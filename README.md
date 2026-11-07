@@ -104,7 +104,7 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ### Live TV & streams
 - HLS, DASH, RTSP, MP4/MKV, IPTV **M3U playlists**
-- **Playlist market** with hundreds of lists, refreshed twice a week
+- **Playlist market** with hundreds of lists, refreshed every 3 days
 - Custom headers, ClearKey / Widevine, smart link detection
 - **Auto-unlock for HTTP 403**: refused links are retried with browser, VLC and host-player headers automatically
 - Watch page with next / previous channel, groups and sharing

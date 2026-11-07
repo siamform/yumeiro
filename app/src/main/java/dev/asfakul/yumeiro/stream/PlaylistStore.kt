@@ -103,7 +103,7 @@ data class PlaylistAnalysis(
 )
 
 /**
- * Default playlist (mirrored twice a week to the `streams` branch by .github/workflows/stream-sync.yml).
+ * Default playlist (mirrored every 3 days to the `streams` branch by .github/workflows/stream-sync.yml).
  * Only Mrgify BDIX ships pre-installed; everything else is available in the Playlist Market.
  */
 object DefaultPlaylists {

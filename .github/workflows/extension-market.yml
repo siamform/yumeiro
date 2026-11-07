@@ -1,6 +1,6 @@
 name: Extension market
 
-# Builds the in-app Extension Market (Videos → Online → Market) twice a week. Discovery:
+# Builds the in-app Extension Market (Videos → Online → Market) every 3 days. Discovery:
 #   1. curated repositories in .github/extensions/sources.json (files verified + mirrored),
 #   2. CloudStream's community repository list (recloudstream/cs-repos),
 #   3. GitHub search for CloudStream extension repositories (topics, keywords, repo.json files),
@@ -13,7 +13,7 @@ name: Extension market
 # extensions automatically (or manually, per extension).
 on:
   schedule:
-    - cron: "17 20 * * 0,3" # Mon + Thu 02:17 Asia/Dhaka
+    - cron: "17 20 */3 * *" # every 3 days, 02:17 Asia/Dhaka
   workflow_dispatch:
   push:
     branches: [main]
@@ -77,7 +77,7 @@ jobs:
           cat > README.md <<'MD'
           # Extension Market (auto-generated)
 
-          Rebuilt twice a week by the `Extension market` workflow from `.github/extensions/sources.json`
+          Rebuilt every 3 days by the `Extension market` workflow from `.github/extensions/sources.json`
           on `main`. `files/` holds verified mirrors of each CloudStream extension; `index.json` is the
           catalog the Yumeiro app reads. Do not edit by hand.
           MD

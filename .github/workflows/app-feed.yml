@@ -6,7 +6,7 @@ name: App notification feed
 # shows new items in the bell inbox.
 on:
   schedule:
-    - cron: "11 23 * * 0,3" # Mon + Thu 05:11 Asia/Dhaka, after the data workflows
+    - cron: "11 23 */3 * *" # every 3 days, 05:11 Asia/Dhaka, after the data workflows
   workflow_dispatch:
   push:
     branches: [main]
@@ -78,7 +78,7 @@ jobs:
           cat > README.md <<'MD'
           # In-app notification feed (auto-generated)
 
-          Built twice a week by the `App notification feed` workflow. Do not edit by hand;
+          Built every 3 days by the `App notification feed` workflow. Do not edit by hand;
           add news to `.github/feed/announcements.json` on `main` instead. The Yumeiro app
           reads `feed.json`.
           MD

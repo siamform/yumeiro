@@ -428,7 +428,7 @@ private fun PlaylistInfoCard(
             val origin = when {
                 playlist.isLocal -> "Your playlist · stored on this device"
                 playlist.isMarket -> "From the playlist market" + (playlist.repo?.let { " · $it" } ?: "")
-                playlist.isDefault -> "Default playlist · synced twice a week"
+                playlist.isDefault -> "Default playlist · synced every 3 days"
                 else -> "Added from a link"
             }
             Text(origin, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -13,7 +13,7 @@ codebase, what changed in the `feat/ultimate-revamp` branch, and what to do next
   must uninstall once and install the first `siamform` release. The fingerprint is in
   `.github/release-signing-cert.sha256`; the keystore is backed up offline by the owner.
 - **Actions budget.** Data workflows (extension market, playlist market, stream sync, app feed) run
-  Monday + Thursday only and skip publishing when nothing changed. CI and CodeQL run on pull requests,
+  every 3 days and skip publishing when nothing changed. CI and CodeQL run on pull requests,
   device check is manual, release runs only for app changes, Dependabot is monthly and grouped.
   Keep it that way: the previous account was restricted for Actions usage.
 
