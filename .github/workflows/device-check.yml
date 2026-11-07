@@ -34,6 +34,9 @@ jobs:
         run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          # Pass the free-text input through env (never inline ${{ }} into a shell script).
+          TEST_FILTER: ${{ github.event.inputs.test }}
         with:
           api-level: 34
           target: google_apis
@@ -44,7 +47,7 @@ jobs:
           script: |
             adb logcat -c || true
             (adb logcat -v time > logcat.txt &) ; sleep 1
-            FILTER="${{ github.event.inputs.test }}"; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.ExtensionCompatDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
+            FILTER="${TEST_FILTER:-}"; case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.ExtensionCompatDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
             adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots shots || true
             adb shell screencap -p /sdcard/last.png && adb pull /sdcard/last.png shots/last.png || true
       - name: Upload results

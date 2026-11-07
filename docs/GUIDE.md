@@ -297,7 +297,8 @@ When the repository becomes private, the updater needs a token to read releases:
 
 1. Create a **fine-grained personal access token** — Repository access: *only* `yumeiro`; Permissions: **Contents: Read-only**. Nothing else.
 2. Save it as the repository secret **`MT_UPDATER_TOKEN`**.
-3. Push to `main`; the next release embeds the token and keeps updating normally.
+3. Push to `main`; the next release embeds the token and keeps updating normally. The release workflow
+   only passes the token while the repository is private, so a public APK never carries it.
 
 Without the secret the app simply uses the public URL, so it keeps working while the repo is public.
 
