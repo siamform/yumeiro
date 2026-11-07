@@ -178,7 +178,7 @@ inside the app, so install only those you trust. See [DISCLAIMER.md](DISCLAIMER.
 
 Please report vulnerabilities privately via
 [GitHub security advisories](https://github.com/siamform/yumeiro/security/advisories/new), not in public issues.
-Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Audit notes are in
+Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Privacy: [PRIVACY.md](PRIVACY.md) · Terms: [TERMS.md](TERMS.md). Audit notes are in
 [docs/security](docs/security/).
 
 ## FAQ
