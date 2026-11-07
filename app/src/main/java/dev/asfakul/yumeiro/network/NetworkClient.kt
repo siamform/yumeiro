@@ -1,5 +1,5 @@
 /*
- * Yumeiro — Copyright (C) 2026 dev-asfakul
+ * Yumeiro — Copyright (C) 2026 siamform
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */

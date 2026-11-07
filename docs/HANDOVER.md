@@ -5,7 +5,7 @@ codebase, what changed in the `feat/ultimate-revamp` branch, and what to do next
 
 ## 0. Repository move (2026-11-07)
 
-- The project moved from `dev-asfakul/yumeiro` to **`siamform/yumeiro`**. App catalog URLs, the
+- The project lives at **`siamform/yumeiro`**. App catalog URLs, the
   `TrustedSources` allowlist, the updater default, scripts and docs all point to the new repo.
 - **Renamed package.** `dev.asfakul.mtrevanced` → `dev.asfakul.yumeiro`, OAuth redirects
   `yumeiro://anilist-login` and `yumeiro://mal-login`.

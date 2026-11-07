@@ -1,5 +1,5 @@
 /*
- * Yumeiro — Copyright (C) 2026 dev-asfakul
+ * Yumeiro — Copyright (C) 2026 siamform
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
@@ -73,7 +73,7 @@ import dev.asfakul.yumeiro.ui.theme.currentDayPart
 import dev.asfakul.yumeiro.ui.theme.palette
 
 object DeveloperInfo {
-    const val NAME = "dev-asfakul"
+    const val NAME = "siamform"
     const val PORTFOLIO = "https://asfakuls-studio.vercel.app/"
     const val GITHUB = "https://github.com/siamform"
     const val SOURCE = "https://github.com/siamform/yumeiro"
