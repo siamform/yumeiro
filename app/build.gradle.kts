@@ -1,0 +1,228 @@
+import java.util.Properties
+
+plugins {
+  alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.compose)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Version — single source of truth lives in /version.properties (bumped by the Release workflow)
+// ---------------------------------------------------------------------------------------------
+val versionProps = Properties().apply {
+  rootProject.file("version.properties").inputStream().use { load(it) }
+}
+val appVersionName: String = versionProps.getProperty("VERSION_NAME")
+val appVersionCode: Int = versionProps.getProperty("VERSION_CODE").toInt()
+
+// ---------------------------------------------------------------------------------------------
+// Constant release keystore
+//
+// Every release MUST be signed with the same keystore, otherwise Android refuses to install the
+// update over the existing app. The keystore is NEVER generated on the fly:
+//   * CI:    decoded from the encrypted GitHub secret MT_KEYSTORE_BASE64 (see release.yml)
+//   * Local: referenced from the git-ignored file /keystore.properties (see keystore.properties.example)
+// If neither is present, release builds are produced UNSIGNED instead of with a random key.
+// ---------------------------------------------------------------------------------------------
+val keystoreProps = Properties().apply {
+  val f = rootProject.file("keystore.properties")
+  if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun secret(envName: String, propName: String): String? =
+  System.getenv(envName)?.takeIf { it.isNotBlank() }
+    ?: keystoreProps.getProperty(propName)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = secret("MT_KEYSTORE_PATH", "storeFile")
+val releaseStorePassword = secret("MT_KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias = secret("MT_KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = secret("MT_KEY_PASSWORD", "keyPassword")
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+  .all { it != null } && rootProject.file(releaseStoreFile!!).exists()
+
+// ---------------------------------------------------------------------------------------------
+// In-app updater configuration (GitHub Releases)
+// ---------------------------------------------------------------------------------------------
+val updateRepoOwner = secret("MT_UPDATE_REPO_OWNER", "updateRepoOwner") ?: "dev-asfakul"
+val updateRepoName = secret("MT_UPDATE_REPO_NAME", "updateRepoName") ?: "yumeiro"
+
+// Optional read-only token so the updater keeps working once the repository becomes private.
+// It is injected at build time only (never committed) and lightly obfuscated in the binary.
+val updaterToken = secret("MT_UPDATER_TOKEN", "updaterToken") ?: ""
+val obfuscationKey = (appVersionCode * 31 + 0x5A) and 0xFF
+// SHA-256 of the official release signing certificate. The app compares its own signature
+// against it at runtime (IntegrityGuard) so re-signed / repackaged copies are flagged.
+val officialCertSha = rootProject.file(".github/release-signing-cert.sha256")
+  .takeIf { it.exists() }?.readText()?.trim()?.lowercase()?.filter { it in "0123456789abcdef" } ?: ""
+val obfuscatedCert = officialCertSha.toByteArray(Charsets.US_ASCII)
+  .mapIndexed { i, b -> (b.toInt() xor ((obfuscationKey + i * 7) and 0xFF)) }.joinToString(",")
+val obfuscatedToken = updaterToken.toByteArray(Charsets.UTF_8)
+  .joinToString(",") { ((it.toInt() xor obfuscationKey) and 0xFF).toString() }
+
+android {
+  namespace = "dev.asfakul.mtrevanced"
+  compileSdk { version = release(37) }
+
+  defaultConfig {
+    applicationId = "dev.asfakul.mtrevanced"
+    minSdk = 28 // Android 9 (Pie)
+    targetSdk = 37 // Android 17
+    versionCode = appVersionCode
+    versionName = appVersionName
+
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    buildConfigField("String", "UPDATE_REPO_OWNER", "\"$updateRepoOwner\"")
+    buildConfigField("String", "UPDATE_REPO_NAME", "\"$updateRepoName\"")
+    buildConfigField("int[]", "UPDATER_TOKEN_BYTES", "new int[]{$obfuscatedToken}")
+    buildConfigField("int", "UPDATER_TOKEN_KEY", "$obfuscationKey")
+    buildConfigField("int[]", "INTEGRITY_BYTES", "new int[]{$obfuscatedCert}")
+    // OAuth client ids for AniList / MyAnimeList sync (public ids, not secrets). Set them as
+    // Gradle properties or CI env vars; users can also enter their own in Settings.
+    val anilistClient = (providers.gradleProperty("anilistClientId").orNull ?: System.getenv("ANILIST_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
+    val malClient = (providers.gradleProperty("malClientId").orNull ?: System.getenv("MAL_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
+    buildConfigField("String", "ANILIST_CLIENT_ID", "\"$anilistClient\"")
+    buildConfigField("String", "MAL_CLIENT_ID", "\"$malClient\"")
+  }
+
+  signingConfigs {
+    if (hasReleaseSigning) {
+      create("release") {
+        storeFile = rootProject.file(releaseStoreFile!!)
+        storePassword = releaseStorePassword
+        keyAlias = releaseKeyAlias
+        keyPassword = releaseKeyPassword
+        enableV1Signing = true // harmless on API 28+, keeps tooling compatibility
+        enableV2Signing = true
+        enableV3Signing = true // enables future key rotation
+      }
+    }
+  }
+
+  buildTypes {
+    release {
+      // R8 code + resource shrinking: ~85% smaller APK (faster update downloads).
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
+      buildConfigField("boolean", "AUTO_UPDATE_CHECK", "true")
+    }
+    debug {
+      // Debug builds install side-by-side with the release app and never replace it.
+      applicationIdSuffix = ".debug"
+      versionNameSuffix = "-debug"
+      buildConfigField("boolean", "AUTO_UPDATE_CHECK", "false")
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+  }
+
+  buildFeatures {
+    compose = true
+    buildConfig = true
+  }
+
+  testOptions { unitTests { isIncludeAndroidResources = true } }
+
+  packaging {
+    resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+  }
+
+  dependenciesInfo {
+    // Don't embed the (Google-encrypted) dependency block: we ship via GitHub, not Play.
+    includeInApk = false
+    includeInBundle = false
+  }
+}
+
+dependencies {
+  // Security floor for vulnerable transitive libraries (OSV scan, 2026-11-07).
+  constraints {
+    implementation("org.jsoup:jsoup:1.23.2") { because("GHSA-65r4-943x-97jj, GHSA-pmhh-3w7g-xqp8 (via CloudStream library)") }
+    implementation("com.google.guava:guava:33.7.2-android") { because("GHSA-xxph-c9ww-hj94 (via Media3)") }
+  }
+  implementation(platform(libs.androidx.compose.bom))
+  implementation(libs.androidx.activity.compose)
+  implementation(libs.androidx.compose.material.icons.core)
+  implementation(libs.androidx.compose.material.icons.extended)
+  implementation(libs.androidx.compose.material3)
+  implementation(libs.androidx.compose.ui)
+  implementation(libs.androidx.compose.ui.graphics)
+  implementation(libs.androidx.compose.ui.tooling.preview)
+  implementation(libs.androidx.core.ktx)
+  // CloudStream extensions build their settings screens with AppCompat / Fragment / Material views.
+  implementation(libs.androidx.appcompat)
+  implementation(libs.androidx.fragment.ktx)
+  implementation(libs.google.material)
+  implementation(libs.androidx.preference.ktx)
+  implementation(libs.androidx.recyclerview)
+  implementation(libs.androidx.webkit)
+  implementation(libs.androidx.work.runtime.ktx)
+  // Installs the baseline profiles bundled with Compose/Media3 on sideloaded APKs → smoother frames.
+  implementation(libs.androidx.profileinstaller)
+  implementation(libs.androidx.lifecycle.runtime.compose)
+  implementation(libs.androidx.lifecycle.runtime.ktx)
+  implementation(libs.androidx.lifecycle.viewmodel.compose)
+  implementation(libs.androidx.navigation.compose)
+  // CloudStream extensions look up NavHostFragment; keep the class available to them.
+  implementation(libs.androidx.navigation.fragment)
+  implementation(libs.coil.compose)
+
+  // Media3
+  implementation(libs.media3.exoplayer)
+  implementation(libs.media3.ui)
+  implementation(libs.media3.session)
+  implementation(libs.media3.common)
+  implementation(libs.media3.exoplayer.hls)
+  implementation(libs.media3.exoplayer.dash)
+  implementation(libs.media3.exoplayer.smoothstreaming)
+  implementation(libs.media3.exoplayer.rtsp)
+  // OkHttp data source: one HTTP stack for probing, playlists and playback, with DNS fallback / DoH.
+  implementation(libs.media3.datasource.okhttp)
+  implementation(libs.okhttp)
+  implementation(libs.okhttp.dnsoverhttps)
+
+  // Online: runs CloudStream-compatible extensions (MainAPI providers / extractors).
+  implementation(libs.cloudstream.library)
+  implementation(libs.cast.framework) // Chromecast
+  implementation(libs.androidx.mediarouter)
+  implementation(libs.jackson.module.kotlin) // same Jackson the CloudStream library already ships; extensions use it
+  implementation(libs.nicehttp) // CloudStream's `app` HTTP helper, wired to our OkHttp client
+  // YouTube / YouTube Music (no login). The CloudStream library already pulls an older NewPipeExtractor
+  // under the lowercase "teamnewpipe" group; the substitution below makes both resolve to one copy.
+  implementation(libs.newpipe.extractor)
+
+  implementation(libs.kotlinx.coroutines.android)
+  implementation(libs.kotlinx.coroutines.core)
+
+  testImplementation(platform(libs.androidx.compose.bom))
+  testImplementation(libs.androidx.compose.ui.test.junit4)
+  testImplementation(libs.androidx.test.core)
+  testImplementation(libs.androidx.junit)
+  testImplementation(libs.junit)
+  testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.okhttp.mockwebserver)
+
+  androidTestImplementation(platform(libs.androidx.compose.bom))
+  androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+  androidTestImplementation(libs.androidx.espresso.core)
+  androidTestImplementation(libs.androidx.junit)
+  androidTestImplementation(libs.androidx.test.runner)
+  androidTestImplementation(libs.okhttp.mockwebserver)
+
+  debugImplementation(libs.androidx.compose.ui.test.manifest)
+  debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+// One NewPipeExtractor on the classpath: CloudStream depends on "com.github.teamnewpipe" (lowercase),
+// we use the current "com.github.TeamNewPipe" release. Same artifact, different JitPack group casing.
+configurations.configureEach {
+  resolutionStrategy.dependencySubstitution {
+    substitute(module("com.github.teamnewpipe:NewPipeExtractor"))
+      .using(module("com.github.TeamNewPipe:NewPipeExtractor:${libs.versions.newpipeExtractor.get()}"))
+  }
+}

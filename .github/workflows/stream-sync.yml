@@ -1,0 +1,85 @@
+name: Stream playlist sync
+
+# Mirrors the default stream playlists (.github/streams/sources.json) into the
+# 'streams' branch every 2 hours. The app's "Sync" button on the Stream page reads
+# https://raw.githubusercontent.com/<repo>/streams/index.json, so playlist updates
+# reach users without a new app release.
+on:
+  schedule:
+    - cron: "23 */2 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/streams/**"
+      - ".github/scripts/sync_streams.py"
+      - ".github/workflows/stream-sync.yml"
+
+permissions:
+  contents: read # default for every job; the publishing job opts in below
+
+concurrency:
+  group: stream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Mirror playlists
+    permissions:
+      contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github
+          fetch-depth: 1
+          # Third-party data is processed below; the push uses an explicit token, so don't persist one in .git/config.
+          persist-credentials: false
+
+      - name: Checkout streams branch
+        run: |
+          set -e
+          if git ls-remote --exit-code --heads origin streams >/dev/null 2>&1; then
+            git fetch --depth=1 origin streams
+            git worktree add out origin/streams
+          else
+            mkdir -p out
+          fi
+
+      - name: Download and validate playlists
+        run: python3 .github/scripts/sync_streams.py out
+
+      - name: Publish to streams branch
+        run: |
+          set -e
+          cd out
+          rm -rf .git 2>/dev/null || true
+          cat > README.md <<'MD'
+          # Stream playlists (auto-generated)
+
+          Mirrored every 2 hours by the `Stream playlist sync` workflow from the sources in
+          `.github/streams/sources.json` on `main`. Do not edit by hand; this branch is
+          rewritten on every sync. The Yumeiro app reads `index.json`.
+          MD
+          sed -i 's/^          //' README.md
+          git init -q -b streams
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "sync: stream playlists $(date -u +%Y-%m-%dT%H:%MZ)"
+          # Single-commit branch: force-push so the mirror never grows the repo history.
+          # Push with the write-only deploy key: the branch ruleset lets only this key update streams.
+          [ -n "$DATA_DEPLOY_KEY" ] || { echo "::error::Secret DATA_BRANCH_DEPLOY_KEY is missing"; exit 1; }
+          install -m 700 -d "$HOME/.ssh"
+          ( umask 077; printf '%s\n' "$DATA_DEPLOY_KEY" > "$HOME/.ssh/data_key" )
+          trap 'shred -u "$HOME/.ssh/data_key" 2>/dev/null || rm -f "$HOME/.ssh/data_key"' EXIT
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$HOME/.ssh/known_hosts_github" # pinned from api.github.com/meta
+          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/data_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts_github" \
+            git push -q -f "git@github.com:${GITHUB_REPOSITORY}.git" streams:streams
+          echo "Published $(jq '.playlists | length' index.json) playlists" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.playlists[] | "- \(.name): \(.channels) channels, ok=\(.ok)"' index.json >> "$GITHUB_STEP_SUMMARY"
+        env:
+          DATA_DEPLOY_KEY: ${{ secrets.DATA_BRANCH_DEPLOY_KEY }}

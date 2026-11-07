@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Many IPTV / camera streams are served over plain HTTP, so user-entered stream URLs may use
+  cleartext. Only system CAs are trusted (no user-installed CAs). The in-app updater and
+  subtitle search only ever use HTTPS endpoints (enforced in code).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">github.com</domain>
+        <domain includeSubdomains="true">githubusercontent.com</domain>
+        <domain includeSubdomains="true">opensubtitles.org</domain>
+    </domain-config>
+</network-security-config>

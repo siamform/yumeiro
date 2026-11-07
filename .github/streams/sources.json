@@ -1,0 +1,13 @@
+{
+  "comment": "Default stream playlist (only Mrgify BDIX ships pre-installed) mirrored to the 'streams' branch every 2 hours by .github/workflows/stream-sync.yml. All other playlists live in the in-app Playlist Market (.github/market/sources.json).",
+  "sources": [
+    {
+      "id": "mrgify_bdix",
+      "name": "Mrgify BDIX",
+      "category": "Bangladesh TV",
+      "description": "BDIX IPTV channels (Bangladesh)",
+      "repo": "abusaeeidx/Mrgify-BDIX-IPTV",
+      "url": "https://raw.githubusercontent.com/abusaeeidx/Mrgify-BDIX-IPTV/main/playlist.m3u"
+    }
+  ]
+}

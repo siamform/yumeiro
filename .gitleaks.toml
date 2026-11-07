@@ -1,0 +1,15 @@
+# gitleaks configuration for Yumeiro.
+# Uses the default rule set and only silences paths that hold THIRD-PARTY data we mirror verbatim
+# (public IPTV playlists whose stream URLs embed the upstream provider's own query tokens).
+# Our own code, workflows and config are always scanned.
+
+title = "yumeiro"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Mirrored third-party playlists (market/streams branches) - not Yumeiro secrets"
+paths = [
+  '''(^|/)playlists/[^/]+\.m3u8?$''',
+]

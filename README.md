@@ -1,0 +1,249 @@
+<div align="center">
+
+<img src="docs/logo.png" width="132" alt="Yumeiro logo" />
+
+# Yumeiro
+
+### 夢色 · Your music, videos, anime and live TV — in one dream-coloured player.
+
+**Made in Bangladesh.**
+
+No account. No login. No ads. No tracking.<br/>
+Local files, YouTube, YouTube Music, IPTV and CloudStream extensions, all in one beautiful Android app.
+
+<p>
+  <a href="https://github.com/dev-asfakul/yumeiro/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/dev-asfakul/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://github.com/dev-asfakul/yumeiro/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/dev-asfakul/yumeiro/total?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://github.com/dev-asfakul/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/dev-asfakul/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
+</p>
+<p>
+  <img alt="Android 9+" src="https://img.shields.io/badge/Android-9%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-F5C46B?style=flat-square&logo=kotlin&logoColor=white&labelColor=16161A" />
+  <a href="LICENSE"><img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-F5C46B?style=flat-square&labelColor=16161A" /></a>
+  <a href="https://github.com/dev-asfakul/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/dev-asfakul/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
+</p>
+
+**[Download the APK](https://github.com/dev-asfakul/yumeiro/releases/latest)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/dev-asfakul/yumeiro/issues)**
+
+</div>
+
+---
+
+<div align="center">
+
+| Home | Now Playing | Music |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/home-dark.jpg" width="230" alt="Home" /> | <img src="docs/screenshots/now-playing-dark.jpg" width="230" alt="Now Playing" /> | <img src="docs/screenshots/music-dark.jpg" width="230" alt="Music" /> |
+| **Videos** | **Stream** | **Library** |
+| <img src="docs/screenshots/videos-dark.jpg" width="230" alt="Videos" /> | <img src="docs/screenshots/stream-dark.jpg" width="230" alt="Stream" /> | <img src="docs/screenshots/library-dark.jpg" width="230" alt="Library" /> |
+| **Built-in user guide** | **Song info + sleep timer** | **Errors come with a fix** |
+| <img src="docs/screenshots/user-guide-dark.jpg" width="230" alt="User guide" /> | <img src="docs/screenshots/song-info-dark.jpg" width="230" alt="Song info with sleep timer" /> | <img src="docs/screenshots/error-tip-dark.jpg" width="230" alt="Error with a suggestion" /> |
+
+</div>
+
+## Why Yumeiro?
+
+Most people juggle four apps: a music player, a video player, YouTube, and something for anime or live TV.
+Yumeiro replaces all of them with **one fast, offline-first app that looks like it belongs in 2026.**
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Music
+- Your local library: songs, albums, artists, folders, playlists
+- **Synced lyrics** that scroll with the song (tap a line to seek)
+- 10-band **equalizer** and sound FX
+- **Sleep timer** — 5 to 90 minutes or end of song, with a gentle fade-out
+- **YouTube Music** without an account — quick picks, search, background play
+
+</td>
+<td width="50%" valign="top">
+
+### Video
+- Grid of your device videos with **continue watching**
+- Gestures, PiP, background play, speed, audio tracks
+- **Floating player** like YouTube — press back or swipe the video down to keep watching while you browse
+- Slim vertical brightness and volume bars, like your phone's own
+- **Subtitles**: embedded, local files, or search online in one tap
+- **YouTube** with no login — trending, anime, AMV, live
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### Anime & online
+- Works with **CloudStream extensions** — your existing repos just work
+- Extension **market**, auto-updates, sub/dub, seasons, episodes
+- A YouTube-style **For you** feed across every extension
+
+</td>
+<td valign="top">
+
+### Live TV & streams
+- HLS, DASH, RTSP, MP4/MKV, IPTV **M3U playlists**
+- **Playlist market** with hundreds of lists, checked every 6 hours
+- Custom headers, ClearKey / Widevine, smart link detection
+- **Auto-unlock for HTTP 403**: refused links are retried with browser, VLC and host-player headers automatically
+- Watch page with next / previous channel, groups and sharing
+
+</td>
+</tr>
+</table>
+
+### Designed, not just built
+
+- **Tsuki** design system — calm ink-black nights or warm paper days, with a single moonlight-gold accent.
+- **Ambient colour** — the background glow quietly takes the colour of the artwork that is playing, like Spotify and Apple Music do.
+- **One floating dock** — the mini player and the navigation bar are joined into one glass capsule.
+- **Endless home** — *Continue listening & watching*, shortcuts, then a *For you* feed that mixes your own songs and videos with YouTube and online picks forever.
+- **User guide in Settings** — illustrated diagrams of every tab, gesture and fix.
+- **Every error comes with a suggestion** for what to try next.
+- Smooth 60 fps: progress ticks never recompose the page, no blur on lists, baseline profiles included.
+
+## Yumeiro vs. the usual stack
+
+| | Yumeiro | Typical music player | Typical video player | YouTube app |
+|---|:---:|:---:|:---:|:---:|
+| Local music + video in one app | ✓ | – | – | – |
+| YouTube & YouTube Music, no login | ✓ | – | – | needs account for most features |
+| CloudStream extensions | ✓ | – | – | – |
+| IPTV / M3U playlists | ✓ | – | some | – |
+| Synced lyrics, equalizer | ✓ | ✓ | – | – |
+| No ads, no tracking, no account | ✓ | varies | varies | – |
+| Seamless self-updates | ✓ | – | – | via store |
+
+## Install
+
+1. Download `release-Yumeiro-vX.Y.Z.apk` from **[Releases](https://github.com/dev-asfakul/yumeiro/releases/latest)**.
+2. Open it and allow "Install unknown apps" for your browser or file manager.
+3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
+
+Android 9 or newer. Phones, tablets and Android TV.
+
+## Verify a release
+
+GitHub Actions builds every release from this repository. The build uses a pinned JDK, pinned action SHAs and no build
+cache, and it never makes a debuggable build. The signing key exists only as an encrypted GitHub secret and is shredded
+after the build. Each release publishes `SHA256SUMS.txt`, generated in the same CI job.
+
+```sh
+# 1. Checksum: download the APK and SHA256SUMS.txt from the same release
+sha256sum -c SHA256SUMS.txt --ignore-missing
+
+# 2. Signing certificate (apksigner ships with Android SDK build-tools)
+apksigner verify --print-certs release-Yumeiro-vX.Y.Z.apk | grep SHA-256
+```
+
+The SHA-256 certificate digest must be:
+
+```
+7d:f9:a3:7b:c8:20:16:14:fe:99:5b:60:18:ad:ca:6f:22:24:a2:e8:b1:c2:3a:fe:d1:43:11:c2:50:9f:c7:7b
+```
+
+The same value is in [`.github/release-signing-cert.sha256`](.github/release-signing-cert.sha256), and CI checks it on
+every release. Do not install an APK with any other certificate; it was not built by this project. The in-app updater
+does the same checks automatically. It only downloads from this repository's GitHub releases, compares the APK against
+the published SHA-256, and relies on Android's same-signature rule when installing.
+
+## What Yumeiro hosts (and doesn't)
+
+Yumeiro is a player. **It hosts no media.** Playlists, live-TV streams and online-video extensions come from third
+parties. The market branches only index links that other people publish. Extensions are third-party code that runs
+inside the app, so install only those you trust. See [DISCLAIMER.md](DISCLAIMER.md).
+
+## Security
+
+Please report vulnerabilities privately via
+[GitHub security advisories](https://github.com/dev-asfakul/yumeiro/security/advisories/new), not in public issues.
+Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Audit notes are in
+[docs/security](docs/security/).
+
+## FAQ
+
+<details>
+<summary><b>Why does Google Play Protect ask to scan the app?</b></summary>
+
+Play Protect shows that prompt for sideloaded apps whose signing key it has not seen often yet — it is about the
+app's reputation, not its code. Apps that have been installed by many people, or whose developer has registered
+the signing key with Google's Android developer verification, stop getting the prompt. You can safely tap
+**Scan app** or **Install without scanning**. Always check that the APK came from this repository's Releases page.
+</details>
+
+<details>
+<summary><b>A stream says "Access denied (HTTP 403)". What now?</b></summary>
+
+Yumeiro already retried it for you: with browser headers, the site and the host as referer, no referer,
+a media-player and a VLC user agent, and the host's own web-player headers. If it still fails, the link's token
+has expired (refresh the playlist or get a fresh link), the host needs a Cookie (add it under Headers & DRM),
+or the stream is limited to certain countries. Yumeiro does not bypass geo-blocking or access controls.
+</details>
+
+<details>
+<summary><b>Do I need an account?</b></summary>
+
+No. There is no login anywhere in the app. YouTube and YouTube Music work without signing in.
+</details>
+
+<details>
+<summary><b>Is it safe? What data does it collect?</b></summary>
+
+Nothing. No analytics, no ads, no servers of ours. Your history, playlists and settings stay on your device.
+Every update is verified against the official signing certificate before it is installed.
+</details>
+
+<details>
+<summary><b>How do I know my APK is the real one?</b></summary>
+
+Official releases are signed with one key; its fingerprint is in [SECURITY.md](SECURITY.md).
+Re-signed copies are detected by the app and marked **Unofficial build** in Settings → About.
+</details>
+
+<details>
+<summary><b>Where do online videos come from?</b></summary>
+
+From CloudStream-format extensions that *you* choose to install. Yumeiro ships only one public-domain extension
+(Internet Archive). Only add extensions for content you have the right to stream.
+</details>
+
+## Build from source
+
+```bash
+git clone https://github.com/dev-asfakul/yumeiro.git
+cd yumeiro
+./gradlew assembleDebug        # JDK 17+, Android SDK 37
+./gradlew testDebugUnitTest    # unit + UI tests
+```
+
+Architecture, release pipeline, updater internals and the full feature list are in **[docs/GUIDE.md](docs/GUIDE.md)**
+and **[docs/HANDOVER.md](docs/HANDOVER.md)**.
+
+## Contributing
+
+Pull requests are welcome. Branch from `main`, use [Conventional Commits](https://www.conventionalcommits.org/),
+and make sure CI passes — merging to `main` ships a release automatically. Security issues: please use
+[private reporting](https://github.com/dev-asfakul/yumeiro/security/advisories/new).
+
+## Support the project
+
+If Yumeiro replaced a few apps on your phone, **[give it a star](https://github.com/dev-asfakul/yumeiro/stargazers)** —
+it is the single best way to help more people find it. Share it with a friend who still uses four apps.
+
+<div align="center">
+
+[Portfolio](https://asfakuls-studio.vercel.app/) · [GitHub @dev-asfakul](https://github.com/dev-asfakul)
+
+**Made in Bangladesh**
+
+</div>
+
+## License
+
+Yumeiro is free software under the **[GNU GPL v3](LICENSE)** — the same licence as the CloudStream and NewPipe code it builds on.
+You may study, change and share the code; modified versions must stay open source under the same licence.
+
+The **Yumeiro name, logo and icon are not covered by the licence** — forks must use their own name, icon and
+`applicationId`. See [TRADEMARKS.md](TRADEMARKS.md) and [NOTICE](NOTICE).
+
+Fonts: Manrope and Unbounded, SIL Open Font License 1.1 ([docs/licenses](docs/licenses/)).

@@ -1,0 +1,92 @@
+name: Extension market
+
+# Builds the in-app Extension Market (Videos → Online → Market) every 6 hours. Discovery:
+#   1. curated repositories in .github/extensions/sources.json (files verified + mirrored),
+#   2. CloudStream's community repository list (recloudstream/cs-repos),
+#   3. GitHub search for CloudStream extension repositories (topics, keywords, repo.json files),
+#   4. extra 'seeds' from sources.json.
+# Every repo.json → plugins.json is read; NSFW and incompatible extensions are skipped; each
+# extension is ranked (stars, last update, status, version) and duplicates across repositories
+# are grouped (best copy first). index.json is published to the single-commit 'extensions'
+# branch. The app reads
+# https://raw.githubusercontent.com/<repo>/extensions/index.json on open and updates installed
+# extensions automatically (or manually, per extension).
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/extensions/**"
+      - ".github/scripts/build_extension_market.py"
+      - ".github/workflows/extension-market.yml"
+
+permissions:
+  contents: read # default for every job; the publishing job opts in below
+
+concurrency:
+  group: extension-market
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build extension index
+    permissions:
+      contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github
+          fetch-depth: 1
+          # Third-party data is processed below; the push uses an explicit token, so don't persist one in .git/config.
+          persist-credentials: false
+
+      - name: Checkout extensions branch
+        run: |
+          set -e
+          if git ls-remote --exit-code --heads origin extensions >/dev/null 2>&1; then
+            git fetch --depth=1 origin extensions
+            git worktree add out origin/extensions
+          else
+            mkdir -p out
+          fi
+
+      - name: Discover, rank and mirror extensions
+        run: python3 .github/scripts/build_extension_market.py out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to extensions branch
+        run: |
+          set -e
+          cd out
+          rm -rf .git 2>/dev/null || true
+          cat > README.md <<'MD'
+          # Extension Market (auto-generated)
+
+          Rebuilt every 6 hours by the `Extension market` workflow from `.github/extensions/sources.json`
+          on `main`. `files/` holds verified mirrors of each CloudStream extension; `index.json` is the
+          catalog the Yumeiro app reads. Do not edit by hand.
+          MD
+          sed -i 's/^          //' README.md
+          git init -q -b extensions
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "extensions: index $(date -u +%Y-%m-%dT%H:%MZ)"
+          # Push with the write-only deploy key: the branch ruleset lets only this key update extensions.
+          [ -n "$DATA_DEPLOY_KEY" ] || { echo "::error::Secret DATA_BRANCH_DEPLOY_KEY is missing"; exit 1; }
+          install -m 700 -d "$HOME/.ssh"
+          ( umask 077; printf '%s\n' "$DATA_DEPLOY_KEY" > "$HOME/.ssh/data_key" )
+          trap 'shred -u "$HOME/.ssh/data_key" 2>/dev/null || rm -f "$HOME/.ssh/data_key"' EXIT
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$HOME/.ssh/known_hosts_github" # pinned from api.github.com/meta
+          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/data_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts_github" \
+            git push -q -f "git@github.com:${GITHUB_REPOSITORY}.git" extensions:extensions
+          if [ -f summary.md ]; then cat summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+        env:
+          DATA_DEPLOY_KEY: ${{ secrets.DATA_BRANCH_DEPLOY_KEY }}

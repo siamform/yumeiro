@@ -1,0 +1,12 @@
+{
+  "_comment": "Hand-written news for the in-app notification inbox. Add an item with a unique id; the App feed workflow publishes it to the 'feed' branch. link: an https URL or one of update, extensions, market, streams, support.",
+  "items": [
+    {
+      "id": "welcome-inbox",
+      "kind": "news",
+      "title": "Meet your notification inbox",
+      "body": "New episodes, extensions, stream playlists and Yumeiro news now land here. Choose what you hear about in Settings > Notifications.",
+      "at": "2026-11-07T12:00:00Z"
+    }
+  ]
+}

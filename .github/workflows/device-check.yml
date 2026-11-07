@@ -1,0 +1,71 @@
+name: Device check
+
+# Runs the app on a real Android emulator and checks that online videos actually render frames.
+# Screenshots and logcat are uploaded as artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Test class or method filter (optional)"
+        required: false
+        default: ""
+  push:
+    branches-ignore: [main, extensions, playlists, market]
+    paths:
+      - "app/src/main/java/dev/asfakul/mtrevanced/online/**"
+      - "app/src/main/java/dev/asfakul/mtrevanced/ui/screens/online/**"
+      - "app/src/main/java/dev/asfakul/mtrevanced/ui/screens/video/**"
+      - "app/src/main/java/dev/asfakul/mtrevanced/stream/**"
+      - "app/src/main/java/com/lagradost/**"
+      - "app/src/androidTest/**"
+      - ".github/workflows/device-check.yml"
+
+concurrency:
+  group: device-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with: { distribution: temurin, java-version: "21.0.13" } # JDK pinned for reproducible builds
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Build APKs
+        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb logcat -c || true
+            (adb logcat -v time > logcat.txt &) ; sleep 1
+            FILTER="${{ github.event.inputs.test }}"; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.mtrevanced.OnlinePlaybackDeviceTest,dev.asfakul.mtrevanced.ExtensionCompatDeviceTest,dev.asfakul.mtrevanced.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
+            adb pull /sdcard/Android/data/dev.asfakul.mtrevanced.debug/files/shots shots || true
+            adb shell screencap -p /sdcard/last.png && adb pull /sdcard/last.png shots/last.png || true
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: device-check
+          path: |
+            shots/
+            logcat.txt
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+      - name: Fail if tests failed
+        run: test ! -f failed.txt

@@ -1,0 +1,95 @@
+name: Playlist market
+
+# Builds the in-app Playlist Market every 6 hours:
+#  * curated playlists + repos listed in .github/market/sources.json,
+#  * new active IPTV playlist repos discovered through GitHub search,
+# then repairs (header, #EXTINF, duplicates, bad URLs), validates and health-samples each list
+# and publishes them to the single-commit 'market' branch. The app reads
+# https://raw.githubusercontent.com/<repo>/market/index.json and installs from playlists/<id>.m3u;
+# installed playlists compare sha256 to detect updates (auto or manual, per playlist).
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Optional comma-separated ids or origins (curated,repo,search) to build"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths:
+      - ".github/market/**"
+      - ".github/scripts/build_market.py"
+      - ".github/workflows/playlist-market.yml"
+
+permissions:
+  contents: read # default for every job; the publishing job opts in below
+
+concurrency:
+  group: playlist-market
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build market catalog
+    permissions:
+      contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github
+          fetch-depth: 1
+          # Third-party data is processed below; the push uses an explicit token, so don't persist one in .git/config.
+          persist-credentials: false
+
+      - name: Checkout market branch
+        run: |
+          set -e
+          if git ls-remote --exit-code --heads origin market >/dev/null 2>&1; then
+            git fetch --depth=1 origin market
+            git worktree add out origin/market
+          else
+            mkdir -p out
+          fi
+
+      - name: Discover, repair and validate playlists
+        run: python3 .github/scripts/build_market.py out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MARKET_ONLY: ${{ github.event.inputs.only }}
+
+      - name: Publish to market branch
+        run: |
+          set -e
+          cd out
+          rm -rf .git 2>/dev/null || true
+          cat > README.md <<'MD'
+          # Playlist Market (auto-generated)
+
+          Rebuilt every 6 hours by the `Playlist market` workflow from `.github/market/sources.json`
+          on `main` plus GitHub discovery. Each playlist in `playlists/` is a repaired copy of its
+          `source`; `index.json` is the catalog the Yumeiro app reads. Do not edit by hand.
+          MD
+          sed -i 's/^          //' README.md
+          git init -q -b market
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "market: catalog $(date -u +%Y-%m-%dT%H:%MZ)"
+          # Push with the write-only deploy key: the branch ruleset lets only this key update market.
+          [ -n "$DATA_DEPLOY_KEY" ] || { echo "::error::Secret DATA_BRANCH_DEPLOY_KEY is missing"; exit 1; }
+          install -m 700 -d "$HOME/.ssh"
+          ( umask 077; printf '%s\n' "$DATA_DEPLOY_KEY" > "$HOME/.ssh/data_key" )
+          trap 'shred -u "$HOME/.ssh/data_key" 2>/dev/null || rm -f "$HOME/.ssh/data_key"' EXIT
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$HOME/.ssh/known_hosts_github" # pinned from api.github.com/meta
+          GIT_SSH_COMMAND="ssh -i $HOME/.ssh/data_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts_github" \
+            git push -q -f "git@github.com:${GITHUB_REPOSITORY}.git" market:market
+          echo "Published $(jq '.playlists | length' index.json) playlists" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.playlists[] | "- \(.name) [\(.category)]: \(.channels) streams, ok=\(.ok)"' index.json >> "$GITHUB_STEP_SUMMARY"
+        env:
+          DATA_DEPLOY_KEY: ${{ secrets.DATA_BRANCH_DEPLOY_KEY }}

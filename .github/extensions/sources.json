@@ -1,0 +1,17 @@
+{
+  "_comment": "Extension Market sources. 'repositories' are curated (files verified and mirrored). The workflow also adds CloudStream's community list (recloudstream/cs-repos) and repositories found by GitHub search; those are installed from their source. 'seeds' are extra GitHub repos (owner/name) to probe; 'blocked' are owner/name repos never listed. NSFW extensions are always skipped. Rebuilt every 6 hours by .github/workflows/extension-market.yml.",
+  "limits": {
+    "maxFileBytes": 15728640,
+    "maxPerRepo": 250,
+    "maxRepositories": 400
+  },
+  "repositories": [
+    {
+      "url": "https://raw.githubusercontent.com/Luna712/Luna712-CloudStream-Extensions/master/repo.json",
+      "github": "Luna712/Luna712-CloudStream-Extensions",
+      "note": "Internet Archive (public-domain films, TV, cartoons) and Dailymotion"
+    }
+  ],
+  "seeds": [],
+  "blocked": []
+}

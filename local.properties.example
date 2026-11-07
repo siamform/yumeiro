@@ -1,0 +1,2 @@
+# Copy to local.properties (git-ignored). Android Studio usually writes this file for you.
+sdk.dir=/absolute/path/to/Android/Sdk
