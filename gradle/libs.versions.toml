@@ -13,7 +13,7 @@ media3 = "1.11.1"
 profileInstaller = "1.4.1"
 # Android UI toolkit used by CloudStream extensions for their own settings dialogs
 appcompat = "1.8.0"
-fragment = "1.8.9"
+fragment = "1.9.1"
 material = "1.14.0"
 preference = "1.2.1"
 recyclerview = "1.4.0"
@@ -41,7 +41,7 @@ androidxJunit = "1.3.0"
 androidxTestCore = "1.7.0"
 androidxTestRunner = "1.7.0"
 espressoCore = "3.7.0"
-robolectric = "4.16.1"
+robolectric = "4.17"
 
 [libraries]
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileInstaller" }
