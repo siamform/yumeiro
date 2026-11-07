@@ -13,7 +13,7 @@ media3 = "1.11.1"
 profileInstaller = "1.4.1"
 # Android UI toolkit used by CloudStream extensions for their own settings dialogs
 appcompat = "1.8.0"
-fragment = "1.8.9"
+fragment = "1.9.1"
 material = "1.14.0"
 preference = "1.2.1"
 recyclerview = "1.4.0"

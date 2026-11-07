@@ -141,8 +141,8 @@ android {
 dependencies {
   // Security floor for vulnerable transitive libraries (OSV scan, 2026-11-07).
   constraints {
-    implementation("org.jsoup:jsoup:1.23.2") { because("GHSA-65r4-943x-97jj, GHSA-pmhh-3w7g-xqp8 (via CloudStream library)") }
-    implementation("com.google.guava:guava:33.7.2-android") { because("GHSA-xxph-c9ww-hj94 (via Media3)") }
+    implementation("org.jsoup:jsoup:1.24.1") { because("GHSA-65r4-943x-97jj, GHSA-pmhh-3w7g-xqp8 (via CloudStream library)") }
+    implementation("com.google.guava:guava:33.8.0-android") { because("GHSA-xxph-c9ww-hj94 (via Media3)") }
   }
   implementation(platform(libs.androidx.compose.bom))
   implementation(libs.androidx.activity.compose)
