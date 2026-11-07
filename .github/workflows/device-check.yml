@@ -44,8 +44,8 @@ jobs:
           script: |
             adb logcat -c || true
             (adb logcat -v time > logcat.txt &) ; sleep 1
-            FILTER="${{ github.event.inputs.test }}"; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.mtrevanced.OnlinePlaybackDeviceTest,dev.asfakul.mtrevanced.ExtensionCompatDeviceTest,dev.asfakul.mtrevanced.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
-            adb pull /sdcard/Android/data/dev.asfakul.mtrevanced.debug/files/shots shots || true
+            FILTER="${{ github.event.inputs.test }}"; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.ExtensionCompatDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
+            adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots shots || true
             adb shell screencap -p /sdcard/last.png && adb pull /sdcard/last.png shots/last.png || true
       - name: Upload results
         if: always()

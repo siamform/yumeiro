@@ -1,0 +1,245 @@
+/*
+ * Yumeiro — Copyright (C) 2026 dev-asfakul
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro.stream
+
+import android.content.Context
+import android.net.Uri
+import android.util.Base64
+import androidx.annotation.OptIn
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.drm.DefaultDrmSessionManagerProvider
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import dev.asfakul.yumeiro.network.NetworkClient
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
+import androidx.media3.exoplayer.drm.DrmSessionManager
+import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
+import androidx.media3.exoplayer.drm.FrameworkMediaDrm
+import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.TransferListener
+import java.util.Collections
+import java.util.WeakHashMap
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * Builds ExoPlayer instances and MediaItems that can play local files and every supported network
+ * format (HLS, DASH, SmoothStreaming, RTSP, progressive incl. MPEG-TS) with per-stream headers & DRM.
+ */
+@OptIn(UnstableApi::class)
+object StreamMediaFactory {
+    /** Media source factory of each player, so separate audio tracks can be merged with the video. */
+    private val factories: MutableMap<ExoPlayer, MediaSource.Factory> = Collections.synchronizedMap(WeakHashMap())
+
+    /** True for links that are fetched over the network (as opposed to local files / content URIs). */
+    fun isNetworkUri(uri: String): Boolean = uri.trim().lowercase().let {
+        it.startsWith("http://") || it.startsWith("https://") || it.startsWith("rtsp://") || it.startsWith("rtmp://")
+    }
+
+    fun createPlayer(context: Context, uri: String): ExoPlayer {
+        val appContext = context.applicationContext
+        val defaultUa = Util.getUserAgent(appContext, "Yumeiro")
+        // Headers are looked up on every connection so a stream resolved (or refreshed) after the
+        // player was created still gets its Referer / Cookie / token headers.
+        val http = RequestAwareHttpFactory(appContext, defaultUa) { StreamRepository.requestFor(uri) }
+        val dataSourceFactory: DataSource.Factory = DefaultDataSource.Factory(appContext, http)
+        val defaultDrm = DefaultDrmSessionManagerProvider().apply { setDrmHttpDataSourceFactory(http) }
+        val msf = DefaultMediaSourceFactory(dataSourceFactory)
+            .setLoadErrorHandlingPolicy(dev.asfakul.yumeiro.player.StreamLoadErrorPolicy())
+            .setLiveMinSpeed(0.97f)
+            .setLiveMaxSpeed(1.03f)
+            .setDrmSessionManagerProvider(DrmSessionManagerProvider { item ->
+                val request = StreamRepository.requestFor(uri)
+                if (request != null && request.drmScheme == DrmScheme.CLEARKEY && !request.clearKeys.isNullOrBlank()) {
+                    DefaultDrmSessionManager.Builder()
+                        .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                        .build(LocalMediaDrmCallback(clearKeyJson(request.clearKeys).toByteArray()))
+                } else defaultDrm.get(item)
+            })
+        val trackSelector = DefaultTrackSelector(appContext).apply {
+            setParameters(
+                buildUponParameters()
+                    // Let ABR switch between e.g. H.264 and HEVC variants of the same ladder.
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowVideoNonSeamlessAdaptiveness(true)
+                    .setExceedVideoConstraintsIfNecessary(true)
+                    .setExceedRendererCapabilitiesIfNecessary(true)
+            )
+        }
+        val builder = ExoPlayer.Builder(appContext)
+            .setMediaSourceFactory(msf as MediaSource.Factory)
+            .setTrackSelector(trackSelector)
+            .setBandwidthMeter(DefaultBandwidthMeter.getSingletonInstance(appContext))
+            .setHandleAudioBecomingNoisy(true)
+            // Request audio focus so music pauses while a video plays (and vice versa).
+            .setAudioAttributes(
+                androidx.media3.common.AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .build(),
+                /* handleAudioFocus = */ true
+            )
+        if (isNetworkUri(uri)) {
+            // Network streams: a deeper buffer rides out jitter; quick start & rebuffer recovery.
+            builder.setLoadControl(
+                DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(
+                        /* minBufferMs = */ 20_000,
+                        /* maxBufferMs = */ 50_000,
+                        /* bufferForPlaybackMs = */ 1_500,
+                        /* bufferForPlaybackAfterRebufferMs = */ 3_000,
+                    )
+                    .setPrioritizeTimeOverSizeThresholds(true)
+                    .build()
+            )
+        }
+        return builder.build().also { factories[it] = msf }
+    }
+
+    /**
+     * Loads [uri] into [player] with its subtitles and, when the source provides separate audio
+     * tracks, merges them with the video so the picture plays with sound.
+     */
+    fun setMedia(
+        player: ExoPlayer,
+        uri: String,
+        subtitles: List<MediaItem.SubtitleConfiguration> = emptyList(),
+        title: String? = null,
+        startPositionMs: Long = C.TIME_UNSET,
+    ) {
+        val item = buildMediaItem(uri, subtitles, title)
+        val audio = StreamRepository.requestFor(uri)?.audioTracks.orEmpty()
+        val factory = factories[player]
+        if (audio.isEmpty() || factory == null) {
+            if (startPositionMs == C.TIME_UNSET) player.setMediaItem(item) else player.setMediaItem(item, startPositionMs)
+            return
+        }
+        val sources = buildList {
+            add(factory.createMediaSource(item))
+            audio.forEach { a ->
+                val b = MediaItem.Builder().setUri(Uri.parse(a.url))
+                detectFormat(a.url).mimeType?.let { b.setMimeType(it) }
+                add(factory.createMediaSource(b.build()))
+            }
+        }
+        player.setMediaSource(MergingMediaSource(/* adjustPeriodTimeOffsets = */ true, *sources.toTypedArray()), startPositionMs)
+    }
+
+    fun buildMediaItem(
+        uri: String,
+        subtitles: List<MediaItem.SubtitleConfiguration> = emptyList(),
+        title: String? = null,
+    ): MediaItem {
+        val request = StreamRepository.requestFor(uri)
+        // A link resolved from a page / redirect plays from its resolved URL but stays keyed by the original.
+        val builder = MediaItem.Builder().setUri(Uri.parse(request?.url ?: uri)).setSubtitleConfigurations(subtitles)
+        if (isNetworkUri(request?.url ?: uri)) {
+            // Applies only when the stream turns out to be live: keep close to the edge, adjust gently.
+            builder.setLiveConfiguration(
+                MediaItem.LiveConfiguration.Builder().setMinPlaybackSpeed(0.97f).setMaxPlaybackSpeed(1.03f).build()
+            )
+        }
+        // Title shown in the media notification / lock screen during background play.
+        if (!title.isNullOrBlank()) {
+            builder.setMediaMetadata(
+                androidx.media3.common.MediaMetadata.Builder().setTitle(title).setDisplayTitle(title).build()
+            )
+        }
+        if (request != null) {
+            request.resolvedFormat().mimeType?.let { builder.setMimeType(it) }
+            when (request.drmScheme) {
+                DrmScheme.WIDEVINE -> request.drmLicenseUrl?.let { license ->
+                    builder.setDrmConfiguration(
+                        MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                            .setLicenseUri(license)
+                            .setLicenseRequestHeaders(request.requestHeaders())
+                            .build(),
+                    )
+                }
+                DrmScheme.CLEARKEY -> if (request.clearKeys.isNullOrBlank()) request.drmLicenseUrl?.let { license ->
+                    builder.setDrmConfiguration(
+                        MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID).setLicenseUri(license)
+                            .setLicenseRequestHeaders(request.requestHeaders()).build(),
+                    )
+                } else {
+                    builder.setDrmConfiguration(MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID).build())
+                }
+                DrmScheme.NONE -> Unit
+            }
+        }
+        return builder.build()
+    }
+
+    /** "kid:key" hex pairs → ClearKey JSON Web Key set. */
+    internal fun clearKeyJson(pairs: String): String {
+        val keys = JSONArray()
+        pairs.split(',', '\n', ';', ' ').map { it.trim() }.filter { it.contains(':') }.forEach { pair ->
+            val (kid, key) = pair.split(':', limit = 2).map { it.trim() }
+            keys.put(JSONObject().put("kty", "oct").put("kid", hexToB64Url(kid)).put("k", hexToB64Url(key)))
+        }
+        return JSONObject().put("keys", keys).put("type", "temporary").toString()
+    }
+
+    private fun hexToB64Url(hex: String): String {
+        val clean = hex.replace("-", "")
+        val bytes = ByteArray(clean.length / 2) { clean.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
+        return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+    }
+}
+
+/**
+ * HTTP data source factory backed by the shared OkHttp client (smart DNS fallback, redirects incl.
+ * cross-protocol, session cookies). Per-stream User-Agent and headers are read at connection time.
+ */
+@OptIn(UnstableApi::class)
+class RequestAwareHttpFactory(
+    private val context: Context,
+    private val defaultUserAgent: String,
+    private val request: () -> StreamRequest?,
+) : HttpDataSource.Factory {
+    private val extra = HttpDataSource.RequestProperties()
+
+    override fun createDataSource(): HttpDataSource {
+        val r = request()
+        val client = StreamInterceptors.clientFor(r?.url, NetworkClient.get(context))
+        val delegate = OkHttpDataSource.Factory(client)
+            .setUserAgent(r?.userAgent ?: defaultUserAgent)
+            .setDefaultRequestProperties(extra.snapshot + (r?.requestHeaders() ?: emptyMap()))
+            .createDataSource()
+        return if (r == null || (r.subtitles.none { it.headers.isNotEmpty() } && r.audioTracks.none { it.headers.isNotEmpty() })) delegate
+        else PerUrlHeadersDataSource(delegate) { uri -> r.headersFor(uri) }
+    }
+
+    override fun setDefaultRequestProperties(defaultRequestProperties: Map<String, String>): HttpDataSource.Factory {
+        extra.clearAndSet(defaultRequestProperties); return this
+    }
+}
+
+/** Sends a subtitle's / audio track's own headers (they can differ from the video's). */
+@OptIn(UnstableApi::class)
+internal class PerUrlHeadersDataSource(
+    private val delegate: HttpDataSource,
+    private val headersFor: (String) -> Map<String, String>?,
+) : HttpDataSource by delegate {
+    override fun open(dataSpec: DataSpec): Long {
+        val own = headersFor(dataSpec.uri.toString())
+        return delegate.open(if (own.isNullOrEmpty()) dataSpec else dataSpec.withAdditionalHeaders(own))
+    }
+    override fun addTransferListener(transferListener: TransferListener) = delegate.addTransferListener(transferListener)
+}

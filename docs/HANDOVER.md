@@ -7,6 +7,8 @@ codebase, what changed in the `feat/ultimate-revamp` branch, and what to do next
 
 - The project moved from `dev-asfakul/yumeiro` to **`siamform/yumeiro`**. App catalog URLs, the
   `TrustedSources` allowlist, the updater default, scripts and docs all point to the new repo.
+- **Renamed package.** `dev.asfakul.mtrevanced` → `dev.asfakul.yumeiro`, OAuth redirects
+  `yumeiro://anilist-login` and `yumeiro://mal-login`.
 - **New release signing key.** Old installs (signed with the previous key, updating from the old repo)
   must uninstall once and install the first `siamform` release. The fingerprint is in
   `.github/release-signing-cert.sha256`; the keystore is backed up offline by the owner.
@@ -18,11 +20,12 @@ codebase, what changed in the `feat/ultimate-revamp` branch, and what to do next
 ## 1. Product in one paragraph
 
 **Name:** Yumeiro (夢色, "dream-colored"). Formerly "MT ReVanced" / "MT Player"; renamed in the
-`feat/yumeiro-rebrand` branch. Repo: `siamform/yumeiro`. The Kotlin package and `applicationId`
-stay `dev.asfakul.mtrevanced` on purpose so existing installs keep updating in place (changing the
-applicationId would make Android treat it as a different app and drop users' data).
+`feat/yumeiro-rebrand` branch. Repo: `siamform/yumeiro`. The Kotlin package, `applicationId`
+and OAuth scheme were renamed from `mtrevanced` to `yumeiro` (`dev.asfakul.yumeiro`, `yumeiro://`) on
+2026-11-07 together with the new signing key, so Android treats it as a new app: users of the old build
+install it fresh.
 
-Yumeiro (`dev.asfakul.mtrevanced`) started as a local audio/video player and is becoming an
+Yumeiro (`dev.asfakul.yumeiro`) started as a local audio/video player and is becoming an
 "ultimate" streaming hub: local music + video, IPTV / live streams, CloudStream-compatible online
 extensions (`.cs3` plugins act as channels), and — new in this branch — login-free YouTube video
 and YouTube Music. No account system anywhere; everything works signed-out.
@@ -59,7 +62,7 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties
 ## 4. Architecture map
 
 ```
-dev.asfakul.mtrevanced
+dev.asfakul.yumeiro
 ├── MTApplication        installs ExtensionGuard (first!), YouTube, update + extension engines
 ├── MainActivity         single activity, Compose host
 ├── ui/
@@ -228,8 +231,8 @@ Apple Music do it: neutral surfaces, one accent, and colour that comes from the 
 
 ## 8b. Yumeiro release notes (rebrand, bento home, watch page, seamless updater)
 
-- **Name**: Yumeiro (夢色, "dream-colored"). Repo `siamform/yumeiro`. `applicationId` is kept as
-  `dev.asfakul.mtrevanced` so existing installs update in place (changing it would make a new app).
+- **Name**: Yumeiro (夢色, "dream-colored"). Repo `siamform/yumeiro`. `applicationId` is
+  `dev.asfakul.yumeiro` (renamed from `dev.asfakul.mtrevanced` on 2026-11-07).
 - **Naming**: online extension channels are **Hues**; the combined feed is **Spectrum**.
 - **Home** (`ui/screens/home/HomeScreen.kt`): hero `VaultSummary` + bento grid of shortcuts
   (`BentoTile`, tags `quick_card_*`) covering every feature, then personal shelves. List tag `home_list`.
