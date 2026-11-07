@@ -21,7 +21,7 @@ import java.time.Instant
  * notification shade.
  */
 object AppFeed {
-    const val URL = "https://raw.githubusercontent.com/dev-asfakul/yumeiro/feed/feed.json"
+    const val URL = "https://raw.githubusercontent.com/siamform/yumeiro/feed/feed.json"
     private const val MAX_BYTES = 512L * 1024
     private const val PREFS = "app_feed"
     /** At most this many system notifications per sync; the rest go to the inbox quietly. */

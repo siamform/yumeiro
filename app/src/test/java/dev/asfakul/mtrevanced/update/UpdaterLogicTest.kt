@@ -95,13 +95,13 @@ class UpdaterLogicTest {
 
     @Test
     fun officialReleaseAssetUrls() {
-        val ok = "https://github.com/dev-asfakul/yumeiro/releases/download/v1.2.0/$apk"
+        val ok = "https://github.com/siamform/yumeiro/releases/download/v1.2.0/$apk"
         assertTrue(TrustedSources.isOfficialReleaseAssetUrl(ok))
-        assertTrue(TrustedSources.isOfficialReleaseAssetUrl("https://api.github.com/repos/dev-asfakul/yumeiro/releases/assets/123"))
+        assertTrue(TrustedSources.isOfficialReleaseAssetUrl("https://api.github.com/repos/siamform/yumeiro/releases/assets/123"))
         assertFalse(TrustedSources.isOfficialReleaseAssetUrl(ok.replace("https://", "http://")))
         assertFalse(TrustedSources.isOfficialReleaseAssetUrl("https://github.com/attacker/yumeiro/releases/download/v1/$apk"))
-        assertFalse(TrustedSources.isOfficialReleaseAssetUrl("https://github.com.evil.io/dev-asfakul/yumeiro/releases/download/v1/$apk"))
-        assertFalse(TrustedSources.isOfficialReleaseAssetUrl("https://api.github.com/repos/dev-asfakul/yumeiro/releases/assets/1/../x"))
+        assertFalse(TrustedSources.isOfficialReleaseAssetUrl("https://github.com.evil.io/siamform/yumeiro/releases/download/v1/$apk"))
+        assertFalse(TrustedSources.isOfficialReleaseAssetUrl("https://api.github.com/repos/siamform/yumeiro/releases/assets/1/../x"))
         assertFalse(TrustedSources.isOfficialReleaseAssetUrl(null))
     }
 
@@ -110,11 +110,11 @@ class UpdaterLogicTest {
         assertTrue(TrustedSources.isGitHubDownloadHost("https://release-assets.githubusercontent.com/x?sig=1"))
         assertFalse(TrustedSources.isGitHubDownloadHost("http://objects.githubusercontent.com/x"))
         assertFalse(TrustedSources.isGitHubDownloadHost("https://githubusercontent.com.evil.io/x"))
-        assertTrue(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/dev-asfakul/yumeiro/market/index.json"))
-        assertTrue(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/dev-asfakul/yumeiro/streams/playlists/a.m3u"))
-        assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/dev-asfakul/yumeiro/main/index.json"))
+        assertTrue(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/siamform/yumeiro/market/index.json"))
+        assertTrue(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/siamform/yumeiro/streams/playlists/a.m3u"))
+        assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/siamform/yumeiro/main/index.json"))
         assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/fork/yumeiro/market/index.json"))
-        assertFalse(TrustedSources.isOfficialCatalogUrl("http://raw.githubusercontent.com/dev-asfakul/yumeiro/market/index.json"))
-        assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com:8443/dev-asfakul/yumeiro/market/index.json"))
+        assertFalse(TrustedSources.isOfficialCatalogUrl("http://raw.githubusercontent.com/siamform/yumeiro/market/index.json"))
+        assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com:8443/siamform/yumeiro/market/index.json"))
     }
 }

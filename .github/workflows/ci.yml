@@ -4,10 +4,10 @@ name: CI
 # Releases are produced only by release.yml on main.
 
 # Never use pull_request_target here: fork PRs run with a read-only token and no secrets.
+# Runs once per pull request (not again for the branch push) to avoid duplicate runs.
 on:
   pull_request:
-  push:
-    branches-ignore: [main, streams]
+    paths-ignore: ["**/*.md", "docs/**"]
   workflow_dispatch:
 
 permissions:

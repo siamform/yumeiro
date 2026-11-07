@@ -1,6 +1,6 @@
 name: Playlist market
 
-# Builds the in-app Playlist Market every 6 hours:
+# Builds the in-app Playlist Market twice a week:
 #  * curated playlists + repos listed in .github/market/sources.json,
 #  * new active IPTV playlist repos discovered through GitHub search,
 # then repairs (header, #EXTINF, duplicates, bad URLs), validates and health-samples each list
@@ -9,7 +9,7 @@ name: Playlist market
 # installed playlists compare sha256 to detect updates (auto or manual, per playlist).
 on:
   schedule:
-    - cron: "41 */6 * * *"
+    - cron: "41 21 * * 0,3" # Mon + Thu 03:41 Asia/Dhaka
   workflow_dispatch:
     inputs:
       only:
@@ -36,7 +36,7 @@ jobs:
     permissions:
       contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 25
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -63,7 +63,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MARKET_ONLY: ${{ github.event.inputs.only }}
 
+      - name: Check for changes
+        id: diff
+        run: |
+          if bash .github/scripts/data-changed.sh out; then echo "changed=true" >> "$GITHUB_OUTPUT"
+          else echo "changed=false" >> "$GITHUB_OUTPUT"; echo "No changes since the last publish; skipped." >> "$GITHUB_STEP_SUMMARY"; fi
+
       - name: Publish to market branch
+        if: steps.diff.outputs.changed == 'true'
         run: |
           set -e
           cd out
@@ -71,7 +78,7 @@ jobs:
           cat > README.md <<'MD'
           # Playlist Market (auto-generated)
 
-          Rebuilt every 6 hours by the `Playlist market` workflow from `.github/market/sources.json`
+          Rebuilt twice a week by the `Playlist market` workflow from `.github/market/sources.json`
           on `main` plus GitHub discovery. Each playlist in `playlists/` is a repaired copy of its
           `source`; `index.json` is the catalog the Yumeiro app reads. Do not edit by hand.
           MD

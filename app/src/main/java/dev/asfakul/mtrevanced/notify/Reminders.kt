@@ -27,7 +27,7 @@ object Reminders {
         LINKEDIN("LinkedIn", "https://www.linkedin.com/in/asfakulislamsiam"),
     }
 
-    const val GITHUB_URL = "https://github.com/dev-asfakul/yumeiro"
+    const val GITHUB_URL = "https://github.com/siamform/yumeiro"
     const val EVERY_MS = 4L * 60 * 60 * 1000
     const val DAILY_MS = 24L * 60 * 60 * 1000
     const val MIN_GAP_MS = 80L * 60 * 1000

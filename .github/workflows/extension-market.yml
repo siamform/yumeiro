@@ -1,6 +1,6 @@
 name: Extension market
 
-# Builds the in-app Extension Market (Videos → Online → Market) every 6 hours. Discovery:
+# Builds the in-app Extension Market (Videos → Online → Market) twice a week. Discovery:
 #   1. curated repositories in .github/extensions/sources.json (files verified + mirrored),
 #   2. CloudStream's community repository list (recloudstream/cs-repos),
 #   3. GitHub search for CloudStream extension repositories (topics, keywords, repo.json files),
@@ -13,7 +13,7 @@ name: Extension market
 # extensions automatically (or manually, per extension).
 on:
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "17 20 * * 0,3" # Mon + Thu 02:17 Asia/Dhaka
   workflow_dispatch:
   push:
     branches: [main]
@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 30
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -60,8 +60,16 @@ jobs:
         run: python3 .github/scripts/build_extension_market.py out
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CODE_SEARCH: "0" # code search is the heaviest GitHub API call; topic/keyword search is enough
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if bash .github/scripts/data-changed.sh out; then echo "changed=true" >> "$GITHUB_OUTPUT"
+          else echo "changed=false" >> "$GITHUB_OUTPUT"; echo "No changes since the last publish; skipped." >> "$GITHUB_STEP_SUMMARY"; fi
 
       - name: Publish to extensions branch
+        if: steps.diff.outputs.changed == 'true'
         run: |
           set -e
           cd out
@@ -69,7 +77,7 @@ jobs:
           cat > README.md <<'MD'
           # Extension Market (auto-generated)
 
-          Rebuilt every 6 hours by the `Extension market` workflow from `.github/extensions/sources.json`
+          Rebuilt twice a week by the `Extension market` workflow from `.github/extensions/sources.json`
           on `main`. `files/` holds verified mirrors of each CloudStream extension; `index.json` is the
           catalog the Yumeiro app reads. Do not edit by hand.
           MD

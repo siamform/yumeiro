@@ -1,7 +1,7 @@
 name: Device check
 
 # Runs the app on a real Android emulator and checks that online videos actually render frames.
-# Screenshots and logcat are uploaded as artifacts.
+# Screenshots and logcat are uploaded as artifacts. Manual only: the emulator is expensive.
 on:
   workflow_dispatch:
     inputs:
@@ -9,16 +9,6 @@ on:
         description: "Test class or method filter (optional)"
         required: false
         default: ""
-  push:
-    branches-ignore: [main, extensions, playlists, market]
-    paths:
-      - "app/src/main/java/dev/asfakul/mtrevanced/online/**"
-      - "app/src/main/java/dev/asfakul/mtrevanced/ui/screens/online/**"
-      - "app/src/main/java/dev/asfakul/mtrevanced/ui/screens/video/**"
-      - "app/src/main/java/dev/asfakul/mtrevanced/stream/**"
-      - "app/src/main/java/com/lagradost/**"
-      - "app/src/androidTest/**"
-      - ".github/workflows/device-check.yml"
 
 concurrency:
   group: device-check-${{ github.ref }}

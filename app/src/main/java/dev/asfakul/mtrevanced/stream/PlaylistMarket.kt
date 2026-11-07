@@ -26,7 +26,7 @@ import java.time.Instant
  * date. The catalog is cached on the device and works offline.
  */
 object PlaylistMarket {
-    const val BASE = "https://raw.githubusercontent.com/dev-asfakul/yumeiro/market"
+    const val BASE = "https://raw.githubusercontent.com/siamform/yumeiro/market"
     const val INDEX_URL = "$BASE/index.json"
     /** Installed market playlists use this id prefix. */
     const val ID_PREFIX = "m_"

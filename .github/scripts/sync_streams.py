@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SOURCES = os.path.join(ROOT, ".github", "streams", "sources.json")
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "out")
-REPO = os.environ.get("GITHUB_REPOSITORY", "dev-asfakul/yumeiro")
+REPO = os.environ.get("GITHUB_REPOSITORY", "siamform/yumeiro")
 BRANCH = os.environ.get("STREAMS_BRANCH", "streams")
 RAW = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}"
 MAX_BYTES = 40 * 1024 * 1024

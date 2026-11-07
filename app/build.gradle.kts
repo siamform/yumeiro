@@ -42,7 +42,7 @@ val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKe
 // ---------------------------------------------------------------------------------------------
 // In-app updater configuration (GitHub Releases)
 // ---------------------------------------------------------------------------------------------
-val updateRepoOwner = secret("MT_UPDATE_REPO_OWNER", "updateRepoOwner") ?: "dev-asfakul"
+val updateRepoOwner = secret("MT_UPDATE_REPO_OWNER", "updateRepoOwner") ?: "siamform"
 val updateRepoName = secret("MT_UPDATE_REPO_NAME", "updateRepoName") ?: "yumeiro"
 
 // Optional read-only token so the updater keeps working once the repository becomes private.

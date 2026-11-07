@@ -6,7 +6,7 @@ name: App notification feed
 # shows new items in the bell inbox.
 on:
   schedule:
-    - cron: "41 */6 * * *"
+    - cron: "11 23 * * 0,3" # Mon + Thu 05:11 Asia/Dhaka, after the data workflows
   workflow_dispatch:
   push:
     branches: [main]
@@ -49,19 +49,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Keep a copy of the previous feed
+        run: cp -r out out.prev
+
       - name: Build feed.json
         run: python3 .github/scripts/build_feed.py out
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Check for changes
+        id: diff
+        run: |
+          norm='del(.generated)'
+          same=true
+          for f in feed.json state.json; do
+            if [ -f "out.prev/$f" ] && [ -f "out/$f" ]; then
+              [ "$(jq -S "$norm" "out.prev/$f")" = "$(jq -S "$norm" "out/$f")" ] || same=false
+            else same=false; fi
+          done
+          if $same; then echo "changed=false" >> "$GITHUB_OUTPUT"; echo "Feed unchanged; skipped." >> "$GITHUB_STEP_SUMMARY"
+          else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
       - name: Publish to feed branch
+        if: steps.diff.outputs.changed == 'true'
         run: |
           set -e
           cd out
           cat > README.md <<'MD'
           # In-app notification feed (auto-generated)
 
-          Built every 6 hours by the `App notification feed` workflow. Do not edit by hand;
+          Built twice a week by the `App notification feed` workflow. Do not edit by hand;
           add news to `.github/feed/announcements.json` on `main` instead. The Yumeiro app
           reads `feed.json`.
           MD

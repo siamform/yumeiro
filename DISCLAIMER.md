@@ -13,5 +13,5 @@ channel or other content.**
 - You are responsible for making sure that what you play is legal where you live.
 
 Rights holders: to have a playlist source removed from the market, open an issue or email the
-maintainer listed on the [GitHub profile](https://github.com/dev-asfakul). Removal from the
+maintainer listed on the [GitHub profile](https://github.com/siamform). Removal from the
 sources list takes effect on the next market sync (at most a few hours).

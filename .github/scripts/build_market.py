@@ -29,11 +29,11 @@ from datetime import datetime, timedelta, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONFIG = os.environ.get('MARKET_CONFIG') or os.path.join(ROOT, '.github', 'market', 'sources.json')
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "out-market")
-REPO = os.environ.get("GITHUB_REPOSITORY", "dev-asfakul/yumeiro")
+REPO = os.environ.get("GITHUB_REPOSITORY", "siamform/yumeiro")
 BRANCH = os.environ.get("MARKET_BRANCH", "market")
 RAW = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}"
 TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-UA = "Yumeiro-playlist-market/1.0 (+https://github.com/dev-asfakul/yumeiro)"
+UA = "Yumeiro-playlist-market/1.0 (+https://github.com/siamform/yumeiro)"
 URL_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://\S+$")
 KEEP_TAGS = ("#EXTVLCOPT", "#KODIPROP", "#EXTGRP", "#EXTHTTP", "#EXT-X-SESSION-KEY")
 SKIP_PATH = re.compile(r"(^|/)(\.github|test|tests|backup|backups|old|archive|epg|sample|examples?)(/|$)", re.I)

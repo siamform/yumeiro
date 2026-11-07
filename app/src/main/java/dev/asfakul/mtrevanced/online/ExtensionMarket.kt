@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
  * the `extensions` branch. Cached on the device; works offline from the last copy.
  */
 object ExtensionMarket {
-    const val BASE = "https://raw.githubusercontent.com/dev-asfakul/yumeiro/extensions"
+    const val BASE = "https://raw.githubusercontent.com/siamform/yumeiro/extensions"
     const val INDEX_URL = "$BASE/index.json"
     const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
     private const val MAX_INDEX_BYTES = 24L * 1024 * 1024

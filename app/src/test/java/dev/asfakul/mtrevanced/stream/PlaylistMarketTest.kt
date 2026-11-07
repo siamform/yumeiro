@@ -62,9 +62,9 @@ class PlaylistMarketTest {
     @Test fun productionCatalogOnlyAcceptsOfficialMarketUrls() {
         PlaylistMarket.resetForTests()
         val c = PlaylistMarket.parse(index(
-            entry("ok", "s", url = "https://raw.githubusercontent.com/dev-asfakul/yumeiro/market/playlists/ok.m3u"),
-            entry("evil", "s", url = "https://evil.example/dev-asfakul/yumeiro/market/x.m3u"),
-            entry("plain", "s", url = "http://raw.githubusercontent.com/dev-asfakul/yumeiro/market/playlists/p.m3u"),
+            entry("ok", "s", url = "https://raw.githubusercontent.com/siamform/yumeiro/market/playlists/ok.m3u"),
+            entry("evil", "s", url = "https://evil.example/siamform/yumeiro/market/x.m3u"),
+            entry("plain", "s", url = "http://raw.githubusercontent.com/siamform/yumeiro/market/playlists/p.m3u"),
             entry("fork", "s", url = "https://raw.githubusercontent.com/someone/yumeiro/market/playlists/f.m3u"),
         ))
         assertEquals(listOf("ok"), c.entries.map { it.id })

@@ -1,9 +1,9 @@
 {
-  "_comment": "Extension Market sources. 'repositories' are curated (files verified and mirrored). The workflow also adds CloudStream's community list (recloudstream/cs-repos) and repositories found by GitHub search; those are installed from their source. 'seeds' are extra GitHub repos (owner/name) to probe; 'blocked' are owner/name repos never listed. NSFW extensions are always skipped. Rebuilt every 6 hours by .github/workflows/extension-market.yml.",
+  "_comment": "Extension Market sources. 'repositories' are curated (files verified and mirrored). The workflow also adds CloudStream's community list (recloudstream/cs-repos) and repositories found by GitHub search; those are installed from their source. 'seeds' are extra GitHub repos (owner/name) to probe; 'blocked' are owner/name repos never listed. NSFW extensions are always skipped. Rebuilt twice a week by .github/workflows/extension-market.yml.",
   "limits": {
     "maxFileBytes": 15728640,
     "maxPerRepo": 250,
-    "maxRepositories": 400
+    "maxRepositories": 150
   },
   "repositories": [
     {

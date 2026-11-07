@@ -15,4 +15,4 @@
 - [ ] Workflow changes keep least-privilege `permissions:` and SHA-pinned actions
 - [ ] New third-party code or assets have a compatible license, listed in `NOTICE`
 
-<!-- Security problems must NOT be reported in a PR. Use https://github.com/dev-asfakul/yumeiro/security/advisories/new -->
+<!-- Security problems must NOT be reported in a PR. Use https://github.com/siamform/yumeiro/security/advisories/new -->

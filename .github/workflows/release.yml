@@ -11,11 +11,13 @@ name: Release
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "LICENSE"
-      - ".github/ISSUE_TEMPLATE/**"
+    # Only app changes ship a release; docs, data sources and workflow edits don't.
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - ".github/release-signing-cert.sha256"
   workflow_dispatch:
     inputs:
       bump:

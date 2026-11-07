@@ -300,7 +300,7 @@ fun SocialMediaCard() {
             }
         }
         SettingsDivider()
-        SettingsActionRow("Star on GitHub", "github.com/dev-asfakul/yumeiro", "social_github") {
+        SettingsActionRow("Star on GitHub", "github.com/siamform/yumeiro", "social_github") {
             if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context)
             else AppMessages.error(context, "Couldn't open GitHub")
         }

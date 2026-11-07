@@ -4,28 +4,49 @@
 
 # Yumeiro
 
-### 夢色 · Your music, videos, anime and live TV — in one dream-coloured player.
+### 夢色 · One dream-coloured app for every song, video, anime and live channel you love.
 
-**Made in Bangladesh.**
+**The all-in-one entertainment hub for Android. Made in Bangladesh.**
 
 No account. No login. No ads. No tracking.<br/>
-Local files, YouTube, YouTube Music, IPTV and CloudStream extensions, all in one beautiful Android app.
+Local music and video, YouTube, YouTube Music, live TV / IPTV and CloudStream extensions — unified in one
+fast, beautifully designed player.
 
 <p>
-  <a href="https://github.com/dev-asfakul/yumeiro/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/dev-asfakul/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
-  <a href="https://github.com/dev-asfakul/yumeiro/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/dev-asfakul/yumeiro/total?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
-  <a href="https://github.com/dev-asfakul/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/dev-asfakul/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://github.com/siamform/yumeiro/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/siamform/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://github.com/siamform/yumeiro/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/siamform/yumeiro/total?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://github.com/siamform/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/siamform/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
 </p>
 <p>
   <img alt="Android 9+" src="https://img.shields.io/badge/Android-9%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-F5C46B?style=flat-square&logo=kotlin&logoColor=white&labelColor=16161A" />
   <a href="LICENSE"><img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-F5C46B?style=flat-square&labelColor=16161A" /></a>
-  <a href="https://github.com/dev-asfakul/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/dev-asfakul/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
+  <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
 </p>
 
-**[Download the APK](https://github.com/dev-asfakul/yumeiro/releases/latest)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/dev-asfakul/yumeiro/issues)**
+**[Download the APK](https://github.com/siamform/yumeiro/releases/latest)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
 
 </div>
+
+---
+
+## One app instead of five
+
+Great apps exist for each piece of the puzzle — **CloudStream** for extensions, **ArchiveTune**, **InnerTune** and
+**Metrolist** for YouTube Music, **NewPipe** and **LibreTube** for YouTube, **VLC** and **MX Player** for local video,
+**TiviMate** for IPTV. Each one does its own job well, and each one stops there.
+
+**Yumeiro brings all of them together in one app** — one library, one player, one history, one design:
+
+| | What you get |
+|---|---|
+| **Everything in one place** | Local music and video, YouTube, YouTube Music, IPTV/M3U and CloudStream `.cs3` extensions share one player, one queue and one *Continue watching* row. |
+| **Your existing extensions work** | CloudStream extension repos install as they are, with a built-in market, auto-updates, sub/dub, seasons and a crash guard, so one broken extension can't take the app down. |
+| **Fixes refused streams for you** | Before showing an error, Yumeiro retries the link with different headers, fetches fresh links, and if needed captures the stream from the page itself. |
+| **No login, ever** | YouTube and YouTube Music — search, quick picks, background play — with no Google account. |
+| **Live catalogs** | The playlist market, extension market and in-app news update without a new app release. |
+| **Safe updates** | Releases are signed with one key, and the in-app updater checks the signing certificate and SHA-256 before it installs anything. |
+| **Designed, not assembled** | The *Tsuki* design system, background glow that takes its colour from the artwork, one floating glass dock, and smooth 60 fps. |
 
 ---
 
@@ -83,7 +104,7 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ### Live TV & streams
 - HLS, DASH, RTSP, MP4/MKV, IPTV **M3U playlists**
-- **Playlist market** with hundreds of lists, checked every 6 hours
+- **Playlist market** with hundreds of lists, refreshed twice a week
 - Custom headers, ClearKey / Widevine, smart link detection
 - **Auto-unlock for HTTP 403**: refused links are retried with browser, VLC and host-player headers automatically
 - Watch page with next / previous channel, groups and sharing
@@ -116,7 +137,7 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ## Install
 
-1. Download `release-Yumeiro-vX.Y.Z.apk` from **[Releases](https://github.com/dev-asfakul/yumeiro/releases/latest)**.
+1. Download `release-Yumeiro-vX.Y.Z.apk` from **[Releases](https://github.com/siamform/yumeiro/releases/latest)**.
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
@@ -139,7 +160,7 @@ apksigner verify --print-certs release-Yumeiro-vX.Y.Z.apk | grep SHA-256
 The SHA-256 certificate digest must be:
 
 ```
-7d:f9:a3:7b:c8:20:16:14:fe:99:5b:60:18:ad:ca:6f:22:24:a2:e8:b1:c2:3a:fe:d1:43:11:c2:50:9f:c7:7b
+2e:cd:fd:04:f3:b2:d1:28:05:01:33:4a:5c:24:7d:71:29:ba:fa:2b:5a:43:48:47:28:9d:fc:06:9a:41:3f:6b
 ```
 
 The same value is in [`.github/release-signing-cert.sha256`](.github/release-signing-cert.sha256), and CI checks it on
@@ -156,7 +177,7 @@ inside the app, so install only those you trust. See [DISCLAIMER.md](DISCLAIMER.
 ## Security
 
 Please report vulnerabilities privately via
-[GitHub security advisories](https://github.com/dev-asfakul/yumeiro/security/advisories/new), not in public issues.
+[GitHub security advisories](https://github.com/siamform/yumeiro/security/advisories/new), not in public issues.
 Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Audit notes are in
 [docs/security](docs/security/).
 
@@ -210,7 +231,7 @@ From CloudStream-format extensions that *you* choose to install. Yumeiro ships o
 ## Build from source
 
 ```bash
-git clone https://github.com/dev-asfakul/yumeiro.git
+git clone https://github.com/siamform/yumeiro.git
 cd yumeiro
 ./gradlew assembleDebug        # JDK 17+, Android SDK 37
 ./gradlew testDebugUnitTest    # unit + UI tests
@@ -223,16 +244,16 @@ and **[docs/HANDOVER.md](docs/HANDOVER.md)**.
 
 Pull requests are welcome. Branch from `main`, use [Conventional Commits](https://www.conventionalcommits.org/),
 and make sure CI passes — merging to `main` ships a release automatically. Security issues: please use
-[private reporting](https://github.com/dev-asfakul/yumeiro/security/advisories/new).
+[private reporting](https://github.com/siamform/yumeiro/security/advisories/new).
 
 ## Support the project
 
-If Yumeiro replaced a few apps on your phone, **[give it a star](https://github.com/dev-asfakul/yumeiro/stargazers)** —
+If Yumeiro replaced a few apps on your phone, **[give it a star](https://github.com/siamform/yumeiro/stargazers)** —
 it is the single best way to help more people find it. Share it with a friend who still uses four apps.
 
 <div align="center">
 
-[Portfolio](https://asfakuls-studio.vercel.app/) · [GitHub @dev-asfakul](https://github.com/dev-asfakul)
+[Portfolio](https://asfakuls-studio.vercel.app/) · [GitHub @siamform](https://github.com/siamform)
 
 **Made in Bangladesh**
 

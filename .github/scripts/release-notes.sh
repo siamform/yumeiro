@@ -4,7 +4,7 @@
 set -euo pipefail
 
 version="$1"; code="$2"; prev="${3:-}"; apk="$4"; sha="$5"
-repo="${GITHUB_REPOSITORY:-dev-asfakul/yumeiro}"
+repo="${GITHUB_REPOSITORY:-siamform/yumeiro}"
 server="${GITHUB_SERVER_URL:-https://github.com}"
 
 range="HEAD"; [ -n "$prev" ] && range="$prev..HEAD"

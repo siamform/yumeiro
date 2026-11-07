@@ -75,8 +75,8 @@ import dev.asfakul.mtrevanced.ui.theme.palette
 object DeveloperInfo {
     const val NAME = "dev-asfakul"
     const val PORTFOLIO = "https://asfakuls-studio.vercel.app/"
-    const val GITHUB = "https://github.com/dev-asfakul"
-    const val SOURCE = "https://github.com/dev-asfakul/yumeiro"
+    const val GITHUB = "https://github.com/siamform"
+    const val SOURCE = "https://github.com/siamform/yumeiro"
 }
 
 @Composable
@@ -209,7 +209,7 @@ fun DeveloperCard() {
                 val integrity = remember { dev.asfakul.mtrevanced.security.IntegrityGuard.status(context) }
                 if (integrity == dev.asfakul.mtrevanced.security.IntegrityGuard.Status.UNOFFICIAL) {
                     Text(
-                        "Unofficial build — not signed by the Yumeiro developer. Download the real app from github.com/dev-asfakul/yumeiro",
+                        "Unofficial build — not signed by the Yumeiro developer. Download the real app from github.com/siamform/yumeiro",
                         color = androidx.compose.ui.graphics.Color(0xFFFF8A80), style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.testTag("unofficial_build_notice"),
                     )

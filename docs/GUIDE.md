@@ -29,7 +29,7 @@ Back to the [README](../README.md).
   - **Stream playlists** saved on the device:
     - One **default playlist**, *Mrgify BDIX* (Bangladesh). It can be disabled, edited (name / URL), refreshed, exported or deleted; *Restore default playlist* brings it back. The other former defaults (IPTV Scraper Zilla, Bangla Movies, BDxTV, YuppTV, T Sports, CricHD, CrestSport) moved to the Playlist Market; on upgrade they are removed unless you edited them.
     - Every playlist opens on **its own page** (`stream/playlist/{id}`) with search, group filters, pull-to-refresh, auto-update switch, edit / export / delete, skeleton loading, and clear error / not-found pages with Retry. Lists opened from a link or an M3U file appear as *Opened list* and can be saved.
-    - **Playlist Market** (Stream → Playlist market): hundreds of IPTV playlists collected from GitHub (curated lists, iptv-org per country, Free-TV and newly discovered active repos), repaired and checked every 6 hours. Search, category filters, stars, stream count, "responding" sample; **Install** adds a playlist to your Stream playlists. Installed playlists **update automatically** (checked when you open the Stream tab, at most every 6 h) or **manually** (*Update* / *Update all*), per playlist.
+    - **Playlist Market** (Stream → Playlist market): hundreds of IPTV playlists collected from GitHub (curated lists, iptv-org per country, Free-TV and newly discovered active repos), repaired and checked twice a week. Search, category filters, stars, stream count, "responding" sample; **Install** adds a playlist to your Stream playlists. Installed playlists **update automatically** (checked when you open the Stream tab, at most every 6 h) or **manually** (*Update* / *Update all*), per playlist.
     - **Add playlist from URL** with *Analyse link*: follows redirects and shows the HTTP status, content type, size, number of streams, groups, header/DRM usage and EPG link before saving.
     - **Create your own playlists**: save the stream in the URL box (with its headers / DRM), or any channel from another list, then edit or remove streams.
     - **Export** any playlist (or an opened M3U) as a standard `.m3u` file; **import** an M3U file and save it as a playlist.
@@ -106,9 +106,9 @@ New here? Start with **[docs/HANDOVER.md](HANDOVER.md)** — architecture, curre
 
 | | |
 |---|---|
-| **Developer** | [dev-asfakul](https://github.com/dev-asfakul) |
+| **Developer** | [siamform](https://github.com/siamform) |
 | **Portfolio** | [asfakuls-studio.vercel.app](https://asfakuls-studio.vercel.app/) |
-| **Buy me a coffee** | [github.com/dev-asfakul](https://github.com/dev-asfakul) |
+| **Buy me a coffee** | [github.com/siamform](https://github.com/siamform) |
 
 The same info is available in the app under **Settings → About & Developer**.
 
@@ -116,24 +116,24 @@ The same info is available in the app under **Settings → About & Developer**.
 
 ## Playlist Market
 
-The [`Playlist market`](../.github/workflows/playlist-market.yml) workflow ([`build_market.py`](../.github/scripts/build_market.py)) runs every 6 hours, on demand and when its sources change:
+The [`Playlist market`](../.github/workflows/playlist-market.yml) workflow ([`build_market.py`](../.github/scripts/build_market.py)) runs twice a week (Monday and Thursday), on demand and when its sources change:
 
 1. **Collects** playlists from [`.github/market/sources.json`](../.github/market/sources.json): curated files, repositories to scan (e.g. every country file of `iptv-org/iptv`), and GitHub searches (`topic:iptv-playlist`, `topic:m3u-playlist`, …) for active, starred repositories.
 2. **Repairs** each file: strips BOM / CRLF, adds a missing `#EXTM3U` header, fixes broken or missing `#EXTINF` lines and blank titles, encodes spaces in URLs, keeps `#EXTVLCOPT` / `#KODIPROP` / `#EXTGRP` options, drops stray comments, invalid URLs and duplicate entries.
 3. **Validates** it (must be a channel list with at least 3 streams, not a web page or a single HLS stream) and probes a sample of streams. The probe runs on GitHub's servers, so region-locked lists such as BDIX can look offline there; it is shown for information only.
-4. **Publishes** the repaired files and `index.json` (id, name, category, country, repo, stars, channels, groups, sha256, updated, health) to the single-commit [`market`](https://github.com/dev-asfakul/yumeiro/tree/market) branch. A source that fails keeps its last good copy.
+4. **Publishes** the repaired files and `index.json` (id, name, category, country, repo, stars, channels, groups, sha256, updated, health) to the single-commit [`market`](https://github.com/siamform/yumeiro/tree/market) branch. A source that fails keeps its last good copy.
 
-The app reads `https://raw.githubusercontent.com/dev-asfakul/yumeiro/market/index.json` (cached on the device for offline use). An installed playlist stores the sha256 it was installed from; when the catalog shows a different one, an update is offered (or applied automatically). To add a source, edit `sources.json`.
+The app reads `https://raw.githubusercontent.com/siamform/yumeiro/market/index.json` (cached on the device for offline use). An installed playlist stores the sha256 it was installed from; when the catalog shows a different one, an update is offered (or applied automatically). To add a source, edit `sources.json`.
 
 ## Stream playlist sync
 
-The default playlist comes from the auto-updated repositories of [abusaeeidx](https://github.com/abusaeeidx), which change every couple of hours. The [`Stream playlist sync`](../.github/workflows/stream-sync.yml) workflow runs every 2 hours (and on demand):
+The default playlist comes from the auto-updated repositories of [abusaeeidx](https://github.com/abusaeeidx), which change every couple of hours. The [`Stream playlist sync`](../.github/workflows/stream-sync.yml) workflow runs twice a week (and on demand):
 
 1. Downloads every source listed in [`.github/streams/sources.json`](../.github/streams/sources.json).
 2. Checks each one is a real channel list (`#EXTINF` + URL); a broken download keeps the previous copy.
-3. Publishes the files and an `index.json` (name, category, channel count, groups, size, sha256, timestamps) to the single-commit [`streams`](https://github.com/dev-asfakul/yumeiro/tree/streams) branch.
+3. Publishes the files and an `index.json` (name, category, channel count, groups, size, sha256, timestamps) to the single-commit [`streams`](https://github.com/siamform/yumeiro/tree/streams) branch.
 
-The app's **Sync latest** button reads `https://raw.githubusercontent.com/dev-asfakul/yumeiro/streams/index.json`, updates the default playlist (new URL, name) and re-downloads it. If the mirror can't be reached, each playlist falls back to its original source URL. To add or change a default playlist, edit `sources.json`; users get it on their next sync, with no app release needed.
+The app's **Sync latest** button reads `https://raw.githubusercontent.com/siamform/yumeiro/streams/index.json`, updates the default playlist (new URL, name) and re-downloads it. If the mirror can't be reached, each playlist falls back to its original source URL. To add or change a default playlist, edit `sources.json`; users get it on their next sync, with no app release needed.
 
 ## Online videos (CloudStream extensions)
 
@@ -145,7 +145,7 @@ The app's **Sync latest** button reads `https://raw.githubusercontent.com/dev-as
 - **Sync.** When the app opens it loads installed extensions, then (at most every 6 hours) refreshes the market and repositories, installs the default extension once and applies updates to extensions with auto-update on.
 - **Limits.** DRM-protected, torrent and magnet links are skipped, Cloudflare challenges are not bypassed, and NSFW extensions are hidden. Extensions that depend on parts of the CloudStream app (not its library) show an "incompatible" error instead of crashing.
 
-The [`Extension market`](../.github/workflows/extension-market.yml) workflow ([`build_extension_market.py`](../.github/scripts/build_extension_market.py)) runs every 6 hours: it reads [`.github/extensions/sources.json`](../.github/extensions/sources.json), validates each repository and `.cs3` (zip, manifest, dex, size), mirrors the files and publishes `index.json` to the [`extensions`](https://github.com/dev-asfakul/yumeiro/tree/extensions) branch, read by the app at `https://raw.githubusercontent.com/dev-asfakul/yumeiro/extensions/index.json`. To add a repository to the market, edit `sources.json`. Only add extensions for content you have the right to stream.
+The [`Extension market`](../.github/workflows/extension-market.yml) workflow ([`build_extension_market.py`](../.github/scripts/build_extension_market.py)) runs twice a week (Monday and Thursday): it reads [`.github/extensions/sources.json`](../.github/extensions/sources.json), validates each repository and `.cs3` (zip, manifest, dex, size), mirrors the files and publishes `index.json` to the [`extensions`](https://github.com/siamform/yumeiro/tree/extensions) branch, read by the app at `https://raw.githubusercontent.com/siamform/yumeiro/extensions/index.json`. To add a repository to the market, edit `sources.json`. Only add extensions for content you have the right to stream.
 
 
 ### For you = YouTube-style home for extensions

@@ -30,7 +30,7 @@ from branch history (GitHub may keep unreachable objects until its own GC).
 If a real secret is ever committed, **rotate it first**, then (maintainer only, after a backup):
 
 ```bash
-git clone --mirror https://github.com/dev-asfakul/yumeiro.git yumeiro-mirror && cd yumeiro-mirror
+git clone --mirror https://github.com/siamform/yumeiro.git yumeiro-mirror && cd yumeiro-mirror
 # remove a file everywhere
 git filter-repo --invert-paths --path path/to/leaked.file
 # or replace a literal value everywhere (one value per line in replacements.txt: VALUE==>REDACTED)

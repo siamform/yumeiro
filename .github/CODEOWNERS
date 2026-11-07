@@ -1,13 +1,13 @@
 # Every change needs the maintainer's eyes.
-*                       @dev-asfakul
-/.github/               @dev-asfakul
-/app/build.gradle.kts   @dev-asfakul
-/app/proguard-rules.pro @dev-asfakul
+*                       @siamform
+/.github/               @siamform
+/app/build.gradle.kts   @siamform
+/app/proguard-rules.pro @siamform
 
 # Security-critical paths (updater, integrity checks, manifest, network/backup rules, policy)
-/app/src/main/java/dev/asfakul/mtrevanced/update/    @dev-asfakul
-/app/src/main/java/dev/asfakul/mtrevanced/security/  @dev-asfakul
-/app/src/main/AndroidManifest.xml                    @dev-asfakul
-/app/src/main/res/xml/                               @dev-asfakul
-/.gitleaks.toml                                      @dev-asfakul
-/SECURITY.md                                         @dev-asfakul
+/app/src/main/java/dev/asfakul/mtrevanced/update/    @siamform
+/app/src/main/java/dev/asfakul/mtrevanced/security/  @siamform
+/app/src/main/AndroidManifest.xml                    @siamform
+/app/src/main/res/xml/                               @siamform
+/.gitleaks.toml                                      @siamform
+/SECURITY.md                                         @siamform

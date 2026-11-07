@@ -204,7 +204,7 @@ internal fun PlaylistsHeader(
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Default updates every 2 hours", color = TextTertiary, fontSize = 11.sp)
+                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Default updates twice a week", color = TextTertiary, fontSize = 11.sp)
             }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, "More playlist actions", tint = TextSecondary) }

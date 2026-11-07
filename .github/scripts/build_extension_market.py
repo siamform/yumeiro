@@ -31,7 +31,7 @@ CONFIG = os.environ.get("EXT_CONFIG", ".github/extensions/sources.json")
 # against the app's CloudStream layer (and CloudStream itself); the app shows it before install.
 COMPAT = os.environ.get("EXT_COMPAT", ".github/extensions/compat.json")
 FOREIGN_PREFIXES = ("com.popcornplay.",)
-REPO = os.environ.get("GITHUB_REPOSITORY", "dev-asfakul/yumeiro")
+REPO = os.environ.get("GITHUB_REPOSITORY", "siamform/yumeiro")
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 DISCOVERY = os.environ.get("DISCOVERY", "1") != "0"
 BRANCH = "extensions"
@@ -174,6 +174,9 @@ def github_search_repos():
 def github_code_search():
     """owner/name -> list of repo.json paths that mention pluginLists."""
     paths = {}
+    if os.environ.get("CODE_SEARCH", "1") == "0":
+        log("code search disabled (CODE_SEARCH=0)")
+        return paths
     if not TOKEN and os.environ.get("USE_GH_CLI") != "1":
         return paths
     for q in ['"pluginLists" filename:repo.json', '"pluginLists" extension:json']:

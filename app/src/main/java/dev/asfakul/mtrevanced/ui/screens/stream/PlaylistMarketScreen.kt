@@ -258,7 +258,7 @@ fun PlaylistMarketScreen(
                     }
                     item(key = "note") {
                         Text(
-                            "Playlists are collected from public GitHub repositories, repaired and checked every 6 hours. " +
+                            "Playlists are collected from public GitHub repositories, repaired and checked twice a week. " +
                                 "\"Responding\" is measured from GitHub's servers, so region-locked lists (e.g. BDIX) may work only in their country. " +
                                 "Yumeiro does not host or bypass protection of any stream.",
                             color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp),

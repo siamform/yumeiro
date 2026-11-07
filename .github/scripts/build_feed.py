@@ -21,7 +21,7 @@ import sys
 import urllib.request
 
 MAX_ITEMS = 50
-REPO = os.environ.get("GITHUB_REPOSITORY", "dev-asfakul/yumeiro")
+REPO = os.environ.get("GITHUB_REPOSITORY", "siamform/yumeiro")
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 ACTIONS = {"update", "extensions", "market", "streams", "support"}
 

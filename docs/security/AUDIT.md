@@ -5,7 +5,7 @@ Scope: the repo, the GitHub Actions workflows, the market/streams catalogs, the 
 ## Fixed in this branch
 - CI/CD: least-privilege `permissions`, all actions pinned to SHAs, `persist-credentials: false`, keystore written with
   umask 077 and shredded with `if: always()`, a pinned JDK, a gitleaks job, dependency review, and a CodeQL workflow.
-- Catalogs: HTTPS plus an allowlist of `raw.githubusercontent.com/dev-asfakul/yumeiro/{market,streams,extensions}`,
+- Catalogs: HTTPS plus an allowlist of `raw.githubusercontent.com/siamform/yumeiro/{market,streams,extensions}`,
   with a final-URL check after redirects, size and time limits, and a fallback to the cached copy on failure.
 - Updater: assets must come from this repo's release URL, the SHA-256 must match the GitHub digest and/or
   `SHA256SUMS.txt` (the install fails closed when no checksum exists), and the dialog shows the source.
@@ -16,7 +16,7 @@ Scope: the repo, the GitHub Actions workflows, the market/streams catalogs, the 
 1. **Signed catalogs.** CI signs `index.json` with minisign (ed25519). The app embeds the public key and rejects
    unsigned or invalid indexes, so a compromised branch or CDN can't inject entries. Cost: one secret
    (`MINISIGN_KEY`) and about 1 KB of verification code using the platform Ed25519 (API 33+) or a small pure-Kotlin verifier.
-2. **Mirror.** Add `https://cdn.jsdelivr.net/gh/dev-asfakul/yumeiro@market/index.json` as a second source, used only
+2. **Mirror.** Add `https://cdn.jsdelivr.net/gh/siamform/yumeiro@market/index.json` as a second source, used only
    when the primary fails, and only with (1), because the mirror is a separate host. A GitHub takedown also takes
    jsDelivr down, so the existing last-known-good cache stays the real fallback.
 3. **Tag-based releases.** Release only on `v*` tags (already protected by a ruleset) rather than every push to `main`.

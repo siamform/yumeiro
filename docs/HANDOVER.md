@@ -3,10 +3,22 @@
 Read this first. It is the fastest way for the next developer or agent to understand the
 codebase, what changed in the `feat/ultimate-revamp` branch, and what to do next.
 
+## 0. Repository move (2026-11-07)
+
+- The project moved from `dev-asfakul/yumeiro` to **`siamform/yumeiro`**. App catalog URLs, the
+  `TrustedSources` allowlist, the updater default, scripts and docs all point to the new repo.
+- **New release signing key.** Old installs (signed with the previous key, updating from the old repo)
+  must uninstall once and install the first `siamform` release. The fingerprint is in
+  `.github/release-signing-cert.sha256`; the keystore is backed up offline by the owner.
+- **Actions budget.** Data workflows (extension market, playlist market, stream sync, app feed) run
+  Monday + Thursday only and skip publishing when nothing changed. CI and CodeQL run on pull requests,
+  device check is manual, release runs only for app changes, Dependabot is monthly and grouped.
+  Keep it that way: the previous account was restricted for Actions usage.
+
 ## 1. Product in one paragraph
 
 **Name:** Yumeiro (夢色, "dream-colored"). Formerly "MT ReVanced" / "MT Player"; renamed in the
-`feat/yumeiro-rebrand` branch. Repo: `dev-asfakul/yumeiro`. The Kotlin package and `applicationId`
+`feat/yumeiro-rebrand` branch. Repo: `siamform/yumeiro`. The Kotlin package and `applicationId`
 stay `dev.asfakul.mtrevanced` on purpose so existing installs keep updating in place (changing the
 applicationId would make Android treat it as a different app and drop users' data).
 
@@ -216,7 +228,7 @@ Apple Music do it: neutral surfaces, one accent, and colour that comes from the 
 
 ## 8b. Yumeiro release notes (rebrand, bento home, watch page, seamless updater)
 
-- **Name**: Yumeiro (夢色, "dream-colored"). Repo `dev-asfakul/yumeiro`. `applicationId` is kept as
+- **Name**: Yumeiro (夢色, "dream-colored"). Repo `siamform/yumeiro`. `applicationId` is kept as
   `dev.asfakul.mtrevanced` so existing installs update in place (changing it would make a new app).
 - **Naming**: online extension channels are **Hues**; the combined feed is **Spectrum**.
 - **Home** (`ui/screens/home/HomeScreen.kt`): hero `VaultSummary` + bento grid of shortcuts

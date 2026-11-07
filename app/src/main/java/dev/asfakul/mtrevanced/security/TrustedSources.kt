@@ -18,12 +18,12 @@ import java.util.concurrent.TimeUnit
  * the Playlist Market, Extension Market and default-streams catalogs (bot-only branches) and the
  * self-updater (GitHub Releases).
  *
- * Rules: HTTPS only, exact host allowlist, path must stay inside `dev-asfakul/yumeiro`, the final
+ * Rules: HTTPS only, exact host allowlist, path must stay inside `siamform/yumeiro`, the final
  * URL after redirects is re-checked, and every fetch has a hard size and wall-clock limit.
  * User-added playlists and third-party extension repositories do NOT go through here.
  */
 object TrustedSources {
-    const val OWNER = "dev-asfakul"
+    const val OWNER = "siamform"
     const val REPO = "yumeiro"
 
     private const val RAW_HOST = "raw.githubusercontent.com"
@@ -34,7 +34,7 @@ object TrustedSources {
 
     class UntrustedSourceException(message: String) : IOException(message)
 
-    /** True for `https://raw.githubusercontent.com/dev-asfakul/yumeiro/{market|streams|extensions|feed}/…`. */
+    /** True for `https://raw.githubusercontent.com/siamform/yumeiro/{market|streams|extensions|feed}/…`. */
     fun isOfficialCatalogUrl(url: HttpUrl): Boolean {
         if (!url.isHttps || url.host != RAW_HOST || url.port != 443) return false
         val seg = url.pathSegments

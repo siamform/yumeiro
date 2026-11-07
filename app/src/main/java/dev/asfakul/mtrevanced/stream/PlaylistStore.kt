@@ -103,11 +103,11 @@ data class PlaylistAnalysis(
 )
 
 /**
- * Default playlist (mirrored every 2 h to the `streams` branch by .github/workflows/stream-sync.yml).
+ * Default playlist (mirrored twice a week to the `streams` branch by .github/workflows/stream-sync.yml).
  * Only Mrgify BDIX ships pre-installed; everything else is available in the Playlist Market.
  */
 object DefaultPlaylists {
-    const val MIRROR_BASE = "https://raw.githubusercontent.com/dev-asfakul/yumeiro/streams"
+    const val MIRROR_BASE = "https://raw.githubusercontent.com/siamform/yumeiro/streams"
     const val INDEX_URL = "$MIRROR_BASE/index.json"
     private const val UPSTREAM = "https://raw.githubusercontent.com/abusaeeidx"
 
