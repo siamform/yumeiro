@@ -1,12 +1,12 @@
 name: Stream playlist sync
 
 # Mirrors the default stream playlists (.github/streams/sources.json) into the
-# 'streams' branch twice a week. The app's "Sync" button on the Stream page reads
+# 'streams' branch every 3 days. The app's "Sync" button on the Stream page reads
 # https://raw.githubusercontent.com/<repo>/streams/index.json, so playlist updates
 # reach users without a new app release.
 on:
   schedule:
-    - cron: "23 22 * * 0,3" # Mon + Thu 04:23 Asia/Dhaka
+    - cron: "23 22 */3 * *" # every 3 days, 04:23 Asia/Dhaka
   workflow_dispatch:
   push:
     branches: [main]
@@ -67,7 +67,7 @@ jobs:
           cat > README.md <<'MD'
           # Stream playlists (auto-generated)
 
-          Mirrored twice a week by the `Stream playlist sync` workflow from the sources in
+          Mirrored every 3 days by the `Stream playlist sync` workflow from the sources in
           `.github/streams/sources.json` on `main`. Do not edit by hand; this branch is
           rewritten on every sync. The Yumeiro app reads `index.json`.
           MD

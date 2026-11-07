@@ -1,5 +1,5 @@
 /*
- * Yumeiro — Copyright (C) 2026 dev-asfakul
+ * Yumeiro — Copyright (C) 2026 siamform
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
@@ -204,7 +204,7 @@ internal fun PlaylistsHeader(
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Default updates twice a week", color = TextTertiary, fontSize = 11.sp)
+                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Default updates every 3 days", color = TextTertiary, fontSize = 11.sp)
             }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, "More playlist actions", tint = TextSecondary) }

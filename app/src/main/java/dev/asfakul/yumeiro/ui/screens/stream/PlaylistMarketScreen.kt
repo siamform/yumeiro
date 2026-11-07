@@ -1,5 +1,5 @@
 /*
- * Yumeiro — Copyright (C) 2026 dev-asfakul
+ * Yumeiro — Copyright (C) 2026 siamform
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
@@ -258,7 +258,7 @@ fun PlaylistMarketScreen(
                     }
                     item(key = "note") {
                         Text(
-                            "Playlists are collected from public GitHub repositories, repaired and checked twice a week. " +
+                            "Playlists are collected from public GitHub repositories, repaired and checked every 3 days. " +
                                 "\"Responding\" is measured from GitHub's servers, so region-locked lists (e.g. BDIX) may work only in their country. " +
                                 "Yumeiro does not host or bypass protection of any stream.",
                             color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp),

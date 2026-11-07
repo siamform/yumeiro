@@ -1,5 +1,5 @@
 Yumeiro
-Copyright (C) 2026 dev-asfakul
+Copyright (C) 2026 siamform
 
 This program is free software: you can redistribute it and/or modify it under the terms of the
 GNU General Public License as published by the Free Software Foundation, either version 3 of the
@@ -14,6 +14,6 @@ Additional terms under GPL v3 section 7:
 Third-party code included in this repository:
   - CloudStream plugin API (com.lagradost.cloudstream3) — GPL-3.0 — https://github.com/recloudstream/cloudstream
     Files under app/src/main/java/com/lagradost/ are adapted from CloudStream and were modified by
-    dev-asfakul (2026) to run as a compatibility layer inside Yumeiro (GPL-3.0 section 5(a)).
+    siamform (2026) to run as a compatibility layer inside Yumeiro (GPL-3.0 section 5(a)).
   - NewPipe Extractor — GPL-3.0 — https://github.com/TeamNewPipe/NewPipeExtractor
   - Manrope and Unbounded fonts — SIL OFL 1.1 — see docs/licenses/

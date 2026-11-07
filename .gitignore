@@ -46,3 +46,7 @@ captures/
 # Logs / heap dumps
 *.log
 *.hprof
+
+# Python bytecode (workflow scripts)
+__pycache__/
+*.pyc

@@ -29,7 +29,7 @@ Back to the [README](../README.md).
   - **Stream playlists** saved on the device:
     - One **default playlist**, *Mrgify BDIX* (Bangladesh). It can be disabled, edited (name / URL), refreshed, exported or deleted; *Restore default playlist* brings it back. The other former defaults (IPTV Scraper Zilla, Bangla Movies, BDxTV, YuppTV, T Sports, CricHD, CrestSport) moved to the Playlist Market; on upgrade they are removed unless you edited them.
     - Every playlist opens on **its own page** (`stream/playlist/{id}`) with search, group filters, pull-to-refresh, auto-update switch, edit / export / delete, skeleton loading, and clear error / not-found pages with Retry. Lists opened from a link or an M3U file appear as *Opened list* and can be saved.
-    - **Playlist Market** (Stream → Playlist market): hundreds of IPTV playlists collected from GitHub (curated lists, iptv-org per country, Free-TV and newly discovered active repos), repaired and checked twice a week. Search, category filters, stars, stream count, "responding" sample; **Install** adds a playlist to your Stream playlists. Installed playlists **update automatically** (checked when you open the Stream tab, at most every 6 h) or **manually** (*Update* / *Update all*), per playlist.
+    - **Playlist Market** (Stream → Playlist market): hundreds of IPTV playlists collected from GitHub (curated lists, iptv-org per country, Free-TV and newly discovered active repos), repaired and checked every 3 days. Search, category filters, stars, stream count, "responding" sample; **Install** adds a playlist to your Stream playlists. Installed playlists **update automatically** (checked when you open the Stream tab, at most every 6 h) or **manually** (*Update* / *Update all*), per playlist.
     - **Add playlist from URL** with *Analyse link*: follows redirects and shows the HTTP status, content type, size, number of streams, groups, header/DRM usage and EPG link before saving.
     - **Create your own playlists**: save the stream in the URL box (with its headers / DRM), or any channel from another list, then edit or remove streams.
     - **Export** any playlist (or an opened M3U) as a standard `.m3u` file; **import** an M3U file and save it as a playlist.
@@ -116,7 +116,7 @@ The same info is available in the app under **Settings → About & Developer**.
 
 ## Playlist Market
 
-The [`Playlist market`](../.github/workflows/playlist-market.yml) workflow ([`build_market.py`](../.github/scripts/build_market.py)) runs twice a week (Monday and Thursday), on demand and when its sources change:
+The [`Playlist market`](../.github/workflows/playlist-market.yml) workflow ([`build_market.py`](../.github/scripts/build_market.py)) runs every 3 days, on demand and when its sources change:
 
 1. **Collects** playlists from [`.github/market/sources.json`](../.github/market/sources.json): curated files, repositories to scan (e.g. every country file of `iptv-org/iptv`), and GitHub searches (`topic:iptv-playlist`, `topic:m3u-playlist`, …) for active, starred repositories.
 2. **Repairs** each file: strips BOM / CRLF, adds a missing `#EXTM3U` header, fixes broken or missing `#EXTINF` lines and blank titles, encodes spaces in URLs, keeps `#EXTVLCOPT` / `#KODIPROP` / `#EXTGRP` options, drops stray comments, invalid URLs and duplicate entries.
@@ -127,7 +127,7 @@ The app reads `https://raw.githubusercontent.com/siamform/yumeiro/market/index.j
 
 ## Stream playlist sync
 
-The default playlist comes from the auto-updated repositories of [abusaeeidx](https://github.com/abusaeeidx), which change every couple of hours. The [`Stream playlist sync`](../.github/workflows/stream-sync.yml) workflow runs twice a week (and on demand):
+The default playlist comes from the auto-updated repositories of [abusaeeidx](https://github.com/abusaeeidx), which change every couple of hours. The [`Stream playlist sync`](../.github/workflows/stream-sync.yml) workflow runs every 3 days (and on demand):
 
 1. Downloads every source listed in [`.github/streams/sources.json`](../.github/streams/sources.json).
 2. Checks each one is a real channel list (`#EXTINF` + URL); a broken download keeps the previous copy.
@@ -145,7 +145,7 @@ The app's **Sync latest** button reads `https://raw.githubusercontent.com/siamfo
 - **Sync.** When the app opens it loads installed extensions, then (at most every 6 hours) refreshes the market and repositories, installs the default extension once and applies updates to extensions with auto-update on.
 - **Limits.** DRM-protected, torrent and magnet links are skipped, Cloudflare challenges are not bypassed, and NSFW extensions are hidden. Extensions that depend on parts of the CloudStream app (not its library) show an "incompatible" error instead of crashing.
 
-The [`Extension market`](../.github/workflows/extension-market.yml) workflow ([`build_extension_market.py`](../.github/scripts/build_extension_market.py)) runs twice a week (Monday and Thursday): it reads [`.github/extensions/sources.json`](../.github/extensions/sources.json), validates each repository and `.cs3` (zip, manifest, dex, size), mirrors the files and publishes `index.json` to the [`extensions`](https://github.com/siamform/yumeiro/tree/extensions) branch, read by the app at `https://raw.githubusercontent.com/siamform/yumeiro/extensions/index.json`. To add a repository to the market, edit `sources.json`. Only add extensions for content you have the right to stream.
+The [`Extension market`](../.github/workflows/extension-market.yml) workflow ([`build_extension_market.py`](../.github/scripts/build_extension_market.py)) runs every 3 days: it reads [`.github/extensions/sources.json`](../.github/extensions/sources.json), validates each repository and `.cs3` (zip, manifest, dex, size), mirrors the files and publishes `index.json` to the [`extensions`](https://github.com/siamform/yumeiro/tree/extensions) branch, read by the app at `https://raw.githubusercontent.com/siamform/yumeiro/extensions/index.json`. To add a repository to the market, edit `sources.json`. Only add extensions for content you have the right to stream.
 
 
 ### For you = YouTube-style home for extensions
@@ -297,7 +297,8 @@ When the repository becomes private, the updater needs a token to read releases:
 
 1. Create a **fine-grained personal access token** — Repository access: *only* `yumeiro`; Permissions: **Contents: Read-only**. Nothing else.
 2. Save it as the repository secret **`MT_UPDATER_TOKEN`**.
-3. Push to `main`; the next release embeds the token and keeps updating normally.
+3. Push to `main`; the next release embeds the token and keeps updating normally. The release workflow
+   only passes the token while the repository is private, so a public APK never carries it.
 
 Without the secret the app simply uses the public URL, so it keeps working while the repo is public.
 

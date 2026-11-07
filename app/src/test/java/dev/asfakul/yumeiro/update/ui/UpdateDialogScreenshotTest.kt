@@ -1,5 +1,5 @@
 /*
- * Yumeiro — Copyright (C) 2026 dev-asfakul
+ * Yumeiro — Copyright (C) 2026 siamform
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
@@ -41,7 +41,7 @@ class UpdateDialogScreenshotTest {
 
     private val release = ReleaseInfo(
         tagName = "v1.1.0", versionName = "1.1.0", versionCode = 2, title = "Yumeiro v1.1.0",
-        notes = "## Yumeiro v1.1.0\n### New features\n- In-app updater with background downloads (a1b2c3d) — dev-asfakul\n- Release notes popup (d4e5f6a) — dev-asfakul\n### Bug fixes\n- Fix equalizer reset on track change (9f8e7d6) — zihadexplor\n### Build & CI\n- Official Gradle 9.8.2 wrapper (1a2b3c4) — dev-asfakul",
+        notes = "## Yumeiro v1.1.0\n### New features\n- In-app updater with background downloads (a1b2c3d) — siamform\n- Release notes popup (d4e5f6a) — siamform\n### Bug fixes\n- Fix equalizer reset on track change (9f8e7d6) — zihadexplor\n### Build & CI\n- Official Gradle 9.8.2 wrapper (1a2b3c4) — siamform",
         publishedAt = "2026-11-03T07:00:00Z", htmlUrl = "",
         asset = ApkAsset(1, "release-Yumeiro-v1.1.0.apk", 5_726_136, "", "", null),
         source = UpdateSource.PUBLIC,

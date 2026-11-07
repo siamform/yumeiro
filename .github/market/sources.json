@@ -1,5 +1,5 @@
 {
-  "comment": "Playlist Market catalog. The 'Playlist market' workflow (.github/workflows/playlist-market.yml) reads this file twice a week, discovers more IPTV playlists on GitHub, repairs and validates them, and publishes them to the 'market' branch (market/index.json). The app's Market page reads that index. 'playlists' = curated single files, 'repos' = repositories scanned for .m3u/.m3u8 files, 'search' = GitHub repository searches for new sources.",
+  "comment": "Playlist Market catalog. The 'Playlist market' workflow (.github/workflows/playlist-market.yml) reads this file every 3 days, discovers more IPTV playlists on GitHub, repairs and validates them, and publishes them to the 'market' branch (market/index.json). The app's Market page reads that index. 'playlists' = curated single files, 'repos' = repositories scanned for .m3u/.m3u8 files, 'search' = GitHub repository searches for new sources.",
   "limits": { "maxEntries": 400, "maxFileBytes": 25000000, "minChannels": 3, "healthSamples": 8 },
   "playlists": [
     { "id": "zilla_combined", "name": "IPTV Scraper Zilla", "category": "Global TV", "description": "Combined free TV from Pluto, Plex, Samsung TV Plus, LG, Roku, Xumo, Tubi and more", "repo": "abusaeeidx/IPTV-Scraper-Zilla", "url": "https://raw.githubusercontent.com/abusaeeidx/IPTV-Scraper-Zilla/main/combined-playlist.m3u" },

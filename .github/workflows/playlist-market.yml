@@ -1,6 +1,6 @@
 name: Playlist market
 
-# Builds the in-app Playlist Market twice a week:
+# Builds the in-app Playlist Market every 3 days:
 #  * curated playlists + repos listed in .github/market/sources.json,
 #  * new active IPTV playlist repos discovered through GitHub search,
 # then repairs (header, #EXTINF, duplicates, bad URLs), validates and health-samples each list
@@ -9,7 +9,7 @@ name: Playlist market
 # installed playlists compare sha256 to detect updates (auto or manual, per playlist).
 on:
   schedule:
-    - cron: "41 21 * * 0,3" # Mon + Thu 03:41 Asia/Dhaka
+    - cron: "41 21 */3 * *" # every 3 days, 03:41 Asia/Dhaka
   workflow_dispatch:
     inputs:
       only:
@@ -78,7 +78,7 @@ jobs:
           cat > README.md <<'MD'
           # Playlist Market (auto-generated)
 
-          Rebuilt twice a week by the `Playlist market` workflow from `.github/market/sources.json`
+          Rebuilt every 3 days by the `Playlist market` workflow from `.github/market/sources.json`
           on `main` plus GitHub discovery. Each playlist in `playlists/` is a repaired copy of its
           `source`; `index.json` is the catalog the Yumeiro app reads. Do not edit by hand.
           MD

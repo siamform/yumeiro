@@ -1,5 +1,5 @@
 {
-  "comment": "Default stream playlist (only Mrgify BDIX ships pre-installed) mirrored to the 'streams' branch twice a week by .github/workflows/stream-sync.yml. All other playlists live in the in-app Playlist Market (.github/market/sources.json).",
+  "comment": "Default stream playlist (only Mrgify BDIX ships pre-installed) mirrored to the 'streams' branch every 3 days by .github/workflows/stream-sync.yml. All other playlists live in the in-app Playlist Market (.github/market/sources.json).",
   "sources": [
     {
       "id": "mrgify_bdix",

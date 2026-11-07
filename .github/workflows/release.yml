@@ -96,7 +96,9 @@ jobs:
           MT_KEY_PASSWORD: ${{ secrets.MT_KEY_PASSWORD }}
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
-          MT_UPDATER_TOKEN: ${{ secrets.MT_UPDATER_TOKEN }}
+          # Only embedded while the repo is private (docs/GUIDE.md "Going private"): a token inside a
+          # public APK can be extracted, and public releases need no token at all.
+          MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
         # --no-build-cache: the signed artifact is always built from source, never from cache entries.
         run: ./gradlew --no-configuration-cache --no-build-cache assembleRelease testDebugUnitTest
 
