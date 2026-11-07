@@ -1,6 +1,6 @@
 package com.lagradost.cloudstream3.network
 
-import dev.asfakul.mtrevanced.online.web.BrowserCheck
+import dev.asfakul.yumeiro.online.web.BrowserCheck
 import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Response

@@ -3,7 +3,7 @@ package com.lagradost.cloudstream3.network
 import android.content.Context
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.nicehttp.Requests
-import dev.asfakul.mtrevanced.online.OnlineRuntime
+import dev.asfakul.yumeiro.online.OnlineRuntime
 import okhttp3.Headers
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient

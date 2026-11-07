@@ -5,10 +5,10 @@ import android.content.Context
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.CloudStreamApp
 import com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData
-import dev.asfakul.mtrevanced.online.ExtensionManager
-import dev.asfakul.mtrevanced.online.ExtensionSources
-import dev.asfakul.mtrevanced.online.InstalledExtension
-import dev.asfakul.mtrevanced.online.RemoteExtension
+import dev.asfakul.yumeiro.online.ExtensionManager
+import dev.asfakul.yumeiro.online.ExtensionSources
+import dev.asfakul.yumeiro.online.InstalledExtension
+import dev.asfakul.yumeiro.online.RemoteExtension
 import java.io.File
 
 /** An installed extension (CloudStream-compatible). */

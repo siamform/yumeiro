@@ -59,11 +59,11 @@ val obfuscatedToken = updaterToken.toByteArray(Charsets.UTF_8)
   .joinToString(",") { ((it.toInt() xor obfuscationKey) and 0xFF).toString() }
 
 android {
-  namespace = "dev.asfakul.mtrevanced"
+  namespace = "dev.asfakul.yumeiro"
   compileSdk { version = release(37) }
 
   defaultConfig {
-    applicationId = "dev.asfakul.mtrevanced"
+    applicationId = "dev.asfakul.yumeiro"
     minSdk = 28 // Android 9 (Pie)
     targetSdk = 37 // Android 17
     versionCode = appVersionCode

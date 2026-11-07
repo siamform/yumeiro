@@ -202,9 +202,9 @@ For that reason this project **never** generates a random or debug key for relea
 
 | GitHub secret | Value |
 |---|---|
-| `MT_KEYSTORE_BASE64` | `base64 -w0 mtrevanced-release.jks` |
+| `MT_KEYSTORE_BASE64` | `base64 -w0 yumeiro-release.jks` |
 | `MT_KEYSTORE_PASSWORD` | keystore password |
-| `MT_KEY_ALIAS` | key alias (`mtrevanced`) |
+| `MT_KEY_ALIAS` | key alias (`yumeiro`) |
 | `MT_KEY_PASSWORD` | key password |
 | `MT_UPDATER_TOKEN` | *optional* — read-only token for a private repo (see below) |
 

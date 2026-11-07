@@ -5,8 +5,8 @@
 /app/proguard-rules.pro @siamform
 
 # Security-critical paths (updater, integrity checks, manifest, network/backup rules, policy)
-/app/src/main/java/dev/asfakul/mtrevanced/update/    @siamform
-/app/src/main/java/dev/asfakul/mtrevanced/security/  @siamform
+/app/src/main/java/dev/asfakul/yumeiro/update/    @siamform
+/app/src/main/java/dev/asfakul/yumeiro/security/  @siamform
 /app/src/main/AndroidManifest.xml                    @siamform
 /app/src/main/res/xml/                               @siamform
 /.gitleaks.toml                                      @siamform

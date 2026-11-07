@@ -1,7 +1,7 @@
 package com.lagradost.cloudstream3.network
 
 import com.lagradost.cloudstream3.app
-import dev.asfakul.mtrevanced.online.web.BrowserCheck
+import dev.asfakul.yumeiro.online.web.BrowserCheck
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request

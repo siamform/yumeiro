@@ -6,8 +6,8 @@
 -renamesourcefileattribute SourceFile
 
 # Manifest-declared components are kept automatically; keep updater receivers explicit for clarity.
--keep class dev.asfakul.mtrevanced.update.DownloadCompleteReceiver { <init>(); }
--keep class dev.asfakul.mtrevanced.update.InstallResultReceiver { <init>(); }
+-keep class dev.asfakul.yumeiro.update.DownloadCompleteReceiver { <init>(); }
+-keep class dev.asfakul.yumeiro.update.InstallResultReceiver { <init>(); }
 
 # ---- Online extensions (CloudStream .cs3 plugins) ----
 # Extensions are separate dex files compiled against the CloudStream library and its dependencies.
@@ -60,9 +60,9 @@
 -keep class androidx.viewpager2.** { *; }
 -keep class androidx.constraintlayout.** { *; }
 -keep class com.google.android.material.** { *; }
--keep class dev.asfakul.mtrevanced.online.web.** { *; }
+-keep class dev.asfakul.yumeiro.online.web.** { *; }
 -keep class * extends androidx.work.ListenableWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
--keep class dev.asfakul.mtrevanced.cast.CastOptionsProvider { <init>(); }
+-keep class dev.asfakul.yumeiro.cast.CastOptionsProvider { <init>(); }
 -dontwarn androidx.**
 -dontwarn com.google.android.material.**
 

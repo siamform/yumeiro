@@ -5,7 +5,7 @@ package com.lagradost.cloudstream3.ui.home
 import androidx.lifecycle.ViewModel
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.utils.DataStoreHelper
-import dev.asfakul.mtrevanced.online.OnlineHistory
+import dev.asfakul.yumeiro.online.OnlineHistory
 
 class HomeViewModel : ViewModel() {
     companion object {
