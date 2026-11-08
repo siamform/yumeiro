@@ -24,7 +24,7 @@ fast, beautifully designed player.
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
 </p>
 
-**[Download the APK](https://github.com/siamform/yumeiro/releases/latest)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
+**[Download the APK](https://github.com/siamform/yumeiro/releases/latest)** · **[Website](https://yumeiro-phi.vercel.app/)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
 
 </div>
 
@@ -43,6 +43,7 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 | **Everything in one place** | Local music and video, YouTube, YouTube Music, IPTV/M3U and CloudStream `.cs3` extensions share one player, one queue and one *Continue watching* row. |
 | **Your existing extensions work** | CloudStream extension repos install as they are, with a built-in market, auto-updates, sub/dub, seasons and a crash guard, so one broken extension can't take the app down. |
 | **Fixes refused streams for you** | Before showing an error, Yumeiro retries the link with different headers, fetches fresh links, and if needed captures the stream from the page itself. |
+| **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. |
 | **No login, ever** | YouTube and YouTube Music — search, quick picks, background play — with no Google account. |
 | **Live catalogs** | The playlist market, extension market and in-app news update without a new app release. |
 | **Safe updates** | Releases are signed with one key, and the in-app updater checks the signing certificate and SHA-256 before it installs anything. |
@@ -253,7 +254,7 @@ it is the single best way to help more people find it. Share it with a friend wh
 
 <div align="center">
 
-[Portfolio](https://asfakuls-studio.vercel.app/) · [GitHub @siamform](https://github.com/siamform)
+[Website](https://yumeiro-phi.vercel.app/) · [GitHub @siamform](https://github.com/siamform)
 
 **Made in Bangladesh**
 

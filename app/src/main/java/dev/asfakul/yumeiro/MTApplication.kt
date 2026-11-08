@@ -30,6 +30,10 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.resumeQueued(this) }
+        runCatching {
+            dev.asfakul.yumeiro.online.download.OnlineDownloads.cleanup(this)
+            dev.asfakul.yumeiro.online.download.OnlineDownloads.scheduleCleanup(this)
+        }
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)

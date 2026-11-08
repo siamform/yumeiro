@@ -76,7 +76,7 @@ import dev.asfakul.yumeiro.ui.theme.palette
 object DeveloperInfo {
     const val NAME = "Asfakul Siam"
     const val HANDLE = "siamform"
-    const val PORTFOLIO = "https://asfakuls-studio.vercel.app/"
+    const val WEBSITE = "https://yumeiro-phi.vercel.app/"
     const val GITHUB = "https://github.com/siamform"
     const val SOURCE = "https://github.com/siamform/yumeiro"
 }
@@ -244,7 +244,7 @@ fun DeveloperCard() {
         Spacer(Modifier.height(10.dp))
         // The developer's links live here (they are about the developer, not app settings).
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-            DevLink(Icons.Default.Language, null, "Portfolio", "dev_portfolio") { open(DeveloperInfo.PORTFOLIO) }
+            DevLink(Icons.Default.Language, null, "Website", "dev_website") { open(DeveloperInfo.WEBSITE) }
             DevLink(null, R.drawable.ic_brand_github, "GitHub", "dev_github") { open(DeveloperInfo.GITHUB) }
             dev.asfakul.yumeiro.notify.Reminders.Social.entries.forEach { sm ->
                 val icon = when (sm) {

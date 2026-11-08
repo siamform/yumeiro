@@ -174,6 +174,10 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
     var gridMode by rememberSaveable(d.url) { mutableStateOf(true) }
     val tileCols = (gridColumns() + 2).coerceAtLeast(5)
     var plotExpanded by remember { mutableStateOf(false) }
+    val downloads by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+    val savedData = remember(downloads, d.url, d.api) {
+        downloads.filter { it.api == d.api && it.titleUrl == d.url && it.status == dev.asfakul.yumeiro.online.download.OnlineDownloads.Status.DONE }.mapNotNull { it.data }.toSet()
+    }
 
     LazyColumn(Modifier.fillMaxSize().testTag("online_detail_list"), contentPadding = PaddingValues(bottom = 48.dp)) {
         item("hero") {
@@ -250,6 +254,10 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     }
                 }
                 MyListButton(d)
+                if (d.unsupportedReason == null && (d.playData != null || ordered.isNotEmpty()) && d.kind != OnlineKind.LIVE) {
+                    Spacer(Modifier.height(8.dp))
+                    TitleDownloadButton(d, version, ordered, episodes, season?.title?.takeIf { seasons.size > 1 }, Modifier.fillMaxWidth())
+                }
                 d.plot?.takeIf { it.isNotBlank() }?.let { plot ->
                     Spacer(Modifier.height(14.dp))
                     Text(
@@ -297,7 +305,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         line.forEach { (i, e) ->
                             val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(d.api, e.data) }
-                            EpisodeTile(e, current = i == resumeIndex, progress = p?.fraction ?: 0f, watched = p?.finished == true, modifier = Modifier.weight(1f)) { onPlay(version, i) }
+                            EpisodeTile(e, current = i == resumeIndex, progress = p?.fraction ?: 0f, watched = p?.finished == true, downloaded = e.data in savedData, modifier = Modifier.weight(1f)) { onPlay(version, i) }
                         }
                         repeat(tileCols - line.size) { Spacer(Modifier.weight(1f)) }
                     }
@@ -305,7 +313,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             } else {
                 items(episodes, key = { "ep_" + it.index + it.value.data }) { (i, e) ->
                     val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(d.api, e.data) }
-                    EpisodeRow(e, progress = p?.fraction ?: 0f, watched = p?.finished == true) { onPlay(version, i) }
+                    EpisodeRow(e, progress = p?.fraction ?: 0f, watched = p?.finished == true, trailing = { EpisodeDownloadIcon(d, version, i, e) }) { onPlay(version, i) }
                 }
             }
         }
@@ -321,7 +329,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
 }
 
 @Composable
-private fun EpisodeRow(e: OnlineEpisode, progress: Float = 0f, watched: Boolean = false, onClick: () -> Unit) {
+private fun EpisodeRow(e: OnlineEpisode, progress: Float = 0f, watched: Boolean = false, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable(onClick = onClick).testTag("online_episode")) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))) {
@@ -338,6 +346,7 @@ private fun EpisodeRow(e: OnlineEpisode, progress: Float = 0f, watched: Boolean 
                 e.description?.takeIf { it.isNotBlank() }?.let { Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp) }
                 e.runtimeMin?.takeIf { it > 0 }?.let { Text("${it} min", color = TextTertiary, fontSize = 11.sp) }
             }
+            trailing()
         }
     }
 }
@@ -366,10 +375,11 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeTile(e: OnlineEpisode, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun EpisodeTile(e: OnlineEpisode, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, downloaded: Boolean = false, onClick: () -> Unit) {
     val bg = when { current -> SpotifyGreen.copy(alpha = 0.24f); watched -> Color.White.copy(alpha = 0.04f); else -> GlassFill }
     Box(modifier.aspectRatio(1.25f).clip(RoundedCornerShape(12.dp)).background(bg).clickable(onClick = onClick).testTag("online_episode"), contentAlignment = Alignment.Center) {
         Text(e.episode?.toString() ?: "•", color = if (watched) TextTertiary else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        if (downloaded) Icon(Icons.Default.CheckCircle, "Downloaded", tint = SpotifyGreen, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(12.dp))
         if (progress > 0.01f) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.12f))) {
                 Box(Modifier.fillMaxWidth(progress).height(3.dp).background(SpotifyGreen))
