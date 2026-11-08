@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -70,7 +69,7 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
     var error by remember(api, pageData) { mutableStateOf<String?>(null) }
     var missing by remember { mutableStateOf(false) }
     var request by remember { mutableIntStateOf(0) }
-    val grid = rememberLazyGridState()
+    val grid = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("row:" + api + "|" + pageData)
 
     // Start with what the home row already showed, so the page is never blank.
     LaunchedEffect(api, pageData) {

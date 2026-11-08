@@ -9,7 +9,6 @@ import dev.asfakul.yumeiro.ui.theme.GlassFill
 import android.net.Uri
 import dev.asfakul.yumeiro.ui.components.AppMessages
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -131,7 +130,7 @@ fun StreamScreen(
     val openPlaylistId by StreamRepository.playlistId.collectAsState()
     val playlists by PlaylistStore.playlists.collectAsState()
     val lastSync by PlaylistStore.lastSync.collectAsState()
-    val listState = rememberLazyListState()
+    val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("stream")
     LaunchedEffect(Unit) {
         runCatching { PlaylistStore.init(context.applicationContext) }
         // Background market check (at most every 6 h, silent unless something was updated).

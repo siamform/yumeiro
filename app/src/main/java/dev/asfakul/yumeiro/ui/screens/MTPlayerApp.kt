@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens
 
+import dev.asfakul.yumeiro.ui.components.tabSwipe
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.pageBackground
@@ -71,6 +72,7 @@ import dev.asfakul.yumeiro.ui.components.SongActionBottomSheet
 import dev.asfakul.yumeiro.ui.components.SongDetailsDialog
 import dev.asfakul.yumeiro.ui.components.VideoDetailsDialog
 import dev.asfakul.yumeiro.ui.navigation.Screen
+import dev.asfakul.yumeiro.ui.navigation.bottomNavItems
 import dev.asfakul.yumeiro.ui.screens.stream.StreamScreen
 import dev.asfakul.yumeiro.ui.screens.stream.PlaylistDetailScreen
 import dev.asfakul.yumeiro.ui.screens.stream.PlaylistMarketScreen
@@ -182,6 +184,9 @@ fun MTPlayerApp(
     val selectedVideoFolder by viewModel.selectedVideoFolder.collectAsStateWithLifecycle()
     val activePlayingVideo by viewModel.activePlayingVideo.collectAsStateWithLifecycle()
     var videoMinimized by rememberSaveable { mutableStateOf(false) }
+    /** Direction of the last tab swipe (-1 previous, +1 next, 0 tap) → which way the pages slide. */
+    var tabSwipeDir by remember { mutableStateOf(0) }
+    LaunchedEffect(currentRoute) { kotlinx.coroutines.delay(600); tabSwipeDir = 0 }
     val videoForDetails by viewModel.videoForDetails.collectAsStateWithLifecycle()
     val showManageHiddenFoldersDialog by viewModel.showManageHiddenFoldersDialog.collectAsStateWithLifecycle()
 
@@ -340,11 +345,14 @@ fun MTPlayerApp(
             },
             bottomBar = {
                 if (!isSubpage) {
-                    // Two floating pills: the mini player floats 10dp above the nav bar, same height.
+                    // One floating dock: the mini player joins the nav bar while music is playing.
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                     Column(modifier = Modifier.fillMaxWidth().widthIn(max = dev.asfakul.yumeiro.ui.components.DockMaxWidth)) {
+                        // ArchiveTune-style dock: with music playing, the mini player sits right on
+                        // the nav bar (small junction corners, rounded outer corners) as one piece.
+                        val dockJoined = playbackState.currentTrack != null
                         MiniPlayerBar(
-                            attachedToNav = false,
+                            attachedToNav = dockJoined,
                             playbackState = playbackState,
                             onTogglePlayPause = viewModel::togglePlayPause,
                             onNext = viewModel::next,
@@ -356,8 +364,8 @@ fun MTPlayerApp(
 
                         MTBottomBar(
                             currentRoute = currentRoute,
-                            onNavigateToRoute = navigateTop,
-                            joinedWithMiniPlayer = false,
+                            onNavigateToRoute = { tabSwipeDir = 0; navigateTop(it) },
+                            joinedWithMiniPlayer = dockJoined,
                         )
                     }
                     }
@@ -369,6 +377,14 @@ fun MTPlayerApp(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding)
+                    // Swipe right → left for the next tab, left → right for the previous one.
+                    .tabSwipe(enabled = !isSubpage && (activePlayingVideo == null || videoMinimized) && !isNowPlayingExpanded) { dir ->
+                        val i = bottomNavItems.indexOfFirst { it.route == currentRoute }
+                        dev.asfakul.yumeiro.ui.components.TabSwipe.target(i, dir, bottomNavItems.size)?.let { t ->
+                            tabSwipeDir = dir
+                            navigateTop(bottomNavItems[t].route)
+                        }
+                    }
             ) {
                 NavHost(
                     navController = navController,
@@ -379,21 +395,29 @@ fun MTPlayerApp(
                     enterTransition = {
                         if (isSubRoute(targetState.destination.route)) {
                             slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it }
+                        } else if (tabSwipeDir != 0) {
+                            slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it * tabSwipeDir }
                         } else EnterTransition.None
                     },
                     exitTransition = {
                         if (isSubRoute(targetState.destination.route)) {
                             slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it / 4 }
+                        } else if (tabSwipeDir != 0) {
+                            slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it * tabSwipeDir }
                         } else ExitTransition.None
                     },
                     popEnterTransition = {
                         if (isSubRoute(initialState.destination.route)) {
                             slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it / 4 }
+                        } else if (tabSwipeDir != 0) {
+                            slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it * tabSwipeDir }
                         } else EnterTransition.None
                     },
                     popExitTransition = {
                         if (isSubRoute(initialState.destination.route)) {
                             slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it }
+                        } else if (tabSwipeDir != 0) {
+                            slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it * tabSwipeDir }
                         } else ExitTransition.None
                     },
                     sizeTransform = null
@@ -914,7 +938,7 @@ fun MTPlayerApp(
                     },
                     onGiveUp = if (isStream && streamNext != null) ({ dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.autoSwitch(context, video.uri) }) else null,
                     overlay = if (online != null) { visible, player -> OnlinePlayerOverlay(visible, player, closePlayer) } else null,
-                    onFatalError = if (online != null) { pos -> dev.asfakul.yumeiro.online.OnlineSession.failover(context, pos) } else null,
+                    onFatalError = if (online != null) { pos -> dev.asfakul.yumeiro.online.OnlineSession.failover(context, pos, video.id) } else null,
                     watchPage = watchPage,
                     minimized = videoMinimized,
                     onMinimize = { videoMinimized = true },

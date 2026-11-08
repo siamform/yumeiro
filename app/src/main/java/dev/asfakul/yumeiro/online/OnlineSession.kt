@@ -219,8 +219,13 @@ object OnlineSession {
      * The current link failed: tries the next one automatically. Returns false when there's
      * nothing left to try (the player then shows its error).
      */
-    fun failover(context: Context, positionMs: Long): Boolean {
+    fun failover(context: Context, positionMs: Long, fromVideoId: String? = null): Boolean {
         val s = _state.value ?: return false
+        // Single owner: only the player that is playing the current link may fail it over. A late
+        // error from a player that was already replaced (or a second error for the same link while
+        // a refresh / page capture runs) must not skip a link or tear the new one down.
+        if (fromVideoId != null && s.videoId != null && fromVideoId != s.videoId) return true
+        if (s.phase == Phase.RESOLVING) return true
         val app = context.applicationContext
         val failed = s.failed + (s.link?.url ?: "")
         val next = s.links.indices.firstOrNull { it != s.linkIndex && s.links[it].url !in failed }
@@ -276,7 +281,7 @@ object OnlineSession {
     fun playEpisode(context: Context, index: Int) {
         val s = _state.value ?: return
         if (index !in s.episodes.indices) return
-        _state.value = s.copy(index = index, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet())
+        _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet())
         resolve(context.applicationContext, null)
     }
 
@@ -290,7 +295,7 @@ object OnlineSession {
         val eps = episodesOf(s.detail, version)
         val cur = s.episode
         val idx = eps.indexOfFirst { it.season == cur?.season && it.episode == cur?.episode }.takeIf { it >= 0 } ?: s.index.coerceIn(0, (eps.size - 1).coerceAtLeast(0))
-        _state.value = s.copy(version = version, episodes = eps, index = if (eps.isEmpty()) -1 else idx, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet())
+        _state.value = s.copy(version = version, episodes = eps, index = if (eps.isEmpty()) -1 else idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet())
         resolve(context.applicationContext, null)
     }
 

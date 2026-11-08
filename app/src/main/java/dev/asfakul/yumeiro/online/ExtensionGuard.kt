@@ -39,7 +39,7 @@ object ExtensionGuard {
     private val TRUSTED_PREFIXES = listOf(
         "dev.asfakul.", "android.", "androidx.", "com.android.", "java.", "javax.", "kotlin.", "kotlinx.",
         "sun.", "jdk.", "dalvik.", "libcore.", "org.json.", "org.chromium.", "com.google.", "okhttp3.", "okio.",
-        "coil.", "org.schabi.newpipe.", "com.fasterxml.", "io.ktor.", "org.mozilla.", "org.jsoup.",
+        "coil.", "coil3.", "org.conscrypt.", "com.squareup.", "org.schabi.newpipe.", "com.fasterxml.", "io.ktor.", "org.mozilla.", "org.jsoup.",
     )
 
     private val swallowed = AtomicInteger(0)
@@ -82,7 +82,11 @@ object ExtensionGuard {
                 try {
                     Looper.loop()
                 } catch (t: Throwable) {
-                    if (!isFromExtension(t)) throw t
+                    // Restarting the looper is only safe for a plain message (a Handler post or a
+                    // coroutine resume). An exception that unwound through a frame (layout, draw,
+                    // composition) leaves the window and Compose half-updated: the UI froze on a
+                    // black frame instead of crashing. Those still crash so the bug is visible.
+                    if (!isFromExtension(t) || unwoundThroughFrame(t)) throw t
                     note(t, "main thread")
                 }
             }
@@ -107,6 +111,15 @@ object ExtensionGuard {
         }
         return false
     }
+
+    /** True when [error] was thrown inside a UI frame (Choreographer / layout / draw / Compose). Pure → unit-testable. */
+    fun unwoundThroughFrame(error: Throwable): Boolean =
+        error.stackTrace.any { f ->
+            val c = f.className
+            c == "android.view.Choreographer" || c.startsWith("android.view.Choreographer$") ||
+                c == "android.view.ViewRootImpl" || c.startsWith("androidx.compose.ui.platform.AndroidUiFrameClock") ||
+                c.startsWith("androidx.compose.runtime.Recomposer") || c.startsWith("androidx.compose.runtime.ComposerImpl")
+        }
 
     internal fun frameIsExtension(className: String): Boolean {
         if (className.isBlank()) return false

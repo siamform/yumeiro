@@ -337,12 +337,6 @@ fun SettingsScreen(
                 SettingsSectionHeader(title = "About & Developer", icon = Icons.Default.Info)
                 Spacer(modifier = Modifier.height(8.dp))
                 DeveloperCard()
-            }
-
-            item {
-                SettingsSectionHeader(title = "Social media", icon = Icons.Default.People)
-                Spacer(modifier = Modifier.height(8.dp))
-                SocialMediaCard()
                 Spacer(modifier = Modifier.height(96.dp))
             }
         }

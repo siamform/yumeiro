@@ -49,12 +49,12 @@ val DockBottomPadding = 14.dp
 val DockMaxWidth = 480.dp
 val DockNavHeight = 76.dp
 val DockMiniHeight = 76.dp
-val DockGap = 4.dp
+val DockGap = 2.dp
 /** Space between the floating mini-player pill and the nav pill. */
 val DockPillGap = 10.dp
-val DockStandaloneCorner = 32.dp
-val DockOuterCorner = 28.dp
-val DockJunctionCorner = 12.dp
+val DockStandaloneCorner = 26.dp
+val DockOuterCorner = 24.dp
+val DockJunctionCorner = 6.dp
 
 /**
  * Floating navigation capsule. When the mini player is showing, both form ONE joined stack:
@@ -89,7 +89,8 @@ fun MTBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(DockNavHeight)
-                .shadow(12.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+                // Joined: a lighter shadow so no dark seam shows where the mini player meets it.
+                .shadow(if (joinedWithMiniPlayer) 4.dp else 12.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
                 .clip(shape)
                 .background(palette.navBar, shape)
                 .border(1.dp, border, shape)

@@ -105,6 +105,7 @@ fun VideoLibraryContent(
 
     LazyVerticalGrid(
         GridCells.Adaptive(108.dp), modifier.fillMaxSize().testTag("video_library"),
+        state = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("video_library:" + (status ?: "")),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 160.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

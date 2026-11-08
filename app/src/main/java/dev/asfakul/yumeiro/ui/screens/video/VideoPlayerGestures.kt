@@ -30,6 +30,8 @@ import kotlin.math.abs
 enum class DragMode {
     NONE,
     SEEK,
+    /** Touch-and-hold, then slide down: picture-in-picture. */
+    HOLD_SWIPE_DOWN,
     BRIGHTNESS,
     VOLUME,
     /** Swipe down in the centre: minimise the player (YouTube style) or leave fullscreen. */
@@ -55,7 +57,16 @@ fun VideoGestureOverlay(
     onSwipeDown: (() -> Unit)? = null,
     /** Live drag distance in px while swiping down (0 when not swiping), for a follow-the-finger effect. */
     onSwipeDownProgress: (Float) -> Unit = {},
+    /**
+     * YouTube-style: touch and hold anywhere on the video, then slide down → picture-in-picture.
+     * Null disables it (the hold then behaves like a normal touch).
+     */
+    onHoldSwipeDown: (() -> Unit)? = null,
+    /** The hold was recognised (for a small haptic / hint). */
+    onHoldStart: () -> Unit = {},
 ) {
+    val currentOnHoldSwipeDown by rememberUpdatedState(onHoldSwipeDown)
+    val currentOnHoldStart by rememberUpdatedState(onHoldStart)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
     val currentOnSwipeDownProgress by rememberUpdatedState(onSwipeDownProgress)
     val coroutineScope = rememberCoroutineScope()
@@ -110,9 +121,23 @@ fun VideoGestureOverlay(
 
                     var dragDirection = DragMode.NONE
                     var isDragging = false
+                    var held = false
+                    var currentEventUptime: Long? = null
+                    val holdAt = down.uptimeMillis + viewConfiguration.longPressTimeoutMillis
 
                     while (true) {
-                        val event = awaitPointerEvent()
+                        // Before the first move, wake up at the long-press time to recognise a hold.
+                        val waitMs = holdAt - (currentEventUptime ?: down.uptimeMillis)
+                        val event = if (!isDragging && !held && currentOnHoldSwipeDown != null && waitMs > 0) {
+                            withTimeoutOrNull(waitMs) { awaitPointerEvent() } ?: run {
+                                held = true
+                                pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
+                                currentOnHoldStart()
+                                null
+                            }
+                        } else awaitPointerEvent()
+                        if (event == null) continue
+                        currentEventUptime = event.changes.firstOrNull()?.uptimeMillis
                         val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
 
                         if (!pointer.pressed) {
@@ -126,7 +151,14 @@ fun VideoGestureOverlay(
                                     val dy = pointer.position.y - startY
                                     if (dy > maxOf(height * 0.18f, 48.dp.toPx())) currentOnSwipeDown?.invoke()
                                 }
+                                if (dragDirection == DragMode.HOLD_SWIPE_DOWN) {
+                                    currentOnSwipeDownProgress(0f)
+                                    val dy = pointer.position.y - startY
+                                    if (dy > maxOf(height * 0.12f, 40.dp.toPx())) currentOnHoldSwipeDown?.invoke()
+                                }
                                 currentOnGestureEnd()
+                            } else if (held) {
+                                // A hold that was released without sliding does nothing.
                             } else {
                                 // Registered a tap
                                 val currentTime = System.currentTimeMillis()
@@ -185,7 +217,10 @@ fun VideoGestureOverlay(
                                 pendingSingleTapJob = null
 
                                 val centre = width > 0f && startX / width in 0.3f..0.7f
-                                dragDirection = if (abs(totalDx) > abs(totalDy)) {
+                                dragDirection = if (held) {
+                                    // After a hold only a downward slide means something (→ PiP).
+                                    if (totalDy > 0f && abs(totalDy) >= abs(totalDx)) DragMode.HOLD_SWIPE_DOWN else DragMode.NONE
+                                } else if (abs(totalDx) > abs(totalDy)) {
                                     DragMode.SEEK
                                 } else if (centre && totalDy > 0f && currentOnSwipeDown != null) {
                                     DragMode.SWIPE_DOWN
@@ -208,7 +243,7 @@ fun VideoGestureOverlay(
                                 DragMode.SEEK -> currentOnScrubDelta(deltaX)
                                 DragMode.BRIGHTNESS -> currentOnBrightnessDelta(-deltaY / height)
                                 DragMode.VOLUME -> currentOnVolumeDelta(-deltaY / height)
-                                DragMode.SWIPE_DOWN -> currentOnSwipeDownProgress((pointer.position.y - startY).coerceAtLeast(0f))
+                                DragMode.SWIPE_DOWN, DragMode.HOLD_SWIPE_DOWN -> currentOnSwipeDownProgress((pointer.position.y - startY).coerceAtLeast(0f))
                                 DragMode.NONE -> {}
                             }
                         }

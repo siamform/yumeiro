@@ -103,6 +103,23 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
     val state = s ?: return
     val positionMs = player.positionMs
     var panel by remember { mutableStateOf<Panel?>(null) }
+
+    // The session is finding new links while this player is still mounted (next episode, Sub/Dub
+    // switch, all links refused → fresh links or the site's own page). The old source is stopped
+    // and the status is shown inside the player, so the user never stares at a dead black surface.
+    if (state.phase != OnlineSession.Phase.PLAYING) {
+        LaunchedEffect(state.phase, state.index, state.version) { player.pause() }
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            Modifier.matchParentSize().background(Color.Black)
+                .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {}
+                .testTag("online_player_resolving"),
+        ) {
+            // The floating mini player is too small for the status card: a spinner is enough there.
+            if (maxWidth >= 260.dp) CompactResolve(state, onClose = onClosePlayer)
+            else CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.align(Alignment.Center).size(28.dp))
+        }
+        return
+    }
     BackHandler(enabled = panel != null) { panel = null }
 
     // Anime: AniSkip intro / outro button (or automatic skip).
@@ -314,7 +331,11 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
         return
     }
     val state = s ?: return
-    if (playerOpen || state.phase == OnlineSession.Phase.PLAYING) return
+    // One owner at a time: this layer stays up until the player has actually mounted, so the
+    // hand-over never leaves a frame with neither of them (which showed the page underneath).
+    val handingOver by dev.asfakul.yumeiro.stream.IncomingMedia.pending.collectAsState()
+    if (playerOpen) return
+    if (state.phase == OnlineSession.Phase.PLAYING && handingOver == null) return
     val close = {
         val d = state.detail
         OnlineSession.end()
