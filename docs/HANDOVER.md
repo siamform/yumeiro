@@ -351,3 +351,36 @@ a single-video movie source, floating / docked player and tab swipes on a real p
 - CloudStream: per-extension "Test" screen and source ranking by previous success.
 - NewPipe / LibreTube: ExoPlayer load-control tuning for faster start, background play queue.
 - Aniyomi: player "skip intro" chapters via AniSkip.
+
+## 13. Offline downloads (anime, movies, YouTube video and music)
+
+**Where:** `online/download/` (logic), `ui/screens/online/DownloadSheets.kt` (sheets), Library → Videos (folders),
+Settings → Downloads.
+
+**Anime / movies / series (extensions)**
+- Detail screen: **Download** button (this season, all episodes, next 5, or the movie) and a per-episode icon.
+- Each title + extension + audio version gets one folder: `Title-(Extension-(Sub|Dub))`, episodes inside as
+  `S01E03 - Name.mp4` (`DownloadNaming`). Same idea as Aniyomi's `downloads/<source>/<title>/` layout, flattened to one
+  readable folder per series.
+- Links are resolved at download time (`DownloadWorker.resolveEpisode`, 90 s timeout) through the extension, so
+  queued episodes don't use expired links. `DownloadNaming.pickLink` never picks DASH, respects the quality cap.
+- `DownloadGate`: user-set parallelism (1–3) and only one job per extension at a time (sites rate-limit).
+- Offline playback: Library → Videos → Downloads, grouped by series folder; episodes show a check on the detail screen (`OnlineDownloads.isSaved`).
+
+**Auto-delete:** Settings → Downloads → timer (off, 1, 3, 7, 14, 30 days after finishing). Pin an item or a whole
+folder to keep it permanently; "Keep new downloads" makes pinning the default. `OnlineDownloads.cleanup` runs at app start
+and daily from `DownloadCleanupWorker`. Rule is pure and tested: `DownloadNaming.expired`.
+
+**YouTube / YouTube Music:** Watch panel → Download. `YtDownloadOptions.build` turns NewPipe Extractor streams into one
+choice per resolution/fps (H.264 first, then VP9, AV1 on Android 14+) plus every audio bitrate. HD video and audio are
+fetched separately (8 MB range requests, like NewPipe, to avoid throttling) and joined with Android `MediaMuxer`
+(`MediaMux`), MP4+AAC or WebM VP9+Opus. Optionally copied to the phone's Movies/Yumeiro or Music/Yumeiro (MediaStore).
+
+**Design decision:** no yt-dlp/ffmpeg bundle (as in Seal / YTDLnis via youtubedl-android) — it adds ~30–60 MB and a
+Python runtime. NewPipe Extractor is already in the app, and MediaMuxer covers the containers YouTube serves.
+
+**References studied:** Seal (github.com/JunkFood02/Seal), YTDLnis (github.com/deniscerri/YTDLnis),
+youtubedl-android (github.com/yausername/youtubedl-android), NewPipe muxers (`Mp4FromDashWriter`, PR #2149),
+Aniyomi download/storage docs (aniyomi.org/docs/faq/downloads, /storage), Android MediaMuxer reference.
+
+**Tests:** `DownloadNamingTest`, `YtDownloadOptionsTest`.

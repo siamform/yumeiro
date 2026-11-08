@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.material.icons.filled.Download
+
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
@@ -324,6 +326,8 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val item = state.item
     val info = state.info
+    var ytDownload by remember(item.id) { mutableStateOf(false) }
+    if (ytDownload) dev.asfakul.yumeiro.ui.screens.online.YouTubeDownloadSheet(item) { ytDownload = false }
     LazyColumn(modifier.fillMaxSize().testTag("yt_watch_panel"), contentPadding = PaddingValues(bottom = 32.dp)) {
         item(key = "title") {
             val views = (info?.views ?: item.views).takeIf { it >= 0 }?.let { formatYtViews(it) }
@@ -356,6 +360,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
             WatchActionsRow {
                 val likes = info?.likes?.takeIf { it >= 0 }
                 if (likes != null) WatchAction(Icons.Default.ThumbUp, formatYtViews(likes).removeSuffix(" views"), "yt_watch_likes") {}
+                if (!item.live) WatchAction(Icons.Default.Download, "Download", "yt_watch_download") { ytDownload = true }
                 WatchAction(Icons.Default.Share, "Share", "yt_watch_share") {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "${item.title}\n${item.url}")
                     runCatching { context.startActivity(Intent.createChooser(send, "Share video").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }

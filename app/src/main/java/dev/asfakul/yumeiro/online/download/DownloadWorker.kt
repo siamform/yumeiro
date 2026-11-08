@@ -16,17 +16,22 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import dev.asfakul.yumeiro.network.NetworkClient
+import dev.asfakul.yumeiro.online.ExtensionManager
+import dev.asfakul.yumeiro.online.LinkEvent
+import dev.asfakul.yumeiro.online.OnlineLink
+import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.online.web.BrowserCheck
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.currentCoroutineContext
 
 /** Runs one download from [OnlineDownloads] with a progress notification. */
 class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -36,6 +41,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         const val KEY_ID = "id"
         private const val CHANNEL = "downloads"
         private const val LOG = "DownloadWorker"
+        private const val LINK_TIMEOUT_MS = 90_000L
     }
 
     private val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -43,45 +49,109 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         OnlineDownloads.ensureLoaded(applicationContext)
+        DownloadSettings.init(applicationContext)
         val id = inputData.getString(KEY_ID) ?: return@withContext Result.failure()
-        val item = OnlineDownloads.get(id) ?: return@withContext Result.failure()
-        if (item.status == OnlineDownloads.Status.DONE) return@withContext Result.success()
-        val notifId = 0x5000 + (id.hashCode() and 0xfff)
-        runCatching { setForeground(foreground(notifId, item.title, 0, 0, true)) }
-        val client = NetworkClient.get(applicationContext).newBuilder().addInterceptor(BrowserCheck.MediaInterceptor).build()
-        val out = OnlineDownloads.fileOf(applicationContext, item)
-        val part = File(out.parentFile, out.name + ".part")
+        val first = OnlineDownloads.get(id) ?: return@withContext Result.failure()
+        if (first.status == OnlineDownloads.Status.DONE) return@withContext Result.success()
+        // Limit parallel downloads; one at a time per extension (sites ban bursts, like Aniyomi).
+        val key = if (first.kind == OnlineDownloads.Kind.YT_VIDEO || first.kind == OnlineDownloads.Kind.YT_AUDIO) null else first.api
+        DownloadGate.acquire(id, key)
         try {
+            run(id)
+        } finally {
+            DownloadGate.release(id)
+        }
+    }
+
+    private suspend fun run(id: String): Result {
+        var item = OnlineDownloads.get(id) ?: return Result.failure()
+        if (item.status == OnlineDownloads.Status.DONE || item.status == OnlineDownloads.Status.PAUSED) return Result.success()
+        val label = listOfNotNull(item.title.takeIf { it.isNotBlank() }, item.episodeLabel?.takeIf { item.kind == OnlineDownloads.Kind.EPISODE }).joinToString(" · ")
+        val notifId = 0x5000 + (id.hashCode() and 0xfff)
+        runCatching { setForeground(foreground(notifId, label, 0, 0, true)) }
+        val client = NetworkClient.get(applicationContext).newBuilder().addInterceptor(BrowserCheck.MediaInterceptor).build()
+        try {
+            OnlineDownloads.progress(id, item.bytes, item.total)
+            if (item.kind == OnlineDownloads.Kind.EPISODE && (item.url.isBlank() || item.fileName.isBlank() || runAttemptCount > 0)) {
+                item = resolveEpisode(item)
+            }
+            val out = OnlineDownloads.fileOf(applicationContext, item)
+            val part = File(out.parentFile, out.name + ".part")
             val onProgress: (Long, Long) -> Unit = { done, total ->
                 OnlineDownloads.progress(id, done, total)
                 val now = System.currentTimeMillis()
                 if (now - lastNotified > 900) {
                     lastNotified = now
                     val pct = if (total > 0) ((done * 100) / total).toInt() else 0
-                    runCatching { notifications.notify(notifId, notification(item.title, pct, 100, total <= 0).build()) }
+                    runCatching { notifications.notify(notifId, notification(label, pct, 100, total <= 0).build()) }
                 }
             }
-            val bytes = if (item.isHls) HlsDownloader(client, item.headers).download(item.url, part, onProgress)
-            else direct(client, item, part, onProgress)
+            val bytes = when (item.kind) {
+                OnlineDownloads.Kind.YT_VIDEO, OnlineDownloads.Kind.YT_AUDIO -> YtDownloads.download(applicationContext, client, item, part, onProgress)
+                else -> if (item.isHls) HlsDownloader(client, item.headers).download(item.url, part, onProgress) else direct(client, item, part, onProgress)
+            }
             if (!part.renameTo(out)) { out.delete(); part.copyTo(out, overwrite = true); part.delete() }
+            if ((item.kind == OnlineDownloads.Kind.YT_VIDEO || item.kind == OnlineDownloads.Kind.YT_AUDIO) && DownloadSettings.saveYouTubeToPhone.value) {
+                val audio = item.kind == OnlineDownloads.Kind.YT_AUDIO
+                val name = out.name.substringBeforeLast('-') + "." + out.extension
+                YtDownloads.publish(applicationContext, out, name, YtDownloads.mimeOf(item.container ?: out.extension, audio), music = audio)?.let { uri ->
+                    // The phone's copy is the one that plays; drop the app copy so space isn't used twice.
+                    OnlineDownloads.resolved(id) { it.copy(publicUri = uri.toString()) }
+                    out.delete()
+                }
+            }
             OnlineDownloads.finished(id, bytes)
-            done(notifId, item.title, "Download complete")
-            Result.success()
+            done(notifId, label, "Download complete")
+            return Result.success()
         } catch (e: CancellationException) {
             OnlineDownloads.paused(id)
             throw e
         } catch (e: Throwable) {
             Log.w(LOG, "download ${item.title}", e)
             val msg = when (e) {
-                is HttpStatus -> "Server answered HTTP ${e.code}" + if (e.code == 401 || e.code == 403) " — the link may have expired; play the episode again and retry" else ""
-                is IOException -> "Network error — will retry"
+                is HttpStatus -> "Server answered HTTP ${e.code}" + if (e.code == 401 || e.code == 403) {
+                    if (item.kind == OnlineDownloads.Kind.LINK) " — the link may have expired; play the episode again and retry" else " — tap retry for a fresh link"
+                } else ""
+                is NoLink -> e.message ?: "No downloadable source"
+                is IOException -> e.message?.takeIf { it.isNotBlank() && !it.startsWith("HTTP") }?.let { "Network error — $it" } ?: "Network error — will retry"
                 else -> e.message ?: "Download failed"
             }
-            if (e is IOException && e !is HttpStatus && runAttemptCount < 3) return@withContext Result.retry()
+            if (e is IOException && e !is HttpStatus && e !is NoLink && runAttemptCount < 3) return Result.retry()
             OnlineDownloads.failed(id, msg)
-            done(notifId, item.title, "Download failed: $msg")
-            Result.failure()
+            done(notifId, label, "Download failed: $msg")
+            return Result.failure()
         }
+    }
+
+    /** Finds a fresh link for a queued episode and names its file. */
+    private suspend fun resolveEpisode(item: OnlineDownloads.Item): OnlineDownloads.Item {
+        val data = item.data ?: throw NoLink("Episode data missing")
+        ExtensionManager.ensureLoaded(applicationContext)
+        val provider = ExtensionManager.provider(item.api) ?: throw NoLink("Extension \"${item.api}\" isn't installed")
+        val links = ArrayList<OnlineLink>()
+        var error: String? = null
+        withTimeoutOrNull(LINK_TIMEOUT_MS) {
+            OnlineRepository.links(provider, data).collect { ev ->
+                when (ev) {
+                    is LinkEvent.Link -> links += ev.link
+                    is LinkEvent.Done -> if (!ev.ok) error = ev.error
+                    else -> Unit
+                }
+            }
+        }
+        val sorted = OnlineRepository.sortLinks(links)
+        // Links that need a separate audio file can't be saved as one file; use them only as a last resort.
+        val link = DownloadNaming.pickLink(sorted.filter { it.audioTracks.isEmpty() }, DownloadSettings.quality.value)
+            ?: DownloadNaming.pickLink(sorted, DownloadSettings.quality.value)
+            ?: throw NoLink(error ?: if (links.isEmpty()) "No sources found for this episode" else "No downloadable source (only DASH/torrent)")
+        val ext = DownloadNaming.extensionFor(link)
+        val base = item.baseName ?: DownloadNaming.clean(item.episodeLabel ?: "Episode ${item.order + 1}", 90)
+        // Same file name on retries so a partial file resumes.
+        val name = if (item.fileName.isNotBlank() && item.fileName.substringAfterLast('.') == ext) item.fileName else "$base.$ext"
+        OnlineDownloads.resolved(item.id) {
+            it.copy(url = link.url, isHls = link.isHls, headers = OnlineDownloads.headersFor(link), fileName = name, quality = link.qualityLabel.ifBlank { null })
+        }
+        return OnlineDownloads.get(item.id) ?: throw NoLink("Removed")
     }
 
     private suspend fun direct(client: OkHttpClient, item: OnlineDownloads.Item, part: File, progress: (Long, Long) -> Unit): Long {
@@ -100,7 +170,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 body.byteStream().use { input ->
                     val buf = ByteArray(64 * 1024)
                     while (true) {
-                        coroutineContext.ensureActive()
+                        currentCoroutineContext().ensureActive()
                         val n = input.read(buf); if (n < 0) break
                         fos.write(buf, 0, n); done += n
                         progress(done, total)
@@ -144,3 +214,29 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 }
 
 internal class HttpStatus(val code: Int) : IOException("HTTP $code")
+internal class NoLink(message: String) : IOException(message)
+
+/** Parallel-download gate: at most [DownloadSettings.parallel] running, one per extension key. */
+internal object DownloadGate {
+    private val running = HashMap<String, String?>()
+
+    suspend fun acquire(id: String, key: String?) {
+        while (true) {
+            synchronized(this) {
+                val busyKey = key != null && running.values.any { it == key }
+                if (running.size < DownloadSettings.parallel.value && !busyKey) { running[id] = key; return }
+            }
+            kotlinx.coroutines.delay(700)
+        }
+    }
+
+    fun release(id: String) = synchronized(this) { running.remove(id); Unit }
+}
+
+/** Daily auto-delete pass for finished downloads. */
+class DownloadCleanupWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        runCatching { OnlineDownloads.cleanup(applicationContext) }
+        Result.success()
+    }
+}

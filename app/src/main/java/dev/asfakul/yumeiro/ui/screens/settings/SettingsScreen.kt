@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.material.icons.filled.Download
+
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import androidx.activity.compose.BackHandler
@@ -237,6 +239,13 @@ fun SettingsScreen(
                 SettingsSectionHeader(title = "Online videos", icon = Icons.Default.Videocam)
                 Spacer(modifier = Modifier.height(8.dp))
                 OnlineSettingsCard()
+            }
+
+            // Downloads (offline anime / YouTube)
+            item {
+                SettingsSectionHeader(title = "Downloads", icon = Icons.Default.Download)
+                Spacer(modifier = Modifier.height(8.dp))
+                DownloadSettingsCard()
             }
 
             // Network (DNS) Section
