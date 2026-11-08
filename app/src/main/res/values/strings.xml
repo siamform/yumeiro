@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Yumeiro</string>
+    <string name="widget_name">Continue watching</string>
+    <string name="widget_description">Jump back into the last thing you watched</string>
+    <string name="widget_overline">CONTINUE WATCHING</string>
+    <string name="widget_empty_title">Nothing to continue yet</string>
+    <string name="widget_empty_body">Open Yumeiro and start something</string>
+    <string name="widget_resume">Resume</string>
+    <string name="widget_open">Open</string>
 </resources>

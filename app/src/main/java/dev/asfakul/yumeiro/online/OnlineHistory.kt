@@ -85,6 +85,7 @@ object OnlineHistory {
     /** Records progress of what's playing. Finished movies leave "Continue watching". */
     fun record(context: Context, detail: OnlineDetail, version: String, episode: OnlineEpisode?, positionMs: Long, durationMs: Long) {
         ensureLoaded(context)
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         if (positionMs <= 0L && durationMs <= 0L) return
         if (detail.kind == OnlineKind.LIVE) return
         val now = System.currentTimeMillis()
@@ -103,12 +104,14 @@ object OnlineHistory {
         _entries.value = (if (finishedMovie) emptyList() else listOf(entry)) + _entries.value.filterNot { it.key == entry.key }.take(MAX_TITLES - 1)
         _version.value++
         save()
+        dev.asfakul.yumeiro.widget.ContinueWidget.maybeRefresh(context, entry.key)
     }
 
     fun remove(context: Context, api: String, url: String) {
         ensureLoaded(context)
         _entries.value = _entries.value.filterNot { it.api == api && it.url == url }
         save()
+        dev.asfakul.yumeiro.widget.ContinueWidget.refresh(context)
     }
 
     /** Removes only 18+ titles (and their resume positions). */
@@ -137,6 +140,7 @@ object OnlineHistory {
         synchronized(this) { progress.clear() }
         _version.value++
         save()
+        dev.asfakul.yumeiro.widget.ContinueWidget.refresh(context)
     }
 
     private fun save() {

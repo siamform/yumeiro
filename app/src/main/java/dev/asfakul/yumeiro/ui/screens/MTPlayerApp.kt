@@ -167,6 +167,12 @@ fun MTPlayerApp(
             if (it != 0L) { navigateSub(Screen.Downloads.route); dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.consumed() }
         }
     }
+    // "Resume" on the home-screen widget.
+    LaunchedEffect(openOnline) {
+        dev.asfakul.yumeiro.widget.TitleNav.pending.collect { item ->
+            if (item != null) { dev.asfakul.yumeiro.widget.TitleNav.consumed(); openOnline(item) }
+        }
+    }
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val positionState = viewModel.playbackPositionMs.collectAsStateWithLifecycle()
@@ -600,6 +606,22 @@ fun MTPlayerApp(
                                 onBrowseOnline = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                 onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
                                 onOpenDownloads = { navigateSub(Screen.Downloads.route) },
+                                header = {
+                                    val h by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
+                                    val b by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
+                                    val d by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+                                    dev.asfakul.yumeiro.ui.screens.library.VideoLibraryHero(
+                                        historyCount = h.size, savedCount = b.size, downloadCount = d.size,
+                                        onHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                        onDownloads = { navigateSub(Screen.Downloads.route) },
+                                        onTogether = { navigateSub(Screen.WatchTogether.route) },
+                                        onSources = { navigateSub(Screen.SourcesHub.route()) },
+                                    )
+                                },
+                            ) else if (libTab == 2) dev.asfakul.yumeiro.ui.screens.library.ReadingLibraryContent(
+                                onBrowse = { navigateSub(Screen.Manga.route) },
+                                onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title)) },
+                                onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
                             ) else
                             LibraryScreen(
                                 stats = stats,
@@ -725,13 +747,60 @@ fun MTPlayerApp(
                     }
                     composable(Screen.Extensions.route) {
                         OpaquePage {
-                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) })
+                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) }, onOpenSources = { navigateSub(Screen.SourcesHub.route()) })
                         }
                     }
                     composable(Screen.ExtensionMarket.route) {
                         OpaquePage {
                         ExtensionMarketScreen(onBack = popSub, onOpenExtensions = { navigateSub(Screen.Extensions.route) })
                         }
+                    }
+
+                    composable(Screen.SourcesHub.route, arguments = listOf(navArgument(Screen.SourcesHub.ARG) { type = NavType.IntType; defaultValue = 0 })) { entry ->
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourcesHubScreen(onBack = popSub, initialTab = entry.arguments?.getInt(Screen.SourcesHub.ARG) ?: 0) }
+                    }
+                    composable(Screen.SourceHealth.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourceHealthScreen(onBack = popSub) }
+                    }
+                    composable(Screen.Manga.route) {
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.manga.MangaHomeScreen(
+                                onBack = popSub,
+                                onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title)) },
+                                onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                            )
+                        }
+                    }
+                    composable(Screen.MangaTitle.route, arguments = listOf("p", "u", "t").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
+                        val a = entry.arguments
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.manga.MangaDetailScreen(
+                                providerId = a?.getString("p").orEmpty(), url = a?.getString("u").orEmpty(), title = a?.getString("t").orEmpty(),
+                                onBack = popSub,
+                                onRead = { m, ch -> navigateSub(Screen.MangaReader.route(m.providerId, m.url, m.title, ch.url, ch.name)) },
+                            )
+                        }
+                    }
+                    composable(Screen.MangaReader.route, arguments = listOf("p", "u", "t", "c", "n").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
+                        val a = entry.arguments
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.manga.MangaReaderScreen(
+                                providerId = a?.getString("p").orEmpty(), mangaUrl = a?.getString("u").orEmpty(), mangaTitle = a?.getString("t").orEmpty(),
+                                chapterUrl = a?.getString("c").orEmpty(), chapterName = a?.getString("n").orEmpty(), onBack = popSub,
+                            )
+                        }
+                    }
+                    composable(Screen.Privacy.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.PrivacyScreen(onBack = popSub) }
+                    }
+                    composable(Screen.Tracking.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = popSub) }
+                    }
+                    composable(Screen.Backup.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.BackupScreen(onBack = popSub) }
+                    }
+                    composable(Screen.WatchTogether.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.watch.WatchTogetherScreen(onBack = popSub) }
                     }
 
                     composable(Screen.Downloads.route) {
@@ -790,6 +859,16 @@ fun MTPlayerApp(
                             onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
                             onClearWatchHistory = viewModel::clearWatchHistory,
                             onClearListeningHistory = viewModel::clearListeningHistory,
+                            onOpenPage = { page ->
+                                navigateSub(when (page) {
+                                    "sources" -> Screen.SourcesHub.route()
+                                    "tracking" -> Screen.Tracking.route
+                                    "backup" -> Screen.Backup.route
+                                    "together" -> Screen.WatchTogether.route
+                                    "health" -> Screen.SourceHealth.route
+                                    else -> Screen.Privacy.route
+                                })
+                            },
                         )
                         }
                     }

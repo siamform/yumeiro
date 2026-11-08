@@ -10,6 +10,7 @@ import android.net.Uri
 import android.util.Log
 import dev.asfakul.yumeiro.network.NetworkClient
 import dev.asfakul.yumeiro.online.OnlineDetail
+import dev.asfakul.yumeiro.online.OnlineKind
 import dev.asfakul.yumeiro.online.OnlineEpisode
 import dev.asfakul.yumeiro.online.OnlineSettings
 import kotlinx.coroutines.CoroutineScope
@@ -58,8 +59,12 @@ object AnimeSync {
     /** Called with player progress; updates trackers once per episode. */
     fun onProgress(context: Context, detail: OnlineDetail, episode: OnlineEpisode?, index: Int, positionMs: Long, durationMs: Long) {
         if (durationMs <= 0 || positionMs < durationMs * 0.85) return
-        if (!AniList.signedIn && !MyAnimeList.signedIn) return
-        if (!AnimeIds.isAnime(detail)) return
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
+        val animeTrackers = AniList.signedIn || MyAnimeList.signedIn || dev.asfakul.yumeiro.tracking.Kitsu.signedIn
+        val trakt = dev.asfakul.yumeiro.tracking.Trakt.signedIn && detail.kind != OnlineKind.LIVE && detail.kind != OnlineKind.OTHER
+        if (!animeTrackers && !trakt) return
+        val isAnime = AnimeIds.isAnime(detail)
+        if (!trakt && !isAnime) return
         val num = episodeNumber(episode, index) ?: if (episode == null) 1 else return
         val key = "${detail.api}|${detail.url}|$num"
         if (!synced.add(key)) return
@@ -67,9 +72,18 @@ object AnimeSync {
         scope.launch {
             runCatching {
                 val client = NetworkClient.get(app)
-                val ids = AnimeIds.of(client, detail) ?: return@runCatching
-                ids.anilist?.let { if (AniList.signedIn) AniList.watched(client, it, num, ids.episodes) }
-                ids.mal?.let { if (MyAnimeList.signedIn) MyAnimeList.watched(client, it, num, ids.episodes) }
+                if (isAnime && animeTrackers) {
+                    val ids = AnimeIds.of(client, detail)
+                    if (ids != null) {
+                        ids.anilist?.let { if (AniList.signedIn) AniList.watched(client, it, num, ids.episodes) }
+                        ids.mal?.let { if (MyAnimeList.signedIn) MyAnimeList.watched(client, it, num, ids.episodes) }
+                        ids.mal?.let { if (dev.asfakul.yumeiro.tracking.Kitsu.signedIn) dev.asfakul.yumeiro.tracking.Kitsu.watched(client, it, num, ids.episodes) }
+                    }
+                }
+                if (trakt) {
+                    val ep = if (episode != null) num else null
+                    dev.asfakul.yumeiro.tracking.Trakt.watched(client, detail.name, detail.year, episode?.season, ep)
+                }
             }.onFailure { Log.w(TAG, "sync", it); synced.remove(key) }
         }
     }

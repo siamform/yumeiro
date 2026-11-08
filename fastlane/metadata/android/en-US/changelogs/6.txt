@@ -1,0 +1,5 @@
+Universal sources: Aniyomi anime, Mihon manga, Stremio add-ons, JavaScript sources and home servers (Jellyfin, Emby, Plex, DLNA, WebDAV, SMB).
+Tracking with MyAnimeList, Kitsu and Trakt; backup and restore; app lock and incognito mode.
+Watch-together rooms on the same Wi-Fi, a continue-watching widget and a source status check.
+Redesigned Library with Music, Videos and Reading tabs.
+Fixed the "504 Gateway Time-out" when downloading updates.

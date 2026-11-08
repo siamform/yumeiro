@@ -176,7 +176,7 @@ fun OnlineHomeScreen(
 
         when {
             !engine.ready -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
-            engine.installed.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
+            engine.installed.isEmpty() && providers.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
             providers.isEmpty() -> StateMessage(
                 icon = Icons.Default.Extension,
                 title = "All extensions are turned off",

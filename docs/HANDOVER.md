@@ -415,3 +415,28 @@ plus an "N more updates" summary), `AppNotifier.block()` returns the exact reaso
 switch, channel off) and is shown in the inbox banner and Settings, `Send a test notification` in Settings →
 Notifications, all exceptions caught, explicit priority/category/timestamp. Items already filed silently by
 older builds are not re-sent.
+
+## 14. Universal sources update (v1.0.5, branch `feat/universal-sources`)
+
+Full list for users: [UPDATE-universal-sources.md](UPDATE-universal-sources.md). Code map: [ARCHITECTURE.md](ARCHITECTURE.md).
+Workflow: [DEVELOPMENT.md](DEVELOPMENT.md). Credits: [INSPIRATION.md](INSPIRATION.md) and `NOTICE`.
+
+- **Bridges, not rewrites.** Aniyomi, Mihon, Stremio, JavaScript and home-server sources are converted to CloudStream
+  `MainAPI` (or `MangaProvider` for manga) and published through `SourceHub`. Everything downstream works unchanged.
+- **Aniyomi/Mihon** extension APKs are downloaded, checked for the same signer on update, and their DEX is loaded
+  against the vendored source API in `eu/kanade/tachiyomi/**` (Apache-2.0). `TachiyomiRuntime` sets up the Injekt graph
+  (`Application`, `NetworkHelper`, `Json`, `JavaScriptEngine`) the extensions ask for. ProGuard keeps these packages.
+- **JavaScript** sources run in QuickJS (`com.dokar.quickjs`). `mangayomi_runtime.js` provides `MProvider`, `Client`,
+  `Document`/`Element`; every native call goes through `JsBridge`.
+- **SMB** files are served to the player by `SmbProxy` on 127.0.0.1 with a random token.
+- **Free only.** No server was added. Watch together is LAN-only (NSD). The status page reads the `extensions` branch
+  `index.json` that the existing workflow already writes.
+- **Updater 504.** `github.com/.../releases/download/...` returned GitHub's own 504 page while the API was fine.
+  `GitHubReleaseClient.resolveDownload` now asks the API asset URL (`Accept: application/octet-stream`, no redirect
+  follow) for the signed `release-assets.githubusercontent.com` link and only falls back to the browser URL. The
+  website has `/download` doing the same server-side. Old installs (≤1.0.4) may still hit the 504 until they update
+  once from the website.
+- **Library redesign** in `ui/screens/library/LibraryDesign.kt`: hero with stats, Music/Videos/Reading tabs.
+- **Tests:** `sources/UniversalSourcesLogicTest` covers WebDAV/DLNA parsing, unpacker, URL normalising, natural
+  sort, zip-slip, Trakt id pick, room clock and labels.
+- **Not verified on a device** for every ecosystem. Self-signed HTTPS on home servers is rejected. No torrents.

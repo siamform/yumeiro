@@ -17,3 +17,15 @@ Third-party code included in this repository:
     siamform (2026) to run as a compatibility layer inside Yumeiro (GPL-3.0 section 5(a)).
   - NewPipe Extractor — GPL-3.0 — https://github.com/TeamNewPipe/NewPipeExtractor
   - Manrope and Unbounded fonts — SIL OFL 1.1 — see docs/licenses/
+  - Aniyomi source API and extensions-lib stubs (eu.kanade.tachiyomi.*, tachiyomi.*, mihon.*) —
+    Apache-2.0 — https://github.com/aniyomiorg/aniyomi and https://github.com/mihonapp/mihon
+    Copyright the Aniyomi, Mihon and Tachiyomi open source projects. Files under
+    app/src/main/java/eu/, app/src/main/java/tachiyomi/ and app/src/main/java/mihon/ are taken from
+    those projects; some were trimmed by siamform (2026) so extension APKs can run inside Yumeiro.
+    License text: docs/licenses/Apache-2.0.txt
+  - Mangayomi JavaScript runtime shims (app/src/main/assets/js/mangayomi_runtime.js) — Apache-2.0 —
+    https://github.com/kodjodevf/mangayomi — Copyright Moustapha Kodjo Amadou. Adapted by siamform (2026).
+  - Kitsu public OAuth client id, as published in Aniyomi's Kitsu tracker — Apache-2.0.
+  - Libraries used at runtime (not vendored): quickjs-kt (Apache-2.0, https://github.com/dokar3/quickjs-kt),
+    smbj (Apache-2.0, https://github.com/hierynomus/smbj), NanoHTTPD (BSD-3-Clause),
+    RxJava 1 (Apache-2.0), Injekt (MIT, https://github.com/mihonapp/injekt), Jsoup (MIT), OkHttp (Apache-2.0).

@@ -386,6 +386,10 @@ private fun VideoPlayerModalContent(
             playWhenReady = autoPlayStart
         }
     }
+    androidx.compose.runtime.DisposableEffect(exoPlayer) {
+        dev.asfakul.yumeiro.watch.WatchTogether.bind(exoPlayer)
+        onDispose { dev.asfakul.yumeiro.watch.WatchTogether.bind(null) }
+    }
     val healthMonitor = remember(exoPlayer) {
         PlaybackHealthMonitor(exoPlayer, onLowBandwidth = { action ->
             showToast(

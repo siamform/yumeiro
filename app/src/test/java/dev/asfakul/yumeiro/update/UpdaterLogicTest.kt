@@ -80,7 +80,7 @@ class UpdaterLogicTest {
     @Test
     fun parseRelease_capturesChecksumsAsset() {
         val r = GitHubReleaseClient.parseRelease(sampleRelease, UpdateSource.PUBLIC)
-        assertEquals("b1", r.asset.checksumsUrl)
+        assertEquals("u1", r.asset.checksumsUrl)
     }
 
     @Test

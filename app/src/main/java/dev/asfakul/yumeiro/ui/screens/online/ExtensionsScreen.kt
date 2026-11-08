@@ -88,7 +88,7 @@ import kotlinx.coroutines.launch
 
 /** Videos → Online → Extensions: installed extensions, their updates and the user's repositories. */
 @Composable
-fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
+fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine by ExtensionManager.state.collectAsState()
@@ -137,6 +137,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
             title = "Extensions", onBack = onBack,
             subtitle = if (engine.ready) "${engine.installed.size} installed · ${engine.enabledCount} active" else "Loading…",
         ) {
+            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, "More sources", tint = TextPrimary) }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, "Market", tint = TextPrimary) }
             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.testTag("extensions_add")) {
                 Icon(Icons.Default.Add, "Add", tint = TextPrimary)
@@ -166,6 +167,19 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                             Button(onClick = { updates.forEach { (e, r) -> update(e, r) } }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
                                 Text("Update all")
+                            }
+                        }
+                    }
+                }
+                item("more_sources") {
+                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_more_sources"),
+                        onClick = onOpenSources) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Language, null, tint = SpotifyGreen)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("More sources", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text("Aniyomi, Mihon manga, Stremio add-ons, JavaScript sources and home servers", color = TextTertiary, fontSize = 12.sp)
                             }
                         }
                     }

@@ -58,6 +58,26 @@ sealed class Screen(val route: String) {
     data object Downloads : Screen("videos/downloads")
     data object Extensions : Screen("videos/online/extensions")
     data object ExtensionMarket : Screen("videos/online/market")
+    /** Aniyomi / Mihon / Stremio / JavaScript / home servers. */
+    data object SourcesHub : Screen("sources?tab={tab}") {
+        const val ARG = "tab"
+        fun route(tab: Int = 0): String = "sources?tab=$tab"
+    }
+    data object Manga : Screen("manga")
+    data object MangaTitle : Screen("manga/title?p={p}&u={u}&t={t}") {
+        fun route(provider: String, url: String, title: String): String =
+            "manga/title?p=" + android.net.Uri.encode(provider) + "&u=" + android.net.Uri.encode(url) + "&t=" + android.net.Uri.encode(title)
+    }
+    data object MangaReader : Screen("manga/read?p={p}&u={u}&t={t}&c={c}&n={n}") {
+        fun route(provider: String, url: String, title: String, chapter: String, name: String): String =
+            "manga/read?p=" + android.net.Uri.encode(provider) + "&u=" + android.net.Uri.encode(url) + "&t=" + android.net.Uri.encode(title) +
+                "&c=" + android.net.Uri.encode(chapter) + "&n=" + android.net.Uri.encode(name)
+    }
+    data object Privacy : Screen("settings/privacy")
+    data object Tracking : Screen("settings/tracking")
+    data object Backup : Screen("settings/backup")
+    data object WatchTogether : Screen("watch/together")
+    data object SourceHealth : Screen("sources/health")
 }
 
 data class BottomNavItem(

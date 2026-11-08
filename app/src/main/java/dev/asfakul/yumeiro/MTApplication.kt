@@ -17,6 +17,7 @@ class MTApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         // Must come first: a crashing extension must never take the whole app down.
         dev.asfakul.yumeiro.online.ExtensionGuard.install()
+        dev.asfakul.yumeiro.security.Privacy.load(this)
         // Foreground/background tracking for seamless (Messenger-style) background updates.
         dev.asfakul.yumeiro.update.AppVisibility.install(this)
         // Per-host header profiles that unlocked refused (HTTP 403) streams before.
