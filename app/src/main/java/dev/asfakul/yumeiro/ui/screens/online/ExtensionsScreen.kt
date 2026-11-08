@@ -223,6 +223,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                         }
                     }
                 }
+                item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.cloudstream) }
                 item("note") {
                     Text(
                         "Extensions run code from their authors. Only install ones you trust, and use them for content you're allowed to watch. Protected (DRM) and torrent sources are not played.",

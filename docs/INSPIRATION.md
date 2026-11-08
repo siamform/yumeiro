@@ -35,3 +35,16 @@ How similar apps handle the problems users reported, and what Yumeiro does inste
 | Background checks killed | YTDLnis exposes "Ignore battery optimization"; ffupdater detects killed jobs with a heartbeat. https://ytdlnis.org/docs/guides/troubleshooting/common-issues , https://github.com/Tobi823/ffupdater/issues/409 , https://dontkillmyapp.com/general | Direct battery exemption request + OEM pages, heartbeat that tells the user when checks stall, catch-up run on every app open |
 | Screen sleeps | Media3 guidance: `keepScreenOn` on the player view and `setWakeMode`. https://developer.android.com/media/media3/ui/playerview , https://developer.android.com/develop/background-work/background-tasks/awake | Same, applied to the Compose player, plus network wake mode for streams |
 | Push without Firebase | UnifiedPush / ntfy (needs a distributor app). https://unifiedpush.org/users/distributors/ntfy/ , https://docs.ntfy.sh/subscribe/phone/ | Roadmap item (optional) |
+
+## YouTube sign-in study (2026-11, settings redesign)
+
+| App | What it does | Source |
+|---|---|---|
+| ArchiveTune | Opens Google's sign-in page in a WebView, keeps the cookies plus VISITOR_DATA / DATASYNC_ID and checks them against InnerTube; users report the login sometimes doesn't save | https://github.com/NatuneGroup/ArchiveTune/blob/main/docs/source-logins.md , https://github.com/rukamori/ArchiveTune/issues/1435 |
+| NewPipe | Refuses login on purpose: privacy, and accounts used by third-party clients can be banned | https://newpipe.net/FAQ/bugs/ , https://github.com/TeamNewPipe/NewPipe/issues/12211 |
+| PipePipe | Login cookie used only to get playback streams, recommended only for IP blocks and age limits; the login has been broken for months | https://anoni.net/news/en/2026/10/pipepipe-youtube-client/ , https://github.com/InfinityLoop1308/PipePipe/issues/2137 |
+| Metrolist | Login for YouTube Music library sync | https://metrolist.cc/faq |
+
+Yumeiro takes the PipePipe scope (playback only, optional, off unless signed in, "only when blocked" by default)
+with ArchiveTune's WebView capture. No library sync, no history upload.
+

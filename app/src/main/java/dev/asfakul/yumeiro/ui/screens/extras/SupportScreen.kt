@@ -98,16 +98,8 @@ fun SupportScreen(onBack: () -> Unit) {
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Favorite, null, tint = SpotifyGreen, modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Yumeiro is free, with no ads and no tracking.", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                            Text("If it makes your day better, any amount helps keep it going. Tap a detail to copy it.", color = TextSecondary, fontSize = 12.sp)
-                        }
-                    }
-                }
+                SupportYumeiroCard(full = true, showCoffee = false)
+                Text("Tap a detail to copy it. Any amount helps, and so does a kind word.", color = TextSecondary, fontSize = 12.sp)
                 SupportInfo.groups.forEach { g -> GroupCard(g) { e -> copy(context, e.label, e.value) } }
                 Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {

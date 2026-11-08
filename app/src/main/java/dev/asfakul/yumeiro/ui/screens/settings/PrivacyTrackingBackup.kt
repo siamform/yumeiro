@@ -12,6 +12,13 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -118,6 +125,11 @@ fun PrivacyScreen(onBack: () -> Unit) {
 
 // region Tracking
 
+private val AniListBlue = androidx.compose.ui.graphics.Color(0xFF3DB4F2)
+private val MalBlue = androidx.compose.ui.graphics.Color(0xFF6C8EEF)
+private val KitsuOrange = androidx.compose.ui.graphics.Color(0xFFFD755C)
+private val TraktRed = androidx.compose.ui.graphics.Color(0xFFED1C24)
+
 @Composable
 fun TrackingScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -126,21 +138,45 @@ fun TrackingScreen(onBack: () -> Unit) {
     var kitsuForm by remember { mutableStateOf(false) }
     var traktKeys by remember { mutableStateOf(false) }
     var traktCode by remember { mutableStateOf<Trakt.DeviceCode?>(null) }
+    var editId by remember { mutableStateOf<String?>(null) }
     fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        .onFailure { AppMessages.error(context, "No browser to sign in with") }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().testTag("tracking_screen")) {
         SubPageHeader(title = "Tracking", onBack = onBack, subtitle = "Watched episodes update your lists automatically")
         androidx.compose.runtime.key(refresh) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
-                Section("Anime", "AniList, MyAnimeList and Kitsu update when you finish about 85% of an episode.") {
-                    TrackerLine("AniList", AniList.user(), signIn = AniList.loginUrl()?.let { u -> { open(u) } }, hintNoId = "Add a client ID in Settings → Online videos",
-                        onSignOut = { AniList.signOut(context); refresh++ })
-                    TrackerLine("MyAnimeList", MyAnimeList.user(), signIn = if (MyAnimeList.clientId().isBlank()) null else ({ MyAnimeList.loginUrl(context)?.let { open(it) } }),
-                        hintNoId = "Add a client ID in Settings → Online videos", onSignOut = { MyAnimeList.signOut(context); refresh++ })
-                    TrackerLine("Kitsu", Kitsu.user(), signIn = { kitsuForm = true }, onSignOut = { Kitsu.signOut(context); refresh++ })
-                }
-                Section("Movies & shows", "Trakt gets movies and episodes you finish, from any source.") {
-                    TrackerLine("Trakt", Trakt.user(), signIn = if (!Trakt.configured) null else ({
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Every tracker is free. AniList, MyAnimeList and Trakt each need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
+                    color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+
+                GroupLabel("Anime")
+                val aniId = AniList.clientId().isNotBlank()
+                TrackerCard(
+                    name = "AniList", tint = AniListBlue, user = AniList.user(), configured = aniId, tag = "anilist",
+                    onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl()?.let { open(it) } },
+                    onSignOut = { AniList.signOut(context); refresh++ },
+                )
+                GuideCard(SetupGuides.anilist, startExpanded = !aniId && AniList.user() == null)
+
+                val malId = MyAnimeList.clientId().isNotBlank()
+                TrackerCard(
+                    name = "MyAnimeList", tint = MalBlue, user = MyAnimeList.user(), configured = malId, tag = "mal",
+                    onSetUp = { editId = "mal" }, onSignIn = { MyAnimeList.loginUrl(context)?.let { open(it) } },
+                    onSignOut = { MyAnimeList.signOut(context); refresh++ },
+                )
+                GuideCard(SetupGuides.myAnimeList)
+
+                TrackerCard(
+                    name = "Kitsu", tint = KitsuOrange, user = Kitsu.user(), configured = true, tag = "kitsu",
+                    onSetUp = null, onSignIn = { kitsuForm = true }, onSignOut = { Kitsu.signOut(context); refresh++ },
+                )
+                GuideCard(SetupGuides.kitsu)
+
+                GroupLabel("Movies & shows")
+                TrackerCard(
+                    name = "Trakt", tint = TraktRed, user = Trakt.user(), configured = Trakt.configured, tag = "trakt",
+                    onSetUp = { traktKeys = true },
+                    onSignIn = {
                         scope.launch {
                             runCatching { withContext(Dispatchers.IO) { Trakt.deviceCode(NetworkClient.get(context)) } }
                                 .onSuccess { c -> traktCode = c; open(c.verificationUrl)
@@ -150,12 +186,41 @@ fun TrackingScreen(onBack: () -> Unit) {
                                     traktCode = null; refresh++ }
                                 .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
                         }
-                    }), hintNoId = "Add your free Trakt API app below", onSignOut = { Trakt.signOut(context); refresh++ })
-                    TextButton(onClick = { traktKeys = true }) { Text(if (Trakt.configured) "Change Trakt API app" else "Add Trakt API app", color = SpotifyGreen) }
-                }
-                Text("Tokens are encrypted with the Android Keystore and never leave the device except to talk to the tracker.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+                    },
+                    onSignOut = { Trakt.signOut(context); refresh++ },
+                )
+                GuideCard(SetupGuides.trakt)
+
+                Text("Tokens and keys are encrypted with the Android Keystore and never leave the device except to talk to the tracker. They're not included in backups.",
+                    color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
+    }
+
+    editId?.let { which ->
+        val isAni = which == "anilist"
+        var text by remember(which) { mutableStateOf(OnlineSettings.secret(if (isAni) "anilist_client" else "mal_client").orEmpty()) }
+        TsukiDialog(
+            onDismissRequest = { editId = null },
+            title = { Text(if (isAni) "AniList client ID" else "MyAnimeList client ID") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (isAni) "Paste the Client ID from anilist.co/settings/developer. Its redirect URL must be:" else "Paste the Client ID from myanimelist.net/apiconfig (App Type: Android). Its redirect URL must be:",
+                        color = TextSecondary, fontSize = 13.sp)
+                    val redirect = if (isAni) AniList.REDIRECT else MyAnimeList.REDIRECT
+                    TextButton(onClick = { copyToClipboard(context, "Redirect URL", redirect) }) { Text(redirect + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
+                    OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth().testTag("tracker_client_id"))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    OnlineSettings.setSecret(context, if (isAni) "anilist_client" else "mal_client", text.trim().ifBlank { null })
+                    editId = null; refresh++
+                    if (text.isNotBlank()) AppMessages.success(context, "Saved. Now tap Sign in")
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { editId = null }) { Text("Cancel") } },
+        )
     }
     if (kitsuForm) {
         var email by remember { mutableStateOf("") }
@@ -195,7 +260,8 @@ fun TrackingScreen(onBack: () -> Unit) {
             title = { Text("Trakt API app") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Create a free app at trakt.tv/oauth/applications with redirect URI urn:ietf:wg:oauth:2.0:oob, then paste its keys.", color = TextSecondary, fontSize = 13.sp)
+                    Text("Create a free app at trakt.tv/oauth/applications/new with this redirect URI, then paste its Client ID and Client Secret.", color = TextSecondary, fontSize = 13.sp)
+                    TextButton(onClick = { copyToClipboard(context, "Redirect URI", SetupGuides.TRAKT_REDIRECT) }) { Text(SetupGuides.TRAKT_REDIRECT + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
                     OutlinedTextField(id, { id = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text("Client secret") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
                 }
@@ -223,15 +289,38 @@ fun TrackingScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun TrackerLine(name: String, user: String?, signIn: (() -> Unit)?, onSignOut: () -> Unit, hintNoId: String? = null) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(name, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(user?.let { "Signed in as $it" } ?: if (signIn == null) hintNoId.orEmpty() else "Not signed in", color = TextTertiary, fontSize = 12.sp)
+private fun TrackerCard(
+    name: String, tint: androidx.compose.ui.graphics.Color, user: String?, configured: Boolean, tag: String,
+    onSetUp: (() -> Unit)?, onSignIn: () -> Unit, onSignOut: () -> Unit,
+) {
+    GlassGroup(Modifier.testTag("tracker_$tag")) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(tint.copy(alpha = 0.22f))
+                    .border(1.dp, tint.copy(alpha = 0.45f), RoundedCornerShape(13.dp)),
+                contentAlignment = Alignment.Center,
+            ) { Text(name.take(1), color = tint, fontWeight = FontWeight.Black, fontSize = 18.sp) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(name, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    when { user != null -> "Signed in as $user"; !configured -> "Needs a free key. See the guide below"; else -> "Ready to sign in" },
+                    color = TextTertiary, fontSize = 12.sp,
+                )
+            }
+            StatusChip(when { user != null -> "Linked"; !configured -> "Set up"; else -> "Ready" }, when { user != null -> true; !configured -> false; else -> null })
         }
-        when {
-            user != null -> TextButton(onClick = onSignOut) { Text("Sign out", color = TextSecondary) }
-            signIn != null -> Button(onClick = signIn, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Sign in") }
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+            if (onSetUp != null && user == null) {
+                if (configured) TextButton(onClick = onSetUp, modifier = Modifier.testTag("tracker_${tag}_change")) { Text("Change key", color = TextSecondary) }
+                else Button(onClick = onSetUp, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                    modifier = Modifier.testTag("tracker_${tag}_setup")) { Text("Set up") }
+            }
+            when {
+                user != null -> OutlinedButton(onClick = onSignOut, shape = RoundedCornerShape(18.dp), modifier = Modifier.testTag("tracker_${tag}_signout")) { Text("Sign out") }
+                configured -> Button(onClick = onSignIn, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                    modifier = Modifier.testTag("tracker_${tag}_signin")) { Text("Sign in") }
+            }
         }
     }
 }

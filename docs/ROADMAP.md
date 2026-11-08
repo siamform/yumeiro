@@ -21,6 +21,8 @@ organised better than any single-source app. Ordered by impact for launch.
 | Push | Optional **UnifiedPush** (FOSS, no Firebase): users with a distributor such as ntfy get instant new-episode pushes even when Android freezes background work. Needs a tiny free publisher (a GitHub Action posting to ntfy.sh topics per followed title is enough). Keep WorkManager as the default. |
 | Playback | Feed `BlackFrameWatchdog` hits into source ranking, so links that went black are tried last next time. |
 | Network | Show which hosts use the automatic DNS bypass in Settings → Network, with a "forget" button. |
+| Settings | Device pass over the new Settings pages and guides (small screens, large font). Translate the setup guides (Bangla first). |
+| YouTube | Optional YouTube Music library / subscriptions sync on top of the account (only if users ask; keep it opt-in). Validate the account with an InnerTube call after sign-in, like ArchiveTune. |
 | Search | Collapse the same title from several Hues into one card with "on N Hues" (data is in `SearchRanker.Ranked.alsoOn`). |
 
 ## 1. Universal extension engine (the differentiator)

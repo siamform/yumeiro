@@ -46,6 +46,7 @@ result elsewhere still fails the gate.
 | Rule | Path | Why it is accepted |
 |---|---|---|
 | `java/weak-cryptographic-algorithm`, `java/potentially-weak-cryptographic-algorithm` | `app/src/main/java/dev/asfakul/yumeiro/sources/js/JsCrypto.kt` | MD5 key derivation (OpenSSL `EVP_BytesToKey`) and AES-CBC are what CryptoJS and Mangayomi sources call; the sites encrypt with them. Used only to decode third-party page data, never to protect Yumeiro data. |
+| same | `app/src/main/java/dev/asfakul/yumeiro/youtube/YtAuthHash.kt` | YouTube's `SAPISIDHASH` request signature is SHA-1 by YouTube's own definition (`SHA1("<ts> <SAPISID> <origin>")`). It signs requests for the optional YouTube account; nothing of ours is protected by it. The cookie itself is sealed with `SecretBox` and excluded from backups. |
 | same | `app/src/main/java/eu/kanade/**` | Vendored Tachiyomi/Aniyomi source API (Apache-2.0). Its signatures are the extension ABI and can't change. |
 | `java/android/missing-certificate-pinning` | `tracking/Kitsu.kt`, `tracking/Trakt.kt`, `sources/servers/PlexProvider.kt` | Kitsu and Trakt rotate certificates without notice (a pin would break sign-in for every user); Plex servers are the user's own hosts with arbitrary certificates. System trust + HTTPS-only applies. |
 

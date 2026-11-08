@@ -12,7 +12,8 @@ import android.content.SharedPreferences
  * In-app reminders: follow the developer, star Yumeiro on GitHub, support the project.
  *
  * Rules:
- *  - Each reminder comes back every 4 hours.
+ *  - "Support" (buy me a coffee) and "Star" come back every 2 hours ([OFTEN_MS]); "Follow"
+ *    every 4 hours ([EVERY_MS]).
  *  - "Follow" counts taps that really opened Facebook / Instagram / LinkedIn. After 3 such
  *    taps it only comes back once a day. Same for "Star" after the user opened GitHub once.
  *  - Never two at once, and at least [MIN_GAP_MS] between any two reminders, so they are
@@ -29,8 +30,10 @@ object Reminders {
 
     const val GITHUB_URL = "https://github.com/siamform/yumeiro"
     const val EVERY_MS = 4L * 60 * 60 * 1000
+    /** Coffee and star (until starred) are the ones that keep the project going, so they come back sooner. */
+    const val OFTEN_MS = 2L * 60 * 60 * 1000
     const val DAILY_MS = 24L * 60 * 60 * 1000
-    const val MIN_GAP_MS = 80L * 60 * 1000
+    const val MIN_GAP_MS = 60L * 60 * 1000
     const val GRACE_MS = 30L * 60 * 1000
     const val FOLLOWS_FOR_DAILY = 3
     /** The follow card counts down this long, then closes by itself. */
@@ -47,8 +50,8 @@ object Reminders {
     /** Interval for [kind] given what the user already did. */
     fun interval(kind: Kind, s: State): Long = when (kind) {
         Kind.FOLLOW -> if (s.followClicks >= FOLLOWS_FOR_DAILY) DAILY_MS else EVERY_MS
-        Kind.STAR -> if (s.starClicks > 0) DAILY_MS else EVERY_MS
-        Kind.SUPPORT -> EVERY_MS
+        Kind.STAR -> if (s.starClicks > 0) DAILY_MS else OFTEN_MS
+        Kind.SUPPORT -> OFTEN_MS
     }
 
     /**

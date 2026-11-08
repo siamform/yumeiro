@@ -87,6 +87,7 @@ object YouTube {
         synchronized(this) {
             if (ready) return
             val locale = Locale.getDefault()
+            YtAccount.init(context)
             NewPipe.init(
                 NewPipeDownloader(NetworkClient.get(context)),
                 Localization.fromLocale(locale),
@@ -166,12 +167,16 @@ object YouTube {
     /** Blocking variant for ExoPlayer loader threads (ResolvingDataSource). */
     fun infoBlocking(id: String, force: Boolean): StreamInfo {
         infoCache[id]?.takeIf { !force && fresh(it.at, INFO_TTL_MS) }?.let { return it.value }
-        val info = StreamInfo.getInfo(service, watchUrl(id))
+        // Anonymous first; the optional account is used only if YouTube puts up a sign-in wall.
+        val info = YtAccount.retryWithAccount { StreamInfo.getInfo(service, watchUrl(id)) }
         infoCache[id] = Timed(System.currentTimeMillis(), info)
         return info
     }
 
     fun invalidate(id: String) { infoCache.remove(id) }
+
+    /** Drops every cached stream (after signing in or out, links made with the old session are stale). */
+    fun invalidateAll() { infoCache.clear() }
 
     fun watchUrl(id: String) = "https://www.youtube.com/watch?v=$id"
 

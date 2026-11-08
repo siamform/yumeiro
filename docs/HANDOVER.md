@@ -172,9 +172,9 @@ host and apply it first next time); Cronet engine for hosts that fingerprint OkH
 
 ### Login-only features
 
-Kept out on purpose (the product rule is "no login"): subscriptions feed, account playlists, likes
-sync, age-restricted / members-only videos, YouTube Music library/uploads. If ever added, do it
-for both audio and video via an optional cookie import screen, never mandatory.
+Still login-free by default. Since §16 there is an **optional** YouTube account (Settings → YouTube
+account) used only to get past "confirm you're not a bot" and age walls. Subscriptions feed,
+account playlists, likes sync and the YouTube Music library are still not built.
 
 Terms note: YouTube's terms disallow third-party stream access; previous versions handed off to
 the YouTube app for that reason. The owner explicitly requested in-app YouTube like ArchiveTune.
@@ -480,3 +480,51 @@ Features:
 
 Not done (needs money or a server): true push while the app is fully killed on OEMs that block WorkManager. The free
 option is UnifiedPush/ntfy (roadmap). Not verified on a physical device in this pass.
+
+## 16. Settings redesign, setup guides, optional YouTube account (branch `feat/settings-redesign`)
+
+Pushed for review; **no PR opened and nothing merged** (owner's instruction).
+
+### Settings
+- `ui/screens/settings/SettingsCatalog.kt` is the single source of truth: 5 groups ("Make it yours", "Watch & listen",
+  "Sources & accounts", "System", "Help & about") and 19 categories with title, summary, search keywords and an
+  optional route to an existing screen. Search: every word must match; title > summary > keyword; unit-tested.
+- `SettingsScreen.kt` home: header (version + user-guide button `open_user_guide`), search, a health strip
+  (notifications / battery / network status), glass groups of category rows, the support card, "Made in Bangladesh".
+  Each category opens its own page that reuses the existing cards. Design pieces live in `SettingsDesign.kt`
+  (`GlassGroup`, `CategoryRow`, `StatusChip`, `CategoryHero`, `GuideCard`…), in the Tsuki gold/glass style.
+- Removed three toggles that did nothing (not persisted, not read anywhere): Bass boost (the real one is in the
+  equalizer), Gapless (ExoPlayer playlists are already gapless) and Scan on launch (the library is read from
+  MediaStore on every launch anyway).
+- Trackers moved out of "Online videos" into **Tracking**: one card per tracker (status chip, Set up / Sign in /
+  Sign out) and the AniList / MyAnimeList client-ID dialogs, with a copy button for the redirect URL.
+
+### Setup guides
+- `SetupGuides.kt`: step-by-step guides with links, copy chips and tips for Aniyomi, Mihon, Stremio, JavaScript
+  (Mangayomi) repos, home servers, CloudStream, AniList, MyAnimeList, Kitsu, Trakt and the YouTube account.
+- Shown as collapsible `GuideCard`s in each Sources hub tab (expanded while that tab is empty), in Extensions,
+  in Tracking and on the YouTube account page. The redirect values users copy are tested against
+  `AniList.REDIRECT`, `MyAnimeList.REDIRECT` and the Trakt OOB URI. Yumeiro still ships no repository links.
+
+### Optional YouTube account
+- Research: ArchiveTune opens Google's sign-in page in a WebView and keeps the cookies; NewPipe refuses login
+  (privacy, account bans); PipePipe uses a login cookie only for playback when blocked. See `INSPIRATION.md`.
+- `youtube/YtAccount.kt`: cookie captured from a hardened WebView (`YouTubeAccountScreen.kt`: "; wv" stripped
+  from the UA, non-http schemes blocked), sealed in `OnlineSettings` secret `yt_cookie` (excluded from backups).
+  Mode **When YouTube blocks a video** (default: the extractor retries once with the account only after
+  `SignInConfirmNotBotException` / `AgeRestrictedContentException`) or **Always**. The cookie and a
+  `SAPISIDHASH` header go only to youtube.com / www / m / music, never googlevideo or ytimg (separate OkHttp client
+  without the session-cookie interceptor). Sign out expires Google/YouTube WebView cookies only.
+- `youtube/YtAuthHash.kt` holds the SHA-1 signature (YouTube's format); CodeQL suppression documented in
+  `docs/security/AUDIT.md`.
+- Risks to tell users (also in the guide): Google may refuse sign-in from embedded browsers; use a spare account.
+
+### Support
+- `ui/screens/extras/SupportMessage.kt`: one honest message (donating is optional, the app stays free with no ads,
+  the developer and team keep it alive unfunded) used on the support page, About, the Settings home card and the
+  reminder card. Coffee and star (until starred) reminders now return every 2 h (`Reminders.OFTEN_MS`); follow stays
+  4 h; minimum gap between any two reminders 60 min. Users can still turn reminders off.
+
+Tests: `SettingsCatalogTest`, `SetupGuidesTest`, `YtAccountTest`, `RemindersTest` (new 2 h case). Not tested on a
+physical device.
+
