@@ -54,6 +54,8 @@ sealed class Screen(val route: String) {
     data object OnlineHistory : Screen("videos/online/history")
     /** My List, downloads and watch history for videos. */
     data object OnlineLibrary : Screen("videos/library")
+    /** Offline downloads: Permanent / Offline groups, settings and tips. */
+    data object Downloads : Screen("videos/downloads")
     data object Extensions : Screen("videos/online/extensions")
     data object ExtensionMarket : Screen("videos/online/market")
 }

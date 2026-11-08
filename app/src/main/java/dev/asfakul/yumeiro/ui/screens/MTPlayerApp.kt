@@ -161,6 +161,12 @@ fun MTPlayerApp(
         com.lagradost.cloudstream3.utils.AppContextUtils.opener = { url, api, _ -> navigateSub(Screen.OnlineTitle.route(api, url)) }
         onDispose { com.lagradost.cloudstream3.utils.AppContextUtils.opener = null }
     }
+    // "View" after starting a download, the download notification, Home and Library open the Downloads page.
+    LaunchedEffect(navigateSub) {
+        dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.requests.collect {
+            if (it != 0L) { navigateSub(Screen.Downloads.route); dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.consumed() }
+        }
+    }
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val positionState = viewModel.playbackPositionMs.collectAsStateWithLifecycle()
@@ -448,6 +454,7 @@ fun MTPlayerApp(
                                 onNavigateToLibrary = { navigateTop(Screen.Library.route) },
                                 onNavigateToSettings = { navigateSub(Screen.Settings.route) },
                                 onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
+                                onOpenDownloads = { navigateSub(Screen.Downloads.route) },
                                 isPlaying = playbackState.isPlaying,
                                 durationMs = playbackState.durationMs,
                                 positionMs = positionProvider,
@@ -592,6 +599,7 @@ fun MTPlayerApp(
                                 onPlayVideo = viewModel::playVideo,
                                 onBrowseOnline = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                 onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                onOpenDownloads = { navigateSub(Screen.Downloads.route) },
                             ) else
                             LibraryScreen(
                                 stats = stats,
@@ -726,6 +734,16 @@ fun MTPlayerApp(
                         }
                     }
 
+                    composable(Screen.Downloads.route) {
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.downloads.DownloadsScreen(
+                                onBack = popSub,
+                                onPlayVideo = viewModel::playVideo,
+                                onBrowse = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                            )
+                        }
+                    }
+
                     composable(Screen.OnlineLibrary.route) {
                         OpaquePage {
                             Column(Modifier.fillMaxSize()) {
@@ -736,6 +754,7 @@ fun MTPlayerApp(
                                     onPlayVideo = viewModel::playVideo,
                                     onBrowseOnline = popSub,
                                     onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                    onOpenDownloads = { navigateSub(Screen.Downloads.route) },
                                 )
                             }
                         }
@@ -1018,6 +1037,7 @@ fun MTPlayerApp(
 
         // Styled in-app messages (falls back to system toasts when no host is attached).
         dev.asfakul.yumeiro.ui.screens.online.BrowserCheckHost()
+        dev.asfakul.yumeiro.ui.screens.downloads.DownloadPromptHost()
         AppMessageHost(bottomPadding = if (isSubpage) androidx.compose.ui.unit.Dp(24f) else androidx.compose.ui.unit.Dp(150f))
 
         // In-app updater popup (GitHub Releases). Hidden during splash and fullscreen video.
@@ -1090,4 +1110,4 @@ private fun isSubRoute(route: String?): Boolean =
         route == Screen.OnlineSearch.route || route == Screen.OnlineTitle.route ||
         route == Screen.Extensions.route || route == Screen.ExtensionMarket.route ||
         route == Screen.OnlineRow.route || route == Screen.OnlineHistory.route ||
-        route == Screen.OnlineLibrary.route
+        route == Screen.OnlineLibrary.route || route == Screen.Downloads.route

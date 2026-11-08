@@ -384,3 +384,17 @@ youtubedl-android (github.com/yausername/youtubedl-android), NewPipe muxers (`Mp
 Aniyomi download/storage docs (aniyomi.org/docs/faq/downloads, /storage), Android MediaMuxer reference.
 
 **Tests:** `DownloadNamingTest`, `YtDownloadOptionsTest`.
+
+### 13b. Download flow and Downloads page (follow-up)
+
+- **Ask first:** every download (episode icon, title sheet, player button, YouTube) goes through
+  `ui/screens/downloads/DownloadPrompt.kt`. The dialog shows quality, size and free space, where the file goes
+  (Downloads folder + phone path, or Movies/Music/Yumeiro for YouTube), **Permanent vs Offline** (with the auto-delete
+  timer chips inline) and tips. "Don't ask again" → `DownloadSettings.askFirst` (Settings → Downloads turns it back on).
+  After starting, a message with **View** opens the Downloads page.
+- **Downloads page** (`Screen.Downloads`, `DownloadsScreen.kt`): storage card, offline settings (same
+  `DownloadSettingsCard`), dismissible tips, filters (All / Offline / Permanent / In progress) and sections
+  In progress → Permanent → Offline, each grouped by series folder (`DownloadGroups`, unit-tested).
+- **Entry points:** Home shortcut "Downloads", Library → Videos (same grouped sections + Manage), the download
+  notification (tap opens the page via `DownloadWorker.ACTION_OPEN_DOWNLOADS` → `DownloadsNav`).
+- **Tests:** `DownloadGroupsTest`, `DownloadUiScreenshotTest` (Robolectric; renders to `app/build/screenshots/dl_*.png`).

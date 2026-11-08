@@ -74,6 +74,10 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
             UpdateManager.get(this).showDialog()
             return
         }
+        if (intent?.action == dev.asfakul.yumeiro.online.download.DownloadWorker.ACTION_OPEN_DOWNLOADS) {
+            dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open()
+            return
+        }
         if (intent?.action == dev.asfakul.yumeiro.notify.AppNotifier.ACTION_OPEN_INBOX) {
             // Opened from a Yumeiro notification: show the inbox and mark that item as read.
             intent.getStringExtra(dev.asfakul.yumeiro.notify.AppNotifier.EXTRA_ITEM)?.let {

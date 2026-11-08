@@ -76,6 +76,7 @@ import dev.asfakul.yumeiro.online.OnlineBookmarks
 import dev.asfakul.yumeiro.online.OnlineHistory
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.online.download.OnlineDownloads
+import dev.asfakul.yumeiro.ui.screens.downloads.downloadSections
 import dev.asfakul.yumeiro.ui.screens.online.ContinueRow
 import dev.asfakul.yumeiro.ui.screens.online.OnlineChip
 import dev.asfakul.yumeiro.ui.screens.online.PosterImage
@@ -98,6 +99,7 @@ fun VideoLibraryContent(
     onBrowseOnline: () -> Unit,
     onOpenHistory: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenDownloads: (() -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -106,6 +108,8 @@ fun VideoLibraryContent(
     }
     val bookmarks by OnlineBookmarks.items.collectAsState()
     val downloads by OnlineDownloads.items.collectAsState()
+    remember { dev.asfakul.yumeiro.online.download.DownloadSettings.init(context); true }
+    val dlDays by dev.asfakul.yumeiro.online.download.DownloadSettings.autoDeleteDays.collectAsState()
     val historyAll by OnlineHistory.entries.collectAsState()
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
@@ -132,20 +136,27 @@ fun VideoLibraryContent(
                 }
             }
         }
-        if (downloads.isNotEmpty()) {
-            item("dlh", span = { GridItemSpan(maxLineSpan) }) { LibHeader("Downloads", subtitle = "${downloads.count { it.status == OnlineDownloads.Status.DONE }} saved for offline") }
-            // Series are grouped into their folder ("Title-(Extension-(Sub))"), YouTube into YouTube / YouTube Music.
-            val groups = downloads.groupBy { it.folder }
-            val loose = groups[""].orEmpty()
-            groups.filterKeys { it.isNotBlank() }.entries.sortedByDescending { e -> e.value.maxOf { it.createdAt } }.forEach { (folder, list) ->
-                item("dlf_$folder", span = { GridItemSpan(maxLineSpan) }) {
-                    DownloadFolderRow(folder, list, expanded = folder in openFolders, onToggle = { if (folder in openFolders) openFolders.remove(folder) else openFolders.add(folder) })
+        // Downloads: grouped into Permanent / Offline by series folder; full page with settings via "Manage".
+        item("dlh", span = { GridItemSpan(maxLineSpan) }) {
+            val split = remember(downloads) { dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloads) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    LibHeader("Downloads", subtitle = if (downloads.isEmpty()) "Watch and listen without internet"
+                        else listOfNotNull("${split.permanentCount} permanent", "${split.offlineCount} offline", if (split.active.isNotEmpty()) "${split.active.size} in progress" else null).joinToString(" · "))
                 }
-                if (folder in openFolders) items(list.sortedWith(compareBy({ it.order }, { -it.createdAt })), key = { "dl_" + it.id }, span = { GridItemSpan(maxLineSpan) }) { d ->
-                    Box(Modifier.padding(start = 14.dp)) { DownloadRow(d, onPlayVideo) }
+                if (onOpenDownloads != null) androidx.compose.material3.TextButton(onClick = onOpenDownloads, modifier = Modifier.testTag("library_downloads_manage")) {
+                    Text(if (downloads.isEmpty()) "How it works" else "Manage", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
                 }
             }
-            items(loose, key = { "dl_" + it.id }, span = { GridItemSpan(maxLineSpan) }) { d -> DownloadRow(d, onPlayVideo) }
+        }
+        if (downloads.isEmpty()) item("dlempty", span = { GridItemSpan(maxLineSpan) }) {
+            Text(
+                "Tip: open any anime or movie and tap Download, or tap Download under a YouTube video. Choose Permanent to keep it, or Offline to let the auto-delete timer clear it.",
+                color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp,
+            )
+        } else {
+            val split = dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloads)
+            downloadSections(split, dev.asfakul.yumeiro.ui.screens.downloads.DownloadFilter.ALL, dlDays, openFolders, onPlayVideo)
         }
         item("mlh", span = { GridItemSpan(maxLineSpan) }) {
             Column {
@@ -213,113 +224,6 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
         Text(b.status.label + " · " + b.api, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
-
-@Composable
-private fun DownloadRow(d: OnlineDownloads.Item, onPlayVideo: (VideoItem) -> Unit) {
-    val context = LocalContext.current
-    val done = d.status == OnlineDownloads.Status.DONE
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer)
-            .clickable(enabled = done) {
-                val f = if (d.fileName.isNotBlank()) OnlineDownloads.fileOf(context, d) else null
-                val uri = when {
-                    f != null && f.exists() -> android.net.Uri.fromFile(f).toString()
-                    d.publicUri != null -> d.publicUri
-                    else -> null
-                }
-                if (uri != null) onPlayVideo(VideoItem(id = "download:${d.id}", title = listOfNotNull(d.title, d.episodeLabel).joinToString(" · "), durationMs = 0L, uri = uri, resolution = d.quality.orEmpty(), folderName = d.folder.ifBlank { "Downloads" }, sizeBytes = d.bytes))
-                else dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "The file was removed")
-            }.padding(10.dp).testTag("library_download"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) { PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize()) }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(d.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            d.episodeLabel?.let { Text(it, color = TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            val line = when (d.status) {
-                OnlineDownloads.Status.DONE -> listOfNotNull("Saved", d.quality, mb(d.bytes), if (d.publicUri != null) "on phone" else null, keepLine(d)).joinToString(" · ")
-                OnlineDownloads.Status.RUNNING -> if (d.total > 0) "${(d.fraction * 100).toInt()}% · ${mb(d.bytes)} of ~${mb(d.total)}" else "Downloading · ${mb(d.bytes)}"
-                OnlineDownloads.Status.QUEUED -> "Waiting…"
-                OnlineDownloads.Status.PAUSED -> "Paused · ${mb(d.bytes)}"
-                OnlineDownloads.Status.FAILED -> d.error ?: "Failed"
-            }
-            Text(line, color = if (d.status == OnlineDownloads.Status.FAILED) Color(0xFFFF8A80) else TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (d.status == OnlineDownloads.Status.RUNNING) {
-                Spacer(Modifier.height(5.dp))
-                if (d.total > 0) LinearProgressIndicator(progress = { d.fraction }, modifier = Modifier.fillMaxWidth().height(3.dp), color = SpotifyGreen)
-                else LinearProgressIndicator(Modifier.fillMaxWidth().height(3.dp), color = SpotifyGreen)
-            }
-        }
-        when (d.status) {
-            OnlineDownloads.Status.DONE -> Icon(Icons.Default.PlayArrow, "Play", tint = SpotifyGreen, modifier = Modifier.padding(horizontal = 6.dp))
-            OnlineDownloads.Status.RUNNING, OnlineDownloads.Status.QUEUED -> IconButton(onClick = { OnlineDownloads.pause(context, d.id) }) { Icon(Icons.Default.Pause, "Pause", tint = TextPrimary) }
-            OnlineDownloads.Status.PAUSED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Download, "Resume", tint = TextPrimary) }
-            OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Refresh, "Retry", tint = TextPrimary) }
-        }
-        if (done) IconButton(onClick = { OnlineDownloads.setKeep(context, d.id, !d.keep) }, modifier = Modifier.testTag("library_download_keep")) {
-            Icon(if (d.keep) Icons.Default.PushPin else Icons.Outlined.PushPin, if (d.keep) "Kept forever (tap to allow auto-delete)" else "Keep forever", tint = if (d.keep) SpotifyGreen else TextTertiary)
-        }
-        IconButton(onClick = { OnlineDownloads.delete(context, d.id) }) { Icon(Icons.Default.Delete, "Delete", tint = TextTertiary) }
-    }
-}
-
-/** "Deletes in 3 days" for unpinned items when the auto-delete timer is on. */
-private fun keepLine(d: OnlineDownloads.Item): String? {
-    val days = dev.asfakul.yumeiro.online.download.DownloadSettings.autoDeleteDays.value
-    if (d.keep || days <= 0 || d.finishedAt <= 0) return null
-    val left = ((d.finishedAt + days * 86_400_000L - System.currentTimeMillis()) / 86_400_000.0).let { kotlin.math.ceil(it).toInt() }.coerceAtLeast(0)
-    return if (left <= 1) "deletes within a day" else "deletes in $left days"
-}
-
-@Composable
-private fun DownloadFolderRow(folder: String, list: List<OnlineDownloads.Item>, expanded: Boolean, onToggle: () -> Unit) {
-    val context = LocalContext.current
-    val saved = list.count { it.status == OnlineDownloads.Status.DONE }
-    val active = list.count { it.active }
-    val failed = list.count { it.status == OnlineDownloads.Status.FAILED }
-    val bytes = list.filter { it.status == OnlineDownloads.Status.DONE }.sumOf { it.bytes }
-    val allKept = list.isNotEmpty() && list.all { it.keep }
-    val running = list.firstOrNull { it.status == OnlineDownloads.Status.RUNNING }
-    var confirm by remember { mutableStateOf(false) }
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).clickable(onClick = onToggle).padding(10.dp).testTag("library_download_folder"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) {
-            PosterImage(list.firstOrNull { it.posterUrl != null }?.posterUrl, list.firstOrNull()?.posterHeaders.orEmpty(), Modifier.fillMaxSize())
-            Icon(Icons.Default.Folder, null, tint = Color.White, modifier = Modifier.align(Alignment.BottomEnd).padding(3.dp).size(16.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(folder, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val line = listOfNotNull(
-                "$saved saved", if (active > 0) "$active downloading" else null, if (failed > 0) "$failed failed" else null,
-                if (bytes > 0) mb(bytes) else null, if (allKept) "kept forever" else null,
-            ).joinToString(" · ")
-            Text(line, color = TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (running != null) {
-                Spacer(Modifier.height(5.dp))
-                if (running.total > 0) LinearProgressIndicator(progress = { running.fraction }, modifier = Modifier.fillMaxWidth().height(3.dp), color = SpotifyGreen)
-                else LinearProgressIndicator(Modifier.fillMaxWidth().height(3.dp), color = SpotifyGreen)
-            }
-        }
-        IconButton(onClick = { OnlineDownloads.setKeepFolder(context, folder, !allKept) }, modifier = Modifier.testTag("library_folder_keep")) {
-            Icon(if (allKept) Icons.Default.PushPin else Icons.Outlined.PushPin, if (allKept) "Kept forever" else "Keep all forever", tint = if (allKept) SpotifyGreen else TextTertiary)
-        }
-        IconButton(onClick = { confirm = true }) { Icon(Icons.Default.Delete, "Delete folder", tint = TextTertiary) }
-        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", tint = TextSecondary)
-    }
-    if (confirm) androidx.compose.material3.AlertDialog(
-        onDismissRequest = { confirm = false },
-        title = { Text("Delete folder?") },
-        text = { Text("$folder and its ${list.size} download${if (list.size == 1) "" else "s"} will be removed from this phone.") },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { confirm = false; OnlineDownloads.deleteFolder(context, folder) }) { Text("Delete") } },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirm = false }) { Text("Cancel") } },
-    )
-}
-
-private fun mb(b: Long): String = if (b >= 1L shl 30) "%.2f GB".format(java.util.Locale.US, b / 1073741824.0) else "%.0f MB".format(java.util.Locale.US, b / 1048576.0)
 
 @Composable
 private fun EmptyCard(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, body: String, action: String?, onAction: (() -> Unit)?) {
