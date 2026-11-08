@@ -103,7 +103,12 @@ fun NotificationSettingsCard() {
     val reminders by keyState(Key.REMINDERS)
     val unread by Inbox.unread.collectAsState()
     var systemOn by remember { mutableStateOf(PermissionCenter.notificationsAllowed(context)) }
-    LifecycleResumeEffect(Unit) { systemOn = PermissionCenter.notificationsAllowed(context); onPauseOrDispose { } }
+    var block by remember { mutableStateOf(dev.asfakul.yumeiro.notify.AppNotifier.block(context)) }
+    LifecycleResumeEffect(Unit) {
+        systemOn = PermissionCenter.notificationsAllowed(context)
+        block = dev.asfakul.yumeiro.notify.AppNotifier.block(context)
+        onPauseOrDispose { }
+    }
     SettingsCard {
         SettingsActionRow(
             "Notification inbox", if (unread > 0) "$unread new · everything Yumeiro told you" else "Everything Yumeiro told you, in one place",
@@ -112,13 +117,28 @@ fun NotificationSettingsCard() {
         SettingsDivider()
         SettingsActionRow(
             "System notifications",
-            if (systemOn) "Allowed by Android. Change sound, pop-up and lock-screen style here" else "Blocked by Android. Tap to turn them on",
-            "settings_system_notifications", status = if (systemOn) "On" else "Off", ok = systemOn,
+            when {
+                !systemOn -> "Blocked by Android. Tap to turn them on"
+                block == dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF -> "Some categories are off in Android. Tap to check them"
+                else -> "Allowed by Android. Change sound, pop-up and lock-screen style here"
+            },
+            "settings_system_notifications", status = if (!systemOn) "Off" else if (block == dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF) "Partly" else "On",
+            ok = systemOn && block != dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF,
             onClick = { PermissionCenter.openNotificationSettings(context) },
         )
         SettingsDivider()
         SettingsToggleRow("Show notifications", "Off keeps everything quietly in the inbox only", enabled,
-            { ns.set(context, Key.ENABLED, it) }, "toggle_notify_enabled")
+            { ns.set(context, Key.ENABLED, it); block = dev.asfakul.yumeiro.notify.AppNotifier.block(context) }, "toggle_notify_enabled")
+        SettingsDivider()
+        SettingsActionRow("Send a test notification", "Check that Yumeiro shows up in the status bar and plays its chime", "settings_test_notification") {
+            val why = dev.asfakul.yumeiro.notify.AppNotifier.sendTest(context)
+            if (why == dev.asfakul.yumeiro.notify.AppNotifier.Block.NONE) AppMessages.success(context, "Test sent. Check your status bar")
+            else {
+                AppMessages.error(context, "${why.title}. ${why.hint}")
+                if (why != dev.asfakul.yumeiro.notify.AppNotifier.Block.MASTER_OFF) PermissionCenter.openNotificationSettings(context)
+            }
+            block = why
+        }
         if (enabled) {
             SettingsDivider()
             SettingsToggleRow("New episodes", "For shows you follow with the bell in My List", episodes,

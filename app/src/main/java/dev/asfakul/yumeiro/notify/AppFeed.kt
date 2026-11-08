@@ -28,6 +28,8 @@ object AppFeed {
     private const val MAX_SHADE = 2
     /** On the very first sync, this many recent items are put in the inbox (no notification). */
     private const val FIRST_RUN_ITEMS = 5
+    /** On the first sync, an item this recent still gets one system notification. */
+    private const val FIRST_RUN_FRESH_MS = 3L * 24 * 60 * 60 * 1000
     private val ACTIONS = setOf("update", "extensions", "market", "streams", "support")
     private val mutex = Mutex()
 
@@ -66,6 +68,17 @@ object AppFeed {
     fun fresh(items: List<FeedItem>, lastAt: Long, known: Set<String>): List<FeedItem> =
         items.filter { it.at > lastAt && it.id !in known }
 
+    /**
+     * Which of [add] (newest first) also go to the notification shade. Normally the newest
+     * [MAX_SHADE]. On the very first sync only items from the last [FIRST_RUN_FRESH_MS] are shown,
+     * so a new install doesn't get a burst of old news, but recent news is not silently hidden
+     * (that used to keep every first-run item inbox-only).
+     */
+    fun shadePlan(add: List<FeedItem>, first: Boolean, now: Long): Set<Int> {
+        val idx = add.indices.filter { i -> !first || (add[i].at > 0 && now - add[i].at <= FIRST_RUN_FRESH_MS) }
+        return idx.take(if (first) 1 else MAX_SHADE).toSet()
+    }
+
     suspend fun sync(c: Context) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val items = parse(TrustedSources.fetchCatalogText(URL, MAX_BYTES))
@@ -75,10 +88,13 @@ object AppFeed {
             Inbox.ensureLoaded(c)
             val known = Inbox.items.value.map { it.id.removePrefix("feed-") }.toSet()
             val add = if (first) items.take(FIRST_RUN_ITEMS) else fresh(items, lastAt, known)
+            val now = System.currentTimeMillis()
+            val plan = shadePlan(add, first, now)
             add.forEachIndexed { i, it ->
-                AppNotifier.post(c, Inbox.Item("feed-${it.id}", it.kind, it.title, it.body, it.at.takeIf { a -> a > 0 } ?: System.currentTimeMillis(), link = it.link),
-                    inboxOnly = first || i >= MAX_SHADE)
+                AppNotifier.post(c, Inbox.Item("feed-${it.id}", it.kind, it.title, it.body, it.at.takeIf { a -> a > 0 } ?: now, link = it.link),
+                    inboxOnly = i !in plan)
             }
+            if (!first || plan.isNotEmpty()) AppNotifier.postSummary(c, add.size - plan.size)
             val newest = items.maxOfOrNull { it.at } ?: lastAt
             p.edit().putLong("last_at", maxOf(lastAt, newest)).apply()
         }

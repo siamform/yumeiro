@@ -42,16 +42,21 @@ fun DownloadSettingsCard() {
     val parallel by DownloadSettings.parallel.collectAsState()
     val keepDefault by DownloadSettings.keepByDefault.collectAsState()
     val toPhone by DownloadSettings.saveYouTubeToPhone.collectAsState()
+    val askFirst by DownloadSettings.askFirst.collectAsState()
+    val tips by DownloadSettings.showTips.collectAsState()
     SettingsCard {
+        SettingsToggleRow("Ask before each download", "Shows where it's saved and lets you pick Permanent or Offline", askFirst,
+            { DownloadSettings.setAskFirst(context, it) }, "setting_ask_first")
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
         Text("Auto-delete watched downloads", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("Finished downloads are removed after this time. Pinned (Keep forever) ones always stay.", color = TextTertiary, fontSize = 12.sp)
+        Text("Offline copies are removed this long after they finish. Permanent (pinned) ones always stay.", color = TextTertiary, fontSize = 12.sp)
         FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DownloadSettings.AUTO_DELETE_CHOICES.forEach { d ->
                 FilterChip(selected = d == days, onClick = { DownloadSettings.setAutoDeleteDays(context, d) }, label = { Text(DownloadSettings.autoDeleteLabel(d)) },
                     modifier = Modifier.testTag("setting_autodelete_$d"))
             }
         }
-        SettingsToggleRow("Keep new downloads forever", "New episode downloads start pinned, so the timer skips them", keepDefault,
+        SettingsToggleRow("Permanent by default", "New episode downloads start as Permanent, so the timer skips them", keepDefault,
             { DownloadSettings.setKeepByDefault(context, it) }, "setting_keep_default")
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         Text("Episode quality", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -69,6 +74,15 @@ fun DownloadSettingsCard() {
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         SettingsToggleRow("Save YouTube downloads to phone", "Videos go to Movies/Yumeiro and music to Music/Yumeiro, visible in other apps", toPhone,
             { DownloadSettings.setSaveYouTubeToPhone(context, it) }, "setting_yt_to_phone")
+        SettingsToggleRow("Show tips on the Downloads page", "The short \"How downloads work\" guide", tips,
+            { DownloadSettings.setShowTips(context, it) }, "setting_download_tips")
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
+        Text("Where files go", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Episodes and movies: ${OnlineDownloads.storagePath(context, "")}/<series folder>, private to Yumeiro and removed if you uninstall. " +
+                "YouTube: ${if (toPhone) "Movies/Yumeiro and Music/Yumeiro on your phone" else "the same app folder"}.",
+            color = TextTertiary, fontSize = 12.sp,
+        )
         Spacer(Modifier.height(4.dp))
         TextButton(onClick = {
             val n = OnlineDownloads.cleanup(context)

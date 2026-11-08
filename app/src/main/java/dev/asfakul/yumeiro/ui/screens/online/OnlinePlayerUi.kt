@@ -146,9 +146,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
             }
             if (state.hasNext) PlayerChip(Icons.Default.SkipNext, "Next", "online_player_next") { OnlineSession.next(context) }
             if (state.link != null && state.link?.isDash != true && state.detail.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) PlayerChip(Icons.Default.Download, "Download", "online_player_download") {
-                val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.downloadCurrent(context)
-                if (err == null) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Downloading — find it in Library → Videos")
-                else dev.asfakul.yumeiro.ui.components.AppMessages.error(context, err)
+                askDownloadCurrent(context, state)
             }
         }
     }
@@ -451,9 +449,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 if (castOk && state.link != null && player != null) dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.Cast, "Cast", "online_watch_cast") { castCurrent(context, state, player) }
                 if (state.link != null && state.link?.isDash != true && d.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) {
                     dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.Download, "Download", "online_watch_download") {
-                        val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.downloadCurrent(context)
-                        if (err == null) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Downloading — find it in Library → Videos")
-                        else dev.asfakul.yumeiro.ui.components.AppMessages.error(context, err)
+                        askDownloadCurrent(context, state)
                     }
                 }
             }
@@ -696,4 +692,16 @@ private fun castCurrent(context: android.content.Context, state: OnlineSession.S
     }
     if (dev.asfakul.yumeiro.cast.CastSupport.connected(context)) start()
     else { dev.asfakul.yumeiro.cast.CastSupport.whenConnected(context) { activity.runOnUiThread { start() } }; dev.asfakul.yumeiro.cast.CastSupport.pickDevice(activity) }
+}
+
+/** "Download" in the player: asks where/how first ([dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt]). */
+internal fun askDownloadCurrent(context: android.content.Context, state: OnlineSession.State) {
+    val s = dev.asfakul.yumeiro.online.download.DownloadSettings.also { it.init(context) }
+    dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.ask(context, dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.Request(
+        type = dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.Type.CURRENT,
+        title = state.detail.name, what = state.episode?.label ?: "this video", count = 1,
+        folder = if (state.episode != null) dev.asfakul.yumeiro.online.download.DownloadNaming.seriesFolder(state.detail.name, state.api, state.version) else dev.asfakul.yumeiro.online.download.DownloadGroups.LOOSE,
+        quality = state.link?.qualityLabel?.ifBlank { null } ?: "Current source",
+        defaultKeep = s.keepByDefault.value,
+    ) { keep -> dev.asfakul.yumeiro.online.download.OnlineDownloads.downloadCurrent(context, keep) })
 }

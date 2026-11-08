@@ -40,6 +40,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         const val TAG = "online_download"
         const val KEY_ID = "id"
         private const val CHANNEL = "downloads"
+        /** Notification tap: opens the Downloads page ([dev.asfakul.yumeiro.MainActivity]). */
+        const val ACTION_OPEN_DOWNLOADS = "dev.asfakul.yumeiro.OPEN_DOWNLOADS"
         private const val LOG = "DownloadWorker"
         private const val LINK_TIMEOUT_MS = 90_000L
     }
@@ -101,7 +103,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 }
             }
             OnlineDownloads.finished(id, bytes)
-            done(notifId, label, "Download complete")
+            done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) "Saved · Permanent · tap to open Downloads" else "Saved · Offline · tap to open Downloads")
             return Result.success()
         } catch (e: CancellationException) {
             OnlineDownloads.paused(id)
@@ -118,7 +120,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
             if (e is IOException && e !is HttpStatus && e !is NoLink && runAttemptCount < 3) return Result.retry()
             OnlineDownloads.failed(id, msg)
-            done(notifId, label, "Download failed: $msg")
+            done(notifId, label, "Download failed: $msg · tap to retry in Downloads")
             return Result.failure()
         }
     }
@@ -196,7 +198,15 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             .setContentText(if (indeterminate) "Downloading…" else "$progress%")
             .setOnlyAlertOnce(true).setOngoing(true)
             .setProgress(max, progress, indeterminate)
+            .setContentIntent(openDownloads())
     }
+
+    private fun openDownloads(): android.app.PendingIntent = android.app.PendingIntent.getActivity(
+        applicationContext, 0x5fff,
+        android.content.Intent(applicationContext, dev.asfakul.yumeiro.MainActivity::class.java).setAction(ACTION_OPEN_DOWNLOADS)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     private fun foreground(id: Int, title: String, p: Int, max: Int, indeterminate: Boolean): ForegroundInfo {
         val n = notification(title, p, max, indeterminate).build()
@@ -208,7 +218,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         runCatching {
             notifications.notify(id + 0x1000, NotificationCompat.Builder(applicationContext, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle(title.ifBlank { "Download" }).setContentText(text).setAutoCancel(true).build())
+                .setContentTitle(title.ifBlank { "Download" }).setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text)).setContentIntent(openDownloads()).setAutoCancel(true).build())
         }
     }
 }

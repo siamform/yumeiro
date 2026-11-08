@@ -384,3 +384,34 @@ youtubedl-android (github.com/yausername/youtubedl-android), NewPipe muxers (`Mp
 Aniyomi download/storage docs (aniyomi.org/docs/faq/downloads, /storage), Android MediaMuxer reference.
 
 **Tests:** `DownloadNamingTest`, `YtDownloadOptionsTest`.
+
+### 13b. Download flow and Downloads page (follow-up)
+
+- **Ask first:** every download (episode icon, title sheet, player button, YouTube) goes through
+  `ui/screens/downloads/DownloadPrompt.kt`. The dialog shows quality, size and free space, where the file goes
+  (Downloads folder + phone path, or Movies/Music/Yumeiro for YouTube), **Permanent vs Offline** (with the auto-delete
+  timer chips inline) and tips. "Don't ask again" → `DownloadSettings.askFirst` (Settings → Downloads turns it back on).
+  After starting, a message with **View** opens the Downloads page.
+- **Downloads page** (`Screen.Downloads`, `DownloadsScreen.kt`): storage card, offline settings (same
+  `DownloadSettingsCard`), dismissible tips, filters (All / Offline / Permanent / In progress) and sections
+  In progress → Permanent → Offline, each grouped by series folder (`DownloadGroups`, unit-tested).
+- **Entry points:** Home shortcut "Downloads", Library → Videos (same grouped sections + Manage), the download
+  notification (tap opens the page via `DownloadWorker.ACTION_OPEN_DOWNLOADS` → `DownloadsNav`).
+- **Tests:** `DownloadGroupsTest`, `DownloadUiScreenshotTest` (Robolectric; renders to `app/build/screenshots/dl_*.png`).
+
+### 13c. Notifications that stayed in the inbox (fix)
+
+**Bug:** feed items (new extensions, playlists, releases, news) appeared in the bell inbox but never in the
+status bar. Causes:
+1. `AppFeed.sync` marked **every item of the first sync** `inboxOnly`. The first periodic `DiscoveryWorker`
+   run happens right after install, so a new user's whole first batch (the live feed has 4) was silent.
+2. `AppNotifier.post` only checked the app-level switch, not a blocked **channel** (user swiped "Don't show
+   these" or turned a category off) or the in-app "Show notifications" switch; the inbox banner only covered
+   the permission case, so users saw no reason.
+3. Only `SecurityException` was caught around `notify()`; any other failure would kill the worker run.
+
+**Fix:** `AppFeed.shadePlan` (first sync: newest item from the last 3 days still notifies; later syncs: newest 2,
+plus an "N more updates" summary), `AppNotifier.block()` returns the exact reason (permission, app off, in-app
+switch, channel off) and is shown in the inbox banner and Settings, `Send a test notification` in Settings →
+Notifications, all exceptions caught, explicit priority/category/timestamp. Items already filed silently by
+older builds are not re-sent.

@@ -97,6 +97,18 @@ object OnlineDownloads {
 
     fun folderDir(context: Context, folder: String): File = if (folder.isBlank()) dir(context) else File(dir(context), folder)
 
+    /** Free space where downloads are saved (bytes, -1 when unknown). */
+    fun freeBytes(context: Context): Long = runCatching { android.os.StatFs(dir(context).path).availableBytes }.getOrDefault(-1L)
+
+    /** Human-readable place on the phone for [folder] (app storage). */
+    fun storagePath(context: Context, folder: String): String {
+        val base = dir(context).absolutePath.substringAfter("/emulated/0/", dir(context).absolutePath).let { if (it.startsWith("/")) it else "Internal storage/$it" }
+        return if (folder.isBlank()) base else "$base/$folder"
+    }
+
+    /** Folder a YouTube download goes into ([enqueueYouTube]). */
+    fun youTubeFolder(audioOnly: Boolean, music: Boolean) = if (audioOnly || music) "YouTube Music" else "YouTube"
+
     fun fileOf(context: Context, item: Item): File = File(folderDir(context, item.folder).apply { mkdirs() }, item.fileName)
 
     /** Something playable is saved for [item] (in the app folder or the phone's media folders). */
@@ -117,21 +129,25 @@ object OnlineDownloads {
             .map { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED) else it }
     }
 
+    /** Tests / previews only: replaces the in-memory list without touching disk. */
+    @androidx.annotation.VisibleForTesting
+    internal fun setItemsForTest(context: Context, list: List<Item>) { ensureLoaded(context); synchronized(this) { _items.value = list } }
+
     fun get(id: String): Item? = _items.value.firstOrNull { it.id == id }
 
     /** Downloads what's playing now (current source of the online session). */
-    fun downloadCurrent(context: Context): String? {
+    fun downloadCurrent(context: Context, keep: Boolean? = null): String? {
         val s = OnlineSession.state.value ?: return "Nothing is playing"
         val link = s.link ?: return "No source yet"
         val folder = if (s.episode != null) DownloadNaming.seriesFolder(s.detail.name, s.api, s.version) else ""
-        return enqueue(context, s.title, s.api, s.detail.url, s.episode?.label, s.detail.posterUrl, s.detail.posterHeaders, link, folder, s.version)
+        return enqueue(context, s.title, s.api, s.detail.url, s.episode?.label, s.detail.posterUrl, s.detail.posterHeaders, link, folder, s.version, keep)
     }
 
     /** Queues [link]; returns an error text, or null when queued. */
     fun enqueue(
         context: Context, title: String, api: String, titleUrl: String, episodeLabel: String?,
         posterUrl: String?, posterHeaders: Map<String, String>, link: OnlineLink,
-        folder: String = "", version: String? = null,
+        folder: String = "", version: String? = null, keep: Boolean? = null,
     ): String? {
         ensureLoaded(context)
         if (link.isDash) return "This source can't be saved (DASH). Pick another source."
@@ -140,7 +156,7 @@ object OnlineDownloads {
         val ext = DownloadNaming.extensionFor(link)
         val name = safeName(listOfNotNull(title.takeIf { it.isNotBlank() }, link.qualityLabel.takeIf { it.isNotBlank() }).joinToString(" ")) + "-" + id + "." + ext
         val item = Item(id, title, api, titleUrl, episodeLabel, posterUrl, posterHeaders, link.url, link.isHls, headersFor(link), name,
-            folder = folder, version = version, keep = DownloadSettings.keepByDefault.value, quality = link.qualityLabel.ifBlank { null })
+            folder = folder, version = version, keep = keep ?: DownloadSettings.keepByDefault.value, quality = link.qualityLabel.ifBlank { null })
         update { list -> listOf(item) + list.filterNot { it.id == id } }
         start(context, id)
         return null
@@ -156,7 +172,7 @@ object OnlineDownloads {
      * Queues whole episodes of [detail] ([episodes]: index in watch order → episode). Links are
      * found when each download starts. Returns how many were added (already saved/queued skipped).
      */
-    fun enqueueEpisodes(context: Context, detail: OnlineDetail, version: String, episodes: List<Pair<Int, OnlineEpisode>>): Int {
+    fun enqueueEpisodes(context: Context, detail: OnlineDetail, version: String, episodes: List<Pair<Int, OnlineEpisode>>, keep: Boolean? = null): Int {
         ensureLoaded(context); DownloadSettings.init(context)
         val folder = DownloadNaming.seriesFolder(detail.name, detail.api, version)
         val now = System.currentTimeMillis()
@@ -170,7 +186,7 @@ object OnlineDownloads {
                 posterUrl = ep.posterUrl ?: detail.posterUrl, posterHeaders = detail.posterHeaders,
                 url = "", isHls = false, headers = emptyMap(), fileName = "",
                 createdAt = now + index, kind = Kind.EPISODE, folder = folder, version = version.ifBlank { null },
-                data = ep.data, order = index, keep = DownloadSettings.keepByDefault.value,
+                data = ep.data, order = index, keep = keep ?: DownloadSettings.keepByDefault.value,
                 baseName = DownloadNaming.episodeBase(ep.season, ep.episode, ep.name, index),
             )
         }
@@ -182,7 +198,7 @@ object OnlineDownloads {
     }
 
     /** Queues a YouTube video or song in [choice] quality. Returns an error text, or null when queued. */
-    fun enqueueYouTube(context: Context, ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice): String? {
+    fun enqueueYouTube(context: Context, ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice, keep: Boolean = true): String? {
         ensureLoaded(context); DownloadSettings.init(context)
         val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
         get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
@@ -193,9 +209,9 @@ object OnlineDownloads {
             episodeLabel = channel?.takeIf { it.isNotBlank() }, posterUrl = thumbnail, posterHeaders = emptyMap(),
             url = "", isHls = false, headers = emptyMap(), fileName = base + suffix + "-" + id + "." + choice.container,
             kind = if (choice.audioOnly) Kind.YT_AUDIO else Kind.YT_VIDEO,
-            folder = if (choice.audioOnly || music) "YouTube Music" else "YouTube",
+            folder = youTubeFolder(choice.audioOnly, music),
             ytId = ytId, videoItag = choice.videoItag, audioItag = choice.audioItag, container = choice.container,
-            quality = choice.label, keep = true,
+            quality = choice.label, keep = keep,
         )
         update { list -> listOf(item) + list.filterNot { it.id == id } }
         start(context, id)

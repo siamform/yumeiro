@@ -63,6 +63,7 @@ import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.YtDownloadOptions
 import dev.asfakul.yumeiro.online.download.YtDownloads
 import dev.asfakul.yumeiro.ui.components.AppMessages
+import dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
@@ -88,9 +89,8 @@ internal fun EpisodeDownloadIcon(d: OnlineDetail, version: String, index: Int, e
             }
             OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, id) }) { Icon(Icons.Default.ErrorOutline, "Retry download", tint = TextTertiary) }
             else -> IconButton(onClick = {
-                val n = OnlineDownloads.enqueueEpisodes(context, d, version, listOf(index to e))
-                if (n > 0) AppMessages.success(context, "Downloading ${e.label}")
-                else if (item?.status == OnlineDownloads.Status.PAUSED) OnlineDownloads.start(context, id)
+                if (item?.status == OnlineDownloads.Status.PAUSED) { OnlineDownloads.start(context, id); return@IconButton }
+                askEpisodes(context, d, version, listOf(index to e), e.label)
             }, modifier = Modifier.testTag("episode_download")) { Icon(Icons.Default.Download, "Download episode", tint = TextSecondary) }
         }
     }
@@ -129,9 +129,8 @@ private fun EpisodeDownloadSheet(
     val all by OnlineDownloads.items.collectAsState()
     val have = all.filter { it.folder == folder && (it.active || it.status == OnlineDownloads.Status.DONE) }.mapNotNull { it.data }.toSet()
     fun queue(list: List<Pair<Int, OnlineEpisode>>, what: String) {
-        val n = OnlineDownloads.enqueueEpisodes(context, d, version, list)
-        AppMessages.success(context, if (n == 0) "Already downloaded or queued" else "Downloading $n $what")
         onDismiss()
+        askEpisodes(context, d, version, list, if (what == "title") "this movie" else if (list.size == 1) list.first().second.label else "${list.size} episodes", movie = what == "title")
     }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("episode_download_sheet")) {
@@ -167,11 +166,22 @@ private fun EpisodeDownloadSheet(
                 }
             }
             Text(
-                "One episode per extension downloads at a time, so the site doesn't block you. Episodes are saved in one folder per series and play offline from Library → Downloads.",
+                "Next you'll see where it's saved and choose Permanent or Offline (auto-delete). One episode per extension downloads at a time, so the site doesn't block you.",
                 color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 10.dp),
             )
         }
     }
+}
+
+/** Asks where/how (see [DownloadPrompt]) before queuing [list] of [d]. */
+internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, version: String, list: List<Pair<Int, OnlineEpisode>>, what: String, movie: Boolean = false) {
+    DownloadSettings.init(context)
+    DownloadPrompt.ask(context, DownloadPrompt.Request(
+        type = if (movie) DownloadPrompt.Type.MOVIE else DownloadPrompt.Type.EPISODES,
+        title = d.name, what = what, count = list.size,
+        folder = DownloadNaming.seriesFolder(d.name, d.api, version), quality = DownloadSettings.qualityLabel(DownloadSettings.quality.value) + " (up to)",
+        defaultKeep = DownloadSettings.keepByDefault.value,
+    ) { keep -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep) == 0) "Already downloaded or queued" else null })
 }
 
 @Composable
@@ -225,9 +235,13 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
                     LazyColumn(Modifier.heightIn(max = 380.dp)) {
                         items(shown, key = { "${it.videoItag}_${it.audioItag}_${it.audioOnly}" }) { c ->
                             SheetOption(if (c.audioOnly) Icons.Default.MusicNote else Icons.Default.Download, c.label, c.detail) {
-                                val err = OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, c)
-                                if (err != null) AppMessages.error(context, err) else AppMessages.success(context, "Downloading ${c.label}")
                                 onDismiss()
+                                DownloadPrompt.ask(context, DownloadPrompt.Request(
+                                    type = if (c.audioOnly) DownloadPrompt.Type.YT_AUDIO else DownloadPrompt.Type.YT_VIDEO,
+                                    title = item.title, what = if (c.audioOnly) "audio (${c.label.removePrefix("Audio ")})" else "${c.label} video", count = 1,
+                                    folder = OnlineDownloads.youTubeFolder(c.audioOnly, item.music), quality = c.label + (c.detail.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+                                    sizeBytes = c.sizeBytes, defaultKeep = true,
+                                ) { keep -> OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, c, keep) })
                             }
                         }
                     }
@@ -238,8 +252,8 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
                 Icon(Icons.Default.CheckCircle, null, tint = TextTertiary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    if (toPhone) "Saved to your phone's ${if (audioTab) "Music" else "Movies"}/Yumeiro folder and to Library → Downloads."
-                    else "Saved in Library → Downloads (app storage).",
+                    if (toPhone) "Saved to your phone's ${if (audioTab) "Music" else "Movies"}/Yumeiro folder and to Downloads (Home or Library → Videos)."
+                    else "Saved in Downloads (Home or Library → Videos), app storage.",
                     color = TextTertiary, fontSize = 11.sp,
                 )
             }

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LiveTv
@@ -253,6 +254,7 @@ fun HomeScreen(
     onOpenLive: () -> Unit = onNavigateToLibrary,
     onOpenSearch: () -> Unit = onNavigateToVideos,
     onOpenHueStore: () -> Unit = onNavigateToSettings,
+    onOpenDownloads: () -> Unit = onNavigateToLibrary,
     /** Number of installed + working extensions ("Hues"). */
     huesCount: Int = 0,
     isPlaying: Boolean = false,
@@ -271,7 +273,17 @@ fun HomeScreen(
     val context = LocalContext.current
     val continueTrack = selectedTrack ?: recentlyPlayed.firstOrNull()
 
-    val tiles = remember(stats.audioCount, stats.videoCount, huesCount) {
+    remember { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context); true }
+    val downloadItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsStateCompat()
+    val dlSummary = remember(downloadItems) {
+        val split = dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloadItems)
+        when {
+            split.active.isNotEmpty() -> "${split.active.size} in progress" to "${split.active.size}"
+            split.isEmpty -> "Save for offline" to null
+            else -> "${split.permanentCount} permanent · ${split.offlineCount} offline" to null
+        }
+    }
+    val tiles = remember(stats.audioCount, stats.videoCount, huesCount, dlSummary) {
         mapOf(
             "music" to HomeShortcut("music", "Music", "${stats.audioCount} songs on device", Icons.Default.LibraryMusic, "音", onNavigateToMusic),
             "ytmusic" to HomeShortcut("ytmusic", "YT Music", "Stream any song", Icons.Default.Album, "歌", onOpenYouTubeMusic),
@@ -283,6 +295,7 @@ fun HomeScreen(
             "live" to HomeShortcut("live", "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "生", onOpenLive),
             "library" to HomeShortcut("library", "Library", "Playlists · favorites · stats", Icons.Default.Bookmarks, "棚", onNavigateToLibrary),
             "store" to HomeShortcut("store", "Hue store", "Find more channels", Icons.Default.Storefront, "店", onOpenHueStore),
+            "downloads" to HomeShortcut("downloads", "Downloads", dlSummary.first, Icons.Default.DownloadForOffline, "保", onOpenDownloads, badge = dlSummary.second),
         )
     }
 
@@ -389,6 +402,9 @@ fun HomeScreen(
                     BentoTile(tiles.getValue("library"), Modifier.weight(1.3f).fillMaxHeight(), compact = true, testTag = "quick_card_library")
                     BentoTile(tiles.getValue("store"), Modifier.weight(1f).fillMaxHeight(), compact = true, testTag = "quick_card_store")
                 }
+            }
+            item(key = "bento_downloads", contentType = "bento") {
+                BentoTile(tiles.getValue("downloads"), Modifier.fillMaxWidth().padding(top = TileGap).height(84.dp), compact = true, testTag = "quick_card_downloads")
             }
 
             // ---- For you (endless) ----------------------------------------------------------

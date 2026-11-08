@@ -40,6 +40,14 @@ object DownloadSettings {
     /** YouTube videos / music also go to the phone's Movies / Music folder (Android 10+). */
     val saveYouTubeToPhone: StateFlow<Boolean> = _saveYouTubeToPhone.asStateFlow()
 
+    private val _askFirst = MutableStateFlow(true)
+    /** Show the "where and how" confirmation before a download starts. */
+    val askFirst: StateFlow<Boolean> = _askFirst.asStateFlow()
+
+    private val _showTips = MutableStateFlow(true)
+    /** The "how downloads work" card on the Downloads page. */
+    val showTips: StateFlow<Boolean> = _showTips.asStateFlow()
+
     @Synchronized
     fun init(context: Context) {
         if (prefs != null) return
@@ -49,6 +57,8 @@ object DownloadSettings {
         _parallel.value = p.getInt("parallel", 2).coerceIn(1, 3)
         _keepByDefault.value = p.getBoolean("keep_default", false)
         _saveYouTubeToPhone.value = p.getBoolean("yt_to_phone", true)
+        _askFirst.value = p.getBoolean("ask_first", true)
+        _showTips.value = p.getBoolean("show_tips", true)
     }
 
     fun setAutoDeleteDays(context: Context, days: Int) { init(context); _autoDeleteDays.value = days; prefs?.edit()?.putInt("auto_delete_days", days)?.apply() }
@@ -56,6 +66,9 @@ object DownloadSettings {
     fun setParallel(context: Context, n: Int) { init(context); _parallel.value = n.coerceIn(1, 3); prefs?.edit()?.putInt("parallel", _parallel.value)?.apply() }
     fun setKeepByDefault(context: Context, on: Boolean) { init(context); _keepByDefault.value = on; prefs?.edit()?.putBoolean("keep_default", on)?.apply() }
     fun setSaveYouTubeToPhone(context: Context, on: Boolean) { init(context); _saveYouTubeToPhone.value = on; prefs?.edit()?.putBoolean("yt_to_phone", on)?.apply() }
+
+    fun setAskFirst(context: Context, on: Boolean) { init(context); _askFirst.value = on; prefs?.edit()?.putBoolean("ask_first", on)?.apply() }
+    fun setShowTips(context: Context, on: Boolean) { init(context); _showTips.value = on; prefs?.edit()?.putBoolean("show_tips", on)?.apply() }
 
     fun autoDeleteLabel(days: Int) = when (days) { 0 -> "Never"; 1 -> "1 day"; else -> "$days days" }
     fun qualityLabel(h: Int) = if (h == 0) "Best" else "${h}p"
