@@ -34,8 +34,10 @@ class DdosGuardKiller(private val alwaysBypass: Boolean) : Interceptor {
         }.also { savedCookiesMap[host] = it }
         val withCookies = request.newBuilder().headers(getHeaders(request.headers.associate { it.first to it.second }, cookies + requestCookies(request))).build()
         val response = chain.proceed(withCookies)
-        if (response.code != 403) return@runCatching response
-        val clearance = BrowserCheck.solveBlocking(request.url.toString()) ?: return@runCatching response
+        // Only a real DDoS-Guard / Cloudflare check opens the browser check; a plain 403 is passed on.
+        if (response.code != 403 || !BrowserCheck.isChallenge(response)) return@runCatching response
+        val url = request.url.toString()
+        val clearance = BrowserCheck.solveBlocking(url, page = BrowserCheck.challengePage(url, request.method, request.header("Accept"))) ?: return@runCatching response
         response.close()
         chain.proceed(BrowserCheck.withClearance(withCookies, clearance))
     }.getOrNull()

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.online.web.SafeWebView
+import dev.asfakul.yumeiro.online.web.SafeWebViewClient
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Handler
@@ -270,7 +272,8 @@ fun PageStreamFinderDialog(
                                     override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress }
                                     override fun onReceivedTitle(view: WebView?, title: String?) { pageTitle = title.orEmpty() }
                                 }
-                                webViewClient = object : WebViewClient() {
+                                SafeWebView.harden(this)
+                                webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                         val scheme = request?.url?.scheme?.lowercase()
                                         return scheme != "http" && scheme != "https" // block intent:, market:, file: …

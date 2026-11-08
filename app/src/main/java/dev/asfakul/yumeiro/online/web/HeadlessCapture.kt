@@ -77,7 +77,7 @@ object HeadlessCapture {
             Log.w(TAG, "capture failed for ${android.net.Uri.parse(pageUrl).host}", t)
             null
         } finally {
-            web?.let { w -> main.post { runCatching { w.stopLoading(); w.destroy() } } }
+            web?.let { w -> main.post { SafeWebView.dispose(w) } }
         }
     }
 
@@ -119,7 +119,9 @@ object HeadlessCapture {
             @JavascriptInterface fun onDrm(system: String) { capture.drmSystem = system }
         }, "MTFinder")
 
-        web.webViewClient = object : WebViewClient() {
+        SafeWebView.harden(web)
+        // A crashed page renderer must not take the app down: give up on this page instead.
+        web.webViewClient = object : SafeWebViewClient(onGone = { if (!result.isCompleted) result.complete(null) }) {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 val c = capture.onRequest(request.url.toString(), request.method, request.requestHeaders.orEmpty())
                 if (c != null) main.post { deliver(c) }
@@ -127,6 +129,7 @@ object HeadlessCapture {
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
+                if (result.isCompleted) return
                 view.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
                 view.evaluateJavascript(NUDGE_JS, null)
             }

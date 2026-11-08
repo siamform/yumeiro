@@ -31,7 +31,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 object OnlineSession {
     private const val TAG = "OnlineSession"
     /** After the first link arrives, wait this long for better ones before starting. */
-    private const val GATHER_MS = 3_500L
+    private const val GATHER_MS = 2_000L
     /** Hard cap on waiting for any link. */
     private const val FIRST_LINK_TIMEOUT_MS = 80_000L
 

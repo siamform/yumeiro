@@ -64,17 +64,31 @@ object BrowserCheck {
     /** Hosts the user dismissed recently: don't ask again for a while. */
     private val declined = ConcurrentHashMap<String, Long>()
 
+    private const val FALLBACK_UA =
+        "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+
     fun init(context: Context) {
         appContext = context.applicationContext
-        userAgent()
+        // WebView start-up must happen on the main thread. Reading the default user agent from a
+        // worker thread makes it wait for the main thread — a dead lock (frozen app, then "isn't
+        // responding") whenever the main thread was itself waiting for that worker.
+        if (onMainThread()) userAgent() else main.post { runCatching { userAgent() } }
     }
 
     /** The WebView's own user agent (clearance cookies are only valid with it). */
     fun userAgent(): String {
         ua?.let { return it }
-        val ctx = appContext
-        val value = runCatching { ctx?.let { WebSettings.getDefaultUserAgent(it) } }.getOrNull()
-            ?: "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+        val ctx = appContext ?: return FALLBACK_UA
+        val value = if (onMainThread()) {
+            runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull()
+        } else {
+            // Ask the main thread and wait briefly; never block a worker on it indefinitely.
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var got: String? = null
+            main.post { got = runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull(); latch.countDown() }
+            latch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+            got
+        } ?: return FALLBACK_UA // not cached: the real one is picked up next time
         ua = value
         runCatching { WebViewResolver.webViewUserAgent = value }
         return value
@@ -84,17 +98,81 @@ object BrowserCheck {
 
     fun forget(host: String) { cleared.remove(host) }
 
-    /** True when [response] is a browser-check page rather than real content. */
-    fun isChallenge(response: Response): Boolean {
-        if (response.code !in setOf(403, 429, 503)) return false
-        if (response.header("cf-mitigated").equals("challenge", true)) return true
-        val server = response.header("Server").orEmpty().lowercase()
-        val protectedBy = "cloudflare" in server || "ddos-guard" in server || response.header("cf-ray") != null
-        if (!protectedBy) return false
-        val body = runCatching { response.peekBody(96 * 1024).string() }.getOrDefault("")
-        return listOf("challenge-platform", "cf-chl", "Just a moment", "cf_chl_opt", "ddos-guard", "Checking your browser", "turnstile")
-            .any { body.contains(it, ignoreCase = true) }
+    /** What a refused response is. */
+    enum class Verdict {
+        /** Real content (or an ordinary error): pass it through. */
+        NONE,
+        /** A "checking your browser" / Turnstile page that a real browser visit can pass. */
+        CHALLENGE,
+        /** A firewall block ("Sorry, you have been blocked", error 1020, geo block): no captcha can fix it. */
+        BLOCKED,
     }
+
+    private val CHALLENGE_MARKERS = listOf(
+        "cf_chl_opt", "challenge-error-title", "challenge-error-text", "cf-challenge-running",
+        "/cdn-cgi/challenge-platform/h/", "<title>just a moment", "cf-browser-verification", "cf_captcha_kind",
+    )
+    private val BLOCK_MARKERS = listOf(
+        "cf-error-details", "sorry, you have been blocked", "error code: 1020", "error code: 1010",
+        "error code: 1015", "error code: 1009", "attention required! | cloudflare", "access denied | ",
+    )
+    private val DDG_MARKERS = listOf("check.ddos-guard.net", "ddos-guard/js-challenge", "checking your browser", "ddg-captcha")
+
+    /**
+     * Classifies a response. Pure → unit-testable.
+     *
+     * Same rule Mihon/Tachiyomi moved to: Cloudflare marks every challenge with the documented
+     * `cf-mitigated: challenge` header. Without it, only the challenge page's own markup counts —
+     * the old check also matched `/cdn-cgi/challenge-platform/scripts/jsd/main.js`, a bot-detection
+     * script Cloudflare injects into *ordinary* pages and error pages, so any 403 from a Cloudflare
+     * host (hot-link protection, a WAF block, an API that wants other headers) opened the
+     * "Verify you're human" page, which could never be passed and then said "you have been blocked".
+     */
+    fun classify(code: Int, mitigated: String?, server: String?, hasCfRay: Boolean, body: String): Verdict {
+        if (mitigated.equals("challenge", true)) return Verdict.CHALLENGE
+        if (code !in setOf(403, 429, 503)) return Verdict.NONE
+        val srv = server.orEmpty().lowercase()
+        val text = body.lowercase()
+        if ("ddos-guard" in srv) {
+            return if (DDG_MARKERS.any { it in text }) Verdict.CHALLENGE else Verdict.NONE
+        }
+        val cloudflare = "cloudflare" in srv || hasCfRay
+        if (!cloudflare) return Verdict.NONE
+        if (BLOCK_MARKERS.any { it in text } && CHALLENGE_MARKERS.none { it in text }) return Verdict.BLOCKED
+        return if (CHALLENGE_MARKERS.any { it in text }) Verdict.CHALLENGE else Verdict.NONE
+    }
+
+    fun verdict(response: Response): Verdict {
+        val mitigated = response.header("cf-mitigated")
+        if (mitigated.equals("challenge", true)) return Verdict.CHALLENGE
+        if (response.code !in setOf(403, 429, 503)) return Verdict.NONE
+        val body = runCatching { response.peekBody(96 * 1024).string() }.getOrDefault("")
+        return classify(response.code, mitigated, response.header("Server"), response.header("cf-ray") != null, body)
+    }
+
+    /** True when [response] is a browser-check page rather than real content. */
+    fun isChallenge(response: Response): Boolean = verdict(response) == Verdict.CHALLENGE
+
+    /**
+     * The page to pass the check on. A challenge is per site (the clearance cookie is for the whole
+     * host), so an API call, a POST, a manifest or a video segment is solved on the site's home page:
+     * loading those directly in a browser is what made the firewall answer "you have been blocked".
+     * Pure → unit-testable.
+     */
+    fun challengePage(url: String, method: String = "GET", accept: String? = null): String {
+        val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return url
+        val root = (uri.scheme ?: "https") + "://" + uri.rawAuthority + "/"
+        if (!method.equals("GET", true)) return root
+        if (accept?.contains("text/html", true) == true) return url
+        val path = uri.rawPath.orEmpty().lowercase()
+        val ext = path.substringAfterLast('/').substringAfterLast('.', "")
+        val nonPage = ext in setOf("json", "m3u8", "m3u", "mpd", "mp4", "mkv", "webm", "ts", "m4s", "key", "vtt", "srt", "ass",
+            "js", "css", "png", "jpg", "jpeg", "webp", "gif", "svg", "xml", "txt", "php")
+        val apiLike = listOf("/api/", "/ajax/", "/graphql", "/v1/", "/v2/", "/embed-api/", "/_next/data/").any { it in "$path/" }
+        return if (nonPage || apiLike) root else url
+    }
+
+    private fun onMainThread() = Looper.myLooper() == Looper.getMainLooper()
 
     private fun webCookies(url: String): Map<String, String> {
         val raw = runCatching { CookieManager.getInstance().getCookie(url) }.getOrNull().orEmpty()
@@ -111,7 +189,7 @@ object BrowserCheck {
      * Gets a clearance for [url]: first silently, then (when [interactive] and the app is open) by
      * showing the page to the user. Returns null when the check could not be passed.
      */
-    suspend fun solve(url: String, interactive: Boolean = true): Clearance? {
+    suspend fun solve(url: String, interactive: Boolean = true, page: String = challengePage(url)): Clearance? {
         val host = runCatching { java.net.URI(url).host }.getOrNull() ?: return null
         val lock = locks.getOrPut(host) { Mutex() }
         val before = cleared[host]
@@ -122,14 +200,21 @@ object BrowserCheck {
                 return@withLock Clearance(c, userAgent()).also { cleared[host] = it }
             }
             Log.i(TAG, "Checking $host in a WebView")
-            headless(url)?.let { return@withLock it.also { cleared[host] = it } }
+            headless(page)?.let { return@withLock it.also { cleared[host] = it } }
             val recentlyDeclined = (declined[host] ?: 0L) > System.currentTimeMillis() - 10 * 60_000
             if (!interactive || recentlyDeclined || CommonActivity.activity == null) return@withLock null
-            askUser(url, host)?.also { cleared[host] = it }
+            askUser(page, host)?.also { cleared[host] = it }
         }
     }
 
-    fun solveBlocking(url: String, interactive: Boolean = true): Clearance? = runBlocking { solve(url, interactive) }
+    /**
+     * Blocking form for OkHttp interceptors. Never runs on the main thread: the check itself needs
+     * the main thread (WebView), so waiting for it there froze the app until Android killed it.
+     */
+    fun solveBlocking(url: String, interactive: Boolean = true, page: String = challengePage(url)): Clearance? {
+        if (onMainThread()) { Log.w(TAG, "browser check requested on the main thread — skipped"); return null }
+        return runBlocking { solve(url, interactive, page) }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     private suspend fun headless(url: String): Clearance? {
@@ -138,32 +223,60 @@ object BrowserCheck {
         return try {
             withContext(Dispatchers.Main) {
                 web = WebView(ctx).apply {
+                    SafeWebView.harden(this)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
-                    settings.allowFileAccess = false
-                    settings.allowContentAccess = false
                     settings.userAgentString = userAgent()
                     CookieManager.getInstance().setAcceptCookie(true)
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                    webViewClient = WebViewClient()
+                    webViewClient = SafeWebViewClient { web = null }
+                    // An off-screen WebView has no size; challenge scripts that check layout or
+                    // visibility then never finish. Give it a phone-sized viewport.
+                    measure(
+                        android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+                        android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY),
+                    )
+                    layout(0, 0, 1080, 1920)
                     loadUrl(url)
                 }
             }
             withTimeoutOrNull(HEADLESS_MS) {
                 var found: Clearance? = null
+                var waited = 0L
                 while (found == null) {
-                    delay(500)
+                    delay(500); waited += 500
                     val c = webCookies(url)
-                    if (hasClearance(c)) found = Clearance(c, userAgent())
+                    if (hasClearance(c)) { found = Clearance(c, userAgent()); break }
+                    if (web == null) break // renderer gone
+                    // A Turnstile checkbox needs a human: stop waiting and show the page right away.
+                    if (waited >= 2_500 && waited % 1_500 == 0L && needsHuman(web)) break
                 }
                 found
             }
         } catch (t: Throwable) {
             Log.w(TAG, "headless check failed", t); null
         } finally {
-            web?.let { w -> main.post { runCatching { w.stopLoading(); w.destroy() } } }
+            web?.let { w -> main.post { SafeWebView.dispose(w) } }
         }
     }
+
+    /** True when the page shows an interactive widget (Turnstile / hCaptcha) a person has to tap. */
+    private suspend fun needsHuman(web: WebView?): Boolean {
+        val w = web ?: return false
+        val done = CompletableDeferred<Boolean>()
+        withContext(Dispatchers.Main) {
+            runCatching { w.evaluateJavascript(NEEDS_HUMAN_JS) { r -> done.complete(r == "true") } }.onFailure { done.complete(false) }
+        }
+        return withTimeoutOrNull(1_500) { done.await() } ?: false
+    }
+
+    /** JS: an interactive challenge widget is on the page. */
+    val NEEDS_HUMAN_JS = """(function(){try{return !!(document.querySelector('iframe[src*="challenges.cloudflare.com"]')||document.querySelector('.cf-turnstile,#turnstile-wrapper,#cf-chl-widget,iframe[src*="hcaptcha.com"]'));}catch(e){return false}})()"""
+
+    /** JS: the page is a firewall block (not a challenge). */
+    val IS_BLOCK_JS =
+        "(function(){try{var t=(document.title||'').toLowerCase();var b=(document.body&&document.body.innerText||'').toLowerCase();" +
+            "return !!document.getElementById('cf-error-details')||t.indexOf('attention required')>=0||b.indexOf('sorry, you have been blocked')>=0;}catch(e){return false}})()"
 
     private suspend fun askUser(url: String, host: String): Clearance? {
         val done = CompletableDeferred<Boolean>()
@@ -181,6 +294,31 @@ object BrowserCheck {
         }
         if (!ok) { declined[host] = System.currentTimeMillis(); return null }
         return Clearance(webCookies(url), userAgent())
+    }
+
+    private val blockedNoticeAt = ConcurrentHashMap<String, Long>()
+
+    /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
+    private fun noteBlocked(host: String) {
+        val now = System.currentTimeMillis()
+        val last = blockedNoticeAt[host] ?: 0L
+        if (now - last < 5 * 60_000) return
+        blockedNoticeAt[host] = now
+        val ctx = appContext ?: return
+        main.post {
+            runCatching {
+                dev.asfakul.yumeiro.ui.components.AppMessages.error(
+                    ctx, "$host refused this request (site firewall, not a captcha). Try again later, turn off VPN / custom DNS, or update the extension.",
+                )
+            }
+        }
+    }
+
+    /** Called by the UI when the check page itself turned out to be a firewall block. */
+    fun onBlocked(host: String) {
+        declined[host] = System.currentTimeMillis()
+        noteBlocked(host)
+        cancel()
     }
 
     /** Called by the UI when the user closes the check page. */
@@ -205,7 +343,17 @@ object BrowserCheck {
      * Application interceptor for extension traffic: adds known clearances and, when a site answers
      * with a browser check, passes it (see [solve]) and retries the request once.
      */
-    object Interceptor : okhttp3.Interceptor {
+    object Interceptor : okhttp3.Interceptor by CheckInterceptor(interactive = true)
+
+    /**
+     * For the video player's own requests (manifests, segments, keys): adds known clearances and
+     * passes a challenge silently, but never opens the "Verify you're human" page — a dialog over
+     * a playing video for one segment request froze playback and hid the picture. A source that
+     * still refuses goes to the player's normal recovery (other headers → next source).
+     */
+    object MediaInterceptor : okhttp3.Interceptor by CheckInterceptor(interactive = false)
+
+    private class CheckInterceptor(private val interactive: Boolean) : okhttp3.Interceptor {
         override fun intercept(chain: okhttp3.Interceptor.Chain): Response {
             var request = chain.request()
             if (request.header(SKIP_HEADER) != null) {
@@ -214,10 +362,19 @@ object BrowserCheck {
             val host = request.url.host
             clearanceFor(host)?.let { request = withClearance(request, it) }
             val response = chain.proceed(request)
-            if (!isChallenge(response)) return response
-            val hadClearance = clearanceFor(host) != null
-            if (hadClearance) forget(host)
-            val clearance = solveBlocking(request.url.toString(), interactive = true) ?: return response
+            when (verdict(response)) {
+                Verdict.NONE -> return response
+                Verdict.BLOCKED -> {
+                    Log.w(TAG, "$host refused the request with a firewall block (not a captcha) — not opening the check page")
+                    noteBlocked(host)
+                    return response
+                }
+                Verdict.CHALLENGE -> Unit
+            }
+            if (onMainThread()) return response
+            if (clearanceFor(host) != null) forget(host)
+            val page = challengePage(request.url.toString(), request.method, request.header("Accept"))
+            val clearance = solveBlocking(request.url.toString(), interactive = interactive, page = page) ?: return response
             response.close()
             return chain.proceed(withClearance(chain.request(), clearance))
         }

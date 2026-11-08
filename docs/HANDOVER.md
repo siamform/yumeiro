@@ -298,3 +298,56 @@ Apple Music do it: neutral surfaces, one accent, and colour that comes from the 
 - NewPipe / NewPipeExtractor — https://github.com/TeamNewPipe/NewPipeExtractor
 - LibreTube, InnerTune / Metrolist (YouTube Music clients), Aniyomi, Kotatsu, Saikou/Dantotsu —
   similar extension-driven streaming apps worth studying for 403/Cloudflare handling.
+
+## 12. Stability pass (2026-11-08): black screen, force close, tab swipe, captcha loop
+
+Branch `fix/stream-blackscreen-captcha-swipe`.
+
+### "Verify you're human" that never shows, then "you have been blocked"
+- Root cause: `BrowserCheck.isChallenge` matched `challenge-platform` / `turnstile` in the body of any
+  Cloudflare 403/429/503. Cloudflare injects `/cdn-cgi/challenge-platform/scripts/jsd/main.js` into
+  ordinary pages and into its block pages, so plain 403s (hot-link, WAF, API) opened the check page.
+  The page then loaded the exact API / media URL, which the WAF answers with "Sorry, you have been
+  blocked" (also because WebView adds `X-Requested-With: <package>`).
+- Fix (`online/web/BrowserCheck.kt`): `classify()` returns `Verdict.CHALLENGE / BLOCKED / NONE`, using the
+  documented `cf-mitigated: challenge` header first, then only real challenge markup. Blocks never open
+  the dialog; the user gets one calm message per host every 5 min. `challengePage()` solves POST, API and
+  media requests on the site root. The dialog (`BrowserCheckHost`) detects a block page, retries the root
+  once, then closes with the message. `SafeWebView.harden` drops `X-Requested-With` where supported.
+  Same approach as Mihon (PR mihonapp/mihon#2200, commits 7ae858e, 649fc83).
+- Tests: `app/src/test/.../online/web/BrowserCheckTest.kt`.
+
+### Stuck after "finding best source", black screen, back removes it
+- The interactive interceptor was on player media requests (`OnlinePlayback.registerInterceptors`), so a
+  segment 403 could hold the loader thread for 20 s headless plus a 120 s dialog over the player.
+  Media / downloads now use `BrowserCheck.MediaInterceptor` (headless only, never a dialog).
+- `PlayerView` is inflated from `res/layout/yumeiro_player_view.xml` with `surface_type="texture_view"`:
+  a SurfaceView ignores Compose scale / translate / clip (swipe-down, floating, docked player) and can
+  stay black after a dialog closes over it.
+- `OnlineSession.GATHER_MS` 3500 → 2000 ms (shorter wait after the first working link).
+
+### Force close / freeze (ANR)
+- `solveBlocking` (runBlocking + Main) is skipped on the main thread; `userAgent()` no longer waits on the
+  main thread from a worker for more than 3 s (fallback UA).
+- Every WebView (headless check, dialog, `HeadlessCapture`, `PageStreamFinderDialog`) uses
+  `SafeWebViewClient`: `onRenderProcessGone` destroys the view instead of letting Android kill the app.
+- `DdosGuardKiller` only solves on a real challenge, not on every 403.
+
+### Tab swipe
+- The release-only `Modifier.tabSwipe` (needed empty space, did not follow the finger) is gone. The five
+  tabs are pages of one `HorizontalPager` inside the Home destination (`tab_pager`). `currentRoute` is the
+  pager's tab on the root; `navigateTop` pops to Home and scrolls the pager (slide for neighbours, jump
+  for far tabs). Back on another tab returns to Home, then double back exits. Rows and carousels keep
+  their own drags through nested scrolling; swipes are disabled under the full-screen video and Now
+  Playing. The old tab routes still exist and redirect to the pager page.
+- `OnlineLibrary` is now a sub-route (no top/bottom bar on that page).
+
+### Not verified on a device
+No emulator in the build sandbox: run `OnlinePlaybackDeviceTest`, try miruro.to (challenge + block),
+a single-video movie source, floating / docked player and tab swipes on a real phone before release.
+
+### Ideas from similar apps (next)
+- Mihon: per-source "Open in WebView" action and a settings toggle to clear cookies / WebView data.
+- CloudStream: per-extension "Test" screen and source ranking by previous success.
+- NewPipe / LibreTube: ExoPlayer load-control tuning for faster start, background play queue.
+- Aniyomi: player "skip intro" chapters via AniSkip.
