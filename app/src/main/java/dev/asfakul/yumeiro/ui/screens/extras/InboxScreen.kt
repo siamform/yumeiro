@@ -85,8 +85,8 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { Inbox.ensureLoaded(context) }
     val items by Inbox.items.collectAsState()
-    var systemOn by remember { mutableStateOf(AppNotifier.systemAllowed(context)) }
-    LifecycleResumeEffect(Unit) { systemOn = AppNotifier.systemAllowed(context); onPauseOrDispose { } }
+    var block by remember { mutableStateOf(AppNotifier.block(context)) }
+    LifecycleResumeEffect(Unit) { block = AppNotifier.block(context); onPauseOrDispose { } }
     var refreshing by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
 
@@ -133,7 +133,13 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 48.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (!systemOn) item("blocked") { BlockedBanner { PermissionCenter.openNotificationSettings(context) } }
+                    if (block != AppNotifier.Block.NONE) item("blocked") {
+                        BlockedBanner(block) {
+                            if (block == AppNotifier.Block.MASTER_OFF) dev.asfakul.yumeiro.notify.NotifySettings.set(context, dev.asfakul.yumeiro.notify.NotifySettings.Key.ENABLED, true)
+                            else PermissionCenter.openNotificationSettings(context)
+                            block = AppNotifier.block(context)
+                        }
+                    }
                     if (items.isEmpty()) item("empty") {
                         StateMessage(
                             Icons.Default.NotificationsNone, "You're all caught up",
@@ -158,14 +164,14 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
 }
 
 @Composable
-private fun BlockedBanner(onFix: () -> Unit) {
+private fun BlockedBanner(block: AppNotifier.Block, onFix: () -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth().testTag("inbox_blocked")) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.NotificationsOff, null, tint = SpotifyGreen)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Notifications are off", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text("You'll still see everything here. Turn them on to hear about new episodes right away.", color = TextSecondary, fontSize = 12.sp)
+                Text(block.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("${block.hint} Until then, news only shows up here.", color = TextSecondary, fontSize = 12.sp)
             }
             TextButton(onClick = onFix) { Text("Turn on", color = SpotifyGreen, fontWeight = FontWeight.Bold) }
         }

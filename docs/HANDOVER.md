@@ -398,3 +398,20 @@ Aniyomi download/storage docs (aniyomi.org/docs/faq/downloads, /storage), Androi
 - **Entry points:** Home shortcut "Downloads", Library → Videos (same grouped sections + Manage), the download
   notification (tap opens the page via `DownloadWorker.ACTION_OPEN_DOWNLOADS` → `DownloadsNav`).
 - **Tests:** `DownloadGroupsTest`, `DownloadUiScreenshotTest` (Robolectric; renders to `app/build/screenshots/dl_*.png`).
+
+### 13c. Notifications that stayed in the inbox (fix)
+
+**Bug:** feed items (new extensions, playlists, releases, news) appeared in the bell inbox but never in the
+status bar. Causes:
+1. `AppFeed.sync` marked **every item of the first sync** `inboxOnly`. The first periodic `DiscoveryWorker`
+   run happens right after install, so a new user's whole first batch (the live feed has 4) was silent.
+2. `AppNotifier.post` only checked the app-level switch, not a blocked **channel** (user swiped "Don't show
+   these" or turned a category off) or the in-app "Show notifications" switch; the inbox banner only covered
+   the permission case, so users saw no reason.
+3. Only `SecurityException` was caught around `notify()`; any other failure would kill the worker run.
+
+**Fix:** `AppFeed.shadePlan` (first sync: newest item from the last 3 days still notifies; later syncs: newest 2,
+plus an "N more updates" summary), `AppNotifier.block()` returns the exact reason (permission, app off, in-app
+switch, channel off) and is shown in the inbox banner and Settings, `Send a test notification` in Settings →
+Notifications, all exceptions caught, explicit priority/category/timestamp. Items already filed silently by
+older builds are not re-sent.

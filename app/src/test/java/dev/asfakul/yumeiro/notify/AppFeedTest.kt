@@ -41,4 +41,19 @@ class AppFeedTest {
         assertEquals(listOf("b"), AppFeed.fresh(items, 1_793_491_200_000L, emptySet()).map { it.id })
         assertEquals(emptyList<String>(), AppFeed.fresh(items, 0, setOf("a", "b")).map { it.id })
     }
+
+    private fun item(id: String, at: Long) = AppFeed.FeedItem(id, Inbox.Kind.NEWS, id, "", at, null)
+
+    @Test fun firstSyncStillPushesTheNewestRecentItem() {
+        val day = 24L * 60 * 60 * 1000
+        val now = 100 * day
+        val add = listOf(item("new", now - day), item("old", now - 10 * day))
+        assertEquals(setOf(0), AppFeed.shadePlan(add, first = true, now = now))
+        assertEquals(emptySet<Int>(), AppFeed.shadePlan(listOf(item("old", now - 10 * day)), first = true, now = now))
+    }
+
+    @Test fun laterSyncsPushUpToTwo() {
+        val add = (1..4).map { item("i$it", 1000L - it) }
+        assertEquals(setOf(0, 1), AppFeed.shadePlan(add, first = false, now = 2000L))
+    }
 }
