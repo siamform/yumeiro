@@ -171,6 +171,8 @@ object AppNotifier {
             .setWhen(item.at).setShowWhen(true)
             .setCategory(if (item.kind == Inbox.Kind.EPISODE) NotificationCompat.CATEGORY_RECOMMENDATION else NotificationCompat.CATEGORY_SOCIAL)
         // Never let a bad notification crash a background worker.
+        if (Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(c, android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED) return
         try { NotificationManagerCompat.from(c).notify(notificationId, b.build()) }
         catch (e: Exception) { Log.w(TAG, "notify", e) }
     }

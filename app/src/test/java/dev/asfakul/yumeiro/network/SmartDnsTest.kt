@@ -28,16 +28,17 @@ class SmartDnsTest {
         systemCalls = 0; altCalls = 0
         SmartDns.system = Dns { host -> systemCalls++; if (systemWorks) listOf(ip) else throw UnknownHostException(host) }
         SmartDns.alternativeOverride = { host, _ -> altCalls++; if (altWorks) listOf(ip) else throw UnknownHostException(host) }
+        SmartDns.online = { true }
         NetworkSettings.setForTests(config)
     }
 
     @After fun reset() {
-        SmartDns.system = Dns.SYSTEM; SmartDns.alternativeOverride = null
+        SmartDns.system = Dns.SYSTEM; SmartDns.alternativeOverride = null; SmartDns.online = { Connectivity.online.value }
         NetworkSettings.setForTests(DnsConfig())
     }
 
-    @Test fun systemDefault_neverUsesAlternative() {
-        setUp(systemWorks = false, config = DnsConfig())
+    @Test fun systemWithoutAuto_neverUsesAlternative() {
+        setUp(systemWorks = false, config = DnsConfig(auto = false))
         try { SmartDns.lookup("example.com"); fail() } catch (_: UnknownHostException) {}
         assertEquals(0, altCalls)
     }
@@ -68,6 +69,61 @@ class SmartDnsTest {
         try { SmartDns.lookup("example.com"); fail() } catch (e: UnknownHostException) {
             assertTrue(e.message, e.message!!.contains("Google"))
         }
+    }
+
+    @Test fun auto_resolvesBlockedHostOverEncryptedDns_andRemembers() {
+        setUp(systemWorks = false, config = DnsConfig())
+        assertEquals(listOf(ip), SmartDns.lookup("blocked.example"))
+        assertEquals(1, altCalls)
+        assertTrue(SmartDns.isBypassed("blocked.example"))
+        SmartDns.lookup("blocked.example")
+        assertEquals(1, systemCalls) // remembered: straight to encrypted DNS
+    }
+
+    @Test fun auto_workingHostsStayOnSystemDns() {
+        setUp(systemWorks = true, config = DnsConfig())
+        assertEquals(listOf(ip), SmartDns.lookup("example.com"))
+        assertEquals(0, altCalls)
+        assertEquals(DnsSource.SYSTEM, SmartDns.lastSourceFor("example.com"))
+    }
+
+    @Test fun auto_sinkholeAnswerIsReplaced() {
+        val sink = InetAddress.getByAddress("site.example", byteArrayOf(0, 0, 0, 0))
+        setUp(systemWorks = true, config = DnsConfig())
+        SmartDns.system = Dns { systemCalls++; listOf(sink) }
+        assertEquals(listOf(ip), SmartDns.lookup("site.example"))
+        assertTrue(SmartDns.isBypassed("site.example"))
+    }
+
+    @Test fun auto_lanNamesKeepPrivateAddresses() {
+        val lan = InetAddress.getByAddress("nas.local", byteArrayOf(192.toByte(), 168.toByte(), 1, 5))
+        setUp(systemWorks = true, config = DnsConfig())
+        SmartDns.system = Dns { listOf(lan) }
+        assertEquals(listOf(lan), SmartDns.lookup("nas.local"))
+        assertEquals(0, altCalls)
+    }
+
+    @Test fun auto_rotatesProviders() {
+        setUp(systemWorks = false, config = DnsConfig())
+        val asked = mutableListOf<DnsProvider>()
+        SmartDns.alternativeOverride = { _, c -> asked += c.provider; if (c.provider == DnsProvider.CLOUDFLARE) throw java.io.IOException("unreachable") else listOf(ip) }
+        assertEquals(listOf(ip), SmartDns.lookup("rot.example"))
+        assertEquals(listOf(DnsProvider.CLOUDFLARE, DnsProvider.QUAD9), asked)
+    }
+
+    @Test fun bogonRanges() {
+        fun a(vararg b: Int) = InetAddress.getByAddress(b.map { it.toByte() }.toByteArray())
+        assertTrue(SmartDns.isBogon(a(0, 0, 0, 0)))
+        assertTrue(SmartDns.isBogon(a(127, 0, 0, 1)))
+        assertTrue(SmartDns.isBogon(a(10, 1, 2, 3)))
+        assertTrue(SmartDns.isBogon(a(100, 64, 0, 1)))
+        assertTrue(!SmartDns.isBogon(a(104, 16, 0, 1)))
+    }
+
+    @Test fun blockingFailuresAreRecognised() {
+        assertTrue(AutoBypassInterceptor.looksLikeBlocking(java.net.ConnectException("Failed to connect")))
+        assertTrue(AutoBypassInterceptor.looksLikeBlocking(java.net.SocketException("Connection reset")))
+        assertTrue(!AutoBypassInterceptor.looksLikeBlocking(java.net.SocketTimeoutException("timeout")))
     }
 
     @Test fun ipLiteralsSkipDns() {

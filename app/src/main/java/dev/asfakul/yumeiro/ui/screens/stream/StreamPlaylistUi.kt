@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +40,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -262,7 +262,7 @@ internal fun PlaylistEditDialog(
         }
     }
 
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         containerColor = DarkSurface,
         title = { Text(title, color = TextPrimary) },
@@ -333,7 +333,7 @@ internal fun AddToPlaylistDialog(
     onCreate: (String) -> Unit,
 ) {
     var newName by remember { mutableStateOf("") }
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
         title = { Text("Save to playlist", color = TextPrimary) },
@@ -374,7 +374,7 @@ internal fun ChannelEditDialog(item: StreamRequest, onDismiss: () -> Unit, onSav
     var logo by remember { mutableStateOf(item.logoUrl.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
     val colors = streamFieldColors()
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
         title = { Text("Edit stream", color = TextPrimary) },
@@ -400,7 +400,7 @@ internal fun ChannelEditDialog(item: StreamRequest, onDismiss: () -> Unit, onSav
 
 @Composable
 internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
         title = { Text("Delete ${playlist.name}?", color = TextPrimary) },

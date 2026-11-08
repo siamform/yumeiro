@@ -37,3 +37,23 @@ Scope: the repo, the GitHub Actions workflows, the market/streams catalogs, the 
   extension ABI. Mitigation is curation: the market lists established, popular extensions (stars, community use),
   installs show trust warnings, and the sha256 is verified whenever the source publishes one.
 - `MainActivity` (VIEW/SEND) and `MediaSessionService` are exported by design.
+
+## CodeQL suppressions (2026-11-09)
+
+`.github/codeql/suppressions.jq` drops these results before upload. Each one is a rule **and** an exact path; any new
+result elsewhere still fails the gate.
+
+| Rule | Path | Why it is accepted |
+|---|---|---|
+| `java/weak-cryptographic-algorithm`, `java/potentially-weak-cryptographic-algorithm` | `app/src/main/java/dev/asfakul/yumeiro/sources/js/JsCrypto.kt` | MD5 key derivation (OpenSSL `EVP_BytesToKey`) and AES-CBC are what CryptoJS and Mangayomi sources call; the sites encrypt with them. Used only to decode third-party page data, never to protect Yumeiro data. |
+| same | `app/src/main/java/eu/kanade/**` | Vendored Tachiyomi/Aniyomi source API (Apache-2.0). Its signatures are the extension ABI and can't change. |
+| `java/android/missing-certificate-pinning` | `tracking/Kitsu.kt`, `tracking/Trakt.kt`, `sources/servers/PlexProvider.kt` | Kitsu and Trakt rotate certificates without notice (a pin would break sign-in for every user); Plex servers are the user's own hosts with arbitrary certificates. System trust + HTTPS-only applies. |
+
+Fixed instead of suppressed: cleartext trusted-extension set (now sealed with `SecretBox`) and the app-lock
+`insecure-local-authentication` finding (prompt bound to a Keystore `CryptoObject`, `security/LockKey`).
+
+## Historical secret findings
+
+| Finding | Status |
+|---|---|
+| Kitsu OAuth client secret, commit `ba30fae` on `feat/universal-sources` (PR #13, never merged) | Removed from code: it now comes from `BuildConfig` and the `KITSU_CLIENT_*` repo secrets. The branch was deleted (2026-11-09). GitHub keeps `refs/pull/13/head`, so **rotate the secret** in the Kitsu developer settings and update the repo secrets. |

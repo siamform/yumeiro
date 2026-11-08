@@ -69,6 +69,10 @@ object OnlineSession {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var lastFailoverAt = 0L
+    private var failoverJob: kotlinx.coroutines.Job? = null
+    private const val FAILOVER_GAP_MS = 900L
+    private const val PUBLISH_GAP_MS = 300L
     private val _state = MutableStateFlow<State?>(null)
     val state: StateFlow<State?> = _state.asStateFlow()
     private var job: Job? = null
@@ -149,7 +153,14 @@ object OnlineSession {
             val links = mutableListOf<OnlineLink>()
             val subs = mutableListOf<OnlineSubtitle>()
             var skipped = 0
+            // Extensions can emit dozens of links/subtitles in a burst; re-sorting and pushing state
+            // for each one recomposed the player on every event and made the UI stutter or freeze.
+            var lastPublish = 0L
+            var pendingPublish = false
             fun publish(done: Boolean, error: String? = null) {
+                val t = System.currentTimeMillis()
+                if (!done && t - lastPublish < PUBLISH_GAP_MS) { pendingPublish = true; return }
+                lastPublish = t; pendingPublish = false
                 val sorted = OnlineRepository.sortLinks(links.distinctBy { it.url })
                 _state.update { cur ->
                     if (cur == null || cur.data != data) return@update cur
@@ -167,7 +178,7 @@ object OnlineSession {
                 publish(false)
                 playCurrent(context, 0, resumeMs)
             }
-            val ticker = launch { while (true) { delay(500); startIfReady(false) } }
+            val ticker = launch { while (true) { delay(500); startIfReady(false); if (pendingPublish && started) publish(false) } }
             val ok = withTimeoutOrNull(FIRST_LINK_TIMEOUT_MS + 60_000L) {
                 OnlineRepository.links(provider, data).collect { ev ->
                     when (ev) {
@@ -232,7 +243,14 @@ object OnlineSession {
         if (next != null) {
             _state.value = s.copy(failed = failed)
             Log.w(TAG, "failover → ${s.links[next].name}")
-            playCurrent(app, next, positionMs)
+            // Dead links can fail within milliseconds of each other; tearing players down and up
+            // that fast starved the main thread (ANR / force close). Space failovers out.
+            val now = System.currentTimeMillis()
+            val wait = (lastFailoverAt + FAILOVER_GAP_MS - now).coerceIn(0L, FAILOVER_GAP_MS)
+            lastFailoverAt = now + wait
+            failoverJob?.cancel()
+            if (wait == 0L) playCurrent(app, next, positionMs)
+            else failoverJob = scope.launch { delay(wait); if (_state.value?.data == s.data) playCurrent(app, next, positionMs) }
             return true
         }
         // Every link refused. Signed links expire / bind to the extraction session, so extract
@@ -289,13 +307,26 @@ object OnlineSession {
     fun previous(context: Context) { _state.value?.let { if (it.hasPrevious) playEpisode(context, it.index - 1) } }
 
     /** Switches Sub ↔ Dub, staying on the same episode number when it exists. */
+    /** True when [version] (e.g. "Dub") has the episode that is playing right now. */
+    fun hasEpisodeIn(version: String): Boolean {
+        val s = _state.value ?: return false
+        return EpisodeMatcher.match(s.episode, episodesOf(s.detail, version)) >= 0
+    }
+
     fun switchVersion(context: Context, version: String) {
         val s = _state.value ?: return
         if (version == s.version || version !in s.detail.versions) return
         val eps = episodesOf(s.detail, version)
         val cur = s.episode
-        val idx = eps.indexOfFirst { it.season == cur?.season && it.episode == cur?.episode }.takeIf { it >= 0 } ?: s.index.coerceIn(0, (eps.size - 1).coerceAtLeast(0))
-        _state.value = s.copy(version = version, episodes = eps, index = if (eps.isEmpty()) -1 else idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet())
+        val idx = EpisodeMatcher.match(cur, eps)
+        if (idx < 0) {
+            // The other version doesn't have this episode: keep playing instead of jumping to a
+            // different episode that happens to sit at the same list position.
+            val what = cur?.episode?.let { "episode $it" } ?: "this episode"
+            dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "${version.ifBlank { "That version" }} isn't available for $what yet. Still playing ${s.version.ifBlank { "the current version" }}.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
+            return
+        }
+        _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet())
         resolve(context.applicationContext, null)
     }
 
@@ -323,7 +354,7 @@ object OnlineSession {
 
     /** The player closed, or the user cancelled resolving. */
     fun end() {
-        job?.cancel(); job = null
+        job?.cancel(); job = null; failoverJob?.cancel(); failoverJob = null
         _state.value = null
     }
 

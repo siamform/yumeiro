@@ -25,6 +25,21 @@ object Connectivity {
         caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }.getOrDefault(true)
 
+    /** True while a VPN carries the traffic (its DNS is then the one that matters). */
+    fun vpnActive(c: Context): Boolean = runCatching {
+        val cm = c.getSystemService(ConnectivityManager::class.java) ?: return false
+        cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+    }.getOrDefault(false)
+
+    /** Opens the system VPN settings (to turn a VPN on or off), falling back to wireless settings. */
+    fun openVpnSettings(c: Context) {
+        val intents = listOf(android.provider.Settings.ACTION_VPN_SETTINGS, android.provider.Settings.ACTION_WIRELESS_SETTINGS)
+        for (action in intents) {
+            val ok = runCatching { c.startActivity(android.content.Intent(action).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+            if (ok) return
+        }
+    }
+
     /** Starts listening once for the lifetime of the process. */
     @Synchronized
     fun start(c: Context) {

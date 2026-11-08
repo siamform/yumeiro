@@ -52,7 +52,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -890,7 +889,7 @@ fun VideoDetailsDialog(
     onToggleFavorite: () -> Unit,
     onHideFolder: () -> Unit
 ) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -986,7 +985,7 @@ fun ManageHiddenFoldersDialog(
     onUnhideFolder: (String) -> Unit,
     onUnhideAll: () -> Unit
 ) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -1406,7 +1405,7 @@ fun AddToPlaylistDialog(
     var isCreatingNew by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
 
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -1544,7 +1543,7 @@ fun SongDetailsDialog(
     track: AudioTrack,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(

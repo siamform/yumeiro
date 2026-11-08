@@ -30,6 +30,9 @@ object SafeWebView {
     private const val TAG = "SafeWebView"
 
     /** Applies the common settings. Call once right after creating the WebView. */
+    // The allow-list feature constant is public API guarded by isFeatureSupported; lint's
+    // RestrictedApi check misreads its @RestrictTo annotation on the constant's group.
+    @android.annotation.SuppressLint("RestrictedApi")
     fun harden(web: WebView) {
         runCatching {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {

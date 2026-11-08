@@ -470,7 +470,10 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                         val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 18) it.take(17) + "…" else it }
                         dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server") { OnlineSession.switchSource(context, i, pos()) }
                     }
-                } else listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer("Switch to $v", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })
+                } else {
+                    val has = remember(state.episode, v) { OnlineSession.hasEpisodeIn(v) }
+                    listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (has) "Switch to $v" else "Not for this episode", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })
+                }
                 dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(v, iconFor(v), servers)
             }
             val ep = state.episode

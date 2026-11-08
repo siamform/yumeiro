@@ -62,6 +62,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -97,6 +98,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onClearWatchHistory: () -> Unit = {},
     onClearListeningHistory: () -> Unit = {},
+    onOpenPage: (String) -> Unit = {},
 ) {
     BackHandler { onBackClick() }
     var showGuide by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
@@ -326,6 +328,33 @@ fun SettingsScreen(
                 SettingsSectionHeader(title = "Permissions", icon = Icons.Default.Shield)
                 Spacer(modifier = Modifier.height(8.dp))
                 PermissionsCard(onMediaGranted = onRescanClick)
+            }
+
+            item {
+                SettingsSectionHeader(title = "Sources, tracking & backup", icon = Icons.Default.Sync)
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+                        SettingsActionRow("Sources", "Aniyomi, Mihon, Stremio, JavaScript and home servers", "settings_sources") { onOpenPage("sources") }
+                        SettingsActionRow("Tracking", "AniList, MyAnimeList, Kitsu and Trakt", "settings_tracking") { onOpenPage("tracking") }
+                        SettingsActionRow("Backup & restore", "Save everything to a file you control", "settings_backup") { onOpenPage("backup") }
+                        SettingsActionRow("Watch together", "Sync playback with people on the same Wi-Fi", "settings_watch_together") { onOpenPage("together") }
+                        SettingsActionRow("Source status", "Check which installed sources respond", "settings_source_health") { onOpenPage("health") }
+                    }
+                }
+            }
+
+            item {
+                SettingsSectionHeader(title = "App lock & incognito", icon = Icons.Default.Lock)
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+                        val incog by dev.asfakul.yumeiro.security.Privacy.incognito.collectAsState()
+                        val lock by dev.asfakul.yumeiro.security.Privacy.lockEnabled.collectAsState()
+                        SettingsActionRow("Privacy", "App lock, incognito mode, hide from recents", "settings_privacy",
+                            status = listOfNotNull(if (lock) "Locked" else null, if (incog) "Incognito" else null).joinToString(" · ").ifBlank { null }) { onOpenPage("privacy") }
+                    }
+                }
             }
 
             item {

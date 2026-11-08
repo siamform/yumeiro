@@ -32,6 +32,7 @@ object YtHistory {
     }
 
     fun add(context: Context, item: YtItem) {
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         load(context)
         val next = (listOf(item) + _items.value.filterNot { it.id == item.id }).take(MAX)
         _items.value = next

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.TipsAndUpdates
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -93,7 +93,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
     // Leaving the page marks everything as seen.
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { Inbox.markAllRead(context) } }
 
-    if (confirmClear) AlertDialog(
+    if (confirmClear) TsukiDialog(
         onDismissRequest = { confirmClear = false },
         title = { Text("Clear all notifications?") },
         text = { Text("They are removed from this page. Your settings stay the same.") },

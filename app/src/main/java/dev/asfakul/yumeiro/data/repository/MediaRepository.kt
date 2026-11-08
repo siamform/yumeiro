@@ -653,6 +653,7 @@ class OfflineMediaRepository(
     }
 
     override suspend fun recordTrackPlayed(trackId: String) {
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         // Update recently played (push to front, max 50)
         val currentList = _recentlyPlayedIds.value.filter { it != trackId }.toMutableList()
         currentList.add(0, trackId)
@@ -724,6 +725,7 @@ class OfflineMediaRepository(
     }
 
     override suspend fun updateVideoProgress(videoId: String, positionMs: Long, durationMs: Long) {
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         val now = System.currentTimeMillis()
         val isCompleted = durationMs > 0 && positionMs >= (durationMs * 0.95).toLong()
 

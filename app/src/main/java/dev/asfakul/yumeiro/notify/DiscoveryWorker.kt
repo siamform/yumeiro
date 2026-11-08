@@ -7,9 +7,12 @@ package dev.asfakul.yumeiro.notify
 
 import android.content.Context
 import android.util.Log
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -20,11 +23,27 @@ import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
-/** Schedules (or cancels) all periodic background checks from the user's settings. */
+/**
+ * Schedules (or cancels) all periodic background checks from the user's settings.
+ *
+ * Yumeiro has no push server (and won't ship Google's FCM), so "push" is reliable polling:
+ *  - the small app feed every [FEED_HOURS] h, the heavier new-episode check every [EPISODE_HOURS] h;
+ *  - a one-off catch-up each time the app comes to the foreground (throttled), so the inbox is
+ *    fresh the moment it opens and missed windows are recovered;
+ *  - failed network runs are retried with backoff instead of waiting for the next window;
+ *  - a heartbeat ([BackgroundHealth]) spots OEM battery killers so the app can ask for an exemption.
+ */
 object BackgroundWork {
+    const val FEED_HOURS = 2L
+    const val EPISODE_HOURS = 4L
+    /** Bump when periods/constraints change so existing installs pick up the new schedule. */
+    private const val SCHEDULE_VERSION = 2
+    private const val CATCH_UP = "background_catch_up"
+    private const val CATCH_UP_GAP_MS = 15L * 60 * 1000
+    private const val PREFS = "background_work"
+
     fun constraints(c: Context): Constraints = Constraints.Builder()
         .setRequiredNetworkType(if (NotifySettings.get(c, NotifySettings.Key.WIFI_ONLY)) NetworkType.UNMETERED else NetworkType.CONNECTED)
-        .setRequiresBatteryNotLow(true)
         .build()
 
     /** Applies the current settings: schedules both workers, or cancels them when background work is off. */
@@ -35,18 +54,78 @@ object BackgroundWork {
             wm.cancelUniqueWork(NewEpisodesWorker.WORK)
             return
         }
+        val prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val effective = if (prefs.getInt("schedule_version", 0) != SCHEDULE_VERSION) ExistingPeriodicWorkPolicy.UPDATE else policy
         val k = constraints(c)
         runCatching {
-            wm.enqueueUniquePeriodicWork(DiscoveryWorker.WORK, policy,
-                PeriodicWorkRequestBuilder<DiscoveryWorker>(6, TimeUnit.HOURS).setConstraints(k).build())
-            wm.enqueueUniquePeriodicWork(NewEpisodesWorker.WORK, policy,
-                PeriodicWorkRequestBuilder<NewEpisodesWorker>(6, TimeUnit.HOURS).setConstraints(k).build())
+            wm.enqueueUniquePeriodicWork(DiscoveryWorker.WORK, effective,
+                PeriodicWorkRequestBuilder<DiscoveryWorker>(FEED_HOURS, TimeUnit.HOURS).setConstraints(k)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES).build())
+            wm.enqueueUniquePeriodicWork(NewEpisodesWorker.WORK, effective,
+                PeriodicWorkRequestBuilder<NewEpisodesWorker>(EPISODE_HOURS, TimeUnit.HOURS).setConstraints(k)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES).build())
+            prefs.edit().putInt("schedule_version", SCHEDULE_VERSION).apply()
         }
+    }
+
+    /** The app came to the foreground: catch up on the feed + episodes now (at most every 15 min). */
+    fun catchUp(c: Context) {
+        if (!NotifySettings.get(c, NotifySettings.Key.BACKGROUND)) return
+        BackgroundHealth.snapshot(c) // before the catch-up run refreshes the heartbeat
+        val prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (!catchUpDue(now, prefs.getLong("catch_up_at", 0L))) return
+        prefs.edit().putLong("catch_up_at", now).apply()
+        val wm = runCatching { WorkManager.getInstance(c.applicationContext) }.getOrNull() ?: return
+        val k = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        runCatching {
+            wm.beginUniqueWork(CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).build())
+                .then(OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).build())
+                .enqueue()
+        }
+    }
+
+    fun catchUpDue(nowMs: Long, lastMs: Long): Boolean = nowMs - lastMs >= CATCH_UP_GAP_MS || nowMs < lastMs
+}
+
+/**
+ * Heartbeat of the background checks. If they stop running for much longer than their period
+ * while background work is on, the phone's battery manager is killing them (dontkillmyapp.com),
+ * and the app asks the user to let Yumeiro run in the background.
+ */
+object BackgroundHealth {
+    private const val PREFS = "background_work"
+
+    fun markRan(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong("last_run_at", System.currentTimeMillis()).apply()
+
+    fun lastRun(c: Context): Long = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong("last_run_at", 0L)
+
+    /** Stalled = never ran in 3 periods since it was first scheduled (or since the last run). */
+    fun stalled(nowMs: Long, lastRunMs: Long, firstSeenMs: Long, periodHours: Long = BackgroundWork.FEED_HOURS): Boolean {
+        val since = if (lastRunMs > 0) lastRunMs else firstSeenMs
+        return since > 0 && nowMs - since > periodHours * 3 * 3_600_000L
+    }
+
+    /** Heartbeat state as it was when the app came to the foreground (the catch-up run resets it). */
+    @Volatile var stalledAtLaunch: Boolean = false
+        private set
+
+    fun snapshot(c: Context) { if (!stalledAtLaunch) stalledAtLaunch = runCatching { looksStalled(c) }.getOrDefault(false) }
+
+    /** Clears the flag once the user has been told (or fixed it). */
+    fun acknowledge() { stalledAtLaunch = false }
+
+    fun looksStalled(c: Context): Boolean {
+        if (!NotifySettings.get(c, NotifySettings.Key.BACKGROUND)) return false
+        val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (!p.contains("first_seen_at")) p.edit().putLong("first_seen_at", now).apply()
+        return stalled(now, lastRun(c), p.getLong("first_seen_at", now))
     }
 }
 
 /**
- * Every 6 hours: reads the small Yumeiro feed (new extensions, new playlists, releases and
+ * Every [BackgroundWork.FEED_HOURS] hours (and when the app opens): reads the small Yumeiro feed (new extensions, new playlists, releases and
  * announcements, published by the "App feed" workflow) and now and then sends a friendly
  * suggestion. New episodes have their own worker. Nothing is installed automatically; every
  * notification opens the inbox.
@@ -85,7 +164,10 @@ class DiscoveryWorker(context: Context, params: WorkerParameters) : CoroutineWor
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val ctx = applicationContext
         NotifySettings.init(ctx)
-        runCatching { AppFeed.sync(ctx) }.onFailure { Log.w(TAG, "feed", it) }
+        val feed = runCatching { AppFeed.sync(ctx) }.onFailure { Log.w(TAG, "feed", it) }
+        // A network hiccup retries soon (with backoff) instead of silently waiting hours.
+        if (feed.exceptionOrNull() is java.io.IOException && runAttemptCount < 3) return@withContext Result.retry()
+        BackgroundHealth.markRan(ctx)
 
         if (NotifySettings.get(ctx, NotifySettings.Key.NUDGES)) {
             val st = ctx.getSharedPreferences(STATE, Context.MODE_PRIVATE)

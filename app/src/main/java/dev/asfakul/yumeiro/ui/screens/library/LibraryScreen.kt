@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import androidx.activity.compose.BackHandler
@@ -46,7 +47,6 @@ import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -130,7 +130,7 @@ fun LibraryScreen(
 
     // Dialog: Create Playlist
     if (showCreateDialog) {
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = {
                 showCreateDialog = false
                 newPlaylistName = ""
@@ -196,7 +196,7 @@ fun LibraryScreen(
 
     // Dialog: Rename Playlist
     playlistToRename?.let { pl ->
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { playlistToRename = null },
             title = {
                 Text(
@@ -243,7 +243,7 @@ fun LibraryScreen(
 
     // Dialog: Delete Playlist
     playlistToDelete?.let { pl ->
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { playlistToDelete = null },
             title = {
                 Text(
@@ -501,221 +501,15 @@ fun LibraryScreen(
             modifier = modifier
                 .fillMaxSize()
                 .testTag("library_screen_root"),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 140.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Overview of the whole collection (moved here from Home).
-            item(key = "dream_deck") {
-                dev.asfakul.yumeiro.ui.screens.home.DreamDeckCard(stats = stats, huesCount = huesCount, onRescanClick = onRescanClick)
-            }
-            // Header
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Music Library",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-
-                    IconButton(
-                        onClick = { showCreateDialog = true },
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(SpotifyGreen)
-                            .testTag("add_playlist_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Create playlist",
-                            tint = OnAccent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            // Quick Hub: Favorites & Equalizer
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    LibraryCategoryCard(
-                        title = "Favorite Songs",
-                        subtitle = "${allTracks.count { it.isFavorite }} songs",
-                        icon = Icons.Default.Favorite,
-                        iconTint = SpotifyGreen,
-                        onClick = onNavigateToMusic,
-                        modifier = Modifier.weight(1f),
-                        testTag = "lib_fav_card"
-                    )
-                    LibraryCategoryCard(
-                        title = "Equalizer",
-                        subtitle = "Audio Presets",
-                        icon = Icons.Default.Equalizer,
-                        iconTint = SpotifyGreen,
-                        onClick = onNavigateToEqualizer,
-                        modifier = Modifier.weight(1f),
-                        testTag = "lib_eq_card"
-                    )
-                }
-            }
-
-            // Recently Played Section
-            if (recentlyPlayed.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Recently Played",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                }
-
-                items(recentlyPlayed.take(4)) { track ->
-                    TrackItemRow(
-                        track = track,
-                        isSelected = currentPlayingTrack?.id == track.id,
-                        onTrackClick = { onTrackClick(track, recentlyPlayed) },
-                        onToggleFavorite = { onToggleFavorite(track.id) },
-                        onMoreOptionsClick = { onTrackOptionsClick(track) }
-                    )
-                }
-            }
-
-            // Most Played Section
-            if (mostPlayed.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(imageVector = Icons.Default.TrendingUp, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Most Played",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-                }
-
-                items(mostPlayed.take(4)) { track ->
-                    TrackItemRow(
-                        track = track,
-                        isSelected = currentPlayingTrack?.id == track.id,
-                        onTrackClick = { onTrackClick(track, mostPlayed) },
-                        onToggleFavorite = { onToggleFavorite(track.id) },
-                        onMoreOptionsClick = { onTrackOptionsClick(track) }
-                    )
-                }
-            }
-
-            // Custom Playlists Section
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Playlists",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${playlists.size} playlists",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextTertiary
-                    )
-                }
-            }
-
-            items(playlists) { playlist ->
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable { selectedPlaylistId = playlist.id }
-                        .testTag("playlist_item_${playlist.id}"),
-                    color = GlassFill,
-                    border = null
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(SpotifyGreen.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QueueMusic,
-                                contentDescription = null,
-                                tint = SpotifyGreen,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = playlist.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Playlist • ${playlist.trackIds.size} songs",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Storage Metrics
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = GlassFill),
-                    border = null
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Storage & Library Breakdown",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        MetricRow(label = "Local Audio Tracks", value = "${stats.audioCount} files", icon = Icons.Default.LibraryMusic)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        MetricRow(label = "Custom Playlists", value = "${playlists.size} lists", icon = Icons.Default.QueueMusic)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        MetricRow(label = "Total Music Playtime", value = formatDuration(stats.totalAudioDurationMs), icon = Icons.Default.Equalizer)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        MetricRow(label = "Storage Used", value = formatFileSize(stats.totalStorageUsedBytes), icon = Icons.Default.Folder)
-                    }
-                }
-            }
+            musicOverview(
+                stats = stats, playlists = playlists, allTracks = allTracks, trackMap = trackMap,
+                recentlyPlayed = recentlyPlayed, mostPlayed = mostPlayed, currentPlayingTrack = currentPlayingTrack,
+                onPlay = onTrackClick, onOpenMusic = onNavigateToMusic, onOpenEqualizer = onNavigateToEqualizer,
+                onRescan = onRescanClick, onCreatePlaylist = { showCreateDialog = true }, onOpenPlaylist = { selectedPlaylistId = it },
+            )
         }
     }
 }

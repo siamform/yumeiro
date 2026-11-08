@@ -167,6 +167,7 @@ class AppNavigationCrashTest {
         tap("nav_tab_music"); snap("dark_music")
         tap("music_tab_1"); snap("dark_albums")
         tap("nav_tab_library"); snap("dark_library")
+        tap("library_tab_1"); snap("dark_library_videos"); tap("library_tab_2"); snap("dark_library_reading"); tap("library_tab_0")
         tap("nav_tab_home"); tap("quick_card_audio_engine"); snap("dark_equalizer"); back()
         tap("nav_tab_music"); tap("music_tab_0")
         tap(firstTagWithPrefix("track_item_")); waitFor("now_playing_screen_root")

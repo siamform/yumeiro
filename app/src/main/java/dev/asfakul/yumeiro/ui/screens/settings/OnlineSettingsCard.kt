@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -56,7 +56,7 @@ fun OnlineSettingsCard() {
     var edit by remember { mutableStateOf<String?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
 
-    if (confirmAdult) AlertDialog(
+    if (confirmAdult) TsukiDialog(
         onDismissRequest = { confirmAdult = false },
         title = { Text("Show 18+ content?") },
         text = { Text("Adult extensions and titles will appear in the market, home and search. Confirm you are 18 or older and that this content is legal where you live.") },
@@ -66,7 +66,7 @@ fun OnlineSettingsCard() {
 
     edit?.let { which ->
         var text by remember(which) { mutableStateOf(when (which) { "os" -> osKey; "lang" -> lang; "anilist" -> OnlineSettings.secret("anilist_client").orEmpty(); else -> OnlineSettings.secret("mal_client").orEmpty() }) }
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { edit = null },
             title = { Text(when (which) { "os" -> "OpenSubtitles API key"; "lang" -> "Subtitle language"; "anilist" -> "AniList client ID"; else -> "MyAnimeList client ID" }) },
             text = {

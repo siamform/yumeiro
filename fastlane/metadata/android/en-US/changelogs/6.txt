@@ -1,0 +1,3 @@
+Universal sources: Aniyomi, Mihon, Stremio, JavaScript and home servers. MAL, Kitsu and Trakt tracking, backup, app lock.
+Fixes: the screen no longer sleeps while watching, black screens and ad clips in streams are skipped, new-episode alerts arrive with the app closed, battery settings open directly, blocked sites work without a VPN, sub/dub keeps the same episode.
+Faster, ranked Hues search; Videos opens on Hues when online; redesigned alerts.

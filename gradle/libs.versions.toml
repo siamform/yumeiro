@@ -106,7 +106,19 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 nicehttp = { group = "com.github.Blatzar", name = "NiceHttp", version.ref = "nicehttp" }
 newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }
 
+# Aniyomi / Mihon extension compatibility (same runtime libraries their extensions link against)
+injekt = { group = "com.github.mihonapp", name = "injekt", version = "91edab2317" }
+rxjava = { group = "io.reactivex", name = "rxjava", version = "1.3.8" }
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version = "2.3.1" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.11.0" }
+kotlinx-serialization-json-okio = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-okio", version = "1.11.0" }
+# JavaScript sources (Mangayomi format): QuickJS with async/await and Kotlin suspend bindings
+quickjs-kt = { group = "io.github.dokar3", name = "quickjs-kt-android", version = "1.0.18" }
+# Home servers: SMB / Windows shares
+smbj = { group = "com.hierynomus", name = "smbj", version = "0.15.0" }
+
 [plugins]
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

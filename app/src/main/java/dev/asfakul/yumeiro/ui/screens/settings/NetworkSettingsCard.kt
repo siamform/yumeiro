@@ -76,6 +76,26 @@ fun NetworkSettingsCard() {
                 ) { NetworkSettings.setDns(context, config.copy(provider = p)); testResult = null }
             }
         }
+        if (!config.usesAlternative) {
+            SettingsDivider()
+            SettingsToggleRow(
+                title = "Get around blocked sites automatically",
+                subtitle = "If your network blocks a site's name (no answer, a block page or a reset connection), Yumeiro looks it up over encrypted DNS instead — Cloudflare, then Quad9, then Google — and remembers it. Sites that work are untouched",
+                checked = config.auto,
+                onCheckedChange = { NetworkSettings.setDns(context, config.copy(auto = it)) },
+                testTag = "toggle_dns_auto",
+            )
+            val vpn = remember { dev.asfakul.yumeiro.network.Connectivity.vpnActive(context) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (vpn) "A VPN is on. If an extension fails only with it, turn it off here." else "Some sources block whole regions; DNS can't fix that — a VPN can.",
+                    color = TextTertiary, fontSize = 11.sp, modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { dev.asfakul.yumeiro.network.Connectivity.openVpnSettings(context) }, modifier = Modifier.testTag("dns_vpn_settings")) {
+                    Text("VPN settings", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
         if (config.usesAlternative) {
             Spacer(Modifier.height(10.dp))
             Text("Connection", color = TextSecondary, fontSize = 12.sp)

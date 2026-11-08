@@ -96,6 +96,10 @@ jobs:
           MT_KEY_PASSWORD: ${{ secrets.MT_KEY_PASSWORD }}
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          KITSU_CLIENT_ID: ${{ secrets.KITSU_CLIENT_ID }}
+          KITSU_CLIENT_SECRET: ${{ secrets.KITSU_CLIENT_SECRET }}
           # Only embedded while the repo is private (docs/GUIDE.md "Going private"): a token inside a
           # public APK can be extracted, and public releases need no token at all.
           MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}

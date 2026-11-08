@@ -14,6 +14,15 @@ organised better than any single-source app. Ordered by impact for launch.
 | Docs | Install guide with screenshots, FAQ ("why is a source empty", "battery settings for notifications"), CONTRIBUTING, issue templates, extension author guide. |
 | Release | Changelog per version, F-Droid/IzzyOnDroid listing, Obtainium link, GitHub Releases with split APKs. |
 
+## 0.5 Reliability follow-ups (after v1.0.5)
+
+| Area | Item |
+|---|---|
+| Push | Optional **UnifiedPush** (FOSS, no Firebase): users with a distributor such as ntfy get instant new-episode pushes even when Android freezes background work. Needs a tiny free publisher (a GitHub Action posting to ntfy.sh topics per followed title is enough). Keep WorkManager as the default. |
+| Playback | Feed `BlackFrameWatchdog` hits into source ranking, so links that went black are tried last next time. |
+| Network | Show which hosts use the automatic DNS bypass in Settings → Network, with a "forget" button. |
+| Search | Collapse the same title from several Hues into one card with "on N Hues" (data is in `SearchRanker.Ranked.alsoOn`). |
+
 ## 1. Universal extension engine (the differentiator)
 
 Make Yumeiro the hub that runs the big ecosystems side by side, each behind one adapter interface
@@ -22,14 +31,22 @@ Make Yumeiro the hub that runs the big ecosystems side by side, each behind one 
 | Ecosystem | Format | How | Notes |
 |---|---|---|---|
 | CloudStream | `.cs3` (DEX) | done | keep crash guard |
-| Aniyomi anime | APK with `AnimeHttpSource` | load APK DEX with a compat stub of extensions-lib (Apache-2.0) | biggest anime catalogue |
-| Mihon / Tachiyomi manga | APK with `HttpSource` | same loader + a reader screen | opens manga/manhwa audience |
-| Stremio addons | HTTP JSON (`/manifest.json`, `/catalog`, `/meta`, `/stream`, `/subtitles`) | pure Kotlin client, no code execution | safest format, huge community |
-| Mangayomi / Dartotsu | JavaScript | sandboxed QuickJS runtime, network only through our client | no native code |
-| Jellyfin / Plex / DLNA / SMB | server APIs | "My servers" source | home media users |
+| Aniyomi anime | APK with `AnimeHttpSource` | done (v1.0.5) | biggest anime catalogue |
+| Mihon / Tachiyomi manga | APK with `HttpSource` | done (v1.0.5), with reader | opens manga/manhwa audience |
+| Stremio addons | HTTP JSON (`/manifest.json`, `/catalog`, `/meta`, `/stream`, `/subtitles`) | done (v1.0.5), HTTP streams only | safest format, huge community |
+| Mangayomi / Dartotsu | JavaScript | done (v1.0.5), QuickJS | no native code |
+| Jellyfin / Plex / DLNA / SMB | server APIs | done (v1.0.5), plus Emby and WebDAV | home media users |
 
 Shared on top: one market for all formats, per-source health score, auto-fallback, sub/dub and quality
 preferences, unified search across every installed source, de-duplicated by AniList/TMDB id.
+
+Still open: unified search de-duplicated by AniList/TMDB id, auto-fallback to another source, Dartotsu-specific APIs.
+
+Done in v1.0.5 from the lists below: MyAnimeList, Kitsu and Trakt tracking; LAN watch together; backup and restore
+(local file); app lock and incognito; continue-watching widget; extension author kit; public status page;
+README "what's different" table; F-Droid/IzzyOnDroid metadata. Still open: Simkl, two-way sync, watch together over
+the internet (needs a free relay), Google Drive/WebDAV backup target, kids profile, now-playing widget, a dedicated
+TV layout, Weblate localisation.
 
 ## 2. Features that set it apart
 

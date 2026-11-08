@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -28,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -109,7 +109,7 @@ fun OnlineSubtitleDialog(
 
     LaunchedEffect(Unit) { search() }
 
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
         title = {

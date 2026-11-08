@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -142,7 +143,7 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
         if (showAdult) all.filter { OnlineHistory.isAdult(it) } else OnlineHistory.forFeed(all, adultOn, adultPrivate)
     }
     var confirmClear by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    if (confirmClear) androidx.compose.material3.AlertDialog(
+    if (confirmClear) dev.asfakul.yumeiro.ui.components.TsukiDialog(
         onDismissRequest = { confirmClear = false },
         title = { Text(if (showAdult) "Clear 18+ history?" else "Clear watch history?") },
         text = { Text(if (showAdult) "Removes every 18+ title and its resume position from this device." else "Removes every title and resume position from this device. This can't be undone.") },

@@ -105,6 +105,8 @@ object ExtensionManager {
         started = true
         val app = context.applicationContext
         scope.launch { runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) } }
+        // Other ecosystems load in parallel; they publish into SourceHub as they become ready.
+        runCatching { dev.asfakul.yumeiro.sources.Bridges.start(app) }.onFailure { Log.e(TAG, "bridges", it) }
     }
 
     /** Waits until saved extensions are loaded. Safe to call many times. */
@@ -145,11 +147,16 @@ object ExtensionManager {
     fun providers(): List<MainAPI> {
         val enabled = _state.value.installed.filter { it.enabled }.map { it.key }.toSet()
         val files = synchronized(plugins) { plugins.filterKeys { it in enabled }.values.mapNotNull { it.filename }.toSet() }
-        return runCatching { APIHolder.allProviders.toList() }.getOrDefault(emptyList())
+        val cloudstream = runCatching { APIHolder.allProviders.toList() }.getOrDefault(emptyList())
             .filter { it.sourcePlugin in files }
+        // Aniyomi, Stremio, JavaScript and home-server sources join through the same MainAPI shape.
+        return (cloudstream + dev.asfakul.yumeiro.sources.SourceHub.providers())
             .distinctBy { it.name }
             .also { ProviderOverrides.apply(it) }
     }
+
+    /** Called by [dev.asfakul.yumeiro.sources.SourceHub] when bridged sources change, so screens reload. */
+    fun bumpGeneration() = _state.update { it.copy(generation = it.generation + 1) }
 
     fun provider(name: String): MainAPI? = providers().firstOrNull { it.name == name }
 

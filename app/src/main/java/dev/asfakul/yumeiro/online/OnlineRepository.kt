@@ -175,6 +175,8 @@ object OnlineRepository {
     private const val LOAD_TIMEOUT = 35_000L
     private const val LINKS_TIMEOUT = 75_000L
     private const val CACHE_MS = 15 * 60 * 1000L
+    /** Same query, same Hue: reuse results for a while (typing back and forth, retries). */
+    private const val SEARCH_CACHE_MS = 10 * 60 * 1000L
     /** Rows requested per provider for the home page. */
     private const val ROWS_PER_PROVIDER = 4
 
@@ -187,7 +189,7 @@ object OnlineRepository {
     /** Search results the user tapped, so details can show a title + poster instantly. */
     val previews = ConcurrentHashMap<String, OnlineItem>()
 
-    fun clearCaches() { homeCache.clear(); detailCache.clear() }
+    fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear() }
 
     /** Items a home row already showed (for an instant "See all"). */
     fun cachedRow(api: String, pageData: String): List<OnlineItem>? =
@@ -216,7 +218,7 @@ object OnlineRepository {
             runCatching {
                 resp.items.orEmpty().map { r ->
                     OnlineRow(
-                        api.name, r.name.orEmpty(), r.list.orEmpty().mapNotNull { runCatching { it.toItem() }.getOrNull() }.distinctBy { it.url }.take(MAX_ROW_ITEMS),
+                        api.name, r.name.orEmpty(), r.list.orEmpty().mapNotNull { runCatching { it.toItem(api.name) }.getOrNull() }.distinctBy { it.url }.take(MAX_ROW_ITEMS),
                         r.isHorizontalImages,
                         pageName = page.name, pageData = page.data, hasNext = resp.hasNext && resp.items.size == 1,
                     )
@@ -233,7 +235,7 @@ object OnlineRepository {
         val resp = parallel.withPermit {
             withTimeout(HOME_TIMEOUT) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
         } ?: return@withContext OnlinePage(emptyList(), false)
-        val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem() } }.distinctBy { it.url }
+        val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name) } }.distinctBy { it.url }
         OnlinePage(items, resp.hasNext && items.isNotEmpty())
     }
 
@@ -263,11 +265,20 @@ object OnlineRepository {
         }
     }.flowOn(Dispatchers.IO)
 
+    private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
+
     private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+        val key = "${api.name}|${q.lowercase()}"
+        searchCache[key]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_CACHE_MS }?.let { return it.value }
         val results = try {
             api.search(q, 1)?.items
         } catch (e: NotImplementedError) { null } ?: api.search(q).orEmpty()
-        return results.mapNotNull { it.toItem() }.distinctBy { it.url }
+        val items = results.mapNotNull { runCatching { it.toItem(api.name) }.getOrNull() }.distinctBy { it.url }
+        if (items.isNotEmpty()) {
+            if (searchCache.size > 64) searchCache.clear()
+            searchCache[key] = Timed(System.currentTimeMillis(), items)
+        }
+        return items
     }
 
     // endregion
@@ -314,7 +325,7 @@ object OnlineRepository {
             contentRating = r.contentRating, playData = playData,
             episodes = episodes.mapValues { (_, l) -> l.sortedWith(compareBy({ it.season ?: 0 }, { it.episode ?: Int.MAX_VALUE })) },
             seasonNames = seasonNames,
-            recommendations = r.recommendations.orEmpty().mapNotNull { it.toItem() }.distinctBy { it.url }.take(24),
+            recommendations = r.recommendations.orEmpty().mapNotNull { it.toItem(api.name) }.distinctBy { it.url }.take(24),
             unsupportedReason = unsupported,
             malId = runCatching { with(LoadResponse) { r.getMalId() }?.toIntOrNull() }.getOrNull(),
             aniListId = runCatching { with(LoadResponse) { r.getAniListId() }?.toIntOrNull() }.getOrNull(),
@@ -387,11 +398,16 @@ object OnlineRepository {
 
     // region mapping helpers
 
-    internal fun SearchResponse.toItem(): OnlineItem? {
+    /**
+     * [owner] is the extension that returned this result. Extensions often copy each other's code
+     * and leave a wrong `apiName`, so trusting it attributed results to another Hue (opening them
+     * with the wrong extension, and colliding list keys that could crash the results grid).
+     */
+    internal fun SearchResponse.toItem(owner: String = apiName): OnlineItem? {
         val n = name.trim().ifBlank { return null }
         if (type == TvType.NSFW && !OnlineSettings.adult.value) return null
         return OnlineItem(
-            name = n, url = url, api = apiName, posterUrl = posterUrl?.takeIf { it.isNotBlank() },
+            name = n, url = url, api = owner.ifBlank { apiName }, posterUrl = posterUrl?.takeIf { it.isNotBlank() },
             posterHeaders = posterHeaders.orEmpty(), type = type?.let(::typeLabel),
             quality = quality?.name, score = runCatching { score?.toDouble(10) }.getOrNull(),
         )
