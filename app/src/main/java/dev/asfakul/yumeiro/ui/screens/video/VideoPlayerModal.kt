@@ -1041,7 +1041,8 @@ private fun VideoPlayerModalContent(
         // Video Surface via Media3 PlayerView
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
+                // Inflated so the surface type can be a TextureView (only settable from XML).
+                (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
                     player = exoPlayer
                     useController = false
                     this.resizeMode = resizeMode

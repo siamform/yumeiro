@@ -8,7 +8,15 @@ package dev.asfakul.yumeiro.ui.screens.online
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.WebChromeClient
+import dev.asfakul.yumeiro.online.web.SafeWebView
+import dev.asfakul.yumeiro.online.web.SafeWebViewClient
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,12 +55,18 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
  * Shows a site's "verify you're human" page when it can't pass on its own. The user completes the
  * check in a normal web page; the cookie it sets is then used for that site's requests.
  * Add once near the app root.
+ *
+ * The page loaded is the site's own page (an API / video URL is solved on the home page, see
+ * [BrowserCheck.challengePage]). If the site answers with a firewall block instead of a check, the
+ * page closes and explains it, instead of leaving the user on "Sorry, you have been blocked".
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun BrowserCheckHost() {
     val pending by BrowserCheck.pending.collectAsState()
     val p = pending ?: return
+    var progress by remember(p) { mutableIntStateOf(0) }
+    var rendererGone by remember(p) { mutableStateOf(false) }
     Dialog(onDismissRequest = { BrowserCheck.cancel() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("browser_check")) {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -64,27 +78,44 @@ fun BrowserCheckHost() {
                 }
                 IconButton(onClick = { BrowserCheck.cancel() }, modifier = Modifier.testTag("browser_check_cancel")) { Icon(Icons.Default.Close, "Cancel", tint = TextPrimary) }
             }
+            if (progress in 1..99) {
+                LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth().height(2.dp))
+            } else Spacer(Modifier.height(2.dp))
+            if (rendererGone) {
+                Text("The page stopped responding. Close this and try again.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
+                return@Column
+            }
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        SafeWebView.harden(this)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        settings.allowFileAccess = false
-                        settings.allowContentAccess = false
                         settings.userAgentString = BrowserCheck.userAgent()
                         CookieManager.getInstance().setAcceptCookie(true)
                         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                        webViewClient = object : WebViewClient() {
+                        val root = BrowserCheck.challengePage(p.url, method = "POST") // scheme://host/
+                        var triedRoot = p.url == root
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress }
+                        }
+                        webViewClient = object : SafeWebViewClient(onGone = { rendererGone = true }) {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 CookieManager.getInstance().flush()
                                 BrowserCheck.onPageLoaded(url ?: p.url)
+                                // "Sorry, you have been blocked" is a firewall answer, not a captcha.
+                                view?.evaluateJavascript(BrowserCheck.IS_BLOCK_JS) { r ->
+                                    if (r != "true") return@evaluateJavascript
+                                    if (!triedRoot) { triedRoot = true; view.loadUrl(root) }
+                                    else BrowserCheck.onBlocked(p.host)
+                                }
                             }
                         }
                         loadUrl(p.url)
                     }
                 },
-                onRelease = { runCatching { it.stopLoading(); it.destroy() } },
+                onRelease = { SafeWebView.dispose(it) },
             )
         }
     }

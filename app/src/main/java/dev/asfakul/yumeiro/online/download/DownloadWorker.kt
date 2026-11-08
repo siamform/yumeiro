@@ -48,7 +48,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         if (item.status == OnlineDownloads.Status.DONE) return@withContext Result.success()
         val notifId = 0x5000 + (id.hashCode() and 0xfff)
         runCatching { setForeground(foreground(notifId, item.title, 0, 0, true)) }
-        val client = NetworkClient.get(applicationContext).newBuilder().addInterceptor(BrowserCheck.Interceptor).build()
+        val client = NetworkClient.get(applicationContext).newBuilder().addInterceptor(BrowserCheck.MediaInterceptor).build()
         val out = OnlineDownloads.fileOf(applicationContext, item)
         val part = File(out.parentFile, out.name + ".part")
         try {

@@ -5,7 +5,10 @@
  */
 package dev.asfakul.yumeiro.ui.screens
 
-import dev.asfakul.yumeiro.ui.components.tabSwipe
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.pageBackground
@@ -109,7 +112,12 @@ fun MTPlayerApp(
     navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
+    val navRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
+    // Bottom-bar tabs are pages of one pager on the Home destination (finger-following swipe).
+    val tabPager = rememberPagerState { bottomNavItems.size }
+    val tabScope = rememberCoroutineScope()
+    /** The visible top-level page: the pager's tab on the root, otherwise the navigation route. */
+    val currentRoute = if (navRoute == Screen.Home.route) bottomNavItems[tabPager.currentPage.coerceIn(0, bottomNavItems.lastIndex)].route else navRoute
     val context = LocalContext.current
 
     // Splash is an overlay instead of a navigation destination, so the back stack always
@@ -120,20 +128,20 @@ fun MTPlayerApp(
     // access cards). Home is always the root of the back stack: going "home" pops back to it
     // instead of restoring a saved state, which previously re-opened the last tab and made the
     // Home tab look dead.
-    val navigateTop: (String) -> Unit = remember(navController) {
+    val navigateTop: (String) -> Unit = remember(navController, tabPager) {
         { route ->
             runCatching {
-                if (route == Screen.Home.route) {
-                    if (!navController.popBackStack(Screen.Home.route, inclusive = false)) {
-                        navController.navigate(Screen.Home.route) { launchSingleTop = true }
-                    }
-                } else {
-                    navController.navigate(route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                if (navController.currentDestination?.route != Screen.Home.route &&
+                    !navController.popBackStack(Screen.Home.route, inclusive = false)
+                ) {
+                    navController.navigate(Screen.Home.route) { launchSingleTop = true }
                 }
+            }
+            val page = bottomNavItems.indexOfFirst { it.route == route }
+            if (page >= 0 && page != tabPager.currentPage) tabScope.launch {
+                // Neighbouring tab: slide; far tab: jump (no flash of every page in between).
+                if (kotlin.math.abs(page - tabPager.currentPage) == 1) tabPager.animateScrollToPage(page)
+                else tabPager.scrollToPage(page)
             }
         }
     }
@@ -184,9 +192,6 @@ fun MTPlayerApp(
     val selectedVideoFolder by viewModel.selectedVideoFolder.collectAsStateWithLifecycle()
     val activePlayingVideo by viewModel.activePlayingVideo.collectAsStateWithLifecycle()
     var videoMinimized by rememberSaveable { mutableStateOf(false) }
-    /** Direction of the last tab swipe (-1 previous, +1 next, 0 tap) → which way the pages slide. */
-    var tabSwipeDir by remember { mutableStateOf(0) }
-    LaunchedEffect(currentRoute) { kotlinx.coroutines.delay(600); tabSwipeDir = 0 }
     val videoForDetails by viewModel.videoForDetails.collectAsStateWithLifecycle()
     val showManageHiddenFoldersDialog by viewModel.showManageHiddenFoldersDialog.collectAsStateWithLifecycle()
 
@@ -364,7 +369,7 @@ fun MTPlayerApp(
 
                         MTBottomBar(
                             currentRoute = currentRoute,
-                            onNavigateToRoute = { tabSwipeDir = 0; navigateTop(it) },
+                            onNavigateToRoute = { navigateTop(it) },
                             joinedWithMiniPlayer = dockJoined,
                         )
                     }
@@ -377,15 +382,247 @@ fun MTPlayerApp(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding)
-                    // Swipe right → left for the next tab, left → right for the previous one.
-                    .tabSwipe(enabled = !isSubpage && (activePlayingVideo == null || videoMinimized) && !isNowPlayingExpanded) { dir ->
-                        val i = bottomNavItems.indexOfFirst { it.route == currentRoute }
-                        dev.asfakul.yumeiro.ui.components.TabSwipe.target(i, dir, bottomNavItems.size)?.let { t ->
-                            tabSwipeDir = dir
-                            navigateTop(bottomNavItems[t].route)
+            ) {
+                // No tab swipes under the full-screen video or Now Playing.
+                val tabSwipeEnabled = (activePlayingVideo == null || videoMinimized) && !isNowPlayingExpanded
+                val tabPage: @Composable (Int) -> Unit = { page ->
+                    when (bottomNavItems[page].route) {
+                        Screen.Home.route -> {
+                            val huesEngine by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
+                            val onlineHistoryAll by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
+                            val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
+                            val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
+                            val onlineHistory = remember(onlineHistoryAll, adultOn, adultPrivate) { dev.asfakul.yumeiro.online.OnlineHistory.forFeed(onlineHistoryAll, adultOn, adultPrivate) }
+                            val ytHistoryItems by dev.asfakul.yumeiro.youtube.YtHistory.items.collectAsState()
+                            val homeResumeVideo = remember(recentlyWatchedVideos, continueWatchingVideos, onlineHistory, ytHistoryItems) {
+                                val device = (continueWatchingVideos + recentlyWatchedVideos).maxByOrNull { it.lastWatchedTimestamp }
+                                    ?.takeIf { it.lastWatchedTimestamp > 0 }
+                                val online = onlineHistory.firstOrNull()
+                                val yt = ytHistoryItems.firstOrNull { !it.music }
+                                when {
+                                    device != null && (online == null || device.lastWatchedTimestamp >= online.updatedAt) ->
+                                        dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
+                                            title = device.title, subtitle = "On device · ${device.folderName}",
+                                            thumbnail = dev.asfakul.yumeiro.ui.image.VideoThumb(device.uri),
+                                            progress = if (device.durationMs > 0) device.playbackPositionMs.toFloat() / device.durationMs else 0f,
+                                            onClick = { viewModel.playVideo(device, continueWatchingVideos.ifEmpty { listOf(device) }) },
+                                        )
+                                    online != null -> dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
+                                        title = online.name, subtitle = listOfNotNull(online.episodeLabel, online.api).joinToString(" · "),
+                                        thumbnail = online.posterUrl, thumbnailHeaders = online.posterHeaders, progress = online.fraction,
+                                        onClick = { openOnline(online.toItem()) },
+                                    )
+                                    yt != null -> dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
+                                        title = yt.title, subtitle = "YouTube · ${yt.channel}", thumbnail = yt.thumbnail,
+                                        onClick = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, yt) },
+                                    )
+                                    else -> null
+                                }
+                            }
+                            OpaquePage {
+                            HomeScreen(
+                                stats = stats,
+                                allTracks = filteredTracks,
+                                recentlyPlayed = recentlyPlayed,
+                                mostPlayed = mostPlayed,
+                                recentVideos = filteredVideos,
+                                selectedTrack = playbackState.currentTrack,
+                                onTrackClick = { track, queue ->
+                                    viewModel.playTrack(track, queue)
+                                },
+                                onTrackOptionsClick = viewModel::openTrackOptions,
+                                onVideoClick = viewModel::playVideo,
+                                onToggleVideoFavorite = viewModel::toggleVideoFavorite,
+                                onVideoOptionsClick = viewModel::showVideoDetails,
+                                onToggleFavorite = viewModel::onToggleFavorite,
+                                onRescanClick = viewModel::scanMedia,
+                                onNavigateToMusic = { musicOnline = false; navigateTop(Screen.Music.route) },
+                                onNavigateToVideos = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE; navigateTop(Screen.Videos.route) },
+                                onOpenYouTubeMusic = { musicOnline = true; navigateTop(Screen.Music.route) },
+                                onOpenYouTube = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
+                                onOpenHues = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                onOpenLive = { navigateTop(Screen.Stream.route) },
+                                onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
+                                onOpenHueStore = { navigateSub(Screen.Extensions.route) },
+                                huesCount = huesEngine.installed.count { it.enabled },
+                                onNavigateToLibrary = { navigateTop(Screen.Library.route) },
+                                onNavigateToSettings = { navigateSub(Screen.Settings.route) },
+                                onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
+                                isPlaying = playbackState.isPlaying,
+                                durationMs = playbackState.durationMs,
+                                positionMs = positionProvider,
+                                onTogglePlayPause = viewModel::togglePlayPause,
+                                onOpenNowPlaying = viewModel::openNowPlaying,
+                                resumeVideo = homeResumeVideo,
+                                onPlayYouTube = { item, list ->
+                                    if (item.music) {
+                                        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
+                                        val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
+                                        viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
+                                    } else {
+                                        dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, item)
+                                    }
+                                },
+                                onlinePicks = { header ->
+                                    dev.asfakul.yumeiro.ui.screens.online.OnlineHomePicks(
+                                        onOpenTitle = openOnline,
+                                        onSeeAll = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                        header = header,
+                                    )
+                                }
+                            )
+                            }
+                        }
+                        Screen.Music.route -> {
+                            OpaquePage {
+                            Column(Modifier.fillMaxSize()) {
+                            dev.asfakul.yumeiro.ui.screens.music.MusicSourceSwitch(online = musicOnline, onChange = { musicOnline = it })
+                            if (musicOnline) {
+                                dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
+                                    dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
+                                    val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
+                                    viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
+                                })
+                            } else
+                            MusicScreen(
+                                tracks = filteredTracks,
+                                albums = albums,
+                                artists = artists,
+                                folders = folders,
+                                stats = stats,
+                                currentPlayingTrack = playbackState.currentTrack,
+                                isPlaying = playbackState.isPlaying,
+                                activeTab = activeMusicTab,
+                                currentSort = trackSort,
+                                isSelectionMode = isSelectionMode,
+                                selectedTrackIds = selectedTrackIds,
+                                onTabChange = viewModel::onMusicTabChange,
+                                onSortChange = viewModel::onSortChange,
+                                onTrackClick = { track, queue ->
+                                    viewModel.playTrack(track, queue)
+                                },
+                                onToggleFavorite = viewModel::onToggleFavorite,
+                                onTrackOptionsClick = viewModel::openTrackOptions,
+                                onToggleSelectionMode = viewModel::toggleSelectionMode,
+                                onToggleTrackSelection = viewModel::toggleTrackSelection,
+                                onSelectAll = viewModel::selectAllTracks,
+                                onClearSelection = viewModel::clearSelection,
+                                onPlaySelected = viewModel::playSelectedTracks,
+                                onAddSelectedToQueue = viewModel::addSelectedToQueue,
+                                onAddSelectedToFavorites = viewModel::addSelectedToFavorites,
+                                onAddSelectedToPlaylist = {
+                                    viewModel.openAddToPlaylist(selectedTrackIds.toList())
+                                },
+                                onRescanClick = viewModel::scanMedia,
+                                onRequestPermission = {
+                                    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO)
+                                    } else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                    permissionsLauncher.launch(permissions)
+                                }
+                            )
+                            }
+                            }
+                        }
+                        Screen.Videos.route -> {
+                            OpaquePage {
+                            Column(Modifier.fillMaxSize()) {
+                            VideoSourceSwitch(source = videoSource, onChange = { videoSource = it })
+                            if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
+                                dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
+                                    onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) },
+                                )
+                            } else if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE) {
+                                OnlineHomeScreen(
+                                    onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
+                                    onOpenTitle = openOnline,
+                                    onOpenExtensions = { navigateSub(Screen.Extensions.route) },
+                                    onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) },
+                                    onOpenRow = { row -> navigateSub(Screen.OnlineRow.route(row.api, row.title, row.pageName.orEmpty(), row.pageData.orEmpty())) },
+                                    onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                    onOpenInfo = { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) },
+                                    onOpenLibrary = { navigateSub(Screen.OnlineLibrary.route) },
+                                )
+                            } else {
+                            VideoScreen(
+                                videos = filteredVideos,
+                                folders = videoFolders,
+                                continueWatching = continueWatchingVideos,
+                                recentlyWatched = recentlyWatchedVideos,
+                                favorites = favoriteVideos,
+                                hiddenFolderPaths = hiddenVideoFolderPaths,
+                                activeTab = activeVideoTab,
+                                currentSort = videoSort,
+                                isGridView = isVideoGridView,
+                                selectedFolder = selectedVideoFolder,
+                                searchQuery = searchQuery,
+                                onTabChange = viewModel::onVideoTabChange,
+                                onSortChange = viewModel::onVideoSortChange,
+                                onToggleLayout = viewModel::toggleVideoLayout,
+                                onSearchQueryChange = viewModel::onSearchQueryChange,
+                                onVideoClick = viewModel::playVideo,
+                                onToggleFavorite = viewModel::toggleVideoFavorite,
+                                onOptionsClick = viewModel::showVideoDetails,
+                                onFolderClick = viewModel::selectVideoFolder,
+                                onBackFromFolder = { viewModel.selectVideoFolder(null) },
+                                onHideFolder = viewModel::hideVideoFolder,
+                                onManageHiddenFoldersClick = { viewModel.setShowManageHiddenFolders(true) },
+                                onRescanClick = viewModel::scanMedia
+                            )
+                            }
+                            }
+                            }
+                        }
+                        Screen.Stream.route -> {
+                            OpaquePage {
+                            StreamScreen(
+                                onOpenPlaylist = { id -> navigateSub(Screen.PlaylistDetail.route(id)) },
+                                onOpenMarket = { navigateSub(Screen.Market.route) },
+                            )
+                            }
+                        }
+                        Screen.Library.route -> {
+                            OpaquePage {
+                            var libTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
+                            Column(Modifier.fillMaxSize()) {
+                            dev.asfakul.yumeiro.ui.screens.library.LibraryTabs(libTab) { libTab = it }
+                            if (libTab == 1) dev.asfakul.yumeiro.ui.screens.library.VideoLibraryContent(
+                                deviceContinue = continueWatchingVideos,
+                                onOpenTitle = openOnline,
+                                onPlayVideo = viewModel::playVideo,
+                                onBrowseOnline = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
+                            ) else
+                            LibraryScreen(
+                                stats = stats,
+                                playlists = playlists,
+                                allTracks = rawTracks,
+                                recentlyPlayed = recentlyPlayed,
+                                mostPlayed = mostPlayed,
+                                currentPlayingTrack = playbackState.currentTrack,
+                                onCreatePlaylist = { name ->
+                                    viewModel.createPlaylist(name)
+                                },
+                                onRenamePlaylist = viewModel::renamePlaylist,
+                                onDeletePlaylist = viewModel::deletePlaylist,
+                                onRemoveTrackFromPlaylist = viewModel::removeTrackFromPlaylist,
+                                onReorderPlaylist = viewModel::reorderPlaylist,
+                                onTrackClick = { track, queue ->
+                                    viewModel.playTrack(track, queue)
+                                },
+                                onToggleFavorite = viewModel::onToggleFavorite,
+                                onNavigateToMusic = { navigateTop(Screen.Music.route) },
+                                onNavigateToSettings = { navigateSub(Screen.Settings.route) },
+                                onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
+                                onTrackOptionsClick = viewModel::openTrackOptions,
+                                huesCount = dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState().value.installed.count { it.enabled },
+                                onRescanClick = viewModel::scanMedia,
+                            )
+                            }
+                            }
                         }
                     }
-            ) {
+                }
                 NavHost(
                     navController = navController,
                     startDestination = Screen.Home.route,
@@ -395,221 +632,40 @@ fun MTPlayerApp(
                     enterTransition = {
                         if (isSubRoute(targetState.destination.route)) {
                             slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it }
-                        } else if (tabSwipeDir != 0) {
-                            slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it * tabSwipeDir }
                         } else EnterTransition.None
                     },
                     exitTransition = {
                         if (isSubRoute(targetState.destination.route)) {
                             slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it / 4 }
-                        } else if (tabSwipeDir != 0) {
-                            slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it * tabSwipeDir }
                         } else ExitTransition.None
                     },
                     popEnterTransition = {
                         if (isSubRoute(initialState.destination.route)) {
                             slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it / 4 }
-                        } else if (tabSwipeDir != 0) {
-                            slideInHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it * tabSwipeDir }
                         } else EnterTransition.None
                     },
                     popExitTransition = {
                         if (isSubRoute(initialState.destination.route)) {
                             slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { it }
-                        } else if (tabSwipeDir != 0) {
-                            slideOutHorizontally(tween(NAV_ANIM_MS, easing = FastOutSlowInEasing)) { -it * tabSwipeDir }
                         } else ExitTransition.None
                     },
                     sizeTransform = null
                 ) {
+                    // The five bottom-bar tabs live in one pager: swipe anywhere on a page (rows and
+                    // carousels keep their own drags first), the page follows the finger like Facebook / Instagram.
                     composable(Screen.Home.route) {
-                        val huesEngine by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
-                        val onlineHistoryAll by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
-                        val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
-                        val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
-                        val onlineHistory = remember(onlineHistoryAll, adultOn, adultPrivate) { dev.asfakul.yumeiro.online.OnlineHistory.forFeed(onlineHistoryAll, adultOn, adultPrivate) }
-                        val ytHistoryItems by dev.asfakul.yumeiro.youtube.YtHistory.items.collectAsState()
-                        val homeResumeVideo = remember(recentlyWatchedVideos, continueWatchingVideos, onlineHistory, ytHistoryItems) {
-                            val device = (continueWatchingVideos + recentlyWatchedVideos).maxByOrNull { it.lastWatchedTimestamp }
-                                ?.takeIf { it.lastWatchedTimestamp > 0 }
-                            val online = onlineHistory.firstOrNull()
-                            val yt = ytHistoryItems.firstOrNull { !it.music }
-                            when {
-                                device != null && (online == null || device.lastWatchedTimestamp >= online.updatedAt) ->
-                                    dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
-                                        title = device.title, subtitle = "On device · ${device.folderName}",
-                                        thumbnail = dev.asfakul.yumeiro.ui.image.VideoThumb(device.uri),
-                                        progress = if (device.durationMs > 0) device.playbackPositionMs.toFloat() / device.durationMs else 0f,
-                                        onClick = { viewModel.playVideo(device, continueWatchingVideos.ifEmpty { listOf(device) }) },
-                                    )
-                                online != null -> dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
-                                    title = online.name, subtitle = listOfNotNull(online.episodeLabel, online.api).joinToString(" · "),
-                                    thumbnail = online.posterUrl, thumbnailHeaders = online.posterHeaders, progress = online.fraction,
-                                    onClick = { openOnline(online.toItem()) },
-                                )
-                                yt != null -> dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
-                                    title = yt.title, subtitle = "YouTube · ${yt.channel}", thumbnail = yt.thumbnail,
-                                    onClick = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, yt) },
-                                )
-                                else -> null
-                            }
-                        }
-                        OpaquePage {
-                        HomeScreen(
-                            stats = stats,
-                            allTracks = filteredTracks,
-                            recentlyPlayed = recentlyPlayed,
-                            mostPlayed = mostPlayed,
-                            recentVideos = filteredVideos,
-                            selectedTrack = playbackState.currentTrack,
-                            onTrackClick = { track, queue ->
-                                viewModel.playTrack(track, queue)
-                            },
-                            onTrackOptionsClick = viewModel::openTrackOptions,
-                            onVideoClick = viewModel::playVideo,
-                            onToggleVideoFavorite = viewModel::toggleVideoFavorite,
-                            onVideoOptionsClick = viewModel::showVideoDetails,
-                            onToggleFavorite = viewModel::onToggleFavorite,
-                            onRescanClick = viewModel::scanMedia,
-                            onNavigateToMusic = { musicOnline = false; navigateTop(Screen.Music.route) },
-                            onNavigateToVideos = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE; navigateTop(Screen.Videos.route) },
-                            onOpenYouTubeMusic = { musicOnline = true; navigateTop(Screen.Music.route) },
-                            onOpenYouTube = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
-                            onOpenHues = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
-                            onOpenLive = { navigateTop(Screen.Stream.route) },
-                            onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
-                            onOpenHueStore = { navigateSub(Screen.Extensions.route) },
-                            huesCount = huesEngine.installed.count { it.enabled },
-                            onNavigateToLibrary = { navigateTop(Screen.Library.route) },
-                            onNavigateToSettings = { navigateSub(Screen.Settings.route) },
-                            onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
-                            isPlaying = playbackState.isPlaying,
-                            durationMs = playbackState.durationMs,
-                            positionMs = positionProvider,
-                            onTogglePlayPause = viewModel::togglePlayPause,
-                            onOpenNowPlaying = viewModel::openNowPlaying,
-                            resumeVideo = homeResumeVideo,
-                            onPlayYouTube = { item, list ->
-                                if (item.music) {
-                                    dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
-                                    val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
-                                    viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
-                                } else {
-                                    dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, item)
-                                }
-                            },
-                            onlinePicks = { header ->
-                                dev.asfakul.yumeiro.ui.screens.online.OnlineHomePicks(
-                                    onOpenTitle = openOnline,
-                                    onSeeAll = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
-                                    header = header,
-                                )
-                            }
-                        )
-                        }
+                        HorizontalPager(
+                            state = tabPager,
+                            userScrollEnabled = tabSwipeEnabled,
+                            key = { bottomNavItems[it].route },
+                            modifier = Modifier.fillMaxSize().testTag("tab_pager"),
+                        ) { page -> tabPage(page) }
                     }
-
-                    composable(Screen.Music.route) {
-                        OpaquePage {
-                        Column(Modifier.fillMaxSize()) {
-                        dev.asfakul.yumeiro.ui.screens.music.MusicSourceSwitch(online = musicOnline, onChange = { musicOnline = it })
-                        if (musicOnline) {
-                            dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
-                                dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
-                                val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
-                                viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
-                            })
-                        } else
-                        MusicScreen(
-                            tracks = filteredTracks,
-                            albums = albums,
-                            artists = artists,
-                            folders = folders,
-                            stats = stats,
-                            currentPlayingTrack = playbackState.currentTrack,
-                            isPlaying = playbackState.isPlaying,
-                            activeTab = activeMusicTab,
-                            currentSort = trackSort,
-                            isSelectionMode = isSelectionMode,
-                            selectedTrackIds = selectedTrackIds,
-                            onTabChange = viewModel::onMusicTabChange,
-                            onSortChange = viewModel::onSortChange,
-                            onTrackClick = { track, queue ->
-                                viewModel.playTrack(track, queue)
-                            },
-                            onToggleFavorite = viewModel::onToggleFavorite,
-                            onTrackOptionsClick = viewModel::openTrackOptions,
-                            onToggleSelectionMode = viewModel::toggleSelectionMode,
-                            onToggleTrackSelection = viewModel::toggleTrackSelection,
-                            onSelectAll = viewModel::selectAllTracks,
-                            onClearSelection = viewModel::clearSelection,
-                            onPlaySelected = viewModel::playSelectedTracks,
-                            onAddSelectedToQueue = viewModel::addSelectedToQueue,
-                            onAddSelectedToFavorites = viewModel::addSelectedToFavorites,
-                            onAddSelectedToPlaylist = {
-                                viewModel.openAddToPlaylist(selectedTrackIds.toList())
-                            },
-                            onRescanClick = viewModel::scanMedia,
-                            onRequestPermission = {
-                                val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO)
-                                } else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-                                permissionsLauncher.launch(permissions)
-                            }
-                        )
-                        }
-                        }
-                    }
-
-                    composable(Screen.Videos.route) {
-                        OpaquePage {
-                        Column(Modifier.fillMaxSize()) {
-                        VideoSourceSwitch(source = videoSource, onChange = { videoSource = it })
-                        if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
-                            dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
-                                onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) },
-                            )
-                        } else if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE) {
-                            OnlineHomeScreen(
-                                onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
-                                onOpenTitle = openOnline,
-                                onOpenExtensions = { navigateSub(Screen.Extensions.route) },
-                                onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) },
-                                onOpenRow = { row -> navigateSub(Screen.OnlineRow.route(row.api, row.title, row.pageName.orEmpty(), row.pageData.orEmpty())) },
-                                onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
-                                onOpenInfo = { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) },
-                                onOpenLibrary = { navigateSub(Screen.OnlineLibrary.route) },
-                            )
-                        } else {
-                        VideoScreen(
-                            videos = filteredVideos,
-                            folders = videoFolders,
-                            continueWatching = continueWatchingVideos,
-                            recentlyWatched = recentlyWatchedVideos,
-                            favorites = favoriteVideos,
-                            hiddenFolderPaths = hiddenVideoFolderPaths,
-                            activeTab = activeVideoTab,
-                            currentSort = videoSort,
-                            isGridView = isVideoGridView,
-                            selectedFolder = selectedVideoFolder,
-                            searchQuery = searchQuery,
-                            onTabChange = viewModel::onVideoTabChange,
-                            onSortChange = viewModel::onVideoSortChange,
-                            onToggleLayout = viewModel::toggleVideoLayout,
-                            onSearchQueryChange = viewModel::onSearchQueryChange,
-                            onVideoClick = viewModel::playVideo,
-                            onToggleFavorite = viewModel::toggleVideoFavorite,
-                            onOptionsClick = viewModel::showVideoDetails,
-                            onFolderClick = viewModel::selectVideoFolder,
-                            onBackFromFolder = { viewModel.selectVideoFolder(null) },
-                            onHideFolder = viewModel::hideVideoFolder,
-                            onManageHiddenFoldersClick = { viewModel.setShowManageHiddenFolders(true) },
-                            onRescanClick = viewModel::scanMedia
-                        )
-                        }
-                        }
-                        }
-                    }
+                    // Old direct routes of the tabs (deep links, saved state) land on the pager page.
+                    composable(Screen.Music.route) { LaunchedEffect(Unit) { navigateTop(Screen.Music.route) } }
+                    composable(Screen.Videos.route) { LaunchedEffect(Unit) { navigateTop(Screen.Videos.route) } }
+                    composable(Screen.Stream.route) { LaunchedEffect(Unit) { navigateTop(Screen.Stream.route) } }
+                    composable(Screen.Library.route) { LaunchedEffect(Unit) { navigateTop(Screen.Library.route) } }
 
                     composable(Screen.OnlineSearch.route) {
                         OpaquePage {
@@ -667,56 +723,6 @@ fun MTPlayerApp(
                     composable(Screen.ExtensionMarket.route) {
                         OpaquePage {
                         ExtensionMarketScreen(onBack = popSub, onOpenExtensions = { navigateSub(Screen.Extensions.route) })
-                        }
-                    }
-
-                    composable(Screen.Stream.route) {
-                        OpaquePage {
-                        StreamScreen(
-                            onOpenPlaylist = { id -> navigateSub(Screen.PlaylistDetail.route(id)) },
-                            onOpenMarket = { navigateSub(Screen.Market.route) },
-                        )
-                        }
-                    }
-
-                    composable(Screen.Library.route) {
-                        OpaquePage {
-                        var libTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
-                        Column(Modifier.fillMaxSize()) {
-                        dev.asfakul.yumeiro.ui.screens.library.LibraryTabs(libTab) { libTab = it }
-                        if (libTab == 1) dev.asfakul.yumeiro.ui.screens.library.VideoLibraryContent(
-                            deviceContinue = continueWatchingVideos,
-                            onOpenTitle = openOnline,
-                            onPlayVideo = viewModel::playVideo,
-                            onBrowseOnline = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
-                            onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
-                        ) else
-                        LibraryScreen(
-                            stats = stats,
-                            playlists = playlists,
-                            allTracks = rawTracks,
-                            recentlyPlayed = recentlyPlayed,
-                            mostPlayed = mostPlayed,
-                            currentPlayingTrack = playbackState.currentTrack,
-                            onCreatePlaylist = { name ->
-                                viewModel.createPlaylist(name)
-                            },
-                            onRenamePlaylist = viewModel::renamePlaylist,
-                            onDeletePlaylist = viewModel::deletePlaylist,
-                            onRemoveTrackFromPlaylist = viewModel::removeTrackFromPlaylist,
-                            onReorderPlaylist = viewModel::reorderPlaylist,
-                            onTrackClick = { track, queue ->
-                                viewModel.playTrack(track, queue)
-                            },
-                            onToggleFavorite = viewModel::onToggleFavorite,
-                            onNavigateToMusic = { navigateTop(Screen.Music.route) },
-                            onNavigateToSettings = { navigateSub(Screen.Settings.route) },
-                            onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
-                            onTrackOptionsClick = viewModel::openTrackOptions,
-                            huesCount = dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState().value.installed.count { it.enabled },
-                            onRescanClick = viewModel::scanMedia,
-                        )
-                        }
                         }
                     }
 
@@ -1033,6 +1039,10 @@ fun MTPlayerApp(
             actionTrack != null || showAddToPlaylistDialog || trackForDetailsDialog != null ||
             videoForDetails != null || showManageHiddenFoldersDialog || appPage != null
         var lastBackPressAt by remember { mutableLongStateOf(0L) }
+        // Back on another tab returns to Home first (like Instagram), then double back exits.
+        BackHandler(enabled = navRoute == Screen.Home.route && tabPager.currentPage != 0 && !overlayOpen) {
+            tabScope.launch { tabPager.animateScrollToPage(0) }
+        }
         BackHandler(enabled = currentRoute == Screen.Home.route && !overlayOpen) {
             val now = SystemClock.elapsedRealtime()
             if (lastBackPressAt != 0L && now - lastBackPressAt <= EXIT_WINDOW_MS) {
@@ -1079,4 +1089,5 @@ private fun isSubRoute(route: String?): Boolean =
         route == Screen.PlaylistDetail.route || route == Screen.Market.route ||
         route == Screen.OnlineSearch.route || route == Screen.OnlineTitle.route ||
         route == Screen.Extensions.route || route == Screen.ExtensionMarket.route ||
-        route == Screen.OnlineRow.route || route == Screen.OnlineHistory.route
+        route == Screen.OnlineRow.route || route == Screen.OnlineHistory.route ||
+        route == Screen.OnlineLibrary.route

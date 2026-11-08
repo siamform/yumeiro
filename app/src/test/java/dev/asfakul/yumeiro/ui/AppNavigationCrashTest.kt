@@ -18,6 +18,8 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollToIndex
@@ -286,7 +288,9 @@ class AppNavigationCrashTest {
 
     @Test fun homeShowsVideosAsGrid() {
         awaitHome()
-        val list = androidx.compose.ui.test.hasScrollAction()
+        // The vertical home list (the tabs themselves are a horizontal pager).
+        val list = androidx.compose.ui.test.hasScrollAction() and
+            androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange)
         rule.onAllNodes(list, true).fetchSemanticsNodes().first()
         rule.onNode(androidx.compose.ui.test.hasTestTag("home_screen_root"), true)
         // Scroll the home list to the videos section.
@@ -298,6 +302,25 @@ class AppNavigationCrashTest {
         }
         org.junit.Assert.assertEquals("two videos per row on a phone", 2, cardsInRow)
         snap("home_video_grid")
+    }
+
+    @Test fun swipeAnywhereMovesBetweenTabsAndBackReturnsHome() {
+        awaitHome()
+        // A swipe on the page content (not on empty space) follows the finger to the next tab.
+        rule.onNodeWithTag("tab_pager", useUnmergedTree = true).performTouchInput { swipeLeft() }
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.waitForIdle()
+        waitFor("music_screen_root")
+        fun pagerOffset() = rule.onNodeWithTag("tab_pager", useUnmergedTree = true).fetchSemanticsNode()
+            .config[androidx.compose.ui.semantics.SemanticsProperties.HorizontalScrollAxisRange].value()
+        org.junit.Assert.assertTrue("pager moved off Home", pagerOffset() > 0f)
+        // Back on another tab goes to Home first instead of exiting.
+        back()
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.waitForIdle()
+        org.junit.Assert.assertFalse(rule.activity.isFinishing)
+        org.junit.Assert.assertEquals(0f, pagerOffset(), 0.5f)
+        waitFor("home_screen_root")
     }
 
     @Test fun doubleBackPressExitsFromHome() {

@@ -62,7 +62,7 @@ object OnlinePlayback {
     fun registerInterceptors(api: com.lagradost.cloudstream3.MainAPI?, link: OnlineLink) {
         val own = link.raw?.let { raw -> runCatching { api?.getVideoInterceptor(raw) }.getOrNull() }
         dev.asfakul.yumeiro.stream.StreamInterceptors.register(
-            link.url, listOfNotNull(dev.asfakul.yumeiro.online.web.BrowserCheck.Interceptor, own),
+            link.url, listOfNotNull(dev.asfakul.yumeiro.online.web.BrowserCheck.MediaInterceptor, own),
         )
     }
 

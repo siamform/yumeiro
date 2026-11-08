@@ -43,7 +43,8 @@ class CloudflareKiller : Interceptor {
         val response = chain.proceed(request)
         if (!BrowserCheck.isChallenge(response)) return response
         BrowserCheck.forget(request.url.host)
-        val clearance = BrowserCheck.solveBlocking(request.url.toString()) ?: return response
+        val url = request.url.toString()
+        val clearance = BrowserCheck.solveBlocking(url, page = BrowserCheck.challengePage(url, request.method, request.header("Accept"))) ?: return response
         response.close()
         return chain.proceed(BrowserCheck.withClearance(chain.request(), clearance))
     }
