@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -270,7 +270,7 @@ fun PlaylistMarketScreen(
 
     details?.let { e ->
         val installed = installedBy[e.id]
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { details = null },
             containerColor = DarkSurface,
             title = { Text(e.name, color = TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis) },

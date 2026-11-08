@@ -115,3 +115,29 @@
     public static int d(...);
     public static int i(...);
 }
+
+# ---- Universal sources (Aniyomi / Mihon / JavaScript / home servers)
+# Aniyomi/Mihon extension APKs are loaded at runtime and link against these API classes by name.
+-keep class eu.kanade.tachiyomi.** { *; }
+-keep class tachiyomi.** { *; }
+-keep class mihon.** { *; }
+-keep class uy.kohesive.injekt.** { *; }
+-keep class rx.** { *; }
+-dontwarn rx.**
+-keep class fi.iki.elonen.** { *; }
+# QuickJS (JavaScript sources) binds Kotlin functions by reflection-free JNI names.
+-keep class com.dokar.quickjs.** { *; }
+# SMB client and its crypto dependencies.
+-keep class com.hierynomus.** { *; }
+-keep class net.engio.** { *; }
+-dontwarn com.hierynomus.**
+-dontwarn net.engio.**
+-dontwarn org.bouncycastle.**
+-dontwarn javax.el.**
+-dontwarn org.slf4j.**
+# Our @Serializable models used by backup and the source bridges.
+-keepclassmembers class dev.asfakul.yumeiro.** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep class dev.asfakul.yumeiro.widget.ContinueWidget { <init>(); }

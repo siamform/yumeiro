@@ -1,0 +1,33 @@
+Yumeiro (夢色, "dream-coloured") is a free, open-source entertainment hub for Android. No account, no login, no ads, no tracking.
+
+<b>What it plays</b>
+<ul>
+<li>Local music and video with gestures, subtitles, resume, equalizer, lyrics and a sleep timer</li>
+<li>YouTube and YouTube Music without a Google account, with background play</li>
+<li>Anime, movies, web series and sports through community CloudStream (.cs3) repositories</li>
+<li>Aniyomi anime and Mihon/Tachiyomi manga extensions</li>
+<li>Stremio add-ons (catalogs, metadata and HTTP streams)</li>
+<li>Mangayomi-style JavaScript sources</li>
+<li>Your own Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV and SMB servers</li>
+<li>Live TV from M3U playlists</li>
+</ul>
+
+<b>Tracking, backup and privacy</b>
+<ul>
+<li>AniList, MyAnimeList, Kitsu and Trakt tracking</li>
+<li>Backup and restore of settings, history, repositories and library</li>
+<li>App lock with the device screen lock, and an incognito mode that records nothing</li>
+</ul>
+
+<b>Watching</b>
+<ul>
+<li>Offline downloads with one folder per series and an auto-delete timer</li>
+<li>Watch-together rooms on the same Wi-Fi, no server needed</li>
+<li>A "continue watching" home-screen widget and an Android TV launcher entry</li>
+<li>Source status check that tells you which of your sources work right now</li>
+</ul>
+
+Yumeiro does not host, upload or index any content. Extensions and repositories are made by third parties and you choose which to add.
+
+Source code: https://github.com/siamform/yumeiro
+Website: https://yumeiro-phi.vercel.app/

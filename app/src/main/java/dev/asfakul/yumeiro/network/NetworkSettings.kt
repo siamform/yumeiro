@@ -53,9 +53,15 @@ data class DnsConfig(
     val provider: DnsProvider = DnsProvider.SYSTEM,
     val transport: DnsTransport = DnsTransport.DOH,
     val mode: DnsMode = DnsMode.FALLBACK,
+    /**
+     * With System DNS: detect hosts the current network blocks (no answer, sinkhole address, or
+     * connections reset right after a system lookup) and quietly resolve them over encrypted DNS
+     * (Cloudflare → Quad9 → Google). On by default; nothing changes for hosts that work.
+     */
+    val auto: Boolean = true,
 ) {
     val usesAlternative: Boolean get() = provider != DnsProvider.SYSTEM
-    val summary: String get() = if (!usesAlternative) "System DNS" else "${provider.label} (${provider.primaryIp}) · ${transport.label} · ${mode.label.lowercase()}"
+    val summary: String get() = if (!usesAlternative) (if (auto) "System DNS · auto bypass for blocked sites" else "System DNS") else "${provider.label} (${provider.primaryIp}) · ${transport.label} · ${mode.label.lowercase()}"
 }
 
 /** Persisted network preferences (Settings → Network). System DNS is the default. */
@@ -64,6 +70,13 @@ object NetworkSettings {
     private val _dns = MutableStateFlow(DnsConfig())
     val dns: StateFlow<DnsConfig> = _dns.asStateFlow()
     @Volatile private var loaded = false
+    @Volatile private var prefs: android.content.SharedPreferences? = null
+    private const val BYPASS_KEY = "dns_bypass_hosts"
+
+    /** Remembers which hosts needed the DNS bypass, so the next launch goes straight to it. */
+    internal fun saveBypass(hosts: Set<String>) {
+        prefs?.edit()?.putStringSet(BYPASS_KEY, HashSet(hosts))?.apply()
+    }
 
     fun init(context: Context) {
         if (loaded) return
@@ -72,7 +85,10 @@ object NetworkSettings {
             provider = enumOr(p.getString("dns_provider", null), DnsProvider.SYSTEM),
             transport = enumOr(p.getString("dns_transport", null), DnsTransport.DOH),
             mode = enumOr(p.getString("dns_mode", null), DnsMode.FALLBACK),
+            auto = p.getBoolean("dns_auto", true),
         )
+        prefs = p
+        SmartDns.restoreBypass(p.getStringSet(BYPASS_KEY, emptySet()).orEmpty())
         loaded = true
     }
 
@@ -83,6 +99,7 @@ object NetworkSettings {
             .putString("dns_provider", config.provider.name)
             .putString("dns_transport", config.transport.name)
             .putString("dns_mode", config.mode.name)
+            .putBoolean("dns_auto", config.auto)
             .apply()
         SmartDns.clearCache()
     }

@@ -1,0 +1,11 @@
+{
+  "id": "community.yumeiro.sample",
+  "version": "1.0.0",
+  "name": "Yumeiro sample add-on",
+  "description": "A tiny static add-on: one catalog, one public-domain film.",
+  "resources": ["catalog", "meta", "stream"],
+  "types": ["movie"],
+  "idPrefixes": ["yum_"],
+  "catalogs": [{ "type": "movie", "id": "sample-movies", "name": "Sample movies" }],
+  "behaviorHints": { "adult": false }
+}

@@ -36,6 +36,7 @@ object NetworkClient {
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .retryOnConnectionFailure(true)
+                .addInterceptor(AutoBypassInterceptor)
                 .addNetworkInterceptor(cookies)
                 .build()
                 .also { client = it }

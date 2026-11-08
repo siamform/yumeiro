@@ -7,6 +7,7 @@
 
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.runtime.remember
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import android.net.Uri
@@ -43,7 +44,6 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -115,7 +115,7 @@ fun PlaybackSpeedDialog(
 ) {
     val speeds = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
 
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -206,7 +206,7 @@ fun AspectRatioDialog(
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "100% Original", "Renders without scaling at native pixel size")
     )
 
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +296,7 @@ fun AudioTrackDialog(
     onSelectTrack: (groupIndex: Int, trackIndex: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -420,7 +420,7 @@ fun SubtitleOptionsDialog(
     onAdjustDelay: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -708,7 +708,7 @@ fun VideoInfoDialog(
     if (health != null) androidx.compose.runtime.LaunchedEffect(Unit) {
         while (true) { healthNow = health(); kotlinx.coroutines.delay(1000L) }
     }
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -946,7 +946,7 @@ fun QualityDialog(
     onSelect: (QualityOption?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = onDismiss,
         title = { Text("Quality", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {

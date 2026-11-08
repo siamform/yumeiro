@@ -24,6 +24,7 @@ dependencyResolutionManagement {
       content {
         includeGroup("com.github.recloudstream.cloudstream")
         includeGroup("com.github.Blatzar")
+        includeGroup("com.github.mihonapp") // injekt (Aniyomi / Mihon extensions)
         includeGroup("com.github.teamnewpipe")
         includeGroupByRegex("com\\.github\\.TeamNewPipe.*")
       }

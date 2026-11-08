@@ -176,7 +176,7 @@ fun OnlineHomeScreen(
 
         when {
             !engine.ready -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
-            engine.installed.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
+            engine.installed.isEmpty() && providers.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
             providers.isEmpty() -> StateMessage(
                 icon = Icons.Default.Extension,
                 title = "All extensions are turned off",
@@ -291,7 +291,14 @@ private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
 }
 
 /** Where the Videos tab gets its videos from. */
-enum class VideoSource(val label: String, val tag: String) { ONLINE("Hues", "online"), YOUTUBE("YouTube", "youtube"), DEVICE("Device", "device") }
+enum class VideoSource(val label: String, val tag: String) {
+    ONLINE("Hues", "online"), YOUTUBE("YouTube", "youtube"), DEVICE("Device", "device");
+
+    companion object {
+        /** Hues when a network is up, device videos when offline. */
+        fun defaultFor(online: Boolean): VideoSource = if (online) ONLINE else DEVICE
+    }
+}
 
 /** "Hues | YouTube | Device" switch shown at the top of the Videos tab. */
 @Composable

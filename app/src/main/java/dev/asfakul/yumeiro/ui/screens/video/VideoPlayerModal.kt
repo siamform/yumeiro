@@ -386,6 +386,10 @@ private fun VideoPlayerModalContent(
             playWhenReady = autoPlayStart
         }
     }
+    androidx.compose.runtime.DisposableEffect(exoPlayer) {
+        dev.asfakul.yumeiro.watch.WatchTogether.bind(exoPlayer)
+        onDispose { dev.asfakul.yumeiro.watch.WatchTogether.bind(null) }
+    }
     val healthMonitor = remember(exoPlayer) {
         PlaybackHealthMonitor(exoPlayer, onLowBandwidth = { action ->
             showToast(
@@ -750,6 +754,16 @@ private fun VideoPlayerModalContent(
         }
     }
 
+    // Behave like a real player: keep the screen awake while a video plays or is about to resume
+    // after buffering, and let it sleep again once paused, ended or closed.
+    val hostView = androidx.compose.ui.platform.LocalView.current
+    var wantsPlay by remember(exoPlayer) { mutableStateOf(exoPlayer.playWhenReady) }
+    val keepAwake = dev.asfakul.yumeiro.player.ScreenWake.shouldKeepOn(isPlaying, isBuffering, wantsPlay, isEnded)
+    DisposableEffect(hostView, keepAwake) {
+        hostView.keepScreenOn = keepAwake
+        onDispose { hostView.keepScreenOn = false }
+    }
+
     // ExoPlayer listener lifecycle
     val currentOnProgressUpdate by rememberUpdatedState(onProgressUpdate)
     DisposableEffect(exoPlayer) {
@@ -792,6 +806,10 @@ private fun VideoPlayerModalContent(
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                wantsPlay = playWhenReady
             }
 
             override fun onTracksChanged(tracks: Tracks) {
@@ -901,6 +919,37 @@ private fun VideoPlayerModalContent(
             PipController.onUserLeaveHint = null
             if (pipSupported && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 runCatching { activity?.setPictureInPictureParams(PipController.params(context, 16, 9, false, false)) }
+            }
+        }
+    }
+
+    // Black-screen guard: audio playing but no new video frames → flush the decoder, then fail over.
+    val blackWatch = remember(exoPlayer) { dev.asfakul.yumeiro.player.BlackFrameWatchdog() }
+    LaunchedEffect(exoPlayer, isPlaying) {
+        if (!isPlaying) return@LaunchedEffect
+        while (true) {
+            delay(1_000L)
+            val counters = exoPlayer.videoDecoderCounters
+            counters?.ensureUpdated()
+            val action = blackWatch.observe(
+                positionMs = exoPlayer.currentPosition,
+                renderedFrames = counters?.renderedOutputBufferCount?.toLong() ?: -1L,
+                hasVideo = exoPlayer.videoFormat != null && counters != null,
+                playing = exoPlayer.isPlaying,
+            )
+            when (action) {
+                dev.asfakul.yumeiro.player.BlackFrameWatchdog.Action.NUDGE -> {
+                    android.util.Log.i("VideoPlayer", "No video frames while playing: flushing decoder")
+                    exoPlayer.seekTo(exoPlayer.currentPosition)
+                }
+                dev.asfakul.yumeiro.player.BlackFrameWatchdog.Action.FAIL -> {
+                    android.util.Log.w("VideoPlayer", "Video stayed black: trying another source")
+                    val pos = exoPlayer.currentPosition
+                    if (onFatalError?.invoke(pos) != true) {
+                        recoverFrom(PlaybackException("The picture stopped (black screen)", null, PlaybackException.ERROR_CODE_DECODING_FAILED))
+                    }
+                }
+                dev.asfakul.yumeiro.player.BlackFrameWatchdog.Action.NONE -> Unit
             }
         }
     }

@@ -93,6 +93,8 @@ class PageStreamCapture {
     /** @return the new capture, or null when the request isn't a stream (or was already seen). */
     fun onRequest(url: String, method: String, headers: Map<String, String>): CapturedStream? {
         if (!url.startsWith("http", ignoreCase = true)) return null
+        // Ad clips (VAST / pre-roll / ad CDNs) are never offered as the stream.
+        if (dev.asfakul.yumeiro.online.web.AdFilter.isAd(url)) return null
         val lower = url.lowercase()
         if (method.equals("POST", true) && LICENSE_HINTS.any { it in lower }) {
             if (licenseUrl == null) licenseUrl = url
@@ -279,6 +281,8 @@ fun PageStreamFinderDialog(
                                         return scheme != "http" && scheme != "https" // block intent:, market:, file: …
                                     }
                                     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                                        // Built-in ad blocking: pre-rolls and pop-unders never load or get offered as "the stream".
+                                        if (request != null && dev.asfakul.yumeiro.online.web.AdFilter.isAd(request.url.toString())) return dev.asfakul.yumeiro.online.web.AdFilter.blocked()
                                         request?.let { record(it.url.toString(), it.method ?: "GET", it.requestHeaders.orEmpty()) }
                                         return null // the page loads normally; we only observe
                                     }

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +44,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -371,7 +371,7 @@ internal fun DownloadFolderRow(f: DownloadGroups.Folder, days: Int, expanded: Bo
         IconButton(onClick = { confirm = true }) { Icon(Icons.Default.Delete, "Delete folder", tint = TextTertiary) }
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", tint = TextSecondary)
     }
-    if (confirm) AlertDialog(
+    if (confirm) TsukiDialog(
         onDismissRequest = { confirm = false },
         title = { Text("Delete ${list.size} download${if (list.size == 1) "" else "s"}?") },
         text = { Text("${f.name}: these files will be removed from this phone. Other copies of the series stay.") },

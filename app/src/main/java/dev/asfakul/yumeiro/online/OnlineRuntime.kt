@@ -63,11 +63,15 @@ object OnlineErrors {
         val m = (e.message ?: root.message).orEmpty()
         return when {
             e is ExtensionManager.ExtensionException -> m
-            root is java.net.UnknownHostException -> "No internet connection"
+            root is java.net.UnknownHostException ->
+                if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
+                else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"
+            root is java.net.ConnectException || root is java.net.NoRouteToHostException ||
+                (root is java.net.SocketException && root.message.orEmpty().contains("reset", true)) ->
+                "Your network refused the connection. The site may be blocked here — try a VPN"
             root is java.net.SocketTimeoutException || root is java.io.InterruptedIOException ||
                 e is kotlinx.coroutines.TimeoutCancellationException -> "The server took too long to answer"
             root is javax.net.ssl.SSLException -> "Secure connection failed"
-            root is java.net.ConnectException -> "Could not connect to the server"
             m.startsWith("HTTP 404") || m.contains("HTTP 404") -> "Not found (404)"
             m.startsWith("HTTP") -> "Server error ($m)"
             root is org.json.JSONException -> "The server sent unreadable data"

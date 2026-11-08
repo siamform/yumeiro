@@ -27,7 +27,11 @@ object AppVisibility : Application.ActivityLifecycleCallbacks {
 
     override fun onActivityStarted(activity: Activity) {
         started++
-        if (started == 1) UpdateManager.get(activity).onAppForegrounded()
+        if (started == 1) {
+            UpdateManager.get(activity).onAppForegrounded()
+            // Catch up on notifications that a battery manager may have held back.
+            runCatching { dev.asfakul.yumeiro.notify.BackgroundWork.catchUp(activity.applicationContext) }
+        }
     }
 
     override fun onActivityStopped(activity: Activity) {

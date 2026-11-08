@@ -21,6 +21,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,7 +141,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
     LaunchedEffect(msg?.id) { msg?.let { delay(it.durationMs); AppMessages.dismiss(it.id) } }
     AnimatedVisibility(
         visible = msg != null,
-        enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 2 },
+        enter = fadeIn(tween(160)) + slideInVertically(androidx.compose.animation.core.spring(dampingRatio = 0.75f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)) { it / 2 },
         exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { it / 2 },
         modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = bottomPadding),
     ) {
@@ -151,14 +152,21 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
             AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to Color(0xFFFFB74D)
             AppMessages.Kind.INFO -> Icons.Default.Info to TextSecondary
         }
+        val toastShape = RoundedCornerShape(20.dp)
+        val baseFill = DarkSurfaceContainerHigh
         Surface(
-            shape = RoundedCornerShape(18.dp), color = DarkSurfaceContainerHigh, shadowElevation = 8.dp,
+            shape = toastShape, color = Color.Transparent, shadowElevation = 12.dp,
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().testTag("app_message")
                 .semantics { liveRegion = LiveRegionMode.Polite }
+                .clip(toastShape)
+                .background(Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.lerp(baseFill, tint, 0.18f), baseFill, baseFill)))
+                .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = 0.55f), dev.asfakul.yumeiro.ui.theme.BrandGold.copy(alpha = 0.12f))), toastShape)
                 .clickable { AppMessages.dismiss(m.id) },
         ) {
-            Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+            Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(tint.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+                }
                 Spacer(Modifier.width(10.dp))
                 Text(m.text, color = TextPrimary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
                 if (m.actionLabel != null && m.action != null) {

@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Sample Manga",
+    "id": 910000001,
+    "baseUrl": "https://example.org",
+    "lang": "en",
+    "typeSource": "single",
+    "iconUrl": "https://raw.githubusercontent.com/<you>/<repo>/main/icon.png",
+    "dateFormat": "",
+    "dateFormatLocale": "",
+    "isNsfw": false,
+    "hasCloudflare": false,
+    "sourceCodeUrl": "https://raw.githubusercontent.com/<you>/<repo>/main/sample-manga.js",
+    "apiUrl": "",
+    "version": "0.0.1",
+    "isManga": true,
+    "itemType": 0,
+    "isFullData": false,
+    "appMinVerReq": "0.5.0",
+    "additionalParams": "",
+    "sourceCodeLanguage": 1,
+    "notes": "Template; replace the selectors with the real site's."
+  }
+]

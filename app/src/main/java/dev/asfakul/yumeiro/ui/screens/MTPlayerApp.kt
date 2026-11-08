@@ -167,6 +167,12 @@ fun MTPlayerApp(
             if (it != 0L) { navigateSub(Screen.Downloads.route); dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.consumed() }
         }
     }
+    // "Resume" on the home-screen widget.
+    LaunchedEffect(openOnline) {
+        dev.asfakul.yumeiro.widget.TitleNav.pending.collect { item ->
+            if (item != null) { dev.asfakul.yumeiro.widget.TitleNav.consumed(); openOnline(item) }
+        }
+    }
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val positionState = viewModel.playbackPositionMs.collectAsStateWithLifecycle()
@@ -234,7 +240,17 @@ fun MTPlayerApp(
         viewModel.onPermissionResult(mediaGranted, false)
     }
 
-    var videoSource by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE) }
+    // Videos opens on Hues when there is a network, otherwise on device videos. It follows the
+    // connection until the user picks a source themselves; from then on their choice sticks.
+    var videoSourcePicked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var videoSource by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(dev.asfakul.yumeiro.ui.screens.online.VideoSource.defaultFor(dev.asfakul.yumeiro.network.Connectivity.isOnline(context)))
+    }
+    LaunchedEffect(Unit) {
+        dev.asfakul.yumeiro.network.Connectivity.online.collect { online ->
+            if (!videoSourcePicked) videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.defaultFor(online)
+        }
+    }
     var musicOnline by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     // Online extensions: load installed ones, then sync updates in the background (like stream playlists).
     LaunchedEffect(Unit) {
@@ -443,10 +459,10 @@ fun MTPlayerApp(
                                 onToggleFavorite = viewModel::onToggleFavorite,
                                 onRescanClick = viewModel::scanMedia,
                                 onNavigateToMusic = { musicOnline = false; navigateTop(Screen.Music.route) },
-                                onNavigateToVideos = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE; navigateTop(Screen.Videos.route) },
+                                onNavigateToVideos = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE; navigateTop(Screen.Videos.route) },
                                 onOpenYouTubeMusic = { musicOnline = true; navigateTop(Screen.Music.route) },
-                                onOpenYouTube = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
-                                onOpenHues = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                onOpenYouTube = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
+                                onOpenHues = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                 onOpenLive = { navigateTop(Screen.Stream.route) },
                                 onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
                                 onOpenHueStore = { navigateSub(Screen.Extensions.route) },
@@ -473,7 +489,7 @@ fun MTPlayerApp(
                                 onlinePicks = { header ->
                                     dev.asfakul.yumeiro.ui.screens.online.OnlineHomePicks(
                                         onOpenTitle = openOnline,
-                                        onSeeAll = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                        onSeeAll = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                         header = header,
                                     )
                                 }
@@ -534,7 +550,7 @@ fun MTPlayerApp(
                         Screen.Videos.route -> {
                             OpaquePage {
                             Column(Modifier.fillMaxSize()) {
-                            VideoSourceSwitch(source = videoSource, onChange = { videoSource = it })
+                            VideoSourceSwitch(source = videoSource, onChange = { videoSourcePicked = true; videoSource = it })
                             if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
                                     onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) },
@@ -597,9 +613,25 @@ fun MTPlayerApp(
                                 deviceContinue = continueWatchingVideos,
                                 onOpenTitle = openOnline,
                                 onPlayVideo = viewModel::playVideo,
-                                onBrowseOnline = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                onBrowseOnline = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                 onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
                                 onOpenDownloads = { navigateSub(Screen.Downloads.route) },
+                                header = {
+                                    val h by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
+                                    val b by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
+                                    val d by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+                                    dev.asfakul.yumeiro.ui.screens.library.VideoLibraryHero(
+                                        historyCount = h.size, savedCount = b.size, downloadCount = d.size,
+                                        onHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                        onDownloads = { navigateSub(Screen.Downloads.route) },
+                                        onTogether = { navigateSub(Screen.WatchTogether.route) },
+                                        onSources = { navigateSub(Screen.SourcesHub.route()) },
+                                    )
+                                },
+                            ) else if (libTab == 2) dev.asfakul.yumeiro.ui.screens.library.ReadingLibraryContent(
+                                onBrowse = { navigateSub(Screen.Manga.route) },
+                                onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title)) },
+                                onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
                             ) else
                             LibraryScreen(
                                 stats = stats,
@@ -725,7 +757,7 @@ fun MTPlayerApp(
                     }
                     composable(Screen.Extensions.route) {
                         OpaquePage {
-                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) })
+                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) }, onOpenSources = { navigateSub(Screen.SourcesHub.route()) })
                         }
                     }
                     composable(Screen.ExtensionMarket.route) {
@@ -734,12 +766,59 @@ fun MTPlayerApp(
                         }
                     }
 
+                    composable(Screen.SourcesHub.route, arguments = listOf(navArgument(Screen.SourcesHub.ARG) { type = NavType.IntType; defaultValue = 0 })) { entry ->
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourcesHubScreen(onBack = popSub, initialTab = entry.arguments?.getInt(Screen.SourcesHub.ARG) ?: 0) }
+                    }
+                    composable(Screen.SourceHealth.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourceHealthScreen(onBack = popSub) }
+                    }
+                    composable(Screen.Manga.route) {
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.manga.MangaHomeScreen(
+                                onBack = popSub,
+                                onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title)) },
+                                onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                            )
+                        }
+                    }
+                    composable(Screen.MangaTitle.route, arguments = listOf("p", "u", "t").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
+                        val a = entry.arguments
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.manga.MangaDetailScreen(
+                                providerId = a?.getString("p").orEmpty(), url = a?.getString("u").orEmpty(), title = a?.getString("t").orEmpty(),
+                                onBack = popSub,
+                                onRead = { m, ch -> navigateSub(Screen.MangaReader.route(m.providerId, m.url, m.title, ch.url, ch.name)) },
+                            )
+                        }
+                    }
+                    composable(Screen.MangaReader.route, arguments = listOf("p", "u", "t", "c", "n").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
+                        val a = entry.arguments
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.manga.MangaReaderScreen(
+                                providerId = a?.getString("p").orEmpty(), mangaUrl = a?.getString("u").orEmpty(), mangaTitle = a?.getString("t").orEmpty(),
+                                chapterUrl = a?.getString("c").orEmpty(), chapterName = a?.getString("n").orEmpty(), onBack = popSub,
+                            )
+                        }
+                    }
+                    composable(Screen.Privacy.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.PrivacyScreen(onBack = popSub) }
+                    }
+                    composable(Screen.Tracking.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = popSub) }
+                    }
+                    composable(Screen.Backup.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.BackupScreen(onBack = popSub) }
+                    }
+                    composable(Screen.WatchTogether.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.watch.WatchTogetherScreen(onBack = popSub) }
+                    }
+
                     composable(Screen.Downloads.route) {
                         OpaquePage {
                             dev.asfakul.yumeiro.ui.screens.downloads.DownloadsScreen(
                                 onBack = popSub,
                                 onPlayVideo = viewModel::playVideo,
-                                onBrowse = { videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
+                                onBrowse = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                             )
                         }
                     }
@@ -790,6 +869,16 @@ fun MTPlayerApp(
                             onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },
                             onClearWatchHistory = viewModel::clearWatchHistory,
                             onClearListeningHistory = viewModel::clearListeningHistory,
+                            onOpenPage = { page ->
+                                navigateSub(when (page) {
+                                    "sources" -> Screen.SourcesHub.route()
+                                    "tracking" -> Screen.Tracking.route
+                                    "backup" -> Screen.Backup.route
+                                    "together" -> Screen.WatchTogether.route
+                                    "health" -> Screen.SourceHealth.route
+                                    else -> Screen.Privacy.route
+                                })
+                            },
                         )
                         }
                     }

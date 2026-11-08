@@ -53,8 +53,19 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
             MTPlayerTheme(palette = palette) {
                 val viewModel: MainViewModel = viewModel()
                 MTPlayerApp(viewModel = viewModel)
+                dev.asfakul.yumeiro.ui.screens.extras.AppLockGate(this@MainActivity)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dev.asfakul.yumeiro.security.Privacy.onStart(this)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        dev.asfakul.yumeiro.security.Privacy.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -86,6 +97,7 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
             dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
             return
         }
+        dev.asfakul.yumeiro.widget.ContinueWidget.itemFrom(intent)?.let { dev.asfakul.yumeiro.widget.TitleNav.open(it); return }
         intent?.data?.let { uri ->
             if (dev.asfakul.yumeiro.online.anime.AnimeSync.handleRedirect(this, uri) { msg -> runOnUiThread { dev.asfakul.yumeiro.ui.components.AppMessages.show(this, msg) } }) return
         }

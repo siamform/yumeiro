@@ -17,6 +17,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import dev.asfakul.yumeiro.stream.MediaKind
 import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.ui.screens.stream.CapturedStream
 import dev.asfakul.yumeiro.ui.screens.stream.PageStreamCapture
@@ -39,6 +40,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 object HeadlessCapture {
     private const val TAG = "HeadlessCapture"
     private val main = Handler(Looper.getMainLooper())
+    private const val PROGRESSIVE_GRACE_MS = 2_500L
 
     /** JS that starts the page's player (muted autoplay is allowed) and clicks common play buttons. */
     private const val NUDGE_JS = """
@@ -104,16 +106,28 @@ object HeadlessCapture {
         }
         val ua = web.settings.userAgentString
 
-        fun deliver(c: CapturedStream) {
+        var pendingFile: Runnable? = null
+        fun finish(c: CapturedStream) {
             if (result.isCompleted) return
             val cookie = runCatching { cookies.getCookie(c.url) }.getOrNull()
-            val req = capture.toRequest(c, pageUrl, title, ua, cookie, base = null)
-            // A manifest is final; for a plain file give the page a moment to reveal an HLS master.
-            result.complete(req)
+            result.complete(capture.toRequest(c, pageUrl, title, ua, cookie, base = null))
+        }
+        fun deliver(c: CapturedStream) {
+            if (result.isCompleted) return
+            if (c.kind == MediaKind.HLS || c.kind == MediaKind.DASH || c.kind == MediaKind.SMOOTH) {
+                // A manifest is final (and wins over any earlier plain file).
+                pendingFile?.let { main.removeCallbacks(it) }; pendingFile = null
+                finish(c); return
+            }
+            // A plain file is often a short pre-roll that plays before the real HLS master: give
+            // the page a moment to reveal the manifest before settling on the file.
+            if (pendingFile != null) return
+            pendingFile = Runnable { pendingFile = null; finish(capture.all().firstOrNull() ?: c) }.also { main.postDelayed(it, PROGRESSIVE_GRACE_MS) }
         }
 
         web.addJavascriptInterface(object {
             @JavascriptInterface fun onMedia(url: String) {
+                if (AdFilter.isAd(url)) return
                 capture.onRequest(url, "GET", emptyMap())?.let { c -> main.post { deliver(c) } }
             }
             @JavascriptInterface fun onDrm(system: String) { capture.drmSystem = system }
@@ -123,6 +137,8 @@ object HeadlessCapture {
         // A crashed page renderer must not take the app down: give up on this page instead.
         web.webViewClient = object : SafeWebViewClient(onGone = { if (!result.isCompleted) result.complete(null) }) {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                // Ads never load, so they can't be captured as "the stream" (black screen bug).
+                if (AdFilter.isAd(request.url.toString())) return AdFilter.blocked()
                 val c = capture.onRequest(request.url.toString(), request.method, request.requestHeaders.orEmpty())
                 if (c != null) main.post { deliver(c) }
                 return null

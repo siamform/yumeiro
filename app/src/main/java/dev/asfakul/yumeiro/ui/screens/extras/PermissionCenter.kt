@@ -54,9 +54,36 @@ object PermissionCenter {
         if (!ok) openAppSettings(c)
     }
 
+    /**
+     * Asks Android to stop battery-optimizing Yumeiro, straight from the app (one-tap system
+     * dialog for this package). Falls back to the app's own page, then the system list, and on
+     * phones with an extra vendor battery manager also offers its auto-start/battery page.
+     */
     fun openBatterySettings(c: Context) {
-        val ok = start(c, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        if (!ok) openAppSettings(c)
+        if (!batteryUnrestricted(c)) {
+            @android.annotation.SuppressLint("BatteryLife")
+            val request = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${c.packageName}"))
+            if (start(c, request)) return
+        }
+        if (openVendorBatterySettings(c)) return
+        if (start(c, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", c.packageName, null)))) return
+        start(c, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    }
+
+    /** Vendor "auto-start / background" pages that the Android exemption alone doesn't cover. */
+    internal fun vendorBatteryIntents(manufacturer: String): List<Pair<String, String>> = when (manufacturer.lowercase()) {
+        "xiaomi", "redmi", "poco" -> listOf("com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity")
+        "huawei", "honor" -> listOf("com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+        "oppo", "realme", "oneplus" -> listOf("com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity")
+        "vivo", "iqoo" -> listOf("com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
+        "samsung" -> listOf("com.samsung.android.lool" to "com.samsung.android.sm.battery.ui.BatteryActivity")
+        else -> emptyList()
+    }
+
+    /** Only after the Android exemption is granted: the vendor page is the second, separate switch. */
+    fun openVendorBatterySettings(c: Context): Boolean {
+        if (!batteryUnrestricted(c)) return false
+        return vendorBatteryIntents(Build.MANUFACTURER).any { (pkg, cls) -> start(c, Intent().setClassName(pkg, cls)) }
     }
 
     /**

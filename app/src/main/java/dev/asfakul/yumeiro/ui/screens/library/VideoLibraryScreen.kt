@@ -249,26 +249,6 @@ private fun LibHeader(title: String, subtitle: String? = null) {
     }
 }
 
-/** "Music | Videos" switch at the top of Library. */
-@Composable
-fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
-    androidx.compose.material3.Surface(shape = RoundedCornerShape(24.dp), color = dev.asfakul.yumeiro.ui.theme.GlassFill, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().testTag("library_tabs")) {
-        Row(Modifier.padding(4.dp)) {
-            listOf("Music", "Videos").forEachIndexed { i, label ->
-                val sel = i == selected
-                androidx.compose.material3.Surface(
-                    shape = RoundedCornerShape(20.dp), color = if (sel) SpotifyGreen else Color.Transparent,
-                    modifier = Modifier.weight(1f).height(36.dp).clickable { onSelect(i) }.testTag("library_tab_$i"),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(label, color = if (sel) dev.asfakul.yumeiro.ui.theme.OnAccent else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun LibraryTopBar(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

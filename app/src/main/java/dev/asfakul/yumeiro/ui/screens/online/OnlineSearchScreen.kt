@@ -138,7 +138,12 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         Spacer(Modifier.height(8.dp))
 
         val searching = results.values.count { it is ProviderResult.Searching }
-        val all = results.entries.flatMap { (_, r) -> (r as? ProviderResult.Done)?.items.orEmpty() }
+        // Ranked by match quality across every Hue (stable while results stream in), unique keys.
+        val done = results.entries.mapNotNull { (n, r) -> (r as? ProviderResult.Done)?.let { n to it.items } }.toMap()
+        val order = remember(providers) { providers.map { it.name } }
+        val all = remember(submitted, done, order) {
+            dev.asfakul.yumeiro.online.SearchRanker.rank(submitted, done, order).map { it.item }
+        }
         // Typeahead: recent searches, My List, watched titles, titles seen while browsing and the live results.
         val suggestions = remember(text, history.toList(), bookmarks, watched, all.size) {
             if (text.isBlank()) emptyList() else {
@@ -202,7 +207,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                         OnlineChip(label, filter == n, { filter = if (filter == n) null else n })
                     }
                 }
-                val shown = if (filter == null) all else (results[filter] as? ProviderResult.Done)?.items.orEmpty()
+                val shown = if (filter == null) all else all.filter { it.api == filter }
                 val failed = (results[filter] as? ProviderResult.Failed)?.message
                 when {
                     shown.isEmpty() && (searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->

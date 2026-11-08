@@ -52,13 +52,17 @@ object StreamMediaFactory {
         it.startsWith("http://") || it.startsWith("https://") || it.startsWith("rtsp://") || it.startsWith("rtmp://")
     }
 
+    /** Media buffer budget for a heap of [memoryClassMb]: ~1/6 of it, kept between 16 and 64 MB. */
+    fun bufferBudgetBytes(memoryClassMb: Int): Int = (memoryClassMb / 6).coerceIn(16, 64) * 1024 * 1024
+
     fun createPlayer(context: Context, uri: String): ExoPlayer {
         val appContext = context.applicationContext
         val defaultUa = Util.getUserAgent(appContext, "Yumeiro")
         // Headers are looked up on every connection so a stream resolved (or refreshed) after the
         // player was created still gets its Referer / Cookie / token headers.
         val http = RequestAwareHttpFactory(appContext, defaultUa) { StreamRepository.requestFor(uri) }
-        val dataSourceFactory: DataSource.Factory = DefaultDataSource.Factory(appContext, http)
+        // HLS playlists pass through the ad-break filter (the mid-stream "black screen" ads).
+        val dataSourceFactory: DataSource.Factory = AdFilterDataSource.Factory(DefaultDataSource.Factory(appContext, http))
         val defaultDrm = DefaultDrmSessionManagerProvider().apply { setDrmHttpDataSourceFactory(http) }
         val msf = DefaultMediaSourceFactory(dataSourceFactory)
             .setLoadErrorHandlingPolicy(dev.asfakul.yumeiro.player.StreamLoadErrorPolicy())
@@ -95,8 +99,14 @@ object StreamMediaFactory {
                     .build(),
                 /* handleAudioFocus = */ true
             )
+        // Hold a CPU wake lock (+ Wi-Fi lock for network streams) while playing or buffering, so
+        // Doze/screen-off never starves the decoder. The screen itself is kept on by the player UI.
+        builder.setWakeMode(if (isNetworkUri(uri)) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
         if (isNetworkUri(uri)) {
             // Network streams: a deeper buffer rides out jitter; quick start & rebuffer recovery.
+            // The byte budget is capped by the app's heap so 1080p/4K extension streams can't
+            // grow the buffer until the process is killed (the "freeze then force close" bug).
+            val memoryClass = (appContext.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)?.memoryClass ?: 192
             builder.setLoadControl(
                 DefaultLoadControl.Builder()
                     .setBufferDurationsMs(
@@ -105,7 +115,8 @@ object StreamMediaFactory {
                         /* bufferForPlaybackMs = */ 1_500,
                         /* bufferForPlaybackAfterRebufferMs = */ 3_000,
                     )
-                    .setPrioritizeTimeOverSizeThresholds(true)
+                    .setTargetBufferBytes(bufferBudgetBytes(memoryClass))
+                    .setPrioritizeTimeOverSizeThresholds(false)
                     .build()
             )
         }

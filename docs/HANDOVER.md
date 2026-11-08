@@ -415,3 +415,68 @@ plus an "N more updates" summary), `AppNotifier.block()` returns the exact reaso
 switch, channel off) and is shown in the inbox banner and Settings, `Send a test notification` in Settings →
 Notifications, all exceptions caught, explicit priority/category/timestamp. Items already filed silently by
 older builds are not re-sent.
+
+## 14. Universal sources update (v1.0.5, branch `feat/universal-sources`)
+
+Full list for users: [UPDATE-universal-sources.md](UPDATE-universal-sources.md). Code map: [ARCHITECTURE.md](ARCHITECTURE.md).
+Workflow: [DEVELOPMENT.md](DEVELOPMENT.md). Credits: [INSPIRATION.md](INSPIRATION.md) and `NOTICE`.
+
+- **Bridges, not rewrites.** Aniyomi, Mihon, Stremio, JavaScript and home-server sources are converted to CloudStream
+  `MainAPI` (or `MangaProvider` for manga) and published through `SourceHub`. Everything downstream works unchanged.
+- **Aniyomi/Mihon** extension APKs are downloaded, checked for the same signer on update, and their DEX is loaded
+  against the vendored source API in `eu/kanade/tachiyomi/**` (Apache-2.0). `TachiyomiRuntime` sets up the Injekt graph
+  (`Application`, `NetworkHelper`, `Json`, `JavaScriptEngine`) the extensions ask for. ProGuard keeps these packages.
+- **JavaScript** sources run in QuickJS (`com.dokar.quickjs`). `mangayomi_runtime.js` provides `MProvider`, `Client`,
+  `Document`/`Element`; every native call goes through `JsBridge`.
+- **SMB** files are served to the player by `SmbProxy` on 127.0.0.1 with a random token.
+- **Free only.** No server was added. Watch together is LAN-only (NSD). The status page reads the `extensions` branch
+  `index.json` that the existing workflow already writes.
+- **Updater 504.** `github.com/.../releases/download/...` returned GitHub's own 504 page while the API was fine.
+  `GitHubReleaseClient.resolveDownload` now asks the API asset URL (`Accept: application/octet-stream`, no redirect
+  follow) for the signed `release-assets.githubusercontent.com` link and only falls back to the browser URL. The
+  website has `/download` doing the same server-side. Old installs (≤1.0.4) may still hit the 504 until they update
+  once from the website.
+- **Library redesign** in `ui/screens/library/LibraryDesign.kt`: hero with stats, Music/Videos/Reading tabs.
+- **Tests:** `sources/UniversalSourcesLogicTest` covers WebDAV/DLNA parsing, unpacker, URL normalising, natural
+  sort, zip-slip, Trakt id pick, room clock and labels.
+- **Not verified on a device** for every ecosystem. Self-signed HTTPS on home servers is rejected. No torrents.
+
+## 15. Stability and polish pass (v1.0.5, branch `feat/v1.0.5-stability`, replaces PR #13)
+
+PR #13 (`feat/universal-sources`) failed CI for two independent reasons; both are fixed here and its content is
+carried over unchanged otherwise.
+
+- **gitleaks (`generic-api-key`).** `tracking/Kitsu.kt` had the Kitsu OAuth client secret as a string literal. It now
+  comes from `BuildConfig.KITSU_CLIENT_ID/SECRET` (Gradle property `kitsuClientId`/`kitsuClientSecret` or env
+  `KITSU_CLIENT_ID`/`KITSU_CLIENT_SECRET`, set as repo secrets and passed in `release.yml`), or from a user-entered
+  value in `OnlineSettings.secret("kitsu_client*")`. Builds without it show "Kitsu sign-in is not set up in this
+  build". The branch history never contains the literal.
+- **CodeQL (15 alerts, High gate).** Real fixes: `TachiyomiExtensions` trusted set is sealed with `SecretBox`
+  (`trusted_v2`, legacy key migrated); app lock binds the prompt to a Keystore key (`security/LockKey`, API 30+,
+  `CryptoObject`), so a hooked callback can't unlock. Reviewed suppressions (rule + path, see
+  `docs/security/AUDIT.md` "CodeQL suppressions"): MD5/AES-CBC needed by the CryptoJS/Mangayomi ABI now live only in
+  `sources/js/JsCrypto.kt`; `eu/kanade/**` is the vendored Tachiyomi API; certificate pinning for Kitsu/Trakt/Plex.
+  `codeql.yml` analyses with `upload: never`, filters the SARIF with `.github/codeql/suppressions.jq`, then uploads.
+
+User-reported bugs, root cause → fix (all with unit tests in `app/src/test`):
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| Phone sleeps while a stream plays | Compose player never set `keepScreenOn`; ExoPlayer had no wake mode for network streams | `player/ScreenWake` + `View.keepScreenOn` while playing/buffering; `setWakeMode(NETWORK)` for network URIs, `LOCAL` otherwise; buffer budget sized from the memory class |
+| Black screen mid-stream ("like ads") | Hosts splice ad segments (other codec/resolution, `#EXT-X-DISCONTINUITY`) into HLS; decoder outputs no frames while audio continues | `stream/HlsAdFilter` (VOD playlists only: CUE-OUT/DATERANGE ad blocks, ad URLs, short foreign-host discontinuity groups, max 35% removed) via `AdFilterDataSource`; `online/web/AdFilter` blocks ad hosts/VAST in WebViews; `player/BlackFrameWatchdog` flushes the decoder after 4 s without frames, then fails over |
+| Freeze / force close with extensions | Link/subtitle bursts re-sorted and re-published state per event; dead links failed over within milliseconds; results keyed by the extension-reported `apiName` collided in the grid | Publish throttled to 300 ms; failovers spaced ≥900 ms; result ownership forced to the extension that answered (`toItem(owner)`) and de-duplicated keys |
+| Notifications only after opening the app | Periodic work had a battery-not-low constraint and a 6 h period; OEM battery managers kill it | 2 h feed / 4 h episodes, no battery constraint, exponential backoff, schedule version bump; catch-up chain when the app opens; `BackgroundHealth` heartbeat + "background checks stalled" card |
+| Battery optimization button did nothing | Opened a generic list (or nothing) | `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (manifest permission added) → OEM page (Xiaomi, Huawei, Oppo, Vivo, Samsung) → app details → list |
+| Extensions need a VPN on some networks | ISP DNS filtering (no answer / sinkhole / reset); DoH was manual and opt-in | System DNS + **auto bypass** (default on): `SmartDns` detects NXDOMAIN-while-online and bogon answers, `AutoBypassInterceptor` marks hosts on connect/TLS reset and retries GET/HEAD once; DoH rotates Cloudflare → Quad9 → Google, per-host choice persisted. VPN detection + VPN settings shortcut; errors no longer say "No internet" when online |
+| Sub → dub played another episode | `switchVersion` fell back to the same list index when numbers didn't match | `online/EpisodeMatcher` (season+episode, absolute number, title); no match → stays on the current version with a message, panel shows "Not for this episode" |
+
+Features:
+- Videos opens on **Hues** when online, **Device** when offline; follows connectivity until the user picks a source.
+- Hues search: `SearchRanker` (exact > prefix > contains > all words > some words, stable by source order), per-query
+  10 min cache, chips filter the ranked list.
+- Alerts: `ui/components/TsukiDialog` is a drop-in for `AlertDialog` (same parameters: glass gradient, ambient glow,
+  gold hairline, icon badge, spring entrance); all 38 dialogs use it. Reminder cards and in-app messages restyled;
+  follow buttons use each network's brand colour.
+
+Not done (needs money or a server): true push while the app is fully killed on OEMs that block WorkManager. The free
+option is UnifiedPush/ntfy (roadmap). Not verified on a physical device in this pass.

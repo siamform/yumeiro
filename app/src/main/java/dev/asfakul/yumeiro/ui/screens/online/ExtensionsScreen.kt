@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -88,7 +88,7 @@ import kotlinx.coroutines.launch
 
 /** Videos → Online → Extensions: installed extensions, their updates and the user's repositories. */
 @Composable
-fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
+fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine by ExtensionManager.state.collectAsState()
@@ -137,6 +137,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
             title = "Extensions", onBack = onBack,
             subtitle = if (engine.ready) "${engine.installed.size} installed · ${engine.enabledCount} active" else "Loading…",
         ) {
+            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, "More sources", tint = TextPrimary) }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, "Market", tint = TextPrimary) }
             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.testTag("extensions_add")) {
                 Icon(Icons.Default.Add, "Add", tint = TextPrimary)
@@ -166,6 +167,19 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                             Button(onClick = { updates.forEach { (e, r) -> update(e, r) } }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
                                 Text("Update all")
+                            }
+                        }
+                    }
+                }
+                item("more_sources") {
+                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_more_sources"),
+                        onClick = onOpenSources) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Language, null, tint = SpotifyGreen)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("More sources", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text("Aniyomi, Mihon manga, Stremio add-ons, JavaScript sources and home servers", color = TextTertiary, fontSize = 12.sp)
                             }
                         }
                     }
@@ -240,7 +254,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
         }
     }
     confirmDelete?.let { ext ->
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { confirmDelete = null },
             title = { Text("Remove ${ext.name}?") },
             text = { Text("Its sources disappear from Online. You can install it again from the market.") },
@@ -257,7 +271,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit) {
         )
     }
     confirmRepo?.let { repo ->
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { confirmRepo = null },
             title = { Text("Remove repository?") },
             text = { Text("${repo.name} won't appear in the market anymore. Extensions you installed from it stay installed.") },
@@ -358,7 +372,7 @@ internal fun InputDialog(
     var text by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    AlertDialog(
+    TsukiDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(title) },
         text = {

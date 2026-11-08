@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -176,7 +176,7 @@ fun BackgroundActivityCard() {
     var battery by remember { mutableStateOf(PermissionCenter.batteryUnrestricted(context)) }
     LifecycleResumeEffect(Unit) { battery = PermissionCenter.batteryUnrestricted(context); onPauseOrDispose { } }
     SettingsCard {
-        SettingsToggleRow("Background checks", "Look for new episodes and Yumeiro news about every 6 hours, even when the app is closed", bg,
+        SettingsToggleRow("Background checks", "Look for Yumeiro news every 2 hours and new episodes every 4 hours, even when the app is closed. Opening the app catches up right away", bg,
             { NotifySettings.set(context, Key.BACKGROUND, it) }, "toggle_background")
         if (bg) {
             SettingsDivider()
@@ -186,11 +186,11 @@ fun BackgroundActivityCard() {
         SettingsDivider()
         SettingsActionRow(
             "Battery optimisation",
-            if (battery) "Unrestricted. Checks and background playback run reliably" else "Optimised. Some phones delay checks or stop playback in the background",
+            if (battery) "Unrestricted. Tap for your phone's extra auto-start or battery page, if it has one" else "Optimised. Tap to allow in one step, so notifications arrive while the app is closed",
             "settings_battery", status = if (battery) "Unrestricted" else "Optimised", ok = battery,
             onClick = { PermissionCenter.openBatterySettings(context) },
         )
-        Text("Checks never run when the battery is low.", color = TextSecondary,
+        Text("Yumeiro has no push server, so notifications rely on these checks being allowed to run.", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }
@@ -245,7 +245,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
 
     pending?.let { a ->
-        AlertDialog(
+        TsukiDialog(
             onDismissRequest = { pending = null },
             title = { Text(a.title) },
             text = { Text(a.body) },

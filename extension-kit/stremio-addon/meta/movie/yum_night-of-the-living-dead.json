@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "id": "yum_night-of-the-living-dead",
+    "type": "movie",
+    "name": "Night of the Living Dead (1968)",
+    "poster": "https://archive.org/services/img/night_of_the_living_dead",
+    "background": "https://archive.org/services/img/night_of_the_living_dead",
+    "releaseInfo": "1968",
+    "runtime": "96 min",
+    "genres": ["Horror"],
+    "description": "Public-domain horror classic, from the Internet Archive."
+  }
+}

@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.kotlin.serialization)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -82,6 +83,16 @@ android {
     val malClient = (providers.gradleProperty("malClientId").orNull ?: System.getenv("MAL_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
     buildConfigField("String", "ANILIST_CLIENT_ID", "\"$anilistClient\"")
     buildConfigField("String", "MAL_CLIENT_ID", "\"$malClient\"")
+    // Trakt (movies / shows tracking): free API app from trakt.tv/oauth/applications. Optional.
+    val traktClient = (providers.gradleProperty("traktClientId").orNull ?: System.getenv("TRAKT_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
+    val traktSecret = (providers.gradleProperty("traktClientSecret").orNull ?: System.getenv("TRAKT_CLIENT_SECRET") ?: "").filter { it.isLetterOrDigit() }
+    buildConfigField("String", "TRAKT_CLIENT_ID", "\"$traktClient\"")
+    buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"$traktSecret\"")
+    // Kitsu (anime tracking) OAuth client for the password grant. Optional; never committed.
+    val kitsuClient = (providers.gradleProperty("kitsuClientId").orNull ?: System.getenv("KITSU_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
+    val kitsuSecret = (providers.gradleProperty("kitsuClientSecret").orNull ?: System.getenv("KITSU_CLIENT_SECRET") ?: "").filter { it.isLetterOrDigit() }
+    buildConfigField("String", "KITSU_CLIENT_ID", "\"$kitsuClient\"")
+    buildConfigField("String", "KITSU_CLIENT_SECRET", "\"$kitsuSecret\"")
   }
 
   signingConfigs {
@@ -194,6 +205,18 @@ dependencies {
   // YouTube / YouTube Music (no login). The CloudStream library already pulls an older NewPipeExtractor
   // under the lowercase "teamnewpipe" group; the substitution below makes both resolve to one copy.
   implementation(libs.newpipe.extractor)
+
+  // Aniyomi (anime) and Mihon (manga) extensions: their source API is vendored under eu.kanade.tachiyomi
+  // (Apache-2.0, see NOTICE); these are the libraries those extensions expect the host app to provide.
+  implementation(libs.injekt)
+  implementation(libs.rxjava)
+  implementation(libs.nanohttpd)
+  implementation(libs.kotlinx.serialization.json)
+  implementation(libs.kotlinx.serialization.json.okio)
+  // Mangayomi-style JavaScript sources
+  implementation(libs.quickjs.kt)
+  // SMB shares (home servers)
+  implementation(libs.smbj)
 
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
