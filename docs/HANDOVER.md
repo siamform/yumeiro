@@ -528,3 +528,43 @@ Pushed for review; **no PR opened and nothing merged** (owner's instruction).
 Tests: `SettingsCatalogTest`, `SetupGuidesTest`, `YtAccountTest`, `RemindersTest` (new 2 h case). Not tested on a
 physical device.
 
+## 17. Paste-cookie YouTube sign-in and free UnifiedPush alerts (branch `feat/settings-redesign`)
+
+Pushed for review; **no PR opened and nothing merged** (owner's instruction).
+
+### Paste cookie (fallback when Google blocks the in-app sign-in page)
+- Modelled on ArchiveTune's "Login with token" (`TokenEditorDialog`, `***INNERTUBE COOKIE*** =…` lines,
+  checked with `hasYouTubeLoginCookie`). ArchiveTune has no "how to get it" guide; Yumeiro adds one.
+- `youtube/YtCookiePaste.kt` (pure, unit-tested) accepts: raw `cookie` header value (with/without `Cookie:`),
+  DevTools "Copy as cURL" (`-b` or `-H 'cookie:'`), Netscape `cookies.txt`, JSON exports (Cookie-Editor etc.)
+  and ArchiveTune/Metrolist token text. Only `youtube.com` cookies are kept. Needs SAPISID + SID.
+- `YtAccount.verify` loads `https://www.youtube.com/account` with the cookie (fresh client without the session
+  interceptors): redirect to accounts.google.com = signed out, `"LOGGED_IN":true` = OK, else unknown (user may
+  save anyway). Then the normal `YtAccount.save` (Keystore-sealed, no backup).
+- UI: "Paste cookie (advanced)" on Settings → YouTube account → `PasteCookiePage` (warning, monospace field,
+  paste-from-clipboard, Check and save). Guide `SetupGuides.youtubeCookie` follows yt-dlp's advice (private window,
+  `youtube.com/robots.txt`, close the window so the cookie is never rotated), DevTools steps, the MIT
+  "Get cookies.txt LOCALLY" extension, Cookie-Editor on Firefox for Android.
+
+### UnifiedPush alerts (optional, free)
+- Library `org.unifiedpush.android:connector:3.3.5` (Apache-2.0, Maven Central). Tink's `protobuf-java` is
+  excluded (clashes with protobuf-lite; Web Push decryption doesn't need it).
+- No server of ours: `notify/PushWake.kt` publishes **scheduled** "wake" messages to the app's own endpoint using
+  ntfy's free scheduled delivery (`In:` header, 10 s – 3 days). `PushPlan` keeps one wake-up every 3 h for 24 h
+  plus a 71 h backstop; each wake-up tops it up (~9 messages/day, ntfy.sh's free limit is 250). The query
+  (`?up=1`) is stripped for publishing: in a test against ntfy.sh (2026-11-09) `?up=1` publishes were refused
+  ("cannot publish to UnifiedPush topic without previously active subscriber"), while plain publishes with `In:`
+  to the same topic were accepted and delivered on time to a live subscriber.
+  If the server's echo has no future `time`, the server can't schedule (non-ntfy distributor) and the UI says so.
+- `PushWakeService` (connector `PushService`, not exported) → `PushWake.onMessage` (payload ignored by design) →
+  `BackgroundWork.wake`: feed + new-episode checks as **expedited** work (20 min throttle), plus a refill.
+  Both workers implement `getForegroundInfo` (only used on Android 9–11, channel `yumeiro_sync`, IMPORTANCE_MIN).
+- The connector's receiver drops broadcasts whose token doesn't match the registration, so other apps can't
+  fake a wake-up. Its `RaiseToForegroundService` / `MessagingReceiverImpl` are exported by the UnifiedPush spec.
+- UI: Settings → Notifications → On-time alerts (`PushAlertsCard`: toggle, push-app picker, status with last
+  wake-up / planned count, Send test) + guide `SetupGuides.unifiedPush` (ntfy F-Droid / Play, battery). WorkManager
+  stays the default; turning push off unregisters and deletes the endpoint (Keystore secret `push_endpoint`).
+
+Tests: `YtCookiePasteTest` (8), `PushPlanTest` (8). 296 unit tests pass; lint clean of new issues. Not tested on a
+physical device (needs ntfy installed and a real Google account).
+

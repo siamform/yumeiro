@@ -30,6 +30,9 @@ class NewEpisodesWorker(context: Context, params: WorkerParameters) : CoroutineW
         fun episodeCount(detail: OnlineDetail): Int = detail.episodes.values.maxOfOrNull { it.size } ?: 0
     }
 
+    /** Only used on Android 9-11 when a push wake-up runs this as expedited work. */
+    override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo = dev.asfakul.yumeiro.notify.PushWake.foregroundInfo(applicationContext)
+
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val ctx = applicationContext
         OnlineBookmarks.ensureLoaded(ctx)

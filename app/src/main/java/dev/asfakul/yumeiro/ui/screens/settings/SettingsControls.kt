@@ -190,7 +190,7 @@ fun BackgroundActivityCard() {
             "settings_battery", status = if (battery) "Unrestricted" else "Optimised", ok = battery,
             onClick = { PermissionCenter.openBatterySettings(context) },
         )
-        Text("Yumeiro has no push server, so notifications rely on these checks being allowed to run.", color = TextSecondary,
+        Text("Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }

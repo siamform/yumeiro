@@ -204,6 +204,7 @@ fun GuideCard(guide: SetupGuide, modifier: Modifier = Modifier, startExpanded: B
 
 @Composable
 private fun GuideStep(n: Int, s: SetupGuide.Step, context: Context) {
+    val dark = LocalMtPalette.current.isDark
     Row(verticalAlignment = Alignment.Top) {
         Box(
             Modifier.size(22.dp).clip(CircleShape).background(Brush.linearGradient(listOf(BrandGold, SpotifyGreen))),
@@ -214,12 +215,13 @@ private fun GuideStep(n: Int, s: SetupGuide.Step, context: Context) {
             Text(s.text, color = TextPrimary, fontSize = 13.sp)
             if (s.copy != null) {
                 Row(
-                    Modifier.clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.22f))
+                    Modifier.clip(RoundedCornerShape(10.dp)).background(if (dark) Color.Black.copy(alpha = 0.22f) else BrandGold.copy(alpha = 0.12f))
+                        .border(0.5.dp, BrandGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .clickable { copyToClipboard(context, "Yumeiro setup", s.copy) }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(s.copy, color = BrandGold, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f, fill = false))
+                    Text(s.copy, color = if (dark) BrandGold else TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f, fill = false))
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Default.ContentCopy, "Copy", tint = TextSecondary, modifier = Modifier.size(14.dp))
                 }

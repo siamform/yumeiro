@@ -360,7 +360,16 @@ private fun CategoryPage(
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                     }
                 }
-                Category.NOTIFICATIONS -> item("c") { NotificationSettingsCard() }
+                Category.NOTIFICATIONS -> {
+                    item("c") { NotificationSettingsCard() }
+                    item("push") {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            GroupLabel("On-time alerts")
+                            PushAlertsCard()
+                            GuideCard(SetupGuides.unifiedPush)
+                        }
+                    }
+                }
                 Category.BACKGROUND -> item("c") { BackgroundActivityCard() }
                 Category.NETWORK -> item("c") { NetworkSettingsCard() }
                 Category.PRIVACY -> {

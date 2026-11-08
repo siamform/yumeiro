@@ -71,6 +71,28 @@ object YtAccount {
         return true
     }
 
+    /**
+     * Asks youtube.com whether [cookie] is signed in: true / false, or null when we could not
+     * tell (offline, consent page, layout change). Blocking; call off the main thread. The
+     * request goes only to www.youtube.com and nothing from the reply is stored.
+     */
+    fun verify(context: Context, cookie: String): Boolean? = runCatching {
+        val client = dev.asfakul.yumeiro.network.NetworkClient.get(context).newBuilder()
+            .apply { interceptors().clear(); networkInterceptors().clear() }
+            .callTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
+        val req = okhttp3.Request.Builder().url("https://www.youtube.com/account")
+            .header("Cookie", sanitize(cookie))
+            .header("User-Agent", NewPipeDownloader.USER_AGENT)
+            .header("Accept-Language", "en-US,en;q=0.8")
+            .build()
+        client.newCall(req).execute().use { r ->
+            // Signed out, /account redirects to the Google sign-in page.
+            if (r.request.url.host.endsWith("accounts.google.com")) return@use false
+            if (!r.isSuccessful) return@use null
+            YtCookiePaste.pageLooksSignedIn(r.peekBody(2_000_000L).string())
+        }
+    }.getOrNull()
+
     fun setMode(context: Context, mode: Mode) {
         init(context)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("mode", mode.name).apply()

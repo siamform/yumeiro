@@ -198,6 +198,7 @@ object SetupGuides {
             SetupGuide.Step("Sign in as usual, including 2-step verification. Yumeiro never sees your password."),
             SetupGuide.Step("When YouTube loads, Yumeiro saves the sign-in cookies, encrypted with the Android Keystore."),
             SetupGuide.Step("By default the account is used only when YouTube blocks a video. Everything else stays anonymous."),
+            SetupGuide.Step("If Google says \"This browser or app may not be secure\", use Paste cookie instead. The next guide shows how."),
         ),
         tips = listOf(
             "Third-party apps aren't official YouTube clients. Google could limit an account used this way, so a spare account is safest.",
@@ -206,7 +207,53 @@ object SetupGuides {
         ),
     )
 
+    /** Paste-cookie fallback (Google may refuse the in-app sign-in page). */
+    val youtubeCookie = SetupGuide(
+        id = "youtube_cookie",
+        title = "How to get your YouTube cookie",
+        intro = "Use this when Google won't let you sign in inside Yumeiro. You sign in on a normal browser and copy the cookie it got. It takes about two minutes on a computer.",
+        steps = listOf(
+            SetupGuide.Step("On a computer, open a private window (Chrome: Ctrl+Shift+N, Firefox: Ctrl+Shift+P). A private window matters: YouTube changes the cookie of open tabs, and a private session is never reopened."),
+            SetupGuide.Step("Sign in to YouTube in that window. A spare Google account is safest.", link = "https://www.youtube.com/", linkLabel = "youtube.com"),
+            SetupGuide.Step("In the same tab, open youtube.com/robots.txt. This page is quiet, so the cookie won't change while you copy it.", link = "https://www.youtube.com/robots.txt", linkLabel = "robots.txt", copy = "https://www.youtube.com/robots.txt"),
+            SetupGuide.Step("Press F12 to open Developer tools, choose the Network tab and reload the page (F5)."),
+            SetupGuide.Step("Click the robots.txt request. Under Request Headers find \"cookie\", right-click its value and copy it. It is long and starts with something like VISITOR_INFO1_LIVE= or SID=."),
+            SetupGuide.Step("Easier option: install the open-source extension Get cookies.txt LOCALLY (Chrome or Firefox), allow it in private windows, and export youtube.com as cookies.txt. Yumeiro reads that file's text too.", link = "https://github.com/kairi003/Get-cookies.txt-LOCALLY", linkLabel = "Get cookies.txt LOCALLY"),
+            SetupGuide.Step("Close the private window without signing out. Signing out would cancel the cookie."),
+            SetupGuide.Step("Send the text to your phone in a way only you can see (for example a note to yourself), paste it here and tap Check and save. Then delete the note."),
+        ),
+        tips = listOf(
+            "Also accepted: Copy as cURL from Developer tools, JSON exports from cookie extensions, and an ArchiveTune or Metrolist token (the ***INNERTUBE COOKIE*** line).",
+            "No computer? Firefox for Android supports the open-source Cookie-Editor add-on. Sign in to youtube.com in a private tab, open Cookie-Editor, choose Export, then Header string or Netscape, and paste the result here.",
+            "This cookie works like your password. Never post it in chats, issues or screenshots. Anyone who has it can use your account.",
+            "Yumeiro checks the cookie only with youtube.com, then stores it encrypted with the Android Keystore. It is never included in backups.",
+            "If YouTube signs you out later, the cookie stops working. Copy a fresh one the same way.",
+        ),
+    )
+
+    /** UnifiedPush via ntfy: free, open-source push so alerts arrive even when the phone is idle. */
+    val unifiedPush = SetupGuide(
+        id = "unifiedpush",
+        title = "Reliable alerts with ntfy (free)",
+        intro = "Android may hold back background checks for hours on some phones. UnifiedPush lets a free push app wake Yumeiro on time, so new-episode and news alerts aren't late. No Google services, no account and no fees.",
+        steps = listOf(
+            SetupGuide.Step("Install ntfy. It's free and open source. F-Droid has the build without Google services.", link = "https://f-droid.org/packages/io.heckel.ntfy/", linkLabel = "ntfy on F-Droid"),
+            SetupGuide.Step("Or get ntfy from Google Play.", link = "https://play.google.com/store/apps/details?id=io.heckel.ntfy", linkLabel = "ntfy on Google Play"),
+            SetupGuide.Step("Open ntfy once and allow its notification. ntfy keeps one light connection open for every app that uses it."),
+            SetupGuide.Step("In Android settings → Apps → ntfy → Battery, choose Unrestricted. Do the same for Yumeiro if your phone is on dontkillmyapp.com.", link = "https://dontkillmyapp.com/", linkLabel = "dontkillmyapp.com"),
+            SetupGuide.Step("Come back here, turn on Reliable alerts and pick ntfy. Yumeiro gets a private push address."),
+            SetupGuide.Step("Tap Send test. A wake-up should arrive within seconds and the status shows the time."),
+        ),
+        tips = listOf(
+            "How it works: Yumeiro asks the ntfy server to wake it every few hours, using ntfy's free scheduled delivery. Each wake-up runs the normal checks, and nothing else is sent.",
+            "That's about 10 messages a day, far below ntfy.sh's free limit of 250. Nobody pays anything.",
+            "Wake-up messages carry no personal data, and Yumeiro ignores their text. Your list and history never leave the phone.",
+            "Running your own ntfy server? Set it as the default server in the ntfy app and Yumeiro uses it automatically.",
+            "Other UnifiedPush apps can be picked too, but only ntfy servers support the scheduled wake-ups.",
+        ),
+    )
+
     const val TRAKT_REDIRECT = "urn:ietf:wg:oauth:2.0:oob"
 
-    val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, youtube)
+    val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, youtube, youtubeCookie, unifiedPush)
 }

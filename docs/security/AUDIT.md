@@ -48,10 +48,17 @@ result elsewhere still fails the gate.
 | `java/weak-cryptographic-algorithm`, `java/potentially-weak-cryptographic-algorithm` | `app/src/main/java/dev/asfakul/yumeiro/sources/js/JsCrypto.kt` | MD5 key derivation (OpenSSL `EVP_BytesToKey`) and AES-CBC are what CryptoJS and Mangayomi sources call; the sites encrypt with them. Used only to decode third-party page data, never to protect Yumeiro data. |
 | same | `app/src/main/java/dev/asfakul/yumeiro/youtube/YtAuthHash.kt` | YouTube's `SAPISIDHASH` request signature is SHA-1 by YouTube's own definition (`SHA1("<ts> <SAPISID> <origin>")`). It signs requests for the optional YouTube account; nothing of ours is protected by it. The cookie itself is sealed with `SecretBox` and excluded from backups. |
 | same | `app/src/main/java/eu/kanade/**` | Vendored Tachiyomi/Aniyomi source API (Apache-2.0). Its signatures are the extension ABI and can't change. |
-| `java/android/missing-certificate-pinning` | `tracking/Kitsu.kt`, `tracking/Trakt.kt`, `sources/servers/PlexProvider.kt` | Kitsu and Trakt rotate certificates without notice (a pin would break sign-in for every user); Plex servers are the user's own hosts with arbitrary certificates. System trust + HTTPS-only applies. |
+| `java/android/missing-certificate-pinning` | `tracking/Kitsu.kt`, `tracking/Trakt.kt`, `sources/servers/PlexProvider.kt`, `notify/PushWake.kt`, `youtube/YtAccount.kt` | Kitsu and Trakt rotate certificates without notice (a pin would break sign-in for every user); Plex servers are the user's own hosts with arbitrary certificates; the UnifiedPush server is whatever the user's push app uses (ntfy.sh or self-hosted) and only receives empty "wake" messages; the pasted-cookie check goes to youtube.com, whose certificates Google rotates. System trust + HTTPS-only applies. |
 
 Fixed instead of suppressed: cleartext trusted-extension set (now sealed with `SecretBox`) and the app-lock
 `insecure-local-authentication` finding (prompt bound to a Keystore `CryptoObject`, `security/LockKey`).
+
+## UnifiedPush components (2026-11-09)
+
+The UnifiedPush connector adds an exported `MessagingReceiverImpl` and `RaiseToForegroundService` (required by the
+spec so any distributor app can deliver). Broadcasts without the registration's random token are dropped by the
+library; message content is ignored by Yumeiro, and a wake-up only starts the throttled background checks. The push
+endpoint is stored with `SecretBox` and never backed up.
 
 ## Historical secret findings
 
