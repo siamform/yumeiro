@@ -51,3 +51,9 @@ result elsewhere still fails the gate.
 
 Fixed instead of suppressed: cleartext trusted-extension set (now sealed with `SecretBox`) and the app-lock
 `insecure-local-authentication` finding (prompt bound to a Keystore `CryptoObject`, `security/LockKey`).
+
+## Historical secret findings
+
+| Finding | Status |
+|---|---|
+| Kitsu OAuth client secret, commit `ba30fae` on `feat/universal-sources` (PR #13, never merged) | Removed from code: it now comes from `BuildConfig` and the `KITSU_CLIENT_*` repo secrets. The branch was deleted (2026-11-09). GitHub keeps `refs/pull/13/head`, so **rotate the secret** in the Kitsu developer settings and update the repo secrets. |
