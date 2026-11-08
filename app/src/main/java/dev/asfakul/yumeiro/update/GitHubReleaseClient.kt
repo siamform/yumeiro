@@ -69,17 +69,27 @@ internal class GitHubReleaseClient(
         }
         val sums = a.checksumsUrl
             ?.takeIf { TrustedSources.isOfficialReleaseAssetUrl(it, owner, repo) }
-            ?.let { url -> runCatching { getSmall(url) }.getOrNull() }
+            ?.let { url ->
+                runCatching { getSmall(url) }.getOrNull()
+                    ?: browserSumsUrl(url, a.browserUrl)?.let { alt -> runCatching { getSmall(alt) }.getOrNull() }
+            }
         val sha = reconcileChecksum(a.sha256, sums, a.name)
             ?: throw UpdateCheckException("Update rejected: no SHA-256 checksum was published for this release.")
         return release.copy(asset = a.copy(sha256 = sha))
     }
+
+    /** `.../releases/download/<tag>/SHA256SUMS.txt` next to the APK, used when the API link fails. */
+    private fun browserSumsUrl(current: String, apkBrowserUrl: String): String? =
+        if (!current.contains("api.github.com") || !apkBrowserUrl.contains("/releases/download/")) null
+        else apkBrowserUrl.substringBeforeLast('/') + "/SHA256SUMS.txt"
 
     /** Small public file (SHA256SUMS.txt); redirects must stay on GitHub hosts. */
     private fun getSmall(url: String): String {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
+            // Needed for API asset URLs (redirects to the file); harmless for browser URLs.
+            setRequestProperty("Accept", "application/octet-stream")
             setRequestProperty("User-Agent", userAgent())
         }
         try {
@@ -96,41 +106,46 @@ internal class GitHubReleaseClient(
 
     /**
      * Returns a URL the system DownloadManager can fetch WITHOUT extra headers.
-     * For private repositories the API asset URL answers with a short-lived signed redirect,
-     * which is resolved here so the token never leaves the app process.
+     *
+     * The API asset URL (`api.github.com/.../releases/assets/{id}` with `Accept: application/octet-stream`)
+     * answers with a short-lived signed link on `release-assets.githubusercontent.com`. That path is used
+     * first for every repository: the `github.com/.../releases/download/...` link can fail with
+     * "504 Gateway Time-out" on GitHub's edge while the API path keeps working. For private repositories
+     * the token is sent here only, so it never leaves the app process.
      */
     suspend fun resolveDownload(release: ReleaseInfo): ResolvedDownload = withContext(Dispatchers.IO) {
-        if (release.source == UpdateSource.PUBLIC || token.isBlank()) {
-            return@withContext ResolvedDownload(release.asset.browserUrl, needsAuthHeader = false)
+        val useToken = release.source != UpdateSource.PUBLIC && token.isNotBlank()
+        if (release.asset.apiUrl.isNotBlank()) {
+            val viaApi = runCatching { signedAssetUrl(release.asset.apiUrl, useToken) }
+            viaApi.getOrNull()?.let { return@withContext it }
+            val err = viaApi.exceptionOrNull()
+            if (err is UpdateCheckException && err.message?.startsWith("Update rejected") == true) throw err
         }
-        val conn = (URL(release.asset.apiUrl).openConnection() as HttpURLConnection).apply {
+        ResolvedDownload(release.asset.browserUrl, needsAuthHeader = false)
+    }
+
+    /** Asks the API for the signed download link; null when GitHub doesn't hand one out. */
+    private fun signedAssetUrl(apiUrl: String, useToken: Boolean): ResolvedDownload? {
+        val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = false
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
             setRequestProperty("Accept", "application/octet-stream")
-            setRequestProperty("Authorization", "Bearer $token")
+            if (useToken) setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("X-GitHub-Api-Version", API_VERSION)
             setRequestProperty("User-Agent", userAgent())
         }
         try {
-            when (val code = conn.responseCode) {
+            return when (conn.responseCode) {
                 in 300..399 -> {
-                    val location = conn.getHeaderField("Location")
-                        ?: throw UpdateCheckException("Download link missing from GitHub response.")
+                    val location = conn.getHeaderField("Location") ?: return null
                     if (!TrustedSources.isGitHubDownloadHost(location)) {
                         throw UpdateCheckException("Update rejected: download redirected off GitHub.")
                     }
                     ResolvedDownload(location, needsAuthHeader = false)
                 }
-                200 -> ResolvedDownload(release.asset.apiUrl, needsAuthHeader = true)
-                else -> {
-                    // Token problem: try the public URL as a last resort.
-                    if (code == 401 || code == 403 || code == 404) {
-                        ResolvedDownload(release.asset.browserUrl, needsAuthHeader = false)
-                    } else {
-                        throw UpdateCheckException("GitHub returned HTTP $code for the download.")
-                    }
-                }
+                200 -> if (useToken) ResolvedDownload(apiUrl, needsAuthHeader = true) else null
+                else -> null
             }
         } finally {
             conn.disconnect()
@@ -210,7 +225,8 @@ internal class GitHubReleaseClient(
             for (i in 0 until assets.length()) {
                 val a = assets.getJSONObject(i)
                 val name = a.optString("name")
-                if (name == "SHA256SUMS.txt") { sumsUrl = a.optString("browser_download_url").ifBlank { null }; continue }
+                // API URL first (see resolveDownload); the browser URL stays as a fallback in getSums.
+                if (name == "SHA256SUMS.txt") { sumsUrl = (a.optString("url").ifBlank { null } ?: a.optString("browser_download_url")).ifBlank { null }; continue }
                 if (!name.endsWith(".apk", ignoreCase = true)) continue
                 if (best == null || name.startsWith("release-", ignoreCase = true)) best = a
             }
