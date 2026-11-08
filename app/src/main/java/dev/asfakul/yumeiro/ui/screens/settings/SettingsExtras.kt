@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Coffee
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,7 +74,8 @@ import dev.asfakul.yumeiro.ui.theme.currentDayPart
 import dev.asfakul.yumeiro.ui.theme.palette
 
 object DeveloperInfo {
-    const val NAME = "siamform"
+    const val NAME = "Asfakul Siam"
+    const val HANDLE = "siamform"
     const val PORTFOLIO = "https://asfakuls-studio.vercel.app/"
     const val GITHUB = "https://github.com/siamform"
     const val SOURCE = "https://github.com/siamform/yumeiro"
@@ -239,20 +241,29 @@ fun DeveloperCard() {
             Spacer(Modifier.width(8.dp))
             Text("Buy me a coffee", fontWeight = FontWeight.Bold)
         }
+        Spacer(Modifier.height(10.dp))
+        // The developer's links live here (they are about the developer, not app settings).
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+            DevLink(Icons.Default.Language, null, "Portfolio", "dev_portfolio") { open(DeveloperInfo.PORTFOLIO) }
+            DevLink(null, R.drawable.ic_brand_github, "GitHub", "dev_github") { open(DeveloperInfo.GITHUB) }
+            dev.asfakul.yumeiro.notify.Reminders.Social.entries.forEach { sm ->
+                val icon = when (sm) {
+                    dev.asfakul.yumeiro.notify.Reminders.Social.FACEBOOK -> R.drawable.ic_brand_facebook
+                    dev.asfakul.yumeiro.notify.Reminders.Social.INSTAGRAM -> R.drawable.ic_brand_instagram
+                    dev.asfakul.yumeiro.notify.Reminders.Social.LINKEDIN -> R.drawable.ic_brand_linkedin
+                }
+                DevLink(null, icon, sm.label, "social_${sm.name.lowercase()}") {
+                    if (dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, sm.url)) dev.asfakul.yumeiro.notify.Reminders.recordFollow(context, sm)
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { open(DeveloperInfo.PORTFOLIO) },
-                border = null, shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = GlassFill, contentColor = TextPrimary),
-                modifier = Modifier.weight(1f).testTag("dev_portfolio"),
-            ) { Icon(Icons.Default.Language, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Portfolio", maxLines = 1) }
-            OutlinedButton(
-                onClick = { open(DeveloperInfo.GITHUB) },
-                border = null, shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = GlassFill, contentColor = TextPrimary),
-                modifier = Modifier.weight(1f).testTag("dev_github"),
-            ) { Icon(Icons.Default.Code, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("GitHub", maxLines = 1) }
+        androidx.compose.material3.TextButton(
+            onClick = { if (dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, dev.asfakul.yumeiro.notify.Reminders.GITHUB_URL)) dev.asfakul.yumeiro.notify.Reminders.recordStar(context) },
+            modifier = Modifier.fillMaxWidth().testTag("social_github_star"),
+        ) {
+            Icon(Icons.Default.Star, null, tint = BrandViolet, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp))
+            Text("Star Yumeiro on GitHub", color = TextPrimary, fontSize = 13.sp)
         }
         Spacer(Modifier.height(12.dp))
         Text(
@@ -281,3 +292,15 @@ fun MadeInBangladesh(modifier: Modifier = Modifier) {
     }
 }
 
+/** Round icon link in the developer card (portfolio, GitHub, social profiles). */
+@Composable
+private fun DevLink(vector: androidx.compose.ui.graphics.vector.ImageVector?, drawable: Int?, label: String, tag: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(GlassFill)
+            .clickable(onClickLabel = label, onClick = onClick).testTag(tag),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (vector != null) Icon(vector, label, tint = TextPrimary, modifier = Modifier.size(20.dp))
+        else if (drawable != null) Icon(painterResource(drawable), label, tint = TextPrimary, modifier = Modifier.size(20.dp))
+    }
+}

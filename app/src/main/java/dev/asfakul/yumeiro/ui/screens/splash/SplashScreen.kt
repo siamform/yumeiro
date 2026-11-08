@@ -92,7 +92,7 @@ fun SplashScreen(
             )
         }
         Text(
-            text = "by siamform",
+            text = "by Asfakul Siam",
             style = MaterialTheme.typography.labelMedium,
             color = TextTertiary,
             fontSize = 11.sp,

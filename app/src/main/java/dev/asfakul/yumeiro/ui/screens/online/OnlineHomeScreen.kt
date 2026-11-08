@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -192,7 +191,7 @@ fun OnlineHomeScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 val ready = providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } }
-                val listState = rememberLazyListState()
+                val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (selected ?: ""))
                 if (selected == null) {
                     val hero = remember(ready) { heroPicks(ready.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
                     val feed = remember(ready, feedLimit, hero) { buildMixFeed(ready, feedLimit, skip = hero.map { it.key }.toSet()) }

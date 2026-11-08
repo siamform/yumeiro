@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -320,7 +319,7 @@ fun HomeScreen(
             maxWidth >= 560.dp -> 3
             else -> 2
         }
-        val listState = rememberLazyListState()
+        val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("home")
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().testTag("home_list"),

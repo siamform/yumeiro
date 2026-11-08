@@ -47,4 +47,15 @@ class RemindersTest {
         assertEquals(Kind.STAR, Reminders.next(state(last), now))
         assertNull(Reminders.next(state(last, stars = 1), now))
     }
+
+    @Test fun firstOpenOfTheDayAlwaysShowsOne() {
+        val now = t0 + 100 * h
+        // Everything was shown 23 h ago (yesterday): not due by interval, but it's a new day.
+        val last = mapOf(Kind.FOLLOW to now - 23 * h, Kind.STAR to now - 23 * h + 1, Kind.SUPPORT to now - 23 * h + 2)
+        val s = state(last, follows = 3, stars = 1)
+        assertEquals(Kind.FOLLOW, Reminders.next(s, now))
+        // Once shown today, normal timing again.
+        val after = state(last + (Kind.FOLLOW to now), follows = 3, stars = 1)
+        assertNull(Reminders.next(after, now + 30 * 60 * 1000))
+    }
 }

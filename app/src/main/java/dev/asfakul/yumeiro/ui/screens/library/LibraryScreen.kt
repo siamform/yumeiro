@@ -497,6 +497,7 @@ fun LibraryScreen(
     } else {
         // Main Library Overview
         LazyColumn(
+            state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("library"),
             modifier = modifier
                 .fillMaxSize()
                 .testTag("library_screen_root"),

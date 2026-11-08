@@ -264,6 +264,7 @@ private fun VideoPlayerModalContent(
     // Floating (minimised) or system PiP: only the picture is shown, no controls or watch page.
     val hideChrome = isInPipMode || minimized
     var swipeDownPx by remember { mutableFloatStateOf(0f) }
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // Audio tracks & Subtitles state
     var audioTracksList by remember(video.id) { mutableStateOf<List<AudioTrackInfo>>(emptyList()) }
@@ -1069,6 +1070,20 @@ private fun VideoPlayerModalContent(
                     else -> null
                 },
                 onSwipeDownProgress = { swipeDownPx = it },
+                // YouTube style: touch and hold the video, then slide down → picture-in-picture
+                // (the in-app floating player where system PiP isn't available).
+                onHoldSwipeDown = when {
+                    isScreenLocked -> null
+                    isPipSupported && activity != null -> ({
+                        val w = activeVideoFormat?.width?.takeIf { it > 0 } ?: video.width
+                        val h = activeVideoFormat?.height?.takeIf { it > 0 } ?: video.height
+                        isControlsVisible = false
+                        if (!PipController.enter(activity, w, h, true)) onMinimize?.invoke()
+                    })
+                    onMinimize != null -> ({ isControlsVisible = false; onMinimize() })
+                    else -> null
+                },
+                onHoldStart = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress) },
                 isScreenLocked = isScreenLocked,
                 onSingleTap = {
                     isControlsVisible = !isControlsVisible

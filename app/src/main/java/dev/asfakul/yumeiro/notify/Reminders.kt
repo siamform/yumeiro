@@ -56,14 +56,21 @@ object Reminders {
      * three take turns. A reminder that has never been shown is staggered by its position, so
      * a fresh install doesn't get all three in its first hours.
      */
-    fun next(s: State, now: Long): Kind? {
+    fun next(s: State, now: Long, dayOf: (Long) -> Long = { it / DAILY_MS }): Kind? {
         if (now - s.installedAt < GRACE_MS) return null
-        if (now - s.lastAny < MIN_GAP_MS) return null
-        return Kind.entries
+        val candidates = Kind.entries
             .map { k -> k to (s.last[k] ?: (s.installedAt - EVERY_MS + GRACE_MS + k.ordinal * MIN_GAP_MS)) }
+        // First open of the day: one card is always shown (the one that waited longest), even
+        // when its normal interval hasn't passed yet. After that the usual timing applies.
+        if (s.lastAny <= 0L || dayOf(s.lastAny) != dayOf(now)) return candidates.minByOrNull { it.second }?.first
+        if (now - s.lastAny < MIN_GAP_MS) return null
+        return candidates
             .filter { (k, last) -> now - last >= interval(k, s) }
             .minByOrNull { it.second }?.first
     }
+
+    /** Calendar day in the phone's time zone (a new day starts at local midnight). */
+    fun localDay(t: Long): Long = (t + java.util.TimeZone.getDefault().getOffset(t)) / DAILY_MS
 
     // region storage
 
@@ -84,7 +91,7 @@ object Reminders {
 
     fun due(c: Context, now: Long = System.currentTimeMillis()): Kind? {
         if (!NotifySettings.get(c, NotifySettings.Key.REMINDERS)) return null
-        return next(state(c, now), now)
+        return next(state(c, now), now, ::localDay)
     }
 
     fun markShown(c: Context, kind: Kind, now: Long = System.currentTimeMillis()) {

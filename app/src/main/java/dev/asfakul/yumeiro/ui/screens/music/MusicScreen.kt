@@ -296,6 +296,7 @@ fun MusicScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("music_tracks_" + activeTab),
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("music_tracks_list"),
@@ -336,6 +337,7 @@ fun MusicScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("music_albums"),
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("albums_list"),
@@ -468,6 +470,7 @@ fun MusicScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("music_artists"),
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("artists_list"),
@@ -589,6 +592,7 @@ fun MusicScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("music_folders"),
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("music_folders_list"),

@@ -107,6 +107,16 @@ class RevampLogicTest {
         assertFalse(ExtensionGuard.frameIsExtension("androidx.compose.runtime.Recomposer"))
         assertFalse(ExtensionGuard.frameIsExtension("kotlinx.coroutines.DispatchedTask"))
         assertFalse(ExtensionGuard.frameIsExtension("java.lang.Thread"))
+        assertFalse(ExtensionGuard.frameIsExtension("coil3.request.RealImageLoader"))
+    }
+
+    @Test fun crashesInsideAFrameAreNotSwallowed() {
+        fun err(vararg classes: String) = RuntimeException("x").apply {
+            stackTrace = classes.map { StackTraceElement(it, "m", null, 1) }.toTypedArray()
+        }
+        assertTrue(ExtensionGuard.unwoundThroughFrame(err("com.example.Provider", "android.view.Choreographer\$FrameDisplayEventReceiver")))
+        assertTrue(ExtensionGuard.unwoundThroughFrame(err("com.example.Provider", "androidx.compose.runtime.Recomposer")))
+        assertFalse(ExtensionGuard.unwoundThroughFrame(err("com.example.Provider", "android.os.Handler", "android.os.Looper")))
     }
 
     @Test fun ytHistoryRoundTrips() {

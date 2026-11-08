@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -111,7 +110,7 @@ fun PlaylistMarketScreen(
     var details by remember { mutableStateOf<PlaylistMarket.Entry?>(null) }
     var updatingAll by remember { mutableStateOf(false) }
     val busy = remember { mutableStateMapOf<String, Boolean>() }
-    val listState = rememberLazyListState()
+    val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("playlist_market")
 
     LaunchedEffect(Unit) { runCatching { PlaylistStore.init(app) }; PlaylistMarket.load(app) }
 
