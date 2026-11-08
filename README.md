@@ -13,7 +13,7 @@ Local music and video, YouTube, YouTube Music, live TV / IPTV and CloudStream ex
 fast, beautifully designed player.
 
 <p>
-  <a href="https://github.com/siamform/yumeiro/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/siamform/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://yumeiro-phi.vercel.app/download"><img alt="Download" src="https://img.shields.io/github/v/release/siamform/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/siamform/yumeiro/total?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/siamform/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
 </p>
@@ -24,7 +24,7 @@ fast, beautifully designed player.
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
 </p>
 
-**[Download the APK](https://github.com/siamform/yumeiro/releases/latest)** · **[Website](https://yumeiro-phi.vercel.app/)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
+**[Download the APK](https://yumeiro-phi.vercel.app/download)** · **[Website](https://yumeiro-phi.vercel.app/)** · **[Full guide](docs/GUIDE.md)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
 
 </div>
 
@@ -138,7 +138,7 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ## Install
 
-1. Download `release-Yumeiro-vX.Y.Z.apk` from **[Releases](https://github.com/siamform/yumeiro/releases/latest)**.
+1. Download `release-Yumeiro-vX.Y.Z.apk` from **[the website](https://yumeiro-phi.vercel.app/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)).
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
