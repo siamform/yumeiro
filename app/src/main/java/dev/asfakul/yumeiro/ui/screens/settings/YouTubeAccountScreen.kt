@@ -234,7 +234,10 @@ private fun GoogleSignInPage(onDone: (Boolean) -> Unit) {
                 factory = { ctx ->
                     WebView(ctx).apply {
                         SafeWebView.harden(this)
+                        // Google's sign-in page needs JavaScript; local files and content:// stay blocked.
                         settings.javaScriptEnabled = true
+                        settings.allowFileAccess = false
+                        settings.allowContentAccess = false
                         settings.domStorageEnabled = true
                         // Google refuses sign-in from user agents marked as an embedded WebView ("; wv").
                         settings.userAgentString = runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull()?.replace("; wv", "")
