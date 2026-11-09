@@ -285,7 +285,7 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
                 )
                 Spacer(Modifier.height(12.dp))
                 dev.asfakul.yumeiro.ui.components.ErrorSuggestions(
-                    remember(state.message) { dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor("extension " + (state.message ?: "")) }
+                    remember(state.message) { dev.asfakul.yumeiro.ui.components.ErrorHelp.forExtension(state.message ?: "") }
                 )
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -362,7 +362,7 @@ private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> U
                 color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.testTag("online_resolve_error"),
             )
-            val tip = remember(state.message) { dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor("extension " + (state.message ?: "")).firstOrNull() }
+            val tip = remember(state.message) { dev.asfakul.yumeiro.ui.components.ErrorHelp.forExtension(state.message ?: "").firstOrNull() }
             if (tip != null) Text("Tip: $tip", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -74,13 +74,14 @@ object PluginManager {
                 repoUrl = repositoryUrl, repoName = runCatching { ExtensionSources.fetchRepo(repositoryUrl).name }.getOrDefault(repositoryUrl),
                 origin = "community",
             ),
+            dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY,
         )
         true
     }.getOrDefault(false)
 
     suspend fun downloadPlugin(
         activity: Activity, pluginUrl: String, pluginHash: String?, internalName: String, file: File, loadPlugin: Boolean,
-    ): Boolean = runCatching { ExtensionManager.installFromUrl(activity.applicationContext, pluginUrl); true }.getOrDefault(false)
+    ): Boolean = runCatching { ExtensionManager.installFromUrl(activity.applicationContext, pluginUrl, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY); true }.getOrDefault(false)
 
     suspend fun deletePlugin(file: File): Boolean {
         val c = ctx ?: return false

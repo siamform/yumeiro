@@ -38,7 +38,7 @@ object StarterExtensions {
         // No catalogue (offline): try again next launch.
         val catalog = runCatching { ExtensionMarket.load(context) }.getOrNull() ?: return emptyList()
         val picks = pick(catalog.extensions)
-        val names = picks.mapNotNull { r -> runCatching { ExtensionManager.install(context, r); r.name }.getOrNull() }
+        val names = picks.mapNotNull { r -> runCatching { ExtensionManager.install(context, r, ExtensionReview.Mode.AUTO); r.name }.getOrNull() }
         // Done once something installed, or the catalogue simply has nothing suitable. Failed downloads retry next launch.
         if (names.isNotEmpty() || (catalog.extensions.isNotEmpty() && picks.isEmpty())) p.edit().putBoolean(KEY_DONE, true).apply()
         return names

@@ -165,14 +165,14 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     if (err != null) AppMessages.error(context, "${it.name} installed but couldn't start: $err")
                     else AppMessages.show(context, "${it.name} installed", AppMessages.Kind.SUCCESS, "Manage") { onOpenExtensions() }
                 }
-                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { install(remote) } }
+                .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { install(remote) } }
         }
     }
     fun updateAll() {
         val list = safe.filter { it.key in updates }
         scope.launch {
             var ok = 0
-            list.forEach { r -> runCatching { ExtensionManager.install(context, r) }.onSuccess { ok++ } }
+            list.forEach { r -> runCatching { ExtensionManager.install(context, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY) }.onSuccess { ok++ } }
             OnlineRepository.clearCaches()
             AppMessages.success(context, "Updated $ok of ${list.size}")
         }

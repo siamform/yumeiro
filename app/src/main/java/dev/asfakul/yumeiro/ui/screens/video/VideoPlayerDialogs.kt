@@ -96,7 +96,11 @@ data class AudioTrackInfo(
     val label: String?,
     val channels: Int,
     val sampleRate: Int,
-    val isSelected: Boolean
+    val isSelected: Boolean,
+    /** False when no decoder on this phone (nor FFmpeg) can play it. */
+    val supported: Boolean = true,
+    /** Short codec name ("AAC", "E-AC-3", …). */
+    val codec: String? = null,
 )
 
 data class SubtitleTrackInfo(
@@ -379,10 +383,11 @@ fun AudioTrackDialog(
                                         text = title,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) SpotifyGreen else TextPrimary
+                                        color = if (isSelected) SpotifyGreen else if (track.supported) TextPrimary else TextSecondary
                                     )
                                     Text(
-                                        text = "$channelStr • ${if (track.sampleRate > 0) "${track.sampleRate / 1000} kHz" else "48 kHz"}",
+                                        text = listOfNotNull(track.codec, channelStr, if (track.sampleRate > 0) "${track.sampleRate / 1000} kHz" else null,
+                                            if (!track.supported) "can't play on this phone" else null).joinToString(" • "),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary,
                                         fontSize = 11.sp
@@ -418,7 +423,9 @@ fun SubtitleOptionsDialog(
     onSelectInternalTrack: (groupIndex: Int, trackIndex: Int) -> Unit,
     onDisableSubtitles: () -> Unit,
     onAdjustDelay: (Long) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Subtitles the source found after playback started (label → load). */
+    moreFromSource: List<Pair<String, () -> Unit>> = emptyList(),
 ) {
     TsukiDialog(
         onDismissRequest = onDismiss,
@@ -513,6 +520,28 @@ fun SubtitleOptionsDialog(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                            }
+                        }
+                    }
+                }
+
+                if (moreFromSource.isNotEmpty()) item {
+                    Text(
+                        text = "MORE FROM THIS SOURCE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SpotifyGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    moreFromSource.forEach { (label, load) ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp), color = DarkSurfaceContainer,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).clickable { load(); onDismiss() }.testTag("source_subtitle_item"),
+                        ) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }

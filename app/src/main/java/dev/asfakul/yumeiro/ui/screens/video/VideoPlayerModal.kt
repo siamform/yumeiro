@@ -269,7 +269,14 @@ private fun VideoPlayerModalContent(
     // Audio tracks & Subtitles state
     var audioTracksList by remember(video.id) { mutableStateOf<List<AudioTrackInfo>>(emptyList()) }
     var subtitleTracksList by remember(video.id) { mutableStateOf<List<SubtitleTrackInfo>>(emptyList()) }
-    var isSubtitlesDisabled by remember { mutableStateOf(false) }
+    // Must match the player: captions start off when the setting says so (the CC button used to
+    // think they were on, so its first tap "turned them off" and nothing ever showed).
+    var isSubtitlesDisabled by remember(video.id) { mutableStateOf(!PlayerSettings.captionsDefault.value) }
+    var autoPickedText by remember(video.id) { mutableStateOf(false) }
+    var audioSwitchJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var audioSwitchRevert by remember(video.id) { mutableStateOf<(() -> Unit)?>(null) }
+    var subtitleReloadJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    remember(video.id) { dev.asfakul.yumeiro.stream.SubtitleTiming.offsetUs = 0L; 0 }
     var externalSubtitleName by remember(video.id) { mutableStateOf<String?>(null) }
     var subtitleDelayMs by remember(video.id) { mutableLongStateOf(0L) }
 
@@ -343,6 +350,16 @@ private fun VideoPlayerModalContent(
         )
     }
     var showOnlineSubtitleDialog by remember { mutableStateOf(false) }
+    // Extensions keep finding subtitles after the video starts; offer those in the captions menu.
+    var lateSubs by remember(video.id) { mutableStateOf<List<dev.asfakul.yumeiro.online.OnlineSubtitle>>(emptyList()) }
+    LaunchedEffect(video.id) {
+        if (!video.id.startsWith("online:")) return@LaunchedEffect
+        dev.asfakul.yumeiro.online.OnlineSession.state.collect { st ->
+            if (st?.videoId != video.id) return@collect
+            val have = externalSubs.map { it.uri.toString() }.toSet()
+            lateSubs = st.subtitles.filter { it.url !in have }.distinctBy { it.url }.take(40)
+        }
+    }
 
     // Network links whose type can't be told from the URL (no extension, redirects, IPTV lists,
     // web pages) are inspected first; everything else starts immediately as before.
@@ -614,12 +631,99 @@ private fun VideoPlayerModalContent(
         exoPlayer.playWhenReady = curPlaying
     }
 
+    /**
+     * Turns on a caption track explicitly. Just re-enabling the text type wasn't enough: the track
+     * selector only auto-picks tracks flagged default/forced or in the phone's language, so most
+     * sources' subtitles never appeared.
+     */
+    fun pickBestTextTrack(tracks: Tracks = exoPlayer.currentTracks): Boolean {
+        val candidates = buildList {
+            tracks.groups.forEachIndexed { gi, g ->
+                if (g.type != C.TRACK_TYPE_TEXT) return@forEachIndexed
+                for (i in 0 until g.length) {
+                    if (!g.isTrackSupported(i, /* allowExceedsCapabilities = */ true)) continue
+                    val f = g.getTrackFormat(i)
+                    add(dev.asfakul.yumeiro.player.TrackPicks.Text(gi, i, f.language, f.label,
+                        forced = f.selectionFlags and C.SELECTION_FLAG_FORCED != 0, isDefault = f.selectionFlags and C.SELECTION_FLAG_DEFAULT != 0))
+                }
+            }
+        }
+        val prefs = listOfNotNull(
+            androidx.core.os.LocaleListCompat.getAdjustedDefault().takeIf { it.size() > 0 }?.get(0)?.toLanguageTag(),
+            java.util.Locale.getDefault().toLanguageTag(),
+        )
+        val best = dev.asfakul.yumeiro.player.TrackPicks.bestText(candidates, prefs) ?: return false
+        val group = tracks.groups[best.group]
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, best.index))
+            .build()
+        return true
+    }
+
     fun setCaptionsEnabled(enabled: Boolean) {
         isSubtitlesDisabled = !enabled
         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
             .build()
-        showToast(if (enabled) "Captions on" else "Captions off")
+        if (enabled) {
+            val hasSelected = exoPlayer.currentTracks.groups.any { it.type == C.TRACK_TYPE_TEXT && it.isSelected }
+            val picked = hasSelected || pickBestTextTrack()
+            showToast(if (picked) "Captions on" else "No captions in this video — load a file or search online")
+        } else showToast("Captions off")
+    }
+
+    /**
+     * Switches audio and keeps it in step with the picture: a seek to the current position flushes
+     * the decoders so the new track starts aligned. If the track doesn't start within 10 s (or
+     * fails), the previous one comes back instead of leaving a frozen black screen.
+     */
+    fun switchAudio(groupIndex: Int, trackIndex: Int) {
+        val tracks = exoPlayer.currentTracks
+        if (groupIndex !in 0 until tracks.groups.size) return
+        val group = tracks.groups[groupIndex]
+        val format = group.getTrackFormat(trackIndex)
+        if (!group.isTrackSupported(trackIndex) && !dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegSupports(format.sampleMimeType)) {
+            showToast("This audio format (${format.sampleMimeType?.substringAfter('/') ?: "unknown"}) can't play on this phone")
+            return
+        }
+        val previous = exoPlayer.trackSelectionParameters
+        exoPlayer.trackSelectionParameters = previous.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
+            .apply { format.language?.let { setPreferredAudioLanguage(it) } }
+            .build()
+        if (!exoPlayer.isCurrentMediaItemLive && exoPlayer.isCurrentMediaItemSeekable) exoPlayer.seekTo(exoPlayer.currentPosition)
+        val revert = {
+            exoPlayer.trackSelectionParameters = previous
+            if (exoPlayer.playbackState == Player.STATE_IDLE) exoPlayer.prepare()
+            if (!exoPlayer.isCurrentMediaItemLive && exoPlayer.isCurrentMediaItemSeekable) exoPlayer.seekTo(exoPlayer.currentPosition)
+            showToast("That audio track didn't load — switched back")
+        }
+        audioSwitchRevert = revert
+        audioSwitchJob?.cancel()
+        audioSwitchJob = coroutineScope.launch {
+            delay(10_000)
+            val stuck = exoPlayer.playbackState == Player.STATE_BUFFERING && exoPlayer.playWhenReady
+            if (stuck && audioSwitchRevert === revert) revert()
+            audioSwitchRevert = null
+        }
+        showToast("Switched audio track")
+    }
+
+    /** Re-reads subtitle files with the new delay (cues are timed when they're parsed). */
+    fun applySubtitleDelay(ms: Long) {
+        dev.asfakul.yumeiro.stream.SubtitleTiming.offsetUs = ms * 1000
+        subtitleReloadJob?.cancel()
+        subtitleReloadJob = coroutineScope.launch {
+            delay(700)
+            if (externalSubs.isEmpty() || resolving || playerError != null) return@launch
+            val pos = exoPlayer.currentPosition
+            val playing = exoPlayer.playWhenReady
+            StreamMediaFactory.setMedia(exoPlayer, video.uri, externalSubs, video.title, pos)
+            exoPlayer.prepare()
+            exoPlayer.playWhenReady = playing
+        }
     }
 
     // External Subtitle Picker
@@ -662,7 +766,9 @@ private fun VideoPlayerModalContent(
                             label = format.label,
                             channels = format.channelCount,
                             sampleRate = format.sampleRate,
-                            isSelected = isSelected
+                            isSelected = isSelected,
+                            supported = group.isTrackSupported(trackIndex) || dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegSupports(format.sampleMimeType),
+                            codec = codecName(format.sampleMimeType ?: format.codecs),
                         )
                     )
                     if (isSelected) {
@@ -683,7 +789,10 @@ private fun VideoPlayerModalContent(
                 }
             }
         }
-        audioTracksList = audios
+        val kept = dev.asfakul.yumeiro.player.TrackPicks.dedupeAudio(audios.map {
+            dev.asfakul.yumeiro.player.TrackPicks.Audio(it.groupIndex, it.trackIndex, it.language, it.label, it.channels, it.codec, it.supported, it.isSelected)
+        }).map { it.group to it.index }.toSet()
+        audioTracksList = audios.filter { (it.groupIndex to it.trackIndex) in kept }
         subtitleTracksList = subs
     }
 
@@ -814,6 +923,13 @@ private fun VideoPlayerModalContent(
 
             override fun onTracksChanged(tracks: Tracks) {
                 updateTracksList(tracks)
+                // Captions on by default: make sure one is actually shown.
+                if (!isSubtitlesDisabled && !autoPickedText && tracks.groups.any { it.type == C.TRACK_TYPE_TEXT }) {
+                    autoPickedText = true
+                    if (tracks.groups.none { it.type == C.TRACK_TYPE_TEXT && it.isSelected }) pickBestTextTrack(tracks)
+                }
+                // The new audio track is playing: no need to switch back.
+                if (audioSwitchRevert != null && exoPlayer.playbackState == Player.STATE_READY) { audioSwitchRevert = null; audioSwitchJob?.cancel() }
                 qualityList = qualityOptions(tracks)
                 // Override removed (new stream, or the health monitor went back to Auto).
                 if (exoPlayer.trackSelectionParameters.overrides.values.none { it.type == C.TRACK_TYPE_VIDEO }) selectedQuality = null
@@ -821,6 +937,8 @@ private fun VideoPlayerModalContent(
 
             override fun onPlayerError(error: PlaybackException) {
                 dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { it.copy(error = "${error.errorCodeName}: ${error.cause?.message ?: error.message}") }
+                // The audio track the user just picked broke playback: go back to the one that worked.
+                audioSwitchRevert?.let { revert -> audioSwitchRevert = null; audioSwitchJob?.cancel(); revert(); return }
                 recoverFrom(error)
             }
         }
@@ -1551,18 +1669,7 @@ private fun VideoPlayerModalContent(
         if (showAudioTrackDialog) {
             AudioTrackDialog(
                 audioTracks = audioTracksList,
-                onSelectTrack = { groupIndex, trackIndex ->
-                    val tracks = exoPlayer.currentTracks
-                    if (groupIndex in 0 until tracks.groups.size) {
-                        val group = tracks.groups[groupIndex]
-                        val override = TrackSelectionOverride(group.mediaTrackGroup, trackIndex)
-                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-                            .buildUpon()
-                            .setOverrideForType(override)
-                            .build()
-                        showToast("Switched audio track")
-                    }
-                },
+                onSelectTrack = { groupIndex, trackIndex -> switchAudio(groupIndex, trackIndex) },
                 onDismiss = { showAudioTrackDialog = false }
             )
         }
@@ -1604,8 +1711,16 @@ private fun VideoPlayerModalContent(
                         .build()
                     showToast("Subtitles turned off")
                 },
+                moreFromSource = lateSubs.map { sub ->
+                    sub.language to {
+                        lateSubs = lateSubs - sub
+                        addExternalSubtitle(Uri.parse(sub.url), dev.asfakul.yumeiro.online.OnlinePlayback.subtitleMime(sub.url),
+                            dev.asfakul.yumeiro.online.OnlinePlayback.languageTag(sub.language) ?: "und", sub.language)
+                    }
+                },
                 onAdjustDelay = { newDelayMs ->
                     subtitleDelayMs = newDelayMs
+                    applySubtitleDelay(newDelayMs)
                     showToast("Subtitle delay: ${if (newDelayMs >= 0) "+$newDelayMs" else "$newDelayMs"} ms")
                 },
                 onDismiss = { showSubtitleDialog = false }
@@ -1701,5 +1816,23 @@ private fun BoxScope.FloatingPlayerChrome(
     }
     Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
         Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent))
+    }
+}
+
+/** Short codec name for the audio menu. */
+internal fun codecName(mime: String?): String? {
+    val m = mime?.lowercase() ?: return null
+    return when {
+        "mp4a" in m || "aac" in m -> "AAC"
+        "eac3-joc" in m -> "Dolby Atmos"
+        "eac3" in m || "ec-3" in m -> "E-AC-3"
+        "ac3" in m || "ac-3" in m -> "AC-3"
+        "true-hd" in m || "truehd" in m -> "TrueHD"
+        "dts" in m -> "DTS"
+        "opus" in m -> "Opus"
+        "vorbis" in m -> "Vorbis"
+        "flac" in m -> "FLAC"
+        "mpeg" in m -> "MP3"
+        else -> m.substringAfter('/').uppercase().take(10)
     }
 }

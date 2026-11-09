@@ -83,7 +83,7 @@ object ExtensionManager {
         val enabledCount: Int get() = installed.count { it.enabled && runtime[it.key]?.loaded == true }
     }
 
-    class ExtensionException(message: String, cause: Throwable? = null) : Exception(message, cause)
+    open class ExtensionException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -171,7 +171,9 @@ object ExtensionManager {
     // region install / remove
 
     /** Downloads and installs (or updates) [remote]. Throws [ExtensionException] with a friendly message. */
-    suspend fun install(context: Context, remote: RemoteExtension): InstalledExtension = withContext(Dispatchers.IO) {
+    suspend fun install(
+        context: Context, remote: RemoteExtension, review: ExtensionReview.Mode = ExtensionReview.Mode.ALWAYS,
+    ): InstalledExtension = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         if (remote.apiVersion > OnlineRuntime.API_VERSION) throw ExtensionException("${remote.name} needs a newer app version")
         markBusy(remote.key, true)
@@ -182,6 +184,8 @@ object ExtensionManager {
             // rebuilt since the market index (up to 6 h old) recorded its hash.
             val liveFile = remote.origin == "community" || remote.origin == "discovered"
             if (remote.sha256 != null && remote.sha256 != sha && !liveFile) throw ExtensionException("Download of ${remote.name} is corrupted (checksum mismatch)")
+            val isUpdate = _state.value.installed.any { it.key == remote.key }
+            gate(review, remote.name, remote.version, remote.repoName, isUpdate, bytes)
             mutex.withLock {
                 val previous = _state.value.installed.firstOrNull { it.key == remote.key }
                 val ext = InstalledExtension(
@@ -198,7 +202,7 @@ object ExtensionManager {
     }
 
     /** Adds an extension from a local `.cs3` file picked by the user. */
-    suspend fun installFromFile(context: Context, uri: Uri, displayName: String?): InstalledExtension = withContext(Dispatchers.IO) {
+    suspend fun installFromFile(context: Context, uri: Uri, displayName: String?, review: ExtensionReview.Mode = ExtensionReview.Mode.ALWAYS): InstalledExtension = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
             val out = java.io.ByteArrayOutputStream()
@@ -212,23 +216,25 @@ object ExtensionManager {
             }
             out.toByteArray()
         } ?: throw ExtensionException("Could not open the file")
-        installManual(context, bytes, "file", displayName)
+        installManual(context, bytes, "file", displayName, review)
     }
 
     /** Adds an extension from a direct `.cs3` link. */
-    suspend fun installFromUrl(context: Context, url: String): InstalledExtension = withContext(Dispatchers.IO) {
+    suspend fun installFromUrl(context: Context, url: String, review: ExtensionReview.Mode = ExtensionReview.Mode.ALWAYS): InstalledExtension = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         val clean = url.trim()
         if (!clean.startsWith("https://") && !clean.startsWith("http://")) throw ExtensionException("Enter a link that starts with https://")
-        installManual(context, downloadFirst(listOf(clean)), clean, clean.substringAfterLast('/').substringBefore('?'))
+        installManual(context, downloadFirst(listOf(clean)), clean, clean.substringAfterLast('/').substringBefore('?'), review)
     }
 
-    private suspend fun installManual(context: Context, bytes: ByteArray, source: String, displayName: String?): InstalledExtension {
+    private suspend fun installManual(context: Context, bytes: ByteArray, source: String, displayName: String?, review: ExtensionReview.Mode): InstalledExtension {
         val manifest = readManifest(bytes) ?: throw ExtensionException("This isn't a CloudStream extension (.cs3)")
         val internal = (displayName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() } ?: manifest.name ?: "Extension")
             .replace(Regex("[^A-Za-z0-9_.\\-]"), "_").take(80)
         val name = manifest.name ?: internal
         val repoUrl = "manual:$internal"
+        val isUpdate = _state.value.installed.any { it.key == RemoteExtension.keyOf(repoUrl, internal) }
+        gate(review, name, manifest.version, if (source == "file") "a file on this phone" else source, isUpdate, bytes)
         return mutex.withLock {
             val previous = _state.value.installed.firstOrNull { it.key == RemoteExtension.keyOf(repoUrl, internal) }
             val ext = InstalledExtension(
@@ -239,6 +245,64 @@ object ExtensionManager {
             installBytes(context, ext, bytes, previous)
         }
     }
+
+    /** Runs the safety check and asks the user (see [ExtensionReview]); throws when not approved. */
+    private suspend fun gate(mode: ExtensionReview.Mode, name: String, version: Int?, source: String, isUpdate: Boolean, bytes: ByteArray) {
+        val report = ExtensionScanner.scan(bytes)
+        lastReports[name] = report
+        if (!ExtensionReview.decide(mode, name, version, source, isUpdate, report)) {
+            if (mode == ExtensionReview.Mode.AUTO || !ExtensionReview.hostAttached) {
+                throw ExtensionException("$name was held back: the safety check flagged it (${report.findings.firstOrNull()?.title ?: report.summary})")
+            }
+            throw ExtensionReview.Declined(name)
+        }
+    }
+
+    private val lastReports = java.util.concurrent.ConcurrentHashMap<String, ExtensionScanner.Report>()
+
+    /** Safety report of an installed extension's file (scanned on demand, cached by file). */
+    suspend fun reportFor(context: Context, ext: InstalledExtension): ExtensionScanner.Report? = withContext(Dispatchers.IO) {
+        val f = pluginFile(context, ext)
+        if (!f.exists()) return@withContext null
+        reportCache[f.name] ?: runCatching { ExtensionScanner.scan(f.readBytes()) }.getOrNull()?.also { reportCache[f.name] = it }
+    }
+    private val reportCache = java.util.concurrent.ConcurrentHashMap<String, ExtensionScanner.Report>()
+
+    /** Result of a fresh update check for one extension. */
+    sealed class UpdateCheck {
+        data object UpToDate : UpdateCheck()
+        data class Available(val remote: RemoteExtension) : UpdateCheck()
+        data class Unavailable(val reason: String) : UpdateCheck()
+    }
+
+    /**
+     * Asks the extension's own repository right now (not the cached market) whether there's a newer
+     * build. Manual installs from a link are re-downloaded and compared by checksum.
+     */
+    suspend fun checkUpdate(context: Context, ext: InstalledExtension): UpdateCheck = withContext(Dispatchers.IO) {
+        if (ext.manual) {
+            val src = ext.sourceUrl.takeIf { it.startsWith("http") } ?: return@withContext UpdateCheck.Unavailable("Added from a file — install a newer file to update it")
+            val bytes = runCatching { downloadFirst(listOf(src)) }.getOrElse { return@withContext UpdateCheck.Unavailable(OnlineErrors.friendly(it)) }
+            if (sha256(bytes) == ext.sha256) return@withContext UpdateCheck.UpToDate
+            val m = readManifest(bytes) ?: return@withContext UpdateCheck.Unavailable("The link no longer points to an extension")
+            return@withContext UpdateCheck.Available(RemoteExtension(
+                internalName = ext.internalName, name = m.name ?: ext.name, url = src, version = m.version ?: ext.version,
+                repoUrl = ext.repoUrl, repoName = ext.repoName, origin = "manual",
+            ))
+        }
+        val fresh = runCatching { ExtensionSources.repoPlugins(ext.repoUrl, force = true).second }.getOrNull()
+            ?.filter { it.internalName == ext.internalName }.orEmpty()
+        val pool = fresh.ifEmpty {
+            runCatching { ExtensionSources.all(context, force = true).items }.getOrDefault(emptyList()).filter { it.key == ext.key }
+        }
+        if (pool.isEmpty()) return@withContext UpdateCheck.Unavailable("Its repository didn't answer or no longer lists it")
+        val newer = updatesForTests(listOf(ext), pool.map { it.copy(repoUrl = ext.repoUrl) }).firstOrNull()?.second
+        if (newer != null) UpdateCheck.Available(newer) else UpdateCheck.UpToDate
+    }
+
+    /** Installs the update found by [checkUpdate] (manual installs keep their own entry). */
+    suspend fun applyUpdate(context: Context, ext: InstalledExtension, remote: RemoteExtension): InstalledExtension =
+        if (ext.manual) installFromUrl(context, remote.url) else install(context, remote)
 
     /** Writes [bytes], swaps the old version out and loads the new one. Caller holds [mutex]. */
     private fun installBytes(context: Context, ext: InstalledExtension, bytes: ByteArray, previous: InstalledExtension?): InstalledExtension {
@@ -381,7 +445,7 @@ object ExtensionManager {
         val failed = mutableListOf<String>()
         for ((ext, remote) in updatesFrom(available.items)) {
             if (!ext.autoUpdate) continue
-            runCatching { install(context, remote) }.onSuccess { updated += it.name }.onFailure { failed += ext.name }
+            runCatching { install(context, remote, ExtensionReview.Mode.AUTO) }.onSuccess { updated += it.name }.onFailure { failed += ext.name }
         }
         mutex.withLock { _state.update { it.copy(lastSync = now) }; writeState(context) }
         SyncResult(installed = installedNow, updated = updated, failed = failed, pending = updatesFrom(available.items).size)

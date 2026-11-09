@@ -25,6 +25,12 @@ organised better than any single-source app. Ordered by impact for launch.
 | YouTube | Optional YouTube Music library / subscriptions sync on top of the account (only if users ask; keep it opt-in). Validate the account with an InnerTube call after sign-in, like ArchiveTune (pasted cookies are already checked against youtube.com/account). |
 | Search | Collapse the same title from several Hues into one card with "on N Hues" (data is in `SearchRanker.Ranked.alsoOn`). |
 
+## 0.6 After the playback fixes
+
+- [ ] Test on real phones: AC-3/E-AC-3 streams, audio switching on HLS with separate audio, subtitle delay.
+- [ ] Extension scanner: tune rules with real extension repos (false positives), consider a community allow-list.
+- [ ] Sign-in: per-extension account notes (which sites need an account) in the Hues market.
+
 ## 1. Universal extension engine (the differentiator)
 
 Make Yumeiro the hub that runs the big ecosystems side by side, each behind one adapter interface
