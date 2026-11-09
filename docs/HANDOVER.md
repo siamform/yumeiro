@@ -710,3 +710,25 @@ a secret (`Trakt.configured`) and always sent one, so a new app could never sign
 - Release: only the `TRAKT_CLIENT_ID` repo secret is needed. `TRAKT_CLIENT_SECRET` stays optional in `release.yml`.
 
 Tests: `TraktAuthTest` (secret omitted/sent, refresh body, refresh window). Not tested against a live Trakt account.
+
+### 21a. CI audit and the base64url client-ID bug (same branch)
+
+**CI audit (all checks of PR #18 green; earlier reds explained).**
+- PR #17's red `CodeQL` check: code scanning compares a PR with the latest analysis of `main`. `codeql.yml` ran only on
+  pull requests and once a month, so the `main` baseline was ~10 merges old and alerts already on `main` (or fixed
+  there) were counted as "new" whenever a PR touched those lines. The action also warned "Please specify an on.push
+  hook". Fix: `push` on `main` with a paths filter (one run per merged code change, docs-only merges skipped).
+- PR #14 had one red gitleaks run on an earlier push; its final head was green on every check before it merged, so
+  nothing is outstanding there.
+- Lint is still `continue-on-error`, so lint findings never turn a PR red; read the report artifact.
+
+**Real bug: client IDs were mangled at build time.** `app/build.gradle.kts` filtered every OAuth client id with
+`isLetterOrDigit()`. Trakt's new IDs (and LRCLIB app IDs) are base64url and contain `-` / `_`; stripping them gave an
+ID Trakt rejects with `401` (checked live: the real ID gets a device code, the stripped one 401s). `buildConfigSafe()`
+keeps letters, digits, `-`, `_`, `.` (JWT-style tokens) and still drops quotes, backslashes and spaces, so nothing can
+break out of the generated Java string literal.
+
+**Secrets.** Repo secrets now include `TRAKT_CLIENT_ID` (secret-less app), plus `SIMKL_CLIENT_ID`, `LASTFM_API_KEY`,
+`LASTFM_SHARED_SECRET`, `LRCLIB_APP_ID`, `OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` used by the next update (§22).
+The repo is public, so anything embedded in an APK is extractable; these are free-tier app identifiers, all
+user-overridable in Settings, and none grants access to a user's account on its own.

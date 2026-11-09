@@ -5,6 +5,12 @@ on:
   pull_request:
     branches: [main]
     paths-ignore: ["**/*.md", "docs/**"]
+  # Baseline for the PR gate. Code scanning compares a PR's alerts with the latest analysis of `main`;
+  # with only the monthly run that baseline was weeks old, so alerts already on `main` (or fixed there)
+  # showed up as "new" on the next PR that touched those lines (PR #17). One run per merged code change.
+  push:
+    branches: [main]
+    paths: ["app/**", "extension-kit/**", ".github/workflows/**", ".github/codeql/**", "*.gradle.kts", "gradle/**"]
   schedule:
     - cron: "17 3 1 * *" # 1st of every month, 09:17 Asia/Dhaka
   workflow_dispatch:
