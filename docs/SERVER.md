@@ -67,7 +67,26 @@ If queue ops ever get close to the limit, raise the cron interval or the per-mes
 3. In `wrangler.toml`, uncomment the `routes` line (`api.yumeiro.click`). Then run `npm run deploy`.
 4. Check `https://api.yumeiro.click/v1/health`.
 
-No secrets are needed. CI (`.github/workflows/server.yml`) only runs tests and the type check, and only when `server/**` changes.
+### Deploying with an API token instead of `wrangler login`
+
+Create the token under **My Profile → API Tokens → Create Token → Custom token** with these permissions:
+
+| Type | Permission | Access |
+|---|---|---|
+| Account | Workers Scripts | Edit |
+| Account | D1 | Edit |
+| Account | Queues | Edit |
+| Account | Account Settings | Read |
+| Zone (`yumeiro.click` only) | Workers Routes | Edit |
+| Zone (`yumeiro.click` only) | Zone | Read |
+
+Set Account Resources to your account and Zone Resources to **Specific zone → yumeiro.click**. Then run Wrangler with
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment. Never commit the token.
+
+If `wrangler deploy` refuses to register the cron, open **Workers & Pages** once in the dashboard and choose a `workers.dev`
+subdomain. The Worker doesn't need to serve on it.
+
+No secrets are needed in the repo. CI (`.github/workflows/server.yml`) only runs tests and the type check, and only when `server/**` changes.
 
 ## Local development
 
