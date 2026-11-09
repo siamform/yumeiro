@@ -82,6 +82,13 @@ TV layout, Weblate localisation.
 - Widgets: continue watching, now playing; Android TV / large-screen layout.
 - Localisation (Bangla first, then the top 10 languages) through Weblate.
 
+## 0.9 Yumeiro Cloud (§23, docs/SERVER.md)
+
+- [x] Deployed to `api.yumeiro.click` on the free plan (§24). Server scope fixed at alerts only.
+- [ ] Owner: rotate the Cloudflare API token that was shared in chat.
+- [ ] Phone test: push on via ntfy, bookmark an airing anime, confirm a wake ~30 min after AniList's airing time.
+- [ ] Watch D1 / Queue usage in the Cloudflare dashboard the first week; tune cron or batch if needed.
+
 ## 2.5 Serverless versions of Sozo's best ideas (see INSPIRATION.md)
 
 - [ ] Trailer "Shorts" feed from TMDB `/videos` (key is in place: `TMDB_API_KEY`), vertical pager, tap to open the title.

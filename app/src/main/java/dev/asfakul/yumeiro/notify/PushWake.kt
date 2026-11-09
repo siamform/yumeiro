@@ -172,6 +172,7 @@ object PushWake {
         runCatching { UnifiedPush.removeDistributor(c) }
         OnlineSettings.setSecret(c, SECRET, null)
         prefs(c).edit().clear().apply()
+        CloudAlerts.forget(c)
         reload(c)
     }
 
@@ -207,6 +208,7 @@ object PushWake {
     internal fun onUnregistered(c: Context) {
         OnlineSettings.setSecret(c, SECRET, null)
         prefs(c).edit().putBoolean("enabled", false).remove("pending").apply()
+        CloudAlerts.forget(c)
         reload(c)
     }
 
@@ -330,6 +332,7 @@ class PushWakeWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun getForegroundInfo(): ForegroundInfo = PushWake.foregroundInfo(applicationContext)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        runCatching { CloudAlerts.sync(applicationContext) } // new endpoint → tell Yumeiro Cloud
         if (!PushWake.refill(applicationContext) && runAttemptCount < 3) Result.retry() else Result.success()
     }
 }

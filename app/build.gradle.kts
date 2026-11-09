@@ -109,6 +109,8 @@ android {
     buildConfigField("String", "LASTFM_SHARED_SECRET", "\"${optionalKey("lastfmSharedSecret", "LASTFM_SHARED_SECRET")}\"")
     buildConfigField("String", "LRCLIB_APP_ID", "\"${optionalKey("lrclibAppId", "LRCLIB_APP_ID")}\"")
     buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
+    // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.
+    buildConfigField("String", "CLOUD_HOST", "\"${(providers.gradleProperty("cloudHost").orNull ?: System.getenv("YUMEIRO_CLOUD_HOST") ?: "api.yumeiro.click").let(::buildConfigSafe)}\"")
     buildConfigField("String", "TMDB_API_KEY", "\"${optionalKey("tmdbApiKey", "TMDB_API_KEY")}\"")
   }
 

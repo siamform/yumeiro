@@ -776,3 +776,60 @@ Tokens / session keys sealed with `SecretBox` via `OnlineSettings.setSecret`, no
 Tests: `SimklTest`, `LastFmTest` (signature vectors incl. UTF-8), `ScrobbleTrackerTest`, `TrackNamesTest`, `LrcLibTest`,
 `OpenSubtitlesParamsTest`. Live-checked during development: Simkl device code + pending poll, Last.fm key, LRCLIB app
 id, OpenSubtitles key, TMDB token. Not tested on a phone or with real Simkl / Last.fm accounts.
+
+## 23. Yumeiro Cloud: airing-time push nudges (branch `feat/cloud-alerts`)
+
+Stacked on `feat/lyrics-scrobble-simkl` (PR #19). Owner asked for a server "smaller but more effective", free tier,
+30k monthly users, and later: "only what is necessary, not a large system". So the server does one thing.
+
+**What.** `server/`: one Cloudflare Worker (TypeScript, no framework) + D1 + one Queue + a 10-minute cron. Devices with
+push on register `{endpoint, anilist ids}`. The cron asks AniList which episodes aired since the last run, finds
+followers and enqueues a 1-byte push to their UnifiedPush endpoint 30 minutes later (sources lag the airing). The app
+ignores push contents anyway: a push → `BackgroundWork.wake` → feed + new-episode checks. Full design, endpoints,
+free-tier budget and owner setup steps: `docs/SERVER.md`. Privacy: `PRIVACY.md` "Push alerts".
+
+**Server safety.** Endpoint SSRF guard (`validEndpoint`: https, default port, no IP literals / localhost / .local /
+.internal, ≤ 1024 chars). Device token stored as SHA-256, compared in constant time. Follow ids validated, ≤ 300.
+404/410 from a push server deletes the device; 45 silent days prunes it. No retries on the queue (a missed nudge is
+harmless; ntfy-scheduled wake-ups still run). Deployed 2026-11-09, see §24. Checked locally with `wrangler dev`: register, follow update,
+bad endpoint, wrong token, unregister, scheduled run against live AniList.
+
+**App.** `notify/CloudAlerts.kt`: `sync()` from `DiscoveryWorker` and `PushWakeWorker` (new endpoint). No-op unless
+endpoint / follows changed or 3 days passed. Follows = the new-episode check's set (`CloudAlertsPlan.watched`), AniList
+ids resolved by title via `AnimeIds.aniListIdForTitle`, cached in prefs (0 = not found), ≤ 10 lookups per run.
+Credentials `<id>.<token>` sealed via `OnlineSettings.setSecret("cloud_device")`; `PushWake.disable` /
+`onUnregistered` call `CloudAlerts.forget`. Build field `CLOUD_HOST` (`cloudHost` / `YUMEIRO_CLOUD_HOST`, default
+`api.yumeiro.click`; blank = off). HTTPS-only for `yumeiro.click`. CodeQL pinning suppression for
+`notify/CloudAlerts.kt` (Cloudflare rotates edge certs), justified in AUDIT.md.
+
+**CI.** `.github/workflows/server.yml`: `npm test` (node:test via tsx) + `tsc`, only on `server/**`; no secrets, no deploy.
+Tests: `server/test/logic.test.ts` (6), `CloudAlertsPlanTest` (4).
+
+## 24. Scope review and deployment (branch `feat/cloud-alerts`, 2026-11-09)
+
+Owner's rules for the server: "we will build only a tiny server … only better streaming experience", 50k monthly users,
+Cloudflare free plan only (the domain is the only paid thing), "if the server is break, it should work smoothly as it
+is", and "use the server only for the most necessary functionality that a user actually need and depend".
+
+**Decision.** The server does airing alerts only. Online watch-together rooms (Durable Object relay, end-to-end
+encrypted, live-tested) and the cloud backup / device-link ideas were dropped from `main`'s path. The rooms work is kept,
+unmerged, on branch `archive/online-rooms` (commit `688226d`) in case the community asks for it and funding exists.
+Reasons with free-plan numbers: `docs/SERVER.md` "Not planned".
+
+**Hardening for 50k users.**
+- App back-off: a failed register waits 6 h → 12 h → 24 h → 48 h → 3 days (`CloudAlertsPlan.retryDelay`), 20 s call
+  timeout. Before this, a broken server meant every push device retried every 2 h (up to ~180k requests/day, over the
+  100k free limit, so one outage could keep itself going).
+- Server: free rate-limit binding `NEW_DEVICES` (5/min per IP, only for registrations that create a row) so fake
+  devices can't burn the 100k D1 writes/day. Refreshes with a valid token are not limited. Best-effort by design
+  (per Cloudflare location).
+- "When the server breaks" table in `docs/SERVER.md`.
+
+**Deployed.** Worker `yumeiro-cloud` (version `fcbe5753`), custom domain `api.yumeiro.click`, cron `*/10`, Queue
+`yumeiro-wakes` producer + consumer, D1 `yumeiro` (`beb118e1-ba0e-4b6b-84d8-d76b42037d7c`, tables `devices`,
+`follows`, `state`). The earlier test deploy with the rooms Durable Object was deleted and redeployed clean (the
+consumer had to be removed first: `wrangler queues consumer remove yumeiro-wakes yumeiro-cloud`). Live checks:
+`/v1/health` → `{ok:true,v:1}`, `/v1/rooms` → 404, register → 200, burst → 429; test rows deleted (devices = 0).
+The D1 id is not a secret. The API token is kept outside the repo; the owner should rotate it because it was pasted in
+chat. Tests: server suite + `tsc`, app 389 unit tests pass.
+

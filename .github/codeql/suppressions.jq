@@ -12,7 +12,9 @@
 #     call third-party subtitle APIs behind CDNs that rotate certificates, HTTPS-only in
 #     network_security_config.xml, and the user's key never follows a redirect off the site
 #     (SubtitleNet.keyScoped); tracking/Simkl.kt, scrobble/LastFm.kt and lyrics/LrcLib.kt call
-#     third-party APIs (Simkl, Last.fm, LRCLIB) that rotate certificates, HTTPS-only as above.
+#     third-party APIs (Simkl, Last.fm, LRCLIB) that rotate certificates, HTTPS-only as above;
+#     notify/CloudAlerts.kt calls our own Worker on Cloudflare, whose edge certificates Cloudflare
+#     issues and rotates automatically (only an endpoint + AniList ids are sent), HTTPS-only.
 #     A stale pin would silently break them, so system CAs only.
 #  3. JavaScript in the Google sign-in WebView (ui/screens/settings/YouTubeAccountScreen.kt): Google's own
 #     sign-in page does not work without it. Only accounts.google.com / youtube.com are loaded, file and
@@ -26,7 +28,7 @@ def suppressed:
   | ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
       and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$)")))
     or (($r == "java/android/missing-certificate-pinning")
-      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/PushWake|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource))\\.kt$")))
+      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource))\\.kt$")))
     or (($r == "java/android/websettings-javascript-enabled")
       and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt")
         or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")));

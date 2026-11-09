@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: 7 November 2026
+Last updated: 9 November 2026
 
 Yumeiro is a free, open-source media player for Android, published at
 [github.com/siamform/yumeiro](https://github.com/siamform/yumeiro). This policy explains what the app does with
@@ -8,8 +8,8 @@ your data. Short version: **we collect nothing.**
 
 ## What we collect
 
-Nothing. Yumeiro has no accounts, no analytics, no advertising, no crash reporting and no servers of our own.
-We cannot see what you play, search or install.
+Nothing personal. Yumeiro has no accounts, no analytics, no advertising and no crash reporting. We cannot see what
+you play, search or install. The one server of our own is optional push alerts, described below.
 
 ## What stays on your device
 
@@ -34,6 +34,15 @@ its own privacy policy.
 | Third-party extensions | Only extensions you install | Whatever that extension requests; extensions are written by third parties |
 
 Yumeiro does not sell, share or transfer any data, because it has none to share.
+
+## Push alerts (Yumeiro Cloud)
+
+Only if you turn on push notifications, the app registers with our small server at `api.yumeiro.click` (Cloudflare
+Workers, source in `server/` of the repository). It stores your push app's delivery address and the AniList ids of
+the shows you follow with notifications on, nothing else: no titles, no history, no account, no IP address. When one
+of those shows airs, the server sends an empty "check now" message and the app looks for new episodes itself.
+Turning push off stops it; the record is deleted automatically when the address stops working, or after 45 days
+without contact.
 
 ## AniList and MyAnimeList
 
