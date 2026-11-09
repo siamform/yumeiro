@@ -776,3 +776,33 @@ Tokens / session keys sealed with `SecretBox` via `OnlineSettings.setSecret`, no
 Tests: `SimklTest`, `LastFmTest` (signature vectors incl. UTF-8), `ScrobbleTrackerTest`, `TrackNamesTest`, `LrcLibTest`,
 `OpenSubtitlesParamsTest`. Live-checked during development: Simkl device code + pending poll, Last.fm key, LRCLIB app
 id, OpenSubtitles key, TMDB token. Not tested on a phone or with real Simkl / Last.fm accounts.
+
+## 23. Yumeiro Cloud: airing-time push nudges (branch `feat/cloud-alerts`)
+
+Stacked on `feat/lyrics-scrobble-simkl` (PR #19). Owner asked for a server "smaller but more effective", free tier,
+30k monthly users, and later: "only what is necessary, not a large system". So the server does one thing.
+
+**What.** `server/`: one Cloudflare Worker (TypeScript, no framework) + D1 + one Queue + a 10-minute cron. Devices with
+push on register `{endpoint, anilist ids}`. The cron asks AniList which episodes aired since the last run, finds
+followers and enqueues a 1-byte push to their UnifiedPush endpoint 30 minutes later (sources lag the airing). The app
+ignores push contents anyway: a push → `BackgroundWork.wake` → feed + new-episode checks. Full design, endpoints,
+free-tier budget and owner setup steps: `docs/SERVER.md`. Privacy: `PRIVACY.md` "Push alerts".
+
+**Server safety.** Endpoint SSRF guard (`validEndpoint`: https, default port, no IP literals / localhost / .local /
+.internal, ≤ 1024 chars). Device token stored as SHA-256, compared in constant time. Follow ids validated, ≤ 300.
+404/410 from a push server deletes the device; 45 silent days prunes it. No retries on the queue (a missed nudge is
+harmless; ntfy-scheduled wake-ups still run). Not deployed yet: `database_id` placeholder and the route are commented
+until the owner moves the domain to Cloudflare. Checked locally with `wrangler dev`: register, follow update,
+bad endpoint, wrong token, unregister, scheduled run against live AniList.
+
+**App.** `notify/CloudAlerts.kt`: `sync()` from `DiscoveryWorker` and `PushWakeWorker` (new endpoint). No-op unless
+endpoint / follows changed or 3 days passed. Follows = the new-episode check's set (`CloudAlertsPlan.watched`), AniList
+ids resolved by title via `AnimeIds.aniListIdForTitle`, cached in prefs (0 = not found), ≤ 10 lookups per run.
+Credentials `<id>.<token>` sealed via `OnlineSettings.setSecret("cloud_device")`; `PushWake.disable` /
+`onUnregistered` call `CloudAlerts.forget`. Build field `CLOUD_HOST` (`cloudHost` / `YUMEIRO_CLOUD_HOST`, default
+`api.yumeiro.click`; blank = off). HTTPS-only for `yumeiro.click`. CodeQL pinning suppression for
+`notify/CloudAlerts.kt` (Cloudflare rotates edge certs), justified in AUDIT.md.
+
+**CI.** `.github/workflows/server.yml`: `npm test` (node:test via tsx) + `tsc`, only on `server/**`; no secrets, no deploy.
+Tests: `server/test/logic.test.ts` (6), `CloudAlertsPlanTest` (4).
+

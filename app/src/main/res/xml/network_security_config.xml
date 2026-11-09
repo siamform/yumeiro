@@ -21,5 +21,6 @@
         <domain includeSubdomains="true">audioscrobbler.com</domain>
         <domain includeSubdomains="true">last.fm</domain>
         <domain includeSubdomains="true">lrclib.net</domain>
+        <domain includeSubdomains="true">yumeiro.click</domain>
     </domain-config>
 </network-security-config>

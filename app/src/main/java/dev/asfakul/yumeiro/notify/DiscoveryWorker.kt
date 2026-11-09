@@ -196,6 +196,7 @@ class DiscoveryWorker(context: Context, params: WorkerParameters) : CoroutineWor
         if (feed.exceptionOrNull() is java.io.IOException && runAttemptCount < 3) return@withContext Result.retry()
         BackgroundHealth.markRan(ctx)
         runCatching { PushWake.refillIfDue(ctx) }
+        runCatching { CloudAlerts.sync(ctx) } // no-op unless follows changed or 3 days passed
 
         if (NotifySettings.get(ctx, NotifySettings.Key.NUDGES)) {
             val st = ctx.getSharedPreferences(STATE, Context.MODE_PRIVATE)
