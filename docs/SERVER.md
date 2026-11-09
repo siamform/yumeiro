@@ -110,6 +110,8 @@ No secrets are needed in the repo. CI (`.github/workflows/server.yml`) only runs
 
 ## Local development
 
+Needs Node.js 22.12 or newer (Wrangler's minimum).
+
 ```bash
 cd server && npm ci
 npx wrangler d1 execute yumeiro --local --file=schema.sql
