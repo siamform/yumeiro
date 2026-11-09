@@ -253,7 +253,7 @@ object OnlineRepository {
             launch {
                 val update = parallel.withPermit {
                     runCatching {
-                        withTimeout(SEARCH_TIMEOUT) { searchOne(api, q) }
+                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { withTimeout(SEARCH_TIMEOUT) { searchOne(api, q) } }
                     }.fold(
                         { SearchUpdate(api.name, it) },
                         { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
@@ -288,7 +288,7 @@ object OnlineRepository {
     suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail = withContext(Dispatchers.IO) {
         val key = "${api.name}|$url"
         detailCache[key]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
-        val resp = withTimeout(LOAD_TIMEOUT) { api.load(url) } ?: throw IllegalStateException("This title isn't available anymore")
+        val resp = withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { withTimeout(LOAD_TIMEOUT) { api.load(url) } } ?: throw IllegalStateException("This title isn't available anymore")
         val detail = map(api, resp)
         detailCache[key] = Timed(System.currentTimeMillis(), detail)
         detail
@@ -342,13 +342,14 @@ object OnlineRepository {
 
     /** Resolves playable links (and subtitles) for [data]; streams them as they are found. */
     fun links(api: MainAPI, data: String): Flow<LinkEvent> = callbackFlow {
-        val job = launch(Dispatchers.IO) {
+        val base = runCatching { api.mainUrl }.getOrNull().orEmpty()
+        val job = launch(Dispatchers.IO + ProviderBase(base)) {
             val result = runCatching {
                 withTimeout(LINKS_TIMEOUT) {
                     api.loadLinks(
                         data, false,
-                        { sub -> sub.url.takeIf { it.startsWith("http") }?.let { trySend(LinkEvent.Subtitle(OnlineSubtitle(sub.lang.ifBlank { "Unknown" }, it, sub.headers.orEmpty()))) } },
-                        { link -> trySend(mapLink(link)) },
+                        { sub -> UrlFix.normalize(sub.url, base).takeIf { UrlFix.isHttp(it) }?.let { trySend(LinkEvent.Subtitle(OnlineSubtitle(sub.lang.ifBlank { "Unknown" }, it, sub.headers.orEmpty()))) } },
+                        { link -> trySend(mapLink(link, base)) },
                     )
                 }
             }
@@ -363,20 +364,26 @@ object OnlineRepository {
         awaitClose { job.cancel() }
     }
 
-    internal fun mapLink(link: ExtractorLink): LinkEvent = when {
+    internal fun mapLink(link: ExtractorLink, base: String? = null): LinkEvent {
+        val url = if (link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET) link.url
+            else UrlFix.normalize(link.url, link.referer.takeIf { UrlFix.isHttp(it) } ?: base)
+        return mapLinkFixed(link, url)
+    }
+
+    private fun mapLinkFixed(link: ExtractorLink, url: String): LinkEvent = when {
         // Protected streams aren't played: this app doesn't bypass DRM.
         link is DrmExtractorLink -> LinkEvent.Skipped("DRM-protected source skipped")
         link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped("Torrent source skipped")
-        !link.url.startsWith("http") -> LinkEvent.Skipped("Unsupported link")
+        !UrlFix.isHttp(url) -> LinkEvent.Skipped("Unsupported link")
         else -> LinkEvent.Link(
             OnlineLink(
-                name = link.name.ifBlank { link.source }, source = link.source, url = link.url,
+                name = link.name.ifBlank { link.source }, source = link.source, url = url,
                 referer = link.referer.takeIf { it.isNotBlank() }, quality = link.quality,
                 isHls = link.type == ExtractorLinkType.M3U8, isDash = link.type == ExtractorLinkType.DASH,
                 headers = link.headers,
                 raw = link,
                 audioTracks = runCatching { link.audioTracks }.getOrNull().orEmpty()
-                    .filter { it.url.startsWith("http") }.map { it.url to it.headers.orEmpty() },
+                    .map { UrlFix.normalize(it.url, url) to it.headers.orEmpty() }.filter { UrlFix.isHttp(it.first) },
             )
         )
     }

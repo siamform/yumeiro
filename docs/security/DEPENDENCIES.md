@@ -16,5 +16,6 @@ The fixes are `constraints {}` in `app/build.gradle.kts`, so they don't change a
 - `io.coil-kt:coil` 2.7.0: Coil 3.x (`io.coil-kt.coil3`) supersedes it. The 2.x line only gets critical fixes. Migrating means API changes, so it is out of scope for a security PR.
 - `com.github.Blatzar:NiceHttp` 0.4.18: low release cadence, single maintainer, and the CloudStream extension ABI depends on it. Keep it aligned with upstream CloudStream.
 - `com.github.recloudstream.cloudstream:library` 4.8.0: tracks upstream. Re-scan whenever it is bumped, because it brings in jsoup, jackson and rhino transitively.
+- `io.github.anilbeesetti:nextlib-media3ext` 1.11.1-0.18.0 (GPL-3.0, bundles FFmpeg native code): used only for audio decoding. Keep its version aligned with media3 (the version prefix must match). FFmpeg CVEs mostly hit demuxers/video decoders, which Yumeiro doesn't use from it; still bump it when FFmpeg ships security releases. See `docs/licenses/NextLib-FFmpeg.md`.
 
 Dependabot (`.github/dependabot.yml`) and the CI `dependency-review` job keep this current. Re-run the scan before each release.

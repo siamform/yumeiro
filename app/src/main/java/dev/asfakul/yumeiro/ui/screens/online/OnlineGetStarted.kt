@@ -114,7 +114,7 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
         installing = true
         scope.launch {
             var ok = 0; val failed = mutableListOf<String>()
-            for (r in list) runCatching { ExtensionManager.install(context, r) }.onSuccess { ok++ }.onFailure { failed += "${r.name}: ${OnlineErrors.friendly(it)}" }
+            for (r in list) runCatching { ExtensionManager.install(context, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY) }.onSuccess { ok++ }.onFailure { failed += "${r.name}: ${OnlineErrors.friendly(it)}" }
             OnlineRepository.clearCaches()
             installing = false
             if (failed.isEmpty()) AppMessages.success(context, "Installed $ok extension${if (ok == 1) "" else "s"}")

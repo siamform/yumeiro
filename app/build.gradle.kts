@@ -140,6 +140,15 @@ android {
 
   packaging {
     resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    jniLibs {
+      // FFmpeg (NextLib) is ~10 MB per ABI. Phones are ARM; x86/x86_64 (emulators, a few
+      // Chromebooks) fall back to the platform decoders (FfmpegLibrary.isAvailable() is false there).
+      for (abi in listOf("x86", "x86_64")) {
+        for (lib in listOf("ass", "avcodec", "avutil", "media3ext", "swresample", "swscale")) excludes += "lib/$abi/lib$lib.so"
+      }
+      // Compressed in the APK (~9 MB instead of ~21 MB for the two ARM ABIs).
+      useLegacyPackaging = true
+    }
   }
 
   dependenciesInfo {
@@ -196,6 +205,8 @@ dependencies {
   implementation(libs.media3.exoplayer.rtsp)
   // OkHttp data source: one HTTP stack for probing, playlists and playback, with DNS fallback / DoH.
   implementation(libs.media3.datasource.okhttp)
+  // FFmpeg audio fallback: AC-3 / E-AC-3 / DTS / TrueHD / Opus / Vorbis tracks the phone can't decode played silent.
+  implementation(libs.nextlib.media3ext)
   implementation(libs.okhttp)
   implementation(libs.okhttp.dnsoverhttps)
 

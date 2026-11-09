@@ -49,8 +49,11 @@ object OnlineRuntime {
             // the same DNS fallback / DNS-over-HTTPS, timeouts and cookie handling as the rest of the
             // app, plus automatic handling of "checking your browser" pages (BrowserCheck).
             runCatching {
-                com.lagradost.cloudstream3.app.baseClient = extensionClient(app)
-            }
+                val client = extensionClient(app)
+                val current = com.lagradost.cloudstream3.app
+                com.lagradost.cloudstream3.app = if (current is SafeRequests) current.also { it.baseClient = client }
+                    else SafeRequests(current, client)
+            }.onFailure { runCatching { com.lagradost.cloudstream3.app.baseClient = extensionClient(app) } }
             initialized = true
         }
     }
@@ -58,6 +61,22 @@ object OnlineRuntime {
 
 /** Human-readable messages for network / extension failures. */
 object OnlineErrors {
+    /** OkHttp's message for a link without http(s) — a site/extension data problem, not an outdated extension. */
+    fun isBadLink(e: Throwable): Boolean {
+        val m = e.message.orEmpty()
+        return e is IllegalArgumentException && (m.contains("Expected URL scheme") || m.contains("unexpected url") ||
+            m.contains("Invalid URL host") || m.contains("no scheme was found"))
+    }
+
+    /** True when updating the extension is a sensible suggestion for this error. */
+    fun extensionMayBeOutdated(e: Throwable): Boolean {
+        val root = generateSequence(e) { it.cause }.last()
+        return !isBadLink(root) && !isBadLink(e) && (root is NoSuchMethodError || root is NoClassDefFoundError ||
+            root is ClassCastException || root is AbstractMethodError || root is NullPointerException ||
+            root is IndexOutOfBoundsException || root is NoSuchElementException ||
+            root.javaClass.name.contains("Json", true) || root.javaClass.name.contains("Selector", true))
+    }
+
     fun friendly(e: Throwable, fallback: String = "Something went wrong"): String {
         val root = generateSequence(e) { it.cause }.last()
         val m = (e.message ?: root.message).orEmpty()
@@ -77,6 +96,7 @@ object OnlineErrors {
             m.startsWith("HTTP") -> "Server error ($m)"
             root is org.json.JSONException -> "The server sent unreadable data"
             root is NotImplementedError -> "This extension doesn't support that"
+            isBadLink(root) || isBadLink(e) -> "The site sent a broken link for this source — try another source"
             m.isNotBlank() -> m.take(160)
             else -> fallback
         }

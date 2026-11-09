@@ -54,6 +54,15 @@ object ErrorHelp {
         fun has(vararg k: String) = k.any { it in t }
         val out = mutableListOf<String>()
         when {
+            has("broken link", "expected url scheme", "no scheme was found", "unexpected url") -> {
+                out += "The site sent a broken link for this source — pick another source from the list"
+                out += "Retry in a moment — sites often fix their links quickly"
+            }
+            has("firewall", "captcha", "browser check", "checking your browser", "verify you are human", "sign in", "log in", "login") -> {
+                out += "Tap Open site to pass the check (or sign in), then tap Done — the source retries by itself"
+                out += "Turn off a VPN / custom DNS — firewalls often block shared IPs"
+                out += "Try another source while the site cools down"
+            }
             has("451", "geo", "region", "country", "not available in your") -> {
                 out += "This content is limited to some countries — pick another source or server"
                 out += "Yumeiro doesn't bypass region locks"
@@ -109,6 +118,21 @@ object ErrorHelp {
             out += "Check your connection and turn off VPN / data saver"
         }
         return out
+    }
+
+    /**
+     * Tips for an extension/source error. Unlike [suggestionsFor] with an "extension" keyword, this
+     * only suggests updating the extension when the error looks like an outdated extension (broken
+     * parsing / missing API) — network, firewall and broken-link errors aren't fixed by an update.
+     */
+    fun forExtension(text: String): List<String> {
+        val t = text.lowercase()
+        val outdated = listOf("outdated", "parse", "selector", "nosuchmethod", "noclassdef", "abstractmethod",
+            "null", "index", "doesn't support", "unreadable").any { it in t }
+        val specific = suggestionsFor(text).takeUnless { it.firstOrNull()?.startsWith("Retry — many") == true }
+        val out = (specific ?: listOf("Retry — many problems are temporary", "Try another source or server")).toMutableList()
+        if (outdated) out += "Check for an update in Hues → Installed (tap Check for update)"
+        return out.distinct().take(4)
     }
 }
 

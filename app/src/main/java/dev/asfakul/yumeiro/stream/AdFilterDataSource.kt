@@ -20,9 +20,16 @@ import java.io.ByteArrayOutputStream
  * HLS parser sees them. Everything else (segments, files, keys) streams through untouched.
  */
 @OptIn(UnstableApi::class)
-class AdFilterDataSource(private val upstream: DataSource) : DataSource {
+class AdFilterDataSource(private val upstream: DataSource, private val owner: Factory? = null) : DataSource {
     class Factory(private val upstream: DataSource.Factory) : DataSource.Factory {
-        override fun createDataSource(): DataSource = AdFilterDataSource(upstream.createDataSource())
+        /**
+         * Off while playing a stream whose audio is a separate playlist (HLS audio renditions or an
+         * extension's extra audio tracks). Each playlist is filtered on its own, so cutting "ads"
+         * from the video but not identically from the audio shifted them apart: video without
+         * sound, and a black, frozen picture after switching the audio language.
+         */
+        @Volatile var disabled = false
+        override fun createDataSource(): DataSource = AdFilterDataSource(upstream.createDataSource(), this)
     }
 
     private var buffer: ByteArray? = null
@@ -40,6 +47,8 @@ class AdFilterDataSource(private val upstream: DataSource) : DataSource {
         bufferedHeaders = upstream.responseHeaders
         upstream.close()
         val text = bytes.toString(Charsets.UTF_8)
+        if (hasSeparateAudio(text)) owner?.disabled = true
+        if (owner?.disabled == true) { buffer = bytes; readPos = 0; return bytes.size.toLong() }
         val cleaned = HlsAdFilter.clean(text, (bufferedUri ?: dataSpec.uri).toString())
         if (cleaned.removedSegments > 0) Log.i(TAG, "Removed ${cleaned.removedSegments} ad segment(s), ${cleaned.removedSeconds.toInt()}s")
         buffer = if (cleaned.removedSegments > 0) cleaned.text.toByteArray(Charsets.UTF_8) else bytes
@@ -82,6 +91,11 @@ class AdFilterDataSource(private val upstream: DataSource) : DataSource {
     companion object {
         private const val TAG = "AdFilter"
         private const val MAX_BYTES = 4L * 1024 * 1024
+
+        private val SEPARATE_AUDIO = Regex("#EXT-X-MEDIA:[^\\n]*TYPE=AUDIO[^\\n]*URI=\"", RegexOption.IGNORE_CASE)
+
+        /** A master playlist whose audio comes from its own playlists. Pure → unit tested. */
+        fun hasSeparateAudio(text: String): Boolean = "#EXT-X-STREAM-INF" in text && SEPARATE_AUDIO.containsMatchIn(text)
 
         fun looksLikePlaylist(uri: Uri, headers: Map<String, List<String>>): Boolean {
             val path = uri.path.orEmpty().lowercase()

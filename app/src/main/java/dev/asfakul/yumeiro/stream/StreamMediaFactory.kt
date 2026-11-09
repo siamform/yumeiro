@@ -46,6 +46,7 @@ import org.json.JSONObject
 object StreamMediaFactory {
     /** Media source factory of each player, so separate audio tracks can be merged with the video. */
     private val factories: MutableMap<ExoPlayer, MediaSource.Factory> = Collections.synchronizedMap(WeakHashMap())
+    private val adFilters: MutableMap<ExoPlayer, AdFilterDataSource.Factory> = Collections.synchronizedMap(WeakHashMap())
 
     /** True for links that are fetched over the network (as opposed to local files / content URIs). */
     fun isNetworkUri(uri: String): Boolean = uri.trim().lowercase().let {
@@ -62,9 +63,11 @@ object StreamMediaFactory {
         // player was created still gets its Referer / Cookie / token headers.
         val http = RequestAwareHttpFactory(appContext, defaultUa) { StreamRepository.requestFor(uri) }
         // HLS playlists pass through the ad-break filter (the mid-stream "black screen" ads).
-        val dataSourceFactory: DataSource.Factory = AdFilterDataSource.Factory(DefaultDataSource.Factory(appContext, http))
+        val adFilter = AdFilterDataSource.Factory(DefaultDataSource.Factory(appContext, http))
+        val dataSourceFactory: DataSource.Factory = SafeSubtitleDataSource.Factory(adFilter)
         val defaultDrm = DefaultDrmSessionManagerProvider().apply { setDrmHttpDataSourceFactory(http) }
         val msf = DefaultMediaSourceFactory(dataSourceFactory)
+            .setSubtitleParserFactory(SniffingSubtitleParserFactory())
             .setLoadErrorHandlingPolicy(dev.asfakul.yumeiro.player.StreamLoadErrorPolicy())
             .setLiveMinSpeed(0.97f)
             .setLiveMaxSpeed(1.03f)
@@ -86,7 +89,7 @@ object StreamMediaFactory {
                     .setExceedRendererCapabilitiesIfNecessary(true)
             )
         }
-        val builder = ExoPlayer.Builder(appContext)
+        val builder = ExoPlayer.Builder(appContext, YumeiroRenderersFactory(appContext))
             .setMediaSourceFactory(msf as MediaSource.Factory)
             .setTrackSelector(trackSelector)
             .setBandwidthMeter(DefaultBandwidthMeter.getSingletonInstance(appContext))
@@ -120,7 +123,7 @@ object StreamMediaFactory {
                     .build()
             )
         }
-        return builder.build().also { factories[it] = msf }
+        return builder.build().also { factories[it] = msf; adFilters[it] = adFilter }
     }
 
     /**
@@ -136,6 +139,8 @@ object StreamMediaFactory {
     ) {
         val item = buildMediaItem(uri, subtitles, title)
         val audio = StreamRepository.requestFor(uri)?.audioTracks.orEmpty()
+        // Separate audio files must stay in step with the video: no per-playlist ad cutting.
+        adFilters[player]?.disabled = audio.isNotEmpty()
         val factory = factories[player]
         if (audio.isEmpty() || factory == null) {
             if (startPositionMs == C.TIME_UNSET) player.setMediaItem(item) else player.setMediaItem(item, startPositionMs)
@@ -159,6 +164,7 @@ object StreamMediaFactory {
     ): MediaItem {
         val request = StreamRepository.requestFor(uri)
         // A link resolved from a page / redirect plays from its resolved URL but stays keyed by the original.
+        subtitles.forEach { SafeSubtitleDataSource.register(it.uri) }
         val builder = MediaItem.Builder().setUri(Uri.parse(request?.url ?: uri)).setSubtitleConfigurations(subtitles)
         if (isNetworkUri(request?.url ?: uri)) {
             // Applies only when the stream turns out to be live: keep close to the edge, adjust gently.

@@ -61,6 +61,18 @@ spec so any distributor app can deliver). Broadcasts without the registration's 
 library; message content is ignored by Yumeiro, and a wake-up only starts the throttled background checks. The push
 endpoint is stored with `SecretBox` and never backed up.
 
+## Extension safety check and site sign-in (2026-11-09)
+
+Every extension install/update is read before it is loaded (`online/ExtensionScanner`): the `.cs3` zip entries and
+its DEX string/type/method tables. Shell commands, hidden/dynamic code loading, native code, SMS, contacts, location,
+camera/mic, package install, accessibility/device admin, account reads, miners and shared-storage deletes are DANGER;
+trackers, device IDs, clipboard, installed-app lists, JS bridges and Yumeiro-internal references are CAUTION. The
+user sees the report before installing; DANGER needs a double confirm and is refused in automatic paths. It is a
+heuristic (reflection or downloaded code can hide behaviour) and complements, not replaces, trusted repos.
+
+Site sign-in (`BrowserCheck.openSite`, `SiteLogins`) keeps cookies in the app's WebView cookie store and sends them
+only to the same host (and its subdomains). Signing out clears that host's cookies. No passwords are stored.
+
 ## Historical secret findings
 
 | Finding | Status |

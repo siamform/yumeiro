@@ -141,3 +141,8 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 -keep class dev.asfakul.yumeiro.widget.ContinueWidget { <init>(); }
+
+# NextLib FFmpeg decoders: JNI looks these up by name.
+-keep class io.github.anilbeesetti.nextlib.media3ext.ffdecoder.** { *; }
+-keep class androidx.media3.decoder.SimpleDecoderOutputBuffer { *; }
+-keep class androidx.media3.decoder.DecoderInputBuffer { *; }

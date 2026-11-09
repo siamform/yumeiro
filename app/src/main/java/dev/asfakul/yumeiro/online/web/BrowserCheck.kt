@@ -19,6 +19,7 @@ import com.lagradost.cloudstream3.network.WebViewResolver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,7 +52,15 @@ object BrowserCheck {
     data class Clearance(val cookies: Map<String, String>, val userAgent: String, val at: Long = System.currentTimeMillis())
 
     /** A check that needs the user, shown by the app UI ([BrowserCheckHost]). */
-    data class Pending(val url: String, val host: String, internal val done: CompletableDeferred<Boolean>)
+    data class Pending(
+        val url: String, val host: String, internal val done: CompletableDeferred<Boolean>,
+        /** Opened by the user (captcha / sign in): never auto-closes, finished with Done. */
+        val manual: Boolean = false,
+        val purpose: Purpose = Purpose.CHECK,
+    )
+
+    /** Why a site page is shown. */
+    enum class Purpose { CHECK, LOGIN }
 
     private val _pending = MutableStateFlow<Pending?>(null)
     val pending: StateFlow<Pending?> = _pending.asStateFlow()
@@ -299,20 +308,25 @@ object BrowserCheck {
     private val blockedNoticeAt = ConcurrentHashMap<String, Long>()
 
     /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
-    private fun noteBlocked(host: String) {
+    private fun noteBlocked(host: String, url: String = "https://$host/") {
         val now = System.currentTimeMillis()
         val last = blockedNoticeAt[host] ?: 0L
         if (now - last < 5 * 60_000) return
         blockedNoticeAt[host] = now
         val ctx = appContext ?: return
+        val root = challengePage(url, method = "POST")
         main.post {
             runCatching {
                 dev.asfakul.yumeiro.ui.components.AppMessages.error(
-                    ctx, "$host refused this request (site firewall, not a captcha). Try again later, turn off VPN / custom DNS, or update the extension.",
-                )
+                    ctx, blockedMessage(host), "Open site",
+                ) { openSite(root, Purpose.CHECK) }
             }
         }
     }
+
+    /** The firewall notice. Pure → unit-testable. */
+    fun blockedMessage(host: String) =
+        "$host's firewall refused this source. Tap Open site to pass its captcha or sign in — or turn off VPN / custom DNS and try again."
 
     /** Called by the UI when the check page itself turned out to be a firewall block. */
     fun onBlocked(host: String) {
@@ -324,10 +338,48 @@ object BrowserCheck {
     /** Called by the UI when the user closes the check page. */
     fun cancel() { _pending.value?.done?.complete(false); _pending.value = null }
 
+    /** Called by the UI when the user taps Done on a page they opened themselves. */
+    fun finish() { _pending.value?.done?.complete(true) }
+
     /** Called by the UI after each page load of the check page. */
     fun onPageLoaded(url: String) {
         val p = _pending.value ?: return
+        if (p.manual) return
         if (hasClearance(webCookies(p.url)) || hasClearance(webCookies(url))) p.done.complete(true)
+    }
+
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main)
+
+    /**
+     * Opens [url] for the user (solve a captcha the site insists on, or sign in to an account the
+     * extension needs). On Done, the site's cookies and the browser's user agent are sent with that
+     * site's requests from then on — so a firewall that let the browser through lets the source
+     * through too, and logged-in pages work in the extension.
+     */
+    fun openSite(url: String, purpose: Purpose = Purpose.CHECK, onDone: ((Boolean) -> Unit)? = null) {
+        val host = runCatching { java.net.URI(url).host }.getOrNull() ?: return
+        _pending.value?.done?.complete(false)
+        val done = CompletableDeferred<Boolean>()
+        _pending.value = Pending(url, host, done, manual = true, purpose = purpose)
+        scope.launch {
+            val ok = try { done.await() } finally { if (_pending.value?.done === done) _pending.value = null }
+            if (ok) {
+                runCatching { CookieManager.getInstance().flush() }
+                declined.remove(host); blockedNoticeAt.remove(host)
+                val c = webCookies(url)
+                if (c.isNotEmpty()) cleared[host] = Clearance(c, userAgent())
+                SiteLogins.add(appContext, host)
+            }
+            onDone?.invoke(ok)
+        }
+    }
+
+    /** Merges the browser cookies of a site the user opened/signed in to into [request]. */
+    internal fun withSiteCookies(request: Request): Request {
+        val host = request.url.host
+        if (!SiteLogins.has(appContext, host)) return request
+        val web = webCookies(request.url.toString()).takeIf { it.isNotEmpty() } ?: return request
+        return withClearance(request, Clearance(web, userAgent()))
     }
 
     /** [request] with the clearance cookies and matching user agent for its host. */
@@ -361,12 +413,13 @@ object BrowserCheck {
             }
             val host = request.url.host
             clearanceFor(host)?.let { request = withClearance(request, it) }
+            request = withSiteCookies(request)
             val response = chain.proceed(request)
             when (verdict(response)) {
                 Verdict.NONE -> return response
                 Verdict.BLOCKED -> {
                     Log.w(TAG, "$host refused the request with a firewall block (not a captcha) — not opening the check page")
-                    noteBlocked(host)
+                    noteBlocked(host, request.url.toString())
                     return response
                 }
                 Verdict.CHALLENGE -> Unit

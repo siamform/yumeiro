@@ -10,6 +10,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +38,9 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -113,10 +117,22 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
 
     fun afterChange() { OnlineRepository.clearCaches() }
 
-    fun update(ext: InstalledExtension, remote: RemoteExtension): kotlinx.coroutines.Job = scope.launch {
-        runCatching { ExtensionManager.install(context, remote) }
+    fun update(ext: InstalledExtension, remote: RemoteExtension, mode: dev.asfakul.yumeiro.online.ExtensionReview.Mode = dev.asfakul.yumeiro.online.ExtensionReview.Mode.ALWAYS): kotlinx.coroutines.Job = scope.launch {
+        runCatching { if (ext.manual) ExtensionManager.applyUpdate(context, ext, remote) else ExtensionManager.install(context, remote, mode) }
             .onSuccess { AppMessages.success(context, "${it.name} updated to v${it.version}"); afterChange() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { update(ext, remote) } }
+            .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { update(ext, remote) } }
+    }
+    var checkingKey by remember { mutableStateOf<String?>(null) }
+    /** Fresh check against the extension's own repository (or its download link). */
+    fun checkOne(ext: InstalledExtension) = scope.launch {
+        checkingKey = ext.key
+        val result = ExtensionManager.checkUpdate(context, ext)
+        checkingKey = null
+        when (result) {
+            is ExtensionManager.UpdateCheck.UpToDate -> AppMessages.success(context, "${ext.name} is up to date (v${ext.version})")
+            is ExtensionManager.UpdateCheck.Available -> update(ext, result.remote)
+            is ExtensionManager.UpdateCheck.Unavailable -> AppMessages.error(context, "${ext.name}: ${result.reason}")
+        }
     }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -127,7 +143,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             }.getOrNull()
             runCatching { ExtensionManager.installFromFile(context, uri, name) }
                 .onSuccess { AppMessages.success(context, "${it.name} added"); afterChange() }
-                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) AppMessages.error(context, OnlineErrors.friendly(it)) }
             working = false
         }
     }
@@ -165,7 +181,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                             Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            Button(onClick = { updates.forEach { (e, r) -> update(e, r) } }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
+                            Button(onClick = { updates.forEach { (e, r) -> update(e, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY) } }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
                                 Text("Update all")
                             }
                         }
@@ -192,7 +208,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     val info = engine.info(ext.key)
                     val upd = updates.firstOrNull { it.first.key == ext.key }?.second
                     InstalledCard(
-                        ext = ext, info = info, busy = ext.key in engine.busy, update = upd,
+                        ext = ext, info = info, busy = ext.key in engine.busy || checkingKey == ext.key, update = upd,
+                        onCheckUpdate = { checkOne(ext) },
                         onToggle = { on -> scope.launch { ExtensionManager.setEnabled(context, ext.key, on); afterChange()
                             ExtensionManager.state.value.info(ext.key).error?.let { AppMessages.error(context, "${ext.name}: $it") } } },
                         onAuto = { on -> scope.launch { ExtensionManager.setAutoUpdate(context, ext.key, on) } },
@@ -251,7 +268,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         scope.launch {
             runCatching { ExtensionManager.installFromUrl(context, text) }
                 .onSuccess { AppMessages.success(context, "${it.name} installed"); done(null); showLinkDialog = false; afterChange() }
-                .onFailure { done(OnlineErrors.friendly(it)) }
+                .onFailure { if (it is dev.asfakul.yumeiro.online.ExtensionReview.Declined) { done(null); showLinkDialog = false } else done(OnlineErrors.friendly(it)) }
         }
     }
     confirmDelete?.let { ext ->
@@ -286,12 +303,41 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
 private fun InstalledCard(
     ext: InstalledExtension, info: ExtensionManager.LoadInfo, busy: Boolean, update: RemoteExtension?,
     onToggle: (Boolean) -> Unit, onAuto: (Boolean) -> Unit, onUpdate: () -> Unit, onDelete: () -> Unit,
+    onCheckUpdate: () -> Unit = {},
 ) {
     var menu by remember { mutableStateOf(false) }
+    var showReport by remember { mutableStateOf(false) }
+    var report by remember(ext.fileName) { mutableStateOf<dev.asfakul.yumeiro.online.ExtensionScanner.Report?>(null) }
+
     var editUrl by remember { mutableStateOf<com.lagradost.cloudstream3.MainAPI?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val plugin = remember(info.loaded, ext.key) { ExtensionManager.pluginOf(ext.key) as? com.lagradost.cloudstream3.plugins.Plugin }
     val apis = remember(info.loaded, info.providers) { ExtensionManager.providers().filter { it.name in info.providers } }
+    LaunchedEffect(ext.fileName) { report = ExtensionManager.reportFor(context, ext) }
+    var signedIn by remember(ext.key) { mutableStateOf(apis.any { a -> siteHost(a.mainUrl)?.let { dev.asfakul.yumeiro.online.web.SiteLogins.has(context, it) } == true }) }
+    fun signIn(api: com.lagradost.cloudstream3.MainAPI) {
+        dev.asfakul.yumeiro.online.web.BrowserCheck.openSite(api.mainUrl.trimEnd('/') + "/", dev.asfakul.yumeiro.online.web.BrowserCheck.Purpose.LOGIN) { ok ->
+            if (ok) { signedIn = true; OnlineRepository.clearCaches(); AppMessages.success(context, "${api.name} will use your sign-in") }
+        }
+    }
+    fun signOut() {
+        apis.forEach { a -> siteHost(a.mainUrl)?.let { dev.asfakul.yumeiro.online.web.SiteLogins.remove(context, it) } }
+        signedIn = false; OnlineRepository.clearCaches(); AppMessages.show(context, "Signed out of ${ext.name}'s site")
+    }
+    report?.takeIf { showReport }?.let { rep ->
+        TsukiDialog(
+            onDismissRequest = { showReport = false },
+            title = { Text("Safety check · ${ext.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(rep.summary, color = levelColor(rep.level), fontWeight = FontWeight.SemiBold)
+                    rep.findings.forEach { f -> Text("• ${f.title} — ${f.detail}", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp) }
+                    Text("Static check of the installed file: ${rep.classes} classes, ${rep.methods} methods read; nothing was run.", color = TextTertiary, fontSize = 11.sp)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showReport = false }) { Text("OK") } },
+        )
+    }
     fun openSettings() {
         val open = plugin?.openSettings ?: return
         val host = com.lagradost.cloudstream3.CommonActivity.activity ?: context
@@ -333,6 +379,12 @@ private fun InstalledCard(
                             DropdownMenuItem(text = { Text(if (apis.size > 1) "Website address · ${api.name}" else "Website address") }, leadingIcon = { Icon(Icons.Default.Language, null) }, onClick = { menu = false; editUrl = api })
                         }
                         if (update != null) DropdownMenuItem(text = { Text("Update to v${update.version}") }, leadingIcon = { Icon(Icons.Default.SystemUpdate, null) }, onClick = { menu = false; onUpdate() })
+                        DropdownMenuItem(text = { Text("Check for update") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onCheckUpdate() })
+                        if (ext.enabled) apis.forEach { api ->
+                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Sign in to site · ${api.name}" else "Sign in to site") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Login, null) }, onClick = { menu = false; signIn(api) })
+                        }
+                        if (signedIn) DropdownMenuItem(text = { Text("Sign out of site") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { menu = false; signOut() })
+                        if (report != null) DropdownMenuItem(text = { Text("Safety check") }, leadingIcon = { Icon(Icons.Default.Shield, null) }, onClick = { menu = false; showReport = true })
                         if (!ext.manual) DropdownMenuItem(
                             text = { Text(if (ext.autoUpdate) "Turn off auto-update" else "Turn on auto-update") },
                             leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onAuto(!ext.autoUpdate) },
@@ -351,6 +403,23 @@ private fun InstalledCard(
                 }
                 if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else "Manual updates", TextSecondary)
                 if (update != null) Pill("Update v${update.version}", WarnColor)
+                report?.let { r -> androidx.compose.foundation.layout.Box(Modifier.clickable { showReport = true }) { Pill(levelLabel(r.level), levelColor(r.level)) } }
+                if (signedIn) Pill("Signed in", SpotifyGreen)
+            }
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (update != null) Button(
+                    onClick = onUpdate, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                    shape = RoundedCornerShape(18.dp), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp).testTag("extension_update_${ext.internalName}"),
+                ) { Icon(Icons.Default.SystemUpdate, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Update to v${update.version}", fontSize = 12.sp) }
+                else androidx.compose.material3.OutlinedButton(
+                    onClick = onCheckUpdate, enabled = !busy && !(ext.manual && !ext.sourceUrl.startsWith("http")),
+                    shape = RoundedCornerShape(18.dp), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp).testTag("extension_check_${ext.internalName}"),
+                ) { Icon(Icons.Default.Refresh, null, tint = TextSecondary, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Check for update", color = TextSecondary, fontSize = 12.sp) }
+                if (ext.enabled && apis.isNotEmpty() && !signedIn) TextButton(onClick = { signIn(apis.first()) }, contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.height(32.dp)) {
+                    Text("Sign in to site", color = SpotifyGreen, fontSize = 12.sp)
+                }
             }
             info.error?.takeIf { ext.enabled }?.let {
                 Row(Modifier.padding(top = 8.dp, end = 8.dp), verticalAlignment = Alignment.Top) {
@@ -396,3 +465,6 @@ internal fun InputDialog(
         dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Cancel") } },
     )
 }
+
+/** Host of an extension's site, for its sign-in. */
+internal fun siteHost(url: String): String? = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.lowercase()?.removePrefix("www.")

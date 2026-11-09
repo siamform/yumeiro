@@ -568,3 +568,43 @@ Pushed for review; **no PR opened and nothing merged** (owner's instruction).
 Tests: `YtCookiePasteTest` (8), `PushPlanTest` (8). 296 unit tests pass; lint clean of new issues. Not tested on a
 physical device (needs ntfy installed and a real Google account).
 
+
+## 18. Playback and extension fixes (branch `fix/playback-extensions`)
+
+**"Expected URL scheme 'http' or 'https'…"**: extensions sometimes hand back relative (`/embed/1`), protocol-relative
+(`//cdn…`), JSON-escaped (`https:\/\/…`) or typo'd (`https:/…`) links. `online/UrlFix.normalize` repairs them;
+`online/SafeRequests` (a NiceHttp `Requests` subclass installed as CloudStream's global `app`) normalizes every
+extension request against the referer or the provider's `mainUrl` (`ProviderBase` coroutine element). Links,
+audio tracks and subtitles from `OnlineRepository` are normalized too. These errors no longer tell users to update
+the extension (`OnlineErrors.isBadLink`, `ErrorHelp.forExtension`).
+
+**Updater + safety bridge**: every install path goes through `ExtensionManager.gate()` →
+`ExtensionScanner` (reads the `.cs3`'s DEX: strings, types, method refs; flags shell commands, hidden code loading,
+native code, SMS/contacts/location/camera, installers/accessibility, account reads, miners, storage deletes as
+DANGER; trackers, device IDs, clipboard, app lists, JS bridges as CAUTION) → `ExtensionReview` dialog
+(`ExtensionReviewHost`). Modes: ALWAYS (manual installs), IF_RISKY (Hues market, updates), AUTO (starter set, sync —
+DANGER is still refused). DANGER needs "Install anyway" twice. Installed cards have Check for update / Update to vX
+(`checkUpdate` re-reads the repo with `force=true`; manual installs re-download and compare SHA-256) and a Safety pill.
+The scanner is a heuristic: it can't see code downloaded at run time (that itself is flagged).
+
+**Firewall / captcha / sign-in**: `BrowserCheck.openSite(url, purpose)` opens the site in a manual WebView
+(no auto-close, Done button). Cookies and the WebView user agent are reused for that host by both the extension
+and media interceptors. `SiteLogins` remembers signed-in hosts (Sign out clears their cookies). LOGIN mode shows a
+short sign-up guide (`SignupSteps`). Firewall errors show "Open site".
+
+**Audio**: NextLib's FFmpeg audio renderer (`nextlib-media3ext`, GPL-3.0, ARM only — x86 uses platform decoders)
+is added after the platform decoders (`YumeiroRenderersFactory`), so AC-3/E-AC-3/DTS/TrueHD/Opus/Vorbis/FLAC play
+on phones without hardware support — that was the "video without sound" case. The HLS ad filter is off for streams
+with separate audio playlists (it cut segments differently in audio and video, causing desync and the black frozen
+picture after switching audio). Audio switching (`switchAudio` in `VideoPlayerModal`) refuses unplayable tracks,
+seeks to flush decoders, and reverts to the previous track on error or after 10 s stuck buffering. Duplicate
+per-variant audio entries are merged (`TrackPicks.dedupeAudio`).
+
+**Subtitles / CC**: the CC button state now matches the "captions by default" setting (its first tap used to do
+nothing). Turning captions on picks a track explicitly (`TrackPicks.bestText`: phone language → English → default).
+`SniffingSubtitleParserFactory` picks the parser by content (SRT served as VTT, header-less VTT, UTF-16), and
+`SafeSubtitleDataSource` turns a failed subtitle download into an empty track instead of a playback error. Subtitle
+delay is applied at parse time (`SubtitleTiming`) and reloads the subtitle files. Subtitles an extension finds
+after playback starts appear under "More from this source" in the captions menu.
+
+Not yet verified on a physical device. Tests: `UrlFixTest`, `ExtensionScannerTest`, `SiteAccessTest`, `SubtitleAudioTest`.
