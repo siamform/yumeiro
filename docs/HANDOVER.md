@@ -833,3 +833,11 @@ consumer had to be removed first: `wrangler queues consumer remove yumeiro-wakes
 The D1 id is not a secret. The API token is kept outside the repo; the owner should rotate it because it was pasted in
 chat. Tests: server suite + `tsc`, app 389 unit tests pass.
 
+### 24a. Server dependency alerts (branch `chore/server-deps`)
+
+After `server/` reached `main`, Dependabot opened alerts for `undici` (several high) and `sharp` (high) and its two
+security-update jobs failed: both are transitive (`wrangler` → `miniflare`), so they can't be bumped alone. Fixed by
+updating `wrangler` to 4.159 and `@cloudflare/workers-types`; `npm audit` reports 0. These are dev/deploy tools only;
+the deployed Worker bundle (10 KiB) never contained them, so production was never exposed. Wrangler now needs Node
+≥ 22.12 (`engines` set; CI already uses 22). `dependabot.yml` gains a monthly grouped npm entry for `/server`.
+

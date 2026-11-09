@@ -22,3 +22,13 @@ updates:
       # AndroidInterceptors). Re-check when 4.17.x / 4.18 ships.
       - dependency-name: "org.robolectric:robolectric"
         versions: ["4.17", "4.17.*"]
+  # Server dev tools (wrangler pulls in miniflare → undici / sharp). Updating wrangler as a group fixes
+  # transitive alerts that per-package security updates can't. Nothing here ships in the Worker bundle.
+  - package-ecosystem: npm
+    directory: /server
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      server:
+        patterns: ["*"]
