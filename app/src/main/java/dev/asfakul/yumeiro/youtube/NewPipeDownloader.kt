@@ -15,8 +15,9 @@ import java.util.concurrent.TimeUnit
 
 /**
  * NewPipeExtractor's HTTP bridge, running on the app's shared OkHttp stack (DNS fallback, DoH,
- * shared cookie jar). No account, no API key — the same anonymous approach NewPipe, ArchiveTune
- * and AuraMusic use.
+ * shared cookie jar). Anonymous by default, like NewPipe. When the optional YouTube account is
+ * active for this request ([YtAccount.active]), youtube.com calls carry its cookies on a separate
+ * client without the shared session-cookie store, so account cookies never leak into it.
  */
 internal class NewPipeDownloader(base: OkHttpClient) : Downloader() {
 
@@ -24,6 +25,10 @@ internal class NewPipeDownloader(base: OkHttpClient) : Downloader() {
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(45, TimeUnit.SECONDS)
         .build()
+
+    private val accountClient: OkHttpClient by lazy {
+        client.newBuilder().apply { networkInterceptors().removeAll { it is dev.asfakul.yumeiro.network.SessionCookies } }.build()
+    }
 
     override fun execute(request: Request): Response {
         val body = request.dataToSend()?.toRequestBody()
@@ -36,7 +41,12 @@ internal class NewPipeDownloader(base: OkHttpClient) : Downloader() {
         }
         if (request.headers().keys.none { it.equals("User-Agent", true) }) builder.header("User-Agent", USER_AGENT)
 
-        client.newCall(builder.build()).execute().use { res ->
+        val existingCookie = request.headers().entries.firstOrNull { it.key.equals("Cookie", true) }?.value?.joinToString("; ")
+        val account = YtAccount.headersFor(request.url(), existingCookie)
+        account.forEach { (k, v) -> builder.header(k, v) }
+        val http = if (account.isEmpty()) client else accountClient
+
+        http.newCall(builder.build()).execute().use { res ->
             if (res.code == 429) {
                 throw ReCaptchaException("YouTube asked for a captcha (rate limited)", request.url())
             }

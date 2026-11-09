@@ -6,9 +6,6 @@
 package dev.asfakul.yumeiro.ui.screens.settings
 
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,14 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,18 +26,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.OnlineSettings
-import dev.asfakul.yumeiro.online.anime.AniList
-import dev.asfakul.yumeiro.online.anime.MyAnimeList
-import dev.asfakul.yumeiro.ui.components.AppMessages
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
-/** Settings → Online videos: 18+ content, intro skip, subtitle search and anime trackers. */
+/** Settings → Online videos: 18+ content, intro skip and subtitle search. Trackers live in Settings → Tracking. */
 @Composable
 fun OnlineSettingsCard() {
     val context = LocalContext.current
@@ -54,7 +45,6 @@ fun OnlineSettingsCard() {
     val osKey by OnlineSettings.openSubtitlesKey.collectAsState()
     var confirmAdult by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<String?>(null) }
-    var refresh by remember { mutableIntStateOf(0) }
 
     if (confirmAdult) TsukiDialog(
         onDismissRequest = { confirmAdult = false },
@@ -65,31 +55,23 @@ fun OnlineSettingsCard() {
     )
 
     edit?.let { which ->
-        var text by remember(which) { mutableStateOf(when (which) { "os" -> osKey; "lang" -> lang; "anilist" -> OnlineSettings.secret("anilist_client").orEmpty(); else -> OnlineSettings.secret("mal_client").orEmpty() }) }
+        var text by remember(which) { mutableStateOf(if (which == "os") osKey else lang) }
         TsukiDialog(
             onDismissRequest = { edit = null },
-            title = { Text(when (which) { "os" -> "OpenSubtitles API key"; "lang" -> "Subtitle language"; "anilist" -> "AniList client ID"; else -> "MyAnimeList client ID" }) },
+            title = { Text(if (which == "os") "OpenSubtitles API key" else "Subtitle language") },
             text = {
                 Column {
-                    Text(when (which) {
-                        "os" -> "Free key from opensubtitles.com → Consumers. Used only to search subtitles."
-                        "lang" -> "Two-letter code, e.g. en, bn, hi, es, ar."
-                        "anilist" -> "Create a client at anilist.co/settings/developer with redirect URL ${AniList.REDIRECT}."
-                        else -> "Create an app at myanimelist.net/apiconfig (type: Android) with redirect URL ${MyAnimeList.REDIRECT}."
-                    }, color = TextSecondary, fontSize = 12.sp)
+                    Text(if (which == "os") "Free key: sign up at opensubtitles.com, open Consumers, create one and paste its API key. Used only to search subtitles."
+                        else "Two-letter code, e.g. en, bn, hi, es, ar.", color = TextSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    when (which) {
-                        "os" -> OnlineSettings.setOpenSubtitlesKey(context, text)
-                        "lang" -> OnlineSettings.setSubtitleLang(context, text.trim().lowercase().take(3).ifBlank { "en" })
-                        "anilist" -> OnlineSettings.setSecret(context, "anilist_client", text.trim())
-                        else -> OnlineSettings.setSecret(context, "mal_client", text.trim())
-                    }
-                    edit = null; refresh++
+                    if (which == "os") OnlineSettings.setOpenSubtitlesKey(context, text)
+                    else OnlineSettings.setSubtitleLang(context, text.trim().lowercase().take(3).ifBlank { "en" })
+                    edit = null
                 }) { Text("Save") }
             },
             dismissButton = { TextButton(onClick = { edit = null }) { Text("Cancel") } },
@@ -109,16 +91,6 @@ fun OnlineSettingsCard() {
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
         ValueRow("OpenSubtitles API key", if (osKey.isBlank()) "Not set — needed for subtitle search" else "Set") { edit = "os" }
-        HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Text("Anime tracking", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-        Text("Watched episodes update your list automatically.", color = TextTertiary, fontSize = 12.sp)
-        Spacer(Modifier.height(6.dp))
-        androidx.compose.runtime.key(refresh) {
-            TrackerRow("AniList", AniList.user(), AniList.loginUrl(), onEditId = { edit = "anilist" }, onSignOut = { AniList.signOut(context); refresh++ })
-            TrackerRow("MyAnimeList", MyAnimeList.user(), if (MyAnimeList.clientId().isBlank()) null else "mal", onEditId = { edit = "mal" }, onSignOut = { MyAnimeList.signOut(context); refresh++ }) {
-                MyAnimeList.loginUrl(context)
-            }
-        }
     }
 }
 
@@ -130,25 +102,5 @@ private fun ValueRow(title: String, value: String, onClick: () -> Unit) {
             Text(value, color = TextTertiary, fontSize = 12.sp)
         }
         TextButton(onClick = onClick) { Text("Change") }
-    }
-}
-
-@Composable
-private fun TrackerRow(name: String, user: String?, loginUrl: String?, onEditId: () -> Unit, onSignOut: () -> Unit, buildUrl: (() -> String?)? = null) {
-    val context = LocalContext.current
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text(name, color = TextPrimary, fontSize = 15.sp)
-            Text(user?.let { "Signed in as $it" } ?: if (loginUrl == null) "Needs a client ID" else "Not signed in", color = TextTertiary, fontSize = 12.sp)
-        }
-        when {
-            user != null -> OutlinedButton(onClick = onSignOut) { Text("Sign out") }
-            loginUrl == null -> OutlinedButton(onClick = onEditId) { Text("Set up") }
-            else -> OutlinedButton(onClick = {
-                val url = buildUrl?.invoke() ?: loginUrl
-                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                    .onFailure { AppMessages.error(context, "No browser to sign in with") }
-            }) { Text("Sign in") }
-        }
     }
 }

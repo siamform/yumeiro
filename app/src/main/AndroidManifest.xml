@@ -191,6 +191,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- UnifiedPush (optional): the distributor app (e.g. ntfy) wakes the background checks.
+             Bound only by the connector library inside this app (PushService checks the caller uid). -->
+        <service
+            android:name=".notify.PushWakeService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- Home-screen widget: continue watching -->
         <receiver
             android:name=".widget.ContinueWidget"

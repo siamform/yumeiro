@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.youtube.YtAccount
+
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -100,6 +102,7 @@ private sealed interface Load<out T> {
 }
 
 private fun friendly(t: Throwable): String = when {
+    YtAccount.accountCanHelp(t) -> YtAccount.blockedHint()
     t.javaClass.simpleName.contains("ReCaptcha") -> "YouTube is rate-limiting this network. Try again in a few minutes or switch networks."
     t is java.io.IOException -> "No connection to YouTube."
     else -> t.message?.take(140) ?: "YouTube didn't answer."

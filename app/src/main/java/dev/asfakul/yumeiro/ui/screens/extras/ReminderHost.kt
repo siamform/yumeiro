@@ -125,15 +125,15 @@ fun ReminderHost(blocked: Boolean) {
         Reminders.Kind.STAR -> ReminderCard(
             icon = Icons.Default.Star, tag = "reminder_star",
             title = "Enjoying Yumeiro?",
-            body = "A star on GitHub helps more people find the app. It takes one tap.",
+            body = SupportMessage.STAR,
             action = "Star on GitHub",
             onAction = { if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context); close() },
             onClose = close,
         )
         Reminders.Kind.SUPPORT -> ReminderCard(
             icon = Icons.Default.Favorite, tag = "reminder_support",
-            title = "Keep Yumeiro free",
-            body = "No ads, no tracking. If Yumeiro helps you, a small coffee keeps it going.",
+            title = "Help keep Yumeiro alive",
+            body = SupportMessage.SHORT,
             action = "Buy me a coffee",
             onAction = { close(); AppPages.open(AppPages.Page.SUPPORT) },
             onClose = close,

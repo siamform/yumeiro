@@ -172,6 +172,9 @@ dependencies {
   implementation(libs.androidx.recyclerview)
   implementation(libs.androidx.webkit)
   implementation(libs.androidx.work.runtime.ktx)
+  // UnifiedPush (Apache-2.0): optional free push through ntfy or any distributor, no Google services.
+  // Tink's full protobuf runtime clashes with protobuf-lite and isn't needed for Web Push.
+  implementation(libs.unifiedpush.connector) { exclude(group = "com.google.protobuf", module = "protobuf-java") }
   // Installs the baseline profiles bundled with Compose/Media3 on sideloaded APKs → smoother frames.
   implementation(libs.androidx.profileinstaller)
   implementation(libs.androidx.lifecycle.runtime.compose)

@@ -72,6 +72,7 @@ object BackgroundWork {
     fun catchUp(c: Context) {
         if (!NotifySettings.get(c, NotifySettings.Key.BACKGROUND)) return
         BackgroundHealth.snapshot(c) // before the catch-up run refreshes the heartbeat
+        runCatching { PushWake.onForeground(c) }
         val prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
         if (!catchUpDue(now, prefs.getLong("catch_up_at", 0L))) return
@@ -81,6 +82,29 @@ object BackgroundWork {
         runCatching {
             wm.beginUniqueWork(CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).build())
                 .then(OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).build())
+                .enqueue()
+        }
+    }
+
+    private const val PUSH_CATCH_UP = "push_catch_up"
+    private const val PUSH_GAP_MS = 20L * 60 * 1000
+
+    /**
+     * A UnifiedPush wake-up arrived ([PushWake]): run the feed + episode checks now, as expedited
+     * work so Doze doesn't hold them back (at most every 20 min).
+     */
+    fun wake(c: Context) {
+        if (!NotifySettings.get(c, NotifySettings.Key.BACKGROUND)) return
+        val prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (now - prefs.getLong("push_wake_at", 0L) in 0 until PUSH_GAP_MS) return
+        prefs.edit().putLong("push_wake_at", now).apply()
+        val wm = runCatching { WorkManager.getInstance(c.applicationContext) }.getOrNull() ?: return
+        val k = constraints(c)
+        val fast = androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST
+        runCatching {
+            wm.beginUniqueWork(PUSH_CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).setExpedited(fast).build())
+                .then(OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).setExpedited(fast).build())
                 .enqueue()
         }
     }
@@ -132,6 +156,9 @@ object BackgroundHealth {
  */
 class DiscoveryWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
+    /** Only used on Android 9-11 when a push wake-up runs this as expedited work. */
+    override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo = PushWake.foregroundInfo(applicationContext)
+
     companion object {
         private const val TAG = "Discovery"
         const val WORK = "discovery_check"
@@ -168,6 +195,7 @@ class DiscoveryWorker(context: Context, params: WorkerParameters) : CoroutineWor
         // A network hiccup retries soon (with backoff) instead of silently waiting hours.
         if (feed.exceptionOrNull() is java.io.IOException && runAttemptCount < 3) return@withContext Result.retry()
         BackgroundHealth.markRan(ctx)
+        runCatching { PushWake.refillIfDue(ctx) }
 
         if (NotifySettings.get(ctx, NotifySettings.Key.NUDGES)) {
             val st = ctx.getSharedPreferences(STATE, Context.MODE_PRIVATE)

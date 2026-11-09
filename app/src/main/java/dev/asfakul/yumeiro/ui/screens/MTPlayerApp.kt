@@ -806,6 +806,9 @@ fun MTPlayerApp(
                     composable(Screen.Tracking.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = popSub) }
                     }
+                    composable(Screen.YouTubeAccount.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.YouTubeAccountScreen(onBack = popSub) }
+                    }
                     composable(Screen.Backup.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.BackupScreen(onBack = popSub) }
                     }
@@ -876,6 +879,7 @@ fun MTPlayerApp(
                                     "backup" -> Screen.Backup.route
                                     "together" -> Screen.WatchTogether.route
                                     "health" -> Screen.SourceHealth.route
+                                    "youtube" -> Screen.YouTubeAccount.route
                                     else -> Screen.Privacy.route
                                 })
                             },

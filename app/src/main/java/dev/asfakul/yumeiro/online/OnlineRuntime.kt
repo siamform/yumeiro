@@ -63,6 +63,7 @@ object OnlineErrors {
         val m = (e.message ?: root.message).orEmpty()
         return when {
             e is ExtensionManager.ExtensionException -> m
+            dev.asfakul.yumeiro.youtube.YtAccount.accountCanHelp(e) -> dev.asfakul.yumeiro.youtube.YtAccount.blockedHint()
             root is java.net.UnknownHostException ->
                 if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
                 else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"

@@ -35,7 +35,7 @@ class RemindersTest {
 
     @Test fun followBecomesDailyAfterThreeFollows() {
         val now = t0 + 100 * h
-        val last = mapOf(Kind.FOLLOW to now - 5 * h, Kind.STAR to now - 2 * h, Kind.SUPPORT to now - 2 * h)
+        val last = mapOf(Kind.FOLLOW to now - 5 * h, Kind.STAR to now - 90 * 60 * 1000, Kind.SUPPORT to now - 90 * 60 * 1000)
         assertEquals(Kind.FOLLOW, Reminders.next(state(last, follows = 2), now))
         assertNull(Reminders.next(state(last, follows = 3), now))
         assertEquals(Kind.FOLLOW, Reminders.next(state(last.plus(Kind.FOLLOW to now - 25 * h), follows = 3), now))
@@ -43,7 +43,7 @@ class RemindersTest {
 
     @Test fun starBecomesDailyAfterAStar() {
         val now = t0 + 100 * h
-        val last = mapOf(Kind.FOLLOW to now - 2 * h, Kind.STAR to now - 5 * h, Kind.SUPPORT to now - 2 * h)
+        val last = mapOf(Kind.FOLLOW to now - 2 * h, Kind.STAR to now - 5 * h, Kind.SUPPORT to now - 90 * 60 * 1000)
         assertEquals(Kind.STAR, Reminders.next(state(last), now))
         assertNull(Reminders.next(state(last, stars = 1), now))
     }
@@ -57,5 +57,14 @@ class RemindersTest {
         // Once shown today, normal timing again.
         val after = state(last + (Kind.FOLLOW to now), follows = 3, stars = 1)
         assertNull(Reminders.next(after, now + 30 * 60 * 1000))
+    }
+
+    @Test fun coffeeAndStarComeBackEveryTwoHours() {
+        val now = t0 + 100 * h
+        val last = mapOf(Kind.FOLLOW to now - 3 * h, Kind.STAR to now - 90 * 60 * 1000, Kind.SUPPORT to now - 2 * h)
+        assertEquals(Kind.SUPPORT, Reminders.next(state(last), now))
+        assertNull(Reminders.next(state(last + (Kind.SUPPORT to now - 100 * 60 * 1000)), now))
+        // Not starred yet: star is due after 2 h too, ahead of follow (4 h).
+        assertEquals(Kind.STAR, Reminders.next(state(mapOf(Kind.FOLLOW to now - 3 * h, Kind.STAR to now - 2 * h - 1, Kind.SUPPORT to now - 61 * 60 * 1000)), now))
     }
 }

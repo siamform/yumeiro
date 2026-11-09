@@ -217,6 +217,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                     color = TextSecondary, fontSize = 13.sp,
                 )
             }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon, startExpanded = repos.isEmpty()) }
             item("repos") { SectionTitle("Repositories", "Paste a repo link (index.min.json)", "Add" to { addRepo = true }) }
             if (repos.isEmpty()) note("norepo", "No repositories yet. Yumeiro doesn't ship any; add one you trust.")
             items(repos, key = { "r" + it.url }) { r ->
@@ -325,6 +326,7 @@ private fun StremioTab() {
                 Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
                     color = TextSecondary, fontSize = 13.sp)
             }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio, startExpanded = addons.isEmpty()) }
             item("head") { SectionTitle("Your add-ons", "${addons.size} added", "Add" to { add = true }) }
             if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
                 HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
@@ -368,6 +370,7 @@ private fun JsTab() {
                 Text("JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.",
                     color = TextSecondary, fontSize = 13.sp)
             }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript, startExpanded = state.repos.isEmpty()) }
             item("repos") { SectionTitle("Repositories", "index.json links", "Add" to { add = true }) }
             if (state.repos.isEmpty()) note("norepo", "No repositories yet. Yumeiro doesn't ship any; add one you trust.")
             items(state.repos, key = { "r$it" }) { r ->
@@ -433,6 +436,7 @@ private fun ServersTab() {
                 Text("Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore.",
                     color = TextSecondary, fontSize = 13.sp)
             }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.servers, startExpanded = servers.isEmpty()) }
             item("add") {
                 SectionTitle("Add a server")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
