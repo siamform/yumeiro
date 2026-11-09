@@ -13,6 +13,12 @@ import {
 export interface Env {
   DB: D1Database;
   WAKES: Queue<WakeJob>;
+  /**
+   * Free per-IP limit on registrations that create a new device row, so nobody can burn the
+   * free plan's 100k D1 row writes/day with fake devices. Refreshes with a valid token skip it.
+   * Counted at the edge; IPs are never stored.
+   */
+  NEW_DEVICES?: RateLimit;
 }
 
 interface WakeJob { endpoints: string[] }
@@ -88,6 +94,9 @@ async function register(req: Request, env: Env): Promise<Response> {
         .bind(endpoint, t, row.id, endpoint, t - DAY),
     ]);
   } else {
+    if (env.NEW_DEVICES && !(await env.NEW_DEVICES.limit({ key: req.headers.get("cf-connecting-ip") ?? "?" })).success) {
+      return fail(429, "slow_down");
+    }
     const old = await env.DB.prepare("SELECT id FROM devices WHERE endpoint = ?").bind(endpoint).first<{ id: string }>();
     const id = old?.id ?? randomToken(12);
     token = randomToken();

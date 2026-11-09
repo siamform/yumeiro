@@ -84,8 +84,8 @@ TV layout, Weblate localisation.
 
 ## 0.9 Yumeiro Cloud (§23, docs/SERVER.md)
 
-- [ ] Owner: Cloudflare account, move `yumeiro.click` nameservers, `wrangler d1 create` / `queues create` /
-  `db:init` / `deploy`, uncomment the route, check `/v1/health`.
+- [x] Deployed to `api.yumeiro.click` on the free plan (§24). Server scope fixed at alerts only.
+- [ ] Owner: rotate the Cloudflare API token that was shared in chat.
 - [ ] Phone test: push on via ntfy, bookmark an airing anime, confirm a wake ~30 min after AniList's airing time.
 - [ ] Watch D1 / Queue usage in the Cloudflare dashboard the first week; tune cron or batch if needed.
 

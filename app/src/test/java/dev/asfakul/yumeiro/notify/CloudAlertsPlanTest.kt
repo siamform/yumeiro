@@ -44,4 +44,14 @@ class CloudAlertsPlanTest {
         assertTrue(CloudAlertsPlan.due("x", "x", now, now - CloudAlertsPlan.REFRESH_MS))
         assertTrue(CloudAlertsPlan.due("x", "x", now, now + 1)) // clock went back
     }
+
+    @Test fun retryBacksOffAndCapsAtRefresh() {
+        val h = 3600_000L
+        assertEquals(6 * h, CloudAlertsPlan.retryDelay(1))
+        assertEquals(12 * h, CloudAlertsPlan.retryDelay(2))
+        assertEquals(48 * h, CloudAlertsPlan.retryDelay(4))
+        assertEquals(CloudAlertsPlan.REFRESH_MS, CloudAlertsPlan.retryDelay(5))
+        assertEquals(CloudAlertsPlan.REFRESH_MS, CloudAlertsPlan.retryDelay(50))
+        assertEquals(6 * h, CloudAlertsPlan.retryDelay(0))
+    }
 }

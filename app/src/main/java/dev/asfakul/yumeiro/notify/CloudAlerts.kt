@@ -46,9 +46,12 @@ object CloudAlerts {
         val endpoint = OnlineSettings.secret(PUSH_SECRET)
         if (!PushWake.state.value.enabled || endpoint.isNullOrBlank() || !endpoint.startsWith("https://")) { forget(c); return }
 
+        val p = prefs(c)
+        // After a failure, wait (6 h → 12 h → … 3 days) so a broken server or a used-up free quota
+        // never turns into every device retrying every 2 hours.
+        if (System.currentTimeMillis() < p.getLong("retry_at", 0L)) return
         val client = NetworkClient.get(c)
         OnlineBookmarks.ensureLoaded(c)
-        val p = prefs(c)
         val cache = runCatching { JSONObject(p.getString("ids", null) ?: "{}") }.getOrDefault(JSONObject())
         var lookups = 0
         val ids = ArrayList<Int>()
@@ -72,22 +75,27 @@ object CloudAlerts {
             .post(body.toRequestBody("application/json".toMediaType()))
             .apply { if (creds != null) header("Authorization", "Bearer $creds") }
             .build()
+        fun failed() {
+            val n = p.getInt("failures", 0) + 1
+            p.edit().putInt("failures", n).putLong("retry_at", now + CloudAlertsPlan.retryDelay(n)).apply()
+        }
+        val quick = client.newBuilder().callTimeout(20, java.util.concurrent.TimeUnit.SECONDS).build()
         runCatching {
-            client.newCall(req).execute().use { r ->
-                if (!r.isSuccessful) { Log.w(TAG, "register HTTP ${r.code}"); return }
+            quick.newCall(req).execute().use { r ->
+                if (!r.isSuccessful) { Log.w(TAG, "register HTTP ${r.code}"); failed(); return }
                 val j = JSONObject(r.body.string())
                 val id = j.optString("id")
                 val token = j.optString("token").takeIf { it.isNotBlank() && it != "null" }
                 if (token != null && id.isNotBlank()) OnlineSettings.setSecret(c, SECRET, "$id.$token")
-                p.edit().putString("fp", fp).putLong("synced_at", now).apply()
+                p.edit().putString("fp", fp).putLong("synced_at", now).remove("failures").remove("retry_at").apply()
             }
-        }.onFailure { Log.w(TAG, "register: ${it.javaClass.simpleName}") }
+        }.onFailure { Log.w(TAG, "register: ${it.javaClass.simpleName}"); failed() }
     }
 
     /** Drops local credentials (push turned off). Keeps the AniList id cache. */
     fun forget(c: Context) {
         if (OnlineSettings.secret(SECRET) != null) OnlineSettings.setSecret(c, SECRET, null)
-        prefs(c).edit().remove("fp").remove("synced_at").apply()
+        prefs(c).edit().remove("fp").remove("synced_at").remove("failures").remove("retry_at").apply()
     }
 }
 
@@ -108,6 +116,10 @@ object CloudAlertsPlan {
     fun fingerprint(endpoint: String, follows: List<Int>): String =
         MessageDigest.getInstance("SHA-256").digest("$endpoint|${follows.joinToString(",")}".toByteArray())
             .take(12).joinToString("") { "%02x".format(it) }
+
+    /** Back-off after failed registrations: 6 h, 12 h, 24 h, 48 h, then 3 days. */
+    fun retryDelay(failures: Int): Long =
+        (6L * 3600 * 1000 shl (failures - 1).coerceIn(0, 4)).coerceAtMost(REFRESH_MS)
 
     fun due(fp: String, oldFp: String?, now: Long, lastSync: Long): Boolean =
         fp != oldFp || now - lastSync >= REFRESH_MS || now < lastSync

@@ -79,3 +79,13 @@ Firebase / Amplitude. Yumeiro has no server and no funds, so each idea is rebuil
 
 Rebuild list from Sozo, all serverless (ROADMAP §2.5): trailer "Shorts" from TMDB videos, on-device stats / streaks /
 yearly recap from local history, on-device subtitle translation, link-TV by QR over the LAN.
+
+## Sozo backend study and the server scope (2026-11, §24)
+
+Sozo's app talks to a private backend for: login / refresh / profile, watch-history sync, favorites, comments, streaks,
+achievements, trivia, a socket.io watch party, link-TV with device approval, remote state and commands, friends and
+activity, notifications and banners, app-version checks, a TMDB proxy and tracker link sync. That needs a paid server
+and accounts. Yumeiro runs on Cloudflare's free plan for 50k monthly users, so only one of those ideas runs on a server:
+the airing nudge, rebuilt as a privacy-first push wake (no account, no titles stored, nothing waits on it). The rest
+are either on-device (stats, streaks, recap, local watch-together, backups by export) or not planned; the reasons and
+free-plan numbers are in `docs/SERVER.md` "Not planned". Online rooms were built and archived on `archive/online-rooms`.
