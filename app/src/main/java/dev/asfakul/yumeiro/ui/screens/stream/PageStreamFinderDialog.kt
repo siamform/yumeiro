@@ -253,11 +253,11 @@ fun PageStreamFinderDialog(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            // File / content:// access off on a local in this function (not only in apply {} / harden()): PR CodeQL scans only credit this.
+                            // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
                             val page = WebView(ctx)
                             page.settings.allowFileAccess = false
                             page.settings.allowContentAccess = false
-                            page.apply {
+                            with(page) {
                                 webViewRef = this
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
@@ -302,6 +302,7 @@ fun PageStreamFinderDialog(
                                 }
                                 loadUrl(pageUrl, headers)
                             }
+                            page
                         },
                     )
                 }

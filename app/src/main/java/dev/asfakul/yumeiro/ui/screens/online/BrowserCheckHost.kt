@@ -108,12 +108,12 @@ fun BrowserCheckHost() {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
-                        // Settings on a local in this function, not only in apply {} / harden(): PR CodeQL scans only credit these.
+                        // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
                         // Local files and content:// stay blocked (also set in harden()).
                         val page = WebView(ctx)
                         page.settings.allowFileAccess = false
                         page.settings.allowContentAccess = false
-                        page.apply {
+                        with(page) {
                             SafeWebView.harden(this)
                             SafeWebView.addAdShield(this)
                             // Never flash black while the first page paints.
@@ -196,6 +196,7 @@ fun BrowserCheckHost() {
                             openInPage = { u -> main.loadUrl(u) }
                             loadUrl(p.url)
                         }
+                        page
                     },
                     onRelease = { openInPage = null; SafeWebView.dispose(it) },
                 )

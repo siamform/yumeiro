@@ -93,7 +93,7 @@ object HeadlessCapture {
     ): WebView {
         val web = WebView(context)
         // Web pages must never read app files or content providers (default is "on" before Android 11).
-        // File / content:// access off on a local in this function (not only in apply {} / harden()): PR CodeQL scans only credit this.
+        // File / content:// access set on the local in this function so CodeQL credits it (harden()-only is missed).
         web.settings.allowFileAccess = false
         web.settings.allowContentAccess = false
         val cookies = CookieManager.getInstance().apply { setAcceptCookie(true); setAcceptThirdPartyCookies(web, true) }

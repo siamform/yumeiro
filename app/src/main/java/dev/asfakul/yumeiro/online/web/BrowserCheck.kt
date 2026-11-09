@@ -237,11 +237,12 @@ object BrowserCheck {
         var web: WebView? = null
         return try {
             withContext(Dispatchers.Main) {
-                // File / content:// access off on a local in this function (not only in apply {} / harden()): PR CodeQL scans only credit this.
+                // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
                 val page = WebView(ctx)
                 page.settings.allowFileAccess = false
                 page.settings.allowContentAccess = false
-                web = page.apply {
+                web = page
+                with(page) {
                     SafeWebView.harden(this)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true

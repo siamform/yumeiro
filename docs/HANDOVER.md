@@ -669,7 +669,7 @@ because it wasn't in that diff.
 | Alert | Where | Decision |
 |---|---|---|
 | `websettings-javascript-enabled` (high) | `BrowserCheckHost.kt` captcha / sign-in page | Needed (Cloudflare, Turnstile, logins). Reviewed suppression (rule + exact path) |
-| `websettings-allow-content-access` x4 | `BrowserCheckHost.kt`: the page, the pop-up probe, the `webRef` state | **Fixed.** CodeQL can't see the settings set inside `SafeWebView.harden()`; set explicitly on both views, on a local variable (`val page = WebView(ctx); page.settings...`) because the PR (diff-informed) scan also didn't credit settings written inside a Kotlin `apply { }` receiver (the first fix push still left 2 medium alerts for that reason; the full scan on `main` credits both forms). The probe (new in #17) had default settings; now JavaScript, file and content access are off and it is destroyed after 5 s if the pop-up never navigates (it leaked before). The `WebView?` Compose state is replaced by a loader lambda |
+| `websettings-allow-content-access` x4 | `BrowserCheckHost.kt`: the page, the pop-up probe, the `webRef` state | **Fixed.** CodeQL can't see the settings set inside `SafeWebView.harden()`; set explicitly on both views, on a local variable (`val page = WebView(ctx); page.settings...`), and configured through `with(page) { }` instead of `apply { }`: the query treats `WebView(..).apply { }`'s return value as another WebView source and doesn't credit settings made inside it (two fix pushes left 2, then 4, medium alerts for exactly that reason; the probe and `HeadlessCapture`, which never used `apply`, were clean). The probe (new in #17) had default settings; now JavaScript, file and content access are off and it is destroyed after 5 s if the pop-up never navigates (it leaked before). The `WebView?` Compose state is replaced by a loader lambda |
 | `missing-certificate-pinning` x2 | `SubDL.kt`, `SubSource.kt` (+ `OpenSubtitles.kt`, touched here) | Reviewed suppression, same reasoning as Kitsu/Trakt: third-party CDNs rotate certs; HTTPS-only already enforced |
 
 **Real bug found during the audit (not reported by CodeQL).** OkHttp strips only `Authorization` on a cross-host
@@ -680,8 +680,7 @@ Tests: `SubtitleKeyScopeTest` (host rules, suffix tricks, HTTPS downgrade, cross
 MockWebServers, same-site redirect keeps the key).
 
 **Same pattern, everywhere (pre-emptive).** The other four WebViews (`BrowserCheck.kt` headless solver,
-`HeadlessCapture.kt`, `YouTubeAccountScreen.kt`, `PageStreamFinderDialog.kt`) now also set file / content access off on a
-local in the creating function, so the next PR that touches any of them doesn't trip the same gate. `harden()` still sets
+`HeadlessCapture.kt`, `YouTubeAccountScreen.kt`, `PageStreamFinderDialog.kt`) now also set file / content access off on a local in the creating function (configured via `with(page) { }`, not `apply { }`), so the next PR that touches any of them doesn't trip the same gate. `harden()` still sets
 them too (defence in depth). New WebViews: copy this pattern.
 
 **SubDL v2 (deliberately not migrated yet).** SubDL's v2 API wants the key in `Authorization: Bearer` / `X-API-Key`

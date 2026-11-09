@@ -55,9 +55,10 @@ result elsewhere still fails the gate.
 
 Fixed instead of suppressed (PR #17): `websettings-allow-content-access` x4 in `BrowserCheckHost.kt` (explicit
 `allowFileAccess`/`allowContentAccess = false` on the page and the pop-up probe; no WebView held in Compose state). Rule of thumb
-for new WebViews: bind `WebView(ctx)` to a local and set `allowFileAccess`/`allowContentAccess = false` on that local in
-the same function. Full scans on `main` credit `harden()` and `apply { }` (0 results), but diff-informed PR scans did
-not: they flagged both the `apply` form and `harden()`-only views on changed lines. Same-function settings pass both.
+for new WebViews: `val page = WebView(ctx)`, set `allowFileAccess`/`allowContentAccess = false` on `page` in the same
+function, configure the rest in `with(page) { }` and return `page`. Never `WebView(ctx).apply { }`: the query treats
+`apply`'s return value as another WebView source and doesn't credit settings made inside it or in `harden()`. (Full
+scans on `main` happened to report 0; diff-informed PR scans flag every such line the PR touches.)
 
 Fixed instead of suppressed: cleartext trusted-extension set (now sealed with `SecretBox`) and the app-lock
 `insecure-local-authentication` finding (prompt bound to a Keystore `CryptoObject`, `security/LockKey`).
