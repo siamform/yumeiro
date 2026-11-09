@@ -691,3 +691,22 @@ stays in the query string to `api.subdl.com` only (HTTPS-only, never logged, a r
 Docs: `docs/security/AUDIT.md` (suppressions table, redirect note, diff-informed note), `.github/codeql/suppressions.jq`,
 `docs/INSPIRATION.md` (competitor study). Tip: after a big refactor run the CodeQL workflow by hand on `main`
 (`workflow_dispatch`) to get a full, non-diff scan. Not tested on a physical device (logic is unit-tested).
+
+## 21. Trakt without a client secret (branch `fix/trakt-secretless`)
+
+**Why.** Since 2026-10-01 Trakt issues no client secret to new API apps ("Not issued. This app signs users in with
+PKCE"); `client_secret` is optional and deprecated on every `/oauth` body (trakt/trakt-api#974). Yumeiro required
+a secret (`Trakt.configured`) and always sent one, so a new app could never sign in.
+
+**What changed (`tracking/Trakt.kt`).**
+- Only the Client ID is required. `client_secret` is sent only when the app has one (pre-October apps).
+- A user's own Client ID is never paired with the built-in secret (it was before: mismatched pair, sign-in failed).
+- Token refresh: access tokens last 7 days and refresh tokens are single-use. `validToken()` refreshes within a day
+  of expiry (serialized, new pair stored at once); a `401` on `/sync/history` forces one refresh and retries; a
+  rejected refresh signs out so the user signs in again. Before this, Trakt sync silently stopped after 7 days.
+- Device-code sign-in is unchanged (PKCE applies only to the authorization-code flow).
+- Settings dialog and setup guide: secret marked optional; redirect URI `urn:ietf:wg:oauth:2.0:oob` (Trakt may warn,
+  it still saves; it's sent on refresh, so it must match the app).
+- Release: only the `TRAKT_CLIENT_ID` repo secret is needed. `TRAKT_CLIENT_SECRET` stays optional in `release.yml`.
+
+Tests: `TraktAuthTest` (secret omitted/sent, refresh body, refresh window). Not tested against a live Trakt account.

@@ -180,11 +180,11 @@ object SetupGuides {
         steps = listOf(
             SetupGuide.Step("Create a free Trakt account, or skip this if you already have one.", link = "https://trakt.tv/auth/join", linkLabel = "Sign up"),
             SetupGuide.Step("Open Trakt's API apps and tap New Application.", link = "https://trakt.tv/oauth/applications/new", linkLabel = "New application"),
-            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this exact value. Leave the other fields empty and save.", copy = TRAKT_REDIRECT),
-            SetupGuide.Step("Copy the Client ID and Client Secret, then tap Add Trakt API app here and paste both."),
+            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this exact value (Trakt may warn about it; save anyway). Leave allowed origins and the other fields empty.", copy = TRAKT_REDIRECT),
+            SetupGuide.Step("Copy the Client ID, then tap Add Trakt API app here and paste it. New Trakt apps have no client secret; paste one only if your (older) app shows it."),
             SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve."),
         ),
-        tips = listOf("Keep the client secret private. It's stored encrypted on the device and never leaves it except to talk to Trakt."),
+        tips = listOf("Signing in shows a short code; nothing secret is needed. If your app has a client secret it's stored encrypted on the device and only sent to Trakt.", "Yumeiro refreshes the sign-in before it expires (Trakt sign-ins last 7 days), so tracking keeps working."),
     )
 
     // endregion
@@ -253,7 +253,7 @@ object SetupGuides {
         ),
     )
 
-    const val TRAKT_REDIRECT = "urn:ietf:wg:oauth:2.0:oob"
+    const val TRAKT_REDIRECT = dev.asfakul.yumeiro.tracking.Trakt.REDIRECT
 
     val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, youtube, youtubeCookie, unifiedPush)
 }

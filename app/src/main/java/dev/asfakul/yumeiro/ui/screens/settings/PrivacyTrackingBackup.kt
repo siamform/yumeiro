@@ -260,10 +260,10 @@ fun TrackingScreen(onBack: () -> Unit) {
             title = { Text("Trakt API app") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Create a free app at trakt.tv/oauth/applications/new with this redirect URI, then paste its Client ID and Client Secret.", color = TextSecondary, fontSize = 13.sp)
+                    Text("Create a free app at trakt.tv/oauth/applications/new with this redirect URI, then paste its Client ID. New Trakt apps have no client secret; fill it in only if Trakt shows one.", color = TextSecondary, fontSize = 13.sp)
                     TextButton(onClick = { copyToClipboard(context, "Redirect URI", SetupGuides.TRAKT_REDIRECT) }) { Text(SetupGuides.TRAKT_REDIRECT + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
                     OutlinedTextField(id, { id = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text("Client secret") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text("Client secret (optional)") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = { TextButton(onClick = {

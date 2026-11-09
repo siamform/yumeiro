@@ -82,7 +82,7 @@ object AnimeSync {
                 }
                 if (trakt) {
                     val ep = if (episode != null) num else null
-                    dev.asfakul.yumeiro.tracking.Trakt.watched(client, detail.name, detail.year, episode?.season, ep)
+                    dev.asfakul.yumeiro.tracking.Trakt.watched(app, client, detail.name, detail.year, episode?.season, ep)
                 }
             }.onFailure { Log.w(TAG, "sync", it); synced.remove(key) }
         }

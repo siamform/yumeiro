@@ -97,6 +97,7 @@ jobs:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          # Optional: Trakt apps created since 2026-10-01 have no secret (PKCE-only); leave the secret unset.
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
           KITSU_CLIENT_ID: ${{ secrets.KITSU_CLIENT_ID }}
           KITSU_CLIENT_SECRET: ${{ secrets.KITSU_CLIENT_SECRET }}
