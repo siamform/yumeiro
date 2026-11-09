@@ -70,7 +70,9 @@ fun BrowserCheckHost() {
     var visible by remember(p) { mutableStateOf(false) }
     var blocked by remember(p) { mutableIntStateOf(0) }
     var lastBlocked by remember(p) { mutableStateOf<String?>(null) }
-    var webRef by remember(p) { mutableStateOf<WebView?>(null) }
+    // "Open anyway" loads the held-back page in the check page. Holds a loader, not the WebView itself,
+    // so no WebView object lives in Compose state (and none outlives the dialog).
+    var openInPage by remember(p) { mutableStateOf<((String) -> Unit)?>(null) }
     Dialog(onDismissRequest = { BrowserCheck.cancel() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("browser_check")) {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -111,7 +113,11 @@ fun BrowserCheckHost() {
                             SafeWebView.addAdShield(this)
                             // Never flash black while the first page paints.
                             setBackgroundColor(android.graphics.Color.WHITE)
+                            // Captcha / sign-in pages need JavaScript (reviewed, docs/security/AUDIT.md). No JS
+                            // bridge is added; local files and content:// stay blocked (also set in harden()).
                             settings.javaScriptEnabled = true
+                            settings.allowFileAccess = false
+                            settings.allowContentAccess = false
                             settings.domStorageEnabled = true
                             settings.userAgentString = BrowserCheck.userAgent()
                             CookieManager.getInstance().setAcceptCookie(true)
@@ -126,12 +132,20 @@ fun BrowserCheckHost() {
                                 // site's own sign-in pages, open them in this page.
                                 override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
                                     val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
-                                    val probe = WebView(ctx)
+                                    // Throwaway view that only learns where the pop-up wants to go; it never runs the
+                                    // pop-up's scripts and can't read local files or content:// URIs.
+                                    val probe = WebView(ctx).apply {
+                                        settings.javaScriptEnabled = false
+                                        settings.allowFileAccess = false
+                                        settings.allowContentAccess = false
+                                    }
+                                    var probeDone = false
                                     probe.webViewClient = object : android.webkit.WebViewClient() {
                                         private var handled = false
                                         private fun route(target: String?) {
                                             if (handled) return
                                             handled = true
+                                            probeDone = true
                                             val decision = dev.asfakul.yumeiro.online.web.AdShield.decidePopup(p.url, main.url, target, login)
                                             if (decision == dev.asfakul.yumeiro.online.web.AdShield.Decision.ALLOW && target != null) main.loadUrl(target)
                                             else { blocked++; if (target != null && target.startsWith("http")) lastBlocked = target }
@@ -142,6 +156,9 @@ fun BrowserCheckHost() {
                                     }
                                     transport.webView = probe
                                     resultMsg.sendToTarget()
+                                    // window.open() with no URL never navigates: dispose the probe instead of leaking it.
+                                    // Main-looper handler, not main.postDelayed: that never runs once the dialog is closed.
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (!probeDone) { probeDone = true; SafeWebView.dispose(probe) } }, POPUP_PROBE_TIMEOUT_MS)
                                     return true
                                 }
                             }
@@ -175,11 +192,11 @@ fun BrowserCheckHost() {
                                     }
                                 }
                             }
-                            webRef = this
+                            openInPage = { u -> main.loadUrl(u) }
                             loadUrl(p.url)
                         }
                     },
-                    onRelease = { webRef = null; SafeWebView.dispose(it) },
+                    onRelease = { openInPage = null; SafeWebView.dispose(it) },
                 )
                 if (!visible) Column(
                     Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("browser_check_loading"),
@@ -192,13 +209,16 @@ fun BrowserCheckHost() {
                 }
                 if (blocked > 0) AdShieldBar(
                     count = blocked, canOpen = lastBlocked != null,
-                    onOpen = { lastBlocked?.let { u -> webRef?.loadUrl(u) }; lastBlocked = null },
+                    onOpen = { lastBlocked?.let { u -> openInPage?.invoke(u) }; lastBlocked = null },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
     }
 }
+
+/** How long a pop-up probe may wait for its first navigation before it is destroyed. */
+private const val POPUP_PROBE_TIMEOUT_MS = 5_000L
 
 /** Slim bar: "Blocked 3 ads & pop-ups" with an "Open anyway" for the last page the shield held back. */
 @Composable

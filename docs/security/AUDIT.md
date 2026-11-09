@@ -50,6 +50,11 @@ result elsewhere still fails the gate.
 | same | `app/src/main/java/eu/kanade/**` | Vendored Tachiyomi/Aniyomi source API (Apache-2.0). Its signatures are the extension ABI and can't change. |
 | `java/android/missing-certificate-pinning` | `tracking/Kitsu.kt`, `tracking/Trakt.kt`, `sources/servers/PlexProvider.kt`, `notify/PushWake.kt`, `youtube/YtAccount.kt` | Kitsu and Trakt rotate certificates without notice (a pin would break sign-in for every user); Plex servers are the user's own hosts with arbitrary certificates; the UnifiedPush server is whatever the user's push app uses (ntfy.sh or self-hosted) and only receives empty "wake" messages; the pasted-cookie check goes to youtube.com, whose certificates Google rotates. System trust + HTTPS-only applies. |
 | `java/android/websettings-javascript-enabled` | `ui/screens/settings/YouTubeAccountScreen.kt` | Google's own sign-in page needs JavaScript. The WebView loads only Google/YouTube sign-in, with file and content access off and non-http schemes blocked (`SafeWebView.harden`). Content-access alerts on the same WebView were fixed (explicit `allowFileAccess`/`allowContentAccess = false`). |
+| `java/android/websettings-javascript-enabled` | `ui/screens/online/BrowserCheckHost.kt` | The captcha / site sign-in page: Cloudflare, Turnstile, hCaptcha and site logins only work with JavaScript (Mihon and CloudStream use the same kind of page). No JS bridge; file and content access set off explicitly; navigations, pop-ups and sub-requests go through `AdShield`; the pop-up probe runs with JavaScript off and is destroyed after 5 s. Added 2026-11-09 (PR #17). |
+| `java/android/missing-certificate-pinning` | `online/subtitles/OpenSubtitles.kt`, `online/subtitles/SubDL.kt`, `online/subtitles/SubSource.kt` | Third-party subtitle APIs behind CDNs that rotate certificates without notice; a pin would break subtitle search for every user. HTTPS-only for these domains in `network_security_config.xml`, system CAs only, and the user's key header is removed from any hop that leaves the site or drops to HTTP (`SubtitleNet.keyScoped`, `SubtitleKeyScopeTest`). Added 2026-11-09 (PR #17). |
+
+Fixed instead of suppressed (PR #17): `websettings-allow-content-access` x4 in `BrowserCheckHost.kt` (explicit
+`allowFileAccess`/`allowContentAccess = false` on the page and the pop-up probe; no WebView held in Compose state).
 
 Fixed instead of suppressed: cleartext trusted-extension set (now sealed with `SecretBox`) and the app-lock
 `insecure-local-authentication` finding (prompt bound to a Keystore `CryptoObject`, `security/LockKey`).
@@ -78,3 +83,17 @@ only to the same host (and its subdomains). Signing out clears that host's cooki
 | Finding | Status |
 |---|---|
 | Kitsu OAuth client secret, commit `ba30fae` on `feat/universal-sources` (PR #13, never merged) | Removed from code: it now comes from `BuildConfig` and the `KITSU_CLIENT_*` repo secrets. The branch was deleted (2026-11-09). GitHub keeps `refs/pull/13/head`, so **rotate the secret** in the Kitsu developer settings and update the repo secrets. |
+
+## Subtitle API keys and redirects (2026-11-09, PR #17)
+
+OkHttp strips only `Authorization` when a redirect changes host; custom key headers are resent to the new host.
+OpenSubtitles (`Api-Key`) and SubSource (`X-API-Key`) now go through `SubtitleNet.keyScoped`, a network interceptor
+that removes the key from any hop that is not HTTPS on the site's own domain (or a subdomain). SubDL's key is a query
+parameter of the API URL only; redirects get a new URL, so it is not forwarded.
+
+## Why PR CodeQL can pass for months and then fail on an old line
+
+The CodeQL action is diff-informed on pull requests: it reports only alerts on lines the PR adds or changes.
+Re-indenting or moving old code (as PR #17 did in `BrowserCheckHost.kt`) makes its old findings "new". `main` is
+only fully scanned by the monthly schedule. Run the CodeQL workflow by hand (`workflow_dispatch`) on `main` after a
+big refactor to see the full picture.

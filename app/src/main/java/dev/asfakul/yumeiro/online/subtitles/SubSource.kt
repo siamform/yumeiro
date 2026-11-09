@@ -25,8 +25,14 @@ object SubSource {
 
     private fun key(): String = OnlineSettings.subsourceKey.value.ifBlank { throw IllegalStateException("Add a free SubSource API key in Settings → Online videos") }
 
+    private const val KEY_HEADER = "X-API-Key"
+    private const val DOMAIN = "subsource.net"
+
+    /** The key header never follows a redirect off subsource.net or onto plain HTTP. */
+    private fun scoped(client: OkHttpClient): OkHttpClient = SubtitleNet.keyScoped(client, KEY_HEADER, DOMAIN)
+
     private fun get(client: OkHttpClient, url: okhttp3.HttpUrl): String =
-        client.newCall(Request.Builder().url(url).header("X-API-Key", key()).header("Accept", "application/json").build()).execute().use { r ->
+        scoped(client).newCall(Request.Builder().url(url).header(KEY_HEADER, key()).header("Accept", "application/json").build()).execute().use { r ->
             if (r.code == 401 || r.code == 403) throw IllegalStateException("SubSource rejected the API key")
             if (r.code == 429) throw IllegalStateException("SubSource is busy, try again in a minute")
             if (!r.isSuccessful) throw IllegalStateException("SubSource answered HTTP ${r.code}")
@@ -94,7 +100,7 @@ object SubSource {
 
     fun download(client: OkHttpClient, hit: SubtitleHit): ByteArray {
         require(hit.provider == NAME && hit.id.all(Char::isDigit))
-        return client.newCall(Request.Builder().url("$API/subtitles/${hit.id}/download").header("X-API-Key", key()).build()).execute().use { r ->
+        return scoped(client).newCall(Request.Builder().url("$API/subtitles/${hit.id}/download").header(KEY_HEADER, key()).build()).execute().use { r ->
             if (r.code == 401 || r.code == 403) throw IllegalStateException("SubSource rejected the API key")
             if (!r.isSuccessful) throw IllegalStateException("SubSource download failed (HTTP ${r.code})")
             SubtitleNet.readCapped(r.body.byteStream(), MAX_ZIP)

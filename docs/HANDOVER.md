@@ -654,3 +654,31 @@ quick check · Open" message is shown instead.
 sample art).
 
 Not yet verified on a physical device. Tests: `SubtitleSitesTest`, `AdShieldTest`, `ExternalDownloaderTest`.
+
+
+## 20. PR #17 CI fix: CodeQL gate (branch `feat/subtitles-downloaders-adshield`)
+
+**Symptom.** Build, unit tests, lint, gitleaks, dependency review and both CodeQL analysis jobs passed, but the
+`CodeQL` code-scanning check failed: "7 new alerts including 1 high severity" (alerts 50–56 on `refs/pull/17/merge`).
+
+**Why it appeared now.** The CodeQL action is diff-informed on pull requests: it reports only alerts on changed lines.
+PR #17 wrapped the captcha WebView in a `Box` (re-indenting it), added a pop-up probe WebView and two subtitle
+clients, so old and new findings on those lines counted as new. Same `javaScriptEnabled = true` line passed in PR #16
+because it wasn't in that diff.
+
+| Alert | Where | Decision |
+|---|---|---|
+| `websettings-javascript-enabled` (high) | `BrowserCheckHost.kt` captcha / sign-in page | Needed (Cloudflare, Turnstile, logins). Reviewed suppression (rule + exact path) |
+| `websettings-allow-content-access` x4 | `BrowserCheckHost.kt`: the page, the pop-up probe, the `webRef` state | **Fixed.** CodeQL can't see the settings set inside `SafeWebView.harden()`; set explicitly on both views. The probe (new in #17) had default settings; now JavaScript, file and content access are off and it is destroyed after 5 s if the pop-up never navigates (it leaked before). The `WebView?` Compose state is replaced by a loader lambda |
+| `missing-certificate-pinning` x2 | `SubDL.kt`, `SubSource.kt` (+ `OpenSubtitles.kt`, touched here) | Reviewed suppression, same reasoning as Kitsu/Trakt: third-party CDNs rotate certs; HTTPS-only already enforced |
+
+**Real bug found during the audit (not reported by CodeQL).** OkHttp strips only `Authorization` on a cross-host
+redirect, so the user's OpenSubtitles `Api-Key` and SubSource `X-API-Key` would follow a redirect to any host,
+including plain HTTP. `SubtitleNet.keyScoped(client, header, domain)` adds a network interceptor that removes the key
+on any hop that isn't HTTPS on the site's domain or a subdomain (OpenSubtitles VIP stays working).
+Tests: `SubtitleKeyScopeTest` (host rules, suffix tricks, HTTPS downgrade, cross-host redirect end-to-end with two
+MockWebServers, same-site redirect keeps the key).
+
+Docs: `docs/security/AUDIT.md` (suppressions table, redirect note, diff-informed note), `.github/codeql/suppressions.jq`,
+`docs/INSPIRATION.md` (competitor study). Tip: after a big refactor run the CodeQL workflow by hand on `main`
+(`workflow_dispatch`) to get a full, non-diff scan. Not tested on a physical device (logic is unit-tested).

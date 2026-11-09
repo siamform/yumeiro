@@ -12,7 +12,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Response
 import java.io.File
 import java.io.InputStream
 
@@ -26,6 +29,31 @@ internal object SubtitleNet {
             if (out.size() > max) throw IllegalStateException("Subtitle archive too large")
         }
         out.toByteArray()
+    }
+
+    /**
+     * True when a request to [url] may carry the user's API key for [domain]: HTTPS and the host is
+     * [domain] or one of its subdomains (OpenSubtitles VIP and SubSource CDN hops stay on the site).
+     */
+    fun keyAllowed(url: HttpUrl, domain: String): Boolean =
+        url.isHttps && (url.host.equals(domain, ignoreCase = true) || url.host.endsWith(".$domain", ignoreCase = true))
+
+    /**
+     * [client] with a network interceptor that removes [header] from every hop that leaves [domain]
+     * or drops to plain HTTP. OkHttp only strips `Authorization` on a cross-host redirect; custom key
+     * headers (`Api-Key`, `X-API-Key`) are otherwise resent to wherever a redirect points. Shares the
+     * caller's connection pool and dispatcher, so it is cheap per call.
+     */
+    fun keyScoped(client: OkHttpClient, header: String, domain: String): OkHttpClient =
+        client.newBuilder().addNetworkInterceptor(KeyScope(header) { keyAllowed(it, domain) }).build()
+
+    /** Network interceptor: each hop (first request and every redirect) keeps [header] only if [allowed]. */
+    internal class KeyScope(private val header: String, private val allowed: (HttpUrl) -> Boolean) : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val r = chain.request()
+            if (r.header(header) == null || allowed(r.url)) return chain.proceed(r)
+            return chain.proceed(r.newBuilder().removeHeader(header).build())
+        }
     }
 }
 

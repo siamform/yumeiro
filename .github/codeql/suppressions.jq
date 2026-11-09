@@ -7,17 +7,24 @@
 #  2. Certificate pinning on hosts Yumeiro does not control (Kitsu/Trakt APIs rotate certs;
 #     Plex is user-hosted; the UnifiedPush server in notify/PushWake.kt is whatever the user's
 #     push app uses, e.g. ntfy.sh or self-hosted; youtube/YtAccount.kt checks a pasted cookie with
-#     youtube.com, whose certificates Google rotates). A stale pin would silently break them, so system CAs only.
+#     youtube.com, whose certificates Google rotates; online/subtitles/{OpenSubtitles,SubDL,SubSource}.kt
+#     call third-party subtitle APIs behind CDNs that rotate certificates, HTTPS-only in
+#     network_security_config.xml, and the user's key never follows a redirect off the site
+#     (SubtitleNet.keyScoped). A stale pin would silently break them, so system CAs only.
 #  3. JavaScript in the Google sign-in WebView (ui/screens/settings/YouTubeAccountScreen.kt): Google's own
 #     sign-in page does not work without it. Only accounts.google.com / youtube.com are loaded, file and
 #     content access are off, non-http schemes are blocked (SafeWebView.harden).
+#     Same rule in the captcha / site sign-in page (ui/screens/online/BrowserCheckHost.kt): Cloudflare,
+#     Turnstile, hCaptcha and site logins are JavaScript. No JS bridge, file and content access off,
+#     navigations / pop-ups / sub-requests filtered by AdShield, the pop-up probe runs without JavaScript.
 def suppressed:
   (.ruleId // .rule.id) as $r
   | (.locations[0].physicalLocation.artifactLocation.uri // "") as $u
   | ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
       and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$)")))
     or (($r == "java/android/missing-certificate-pinning")
-      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt)|sources/servers/PlexProvider|notify/PushWake|youtube/YtAccount)\\.kt$")))
+      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt)|sources/servers/PlexProvider|notify/PushWake|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource))\\.kt$")))
     or (($r == "java/android/websettings-javascript-enabled")
-      and ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt"));
+      and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")));
 .runs |= map(.results |= map(select(suppressed | not)))
