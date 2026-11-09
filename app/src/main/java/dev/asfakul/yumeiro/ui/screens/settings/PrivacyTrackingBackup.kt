@@ -64,6 +64,10 @@ import dev.asfakul.yumeiro.online.anime.MyAnimeList
 import dev.asfakul.yumeiro.security.Privacy
 import dev.asfakul.yumeiro.tracking.Kitsu
 import dev.asfakul.yumeiro.tracking.Trakt
+import dev.asfakul.yumeiro.tracking.Simkl
+import dev.asfakul.yumeiro.scrobble.LastFm
+import dev.asfakul.yumeiro.scrobble.Scrobbler
+import dev.asfakul.yumeiro.lyrics.LrcLib
 import dev.asfakul.yumeiro.ui.components.AppMessages
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -129,6 +133,8 @@ private val AniListBlue = androidx.compose.ui.graphics.Color(0xFF3DB4F2)
 private val MalBlue = androidx.compose.ui.graphics.Color(0xFF6C8EEF)
 private val KitsuOrange = androidx.compose.ui.graphics.Color(0xFFFD755C)
 private val TraktRed = androidx.compose.ui.graphics.Color(0xFFED1C24)
+private val SimklBlue = androidx.compose.ui.graphics.Color(0xFF3D9BE9)
+private val LastFmRed = androidx.compose.ui.graphics.Color(0xFFD51007)
 
 @Composable
 fun TrackingScreen(onBack: () -> Unit) {
@@ -138,6 +144,10 @@ fun TrackingScreen(onBack: () -> Unit) {
     var kitsuForm by remember { mutableStateOf(false) }
     var traktKeys by remember { mutableStateOf(false) }
     var traktCode by remember { mutableStateOf<Trakt.DeviceCode?>(null) }
+    var simklKeys by remember { mutableStateOf(false) }
+    var simklCode by remember { mutableStateOf<Simkl.DeviceCode?>(null) }
+    var lastfmUrl by remember { mutableStateOf<String?>(null) }
+    var lastfmJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var editId by remember { mutableStateOf<String?>(null) }
     fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         .onFailure { AppMessages.error(context, "No browser to sign in with") }
@@ -146,7 +156,7 @@ fun TrackingScreen(onBack: () -> Unit) {
         SubPageHeader(title = "Tracking", onBack = onBack, subtitle = "Watched episodes update your lists automatically")
         androidx.compose.runtime.key(refresh) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Every tracker is free. AniList, MyAnimeList and Trakt each need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
+                Text("Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList, MyAnimeList and Trakt need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
 
                 GroupLabel("Anime")
@@ -190,6 +200,61 @@ fun TrackingScreen(onBack: () -> Unit) {
                     onSignOut = { Trakt.signOut(context); refresh++ },
                 )
                 GuideCard(SetupGuides.trakt)
+
+                TrackerCard(
+                    name = "Simkl", tint = SimklBlue, user = Simkl.user(), configured = Simkl.configured, tag = "simkl",
+                    onSetUp = { simklKeys = true },
+                    onSignIn = {
+                        scope.launch {
+                            runCatching { withContext(Dispatchers.IO) { Simkl.deviceCode(NetworkClient.get(context)) } }
+                                .onSuccess { c -> simklCode = c; open(c.verificationUrl)
+                                    runCatching { Simkl.awaitToken(context, NetworkClient.get(context), c) }
+                                        .onSuccess { AppMessages.success(context, "Signed in to Simkl as $it") }
+                                        .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                                    simklCode = null; refresh++ }
+                                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                        }
+                    },
+                    onSignOut = { Simkl.signOut(context); refresh++ },
+                )
+                GuideCard(SetupGuides.simkl)
+
+                GroupLabel("Music")
+                TrackerCard(
+                    name = "Last.fm", tint = LastFmRed, user = LastFm.user(), configured = LastFm.configured, tag = "lastfm",
+                    onSetUp = null,
+                    onSignIn = {
+                        lastfmJob?.cancel()
+                        lastfmJob = scope.launch {
+                            runCatching { withContext(Dispatchers.IO) { LastFm.requestToken(NetworkClient.get(context)) } }
+                                .onSuccess { (token, url) -> lastfmUrl = url; open(url)
+                                    runCatching { withContext(Dispatchers.IO) { LastFm.awaitSession(context, NetworkClient.get(context), token) } }
+                                        .onSuccess { AppMessages.success(context, "Scrobbling to Last.fm as $it"); Scrobbler.flush(context) }
+                                        .onFailure { if (it !is kotlinx.coroutines.CancellationException) AppMessages.error(context, OnlineErrors.friendly(it)) }
+                                    lastfmUrl = null; refresh++ }
+                                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                        }
+                    },
+                    onSignOut = { LastFm.signOut(context); refresh++ },
+                )
+                if (LastFm.user() != null) {
+                    remember { Scrobbler.init(context); true }
+                    val on by Scrobbler.enabled.collectAsState()
+                    val pending by Scrobbler.pending.collectAsState()
+                    GlassGroup {
+                        Box(Modifier.padding(horizontal = 12.dp)) {
+                            SettingsToggleRow("Scrobble what I play", if (pending > 0) "$pending waiting to be sent" else "Paused while incognito", on, { Scrobbler.setEnabled(context, it) }, "lastfm_scrobble_toggle")
+                        }
+                    }
+                }
+                GuideCard(SetupGuides.lastfm)
+                remember { LrcLib.init(context); true }
+                val lyricsOnline by LrcLib.enabled.collectAsState()
+                GlassGroup {
+                    Box(Modifier.padding(horizontal = 12.dp)) {
+                        SettingsToggleRow("Find lyrics online", "From LRCLIB, a free open lyrics library. Sends only the song's title, artist, album and length", lyricsOnline, { LrcLib.setEnabled(context, it) }, "lyrics_online_toggle")
+                    }
+                }
 
                 Text("Tokens and keys are encrypted with the Android Keystore and never leave the device except to talk to the tracker. They're not included in backups.",
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
@@ -260,10 +325,10 @@ fun TrackingScreen(onBack: () -> Unit) {
             title = { Text("Trakt API app") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Create a free app at trakt.tv/oauth/applications/new with this redirect URI, then paste its Client ID and Client Secret.", color = TextSecondary, fontSize = 13.sp)
+                    Text("Create a free app at trakt.tv/oauth/applications/new with this redirect URI, then paste its Client ID. New Trakt apps have no client secret; fill it in only if Trakt shows one.", color = TextSecondary, fontSize = 13.sp)
                     TextButton(onClick = { copyToClipboard(context, "Redirect URI", SetupGuides.TRAKT_REDIRECT) }) { Text(SetupGuides.TRAKT_REDIRECT + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
                     OutlinedTextField(id, { id = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text("Client secret") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text("Client secret (optional)") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = { TextButton(onClick = {
@@ -272,6 +337,49 @@ fun TrackingScreen(onBack: () -> Unit) {
                 traktKeys = false; refresh++
             }) { Text("Save") } },
             dismissButton = { TextButton(onClick = { traktKeys = false }) { Text("Cancel") } },
+        )
+    }
+    if (simklKeys) {
+        var id by remember { mutableStateOf(OnlineSettings.secret("simkl_client").orEmpty()) }
+        TsukiDialog(
+            onDismissRequest = { simklKeys = false },
+            title = { Text("Your own Simkl app") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Optional. Leave empty to use Yumeiro's built-in app. To use your own, create one at simkl.com/settings/developer and paste its Client ID.", color = TextSecondary, fontSize = 13.sp)
+                    OutlinedTextField(id, { id = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = { TextButton(onClick = {
+                OnlineSettings.setSecret(context, "simkl_client", id.trim().ifBlank { null })
+                simklKeys = false; refresh++
+            }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { simklKeys = false }) { Text("Cancel") } },
+        )
+    }
+    simklCode?.let { c ->
+        TsukiDialog(
+            onDismissRequest = {},
+            title = { Text("Approve on Simkl") },
+            text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text("Open ${c.verificationUrl} on any device and enter", color = TextSecondary)
+                Text(c.userCode, color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(12.dp))
+                LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
+            } },
+            confirmButton = { TextButton(onClick = { open(c.verificationUrl) }) { Text("Open Simkl") } },
+        )
+    }
+    lastfmUrl?.let { url ->
+        TsukiDialog(
+            onDismissRequest = {},
+            title = { Text("Approve on Last.fm") },
+            text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text("Tap \"Yes, allow access\" on Last.fm, then come back. This finishes on its own.", color = TextSecondary)
+                Spacer(Modifier.size(12.dp))
+                LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
+            } },
+            confirmButton = { TextButton(onClick = { open(url) }) { Text("Open Last.fm") } },
+            dismissButton = { TextButton(onClick = { lastfmJob?.cancel(); lastfmUrl = null }) { Text("Cancel") } },
         )
     }
     traktCode?.let { c ->

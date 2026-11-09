@@ -20,7 +20,7 @@ import org.json.JSONObject
  */
 object OpenSubtitles {
     private const val API = "https://api.opensubtitles.com/api/v1"
-    private const val UA = "Yumeiro v1"
+    private val UA = "Yumeiro v${dev.asfakul.yumeiro.BuildConfig.VERSION_NAME}"
     private const val KEY_HEADER = "Api-Key"
     private const val DOMAIN = "opensubtitles.com"
 
@@ -29,15 +29,24 @@ object OpenSubtitles {
 
     data class Result(val fileId: Long, val language: String, val release: String, val downloads: Int, val hearingImpaired: Boolean, val fromTrusted: Boolean)
 
-    fun available(): Boolean = OnlineSettings.openSubtitlesKey.value.isNotBlank()
+    /** The user's own key, else the one built into release builds (OPENSUBTITLES_API_KEY). */
+    fun key(): String = OnlineSettings.openSubtitlesKey.value.ifBlank { dev.asfakul.yumeiro.BuildConfig.OPENSUBTITLES_API_KEY }
+    val builtIn: Boolean get() = dev.asfakul.yumeiro.BuildConfig.OPENSUBTITLES_API_KEY.isNotBlank()
+    fun available(): Boolean = key().isNotBlank()
+
+    internal fun searchParams(title: String, imdbId: String?, season: Int?, episode: Int?, language: String): List<Pair<String, String>> = buildMap {
+        if (imdbId != null) put("imdb_id", imdbId.removePrefix("tt").trimStart('0')) else put("query", title.lowercase())
+        if (season != null) put("season_number", season.toString())
+        if (episode != null) put("episode_number", episode.toString())
+        put("languages", language.lowercase())
+    }.toSortedMap().toList()
 
     fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String): List<Result> {
-        val key = OnlineSettings.openSubtitlesKey.value.ifBlank { throw IllegalStateException("Add an OpenSubtitles API key in Settings → Online videos") }
+        val key = key().ifBlank { throw IllegalStateException("Add an OpenSubtitles API key in Settings → Online videos") }
+        // The API 301-redirects any request whose parameters aren't sorted by name (and lowercase),
+        // costing a round trip each search, so they are added in sorted order.
         val url = "$API/subtitles".toHttpUrl().newBuilder().apply {
-            if (imdbId != null) addQueryParameter("imdb_id", imdbId.removePrefix("tt").trimStart('0')) else addQueryParameter("query", title)
-            if (season != null) addQueryParameter("season_number", season.toString())
-            if (episode != null) addQueryParameter("episode_number", episode.toString())
-            addQueryParameter("languages", language.lowercase())
+            searchParams(title, imdbId, season, episode, language).forEach { (k, v) -> addQueryParameter(k, v) }
         }.build()
         val text = scoped(client).newCall(Request.Builder().url(url).header(KEY_HEADER, key).header("User-Agent", UA).header("Accept", "application/json").build()).execute().use { r ->
             if (r.code == 401 || r.code == 403) throw IllegalStateException("OpenSubtitles rejected the API key")
@@ -62,7 +71,7 @@ object OpenSubtitles {
 
     /** Temporary download link for [fileId] (SRT). */
     fun link(client: OkHttpClient, fileId: Long): String {
-        val key = OnlineSettings.openSubtitlesKey.value
+        val key = key()
         val body = JSONObject().put("file_id", fileId).put("sub_format", "srt").toString().toRequestBody("application/json".toMediaType())
         return scoped(client).newCall(Request.Builder().url("$API/download").post(body).header(KEY_HEADER, key).header("User-Agent", UA).header("Accept", "application/json").build()).execute().use { r ->
             val o = runCatching { JSONObject(r.body.string()) }.getOrNull()

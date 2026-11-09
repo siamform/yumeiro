@@ -39,6 +39,10 @@ object AnimeIds {
         return ids.takeIf { it.anilist != null || it.mal != null }
     }
 
+    /** AniList id for a bookmarked title (no detail page loaded), or null. Network call. */
+    fun aniListIdForTitle(client: OkHttpClient, name: String): Int? =
+        runCatching { search(client, cleanTitle(name), null)?.anilist }.getOrNull()
+
     /** Strips "(Dub)", "Season 2 [1080p]" style suffixes extensions add. */
     internal fun cleanTitle(name: String): String = name
         .replace(Regex("""\s*[(\[][^)\]]*(dub|sub|uncensored|\d{3,4}p)[^)\]]*[)\]]""", RegexOption.IGNORE_CASE), "")

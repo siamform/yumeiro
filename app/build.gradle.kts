@@ -59,6 +59,14 @@ val obfuscatedCert = officialCertSha.toByteArray(Charsets.US_ASCII)
 val obfuscatedToken = updaterToken.toByteArray(Charsets.UTF_8)
   .joinToString(",") { ((it.toInt() xor obfuscationKey) and 0xFF).toString() }
 
+/**
+ * Keeps only characters that are safe inside a BuildConfig string literal. Client IDs may be
+ * base64url (letters, digits, `-`, `_`; Trakt IDs since 2026-10, LRCLIB app IDs) or JWTs (`.`; TMDB
+ * read tokens), so only quotes, backslashes, spaces and other punctuation are dropped. Stripping `-`
+ * and `_` (the old `isLetterOrDigit` filter) turned a valid Trakt ID into one Trakt rejects with 401.
+ */
+fun buildConfigSafe(value: String): String = value.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' || it == '.' }
+
 android {
   namespace = "dev.asfakul.yumeiro"
   compileSdk { version = release(37) }
@@ -79,20 +87,31 @@ android {
     buildConfigField("int[]", "INTEGRITY_BYTES", "new int[]{$obfuscatedCert}")
     // OAuth client ids for AniList / MyAnimeList sync (public ids, not secrets). Set them as
     // Gradle properties or CI env vars; users can also enter their own in Settings.
-    val anilistClient = (providers.gradleProperty("anilistClientId").orNull ?: System.getenv("ANILIST_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
-    val malClient = (providers.gradleProperty("malClientId").orNull ?: System.getenv("MAL_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
+    val anilistClient = (providers.gradleProperty("anilistClientId").orNull ?: System.getenv("ANILIST_CLIENT_ID") ?: "").let(::buildConfigSafe)
+    val malClient = (providers.gradleProperty("malClientId").orNull ?: System.getenv("MAL_CLIENT_ID") ?: "").let(::buildConfigSafe)
     buildConfigField("String", "ANILIST_CLIENT_ID", "\"$anilistClient\"")
     buildConfigField("String", "MAL_CLIENT_ID", "\"$malClient\"")
     // Trakt (movies / shows tracking): free API app from trakt.tv/oauth/applications. Optional.
-    val traktClient = (providers.gradleProperty("traktClientId").orNull ?: System.getenv("TRAKT_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
-    val traktSecret = (providers.gradleProperty("traktClientSecret").orNull ?: System.getenv("TRAKT_CLIENT_SECRET") ?: "").filter { it.isLetterOrDigit() }
+    val traktClient = (providers.gradleProperty("traktClientId").orNull ?: System.getenv("TRAKT_CLIENT_ID") ?: "").let(::buildConfigSafe)
+    val traktSecret = (providers.gradleProperty("traktClientSecret").orNull ?: System.getenv("TRAKT_CLIENT_SECRET") ?: "").let(::buildConfigSafe)
     buildConfigField("String", "TRAKT_CLIENT_ID", "\"$traktClient\"")
     buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"$traktSecret\"")
     // Kitsu (anime tracking) OAuth client for the password grant. Optional; never committed.
-    val kitsuClient = (providers.gradleProperty("kitsuClientId").orNull ?: System.getenv("KITSU_CLIENT_ID") ?: "").filter { it.isLetterOrDigit() }
-    val kitsuSecret = (providers.gradleProperty("kitsuClientSecret").orNull ?: System.getenv("KITSU_CLIENT_SECRET") ?: "").filter { it.isLetterOrDigit() }
+    val kitsuClient = (providers.gradleProperty("kitsuClientId").orNull ?: System.getenv("KITSU_CLIENT_ID") ?: "").let(::buildConfigSafe)
+    val kitsuSecret = (providers.gradleProperty("kitsuClientSecret").orNull ?: System.getenv("KITSU_CLIENT_SECRET") ?: "").let(::buildConfigSafe)
     buildConfigField("String", "KITSU_CLIENT_ID", "\"$kitsuClient\"")
     buildConfigField("String", "KITSU_CLIENT_SECRET", "\"$kitsuSecret\"")
+    // Free API keys for Simkl (tracking), Last.fm (scrobbling), LRCLIB (lyrics), OpenSubtitles and
+    // TMDB. All optional (features hide or ask for the user's own key when blank); never committed.
+    fun optionalKey(prop: String, env: String) = (providers.gradleProperty(prop).orNull ?: System.getenv(env) ?: "").let(::buildConfigSafe)
+    buildConfigField("String", "SIMKL_CLIENT_ID", "\"${optionalKey("simklClientId", "SIMKL_CLIENT_ID")}\"")
+    buildConfigField("String", "LASTFM_API_KEY", "\"${optionalKey("lastfmApiKey", "LASTFM_API_KEY")}\"")
+    buildConfigField("String", "LASTFM_SHARED_SECRET", "\"${optionalKey("lastfmSharedSecret", "LASTFM_SHARED_SECRET")}\"")
+    buildConfigField("String", "LRCLIB_APP_ID", "\"${optionalKey("lrclibAppId", "LRCLIB_APP_ID")}\"")
+    buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
+    // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.
+    buildConfigField("String", "CLOUD_HOST", "\"${(providers.gradleProperty("cloudHost").orNull ?: System.getenv("YUMEIRO_CLOUD_HOST") ?: "api.yumeiro.click").let(::buildConfigSafe)}\"")
+    buildConfigField("String", "TMDB_API_KEY", "\"${optionalKey("tmdbApiKey", "TMDB_API_KEY")}\"")
   }
 
   signingConfigs {

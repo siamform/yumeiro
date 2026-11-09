@@ -180,11 +180,42 @@ object SetupGuides {
         steps = listOf(
             SetupGuide.Step("Create a free Trakt account, or skip this if you already have one.", link = "https://trakt.tv/auth/join", linkLabel = "Sign up"),
             SetupGuide.Step("Open Trakt's API apps and tap New Application.", link = "https://trakt.tv/oauth/applications/new", linkLabel = "New application"),
-            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this exact value. Leave the other fields empty and save.", copy = TRAKT_REDIRECT),
-            SetupGuide.Step("Copy the Client ID and Client Secret, then tap Add Trakt API app here and paste both."),
+            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this exact value (Trakt may warn about it; save anyway). Leave allowed origins and the other fields empty.", copy = TRAKT_REDIRECT),
+            SetupGuide.Step("Copy the Client ID, then tap Add Trakt API app here and paste it. New Trakt apps have no client secret; paste one only if your (older) app shows it."),
             SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve."),
         ),
-        tips = listOf("Keep the client secret private. It's stored encrypted on the device and never leaves it except to talk to Trakt."),
+        tips = listOf("Signing in shows a short code; nothing secret is needed. If your app has a client secret it's stored encrypted on the device and only sent to Trakt.", "Yumeiro refreshes the sign-in before it expires (Trakt sign-ins last 7 days), so tracking keeps working."),
+    )
+
+    val simkl = SetupGuide(
+        id = "simkl",
+        title = "Simkl: anime, shows and movies in one list",
+        intro = "Simkl tracks anime, TV and movies together and syncs with many other apps. Yumeiro has a built-in Simkl app, so you only sign in.",
+        steps = listOf(
+            SetupGuide.Step("Create a free Simkl account, or skip this if you already have one.", link = "https://simkl.com/", linkLabel = "Open Simkl"),
+            SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens simkl.com/pin. Type the code there and approve."),
+            SetupGuide.Step("Done. Finished episodes and movies are marked watched on Simkl, matched by MyAnimeList, AniList, IMDb or TMDB id."),
+        ),
+        tips = listOf(
+            "Using your own Simkl app is optional: create one at simkl.com/settings/developer (redirect URI urn:ietf:wg:oauth:2.0:oob), then tap Change key and paste its Client ID.",
+            "Simkl sign-ins last 7 days and Yumeiro renews them on its own.",
+        ),
+    )
+
+    val lastfm = SetupGuide(
+        id = "lastfm",
+        title = "Last.fm scrobbling",
+        intro = "Scrobbling sends the songs you play to your Last.fm profile, for stats, charts and recommendations. Local files and streamed songs both count.",
+        steps = listOf(
+            SetupGuide.Step("Create a free Last.fm account, or skip this if you already have one.", link = "https://www.last.fm/join", linkLabel = "Sign up"),
+            SetupGuide.Step("Tap Sign in. Last.fm opens in your browser; tap Yes, allow access. Yumeiro never sees your password."),
+            SetupGuide.Step("Come back to Yumeiro. It notices the approval within a few seconds."),
+        ),
+        tips = listOf(
+            "A song is scrobbled after you've listened to half of it or 4 minutes, whichever comes first (Last.fm's rule). Songs under 30 seconds don't count.",
+            "Offline? Scrobbles wait on the device (up to 500, for 14 days) and are sent when you're back online.",
+            "Incognito mode pauses scrobbling.",
+        ),
     )
 
     // endregion
@@ -253,7 +284,7 @@ object SetupGuides {
         ),
     )
 
-    const val TRAKT_REDIRECT = "urn:ietf:wg:oauth:2.0:oob"
+    const val TRAKT_REDIRECT = dev.asfakul.yumeiro.tracking.Trakt.REDIRECT
 
     val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, youtube, youtubeCookie, unifiedPush)
 }

@@ -12,6 +12,7 @@ enum class LyricsSource(val label: String) {
     EMBEDDED("Embedded in file"),
     SIDECAR(".lrc file"),
     IMPORTED("Imported .lrc"),
+    ONLINE("LRCLIB"),
 }
 
 data class Lyrics(val lines: List<LyricLine>, val source: LyricsSource) {

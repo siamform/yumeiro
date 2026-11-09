@@ -17,5 +17,10 @@
         <domain includeSubdomains="true">opensubtitles.com</domain>
         <domain includeSubdomains="true">subdl.com</domain>
         <domain includeSubdomains="true">subsource.net</domain>
+        <domain includeSubdomains="true">simkl.com</domain>
+        <domain includeSubdomains="true">audioscrobbler.com</domain>
+        <domain includeSubdomains="true">last.fm</domain>
+        <domain includeSubdomains="true">lrclib.net</domain>
+        <domain includeSubdomains="true">yumeiro.click</domain>
     </domain-config>
 </network-security-config>

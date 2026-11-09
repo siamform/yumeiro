@@ -260,7 +260,7 @@ Apple Music do it: neutral surfaces, one accent, and colour that comes from the 
 3. ExtensionGuard classloader-based detection (see §5).
 4. YouTube: related-video "Up next" + autoplay, chapters, SponsorBlock, comments (all login-free).
 5. YouTube Music: radio from a song (`YouTube.related`), albums/artists pages, synced lyrics
-   (LRCLIB is already used by `lyrics/`), offline downloads.
+   (LRCLIB online lyrics landed in §22; it was not wired in before despite this note), offline downloads.
 6. Unified search across channels + YouTube with source chips.
 7. Mixed Videos tab option ("Mix" = online channels + YouTube in one feed).
 8. Redesign pass on the remaining legacy screens (Library, Settings, Stream lists).
@@ -691,3 +691,145 @@ stays in the query string to `api.subdl.com` only (HTTPS-only, never logged, a r
 Docs: `docs/security/AUDIT.md` (suppressions table, redirect note, diff-informed note), `.github/codeql/suppressions.jq`,
 `docs/INSPIRATION.md` (competitor study). Tip: after a big refactor run the CodeQL workflow by hand on `main`
 (`workflow_dispatch`) to get a full, non-diff scan. Not tested on a physical device (logic is unit-tested).
+
+## 21. Trakt without a client secret (branch `fix/trakt-secretless`)
+
+**Why.** Since 2026-10-01 Trakt issues no client secret to new API apps ("Not issued. This app signs users in with
+PKCE"); `client_secret` is optional and deprecated on every `/oauth` body (trakt/trakt-api#974). Yumeiro required
+a secret (`Trakt.configured`) and always sent one, so a new app could never sign in.
+
+**What changed (`tracking/Trakt.kt`).**
+- Only the Client ID is required. `client_secret` is sent only when the app has one (pre-October apps).
+- A user's own Client ID is never paired with the built-in secret (it was before: mismatched pair, sign-in failed).
+- Token refresh: access tokens last 7 days and refresh tokens are single-use. `validToken()` refreshes within a day
+  of expiry (serialized, new pair stored at once); a `401` on `/sync/history` forces one refresh and retries; a
+  rejected refresh signs out so the user signs in again. Before this, Trakt sync silently stopped after 7 days.
+- Device-code sign-in is unchanged (PKCE applies only to the authorization-code flow).
+- Settings dialog and setup guide: secret marked optional; redirect URI `urn:ietf:wg:oauth:2.0:oob` (Trakt may warn,
+  it still saves; it's sent on refresh, so it must match the app).
+- Release: only the `TRAKT_CLIENT_ID` repo secret is needed. `TRAKT_CLIENT_SECRET` stays optional in `release.yml`.
+
+Tests: `TraktAuthTest` (secret omitted/sent, refresh body, refresh window). Not tested against a live Trakt account.
+
+### 21a. CI audit and the base64url client-ID bug (same branch)
+
+**CI audit (all checks of PR #18 green; earlier reds explained).**
+- PR #17's red `CodeQL` check: code scanning compares a PR with the latest analysis of `main`. `codeql.yml` ran only on
+  pull requests and once a month, so the `main` baseline was ~10 merges old and alerts already on `main` (or fixed
+  there) were counted as "new" whenever a PR touched those lines. The action also warned "Please specify an on.push
+  hook". Fix: `push` on `main` with a paths filter (one run per merged code change, docs-only merges skipped).
+- PR #14 had one red gitleaks run on an earlier push; its final head was green on every check before it merged, so
+  nothing is outstanding there.
+- Lint is still `continue-on-error`, so lint findings never turn a PR red; read the report artifact.
+
+**Real bug: client IDs were mangled at build time.** `app/build.gradle.kts` filtered every OAuth client id with
+`isLetterOrDigit()`. Trakt's new IDs (and LRCLIB app IDs) are base64url and contain `-` / `_`; stripping them gave an
+ID Trakt rejects with `401` (checked live: the real ID gets a device code, the stripped one 401s). `buildConfigSafe()`
+keeps letters, digits, `-`, `_`, `.` (JWT-style tokens) and still drops quotes, backslashes and spaces, so nothing can
+break out of the generated Java string literal.
+
+**Secrets.** Repo secrets now include `TRAKT_CLIENT_ID` (secret-less app), plus `SIMKL_CLIENT_ID`, `LASTFM_API_KEY`,
+`LASTFM_SHARED_SECRET`, `LRCLIB_APP_ID`, `OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` used by the next update (§22).
+The repo is public, so anything embedded in an APK is extractable; these are free-tier app identifiers, all
+user-overridable in Settings, and none grants access to a user's account on its own.
+
+## 22. Simkl, Last.fm scrobbling, LRCLIB lyrics, keyless OpenSubtitles (branch `feat/lyrics-scrobble-simkl`)
+
+Stacked on `fix/trakt-secretless` (PR #18): it needs `buildConfigSafe()` for the base64url LRCLIB id. Merge #18 first.
+Competitor and Sozo study: `docs/INSPIRATION.md` (last section). Next steps: `docs/ROADMAP.md` §0.8 and §2.5.
+
+**Build-time keys** (`app/build.gradle.kts`, `release.yml`, `.env.example`; all optional, blank = feature asks for the
+user's own key or hides): `SIMKL_CLIENT_ID`, `LASTFM_API_KEY`, `LASTFM_SHARED_SECRET`, `LRCLIB_APP_ID`,
+`OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` (read token, reserved for the trailer feed). Repo secrets are set.
+
+**Simkl (`tracking/Simkl.kt`).** The built-in app is an AUTH V2 app: the old `/oauth/pin` flow is rejected, so sign-in
+uses the OAuth 2 device flow (`POST /oauth2/device`, scope `media:read media:write`, poll `/oauth2/token` without a
+secret). Every call carries `client_id`, `app-name`, `app-version` and a User-Agent (Simkl requires them). Access
+tokens last 7 days, refresh tokens 180 days (not rotated); `validToken()` refreshes a day early, a `401` forces one
+refresh. A read-only scope grant is detected and reported. `AnimeSync` posts finished episodes / movies to
+`/sync/history` with MAL / AniList / IMDb / TMDB ids; each tracker (Trakt, Simkl) is isolated so one failing
+doesn't stop the other. UI: "Movies & shows" card, device-code dialog, optional own Client ID (`simkl_client`).
+
+**Last.fm (`scrobble/`).** `LastFm.kt`: desktop auth (signed `auth.getToken` → user approves on last.fm →
+poll `auth.getSession`, error 14 = not yet), `track.updateNowPlaying`, `track.scrobble` (batches of 50). MD5 `api_sig`
+lives alone in `LastFmSignature.kt` (Last.fm's format, CodeQL-suppressed by exact path, see AUDIT.md).
+`ScrobbleRules.kt`: `TrackNames` (cleans "Artist - Topic", VEVO, "(Official Video)", "[MV]", "| 4K", "Artist - "
+prefixes) and the pure `ScrobbleTracker` (tracks > 30 s; scrobble at min(50 %, 4 min) of wall-clock listening, capped
+2 s per tick so seeks don't count; restart = new listen; unknown artist = skipped). `Scrobbler.kt`: hooked in
+`MusicPlayerManager.init`, offline queue in prefs (≤ 500, drops > 14 days old, Last.fm's limit), error 9 signs out,
+8/11/16/29 retry later; nothing while incognito or switched off. Limitation: it runs while `MusicPlayerManager`
+exists (the UI side); background-only sessions after the activity is gone aren't scrobbled yet (ROADMAP §0.8).
+
+**LRCLIB (`lyrics/LrcLib.kt`).** Fourth lyrics step after imported / sidecar / embedded: `/api/get` with title, artist,
+album, length, then `/api/search` with `pick()` (±2 s match first, synced over plain, > 10 s off rejected as another
+version). Sends `User-Agent: Yumeiro v<ver> (repo URL)` and `Lrclib-App-Id`. Hits cached in `cacheDir/lyrics_online`,
+misses remembered 7 days. Settings toggle "Find lyrics online" (Tracking → Music). Source label `LRCLIB`.
+
+**OpenSubtitles.** Uses the built-in key when the user has none (user key wins; Settings shows "Your key" / "Built-in").
+Query parameters are sent sorted and lowercased (the API 301-redirects otherwise, checked live). UA carries the version.
+
+**Security.** `network_security_config.xml`: HTTPS-only for simkl.com, audioscrobbler.com, last.fm, lrclib.net.
+Tokens / session keys sealed with `SecretBox` via `OnlineSettings.setSecret`, not in backups. CodeQL suppressions
+(rule + exact path) for the MD5 signature file and certificate pinning on the three new clients, in
+`.github/codeql/suppressions.jq` and `docs/security/AUDIT.md`.
+
+Tests: `SimklTest`, `LastFmTest` (signature vectors incl. UTF-8), `ScrobbleTrackerTest`, `TrackNamesTest`, `LrcLibTest`,
+`OpenSubtitlesParamsTest`. Live-checked during development: Simkl device code + pending poll, Last.fm key, LRCLIB app
+id, OpenSubtitles key, TMDB token. Not tested on a phone or with real Simkl / Last.fm accounts.
+
+## 23. Yumeiro Cloud: airing-time push nudges (branch `feat/cloud-alerts`)
+
+Stacked on `feat/lyrics-scrobble-simkl` (PR #19). Owner asked for a server "smaller but more effective", free tier,
+30k monthly users, and later: "only what is necessary, not a large system". So the server does one thing.
+
+**What.** `server/`: one Cloudflare Worker (TypeScript, no framework) + D1 + one Queue + a 10-minute cron. Devices with
+push on register `{endpoint, anilist ids}`. The cron asks AniList which episodes aired since the last run, finds
+followers and enqueues a 1-byte push to their UnifiedPush endpoint 30 minutes later (sources lag the airing). The app
+ignores push contents anyway: a push → `BackgroundWork.wake` → feed + new-episode checks. Full design, endpoints,
+free-tier budget and owner setup steps: `docs/SERVER.md`. Privacy: `PRIVACY.md` "Push alerts".
+
+**Server safety.** Endpoint SSRF guard (`validEndpoint`: https, default port, no IP literals / localhost / .local /
+.internal, ≤ 1024 chars). Device token stored as SHA-256, compared in constant time. Follow ids validated, ≤ 300.
+404/410 from a push server deletes the device; 45 silent days prunes it. No retries on the queue (a missed nudge is
+harmless; ntfy-scheduled wake-ups still run). Deployed 2026-11-09, see §24. Checked locally with `wrangler dev`: register, follow update,
+bad endpoint, wrong token, unregister, scheduled run against live AniList.
+
+**App.** `notify/CloudAlerts.kt`: `sync()` from `DiscoveryWorker` and `PushWakeWorker` (new endpoint). No-op unless
+endpoint / follows changed or 3 days passed. Follows = the new-episode check's set (`CloudAlertsPlan.watched`), AniList
+ids resolved by title via `AnimeIds.aniListIdForTitle`, cached in prefs (0 = not found), ≤ 10 lookups per run.
+Credentials `<id>.<token>` sealed via `OnlineSettings.setSecret("cloud_device")`; `PushWake.disable` /
+`onUnregistered` call `CloudAlerts.forget`. Build field `CLOUD_HOST` (`cloudHost` / `YUMEIRO_CLOUD_HOST`, default
+`api.yumeiro.click`; blank = off). HTTPS-only for `yumeiro.click`. CodeQL pinning suppression for
+`notify/CloudAlerts.kt` (Cloudflare rotates edge certs), justified in AUDIT.md.
+
+**CI.** `.github/workflows/server.yml`: `npm test` (node:test via tsx) + `tsc`, only on `server/**`; no secrets, no deploy.
+Tests: `server/test/logic.test.ts` (6), `CloudAlertsPlanTest` (4).
+
+## 24. Scope review and deployment (branch `feat/cloud-alerts`, 2026-11-09)
+
+Owner's rules for the server: "we will build only a tiny server … only better streaming experience", 50k monthly users,
+Cloudflare free plan only (the domain is the only paid thing), "if the server is break, it should work smoothly as it
+is", and "use the server only for the most necessary functionality that a user actually need and depend".
+
+**Decision.** The server does airing alerts only. Online watch-together rooms (Durable Object relay, end-to-end
+encrypted, live-tested) and the cloud backup / device-link ideas were dropped from `main`'s path. The rooms work is kept,
+unmerged, on branch `archive/online-rooms` (commit `688226d`) in case the community asks for it and funding exists.
+Reasons with free-plan numbers: `docs/SERVER.md` "Not planned".
+
+**Hardening for 50k users.**
+- App back-off: a failed register waits 6 h → 12 h → 24 h → 48 h → 3 days (`CloudAlertsPlan.retryDelay`), 20 s call
+  timeout. Before this, a broken server meant every push device retried every 2 h (up to ~180k requests/day, over the
+  100k free limit, so one outage could keep itself going).
+- Server: free rate-limit binding `NEW_DEVICES` (5/min per IP, only for registrations that create a row) so fake
+  devices can't burn the 100k D1 writes/day. Refreshes with a valid token are not limited. Best-effort by design
+  (per Cloudflare location).
+- "When the server breaks" table in `docs/SERVER.md`.
+
+**Deployed.** Worker `yumeiro-cloud` (version `fcbe5753`), custom domain `api.yumeiro.click`, cron `*/10`, Queue
+`yumeiro-wakes` producer + consumer, D1 `yumeiro` (`beb118e1-ba0e-4b6b-84d8-d76b42037d7c`, tables `devices`,
+`follows`, `state`). The earlier test deploy with the rooms Durable Object was deleted and redeployed clean (the
+consumer had to be removed first: `wrangler queues consumer remove yumeiro-wakes yumeiro-cloud`). Live checks:
+`/v1/health` → `{ok:true,v:1}`, `/v1/rooms` → 404, register → 200, burst → 429; test rows deleted (devices = 0).
+The D1 id is not a secret. The API token is kept outside the repo; the owner should rotate it because it was pasted in
+chat. Tests: server suite + `tsc`, app 389 unit tests pass.
+
