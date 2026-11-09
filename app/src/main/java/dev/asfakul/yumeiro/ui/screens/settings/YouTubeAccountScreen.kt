@@ -232,12 +232,14 @@ private fun GoogleSignInPage(onDone: (Boolean) -> Unit) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
-                    WebView(ctx).apply {
+                    // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
+                    val page = WebView(ctx)
+                    page.settings.allowFileAccess = false
+                    page.settings.allowContentAccess = false
+                    with(page) {
                         SafeWebView.harden(this)
                         // Google's sign-in page needs JavaScript; local files and content:// stay blocked.
                         settings.javaScriptEnabled = true
-                        settings.allowFileAccess = false
-                        settings.allowContentAccess = false
                         settings.domStorageEnabled = true
                         // Google refuses sign-in from user agents marked as an embedded WebView ("; wv").
                         settings.userAgentString = runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull()?.replace("; wv", "")
@@ -261,6 +263,7 @@ private fun GoogleSignInPage(onDone: (Boolean) -> Unit) {
                         web = this
                         loadUrl(YtAccount.LOGIN_URL)
                     }
+                    page
                 },
                 onRelease = { if (web === it) web = null; SafeWebView.dispose(it) },
             )

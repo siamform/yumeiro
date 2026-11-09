@@ -48,6 +48,10 @@ object DownloadSettings {
     /** The "how downloads work" card on the Downloads page. */
     val showTips: StateFlow<Boolean> = _showTips.asStateFlow()
 
+    private val _downloader = MutableStateFlow(ExternalDownloader.IN_APP)
+    /** Who saves "Download this video": "" = Yumeiro, a package name (1DM, ADM…), or "chooser". */
+    val downloader: StateFlow<String> = _downloader.asStateFlow()
+
     @Synchronized
     fun init(context: Context) {
         if (prefs != null) return
@@ -59,6 +63,7 @@ object DownloadSettings {
         _saveYouTubeToPhone.value = p.getBoolean("yt_to_phone", true)
         _askFirst.value = p.getBoolean("ask_first", true)
         _showTips.value = p.getBoolean("show_tips", true)
+        _downloader.value = p.getString("downloader", null).orEmpty()
     }
 
     fun setAutoDeleteDays(context: Context, days: Int) { init(context); _autoDeleteDays.value = days; prefs?.edit()?.putInt("auto_delete_days", days)?.apply() }
@@ -69,6 +74,8 @@ object DownloadSettings {
 
     fun setAskFirst(context: Context, on: Boolean) { init(context); _askFirst.value = on; prefs?.edit()?.putBoolean("ask_first", on)?.apply() }
     fun setShowTips(context: Context, on: Boolean) { init(context); _showTips.value = on; prefs?.edit()?.putBoolean("show_tips", on)?.apply() }
+
+    fun setDownloader(context: Context, pkg: String) { init(context); _downloader.value = pkg; prefs?.edit()?.putString("downloader", pkg)?.apply() }
 
     fun autoDeleteLabel(days: Int) = when (days) { 0 -> "Never"; 1 -> "1 day"; else -> "$days days" }
     fun qualityLabel(h: Int) = if (h == 0) "Best" else "${h}p"

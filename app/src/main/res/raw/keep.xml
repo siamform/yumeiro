@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The notification chime is referenced by name (android.resource://…/raw/yumeiro_tsuki) so the
+     channel sound survives resource-id changes between versions; keep it if resources are shrunk. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@raw/yumeiro_tsuki" />

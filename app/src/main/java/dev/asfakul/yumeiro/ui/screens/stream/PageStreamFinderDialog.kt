@@ -253,12 +253,14 @@ fun PageStreamFinderDialog(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            WebView(ctx).apply {
+                            // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
+                            val page = WebView(ctx)
+                            page.settings.allowFileAccess = false
+                            page.settings.allowContentAccess = false
+                            with(page) {
                                 webViewRef = this
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
-                                settings.allowFileAccess = false
-                                settings.allowContentAccess = false
                                 settings.mediaPlaybackRequiresUserGesture = true
                                 base?.userAgent?.let { settings.userAgentString = it }
                                 CookieManager.getInstance().setAcceptCookie(true)
@@ -300,6 +302,7 @@ fun PageStreamFinderDialog(
                                 }
                                 loadUrl(pageUrl, headers)
                             }
+                            page
                         },
                     )
                 }

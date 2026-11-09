@@ -44,6 +44,14 @@ object OnlineSettings {
     /** Optional OpenSubtitles.com API key (adds OpenSubtitles results to subtitle search). */
     val openSubtitlesKey: StateFlow<String> = _openSubtitlesKey.asStateFlow()
 
+    private val _subdlKey = MutableStateFlow("")
+    /** Optional free SubDL API key (adds SubDL results to subtitle search). Stored encrypted. */
+    val subdlKey: StateFlow<String> = _subdlKey.asStateFlow()
+
+    private val _subsourceKey = MutableStateFlow("")
+    /** Optional free SubSource API key (adds SubSource results to subtitle search). Stored encrypted. */
+    val subsourceKey: StateFlow<String> = _subsourceKey.asStateFlow()
+
     fun init(context: Context) {
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences("online_settings", Context.MODE_PRIVATE).also { prefs = it }
@@ -55,6 +63,8 @@ object OnlineSettings {
         _autoSkip.value = p.getBoolean("auto_skip", false)
         _subtitleLang.value = p.getString("subtitle_lang", null) ?: java.util.Locale.getDefault().language.ifBlank { "en" }
         _openSubtitlesKey.value = readSecret("os_key").orEmpty()
+        _subdlKey.value = readSecret("subdl_key").orEmpty()
+        _subsourceKey.value = readSecret("subsource_key").orEmpty()
     }
 
     fun setAdult(context: Context, v: Boolean) { init(context); _adult.value = v; prefs?.edit()?.putBoolean("adult", v)?.apply(); OnlineRepository.clearCaches() }
@@ -63,6 +73,8 @@ object OnlineSettings {
     fun setAutoSkip(context: Context, v: Boolean) { init(context); _autoSkip.value = v; prefs?.edit()?.putBoolean("auto_skip", v)?.apply() }
     fun setSubtitleLang(context: Context, v: String) { init(context); _subtitleLang.value = v; prefs?.edit()?.putString("subtitle_lang", v)?.apply() }
     fun setOpenSubtitlesKey(context: Context, v: String) { init(context); _openSubtitlesKey.value = v.trim(); writeSecret("os_key", v.trim()) }
+    fun setSubdlKey(context: Context, v: String) { init(context); _subdlKey.value = v.trim(); writeSecret("subdl_key", v.trim()) }
+    fun setSubsourceKey(context: Context, v: String) { init(context); _subsourceKey.value = v.trim(); writeSecret("subsource_key", v.trim()) }
 
     /** Small secrets store for sync accounts (tokens). */
     fun secret(key: String): String? = readSecret("secret:$key")

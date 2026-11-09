@@ -210,8 +210,13 @@ object BrowserCheck {
             }
             Log.i(TAG, "Checking $host in a WebView")
             headless(page)?.let { return@withLock it.also { cleared[host] = it } }
-            val recentlyDeclined = (declined[host] ?: 0L) > System.currentTimeMillis() - 10 * 60_000
+            val now = System.currentTimeMillis()
+            val recentlyDeclined = (declined[host] ?: 0L) > now - 10 * 60_000
             if (!interactive || recentlyDeclined || CommonActivity.activity == null) return@withLock null
+            // Solved by hand a moment ago and the site asks again: don't pop the page up over and
+            // over. Offer it calmly instead (one message, the user opens it when ready).
+            if (BrowserCheckPolicy.tooSoon(askedAt[host], now)) { noteAskAgain(host, url); return@withLock null }
+            askedAt[host] = now
             askUser(page, host)?.also { cleared[host] = it }
         }
     }
@@ -228,17 +233,34 @@ object BrowserCheck {
     @SuppressLint("SetJavaScriptEnabled")
     private suspend fun headless(url: String): Clearance? {
         val ctx = appContext ?: return null
+        val home = url
         var web: WebView? = null
         return try {
             withContext(Dispatchers.Main) {
-                web = WebView(ctx).apply {
+                // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
+                val page = WebView(ctx)
+                page.settings.allowFileAccess = false
+                page.settings.allowContentAccess = false
+                web = page
+                with(page) {
                     SafeWebView.harden(this)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.userAgentString = userAgent()
                     CookieManager.getInstance().setAcceptCookie(true)
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                    webViewClient = SafeWebViewClient { web = null }
+                    SafeWebView.addAdShield(this)
+                    webViewClient = object : SafeWebViewClient({ web = null }) {
+                        override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
+                            val u = request?.url?.toString() ?: return null
+                            return if (!request.isForMainFrame && AdShield.blockRequest(u)) AdFilter.blocked() else null
+                        }
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                            val r = request ?: return false
+                            if (!r.isForMainFrame) return false
+                            return AdShield.decideNavigation(home, view?.url, r.url.toString(), r.hasGesture(), r.isRedirect, login = false) == AdShield.Decision.BLOCK
+                        }
+                    }
                     // An off-screen WebView has no size; challenge scripts that check layout or
                     // visibility then never finish. Give it a phone-sized viewport.
                     measure(
@@ -306,6 +328,24 @@ object BrowserCheck {
     }
 
     private val blockedNoticeAt = ConcurrentHashMap<String, Long>()
+    private val askedAt = ConcurrentHashMap<String, Long>()
+    private val askAgainNoticeAt = ConcurrentHashMap<String, Long>()
+
+    /** "Check again" as a single tap-to-open message, at most once per [BrowserCheckPolicy.ASK_COOLDOWN_MS]. */
+    private fun noteAskAgain(host: String, url: String) {
+        val now = System.currentTimeMillis()
+        if (BrowserCheckPolicy.tooSoon(askAgainNoticeAt[host], now)) return
+        askAgainNoticeAt[host] = now
+        val ctx = appContext ?: return
+        val root = challengePage(url, method = "POST")
+        main.post {
+            runCatching {
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(ctx, "$host wants another quick check", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "Open") {
+                    openSite(root, Purpose.CHECK)
+                }
+            }
+        }
+    }
 
     /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
     private fun noteBlocked(host: String, url: String = "https://$host/") {
@@ -365,7 +405,7 @@ object BrowserCheck {
             val ok = try { done.await() } finally { if (_pending.value?.done === done) _pending.value = null }
             if (ok) {
                 runCatching { CookieManager.getInstance().flush() }
-                declined.remove(host); blockedNoticeAt.remove(host)
+                declined.remove(host); blockedNoticeAt.remove(host); askAgainNoticeAt.remove(host)
                 val c = webCookies(url)
                 if (c.isNotEmpty()) cleared[host] = Clearance(c, userAgent())
                 SiteLogins.add(appContext, host)
@@ -432,4 +472,12 @@ object BrowserCheck {
             return chain.proceed(withClearance(chain.request(), clearance))
         }
     }
+}
+
+/** Timing rules for the "Verify you're human" page. Pure → unit-tested. */
+object BrowserCheckPolicy {
+    /** After the page was shown for a host, it isn't shown again automatically for this long. */
+    const val ASK_COOLDOWN_MS = 3 * 60_000L
+
+    fun tooSoon(lastAskedAt: Long?, now: Long): Boolean = lastAskedAt != null && now - lastAskedAt in 0 until ASK_COOLDOWN_MS
 }

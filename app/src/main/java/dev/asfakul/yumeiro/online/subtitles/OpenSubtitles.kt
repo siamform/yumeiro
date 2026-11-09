@@ -21,6 +21,11 @@ import org.json.JSONObject
 object OpenSubtitles {
     private const val API = "https://api.opensubtitles.com/api/v1"
     private const val UA = "Yumeiro v1"
+    private const val KEY_HEADER = "Api-Key"
+    private const val DOMAIN = "opensubtitles.com"
+
+    /** The key header never follows a redirect off opensubtitles.com (VIP hosts are subdomains) or onto plain HTTP. */
+    private fun scoped(client: OkHttpClient): OkHttpClient = SubtitleNet.keyScoped(client, KEY_HEADER, DOMAIN)
 
     data class Result(val fileId: Long, val language: String, val release: String, val downloads: Int, val hearingImpaired: Boolean, val fromTrusted: Boolean)
 
@@ -34,7 +39,7 @@ object OpenSubtitles {
             if (episode != null) addQueryParameter("episode_number", episode.toString())
             addQueryParameter("languages", language.lowercase())
         }.build()
-        val text = client.newCall(Request.Builder().url(url).header("Api-Key", key).header("User-Agent", UA).header("Accept", "application/json").build()).execute().use { r ->
+        val text = scoped(client).newCall(Request.Builder().url(url).header(KEY_HEADER, key).header("User-Agent", UA).header("Accept", "application/json").build()).execute().use { r ->
             if (r.code == 401 || r.code == 403) throw IllegalStateException("OpenSubtitles rejected the API key")
             if (!r.isSuccessful) throw IllegalStateException("OpenSubtitles answered HTTP ${r.code}")
             r.body.string()
@@ -59,7 +64,7 @@ object OpenSubtitles {
     fun link(client: OkHttpClient, fileId: Long): String {
         val key = OnlineSettings.openSubtitlesKey.value
         val body = JSONObject().put("file_id", fileId).put("sub_format", "srt").toString().toRequestBody("application/json".toMediaType())
-        return client.newCall(Request.Builder().url("$API/download").post(body).header("Api-Key", key).header("User-Agent", UA).header("Accept", "application/json").build()).execute().use { r ->
+        return scoped(client).newCall(Request.Builder().url("$API/download").post(body).header(KEY_HEADER, key).header("User-Agent", UA).header("Accept", "application/json").build()).execute().use { r ->
             val o = runCatching { JSONObject(r.body.string()) }.getOrNull()
             if (!r.isSuccessful) throw IllegalStateException(o?.optString("message")?.takeIf { it.isNotBlank() } ?: "OpenSubtitles answered HTTP ${r.code}")
             o?.optString("link")?.takeIf { it.startsWith("http") } ?: throw IllegalStateException("No download link")

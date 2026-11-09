@@ -37,9 +37,9 @@ object SettingsCatalog {
         AUDIO(Group.WATCH, "Audio & equalizer", "Equalizer, bass boost, virtualizer, presets",
             listOf("sound", "eq", "bass", "music", "3d", "virtualizer")),
         ONLINE(Group.WATCH, "Online videos", "18+ content, skip intro, subtitle search",
-            listOf("anime", "adult", "nsfw", "aniskip", "opensubtitles", "language", "intro", "outro")),
+            listOf("anime", "adult", "nsfw", "aniskip", "opensubtitles", "subdl", "subsource", "subtitles", "language", "intro", "outro")),
         DOWNLOADS(Group.WATCH, "Downloads", "Quality, folders and automatic clean-up",
-            listOf("offline", "storage", "quality", "delete", "save")),
+            listOf("offline", "storage", "quality", "delete", "save", "1dm", "adm", "download manager", "external")),
         LIBRARY(Group.WATCH, "Library & storage", "Scan this device for music and videos",
             listOf("scan", "rescan", "media", "files", "folder", "local")),
 

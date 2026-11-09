@@ -608,3 +608,86 @@ delay is applied at parse time (`SubtitleTiming`) and reloads the subtitle files
 after playback starts appear under "More from this source" in the captions menu.
 
 Not yet verified on a physical device. Tests: `UrlFixTest`, `ExtensionScannerTest`, `SiteAccessTest`, `SubtitleAudioTest`.
+
+## 19. Subtitle sites, external download managers, softer chime, ad shield (branch `feat/subtitles-downloaders-adshield`)
+
+**Subtitles**: `online/subtitles/SubDL` (api.subdl.com, key in the query string) and `SubSource` (api.subsource.net v1,
+`X-API-Key` header) join OpenSubtitles.com. Keys are the user's own free keys, stored encrypted like the
+OpenSubtitles key (`OnlineSettings.subdlKey` / `subsourceKey`, `SecretBox`), never logged; error texts never contain
+URLs. `SubtitleHub` searches every site with a key in parallel and interleaves results; one site failing shows its
+error without hiding the rest. SubDL / SubSource send ZIPs: `SubtitleArchive.pick` unpacks with size caps, picks the
+episode from season packs (SxxEyy, 1x02, "Show - 07"), decodes UTF-8 / UTF-16 / Windows-1252, and the file goes to
+`cacheDir/subtitles` as a `file://` URI (plays through `DefaultDataSource`). Language mapping: `SubtitleLanguages`
+(SubDL "EN"/"BR_PT", SubSource "english"/"farsi_persian", matching Bazarr's converters). The local video player's
+dialog adds them via `subtitles/SubtitleSitesProvider`. Limits: SubDL free keys ~2,000 searches/day; SubSource
+60 requests/min.
+
+**External download managers**: Settings → Downloads → "Download with" (`DownloadSettings.downloader`): Yumeiro,
+any installed 1DM / 1DM+ / 1DM Lite / ADM / ADM Pro, or "Ask each time". `ExternalDownloader.send` uses 1DM's
+documented intent (`idm.internet.download.manager.Downloader`, extras `extra_headers`, `extra_referer`,
+`extra_useragent`, `extra_cookies`, `extra_filename`) plus `Browser.EXTRA_HEADERS` for everyone. Only "Download this
+video" in the player is handed off (`OnlineDownloads.sendCurrentToExternal`); season batches and YouTube stay
+in-app. DASH never, HLS only to 1DM; otherwise it falls back to the built-in downloader with a message. The manifest
+`<queries>` lists just those packages (no all-apps visibility).
+
+**Notification sound**: new original chime `res/raw/yumeiro_tsuki.ogg` (synthesised: soft E5 → B5 bell with a short
+room tail, 1.5 s, peak −9 dBFS, about 5 dB quieter on average than the old one). Android can't change a channel's
+sound, so channel ids moved to `*_v3` (`AppNotifier.Channel`, `UpdateNotifier`) and the v2 ids are deleted. The sound
+URI is name-based (`android.resource://pkg/raw/yumeiro_tsuki`, kept by `res/raw/keep.xml`) so it survives
+resource-id changes. Users who changed a channel's sound or importance get the defaults again once.
+
+**Captcha / site page (black screen + ads after every tap)**: cause was `setSupportMultipleWindows(false)`: ad
+`window.open` / `target=_blank` replaced the page itself. Now `SafeWebView.harden` turns multiple windows on (the
+default `onCreateWindow` drops pop-ups), `SafeWebView.addAdShield` injects `AdShield.DOCUMENT_START_JS` (no
+`window.open`, removes empty full-screen click-catcher overlays) where `DOCUMENT_START_SCRIPT` is supported, and
+`BrowserCheckHost` routes navigations through `AdShield.decideNavigation` (same site, captcha / sign-in hosts and
+server redirects pass; ad hosts, `intent:`/`market:` and cross-site jumps are held back), pop-ups through
+`decidePopup` (only sign-in pages, opened in the same view), and sub-requests through `blockRequest`
+(`AdFilter` list). A slim bar shows "Blocked N ads & pop-ups" with "Open anyway" for the last held-back page; a
+loading cover replaces the black first paint. The headless check uses the same filters. `BrowserCheckPolicy`:
+after the check page was shown for a host it isn't shown again automatically for 3 minutes; a single "wants another
+quick check · Open" message is shown instead.
+
+**Torrent**: proposal only, see `docs/proposals/TORRENT.md`.
+
+**README**: player (landscape), Hues home, a Hue and the watch page added from real UI renders (artwork is original
+sample art).
+
+Not yet verified on a physical device. Tests: `SubtitleSitesTest`, `AdShieldTest`, `ExternalDownloaderTest`.
+
+
+## 20. PR #17 CI fix: CodeQL gate (branch `feat/subtitles-downloaders-adshield`)
+
+**Symptom.** Build, unit tests, lint, gitleaks, dependency review and both CodeQL analysis jobs passed, but the
+`CodeQL` code-scanning check failed: "7 new alerts including 1 high severity" (alerts 50–56 on `refs/pull/17/merge`).
+
+**Why it appeared now.** The CodeQL action is diff-informed on pull requests: it reports only alerts on changed lines.
+PR #17 wrapped the captcha WebView in a `Box` (re-indenting it), added a pop-up probe WebView and two subtitle
+clients, so old and new findings on those lines counted as new. Same `javaScriptEnabled = true` line passed in PR #16
+because it wasn't in that diff.
+
+| Alert | Where | Decision |
+|---|---|---|
+| `websettings-javascript-enabled` (high) | `BrowserCheckHost.kt` captcha / sign-in page | Needed (Cloudflare, Turnstile, logins). Reviewed suppression (rule + exact path) |
+| `websettings-allow-content-access` x4 | `BrowserCheckHost.kt`: the page, the pop-up probe, the `webRef` state | **Fixed.** CodeQL can't see the settings set inside `SafeWebView.harden()`; set explicitly on both views, on a local variable (`val page = WebView(ctx); page.settings...`), and configured through `with(page) { }` instead of `apply { }`: the query treats `WebView(..).apply { }`'s return value as another WebView source and doesn't credit settings made inside it (two fix pushes left 2, then 4, medium alerts for exactly that reason; the probe and `HeadlessCapture`, which never used `apply`, were clean). The probe (new in #17) had default settings; now JavaScript, file and content access are off and it is destroyed after 5 s if the pop-up never navigates (it leaked before). The `WebView?` Compose state is replaced by a loader lambda |
+| `missing-certificate-pinning` x2 | `SubDL.kt`, `SubSource.kt` (+ `OpenSubtitles.kt`, touched here) | Reviewed suppression, same reasoning as Kitsu/Trakt: third-party CDNs rotate certs; HTTPS-only already enforced |
+
+**Real bug found during the audit (not reported by CodeQL).** OkHttp strips only `Authorization` on a cross-host
+redirect, so the user's OpenSubtitles `Api-Key` and SubSource `X-API-Key` would follow a redirect to any host,
+including plain HTTP. `SubtitleNet.keyScoped(client, header, domain)` adds a network interceptor that removes the key
+on any hop that isn't HTTPS on the site's domain or a subdomain (OpenSubtitles VIP stays working).
+Tests: `SubtitleKeyScopeTest` (host rules, suffix tricks, HTTPS downgrade, cross-host redirect end-to-end with two
+MockWebServers, same-site redirect keeps the key).
+
+**Same pattern, everywhere (pre-emptive).** The other four WebViews (`BrowserCheck.kt` headless solver,
+`HeadlessCapture.kt`, `YouTubeAccountScreen.kt`, `PageStreamFinderDialog.kt`) now also set file / content access off on a local in the creating function (configured via `with(page) { }`, not `apply { }`), so the next PR that touches any of them doesn't trip the same gate. `harden()` still sets
+them too (defence in depth). New WebViews: copy this pattern.
+
+**SubDL v2 (deliberately not migrated yet).** SubDL's v2 API wants the key in `Authorization: Bearer` / `X-API-Key`
+instead of `?api_key=`, but v2 downloads count against 50/day on free keys (today's `dl.subdl.com` ZIPs are anonymous)
+and the v2 subtitle-search response isn't documented. Migrate only with a real key to test against; until then the key
+stays in the query string to `api.subdl.com` only (HTTPS-only, never logged, a redirect doesn't carry the query).
+
+Docs: `docs/security/AUDIT.md` (suppressions table, redirect note, diff-informed note), `.github/codeql/suppressions.jq`,
+`docs/INSPIRATION.md` (competitor study). Tip: after a big refactor run the CodeQL workflow by hand on `main`
+(`workflow_dispatch`) to get a full, non-diff scan. Not tested on a physical device (logic is unit-tested).

@@ -22,8 +22,8 @@ import dev.asfakul.yumeiro.R
 /** Posts "update ready" / "update failed" notifications for background downloads. */
 internal object UpdateNotifier {
 
-    private const val CHANNEL_ID = "yumeiro_updates"
-    private const val OLD_CHANNEL_ID = "app_updates"
+    private const val CHANNEL_ID = "yumeiro_updates_v3"
+    private val OLD_CHANNEL_IDS = listOf("app_updates", "yumeiro_updates")
     private const val NOTIFICATION_ID = 7301
 
     const val ACTION_OPEN_UPDATE = "dev.asfakul.yumeiro.update.action.OPEN_UPDATE"
@@ -43,7 +43,7 @@ internal object UpdateNotifier {
                 }
             )
         }
-        runCatching { if (nm.getNotificationChannel(OLD_CHANNEL_ID) != null) nm.deleteNotificationChannel(OLD_CHANNEL_ID) }
+        OLD_CHANNEL_IDS.forEach { id -> runCatching { if (nm.getNotificationChannel(id) != null) nm.deleteNotificationChannel(id) } }
     }
 
     private fun canNotify(context: Context): Boolean {

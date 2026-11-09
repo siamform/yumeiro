@@ -616,28 +616,29 @@ private fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.Pla
     }
 }
 
-/** Search OpenSubtitles for the playing title / episode. */
+/** Searches every subtitle site with a free key (OpenSubtitles, SubDL, SubSource) for the playing title / episode. */
 @Composable
 private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yumeiro.online.OnlineSubtitle) -> Unit) {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val key by dev.asfakul.yumeiro.online.OnlineSettings.openSubtitlesKey.collectAsState()
+    val osKey by dev.asfakul.yumeiro.online.OnlineSettings.openSubtitlesKey.collectAsState()
+    val subdlKey by dev.asfakul.yumeiro.online.OnlineSettings.subdlKey.collectAsState()
+    val subsourceKey by dev.asfakul.yumeiro.online.OnlineSettings.subsourceKey.collectAsState()
     val lang by dev.asfakul.yumeiro.online.OnlineSettings.subtitleLang.collectAsState()
-    var results by remember(state.videoId) { mutableStateOf<List<dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.Result>?>(null) }
-    var error by remember(state.videoId) { mutableStateOf<String?>(null) }
+    val hub = dev.asfakul.yumeiro.online.subtitles.SubtitleHub
+    val anyKey = osKey.isNotBlank() || subdlKey.isNotBlank() || subsourceKey.isNotBlank()
+    var outcome by remember(state.videoId) { mutableStateOf<dev.asfakul.yumeiro.online.subtitles.SubtitleHub.Outcome?>(null) }
     var busy by remember { mutableStateOf(false) }
-    LaunchedEffect(state.videoId, key, lang) {
-        if (key.isBlank()) return@LaunchedEffect
-        busy = true; error = null
-        val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.search(
-                    dev.asfakul.yumeiro.network.NetworkClient.get(context), dev.asfakul.yumeiro.online.anime.AnimeIds.cleanTitle(state.detail.name),
-                    state.detail.imdbId, state.episode?.season, state.episode?.episode, lang,
-                )
-            }
-        }
-        r.onSuccess { results = it }.onFailure { error = it.message ?: "Search failed" }
+    var fetching by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.videoId, osKey, subdlKey, subsourceKey, lang) {
+        if (!anyKey) return@LaunchedEffect
+        busy = true
+        outcome = runCatching {
+            hub.search(
+                dev.asfakul.yumeiro.network.NetworkClient.get(context), dev.asfakul.yumeiro.online.anime.AnimeIds.cleanTitle(state.detail.name),
+                state.detail.imdbId, state.episode?.season, state.episode?.episode, lang,
+            )
+        }.getOrElse { dev.asfakul.yumeiro.online.subtitles.SubtitleHub.Outcome(emptyList(), mapOf("Search" to (it.message ?: "failed")), emptyList()) }
         busy = false
     }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -647,20 +648,24 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
                 color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp, modifier = Modifier.padding(4.dp),
             )
         }
-        if (key.isBlank()) item {
-            Text("Search OpenSubtitles: add your free API key in Settings → Online videos.", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+        if (!anyKey) item {
+            Text("Search OpenSubtitles, SubDL and SubSource: add any of their free API keys in Settings → Online videos.", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
         }
-        if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text("Searching OpenSubtitles ($lang)…", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp) } }
-        error?.let { e -> item { Text(e, color = ErrorColor, fontSize = 12.sp, modifier = Modifier.padding(6.dp)) } }
-        if (results?.isEmpty() == true && !busy) item { Text("Nothing found in this language.", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(6.dp)) }
-        itemsIndexed(results.orEmpty().take(40), key = { _, r -> r.fileId }) { _, r ->
+        val sites = outcome?.providers?.joinToString(", ") ?: hub.configured().joinToString(", ")
+        if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text("Searching $sites (${lang.uppercase()})…", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp) } }
+        outcome?.errors?.forEach { (site, e) -> item(key = "err_$site") { Text("$site: $e", color = ErrorColor, fontSize = 12.sp, modifier = Modifier.padding(6.dp)) } }
+        val hits = outcome?.hits.orEmpty()
+        if (outcome != null && hits.isEmpty() && !busy) item { Text("Nothing found in this language.", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(6.dp)) }
+        itemsIndexed(hits, key = { _, r -> r.key }) { _, r ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.06f)).clickable {
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.06f)).clickable(enabled = fetching == null) {
+                    fetching = r.key
                     scope.launch {
-                        val link = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.link(dev.asfakul.yumeiro.network.NetworkClient.get(context), r.fileId) }
+                        val link = runCatching {
+                            hub.resolve(context, dev.asfakul.yumeiro.network.NetworkClient.get(context), r, state.episode?.season, state.episode?.episode)
                         }
-                        link.onSuccess { onPick(dev.asfakul.yumeiro.online.OnlineSubtitle("${r.language.uppercase()} · OpenSubtitles", it, emptyMap())) }
+                        fetching = null
+                        link.onSuccess { onPick(dev.asfakul.yumeiro.online.OnlineSubtitle("${r.language.uppercase()} · ${r.provider}", it, emptyMap())) }
                             .onFailure { dev.asfakul.yumeiro.ui.components.AppMessages.error(context, it.message ?: "Couldn't get the subtitle") }
                     }
                 }.padding(12.dp).testTag("online_subtitle_result"),
@@ -668,8 +673,10 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(r.release, color = Color.White, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(listOfNotNull(r.language.uppercase(), "${r.downloads} downloads", "HI".takeIf { r.hearingImpaired }, "trusted".takeIf { r.fromTrusted }).joinToString(" · "), color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp)
+                    Text(listOfNotNull(r.provider, r.language.uppercase(), "${r.downloads} downloads".takeIf { r.downloads > 0 }, "HI".takeIf { r.hearingImpaired },
+                        "season pack".takeIf { r.seasonPack }, r.uploader).joinToString(" · "), color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp)
                 }
+                if (fetching == r.key) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -700,6 +707,12 @@ private fun castCurrent(context: android.content.Context, state: OnlineSession.S
 /** "Download" in the player: asks where/how first ([dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt]). */
 internal fun askDownloadCurrent(context: android.content.Context, state: OnlineSession.State) {
     val s = dev.asfakul.yumeiro.online.download.DownloadSettings.also { it.init(context) }
+    val choice = s.downloader.value
+    if (choice != dev.asfakul.yumeiro.online.download.ExternalDownloader.IN_APP) {
+        val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.sendCurrentToExternal(context)
+        if (err == null) { dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Sent to ${dev.asfakul.yumeiro.online.download.ExternalDownloader.label(choice)}"); return }
+        dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "$err. Using Yumeiro's downloader instead")
+    }
     dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.ask(context, dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.Request(
         type = dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.Type.CURRENT,
         title = state.detail.name, what = state.episode?.label ?: "this video", count = 1,

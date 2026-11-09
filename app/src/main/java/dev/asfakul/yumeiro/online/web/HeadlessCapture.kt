@@ -92,13 +92,14 @@ object HeadlessCapture {
         result: CompletableDeferred<StreamRequest?>,
     ): WebView {
         val web = WebView(context)
+        // Web pages must never read app files or content providers (default is "on" before Android 11).
+        // File / content:// access set on the local in this function so CodeQL credits it (harden()-only is missed).
+        web.settings.allowFileAccess = false
+        web.settings.allowContentAccess = false
         val cookies = CookieManager.getInstance().apply { setAcceptCookie(true); setAcceptThirdPartyCookies(web, true) }
         web.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            // Web pages must never read app files or content providers (default is "on" before Android 11).
-            allowFileAccess = false
-            allowContentAccess = false
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             loadsImagesAutomatically = false

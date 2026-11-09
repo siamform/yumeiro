@@ -49,3 +49,15 @@ How similar apps handle the problems users reported, and what Yumeiro does inste
 Yumeiro takes the PipePipe scope (playback only, optional, off unless signed in, "only when blocked" by default)
 with ArchiveTune's WebView capture. No library sync, no history upload.
 
+
+## Captcha page and subtitle sites study (2026-11, PR #17 CI fix)
+
+| Topic | How others do it | Yumeiro |
+|---|---|---|
+| Captcha / site WebView | Mihon's `setDefaultSettings()` turns JavaScript, DOM storage and multiple windows on and keeps pop-ups as a stack of real tabs. https://github.com/mihonapp/mihon/blob/446f6df8/core/common/src/main/kotlin/eu/kanade/tachiyomi/util/system/WebViewUtil.kt , https://github.com/mihonapp/mihon/blob/446f6df8/app/src/main/java/eu/kanade/presentation/webview/WebViewScreenContent.kt . Reikai (Mihon fork) scopes its challenge listener to the page origin in an isolated JS world and can hand off to a self-hosted FlareSolverr. https://github.com/unseensnick/Reikai/blob/main/docs/dev/subsystems/cloudflare.md | JavaScript on only in the page itself, no JS bridge, file/content access off, pop-ups opened in a JavaScript-less probe that only reads the target URL and is destroyed after 5 s; ad hosts and cross-site jumps held back (AdShield) |
+| Subtitle sites | CloudStream: OpenSubtitles (login) and SubDL. https://cloudstream.miraheze.org/wiki/Subtitles . SkyStream also asks Stremio subtitle add-ons, including OpenSubtitles' own add-on, so IMDb titles get subtitles with no key. https://github.com/akashdh11/skystream/releases/tag/v2.9.0 . Kodi a4kSubtitles: many providers, auto-search first item. https://github.com/a4k-openproject/a4kSubtitles | OpenSubtitles + SubDL + SubSource in parallel, season-pack episode picking, keys sealed with `SecretBox` and scoped to their own domain across redirects |
+| API keys in requests | Every common HTTP client resends a custom `X-Api-Key` header on a cross-host redirect. https://safeguard.sh/resources/blog/http-client-redirect-header-leak-authorization-api-key-2026 | `SubtitleNet.keyScoped` drops the key on any hop off the site or onto HTTP |
+
+Next ideas (not built): keyless subtitles through the Stremio subtitle add-ons Yumeiro can already run (the
+Stremio bridge), and moving SubDL to its v2 API with the key in a header instead of the URL
+(https://subdl.com/developers). Both need a device check with real titles first.
