@@ -806,3 +806,66 @@ Credentials `<id>.<token>` sealed via `OnlineSettings.setSecret("cloud_device")`
 **CI.** `.github/workflows/server.yml`: `npm test` (node:test via tsx) + `tsc`, only on `server/**`; no secrets, no deploy.
 Tests: `server/test/logic.test.ts` (6), `CloudAlertsPlanTest` (4).
 
+
+## 24. Yumeiro Cloud v2: online watch-together rooms, server deployed (branch `feat/cloud-rooms-vault`)
+
+Stacked on `feat/cloud-alerts` (PR #20). New owner (2026-11-09) asked to study Sozo's server features, and gave a
+Cloudflare API token (Workers, KV, R2, D1, Queues, zone perms for `yumeiro.click`). The token lives only outside the repo
+(sandbox `~/.secrets/cf.env`, never committed or printed); the owner was advised to rotate it because it was pasted in
+chat. It has no DNS read permission (not needed).
+
+**Owner's scope (verbatim gist, 2026-11-09):** "only a tiny server, not all features… open source, no development fund…
+only better streaming experience… 50k monthly users… only Cloudflare free plan… it should not break the functionality or
+block anything… if the server breaks, it should work smoothly as it is… all free resources except the domain."
+
+**Scope review against the free plan** (sources and numbers in docs/SERVER.md "Free-plan budget"): Workers 100k
+requests/day; Durable Objects 100k requests/day (incoming WebSocket messages 20:1, protocol pings free, hibernation not
+billed) and 100k storage row writes/day (each `setAlarm` = 1); D1 500 MB per database; going over a limit makes further
+calls of that kind fail until 00:00 UTC. Result:
+- **Dropped:** encrypted cloud backup + "link a device" (built first, then removed before merge). Backups are hundreds
+  of KB each; a few thousand users would fill the 500 MB D1 database the airing alerts also use → it would break alerts.
+  The `vaults` / `links` tables were dropped from the live D1 (they only held test rows).
+- **Kept:** airing alerts (§23) and online rooms, redesigned to write **nothing per message**: the Durable Object only
+  relays; a newcomer gets the state because the host's app re-sends it when `peers {joined}` arrives. Storage per room:
+  host-token hash + creation time once, one alarm every 10 minutes, an "empty" mark. Host heartbeat 30 s.
+
+**Deployed.** `yumeiro-cloud` at `https://api.yumeiro.click` (custom domain), cron `*/10`, queue `yumeiro-wakes`, D1
+`yumeiro` (`beb118e1-…`; tables devices, follows, state), Durable Object class `Room` (migration `v1-rooms`, SQLite,
+free plan), rate limit `WRITES` (20 room creations / 60 s per IP). `wrangler.toml` has the real database id and route.
+`/v1/health` → `{ok:true,v:2,features:["alerts","rooms"]}`.
+
+**Fail-safe (the owner's main rule).** Nothing on start-up, playback or any screen waits on the server.
+`cloud/CloudApi.kt`: 8 s connect / 15 s total timeouts; `CloudGate` circuit breaker (after a 5xx / 429 / quota error,
+no calls for 2 → 4 → … 60 min; the UI says "Online rooms are unavailable right now. Rooms on the same Wi-Fi still work").
+Network blips only reconnect with backoff (≤ 12 tries). Guests keep playing on their own if the relay disappears.
+Alerts already fall back to ntfy-scheduled wake-ups. Table in docs/SERVER.md "When the server breaks".
+
+**Server.** `server/src/cloud.ts` (pure room rules: ids, frame parsing, per-socket budget 40 frames / 10 s, alarm
+verdict keep / mark / unmark / delete, invite page), `server/src/room.ts` (Durable Object, Hibernation API),
+`server/src/index.ts` routes `POST /v1/rooms`, `GET /v1/rooms/<id>/ws`, `GET /r/<id>` (invite page, CSP, hands the
+`#fragment` to `yumeiro://room/…`). Tests `server/test/cloud.test.ts` (7) + `logic.test.ts` (6) = 13, `tsc` clean.
+
+**Live check (2026-11-09, Node WebSocket client against production).** Create → host hello → guest joins →
+host sees `peers(joined)` and sends state → guest receives it (hello has no stored state) → guest leaves → host `close`
+→ everyone gets `closed`; joining an unknown room is refused; earlier run also verified chat relay, guest `state` ignored,
+lower-case ids, invite page 200.
+
+**App.**
+- `cloud/CloudCrypto.kt` (HKDF-SHA256, AES-256-GCM `v1.` frames, base32 `CloudCodes`, `CloudKeys.Room`),
+  `cloud/CloudApi.kt` (`CloudApi`, `CloudGate`).
+- `watch/WatchTogether.kt`: `hostOnline`, `joinOnline`, `say`, `chat` flow, `Status.online/invite/hostHere`; pure
+  `RoomPlan` (invite parse / build, send on change + 30 s heartbeat, backoff); `RoomNav` for deep links. The player is
+  only read on the main thread (`main.post`).
+- UI `ui/screens/watch/WatchTogetherScreen.kt`: "Online room" section (your name, create, join with link), room card
+  (invite share / copy, end / leave, host-away), encrypted chat + 6 reactions.
+- Manifest `yumeiro://room` → `MainActivity.handleIntent` → `RoomNav` → NavHost opens Watch together, which asks
+  before joining. (https App Links would need `assetlinks.json` with the release cert fingerprint; not done.)
+- CodeQL pinning suppression extended to `watch/WatchTogether.kt`, justified in docs/security/AUDIT.md.
+
+**Tests.** `CloudCryptoTest` (RFC 5869 case 1, seal/open + AAD, server shape, base32 incl. RFC 4648 vector and typos,
+room keys, `CloudGate` back-off), `RoomPlanTest` (5). Local `:app:testDebugUnitTest`, `assembleDebug`, `lintDebug`.
+
+**Not done / next.** Not tested on phones yet (two devices on different networks, plus one run with the server
+unreachable): do it before merging the stack, because merging `app/**` to `main` publishes a release. Watch the
+Durable Object metrics the first weeks. Ideas that fit the free plan: QR for invites, a guest "hold on" request, LAN-only
+library transfer to a new device (ROADMAP §0.9 / §2.5).

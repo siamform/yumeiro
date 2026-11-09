@@ -84,8 +84,13 @@ TV layout, Weblate localisation.
 
 ## 0.9 Yumeiro Cloud (§23, docs/SERVER.md)
 
-- [ ] Owner: Cloudflare account, move `yumeiro.click` nameservers, `wrangler d1 create` / `queues create` /
-  `db:init` / `deploy`, uncomment the route, check `/v1/health`.
+- [x] Owner: Cloudflare account, `yumeiro.click` on Cloudflare, D1 / Queue created, Worker deployed at
+  `api.yumeiro.click` (2026-11-09, §24).
+- [ ] Phone test (two phones on different networks): online room create → share → join from the link, play / pause /
+  seek / next episode, chat and reactions, host leaves and comes back, room ends.
+- [ ] Phone test: with the server unreachable (airplane mode on Wi-Fi without internet, or `CLOUD_HOST` pointing to a dead
+  host) the app starts, plays, and Watch together shows the busy message without hanging.
+- [ ] First weeks: check Durable Object requests / row writes in the Cloudflare dashboard against docs/SERVER.md.
 - [ ] Phone test: push on via ntfy, bookmark an airing anime, confirm a wake ~30 min after AniList's airing time.
 - [ ] Watch D1 / Queue usage in the Cloudflare dashboard the first week; tune cron or batch if needed.
 
@@ -96,7 +101,10 @@ TV layout, Weblate localisation.
 - [ ] On-device subtitle translation (ML Kit on-device translation is free; check model size and licence first).
 - [ ] ListenBrainz as a second scrobbler (token only, no secret), reusing `ScrobbleTracker` and the offline queue.
 - [ ] Last.fm: love / unlove from Now Playing, scrobble from the background service when the UI is closed.
-- [ ] Link a TV by QR over the LAN (reuse watch-together discovery).
+- [ ] Move the library to a new phone / TV over the LAN (no server; reuse watch-together discovery).
+- [ ] QR codes for invite links and link codes (needs a tiny QR encoder; no library in deps yet).
+- [ ] Guests can ask the host to pause ("hold on") — a sealed `msg` kind the host's app turns into a pause prompt.
+- [ ] Android TV: big-screen layout for the link-code dialog and online room card.
 
 ## 3. Growth and community
 

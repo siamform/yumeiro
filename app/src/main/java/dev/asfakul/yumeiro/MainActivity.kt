@@ -99,6 +99,7 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         }
         dev.asfakul.yumeiro.widget.ContinueWidget.itemFrom(intent)?.let { dev.asfakul.yumeiro.widget.TitleNav.open(it); return }
         intent?.data?.let { uri ->
+            if (uri.scheme == "yumeiro" && uri.host == "room") { dev.asfakul.yumeiro.watch.RoomNav.open(uri.toString()); return }
             if (dev.asfakul.yumeiro.online.anime.AnimeSync.handleRedirect(this, uri) { msg -> runOnUiThread { dev.asfakul.yumeiro.ui.components.AppMessages.show(this, msg) } }) return
         }
         IncomingMedia.handle(this, intent)

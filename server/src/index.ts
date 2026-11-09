@@ -3,16 +3,26 @@
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
-// Yumeiro Cloud: a tiny wake-up server. It never sends content, only "check now" pings to a
-// device's own UnifiedPush endpoint; the app then fetches what's new itself. See docs/SERVER.md.
+// Yumeiro Cloud: a tiny, optional helper. (1) Airing alerts: "check now" pings to a device's own
+// UnifiedPush endpoint; the app then fetches what's new itself. (2) Online watch-together rooms:
+// sealed relay, one hibernating Durable Object per room. Nothing in the app depends on it: when
+// it's down or over the free quota, the app keeps working exactly as without it. See docs/SERVER.md.
 import {
   AIRING_WAKE_DELAYS_S, SILENT_DAYS, WAKES_PER_MESSAGE, airingWindow, chunk, parseFollows,
   pushOutcome, randomToken, same, sha256, validEndpoint,
 } from "./logic.ts";
+import {
+  invitePage, newRoomId, validRoomId, validToken,
+} from "./cloud.ts";
+
+export { Room } from "./room.ts";
 
 export interface Env {
   DB: D1Database;
   WAKES: Queue<WakeJob>;
+  ROOMS: DurableObjectNamespace;
+  /** Per-IP limit for creating rooms. The IP is never stored. */
+  WRITES?: RateLimit;
 }
 
 interface WakeJob { endpoints: string[] }
@@ -32,9 +42,14 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     try {
-      if (url.pathname === "/v1/health" && req.method === "GET") return json({ ok: true, v: 1 });
+      if (url.pathname === "/v1/health" && req.method === "GET") return json({ ok: true, v: 2, features: ["alerts", "rooms"] });
       if (url.pathname === "/v1/devices" && req.method === "POST") return await register(req, env);
       if (url.pathname === "/v1/devices" && req.method === "DELETE") return await unregister(req, env);
+      if (url.pathname === "/v1/rooms" && req.method === "POST") return await createRoom(req, env);
+      let m = /^\/v1\/rooms\/([A-Za-z0-9]{8})\/ws$/.exec(url.pathname);
+      if (m && req.method === "GET") return await joinRoom(req, env, m[1]);
+      m = /^\/r\/([A-Za-z0-9]{8})$/.exec(url.pathname);
+      if (m && req.method === "GET") return invite(m[1]);
       return fail(404, "not_found");
     } catch (e) {
       console.error("fetch", url.pathname, e);
@@ -150,6 +165,57 @@ async function prune(env: Env): Promise<void> {
   ]);
 }
 
+// ---- abuse guard ----
+
+/** False when this IP made too many writes in the last minute. Uses Cloudflare's rate limiter; nothing is stored. */
+async function allowed(req: Request, env: Env, what: string): Promise<boolean> {
+  if (!env.WRITES) return true;
+  const ip = req.headers.get("cf-connecting-ip") ?? "?";
+  return (await env.WRITES.limit({ key: `${what}:${ip}` })).success;
+}
+
+// ---- watch-together rooms ----
+
+async function createRoom(req: Request, env: Env): Promise<Response> {
+  if (!(await allowed(req, env, "room"))) return fail(429, "slow_down");
+  for (let i = 0; i < 3; i++) {
+    const id = newRoomId();
+    const host = randomToken();
+    const r = await env.ROOMS.get(env.ROOMS.idFromName(id)).fetch("https://room/init", {
+      method: "POST", body: JSON.stringify({ hostHash: await sha256(host) }),
+    });
+    if (r.ok) return json({ id, host });
+    if (r.status !== 409) return fail(502, "room_init");
+  }
+  return fail(503, "try_again");
+}
+
+async function joinRoom(req: Request, env: Env, raw: string): Promise<Response> {
+  const id = validRoomId(raw);
+  if (!id) return fail(404, "not_found");
+  if (req.headers.get("upgrade")?.toLowerCase() !== "websocket") return fail(426, "expected_websocket");
+  const headers = new Headers(req.headers);
+  headers.delete("x-room-host");
+  const host = validToken(req.headers.get("authorization"));
+  if (host) headers.set("x-room-host", host);
+  headers.delete("authorization");
+  return env.ROOMS.get(env.ROOMS.idFromName(id)).fetch(new Request(req.url, { headers }));
+}
+
+function invite(raw: string): Response {
+  const id = validRoomId(raw);
+  if (!id) return fail(404, "not_found");
+  return new Response(invitePage(id), {
+    headers: {
+      "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer", "x-frame-options": "DENY",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+    },
+  });
+}
+
+
+
 // ---- wake-ups ----
 
 /** Episodes that aired since the last run → wake the devices that follow those shows. */
@@ -218,3 +284,4 @@ async function getState(env: Env, k: string): Promise<string | null> {
 async function setState(env: Env, k: string, v: string): Promise<void> {
   await env.DB.prepare("INSERT INTO state (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(k, v).run();
 }
+

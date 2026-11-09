@@ -44,6 +44,16 @@ of those shows airs, the server sends an empty "check now" message and the app l
 Turning push off stops it; the record is deleted automatically when the address stops working, or after 45 days
 without contact.
 
+## Online watch-together rooms (Yumeiro Cloud)
+
+Optional, no account. What's playing, the position and room chat are encrypted on your device with AES-256-GCM. The
+room key is in the invite link after the `#`, which is never sent to any server, so `api.yumeiro.click` can only relay
+sealed messages it can't read. It stores nothing per message: only the room id, a hash of the host's token and the
+creation time, deleted when the host ends the room, when it has been empty for a few minutes, or after 24 hours.
+
+Like any website, Cloudflare processes your IP address to deliver requests and for short-lived rate limiting; Yumeiro
+doesn't log or store it.
+
 ## AniList and MyAnimeList
 
 Signing in is optional. Yumeiro uses the official OAuth login of each service. The token stays on your device and is

@@ -79,3 +79,23 @@ Firebase / Amplitude. Yumeiro has no server and no funds, so each idea is rebuil
 
 Rebuild list from Sozo, all serverless (ROADMAP §2.5): trailer "Shorts" from TMDB videos, on-device stats / streaks /
 yearly recap from local history, on-device subtitle translation, link-TV by QR over the LAN.
+
+## Sozo server study (2026-11, §24)
+
+Second look at Sozo, this time at what its backend does (read from the Flutter client in `lib/`, the server itself is
+private and its base URL is obfuscated). It is a classic account backend: `auth/login`, `refresh`, `profile`,
+`auth/history/sync`, `auth/favorites`, comments, streak ping, achievements, trivia leaderboards and challenges, a
+socket.io `/watch` namespace for watch parties, `link-tv` + `auth/device/approve`, `remote/state` / `remote/command`,
+support tickets, notifications, banners, app-version, friends / privacy / activity, a TMDB catalogue proxy, and
+Trakt / AniList / MAL link sync. Everything is tied to an account and readable by the operator.
+
+What users love there, judged against Yumeiro's limits (open source, no funds, Cloudflare free plan, ~50k monthly
+users, and the app must never depend on the server). Only what improves watching and fits the free plan was built:
+
+| Sozo (account + server reads everything) | Yumeiro Cloud |
+|---|---|
+| Watch party over socket.io, needs an account | Built: online rooms on a hibernating Durable Object; the invite link carries the key in `#fragment`; the server relays sealed frames and stores nothing per message; newcomers sync from the host; chat + reactions; Wi-Fi rooms still work with no server at all |
+| History / favourites sync to the account | Not built: backups would fill the free 500 MB D1 database at this user count. File backup (Backup & restore) stays |
+| Link a TV, approve on phone (account session) | Not built (depends on cloud sync). Later idea: LAN-only transfer, no server |
+| Comments, trivia, leaderboards, friends, activity | Not rebuilt on purpose: they need identities and moderation, and the owner asked for "only what is necessary" |
+| Remote control (`remote/state`, `remote/command`) | Possible later on the same room transport (a sealed `msg` kind), no new server code |

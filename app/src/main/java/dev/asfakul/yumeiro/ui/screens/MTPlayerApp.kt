@@ -167,6 +167,10 @@ fun MTPlayerApp(
             if (it != 0L) { navigateSub(Screen.Downloads.route); dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.consumed() }
         }
     }
+    // An online watch-together invite opened from a link: show Watch together (the screen offers to join).
+    LaunchedEffect(navigateSub) {
+        dev.asfakul.yumeiro.watch.RoomNav.pending.collect { if (it != null) navigateSub(Screen.WatchTogether.route) }
+    }
     // "Resume" on the home-screen widget.
     LaunchedEffect(openOnline) {
         dev.asfakul.yumeiro.widget.TitleNav.pending.collect { item ->

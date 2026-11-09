@@ -1,15 +1,14 @@
-# Yumeiro Cloud: one free Cloudflare Worker. See server/README.md for setup.
+# Yumeiro Cloud: one free Cloudflare Worker. See docs/SERVER.md for design and setup.
 name = "yumeiro-cloud"
 main = "src/index.ts"
 compatibility_date = "2026-05-01"
 
-# Uncomment once yumeiro.click is on Cloudflare DNS.
-# routes = [{ pattern = "api.yumeiro.click", custom_domain = true }]
+routes = [{ pattern = "api.yumeiro.click", custom_domain = true }]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "yumeiro"
-database_id = "REPLACE_WITH_D1_ID" # printed by `npx wrangler d1 create yumeiro`
+database_id = "beb118e1-ba0e-4b6b-84d8-d76b42037d7c" # not a secret; only usable with an API token for this account # printed by `npx wrangler d1 create yumeiro`
 
 [[queues.producers]]
 binding = "WAKES"
@@ -20,6 +19,22 @@ queue = "yumeiro-wakes"
 max_batch_size = 1  # one message = up to 40 pushes, under the 50-subrequest limit
 max_batch_timeout = 5
 max_retries = 0
+
+# Watch-together rooms: one SQLite-backed Durable Object per room (free plan), WebSocket hibernation.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1-rooms"
+new_sqlite_classes = ["Room"]
+
+# Per-IP limit for creating rooms. Counted at the edge; IPs are never stored.
+[[ratelimits]]
+name = "WRITES"
+namespace_id = "7001"
+simple = { limit = 20, period = 60 }
+
 
 [triggers]
 # Every 10 minutes: episodes that just aired on AniList. the 03:00 UTC run also prunes silent devices.

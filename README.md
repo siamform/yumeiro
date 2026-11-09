@@ -46,8 +46,8 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 | **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. Prefer **1DM** or **ADM**? Pick it in Settings → Downloads and episodes go straight to it, with the right headers. |
 | **Every extension format** | CloudStream `.cs3`, Aniyomi anime and Mihon/Tachiyomi manga APKs, Stremio add-ons and Mangayomi-style JavaScript sources, side by side in one Sources hub. |
 | **Your home servers** | Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV and SMB shares show up as sources, with natural episode order. |
-| **Track, back up, stay private** | AniList, MyAnimeList, Kitsu and Trakt; one-file backup and restore; app lock and incognito mode. |
-| **Watch together** | Rooms on the same Wi-Fi keep play, pause and seek in sync. No account, no server. |
+| **Track, back up, stay private** | AniList, MyAnimeList, Kitsu, Trakt and Simkl; one-file backup and restore; app lock and incognito mode. |
+| **Watch together** | Rooms on the same Wi-Fi with no server, or online rooms with friends anywhere: share a link, everyone stays in sync, with chat and reactions. End-to-end encrypted, no account. |
 | **No login, ever** | YouTube and YouTube Music — search, quick picks, background play — with no Google account. |
 | **Live catalogs** | The playlist market, extension market and in-app news update without a new app release. |
 | **Safe updates** | Releases are signed with one key, and the in-app updater checks the signing certificate and SHA-256 before it installs anything. |
@@ -167,7 +167,7 @@ How Yumeiro compares with the apps it learns from. All of them are great at thei
 | IPTV / M3U | ✓ | – | – | – | – | ✓ | Live TV via server |
 | AniList, MAL, Kitsu, Trakt tracking | ✓ | ✓ | ✓ | AniList, MAL | Trakt | add-on | – |
 | Backup / app lock / incognito | ✓ | ✓ | ✓ | backup | – | – | – |
-| Watch together without a server | ✓ (same Wi-Fi) | – | – | – | – | – | SyncPlay via server |
+| Watch together | ✓ (same Wi-Fi, or online end-to-end encrypted, no account) | – | – | – | – | – | SyncPlay via server |
 | Crash guard for broken extensions | ✓ | – | – | partial | n/a | – | n/a |
 | Public source status page | [✓](https://yumeiro-phi.vercel.app/status) | – | – | – | – | – | – |
 
