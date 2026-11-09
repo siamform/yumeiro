@@ -101,6 +101,15 @@ android {
     val kitsuSecret = (providers.gradleProperty("kitsuClientSecret").orNull ?: System.getenv("KITSU_CLIENT_SECRET") ?: "").let(::buildConfigSafe)
     buildConfigField("String", "KITSU_CLIENT_ID", "\"$kitsuClient\"")
     buildConfigField("String", "KITSU_CLIENT_SECRET", "\"$kitsuSecret\"")
+    // Free API keys for Simkl (tracking), Last.fm (scrobbling), LRCLIB (lyrics), OpenSubtitles and
+    // TMDB. All optional (features hide or ask for the user's own key when blank); never committed.
+    fun optionalKey(prop: String, env: String) = (providers.gradleProperty(prop).orNull ?: System.getenv(env) ?: "").let(::buildConfigSafe)
+    buildConfigField("String", "SIMKL_CLIENT_ID", "\"${optionalKey("simklClientId", "SIMKL_CLIENT_ID")}\"")
+    buildConfigField("String", "LASTFM_API_KEY", "\"${optionalKey("lastfmApiKey", "LASTFM_API_KEY")}\"")
+    buildConfigField("String", "LASTFM_SHARED_SECRET", "\"${optionalKey("lastfmSharedSecret", "LASTFM_SHARED_SECRET")}\"")
+    buildConfigField("String", "LRCLIB_APP_ID", "\"${optionalKey("lrclibAppId", "LRCLIB_APP_ID")}\"")
+    buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
+    buildConfigField("String", "TMDB_API_KEY", "\"${optionalKey("tmdbApiKey", "TMDB_API_KEY")}\"")
   }
 
   signingConfigs {

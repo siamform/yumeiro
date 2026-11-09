@@ -101,7 +101,7 @@ fun OnlineSettingsCard() {
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
         Text("Subtitle sites (all free, use any or all)", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-        ValueRow("OpenSubtitles API key", if (osKey.isBlank()) "Not set" else "Set") { edit = "os" }
+        ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
         ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
         ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
     }

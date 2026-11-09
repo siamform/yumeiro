@@ -165,7 +165,7 @@ fun NowPlayingScreen(
     val lyricsState by produceState(LyricsUi(loading = true), track?.id, track?.uri, lyricsReload) {
         value = LyricsUi(loading = true)
         value = if (track == null) LyricsUi() else LyricsUi(
-            lyrics = runCatching { TrackDetailsRepository.loadLyrics(context, track.id, track.uri) }.getOrNull()
+            lyrics = runCatching { TrackDetailsRepository.loadLyrics(context, track.id, track.uri, track.title, track.artist, track.album, track.durationMs.takeIf { it > 0 } ?: playbackState.durationMs) }.getOrNull()
         )
     }
 

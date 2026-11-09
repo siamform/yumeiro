@@ -37,6 +37,13 @@ organised better than any single-source app. Ordered by impact for launch.
 - [ ] Built-in torrent streaming: see [proposals/TORRENT.md](proposals/TORRENT.md) (libtorrent4j + loopback stream server, opt-in).
 - [ ] SubDL / SubSource: optional search by TMDB id when an extension provides it.
 
+## 0.8 After Simkl / Last.fm / LRCLIB (§22)
+
+- [ ] Test on real phones: Simkl device sign-in and a watched anime episode + movie, Last.fm sign-in, scrobble after
+  half a song, offline queue sent later, LRCLIB lyrics on a YouTube song and on a local file without tags.
+- [ ] Scrobbling runs while the player UI exists; move `Scrobbler.watch` into `PlaybackService` so screen-off,
+  app-swiped sessions scrobble too.
+
 ## 1. Universal extension engine (the differentiator)
 
 Make Yumeiro the hub that runs the big ecosystems side by side, each behind one adapter interface
@@ -58,13 +65,14 @@ Still open: unified search de-duplicated by AniList/TMDB id, auto-fallback to an
 
 Done in v1.0.5 from the lists below: MyAnimeList, Kitsu and Trakt tracking; LAN watch together; backup and restore
 (local file); app lock and incognito; continue-watching widget; extension author kit; public status page;
-README "what's different" table; F-Droid/IzzyOnDroid metadata. Still open: Simkl, two-way sync, watch together over
+README "what's different" table; F-Droid/IzzyOnDroid metadata. Simkl, Last.fm scrobbling and LRCLIB lyrics landed
+in §22. Still open: two-way sync, watch together over
 the internet (needs a free relay), Google Drive/WebDAV backup target, kids profile, now-playing widget, a dedicated
 TV layout, Weblate localisation.
 
 ## 2. Features that set it apart
 
-- Tracking: AniList (exists), add MyAnimeList, Kitsu, Simkl, Trakt; two-way sync of progress.
+- Tracking: AniList, MyAnimeList, Kitsu, Trakt, Simkl (all exist); two-way sync of progress.
 - Watch together (synced playback room over a link), and cast (exists) with queue.
 - Smart library: one entry per title across sources; "available on 3 sources" with best one picked.
 - Downloads: background queue (done), Wi-Fi only, storage location choice (SD card / SAF folder), export to gallery.
@@ -73,6 +81,15 @@ TV layout, Weblate localisation.
 - App lock (biometric), incognito mode, per-profile libraries (kids profile with adult content hard-off).
 - Widgets: continue watching, now playing; Android TV / large-screen layout.
 - Localisation (Bangla first, then the top 10 languages) through Weblate.
+
+## 2.5 Serverless versions of Sozo's best ideas (see INSPIRATION.md)
+
+- [ ] Trailer "Shorts" feed from TMDB `/videos` (key is in place: `TMDB_API_KEY`), vertical pager, tap to open the title.
+- [ ] Stats, streaks and a yearly recap computed from local watch / listen history (no account, nothing uploaded).
+- [ ] On-device subtitle translation (ML Kit on-device translation is free; check model size and licence first).
+- [ ] ListenBrainz as a second scrobbler (token only, no secret), reusing `ScrobbleTracker` and the offline queue.
+- [ ] Last.fm: love / unlove from Now Playing, scrobble from the background service when the UI is closed.
+- [ ] Link a TV by QR over the LAN (reuse watch-together discovery).
 
 ## 3. Growth and community
 

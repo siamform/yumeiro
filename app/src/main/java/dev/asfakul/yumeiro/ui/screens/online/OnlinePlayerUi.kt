@@ -626,7 +626,7 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
     val subsourceKey by dev.asfakul.yumeiro.online.OnlineSettings.subsourceKey.collectAsState()
     val lang by dev.asfakul.yumeiro.online.OnlineSettings.subtitleLang.collectAsState()
     val hub = dev.asfakul.yumeiro.online.subtitles.SubtitleHub
-    val anyKey = osKey.isNotBlank() || subdlKey.isNotBlank() || subsourceKey.isNotBlank()
+    val anyKey = osKey.isNotBlank() || dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn || subdlKey.isNotBlank() || subsourceKey.isNotBlank()
     var outcome by remember(state.videoId) { mutableStateOf<dev.asfakul.yumeiro.online.subtitles.SubtitleHub.Outcome?>(null) }
     var busy by remember { mutableStateOf(false) }
     var fetching by remember { mutableStateOf<String?>(null) }

@@ -46,7 +46,14 @@ object TrackDetailsRepository {
     private fun importedFile(context: Context, trackId: String): File =
         File(File(context.filesDir, "lyrics"), trackId.replace(Regex("[^A-Za-z0-9_.-]"), "_") + ".lrc")
 
-    suspend fun loadLyrics(context: Context, trackId: String, uri: String): Lyrics? = withContext(Dispatchers.IO) {
+    /**
+     * Lyrics for a track, best source first: imported, sidecar .lrc, embedded tags, then (when
+     * [online] and the setting allow it) LRCLIB using [title]/[artist]/[album]/[durationMs].
+     */
+    suspend fun loadLyrics(
+        context: Context, trackId: String, uri: String,
+        title: String = "", artist: String = "", album: String = "", durationMs: Long = 0L, online: Boolean = true,
+    ): Lyrics? = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         // 1. User-imported lyrics override everything.
         runCatching {
@@ -79,6 +86,14 @@ object TrackDetailsRepository {
                 }
             }
         }.onFailure { Log.d(TAG, "embedded lyrics: ${it.javaClass.simpleName}") }
+        // 4. LRCLIB, for streamed songs and files without lyrics.
+        if (online && title.isNotBlank()) {
+            LrcLib.init(app)
+            if (LrcLib.enabled.value) runCatching {
+                LrcLib.find(app, dev.asfakul.yumeiro.network.NetworkClient.get(app), title, artist, album, durationMs)
+                    ?.let { LrcParser.parse(it) }?.takeIf { it.isNotEmpty() }?.let { return@withContext Lyrics(it, LyricsSource.ONLINE) }
+            }.onFailure { Log.d(TAG, "online lyrics: ${it.javaClass.simpleName}") }
+        }
         null
     }
 

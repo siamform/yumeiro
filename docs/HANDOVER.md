@@ -260,7 +260,7 @@ Apple Music do it: neutral surfaces, one accent, and colour that comes from the 
 3. ExtensionGuard classloader-based detection (see §5).
 4. YouTube: related-video "Up next" + autoplay, chapters, SponsorBlock, comments (all login-free).
 5. YouTube Music: radio from a song (`YouTube.related`), albums/artists pages, synced lyrics
-   (LRCLIB is already used by `lyrics/`), offline downloads.
+   (LRCLIB online lyrics landed in §22; it was not wired in before despite this note), offline downloads.
 6. Unified search across channels + YouTube with source chips.
 7. Mixed Videos tab option ("Mix" = online channels + YouTube in one feed).
 8. Redesign pass on the remaining legacy screens (Library, Settings, Stream lists).
@@ -732,3 +732,47 @@ break out of the generated Java string literal.
 `LASTFM_SHARED_SECRET`, `LRCLIB_APP_ID`, `OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` used by the next update (§22).
 The repo is public, so anything embedded in an APK is extractable; these are free-tier app identifiers, all
 user-overridable in Settings, and none grants access to a user's account on its own.
+
+## 22. Simkl, Last.fm scrobbling, LRCLIB lyrics, keyless OpenSubtitles (branch `feat/lyrics-scrobble-simkl`)
+
+Stacked on `fix/trakt-secretless` (PR #18): it needs `buildConfigSafe()` for the base64url LRCLIB id. Merge #18 first.
+Competitor and Sozo study: `docs/INSPIRATION.md` (last section). Next steps: `docs/ROADMAP.md` §0.8 and §2.5.
+
+**Build-time keys** (`app/build.gradle.kts`, `release.yml`, `.env.example`; all optional, blank = feature asks for the
+user's own key or hides): `SIMKL_CLIENT_ID`, `LASTFM_API_KEY`, `LASTFM_SHARED_SECRET`, `LRCLIB_APP_ID`,
+`OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` (read token, reserved for the trailer feed). Repo secrets are set.
+
+**Simkl (`tracking/Simkl.kt`).** The built-in app is an AUTH V2 app: the old `/oauth/pin` flow is rejected, so sign-in
+uses the OAuth 2 device flow (`POST /oauth2/device`, scope `media:read media:write`, poll `/oauth2/token` without a
+secret). Every call carries `client_id`, `app-name`, `app-version` and a User-Agent (Simkl requires them). Access
+tokens last 7 days, refresh tokens 180 days (not rotated); `validToken()` refreshes a day early, a `401` forces one
+refresh. A read-only scope grant is detected and reported. `AnimeSync` posts finished episodes / movies to
+`/sync/history` with MAL / AniList / IMDb / TMDB ids; each tracker (Trakt, Simkl) is isolated so one failing
+doesn't stop the other. UI: "Movies & shows" card, device-code dialog, optional own Client ID (`simkl_client`).
+
+**Last.fm (`scrobble/`).** `LastFm.kt`: desktop auth (signed `auth.getToken` → user approves on last.fm →
+poll `auth.getSession`, error 14 = not yet), `track.updateNowPlaying`, `track.scrobble` (batches of 50). MD5 `api_sig`
+lives alone in `LastFmSignature.kt` (Last.fm's format, CodeQL-suppressed by exact path, see AUDIT.md).
+`ScrobbleRules.kt`: `TrackNames` (cleans "Artist - Topic", VEVO, "(Official Video)", "[MV]", "| 4K", "Artist - "
+prefixes) and the pure `ScrobbleTracker` (tracks > 30 s; scrobble at min(50 %, 4 min) of wall-clock listening, capped
+2 s per tick so seeks don't count; restart = new listen; unknown artist = skipped). `Scrobbler.kt`: hooked in
+`MusicPlayerManager.init`, offline queue in prefs (≤ 500, drops > 14 days old, Last.fm's limit), error 9 signs out,
+8/11/16/29 retry later; nothing while incognito or switched off. Limitation: it runs while `MusicPlayerManager`
+exists (the UI side); background-only sessions after the activity is gone aren't scrobbled yet (ROADMAP §0.8).
+
+**LRCLIB (`lyrics/LrcLib.kt`).** Fourth lyrics step after imported / sidecar / embedded: `/api/get` with title, artist,
+album, length, then `/api/search` with `pick()` (±2 s match first, synced over plain, > 10 s off rejected as another
+version). Sends `User-Agent: Yumeiro v<ver> (repo URL)` and `Lrclib-App-Id`. Hits cached in `cacheDir/lyrics_online`,
+misses remembered 7 days. Settings toggle "Find lyrics online" (Tracking → Music). Source label `LRCLIB`.
+
+**OpenSubtitles.** Uses the built-in key when the user has none (user key wins; Settings shows "Your key" / "Built-in").
+Query parameters are sent sorted and lowercased (the API 301-redirects otherwise, checked live). UA carries the version.
+
+**Security.** `network_security_config.xml`: HTTPS-only for simkl.com, audioscrobbler.com, last.fm, lrclib.net.
+Tokens / session keys sealed with `SecretBox` via `OnlineSettings.setSecret`, not in backups. CodeQL suppressions
+(rule + exact path) for the MD5 signature file and certificate pinning on the three new clients, in
+`.github/codeql/suppressions.jq` and `docs/security/AUDIT.md`.
+
+Tests: `SimklTest`, `LastFmTest` (signature vectors incl. UTF-8), `ScrobbleTrackerTest`, `TrackNamesTest`, `LrcLibTest`,
+`OpenSubtitlesParamsTest`. Live-checked during development: Simkl device code + pending poll, Last.fm key, LRCLIB app
+id, OpenSubtitles key, TMDB token. Not tested on a phone or with real Simkl / Last.fm accounts.

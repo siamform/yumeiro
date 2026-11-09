@@ -61,3 +61,21 @@ with ArchiveTune's WebView capture. No library sync, no history upload.
 Next ideas (not built): keyless subtitles through the Stremio subtitle add-ons Yumeiro can already run (the
 Stremio bridge), and moving SubDL to its v2 API with the key in a header instead of the URL
 (https://subdl.com/developers). Both need a device check with real titles first.
+
+## Sozo, music clients and trackers study (2026-11, §22)
+
+Sozo (https://github.com/Sozo-app/sozo, Flutter, GPL-3.0) is the closest "everything app" to Yumeiro. Read for
+workflow and design, not copied. Its standout features (Shorts trailer feed, auto-translated subtitles, comments,
+achievements, yearly recap, streaks, trivia, watch party) all run on a private Node backend (`sozo-backend`) plus
+Firebase / Amplitude. Yumeiro has no server and no funds, so each idea is rebuilt on-device on free public APIs.
+
+| Area | How others do it | Yumeiro |
+|---|---|---|
+| Tracking breadth | Sozo: Trakt. Dartotsu and AnymeX: AniList, MAL, Simkl, Kitsu. https://github.com/aayush2622/Dartotsu , https://github.com/RyanYuuki/AnymeX | AniList, MAL, Kitsu, Trakt and now Simkl (anime, shows and movies in one list), matched by MAL / AniList / IMDb / TMDB id, each tracker isolated so one failure never blocks the others |
+| Simkl sign-in | Typical apps use the PIN flow with a client secret | OAuth 2 device flow (`/oauth2/device`) with the built-in public client id, no secret, 7-day tokens renewed ahead of expiry |
+| Scrobbling | Metrolist has Last.fm built in but its own FAQ also points users to Pano Scrobbler. https://github.com/MetrolistGroup/Metrolist , https://www.apkmirror.com/apk/mostafaalagamy/metrolist/metrolist-12-9-0-release/metrolist-12-9-0-android-apk-download/ . Pano Scrobbler: offline queue, regex edits, first-artist extraction. https://github.com/kawaiiDango/pano-scrobbler | Built in, for local files and streamed songs alike: Last.fm's 50% / 4-minute rule on real listening time (seeking doesn't count), "Artist - Topic" / "(Official Video)" clean-up, offline queue (500, 14 days), paused in incognito |
+| Synced lyrics | Kreate, Gyawun and N-Zik use LRCLIB and KuGou; Metrolist users report providers silently missing until the priority list is re-saved. https://h5.2113.net/topics/youtube-music-clients/ , https://github.com/MetrolistGroup/Metrolist/issues/3610 | One fixed, predictable order: imported → sidecar `.lrc` → embedded tags → LRCLIB (length-matched, synced preferred, other versions rejected), disk cache and a week-long "no lyrics" memory so songs aren't re-queried |
+| Subtitles | Sozo auto-translates on its server | Keyless OpenSubtitles through the built-in key (user key still wins), parameters pre-sorted to skip the API's 301; on-device translation is on the roadmap |
+
+Rebuild list from Sozo, all serverless (ROADMAP §2.5): trailer "Shorts" from TMDB videos, on-device stats / streaks /
+yearly recap from local history, on-device subtitle translation, link-TV by QR over the LAN.

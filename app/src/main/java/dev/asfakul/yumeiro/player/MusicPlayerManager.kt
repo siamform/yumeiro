@@ -150,6 +150,9 @@ class MusicPlayerManager(
         if (player.mediaItemCount > 0) connectSession()
         // Restore playback state if player was already playing in background
         restoreExistingState()
+        // Last.fm scrobbling (no-op unless signed in, enabled and not incognito).
+        dev.asfakul.yumeiro.scrobble.Scrobbler.watch(context, playbackState, scope)
+        scope.launch(Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.scrobble.Scrobbler.flush(context) } }
     }
 
     private fun connectSession() {
