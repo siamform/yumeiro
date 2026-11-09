@@ -253,12 +253,14 @@ fun PageStreamFinderDialog(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            WebView(ctx).apply {
+                            // File / content:// access off on a local in this function (not only in apply {} / harden()): PR CodeQL scans only credit this.
+                            val page = WebView(ctx)
+                            page.settings.allowFileAccess = false
+                            page.settings.allowContentAccess = false
+                            page.apply {
                                 webViewRef = this
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
-                                settings.allowFileAccess = false
-                                settings.allowContentAccess = false
                                 settings.mediaPlaybackRequiresUserGesture = true
                                 base?.userAgent?.let { settings.userAgentString = it }
                                 CookieManager.getInstance().setAcceptCookie(true)

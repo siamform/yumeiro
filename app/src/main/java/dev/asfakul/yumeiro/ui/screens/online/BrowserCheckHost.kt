@@ -108,16 +108,18 @@ fun BrowserCheckHost() {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
-                        WebView(ctx).apply {
+                        // Settings on a local in this function, not only in apply {} / harden(): PR CodeQL scans only credit these.
+                        // Local files and content:// stay blocked (also set in harden()).
+                        val page = WebView(ctx)
+                        page.settings.allowFileAccess = false
+                        page.settings.allowContentAccess = false
+                        page.apply {
                             SafeWebView.harden(this)
                             SafeWebView.addAdShield(this)
                             // Never flash black while the first page paints.
                             setBackgroundColor(android.graphics.Color.WHITE)
-                            // Captcha / sign-in pages need JavaScript (reviewed, docs/security/AUDIT.md). No JS
-                            // bridge is added; local files and content:// stay blocked (also set in harden()).
+                            // Captcha / sign-in pages need JavaScript (reviewed, docs/security/AUDIT.md). No JS bridge is added.
                             settings.javaScriptEnabled = true
-                            settings.allowFileAccess = false
-                            settings.allowContentAccess = false
                             settings.domStorageEnabled = true
                             settings.userAgentString = BrowserCheck.userAgent()
                             CookieManager.getInstance().setAcceptCookie(true)
@@ -134,11 +136,10 @@ fun BrowserCheckHost() {
                                     val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
                                     // Throwaway view that only learns where the pop-up wants to go; it never runs the
                                     // pop-up's scripts and can't read local files or content:// URIs.
-                                    val probe = WebView(ctx).apply {
-                                        settings.javaScriptEnabled = false
-                                        settings.allowFileAccess = false
-                                        settings.allowContentAccess = false
-                                    }
+                                    val probe = WebView(ctx)
+                                    probe.settings.javaScriptEnabled = false
+                                    probe.settings.allowFileAccess = false
+                                    probe.settings.allowContentAccess = false
                                     var probeDone = false
                                     probe.webViewClient = object : android.webkit.WebViewClient() {
                                         private var handled = false

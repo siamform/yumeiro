@@ -669,7 +669,7 @@ because it wasn't in that diff.
 | Alert | Where | Decision |
 |---|---|---|
 | `websettings-javascript-enabled` (high) | `BrowserCheckHost.kt` captcha / sign-in page | Needed (Cloudflare, Turnstile, logins). Reviewed suppression (rule + exact path) |
-| `websettings-allow-content-access` x4 | `BrowserCheckHost.kt`: the page, the pop-up probe, the `webRef` state | **Fixed.** CodeQL can't see the settings set inside `SafeWebView.harden()`; set explicitly on both views. The probe (new in #17) had default settings; now JavaScript, file and content access are off and it is destroyed after 5 s if the pop-up never navigates (it leaked before). The `WebView?` Compose state is replaced by a loader lambda |
+| `websettings-allow-content-access` x4 | `BrowserCheckHost.kt`: the page, the pop-up probe, the `webRef` state | **Fixed.** CodeQL can't see the settings set inside `SafeWebView.harden()`; set explicitly on both views, on a local variable (`val page = WebView(ctx); page.settings...`) because the PR (diff-informed) scan also didn't credit settings written inside a Kotlin `apply { }` receiver (the first fix push still left 2 medium alerts for that reason; the full scan on `main` credits both forms). The probe (new in #17) had default settings; now JavaScript, file and content access are off and it is destroyed after 5 s if the pop-up never navigates (it leaked before). The `WebView?` Compose state is replaced by a loader lambda |
 | `missing-certificate-pinning` x2 | `SubDL.kt`, `SubSource.kt` (+ `OpenSubtitles.kt`, touched here) | Reviewed suppression, same reasoning as Kitsu/Trakt: third-party CDNs rotate certs; HTTPS-only already enforced |
 
 **Real bug found during the audit (not reported by CodeQL).** OkHttp strips only `Authorization` on a cross-host
@@ -678,6 +678,16 @@ including plain HTTP. `SubtitleNet.keyScoped(client, header, domain)` adds a net
 on any hop that isn't HTTPS on the site's domain or a subdomain (OpenSubtitles VIP stays working).
 Tests: `SubtitleKeyScopeTest` (host rules, suffix tricks, HTTPS downgrade, cross-host redirect end-to-end with two
 MockWebServers, same-site redirect keeps the key).
+
+**Same pattern, everywhere (pre-emptive).** The other four WebViews (`BrowserCheck.kt` headless solver,
+`HeadlessCapture.kt`, `YouTubeAccountScreen.kt`, `PageStreamFinderDialog.kt`) now also set file / content access off on a
+local in the creating function, so the next PR that touches any of them doesn't trip the same gate. `harden()` still sets
+them too (defence in depth). New WebViews: copy this pattern.
+
+**SubDL v2 (deliberately not migrated yet).** SubDL's v2 API wants the key in `Authorization: Bearer` / `X-API-Key`
+instead of `?api_key=`, but v2 downloads count against 50/day on free keys (today's `dl.subdl.com` ZIPs are anonymous)
+and the v2 subtitle-search response isn't documented. Migrate only with a real key to test against; until then the key
+stays in the query string to `api.subdl.com` only (HTTPS-only, never logged, a redirect doesn't carry the query).
 
 Docs: `docs/security/AUDIT.md` (suppressions table, redirect note, diff-informed note), `.github/codeql/suppressions.jq`,
 `docs/INSPIRATION.md` (competitor study). Tip: after a big refactor run the CodeQL workflow by hand on `main`
