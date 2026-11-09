@@ -71,6 +71,7 @@ import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 /** Search & download subtitles from OpenSubtitles (title + file-hash matching). */
@@ -84,6 +85,11 @@ fun OnlineSubtitleDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val provider = remember { OpenSubtitlesProvider() }
+    val sites = remember(context) {
+        dev.asfakul.yumeiro.online.OnlineSettings.init(context)
+        listOf(dev.asfakul.yumeiro.online.subtitles.SubDL.NAME, dev.asfakul.yumeiro.online.subtitles.SubSource.NAME)
+            .map { dev.asfakul.yumeiro.subtitles.SubtitleSitesProvider(context.applicationContext, it) }.filter { it.available() }
+    }
     remember(context) { PlayerSettings.init(context); PlayerSettings }
     val savedLang by PlayerSettings.subtitleLanguage.collectAsState()
     var language by remember { mutableStateOf(savedLang) }
@@ -101,7 +107,16 @@ fun OnlineSubtitleDialog(
         scope.launch {
             runCatching {
                 if (hash == null) hash = MovieHasher.compute(context, Uri.parse(videoUri))
-                provider.search(query, language, hash)
+                val main = runCatching { provider.search(query, language, hash) }
+                val h = hash
+                val extra = kotlinx.coroutines.coroutineScope {
+                    sites.map { p -> async { runCatching { p.search(query, language, h) }.getOrDefault(emptyList()) } }.map { it.await() }
+                }
+                val all = listOf(main.getOrDefault(emptyList())) + extra
+                if (all.all { it.isEmpty() }) main.getOrThrow()
+                val merged = mutableListOf<OnlineSubtitle>()
+                for (i in 0 until (all.maxOfOrNull { it.size } ?: 0)) all.forEach { l -> l.getOrNull(i)?.let(merged::add) }
+                merged.sortedByDescending { it.hashMatch }
             }.onSuccess { results = it }.onFailure { error = it.message ?: "Search failed" }
             loading = false; searched = true
         }
@@ -164,7 +179,7 @@ fun OnlineSubtitleDialog(
                                     if (downloadingId != null) return@SubtitleResultRow
                                     downloadingId = sub.id
                                     scope.launch {
-                                        runCatching { provider.download(context, sub) }
+                                        runCatching { (sites.firstOrNull { it.name == sub.provider } ?: provider).download(context, sub) }
                                             .onSuccess { onLoaded(it) }
                                             .onFailure { error = it.message ?: "Download failed" }
                                         downloadingId = null
@@ -174,7 +189,8 @@ fun OnlineSubtitleDialog(
                         }
                     }
                 }
-                Text("Source: OpenSubtitles.org", color = TextSecondary, fontSize = 11.sp)
+                Text("Sources: " + (listOf("OpenSubtitles.org") + sites.map { it.name }).joinToString(", ") +
+                    if (sites.isEmpty()) " (add free SubDL / SubSource keys in Settings for more)" else "", color = TextSecondary, fontSize = 11.sp)
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = SpotifyGreen) } },
@@ -198,7 +214,7 @@ private fun SubtitleResultRow(sub: OnlineSubtitle, downloading: Boolean, onClick
                         Spacer(Modifier.width(3.dp))
                         Text("Exact match · ", color = SpotifyGreen, fontSize = 11.sp)
                     }
-                    Text("${sub.language} · ${sub.format.uppercase()} · ${sub.downloads} downloads", color = TextSecondary, fontSize = 11.sp)
+                    Text(listOfNotNull(sub.provider, sub.language, sub.format.uppercase().takeIf { sub.provider == "OpenSubtitles" }, "${sub.downloads} downloads".takeIf { sub.downloads > 0 }).joinToString(" · "), color = TextSecondary, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.width(8.dp))

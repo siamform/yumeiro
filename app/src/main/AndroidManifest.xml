@@ -53,6 +53,17 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+    <!-- External download managers (Settings → Downloads → Download with): only these packages are
+         looked up, so Yumeiro can list the ones installed without asking for all-apps visibility. -->
+    <queries>
+        <package android:name="idm.internet.download.manager.plus" />
+        <package android:name="idm.internet.download.manager" />
+        <package android:name="idm.internet.download.manager.adm.lite" />
+        <package android:name="com.dv.adm" />
+        <package android:name="com.dv.adm.pay" />
+        <package android:name="com.dv.adm.old" />
+    </queries>
+
     <application
         android:name=".MTApplication"
         android:banner="@drawable/tv_banner"

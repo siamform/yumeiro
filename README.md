@@ -43,7 +43,7 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 | **Everything in one place** | Local music and video, YouTube, YouTube Music, IPTV/M3U and CloudStream `.cs3` extensions share one player, one queue and one *Continue watching* row. |
 | **Your existing extensions work** | CloudStream extension repos install as they are, with a built-in market, auto-updates, sub/dub, seasons and a crash guard, so one broken extension can't take the app down. |
 | **Fixes refused streams for you** | Before showing an error, Yumeiro retries the link with different headers, fetches fresh links, and if needed captures the stream from the page itself. |
-| **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. |
+| **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. Prefer **1DM** or **ADM**? Pick it in Settings → Downloads and episodes go straight to it, with the right headers. |
 | **Every extension format** | CloudStream `.cs3`, Aniyomi anime and Mihon/Tachiyomi manga APKs, Stremio add-ons and Mangayomi-style JavaScript sources, side by side in one Sources hub. |
 | **Your home servers** | Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV and SMB shares show up as sources, with natural episode order. |
 | **Track, back up, stay private** | AniList, MyAnimeList, Kitsu and Trakt; one-file backup and restore; app lock and incognito mode. |
@@ -57,13 +57,21 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 
 <div align="center">
 
-| Home | Now Playing | Music |
+<img src="docs/screenshots/player-landscape-dark.jpg" width="760" alt="Full-screen player playing an anime episode, with subtitles, Skip intro and quick controls" />
+
+**Full-screen player** · subtitles from OpenSubtitles, SubDL and SubSource · Skip intro · audio, captions, speed and picture-in-picture one tap away
+
+| Hues (anime, movies, drama, live) | Inside a Hue | Watching an episode |
 |:---:|:---:|:---:|
+| <img src="docs/screenshots/hues-home-dark.jpg" width="230" alt="Hues home with the featured title and Continue watching" /> | <img src="docs/screenshots/hue-channel-dark.jpg" width="230" alt="AnimeHue with Top 10 and new episodes" /> | <img src="docs/screenshots/watch-dark.jpg" width="230" alt="Episode playing, with sources, dub and episode list" /> |
+| **Home** | **Now Playing** | **Music** |
 | <img src="docs/screenshots/home-dark.jpg" width="230" alt="Home" /> | <img src="docs/screenshots/now-playing-dark.jpg" width="230" alt="Now Playing" /> | <img src="docs/screenshots/music-dark.jpg" width="230" alt="Music" /> |
-| **Videos** | **Stream** | **Library** |
+| **Videos** | **Stream (live TV playlists)** | **Library** |
 | <img src="docs/screenshots/videos-dark.jpg" width="230" alt="Videos" /> | <img src="docs/screenshots/stream-dark.jpg" width="230" alt="Stream" /> | <img src="docs/screenshots/library-dark.jpg" width="230" alt="Library" /> |
 | **Built-in user guide** | **Song info + sleep timer** | **Errors come with a fix** |
 | <img src="docs/screenshots/user-guide-dark.jpg" width="230" alt="User guide" /> | <img src="docs/screenshots/song-info-dark.jpg" width="230" alt="Song info with sleep timer" /> | <img src="docs/screenshots/error-tip-dark.jpg" width="230" alt="Error with a suggestion" /> |
+
+<sub>Screens are rendered from the app's real UI. Titles and artwork in the Hues shots are original samples made for this README, not real catalogue content.</sub>
 
 </div>
 
@@ -91,7 +99,7 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 - Gestures, PiP, background play, speed, audio tracks
 - **Floating player** like YouTube — press back or swipe the video down to keep watching while you browse
 - Slim vertical brightness and volume bars, like your phone's own
-- **Subtitles**: embedded, local files, or search online in one tap
+- **Subtitles**: embedded, local files, or search OpenSubtitles, SubDL and SubSource at once (free keys, your own)
 - **YouTube** with no login — trending, anime, AMV, live
 
 </td>

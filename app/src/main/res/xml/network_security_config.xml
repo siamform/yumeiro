@@ -14,5 +14,8 @@
         <domain includeSubdomains="true">github.com</domain>
         <domain includeSubdomains="true">githubusercontent.com</domain>
         <domain includeSubdomains="true">opensubtitles.org</domain>
+        <domain includeSubdomains="true">opensubtitles.com</domain>
+        <domain includeSubdomains="true">subdl.com</domain>
+        <domain includeSubdomains="true">subsource.net</domain>
     </domain-config>
 </network-security-config>

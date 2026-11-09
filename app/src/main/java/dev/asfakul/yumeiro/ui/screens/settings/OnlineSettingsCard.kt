@@ -43,6 +43,8 @@ fun OnlineSettingsCard() {
     val auto by OnlineSettings.autoSkip.collectAsState()
     val lang by OnlineSettings.subtitleLang.collectAsState()
     val osKey by OnlineSettings.openSubtitlesKey.collectAsState()
+    val subdlKey by OnlineSettings.subdlKey.collectAsState()
+    val subsourceKey by OnlineSettings.subsourceKey.collectAsState()
     var confirmAdult by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<String?>(null) }
 
@@ -55,22 +57,30 @@ fun OnlineSettingsCard() {
     )
 
     edit?.let { which ->
-        var text by remember(which) { mutableStateOf(if (which == "os") osKey else lang) }
+        var text by remember(which) { mutableStateOf(when (which) { "os" -> osKey; "subdl" -> subdlKey; "subsource" -> subsourceKey; else -> lang }) }
         TsukiDialog(
             onDismissRequest = { edit = null },
-            title = { Text(if (which == "os") "OpenSubtitles API key" else "Subtitle language") },
+            title = { Text(when (which) { "os" -> "OpenSubtitles API key"; "subdl" -> "SubDL API key"; "subsource" -> "SubSource API key"; else -> "Subtitle language" }) },
             text = {
                 Column {
-                    Text(if (which == "os") "Free key: sign up at opensubtitles.com, open Consumers, create one and paste its API key. Used only to search subtitles."
-                        else "Two-letter code, e.g. en, bn, hi, es, ar.", color = TextSecondary, fontSize = 12.sp)
+                    Text(when (which) {
+                        "os" -> "Free key: sign up at opensubtitles.com, open Consumers, create one and paste its API key. Used only to search subtitles."
+                        "subdl" -> "Free key: sign in at subdl.com, open your account panel and copy the API key. Used only to search and download subtitles."
+                        "subsource" -> "Free key: sign in at subsource.net, open your profile and create an API key. Used only to search and download subtitles."
+                        else -> "Two-letter code, e.g. en, bn, hi, es, ar (pt-br for Brazilian Portuguese)."
+                    }, color = TextSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("setting_key_field"))
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if (which == "os") OnlineSettings.setOpenSubtitlesKey(context, text)
-                    else OnlineSettings.setSubtitleLang(context, text.trim().lowercase().take(3).ifBlank { "en" })
+                    when (which) {
+                        "os" -> OnlineSettings.setOpenSubtitlesKey(context, text)
+                        "subdl" -> OnlineSettings.setSubdlKey(context, text)
+                        "subsource" -> OnlineSettings.setSubsourceKey(context, text)
+                        else -> OnlineSettings.setSubtitleLang(context, text.trim().lowercase().take(5).ifBlank { "en" })
+                    }
                     edit = null
                 }) { Text("Save") }
             },
@@ -90,7 +100,10 @@ fun OnlineSettingsCard() {
         if (skip) SettingsToggleRow("Skip automatically", "Jump past intros and outros without asking", auto, { OnlineSettings.setAutoSkip(context, it) }, "setting_auto_skip")
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
-        ValueRow("OpenSubtitles API key", if (osKey.isBlank()) "Not set — needed for subtitle search" else "Set") { edit = "os" }
+        Text("Subtitle sites (all free, use any or all)", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        ValueRow("OpenSubtitles API key", if (osKey.isBlank()) "Not set" else "Set") { edit = "os" }
+        ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
+        ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
     }
 }
 

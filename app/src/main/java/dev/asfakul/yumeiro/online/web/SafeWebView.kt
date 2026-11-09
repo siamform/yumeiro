@@ -43,8 +43,24 @@ object SafeWebView {
             allowFileAccess = false
             allowContentAccess = false
             javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(false)
+            // With multiple windows OFF, an ad's window.open / target=_blank replaced the page
+            // itself (the black ad screen on captcha pages). ON + a WebChromeClient that declines
+            // onCreateWindow (the default) drops such pop-ups instead.
+            setSupportMultipleWindows(true)
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+        }
+    }
+
+    /**
+     * Adds the [AdShield] page script (no pop-ups / click-catcher overlays) where the WebView
+     * supports document-start scripts; elsewhere the pop-up handling in the client still applies.
+     */
+    @android.annotation.SuppressLint("RequiresFeature")
+    fun addAdShield(web: WebView) {
+        runCatching {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                androidx.webkit.WebViewCompat.addDocumentStartJavaScript(web, AdShield.DOCUMENT_START_JS, setOf("*"))
+            }
         }
     }
 

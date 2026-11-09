@@ -31,16 +31,23 @@ object AppNotifier {
     const val ACTION_OPEN_INBOX = "dev.asfakul.yumeiro.action.OPEN_INBOX"
     const val EXTRA_ITEM = "inbox_item"
 
-    /** Channels (v2 = with the Yumeiro chime). Old silent/default-sound channels are removed. */
+    /**
+     * Channels (v3 = the soft "tsuki" chime). Android never changes a channel's sound after it is
+     * created, so a new sound needs new channel ids; the old ones are removed.
+     */
     enum class Channel(val id: String, val title: String, val description: String, val importance: Int) {
-        EPISODES("yumeiro_episodes", "New episodes", "Saved series with new episodes", NotificationManager.IMPORTANCE_DEFAULT),
-        DISCOVER("yumeiro_discover", "New extensions & streams", "New extensions in the market and new stream playlists", NotificationManager.IMPORTANCE_DEFAULT),
-        NEWS("yumeiro_news", "What's new", "New features, releases and announcements", NotificationManager.IMPORTANCE_DEFAULT),
-        NUDGE("yumeiro_suggestions", "Suggestions", "An occasional idea for something to watch or listen to", NotificationManager.IMPORTANCE_LOW),
+        EPISODES("yumeiro_episodes_v3", "New episodes", "Saved series with new episodes", NotificationManager.IMPORTANCE_DEFAULT),
+        DISCOVER("yumeiro_discover_v3", "New extensions & streams", "New extensions in the market and new stream playlists", NotificationManager.IMPORTANCE_DEFAULT),
+        NEWS("yumeiro_news_v3", "What's new", "New features, releases and announcements", NotificationManager.IMPORTANCE_DEFAULT),
+        NUDGE("yumeiro_suggestions_v3", "Suggestions", "An occasional idea for something to watch or listen to", NotificationManager.IMPORTANCE_LOW),
     }
-    private val OLD_CHANNELS = listOf("new_episodes", "discover_new", "discover_nudge")
+    private val OLD_CHANNELS = listOf(
+        "new_episodes", "discover_new", "discover_nudge",
+        // v2 (the first, brighter chime)
+        "yumeiro_episodes", "yumeiro_discover", "yumeiro_news", "yumeiro_suggestions",
+    )
 
-    fun soundUri(c: Context): Uri = Uri.parse("android.resource://${c.packageName}/${R.raw.yumeiro_chime}")
+    fun soundUri(c: Context): Uri = Uri.parse("android.resource://${c.packageName}/raw/yumeiro_tsuki")
 
     fun ensureChannels(c: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

@@ -608,3 +608,49 @@ delay is applied at parse time (`SubtitleTiming`) and reloads the subtitle files
 after playback starts appear under "More from this source" in the captions menu.
 
 Not yet verified on a physical device. Tests: `UrlFixTest`, `ExtensionScannerTest`, `SiteAccessTest`, `SubtitleAudioTest`.
+
+## 19. Subtitle sites, external download managers, softer chime, ad shield (branch `feat/subtitles-downloaders-adshield`)
+
+**Subtitles**: `online/subtitles/SubDL` (api.subdl.com, key in the query string) and `SubSource` (api.subsource.net v1,
+`X-API-Key` header) join OpenSubtitles.com. Keys are the user's own free keys, stored encrypted like the
+OpenSubtitles key (`OnlineSettings.subdlKey` / `subsourceKey`, `SecretBox`), never logged; error texts never contain
+URLs. `SubtitleHub` searches every site with a key in parallel and interleaves results; one site failing shows its
+error without hiding the rest. SubDL / SubSource send ZIPs: `SubtitleArchive.pick` unpacks with size caps, picks the
+episode from season packs (SxxEyy, 1x02, "Show - 07"), decodes UTF-8 / UTF-16 / Windows-1252, and the file goes to
+`cacheDir/subtitles` as a `file://` URI (plays through `DefaultDataSource`). Language mapping: `SubtitleLanguages`
+(SubDL "EN"/"BR_PT", SubSource "english"/"farsi_persian", matching Bazarr's converters). The local video player's
+dialog adds them via `subtitles/SubtitleSitesProvider`. Limits: SubDL free keys ~2,000 searches/day; SubSource
+60 requests/min.
+
+**External download managers**: Settings → Downloads → "Download with" (`DownloadSettings.downloader`): Yumeiro,
+any installed 1DM / 1DM+ / 1DM Lite / ADM / ADM Pro, or "Ask each time". `ExternalDownloader.send` uses 1DM's
+documented intent (`idm.internet.download.manager.Downloader`, extras `extra_headers`, `extra_referer`,
+`extra_useragent`, `extra_cookies`, `extra_filename`) plus `Browser.EXTRA_HEADERS` for everyone. Only "Download this
+video" in the player is handed off (`OnlineDownloads.sendCurrentToExternal`); season batches and YouTube stay
+in-app. DASH never, HLS only to 1DM; otherwise it falls back to the built-in downloader with a message. The manifest
+`<queries>` lists just those packages (no all-apps visibility).
+
+**Notification sound**: new original chime `res/raw/yumeiro_tsuki.ogg` (synthesised: soft E5 → B5 bell with a short
+room tail, 1.5 s, peak −9 dBFS, about 5 dB quieter on average than the old one). Android can't change a channel's
+sound, so channel ids moved to `*_v3` (`AppNotifier.Channel`, `UpdateNotifier`) and the v2 ids are deleted. The sound
+URI is name-based (`android.resource://pkg/raw/yumeiro_tsuki`, kept by `res/raw/keep.xml`) so it survives
+resource-id changes. Users who changed a channel's sound or importance get the defaults again once.
+
+**Captcha / site page (black screen + ads after every tap)**: cause was `setSupportMultipleWindows(false)`: ad
+`window.open` / `target=_blank` replaced the page itself. Now `SafeWebView.harden` turns multiple windows on (the
+default `onCreateWindow` drops pop-ups), `SafeWebView.addAdShield` injects `AdShield.DOCUMENT_START_JS` (no
+`window.open`, removes empty full-screen click-catcher overlays) where `DOCUMENT_START_SCRIPT` is supported, and
+`BrowserCheckHost` routes navigations through `AdShield.decideNavigation` (same site, captcha / sign-in hosts and
+server redirects pass; ad hosts, `intent:`/`market:` and cross-site jumps are held back), pop-ups through
+`decidePopup` (only sign-in pages, opened in the same view), and sub-requests through `blockRequest`
+(`AdFilter` list). A slim bar shows "Blocked N ads & pop-ups" with "Open anyway" for the last held-back page; a
+loading cover replaces the black first paint. The headless check uses the same filters. `BrowserCheckPolicy`:
+after the check page was shown for a host it isn't shown again automatically for 3 minutes; a single "wants another
+quick check · Open" message is shown instead.
+
+**Torrent**: proposal only, see `docs/proposals/TORRENT.md`.
+
+**README**: player (landscape), Hues home, a Hue and the watch page added from real UI renders (artwork is original
+sample art).
+
+Not yet verified on a physical device. Tests: `SubtitleSitesTest`, `AdShieldTest`, `ExternalDownloaderTest`.

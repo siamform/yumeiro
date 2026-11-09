@@ -143,6 +143,20 @@ object OnlineDownloads {
         return enqueue(context, s.title, s.api, s.detail.url, s.episode?.label, s.detail.posterUrl, s.detail.posterHeaders, link, folder, s.version, keep)
     }
 
+    /**
+     * Sends what's playing to the external download app chosen in Settings → Downloads.
+     * Returns null when handed off, or the reason it can't be (the caller then uses the built-in downloader).
+     */
+    fun sendCurrentToExternal(context: Context): String? {
+        DownloadSettings.init(context)
+        val choice = DownloadSettings.downloader.value
+        val s = OnlineSession.state.value ?: return "Nothing is playing"
+        val link = s.link ?: return "No source yet"
+        ExternalDownloader.unsupportedReason(choice, link.isHls, link.isDash)?.let { return it }
+        if (choice != ExternalDownloader.CHOOSER && ExternalDownloader.installed(context).none { it.pkg == choice }) return "${ExternalDownloader.label(choice)} isn't installed"
+        return ExternalDownloader.send(context, choice, link.url, headersFor(link), ExternalDownloader.fileName(s.title, s.episode?.label, link.isHls))
+    }
+
     /** Queues [link]; returns an error text, or null when queued. */
     fun enqueue(
         context: Context, title: String, api: String, titleUrl: String, episodeLabel: String?,

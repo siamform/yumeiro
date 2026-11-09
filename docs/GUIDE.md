@@ -45,7 +45,7 @@ Back to the [README](../README.md).
 - Videos are shown in a **grid** (2 columns on phones, more on tablets) with a list toggle.
 - **CC on/off** button in the controls.
 - **Multiple audio tracks**: switch language/track when the video contains more than one.
-- **Subtitles**: embedded tracks, load a local `.srt` / `.vtt` / `.ass` / `.ssa` / `.ttml` file, or **search online** (OpenSubtitles, by file hash or title, 20+ languages) and load in one tap.
+- **Subtitles**: embedded tracks, load a local `.srt` / `.vtt` / `.ass` / `.ssa` / `.ttml` file, or **search online** (OpenSubtitles by file hash or title; SubDL and SubSource too when you add their free API keys in Settings → Online videos) and load in one tap. Online videos search all three at once and pick the right episode out of season packs.
 - **Picture-in-Picture** with play/pause, rewind and forward actions; enters PiP automatically when you leave the app. Can be turned off in Settings → Video Player (hides the PiP button too).
 - **Background play for video**: audio keeps playing with the screen off or in other apps, with play/pause/seek controls in the media notification and lock screen. Can be turned off in Settings → Video Player (the video then pauses when you leave the app).
 - Gestures for brightness, volume and seeking, playback speed, aspect ratio, lock. Brightness and volume show as slim vertical level bars at the screen edges, like the phone's own volume bar.
@@ -323,7 +323,7 @@ Only what the features need:
 | `UPDATE_PACKAGES_WITHOUT_USER_ACTION` | Seamless self-updates without a confirmation dialog (Android 12+) |
 | `DOWNLOAD_WITHOUT_NOTIFICATION` | Quiet background download of updates |
 
-Hardening: cleartext HTTP is allowed only for user-entered stream URLs (many IPTV/camera streams are plain HTTP) and blocked for GitHub and OpenSubtitles, only system CAs are trusted, update files excluded from backups, only the receiver that needs it is exported, R8 shrinking and obfuscation enabled for release.
+Hardening: cleartext HTTP is allowed only for user-entered stream URLs (many IPTV/camera streams are plain HTTP) and blocked for GitHub and the subtitle sites (OpenSubtitles, SubDL, SubSource), only system CAs are trusted, update files excluded from backups, only the receiver that needs it is exported, R8 shrinking and obfuscation enabled for release.
 
 ---
 

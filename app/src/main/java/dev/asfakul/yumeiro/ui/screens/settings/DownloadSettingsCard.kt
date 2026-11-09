@@ -44,9 +44,26 @@ fun DownloadSettingsCard() {
     val toPhone by DownloadSettings.saveYouTubeToPhone.collectAsState()
     val askFirst by DownloadSettings.askFirst.collectAsState()
     val tips by DownloadSettings.showTips.collectAsState()
+    val downloader by DownloadSettings.downloader.collectAsState()
+    val installed = remember { dev.asfakul.yumeiro.online.download.ExternalDownloader.installed(context) }
     SettingsCard {
         SettingsToggleRow("Ask before each download", "Shows where it's saved and lets you pick Permanent or Offline", askFirst,
             { DownloadSettings.setAskFirst(context, it) }, "setting_ask_first")
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
+        Text("Download with", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            if (installed.isEmpty()) "Yumeiro's own downloader. Install a free download manager such as 1DM or ADM to hand videos to it instead."
+            else "Send \"Download this video\" to another app. Whole-season and YouTube downloads always use Yumeiro.",
+            color = TextTertiary, fontSize = 12.sp,
+        )
+        FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val options = listOf(dev.asfakul.yumeiro.online.download.ExternalDownloader.IN_APP) + installed.map { it.pkg } +
+                dev.asfakul.yumeiro.online.download.ExternalDownloader.CHOOSER + listOfNotNull(downloader.takeIf { d -> d.isNotEmpty() && d != dev.asfakul.yumeiro.online.download.ExternalDownloader.CHOOSER && installed.none { it.pkg == d } })
+            options.forEach { pkg ->
+                FilterChip(selected = pkg == downloader, onClick = { DownloadSettings.setDownloader(context, pkg) },
+                    label = { Text(dev.asfakul.yumeiro.online.download.ExternalDownloader.label(pkg)) }, modifier = Modifier.testTag("setting_downloader_${pkg.ifEmpty { "app" }}"))
+            }
+        }
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         Text("Auto-delete watched downloads", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text("Offline copies are removed this long after they finish. Permanent (pinned) ones always stay.", color = TextTertiary, fontSize = 12.sp)

@@ -31,6 +31,12 @@ organised better than any single-source app. Ordered by impact for launch.
 - [ ] Extension scanner: tune rules with real extension repos (false positives), consider a community allow-list.
 - [ ] Sign-in: per-extension account notes (which sites need an account) in the Hues market.
 
+## 0.7 After subtitles / download managers / ad shield
+
+- [ ] Test on real phones: SubDL and SubSource with real free keys (season packs, anime numbering), 1DM and ADM hand-off with header-protected links, the captcha page on sites with pop-under ads.
+- [ ] Built-in torrent streaming: see [proposals/TORRENT.md](proposals/TORRENT.md) (libtorrent4j + loopback stream server, opt-in).
+- [ ] SubDL / SubSource: optional search by TMDB id when an extension provides it.
+
 ## 1. Universal extension engine (the differentiator)
 
 Make Yumeiro the hub that runs the big ecosystems side by side, each behind one adapter interface
