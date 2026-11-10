@@ -951,8 +951,13 @@ kept platform bar defaults — a white status bar over the dark header. `FullScr
 `BrowserCheckHost.kt`) makes that window draw edge-to-edge with transparent bars, the app background and
 icon colours from the current theme.
 
-**Known gap.** `ca.mpreg.imagedecoder` (4 extensions: webtoonlib, randomscan, toonlook, procomic) isn't bundled:
-it adds ~12 MB of native code for 4 sources. Those load but fail on images that need it.
+**Image decoder (not a real gap).** `ca.mpreg.imagedecoder` (Mihon's native decoder, ~12 MB) isn't bundled. Four
+extensions use it, through Keiyoushi's `lib/imagedecoder`, to decode scrambled page tiles before reassembling them:
+webtoonlib, randomscan, toonlook, procomic. That library tries Mihon's decoder, then Tachiyomi's, then Android's
+`BitmapFactory`. A decoder that fails to link is dropped for good, so in Yumeiro it goes straight to `BitmapFactory`
+and pages show normally (JPEG / PNG / WebP / GIF on every Android version). The only losses: AVIF on Android < 12,
+JPEG XL on any version (BitmapFactory can't read them), and HDR pages shown in SDR. Add the decoder only if users
+report broken pages on those sources, ideally only in the arm64 build.
 
 **Tests.** `TachiyomiIndexTest` (v1, stubs, repo.json, v2 JSON/gzip/proto, the real Keiyoushi `index.pb`
 fixture, normalizeRepo, lib versions, MemoStore) and `KeiyoushiLinkageTest`.
