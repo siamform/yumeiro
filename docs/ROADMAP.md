@@ -61,7 +61,7 @@ Make Yumeiro the hub that runs the big ecosystems side by side, each behind one 
 Shared on top: one market for all formats (done: Discover lists in every Sources tab, from `sources.json`), per-source health score, auto-fallback, sub/dub and quality
 preferences, unified search across every installed source, de-duplicated by AniList/TMDB id.
 
-Done: Mihon's v2 store index (`repo.json` → `index.pb` / `index.json`) and extensions-lib 1.6, so Keiyoushi works (HANDOVER §27). Still open: `ca.mpreg.imagedecoder` for 4 extensions, unified search de-duplicated by AniList/TMDB id, auto-fallback to another source, Dartotsu-specific APIs.
+Done: Mihon's v2 store index (`repo.json` → `index.pb` / `index.json`) and extensions-lib 1.6, so Keiyoushi works (HANDOVER §27). Optional: Mihon's native image decoder, only for AVIF/JPEG XL/HDR pages in 4 extensions (they otherwise use Android's decoder). Still open: unified search de-duplicated by AniList/TMDB id, auto-fallback to another source, Dartotsu-specific APIs.
 
 Done in v1.0.5 from the lists below: MyAnimeList, Kitsu and Trakt tracking; LAN watch together; backup and restore
 (local file); app lock and incognito; continue-watching widget; extension author kit; public status page;
