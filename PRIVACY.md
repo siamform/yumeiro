@@ -39,7 +39,8 @@ Yumeiro does not sell, share or transfer any data, because it has none to share.
 
 Only if you turn on push notifications, the app registers with our small server at `api.yumeiro.click` (Cloudflare
 Workers, source in `server/` of the repository). It stores your push app's delivery address and the AniList ids of
-the shows you follow with notifications on, nothing else: no titles, no history, no account, no IP address. When one
+the shows you follow with notifications on, plus when their next episodes air (looked up by your phone on AniList's
+public schedule and shared between all users, not linked to you), nothing else: no titles, no history, no account, no IP address. When one
 of those shows airs, the server sends an empty "check now" message and the app looks for new episodes itself.
 Turning push off stops it; the record is deleted automatically when the address stops working, or after 45 days
 without contact.

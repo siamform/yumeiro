@@ -6,8 +6,8 @@
 // Yumeiro Cloud: a tiny wake-up server. It never sends content, only "check now" pings to a
 // device's own UnifiedPush endpoint; the app then fetches what's new itself. See docs/SERVER.md.
 import {
-  AIRING_WAKE_DELAYS_S, SILENT_DAYS, WAKES_PER_MESSAGE, airingWindow, chunk, parseFollows,
-  pushOutcome, randomToken, same, sha256, validEndpoint,
+  AIRING_WAKE_DELAYS_S, MAX_ROLLS, ROLL_S, SILENT_DAYS, WAKES_PER_MESSAGE, airingWindow, chunk, parseFollows,
+  parseAiring, pushOutcome, randomToken, same, sha256, validEndpoint,
 } from "./logic.ts";
 
 export interface Env {
@@ -19,6 +19,8 @@ export interface Env {
    * Counted at the edge; IPs are never stored.
    */
   NEW_DEVICES?: RateLimit;
+  /** Per-device limit on check-ins, so one device can't loop writes. Legit apps check in a few times a day. */
+  DEVICE_SYNC?: RateLimit;
 }
 
 interface WakeJob { endpoints: string[] }
@@ -38,7 +40,7 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     try {
-      if (url.pathname === "/v1/health" && req.method === "GET") return json({ ok: true, v: 1 });
+      if (url.pathname === "/v1/health" && req.method === "GET") return await health(env);
       if (url.pathname === "/v1/devices" && req.method === "POST") return await register(req, env);
       if (url.pathname === "/v1/devices" && req.method === "DELETE") return await unregister(req, env);
       return fail(404, "not_found");
@@ -64,6 +66,17 @@ export default {
   },
 } satisfies ExportedHandler<Env, WakeJob>;
 
+/**
+ * For uptime monitors: 200 only if D1 answers and the 10-minute job ran in the last 30 minutes.
+ * `cron_s` = seconds since the job last finished. One D1 read per call.
+ */
+async function health(env: Env): Promise<Response> {
+  const last = Number(await getState(env, "aired_to").catch(() => null));
+  const ago = last > 0 ? now() - last : null;
+  const ok = ago != null && ago < 1800;
+  return json({ ok, v: 2, cron_s: ago }, ok ? 200 : 503);
+}
+
 // ---- devices ----
 
 async function register(req: Request, env: Env): Promise<Response> {
@@ -84,6 +97,7 @@ async function register(req: Request, env: Env): Promise<Response> {
       .bind(auth.id).first<{ id: string; token_hash: string; follows_v: string; seen: number }>();
     if (r && same(r.token_hash, await sha256(auth.token))) row = r;
   }
+  if (row && env.DEVICE_SYNC && !(await env.DEVICE_SYNC.limit({ key: row.id })).success) return fail(429, "slow_down");
   let token: string | null = null;
   if (row) {
     // Endpoint may have changed (distributor switch). Drop any other row that owned the new one.
@@ -121,7 +135,16 @@ async function register(req: Request, env: Env): Promise<Response> {
     stmts.push(env.DB.prepare("UPDATE devices SET follows_v = ? WHERE id = ?").bind(version, row.id));
     await env.DB.batch(stmts);
   }
-  return json({ id: row.id, token, follows: follows.length });
+
+  // Shared timetable: only rows whose time actually changed are written; a report resets the weekly guess.
+  const airing = parseAiring(body.airing, follows, t);
+  if (airing.length) {
+    await env.DB.batch(chunk(airing, 45).map((ps) => env.DB.prepare(
+      `INSERT INTO airing (media_id, at, rolls) VALUES ${ps.map(() => "(?, ?, 0)").join(",")}
+       ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, rolls = 0 WHERE airing.at <> excluded.at OR airing.rolls <> 0`,
+    ).bind(...ps.flat())));
+  }
+  return json({ id: row.id, token, follows: follows.length, airing: airing.length });
 }
 
 async function unregister(req: Request, env: Env): Promise<Response> {
@@ -156,18 +179,25 @@ async function prune(env: Env): Promise<void> {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM follows WHERE device_id IN (SELECT id FROM devices WHERE seen < ?)").bind(cut),
     env.DB.prepare("DELETE FROM devices WHERE seen < ?").bind(cut),
+    env.DB.prepare("DELETE FROM airing WHERE media_id NOT IN (SELECT media_id FROM follows)"),
   ]);
 }
 
 // ---- wake-ups ----
 
-/** Episodes that aired since the last run → wake the devices that follow those shows. */
+/** Episodes that aired since the last run → wake the devices that follow those shows. No outside calls. */
 async function airingWakes(env: Env): Promise<void> {
   const t = now();
   const last = await getState(env, "aired_to");
   const [from, to] = airingWindow(last == null ? null : Number(last), t);
-  const media = await airedMedia(from, to);
-  await setState(env, "aired_to", String(to));
+  const due = await env.DB.prepare("SELECT media_id FROM airing WHERE at > ? AND at <= ?").bind(from, to).all<{ media_id: number }>();
+  const media = due.results.map((r) => r.media_id);
+  await env.DB.batch([
+    // Guess next week's episode until a phone reports the real time; give up after MAX_ROLLS guesses.
+    env.DB.prepare("DELETE FROM airing WHERE at > ? AND at <= ? AND rolls >= ?").bind(from, to, MAX_ROLLS),
+    env.DB.prepare("UPDATE airing SET at = at + ?, rolls = rolls + 1 WHERE at > ? AND at <= ?").bind(ROLL_S, from, to),
+    env.DB.prepare("INSERT INTO state (k, v) VALUES ('aired_to', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(to)),
+  ]);
   if (media.length === 0) return;
   const endpoints = new Set<string>();
   for (const ids of chunk(media, 90)) { // D1 allows 100 bound parameters per query
@@ -177,24 +207,6 @@ async function airingWakes(env: Env): Promise<void> {
     for (const x of r.results) endpoints.add(x.endpoint);
   }
   await enqueue(env, [...endpoints], AIRING_WAKE_DELAYS_S);
-}
-
-async function airedMedia(from: number, to: number): Promise<number[]> {
-  const q = "query($a:Int,$b:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage}airingSchedules(airingAt_greater:$a,airingAt_lesser:$b){mediaId}}}";
-  const ids = new Set<number>();
-  for (let page = 1; page <= 5; page++) {
-    const r = await fetch("https://graphql.anilist.co", {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json", "user-agent": "yumeiro-cloud/1" },
-      body: JSON.stringify({ query: q, variables: { a: from, b: to + 1, p: page } }),
-    });
-    if (!r.ok) throw new Error(`anilist ${r.status}`); // leave aired_to unchanged; next run retries
-    const data = (await r.json()) as { data?: { Page?: { pageInfo?: { hasNextPage?: boolean }; airingSchedules?: { mediaId: number }[] } } };
-    const p = data.data?.Page;
-    for (const s of p?.airingSchedules ?? []) if (Number.isInteger(s.mediaId)) ids.add(s.mediaId);
-    if (!p?.pageInfo?.hasNextPage) break;
-  }
-  return [...ids];
 }
 
 async function enqueue(env: Env, endpoints: string[], delays: number[]): Promise<number> {
@@ -223,7 +235,4 @@ async function wake(endpoint: string): Promise<"ok" | "gone" | "retry"> {
 
 async function getState(env: Env, k: string): Promise<string | null> {
   return (await env.DB.prepare("SELECT v FROM state WHERE k = ?").bind(k).first<{ v: string }>())?.v ?? null;
-}
-async function setState(env: Env, k: string, v: string): Promise<void> {
-  await env.DB.prepare("INSERT INTO state (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(k, v).run();
 }

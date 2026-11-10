@@ -107,7 +107,7 @@ New here? Start with **[docs/HANDOVER.md](HANDOVER.md)** — architecture, curre
 | | |
 |---|---|
 | **Developer** | [siamform](https://github.com/siamform) |
-| **Website** | [yumeiro-phi.vercel.app](https://yumeiro-phi.vercel.app/) |
+| **Website** | [yumeiro.click](https://yumeiro.click/) |
 | **Buy me a coffee** | [github.com/siamform](https://github.com/siamform) |
 
 The same info is available in the app under **Settings → About & Developer**.

@@ -11,6 +11,7 @@ import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.network.NetworkClient
 import dev.asfakul.yumeiro.online.OnlineBookmarks
 import dev.asfakul.yumeiro.online.OnlineSettings
+import dev.asfakul.yumeiro.online.anime.AniList
 import dev.asfakul.yumeiro.online.anime.AnimeIds
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -70,7 +71,11 @@ object CloudAlerts {
         val creds = OnlineSettings.secret(SECRET)
         if (creds != null && !CloudAlertsPlan.due(fp, p.getString("fp", null), now, p.getLong("synced_at", 0L))) return
 
-        val body = JSONObject().put("endpoint", endpoint).put("anilist", JSONArray(follows)).toString()
+        // The server can't reach AniList (it blocks Cloudflare Workers), so the phone tells it when the
+        // next episodes air. If AniList fails here the server keeps its last times and guesses weekly.
+        val airing = JSONArray()
+        for (pair in nextAiring(client, follows)) airing.put(JSONArray().put(pair.first).put(pair.second))
+        val body = JSONObject().put("endpoint", endpoint).put("anilist", JSONArray(follows)).put("airing", airing).toString()
         val req = Request.Builder().url("https://$host/v1/devices")
             .post(body.toRequestBody("application/json".toMediaType()))
             .apply { if (creds != null) header("Authorization", "Bearer $creds") }
@@ -90,6 +95,22 @@ object CloudAlerts {
                 p.edit().putString("fp", fp).putLong("synced_at", now).remove("failures").remove("retry_at").apply()
             }
         }.onFailure { Log.w(TAG, "register: ${it.javaClass.simpleName}"); failed() }
+    }
+
+    /** Next-episode times for [ids] from AniList, 50 per request. Empty on failure. */
+    private fun nextAiring(client: okhttp3.OkHttpClient, ids: List<Int>): List<Pair<Int, Long>> {
+        val q = "query(\$ids:[Int]){Page(perPage:50){media(id_in:\$ids,type:ANIME){id nextAiringEpisode{airingAt}}}}"
+        val found = ArrayList<Pair<Int, Long?>>()
+        for (group in ids.chunked(50)) {
+            val media = runCatching {
+                AniList.graphql(client, q, JSONObject().put("ids", JSONArray(group)), null)?.optJSONObject("Page")?.optJSONArray("media")
+            }.getOrNull() ?: break
+            for (i in 0 until media.length()) {
+                val m = media.optJSONObject(i) ?: continue
+                found += m.optInt("id") to m.optJSONObject("nextAiringEpisode")?.optLong("airingAt")
+            }
+        }
+        return CloudAlertsPlan.airing(found, System.currentTimeMillis() / 1000)
     }
 
     /** Drops local credentials (push turned off). Keeps the AniList id cache. */
@@ -114,8 +135,13 @@ object CloudAlertsPlan {
     fun follows(ids: List<Int>): List<Int> = ids.filter { it > 0 }.distinct().sorted().take(MAX_FOLLOWS)
 
     fun fingerprint(endpoint: String, follows: List<Int>): String =
-        MessageDigest.getInstance("SHA-256").digest("$endpoint|${follows.joinToString(",")}".toByteArray())
+        MessageDigest.getInstance("SHA-256").digest("a2|$endpoint|${follows.joinToString(",")}".toByteArray()) // "a2": re-sync once after the airing-times update
             .take(12).joinToString("") { "%02x".format(it) }
+
+    /** Keeps followed shows with a next episode from now to 15 days ahead (the server's accepted range). */
+    fun airing(found: List<Pair<Int, Long?>>, nowS: Long): List<Pair<Int, Long>> =
+        found.mapNotNull { (id, at) -> if (id > 0 && at != null && at > nowS - 3600 && at <= nowS + 15 * 86_400L) id to at else null }
+            .distinctBy { it.first }.sortedBy { it.first }
 
     /** Back-off after failed registrations: 6 h, 12 h, 24 h, 48 h, then 3 days. */
     fun retryDelay(failures: Int): Long =

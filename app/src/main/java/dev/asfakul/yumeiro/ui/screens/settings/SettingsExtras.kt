@@ -76,7 +76,7 @@ import dev.asfakul.yumeiro.ui.theme.palette
 object DeveloperInfo {
     const val NAME = "Asfakul Siam"
     const val HANDLE = "siamform"
-    const val WEBSITE = "https://yumeiro-phi.vercel.app/"
+    const val WEBSITE = "https://yumeiro.click/"
     const val GITHUB = "https://github.com/siamform"
     const val SOURCE = "https://github.com/siamform/yumeiro"
 }

@@ -4,7 +4,7 @@ Everything here is free.
 
 ## Website (now)
 
-`https://yumeiro-phi.vercel.app/download` redirects to the newest signed APK (or `?id=<assetId>` for a specific asset).
+`https://yumeiro.click/download` redirects to the newest signed APK (or `?id=<assetId>` for a specific asset).
 It asks the GitHub API for a short-lived signed link, so it keeps working when `github.com/.../releases/download/...`
 returns 504. Use this link everywhere instead of the raw release URL.
 

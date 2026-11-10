@@ -39,7 +39,7 @@ Screenshot tests write PNGs to `app/build/screenshots/`. Look at them after UI c
 1. `testDebugUnitTest` green, `assembleRelease` builds.
 2. `version.properties` bumped (or rely on auto-bump) and `fastlane/metadata/android/en-US/changelogs/<code>.txt` added.
 3. `docs/HANDOVER.md` section for the update, README if user-visible.
-4. Merge PR → release workflow → check the release page and `https://yumeiro-phi.vercel.app/download`.
+4. Merge PR → release workflow → check the release page and `https://yumeiro.click/download`.
 
 ## Next developer: where to start
 

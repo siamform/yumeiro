@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { airingWindow, chunk, parseFollows, pushOutcome, randomToken, same, sha256, validEndpoint } from "../src/logic.ts";
+import { AIRING_MAX_AHEAD_S, airingWindow, chunk, parseAiring, parseFollows, pushOutcome, randomToken, same, sha256, validEndpoint } from "../src/logic.ts";
 
 test("endpoint guard accepts public https push URLs", () => {
   assert.equal(validEndpoint("https://ntfy.sh/upAbC123?up=1"), "https://ntfy.sh/upAbC123?up=1");
@@ -52,3 +52,18 @@ test("tokens, hashing and helpers", async () => {
   assert.ok(!same("abc", "ab"));
   assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
 });
+
+test("airing reports keep followed ids and sane times only", () => {
+  const now = 1_800_000_000;
+  const got = parseAiring([
+    [5, now + 3600], [5, now + 7200], // last one wins
+    [9, now + 100],                   // not followed
+    [3, now - 7200],                  // too old
+    [21, now + AIRING_MAX_AHEAD_S + 1], // too far ahead
+    [21, now + 60.5], ["3", now], [3], "x", null,
+    [3, now - 60],
+  ], [3, 5, 21], now);
+  assert.deepEqual(got, [[3, now - 60], [5, now + 7200]]);
+  assert.deepEqual(parseAiring("nope", [1], now), []);
+});
+

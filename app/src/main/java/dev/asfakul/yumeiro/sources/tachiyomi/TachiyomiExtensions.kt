@@ -44,7 +44,8 @@ import java.security.MessageDigest
  * loaded with a child-first class loader against the vendored extensions-lib API — the same
  * "private extension" path Aniyomi itself uses.
  *
- * Repos are plain `index.min.json` files; Yumeiro ships none and adds none by itself.
+ * Repos are plain `index.min.json` files; Yumeiro ships none and adds none by itself. The
+ * Discover list ([dev.asfakul.yumeiro.sources.SourceMarket]) only suggests ones found on GitHub.
  */
 object TachiyomiExtensions {
     private const val TAG = "TachiyomiExt"

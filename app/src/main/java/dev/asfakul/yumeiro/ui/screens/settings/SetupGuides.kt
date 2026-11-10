@@ -33,11 +33,11 @@ object SetupGuides {
     val aniyomi = SetupGuide(
         id = "aniyomi",
         title = "How to get Aniyomi extensions",
-        intro = "Anime extensions come from repositories run by the community. Yumeiro doesn't ship or recommend any, so you add the ones you trust.",
+        intro = "Anime extensions come from repositories run by the community. Yumeiro doesn't ship any, but Discover lists the ones found on GitHub so you can pick one you trust.",
         steps = listOf(
-            SetupGuide.Step("Find a repository. Extension projects list their repo link on their GitHub page or website, often under \"Add repo\" or \"Install\"."),
-            SetupGuide.Step("Copy the link. Any of these work: a link ending in index.min.json, a GitHub repo page, a raw.githubusercontent.com link, or an aniyomi:// \"Add repo\" button (long-press it and copy)."),
-            SetupGuide.Step("Tap Add next to Repositories and paste the link."),
+            SetupGuide.Step("Open Discover below. Repositories are ranked by GitHub stars, recent updates and size; sort them or search by name, language (en, ja…) or a source you know."),
+            SetupGuide.Step("Tap Add on one you trust. That's it; no links to copy."),
+            SetupGuide.Step("Have a link instead? Tap Add next to Your repositories and paste it: index.min.json, a GitHub repo page, a raw.githubusercontent.com link, or an aniyomi:// \"Add repo\" button (long-press it and copy)."),
             SetupGuide.Step("Under Available, tap the download icon next to the extensions you want. Filter by name or language code (en, ja, es…)."),
             SetupGuide.Step("Tap Trust on each new extension. Yumeiro checks its signing key, and the code doesn't run until you trust it."),
             SetupGuide.Step("Open Videos → Online. The new sources appear there and in search."),
@@ -52,11 +52,10 @@ object SetupGuides {
     val mihon = SetupGuide(
         id = "mihon",
         title = "How to get Mihon manga extensions",
-        intro = "Manga extensions use the Mihon / Tachiyomi format and come from community repositories. Yumeiro doesn't ship or recommend any.",
+        intro = "Manga extensions use the Mihon / Tachiyomi format and come from community repositories. Yumeiro doesn't ship any; Discover lists the ones found on GitHub.",
         steps = listOf(
-            SetupGuide.Step("Find a repository on the extension project's GitHub page or website."),
-            SetupGuide.Step("Copy its link: index.min.json, a GitHub repo page, a raw link, or a tachiyomi:// / mihon:// \"Add repo\" button (long-press it and copy)."),
-            SetupGuide.Step("Tap Add next to Repositories and paste it."),
+            SetupGuide.Step("Open Discover below, sort or search, and tap Add on a repository you trust."),
+            SetupGuide.Step("Or tap Add next to Your repositories and paste a link: index.min.json, a GitHub repo page, a raw link, or a tachiyomi:// / mihon:// \"Add repo\" button (long-press it and copy)."),
             SetupGuide.Step("Install extensions from Available, then tap Trust on each one."),
             SetupGuide.Step("Open the Manga section to browse and read."),
         ),
@@ -72,7 +71,8 @@ object SetupGuides {
         intro = "A Stremio add-on is a small web service. Each one has a manifest link ending in manifest.json, and that's all Yumeiro needs.",
         steps = listOf(
             SetupGuide.Step("Start with Cinemeta, Stremio's official catalog of movies and series: tap Add on its card below."),
-            SetupGuide.Step("Find more in the community add-on catalog, or on an add-on's own website.", link = "https://stremio-addons.net", linkLabel = "Add-on catalog"),
+            SetupGuide.Step("Open Discover: Stremio's featured add-ons and the community catalog, each one checked. Filter by Movie, Series, Anime or TV and tap Add."),
+            SetupGuide.Step("Want one that isn't listed? Find it in the community catalog or on its own website.", link = "https://stremio-addons.net", linkLabel = "Add-on catalog"),
             SetupGuide.Step("On the add-on's page, long-press Install (or Copy link) and copy it. https:// and stremio:// links both work."),
             SetupGuide.Step("Some add-ons need setup first. Open their Configure page in your browser, choose options, then copy the final install link."),
             SetupGuide.Step("Tap Add here and paste the link. Catalogs show in Videos → Online, and streams show when you open a title."),
@@ -88,9 +88,8 @@ object SetupGuides {
         title = "How to add JavaScript sources",
         intro = "JavaScript sources use the Mangayomi format and run in a locked-down engine with no access to your files or other apps.",
         steps = listOf(
-            SetupGuide.Step("Find a Mangayomi-format repository on its project's GitHub page. The link usually ends in index.json."),
-            SetupGuide.Step("Copy the link. A mangayomi:// \"Add repo\" link works too."),
-            SetupGuide.Step("Tap Add next to Repositories and paste it."),
+            SetupGuide.Step("Open Discover below and tap Add on a Mangayomi repository you trust. Manga and anime indexes are listed separately."),
+            SetupGuide.Step("Or tap Add next to Your repositories and paste a link (usually ending in index.json). A mangayomi:// \"Add repo\" link works too."),
             SetupGuide.Step("Install sources from Available. Manga sources show in Manga, and anime or video sources in Videos → Online."),
         ),
         tips = listOf("Only the JavaScript sources in a repository are used; Dart ones are skipped."),

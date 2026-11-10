@@ -13,9 +13,10 @@ One small, free Cloudflare Worker. Its only job is to say **"an episode you foll
 ## How it works
 
 ```
-App (push on) ──POST /v1/devices {endpoint, anilist:[ids]}──► Worker ──► D1 (devices, follows)
+App (push on) ── asks AniList for next airing times of its shows (phones aren't blocked)
+      └─POST /v1/devices {endpoint, anilist:[ids], airing:[[id, at]]}──► Worker ──► D1 (devices, follows, airing)
                                                                 │
-Cron every 10 min ── AniList airingSchedules (last run → now] ──┤
+Cron every 10 min ── airing rows with at in (last run → now] ───┤  (no outside calls)
                                                                 ▼
                      followers of those shows ──► Queue (30 min delay, 40 endpoints/message)
                                                                 ▼
@@ -25,9 +26,17 @@ Cron every 10 min ── AniList airingSchedules (last run → now] ──┤
 
 | Endpoint | What it does |
 |---|---|
-| `GET /v1/health` | `{ok:true}` |
-| `POST /v1/devices` | Register or refresh. New devices are limited to 5 per minute per IP (free rate-limit binding, best-effort, IPs not stored); `429 slow_down` otherwise. Body `{endpoint, anilist}`. Returns `{id, token}`. The token is only returned on first registration. Later calls send `Authorization: Bearer <id>.<token>`. Only the token's SHA-256 is stored. |
+| `GET /v1/health` | `200 {ok:true, v:2, cron_s}` when D1 answers and the 10-minute job ran in the last 30 min; `503 {ok:false}` otherwise. `cron_s` = seconds since the last run. Point an uptime monitor here. |
+| `POST /v1/devices` | Register or refresh. Optional `airing: [[anilistId, unixSeconds]]`: next-episode times the phone got from AniList; kept only for followed ids and times from 1 h ago to 15 days ahead. Check-ins limited to 3 per minute per device. New devices are limited to 5 per minute per IP (free rate-limit binding, best-effort, IPs not stored); `429 slow_down` otherwise. Body `{endpoint, anilist}`. Returns `{id, token}`. The token is only returned on first registration. Later calls send `Authorization: Bearer <id>.<token>`. Only the token's SHA-256 is stored. |
 | `DELETE /v1/devices` | Remove this device (Bearer). |
+
+Why phones send airing times: AniList blocks requests from Cloudflare Workers ("You have been manually blocked", tested
+2026-11-10 from a probe Worker with plain, custom, Referer and browser headers: all 403). We don't work around a
+deliberate block. Phones are not blocked, already talk to AniList, and one `id_in` query per 50 shows is cheap.
+The `airing` table is shared (one row per show, not per device), so 50k phones following the same 150 airing shows
+write ~150 rows, and only when a time changes. After an episode fires the server guesses next week (+7 days), at
+most 2 guesses in a row without a fresh report, then drops the row. A bad report can at worst cause one harmless extra
+"check now" or one missed nudge until the next phone reports.
 
 Housekeeping:
 - Follow lists are only rewritten when they change.
@@ -69,7 +78,7 @@ Nothing in the app waits on the server. Every call is in a background worker and
 | Failure | What users notice |
 |---|---|
 | Worker down, errors, or quota used up for the day | Alerts arrive on the normal schedule instead of ~30 min after airing: ntfy-scheduled wake-ups (~9/day) plus the regular 2 h / 4 h background checks. Playback, search, library, tracking all unaffected. |
-| AniList down | The cron leaves its window unchanged and catches up on the next run. |
+| AniList down or blocking | The server never calls it. Phones that can't reach it send no times; the server keeps the last ones and guesses weekly. |
 | A push server (ntfy) down | That nudge is skipped (no retries). The app still checks on its own schedule. |
 | Domain or Cloudflare account lost | Same as "Worker down". Build with `cloudHost=` blank to remove the feature. |
 
@@ -85,7 +94,20 @@ Nothing in the app waits on the server. Every call is in a background worker and
    npm run db:init                          # creates the tables
    ```
 3. Change the `routes` host in `wrangler.toml` if you use another domain. Then run `npm run deploy`.
-4. Check `https://api.yumeiro.click/v1/health`.
+4. Check `https://api.yumeiro.click/v1/health` (503 until the first 10-minute run, then 200).
+
+## Is it working? (monitoring, all free)
+
+- **Uptime monitor:** add `https://api.yumeiro.click/v1/health` to a free monitor (UptimeRobot, Better Stack or
+  similar), every 5–10 minutes, alert on any non-200. A 503 means the database or the 10-minute job is broken, not
+  only the Worker. 144–288 checks a day is nothing against the 100k request limit.
+- **Dashboard:** Workers & Pages → `yumeiro-cloud` → Metrics: requests, errors, CPU. Errors should be ~0.
+  D1 → `yumeiro` → Metrics: rows read / written per day. Queues → `yumeiro-wakes`: messages per day.
+- **Live logs:** `npx wrangler tail yumeiro-cloud` shows every request and cron run with exceptions (`--format json`
+  for details). This is how the AniList block was found: 61 cron runs in a row ended in `anilist 403`.
+- **Database peek:** `npx wrangler d1 execute yumeiro --remote --command "SELECT count(*) FROM devices"`, same for
+  `airing`. `SELECT * FROM state` shows `aired_to` (last run).
+- **End to end:** push on in the app (ntfy), follow an airing anime, wait for ~30 min after its airing time.
 
 ### Deploying with an API token instead of `wrangler login`
 

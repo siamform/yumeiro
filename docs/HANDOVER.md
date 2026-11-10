@@ -841,3 +841,57 @@ updating `wrangler` to 4.159 and `@cloudflare/workers-types`; `npm audit` report
 the deployed Worker bundle (10 KiB) never contained them, so production was never exposed. Wrangler now needs Node
 ≥ 22.12 (`engines` set; CI already uses 22). `dependabot.yml` gains a monthly grouped npm entry for `/server`.
 
+## 25. Alerts never fired: AniList blocks Cloudflare Workers (branch `fix/alerts-airing-from-devices`)
+
+**Found by** checking the live server (owner asked "how do I ensure my server is working"). `/v1/health` said ok but
+`state` was empty. Cloudflare GraphQL analytics: 61 `scriptThrewException` with 1 subrequest each, every cron run since
+deploy. `wrangler tail`: `anilist 403`. A throwaway probe Worker (deleted after) got `403 "You have been manually
+blocked. Please come to the principal's office."` with plain, custom-UA, Referer and browser headers; the same
+query from a normal machine returns 200. AniList blocks Cloudflare Workers egress deliberately; not worked around.
+
+**Fix.** The server makes no outside calls now. Phones (not blocked) look up `nextAiringEpisode` for their follows
+(`CloudAlerts.nextAiring`, `id_in`, 50 per request) and send `airing: [[id, at]]` on check-in. Server: shared table
+`airing (media_id PK, at, rolls)`; `parseAiring` keeps followed ids and times in [now − 1 h, now + 15 d]; upsert
+writes only changed rows. Cron selects rows with `at` in the window, wakes followers, rolls `at` +7 d (≤ 2 guesses,
+then deletes), records `aired_to` in the same batch. Daily prune drops airing rows nobody follows. New per-device
+check-in limit `DEVICE_SYNC` (3/min). `/v1/health` is now a real check: 200 only if D1 answers and the job ran within
+30 min, else 503 (`v: 2`, `cron_s`). App fingerprint prefix `a2|` makes updated phones re-sync once at once.
+Monitoring how-to: `docs/SERVER.md` "Is it working?". PRIVACY.md updated (airing times, shared, not linked to you).
+
+**Deployed** 2026-11-10 (version `f1bb9926`) before merge; it accepts v1.3.0 check-ins (no `airing`, no alerts for
+them until they update). Tests: server 7 + `tsc`, local `wrangler dev` end to end (register with airing, per-device
+429, cron fires and rolls +7 d, unfollowed id rejected, health 503 → 200), app 390 unit tests.
+
+## 26. Markets for Aniyomi, Mihon, Mangayomi and Stremio; yumeiro.click links (branch `fix/alerts-airing-from-devices`)
+
+**Asked:** "users manually need to add extension … there should be their individual extension market … auto search
+by github star or rating … and also the manual setups." Also: README and in-app links should use `yumeiro.click`.
+
+**Builder.** `.github/scripts/build_source_market.py` runs in the `Extension market` workflow after the CloudStream
+step (best effort, `timeout 25m … || warning`; a failure keeps the last `sources.json`). Per format: GitHub repo
+search (topics + keywords, by stars, ≤160 candidates), README add-repo links (`aniyomi:// tachiyomi:// mihon://
+mangayomi://`, raw index URLs), usual publish paths (`repo` / default branch). Every index is downloaded and parsed;
+kind comes from the contents (`.animeextension.` packages = Aniyomi), placeholder entries ("Outdated App", "Update to
+…") are dropped, repos not pushed for `STALE_DAYS` are left out, forks/mirrors with an identical index are merged.
+Score = 25·log10(stars+1) + 30·e^(−days/180) + 6·log2(count+1). 18+ entries are counted (`nsfw`) so the app can
+hide them. Stremio: Stremio's featured collection + stremio-addons.net community catalog, each manifest fetched;
+non-answering ones are left out, `adult` flagged. Only links are listed; nothing is mirrored. `blocked` and
+`sourceSeeds` come from `.github/extensions/sources.json`. Local test: `USE_GH_CLI=1 python3 … /tmp/out` (uses the
+gh CLI for GitHub calls).
+
+**App.** `sources/SourceMarket.kt` reads `${ExtensionMarket.BASE}/sources.json` through
+`TrustedSources.fetchCatalogText` (official branch only), caches it in `files/extensions/sources.json`, refreshes
+every 6 h, works offline from the cache. Pure `parse` / `filterRepos` / `filterAddons` / `ago` are unit-tested
+(`SourceMarketTest`). UI `ui/screens/sources/SourceMarketSection.kt`: a "Discover" block in the Aniyomi, Mihon,
+JavaScript and Stremio tabs — search (name, owner, language, sample source names), sort chips (Top / Recently
+updated / Most extensions; Stremio: Featured / A–Z + Movie/Series/Anime/TV), rows with stars, last update, count,
+languages and sample names, one-tap Add through the existing `addRepo` / `StremioAddons.add` paths, "Added" when
+present. Adult-only repos and adult add-ons are hidden unless the 18+ setting is on. Expanded by default until the
+user has a repository. The manual paste dialog is unchanged ("Your repositories" → Add). Setup guides updated.
+
+**Known gap.** Keiyoushi (the main Mihon repo) now publishes `index.pb` / `index.json` v2 with lib 1.6 and leaves only
+placeholders in `index.min.json`, so it isn't listed. Supporting that format is on the roadmap.
+
+**Links.** Every `yumeiro-phi.vercel.app` link (README, docs, fastlane description, Settings → website, Source
+status) now points at `https://yumeiro.click` (308 → www, served by Vercel; `/download` and `/status` work).
+
