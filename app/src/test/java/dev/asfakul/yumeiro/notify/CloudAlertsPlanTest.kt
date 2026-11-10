@@ -54,4 +54,13 @@ class CloudAlertsPlanTest {
         assertEquals(CloudAlertsPlan.REFRESH_MS, CloudAlertsPlan.retryDelay(50))
         assertEquals(6 * h, CloudAlertsPlan.retryDelay(0))
     }
+
+    @Test fun airingKeepsSaneTimesOnly() {
+        val now = 1_800_000_000L
+        val got = CloudAlertsPlan.airing(
+            listOf(5 to now + 600, 5 to now + 900, 3 to null, 0 to now, 9 to now - 7200, 7 to now + 16 * 86_400L, 2 to now - 60),
+            now,
+        )
+        assertEquals(listOf(2 to now - 60, 5 to now + 600), got)
+    }
 }

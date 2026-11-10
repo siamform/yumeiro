@@ -11,6 +11,11 @@ export const MAX_ENDPOINT = 1024;
 export const WAKES_PER_MESSAGE = 40;
 /** A device that hasn't checked in for this long is deleted. */
 export const SILENT_DAYS = 45;
+/** Accepted range for a reported airing time, relative to now. */
+export const AIRING_MAX_AHEAD_S = 15 * 86_400;
+/** Weekly guess when no phone has reported a new time yet, at most this many times in a row. */
+export const ROLL_S = 7 * 86_400;
+export const MAX_ROLLS = 2;
 /** Wake-up delay after an episode airs: sources usually have it 10–40 min later. */
 export const AIRING_WAKE_DELAYS_S = [30 * 60];
 
@@ -84,3 +89,23 @@ export function pushOutcome(status: number): "ok" | "gone" | "retry" {
   if (status === 404 || status === 410) return "gone"; // endpoint unregistered (RFC 8030 / ntfy 41002)
   return "retry";
 }
+
+/**
+ * Reported airing times: [[anilistId, unixSeconds], ...]. Kept only for followed ids and for times from
+ * an hour ago to 15 days ahead (anything else is a bad clock or a bad actor). One entry per id.
+ */
+export function parseAiring(raw: unknown, follows: number[], nowS: number): [number, number][] {
+  if (!Array.isArray(raw)) return [];
+  const ok = new Set(follows);
+  const out = new Map<number, number>();
+  for (const p of raw) {
+    if (!Array.isArray(p) || p.length !== 2) continue;
+    const [id, at] = p;
+    if (typeof id !== "number" || !ok.has(id) || typeof at !== "number" || !Number.isInteger(at)) continue;
+    if (at < nowS - 3600 || at > nowS + AIRING_MAX_AHEAD_S) continue;
+    out.set(id, at);
+    if (out.size >= follows.length) break;
+  }
+  return [...out.entries()].sort((a, b) => a[0] - b[0]);
+}
+

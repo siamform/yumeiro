@@ -15,3 +15,12 @@ CREATE TABLE IF NOT EXISTS follows (
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS follows_device ON follows(device_id);
 CREATE TABLE IF NOT EXISTS state (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+-- Next airing time per show (shared, not per device). Phones report it from AniList when they check in;
+-- the server can't ask AniList itself (AniList blocks Cloudflare Workers). After an episode fires the
+-- time moves on a week; `rolls` counts those guesses and stops after 2 without a fresh report.
+CREATE TABLE IF NOT EXISTS airing (
+  media_id INTEGER PRIMARY KEY,         -- AniList media id
+  at       INTEGER NOT NULL,            -- unix s of the next episode
+  rolls    INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS airing_at ON airing(at);
