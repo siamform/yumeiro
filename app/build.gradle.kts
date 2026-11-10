@@ -228,6 +228,8 @@ dependencies {
   implementation(libs.nextlib.media3ext)
   implementation(libs.okhttp)
   implementation(libs.okhttp.dnsoverhttps)
+  implementation(libs.okhttp.brotli)
+  implementation(libs.okhttp.zstd)
 
   // Online: runs CloudStream-compatible extensions (MainAPI providers / extractors).
   implementation(libs.cloudstream.library)
@@ -246,6 +248,7 @@ dependencies {
   implementation(libs.nanohttpd)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.kotlinx.serialization.json.okio)
+  implementation(libs.kotlinx.serialization.protobuf)
   // Mangayomi-style JavaScript sources
   implementation(libs.quickjs.kt)
   // SMB shares (home servers)

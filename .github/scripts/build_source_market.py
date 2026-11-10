@@ -139,6 +139,32 @@ def parse_tachiyomi(data):
     return kind, out
 
 
+V2_WARN = {"CONTENT_WARNING_NSFW": True, 3: True, "3": True}
+
+
+def parse_tachiyomi_v2(data):
+    """TachiyomiX v2 index.json (Keiyoushi, extensions-lib 1.6) -> ("mihon", entries) or None."""
+    if not isinstance(data, dict):
+        return None
+    lst = data.get("extensionList")
+    rows = (lst or {}).get("extensions") if isinstance(lst, dict) else data.get("extensions")
+    if not isinstance(rows, list):
+        return None
+    out = []
+    for e in rows:
+        if not isinstance(e, dict) or not isinstance(e.get("packageName"), str):
+            continue
+        if not isinstance((e.get("resources") or {}).get("apkUrl"), str) or STUB.match(str(e.get("name", ""))):
+            continue
+        langs = sorted({str(s.get("language", ""))[:8] for s in e.get("sources") or [] if isinstance(s, dict)} - {""})
+        out.append({"name": str(e.get("name", ""))[:80], "lang": langs[0] if len(langs) == 1 else "all",
+                    "nsfw": bool(V2_WARN.get(e.get("contentWarning")))})
+    if not out:
+        return None
+    anime = sum(".animeextension." in e["packageName"] for e in rows if isinstance(e, dict) and isinstance(e.get("packageName"), str))
+    return ("aniyomi" if anime * 2 >= len(out) else "mihon"), out
+
+
 def parse_mangayomi(data):
     if not isinstance(data, list) or not data:
         return None
@@ -155,7 +181,7 @@ def load_index(url):
         data = fetch_json(url, limit=12 << 20)
     except Exception:
         return None
-    got = parse_tachiyomi(data) or parse_mangayomi(data)
+    got = parse_tachiyomi(data) or parse_tachiyomi_v2(data) or parse_mangayomi(data)
     if not got:
         return None
     digest = hashlib.sha256(json.dumps(sorted(e["name"] + e["lang"] for e in got[1])).encode()).hexdigest()[:16]
@@ -198,6 +224,8 @@ def index_urls_for(meta):
     urls += RAW_INDEX.findall(readme)
     for b in ("repo", branch):
         urls += ["https://raw.githubusercontent.com/%s/%s/index.min.json" % (full, b)]
+    # v2 stores (extensions-lib 1.6): index.min.json only holds update stubs; index.json is the v2 list.
+    urls += ["https://raw.githubusercontent.com/%s/repo/index.json" % full]
     urls += ["https://raw.githubusercontent.com/%s/%s/%s" % (full, branch, f) for f in ("index.json", "anime_index.json")]
     clean = []
     for u in urls:
@@ -208,7 +236,7 @@ def index_urls_for(meta):
             u += "/index.min.json"
         if u not in clean:
             clean.append(u)
-    return clean[:10]
+    return clean[:12]
 
 
 def repo_meta(full, cache):

@@ -39,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,6 +75,7 @@ fun BrowserCheckHost() {
     // so no WebView object lives in Compose state (and none outlives the dialog).
     var openInPage by remember(p) { mutableStateOf<((String) -> Unit)?>(null) }
     Dialog(onDismissRequest = { BrowserCheck.cancel() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        FullScreenDialogBars()
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("browser_check")) {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.VerifiedUser, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
@@ -215,6 +217,43 @@ fun BrowserCheckHost() {
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+        }
+    }
+}
+
+/**
+ * Makes the check page's own window draw behind the status / navigation bars with the app's colours.
+ * A dialog window otherwise keeps the platform defaults (DayNight → a white status bar with light
+ * icons over the dark header) — that was the white top bar on captcha pages.
+ */
+@Composable
+internal fun FullScreenDialogBars() {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val window = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window ?: return
+    val bg = MaterialTheme.colorScheme.background
+    val dark = (dev.asfakul.yumeiro.ui.theme.LocalAppPalette.current ?: dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current).isDark
+    androidx.compose.runtime.SideEffect {
+        @Suppress("DEPRECATION")
+        window.apply {
+            setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+            setDimAmount(0f)
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(bg.toArgb()))
+            statusBarColor = android.graphics.Color.TRANSPARENT
+            navigationBarColor = android.graphics.Color.TRANSPARENT
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                isStatusBarContrastEnforced = false
+                isNavigationBarContrastEnforced = false
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                attributes = attributes.apply {
+                    layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+            }
+        }
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
         }
     }
 }

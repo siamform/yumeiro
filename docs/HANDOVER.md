@@ -889,9 +889,71 @@ languages and sample names, one-tap Add through the existing `addRepo` / `Stremi
 present. Adult-only repos and adult add-ons are hidden unless the 18+ setting is on. Expanded by default until the
 user has a repository. The manual paste dialog is unchanged ("Your repositories" → Add). Setup guides updated.
 
-**Known gap.** Keiyoushi (the main Mihon repo) now publishes `index.pb` / `index.json` v2 with lib 1.6 and leaves only
-placeholders in `index.min.json`, so it isn't listed. Supporting that format is on the roadmap.
+**Known gap (closed in §27).** Keiyoushi (the main Mihon repo) now publishes `index.pb` / `index.json` v2 with lib 1.6
+and leaves only placeholders in `index.min.json`, so it wasn't listed. §27 adds that format.
 
 **Links.** Every `yumeiro-phi.vercel.app` link (README, docs, fastlane description, Settings → website, Source
 status) now points at `https://yumeiro.click` (308 → www, served by Vercel; `/download` and `/status` work).
+
+## 27. Mihon extensions-lib 1.6 and the v2 store index — Keiyoushi works (branch `feat/mihon-lib-1-6`)
+
+**Why.** Keiyoushi moved every extension (1554) to extensions-lib 1.6 (`keiyoushi.source.KeiSource`) and a new
+store index: `repo.json` → `index_v2` (`index.pb`, protobuf; `index.json` is the same in JSON). `index.min.json`
+now only holds "Outdated App" stubs. Yumeiro read neither, so Keiyoushi was unreachable.
+
+**Store index** (`sources/tachiyomi/TachiyomiIndex.kt`, used by `TachiyomiExtensions.fetchRepoIndex`).
+One request to `<base>/repo.json` decides: a v2 store points at `index_v2`, which is decoded (gzip or not,
+protobuf or JSON — sniffed, not trusted from the URL; `extensionListUrl` indexes follow the second file).
+Otherwise `index.min.json` is read as before; if it only has update stubs, `index.pb` then `index.json` next
+to it are tried. Protobuf schema = mihonapp/extensions-lib `index.proto` (kotlinx-serialization-protobuf).
+v2 entries carry absolute APK/icon URLs (GitHub releases), so `IndexEntry` gained `apkUrl`/`iconUrl`/`lib`.
+Content warning: only NSFW waits behind the 18+ switch; SAFE and MIXED are listed like before.
+`normalizeRepo` also accepts `index.pb`, `repo.json`, `github.com/<o>/<r>/raw|blob/<branch>/…` and
+URL-encoded `mihon://add-repo?url=` links.
+
+**Auto-trust by repo key.** The store declares its signing-certificate SHA-256 (`repo.json`
+`meta.signingKeyFingerprint` / v2 `signingKey`). An APK installed from that store and signed with exactly that
+certificate is trusted at once (like Mihon); anything else still needs the manual trust tap. Keiyoushi:
+`9add655a…5a75d4da2`, checked with `apksigner` on the real MangaDex APK.
+
+**Host ABI (extensions-lib 1.6).** Checked against the class files of all 1554 Keiyoushi jars — every external
+class, method and field they reference (1560 refs) is asserted to exist with the same JVM signature by
+`KeiyoushiLinkageTest` (fixture `app/src/test/resources/keiyoushi-lib16-refs.json`). Changes:
+- `source/MangaSource.kt` → `Source.kt`: the interface is `eu.kanade.tachiyomi.source.Source` (the old name made
+  every extension that implements `Source`/`SourceFactory` fail to link). It now declares `supportsLatest`,
+  `getFilterList`, the suspend catalogue calls and `getMangaUpdate(manga, chapters, fetchDetails, fetchChapters)`
+  (default bridges older extensions to getMangaDetails/getChapterList). New `SMangaUpdate`.
+- `CatalogueSource`: related-manga members (`supportsRelatedMangas`, `fetchRelatedMangaList`, …).
+- `SManga.memo` / `SChapter.memo` (`JsonObject`), copied in `copy()` / `copyFrom()`.
+- `HttpSource.getHomeUrl()` (default `baseUrl`; used for the provider's site link). `headers` stays `by lazy`
+  — KeiSource replaces the `headers$delegate` field reflectively.
+- `ChallengeInterceptor` → `CloudflareInterceptor`: KeiSource refuses to start unless the default client has
+  interceptors named `UncaughtExceptionInterceptor`, `UserAgentInterceptor`, `CloudflareInterceptor` and no
+  Brotli / IgnoreGzip network interceptor. Don't rename them.
+- New deps: `okhttp-brotli`, `okhttp-zstd` (KeiSource adds `CompressionInterceptor(Gzip, Deflate, Brotli, Zstd)`),
+  `kotlinx-serialization-protobuf`. `app.cash.quickjs.QuickJs` (25 extensions) is a small layer over the QuickJS
+  Yumeiro already ships (`app/src/main/java/app/cash/quickjs/QuickJs.kt`) — two QuickJS libraries can't coexist
+  (same `libquickjs.so`). R8 keeps added for zstd / brotli / quickjs / webkit boundary.
+
+**Bridge** (`MihonMangaProvider`). Details and chapters use `getMangaUpdate`: details asks for both and keeps the
+chapters for 60 s, so opening a title costs one source call. Calls per manga are serialised with a `Mutex`
+(KeiSource throws on concurrent calls for the same manga). Memo data is persisted per source
+(`files/tachiyomi/memo/<id>.json`, LRU 5000, `MemoStore`) and handed back on details/chapters/pages — some
+multisrc themes (e.g. Iken: `chapter.memo["seriesSlug"]!!`) need it. Empty memos are never written.
+Loader: `MAX_MANGA_LIB` 1.6; reads `tachiyomix.name`, `tachiyomix.extensionLib` (stored as a float) and
+`tachiyomix.contentWarning` (0 safe, 1 mixed, 2 NSFW).
+
+**Market.** `build_source_market.py` reads v2 `index.json` (and probes `<repo>/repo/index.json`), so Keiyoushi is
+listed in Discover again; the stored URL is accepted by the app's add-repo path.
+
+**Captcha page top bar.** The "Verify you're human" dialog (and the page stream finder) is its own window, which
+kept platform bar defaults — a white status bar over the dark header. `FullScreenDialogBars()` (in
+`BrowserCheckHost.kt`) makes that window draw edge-to-edge with transparent bars, the app background and
+icon colours from the current theme.
+
+**Known gap.** `ca.mpreg.imagedecoder` (4 extensions: webtoonlib, randomscan, toonlook, procomic) isn't bundled:
+it adds ~12 MB of native code for 4 sources. Those load but fail on images that need it.
+
+**Tests.** `TachiyomiIndexTest` (v1, stubs, repo.json, v2 JSON/gzip/proto, the real Keiyoushi `index.pb`
+fixture, normalizeRepo, lib versions, MemoStore) and `KeiyoushiLinkageTest`.
 

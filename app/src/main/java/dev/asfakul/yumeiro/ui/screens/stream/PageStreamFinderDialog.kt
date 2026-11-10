@@ -230,6 +230,7 @@ fun PageStreamFinderDialog(
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        dev.asfakul.yumeiro.ui.screens.online.FullScreenDialogBars()
         Surface(color = DarkSurface, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

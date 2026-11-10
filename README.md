@@ -110,7 +110,7 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ### Anime & online
 - Works with **CloudStream extensions** — your existing repos just work
-- **Aniyomi** anime, **Mihon** manga (with a reader), **Stremio** add-ons and **JavaScript** sources
+- **Aniyomi** anime, **Mihon** manga (with a reader, extensions-lib up to 1.6 and the new store index — Keiyoushi works), **Stremio** add-ons and **JavaScript** sources
 - **Home servers**: Jellyfin, Emby, Plex, DLNA, WebDAV, SMB
 - Extension **markets** for every format (CloudStream, Aniyomi, Mihon, Mangayomi, Stremio) with search, ranking and one-tap Add
 - Auto-updates, sub/dub, seasons, episodes

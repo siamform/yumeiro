@@ -122,6 +122,11 @@
 -keep class tachiyomi.** { *; }
 -keep class mihon.** { *; }
 -keep class uy.kohesive.injekt.** { *; }
+# extensions-lib 1.6 (Keiyoushi): QuickJS API (app.cash.quickjs, on dokar QuickJS), zstd/brotli decoding, WebView boundary
+-keep class app.cash.quickjs.** { *; }
+-keep class com.squareup.zstd.** { *; }
+-keep class org.brotli.** { *; }
+-keep class org.chromium.support_lib_boundary.** { *; }
 -keep class rx.** { *; }
 -dontwarn rx.**
 -keep class fi.iki.elonen.** { *; }

@@ -55,8 +55,8 @@ object SetupGuides {
         intro = "Manga extensions use the Mihon / Tachiyomi format and come from community repositories. Yumeiro doesn't ship any; Discover lists the ones found on GitHub.",
         steps = listOf(
             SetupGuide.Step("Open Discover below, sort or search, and tap Add on a repository you trust."),
-            SetupGuide.Step("Or tap Add next to Your repositories and paste a link: index.min.json, a GitHub repo page, a raw link, or a tachiyomi:// / mihon:// \"Add repo\" button (long-press it and copy)."),
-            SetupGuide.Step("Install extensions from Available, then tap Trust on each one."),
+            SetupGuide.Step("Or tap Add next to Your repositories and paste a link: repo.json, index.min.json, index.pb, a GitHub repo page, a raw link, or a tachiyomi:// / mihon:// \"Add repo\" button (long-press it and copy)."),
+            SetupGuide.Step("Install extensions from Available. Extensions signed with the key the repository publishes (Keiyoushi does) are trusted right away; others need a Trust tap."),
             SetupGuide.Step("Open the Manga section to browse and read."),
         ),
         tips = listOf(
