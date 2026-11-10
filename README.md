@@ -13,7 +13,7 @@ Local music and video, YouTube, YouTube Music, live TV / IPTV, CloudStream, Aniy
 sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified in one fast, beautifully designed player.
 
 <p>
-  <a href="https://yumeiro-phi.vercel.app/download"><img alt="Download" src="https://img.shields.io/github/v/release/siamform/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
+  <a href="https://yumeiro.click/download"><img alt="Download" src="https://img.shields.io/github/v/release/siamform/yumeiro?style=for-the-badge&label=Download&color=F5C46B&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/siamform/yumeiro/total?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/siamform/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
 </p>
@@ -24,7 +24,7 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
 </p>
 
-**[Download the APK](https://yumeiro-phi.vercel.app/download)** · **[Website](https://yumeiro-phi.vercel.app/)** · **[Full guide](docs/GUIDE.md)** · **[Source status](https://yumeiro-phi.vercel.app/status)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
+**[Download the APK](https://yumeiro.click/download)** · **[Website](https://yumeiro.click/)** · **[Full guide](docs/GUIDE.md)** · **[Source status](https://yumeiro.click/status)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
 
 </div>
 
@@ -45,6 +45,7 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 | **Fixes refused streams for you** | Before showing an error, Yumeiro retries the link with different headers, fetches fresh links, and if needed captures the stream from the page itself. |
 | **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. Prefer **1DM** or **ADM**? Pick it in Settings → Downloads and episodes go straight to it, with the right headers. |
 | **Every extension format** | CloudStream `.cs3`, Aniyomi anime and Mihon/Tachiyomi manga APKs, Stremio add-ons and Mangayomi-style JavaScript sources, side by side in one Sources hub. |
+| **A market for every format** | No more hunting for repo links: each Sources tab has a Discover list of repositories and add-ons found on GitHub and in Stremio's catalogs, ranked by stars, recent updates and size, with search, sort and one-tap Add. Pasting a link by hand still works. |
 | **Your home servers** | Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV and SMB shares show up as sources, with natural episode order. |
 | **Track, back up, stay private** | AniList, MyAnimeList, Kitsu and Trakt; one-file backup and restore; app lock and incognito mode. |
 | **Watch together** | Rooms on the same Wi-Fi keep play, pause and seek in sync. No account, no server. |
@@ -111,7 +112,8 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 - Works with **CloudStream extensions** — your existing repos just work
 - **Aniyomi** anime, **Mihon** manga (with a reader), **Stremio** add-ons and **JavaScript** sources
 - **Home servers**: Jellyfin, Emby, Plex, DLNA, WebDAV, SMB
-- Extension **market**, auto-updates, sub/dub, seasons, episodes
+- Extension **markets** for every format (CloudStream, Aniyomi, Mihon, Mangayomi, Stremio) with search, ranking and one-tap Add
+- Auto-updates, sub/dub, seasons, episodes
 - A YouTube-style **For you** feed across every extension
 
 </td>
@@ -169,7 +171,7 @@ How Yumeiro compares with the apps it learns from. All of them are great at thei
 | Backup / app lock / incognito | ✓ | ✓ | ✓ | backup | – | – | – |
 | Watch together without a server | ✓ (same Wi-Fi) | – | – | – | – | – | SyncPlay via server |
 | Crash guard for broken extensions | ✓ | – | – | partial | n/a | – | n/a |
-| Public source status page | [✓](https://yumeiro-phi.vercel.app/status) | – | – | – | – | – | – |
+| Public source status page | [✓](https://yumeiro.click/status) | – | – | – | – | – | – |
 
 Yumeiro does not ship torrent streaming. Stremio add-ons that only return torrents are listed but their torrent streams are skipped.
 
@@ -178,11 +180,11 @@ Yumeiro does not ship torrent streaming. Stremio add-ons that only return torren
 The [extension kit](extension-kit/README.md) has a working sample for each format Yumeiro reads: a static Stremio add-on you can host
 on GitHub Pages for free, a JavaScript source with its `index.json`, and pointers for CloudStream, Aniyomi and Mihon templates.
 Repositories listed in [.github/extensions/sources.json](.github/extensions/sources.json) are checked every 3 days and shown on the
-[public status page](https://yumeiro-phi.vercel.app/status).
+[public status page](https://yumeiro.click/status).
 
 ## Install
 
-1. Download `release-Yumeiro-vX.Y.Z.apk` from **[the website](https://yumeiro-phi.vercel.app/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)).
+1. Download `release-Yumeiro-vX.Y.Z.apk` from **[the website](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)).
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
@@ -298,7 +300,7 @@ it is the single best way to help more people find it. Share it with a friend wh
 
 <div align="center">
 
-[Website](https://yumeiro-phi.vercel.app/) · [GitHub @siamform](https://github.com/siamform)
+[Website](https://yumeiro.click/) · [GitHub @siamform](https://github.com/siamform)
 
 **Made in Bangladesh**
 

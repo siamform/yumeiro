@@ -30,4 +30,4 @@ Yumeiro (夢色, "dream-coloured") is a free, open-source entertainment hub for 
 Yumeiro does not host, upload or index any content. Extensions and repositories are made by third parties and you choose which to add.
 
 Source code: https://github.com/siamform/yumeiro
-Website: https://yumeiro-phi.vercel.app/
+Website: https://yumeiro.click/

@@ -17,14 +17,14 @@ Branch `feat/universal-sources`. One pull request, merged once everything below 
 | Watch together | Host a room on the same Wi-Fi (found automatically, or join by address and 4-digit code). Play, pause, seek and episode changes follow the host. No server. | Library → Videos → Watch together, or Settings → Watch together |
 | Widget | "Continue watching" home-screen widget with poster; tapping opens the title. | Home screen |
 | Android TV | The existing leanback launcher entry and banner. The new screens use the same D-pad-friendly components. | TV launcher |
-| Source status | On-device check of every installed source (home + search, 25 s timeout), shareable report, and a public page for every market repo. | Settings → Source status; [public page](https://yumeiro-phi.vercel.app/status) |
+| Source status | On-device check of every installed source (home + search, 25 s timeout), shareable report, and a public page for every market repo. | Settings → Source status; [public page](https://yumeiro.click/status) |
 | Library redesign | Hero header with stats, three tabs (Music, Videos, Reading), playlist mosaics, shelf covers. | Library |
 | Updates | Fixed "504 Gateway Time-out" when downloading an update: the updater now uses the GitHub API asset link first and the website `/download` route is the public download link. | Settings → Updates |
 
 ## For the community
 
 - `extension-kit/`: working samples for a static Stremio add-on and a JavaScript source, plus pointers for CloudStream, Aniyomi and Mihon templates.
-- Public status page: <https://yumeiro-phi.vercel.app/status>, fed by the existing `extension-market` workflow (every 3 days, no new Actions minutes).
+- Public status page: <https://yumeiro.click/status>, fed by the existing `extension-market` workflow (every 3 days, no new Actions minutes).
 - F-Droid / IzzyOnDroid metadata in `fastlane/metadata/android/en-US/`. See [DISTRIBUTION.md](DISTRIBUTION.md).
 - "What's different" table in the README.
 

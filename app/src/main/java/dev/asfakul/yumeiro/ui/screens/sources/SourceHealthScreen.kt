@@ -131,7 +131,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                 }
                 Text("Checks run on your phone and network. A source can work for someone else and fail here if a site is blocked where you are.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                 val uri = androidx.compose.ui.platform.LocalUriHandler.current
-                androidx.compose.material3.TextButton(onClick = { runCatching { uri.openUri("https://yumeiro-phi.vercel.app/status") } }, contentPadding = PaddingValues(0.dp)) {
+                androidx.compose.material3.TextButton(onClick = { runCatching { uri.openUri("https://yumeiro.click/status") } }, contentPadding = PaddingValues(0.dp)) {
                     Text("See the public status of every market repository", color = SpotifyGreen, fontSize = 13.sp)
                 }
             }
