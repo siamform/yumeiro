@@ -11,6 +11,11 @@ name: Extension market
 # branch. The app reads
 # https://raw.githubusercontent.com/<repo>/extensions/index.json on open and updates installed
 # extensions automatically (or manually, per extension).
+#
+# The same run builds sources.json, the Discover lists for Aniyomi, Mihon, Mangayomi and Stremio
+# (Sources screen): GitHub search per format + README add-repo links, every index read and ranked
+# (stars, last update, size), duplicates merged; Stremio add-ons from the official and community
+# catalogs with each manifest checked. If that step fails, the previous sources.json stays.
 on:
   schedule:
     - cron: "17 20 */3 * *" # every 3 days, 02:17 Asia/Dhaka
@@ -20,6 +25,7 @@ on:
     paths:
       - ".github/extensions/**"
       - ".github/scripts/build_extension_market.py"
+      - ".github/scripts/build_source_market.py"
       - ".github/workflows/extension-market.yml"
 
 permissions:
@@ -35,7 +41,7 @@ jobs:
     permissions:
       contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 55
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,6 +68,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CODE_SEARCH: "0" # code search is the heaviest GitHub API call; topic/keyword search is enough
 
+      - name: Discover Aniyomi, Mihon, Mangayomi and Stremio sources
+        # Best effort: a failure keeps the last published sources.json, and the CloudStream index still ships.
+        run: timeout 25m python3 .github/scripts/build_source_market.py out || echo "::warning::Source market step failed; keeping the previous sources.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check for changes
         id: diff
         run: |
@@ -79,7 +91,8 @@ jobs:
 
           Rebuilt every 3 days by the `Extension market` workflow from `.github/extensions/sources.json`
           on `main`. `files/` holds verified mirrors of each CloudStream extension; `index.json` is the
-          catalog the Yumeiro app reads. Do not edit by hand.
+          catalog the Yumeiro app reads. `sources.json` lists Aniyomi, Mihon, Mangayomi and Stremio
+          repositories/add-ons for the app's Discover lists. Do not edit by hand.
           MD
           sed -i 's/^          //' README.md
           git init -q -b extensions

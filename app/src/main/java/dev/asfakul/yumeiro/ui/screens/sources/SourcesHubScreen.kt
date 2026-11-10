@@ -200,6 +200,13 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
         loading = false
     }
     LaunchedEffect(kind, repos.size) { if (repos.isNotEmpty()) refresh() }
+    fun addRepoUrl(url: String) = scope.launch {
+        loading = true
+        TachiyomiExtensions.addRepo(context, url, kind)
+            .onSuccess { AppMessages.success(context, "Repository added · $it extensions"); refresh() }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+        loading = false
+    }
 
     val installedPkgs = installed.associateBy { it.pkg }
     val shown = available
@@ -218,8 +225,18 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                 )
             }
             item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon, startExpanded = repos.isEmpty()) }
-            item("repos") { SectionTitle("Repositories", "Paste a repo link (index.min.json)", "Add" to { addRepo = true }) }
-            if (repos.isEmpty()) note("norepo", "No repositories yet. Yumeiro doesn't ship any; add one you trust.")
+            item("market") {
+                val repoUrls = repos.map { it.url }.toSet()
+                RepoMarket(
+                    kind = if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.sources.SourceMarket.Kind.ANIYOMI else dev.asfakul.yumeiro.sources.SourceMarket.Kind.MIHON,
+                    label = kind.label,
+                    isAdded = { runCatching { TachiyomiExtensions.normalizeRepo(it) in repoUrls }.getOrDefault(false) },
+                    startExpanded = repos.isEmpty(),
+                    onAdd = { addRepoUrl(it) },
+                )
+            }
+            item("repos") { SectionTitle("Your repositories", "Or paste any repo link (index.min.json)", "Add" to { addRepo = true }) }
+            if (repos.isEmpty()) note("norepo", "No repositories yet. Pick one from Discover above, or paste a link you trust.")
             items(repos, key = { "r" + it.url }) { r ->
                 HubCard(r.name.ifBlank { r.url }, r.url) {
                     IconButton(onClick = { scope.launch { TachiyomiExtensions.removeRepo(context, r.url); available = available.filterNot { it.repo.url == r.url } } }) {
@@ -274,13 +291,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
         onDismiss = { addRepo = false },
     ) { url ->
         addRepo = false
-        scope.launch {
-            loading = true
-            TachiyomiExtensions.addRepo(context, url, kind)
-                .onSuccess { AppMessages.success(context, "Repository added · $it extensions"); refresh() }
-                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
-            loading = false
-        }
+        addRepoUrl(url)
     }
     trustAsk?.let { e ->
         TsukiDialog(
@@ -323,11 +334,15 @@ private fun StremioTab() {
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
-                Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
+                Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
                     color = TextSecondary, fontSize = 13.sp)
             }
             item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio, startExpanded = addons.isEmpty()) }
-            item("head") { SectionTitle("Your add-ons", "${addons.size} added", "Add" to { add = true }) }
+            item("market") {
+                val have = addons.map { it.manifestUrl }.toSet()
+                AddonMarket(isAdded = { StremioAddons.normalize(it) in have }, startExpanded = addons.isEmpty(), onAdd = { addUrl(it) })
+            }
+            item("head") { SectionTitle("Your add-ons", "${addons.size} added · or paste a manifest link", "Add" to { add = true }) }
             if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
                 HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
                     TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text("Add", color = SpotifyGreen) }
@@ -360,6 +375,13 @@ private fun JsTab() {
     var query by remember { mutableStateOf("") }
     suspend fun refresh() { loading = true; available = runCatching { JsSources.available(context) }.getOrDefault(available); loading = false }
     LaunchedEffect(state.repos.size) { if (state.repos.isNotEmpty()) refresh() }
+    fun addRepoUrl(url: String) = scope.launch {
+        loading = true
+        JsSources.addRepo(context, url)
+            .onSuccess { AppMessages.success(context, "Repository added · $it sources"); refresh() }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+        loading = false
+    }
     val installedIds = state.installed.associateBy { it.id }
     val shown = available.filter { it.isJs && (adult || !it.nsfw) && (query.isBlank() || it.name.contains(query, true) || it.lang.equals(query, true)) }.sortedBy { it.name.lowercase() }
 
@@ -371,8 +393,17 @@ private fun JsTab() {
                     color = TextSecondary, fontSize = 13.sp)
             }
             item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript, startExpanded = state.repos.isEmpty()) }
-            item("repos") { SectionTitle("Repositories", "index.json links", "Add" to { add = true }) }
-            if (state.repos.isEmpty()) note("norepo", "No repositories yet. Yumeiro doesn't ship any; add one you trust.")
+            item("market") {
+                val have = state.repos.toSet()
+                RepoMarket(
+                    kind = dev.asfakul.yumeiro.sources.SourceMarket.Kind.MANGAYOMI, label = "Mangayomi",
+                    isAdded = { runCatching { JsSources.normalizeRepo(it) in have }.getOrDefault(false) },
+                    startExpanded = state.repos.isEmpty(),
+                    onAdd = { addRepoUrl(it) },
+                )
+            }
+            item("repos") { SectionTitle("Your repositories", "Or paste any index.json link", "Add" to { add = true }) }
+            if (state.repos.isEmpty()) note("norepo", "No repositories yet. Pick one from Discover above, or paste a link you trust.")
             items(state.repos, key = { "r$it" }) { r ->
                 HubCard(r.substringAfter("://").substringBefore("/"), r) {
                     IconButton(onClick = { JsSources.removeRepo(context, r) }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
@@ -408,11 +439,7 @@ private fun JsTab() {
     }
     if (add) UrlDialog("Add JavaScript repository", "index.json link", "Mangayomi-format repositories. Only JavaScript sources are used.", { add = false }) { url ->
         add = false
-        scope.launch {
-            JsSources.addRepo(context, url)
-                .onSuccess { AppMessages.success(context, "Repository added · $it sources"); refresh() }
-                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
-        }
+        addRepoUrl(url)
     }
 }
 

@@ -58,10 +58,10 @@ Make Yumeiro the hub that runs the big ecosystems side by side, each behind one 
 | Mangayomi / Dartotsu | JavaScript | done (v1.0.5), QuickJS | no native code |
 | Jellyfin / Plex / DLNA / SMB | server APIs | done (v1.0.5), plus Emby and WebDAV | home media users |
 
-Shared on top: one market for all formats, per-source health score, auto-fallback, sub/dub and quality
+Shared on top: one market for all formats (done: Discover lists in every Sources tab, from `sources.json`), per-source health score, auto-fallback, sub/dub and quality
 preferences, unified search across every installed source, de-duplicated by AniList/TMDB id.
 
-Still open: unified search de-duplicated by AniList/TMDB id, auto-fallback to another source, Dartotsu-specific APIs.
+Still open: Mihon's newer `index.pb` / `index.json` v2 repo format (Keiyoushi publishes only that now, with extension lib 1.6; Yumeiro reads `index.min.json`, lib 1.2–1.5), unified search de-duplicated by AniList/TMDB id, auto-fallback to another source, Dartotsu-specific APIs.
 
 Done in v1.0.5 from the lists below: MyAnimeList, Kitsu and Trakt tracking; LAN watch together; backup and restore
 (local file); app lock and incognito; continue-watching widget; extension author kit; public status page;
@@ -85,6 +85,8 @@ TV layout, Weblate localisation.
 ## 0.9 Yumeiro Cloud (§23, docs/SERVER.md)
 
 - [x] Deployed to `api.yumeiro.click` on the free plan (§24). Server scope fixed at alerts only.
+- [x] Airing times come from phones; the server no longer calls AniList, which blocks Workers (§25).
+- [ ] Owner: add `/v1/health` to a free uptime monitor (SERVER.md "Is it working?").
 - [ ] Owner: rotate the Cloudflare API token that was shared in chat.
 - [ ] Phone test: push on via ntfy, bookmark an airing anime, confirm a wake ~30 min after AniList's airing time.
 - [ ] Watch D1 / Queue usage in the Cloudflare dashboard the first week; tune cron or batch if needed.
