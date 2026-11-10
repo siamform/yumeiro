@@ -8,9 +8,9 @@ import okhttp3.Response
 /**
  * When a site answers with a browser check (Cloudflare, DDoS-Guard…), solve it once in Yumeiro's
  * WebView (headless first, then asks the user) and retry with the cleared cookies and the same
- * user agent. Replaces Aniyomi's CloudflareInterceptor.
+ * user agent. Same class name as Mihon's, which extensions-lib 1.6 sources check for.
  */
-class ChallengeInterceptor(private val userAgent: () -> String) : Interceptor {
+class CloudflareInterceptor(private val userAgent: () -> String) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val response = chain.proceed(request)

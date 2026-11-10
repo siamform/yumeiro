@@ -18,7 +18,7 @@ import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.AnimeSourceFactory
 import eu.kanade.tachiyomi.source.CatalogueSource
-import eu.kanade.tachiyomi.source.MangaSource
+import eu.kanade.tachiyomi.source.Source as MangaSource
 import eu.kanade.tachiyomi.source.SourceFactory
 import eu.kanade.tachiyomi.util.ChildFirstPathClassLoader
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +44,8 @@ import java.security.MessageDigest
  * loaded with a child-first class loader against the vendored extensions-lib API — the same
  * "private extension" path Aniyomi itself uses.
  *
- * Repos are plain `index.min.json` files; Yumeiro ships none and adds none by itself. The
+ * Repos are `index.min.json` files or TachiyomiX v2 stores (`repo.json` → `index.pb` /
+ * `index.json`, see [TachiyomiIndex]); Yumeiro ships none and adds none by itself. The
  * Discover list ([dev.asfakul.yumeiro.sources.SourceMarket]) only suggests ones found on GitHub.
  */
 object TachiyomiExtensions {
@@ -53,9 +54,13 @@ object TachiyomiExtensions {
     enum class Kind(val label: String) { ANIME("Aniyomi"), MANGA("Mihon") }
 
     @Serializable
-    data class Repo(val url: String, val kind: Kind, val name: String = "")
+    /** [fingerprint]: the signing-certificate SHA-256 the store says its extensions use (v2 / repo.json). */
+    data class Repo(val url: String, val kind: Kind, val name: String = "", val fingerprint: String? = null)
 
-    /** One entry of a repo's index.min.json. */
+    /**
+     * One extension of a repo index. v1 (`index.min.json`) fills the first fields; v2 stores also
+     * give absolute [apkUrl] / [iconUrl] (APKs often live on GitHub releases) and the [lib] version.
+     */
     @Serializable
     data class IndexEntry(
         val name: String,
@@ -65,11 +70,14 @@ object TachiyomiExtensions {
         val code: Long = 0,
         val version: String = "",
         val nsfw: Int = 0,
+        val apkUrl: String? = null,
+        val iconUrl: String? = null,
+        val lib: String? = null,
     )
 
     data class Available(val repo: Repo, val entry: IndexEntry) {
-        val apkUrl get() = repo.base() + "/apk/" + entry.apk
-        val iconUrl get() = repo.base() + "/icon/" + entry.pkg + ".png"
+        val apkUrl get() = entry.apkUrl ?: (repo.base() + "/apk/" + entry.apk)
+        val iconUrl get() = entry.iconUrl ?: (repo.base() + "/icon/" + entry.pkg + ".png")
         val displayName get() = entry.name.substringAfter("Aniyomi: ").substringAfter("Tachiyomi: ")
     }
 
@@ -103,7 +111,7 @@ object TachiyomiExtensions {
 
     private val SUPPORTED_ANIME_LIB = listOf(12.0, 13.0, 14.0, 15.0, 16.0, 17.0)
     private const val MIN_MANGA_LIB = 1.2
-    private const val MAX_MANGA_LIB = 1.5
+    private const val MAX_MANGA_LIB = 1.6
 
     private fun root(context: Context) = File(context.filesDir, "tachiyomi").apply { mkdirs() }
     private fun extDir(context: Context, kind: Kind) = File(root(context), kind.name.lowercase()).apply { mkdirs() }
@@ -138,13 +146,27 @@ object TachiyomiExtensions {
 
     // region repos
 
-    /** Normalises a pasted repo link to its base folder (the one that holds index.min.json). */
+    /**
+     * Normalises a pasted repo link to its base folder (the one that holds `repo.json` /
+     * `index.min.json` / `index.pb`). Accepts the index or repo.json link itself, `github.com`
+     * repo, tree and raw links, and the `tachiyomi://` / `mihon://` / `aniyomi://` add-repo links.
+     */
     fun normalizeRepo(raw: String): String {
         var u = raw.trim().removeSuffix("/")
         if (u.startsWith("tachiyomi://") || u.startsWith("aniyomi://") || u.startsWith("mihon://")) {
-            u = android.net.Uri.parse(u).getQueryParameter("url") ?: u
+            u = Regex("""[?&]url=([^&]+)""").find(u)?.groupValues?.get(1)
+                ?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: u
+            u = u.trim().removeSuffix("/")
         }
-        u = u.removeSuffix("/index.min.json").removeSuffix("/index.json").removeSuffix("/repo.json")
+        u = u.substringBefore('#').substringBefore('?')
+        for (file in listOf("/index.min.json", "/index.json", "/index.pb", "/index.pb.gz", "/index.json.gz", "/repo.json")) {
+            u = u.removeSuffix(file)
+        }
+        // github.com/<owner>/<repo>/(raw|blob)/<branch>[/path] -> raw.githubusercontent.com/<owner>/<repo>/<branch>[/path]
+        Regex("""^https?://github\.com/([^/]+)/([^/]+)/(?:raw|blob)/(.+)$""").find(u)?.let { m ->
+            val (owner, repo, rest) = m.destructured
+            u = "https://raw.githubusercontent.com/$owner/$repo/$rest"
+        }
         // github.com/<owner>/<repo>[/tree/<branch>] -> raw.githubusercontent.com/<owner>/<repo>/<branch>
         Regex("""^https?://github\.com/([^/]+)/([^/]+)(?:/tree/([^/]+))?/?$""").find(u)?.let { m ->
             val (owner, repo, branch) = m.destructured
@@ -157,9 +179,11 @@ object TachiyomiExtensions {
     suspend fun addRepo(context: Context, raw: String, kind: Kind): Result<Int> = withContext(Dispatchers.IO) {
         runCatching {
             val base = normalizeRepo(raw)
-            val repo = Repo(base, kind, base.substringAfter("://").substringBefore("/"))
-            val count = fetchIndex(context, repo).size
+            val host = base.substringAfter("://").substringBefore("/")
+            val index = fetchRepoIndex(context, Repo(base, kind, host))
+            val count = index.entries.size
             require(count > 0) { "That link has no extensions" }
+            val repo = Repo(base, kind, index.meta.name.ifBlank { host }, index.meta.fingerprint)
             mutex.withLock {
                 val repos = (_state.value.repos.filterNot { it.url == base } + repo)
                 saveRepos(context, repos)
@@ -175,19 +199,61 @@ object TachiyomiExtensions {
         _state.update { it.copy(repos = repos) }
     }
 
-    suspend fun fetchIndex(context: Context, repo: Repo): List<IndexEntry> = withContext(Dispatchers.IO) {
-        val body = NetworkClient.get(context).newCall(Request.Builder().url(repo.base() + "/index.min.json").build())
-            .execute().use { r ->
-                if (!r.isSuccessful) error("Repo answered HTTP ${r.code}")
-                r.body.string()
-            }
-        TachiyomiRuntime.json.decodeFromString(ListSerializer(IndexEntry.serializer()), body)
+    suspend fun fetchIndex(context: Context, repo: Repo): List<IndexEntry> = fetchRepoIndex(context, repo).entries
+
+    /**
+     * Reads a repo in whichever format it publishes. One small `repo.json` request decides: a v2
+     * store points at its `index_v2`; otherwise `index.min.json` is read, and if that only holds
+     * "update your app" stubs the v2 files next to it are tried.
+     */
+    suspend fun fetchRepoIndex(context: Context, repo: Repo): TachiyomiIndex.Parsed = withContext(Dispatchers.IO) {
+        val base = repo.base()
+        val http = NetworkClient.get(context)
+        fun bytes(url: String): ByteArray = http.newCall(Request.Builder().url(url).build()).execute().use { r ->
+            if (!r.isSuccessful) error("Repo answered HTTP ${r.code}")
+            r.body.bytes()
+        }
+        fun v2(url: String, meta: TachiyomiIndex.Meta): TachiyomiIndex.Parsed {
+            val raw = bytes(url)
+            val list = TachiyomiIndex.extensionListUrl(raw)
+            val parsed = if (list != null) {
+                TachiyomiIndex.parseV2(bytes(TachiyomiIndex.resolve(url, list)), TachiyomiIndex.resolve(url, list))
+                    .let { it.copy(meta = TachiyomiIndex.parseV2(raw, url).meta) }
+            } else TachiyomiIndex.parseV2(raw, url)
+            return parsed.copy(
+                entries = parsed.entries.filterNot(TachiyomiIndex::isPlaceholder),
+                meta = parsed.meta.copy(
+                    name = parsed.meta.name.ifBlank { meta.name },
+                    fingerprint = meta.fingerprint ?: parsed.meta.fingerprint,
+                ),
+            )
+        }
+
+        val meta = runCatching { TachiyomiIndex.parseRepoJson(bytes("$base/repo.json").decodeToString()) }
+            .getOrDefault(TachiyomiIndex.Meta())
+        meta.indexV2?.let { url -> runCatching { v2(url, meta) }.getOrNull()?.takeIf { it.entries.isNotEmpty() }?.let { return@withContext it } }
+
+        val v1 = runCatching { TachiyomiIndex.parseV1(bytes("$base/index.min.json").decodeToString()) }
+        val v1List = v1.getOrNull()
+        if (v1List != null && v1List.isNotEmpty() && !TachiyomiIndex.isPlaceholderOnly(v1List)) {
+            return@withContext TachiyomiIndex.Parsed(v1List, meta)
+        }
+        for (file in listOf("index.pb", "index.json")) {
+            runCatching { v2("$base/$file", meta) }.getOrNull()?.takeIf { it.entries.isNotEmpty() }?.let { return@withContext it }
+        }
+        if (v1List != null) {
+            // Only update stubs and no readable v2 index next to them.
+            error(if (v1List.isEmpty()) "That repo is empty" else "This repo moved to a newer index Yumeiro couldn't find")
+        }
+        throw v1.exceptionOrNull() ?: IllegalStateException("No extension index found at that link")
     }
 
     /** Every extension offered by the saved repos of [kind], newest version per package. */
     suspend fun available(context: Context, kind: Kind): List<Available> = withContext(Dispatchers.IO) {
         _state.value.repos.filter { it.kind == kind }.flatMap { repo ->
-            runCatching { fetchIndex(context, repo) }.getOrDefault(emptyList()).map { Available(repo, it) }
+            val idx = runCatching { fetchRepoIndex(context, repo) }.getOrNull() ?: return@flatMap emptyList()
+            val r = repo.copy(fingerprint = idx.meta.fingerprint ?: repo.fingerprint)
+            idx.entries.map { Available(r, it) }
         }.groupBy { it.entry.pkg }.map { (_, list) -> list.maxBy { it.entry.code } }
             .filter { OnlineSettings.adult.value || it.entry.nsfw == 0 }
             .sortedBy { it.displayName.lowercase() }
@@ -212,13 +278,21 @@ object TachiyomiExtensions {
                 if (!r.isSuccessful) error("Download failed (HTTP ${r.code})")
                 tmp.outputStream().use { out -> r.body.byteStream().copyTo(out) }
             }
-            try { installFile(context, tmp, item.repo.kind, item.iconUrl) } finally { tmp.delete() }
+            try {
+                installFile(context, tmp, item.repo.kind, item.iconUrl, item.repo.fingerprint)
+            } finally { tmp.delete() }
         }
     }
 
-    /** Installs a local APK file (from a repo download or the file picker). */
+    /**
+     * Installs a local APK file (from a repo download or the file picker). When the repo the APK
+     * came from declares a signing fingerprint and the APK is signed with exactly that certificate,
+     * it's trusted right away (the user trusted the store by adding it) — like Mihon does.
+     */
     @SuppressLint("PackageManagerGetSignatures")
-    suspend fun installFile(context: Context, apk: File, kind: Kind, iconUrl: String? = null) = mutex.withLock {
+    suspend fun installFile(
+        context: Context, apk: File, kind: Kind, iconUrl: String? = null, repoFingerprint: String? = null,
+    ) = mutex.withLock {
         val pm = context.packageManager
         val info = pm.getPackageArchiveInfo(apk.absolutePath, FLAGS) ?: error("Not a valid APK")
         val detected = kindOf(info) ?: error("This APK isn't an Aniyomi or Mihon extension")
@@ -234,6 +308,10 @@ object TachiyomiExtensions {
         target.delete()
         apk.copyTo(target, overwrite = true)
         target.setReadOnly() // Android 14+ refuses to load writable dex files.
+        val sig = signatures(info).lastOrNull()
+        if (sig != null && repoFingerprint != null && sig.equals(TachiyomiIndex.cleanFingerprint(repoFingerprint), true)) {
+            saveTrusted(context, trustedSet(context) + "${info.packageName}:$sig")
+        }
         iconUrl?.let { prefs(context).edit().putString("icon:" + info.packageName, it).apply() }
         reloadLocked(context)
     }
@@ -277,7 +355,7 @@ object TachiyomiExtensions {
             AniyomiProvider(src, SourceHub.uniqueName(src.name, src.lang, taken).also(taken::add))
         }
         SourceHub.publishVideo("aniyomi", SourceHub.Ecosystem.ANIYOMI, animeApis)
-        SourceHub.publishManga("mihon", manga.map { MihonMangaProvider(it) })
+        SourceHub.publishManga("mihon", manga.map { MihonMangaProvider(it, MemoStore(File(context.filesDir, "tachiyomi/memo/${it.id}.json"))) })
         _state.update { State(repos, installed.sortedBy { it.name.lowercase() }, ready = true) }
     }
 
@@ -293,11 +371,16 @@ object TachiyomiExtensions {
         val meta = app.metaData ?: error("Missing extension metadata")
         val versionName = pkg.versionName.orEmpty()
         val prefix = if (kind == Kind.ANIME) "tachiyomi.animeextension" else "tachiyomi.extension"
-        val name = meta.getString("aniyomix.name")
+        val x = if (kind == Kind.ANIME) "aniyomix" else "tachiyomix"
+        val name = (meta.getString("$x.name") ?: meta.getString("aniyomix.name"))
             ?: pm.getApplicationLabel(app).toString().substringAfter("Aniyomi: ").substringAfter("Tachiyomi: ")
-        val lib = (meta.getInt("aniyomix.extensionLib").takeIf { it != 0 }?.toDouble())
-            ?: versionName.substringBeforeLast('.').toDoubleOrNull()
-        val nsfw = meta.getInt("$prefix.nsfw") == 1 || meta.getInt("aniyomix.contentWarning") > 0
+        // tachiyomix 1.6 writes "1.6" (aapt stores it as a float); aniyomix writes an int like 16.
+        val lib = libVersion(meta.get("$x.extensionLib")) ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+        // tachiyomix.contentWarning: 0 safe, 1 mixed, 2 NSFW. Only NSFW waits for the adult switch, like
+        // the store listing; without it, fall back to the old nsfw flag.
+        val warning = (meta.get("$x.contentWarning") as? Number)?.toInt()
+        val nsfw = if (warning != null && kind == Kind.MANGA) warning >= 2
+        else meta.getInt("$prefix.nsfw") == 1 || (warning ?: 0) > 0
         val sig = signatures(pkg).lastOrNull()
         val trusted = sig != null && "${pkg.packageName}:$sig" in trustedSet(context)
         val base = Installed(pkg.packageName, name, kind, versionName, pkg.longVersionCode, lib, nsfw, sig, trusted, 0)
@@ -331,6 +414,15 @@ object TachiyomiExtensions {
         val anime = objs.filterIsInstance<AnimeSource>()
         val manga = objs.filterIsInstance<MangaSource>()
         return LoadResult(base.copy(sources = anime.size + manga.size), anime, manga)
+    }
+
+    /** Reads an extension-lib meta-data value: int 16 (aniyomix), float/string 1.6 (tachiyomix). */
+    internal fun libVersion(value: Any?): Double? = when (value) {
+        null -> null
+        is Int -> value.takeIf { it != 0 }?.toDouble()
+        is Float -> value.toString().toDoubleOrNull()
+        is Number -> value.toDouble().takeIf { it != 0.0 }
+        else -> value.toString().trim().toDoubleOrNull()
     }
 
     private fun kindOf(info: PackageInfo): Kind? {

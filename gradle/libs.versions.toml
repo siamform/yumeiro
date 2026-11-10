@@ -90,6 +90,8 @@ media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasourc
 
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-dnsoverhttps = { group = "com.squareup.okhttp3", name = "okhttp-dnsoverhttps", version.ref = "okhttp" }
+okhttp-brotli = { group = "com.squareup.okhttp3", name = "okhttp-brotli", version.ref = "okhttp" }
+okhttp-zstd = { group = "com.squareup.okhttp3", name = "okhttp-zstd", version.ref = "okhttp" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3", version.ref = "okhttp" }
 
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
@@ -117,6 +119,7 @@ rxjava = { group = "io.reactivex", name = "rxjava", version = "1.3.8" }
 nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version = "2.3.1" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.11.0" }
 kotlinx-serialization-json-okio = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-okio", version = "1.11.0" }
+kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version = "1.11.0" }
 # JavaScript sources (Mangayomi format): QuickJS with async/await and Kotlin suspend bindings
 quickjs-kt = { group = "io.github.dokar3", name = "quickjs-kt-android", version = "1.0.18" }
 # Home servers: SMB / Windows shares

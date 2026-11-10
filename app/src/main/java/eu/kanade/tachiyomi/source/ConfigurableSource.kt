@@ -6,7 +6,7 @@ import android.content.SharedPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-interface ConfigurableSource : MangaSource {
+interface ConfigurableSource : Source {
 
     /**
      * Gets instance of [SharedPreferences] scoped to the specific source.

@@ -2,6 +2,7 @@
 
 package eu.kanade.tachiyomi.source.model
 
+import kotlinx.serialization.json.JsonObject
 import java.io.Serializable
 
 interface SManga : Serializable {
@@ -24,6 +25,13 @@ interface SManga : Serializable {
 
     var update_strategy: UpdateStrategy
 
+    /**
+     * Extra source-specific data kept with the entry, not shown to users (e.g. a series slug).
+     *
+     * @since extensions-lib 1.6
+     */
+    var memo: JsonObject
+
     var initialized: Boolean
 
     fun getGenres(): List<String>? {
@@ -42,6 +50,7 @@ interface SManga : Serializable {
         it.thumbnail_url = thumbnail_url
         it.update_strategy = update_strategy
         it.initialized = initialized
+        it.memo = memo
     }
 
     companion object {
