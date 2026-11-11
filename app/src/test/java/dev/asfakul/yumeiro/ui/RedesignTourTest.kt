@@ -71,6 +71,9 @@ class RedesignTourTest {
     }
 
     private fun tap(tag: String, list: String? = null) {
+        // Music and Videos pick their source from the title menu: open it first.
+        val menu = Regex("^(music|video)_source_(?!switch|menu)").find(tag)?.groupValues?.get(1)
+        if (menu != null && !exists(tag)) { waitFor("${menu}_source_switch"); rule.onNodeWithTag("${menu}_source_switch", true).performClick(); settle(500) }
         if (list != null) scrollTo(list, tag)
         if (tag.startsWith("quick_card_")) scrollTo("home_list", tag)
         waitFor(tag)
@@ -141,11 +144,18 @@ class RedesignTourTest {
     }
 
     private fun stop(name: String, block: () -> Unit) {
-        runCatching(block).onFailure { missing += "$name: ${it.javaClass.simpleName} ${it.message?.take(160)}"; home() }
+        runCatching(block).onFailure {
+            missing += "$name: ${it.javaClass.simpleName} ${it.message?.take(160)}"
+            rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.resetForTests() }
+            home()
+        }
     }
 
     private fun awaitHome() {
         dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.resetForTests()
+        dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.resetForTests()
+        dev.asfakul.yumeiro.ui.screens.home.HomeLayout.resetForTests()
+        dev.asfakul.yumeiro.network.Connectivity.overrideForTests(true)
         dev.asfakul.yumeiro.ui.components.ScrollMemory.clear()
         rule.mainClock.advanceTimeBy(3_000)
         rule.waitUntil(10_000) { exists("nav_tab_music") }
@@ -173,13 +183,51 @@ class RedesignTourTest {
             }
             home()
         }
+        stop("home_folds") {
+            // Fold a space and a row, capture, then unfold: the choice is remembered in HomeLayout.
+            tap("home_space_toggle_keep", list = "home_list"); settle(500)
+            tap("home_fold_new", list = "home_list"); settle(500)
+            rule.onNodeWithTag("home_list", true).performScrollToNode(hasTestTag("home_space_keep")); settle(300)
+            snap("03_home_folded")
+            org.junit.Assert.assertFalse("folded space hides its tiles", exists("quick_card_manga"))
+            tap("home_space_toggle_keep", list = "home_list"); tap("home_fold_new", list = "home_list")
+            scrollTo("home_list", "quick_card_manga")
+            org.junit.Assert.assertTrue("unfolded space shows its tiles", exists("quick_card_manga"))
+            runCatching { rule.onNodeWithTag("home_list", true).performScrollToIndex(0) }; settle(400)
+        }
         stop("setup_guide") {
             rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show() }
-            waitFor("setup_guide"); snap("06_setup_welcome")
-            tap("setup_next"); snap("07_setup_where")
-            tap("setup_next"); snap("08_setup_checklist")
+            waitFor("setup_guide"); settle(900); snap("06_setup_welcome")
+            tap("setup_open_checklist"); settle(600); snap("08_setup_checklist")
+            tap("setup_back"); settle(600)
             tap("setup_skip"); settle()
             org.junit.Assert.assertFalse("setup guide closes on skip", exists("setup_guide"))
+            org.junit.Assert.assertEquals(dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.Onboarding.SKIPPED, dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.onboarding.value)
+            home()
+        }
+        stop("explore_tour") {
+            rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show() }
+            waitFor("setup_guide"); tap("setup_explore"); settle(900)
+            waitFor("tour_step_home"); snap("07_tour_01_home")
+            tap("tour_next"); waitFor("tour_step_tab_music"); snap("07_tour_02_tab_music")
+            // The highlighted tab is live: tapping the real Music tab moves the tour on.
+            rule.onNodeWithTag("nav_tab_music", true).performClick(); settle(900)
+            waitFor("tour_step_music_source"); snap("07_tour_03_music_source")
+            // Try the real source menu; closing it continues the tour.
+            rule.onNodeWithTag("music_source_switch", true).performClick(); settle(700)
+            waitFor("music_source_menu"); snap("07_tour_04_music_menu_open")
+            rule.onNodeWithTag("music_source_device", true).performClick(); settle(900)
+            waitFor("tour_step_tab_videos"); snap("07_tour_05_tab_videos")
+            tap("tour_next"); settle(900); waitFor("tour_step_video_source"); snap("07_tour_06_video_source")
+            tap("tour_next"); settle(900); waitFor("tour_step_yumix"); snap("07_tour_07_yumix")
+            tap("tour_next"); settle(900); waitFor("tour_step_tab_library"); snap("07_tour_08_tab_library")
+            tap("tour_next"); settle(900); waitFor("tour_step_actions"); snap("07_tour_09_actions")
+            tap("tour_back"); settle(600); waitFor("tour_step_tab_library")
+            tap("tour_next"); settle(600)
+            tap("tour_next"); settle(600); waitFor("tour_step_finish"); snap("07_tour_10_finish")
+            tap("tour_done"); settle()
+            org.junit.Assert.assertFalse("tour closes", exists("explore_tour"))
+            org.junit.Assert.assertEquals(dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.Onboarding.EXPLORED, dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.onboarding.value)
             home()
         }
         stop("search") {
@@ -192,6 +240,7 @@ class RedesignTourTest {
 
         // Music
         stop("music") { tap("nav_tab_music"); tap("music_source_device"); snap("10_music_tracks") }
+        stop("music_menu") { tap("music_source_switch"); waitFor("music_source_menu"); settle(500); snap("12_music_source_menu"); tap("music_source_menu_scrim") }
         stop("music_modes") {
             tap("music_source_mix"); settle(800); snap("13_music_mode_mix")
             tap("music_source_online"); settle(1_200); snap("14_music_mode_online")
@@ -232,6 +281,7 @@ class RedesignTourTest {
             home(); tap("nav_tab_videos"); tap("video_source_device"); snap("30_videos")
             for (i in 0..4) if (exists("video_tab_$i")) { tap("video_tab_$i"); snap("31_videos_tab_$i") }
         }
+        stop("video_menu") { tap("video_source_switch"); waitFor("video_source_menu"); settle(500); snap("34_video_source_menu"); tap("video_source_menu_scrim") }
         stop("video_modes") {
             tap("video_source_online"); settle(1_500); snap("35_video_mode_extensions")
             tap("video_source_youtube"); settle(1_500); snap("36_video_mode_youtube")
@@ -254,6 +304,21 @@ class RedesignTourTest {
         stop("store") { home(); tap("quick_card_store"); settle(1_500); snap("53_hue_store"); back() }
 
         // Settings and every category
+        stop("offline") {
+            rule.runOnUiThread { dev.asfakul.yumeiro.network.Connectivity.overrideForTests(false) }
+            home(); settle(800)
+            runCatching { rule.onNodeWithTag("home_list", true).performScrollToIndex(0) }; settle(400); snap("80_offline_home")
+            if (runCatching { rule.onNodeWithTag("home_list", true).performScrollToNode(hasTestTag("home_moods_offline")) }.isSuccess) { settle(300); snap("81_offline_moods") }
+            home(); tap("nav_tab_music"); tap("music_source_online"); settle(1_000); waitFor("offline_notice_music"); snap("82_offline_music_online")
+            tap("music_source_device"); settle()
+            home(); tap("nav_tab_videos"); tap("video_source_youtube"); settle(1_000); waitFor("offline_notice_videos"); snap("83_offline_youtube")
+            tap("video_source_online"); settle(1_000); snap("84_offline_yumix")
+            tap("offline_exit_videos"); settle(800)
+            org.junit.Assert.assertFalse("device videos have no offline notice", exists("offline_notice_videos"))
+            snap("85_offline_device_videos")
+            rule.runOnUiThread { dev.asfakul.yumeiro.network.Connectivity.overrideForTests(true) }; settle()
+            home()
+        }
         stop("settings") { home(); tap("topbar_settings_action"); waitFor("settings_home"); snap("60_settings") }
         val cats = listOf("appearance", "player", "audio", "online", "downloads", "library", "sources", "source_status", "tracking",
             "youtube", "together", "notifications", "background", "network", "privacy", "backup", "updates", "setup", "guide", "about")
@@ -295,7 +360,7 @@ class RedesignTourTest {
         stop("videos") { home(); tap("nav_tab_videos"); snap("30_videos") }
         stop("setup") {
             rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show() }
-            waitFor("setup_guide"); snap("06_setup_welcome"); tap("setup_next"); tap("setup_next"); snap("08_setup_checklist"); tap("setup_skip")
+            waitFor("setup_guide"); settle(900); snap("06_setup_welcome"); tap("setup_open_checklist"); settle(600); snap("08_setup_checklist"); tap("setup_done")
             home()
         }
         stop("np") {

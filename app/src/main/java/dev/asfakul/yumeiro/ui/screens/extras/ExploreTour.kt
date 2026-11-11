@@ -180,7 +180,15 @@ fun ExploreTourOverlay(
     val density = LocalDensity.current
 
     LaunchedEffect(i) { onPrepare(stop.place) }
-    LaunchedEffect(i, currentRoute) { if (stop.advanceOnRoute != null && stop.advanceOnRoute == currentRoute) ExploreTour.next() }
+    // Move on only when the user reaches the destination during this stop (not when Back lands
+    // on a stop whose destination is already showing).
+    var lastRoute by remember(i) { mutableStateOf(currentRoute) }
+    LaunchedEffect(i, currentRoute) {
+        if (currentRoute != lastRoute) {
+            lastRoute = currentRoute
+            if (stop.advanceOnRoute != null && stop.advanceOnRoute == currentRoute) ExploreTour.next()
+        }
+    }
     var sawMenu by remember(i) { mutableStateOf(false) }
     LaunchedEffect(sourceMenuOpen, i) {
         if (stop.menuStop && sourceMenuOpen) sawMenu = true

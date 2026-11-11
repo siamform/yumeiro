@@ -40,6 +40,9 @@ object Connectivity {
         }
     }
 
+    /** Tests only: simulate losing / regaining the connection. */
+    internal fun overrideForTests(online: Boolean) { _online.value = online }
+
     /** Starts listening once for the lifetime of the process. */
     @Synchronized
     fun start(c: Context) {

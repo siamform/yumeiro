@@ -96,6 +96,9 @@ class AppNavigationCrashTest {
     @get:Rule val chain: org.junit.rules.RuleChain = org.junit.rules.RuleChain.outerRule(grantRule).around(rule)
 
     private fun tap(tag: String) {
+        // Music and Videos pick their source from the title menu: open it first.
+        val menu = Regex("^(music|video)_source_(?!switch|menu)").find(tag)?.groupValues?.get(1)
+        if (menu != null && rule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) tap("${menu}_source_switch")
         if (tag.startsWith("quick_card_")) {
             // The bento grid lives in a LazyColumn; bring the tile into view on small test screens.
             rule.waitUntil(5_000) { rule.onAllNodesWithTag("home_list", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }

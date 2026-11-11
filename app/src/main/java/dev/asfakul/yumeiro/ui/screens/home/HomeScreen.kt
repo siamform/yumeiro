@@ -275,10 +275,10 @@ fun HomeScreen(
     val contextLine = when {
         freshSeries == 1 -> "${episodeCards.first { it.fresh }.bookmark.name} has a new episode waiting."
         freshSeries > 1 -> "$freshSeries series you follow have new episodes."
+        !isOnline -> "You're offline. Music and videos on this phone still play."
         continueTrack != null && selectedTrack != null -> "Still playing \u201c${continueTrack.title}\u201d."
         continueTrack != null -> "Pick up \u201c${continueTrack.title}\u201d where you left off."
         resumeVideo != null -> "Continue \u201c${resumeVideo.title}\u201d."
-        !isOnline -> "You're offline. Music and videos on this phone still play."
         else -> "Play something from this phone, or explore online."
     }
 
