@@ -48,3 +48,33 @@ a section, progress). Gold is used on purpose, not as decoration.
 - **Home Explore tiles**: a 3-column grid (6 columns at ≥600dp), with rows of equal height and titles of up to 2 lines.
 - **Language**: user-facing text is English. "Yumix" replaces "Hues". Japanese words are no longer used as labels.
 - **Colours**: unchanged.
+
+## Round 3 changes
+Colours and fonts are **unchanged**. Round 3 adds interaction components and motion rules.
+
+**Principles added**
+- One clear source per page, which the user changes from the title. No permanent source cards.
+- Show the important things first (context line, new episodes). Everything else folds, and folding is remembered.
+- The brand signature ("◆ 夢色 YUMEIRO" + greeting) appears **only on Home**.
+- Every new animation has a reduced-motion version.
+- Never fake data. If the app doesn't know something (a release date), say what it does know (the found date).
+
+| Component | File | Notes |
+|---|---|---|
+| `YuMotion` | `ui/components/Motion.kt` | M3 easings (Emphasized, EmphasizedDecelerate/Accelerate, Standard). Durations SHORT 150, MEDIUM 300, ENTER 400, EXIT 200 ms. Helpers return `snap()` when reduced. `LocalReducedMotion`, `reducedMotion()`, `isReducedMotion(context)` (reads `ANIMATOR_DURATION_SCALE`) |
+| `SourceOption` / `SourceMenu` | `ui/components/SourceSelector.kt` | In-window panel under the top bar: scrim (`<tag>_scrim`) and a heading ("Listen from"/"Watch from"). Rows are at least 64dp tall, with an icon, a title, a live status and a check on the selected row. Rows are `Role.RadioButton`, enter with a 30ms stagger, and Back closes the menu |
+| `SourceTitle` | `ui/components/MTTopBar.kt` | Top-bar title + rotating chevron, `Role.DropdownList`, AnimatedContent on change. Enabled by `onTitleClick` / `titleExpanded` / `titleTag` |
+| `FoldHeader` | `ui/screens/home/HomeSections.kt` | Section title + optional "See all" + fold arrow (`home_fold_<key>`). State in `HomeLayout` (prefs `home_layout`) |
+| `Space` / `SpaceGroup` | same | Named group of shortcut tiles, 4 columns, foldable (`home_space_<key>`, `home_space_toggle_<key>`) |
+| `EpisodeCarousel` / `EpisodesEmpty` | same | M3 hero carousel: 212dp cards, 28dp corners, 44dp peek, page dots. The cover is the series' own poster at 30% (dark) or 18% (light) under an ink gradient. Gold "Watch now"/"Episodes" pill |
+| `ContextLine` | same | One sentence from real state (`home_context_line`) |
+| `OfflineNotice` | `ui/components/OfflineNotice.kt` | Tonal card: what needs the internet + chips for what still works (`offline_exit_*`). Exits come from `LocalOfflineExits` |
+| `ExploreTourOverlay` | `ui/screens/extras/ExploreTour.kt` | Canvas scrim with a `BlendMode.Clear` hole, 2dp accent ring, pulse. Four blocker boxes around the hole keep the target live. The card is placed above or below the hole, with a step counter, dots and Back/Next/Skip |
+
+**Motion map**
+- Tabs: slide by ⅓ + fade, 300ms emphasized (fade only when reduced).
+- Source menu: expand from top + fade, rows staggered.
+- Title: cross-fade + slide. Chevron rotates 180°.
+- Carousel: neighbouring pages scale down 6% and fade 35% per page of distance (off when reduced).
+- Fold: the arrow rotates and the content expands/shrinks.
+- Tour: the spotlight moves between targets and the ring pulses (off when reduced).

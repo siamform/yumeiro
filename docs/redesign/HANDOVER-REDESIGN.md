@@ -1,12 +1,68 @@
 # Handover: Yumeiro redesign
 
-> **Round 2 is current.** Read [§0](#0-round-2-start-here) first. The sections after it describe round 1 (`72fa3da`). Most of it is still true, except where §0 says otherwise.
+> **Round 3 is current.** Read [§R3](#r3-round-3-start-here) first, then §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## 0. Round 2 (start here)
+## R3. Round 3 (start here)
+
+**Why it exists.** The owner asked for a full UX rethink, not a theme. The app has 800+ users and they found it confusing. Requirements:
+- a guided Quick Setup / Explore tour on the real interface
+- source dropdowns instead of tabs in Music and Videos
+- a personal, animated Home that keeps every shortcut
+- a new-episodes carousel with no fabricated data
+- proper offline and missing-configuration states
+- reduced motion respected
+- no feature removed, no copying of other apps
+
+The report is [ROUND-3.md](ROUND-3.md), the audit is [V3-SCOPE.md](V3-SCOPE.md) and the research is [RESEARCH-V3.md](RESEARCH-V3.md).
+
+**Branch.** `redesign/v3-experience`, from `7011396` (end of round 2). Commits:
+- `ad4ef36`: selectors, motion, Home carousel and spaces
+- `ac9f569`: Explore tour, welcome, offline notices
+- `50d1c55`: tour fixes, carousel tests
+- then the docs commit
+
+It was pushed to `origin` (`siamform/yumeiro-redesign`) only. The `upstream` push URL is disabled on purpose.
+**Never push to `siamform/yumeiro`, and never open a PR without the owner's written approval.**
+
+**Where the code is** (`app/src/main/java/dev/asfakul/yumeiro/`):
+
+| File | What it does |
+|---|---|
+| `ui/components/Motion.kt` | `YuMotion` tokens, `LocalReducedMotion`, `isReducedMotion()` |
+| `ui/components/SourceSelector.kt` | `SourceOption`, `SourceMenu` (the title dropdown panel) |
+| `ui/components/MTTopBar.kt` | `SourceTitle`, `onTitleClick`/`titleExpanded`/`titleTag`, `signatureOverline()`, tour targets `topbar_title`/`topbar_actions` |
+| `ui/components/OfflineNotice.kt` | `OfflineNotice(what, tag)`, `OfflineExits`, `LocalOfflineExits` |
+| `ui/screens/MTPlayerApp.kt` | Wires the menus (`music_source_menu`, `video_source_menu`), Home-only signature, tab transitions, offline exits, `ExploreTourOverlay` and its navigation (`onPrepare`) |
+| `ui/screens/home/HomeSections.kt` | `HomeLayout` (fold prefs), `FoldHeader`, `EpisodeCard`/`episodeCards()`, `EpisodeCarousel`, `EpisodesEmpty`, `Space`/`SpaceGroup`, `ContextLine` |
+| `ui/screens/home/HomeScreen.kt` | New Home order (see NAVIGATION.md "Round 3") |
+| `ui/screens/extras/ExploreTour.kt` | The 9 stops, `ExploreTour` state, `TourTargets` + `Modifier.tourTarget(key)`, overlay |
+| `ui/screens/extras/SetupGuide.kt` | Welcome (Explore / Skip), `Onboarding` NONE/EXPLORED/SKIPPED (prefs `onboarding`), checklist page; `show(checklist = true)` opens the checklist directly |
+| `network/Connectivity.kt` | `overrideForTests(online)` |
+
+**Things to know before changing it**
+- **Tour targets.** A screen registers a target with `Modifier.tourTarget("key")`. It does nothing while the tour is closed. To add a stop, add a `TourStop` and make sure its `TourPlace` is reachable in `onPrepare`.
+- **Tour advancing.** Stops with `advanceOnRoute` advance only when the route **changes during that stop**. Tapping Back onto a stop whose route is already showing must not skip ahead; this was a real bug that has been fixed. `menuStop` stops hide the overlay while the menu is open and advance when it closes.
+- **Episode dates.** `episodeCards()` takes the date from the Inbox alert that `NewEpisodesWorker` creates (id `ep-<key>-<hour>`). Extensions give no release date. Do not add one unless an extension API provides it.
+- **The old `MusicSourceSwitch`/`VideoSourceSwitch`** are kept (`OnlinePagesTest` uses `VideoSourceSwitch`). They are no longer shown on the pages.
+- **Tests reset state.** `RedesignTourTest.awaitHome` resets `SetupGuide`, `ExploreTour`, `HomeLayout` and `Connectivity`. Keep that if you add stops.
+
+**Build and test.** The toolchain and commands are unchanged from §0/§3. Full suite: `./gradlew :app:testDebugUnitTest --no-configuration-cache` (about 8 minutes).
+- Screenshots land in `app/build/screenshots/tour_<light|dark|small|largetext>_*.png` and `fixture_carousel_page*.png`.
+- Sheets are in `docs/redesign/screenshots/v3/`.
+- Run tests in the foreground. A killed run can leave a half-written results folder; run `./gradlew --stop` and delete `app/build/test-results/testDebugUnitTest` before rerunning.
+
+**What is left (if the owner approves the direction)**
+1. A round 3 rework of Now Playing, the video player, Search, Library, Downloads, Settings categories, Equalizer and the dialogs. They currently carry the round 1/2 design.
+2. Test on a real device and with TalkBack; profile performance.
+3. Raise the light-theme tour scrim contrast if the owner finds it weak.
+4. Consider shortening the tour to fewer stops after real-user feedback.
+5. Only after written approval: final integration into `siamform/yumeiro`.
+
+## 0. Round 2
 
 **Why it exists.** The owner rejected round 1 as "the same as the old Yumeiro", with too many
 Japanese words and a weak Home. Their new direction:

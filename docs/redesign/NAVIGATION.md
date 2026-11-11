@@ -52,3 +52,56 @@ Overlays: Setup guide (first launch, or from Home/Settings), Now Playing, video 
 - Swiping between tabs (the pager) works as before, now across 4 pages.
 - Mini player: tap opens Now Playing, swipe left = next, swipe right = previous.
 - Back: unchanged. In the setup guide, Back goes to the previous page and closes the guide from the first page.
+
+## Round 3
+**Bottom bar:** unchanged (Home, Music, Videos, Library).
+
+**Source menus (title is the selector)**
+| Page | Title tag | Menu tag | Options |
+|---|---|---|---|
+| Music | `music_source_switch` | `music_source_menu` | On device · Online (YouTube Music) · Mix |
+| Videos | `video_source_switch` | `video_source_menu` | Yumix · YouTube · Device · Live TV |
+
+**Home order:**
+1. Signature
+2. Context line
+3. Search
+4. Setup card (until done)
+5. Continue
+6. New episodes
+7. Your spaces
+8. Sources banner
+9. Moods
+10. New arrivals
+11. Most played
+12. Watched recently
+13. Random
+14. YouTube
+
+**Spaces → shortcuts (all 12 kept)**
+| Space | Shortcuts |
+|---|---|
+| Watch | Yumix, YouTube, Live TV, Device videos |
+| Listen | Music, YouTube Music, Mix, Audio engine |
+| Read & keep | Manga, Library, Downloads, Get sources |
+
+**First launch:** Welcome → **Explore Yumeiro** (tour) / **Skip for now** / "Open the quick-setup checklist".
+- The result is stored in prefs `onboarding` (NONE / EXPLORED / SKIPPED).
+- Replay from Settings → Setup guide, or from "Take the 1-minute tour" on the Home setup card.
+
+**Explore tour stops**
+| # | Id | Highlights | Advances when |
+|---|---|---|---|
+| 1 | home | Home title | Next |
+| 2 | tab_music | Music tab | the user taps Music (route changes) or Next |
+| 3 | music_source | Music title | the user opens and closes the menu, or Next |
+| 4 | tab_videos | Videos tab | the user taps Videos, or Next |
+| 5 | video_source | Videos title | the menu closes, or Next |
+| 6 | yumix | Market / extension buttons | Next |
+| 7 | tab_library | Library tab | the user taps Library, or Next |
+| 8 | actions | Bell + settings | Next |
+| 9 | finish | — | Done (or "Open quick setup") |
+
+Back works on every stop. Skip ends the tour from any stop.
+
+**Offline:** Music Online, Yumix, YouTube, Live TV and Manga show `OfflineNotice`. Its exits go to Music · On device, Videos · Device, Downloads and Library.
