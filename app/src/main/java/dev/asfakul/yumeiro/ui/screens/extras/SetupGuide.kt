@@ -366,7 +366,7 @@ fun SetupStepRow(step: SetupStep, done: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(step.title, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(step.detail, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(step.detail, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(10.dp))
         Text(

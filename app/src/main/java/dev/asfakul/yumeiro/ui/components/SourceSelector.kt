@@ -156,13 +156,13 @@ private fun SourceRow(o: SourceOption, selected: Boolean, index: Int, reduced: B
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(o.title, color = p.textPrimary, fontSize = 15.sp, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(o.description, color = p.textSecondary, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(o.description, color = p.textSecondary, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(10.dp))
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
             if (selected) Icon(Icons.Default.Check, "Selected", tint = p.accent, modifier = Modifier.size(20.dp))
             Text(
-                o.status, color = if (o.attention) p.accent else p.textTertiary, fontSize = 11.sp,
+                o.status, color = if (o.attention) p.accent else p.textSecondary, fontSize = 12.sp,
                 fontWeight = if (o.attention) FontWeight.Bold else FontWeight.Normal, maxLines = 1,
             )
         }
