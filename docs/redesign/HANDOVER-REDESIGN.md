@@ -1,8 +1,54 @@
-# Handover: Yumeiro redesign "Tsuki no Michi" (月の道)
+# Handover: Yumeiro redesign
+
+> **Round 2 is current.** Read [§0](#0-round-2-start-here) first. The sections after it describe round 1 (`72fa3da`). Most of it is still true, except where §0 says otherwise.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
+
+## 0. Round 2 (start here)
+
+**Why it exists.** The owner rejected round 1 as "the same as the old Yumeiro", with too many
+Japanese words and a weak Home. Their new direction:
+- modes instead of tabs in Music and Videos
+- Hues renamed to Yumix
+- fewer Japanese words
+- a skippable first-run setup guide
+- Stream removed from the bottom bar
+- a Home that explains the app: next episodes, moods, new arrivals, most played, random videos without repeats, and a banner for every extension
+
+The full report is [ROUND-2.md](ROUND-2.md). The navigation map is [NAVIGATION.md](NAVIGATION.md).
+
+**Commit.** `1bf8f31` on `redesign/yume-experience`, pushed to `origin` (`siamform/yumeiro-redesign`) only.
+
+**Where the code is** (`app/src/main/java/dev/asfakul/yumeiro/`):
+
+| File | What it does |
+|---|---|
+| `ui/components/ModeSwitcher.kt` | `ModeOption` + `ModeSwitcher`: equal-width cards (icon disc, title, status). Selected = accent tonal fill + 1.5dp accent border |
+| `ui/screens/music/MusicScreen.kt` | `enum MusicMode { DEVICE, ONLINE, MIX }` and `MusicSourceSwitch(mode, onChange, songCount)` (tags `music_source_device/online/mix`) |
+| `ui/screens/music/MusicMix.kt` | `MusicMixScreen`: a "Shuffle the mix" hero (`music_mix_shuffle`), plus Most played, From YouTube Music, Played recently and New on this phone |
+| `ui/screens/online/OnlineHomeScreen.kt` | `VideoSource` gained `LIVE`. `VideoSourceSwitch(source, onChange, extensionCount, deviceCount)` (tags `video_source_online/youtube/device/live`). Adds the "Your sources" banner strip |
+| `ui/screens/online/ExtensionBanner.kt` | `ExtensionBanner` (poster backdrop, scrim, "Yumix source" chip, gold action pill) and `ExtensionBannerStrip` |
+| `ui/screens/online/OnlineHomePicks.kt` | Every extension row on Home starts with its banner ("Browse" opens `Screen.OnlineRow`) |
+| `ui/screens/extras/SetupGuide.kt` | `SetupStep` (8 steps), `SetupGuide` (prefs `setup_guide`: `seen`, `visited`, `card_hidden`. `shouldAutoShow` is false under Robolectric), `rememberSetupStatus()` (reads real state), `SetupGuideOverlay` (3 pages; tags `setup_guide`, `setup_skip`, `setup_next`, `setup_back`, `setup_step_<NAME>`) |
+| `ui/screens/home/HomeScreen.kt` | Rewritten. See the section order in ROUND-2 §C. Random videos exclude every device video already shown above (`randomPool`) |
+| `ui/screens/MTPlayerApp.kt` | `musicModeKey` (saveable), `openMusic(mode)`, `openVideos(source)`, the Live TV branch inside Videos, the `Screen.Stream` redirect, the guide overlay (blocks touches beneath it) and the step → destination mapping, `popupBlocked`/`overlayOpen` include the guide |
+| `ui/screens/settings/SettingsCatalog.kt` / `SettingsScreen.kt` | New `Category.SETUP` (route `setup` → `SetupGuide.show()`), `object SettingsLaunch` (one-shot "open on category") |
+| `ui/components/MTBottomBar.kt` | 4 tabs. A solid gold capsule (58×30dp) glides behind the active icon |
+| `ui/navigation/Screen.kt` | `bottomNavItems` has 4 items. `Screen.Stream` is kept as a route |
+
+**How to verify:** run the same commands as §4. The latest run on `1bf8f31` gave 409 tests, 0 failures,
+0 errors, 0 skipped, and all 4 tour `missing` files were empty. The round 2 sheets are in
+`docs/redesign/screenshots/v2/` and were built with Pillow from `app/build/screenshots/tour_*`.
+
+**Gotchas found in round 2:**
+- `ScrollMemory` restores list positions by index, across tests in the same JVM. The tour clears it and scrolls Home to the top in `awaitHome()`.
+- Song and video MediaStore IDs can collide. Never key a mixed row by the raw id.
+- `SetupGuide` is a process-wide object. Tests call `SetupGuide.resetForTests()`.
+
+**Still to do after approval:** the limitations in ROUND-2 §H, a device pass (TalkBack, gestures),
+CI (Stage 6), then a PR (Stage 7). Do not merge without the owner's explicit authorisation.
 
 ## 1. Where things are
 

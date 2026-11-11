@@ -38,3 +38,13 @@ a section, progress). Gold is used on purpose, not as decoration.
 5. **Readable on gold.** Text on gold uses `onAccent` ink (this fixes the white-on-gold FilterPill).
 6. **No new hues, no extra blur/glass** beyond the existing `GlassFill`.
 7. **Status never covers content.** Offline is now a tag in the tab header, or a bottom pill on sub-pages.
+
+## Round 2 changes
+- **Type**: display styles use Manrope ExtraBold/Bold (`Type.kt`, `DisplayStyle` 28sp). The top-bar title is plain `headlineLarge`, with no gradient, and drops to `headlineSmall` below 380dp width. Overlines are 12sp SemiBold, not upper-case.
+- **Background** (`DesignSystem.kt` `pageBackground`): the glow is softer (0.09/0.06), with no sparkles and no echo.
+- **Bottom bar**: 4 labelled tabs. One solid `accent` capsule (58×30dp) glides behind the active icon (`onAccent` icon, ExtraBold label). The bar shadow is 6dp and the border is a plain hairline.
+- **ModeSwitcher** (`ui/components/ModeSwitcher.kt`): use it wherever a page has 2–4 sources of content. Cards are equal width and at least 76dp tall, with an icon disc, a title and a live status line. The selected card gets an accent tonal fill and a 1.5dp accent border.
+- **ExtensionBanner** (`ui/screens/online/ExtensionBanner.kt`): one per extension. A poster backdrop, a horizontal ink scrim, a "Yumix source" chip and a gold action pill.
+- **Home Explore tiles**: a 3-column grid (6 columns at ≥600dp), with rows of equal height and titles of up to 2 lines.
+- **Language**: user-facing text is English. "Yumix" replaces "Hues". Japanese words are no longer used as labels.
+- **Colours**: unchanged.

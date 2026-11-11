@@ -45,3 +45,15 @@ night vibe stay exactly as they were.
 
 ### Not yet studied in depth
 Jellyfin/Findroid, VLC/MX Player gestures, Disney+, Aniyomi. These are listed as a gap in `HANDOVER-REDESIGN.md`.
+
+## Round 2 additions (onboarding, modes)
+
+| Source | Finding | Applied in Yumeiro |
+|---|---|---|
+| [NN/g — Mobile Tutorials](https://www.nngroup.com/articles/mobile-tutorials/) | Tutorials did not raise task success, and readers rated tasks as harder | The guide is mostly a **checklist of real actions**, not instructions. Only 3 pages |
+| [NN/g — Mobile-App Onboarding](https://www.nngroup.com/articles/mobile-app-onboarding/) | Keep it brief and optional, with a visible Skip and a progress indicator. Focus on what is novel | Skip on every page, progress dashes, and focus on what is unique to Yumeiro (Yumix sources, manga sources, Live TV, DNS) |
+| [NN/g — Tutorials vs Contextual Help](https://www.nngroup.com/articles/onboarding-tutorials/) | Help must be easy to dismiss and to recall later | Reopen it from the Home "Finish setting up" card or Settings → Setup guide. The card can be hidden |
+| [Material — Onboarding](https://m1.material.io/growth-communications/onboarding.html) | Show it to first-time users only, don't force education, prioritise the first key action | Auto-shows once (`setup_guide/seen`). Every step jumps straight to the real screen |
+| [NN/g — recognition vs recall](https://www.nngroup.com/articles/recognition-and-recall/) | Visible, labelled choices | Music and Videos modes are labelled cards with a live status line instead of small pills or tabs |
+
+What was **not** copied: no carousel of marketing slides, no coach-mark overlays on top of real UI, and no other app's onboarding layout.
