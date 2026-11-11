@@ -57,4 +57,6 @@ interface MangaProvider {
     suspend fun pages(chapterUrl: String): List<MangaPageRef>
     /** Downloads one page image (with the headers and cookies the source needs). */
     suspend fun image(page: MangaPageRef): MangaImage
+    /** Headers cover images need (many sources check Referer / User-Agent). */
+    fun coverHeaders(): Map<String, String> = emptyMap()
 }

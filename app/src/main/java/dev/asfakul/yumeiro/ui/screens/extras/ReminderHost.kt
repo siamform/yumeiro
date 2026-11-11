@@ -186,9 +186,8 @@ private fun IconBadge(icon: ImageVector, size: androidx.compose.ui.unit.Dp = 60.
 
 /** Brand colour of each social network (their own guidelines), so the buttons are recognisable at a glance. */
 private fun brandColor(s: Reminders.Social) = when (s) {
-    Reminders.Social.FACEBOOK -> androidx.compose.ui.graphics.Color(0xFF1877F2)
-    Reminders.Social.INSTAGRAM -> androidx.compose.ui.graphics.Color(0xFFE1306C)
-    Reminders.Social.LINKEDIN -> androidx.compose.ui.graphics.Color(0xFF0A66C2)
+    Reminders.Social.TELEGRAM_CHANNEL -> androidx.compose.ui.graphics.Color(0xFF229ED9)
+    Reminders.Social.TELEGRAM_GROUP -> androidx.compose.ui.graphics.Color(0xFF1C7FB0)
 }
 
 @Composable
@@ -224,9 +223,9 @@ private fun FollowCard(onClose: () -> Unit) {
                 CircularProgressIndicator(progress = { left / total.toFloat() }, color = BrandGold, trackColor = androidx.compose.ui.graphics.Color.Transparent, strokeWidth = 3.dp, modifier = Modifier.size(60.dp))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Follow the developer", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+            Text("Join the Yumeiro community", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
             Spacer(Modifier.height(6.dp))
-            Text("Get Yumeiro news first, share ideas and say hi.", color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
+            Text("Get Yumeiro news first on Telegram, ask for help and share ideas.", color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Reminders.Social.entries.forEach { s ->

@@ -11,7 +11,7 @@ import dev.asfakul.yumeiro.online.OnlineRow
 /**
  * "Mood of the hour" (気分). Yumeiro picks the mood itself — from the time of day by default —
  * and fills it from online: songs from YouTube Music, a matching video shelf from YouTube, and a
- * row from your extensions whose title fits the mood. "Shuffle" jumps to another mood (or one of
+ * row from your extensions whose title fits the mood. The mood changes by itself (see [autoPick]) (or one of
  * your own YouTube Music topics). Nothing here is stored; it is a suggestion, not a setting.
  */
 internal data class HomeMood(
@@ -47,6 +47,16 @@ internal object HomeMoods {
 
     /** A mood built from one of your own YouTube Music topics. */
     fun fromTopic(topic: String) = HomeMood("topic:$topic", "好", topic, "One of your topics", topic, topic, topic.split(' ').filter { it.length > 2 })
+
+    /**
+     * The mood Home opens with: usually the hour's own mood, sometimes (about one time in three)
+     * one of your topics or a neighbouring mood, so the section changes by itself.
+     */
+    fun autoPick(hourMood: HomeMood, topics: List<String>, random: java.util.Random): HomeMood {
+        if (random.nextInt(3) != 0) return hourMood
+        val pool = (listOf(ANIME, HITS, FOCUS) + topics.map(::fromTopic)).filter { it.key != hourMood.key }
+        return if (pool.isEmpty()) hourMood else pool[random.nextInt(pool.size)]
+    }
 
     /** The next mood after [current] in a shuffled order that never repeats the current one. */
     fun shuffle(current: HomeMood, topics: List<String>, random: java.util.Random): HomeMood {

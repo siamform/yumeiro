@@ -88,6 +88,8 @@ import dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush
 import dev.asfakul.yumeiro.youtube.YouTube
 import dev.asfakul.yumeiro.youtube.YtHistory
 import dev.asfakul.yumeiro.youtube.YtItem
+import dev.asfakul.yumeiro.youtube.interleaveFeeds
+import dev.asfakul.yumeiro.youtube.isShort
 import dev.asfakul.yumeiro.youtube.YtDiscovery
 import dev.asfakul.yumeiro.youtube.YtFeed
 import dev.asfakul.yumeiro.youtube.YtTopics
@@ -108,7 +110,7 @@ private sealed interface Load<out T> {
     data class Failed(val message: String) : Load<Nothing>
 }
 
-private fun friendly(t: Throwable): String = when {
+internal fun friendly(t: Throwable): String = when {
     YtAccount.accountCanHelp(t) -> YtAccount.blockedHint()
     t.javaClass.simpleName.contains("ReCaptcha") -> "YouTube is rate-limiting this network. Try again in a few minutes or switch networks."
     !dev.asfakul.yumeiro.network.Connectivity.online.value -> "You're offline. Your downloads and songs on this phone still play."
@@ -117,7 +119,7 @@ private fun friendly(t: Throwable): String = when {
 }
 
 /** Internal library or resource messages are never shown to people as-is. */
-private fun readable(m: String): String {
+internal fun readable(m: String): String {
     val internal = listOf("resource", "Exception", "null", "PublicSuffix", "java.", "kotlin.", "Unable to load")
     return if (m.isBlank() || internal.any { m.contains(it, ignoreCase = false) }) "YouTube didn't answer. Try again in a moment." else m
 }
@@ -137,6 +139,11 @@ fun YouTubeVideoScreen(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) 
 /** Music → YouTube Music: songs planned from what you play, your topics and today's mix. */
 @Composable
 fun YouTubeMusicScreen(onPlay: (YtItem, List<YtItem>) -> Unit, modifier: Modifier = Modifier) {
+    var basic by rememberSaveable { mutableStateOf(false) }
+    if (!basic) {
+        YtMusicBrowse(onPlay = onPlay, onBasic = { basic = true }, modifier = modifier.testTag("youtube_music_home"))
+        return
+    }
     YtBrowse(
         music = true,
         searchFilter = YouTube.Filter.SONGS,
@@ -185,6 +192,10 @@ private fun YtBrowse(
     var shuffle by remember { mutableStateOf(YtTopics.shuffleCount(context)) }
     var editingTopics by remember { mutableStateOf(false) }
     var addingTopic by remember { mutableStateOf(false) }
+    // A channel opened from a card replaces the page in place (no new screen, no flash).
+    var channelUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var channelName by rememberSaveable { mutableStateOf("") }
+    val openChannel: ((YtItem) -> Unit)? = if (music) null else { item -> channelName = item.channel; channelUrl = item.channelUrl }
     LaunchedEffect(Unit) { YtHistory.load(context) }
     val history by YtHistory.items.collectAsState()
     // Offline, the page banner already explains what still works; empty skeleton shelves would only look broken.
@@ -285,6 +296,12 @@ private fun YtBrowse(
     }
     fun isTopic(text: String) = topics.any { YtDiscovery.fold(it) == YtDiscovery.fold(text) }
 
+    val openUrl = channelUrl
+    if (openUrl != null) {
+        Box(modifier.fillMaxSize()) { YtChannelPage(openUrl, channelName, onBack = { channelUrl = null }, onPlay = onPlay) }
+        return
+    }
+
     Column(modifier.fillMaxSize()) {
         val searchKey = if (music) dev.asfakul.yumeiro.ui.components.TabSearch.YT_MUSIC else dev.asfakul.yumeiro.ui.components.TabSearch.YT_VIDEO
         val asked by dev.asfakul.yumeiro.ui.components.TabSearch.open.collectAsState()
@@ -325,7 +342,7 @@ private fun YtBrowse(
                 if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
                 if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem("No results for “$sub”.", null) }
                 itemsIndexed(res.items, key = { i, it -> "r${i}_${it.id}" }) { _, item ->
-                    if (music) SongRow(item) { onPlay(item, res.items) } else YtVideoCard(item, wide = true) { onPlay(item, res.items) }
+                    if (music) SongRow(item) { onPlay(item, res.items) } else YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, res.items) }
                 }
                 if (res.error != null) item("err") { YtProblem(res.error) { searchMore(sub) } }
                 if (res.items.isNotEmpty() && res.loading) item("more") { YtLoadingMore() }
@@ -347,6 +364,7 @@ private fun YtBrowse(
                 ) { chip = f.id; if (pagedFeeds[f.id] == null) loadFeedPage(f) }
             }
             item("c_add") { YtChip("Topic", false, leading = Icons.Default.Add, modifier = Modifier.testTag("youtube_add_topic")) { addingTopic = true } }
+            if (!music && topics.isNotEmpty()) item("c_edit") { YtChip("Edit topics", false, modifier = Modifier.testTag("youtube_edit_topics_chip")) { editingTopics = true } }
         }
 
         val selected = feeds.firstOrNull { it.id == chip }
@@ -365,12 +383,62 @@ private fun YtBrowse(
                 }
                 if (page.items.isEmpty() && page.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
                 itemsIndexed(page.items, key = { i, it -> "fi${i}_${it.id}" }) { _, item ->
-                    if (music) SongRow(item) { onPlay(item, page.items) } else YtVideoCard(item, wide = true) { onPlay(item, page.items) }
+                    if (music) SongRow(item) { onPlay(item, page.items) } else YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, page.items) }
                 }
                 if (page.error != null) item("ferr") { YtProblem(page.error) { loadFeedPage(selected, reset = page.items.isEmpty()) } }
                 if (page.items.isNotEmpty() && page.loading) item("fmore") { YtLoadingMore() }
                 if (!selected.pages && page.items.isNotEmpty()) item("fend") {
                     Text("That's the whole list. Search or pick another chip for more.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+                }
+            }
+        } else if (!music) {
+            // YouTube home: one mixed stream of full-width videos with a Shorts shelf and
+            // "Watch again" woven in, paging forever from the planned feeds.
+            val lists = feeds.map { f -> pagedFeeds[f.id]?.items?.takeIf { it.isNotEmpty() } ?: (shelves[f.id] as? Load.Ready)?.value.orEmpty() }
+            val stream = remember(lists) { interleaveFeeds(lists) }
+            val shorts = remember(stream) { stream.filter { it.isShort() }.take(12) }
+            val videos = remember(stream, shorts) { if (shorts.size >= 3) stream.filterNot { it in shorts } else stream }
+            val anyLoading = feeds.any { shelves[it.id] == null || shelves[it.id] is Load.Loading } || pagedFeeds.values.any { it.loading }
+            val allFailed = feeds.isNotEmpty() && feeds.all { shelves[it.id] is Load.Failed }
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val pageable = feeds.filter { it.pages && (pagedFeeds[it.id]?.canLoadMore ?: true) }
+            var turn by remember { mutableStateOf(0) }
+            YtEndlessTrigger(listState, videos.isNotEmpty() && pageable.isNotEmpty() && pagedFeeds.values.none { it.loading }) {
+                // Two feeds per step keeps the stream varied without flooding the network.
+                repeat(minOf(2, pageable.size)) { k -> loadFeedPage(pageable[(turn + k) % pageable.size]) }
+                turn += 2
+            }
+            LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
+                if (videos.isEmpty() && anyLoading && netOnline) itemsIndexed(List(4) { it }, key = { i, _ -> "hsk$i" }) { _, _ ->
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        SkeletonBlock(null, 200.dp, shape = RoundedCornerShape(18.dp))
+                        Row(Modifier.padding(top = 10.dp)) {
+                            SkeletonBlock(36.dp, 36.dp, shape = CircleShape); Spacer(Modifier.width(12.dp))
+                            Column { SkeletonBlock(220.dp, 14.dp); Spacer(Modifier.height(6.dp)); SkeletonBlock(140.dp, 12.dp) }
+                        }
+                    }
+                }
+                if (videos.isEmpty() && allFailed) item("home_err") { YtProblem((shelves[feeds.first().id] as Load.Failed).message) { loadShelves(true) } }
+                itemsIndexed(videos, key = { i, it -> "h${i}_${it.id}" }) { i, item ->
+                    YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, videos) }
+                    if (i == 1 && shorts.size >= 3) {
+                        Column(Modifier.padding(vertical = 8.dp).testTag("youtube_shorts_shelf")) {
+                            YtLabel("Shorts", "ショート")
+                            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                itemsIndexed(shorts, key = { k, s -> "s${k}_${s.id}" }) { _, s -> YtShortCard(s, Modifier.width(150.dp)) { onPlay(s, shorts) } }
+                            }
+                        }
+                    }
+                    if (i == 4 && mine.isNotEmpty()) {
+                        YtShelfRow("Watch again", null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
+                    }
+                }
+                if (videos.isNotEmpty() && pagedFeeds.values.any { it.loading }) item("home_more") { YtLoadingMore() }
+                item("note") {
+                    Text(
+                        "Streams come straight from YouTube without an account. Your topics, searches and history stay on this device.",
+                        color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    )
                 }
             }
         } else LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -432,7 +500,7 @@ private fun YtBrowse(
 
 /** Loads the next page when the list is within 5 items of the end. */
 @Composable
-private fun YtEndlessTrigger(state: androidx.compose.foundation.lazy.LazyListState, enabled: Boolean, onMore: () -> Unit) {
+internal fun YtEndlessTrigger(state: androidx.compose.foundation.lazy.LazyListState, enabled: Boolean, onMore: () -> Unit) {
     val nearEnd by remember(state) {
         androidx.compose.runtime.derivedStateOf {
             val info = state.layoutInfo
@@ -444,7 +512,7 @@ private fun YtEndlessTrigger(state: androidx.compose.foundation.lazy.LazyListSta
 }
 
 @Composable
-private fun YtLoadingMore() {
+internal fun YtLoadingMore() {
     Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
         androidx.compose.material3.CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
     }
@@ -516,7 +584,7 @@ private fun YtTopicsDialog(topics: List<String>, music: Boolean, onRemove: (Stri
 }
 
 @Composable
-private fun YtSearchBar(query: String, placeholder: String, music: Boolean, autoFocus: Boolean = false, onChange: (String) -> Unit, onSearch: () -> Unit, onClear: () -> Unit) {
+internal fun YtSearchBar(query: String, placeholder: String, music: Boolean, autoFocus: Boolean = false, onChange: (String) -> Unit, onSearch: () -> Unit, onClear: () -> Unit) {
     val border = rememberGlassBorder()
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
@@ -542,7 +610,7 @@ private fun YtSearchBar(query: String, placeholder: String, music: Boolean, auto
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun YtChip(
+internal fun YtChip(
     label: String, selected: Boolean, modifier: Modifier = Modifier,
     leading: androidx.compose.ui.graphics.vector.ImageVector? = null,
     trailing: androidx.compose.ui.graphics.vector.ImageVector? = null,
@@ -594,32 +662,38 @@ private fun YtShelfRow(
     }
 }
 
-/** YouTube-style video card: 16:9 thumbnail with duration / LIVE badge, channel and views below. */
+/**
+ * YouTube-style video card: 16:9 thumbnail with duration / LIVE badge, then avatar, title and
+ * "channel · views · age". Tapping the avatar or channel name opens the channel when [onChannel] is set.
+ */
 @Composable
-private fun YtVideoCard(item: YtItem, wide: Boolean, onClick: () -> Unit) {
-    val border = rememberGlassBorder()
-    Column(Modifier.fillMaxWidth().then(if (wide) Modifier.padding(horizontal = 16.dp, vertical = 8.dp) else Modifier).clickable(onClick = onClick).testTag("youtube_card")) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(if (wide) 22.dp else 16.dp)).border(1.dp, border, RoundedCornerShape(if (wide) 22.dp else 16.dp))) {
+internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = true, onChannel: ((YtItem) -> Unit)? = null, onClick: () -> Unit) {
+    val radius = if (wide) 18.dp else 14.dp
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).then(if (wide) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier).testTag("youtube_card")) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(radius)).background(GlassFill)) {
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
             val badge = when { item.live -> "LIVE"; item.durationSec > 0 -> formatYtDuration(item.durationSec); else -> null }
             if (badge != null) Surface(
-                shape = RoundedCornerShape(8.dp), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.72f),
+                shape = RoundedCornerShape(6.dp), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.78f),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
-            ) { Text(badge, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) }
+            ) { Text(badge, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)) }
         }
+        val channelTap = if (onChannel != null && !item.channelUrl.isNullOrBlank()) Modifier.clickable(onClickLabel = "Open channel") { onChannel(item) } else Modifier
         Row(Modifier.padding(top = 10.dp, start = 2.dp, end = 2.dp)) {
-            if (wide) {
-                Box(Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(SpotifyGreen, AccentSecondary))), contentAlignment = Alignment.Center) {
+            if (wide && showChannel) {
+                Box(Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(SpotifyGreen, AccentSecondary))).then(channelTap).testTag("youtube_card_avatar"), contentAlignment = Alignment.Center) {
                     if (item.channelAvatar != null) PosterImage(item.channelAvatar, emptyMap(), Modifier.fillMaxSize())
                     else Text(item.channel.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text(item.title, color = TextPrimary, fontSize = if (wide) 14.sp else 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = TextPrimary, fontSize = if (wide) 15.sp else 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = if (wide) 20.sp else 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    listOfNotNull(item.channel.takeIf { it.isNotBlank() }, item.views.takeIf { it >= 0 }?.let { formatYtViews(it) }, item.uploaded).joinToString(" · "),
+                    listOfNotNull(item.channel.takeIf { it.isNotBlank() && showChannel }, item.views.takeIf { it >= 0 }?.let { formatYtViews(it) }, item.uploaded).joinToString(" · "),
                     color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = if (showChannel) channelTap else Modifier,
                 )
             }
         }
@@ -658,7 +732,7 @@ private fun SongRow(item: YtItem, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SongRowSkeleton() {
+internal fun SongRowSkeleton() {
     Row(Modifier.padding(horizontal = 16.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         SkeletonBlock(54.dp, 54.dp, shape = RoundedCornerShape(12.dp))
         Spacer(Modifier.width(12.dp))
@@ -667,7 +741,7 @@ private fun SongRowSkeleton() {
 }
 
 @Composable
-private fun YtProblem(message: String, onRetry: (() -> Unit)?) {
+internal fun YtProblem(message: String, onRetry: (() -> Unit)?) {
     Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.WifiOff, null, tint = TextSecondary)

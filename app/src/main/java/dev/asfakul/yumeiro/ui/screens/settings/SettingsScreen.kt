@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,7 +38,8 @@ import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
@@ -165,8 +167,9 @@ private val YtRed = Color(0xFFFF4E45)
 
 internal fun Category.look(): CategoryLook = when (this) {
     Category.APPEARANCE -> CategoryLook(Icons.Default.Palette, Rose)
+    Category.NAVIGATION -> CategoryLook(Icons.Default.ViewWeek, Sky)
     Category.PLAYER -> CategoryLook(Icons.Default.PlayCircle, BrandGold)
-    Category.AUDIO -> CategoryLook(Icons.Default.Equalizer, BrandAmber)
+    Category.AUDIO -> CategoryLook(Icons.Default.GraphicEq, BrandAmber)
     Category.ONLINE -> CategoryLook(Icons.Default.Videocam, BrandCoral)
     Category.DOWNLOADS -> CategoryLook(Icons.Default.Download, Teal)
     Category.LIBRARY -> CategoryLook(Icons.Default.Folder, Mint)
@@ -184,6 +187,15 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.SETUP -> CategoryLook(Icons.Filled.Explore, BrandGold)
     Category.GUIDE -> CategoryLook(Icons.AutoMirrored.Filled.MenuBook, BrandGold)
     Category.ABOUT -> CategoryLook(Icons.Default.Info, BrandCoral)
+}
+
+/** The page's Japanese name, shown as a watermark on its banner. */
+internal fun Category.kana(): String = when (this) {
+    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PLAYER -> "映"; Category.AUDIO -> "音"
+    Category.ONLINE -> "網"; Category.DOWNLOADS -> "保存"; Category.LIBRARY -> "蔵"; Category.SOURCES -> "源"
+    Category.SOURCE_STATUS -> "診"; Category.TRACKING -> "記録"; Category.YOUTUBE -> "動画"; Category.TOGETHER -> "共"
+    Category.NOTIFICATIONS -> "通知"; Category.BACKGROUND -> "電池"; Category.NETWORK -> "接続"; Category.PRIVACY -> "鍵"
+    Category.BACKUP -> "控"; Category.UPDATES -> "新"; Category.SETUP -> "始"; Category.GUIDE -> "案内"; Category.ABOUT -> "夢色"
 }
 
 /** Live status shown as a chip on a category row (null = no chip). */
@@ -223,23 +235,21 @@ private fun rememberStatuses(): Map<Category, Status> {
 private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
     BackHandler(onBack = onBack)
     var query by rememberSaveable { mutableStateOf("") }
-    var searching by rememberSaveable { mutableStateOf(false) }
     val statuses = rememberStatuses()
     val results = remember(query) { SettingsCatalog.search(query) }
 
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Settings", onBack = onBack, subtitle = "Yumeiro ${BuildConfig.VERSION_NAME}", handleBack = false, modifier = Modifier.testTag("settings_back_button")) {
-            dev.asfakul.yumeiro.ui.components.SearchIconButton(open = searching, onToggle = { searching = !searching; if (!searching) query = "" }, tag = "settings_search_toggle", description = "Search settings")
             IconButton(onClick = { onOpen(Category.GUIDE) }, modifier = Modifier.testTag("open_user_guide")) {
                 Icon(Icons.AutoMirrored.Filled.MenuBook, "User guide", tint = BrandGold)
             }
         }
-        dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching, query = query, onQuery = { query = it }, placeholder = "Search settings", tag = "settings_search")
         LazyColumn(
             Modifier.fillMaxSize().testTag("settings_home"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item("hero") { SettingsHero(query = query, onQuery = { query = it }) }
 
             if (query.isNotBlank()) {
                 item("results") {
@@ -263,6 +273,33 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
             }
             item("made_in") { MadeInBangladesh(Modifier.fillMaxWidth().padding(top = 8.dp)) }
         }
+    }
+}
+
+/**
+ * Top of Settings: the 設定 overline, a short promise and the search field, always visible (a
+ * hidden search toggle was easy to miss).
+ */
+@Composable
+private fun SettingsHero(query: String, onQuery: (String) -> Unit) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeLg
+    Column(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(Brush.linearGradient(listOf(p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f), BrandGold.copy(alpha = 0.06f), Color.Transparent)))
+            .border(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline(), shape)
+            .padding(16.dp).testTag("settings_hero_home"),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            YumeiroMark(Modifier.size(40.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(dev.asfakul.yumeiro.ui.components.kanaOverline("設定", "Settings"), style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, maxLines = 1)
+                Text("Make Yumeiro yours", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        dev.asfakul.yumeiro.ui.components.YuSearchField(query = query, onQuery = onQuery, placeholder = "Search settings", tag = "settings_search")
     }
 }
 
@@ -319,15 +356,20 @@ private fun CategoryPage(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item("hero") { CategoryHero(look.icon, look.tint, c.title, c.summary) }
+            item("hero") { CategoryHero(look.icon, look.tint, c.title, c.summary, c.kana()) }
             when (c) {
                 Category.APPEARANCE -> item("c") { AppearanceSettingsCard() }
                 Category.PLAYER -> item("c") { VideoPlayerSettingsCard() }
-                Category.AUDIO -> item("c") {
-                    SettingsCard {
+                Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
+                Category.AUDIO -> {
+                    item("q") { GroupLabel("Quality"); AudioQualityCard() }
+                    item("c") {
+                        GroupLabel("Sound")
+                        SettingsCard {
                         SettingsActionRow("Equalizer & sound effects", "5 bands, presets, bass boost and 3D virtualizer", "setting_equalizer_selector") { onNavigateToEqualizer() }
                         Text("Songs already play back-to-back with no gap, and Yumeiro keeps playing with the screen off.",
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+                        }
                     }
                 }
                 Category.ONLINE -> {
@@ -359,7 +401,10 @@ private fun CategoryPage(
                     }
                 }
                 Category.BACKGROUND -> item("c") { BackgroundActivityCard() }
-                Category.NETWORK -> item("c") { NetworkSettingsCard() }
+                Category.NETWORK -> {
+                    item("c") { NetworkSettingsCard() }
+                    item("torrent") { GroupLabel("Torrent streaming"); TorrServerCard() }
+                }
                 Category.PRIVACY -> {
                     item("lock") {
                         GroupLabel("Lock & incognito")
@@ -376,8 +421,8 @@ private fun CategoryPage(
                 Category.UPDATES -> item("c") { UpdateSettingsCard() }
                 Category.ABOUT -> {
                     item("dev") { DeveloperCard() }
-                    item("support") { dev.asfakul.yumeiro.ui.screens.extras.SupportYumeiroCard(full = true) }
-                    item("social") { GroupLabel("Follow & support"); SocialMediaCard() }
+                    item("social") { GroupLabel("Community"); SocialMediaCard() }
+                    item("support") { GroupLabel("Support Yumeiro"); dev.asfakul.yumeiro.ui.screens.extras.SupportYumeiroCard(full = true) }
                     item("guide") { UserGuideEntryCard(onOpen = { onOpenCategory(Category.GUIDE) }) }
                 }
                 // Categories with their own screens never open here; offer the jump just in case.
@@ -400,20 +445,23 @@ fun SettingsToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     testTag: String,
+    enabled: Boolean = true,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onCheckedChange(!checked) }.padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }.padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+            Text(text = title, color = if (enabled) TextPrimary else TextSecondary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(text = subtitle, color = TextTertiary, fontSize = 12.5.sp, lineHeight = 17.sp)
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Switch(
             checked = checked,
+            enabled = enabled,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = OnAccent,
@@ -428,7 +476,7 @@ fun SettingsToggleRow(
 
 @Composable
 fun SettingsDivider() {
-    Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).height(0.5.dp).background(TextTertiary.copy(alpha = 0.18f)))
+    Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(0.5.dp).background(TextTertiary.copy(alpha = 0.16f)))
 }
 
 // endregion

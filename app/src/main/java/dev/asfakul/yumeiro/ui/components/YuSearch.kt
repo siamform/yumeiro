@@ -139,6 +139,38 @@ fun HeaderSearchField(
     }
 }
 
+/** Always-visible slim search field (no auto-focus), for pages where search is the main tool. */
+@Composable
+fun YuSearchField(query: String, onQuery: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
+    val p = LocalMtPalette.current
+    val focusManager = LocalFocusManager.current
+    val shape = RoundedCornerShape(22.dp)
+    Row(
+        modifier.fillMaxWidth().height(44.dp).clip(shape)
+            .background(p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
+            .border(1.dp, if (query.isNotEmpty()) p.accent.copy(alpha = 0.55f) else p.textTertiary.copy(alpha = 0.22f), shape)
+            .padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.Search, null, tint = if (query.isNotEmpty()) p.accent else p.textSecondary, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(10.dp))
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (query.isEmpty()) Text(placeholder, color = p.textTertiary, fontSize = 13.sp, maxLines = 1)
+            BasicTextField(
+                value = query, onValueChange = onQuery, singleLine = true,
+                textStyle = TextStyle(color = p.textPrimary, fontSize = 14.sp),
+                cursorBrush = SolidColor(p.accent),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                modifier = Modifier.fillMaxWidth().testTag(tag),
+            )
+        }
+        if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(40.dp)) {
+            Icon(Icons.Default.Close, "Clear search", tint = p.textSecondary, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
 /** Bottom sheet holding a page's filters, with Reset and a Show-results button. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -737,7 +737,7 @@ fun musicSourceOptions(songCount: Int, online: Boolean): List<dev.asfakul.yumeir
     dev.asfakul.yumeiro.ui.components.SourceOption(
         "mix", "Mix", "Your songs and online picks in one place",
         if (online) "Device + online" else "Device part only",
-        androidx.compose.material.icons.Icons.Default.Shuffle, "music_source_mix",
+        androidx.compose.material.icons.Icons.Default.Album, "music_source_mix",
     ),
 )
 

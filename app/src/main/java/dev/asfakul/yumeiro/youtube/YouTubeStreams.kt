@@ -57,10 +57,17 @@ object YouTubeStreams {
     }
 
     /** Original-language audio, AAC first (plays everywhere), highest bitrate. */
-    fun pickAudio(info: StreamInfo): AudioStream? {
+    fun pickAudio(info: StreamInfo, tier: dev.asfakul.yumeiro.player.AudioQuality.Tier? = null): AudioStream? {
         val all = info.audioStreams.filter { it.isUrl && (it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP || it.deliveryMethod == DeliveryMethod.DASH) }
         val original = all.filter { runCatching { it.audioTrackType }.getOrNull().let { t -> t == null || t == AudioTrackType.ORIGINAL } }
             .ifEmpty { all }
+        if (tier != null && tier.streamCapKbps != Int.MAX_VALUE) {
+            // Settings → Audio quality: the best stream under the limit (Data saver = the smallest).
+            // NewPipe: averageBitrate is kbps, bitrate is bps.
+            fun kbps(a: AudioStream) = a.averageBitrate.takeIf { b -> b > 0 } ?: (a.bitrate / 1000)
+            val want = dev.asfakul.yumeiro.player.AudioQuality.choose(original.map { kbps(it) }.filter { it > 0 }, tier)
+            if (want != null) original.filter { kbps(it) == want }.maxByOrNull { if (it.format == MediaFormat.M4A) 1 else 0 }?.let { return it }
+        }
         return original.maxWithOrNull(
             compareBy<AudioStream>({ it.format == MediaFormat.M4A }, { it.averageBitrate.takeIf { b -> b > 0 } ?: it.bitrate })
         )
@@ -151,7 +158,7 @@ object YouTubeStreams {
     fun audioBlocking(id: String, force: Boolean = false): Pair<String, Map<String, String>> {
         if (force) YouTube.invalidate(id)
         val info = YouTube.infoBlocking(id, force)
-        val audio = pickAudio(info)?.takeIf { it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
+        val audio = pickAudio(info, dev.asfakul.yumeiro.player.AudioQuality.current())?.takeIf { it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
             ?: info.audioStreams.firstOrNull { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
         if (audio != null) return audio.content to headersFor(audio.content)
         val hls = info.hlsUrl?.takeIf { it.isNotBlank() } ?: throw IllegalStateException("No audio stream for $id")

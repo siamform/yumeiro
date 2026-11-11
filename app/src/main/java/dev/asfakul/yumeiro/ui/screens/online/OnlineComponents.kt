@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.ui.screens.online
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,19 +85,52 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
     )
 }
 
+/**
+ * Release tags over a poster: kind (Movie / Series / Anime) and release source top-left, audio
+ * (Bengali, Hindi, Dual, Multi, Dub) bottom-left. Small translucent glass chips so the art stays
+ * the hero; theatre recordings (CAM / TS) get an amber tint as a quality hint.
+ */
+@Composable
+internal fun androidx.compose.foundation.layout.BoxScope.PosterTags(item: OnlineItem, compact: Boolean = false, max: Int = 3) {
+    val tags = item.tags
+    if (tags.isEmpty()) return
+    val type = tags.firstOrNull { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE }
+    val release = tags.filter { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.SOURCE || it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.RESOLUTION }
+        .take(if (compact) 1 else 2)
+    val audio = tags.firstOrNull { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.LANGUAGE }
+    val top = (listOfNotNull(type) + release).take(max)
+    val pad = if (compact) 5.dp else 8.dp
+    if (top.isNotEmpty()) Row(Modifier.align(Alignment.TopStart).padding(pad).testTag("poster_tags"), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        top.forEach { TagChip(it, compact, strong = it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE) }
+    }
+    if (audio != null) Box(Modifier.align(Alignment.BottomStart).padding(pad)) { TagChip(audio, compact, strong = false) }
+}
+
+@Composable
+private fun TagChip(tag: dev.asfakul.yumeiro.online.ReleaseTags.Tag, compact: Boolean, strong: Boolean) {
+    val fill = when {
+        tag.low -> Color(0xFFB4690E).copy(alpha = 0.88f)
+        strong -> SpotifyGreen.copy(alpha = 0.92f)
+        else -> Color(0xFF0E0B14).copy(alpha = 0.62f)
+    }
+    val fg = if (strong && !tag.low) OnAccent else Color.White
+    Text(
+        tag.label, color = fg, fontSize = if (compact) 8.5.sp else 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+        letterSpacing = 0.2.sp, lineHeight = if (compact) 10.sp else 12.sp,
+        modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(fill)
+            .border(0.5.dp, Color.White.copy(alpha = if (strong) 0f else 0.16f), RoundedCornerShape(5.dp))
+            .padding(horizontal = if (compact) 4.dp else 6.dp, vertical = if (compact) 1.dp else 2.dp),
+    )
+}
+
 @Composable
 internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.dp, horizontal: Boolean = false, showSource: Boolean = false, modifier: Modifier? = null, progress: Float? = null) {
     val w = if (horizontal) width * 1.6f else width
     Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster").padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
-            val badge = item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }
-            if (badge != null) {
-                Text(
-                    badge, color = OnAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
-                )
-            }
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
+            PosterTags(item, compact = true)
             item.score?.takeIf { it > 0 }?.let { s ->
                 Row(
                     Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp),
@@ -106,7 +140,6 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
                     Text(String.format(java.util.Locale.US, "%.1f", s), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
             if (progress != null && progress > 0f) {
                 Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
                     Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(3.dp).background(SpotifyGreen))

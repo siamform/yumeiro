@@ -130,6 +130,7 @@ object AppMessages {
     }
 
     fun success(context: android.content.Context?, text: String) = show(context, text, Kind.SUCCESS)
+    fun info(context: android.content.Context?, text: String) = show(context, text, Kind.INFO)
     fun error(context: android.content.Context?, text: String, actionLabel: String? = null, action: (() -> Unit)? = null) =
         show(context, text, Kind.ERROR, actionLabel, action)
 
@@ -155,15 +156,17 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
             AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to Color(0xFFFFB74D)
             AppMessages.Kind.INFO -> Icons.Default.Info to TextSecondary
         }
-        val toastShape = RoundedCornerShape(20.dp)
-        val baseFill = DarkSurfaceContainerHigh
+        // One opaque, theme-aware surface: the old pill was always dark (unreadable in light mode)
+        // and drew its fill inside a transparent Surface, so the shadow and edges broke on glass.
+        val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+        val toastShape = RoundedCornerShape(18.dp)
+        val baseFill = if (p.isDark) DarkSurfaceContainerHigh else Color(0xFFFFFBF4)
+        val fill = androidx.compose.ui.graphics.lerp(baseFill, tint, if (p.isDark) 0.10f else 0.06f)
         Surface(
-            shape = toastShape, color = Color.Transparent, shadowElevation = 12.dp,
+            shape = toastShape, color = fill, contentColor = p.textPrimary, shadowElevation = 10.dp, tonalElevation = 0.dp,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = 0.50f), dev.asfakul.yumeiro.ui.theme.BrandGold.copy(alpha = 0.14f)))),
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().testTag("app_message")
                 .semantics { liveRegion = LiveRegionMode.Polite }
-                .clip(toastShape)
-                .background(Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.lerp(baseFill, tint, 0.18f), baseFill, baseFill)))
-                .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = 0.55f), dev.asfakul.yumeiro.ui.theme.BrandGold.copy(alpha = 0.12f))), toastShape)
                 .clickable { AppMessages.dismiss(m.id) },
         ) {
             Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -171,7 +174,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
                     Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
                 }
                 Spacer(Modifier.width(10.dp))
-                Text(m.text, color = TextPrimary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+                Text(m.text, color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
                 if (m.actionLabel != null && m.action != null) {
                     TextButton(onClick = { AppMessages.dismiss(m.id); runCatching { m.action.invoke() } }, modifier = Modifier.testTag("app_message_action")) {
                         Text(m.actionLabel, color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)

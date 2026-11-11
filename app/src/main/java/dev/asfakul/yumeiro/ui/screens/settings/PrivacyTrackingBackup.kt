@@ -166,7 +166,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                     onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl()?.let { open(it) } },
                     onSignOut = { AniList.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.anilist, startExpanded = !aniId && AniList.user() == null)
+                GuideCard(SetupGuides.anilist)
 
                 val malId = MyAnimeList.clientId().isNotBlank()
                 TrackerCard(

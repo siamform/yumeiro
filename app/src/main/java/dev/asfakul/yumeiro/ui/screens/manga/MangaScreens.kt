@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook as MenuBookMirrored
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.ViewCarousel
@@ -222,8 +223,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
 private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (MangaItem) -> Unit) {
     Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable { onClick(m) }) {
         Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.MenuBook, null, tint = TextTertiary, modifier = Modifier.size(28.dp))
-            AsyncImage(model = m.cover, contentDescription = m.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            MangaCoverImage(m.providerId, m.cover, Modifier.fillMaxSize())
         }
         Spacer(Modifier.height(6.dp))
         Text(m.title, color = TextPrimary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
@@ -233,7 +233,7 @@ private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.un
 
 /** Title page: cover, description, save toggle and the chapter list. */
 @Composable
-fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: () -> Unit, onRead: (MangaItem, MangaChapter) -> Unit) {
+fun MangaDetailScreen(providerId: String, url: String, title: String, cover: String? = null, onBack: () -> Unit, onRead: (MangaItem, MangaChapter) -> Unit) {
     val context = LocalContext.current
     val provider = remember(providerId) { SourceHub.manga(providerId) }
     var details by remember { mutableStateOf<MangaDetails?>(null) }
@@ -249,7 +249,10 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
         runCatching { details = provider.details(url); chapters = provider.chapters(url) }.onFailure { error = OnlineErrors.friendly(it) }
     }
     val entry = library.firstOrNull { it.providerId == providerId && it.url == url }
-    val item = MangaItem(providerId, url, details?.title ?: title, details?.cover ?: entry?.cover)
+    val item = MangaItem(providerId, url, details?.title?.takeIf { it.isNotBlank() } ?: title,
+        details?.cover?.takeIf { it.isNotBlank() } ?: entry?.cover ?: cover?.takeIf { it.isNotBlank() })
+    // Saved before the details arrived (or saved from an older build without a cover): fill it in now.
+    LaunchedEffect(details, entry?.key) { details?.let { d -> MangaLibrary.refreshMeta(context, providerId, url, d.title, d.cover ?: cover) } }
     val sorted = chapters?.let { if (newestFirst) it else it.reversed() }
 
     Column(Modifier.fillMaxSize().testTag("manga_detail")) {
@@ -262,8 +265,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
             item("head") {
                 Row {
                     Box(Modifier.width(112.dp).aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.MenuBook, null, tint = TextTertiary, modifier = Modifier.size(28.dp))
-                        AsyncImage(item.cover, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        MangaCoverImage(providerId, item.cover, Modifier.fillMaxSize())
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
@@ -317,6 +319,14 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
             }
         }
     }
+}
+
+/** Cover art with the headers its source needs; falls back to a book glyph when it can't load. */
+@Composable
+fun MangaCoverImage(providerId: String, cover: String?, modifier: Modifier = Modifier) {
+    val hub by SourceHub.state.collectAsState()
+    val headers = remember(providerId, hub.generation) { runCatching { SourceHub.manga(providerId)?.coverHeaders() }.getOrNull().orEmpty() }
+    dev.asfakul.yumeiro.ui.screens.online.PosterImage(cover, headers, modifier, fallbackIcon = Icons.AutoMirrored.Filled.MenuBookMirrored)
 }
 
 private val pageCache = object : android.util.LruCache<String, Bitmap>(64 * 1024 * 1024) {

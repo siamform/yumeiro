@@ -61,8 +61,7 @@ fun Modifier.pageBackground(): Modifier = composed {
                 0f to p.bgTop, 0.42f to p.bgMid, 1f to p.bgBottom,
                 startY = -top, endY = windowH - top
             )
-            // A quiet page: one soft wash of the accent (or artwork colour) behind the header only.
-            val glowA = if (p.isDark) 0.09f else 0.06f
+            val glowA = if (p.isDark) 0.20f else 0.14f
             val halo = Brush.radialGradient(
                 0f to ambient.copy(alpha = glowA), 0.55f to ambient.copy(alpha = glowA * 0.35f), 1f to Color.Transparent,
                 center = Offset(w * 0.78f, -top - w * 0.10f), radius = w * 1.05f,
@@ -71,11 +70,12 @@ fun Modifier.pageBackground(): Modifier = composed {
                 listOf(ambient.copy(alpha = glowA * 0.28f), Color.Transparent),
                 center = Offset(w * 0.05f, -top + windowH * 0.55f), radius = w * 0.8f,
             )
-            val sparkles = emptyList<Triple<Offset, Float, Float>>()
+            val sparkles = if (p.isDark) sparkleField(w, windowH * 0.45f) else emptyList()
             val starColor = Color.White
             onDrawBehind {
                 drawRect(brush)
                 drawRect(halo)
+                drawRect(echo)
                 sparkles.forEach { (c, r, a) ->
                     val cy = c.y - top
                     if (cy < -r || cy > size.height + r) return@forEach

@@ -229,7 +229,8 @@ fun PageStreamFinderDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    // Back walks the page history first (browsing a saved website), then closes.
+    Dialog(onDismissRequest = { val wv = webViewRef; if (wv != null && wv.canGoBack()) wv.goBack() else onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         dev.asfakul.yumeiro.ui.screens.online.FullScreenDialogBars()
         Surface(color = DarkSurface, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -278,6 +279,8 @@ fun PageStreamFinderDialog(
                                     override fun onReceivedTitle(view: WebView?, title: String?) { pageTitle = title.orEmpty() }
                                 }
                                 SafeWebView.harden(this)
+                                // Pop-ups and click-catcher ad overlays stay off while the user browses.
+                                SafeWebView.addAdShield(this)
                                 webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                         val scheme = request?.url?.scheme?.lowercase()

@@ -358,8 +358,7 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
 private fun ShelfCover(e: MangaLibrary.Entry, subtitle: String?, fill: Boolean = false, onClick: () -> Unit) {
     Column((if (fill) Modifier.fillMaxWidth() else Modifier.width(108.dp)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill)) {
-            Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = TextTertiary, modifier = Modifier.align(Alignment.Center).size(28.dp))
-            AsyncImage(e.cover, e.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            dev.asfakul.yumeiro.ui.screens.manga.MangaCoverImage(e.providerId, e.cover, Modifier.fillMaxSize())
         }
         Spacer(Modifier.height(6.dp))
         Text(e.title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)

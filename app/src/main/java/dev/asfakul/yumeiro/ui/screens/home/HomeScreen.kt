@@ -79,6 +79,14 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -143,6 +151,8 @@ private data class Feature(
     val status: String,
     val icon: ImageVector,
     val kanji: String,
+    /** The space's own colour (a traditional Japanese hue), used for its seal. */
+    val hue: Color,
     val onClick: () -> Unit,
     val badge: String? = null,
 )
@@ -156,8 +166,17 @@ private sealed interface Played {
     data class Video(val entry: PlayCounts.Entry, val device: VideoItem? = null) : Played { override val count get() = entry.count; override val key get() = "v_${entry.key}" }
 }
 
-/** Spaces shown before "Show all" (the rest follow in the same grid). */
-private const val SPACES_VISIBLE = 8
+/** Traditional Japanese colours, one per space: each seal is recognisable at a glance. */
+private object SpaceHues {
+    val Kobai = Color(0xFFD9668A)      // 紅梅 plum blossom
+    val Shu = Color(0xFFD9553F)        // 朱 vermilion
+    val Fuji = Color(0xFF8F6CC9)       // 藤 wisteria
+    val Yamabuki = Color(0xFFE0A030)   // 山吹 kerria gold
+    val Wakatake = Color(0xFF4FA87A)   // 若竹 young bamboo
+    val Sora = Color(0xFF4C8FD6)       // 空 sky
+    val Ai = Color(0xFF5866C2)         // 藍 indigo
+    val Seiji = Color(0xFF3E9E94)      // 青磁 celadon
+}
 
 /**
  * Home — one calm editorial page, top to bottom, nothing folds:
@@ -281,34 +300,26 @@ fun HomeScreen(
     var deviceShown by rememberSaveable(shuffleSeed) { mutableIntStateOf(6) }
     val devicePool = remember(recentVideos, shuffleSeed) { recentVideos.distinctBy { it.id }.shuffled(java.util.Random(shuffleSeed)) }
 
-    var spacesOpen by rememberSaveable { mutableStateOf(false) }
     var customizing by rememberSaveable { mutableStateOf(false) }
 
     val features = remember(stats.audioCount, stats.videoCount, huesCount, activeDownloads, mangaCount) {
         listOf(
-            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", Icons.Default.AutoAwesome, "彩", onOpenHues),
-            Feature("quick_card_youtube", "YouTube", "No login", Icons.Default.SmartDisplay, "映", onOpenYouTube),
-            Feature("quick_card_ytmusic", "YT Music", "Online songs", Icons.Default.Album, "歌", onOpenYouTubeMusic),
-            Feature("quick_card_music", "My music", if (stats.audioCount > 0) "${stats.audioCount} songs" else "On this phone", Icons.Default.LibraryMusic, "音", onNavigateToMusic),
-            Feature("quick_card_videos", "My videos", if (stats.videoCount > 0) "${stats.videoCount} files" else "On this phone", Icons.Default.VideoLibrary, "録", onNavigateToVideos),
-            Feature("quick_card_manga", "Manga", if (mangaCount > 0) "$mangaCount sources" else "Add sources", Icons.AutoMirrored.Filled.MenuBook, "読", onOpenManga),
-            Feature("quick_card_downloads", "Downloads", if (activeDownloads > 0) "$activeDownloads active" else "Offline", Icons.Default.DownloadForOffline, "保", onOpenDownloads,
+            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", Icons.Default.AutoAwesome, "彩", SpaceHues.Kobai, onOpenHues),
+            Feature("quick_card_youtube", "YouTube", "Videos", Icons.Default.SmartDisplay, "映", SpaceHues.Shu, onOpenYouTube),
+            Feature("quick_card_ytmusic", "YT Music", "Songs", Icons.Default.Album, "歌", SpaceHues.Fuji, onOpenYouTubeMusic),
+            Feature("quick_card_store", "Extensions", if (huesCount > 0) "$huesCount on" else "Get some", Icons.Default.Extension, "拡", SpaceHues.Yamabuki, onOpenHueStore),
+            Feature("quick_card_manga", "Manga", if (mangaCount > 0) "$mangaCount sources" else "Add sources", Icons.AutoMirrored.Filled.MenuBook, "読", SpaceHues.Wakatake, onOpenManga),
+            Feature("quick_card_live", "Live TV", "IPTV · links", Icons.Default.LiveTv, "生", SpaceHues.Sora, onOpenLive),
+            Feature("quick_card_sources", "Sources", "All sources", Icons.Default.Hub, "源", SpaceHues.Ai, onOpenSources),
+            Feature("quick_card_downloads", "Downloads", if (activeDownloads > 0) "$activeDownloads active" else "Offline", Icons.Default.DownloadForOffline, "保", SpaceHues.Seiji, onOpenDownloads,
                 badge = activeDownloads.takeIf { it > 0 }?.toString()),
-            Feature("quick_card_store", "Market", "Get extensions", Icons.Default.Storefront, "拡", onOpenHueStore),
-            Feature("quick_card_live", "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "生", onOpenLive),
-            Feature("quick_card_mix", "Mix", "Yours + online", Icons.Default.Shuffle, "混", onOpenMix),
-            Feature("quick_card_audio_engine", "Equalizer", "Bass · 3D", Icons.Default.GraphicEq, "響", onNavigateToEqualizer),
-            Feature("quick_card_library", "Library", "Playlists", Icons.Default.Bookmarks, "庫", onNavigateToLibrary),
         )
     }
     val contextLine = when {
         freshSeries == 1 -> "${episodeCards.first { it.fresh }.bookmark.name} has a new episode waiting."
         freshSeries > 1 -> "$freshSeries series you follow have new episodes."
         !isOnline -> "You're offline. Music and videos on this phone still play."
-        continueTrack != null && selectedTrack != null -> "Still playing \u201c${continueTrack.title}\u201d."
-        continueTrack != null -> "Pick up \u201c${continueTrack.title}\u201d where you left off."
-        resumeVideo != null -> "Continue \u201c${resumeVideo.title}\u201d."
-        else -> "Play something from this phone, or explore online."
+        else -> null
     }
 
     BoxWithConstraints(modifier.fillMaxSize().testTag("home_screen_root")) {
@@ -326,7 +337,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize().testTag("home_list"),
             contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 2.dp, bottom = 170.dp),
         ) {
-            item(key = "context", contentType = "context") { ContextLine(contextLine) }
+            contextLine?.let { line -> item(key = "context", contentType = "context") { ContextLine(line) } }
 
             // ---- Setup progress (until everything is ready or the card is dismissed) -----------
             if (!setup.complete && !setupCardHidden) item(key = "setup", contentType = "setup") {
@@ -338,7 +349,7 @@ fun HomeScreen(
 
             // ---- つづき Continue -----------------------------------------------------------------
             item(key = "continue_header", contentType = "header") {
-                YuSection("つづき", "Continue", "Pick up where you left off")
+                YuSection("つづき", "Continue", "Jump back in")
             }
             item(key = "continue_row", contentType = "continue") {
                 val isCurrent = continueTrack != null && selectedTrack?.id == continueTrack.id
@@ -432,16 +443,11 @@ fun HomeScreen(
             // ---- 空間 Spaces: every feature in one grid ---------------------------------------------
             if ("spaces" !in hidden) {
                 item(key = "spaces_header", contentType = "header") {
-                    YuSection(
-                        "空間", "Spaces", "Everything in Yumeiro",
-                        action = if (spacesOpen) "Show less" else "Show all ${features.size}",
-                        onAction = { spacesOpen = !spacesOpen }, actionTag = "home_spaces_all",
-                    )
+                    YuSection("空間", "Spaces", "Everything in Yumeiro")
                 }
-                val shown = if (spacesOpen) features else features.take(SPACES_VISIBLE)
-                shown.chunked(spaceColumns).forEachIndexed { i, row ->
+                features.chunked(spaceColumns).forEachIndexed { i, row ->
                     item(key = "spaces_$i", contentType = "spaces_row") {
-                        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
                             repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
@@ -752,36 +758,56 @@ private fun EmptyArt(icon: ImageVector) {
 
 // ---- Spaces ---------------------------------------------------------------------------------
 
+/**
+ * A space as a seal (印): a squircle in the space's own Japanese colour with the icon in
+ * white, its kanji faintly stamped behind, and the name underneath. No card around it, so
+ * the grid breathes; a press sinks the seal a little.
+ */
 @Composable
 private fun FeatureTile(f: Feature, modifier: Modifier) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(16.dp)
-    Box(
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val reduced = dev.asfakul.yumeiro.ui.components.reducedMotion()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        if (pressed && !reduced) 0.92f else 1f,
+        androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 600f), label = "seal",
+    )
+    val seal = RoundedCornerShape(20.dp)
+    Column(
         modifier
-            .heightIn(min = 88.dp)
-            .clip(shape)
-            .background(tileFill())
-            .clickable(role = Role.Button, onClickLabel = "Open ${f.title}", onClick = f.onClick)
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClickLabel = "Open ${f.title}", onClick = f.onClick)
             .semantics(mergeDescendants = true) { contentDescription = "${f.title}, ${f.status}" }
+            .padding(vertical = 4.dp)
             .testTag(f.tag),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        KanjiMark(f.kanji, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 8.dp), size = 26.sp, alpha = 0.10f)
-        Column(Modifier.padding(horizontal = 9.dp, vertical = 10.dp)) {
-            Box(Modifier.fillMaxWidth()) {
-                Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f)), contentAlignment = Alignment.Center) {
-                    Icon(f.icon, null, tint = p.accent, modifier = Modifier.size(18.dp))
-                }
-                f.badge?.let {
-                    Text(
-                        it, color = p.onAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.TopEnd).clip(RoundedCornerShape(50)).background(p.accent).padding(horizontal = 6.dp, vertical = 1.dp),
-                    )
-                }
+        Box(
+            Modifier
+                .size(58.dp)
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .shadow(if (p.isDark) 10.dp else 6.dp, seal, ambientColor = f.hue, spotColor = f.hue)
+                .clip(seal)
+                .background(Brush.linearGradient(listOf(lerp(f.hue, Color.White, 0.18f), f.hue, lerp(f.hue, Color.Black, 0.28f)))),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                f.kanji, color = Color.White.copy(alpha = 0.20f), fontSize = 34.sp, lineHeight = 34.sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 8.dp).clearAndSetSemantics { },
+            )
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.22f), 0.45f to Color.Transparent)))
+            Icon(f.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
+            f.badge?.let {
+                Text(
+                    it, color = f.hue, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).clip(RoundedCornerShape(50)).background(Color.White).padding(horizontal = 5.dp),
+                )
             }
-            Spacer(Modifier.height(8.dp))
-            Text(f.title, color = p.textPrimary, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(f.status, color = p.textTertiary, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+        Spacer(Modifier.height(8.dp))
+        Text(f.title, color = p.textPrimary, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(f.status, color = p.textTertiary, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
@@ -799,7 +825,9 @@ private fun MoodSection(
     val p = LocalMtPalette.current
     val topics = remember { dev.asfakul.yumeiro.youtube.YtTopics.load(context, music = true).take(8) }
     val hourMood = remember { HomeMoods.forHour(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) }
-    var moodKey by rememberSaveable { mutableStateOf(hourMood.key) }
+    // The mood picks itself: the hour's mood, or now and then one of your topics, chosen once each
+    // time Home opens. The songs inside are shuffled too, so Home never looks the same twice.
+    var moodKey by rememberSaveable { mutableStateOf(HomeMoods.autoPick(hourMood, topics, java.util.Random(System.nanoTime())).key) }
     val mood = remember(moodKey) { HomeMoods.all.firstOrNull { it.key == moodKey } ?: moodKey.removePrefix("topic:").let(HomeMoods::fromTopic) }
     var seed by rememberSaveable { mutableStateOf(System.nanoTime()) }
     var tick by remember { mutableIntStateOf(0) }
@@ -816,24 +844,18 @@ private fun MoodSection(
                 YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, mood.musicQuery, mood.title, "Mood", true)).items
             }.getOrNull()
         }
-        if (r == null) { failed = true; songs = emptyList() } else songs = r.distinctBy { it.id }.map { it.copy(music = true) }.take(14)
+        if (r == null) { failed = true; songs = emptyList() } else songs = r.distinctBy { it.id }.map { it.copy(music = true) }.shuffled(java.util.Random(seed)).take(14)
         videos = kotlinx.coroutines.withTimeoutOrNull(20_000) {
             runCatching {
                 YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, mood.videoQuery, mood.title, "Mood", false)).items
             }.getOrNull()
-        }.orEmpty().filterNot { it.live }.distinctBy { it.id }.take(10)
+        }.orEmpty().filterNot { it.live }.distinctBy { it.id }.shuffled(java.util.Random(seed)).take(10)
     }
     val picks = remember(mood, channels, seed) { HomeMoods.extensionPicks(mood, channels, seed) }
 
     Column(Modifier.fillMaxWidth().testTag("home_moods")) {
         YuSection(
             "気分", if (mood.key == hourMood.key) "Mood of the hour" else "Mood", mood.title,
-            trailing = {
-                GlassPill("Shuffle", onClick = {
-                    moodKey = HomeMoods.shuffle(mood, topics, java.util.Random(System.nanoTime())).key
-                    seed = System.nanoTime(); tick++
-                }, leading = Icons.Default.Shuffle, tag = "home_mood_shuffle", clickLabel = "Another mood")
-            },
         )
         // Mood card: the kanji and a one-line description.
         Row(

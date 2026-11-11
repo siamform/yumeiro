@@ -50,8 +50,12 @@ data class OnlineItem(
     val type: String? = null,
     val quality: String? = null,
     val score: Double? = null,
+    /** Anime dub / sub status names from the extension ("Dubbed", "Subbed"). */
+    val dub: Set<String> = emptySet(),
 ) {
     val key: String get() = "$api|$url"
+    /** Poster tags (language, release source, resolution, kind) — see [ReleaseTags]. */
+    val tags: List<ReleaseTags.Tag> by lazy(LazyThreadSafetyMode.PUBLICATION) { ReleaseTags.parse(name, quality, type, dub) }
 }
 
 data class OnlineRow(
@@ -417,6 +421,8 @@ object OnlineRepository {
             name = n, url = url, api = owner.ifBlank { apiName }, posterUrl = posterUrl?.takeIf { it.isNotBlank() },
             posterHeaders = posterHeaders.orEmpty(), type = type?.let(::typeLabel),
             quality = quality?.name, score = runCatching { score?.toDouble(10) }.getOrNull(),
+            dub = (this as? com.lagradost.cloudstream3.AnimeSearchResponse)?.dubStatus.orEmpty()
+                .filter { it != DubStatus.None }.mapTo(HashSet()) { it.name },
         )
     }
 

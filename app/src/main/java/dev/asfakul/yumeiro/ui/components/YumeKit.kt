@@ -31,6 +31,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -183,6 +187,52 @@ fun YumeIconButton(
                     if (badge > 9) "9+" else badge.toString(), color = LocalMtPalette.current.onAccent,
                     fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Header action (search · inbox · settings): a 40dp seal-shaped tonal tile, the same squircle as
+ * Home's space tiles. Presses sink slightly; the unread badge sits on a cut-out ring so it reads
+ * on any background.
+ */
+@Composable
+fun TopAction(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    badge: Int = 0,
+    badgeTag: String? = null,
+    active: Boolean = false,
+) {
+    val p = LocalMtPalette.current
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.90f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 700f), label = "top_action")
+    val shape = RoundedCornerShape(14.dp)
+    Box(modifier.size(44.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(40.dp).graphicsLayer { scaleX = scale; scaleY = scale }.clip(shape)
+                .background(if (active) p.accent.copy(alpha = if (p.isDark) 0.20f else 0.14f) else p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
+                .border(1.dp, if (active) p.accent.copy(alpha = 0.5f) else p.textPrimary.copy(alpha = if (p.isDark) 0.08f else 0.07f), shape)
+                .clickable(interactionSource = interaction, indication = androidx.compose.material3.ripple(), role = Role.Button, onClickLabel = contentDescription, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = contentDescription, tint = if (active) (if (p.isDark) p.accentBright else p.accent) else p.textPrimary, modifier = Modifier.size(20.dp))
+        }
+        if (badge > 0) {
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 0.dp)
+                    .height(18.dp).widthIn(min = 18.dp)
+                    .background(p.background, CircleShape).padding(2.dp)
+                    .background(p.accent, CircleShape)
+                    .then(if (badgeTag != null) Modifier.testTag(badgeTag) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(if (badge > 9) "9+" else badge.toString(), color = p.onAccent, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 3.dp))
             }
         }
     }

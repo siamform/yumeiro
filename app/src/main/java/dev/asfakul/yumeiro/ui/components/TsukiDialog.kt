@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -91,59 +92,66 @@ fun TsukiDialog(
     LaunchedEffect(Unit) { alpha.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow)) }
     LaunchedEffect(Unit) { scale.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)) }
     Dialog(onDismissRequest = onDismissRequest, properties = properties) {
+        // Opaque surface + real border: the old version drew a gradient inside a *transparent*
+        // Surface with a shadow, which showed a dark box / broken edges behind the card on many
+        // phones (and let the page bleed through in light mode). The wash is now painted inside
+        // the clipped, opaque card.
         Surface(
             shape = shape,
-            color = Color.Transparent,
-            shadowElevation = 18.dp,
+            color = base,
+            contentColor = p.textPrimary,
+            shadowElevation = 16.dp,
+            tonalElevation = 0.dp,
+            border = androidx.compose.foundation.BorderStroke(1.dp, hairline),
             modifier = modifier
-                .widthIn(min = 280.dp, max = 560.dp)
-                .graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value }
-                .clip(shape)
-                .background(surface)
-                .border(1.dp, hairline, shape),
+                .widthIn(min = 280.dp, max = 520.dp)
+                .graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value },
         ) {
-            Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 18.dp)) {
+            Column(Modifier.background(surface).padding(start = 22.dp, end = 22.dp, top = 0.dp, bottom = 14.dp)) {
                 // The moon path: a short gold stroke hanging from the top edge, shared with the dock.
                 Box(
-                    Modifier.align(Alignment.CenterHorizontally).size(width = 32.dp, height = 3.dp)
+                    Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 3.dp)
                         .clip(RoundedCornerShape(bottomStart = 3.dp, bottomEnd = 3.dp))
                         .background(Brush.horizontalGradient(listOf(p.accent2, p.accent, p.accent2)))
                 )
-                androidx.compose.foundation.layout.Spacer(Modifier.heightIn(min = 21.dp))
-                if (icon != null) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .background(Brush.radialGradient(listOf(glow.copy(alpha = 0.38f), BrandGold.copy(alpha = 0.10f))))
-                            .border(1.dp, BrandGold.copy(alpha = 0.45f), CircleShape),
-                    ) {
-                        CompositionLocalProvider(LocalContentColor provides if (iconContentColor.isSpecified()) iconContentColor else BrandGold) {
-                            Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) { icon() }
+                androidx.compose.foundation.layout.Spacer(Modifier.heightIn(min = 20.dp))
+                // Header: seal-style icon tile beside the title (editorial, left-aligned).
+                if (icon != null || title != null) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                        if (icon != null) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                                    .background(Brush.linearGradient(listOf(glow.copy(alpha = if (p.isDark) 0.30f else 0.20f), BrandGold.copy(alpha = 0.10f))))
+                                    .border(1.dp, BrandGold.copy(alpha = 0.40f), RoundedCornerShape(14.dp)),
+                            ) {
+                                CompositionLocalProvider(LocalContentColor provides if (iconContentColor.isSpecified()) iconContentColor else BrandGold) {
+                                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { icon() }
+                                }
+                            }
+                            androidx.compose.foundation.layout.Spacer(Modifier.size(14.dp))
                         }
-                    }
-                    androidx.compose.foundation.layout.Spacer(Modifier.heightIn(min = 14.dp))
-                }
-                if (title != null) {
-                    CompositionLocalProvider(LocalContentColor provides if (titleContentColor.isSpecified()) titleContentColor else p.textPrimary) {
-                        ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp, color = LocalContentColor.current)) {
-                            Box(Modifier.fillMaxWidth().padding(bottom = 10.dp), contentAlignment = if (icon != null) Alignment.Center else Alignment.CenterStart) { title() }
+                        if (title != null) {
+                            CompositionLocalProvider(LocalContentColor provides if (titleContentColor.isSpecified()) titleContentColor else p.textPrimary) {
+                                ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp, lineHeight = 24.sp, color = LocalContentColor.current)) {
+                                    Box(Modifier.weight(1f)) { title() }
+                                }
+                            }
                         }
                     }
                 }
                 if (text != null) {
                     CompositionLocalProvider(LocalContentColor provides if (textContentColor.isSpecified()) textContentColor else p.textSecondary) {
                         ProvideTextStyle(MaterialTheme.typography.bodyMedium.copy(color = LocalContentColor.current, lineHeight = 21.sp)) {
-                            Box(Modifier.weight(1f, fill = false).fillMaxWidth().padding(bottom = 18.dp)) { text() }
+                            Box(Modifier.weight(1f, fill = false).fillMaxWidth().padding(bottom = 16.dp)) { text() }
                         }
                     }
                 }
-                CompositionLocalProvider(LocalContentColor provides p.accent) {
+                Box(Modifier.fillMaxWidth().padding(bottom = 6.dp).height(0.5.dp).background(p.textTertiary.copy(alpha = 0.18f)))
+                CompositionLocalProvider(LocalContentColor provides if (p.isDark) p.accentBright else p.accent) {
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         dismissButton?.invoke()

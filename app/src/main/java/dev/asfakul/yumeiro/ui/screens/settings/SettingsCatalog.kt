@@ -31,11 +31,13 @@ object SettingsCatalog {
     ) {
         APPEARANCE(Group.PERSONAL, "Look & feel", "Theme, time-of-day colours, pure black, artwork glow",
             listOf("theme", "dark", "light", "amoled", "colour", "color", "ambient", "appearance")),
+        NAVIGATION(Group.PERSONAL, "Navigation bar", "Choose the tabs and add up to two shortcuts",
+            listOf("bottom bar", "tabs", "taskbar", "nav", "shortcut", "menu", "dock")),
 
         PLAYER(Group.WATCH, "Player", "Background play, picture-in-picture, captions, Back button",
             listOf("video", "pip", "subtitles", "cc", "floating", "minimize", "background")),
-        AUDIO(Group.WATCH, "Audio & equalizer", "Equalizer, bass boost, virtualizer, presets",
-            listOf("sound", "eq", "bass", "music", "3d", "virtualizer")),
+        AUDIO(Group.WATCH, "Audio quality & sound", "Hi-Res, lossless or data saver, separately for Wi-Fi and mobile; equalizer",
+            listOf("sound", "eq", "equalizer", "bass", "music", "3d", "virtualizer", "quality", "flac", "lossless", "hi-res", "hires", "dolby", "atmos", "kbps", "bitrate", "data saver", "320")),
         ONLINE(Group.WATCH, "Online videos", "18+ content, skip intro, subtitle search",
             listOf("anime", "adult", "nsfw", "aniskip", "opensubtitles", "subdl", "subsource", "subtitles", "language", "intro", "outro")),
         DOWNLOADS(Group.WATCH, "Downloads", "Quality, folders and automatic clean-up",

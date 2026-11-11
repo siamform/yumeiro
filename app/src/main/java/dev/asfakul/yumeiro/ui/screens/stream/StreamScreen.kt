@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
@@ -119,6 +121,7 @@ fun StreamScreen(
     modifier: Modifier = Modifier,
     onOpenPlaylist: (String) -> Unit = {},
     onOpenMarket: () -> Unit = {},
+    onOpenWebsites: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -262,15 +265,15 @@ fun StreamScreen(
     fun play() {
         val u = url.trim()
         error = null
-        if (!Regex("^(https?|rtsps?)://.+", RegexOption.IGNORE_CASE).matches(u)) {
-            error = "Enter a valid http(s):// or rtsp:// URL"
+        if (!Regex("^(https?|rtsps?)://.+", RegexOption.IGNORE_CASE).matches(u) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
+            error = "Enter a valid http(s)://, rtsp:// or magnet: link"
             return
         }
         handoff = null
         if (format == StreamFormat.AUTO && looksLikeM3uPlaylist(u)) { loadPlaylist(u, Uri.parse(u).lastPathSegment); return }
         val request = currentRequest()
         // A format picked by hand (or RTSP) is played exactly as before, without inspection.
-        if (format != StreamFormat.AUTO || !u.startsWith("http", ignoreCase = true)) { IncomingMedia.open(context, request); return }
+        if (format != StreamFormat.AUTO || (!u.startsWith("http", ignoreCase = true) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u))) { IncomingMedia.open(context, request); return }
         // Otherwise look at what the link really returns (headers, MIME type, redirects, content).
         loading = true
         scope.launch {
@@ -286,6 +289,41 @@ fun StreamScreen(
                 is Resolution.NeedsBrowser -> pageFinder = r
                 is Resolution.Handoff -> { handoff = r; error = r.reason }
                 is Resolution.Failed -> error = "${r.title}. ${r.message}"
+            }
+        }
+    }
+
+    /** Resolves the link like Play does, then saves it with the built-in downloader. */
+    fun download() {
+        val u = url.trim()
+        error = null
+        if (u.isBlank()) { error = "Paste a link first"; return }
+        loading = true
+        scope.launch {
+            val r = runCatching { StreamResolver.resolve(context, currentRequest(), thorough = true) }.getOrNull()
+            loading = false
+            when (r) {
+                is Resolution.Playable -> {
+                    val req = r.request
+                    val fmt = req.resolvedFormat()
+                    if (fmt == StreamFormat.DASH || fmt == StreamFormat.SMOOTH || req.drmScheme != dev.asfakul.yumeiro.stream.DrmScheme.NONE) {
+                        error = "This stream can't be saved (DASH or protected). You can still play it."
+                        return@launch
+                    }
+                    val headers = req.requestHeaders() + listOfNotNull(req.userAgent?.let { "User-Agent" to it })
+                    val title = req.title.ifBlank { Uri.parse(req.url).lastPathSegment?.substringBeforeLast('.') ?: PlatformRules.hostOf(u) ?: "Video" }
+                    val link = dev.asfakul.yumeiro.online.OnlineLink(
+                        name = title, source = PlatformRules.hostOf(u) ?: "Link", url = req.url, referer = req.referer, quality = 0,
+                        isHls = fmt == StreamFormat.HLS, isDash = false, headers = headers,
+                    )
+                    val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", u, null, req.logoUrl, emptyMap(), link)
+                    if (err != null) error = err else dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Downloading \"$title\"")
+                }
+                is Resolution.NeedsBrowser -> pageFinder = r
+                is Resolution.Handoff -> { handoff = r; error = r.reason }
+                is Resolution.Playlist -> error = "This is a playlist. Open it and download a single channel or file."
+                is Resolution.Failed -> error = "${r.title}. ${r.message}"
+                null -> error = "Couldn't open the link."
             }
         }
     }
@@ -326,7 +364,7 @@ fun StreamScreen(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text("Network stream", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text("HLS · DASH · Smooth · RTSP · TS · MP4 · M3U", color = TextSecondary, fontSize = 12.sp)
+                            Text("HLS · DASH · MP4 · M3U · YouTube · Drive · TeraBox · Torrent", color = TextSecondary, fontSize = 12.sp)
                         }
                     }
                     OutlinedTextField(
@@ -415,6 +453,11 @@ fun StreamScreen(
                             modifier = Modifier.height(48.dp),
                         ) { Icon(Icons.Default.FolderOpen, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("M3U file") }
                     }
+                    if (url.isNotBlank()) OutlinedButton(
+                        onClick = ::download, enabled = !loading, border = null,
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = GlassFill, contentColor = TextPrimary),
+                        modifier = Modifier.fillMaxWidth().height(44.dp).testTag("stream_download"),
+                    ) { Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Download") }
                     if (url.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = { loadPlaylist(url.trim(), Uri.parse(url.trim()).host) }, modifier = Modifier.weight(1f)) {
@@ -449,6 +492,25 @@ fun StreamScreen(
             OpenedListCard(name = playlistName, count = channels.size, onOpen = { onOpenPlaylist(OPENED_PLAYLIST_SLUG) }, onClose = { StreamRepository.setPlaylist(null, emptyList()) })
         }
         item(key = "market_entry") { MarketEntryCard(installed = playlists.count { it.isMarket }, onClick = onOpenMarket) }
+        item(key = "websites") {
+            val pal = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(GlassFill)
+                    .clickable(onClickLabel = "Open websites", onClick = onOpenWebsites).padding(horizontal = 14.dp, vertical = 12.dp)
+                    .testTag("stream_websites"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(pal.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Language, null, tint = pal.accentBright, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Websites", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Save a video site and play its videos here", color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextTertiary)
+            }
+        }
         fun cardFor(p: StreamPlaylist): @Composable () -> Unit = {
             PlaylistCard(
                 playlist = p, busy = busyIds[p.id] == true || (syncing && p.isDefault && p.enabled),

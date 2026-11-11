@@ -23,6 +23,7 @@ sealed class Screen(val route: String) {
     data object Music : Screen("music")
     data object Videos : Screen("videos")
     data object Stream : Screen("stream")
+    data object WebSites : Screen("websites")
     data object Library : Screen("library")
     data object Settings : Screen("settings")
     data object Equalizer : Screen("equalizer")
@@ -64,9 +65,10 @@ sealed class Screen(val route: String) {
         fun route(tab: Int = 0): String = "sources?tab=$tab"
     }
     data object Manga : Screen("manga")
-    data object MangaTitle : Screen("manga/title?p={p}&u={u}&t={t}") {
-        fun route(provider: String, url: String, title: String): String =
-            "manga/title?p=" + android.net.Uri.encode(provider) + "&u=" + android.net.Uri.encode(url) + "&t=" + android.net.Uri.encode(title)
+    data object MangaTitle : Screen("manga/title?p={p}&u={u}&t={t}&i={i}") {
+        fun route(provider: String, url: String, title: String, cover: String? = null): String =
+            "manga/title?p=" + android.net.Uri.encode(provider) + "&u=" + android.net.Uri.encode(url) + "&t=" + android.net.Uri.encode(title) +
+                "&i=" + android.net.Uri.encode(cover.orEmpty())
     }
     data object MangaReader : Screen("manga/read?p={p}&u={u}&t={t}&c={c}&n={n}") {
         fun route(provider: String, url: String, title: String, chapter: String, name: String): String =

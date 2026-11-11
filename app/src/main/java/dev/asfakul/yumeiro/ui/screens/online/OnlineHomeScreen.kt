@@ -201,24 +201,23 @@ fun OnlineHomeScreen(
                 val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (selected ?: ""))
                 if (selected == null) {
                     val hero = remember(ready) { heroPicks(ready.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
-                    val feed = remember(ready, feedLimit, hero) { buildMixFeed(ready, feedLimit, skip = hero.map { it.key }.toSet()) }
-                    // Infinite feed: grow the mix as the user nears the end.
-                    val nearEnd by remember { derivedStateOf { val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0; last >= listState.layoutInfo.totalItemsCount - 4 } }
-                    LaunchedEffect(nearEnd, feed.size) { if (nearEnd && feed.count { it is FeedEntry.Card } >= feedLimit) feedLimit += 16 }
+                    // "Top picks": one mixed row across every extension (round-robin, de-duplicated).
+                    val picks = remember(ready, hero) {
+                        buildMixFeed(ready, 24, cardsPerShelf = Int.MAX_VALUE, skip = hero.map { it.key }.toSet())
+                            .filterIsInstance<FeedEntry.Card>().map { it.item }
+                    }
+                    // Then one tidy section per extension: its first rows as shelves. More sections
+                    // appear as you scroll, so many extensions never load a wall of rows at once.
+                    var groupLimit by rememberSaveable { mutableStateOf(4) }
+                    val groups = remember(ready, groupLimit) { mixGroups(ready, groupLimit) }
+                    val nearEnd by remember { derivedStateOf { val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0; last >= listState.layoutInfo.totalItemsCount - 3 } }
+                    LaunchedEffect(nearEnd, groups.size, ready.size) { if (nearEnd && groups.size < ready.size) groupLimit += 3 }
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                         if (providers.size > 1) item("channels") { ChannelStrip(channelNames, loadingNames, null) { selected = it } }
                         if (hero.isNotEmpty()) item("hero") {
                             HeroCarousel(hero, onPlay = openItem, onInfo = openInfo)
                         } else if (loadingNames.isNotEmpty()) item("hero_skel") {
                             dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, 380.dp, Modifier.padding(horizontal = 16.dp), RoundedCornerShape(24.dp))
-                        }
-                        // Every extension gets its own banner; tapping one opens that extension's page.
-                        val banners = ready.mapNotNull { (n, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.let { Triple(n, it.title, it.items) } }
-                        if (banners.isNotEmpty()) item("ext_banners") {
-                            Column(Modifier.padding(top = 14.dp, bottom = 4.dp)) {
-                                SectionHeader("Your sources", subtitle = "${banners.size} extension${if (banners.size == 1) "" else "s"} ready")
-                                ExtensionBannerStrip(banners, onOpen = { selected = it })
-                            }
                         }
                         if (continueItems.isNotEmpty()) item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
@@ -227,20 +226,22 @@ fun OnlineHomeScreen(
                         if (mine.isNotEmpty()) item("mylist") {
                             PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
-                        if (feed.isNotEmpty()) item("feed_label") {
-                            FeedLabel("Mixed for you", "from ${ready.size} of ${providers.size} extensions")
+                        if (picks.isNotEmpty()) item("feed_label") {
+                            PosterShelf("Top picks", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
-                        items(feed, key = { it.key }, contentType = { if (it is FeedEntry.Card) "card" else "shelf" }) { e ->
-                            when (e) {
-                                is FeedEntry.Card -> FeedCard(e.item, e.horizontal, onClick = { openInfo(e.item) }, onChannel = { selected = e.item.api })
-                                is FeedEntry.Shelf -> PosterShelf(
-                                    e.row.title, subtitle = "Playlist · ${e.row.api}", items = e.row.items, horizontal = e.row.horizontal,
-                                    onClick = openItem, onSeeAll = if (e.row.pageData != null) ({ onOpenRow(e.row) }) else null,
-                                )
+                        groups.forEach { g ->
+                            item("grp_h_" + g.name, contentType = "group_header") { ChannelSectionHeader(g.name, g.titles) { selected = g.name } }
+                            g.rows.forEachIndexed { i, row ->
+                                item("grp_${g.name}_${i}_${row.title}", contentType = "shelf") {
+                                    PosterShelf(
+                                        row.title, subtitle = null, items = row.items, horizontal = row.horizontal,
+                                        onClick = openInfo, onSeeAll = if (row.pageData != null) ({ onOpenRow(row) }) else ({ selected = g.name }),
+                                    )
+                                }
                             }
                         }
                         if (loadingNames.isNotEmpty()) item("feed_loading") {
-                            Column { SectionHeader("Loading ${loadingNames.size} more extension${if (loadingNames.size == 1) "" else "s"}…"); FeedCardSkeleton() }
+                            Column { SectionHeader("Loading ${loadingNames.size} more extension${if (loadingNames.size == 1) "" else "s"}…"); PosterGridSkeleton() }
                         }
                         val failed = providers.filter { homes[it.name] is ProviderHome.Failed }
                         if (failed.isNotEmpty()) item("feed_failed") {

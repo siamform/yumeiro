@@ -83,12 +83,14 @@ object DeveloperInfo {
 
 @Composable
 internal fun SettingsCard(content: @Composable () -> Unit) {
+    // Same glass + moon hairline as the Settings home groups, so every page reads as one system.
+    val shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeLg
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = shape,
         colors = CardDefaults.cardColors(containerColor = GlassFill),
-        border = null,
-    ) { Column(Modifier.padding(14.dp)) { content() } }
+        border = androidx.compose.foundation.BorderStroke(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline()),
+    ) { Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) { content() } }
 }
 
 @Composable
@@ -240,39 +242,11 @@ fun DeveloperCard() {
             }
         }
         Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.SUPPORT) },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFDD00), contentColor = Color(0xFF1A1A1A)),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth().height(46.dp).testTag("buy_me_a_coffee"),
-        ) {
-            Icon(Icons.Default.Coffee, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Buy me a coffee", fontWeight = FontWeight.Bold)
-        }
-        Spacer(Modifier.height(10.dp))
-        // The developer's links live here (they are about the developer, not app settings).
+        // Developer links only. Support and the Telegram community each have one card below,
+        // so nothing on the About page is shown twice.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
             DevLink(Icons.Default.Language, null, "Website", "dev_website") { open(DeveloperInfo.WEBSITE) }
             DevLink(null, R.drawable.ic_brand_github, "GitHub", "dev_github") { open(DeveloperInfo.GITHUB) }
-            dev.asfakul.yumeiro.notify.Reminders.Social.entries.forEach { sm ->
-                val icon = when (sm) {
-                    dev.asfakul.yumeiro.notify.Reminders.Social.FACEBOOK -> R.drawable.ic_brand_facebook
-                    dev.asfakul.yumeiro.notify.Reminders.Social.INSTAGRAM -> R.drawable.ic_brand_instagram
-                    dev.asfakul.yumeiro.notify.Reminders.Social.LINKEDIN -> R.drawable.ic_brand_linkedin
-                }
-                DevLink(null, icon, sm.label, "social_${sm.name.lowercase()}") {
-                    if (dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, sm.url)) dev.asfakul.yumeiro.notify.Reminders.recordFollow(context, sm)
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        androidx.compose.material3.TextButton(
-            onClick = { if (dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, dev.asfakul.yumeiro.notify.Reminders.GITHUB_URL)) dev.asfakul.yumeiro.notify.Reminders.recordStar(context) },
-            modifier = Modifier.fillMaxWidth().testTag("social_github_star"),
-        ) {
-            Icon(Icons.Default.Star, null, tint = BrandViolet, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp))
-            Text("Star Yumeiro on GitHub", color = TextPrimary, fontSize = 13.sp)
         }
         Spacer(Modifier.height(12.dp))
         Text(

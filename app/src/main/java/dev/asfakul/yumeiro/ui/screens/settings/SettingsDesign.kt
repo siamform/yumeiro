@@ -156,14 +156,29 @@ internal fun RowDivider() {
 
 /** Header shown at the top of a category page: big tile, title and one-line description. */
 @Composable
-internal fun CategoryHero(icon: ImageVector, tint: Color, title: String, summary: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconTile(icon, tint, size = 52)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(2.dp))
-            Text(summary, color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+internal fun CategoryHero(icon: ImageVector, tint: Color, title: String, summary: String, kana: String? = null) {
+    // A quiet banner: tint wash from the left, a large kanji watermark on the right (the page's
+    // Japanese name, e.g. 音 for Audio), the icon tile and a two-line description.
+    val p = LocalMtPalette.current
+    val shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeLg
+    Box(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(Brush.horizontalGradient(listOf(tint.copy(alpha = if (p.isDark) 0.20f else 0.16f), tint.copy(alpha = 0.04f), Color.Transparent)))
+            .border(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline(), shape)
+            .testTag("settings_hero"),
+    ) {
+        if (kana != null) Text(
+            kana, color = tint.copy(alpha = if (p.isDark) 0.16f else 0.20f), fontSize = 64.sp, fontWeight = FontWeight.Black, maxLines = 1,
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp),
+        )
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconTile(icon, tint, size = 48)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f).padding(end = if (kana != null) 40.dp else 0.dp)) {
+                Text(title, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
+                Spacer(Modifier.height(3.dp))
+                Text(summary, color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+            }
         }
     }
 }

@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -71,19 +73,23 @@ internal fun SettingsActionRow(
     status: String? = null, ok: Boolean? = null, danger: Boolean = false, onClick: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(vertical = 10.dp).testTag(testTag),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 8.dp).testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = if (danger) Color(0xFFFF8A80) else TextPrimary)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp, color = if (danger) dev.asfakul.yumeiro.ui.theme.WarnTone else TextPrimary)
+            Spacer(Modifier.height(2.dp))
+            Text(subtitle, fontSize = 12.5.sp, lineHeight = 17.sp, color = TextTertiary)
         }
         Spacer(Modifier.width(10.dp))
-        if (ok != null) Icon(
-            if (ok) Icons.Default.CheckCircle else Icons.Default.ErrorOutline, null,
-            tint = if (ok) SpotifyGreen else Color(0xFFFFB74D), modifier = Modifier.size(18.dp),
-        )
-        if (status != null) { Spacer(Modifier.width(4.dp)); Text(status, color = if (ok == false) Color(0xFFFFB74D) else TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        when {
+            status != null -> StatusChip(status, ok)
+            ok != null -> Icon(
+                if (ok) Icons.Default.CheckCircle else Icons.Default.ErrorOutline, null,
+                tint = if (ok) SpotifyGreen else dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(2.dp))
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextTertiary)
     }
 }
@@ -160,7 +166,7 @@ fun NotificationSettingsCard() {
                 { ns.set(context, Key.SOUND, it) }, "toggle_notify_sound")
         }
         SettingsDivider()
-        SettingsToggleRow("In-app reminders", "Now and then: follow the developer, star on GitHub, support the app", reminders,
+        SettingsToggleRow("In-app reminders", "Now and then: join the Telegram community, star on GitHub, support the app", reminders,
             { ns.set(context, Key.REMINDERS, it) }, "toggle_notify_reminders")
         Text("App updates are always announced when you open the app.",
             color = TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
@@ -310,11 +316,11 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
 fun SocialMediaCard() {
     val context = LocalContext.current
     SettingsCard {
-        Text("Follow the developer for news, ideas and sneak peeks.", color = TextSecondary,
+        Text("Yumeiro has its own community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
         Reminders.Social.entries.forEachIndexed { i, s ->
             if (i > 0) SettingsDivider()
-            SettingsActionRow(s.label, s.url.removePrefix("https://www."), "social_${s.name.lowercase()}") {
+            SettingsActionRow(s.label, "${s.detail} · ${s.url.removePrefix("https://")}", "social_${s.name.lowercase()}") {
                 if (Links.open(context, s.url)) Reminders.recordFollow(context, s)
                 else AppMessages.error(context, "Couldn't open ${s.label}")
             }

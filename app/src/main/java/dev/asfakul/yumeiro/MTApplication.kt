@@ -30,6 +30,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.notify.DiscoveryWorker.schedule(this) }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
+        runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
+        runCatching { dev.asfakul.yumeiro.stream.TorrentSettings.init(this) }
         runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.resumeQueued(this) }
         runCatching {
             dev.asfakul.yumeiro.online.download.OnlineDownloads.cleanup(this)

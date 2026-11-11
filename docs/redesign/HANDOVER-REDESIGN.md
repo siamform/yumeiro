@@ -1,12 +1,41 @@
 # Handover: Yumeiro redesign
 
-> **Round 5 is current.** Read §R5 first, then §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 6 is current.** Read §R6 first, then §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R5. Round 5: signature redesign and full UI audit (start here)
+## R6. Round 6: owner feedback on R5, new sources, settings rebuild (start here)
+
+**Branch.** `redesign/v5-signature` (continues R5). Pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`; the CI branch there, the PR and the merge each still need the owner's written approval.
+
+| Request | Fix (files under `app/src/main/java/dev/asfakul/yumeiro/`) |
+|---|---|
+| Production background missing | `ui/theme/DesignSystem.kt`: the layered production backdrop is back behind every page |
+| Pickup above Continue; Spaces shortcuts off-vibe; no Extensions shortcut; Mix/Equalizer not needed | `ui/screens/home/HomeScreen.kt`: 8 kana-marked Spaces (Yumix, YouTube, YT Music, Extensions, Manga, Live TV, Sources, Downloads), no "Show all"; pickup only for episodes/offline |
+| Mood of the hour and Music Mix had a needless Shuffle; Mix showed little online music | Shuffle removed (moods shuffle by themselves). `ui/screens/music/MusicMix.kt` rebuilt on a new YouTube Music client `youtube/music/` (`YtMusicApi`, `YmParser`, `YmModels`: home shelves, quick picks, continuations with a visitor id) mixed with device songs |
+| Online/Device/Mix switcher too big | `MTTopBar` `SourcePill` smaller, same for Music and Videos |
+| Yumix page unorganised; extension tap opened a big banner | `ui/screens/online/OnlineHomeScreen.kt`: channel strip, hero, Continue, My List, Top picks, then one titled section per extension (`mixGroups()` in `OnlineFeed.kt`, two rows each, grows as you scroll). Extension pages use a slim header bar and a 3-column (2 for landscape) poster grid (`hueGridRows()`) |
+| Release tags on posters | `online/ReleaseTags.kt` parses title/quality/dub into language (Bengali, Hindi, English, Dual, Multi), source (WEB-DL, WEBRip, BluRay, HDTS, CAM...), resolution and type (Movie/Series); `PosterTags` in `OnlineComponents.kt`. Works for every extension because it only reads the standard search fields |
+| YouTube / YT Music not like the real apps | YT Music: `ui/screens/youtube/YtMusicBrowse.kt` (real YT Music home shelves). YouTube: home is now one mixed endless stream of full-width cards (`interleaveFeeds`), a Shorts shelf and Watch again woven in, chip row, and channel pages (`YtChannelPage.kt`: banner, avatar, subscribers, Videos/Shorts/Live tabs) via `YouTube.channel` / `channelTab` |
+| Page went full-screen for a second before Extensions/Sources opened | `MTPlayerApp.kt`: padding frozen per page and sub pages wrapped in `page(subPad, ...)` so nothing re-lays out during the transition |
+| Alerts, toasts and dialogs broke on some backgrounds | `TsukiDialog` redesigned (opaque, theme-aware); toasts opaque and always at the bottom (`AppMessages`) |
+| Manga library not syncing, no thumbnails | `MangaProvider.coverHeaders()` (Mihon/JS sources send their Referer/headers), `MangaCoverImage`, `MangaLibrary.refreshMeta`, title route carries the cover so details backfill it |
+| Bottom bar, top nav redesign; nav customisation | `MTBottomBar` new active indicator; `TopAction` buttons; `ui/navigation/NavPrefs.kt` (4 tabs default, 3 to 6 items, up to 2 shortcuts) with a Settings card |
+| Guides expanded by default | `GuideCard` starts collapsed |
+| Settings complete redesign; Buy me a coffee repeated | Settings hero, always-visible search, Navigation category, kana group labels; one `SupportYumeiroCard` per page |
+| Audio quality selector | `player/AudioQuality.kt` (Atmos, Hi-Res Max, Hi-Res, CD, 320, YouTube Music, Data saver; separate Wi-Fi/mobile), applied in `YouTubeStreams.pickAudio`. Lossless tiers apply to local and lossless sources; YouTube itself tops out at its own bitrates |
+| Website option (idea from Hikari, own implementation) | `online/web/SavedSites.kt` + `ui/screens/sites/WebSitesScreen.kt`: save any site, browse it in the ad-shielded page browser and send the video to Yumeiro's player. Entry: Live TV page "Websites" card and the optional nav shortcut |
+| TeraBox, DiskWala, torrent, Google Drive, YouTube from Live TV | `stream/LinkHosts.kt`: Drive and Dropbox become direct downloads, TeraBox/DiskWala open in the page browser, magnet/.torrent stream through the user's own TorrServer (`TorrentSettings`, Settings → Network). YouTube links pasted in Live TV play in-app. Live TV links can be downloaded |
+| Stream page did not follow the theme | `WatchScaffold` reads the current palette |
+| Community links | Telegram channel and group replace personal profiles (`notify/Reminders.kt`) |
+
+**Tests added:** `YmParserTest`, `ReleaseTagsTest`, `LinkHostsTest` (also `SavedSites`, `TorrentSettings`), `YtHomeOrderTest` (also `AudioQuality`, `NavPrefs`); `RedesignTourTest` and `AppNavigationCrashTest` updated for the new Home spaces and the Websites page.
+
+**Not done.** No device testing. TorrServer must be run by the user (Yumeiro does not bundle a torrent engine). TeraBox/DiskWala have no public direct-link API, so they open in the page browser.
+
+## R5. Round 5: signature redesign and full UI audit
 
 **Branch.** `redesign/v5-signature`, from `6d486ba` (the end of round 4). Pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`; a CI branch there, a PR and a merge each need the owner's written approval.
 

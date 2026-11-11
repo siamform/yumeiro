@@ -81,6 +81,9 @@ class MihonMangaProvider(private val source: CatalogueSource, private val memos:
         }
     }
 
+    override fun coverHeaders(): Map<String, String> =
+        runCatching { http?.headers?.let { h -> h.names().associateWith { n -> h[n].orEmpty() } } }.getOrNull().orEmpty()
+
     private suspend fun update(url: String, details: Boolean, chapters: Boolean): SMangaUpdate =
         locks.getOrPut(url) { Mutex() }.withLock {
             val known = chapterCache[url]?.chapters.orEmpty()

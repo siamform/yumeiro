@@ -66,11 +66,14 @@ val DockOuterCorner = 22.dp
 val DockJunctionCorner = 6.dp
 
 /**
- * The Yumeiro dock: one quiet ink bar holding the four main destinations (Home · Videos · Music ·
- * Library). The active tab is marked by a solid gold capsule that glides behind its icon (one shared,
- * spring-animated indicator) with an ink icon on top and a bold label underneath — a clear,
- * high-contrast selected state instead of a thin stroke. Every tab keeps its label (recognition over
- * recall). When the mini player is showing, both pieces form one joined stack.
+ * The Yumeiro dock: one quiet ink bar holding the main destinations (Home · Music · Videos ·
+ * Library by default; 3 to 6 items, see Settings → Navigation bar).
+ *
+ * Active state: a soft accent-tinted capsule with a hairline glides behind the active icon
+ * (one shared spring-animated indicator), the icon fills and takes the accent colour, and a short
+ * brush-stroke underline sits under the label, like the stroke under a hanko seal. Inactive tabs
+ * stay calm and readable. Every tab keeps its label (recognition over recall). With the mini player
+ * showing, both pieces form one joined stack.
  */
 @Composable
 fun MTBottomBar(
@@ -79,14 +82,17 @@ fun MTBottomBar(
     modifier: Modifier = Modifier,
     /** True while the mini player is docked right above this bar. */
     joinedWithMiniPlayer: Boolean = false,
+    /** What the bar shows (main tabs, then pinned shortcuts). */
+    items: List<dev.asfakul.yumeiro.ui.navigation.BottomNavItem> = bottomNavItems,
 ) {
     val palette = LocalMtPalette.current
-    val inactive = if (palette.isDark) palette.textSecondary.copy(alpha = 0.78f) else palette.textTertiary
+    val inactive = if (palette.isDark) palette.textSecondary.copy(alpha = 0.80f) else palette.textSecondary
     val border = palette.textPrimary.copy(alpha = if (palette.isDark) 0.07f else 0.08f)
     val shape = if (joinedWithMiniPlayer) {
         RoundedCornerShape(topStart = DockJunctionCorner, topEnd = DockJunctionCorner, bottomStart = DockOuterCorner, bottomEnd = DockOuterCorner)
     } else RoundedCornerShape(DockStandaloneCorner)
-    val selectedIndex = bottomNavItems.indexOfFirst { it.route == currentRoute }
+    val selectedIndex = items.indexOfFirst { it.route == currentRoute }
+    val activeTint = if (palette.isDark) palette.accentBright else palette.accent
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -104,29 +110,32 @@ fun MTBottomBar(
                 .border(1.dp, border, shape)
         ) {
             val inner = 6.dp
-            val tabW = (maxWidth - inner * 2) / bottomNavItems.size
-            val indicatorW = 58.dp
+            val count = items.size.coerceAtLeast(1)
+            val tabW = (maxWidth - inner * 2) / count
+            val indicatorW = if (count >= 6) 46.dp else if (count == 5) 52.dp else 56.dp
             val indicatorH = 30.dp
             val target = inner + tabW * selectedIndex.coerceAtLeast(0) + (tabW - indicatorW) / 2
             val x by animateDpAsState(target, Yume.settle(), label = "dockPillX")
             val indicatorAlpha by animateFloatAsState(if (selectedIndex >= 0) 1f else 0f, label = "dockPillA")
-            // Icon row sits 11dp from the top (68dp bar: 11 + 30 pill + 4 + ~16 label + rest).
+            val pillShape = RoundedCornerShape(50)
             Box(
                 Modifier
                     .offset(x = x, y = 9.dp)
                     .width(indicatorW)
                     .height(indicatorH)
                     .scale(indicatorAlpha)
-                    .clip(CircleShape)
-                    .background(palette.accent)
+                    .clip(pillShape)
+                    .background(palette.accent.copy(alpha = if (palette.isDark) 0.18f else 0.14f))
+                    .border(1.dp, palette.accent.copy(alpha = if (palette.isDark) 0.38f else 0.30f), pillShape)
             )
             Row(
                 modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = inner),
                 verticalAlignment = Alignment.Top
             ) {
-                bottomNavItems.forEach { item ->
+                items.forEach { item ->
                     val isSelected = currentRoute == item.route
-                    val tint by animateColorAsState(if (isSelected) palette.onAccent else inactive, label = "navTint")
+                    val tint by animateColorAsState(if (isSelected) activeTint else inactive, label = "navTint")
+                    val stroke by animateDpAsState(if (isSelected) 14.dp else 0.dp, Yume.settle(), label = "navStroke")
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -150,13 +159,19 @@ fun MTBottomBar(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(3.dp))
                         Text(
                             text = item.label,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = if (count >= 6) androidx.compose.ui.unit.TextUnit(10.5f, androidx.compose.ui.unit.TextUnitType.Sp) else MaterialTheme.typography.labelMedium.fontSize,
+                            ),
                             color = if (isSelected) palette.textPrimary else inactive,
-                            maxLines = 1
+                            maxLines = 1,
+                            softWrap = false,
                         )
+                        Spacer(Modifier.height(3.dp))
+                        Box(Modifier.width(stroke).height(2.dp).clip(RoundedCornerShape(50)).background(activeTint))
                     }
                 }
             }

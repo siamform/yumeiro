@@ -179,7 +179,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                 }
             }
 
-            GuideCard(SetupGuides.youtube, startExpanded = !st.signedIn)
+            GuideCard(SetupGuides.youtube)
             GuideCard(SetupGuides.youtubeCookie)
         }
     }
@@ -351,7 +351,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     else Text("Check and save", fontWeight = FontWeight.SemiBold)
                 }
             }
-            GuideCard(SetupGuides.youtubeCookie, startExpanded = true)
+            GuideCard(SetupGuides.youtubeCookie)
         }
     }
 

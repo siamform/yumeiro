@@ -249,15 +249,15 @@ fun MTTopBar(
                         SourcePill(sourceLabel, titleExpanded, onTitleClick, titleTag, narrow, Modifier.weight(1f, fill = false))
                     } else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
                 }
-                // One capsule for every header action (was three separate glass circles).
-                ActionCapsule(Modifier.tourTarget("topbar_actions")) {
-                    if (showSearch) YumeIconButton(
+                // Seal-shaped header actions: separate tiles read faster than one capsule.
+                Row(Modifier.tourTarget("topbar_actions"), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (showSearch) TopAction(
                         icon = Icons.Default.Search,
                         contentDescription = searchDescription,
                         onClick = { if (onSearchClick != null) onSearchClick() else isSearchExpanded = true },
                         modifier = Modifier.testTag("topbar_search_action")
                     )
-                    YumeIconButton(
+                    TopAction(
                         icon = if (unreadCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,
                         contentDescription = if (unreadCount > 0) "Notifications, $unreadCount new" else "Notifications",
                         onClick = onInboxClick,
@@ -266,7 +266,7 @@ fun MTTopBar(
                         modifier = Modifier.testTag("topbar_inbox_action")
                     )
                     if (!showBackButton) {
-                        YumeIconButton(
+                        TopAction(
                             icon = Icons.Outlined.Settings,
                             contentDescription = "Open Settings",
                             onClick = onSettingsClick,
@@ -370,13 +370,13 @@ private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, ta
     val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "pillChevron")
     val shape = RoundedCornerShape(50)
     Row(
-        modifier.height(if (narrow) 30.dp else 34.dp).clip(shape)
+        modifier.height(if (narrow) 26.dp else 28.dp).clip(shape)
             .background(if (expanded) p.accent.copy(alpha = 0.22f) else p.textPrimary.copy(alpha = if (p.isDark) 0.08f else 0.06f))
             .border(1.dp, if (expanded) p.accent.copy(alpha = 0.6f) else p.textPrimary.copy(alpha = if (p.isDark) 0.18f else 0.14f), shape)
             .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
             .semantics { contentDescription = "Source: $label. ${if (expanded) "Menu open" else "Tap to change"}" }
             .then(if (tag != null) Modifier.testTag(tag) else Modifier)
-            .padding(start = if (narrow) 9.dp else 12.dp, end = if (narrow) 3.dp else 6.dp),
+            .padding(start = if (narrow) 8.dp else 10.dp, end = if (narrow) 3.dp else 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         androidx.compose.animation.AnimatedContent(
@@ -388,7 +388,7 @@ private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, ta
                     (androidx.compose.animation.slideOutVertically(YuMotion.exit(false, 160)) { -it / 2 } + androidx.compose.animation.fadeOut(YuMotion.exit(false, 120)))
             },
             label = "sourcePill",
-        ) { t -> Text(t, color = TextPrimary, fontSize = if (narrow) 12.sp else 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null, tint = p.accent, modifier = Modifier.size(18.dp).rotate(turn))
+        ) { t -> Text(t, color = TextPrimary, fontSize = if (narrow) 11.sp else 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, letterSpacing = 0.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null, tint = p.accent, modifier = Modifier.size(16.dp).rotate(turn))
     }
 }

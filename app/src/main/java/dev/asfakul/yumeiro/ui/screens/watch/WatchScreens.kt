@@ -109,13 +109,17 @@ fun WatchScaffold(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    // This page is drawn inside the dark player layer; only the 16:9 video area stays dark. The
+    // app bar and details use the user's theme (as the docked watch page does), so a light theme
+    // no longer flashes a dark page while a stream is being found.
+    val app = dev.asfakul.yumeiro.ui.theme.LocalAppPalette.current ?: dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     Column(
-        Modifier.fillMaxSize().background(DarkBackground).statusBarsPadding()
+        Modifier.fillMaxSize().background(app.background).statusBarsPadding()
             .clickable(remember { MutableInteractionSource() }, null) {}
             .testTag(tag)
     ) {
         // Same app bar as the docked player, so nothing jumps when the stream starts.
-        PlayerBrandBar(onMinimize = onBack, onClose = onBack, minimizeLabel = "Back")
+        dev.asfakul.yumeiro.ui.theme.AppThemeLayer { PlayerBrandBar(onMinimize = onBack, onClose = onBack, minimizeLabel = "Back") }
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
             if (backdrop != null) {
                 PosterImage(backdrop, backdropHeaders, Modifier.fillMaxSize().blur(18.dp))
@@ -125,7 +129,11 @@ fun WatchScaffold(
             }
             screen()
         }
-        Column(Modifier.fillMaxWidth().weight(1f)) { content() }
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
+                Column(Modifier.fillMaxSize().background(app.background)) { content() }
+            }
+        }
     }
 }
 

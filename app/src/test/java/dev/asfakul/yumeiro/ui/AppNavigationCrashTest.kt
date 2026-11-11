@@ -103,13 +103,7 @@ class AppNavigationCrashTest {
             // The bento grid lives in a LazyColumn; bring the tile into view on small test screens.
             rule.waitUntil(5_000) { rule.onAllNodesWithTag("home_list", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             val list = rule.onNodeWithTag("home_list", useUnmergedTree = true)
-            if (runCatching { list.performScrollToNode(androidx.compose.ui.test.hasTestTag(tag)) }.isFailure) {
-                // Less-used spaces sit behind "Show all".
-                list.performScrollToNode(androidx.compose.ui.test.hasTestTag("home_spaces_all"))
-                rule.onNodeWithTag("home_spaces_all", useUnmergedTree = true).performClick()
-                rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
-                list.performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
-            }
+            list.performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
             rule.waitForIdle()
         }
         rule.waitUntil(5_000) { rule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
@@ -177,7 +171,7 @@ class AppNavigationCrashTest {
         tap("music_tab_1"); snap("dark_albums")
         tap("nav_tab_library"); snap("dark_library")
         tap("library_tab_1"); snap("dark_library_videos"); tap("library_tab_2"); snap("dark_library_reading"); tap("library_tab_0")
-        tap("nav_tab_home"); tap("quick_card_audio_engine"); snap("dark_equalizer"); back()
+        tap("nav_tab_home"); tap("quick_card_downloads"); snap("dark_downloads"); back()
         tap("nav_tab_music"); tap("music_tab_0")
         tap(firstTagWithPrefix("track_item_")); waitFor("now_playing_screen_root")
         // The fake test files can't be decoded; capture the error tip, then dismiss it for clean shots.
@@ -281,9 +275,9 @@ class AppNavigationCrashTest {
     @Test fun quickNavigationThenHomeDoesNotCrash() {
         awaitHome()
         repeat(2) {
-            for (card in listOf("quick_card_music", "quick_card_videos", "quick_card_library", "quick_card_audio_engine")) {
+            for (card in listOf("quick_card_hues", "quick_card_youtube", "quick_card_ytmusic", "quick_card_downloads")) {
                 tap(card)
-                if (card == "quick_card_audio_engine") back() else tap("nav_tab_home")
+                if (card == "quick_card_downloads") back() else tap("nav_tab_home")
                 waitFor("home_screen_root")
                 tap(card)
                 back()
@@ -291,8 +285,8 @@ class AppNavigationCrashTest {
             }
         }
         // Mixed: quick card, then bottom tabs, then Home again.
-        tap("quick_card_music"); tap("nav_tab_videos"); tap("nav_tab_home"); waitFor("home_screen_root")
-        tap("quick_card_videos"); tap("nav_tab_library"); tap("nav_tab_home"); waitFor("home_screen_root")
+        tap("quick_card_ytmusic"); tap("nav_tab_videos"); tap("nav_tab_home"); waitFor("home_screen_root")
+        tap("quick_card_hues"); tap("nav_tab_library"); tap("nav_tab_home"); waitFor("home_screen_root")
         snap("home_after_quick_nav")
     }
 

@@ -77,7 +77,6 @@ class RedesignTourTest {
         if (list != null) scrollTo(list, tag)
         if (tag.startsWith("quick_card_")) {
             scrollTo("home_list", tag)
-            if (!exists(tag)) { scrollTo("home_list", "home_spaces_all"); rule.onNodeWithTag("home_spaces_all", true).performClick(); settle(600); scrollTo("home_list", tag) }
         }
         waitFor(tag)
         rule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
@@ -187,14 +186,13 @@ class RedesignTourTest {
             home()
         }
         stop("home_layout") {
-            // Spaces: 8 tiles, the rest behind "Show all"; Customize Home hides/shows whole sections.
-            scrollTo("home_list", "home_spaces_all")
-            org.junit.Assert.assertFalse("less-used spaces start tucked away", exists("quick_card_audio_engine"))
-            tap("home_spaces_all", list = "home_list"); settle(500)
-            scrollTo("home_list", "quick_card_audio_engine")
-            org.junit.Assert.assertTrue("show all reveals every space", exists("quick_card_audio_engine"))
-            snap("03_home_spaces_all")
-            tap("home_spaces_all", list = "home_list"); settle(400)
+            // Spaces: exactly the 8 everyday tiles (Extensions and Sources included, no Mix/Equalizer);
+            // Customize Home hides/shows whole sections.
+            scrollTo("home_list", "quick_card_sources")
+            org.junit.Assert.assertTrue("extensions shortcut is on Home", exists("quick_card_store"))
+            org.junit.Assert.assertFalse("equalizer is not a Home space", exists("quick_card_audio_engine"))
+            org.junit.Assert.assertFalse("no show-all toggle", exists("home_spaces_all"))
+            snap("03_home_spaces")
             tap("home_customize", list = "home_list"); waitFor("home_customize_sheet"); settle(600)
             snap("03_home_customize", sheet = "home_customize_sheet", sheetColor = surfaceHigh)
             tap("home_customize_moods"); settle(400)
@@ -282,7 +280,7 @@ class RedesignTourTest {
             tap("now_playing_more_button"); settle(); settle(1_200); snap("27_now_playing_more", sheet = "song_action_sheet_content", sheetColor = surfaceHigh)
             back(); home()
         }
-        stop("equalizer") { home(); tap("quick_card_audio_engine"); snap("29_equalizer"); back() }
+        stop("sources") { home(); tap("quick_card_sources"); settle(800); snap("29_sources"); back() }
 
         // Videos
         stop("videos") {
@@ -302,6 +300,14 @@ class RedesignTourTest {
         // Stream / Live TV
         stop("stream") { home(); tap("nav_tab_videos"); tap("video_source_live"); settle(1_000); snap("40_stream") }
         stop("market") { tap("market_entry", list = "stream_screen"); waitFor("market_screen"); snap("41_playlist_market"); back() }
+        stop("websites") {
+            tap("stream_websites", list = "stream_screen"); waitFor("websites_screen"); settle(600); snap("42_websites_empty")
+            rule.onNodeWithTag("site_add_field", true).performTextInput("archive.org"); settle(300)
+            tap("site_add"); waitFor("site_row"); settle(500); snap("43_websites_saved")
+            tap("site_menu"); tap("site_remove"); settle(500)
+            org.junit.Assert.assertFalse("removed site is gone", exists("site_row"))
+            back()
+        }
 
         // Library
         stop("library") {
