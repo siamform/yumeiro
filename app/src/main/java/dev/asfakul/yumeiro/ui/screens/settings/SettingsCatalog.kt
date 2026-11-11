@@ -67,8 +67,8 @@ object SettingsCatalog {
 
         UPDATES(Group.ABOUT, "App updates", "Check for new versions from GitHub Releases",
             listOf("update", "version", "release", "changelog", "beta")),
-        SETUP(Group.ABOUT, "Setup guide", "Replay the first-run tour and setup checklist",
-            listOf("onboarding", "tour", "welcome", "start", "checklist", "getting started"), route = "setup"),
+        SETUP(Group.ABOUT, "Setup guide", "Explore Yumeiro again, or open the quick-setup checklist",
+            listOf("onboarding", "tour", "explore", "welcome", "start", "checklist", "getting started"), route = "setup"),
         GUIDE(Group.ABOUT, "User guide", "How every part of Yumeiro works",
             listOf("help", "how to", "tutorial", "faq", "manual"), route = "guide"),
         ABOUT(Group.ABOUT, "About & developer", "Version, source code, the developer and support",

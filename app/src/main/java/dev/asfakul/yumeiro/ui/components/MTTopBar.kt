@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -211,7 +212,7 @@ fun MTTopBar(
                     )
                     Spacer(Modifier.width(4.dp))
                 }
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).tourTarget("topbar_title")) {
                     if (overline != null || offline) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (overline != null) Text(
@@ -237,7 +238,7 @@ fun MTTopBar(
                     ) else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
                 }
                 // One capsule for every header action (was three separate glass circles).
-                ActionCapsule {
+                ActionCapsule(Modifier.tourTarget("topbar_actions")) {
                     if (showSearch) YumeIconButton(
                         icon = Icons.Default.Search,
                         contentDescription = "Search your library",

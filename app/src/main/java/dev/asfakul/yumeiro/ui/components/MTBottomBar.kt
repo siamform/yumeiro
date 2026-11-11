@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -136,7 +137,8 @@ fun MTBottomBar(
                                 role = Role.Tab,
                             ) { if (!isSelected) onNavigateToRoute(item.route) }
                             .semantics { selected = isSelected }
-                            .testTag(item.testTag),
+                            .testTag(item.testTag)
+                            .tourTarget(item.testTag),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Spacer(Modifier.height(9.dp))

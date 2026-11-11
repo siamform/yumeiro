@@ -341,11 +341,20 @@ fun MTPlayerApp(
         }
     }
 
+    val offlineExits = remember {
+        dev.asfakul.yumeiro.ui.components.OfflineExits(
+            deviceMusic = { openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.DEVICE) },
+            deviceVideos = { openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE) },
+            downloads = { navigateSub(Screen.Downloads.route) },
+            library = { navigateTop(Screen.Library.route) },
+        )
+    }
     val reducedMotionOn = remember { dev.asfakul.yumeiro.ui.components.isReducedMotion(context) }
     val ambientColor = dev.asfakul.yumeiro.ui.theme.rememberAmbientColor(playbackState.currentTrack?.albumArtUri)
     androidx.compose.runtime.CompositionLocalProvider(
         dev.asfakul.yumeiro.ui.components.LocalIsPlaying provides playbackState.isPlaying,
         dev.asfakul.yumeiro.ui.components.LocalReducedMotion provides reducedMotionOn,
+        dev.asfakul.yumeiro.ui.components.LocalOfflineExits provides offlineExits,
         dev.asfakul.yumeiro.ui.theme.LocalAmbientColor provides ambientColor,
     ) {
     Box(modifier = Modifier.fillMaxSize().pageBackground()) {
@@ -543,11 +552,14 @@ fun MTPlayerApp(
                                     onOpenOnline = { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE.key },
                                 )
                             } else if (musicOnline) {
+                                Column(Modifier.fillMaxSize()) {
+                                if (!isOnline) dev.asfakul.yumeiro.ui.components.OfflineNotice("YouTube Music", tag = "offline_notice_music")
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
                                     dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
                                     val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                     viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                 })
+                                }
                             } else
                             MusicScreen(
                                 tracks = filteredTracks,
@@ -593,6 +605,16 @@ fun MTPlayerApp(
                             OpaquePage {
                             Column(Modifier.fillMaxSize()) {
                             val extState by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
+                            if (!isOnline && videoSource != dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE) {
+                                dev.asfakul.yumeiro.ui.components.OfflineNotice(
+                                    when (videoSource) {
+                                        dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE -> "Live TV"
+                                        dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> "YouTube"
+                                        else -> "Yumix"
+                                    },
+                                    tag = "offline_notice_videos",
+                                )
+                            }
                             if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE) {
                                 StreamScreen(
                                     onOpenPlaylist = { id -> navigateSub(Screen.PlaylistDetail.route(id)) },
@@ -1189,7 +1211,8 @@ fun MTPlayerApp(
             if (!showSplash && dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.shouldAutoShow(context)) dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show()
         }
         // Popups take turns: never during splash, video, PiP, the update dialog or an open page.
-        val popupBlocked = showSplash || setupOpen || activePlayingVideo != null || inPip || updateDialogOpen || appPage != null ||
+        val tourStep by dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.step.collectAsState()
+        val popupBlocked = showSplash || setupOpen || tourStep != null || activePlayingVideo != null || inPip || updateDialogOpen || appPage != null ||
             (isNowPlayingExpanded && playbackState.currentTrack != null)
         dev.asfakul.yumeiro.ui.screens.extras.NotificationPromptHost(blocked = popupBlocked || !startupPermissionsDone)
         dev.asfakul.yumeiro.ui.screens.extras.ReminderHost(blocked = popupBlocked || !startupPermissionsDone)
@@ -1238,6 +1261,23 @@ fun MTPlayerApp(
                     }
                 })
             }
+        }
+
+        // Explore tour: spotlights the real controls; taps on the highlighted one go through.
+        if (!showSplash && !setupOpen && activePlayingVideo == null && !(isNowPlayingExpanded && playbackState.currentTrack != null)) {
+            dev.asfakul.yumeiro.ui.screens.extras.ExploreTourOverlay(
+                currentRoute = currentRoute,
+                sourceMenuOpen = sourceMenuFor != null,
+                onPrepare = { place ->
+                    when (place) {
+                        dev.asfakul.yumeiro.ui.screens.extras.TourPlace.HOME -> navigateTop(Screen.Home.route)
+                        dev.asfakul.yumeiro.ui.screens.extras.TourPlace.MUSIC -> navigateTop(Screen.Music.route)
+                        dev.asfakul.yumeiro.ui.screens.extras.TourPlace.VIDEOS_YUMIX -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE)
+                        dev.asfakul.yumeiro.ui.screens.extras.TourPlace.LIBRARY -> navigateTop(Screen.Library.route)
+                    }
+                },
+                onOpenSetup = { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show(checklist = true) },
+            )
         }
 
         // Splash overlay (fades out once, then never shown again for this task).

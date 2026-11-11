@@ -139,6 +139,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                 primary = "Open sources" to onOpenSources, testTag = "manga_empty")
             return@Column
         }
+        val online by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
+        if (!online) dev.asfakul.yumeiro.ui.components.OfflineNotice("Reading from manga sources", tag = "offline_notice_manga")
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(providers, key = { it.id }) { p ->
                 FilterPill(label = p.name + if (p.lang.isNotBlank() && p.lang != "all") " · ${p.lang.uppercase()}" else "",
@@ -211,7 +213,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
             StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { more() }, testTag = "manga_error")
         } }
         if (!loading && error == null && items.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-            Text("Nothing here.", color = TextTertiary, modifier = Modifier.padding(24.dp))
+            StateMessage(Icons.Default.MenuBook, "Nothing in this list", "This source returned no titles here. Try another list, another source, or search.", testTag = "manga_nothing")
         }
     }
 }

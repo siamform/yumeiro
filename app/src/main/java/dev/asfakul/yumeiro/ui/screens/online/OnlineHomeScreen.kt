@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -170,6 +171,7 @@ fun OnlineHomeScreen(
                     Text("Search every extension…", color = TextTertiary, fontSize = 13.sp)
                 }
             }
+            Row(Modifier.tourTarget("yumix_sources")) {
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_market")) {
                 Icon(Icons.Default.Storefront, "Extension market", tint = TextPrimary)
             }
@@ -178,6 +180,7 @@ fun OnlineHomeScreen(
                 BadgedBox(badge = { if (errors > 0) Badge { Text("$errors") } }) {
                     Icon(Icons.Default.Extension, "Extensions", tint = TextPrimary)
                 }
+            }
             }
         }
 

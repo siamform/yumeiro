@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Extension
@@ -204,6 +205,7 @@ fun HomeScreen(
     val mangaCount = remember(hub.generation) { dev.asfakul.yumeiro.sources.SourceHub.mangaProviders().size }
     val setup = rememberSetupStatus()
     val setupCardHidden by SetupGuide.cardHidden.collectAsState()
+    val onboarding by SetupGuide.onboarding.collectAsState()
 
     // ---- New episodes: series with new episodes first, then what you are watching --------------
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(context) }
@@ -312,7 +314,10 @@ fun HomeScreen(
 
             // ---- Setup progress (until everything is ready or the card is dismissed) -----------
             if (!setup.complete && !setupCardHidden) item(key = "setup", contentType = "setup") {
-                SetupCard(setup.count, setup.total, onOpen = { SetupGuide.show() }, onHide = { SetupGuide.hideCard(context) })
+                SetupCard(
+                    setup.count, setup.total, onOpen = { SetupGuide.show(checklist = true) }, onHide = { SetupGuide.hideCard(context) },
+                    onExplore = if (onboarding != SetupGuide.Onboarding.EXPLORED) ({ dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.start() }) else null,
+                )
             }
 
             // ---- Continue ------------------------------------------------------------------
@@ -538,7 +543,7 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier, onSeeAll: (() ->
 // ---- Setup card ---------------------------------------------------------------------------
 
 @Composable
-private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> Unit) {
+private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> Unit, onExplore: (() -> Unit)? = null) {
     val p = LocalMtPalette.current
     val shape = RoundedCornerShape(20.dp)
     Column(
@@ -570,6 +575,19 @@ private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> U
             })
             Spacer(Modifier.width(12.dp))
             Text("Continue", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+        if (onExplore != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(p.accent.copy(alpha = 0.16f))
+                    .clickable(role = Role.Button, onClick = onExplore).testTag("home_setup_explore")
+                    .padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.Explore, null, tint = p.accent, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Take the 1-minute tour", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
         }
     }
 }
