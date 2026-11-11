@@ -570,7 +570,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
     }
 
     if (sheet != null) {
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = PanelColor) {
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = PanelColor, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
             Text(if (sheet == Sheet.SOURCES) "Sources" else "Subtitles", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             Box(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
                 Column {

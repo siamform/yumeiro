@@ -34,7 +34,21 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,8 +66,11 @@ import dev.asfakul.yumeiro.data.model.PlaybackState
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 
 /**
- * Floating prototype mini player: rounded glass card joined to the nav dock with a 3dp accent progress line
- * along the bottom edge. The progress is read in the draw phase from [positionMs], so position
+ * The mini player of the Tsuki dock. Progress is the moon path: a gold line running along the
+ * TOP edge of the strip (where the eye already is), not hidden at the bottom. Swipe the artwork
+ * and title left/right to skip to the next/previous track (the strip follows the finger and
+ * springs back); the explicit previous / play-pause / next / close buttons stay for precision
+ * and accessibility, and both skips are also exposed as accessibility custom actions. The progress is read in the draw phase from [positionMs], so position
  * ticks only redraw that line — nothing recomposes while music plays.
  */
 @Composable
@@ -110,27 +127,60 @@ fun MiniPlayerBar(
                         val h = 3.dp.toPx()
                         val inset = 18.dp.toPx()
                         val trackW = size.width - inset * 2
-                        drawRoundRect(content.copy(alpha = 0.14f), Offset(inset, size.height - h - 3.dp.toPx()), Size(trackW, h), androidx.compose.ui.geometry.CornerRadius(h))
-                        drawRoundRect(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(accent, accent2), startX = inset, endX = inset + trackW),
-                            Offset(inset, size.height - h - 3.dp.toPx()), Size(trackW * p, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h)
+                        val top = 0f
+                        drawRoundRect(content.copy(alpha = 0.10f), Offset(inset, top), Size(trackW, h), androidx.compose.ui.geometry.CornerRadius(h))
+                        if (p > 0f) drawRoundRect(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(accent2, accent), startX = inset, endX = inset + trackW),
+                            Offset(inset, top), Size(trackW * p, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h)
                         )
                     }
                     .clickable(onClickLabel = "Open player", onClick = onClick)
+                    .semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction("Next track") { onNext(); true },
+                            CustomAccessibilityAction("Previous track") { onPrevious(); true },
+                        )
+                    }
                     .testTag("mini_player_bar")
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(DockMiniHeight)
-                        .padding(start = 14.dp, end = 10.dp),
+                        .padding(start = 12.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val swipe = remember(track.id) { Animatable(0f) }
+                    val scope = rememberCoroutineScope()
+                    val threshold = with(LocalDensity.current) { 64.dp.toPx() }
+                    Row(
+                        Modifier
+                            .weight(1f)
+                            .offset { androidx.compose.ui.unit.IntOffset(swipe.value.roundToInt(), 0) }
+                            .graphicsLayer { alpha = 1f - (abs(swipe.value) / (threshold * 3f)).coerceIn(0f, 0.6f) }
+                            .pointerInput(track.id) {
+                                detectHorizontalDragGestures(
+                                    onDragEnd = {
+                                        val v = swipe.value
+                                        when {
+                                            v <= -threshold -> onNext()
+                                            v >= threshold -> onPrevious()
+                                        }
+                                        scope.launch { swipe.animateTo(0f, dev.asfakul.yumeiro.ui.theme.Yume.settle()) }
+                                    },
+                                    onDragCancel = { scope.launch { swipe.animateTo(0f) } },
+                                ) { change, drag ->
+                                    change.consume()
+                                    scope.launch { swipe.snapTo((swipe.value + drag).coerceIn(-threshold * 1.6f, threshold * 1.6f)) }
+                                }
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     TrackArtwork(
                         artUri = track.albumArtUri,
                         key = track.id,
-                        size = 52.dp,
-                        cornerRadius = 14.dp,
+                        size = 48.dp,
+                        cornerRadius = 12.dp,
                         contentDescription = track.album
                     )
                     Spacer(Modifier.width(12.dp))
@@ -141,10 +191,11 @@ fun MiniPlayerBar(
                         )
                         Text(track.artist, style = MaterialTheme.typography.bodySmall, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    }
                     MiniButton(Icons.Default.SkipPrevious, "Previous Track", content, onPrevious, "mini_player_previous_button")
                     Box(
                         Modifier
-                            .size(46.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(accent)
                             .clickable(role = Role.Button, onClick = onTogglePlayPause)
@@ -170,7 +221,7 @@ fun MiniPlayerBar(
 private fun MiniButton(icon: ImageVector, desc: String, tint: Color, onClick: () -> Unit, tag: String, iconSize: Int = 24) {
     Box(
         Modifier
-            .size(40.dp)
+            .size(44.dp)
             .clip(CircleShape)
             .clickable(role = Role.Button, onClick = onClick)
             .testTag(tag),

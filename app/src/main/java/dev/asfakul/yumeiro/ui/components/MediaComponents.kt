@@ -79,6 +79,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -217,12 +219,13 @@ fun TrackItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusMd))
             .background(
-                if (isChecked) SpotifyGreen.copy(alpha = 0.22f)
-                else if (isSelected) GlassFill
+                if (isChecked) SpotifyGreen.copy(alpha = 0.20f)
+                else if (isSelected) SpotifyGreen.copy(alpha = 0.07f)
                 else Color.Transparent
             )
+            .then(if (isSelected) Modifier.moonPathMark() else Modifier)
             .combinedClickable(
                 onClick = {
                     if (isSelectionMode && onCheckedChange != null) onCheckedChange(!isChecked) else onTrackClick()
@@ -282,8 +285,8 @@ fun TrackItemRow(
         } else {
             Text(
                 text = formatDuration(track.durationMs),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                style = MaterialTheme.typography.labelMedium,
+                color = TextTertiary
             )
         }
 
@@ -1247,11 +1250,14 @@ fun SongActionBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = DarkSurfaceContainerHigh,
+        shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
+        dragHandle = { MoonSheetHandle() },
         modifier = modifier.testTag("song_action_bottom_sheet")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("song_action_sheet_content")
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             // Track Header
@@ -1675,4 +1681,25 @@ fun BatchActionBar(
             }
         }
     }
+}
+
+
+/**
+ * The moon-path selection mark: a short gold stroke on the leading edge of the row that is
+ * playing (or selected). Same motif as the dock indicator, section headers and dialogs.
+ */
+fun Modifier.moonPathMark(): Modifier = composed {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val a = p.accent
+    val b = p.accent2
+    this.then(Modifier.drawBehind {
+        val w = 3.dp.toPx()
+        val h = size.height * 0.46f
+        drawRoundRect(
+            androidx.compose.ui.graphics.Brush.verticalGradient(listOf(a, b), startY = (size.height - h) / 2f, endY = (size.height + h) / 2f),
+            topLeft = androidx.compose.ui.geometry.Offset(0f, (size.height - h) / 2f),
+            size = androidx.compose.ui.geometry.Size(w, h),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w),
+        )
+    })
 }

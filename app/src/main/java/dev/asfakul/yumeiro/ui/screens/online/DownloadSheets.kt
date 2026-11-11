@@ -132,7 +132,7 @@ private fun EpisodeDownloadSheet(
         onDismiss()
         askEpisodes(context, d, version, list, if (what == "title") "this movie" else if (list.size == 1) list.first().second.label else "${list.size} episodes", movie = what == "title")
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("episode_download_sheet")) {
             Text("Download for offline", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(Modifier.height(6.dp))
@@ -216,7 +216,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
             .onFailure { error = it.message ?: "Couldn't load qualities" }
     }
     var audioTab by remember(item.id) { mutableStateOf(item.music) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("yt_download_sheet")) {
             Text("Download", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(item.title, color = TextSecondary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))

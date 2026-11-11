@@ -100,6 +100,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.heightIn
+import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -195,56 +197,38 @@ fun NowPlayingScreen(
             // Controls are anchored to the bottom (thumb reach); the flexible area sits above them.
             verticalArrangement = Arrangement.Bottom
         ) {
-            // Header: collapse · NOW PLAYING · equalizer + more
+            // Header: collapse · 再生中 NOW PLAYING · more. Sleep and EQ moved to the labelled tool rail.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                GlassIconButton(
+                dev.asfakul.yumeiro.ui.components.YumeIconButton(
                     icon = Icons.Default.KeyboardArrowDown,
                     contentDescription = "Collapse Player",
                     onClick = onClose,
                     modifier = Modifier.testTag("now_playing_collapse_button")
                 )
-                Row(
-                    Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    EqualizerBars(color = SpotifyGreen, playing = playbackState.isPlaying, barCount = 4)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (sleepLeft != null) "SLEEP · ${sleepLeft.uppercase()}" else "NOW PLAYING", style = OverlineStyle,
-                        color = if (sleepLeft != null) SpotifyGreen else TextSecondary, maxLines = 1)
-                }
-                if (sleepTimer != null) {
-                    Box(contentAlignment = Alignment.TopEnd) {
-                        GlassIconButton(
-                            icon = Icons.Default.Bedtime,
-                            contentDescription = if (sleepLeft != null) "Sleep timer: $sleepLeft" else "Sleep timer",
-                            onClick = { showSleepSheet = true },
-                            modifier = Modifier.testTag("now_playing_sleep_button")
-                        )
-                        if (sleepState != null) {
-                            Box(Modifier.size(9.dp).clip(CircleShape).background(SpotifyGreen).testTag("sleep_timer_active_dot"))
-                        }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        EqualizerBars(color = SpotifyGreen, playing = playbackState.isPlaying, barCount = 4)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (sleepLeft != null) "おやすみ · SLEEP ${sleepLeft.uppercase()}" else "再生中 · NOW PLAYING", style = OverlineStyle,
+                            color = SpotifyGreen, maxLines = 1)
                     }
-                    Spacer(Modifier.width(8.dp))
+                    val from = track?.album?.takeIf { it.isNotBlank() }
+                    if (from != null) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(from, style = MaterialTheme.typography.labelMedium, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
-                GlassIconButton(
-                    icon = Icons.Default.Equalizer,
-                    contentDescription = "Equalizer",
-                    onClick = onOpenEqualizer,
-                    modifier = Modifier.testTag("now_playing_equalizer_button")
-                )
                 if (onMoreOptions != null) {
-                    Spacer(Modifier.width(8.dp))
-                    GlassIconButton(
+                    dev.asfakul.yumeiro.ui.components.YumeIconButton(
                         icon = Icons.Default.MoreHoriz,
                         contentDescription = "Song options",
                         onClick = onMoreOptions,
                         modifier = Modifier.testTag("now_playing_more_button")
                     )
-                }
+                } else Spacer(Modifier.width(48.dp))
             }
 
             AnimatedVisibility(visible = playbackState.errorMessage != null) {
@@ -383,18 +367,31 @@ fun NowPlayingScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-            // Bottom pills: Lyrics / Up next / Info
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PillButton(Icons.Default.Lyrics, "Lyrics", selected = panel == PANEL_LYRICS,
+            Spacer(Modifier.height(18.dp))
+            // Tool rail: every Now Playing tool, always labelled (Lyrics · Up next · Info · Sleep · EQ).
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusLg))
+                    .background(GlassFill).padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                RailTool(Icons.Default.Lyrics, "Lyrics", selected = panel == PANEL_LYRICS,
                     onClick = { panel = if (panel == PANEL_LYRICS) PANEL_ART else PANEL_LYRICS },
                     modifier = Modifier.weight(1f).testTag("now_playing_lyrics_button"), description = "Toggle Lyrics")
-                PillButton(Icons.AutoMirrored.Filled.QueueMusic, "Up next", selected = panel == PANEL_QUEUE,
+                RailTool(Icons.AutoMirrored.Filled.QueueMusic, "Up next", selected = panel == PANEL_QUEUE,
                     onClick = { panel = if (panel == PANEL_QUEUE) PANEL_ART else PANEL_QUEUE },
                     modifier = Modifier.weight(1f).testTag("now_playing_queue_toggle_button"), description = "Toggle Queue")
-                PillButton(Icons.Default.Info, "Info", selected = panel == PANEL_INFO,
+                RailTool(Icons.Default.Info, "Info", selected = panel == PANEL_INFO,
                     onClick = { panel = if (panel == PANEL_INFO) PANEL_ART else PANEL_INFO },
                     modifier = Modifier.weight(1f).testTag("now_playing_info_button"), description = "Toggle Song Info")
+                if (sleepTimer != null) {
+                    RailTool(Icons.Default.Bedtime, sleepLeft ?: "Sleep", selected = sleepState != null,
+                        onClick = { showSleepSheet = true },
+                        modifier = Modifier.weight(1f).testTag("now_playing_sleep_button"),
+                        description = if (sleepLeft != null) "Sleep timer: $sleepLeft" else "Sleep timer",
+                        dot = if (sleepState != null) "sleep_timer_active_dot" else null)
+                }
+                RailTool(Icons.Default.Equalizer, "EQ", selected = false, onClick = onOpenEqualizer,
+                    modifier = Modifier.weight(1f).testTag("now_playing_equalizer_button"), description = "Equalizer")
             }
         }
         if (showSleepSheet && sleepTimer != null) {
@@ -432,8 +429,8 @@ private fun ArtworkPanel(track: AudioTrack?, lyrics: Lyrics?, positionMs: () -> 
                 .weight(1f, fill = false)
                 .widthIn(max = 360.dp)
                 .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                .shadow(28.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black, spotColor = Color.Black)
-                .clip(RoundedCornerShape(36.dp))
+                .shadow(20.dp, dev.asfakul.yumeiro.ui.theme.Yume.shapeXl, ambientColor = Color.Black, spotColor = Color.Black)
+                .clip(dev.asfakul.yumeiro.ui.theme.Yume.shapeXl)
                 .background(artBrush)
                 .drawBehind { drawVinylRings() }
                 .testTag("now_playing_artwork_box"),
@@ -728,14 +725,15 @@ private fun RoundControl(
 private fun PillButton(
     icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, description: String? = null,
 ) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(24.dp)
     Row(
         modifier = modifier
-            .height(44.dp)
+            .height(48.dp)
             .clip(shape)
             .background(if (selected) ChipSelectedColor else GlassFill, shape)
             .clickable(role = Role.Button, onClick = onClick)
-            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
+            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier)
+            .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -743,6 +741,36 @@ private fun PillButton(
         Icon(icon, null, tint = c, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text(label, style = MaterialTheme.typography.labelLarge, color = c, maxLines = 1)
+    }
+}
+
+/** One labelled tool of the Now Playing rail; selected = gold tonal pill (same language as the dock). */
+@Composable
+private fun RailTool(
+    icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+    description: String? = null, dot: String? = null,
+) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val tint = if (selected) (if (p.isDark) p.accentBright else p.accent) else TextPrimary
+    Column(
+        modifier = modifier
+            .heightIn(min = 58.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            Modifier.width(46.dp).height(28.dp).clip(CircleShape)
+                .background(if (selected) p.accent.copy(alpha = if (p.isDark) 0.18f else 0.12f) else Color.Transparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+            if (dot != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 8.dp).size(7.dp).clip(CircleShape).background(SpotifyGreen).testTag(dot))
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) tint else TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -757,7 +785,8 @@ private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> 
     val currentOnSeek by rememberUpdatedState(onSeek)
     val currentDuration by rememberUpdatedState(duration)
     val accent = SpotifyGreen
-    val trackColor = TextPrimary.copy(alpha = 0.2f)
+    val accent2 = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent2
+    val trackColor = TextPrimary.copy(alpha = 0.16f)
     val thumb = ChipSelectedColor
     fun fraction(): Float = if (dragFraction >= 0f) dragFraction else (positionMs().toFloat() / duration).coerceIn(0f, 1f)
 
@@ -796,7 +825,10 @@ private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> 
                     val usable = size.width - r * 2
                     val f = fraction()
                     drawRoundRect(trackColor, Offset(r, y - h / 2), Size(usable, h), CornerRadius(h / 2))
-                    drawRoundRect(accent, Offset(r, y - h / 2), Size(usable * f, h), CornerRadius(h / 2))
+                    drawRoundRect(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(accent2, accent), startX = r, endX = r + usable),
+                        Offset(r, y - h / 2), Size(usable * f, h), CornerRadius(h / 2)
+                    )
                     drawCircle(thumb, radius = r, center = Offset(r + usable * f, y))
                 }
         )
@@ -807,8 +839,8 @@ private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> 
                     ms / 1000L
                 }
             }
-            Text(if (elapsedSec <= 0L) "00:00" else formatDuration(elapsedSec * 1000L), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-            Text(formatDuration(durationMs), style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.End)
+            Text(if (elapsedSec <= 0L) "00:00" else formatDuration(elapsedSec * 1000L), style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Text(formatDuration(durationMs), style = MaterialTheme.typography.labelMedium, color = TextTertiary, textAlign = TextAlign.End)
         }
     }
 }

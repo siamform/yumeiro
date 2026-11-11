@@ -102,7 +102,14 @@ fun TsukiDialog(
                 .background(surface)
                 .border(1.dp, hairline, shape),
         ) {
-            Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 18.dp)) {
+            Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 18.dp)) {
+                // The moon path: a short gold stroke hanging from the top edge, shared with the dock.
+                Box(
+                    Modifier.align(Alignment.CenterHorizontally).size(width = 32.dp, height = 3.dp)
+                        .clip(RoundedCornerShape(bottomStart = 3.dp, bottomEnd = 3.dp))
+                        .background(Brush.horizontalGradient(listOf(p.accent2, p.accent, p.accent2)))
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.heightIn(min = 21.dp))
                 if (icon != null) {
                     Box(
                         contentAlignment = Alignment.Center,

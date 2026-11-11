@@ -46,6 +46,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -106,6 +110,8 @@ fun MTTopBar(
     unreadCount: Int = 0,
     /** False on tabs that have their own search box (Videos, Stream, online Music). */
     showSearch: Boolean = true,
+    /** No internet: shown as a quiet tag on the overline line instead of a banner over the title. */
+    offline: Boolean = false,
 ) {
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     // The text last committed; suggestions hide until the user types something new.
@@ -119,7 +125,7 @@ fun MTTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 8.dp)
+            .padding(start = 20.dp, end = 14.dp, top = 8.dp, bottom = 6.dp)
     ) {
         if (isSearchExpanded && showSearch) {
             Column(Modifier.fillMaxWidth()) {
@@ -199,7 +205,19 @@ fun MTTopBar(
                 }
                 Column(Modifier.weight(1f)) {
                     if (overline != null) {
-                        Text("✦ " + overline.uppercase(), style = OverlineStyle, color = SpotifyGreen, maxLines = 1)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            MoonPath(height = 12.dp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                overline.uppercase(), style = OverlineStyle, color = SpotifyGreen, maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (offline) {
+                                Spacer(Modifier.width(8.dp))
+                                OfflineTag()
+                            }
+                        }
                         Spacer(Modifier.height(2.dp))
                     }
                     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
@@ -214,44 +232,56 @@ fun MTTopBar(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (showSearch) GlassIconButton(
-                    icon = Icons.Default.Search,
-                    contentDescription = "Search your library",
-                    onClick = { isSearchExpanded = true },
-                    modifier = Modifier.testTag("topbar_search_action")
-                )
-                Box {
-                    GlassIconButton(
+                // One capsule for every header action (was three separate glass circles).
+                ActionCapsule {
+                    if (showSearch) YumeIconButton(
+                        icon = Icons.Default.Search,
+                        contentDescription = "Search your library",
+                        onClick = { isSearchExpanded = true },
+                        modifier = Modifier.testTag("topbar_search_action")
+                    )
+                    YumeIconButton(
                         icon = if (unreadCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,
                         contentDescription = if (unreadCount > 0) "Notifications, $unreadCount new" else "Notifications",
                         onClick = onInboxClick,
+                        badge = unreadCount,
+                        badgeTag = "topbar_inbox_badge",
                         modifier = Modifier.testTag("topbar_inbox_action")
                     )
-                    if (unreadCount > 0) {
-                        Box(
-                            Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 2.dp)
-                                .size(if (unreadCount > 9) 20.dp else 17.dp)
-                                .background(SpotifyGreen, CircleShape)
-                                .testTag("topbar_inbox_badge"),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                if (unreadCount > 9) "9+" else unreadCount.toString(),
-                                color = dev.asfakul.yumeiro.ui.theme.OnAccent,
-                                fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1,
-                            )
-                        }
+                    if (!showBackButton) {
+                        YumeIconButton(
+                            icon = Icons.Outlined.Settings,
+                            contentDescription = "Open Settings",
+                            onClick = onSettingsClick,
+                            modifier = Modifier.testTag("topbar_settings_action")
+                        )
                     }
-                }
-                if (!showBackButton) {
-                    GlassIconButton(
-                        icon = Icons.Outlined.Settings,
-                        contentDescription = "Open Settings",
-                        onClick = onSettingsClick,
-                        modifier = Modifier.testTag("topbar_settings_action")
-                    )
                 }
             }
         }
     }
 }
+
+
+/** Compact offline marker for headers ("オフライン · Offline"); local music and videos keep working. */
+@Composable
+fun OfflineTag(modifier: Modifier = Modifier) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    Row(
+        modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .background(p.textPrimary.copy(alpha = 0.08f))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .androidx_semantics_offline(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.CloudOff, null, tint = p.textSecondary, modifier = Modifier.size(12.dp))
+        Spacer(Modifier.width(4.dp))
+        Text("Offline", style = MaterialTheme.typography.labelSmall, color = p.textSecondary, maxLines = 1)
+    }
+}
+
+private fun Modifier.androidx_semantics_offline(): Modifier =
+    this.testTag("offline_banner").then(
+        Modifier.semantics(mergeDescendants = true) { contentDescription = "You're offline, showing saved content" }
+    )

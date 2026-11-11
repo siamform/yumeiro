@@ -124,6 +124,8 @@ data class HomeShortcut(
     val glyph: String,
     val onClick: () -> Unit,
     val badge: String? = null,
+    /** Two-word live status under the key name ("60 songs", "No login"). */
+    val meta: String = subtitle,
 )
 
 /** The last thing you watched (device video, Hue title or YouTube), shown next to "last played". */
@@ -285,17 +287,18 @@ fun HomeScreen(
     }
     val tiles = remember(stats.audioCount, stats.videoCount, huesCount, dlSummary) {
         mapOf(
-            "music" to HomeShortcut("music", "Music", "${stats.audioCount} songs on device", Icons.Default.LibraryMusic, "音", onNavigateToMusic),
-            "ytmusic" to HomeShortcut("ytmusic", "YT Music", "Stream any song", Icons.Default.Album, "歌", onOpenYouTubeMusic),
-            "eq" to HomeShortcut("eq", "Equalizer", "Bass · 3D · presets", Icons.Default.GraphicEq, "響", onNavigateToEqualizer),
+            "music" to HomeShortcut("music", "Music", "${stats.audioCount} songs on device", Icons.Default.LibraryMusic, "音", onNavigateToMusic, meta = "${stats.audioCount} songs"),
+            "ytmusic" to HomeShortcut("ytmusic", "YT Music", "Stream any song", Icons.Default.Album, "歌", onOpenYouTubeMusic, meta = "Stream"),
+            "eq" to HomeShortcut("eq", "Equalizer", "Bass · 3D · presets", Icons.Default.GraphicEq, "響", onNavigateToEqualizer, meta = "Presets"),
             "hues" to HomeShortcut("hues", "Hues", "Your extension channels · Spectrum feed", Icons.Default.AutoAwesome, "彩", onOpenHues,
-                badge = if (huesCount > 0) "$huesCount live" else "Add"),
-            "videos" to HomeShortcut("videos", "Videos", "${stats.videoCount} on device", Icons.Default.VideoLibrary, "映", onNavigateToVideos),
-            "youtube" to HomeShortcut("youtube", "YouTube", "No login", Icons.Default.SmartDisplay, "動", onOpenYouTube),
-            "live" to HomeShortcut("live", "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "生", onOpenLive),
-            "library" to HomeShortcut("library", "Library", "Playlists · favorites · stats", Icons.Default.Bookmarks, "棚", onNavigateToLibrary),
-            "store" to HomeShortcut("store", "Hue store", "Find more channels", Icons.Default.Storefront, "店", onOpenHueStore),
-            "downloads" to HomeShortcut("downloads", "Downloads", dlSummary.first, Icons.Default.DownloadForOffline, "保", onOpenDownloads, badge = dlSummary.second),
+                badge = if (huesCount > 0) "$huesCount live" else null, meta = if (huesCount > 0) "$huesCount live" else "Add one"),
+            "videos" to HomeShortcut("videos", "Videos", "${stats.videoCount} on device", Icons.Default.VideoLibrary, "映", onNavigateToVideos, meta = "${stats.videoCount} files"),
+            "youtube" to HomeShortcut("youtube", "YouTube", "No login", Icons.Default.SmartDisplay, "動", onOpenYouTube, meta = "No login"),
+            "live" to HomeShortcut("live", "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "生", onOpenLive, meta = "IPTV"),
+            "library" to HomeShortcut("library", "Library", "Playlists · favorites · stats", Icons.Default.Bookmarks, "棚", onNavigateToLibrary, meta = "Yours"),
+            "store" to HomeShortcut("store", "Store", "Hue store · find more channels", Icons.Default.Storefront, "店", onOpenHueStore, meta = "Browse"),
+            "downloads" to HomeShortcut("downloads", "Downloads", "Downloads · ${dlSummary.first}", Icons.Default.DownloadForOffline, "保", onOpenDownloads, badge = dlSummary.second,
+                meta = if (dlSummary.second != null) "${dlSummary.second} active" else "Offline"),
         )
     }
 
@@ -338,16 +341,18 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize().testTag("home_list"),
             contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 8.dp, bottom = 170.dp),
         ) {
-            // ---- Continue listening & watching ------------------------------------------------
+            // ---- Tonight: one resume panel (music above, video below) ------------------------
             item(key = "continue_header", contentType = "header") {
-                SectionTitle("Continue listening & watching", overline = "つづき · Pick up where you left off")
+                dev.asfakul.yumeiro.ui.components.MoonSectionHeader(
+                    "Pick up where you left off", overline = "つづき · Tonight",
+                )
             }
             item(key = "continue_row", contentType = "continue") {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = HeaderGap).height(if (wide) 250.dp else 228.dp),
-                    horizontalArrangement = Arrangement.spacedBy(TileGap)
+                val isCurrent = continueTrack != null && selectedTrack?.id == continueTrack.id
+                dev.asfakul.yumeiro.ui.components.YumePanel(
+                    Modifier.fillMaxWidth().padding(top = 6.dp),
+                    shape = RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusLg),
                 ) {
-                    val isCurrent = continueTrack != null && selectedTrack?.id == continueTrack.id
                     ResumeMusicCard(
                         track = continueTrack,
                         isCurrent = isCurrent,
@@ -368,55 +373,46 @@ fun HomeScreen(
                                 else -> onTrackClick(continueTrack, recentlyPlayed.ifEmpty { allTracks })
                             }
                         },
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    ResumeVideoCard(resumeVideo, onEmptyClick = onNavigateToVideos, modifier = Modifier.weight(1f).fillMaxHeight())
+                    Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(TextPrimary.copy(alpha = 0.07f)))
+                    ResumeVideoCard(resumeVideo, onEmptyClick = onNavigateToVideos, modifier = Modifier.fillMaxWidth())
                 }
             }
 
-            // ---- Shortcuts ----------------------------------------------------------------
+            // ---- Spaces: every corner of Yumeiro as a kana key -----------------------------------
             item(key = "bento_label", contentType = "header") {
-                SectionTitle("Shortcuts", overline = "すべて · Everything in Yumeiro", modifier = Modifier.padding(top = SectionGap))
+                dev.asfakul.yumeiro.ui.components.MoonSectionHeader(
+                    "Spaces", overline = "すべて · Everything in Yumeiro", modifier = Modifier.padding(top = SectionGap - 8.dp),
+                )
             }
             item(key = "bento_listen", contentType = "bento") {
-                Row(Modifier.fillMaxWidth().padding(top = HeaderGap).height(if (wide) 236.dp else 216.dp), horizontalArrangement = Arrangement.spacedBy(TileGap)) {
-                    BentoTile(tiles.getValue("music"), Modifier.weight(1.15f).fillMaxHeight(), big = true, testTag = "quick_card_music")
-                    Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(TileGap)) {
-                        BentoTile(tiles.getValue("ytmusic"), Modifier.fillMaxWidth().weight(1f), testTag = "quick_card_ytmusic")
-                        BentoTile(tiles.getValue("eq"), Modifier.fillMaxWidth().weight(1f), testTag = "quick_card_audio_engine")
+                val cols = if (wide) 10 else 5
+                val keys = listOf(
+                    "music" to "quick_card_music", "ytmusic" to "quick_card_ytmusic", "eq" to "quick_card_audio_engine",
+                    "hues" to "quick_card_hues", "store" to "quick_card_store",
+                    "videos" to "quick_card_videos", "youtube" to "quick_card_youtube", "live" to "quick_card_live",
+                    "library" to "quick_card_library", "downloads" to "quick_card_downloads",
+                )
+                Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(TileGap)) {
+                    keys.chunked(cols).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (k, tag) -> KanaKey(tiles.getValue(k), Modifier.weight(1f), primary = k == "music", testTag = tag) }
+                        }
                     }
                 }
-            }
-            item(key = "bento_hues", contentType = "bento") {
-                BentoTile(tiles.getValue("hues"), Modifier.fillMaxWidth().padding(top = TileGap).height(96.dp), wideLayout = true, testTag = "quick_card_hues")
-            }
-            item(key = "bento_watch", contentType = "bento") {
-                Row(Modifier.fillMaxWidth().padding(top = TileGap).height(if (wide) 140.dp else 124.dp), horizontalArrangement = Arrangement.spacedBy(TileGap)) {
-                    BentoTile(tiles.getValue("videos"), Modifier.weight(1f).fillMaxHeight(), testTag = "quick_card_videos")
-                    BentoTile(tiles.getValue("youtube"), Modifier.weight(1f).fillMaxHeight(), testTag = "quick_card_youtube")
-                    BentoTile(tiles.getValue("live"), Modifier.weight(1f).fillMaxHeight(), testTag = "quick_card_live")
-                }
-            }
-            item(key = "bento_more", contentType = "bento") {
-                Row(Modifier.fillMaxWidth().padding(top = TileGap).height(84.dp), horizontalArrangement = Arrangement.spacedBy(TileGap)) {
-                    BentoTile(tiles.getValue("library"), Modifier.weight(1.3f).fillMaxHeight(), compact = true, testTag = "quick_card_library")
-                    BentoTile(tiles.getValue("store"), Modifier.weight(1f).fillMaxHeight(), compact = true, testTag = "quick_card_store")
-                }
-            }
-            item(key = "bento_downloads", contentType = "bento") {
-                BentoTile(tiles.getValue("downloads"), Modifier.fillMaxWidth().padding(top = TileGap).height(84.dp), compact = true, testTag = "quick_card_downloads")
             }
 
             // ---- For you (endless) ----------------------------------------------------------
             item(key = "feed_header", contentType = "header") {
-                Row(Modifier.fillMaxWidth().padding(top = SectionGap), verticalAlignment = Alignment.CenterVertically) {
-                    SectionTitle("For you", overline = "おすすめ · Endless mix of your music & videos", modifier = Modifier.weight(1f))
-                    Box(
-                        Modifier.size(40.dp).glass(CircleShape)
-                            .clickable(role = Role.Button, onClickLabel = "Shuffle feed") { seed = System.nanoTime() }
-                            .testTag("home_feed_shuffle"),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Default.Shuffle, contentDescription = "Shuffle feed", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
+                Row(Modifier.fillMaxWidth().padding(top = SectionGap - 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    dev.asfakul.yumeiro.ui.components.MoonSectionHeader(
+                        "For you", overline = "おすすめ · Your music & videos, endlessly", modifier = Modifier.weight(1f),
+                    )
+                    dev.asfakul.yumeiro.ui.components.YumeIconButton(
+                        Icons.Default.Shuffle, "Shuffle feed", onClick = { seed = System.nanoTime() },
+                        modifier = Modifier.testTag("home_feed_shuffle"),
+                    )
                 }
             }
 
@@ -546,40 +542,55 @@ private fun FeedHeader(title: String, onSeeAll: (() -> Unit)? = null) {
 
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, onSeeAll: (() -> Unit)? = null) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(top = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        if (onSeeAll != null) {
-            Text(
-                "See all",
-                style = MaterialTheme.typography.labelLarge,
-                color = SpotifyGreen,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(role = Role.Button, onClick = onSeeAll)
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            )
-        }
-    }
+    dev.asfakul.yumeiro.ui.components.MoonSectionHeader(title, modifier = modifier, onAction = onSeeAll)
 }
 
 // ---- Continue cards -------------------------------------------------------------------------------
 
+/** One row of the Tonight panel: art · eyebrow/title/subtitle · action, with a moon-path progress line. */
 @Composable
-private fun ResumeCardFrame(modifier: Modifier, onClick: () -> Unit, tag: String, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
-    val palette = LocalMtPalette.current
-    Box(
-        modifier
-            .clip(shape)
-            .background(palette.surfaceContainerHigh.copy(alpha = if (palette.isDark) 0.72f else 1f))
-            .border(1.dp, rememberGlassBorder(), shape)
-            .clickable(onClick = onClick)
-            .testTag(tag)
-    ) { content() }
+private fun ResumeRow(
+    modifier: Modifier,
+    tag: String,
+    onClick: () -> Unit,
+    eyebrow: String,
+    title: String,
+    subtitle: String,
+    progress: () -> Float,
+    art: @Composable () -> Unit,
+    action: @Composable () -> Unit,
+) {
+    val track20 = TextPrimary.copy(alpha = 0.10f)
+    val p = LocalMtPalette.current
+    Row(
+        modifier.clickable(onClick = onClick).testTag(tag).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        art()
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(eyebrow, style = OverlineStyle, color = if (p.isDark) p.accentBright.copy(alpha = 0.9f) else p.accent, maxLines = 1)
+            Spacer(Modifier.height(3.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(8.dp))
+            val accent = p.accent
+            val accent2 = p.accent2
+            Box(
+                Modifier.fillMaxWidth().height(3.dp).drawBehind {
+                    val r = CornerRadius(size.height / 2)
+                    drawRoundRect(track20, cornerRadius = r)
+                    val v = progress().coerceIn(0f, 1f)
+                    if (v > 0f) drawRoundRect(
+                        Brush.horizontalGradient(listOf(accent2, accent)),
+                        size = Size(size.width * v, size.height), cornerRadius = r,
+                    )
+                }
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        action()
+    }
 }
 
 @Composable
@@ -593,207 +604,134 @@ private fun ResumeMusicCard(
     onPlayPause: () -> Unit,
     modifier: Modifier,
 ) {
-    val accent = SpotifyGreen
-    val track20 = TextPrimary.copy(alpha = 0.16f)
-    ResumeCardFrame(modifier, onClick, "home_continue_card") {
-        Column(Modifier.fillMaxSize().padding(12.dp)) {
-            Box(Modifier.fillMaxWidth().weight(1f)) {
+    ResumeRow(
+        modifier = modifier,
+        tag = "home_continue_card",
+        onClick = onClick,
+        eyebrow = if (isPlaying) "音 · NOW PLAYING" else "音 · LAST PLAYED",
+        title = track?.title ?: "Nothing played yet",
+        subtitle = track?.artist ?: "Start a song and it waits for you here",
+        progress = { if (isCurrent && durationMs > 0) positionMs().toFloat() / durationMs else 0f },
+        art = {
+            Box(Modifier.size(64.dp)) {
                 if (track != null) {
-                    Box(Modifier.fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true).align(Alignment.CenterStart)) {
-                        TrackArtwork(artUri = track.albumArtUri, key = track.id, size = 200.dp, cornerRadius = 16.dp, contentDescription = track.album, modifier = Modifier.fillMaxSize())
-                    }
-                } else {
-                    EmptyArt(Icons.Default.MusicNote)
-                }
-                Box(
-                    Modifier.align(Alignment.BottomEnd).size(44.dp).clip(CircleShape).background(accent)
-                        .clickable(role = Role.Button, onClick = onPlayPause).testTag("home_continue_play"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = LocalMtPalette.current.onAccent, modifier = Modifier.size(24.dp)
-                    )
-                }
+                    TrackArtwork(artUri = track.albumArtUri, key = track.id, size = 64.dp, cornerRadius = 12.dp, contentDescription = track.album)
+                } else EmptyArt(Icons.Default.MusicNote)
             }
-            Spacer(Modifier.height(10.dp))
-            Text("MUSIC · LAST PLAYED", style = OverlineStyle, color = TextTertiary, maxLines = 1)
-            Spacer(Modifier.height(2.dp))
-            Text(track?.title ?: "Nothing yet", style = MaterialTheme.typography.titleMedium, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track?.artist ?: "Play a song to see it here", style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(8.dp))
+        },
+        action = {
             Box(
-                Modifier.fillMaxWidth().height(3.dp).drawBehind {
-                    val r = CornerRadius(size.height / 2)
-                    drawRoundRect(track20, cornerRadius = r)
-                    val p = if (isCurrent && durationMs > 0) (positionMs().toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-                    if (p > 0f) drawRoundRect(accent, size = Size(size.width * p, size.height), cornerRadius = r)
-                }
-            )
-        }
-    }
+                Modifier.size(48.dp).clip(CircleShape).background(SpotifyGreen)
+                    .clickable(role = Role.Button, onClick = onPlayPause).testTag("home_continue_play"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else if (track == null) "Open Music" else "Play",
+                    tint = LocalMtPalette.current.onAccent, modifier = Modifier.size(24.dp)
+                )
+            }
+        },
+    )
 }
 
 @Composable
 private fun ResumeVideoCard(video: ResumeVideo?, onEmptyClick: () -> Unit, modifier: Modifier) {
-    val accent = SpotifyGreen
-    val track20 = TextPrimary.copy(alpha = 0.16f)
-    ResumeCardFrame(modifier, video?.onClick ?: onEmptyClick, "home_continue_video") {
-        Column(Modifier.fillMaxSize().padding(12.dp)) {
-            Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(alpha = 0.35f))) {
-                if (video?.thumbnail != null) {
-                    if (video.thumbnailHeaders.isNotEmpty() && video.thumbnail is String) {
-                        dev.asfakul.yumeiro.ui.screens.online.PosterImage(video.thumbnail, video.thumbnailHeaders, Modifier.fillMaxSize())
-                    } else {
-                        AsyncImage(model = video.thumbnail, contentDescription = video.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    }
-                } else {
-                    EmptyArt(Icons.Default.Videocam)
+    ResumeRow(
+        modifier = modifier,
+        tag = "home_continue_video",
+        onClick = video?.onClick ?: onEmptyClick,
+        eyebrow = "映 · LAST WATCHED",
+        title = video?.title ?: "Nothing watched yet",
+        subtitle = video?.subtitle ?: "Videos you start will resume from here",
+        progress = { video?.progress ?: 0f },
+        art = {
+            Box(Modifier.width(64.dp).height(64.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.35f))) {
+                    if (video?.thumbnail != null) {
+                        if (video.thumbnailHeaders.isNotEmpty() && video.thumbnail is String) {
+                            dev.asfakul.yumeiro.ui.screens.online.PosterImage(video.thumbnail, video.thumbnailHeaders, Modifier.fillMaxSize())
+                        } else {
+                            AsyncImage(model = video.thumbnail, contentDescription = video.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        }
+                    } else EmptyArt(Icons.Default.Videocam)
                 }
-                Box(
-                    Modifier.align(Alignment.Center).size(44.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f))
-                        .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp)) }
             }
-            Spacer(Modifier.height(10.dp))
-            Text("VIDEO · LAST WATCHED", style = OverlineStyle, color = TextTertiary, maxLines = 1)
-            Spacer(Modifier.height(2.dp))
-            Text(video?.title ?: "Nothing yet", style = MaterialTheme.typography.titleMedium, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(video?.subtitle ?: "Watch a video to see it here", style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(8.dp))
-            val p = video?.progress ?: 0f
+        },
+        action = {
             Box(
-                Modifier.fillMaxWidth().height(3.dp).drawBehind {
-                    val r = CornerRadius(size.height / 2)
-                    drawRoundRect(track20, cornerRadius = r)
-                    if (p > 0f) drawRoundRect(accent, size = Size(size.width * p.coerceIn(0f, 1f), size.height), cornerRadius = r)
-                }
-            )
-        }
-    }
+                Modifier.size(48.dp).clip(CircleShape).border(1.dp, SpotifyGreen.copy(alpha = 0.55f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (video == null) Icons.Default.VideoLibrary else Icons.Default.PlayArrow,
+                    contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(22.dp),
+                )
+            }
+        },
+    )
 }
 
 @Composable
 private fun EmptyArt(icon: ImageVector) {
     Box(
-        Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).background(TextPrimary.copy(alpha = 0.06f)),
+        Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(TextPrimary.copy(alpha = 0.06f)),
         contentAlignment = Alignment.Center
-    ) { Icon(icon, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(34.dp)) }
+    ) { Icon(icon, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(26.dp)) }
 }
 
-// ---- Shortcut tiles --------------------------------------------------------------------------------
+// ---- Spaces (kana keys) ---------------------------------------------------------------------------
 
 /**
- * A "boxy" shortcut. All tiles share one calm, tonal style (neutral surface + accent icon chip +
- * faint kanji watermark); only the primary Music tile is filled with the accent so the grid has
- * one clear focal point instead of a rainbow. [big] = tall hero tile, [wideLayout] = banner,
- * [compact] = slim one-line tile.
+ * A kana key: each corner of Yumeiro is one compact key with its kana (音 歌 響 彩 店 映 動 生 棚 保)
+ * as the symbol, the name below and a short live status (song count, "3 live", downloads in
+ * progress). Ten keys in two rows replace the old ~600dp bento wall, so the feed starts sooner,
+ * while every destination stays one tap away and always visible. Only Music is filled gold.
  */
 @Composable
-private fun BentoTile(
-    tile: HomeShortcut,
-    modifier: Modifier,
-    big: Boolean = false,
-    wideLayout: Boolean = false,
-    compact: Boolean = false,
-    testTag: String,
-) {
+private fun KanaKey(tile: HomeShortcut, modifier: Modifier, primary: Boolean, testTag: String) {
     val palette = LocalMtPalette.current
-    val shape = RoundedCornerShape(if (compact) 20.dp else 24.dp)
-    val filled = big
+    val shape = RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusMd)
     val accent = palette.accent
     val accent2 = palette.accent2
-    val surface = palette.surfaceContainerHigh.copy(alpha = if (palette.isDark) 0.72f else 1f)
-    val content = if (filled) palette.onAccent else palette.textPrimary
-    val sub = if (filled) palette.onAccent.copy(alpha = 0.78f) else palette.textSecondary
-    val glyphColor = if (filled) palette.onAccent.copy(alpha = 0.12f) else palette.textPrimary.copy(alpha = 0.05f)
-    Box(
+    val surface = palette.surfaceContainerHigh.copy(alpha = if (palette.isDark) 0.66f else 1f)
+    val glyphColor = if (primary) palette.onAccent else if (palette.isDark) palette.accentBright else palette.accent
+    val titleColor = if (primary) palette.onAccent else palette.textPrimary
+    val subColor = if (primary) palette.onAccent.copy(alpha = 0.74f) else palette.textTertiary
+    Column(
         modifier
+            .height(96.dp)
             .clip(shape)
             .drawBehind {
-                if (filled) {
-                    drawRect(Brush.linearGradient(listOf(accent, accent2), start = Offset.Zero, end = Offset(size.width, size.height)))
-                    drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent), center = Offset(size.width * 0.1f, 0f), radius = size.maxDimension * 0.7f), radius = size.maxDimension * 0.7f, center = Offset(size.width * 0.1f, 0f))
-                } else {
-                    drawRect(surface)
-                }
+                if (primary) drawRect(Brush.linearGradient(listOf(accent, accent2), start = Offset.Zero, end = Offset(size.width, size.height)))
+                else drawRect(surface)
             }
-            .border(1.dp, if (filled) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.05f))) else rememberGlassBorder(), shape)
+            .border(1.dp, if (primary) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.04f))) else rememberGlassBorder(), shape)
             .clickable(role = Role.Button, onClickLabel = "Open ${tile.title}", onClick = tile.onClick)
-            .semantics { contentDescription = tile.title }
+            .semantics(mergeDescendants = true) { contentDescription = "${tile.title}, ${tile.subtitle}" + (tile.badge?.let { ", $it" } ?: "") }
             .testTag(testTag)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            tile.glyph,
-            color = glyphColor,
-            fontSize = if (big) 120.sp else if (compact) 52.sp else 76.sp,
-            fontWeight = FontWeight.Black,
-            maxLines = 1,
-            modifier = Modifier.align(Alignment.BottomEnd).offset(x = 10.dp, y = if (big) 26.dp else 16.dp),
-        )
-        if (compact) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconChip(tile.icon, 40.dp, filled)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(tile.title, style = MaterialTheme.typography.titleMedium, color = content, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(tile.subtitle, style = MaterialTheme.typography.bodySmall, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        } else if (wideLayout) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconChip(tile.icon, 50.dp, filled)
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(tile.title, style = DisplayTitle, color = content, maxLines = 1)
-                    Spacer(Modifier.height(2.dp))
-                    Text(tile.subtitle, style = MaterialTheme.typography.bodyMedium, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                tile.badge?.let { Badge(it, filled) }
-            }
-        } else {
-            Column(Modifier.fillMaxSize().padding(if (big) 16.dp else 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconChip(tile.icon, if (big) 48.dp else 34.dp, filled)
-                    Spacer(Modifier.weight(1f))
-                    tile.badge?.let { Badge(it, filled) }
-                }
-                Spacer(Modifier.weight(1f))
-                Text(
-                    tile.title,
-                    style = if (big) DisplayTitle else MaterialTheme.typography.titleMedium,
-                    color = content, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                Text(tile.subtitle, style = MaterialTheme.typography.bodySmall, color = sub, maxLines = if (big) 2 else 1, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.fillMaxWidth().height(34.dp), contentAlignment = Alignment.Center) {
+            Text(tile.glyph, color = glyphColor, fontSize = 26.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            tile.badge?.let { b ->
+                Box(
+                    Modifier.align(Alignment.TopEnd).padding(end = 2.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (primary) Color.Black.copy(alpha = 0.18f) else palette.accent.copy(alpha = if (palette.isDark) 0.22f else 0.14f))
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                ) { Text(b.substringBefore(' '), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (primary) palette.onAccent else glyphColor, maxLines = 1) }
             }
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            tile.title,
+            style = MaterialTheme.typography.labelMedium.let { if (tile.title.length > 8) it.copy(fontSize = 10.5.sp, letterSpacing = 0.sp) else it },
+            fontWeight = FontWeight.Bold, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        Text(tile.meta, style = MaterialTheme.typography.labelSmall, color = subColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
-}
-
-private val DisplayTitle: TextStyle
-    @Composable get() = MaterialTheme.typography.headlineSmall.copy(fontFamily = Unbounded, fontWeight = FontWeight.Bold)
-
-@Composable
-private fun IconChip(icon: ImageVector, size: Dp, onFilled: Boolean) {
-    val palette = LocalMtPalette.current
-    val bg = if (onFilled) Color.Black.copy(alpha = 0.14f) else palette.accent.copy(alpha = if (palette.isDark) 0.16f else 0.12f)
-    val tint = if (onFilled) palette.onAccent else if (palette.isDark) palette.accentBright else palette.accent
-    Box(
-        Modifier.size(size).clip(RoundedCornerShape(size * 0.32f)).background(bg),
-        contentAlignment = Alignment.Center,
-    ) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.52f)) }
-}
-
-@Composable
-private fun Badge(text: String, onFilled: Boolean) {
-    val palette = LocalMtPalette.current
-    Box(
-        Modifier.clip(RoundedCornerShape(50))
-            .background(if (onFilled) Color.Black.copy(alpha = 0.16f) else palette.textPrimary.copy(alpha = 0.08f))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-    ) { Text(text, style = MaterialTheme.typography.labelMedium, color = if (onFilled) palette.onAccent else palette.textPrimary, fontWeight = FontWeight.Bold, maxLines = 1) }
 }
 
 // ---- Feed items ------------------------------------------------------------------------------------

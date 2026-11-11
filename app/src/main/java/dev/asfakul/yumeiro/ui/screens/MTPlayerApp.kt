@@ -367,6 +367,7 @@ fun MTPlayerApp(
                             Screen.Music.route -> !musicOnline
                             else -> true
                         },
+                        offline = !isOnline,
                     )
                 }
             },
@@ -1116,10 +1117,11 @@ fun MTPlayerApp(
         // Offline: a slim banner under the status bar; local music and videos keep working.
         // Hidden over full-screen views (Now Playing, pages) so it never covers their top buttons.
         AnimatedVisibility(
-            visible = !isOnline && !showSplash && activePlayingVideo == null && appPage == null &&
+            // Tabs show "Offline" inside their header; the floating pill is only for sub-pages.
+            visible = !isOnline && isSubpage && !showSplash && activePlayingVideo == null && appPage == null &&
                 !(isNowPlayingExpanded && playbackState.currentTrack != null),
             enter = fadeIn(tween(200)), exit = fadeOut(tween(200)),
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier.align(Alignment.BottomCenter),
         ) { dev.asfakul.yumeiro.ui.components.OfflineBanner() }
 
         // Popups take turns: never during splash, video, PiP, the update dialog or an open page.
