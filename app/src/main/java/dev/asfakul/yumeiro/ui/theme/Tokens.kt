@@ -32,9 +32,9 @@ object Yume {
     val space24 = 24.dp
     val space32 = 32.dp
     /** Page side margin used by every tab and sub-page. */
-    val gutter = 20.dp
+    val gutter = 16.dp
     /** Gap between two sections of a page. */
-    val sectionGap = 28.dp
+    val sectionGap = 24.dp
 
     // ---- Touch -------------------------------------------------------------------------------
     /** Minimum touch target (Android accessibility guidance: 48×48dp). */

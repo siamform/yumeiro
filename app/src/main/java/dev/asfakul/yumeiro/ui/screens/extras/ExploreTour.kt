@@ -106,15 +106,15 @@ data class TourStop(
 object ExploreTour {
     val stops: List<TourStop> = listOf(
         TourStop("home", "topbar_title", "Home is your starting point",
-            "It greets you, shows what's waiting — new episodes, where you left off — and keeps every feature in spaces you can fold.", TourPlace.HOME),
+            "It greets you, shows what's waiting — new episodes, where you left off — and keeps every feature in Spaces — tap Show all for the rest.", TourPlace.HOME),
         TourStop("tab_music", "nav_tab_music", "Music",
             "Your songs and YouTube Music live here. Tap Music to open it.", TourPlace.HOME, advanceOnRoute = "music"),
         TourStop("music_source", "topbar_title", "Choose where music comes from",
-            "Tap the title to switch between On device, Online and Mix. Try it now.", TourPlace.MUSIC, menuStop = true),
+            "Tap the pill next to the title to switch between On device, Online and Mix. Try it now.", TourPlace.MUSIC, menuStop = true),
         TourStop("tab_videos", "nav_tab_videos", "Videos and streaming",
             "Tap Videos. Extensions, YouTube, this phone's videos and Live TV are all in one place.", TourPlace.MUSIC, advanceOnRoute = "videos"),
         TourStop("video_source", "topbar_title", "Pick what to watch",
-            "The title switches between Yumix, YouTube, Device and Live TV. Each keeps its own screen and search.", TourPlace.VIDEOS_YUMIX, menuStop = true),
+            "The pill next to the title switches between Yumix, YouTube, Device and Live TV. Each keeps its own screen and search.", TourPlace.VIDEOS_YUMIX, menuStop = true),
         TourStop("yumix", "yumix_sources", "Extensions and sources",
             "Get sources from the market, or manage the ones you have. Yumix shows what they offer.", TourPlace.VIDEOS_YUMIX),
         TourStop("tab_library", "nav_tab_library", "Library",

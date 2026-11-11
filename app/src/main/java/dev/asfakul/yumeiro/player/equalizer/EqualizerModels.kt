@@ -13,7 +13,10 @@ data class EqualizerBand(
     val maxLevelMb: Short = 1500
 ) {
     val displayFrequency: String
-        get() = if (centerFreqHz >= 1000) {
+        get() = if (centerFreqHz <= 0) {
+            // Some audio drivers don't report a centre frequency; never show "0Hz".
+            "Band ${bandIndex + 1}"
+        } else if (centerFreqHz >= 1000) {
             val khz = centerFreqHz / 1000f
             if (khz % 1f == 0f) "${khz.toInt()}kHz" else "${String.format(java.util.Locale.US, "%.1f", khz)}kHz"
         } else {

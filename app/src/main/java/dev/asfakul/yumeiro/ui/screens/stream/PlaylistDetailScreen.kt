@@ -153,7 +153,7 @@ fun PlaylistDetailScreen(
     fun msg(text: String) = AppMessages.show(context, text)
     fun fail(text: String) = AppMessages.error(context, text)
     fun launchSafe(onError: (String) -> Unit = ::fail, block: suspend () -> Unit) = scope.launch {
-        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(e.message ?: "Something went wrong") }
+        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.")) }
     }
 
     LaunchedEffect(Unit) { runCatching { PlaylistStore.init(app) }; storeReady = true }
@@ -273,7 +273,7 @@ fun PlaylistDetailScreen(
                 LoadState.NotFound -> StateMessage(
                     icon = Icons.Default.SearchOff,
                     title = if (isOpened) "No list is open" else "Playlist not found",
-                    message = if (isOpened) "Open a playlist link or an M3U file from the Stream tab." else "It may have been deleted or renamed. Your other playlists are still on the Stream tab.",
+                    message = if (isOpened) "Open a playlist link or an M3U file from Videos → Live TV." else "It may have been deleted or renamed. Your other playlists are still in Videos → Live TV.",
                     primary = "Back to Stream" to onBack,
                     secondary = "Browse playlist market" to onOpenMarket,
                     testTag = "playlist_not_found",
@@ -332,7 +332,7 @@ fun PlaylistDetailScreen(
                             channels.isEmpty() -> item(key = "empty") {
                                 StateMessage(
                                     icon = Icons.Default.LiveTv, title = if (editable) "No streams yet" else "This playlist is empty",
-                                    message = if (editable) "Save streams here from the Stream tab or from any other playlist." else "The source has no channels right now. Pull down to try again later.",
+                                    message = if (editable) "Save streams here from Videos → Live TV or from any other playlist." else "The source has no channels right now. Pull down to try again later.",
                                     primary = if (editable) null else "Refresh" to { refresh() },
                                     testTag = "playlist_empty",
                                 )
@@ -348,7 +348,7 @@ fun PlaylistDetailScreen(
                                 val (index, ch) = v
                                 StreamRow(
                                     ch, subtitle = ch.group ?: ch.resolvedFormat().label,
-                                    onClick = { runCatching { IncomingMedia.open(context, ch) }.onFailure { fail("Can't play this stream: ${it.message}") } },
+                                    onClick = { runCatching { IncomingMedia.open(context, ch) }.onFailure { fail("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") } },
                                     onAdd = if (editable) null else ({ addTarget = ch }),
                                     onEditIcon = if (editable) ({ editChannel = index to ch }) else null,
                                     onDelete = if (editable) ({

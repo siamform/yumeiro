@@ -223,7 +223,7 @@ private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, paralle
                 Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(listOfNotNull(DownloadPrompt.sizeText(used).ifBlank { "Nothing" } + " used", if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
+                    Text(listOfNotNull((DownloadPrompt.sizeText(used).takeIf { it.isNotBlank() && used > 0 }?.let { "$it used" } ?: "No space used yet"), if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     Text("Auto-delete: ${DownloadSettings.autoDeleteLabel(days)} · Quality: ${DownloadSettings.qualityLabel(quality)} · $parallel at once",
                         color = TextTertiary, fontSize = 12.sp)

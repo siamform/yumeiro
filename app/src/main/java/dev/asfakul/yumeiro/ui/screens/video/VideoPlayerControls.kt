@@ -590,7 +590,7 @@ fun LockedFloatingUnlockButton(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Controls Locked • Tap to Unlock",
+                    text = "Controls locked · tap to unlock",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,

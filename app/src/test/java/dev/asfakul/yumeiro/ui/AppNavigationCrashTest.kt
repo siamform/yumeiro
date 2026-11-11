@@ -102,8 +102,14 @@ class AppNavigationCrashTest {
         if (tag.startsWith("quick_card_")) {
             // The bento grid lives in a LazyColumn; bring the tile into view on small test screens.
             rule.waitUntil(5_000) { rule.onAllNodesWithTag("home_list", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-            rule.onNodeWithTag("home_list", useUnmergedTree = true)
-                .performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
+            val list = rule.onNodeWithTag("home_list", useUnmergedTree = true)
+            if (runCatching { list.performScrollToNode(androidx.compose.ui.test.hasTestTag(tag)) }.isFailure) {
+                // Less-used spaces sit behind "Show all".
+                list.performScrollToNode(androidx.compose.ui.test.hasTestTag("home_spaces_all"))
+                rule.onNodeWithTag("home_spaces_all", useUnmergedTree = true).performClick()
+                rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
+                list.performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
+            }
             rule.waitForIdle()
         }
         rule.waitUntil(5_000) { rule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }

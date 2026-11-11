@@ -9,7 +9,12 @@ import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -106,6 +111,16 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
                         }
                     }
                     item("nearby") { SectionTitle("Rooms nearby", if (found.isEmpty()) "Looking on this Wi-Fi…" else null) }
+                    if (found.isEmpty()) item("nearby_empty") {
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GlassFill).padding(16.dp).testTag("wt_nearby_empty"),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SpotifyGreen)
+                            Spacer(Modifier.width(12.dp))
+                            Text("No rooms yet. When someone on the same Wi-Fi taps Host a room, it shows up here.", color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+                        }
+                    }
                     items(found, key = { it.name + it.host }) { f ->
                         HubCard(f.name, "${f.host}:${f.port}") {
                             TextButton(onClick = { joinTarget = "${f.host}:${f.port}" to f.name }) { Text("Join", color = SpotifyGreen) }

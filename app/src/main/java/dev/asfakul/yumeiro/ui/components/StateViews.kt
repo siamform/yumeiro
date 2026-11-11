@@ -65,6 +65,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -303,17 +304,21 @@ fun SubPageHeader(
     ) {
         YumeIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack, modifier = Modifier.testTag("subpage_back"))
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
+            // Editorial overline: the page's kanji in the accent, then the brand (設定 · YUMEIRO).
+            // The kanji is decorative, so TalkBack skips it; the title below is the heading.
+            val kana = if (kanaEnabled()) androidx.compose.runtime.remember(title) { Kana.forTitle(title) } else null
             Row(verticalAlignment = Alignment.CenterVertically) {
-                YumeiroMark()
-                // Quiet Japanese accent for the page (設定, 検索 …); decorative, so TalkBack skips it.
-                val kana = if (kanaEnabled()) androidx.compose.runtime.remember(title) { Kana.forTitle(title) } else null
-                if (kana != null) Text(
-                    "  ·  $kana", color = TextTertiary, fontSize = 10.sp, maxLines = 1,
-                    modifier = Modifier.testTag("subpage_kana").clearAndSetSemantics { },
-                )
+                if (kana != null) {
+                    Text(kana, style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = dev.asfakul.yumeiro.ui.theme.SpotifyGreen, maxLines = 1,
+                        modifier = Modifier.testTag("subpage_kana").clearAndSetSemantics { })
+                    Text("  ·  ", style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, modifier = Modifier.clearAndSetSemantics { })
+                }
+                Text("YUMEIRO", style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = if (kana != null) TextTertiary else dev.asfakul.yumeiro.ui.theme.SpotifyGreen, maxLines = 1,
+                    modifier = Modifier.testTag("yumeiro_mark").clearAndSetSemantics { })
             }
-            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("subpage_title"))
-            subtitle?.let { Text(it, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            Text(title, color = TextPrimary, style = dev.asfakul.yumeiro.ui.theme.PageTitleCompactStyle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp).testTag("subpage_title").semantics { heading() })
+            subtitle?.let { Text(it, color = TextSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp)) }
         }
         actions()
     }

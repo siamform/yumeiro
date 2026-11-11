@@ -223,25 +223,27 @@ private fun rememberStatuses(): Map<Category, Status> {
 private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
     BackHandler(onBack = onBack)
     var query by rememberSaveable { mutableStateOf("") }
+    var searching by rememberSaveable { mutableStateOf(false) }
     val statuses = rememberStatuses()
     val results = remember(query) { SettingsCatalog.search(query) }
 
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Settings", onBack = onBack, subtitle = "Yumeiro ${BuildConfig.VERSION_NAME}", handleBack = false, modifier = Modifier.testTag("settings_back_button")) {
+            dev.asfakul.yumeiro.ui.components.SearchIconButton(open = searching, onToggle = { searching = !searching; if (!searching) query = "" }, tag = "settings_search_toggle", description = "Search settings")
             IconButton(onClick = { onOpen(Category.GUIDE) }, modifier = Modifier.testTag("open_user_guide")) {
                 Icon(Icons.AutoMirrored.Filled.MenuBook, "User guide", tint = BrandGold)
             }
         }
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching, query = query, onQuery = { query = it }, placeholder = "Search settings", tag = "settings_search")
         LazyColumn(
             Modifier.fillMaxSize().testTag("settings_home"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            item("search") { SettingsSearchField(query) { query = it } }
 
             if (query.isNotBlank()) {
                 item("results") {
-                    if (results.isEmpty()) Text("No settings match \"$query\".", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("settings_no_results"))
+                    if (results.isEmpty()) Text("No settings match “$query”. Try a shorter word.", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("settings_no_results"))
                     else GlassGroup(Modifier.testTag("settings_results")) { CategoryList(results, statuses, onOpen) }
                 }
                 return@LazyColumn
@@ -274,24 +276,6 @@ private fun CategoryList(cats: List<Category>, statuses: Map<Category, Status>, 
     }
 }
 
-@Composable
-private fun SettingsSearchField(query: String, onChange: (String) -> Unit) {
-    androidx.compose.material3.OutlinedTextField(
-        value = query, onValueChange = onChange, singleLine = true,
-        placeholder = { Text("Search settings", color = TextTertiary) },
-        leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
-        trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onChange("") }) { Icon(Icons.Default.Close, "Clear", tint = TextSecondary) } },
-        shape = RoundedCornerShape(50),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
-        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = GlassFill, unfocusedContainerColor = GlassFill,
-            focusedBorderColor = SpotifyGreen.copy(alpha = 0.6f), unfocusedBorderColor = BrandGold.copy(alpha = 0.18f),
-            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, cursorColor = SpotifyGreen,
-        ),
-        modifier = Modifier.fillMaxWidth().testTag("settings_search"),
-    )
-}
-
 /** Three tiles that answer "is anything wrong?" at a glance: notifications, battery, network. */
 @Composable
 private fun HealthStrip(statuses: Map<Category, Status>, onOpen: (Category) -> Unit) {
@@ -300,7 +284,7 @@ private fun HealthStrip(statuses: Map<Category, Status>, onOpen: (Category) -> U
             val s = statuses[c]
             val look = c.look()
             val warn = s?.ok == false
-            val warnColor = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) Color(0xFFFFB74D) else Color(0xFFB45309)
+            val warnColor = dev.asfakul.yumeiro.ui.theme.WarnTone
             Column(
                 Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
                     .background(Brush.verticalGradient(listOf(look.tint.copy(alpha = if (warn) 0.10f else 0.16f), GlassFill)))

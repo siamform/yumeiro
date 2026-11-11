@@ -192,7 +192,7 @@ fun MiniPlayerBar(
                         Text(track.artist, style = MaterialTheme.typography.bodySmall, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     }
-                    MiniButton(Icons.Default.SkipPrevious, "Previous Track", content, onPrevious, "mini_player_previous_button")
+                    MiniButton(Icons.Default.SkipPrevious, "Previous track", content, onPrevious, "mini_player_previous_button")
                     Box(
                         Modifier
                             .size(48.dp)
@@ -209,7 +209,7 @@ fun MiniPlayerBar(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    MiniButton(Icons.Default.SkipNext, "Next Track", content, onNext, "mini_player_next_button")
+                    MiniButton(Icons.Default.SkipNext, "Next track", content, onNext, "mini_player_next_button")
                     MiniButton(Icons.Default.Close, "Stop and close player", sub, onClose, "mini_player_close_button", 20)
                 }
             }

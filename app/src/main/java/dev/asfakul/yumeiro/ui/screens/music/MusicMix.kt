@@ -136,8 +136,9 @@ fun MusicMixScreen(
             MixHeader("From YouTube Music", "Songs you played online", onOpenOnline)
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(onlineSongs.take(16), key = { "o_" + it.id }) { yt ->
-                    Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onPlayOnline(yt, onlineSongs) }.testTag("music_mix_online_${yt.id}")) {
+                    Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onPlayOnline(yt, onlineSongs) }.testTag("music_mix_online_${yt.id}").padding(bottom = 10.dp)) {
                         Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+                            TrackArtwork(artUri = null, key = yt.id, size = 128.dp, cornerRadius = 14.dp, modifier = Modifier.fillMaxSize())
                             AsyncImage(model = yt.thumbnail, contentDescription = yt.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         }
                         Spacer(Modifier.height(6.dp))
@@ -167,17 +168,15 @@ private fun MixLink(label: String, icon: androidx.compose.ui.graphics.vector.Ima
 
 @Composable
 private fun MixHeader(title: String, subtitle: String, onMore: (() -> Unit)? = null) {
-    val p = LocalMtPalette.current
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = p.textPrimary)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = p.textTertiary)
-        }
-        if (onMore != null) Text(
-            "Open", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onMore).padding(horizontal = 12.dp, vertical = 8.dp),
-        )
+    val kana = when (title) {
+        "Most played" -> "愛聴"; "Played recently" -> "最近"; "New on this phone" -> "新着"; "From YouTube Music" -> "配信"
+        else -> null
     }
+    dev.asfakul.yumeiro.ui.components.YuSection(
+        kana = kana, label = subtitle, title = title,
+        modifier = Modifier.padding(start = 16.dp, end = 8.dp), top = 20.dp,
+        action = if (onMore != null) "Open" else null, onAction = onMore,
+    )
 }
 
 @Composable
@@ -187,7 +186,7 @@ private fun TrackShelf(title: String, subtitle: String, shelfTracks: List<AudioT
     MixHeader(title, subtitle)
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(tracks, key = { title + it.id }) { t ->
-            Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onPlay(t, tracks) }) {
+            Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onPlay(t, tracks) }.padding(bottom = 10.dp)) {
                 TrackArtwork(artUri = t.albumArtUri, key = t.id, size = 128.dp, cornerRadius = 14.dp, contentDescription = t.album)
                 Spacer(Modifier.height(6.dp))
                 Text(t.title, style = MaterialTheme.typography.titleSmall, color = if (t.id == currentId) p.accent else p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)

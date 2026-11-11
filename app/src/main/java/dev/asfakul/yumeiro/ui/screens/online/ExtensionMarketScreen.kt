@@ -111,6 +111,8 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
     var repoFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var showRepoDialog by remember { mutableStateOf(false) }
     var showLanguages by remember { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var showFilters by remember { mutableStateOf(false) }
 
     suspend fun load(force: Boolean) {
         refreshing = true
@@ -151,6 +153,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             }
             .toList()
     }
+    val activeFilters = (if (category != "All") 1 else 0) + (if (language != null) 1 else 0) + (if (sort != MarketSort.TOP) 1 else 0) + (if (repoFilter != null) 1 else 0)
     val repos = remember(data) { data?.repos.orEmpty().sortedWith(compareByDescending<ExtensionSources.RepoListing> { it.origin == "user" }.thenByDescending { it.verified }.thenByDescending { it.stars ?: 0 }.thenByDescending { it.count }) }
 
     fun install(remote: RemoteExtension) {
@@ -183,10 +186,18 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             title = "Extension market", onBack = onBack,
             subtitle = data?.let { d -> "${safe.count { it.primary }} extensions · ${d.repos.size} repositories" } ?: "Loading…",
         ) {
+            if (tab != MarketTab.REPOS) {
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "market_search_toggle", "Search the market")
+            }
+            if (tab == MarketTab.DISCOVER) dev.asfakul.yumeiro.ui.components.FilterIconButton(activeFilters, { showFilters = true }, "market_filter")
             IconButton(onClick = { showRepoDialog = true }, modifier = Modifier.testTag("market_add_repo")) { Icon(Icons.Default.Add, "Add repository", tint = TextPrimary) }
         }
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(
+            open = tab != MarketTab.REPOS && (searchOpen || query.isNotEmpty()), query = query, onQuery = { query = it },
+            placeholder = "Name, site, author or repository", tag = "market_search",
+        )
         // Tabs
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(22.dp)).background(GlassFill).padding(4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(22.dp)).background(GlassFill).padding(4.dp)) {
             MarketTab.entries.forEach { t ->
                 val sel = t == tab
                 val label = when (t) {
@@ -201,35 +212,19 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 ) { Text(label, color = if (sel) OnAccent else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
             }
         }
-        if (tab != MarketTab.REPOS) {
-            OutlinedTextField(
-                value = query, onValueChange = { query = it }, singleLine = true,
-                placeholder = { Text("Search name, site, author") },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear", tint = TextSecondary) } },
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SpotifyGreen, unfocusedBorderColor = GlassFill, focusedContainerColor = GlassFill, unfocusedContainerColor = GlassFill),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("market_search"),
-            )
-        }
-        if (tab == MarketTab.DISCOVER) {
-            FlowRow(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                categories.forEach { c -> OnlineChip(c, c == category, { category = c }, Modifier.testTag("market_cat_$c")) }
-            }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box {
-                    OnlineChip(language?.let { "Language: ${it.uppercase()}" } ?: "Any language", language != null, { showLanguages = true }, Modifier.testTag("market_language"))
-                    DropdownMenu(expanded = showLanguages, onDismissRequest = { showLanguages = false }) {
-                        DropdownMenuItem(text = { Text("Any language") }, onClick = { language = null; showLanguages = false })
-                        languages.take(40).forEach { l -> DropdownMenuItem(text = { Text(languageName(l)) }, onClick = { language = l; showLanguages = false }) }
-                    }
-                }
-                MarketSort.entries.forEach { s2 -> OnlineChip(s2.label, s2 == sort, { sort = s2 }) }
-            }
-            repoFilter?.let { rf ->
-                val name = repos.firstOrNull { it.url.equals(rf, true) }?.name ?: ExtensionFormats.repoNameFromUrl(rf)
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OnlineChip("Repository: $name  ✕", true, { repoFilter = null }, Modifier.testTag("market_repo_filter"))
+        // Only what is applied shows on the page (one slim row); everything else lives in the sheet.
+        if (tab == MarketTab.DISCOVER && activeFilters > 0) {
+            androidx.compose.foundation.lazy.LazyRow(
+                Modifier.fillMaxWidth().testTag("market_active_filters"),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (category != "All") item("c") { OnlineChip("$category  ✕", true, { category = "All" }, Modifier.testTag("market_active_category")) }
+                language?.let { l -> item("l") { OnlineChip("${languageName(l)}  ✕", true, { language = null }, Modifier.testTag("market_active_language")) } }
+                if (sort != MarketSort.TOP) item("s") { OnlineChip("${sort.label}  ✕", true, { sort = MarketSort.TOP }) }
+                repoFilter?.let { rf ->
+                    val name = repos.firstOrNull { it.url.equals(rf, true) }?.name ?: ExtensionFormats.repoNameFromUrl(rf)
+                    item("r") { OnlineChip("$name  ✕", true, { repoFilter = null }, Modifier.testTag("market_repo_filter")) }
                 }
             }
         }
@@ -290,6 +285,28 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+
+    if (showFilters) dev.asfakul.yumeiro.ui.components.FilterSheet(
+        onDismiss = { showFilters = false },
+        onReset = if (activeFilters > 0) ({ category = "All"; language = null; sort = MarketSort.TOP; repoFilter = null }) else null,
+        resultCount = visible.size, tag = "market_filter_sheet",
+    ) {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Sort by") {
+            MarketSort.entries.forEach { s2 -> OnlineChip(s2.label, s2 == sort, { sort = s2 }, Modifier.testTag("market_sort_${s2.name.lowercase()}")) }
+        }
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Category") {
+            categories.forEach { c -> OnlineChip(c, c == category, { category = c }, Modifier.testTag("market_cat_$c")) }
+        }
+        if (languages.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterGroup("Language") {
+            OnlineChip("Any", language == null, { language = null }, Modifier.testTag("market_language"))
+            languages.take(if (showLanguages) 60 else 11).forEach { l -> OnlineChip(languageName(l), l == language, { language = l }, Modifier.testTag("market_lang_$l")) }
+            if (!showLanguages && languages.size > 11) OnlineChip("+${languages.size - 11} more", false, { showLanguages = true }, Modifier.testTag("market_lang_more"))
+        }
+        repoFilter?.let { rf ->
+            val name = repos.firstOrNull { it.url.equals(rf, true) }?.name ?: ExtensionFormats.repoNameFromUrl(rf)
+            dev.asfakul.yumeiro.ui.components.FilterGroup("Repository") { OnlineChip("$name  ✕", true, { repoFilter = null }) }
         }
     }
 

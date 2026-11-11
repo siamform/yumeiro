@@ -34,4 +34,13 @@ class NavigationFlowTest {
         ScrollMemory.put("home", 0, 0, now = 3_000L)
         assertNull(ScrollMemory.get("home", now = 3_000L))
     }
+
+    @Test fun staticPagesAreReusedInsteadOfStacked() {
+        val sub = dev.asfakul.yumeiro.ui.navigation.SubNav
+        org.junit.Assert.assertTrue(sub.reusable(dev.asfakul.yumeiro.ui.navigation.Screen.Extensions.route))
+        org.junit.Assert.assertTrue(sub.reusable(dev.asfakul.yumeiro.ui.navigation.Screen.ExtensionMarket.route))
+        org.junit.Assert.assertFalse(sub.reusable("videos/online/title?api=api&url=https%3A%2F%2Fx%2Fy"))
+        org.junit.Assert.assertFalse(sub.reusable(dev.asfakul.yumeiro.ui.navigation.Screen.SourcesHub.route(1)))
+        org.junit.Assert.assertFalse(sub.reusable("stream/playlist/abc"))
+    }
 }

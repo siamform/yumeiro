@@ -68,6 +68,6 @@ class PlaybackRecoveryTest {
         val drm = r.decide(facts(PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED), true, true) as RecoveryAction.Fail
         assertTrue(drm.message.contains("doesn't bypass DRM"))
         val dec = r.decide(facts(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED), true, true) as RecoveryAction.Fail
-        assertEquals("Unsupported Video Format", dec.title)
+        assertEquals("Unsupported video format", dec.title)
     }
 }

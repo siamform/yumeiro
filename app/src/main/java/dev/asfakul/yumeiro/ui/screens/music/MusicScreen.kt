@@ -169,7 +169,7 @@ fun MusicScreen(
                     ) {
                         Icon(
                             imageVector = if (isSelectionMode) Icons.Default.CheckCircle else Icons.Default.SelectAll,
-                            contentDescription = "Select Mode",
+                            contentDescription = "Select mode",
                             tint = if (isSelectionMode) SpotifyGreen else TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -190,7 +190,7 @@ fun MusicScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Sort,
-                                contentDescription = "Sort Options",
+                                contentDescription = "Sort options",
                                 tint = SpotifyGreen,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -198,7 +198,7 @@ fun MusicScreen(
                             val sortLabel = when (currentSort) {
                                 TrackSort.TITLE_ASC -> "A to Z"
                                 TrackSort.TITLE_DESC -> "Z to A"
-                                TrackSort.RECENTLY_ADDED -> "Recently Added"
+                                TrackSort.RECENTLY_ADDED -> "Recently added"
                                 TrackSort.DURATION -> "Duration"
                                 TrackSort.ARTIST -> "Artist"
                                 TrackSort.ALBUM -> "Album"
@@ -220,7 +220,7 @@ fun MusicScreen(
                                 val label = when (sortOption) {
                                     TrackSort.TITLE_ASC -> "Title (A to Z)"
                                     TrackSort.TITLE_DESC -> "Title (Z to A)"
-                                    TrackSort.RECENTLY_ADDED -> "Recently Added"
+                                    TrackSort.RECENTLY_ADDED -> "Recently added"
                                     TrackSort.DURATION -> "Duration"
                                     TrackSort.ARTIST -> "Artist"
                                     TrackSort.ALBUM -> "Album"
@@ -260,7 +260,7 @@ fun MusicScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shuffle,
-                            contentDescription = "Shuffle All",
+                            contentDescription = "Shuffle all",
                             tint = OnAccent,
                             modifier = Modifier.size(18.dp)
                         )
@@ -291,7 +291,7 @@ fun MusicScreen(
                         title = if (activeTab == 4) "No favorite songs yet" else "No audio files detected",
                         subtitle = if (activeTab == 4) "Tap the heart icon on any song to add it to your favorites."
                         else "Place MP3, FLAC, M4A, OGG, or WAV files in local storage and tap Rescan.",
-                        buttonText = if (activeTab == 4) "Browse Songs" else "Scan Storage",
+                        buttonText = if (activeTab == 4) "Browse songs" else "Scan storage",
                         onButtonClick = if (activeTab == 4) { { onTabChange(0) } } else onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -331,8 +331,8 @@ fun MusicScreen(
                 if (albums.isEmpty()) {
                     EmptyMediaView(
                         title = "No albums found",
-                        subtitle = "Audio albums will appear here automatically when files are found.",
-                        buttonText = "Rescan Media",
+                        subtitle = "Albums appear here once songs are on this phone.",
+                        buttonText = "Scan again",
                         onButtonClick = onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -397,7 +397,7 @@ fun MusicScreen(
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = "${album.artist} • ${album.trackCount} tracks",
+                                                text = "${album.artist} · ${if (album.trackCount == 1) "1 song" else "${album.trackCount} songs"}",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary
                                             )
@@ -433,7 +433,7 @@ fun MusicScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Play Album", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text("Play album", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 }
                                             }
 
@@ -464,8 +464,8 @@ fun MusicScreen(
                 if (artists.isEmpty()) {
                     EmptyMediaView(
                         title = "No artists found",
-                        subtitle = "Artists will be indexed automatically from your on-device audio files.",
-                        buttonText = "Rescan Media",
+                        subtitle = "Artists appear here once songs are on this phone.",
+                        buttonText = "Scan again",
                         onButtonClick = onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -519,7 +519,7 @@ fun MusicScreen(
                                                 color = TextPrimary
                                             )
                                             Text(
-                                                text = "${artist.trackCount} tracks • ${artist.albumCount} albums",
+                                                text = "${if (artist.trackCount == 1) "1 song" else "${artist.trackCount} songs"} · ${if (artist.albumCount == 1) "1 album" else "${artist.albumCount} albums"}",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary
                                             )
@@ -555,7 +555,7 @@ fun MusicScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Play All", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text("Play all", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 }
                                             }
 
@@ -586,8 +586,8 @@ fun MusicScreen(
                 if (folders.isEmpty()) {
                     EmptyMediaView(
                         title = "No music folders found",
-                        subtitle = "Audio directories on internal storage will appear here.",
-                        buttonText = "Rescan Folders",
+                        subtitle = "Folders that hold songs show up here.",
+                        buttonText = "Scan again",
                         onButtonClick = onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -601,13 +601,13 @@ fun MusicScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(folders, key = { "f_${it.path}_${it.name}" }) { folder ->
-                            val isExpanded = expandedFolderPath == folder.name
+                            val isExpanded = expandedFolderPath == folder.path
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(20.dp))
                                     .clickable {
-                                        expandedFolderPath = if (isExpanded) null else folder.name
+                                        expandedFolderPath = if (isExpanded) null else folder.path
                                     }
                                     .testTag("folder_card_${folder.name}"),
                                 shape = RoundedCornerShape(20.dp),
@@ -638,10 +638,18 @@ fun MusicScreen(
                                                 text = folder.name,
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
-                                                color = TextPrimary
+                                                color = TextPrimary,
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = "${folder.trackCount} songs in this folder",
+                                                // The path tells apart two folders with the same name.
+                                                text = listOfNotNull(
+                                                    if (folder.trackCount == 1) "1 song" else "${folder.trackCount} songs",
+                                                    shortFolderPath(folder.path),
+                                                ).joinToString(" · "),
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.MiddleEllipsis,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary
                                             )
@@ -677,7 +685,7 @@ fun MusicScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Play Folder", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text("Play folder", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 }
                                             }
 
@@ -732,3 +740,13 @@ fun musicSourceOptions(songCount: Int, online: Boolean): List<dev.asfakul.yumeir
         androidx.compose.material.icons.Icons.Default.Shuffle, "music_source_mix",
     ),
 )
+
+
+/** "/storage/emulated/0/Music/Anime" → "Music/Anime"; null when the path adds nothing. */
+internal fun shortFolderPath(path: String): String? {
+    // MediaStore sometimes reports "<unknown>" for a segment; drop those rather than show them.
+    val p = path.trim().split('/').filterNot { it.equals("<unknown>", true) }.joinToString("/").trimEnd('/')
+    if (p.isBlank()) return null
+    val short = p.replace(Regex("^/storage/emulated/\\d+/?"), "").replace(Regex("^/storage/([0-9A-F]{4}-[0-9A-F]{4})/?"), "SD card/")
+    return short.trimEnd('/').ifBlank { null }
+}

@@ -274,7 +274,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
             } else {
                 item(key = "empty") {
                     Text(
-                        "Open an M3U playlist in the Stream tab to switch channels from here.",
+                        "Open an M3U playlist in Videos → Live TV to switch channels from here.",
                         color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp),
                     )
                 }

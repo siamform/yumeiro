@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,7 +87,7 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
 @Composable
 internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.dp, horizontal: Boolean = false, showSource: Boolean = false, modifier: Modifier? = null, progress: Float? = null) {
     val w = if (horizontal) width * 1.6f else width
-    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster")) {
+    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster").padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             val badge = item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }
@@ -249,5 +250,5 @@ internal fun Pill(text: String, color: Color = SpotifyGreen) {
     }
 }
 
-internal val WarnColor = Color(0xFFFFB74D)
+internal val WarnColor: Color @Composable @ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.WarnTone
 internal val ErrorColor = Color(0xFFFF6B6B)

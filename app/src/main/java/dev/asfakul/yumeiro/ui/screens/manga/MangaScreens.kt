@@ -221,8 +221,10 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
 @Composable
 private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (MangaItem) -> Unit) {
     Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable { onClick(m) }) {
-        AsyncImage(model = m.cover, contentDescription = m.title, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill))
+        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.MenuBook, null, tint = TextTertiary, modifier = Modifier.size(28.dp))
+            AsyncImage(model = m.cover, contentDescription = m.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
         Spacer(Modifier.height(6.dp))
         Text(m.title, color = TextPrimary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
         if (subtitle != null) Text(subtitle, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -259,8 +261,10 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item("head") {
                 Row {
-                    AsyncImage(item.cover, null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.width(112.dp).aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill))
+                    Box(Modifier.width(112.dp).aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.MenuBook, null, tint = TextTertiary, modifier = Modifier.size(28.dp))
+                        AsyncImage(item.cover, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)

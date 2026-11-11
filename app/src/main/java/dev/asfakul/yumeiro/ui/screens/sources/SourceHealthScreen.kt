@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -119,7 +120,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        SubPageHeader(title = "Source status", onBack = onBack, subtitle = if (results.isEmpty()) "${apis.size} sources installed" else "${results.count { it.value.ok }} of ${results.size} working") {
+        SubPageHeader(title = "Source status", onBack = onBack, subtitle = if (results.isEmpty()) (when (apis.size) { 0 -> "No sources installed yet"; 1 -> "1 source installed"; else -> "${apis.size} sources installed" }) else "${results.count { it.value.ok }} of ${results.size} working") {
             if (results.isNotEmpty()) IconButton(onClick = ::share) { Icon(Icons.Default.Share, "Share report", tint = TextSecondary) }
         }
         if (running) LinearProgressIndicator(progress = { if (apis.isEmpty()) 0f else done / apis.size.toFloat() }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
@@ -134,6 +135,15 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                 androidx.compose.material3.TextButton(onClick = { runCatching { uri.openUri("https://yumeiro.click/status") } }, contentPadding = PaddingValues(0.dp)) {
                     Text("See the public status of every market repository", color = SpotifyGreen, fontSize = 13.sp)
                 }
+            }
+            if (apis.isEmpty()) item("empty") {
+                dev.asfakul.yumeiro.ui.components.StateMessage(
+                    icon = Icons.Default.Extension,
+                    title = "Nothing to check yet",
+                    message = "Install a Yumix source from Videos, then come back to see which ones work on your network.",
+                    modifier = Modifier.padding(top = 24.dp),
+                    testTag = "source_status_empty",
+                )
             }
             items(apis, key = { it.name }) { a ->
                 val h = results[a.name]

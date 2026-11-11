@@ -312,7 +312,7 @@ fun ResumePill(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Start Over",
+                    text = "Start over",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )

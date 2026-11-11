@@ -135,6 +135,10 @@ object OnlineSession {
             return
         }
         _state.value = s
+        dev.asfakul.yumeiro.data.PlayCounts.record(
+            app, dev.asfakul.yumeiro.data.PlayCounts.Kind.ONLINE, "${detail.api}|${detail.url}", detail.name, detail.api,
+            detail.posterUrl, detail.posterHeaders, api = detail.api, url = detail.url,
+        )
         resolve(app, resumeMs)
     }
 

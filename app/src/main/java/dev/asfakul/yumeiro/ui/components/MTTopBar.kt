@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -121,6 +122,11 @@ fun MTTopBar(
     /** The source menu under the title is open (chevron turns up). */
     titleExpanded: Boolean = false,
     titleTag: String? = null,
+    /** With [onTitleClick]: the current source, shown as a translucent pill next to the title ("Music  Mix ⌄"). */
+    sourceLabel: String? = null,
+    /** Replaces the inline library search (e.g. Yumix opens the all-extension search page). */
+    onSearchClick: (() -> Unit)? = null,
+    searchDescription: String = "Search your library",
 ) {
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     // The text last committed; suggestions hide until the user types something new.
@@ -228,21 +234,27 @@ fun MTTopBar(
                         Spacer(Modifier.height(2.dp))
                     }
                     // Narrow phones (≤ 380dp) get one step smaller so "Good morning" never clips.
-                    val titleStyle = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineLarge
+                    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
+                    val titleStyle = if (narrow) dev.asfakul.yumeiro.ui.theme.PageTitleCompactStyle else dev.asfakul.yumeiro.ui.theme.PageTitleStyle
                     if (onTitleClick == null) Text(
                         text = title,
                         style = titleStyle,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
-                    ) else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
+                    ) else if (sourceLabel != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The page title always shows in full; on narrow phones the pill gives way instead.
+                        Text(title, style = titleStyle, color = TextPrimary, maxLines = 1, softWrap = false)
+                        Spacer(Modifier.width(if (narrow) 6.dp else 10.dp))
+                        SourcePill(sourceLabel, titleExpanded, onTitleClick, titleTag, narrow, Modifier.weight(1f, fill = false))
+                    } else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
                 }
                 // One capsule for every header action (was three separate glass circles).
                 ActionCapsule(Modifier.tourTarget("topbar_actions")) {
                     if (showSearch) YumeIconButton(
                         icon = Icons.Default.Search,
-                        contentDescription = "Search your library",
-                        onClick = { isSearchExpanded = true },
+                        contentDescription = searchDescription,
+                        onClick = { if (onSearchClick != null) onSearchClick() else isSearchExpanded = true },
                         modifier = Modifier.testTag("topbar_search_action")
                     )
                     YumeIconButton(
@@ -343,5 +355,40 @@ private fun SourceTitle(title: String, style: androidx.compose.ui.text.TextStyle
                 modifier = Modifier.size(20.dp).rotate(turn),
             )
         }
+    }
+}
+
+
+/**
+ * The tab's source as a see-through glass pill ("Mix ⌄"): the translucent fill and hairline say
+ * "this changes" while the page title stays put. Animates when the source changes.
+ */
+@Composable
+private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, tag: String?, narrow: Boolean = false, modifier: Modifier = Modifier) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val reduced = reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "pillChevron")
+    val shape = RoundedCornerShape(50)
+    Row(
+        modifier.height(if (narrow) 30.dp else 34.dp).clip(shape)
+            .background(if (expanded) p.accent.copy(alpha = 0.22f) else p.textPrimary.copy(alpha = if (p.isDark) 0.08f else 0.06f))
+            .border(1.dp, if (expanded) p.accent.copy(alpha = 0.6f) else p.textPrimary.copy(alpha = if (p.isDark) 0.18f else 0.14f), shape)
+            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
+            .semantics { contentDescription = "Source: $label. ${if (expanded) "Menu open" else "Tap to change"}" }
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .padding(start = if (narrow) 9.dp else 12.dp, end = if (narrow) 3.dp else 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.animation.AnimatedContent(
+            modifier = Modifier.weight(1f, fill = false),
+            targetState = label,
+            transitionSpec = {
+                if (reduced) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap())
+                else (androidx.compose.animation.slideInVertically(YuMotion.enter(false, 300)) { it / 2 } + androidx.compose.animation.fadeIn(YuMotion.enter(false, 250))) togetherWith
+                    (androidx.compose.animation.slideOutVertically(YuMotion.exit(false, 160)) { -it / 2 } + androidx.compose.animation.fadeOut(YuMotion.exit(false, 120)))
+            },
+            label = "sourcePill",
+        ) { t -> Text(t, color = TextPrimary, fontSize = if (narrow) 12.sp else 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null, tint = p.accent, modifier = Modifier.size(18.dp).rotate(turn))
     }
 }

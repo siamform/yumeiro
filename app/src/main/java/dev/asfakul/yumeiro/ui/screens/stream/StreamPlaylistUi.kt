@@ -257,7 +257,7 @@ internal fun PlaylistEditDialog(
     fun run(block: suspend () -> Unit) {
         busy = true; error = null
         scope.launch {
-            try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: "Something went wrong" }
+            try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.") }
             busy = false
         }
     }

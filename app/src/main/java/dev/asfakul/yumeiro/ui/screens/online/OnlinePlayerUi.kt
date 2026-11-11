@@ -666,7 +666,7 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
                         }
                         fetching = null
                         link.onSuccess { onPick(dev.asfakul.yumeiro.online.OnlineSubtitle("${r.language.uppercase()} · ${r.provider}", it, emptyMap())) }
-                            .onFailure { dev.asfakul.yumeiro.ui.components.AppMessages.error(context, it.message ?: "Couldn't get the subtitle") }
+                            .onFailure { dev.asfakul.yumeiro.ui.components.AppMessages.error(context, dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't get the subtitle.")) }
                     }
                 }.padding(12.dp).testTag("online_subtitle_result"),
                 verticalAlignment = Alignment.CenterVertically,

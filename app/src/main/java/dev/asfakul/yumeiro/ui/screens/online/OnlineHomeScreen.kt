@@ -160,17 +160,14 @@ fun OnlineHomeScreen(
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
     Column(modifier.fillMaxSize().testTag("online_home")) {
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                shape = RoundedCornerShape(24.dp), color = GlassFill,
-                modifier = Modifier.weight(1f).height(48.dp).clickable(onClick = onOpenSearch).testTag("online_search_entry"),
-            ) {
-                Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Search every extension…", color = TextTertiary, fontSize = 13.sp)
-                }
-            }
+        // Search lives in the top bar (one magnifier per tab); this slim strip only says what feeds the
+        // page and keeps the market / extension manager one tap away.
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} extension${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
+                style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
+                modifier = Modifier.weight(1f).clickable(onClickLabel = "Manage extensions", onClick = onOpenExtensions).padding(vertical = 12.dp),
+            )
             Row(Modifier.tourTarget("yumix_sources")) {
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_market")) {
                 Icon(Icons.Default.Storefront, "Extension market", tint = TextPrimary)

@@ -54,6 +54,10 @@ object ErrorHelp {
         fun has(vararg k: String) = k.any { it in t }
         val out = mutableListOf<String>()
         when {
+            has("on device", "on this phone", "file not found", "filenotfound", "file was moved", "enoent") -> {
+                out += "The file was moved or deleted — rescan your music or videos"
+                out += "Check that the SD card or USB storage is still connected"
+            }
             has("broken link", "expected url scheme", "no scheme was found", "unexpected url") -> {
                 out += "The site sent a broken link for this source — pick another source from the list"
                 out += "Retry in a moment — sites often fix their links quickly"

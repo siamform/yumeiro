@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -90,15 +89,15 @@ import dev.asfakul.yumeiro.ui.theme.rememberGlassBorder
 
 @Composable
 internal fun LibrarySectionHeader(title: String, subtitle: String? = null, action: String? = null, onAction: (() -> Unit)? = null, testTag: String? = null) {
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            subtitle?.let { Text(it, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        }
-        if (action != null && onAction != null) Text(action, color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onAction).padding(horizontal = 8.dp, vertical = 4.dp)
-                .then(if (testTag != null) Modifier.testTag(testTag) else Modifier))
+    // Same editorial voice as Home: kanji · LABEL overline, then the title. The subtitle becomes the overline label.
+    val kana = when (title) {
+        "Jump back in" -> "続き"; "Playlists" -> "選曲"; "On repeat" -> "愛聴"; "Continue reading" -> "続読"; "Saved" -> "保存"
+        else -> null
     }
+    dev.asfakul.yumeiro.ui.components.YuSection(
+        kana = kana, label = subtitle ?: when (title) { "Saved" -> "Your shelf"; "Continue reading" -> "Pick up again"; else -> "Library" }, title = title,
+        top = 14.dp, action = action, onAction = onAction, actionTag = testTag,
+    )
 }
 
 /** Big accent card: the hero of each tab. */
@@ -202,7 +201,7 @@ internal fun LazyListScope.musicOverview(
     val favorites = allTracks.filter { it.isFavorite }
     item(key = "hero") {
         LibraryHero(
-            overline = "Your music", title = "Liked Songs",
+            overline = "Your music", title = "Liked songs",
             subtitle = if (favorites.isEmpty()) "Tap the heart on any song to keep it here" else songsLabel(favorites.size, favorites.sumOf { it.durationMs }),
             glyph = "夢", testTag = "lib_fav_card", onClick = onOpenMusic,
             trailing = {
@@ -240,7 +239,7 @@ internal fun LazyListScope.musicOverview(
         item(key = "recent") {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(recentlyPlayed.take(15), key = { "r_" + it.id }) { t ->
-                    Column(Modifier.width(132.dp).clip(RoundedCornerShape(16.dp)).clickable { onPlay(t, recentlyPlayed) }.testTag("lib_recent_${t.id}")) {
+                    Column(Modifier.width(132.dp).clip(RoundedCornerShape(16.dp)).clickable { onPlay(t, recentlyPlayed) }.testTag("lib_recent_${t.id}").padding(bottom = 10.dp)) {
                         TrackArtwork(t.albumArtUri, t.albumId, 132.dp, 16.dp)
                         Spacer(Modifier.height(8.dp))
                         Text(t.title, color = if (currentPlayingTrack?.id == t.id) SpotifyGreen else TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -263,7 +262,7 @@ internal fun LazyListScope.musicOverview(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             row.forEach { pl ->
                 val tracks = remember(pl.trackIds, trackMap) { pl.trackIds.mapNotNull { trackMap[it] } }
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).clickable { onOpenPlaylist(pl.id) }.testTag("playlist_item_${pl.id}")) {
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).clickable { onOpenPlaylist(pl.id) }.testTag("playlist_item_${pl.id}").padding(bottom = 10.dp)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) { PlaylistMosaic(tracks, pl.id, maxWidth) }
                     }
@@ -357,7 +356,7 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
 
 @Composable
 private fun ShelfCover(e: MangaLibrary.Entry, subtitle: String?, fill: Boolean = false, onClick: () -> Unit) {
-    Column((if (fill) Modifier.fillMaxWidth() else Modifier.width(108.dp)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick)) {
+    Column((if (fill) Modifier.fillMaxWidth() else Modifier.width(108.dp)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill)) {
             Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = TextTertiary, modifier = Modifier.align(Alignment.Center).size(28.dp))
             AsyncImage(e.cover, e.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())

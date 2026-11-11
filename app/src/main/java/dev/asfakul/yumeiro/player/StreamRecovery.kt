@@ -125,7 +125,7 @@ class PlaybackRecovery(
             "The data from this link isn't a media format the player understands${f.message?.let { " ($it)" }.orEmpty()}. If it's a web page, open it from the Stream tab so its player stream can be found.",
         )
         return RecoveryAction.Fail(
-            "Unsupported Video Format",
+            "Unsupported video format",
             "This device's hardware decoders could not play this file, or the media stream is corrupted.\n\n${f.message ?: "Playback error"}",
         )
     }

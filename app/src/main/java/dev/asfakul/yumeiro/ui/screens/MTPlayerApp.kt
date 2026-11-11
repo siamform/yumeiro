@@ -145,8 +145,17 @@ fun MTPlayerApp(
             }
         }
     }
+    // A page that is already open further down the stack is brought back instead of stacked again:
+    // Extensions → Market → "Manage" used to push a second Extensions page (and so on), so Back
+    // kept re-opening Extensions as if it had been tapped again.
     val navigateSub: (String) -> Unit = remember(navController) {
-        { route -> runCatching { navController.navigate(route) { launchSingleTop = true } } }
+        { route ->
+            runCatching {
+                if (!(dev.asfakul.yumeiro.ui.navigation.SubNav.reusable(route) && navController.popBackStack(route, inclusive = false))) {
+                    navController.navigate(route) { launchSingleTop = true }
+                }
+            }
+        }
     }
     val popSub: () -> Unit = remember(navController) {
         { if (navController.previousBackStackEntry != null) navController.popBackStack() }
@@ -369,14 +378,19 @@ fun MTPlayerApp(
                         // Home keeps the signature mark; Music and Videos show their source as the title.
                         title = when (currentRoute) {
                             Screen.Home.route -> greetingForNow()
-                            Screen.Music.route -> musicSourceTitle(musicMode)
-                            Screen.Videos.route -> videoSource.label
+                            Screen.Music.route -> "Music"
+                            Screen.Videos.route -> "Videos"
                             else -> topBarTitle
                         },
+                        sourceLabel = when (currentRoute) {
+                            Screen.Music.route -> musicSourceTitle(musicMode)
+                            Screen.Videos.route -> videoSource.label
+                            else -> null
+                        },
                         overline = when (currentRoute) {
-                            Screen.Home.route -> "◆ 夢色 YUMEIRO"
-                            Screen.Music.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("音楽", "Music", kanaOn)
-                            Screen.Videos.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("映像", "Videos", kanaOn)
+                            Screen.Home.route -> "◆ 夢色 · YUMEIRO"
+                            Screen.Music.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("音楽", "LISTEN", kanaOn)
+                            Screen.Videos.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("映像", "WATCH", kanaOn)
                             else -> dev.asfakul.yumeiro.ui.components.Kana.overline(dev.asfakul.yumeiro.ui.components.Kana.forTitle(topBarTitle), null, kanaOn)
                         },
                         onTitleClick = if (currentRoute == Screen.Music.route || currentRoute == Screen.Videos.route) {
@@ -392,10 +406,25 @@ fun MTPlayerApp(
                         onInboxClick = { dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX) },
                         unreadCount = inboxUnread,
                         // Videos (Hues / YouTube / device) and Stream have their own search box, so does online Music.
+                        // One search entry per tab, always the magnifier up here (no fixed boxes on the page).
                         showSearch = when (currentRoute) {
-                            Screen.Videos.route, Screen.Stream.route -> false
-                            Screen.Music.route -> musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.DEVICE
+                            Screen.Stream.route -> false
+                            Screen.Videos.route -> videoSource != dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE
+                            Screen.Music.route -> musicMode != dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX
                             else -> true
+                        },
+                        onSearchClick = when {
+                            currentRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE -> ({ navigateSub(Screen.OnlineSearch.route) })
+                            currentRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> ({ dev.asfakul.yumeiro.ui.components.TabSearch.toggle(dev.asfakul.yumeiro.ui.components.TabSearch.YT_VIDEO) })
+                            currentRoute == Screen.Music.route && musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE -> ({ dev.asfakul.yumeiro.ui.components.TabSearch.toggle(dev.asfakul.yumeiro.ui.components.TabSearch.YT_MUSIC) })
+                            else -> null
+                        },
+                        searchDescription = when {
+                            currentRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE -> "Search every extension"
+                            currentRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> "Search YouTube"
+                            currentRoute == Screen.Music.route && musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE -> "Search YouTube Music"
+                            currentRoute == Screen.Videos.route -> "Search videos on this phone"
+                            else -> "Search your library"
                         },
                         offline = !isOnline,
                     )
@@ -521,15 +550,7 @@ fun MTPlayerApp(
                                         dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, item)
                                     }
                                 },
-                                onlinePicks = { header ->
-                                    dev.asfakul.yumeiro.ui.screens.online.OnlineHomePicks(
-                                        onOpenTitle = openOnline,
-                                        onSeeAll = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
-                                        header = header,
-                                        onOpenRow = { row -> navigateSub(Screen.OnlineRow.route(row.api, row.title, row.pageName.orEmpty(), row.pageData.orEmpty())) },
-                                        showResume = false,
-                                    )
-                                }
+                                onOpenRow = { row -> navigateSub(Screen.OnlineRow.route(row.api, row.title, row.pageName.orEmpty(), row.pageData.orEmpty())) },
                             )
                             }
                         }
@@ -1341,10 +1362,12 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
+/**
+ * Every page that is not one of the bottom-bar tabs is a sub-page: it brings its own header (back,
+ * kanji overline, title), so the tab top bar and dock must not stack on top of it. Listing the
+ * tabs (not the sub-pages) means a new page can never get two headers again.
+ */
 private fun isSubRoute(route: String?): Boolean =
-    route == Screen.Settings.route || route == Screen.Equalizer.route ||
-        route == Screen.PlaylistDetail.route || route == Screen.Market.route ||
-        route == Screen.OnlineSearch.route || route == Screen.OnlineTitle.route ||
-        route == Screen.Extensions.route || route == Screen.ExtensionMarket.route ||
-        route == Screen.OnlineRow.route || route == Screen.OnlineHistory.route ||
-        route == Screen.OnlineLibrary.route || route == Screen.Downloads.route
+    route != null && route !in TabRoutes
+
+private val TabRoutes = setOf(Screen.Home.route, Screen.Music.route, Screen.Videos.route, Screen.Stream.route, Screen.Library.route)

@@ -75,7 +75,10 @@ class RedesignTourTest {
         val menu = Regex("^(music|video)_source_(?!switch|menu)").find(tag)?.groupValues?.get(1)
         if (menu != null && !exists(tag)) { waitFor("${menu}_source_switch"); rule.onNodeWithTag("${menu}_source_switch", true).performClick(); settle(500) }
         if (list != null) scrollTo(list, tag)
-        if (tag.startsWith("quick_card_")) scrollTo("home_list", tag)
+        if (tag.startsWith("quick_card_")) {
+            scrollTo("home_list", tag)
+            if (!exists(tag)) { scrollTo("home_list", "home_spaces_all"); rule.onNodeWithTag("home_spaces_all", true).performClick(); settle(600); scrollTo("home_list", tag) }
+        }
         waitFor(tag)
         rule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
         settle()
@@ -175,24 +178,29 @@ class RedesignTourTest {
         awaitHome()
         stop("home") { snap("01_home") }
         stop("home_sections") {
-            for ((i, t) in listOf("home_next_episodes", "home_episodes_empty", "quick_card_store", "home_sources_banner", "home_moods_retry",
-                "home_new_arrivals", "home_most_played", "home_feed_shuffle", "home_random_more").withIndex()) {
+            for ((i, t) in listOf("home_next_episodes", "home_episodes_empty", "home_continue_card", "quick_card_store", "home_moods",
+                "home_new_arrivals", "home_most_played", "home_feed", "home_random_more", "home_customize").withIndex()) {
                 if (runCatching { rule.onNodeWithTag("home_list", true).performScrollToNode(hasTestTag(t)) }.isSuccess) {
                     settle(300); snap("02_home_${"%02d".format(i)}_$t")
                 }
             }
             home()
         }
-        stop("home_folds") {
-            // Fold a space and a row, capture, then unfold: the choice is remembered in HomeLayout.
-            tap("home_space_toggle_keep", list = "home_list"); settle(500)
-            tap("home_fold_new", list = "home_list"); settle(500)
-            rule.onNodeWithTag("home_list", true).performScrollToNode(hasTestTag("home_space_keep")); settle(300)
-            snap("03_home_folded")
-            org.junit.Assert.assertFalse("folded space hides its tiles", exists("quick_card_manga"))
-            tap("home_space_toggle_keep", list = "home_list"); tap("home_fold_new", list = "home_list")
-            scrollTo("home_list", "quick_card_manga")
-            org.junit.Assert.assertTrue("unfolded space shows its tiles", exists("quick_card_manga"))
+        stop("home_layout") {
+            // Spaces: 8 tiles, the rest behind "Show all"; Customize Home hides/shows whole sections.
+            scrollTo("home_list", "home_spaces_all")
+            org.junit.Assert.assertFalse("less-used spaces start tucked away", exists("quick_card_audio_engine"))
+            tap("home_spaces_all", list = "home_list"); settle(500)
+            scrollTo("home_list", "quick_card_audio_engine")
+            org.junit.Assert.assertTrue("show all reveals every space", exists("quick_card_audio_engine"))
+            snap("03_home_spaces_all")
+            tap("home_spaces_all", list = "home_list"); settle(400)
+            tap("home_customize", list = "home_list"); waitFor("home_customize_sheet"); settle(600)
+            snap("03_home_customize", sheet = "home_customize_sheet", sheetColor = surfaceHigh)
+            tap("home_customize_moods"); settle(400)
+            org.junit.Assert.assertTrue("hiding a section is remembered", "moods" in dev.asfakul.yumeiro.ui.screens.home.HomeLayout.hidden.value)
+            tap("home_customize_moods"); settle(400)
+            back(); settle(400)
             runCatching { rule.onNodeWithTag("home_list", true).performScrollToIndex(0) }; settle(400)
         }
         stop("setup_guide") {

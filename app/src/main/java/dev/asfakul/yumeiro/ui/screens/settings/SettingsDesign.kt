@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -87,11 +89,20 @@ internal fun IconTile(icon: ImageVector, tint: Color, size: Int = 38) {
 /** Small caps label above a group of categories ("WATCH & LISTEN"). */
 @Composable
 internal fun GroupLabel(text: String, modifier: Modifier = Modifier) {
-    Row(modifier.padding(start = 4.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        dev.asfakul.yumeiro.ui.components.MoonPath(height = 12.dp)
-        Spacer(Modifier.width(8.dp))
-        Text(text.uppercase(), color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+    // Editorial overline (個性 · MAKE IT YOURS) — the same voice as Home's sections, with a kanji only where it fits.
+    val kana = when (text.lowercase()) {
+        "make it yours" -> "個性"; "watch & listen" -> "視聴"; "sources & accounts" -> "源"; "system" -> "仕組"
+        "help & about" -> "案内"; "permissions" -> "許可"; "clear data" -> "消去"; "follow & support" -> "応援"
+        "lock & incognito" -> "鍵"; "on-time alerts" -> "通知"; "anime" -> "アニメ"; "music" -> "音楽"
+        "movies & shows" -> "映画"; "use my account" -> "アカウント"
+        else -> null
     }
+    Text(
+        dev.asfakul.yumeiro.ui.components.kanaOverline(kana, text),
+        style = dev.asfakul.yumeiro.ui.theme.OverlineStyle,
+        maxLines = 1,
+        modifier = modifier.padding(start = 4.dp, top = 14.dp, bottom = 8.dp).semantics { heading() },
+    )
 }
 
 /** A glass card holding a column of rows, with the gold hairline. */
@@ -131,7 +142,7 @@ internal fun CategoryRow(
 
 @Composable
 internal fun StatusChip(text: String, ok: Boolean?) {
-    val c = when (ok) { true -> SpotifyGreen; false -> Color(0xFFFFB74D); null -> TextSecondary }
+    val c = when (ok) { true -> SpotifyGreen; false -> dev.asfakul.yumeiro.ui.theme.WarnTone; null -> TextSecondary }
     Surface(shape = RoundedCornerShape(50), color = c.copy(alpha = 0.14f)) {
         Text(text, color = c, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
     }

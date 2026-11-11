@@ -39,6 +39,7 @@ object BackgroundWork {
     /** Bump when periods/constraints change so existing installs pick up the new schedule. */
     private const val SCHEDULE_VERSION = 2
     private const val CATCH_UP = "background_catch_up"
+    private const val CATCH_UP_EPISODES = "background_catch_up_episodes"
     private const val CATCH_UP_GAP_MS = 15L * 60 * 1000
     private const val PREFS = "background_work"
 
@@ -79,14 +80,16 @@ object BackgroundWork {
         prefs.edit().putLong("catch_up_at", now).apply()
         val wm = runCatching { WorkManager.getInstance(c.applicationContext) }.getOrNull() ?: return
         val k = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        // Two independent jobs: a feed that is retrying (offline server, timeout) must never hold
+        // back the new-episode check, which only talks to the user's own extensions.
         runCatching {
-            wm.beginUniqueWork(CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).build())
-                .then(OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).build())
-                .enqueue()
+            wm.enqueueUniqueWork(CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).build())
+            wm.enqueueUniqueWork(CATCH_UP_EPISODES, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).build())
         }
     }
 
     private const val PUSH_CATCH_UP = "push_catch_up"
+    private const val PUSH_CATCH_UP_EPISODES = "push_catch_up_episodes"
     private const val PUSH_GAP_MS = 20L * 60 * 1000
 
     /**
@@ -103,9 +106,8 @@ object BackgroundWork {
         val k = constraints(c)
         val fast = androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST
         runCatching {
-            wm.beginUniqueWork(PUSH_CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).setExpedited(fast).build())
-                .then(OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).setExpedited(fast).build())
-                .enqueue()
+            wm.enqueueUniqueWork(PUSH_CATCH_UP, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<DiscoveryWorker>().setConstraints(k).setExpedited(fast).build())
+            wm.enqueueUniqueWork(PUSH_CATCH_UP_EPISODES, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<NewEpisodesWorker>().setConstraints(k).setExpedited(fast).build())
         }
     }
 

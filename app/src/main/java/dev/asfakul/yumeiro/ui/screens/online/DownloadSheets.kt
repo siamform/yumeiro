@@ -213,7 +213,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
         DownloadSettings.init(context)
         runCatching { YtDownloads.optionsFor(context, item.id).second }
             .onSuccess { choices = it; if (it.isEmpty()) error = "No downloadable formats for this video" }
-            .onFailure { error = it.message ?: "Couldn't load qualities" }
+            .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't load qualities.") }
     }
     var audioTab by remember(item.id) { mutableStateOf(item.music) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {

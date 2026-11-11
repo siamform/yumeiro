@@ -113,8 +113,8 @@ object OnlineBookmarks {
     }
 
     private fun update(change: (List<Bookmark>) -> List<Bookmark>) {
-        synchronized(this) { _items.value = change(_items.value).take(MAX) }
-        write()
+        // One writer at a time: the new-episode check updates several series in parallel.
+        synchronized(this) { _items.value = change(_items.value).take(MAX); write() }
     }
 
     private fun write() {

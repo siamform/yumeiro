@@ -130,9 +130,9 @@ internal fun HubCard(
                 }
                 if (!subtitle.isNullOrBlank()) Text(subtitle, color = TextTertiary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (warning != null) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    Icon(Icons.Default.Warning, null, tint = androidx.compose.ui.graphics.Color(0xFFFFB74D), modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Warning, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(warning, color = androidx.compose.ui.graphics.Color(0xFFFFB74D), fontSize = 11.sp, maxLines = 3)
+                    Text(warning, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 11.sp, maxLines = 3)
                 }
             }
             trailing()

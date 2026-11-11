@@ -65,6 +65,12 @@ object Kana {
         "setup" to "案内",
         "queue" to "順番",
         "home" to "夢色",
+        "battery" to "電池",
+        "background" to "電池",
+        "reading" to "読書",
+        "lyrics" to "歌詞",
+        "discover" to "発見",
+        "account" to "アカウント",
     ).sortedByDescending { it.first.length }
 
     /** The accent for a page title, or null when nothing fits (no accent beats a wrong one). */

@@ -172,7 +172,7 @@ fun StreamScreen(
 
     /** Runs [block] off the main thread; any failure becomes a short message instead of a crash. */
     fun launchSafe(onError: (String) -> Unit = ::toastError, block: suspend () -> Unit) = scope.launch {
-        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(e.message ?: "Something went wrong") }
+        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.")) }
     }
 
     /** Opens a saved playlist on its own page; [force] re-downloads it first (card menu → Refresh now). */
@@ -254,7 +254,7 @@ fun StreamScreen(
         scope.launch {
             runCatching { StreamRepository.loadPlaylist(context, source, currentRequest().takeIf { source.startsWith("http") }) }
                 .onSuccess { StreamRepository.setPlaylist(name, it); onOpenPlaylist(OPENED_PLAYLIST_SLUG) }
-                .onFailure { error = it.message ?: "Could not load playlist" }
+                .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't load this playlist.") }
             loading = false
         }
     }
@@ -275,7 +275,7 @@ fun StreamScreen(
         loading = true
         scope.launch {
             val r = runCatching { StreamResolver.resolve(context, request, thorough = true) }
-                .getOrElse { Resolution.Failed("Couldn't open the link", it.message ?: it.javaClass.simpleName) }
+                .getOrElse { Resolution.Failed("Couldn't open the link", dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Check the link and try again.")) }
             loading = false
             when (r) {
                 is Resolution.Playable -> IncomingMedia.open(context, r.request)
@@ -372,7 +372,7 @@ fun StreamScreen(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(UserAgentPreset.entries, key = { it.name }) { p -> Chip(p.label, uaPreset == p && customUa.isBlank()) { uaPreset = p; customUa = "" } }
                             }
-                            OutlinedTextField(customUa, { customUa = it }, label = { Text("Custom User-Agent") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(customUa, { customUa = it }, label = { Text("Custom user agent") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                             OutlinedTextField(referer, { referer = it }, label = { Text("Referer") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                             OutlinedTextField(origin, { origin = it }, label = { Text("Origin") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                             OutlinedTextField(cookie, { cookie = it }, label = { Text("Cookie") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())

@@ -131,7 +131,7 @@ fun PlaybackSpeedDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Playback Speed",
+                    text = "Playback speed",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -222,7 +222,7 @@ fun AspectRatioDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Aspect Ratio",
+                    text = "Aspect ratio",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -312,7 +312,7 @@ fun AudioTrackDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Audio Tracks",
+                    text = "Audio tracks",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -387,7 +387,7 @@ fun AudioTrackDialog(
                                     )
                                     Text(
                                         text = listOfNotNull(track.codec, channelStr, if (track.sampleRate > 0) "${track.sampleRate / 1000} kHz" else null,
-                                            if (!track.supported) "can't play on this phone" else null).joinToString(" • "),
+                                            if (!track.supported) "can't play on this phone" else null).joinToString(" · "),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary,
                                         fontSize = 11.sp
@@ -582,7 +582,7 @@ fun SubtitleOptionsDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Subtitles Off",
+                                text = "Subtitles off",
                                 color = if (isSubtitlesDisabled) SpotifyGreen else TextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -749,7 +749,7 @@ fun VideoInfoDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Video Details",
+                    text = "Video details",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -767,12 +767,12 @@ fun VideoInfoDialog(
                     value = if (video.width > 0 && video.height > 0) "${video.width} × ${video.height} (${video.resolution})" else video.resolution
                 )
                 InfoRow(label = "Duration", value = formatDuration(video.durationMs))
-                InfoRow(label = "File Size", value = formatFileSize(video.sizeBytes))
+                InfoRow(label = "File size", value = formatFileSize(video.sizeBytes))
 
                 videoFormat?.let { vf ->
-                    InfoRow(label = "Video Codec", value = vf.sampleMimeType ?: "Hardware H.264/HEVC")
+                    InfoRow(label = "Video codec", value = vf.sampleMimeType ?: "Hardware H.264/HEVC")
                     if (vf.frameRate > 0) {
-                        InfoRow(label = "Frame Rate", value = "%.2f fps".format(vf.frameRate))
+                        InfoRow(label = "Frame rate", value = "%.2f fps".format(vf.frameRate))
                     }
                     if (vf.bitrate > 0) {
                         InfoRow(label = "Bitrate", value = "${vf.bitrate / 1000} kbps")
@@ -780,7 +780,7 @@ fun VideoInfoDialog(
                 }
 
                 audioFormat?.let { af ->
-                    InfoRow(label = "Audio Codec", value = af.sampleMimeType ?: "AAC / PCM")
+                    InfoRow(label = "Audio codec", value = af.sampleMimeType ?: "AAC / PCM")
                     if (af.channelCount > 0) {
                         val ch = when (af.channelCount) {
                             1 -> "Mono"
@@ -842,7 +842,7 @@ fun PlaybackErrorOverlay(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     onNextVideo: (() -> Unit)? = null,
-    title: String = "Unsupported Video Format",
+    title: String = "Can't play this video",
     /** Full explanation; when null the generic decoder text is shown with [errorMessage] appended. */
     detail: String? = null,
     actionLabel: String? = null,
@@ -883,7 +883,7 @@ fun PlaybackErrorOverlay(
                 Spacer(modifier = Modifier.height(8.dp))
                 val parsed = remember(detail, errorMessage, title) {
                     dev.asfakul.yumeiro.ui.components.ErrorHelp.parse(
-                        detail ?: "This device's hardware decoders could not play this file, or the media stream is corrupted. $errorMessage"
+                        detail ?: errorMessage.ifBlank { "This phone's decoders couldn't play this file, or the file is damaged." }
                     ).let { if (it.tips.isEmpty()) it.copy(tips = dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor("$title $errorMessage")) else it }
                 }
                 Column(

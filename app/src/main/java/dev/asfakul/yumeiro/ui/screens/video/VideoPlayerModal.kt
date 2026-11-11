@@ -459,13 +459,13 @@ private fun VideoPlayerModalContent(
                 StreamRepository.setPlaylist(r.name, r.channels)
                 showErrorCard(
                     "Channel list opened",
-                    "This link is an IPTV playlist with ${r.channels.size} channel${if (r.channels.size == 1) "" else "s"}, not a single stream. The channels are now listed in the Stream tab under Opened list — pick one there.",
+                    "This link is an IPTV playlist with ${r.channels.size} channel${if (r.channels.size == 1) "" else "s"}, not a single stream. The channels are now listed in Videos → Live TV under Opened list — pick one there.",
                     canRetry = false,
                 )
             }
             is Resolution.NeedsBrowser -> showErrorCard(
                 "This is a web page",
-                "${r.reason}\n\nOpen the link from the Stream tab: it can load the page and pick up the stream its player uses (with the page's own session and headers).",
+                "${r.reason}\n\nOpen the link from Videos → Live TV: it can load the page and pick up the stream its player uses (with the page's own session and headers).",
                 canRetry = false,
                 action = "Open in browser" to {
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -491,7 +491,7 @@ private fun VideoPlayerModalContent(
         isBuffering = true
         coroutineScope.launch {
             val r = runCatching { StreamResolver.resolve(context, request, thorough) }
-                .getOrElse { Resolution.Failed("Couldn't open the link", it.message ?: it.javaClass.simpleName) }
+                .getOrElse { Resolution.Failed("Couldn't open the link", dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Check the link and try again.")) }
             handleResolution(r, positionMs)
         }
     }
@@ -537,7 +537,12 @@ private fun VideoPlayerModalContent(
         val facts = ErrorFacts.from(error)
         if (!isNetworkStream) {
             if (onFatalError?.invoke(exoPlayer.currentPosition) == true) return
-            playerError = error.message ?: "Playback error (${error.errorCodeName})"
+            playerError = when {
+                error.errorCodeName.contains("FILE_NOT_FOUND") -> "This file was moved or deleted."
+                error.errorCodeName.contains("NO_PERMISSION") -> "Yumeiro can't read this file. Allow media access in Settings."
+                error.errorCodeName.contains("DECOD") || error.errorCodeName.contains("FORMAT") -> "This phone can't decode this video's format. It may play in another app or after converting to MP4."
+                else -> "This video couldn't play (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})."
+            }
             isBuffering = false
             return
         }
@@ -1429,7 +1434,7 @@ private fun VideoPlayerModalContent(
                 isScreenLocked = false
                 isLockedUnlockPillVisible = false
                 isControlsVisible = true
-                showToast("Screen Unlocked")
+                showToast("Screen unlocked")
             },
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -1635,7 +1640,7 @@ private fun VideoPlayerModalContent(
                 onClose = onClose,
                 onNextVideo = if (nextVideo != null) onNextVideo else null,
                 modifier = Modifier.align(Alignment.Center),
-                title = errorTitle ?: "Unsupported Video Format",
+                title = errorTitle ?: "Can't play this video",
                 detail = errorDetail,
                 actionLabel = errorAction?.first,
                 onAction = errorAction?.second,

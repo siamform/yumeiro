@@ -137,7 +137,7 @@ fun LibraryScreen(
             },
             title = {
                 Text(
-                    text = "New Playlist",
+                    text = "New playlist",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -200,7 +200,7 @@ fun LibraryScreen(
             onDismissRequest = { playlistToRename = null },
             title = {
                 Text(
-                    text = "Rename Playlist",
+                    text = "Rename playlist",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -247,7 +247,7 @@ fun LibraryScreen(
             onDismissRequest = { playlistToDelete = null },
             title = {
                 Text(
-                    text = "Delete Playlist?",
+                    text = "Delete playlist?",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -337,7 +337,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Rename Playlist",
+                            contentDescription = "Rename playlist",
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -350,7 +350,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Playlist",
+                            contentDescription = "Delete playlist",
                             tint = Color(0xFFFF6B6B),
                             modifier = Modifier.size(20.dp)
                         )
@@ -375,7 +375,7 @@ fun LibraryScreen(
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = OnAccent)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Play All", color = OnAccent, fontWeight = FontWeight.Bold)
+                            Text("Play all", color = OnAccent, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -402,8 +402,8 @@ fun LibraryScreen(
                 item {
                     EmptyMediaView(
                         title = "Playlist is empty",
-                        subtitle = "Go to Music tab, long-press any track or click 3 dots, and choose 'Add to Playlist'.",
-                        buttonText = "Browse Music",
+                        subtitle = "In Music, tap ⋮ on any song and choose Add to playlist.",
+                        buttonText = "Browse music",
                         onButtonClick = onNavigateToMusic
                     )
                 }
@@ -455,7 +455,7 @@ fun LibraryScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Move Up",
+                                        contentDescription = "Move up",
                                         tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -470,7 +470,7 @@ fun LibraryScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Move Down",
+                                        contentDescription = "Move down",
                                         tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )

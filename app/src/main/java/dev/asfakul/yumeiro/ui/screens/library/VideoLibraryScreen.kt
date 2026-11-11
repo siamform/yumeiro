@@ -181,7 +181,7 @@ fun VideoLibraryContent(
 
 @Composable
 private fun DeviceCard(v: VideoItem, onClick: () -> Unit) {
-    Column(Modifier.width(180.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick)) {
+    Column(Modifier.width(180.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(DarkSurfaceContainer)) {
             PosterImage(v.thumbnailUri ?: v.uri, emptyMap(), Modifier.fillMaxSize())
             if (v.durationMs > 0) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
@@ -197,7 +197,7 @@ private fun DeviceCard(v: VideoItem, onClick: () -> Unit) {
 private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
-    Column(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("library_bookmark")) {
+    Column(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("library_bookmark").padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp)).background(DarkSurfaceContainer)) {
             PosterImage(b.posterUrl, b.posterHeaders, Modifier.fillMaxSize())
             if (b.newEpisodes > 0) Text(

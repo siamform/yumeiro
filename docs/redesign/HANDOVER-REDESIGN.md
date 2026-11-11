@@ -1,12 +1,32 @@
 # Handover: Yumeiro redesign
 
-> **Round 3 is current.** Read [§R3](#r3-round-3-start-here) first, then §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 5 is current.** Read §R5 first, then §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R4. Round 4: fixes, security review, discovery (start here)
+## R5. Round 5: signature redesign and full UI audit (start here)
+
+**Branch.** `redesign/v5-signature`, from `6d486ba` (the end of round 4). Pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`; a CI branch there, a PR and a merge each need the owner's written approval.
+
+**What the owner asked for, and what was done**
+
+| Request | Fix (files, under `app/src/main/java/dev/asfakul/yumeiro/`) |
+|---|---|
+| Extensions opened twice (tap opened the page, then re-opened it) | `ui/navigation/SubNav.kt` (`SubNav.reusable`): `navigateSub` returns to an argument-free page already on the back stack instead of stacking a second copy; tests `ExtensionNavTest`, `NavigationFlowTest` |
+| New-episode reminders unclear | `DiscoveryWorker`, `NewEpisodesWorker.due`, `OnlineBookmarks`; Home shows a clickable carousel only from real extension data |
+| Home: too many dropdowns, big type, extra search box, weak Continue | Rewritten Home (`ui/home/HomeScreen.kt`, `HomeSections.kt`, `HomeOnline.kt`, `HomeMoods.kt`): old-style Continue row, one "Spaces" grid (8 visible + Show all), moods from time of day and online extensions, "New arrivals" from extensions/YouTube, "Most played" from `data/PlayCounts.kt`, endless "Yumix random" grouped by extension. Home search box removed |
+| Japanese editorial identity | `ui/components/YuEditorial.kt` (kana overline, `YuSection`, kanji watermark, hanko, glass pill), used by Home, Library, Music Mix, Settings group labels, sub-page headers. New type tokens in `Type.kt` |
+| Music/Video source switcher should look changeable | `MTTopBar` `SourcePill` (translucent pill with chevron), compacts below 380dp so the page title is never truncated |
+| Search bars too wide / fixed; filter takes 25% of screen | `ui/components/YuSearch.kt` (search icon, header search field, filter button, filter bottom sheet). Used in Videos, Music, Extensions, Playlist market, Settings |
+| UI mistakes everywhere, proper fallbacks | Audit pass: empty states with icons and actions (`EmptyMediaView`), friendly errors instead of raw exceptions (`OnlineErrors.friendly` in every online screen and the players), offline YouTube without skeletons and auto-retry when back online, "Band N" when an equalizer band has no frequency, folder subtitles without `<unknown>`/`/storage/emulated/0` (`shortFolderPath`), image placeholders behind every remote image, clipped descenders fixed in clipped cards, Now Playing fallbacks ("Untitled", "Unknown artist"), sentence case and plural fixes, user guide and tour updated to four tabs |
+
+**Tests added:** `HomeDataTest`, `ExtensionNavTest`, `FallbackTextTest`; `RedesignTourTest`, `AppNavigationCrashTest`, `PlaybackRecoveryTest` updated.
+
+**Not done.** No real device or TalkBack testing; screenshots come from Robolectric.
+
+## R4. Round 4: fixes, security review, discovery
 
 **Branch.** `redesign/v4-complete`, from `7f31776` (the end of round 3). It is pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`. A CI branch on the main repo, a PR and a merge each need the owner's written approval.
 

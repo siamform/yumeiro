@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.activity.compose.BackHandler
@@ -205,7 +206,7 @@ fun NowPlayingScreen(
             ) {
                 dev.asfakul.yumeiro.ui.components.YumeIconButton(
                     icon = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Collapse Player",
+                    contentDescription = "Collapse player",
                     onClick = onClose,
                     modifier = Modifier.testTag("now_playing_collapse_button")
                 )
@@ -251,7 +252,7 @@ fun NowPlayingScreen(
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            playbackState.errorMessage ?: "Playback Error",
+                            playbackState.errorMessage ?: "Playback error",
                             style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD6DD)
                         )
                         val tip = remember(playbackState.errorMessage) {
@@ -298,13 +299,18 @@ fun NowPlayingScreen(
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        track?.title ?: "Select a song", style = MaterialTheme.typography.headlineLarge,
+                        track?.title?.takeIf { it.isNotBlank() } ?: if (track != null) "Untitled" else "Select a song", style = MaterialTheme.typography.headlineLarge,
                         color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        // Long titles drift slowly instead of being cut off (still when reduced motion is on).
                         modifier = Modifier.testTag("now_playing_title")
+                            .then(if (dev.asfakul.yumeiro.ui.components.reducedMotion()) Modifier else Modifier.basicMarquee(initialDelayMillis = 2000, velocity = 28.dp))
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        listOfNotNull(track?.artist ?: "Unknown Artist", track?.album?.takeIf { it.isNotBlank() }).joinToString(" \u00B7 "),
+                        listOfNotNull(
+                            track?.artist?.takeIf { it.isNotBlank() && !it.equals("Unknown Artist", true) } ?: "Unknown artist",
+                            track?.album?.takeIf { it.isNotBlank() && !it.equals("Unknown Album", true) },
+                        ).joinToString(" \u00B7 "),
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize * 1.07f),
                         color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
@@ -342,7 +348,7 @@ fun NowPlayingScreen(
                     Icons.Default.Shuffle, "Shuffle", if (playbackState.isShuffleEnabled) SpotifyGreen else TextSecondary,
                     22, onToggleShuffle, "now_playing_shuffle_button"
                 )
-                RoundControl(Icons.Default.SkipPrevious, "Previous Track", TextPrimary, 34, onPrevious, "now_playing_previous_button", 56)
+                RoundControl(Icons.Default.SkipPrevious, "Previous track", TextPrimary, 34, onPrevious, "now_playing_previous_button", 56)
                 Box(
                     modifier = Modifier
                         .size(76.dp)
@@ -360,11 +366,11 @@ fun NowPlayingScreen(
                         modifier = Modifier.size(38.dp)
                     )
                 }
-                RoundControl(Icons.Default.SkipNext, "Next Track", TextPrimary, 34, onNext, "now_playing_next_button", 56)
+                RoundControl(Icons.Default.SkipNext, "Next track", TextPrimary, 34, onNext, "now_playing_next_button", 56)
                 val (repeatIcon, repeatDesc) = when (playbackState.repeatMode) {
-                    PlayerRepeatMode.OFF -> Icons.Default.Repeat to "Repeat Off"
-                    PlayerRepeatMode.ALL -> Icons.Default.Repeat to "Repeat All"
-                    PlayerRepeatMode.ONE -> Icons.Default.RepeatOne to "Repeat One"
+                    PlayerRepeatMode.OFF -> Icons.Default.Repeat to "Repeat off"
+                    PlayerRepeatMode.ALL -> Icons.Default.Repeat to "Repeat all"
+                    PlayerRepeatMode.ONE -> Icons.Default.RepeatOne to "Repeat one"
                 }
                 RoundControl(
                     repeatIcon, repeatDesc, if (playbackState.repeatMode == PlayerRepeatMode.OFF) TextSecondary else SpotifyGreen,
@@ -381,10 +387,10 @@ fun NowPlayingScreen(
             ) {
                 RailTool(Icons.Default.Lyrics, "Lyrics", selected = panel == PANEL_LYRICS,
                     onClick = { panel = if (panel == PANEL_LYRICS) PANEL_ART else PANEL_LYRICS },
-                    modifier = Modifier.weight(1f).testTag("now_playing_lyrics_button"), description = "Toggle Lyrics")
+                    modifier = Modifier.weight(1f).testTag("now_playing_lyrics_button"), description = "Toggle lyrics")
                 RailTool(Icons.AutoMirrored.Filled.QueueMusic, "Up next", selected = panel == PANEL_QUEUE,
                     onClick = { panel = if (panel == PANEL_QUEUE) PANEL_ART else PANEL_QUEUE },
-                    modifier = Modifier.weight(1f).testTag("now_playing_queue_toggle_button"), description = "Toggle Queue")
+                    modifier = Modifier.weight(1f).testTag("now_playing_queue_toggle_button"), description = "Toggle queue")
                 RailTool(Icons.Default.Info, "Info", selected = panel == PANEL_INFO,
                     onClick = { panel = if (panel == PANEL_INFO) PANEL_ART else PANEL_INFO },
                     modifier = Modifier.weight(1f).testTag("now_playing_info_button"), description = "Toggle Song Info")

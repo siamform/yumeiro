@@ -58,6 +58,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -110,8 +111,15 @@ private sealed interface Load<out T> {
 private fun friendly(t: Throwable): String = when {
     YtAccount.accountCanHelp(t) -> YtAccount.blockedHint()
     t.javaClass.simpleName.contains("ReCaptcha") -> "YouTube is rate-limiting this network. Try again in a few minutes or switch networks."
-    t is java.io.IOException -> "No connection to YouTube."
-    else -> t.message?.take(140) ?: "YouTube didn't answer."
+    !dev.asfakul.yumeiro.network.Connectivity.online.value -> "You're offline. Your downloads and songs on this phone still play."
+    t is java.io.IOException -> "Couldn't reach YouTube. Check your connection and try again."
+    else -> readable(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "YouTube didn't answer. Try again in a moment."))
+}
+
+/** Internal library or resource messages are never shown to people as-is. */
+private fun readable(m: String): String {
+    val internal = listOf("resource", "Exception", "null", "PublicSuffix", "java.", "kotlin.", "Unable to load")
+    return if (m.isBlank() || internal.any { m.contains(it, ignoreCase = false) }) "YouTube didn't answer. Try again in a moment." else m
 }
 
 /** Videos → YouTube: a login-free home planned from what you watch, pin and search. */
@@ -179,6 +187,8 @@ private fun YtBrowse(
     var addingTopic by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { YtHistory.load(context) }
     val history by YtHistory.items.collectAsState()
+    // Offline, the page banner already explains what still works; empty skeleton shelves would only look broken.
+    val netOnline by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
     val mine = remember(history) { history.filter { it.music == music } }
     // Re-plan only when the inputs change; history is reduced to what the planner reads so a new
     // play doesn't reshuffle the page under the user's finger.
@@ -206,6 +216,7 @@ private fun YtBrowse(
         }
     }
     LaunchedEffect(feeds) { loadShelves(false) }
+    LaunchedEffect(netOnline) { if (netOnline && shelves.values.any { it is Load.Failed }) loadShelves(false) }
 
     fun loadFeedPage(f: YtFeed, reset: Boolean = false) {
         val cur = if (reset) Paged() else pagedFeeds[f.id] ?: Paged()
@@ -275,7 +286,20 @@ private fun YtBrowse(
     fun isTopic(text: String) = topics.any { YtDiscovery.fold(it) == YtDiscovery.fold(text) }
 
     Column(modifier.fillMaxSize()) {
-        YtSearchBar(query, placeholder, music, onChange = { query = it; if (it.isBlank()) { submitted = null; results = null } }, onSearch = { search(query) }, onClear = { query = ""; submitted = null; results = null })
+        val searchKey = if (music) dev.asfakul.yumeiro.ui.components.TabSearch.YT_MUSIC else dev.asfakul.yumeiro.ui.components.TabSearch.YT_VIDEO
+        val asked by dev.asfakul.yumeiro.ui.components.TabSearch.open.collectAsState()
+        val barOpen = asked == searchKey || query.isNotEmpty() || submitted != null
+        androidx.compose.animation.AnimatedVisibility(
+            visible = barOpen,
+            enter = androidx.compose.animation.expandVertically(dev.asfakul.yumeiro.ui.components.YuMotion.enter(dev.asfakul.yumeiro.ui.components.reducedMotion(), 260)) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically(dev.asfakul.yumeiro.ui.components.YuMotion.exit(dev.asfakul.yumeiro.ui.components.reducedMotion(), 200)) + androidx.compose.animation.fadeOut(),
+        ) {
+            YtSearchBar(
+                query, placeholder, music, autoFocus = asked == searchKey,
+                onChange = { query = it; if (it.isBlank()) { submitted = null; results = null } }, onSearch = { search(query) },
+                onClear = { query = ""; submitted = null; results = null; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
+            )
+        }
         dev.asfakul.yumeiro.ui.components.SuggestionList(
             query = query, suggestions = suggestions,
             onPick = { search(it.text) }, onFill = { query = it.text },
@@ -371,7 +395,7 @@ private fun YtBrowse(
             // Featured: the first planned feed as quick picks (music) or big cards (video).
             val featured = feeds.firstOrNull()
             if (featured != null) when (val l = shelves[featured.id] ?: Load.Loading) {
-                Load.Loading -> item("feat_load") { SkeletonBlock(null, 230.dp, Modifier.padding(16.dp), RoundedCornerShape(24.dp)) }
+                Load.Loading -> if (netOnline) item("feat_load") { SkeletonBlock(null, 230.dp, Modifier.padding(16.dp), RoundedCornerShape(24.dp)) }
                 is Load.Failed -> item("feat_err") { YtProblem(l.message) { loadShelves(true) } }
                 is Load.Ready -> {
                     item("feat_label") { YtLabel(featured.title, featured.overline) }
@@ -382,7 +406,7 @@ private fun YtBrowse(
             feeds.drop(1).forEach { f ->
                 item("shelf_${f.id}") {
                     when (val l = shelves[f.id] ?: Load.Loading) {
-                        Load.Loading -> Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = RoundedCornerShape(18.dp)) } } }
+                        Load.Loading -> if (netOnline) Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = RoundedCornerShape(18.dp)) } } }
                         is Load.Failed -> Unit
                         is Load.Ready -> YtShelfRow(f.title, f.overline, if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, l.value, music,
                             onSeeAll = { chip = f.id; if (pagedFeeds[f.id] == null) loadFeedPage(f) }) { onPlay(it, l.value) }
@@ -492,8 +516,10 @@ private fun YtTopicsDialog(topics: List<String>, music: Boolean, onRemove: (Stri
 }
 
 @Composable
-private fun YtSearchBar(query: String, placeholder: String, music: Boolean, onChange: (String) -> Unit, onSearch: () -> Unit, onClear: () -> Unit) {
+private fun YtSearchBar(query: String, placeholder: String, music: Boolean, autoFocus: Boolean = false, onChange: (String) -> Unit, onSearch: () -> Unit, onClear: () -> Unit) {
     val border = rememberGlassBorder()
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(50.dp).clip(RoundedCornerShape(25.dp))
             .background(GlassFill).border(1.dp, border, RoundedCornerShape(25.dp)).padding(horizontal = 16.dp),
@@ -507,10 +533,10 @@ private fun YtSearchBar(query: String, placeholder: String, music: Boolean, onCh
                 query, onChange, singleLine = true, cursorBrush = SolidColor(SpotifyGreen),
                 textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-                modifier = Modifier.fillMaxWidth().testTag("youtube_search"),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("youtube_search"),
             )
         }
-        if (query.isNotEmpty()) IconButton(onClick = onClear, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, "Clear", tint = TextSecondary) }
+        IconButton(onClick = onClear, modifier = Modifier.size(40.dp).testTag("youtube_search_close")) { Icon(Icons.Default.Close, if (query.isNotEmpty()) "Clear" else "Close search", tint = TextSecondary) }
     }
 }
 

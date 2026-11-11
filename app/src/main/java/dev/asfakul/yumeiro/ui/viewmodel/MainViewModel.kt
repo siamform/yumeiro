@@ -328,6 +328,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.distinctBy { it.id }
         _videoQueue.value = if (q.any { it.id == video.id }) q else listOf(video)
         _activePlayingVideo.value = video
+        dev.asfakul.yumeiro.data.PlayCounts.record(getApplication(), dev.asfakul.yumeiro.data.PlayCounts.Kind.DEVICE, video.id, video.title, video.folderName, video.uri)
     }
 
     private fun queueNeighbor(offset: Int): VideoItem? {

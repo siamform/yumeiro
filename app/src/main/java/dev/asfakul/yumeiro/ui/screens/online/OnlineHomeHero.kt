@@ -97,7 +97,7 @@ internal fun HeroCarousel(
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.35f), 0.25f to Color.Transparent, 0.55f to Color.Transparent, 1f to bg)))
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 20.dp, vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     val tags = listOfNotNull(item.type, item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }, item.score?.takeIf { it > 0 }?.let { "★ %.1f".format(java.util.Locale.US, it) }, item.api)
-                    Text(tags.joinToString("  •  "), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Text(tags.joinToString("  ·  "), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                     Spacer(Modifier.height(6.dp))
                     Text(item.name, color = Color.White, fontSize = 26.sp, lineHeight = 30.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(Modifier.height(14.dp))
@@ -174,7 +174,7 @@ internal fun ContinueRow(entries: List<OnlineHistory.Entry>, onClick: (OnlineIte
         SectionHeader("Continue watching") { SeeAllButton(onSeeAll) }
         LazyRow(contentPadding = PaddingValues(horizontal = edgePadding), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             itemsIndexed(entries.take(15), key = { i, it -> "${i}_${it.key}" }) { _, e ->
-                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onClick(e.toItem()) }) {
+                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onClick(e.toItem()) }.padding(bottom = 10.dp)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp))) {
                         PosterImage(e.posterUrl, e.posterHeaders, Modifier.fillMaxSize())
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))))

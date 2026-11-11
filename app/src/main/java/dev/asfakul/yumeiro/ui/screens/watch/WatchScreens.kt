@@ -193,7 +193,7 @@ fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag
 @Composable
 fun BoxScope.WatchScreenError(message: String, onRetry: () -> Unit, onClose: () -> Unit, tag: String = "watch_error") {
     Column(Modifier.align(Alignment.Center).padding(horizontal = 24.dp).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFFFB74D), modifier = Modifier.size(28.dp))
+        Icon(Icons.Default.ErrorOutline, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(28.dp))
         Spacer(Modifier.height(6.dp))
         Text(message, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(4.dp))

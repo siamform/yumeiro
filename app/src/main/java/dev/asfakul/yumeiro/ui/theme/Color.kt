@@ -65,6 +65,8 @@ val LocalMtPalette = staticCompositionLocalOf { Palettes.Dark }
 
 // ---- Accessors used by every screen ---------------------------------------------------------
 val SpotifyGreen: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accent
+/** Amber for warnings; darker on light surfaces so the text keeps its contrast. */
+val WarnTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFFB74D) else Color(0xFFB45309)
 val SpotifyGreenBright: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accentBright
 val AccentSecondary: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accent2
 val OnAccent: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.onAccent
