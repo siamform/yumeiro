@@ -64,6 +64,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -302,7 +303,15 @@ fun SubPageHeader(
     ) {
         YumeIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack, modifier = Modifier.testTag("subpage_back"))
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
-            YumeiroMark()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                YumeiroMark()
+                // Quiet Japanese accent for the page (設定, 検索 …); decorative, so TalkBack skips it.
+                val kana = if (kanaEnabled()) androidx.compose.runtime.remember(title) { Kana.forTitle(title) } else null
+                if (kana != null) Text(
+                    "  ·  $kana", color = TextTertiary, fontSize = 10.sp, maxLines = 1,
+                    modifier = Modifier.testTag("subpage_kana").clearAndSetSemantics { },
+                )
+            }
             Text(title, color = TextPrimary, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("subpage_title"))
             subtitle?.let { Text(it, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }

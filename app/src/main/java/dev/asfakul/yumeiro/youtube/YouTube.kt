@@ -112,6 +112,33 @@ object YouTube {
         items
     }
 
+    /**
+     * One page of a planned [YtFeed]. Searches page forever (pass the returned `next`); kiosks and
+     * related lists are a single page. First pages are cached like shelves.
+     */
+    suspend fun feed(context: Context, feed: YtFeed, page: Page? = null, force: Boolean = false): YtPage = withContext(Dispatchers.IO) {
+        init(context)
+        val key = "feed:${feed.id}"
+        if (page == null) listCache[key]?.takeIf { !force && fresh(it.at, LIST_TTL_MS) }?.let { return@withContext YtPage(it.value, pageTokens[key]) }
+        val result = when (feed.kind) {
+            YtFeed.Kind.KIOSK -> YtPage(
+                runCatching { kiosk(feed.arg, feed.music) }.getOrElse {
+                    Log.w(TAG, "kiosk ${feed.arg}", it)
+                    searchBlocking(feed.title, if (feed.music) Filter.SONGS else Filter.VIDEOS, null).items
+                },
+                null,
+            )
+            YtFeed.Kind.RELATED -> YtPage(infoBlocking(feed.arg, false).relatedItems.mapNotNull { it.toYt(feed.music) }, null)
+            YtFeed.Kind.QUERY -> searchBlocking(feed.arg, if (feed.music) Filter.SONGS else Filter.VIDEOS, page)
+        }
+        if (page == null && result.items.isNotEmpty()) {
+            listCache[key] = Timed(System.currentTimeMillis(), result.items)
+            if (result.next != null) pageTokens[key] = result.next else pageTokens.remove(key)
+        }
+        result
+    }
+    private val pageTokens = ConcurrentHashMap<String, Page>()
+
     private fun fallbackSearch(shelf: YtShelf): List<YtItem> {
         val q = shelf.query ?: shelf.title
         return searchBlocking(q, if (shelf.music) Filter.SONGS else Filter.VIDEOS, null).items

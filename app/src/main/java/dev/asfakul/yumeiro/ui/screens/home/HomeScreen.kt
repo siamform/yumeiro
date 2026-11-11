@@ -830,19 +830,33 @@ private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit, collapsed: Boole
     val context = LocalContext.current
     val p = LocalMtPalette.current
     var mood by rememberSaveable { mutableStateOf(Mood.CHILL) }
+    // The user's own YouTube Music topics (pinned on the YouTube Music page) follow the built-in
+    // moods, so Home reflects what they actually listen to instead of a fixed list.
+    var topic by rememberSaveable { mutableStateOf<String?>(null) }
+    val topics = remember { dev.asfakul.yumeiro.youtube.YtTopics.load(context, music = true) }
+        .filter { t -> Mood.entries.none { dev.asfakul.yumeiro.youtube.YtDiscovery.fold(it.label) == dev.asfakul.yumeiro.youtube.YtDiscovery.fold(t) } }
+        .take(8)
     var tick by remember { mutableIntStateOf(0) }
     var items by remember { mutableStateOf<List<YtItem>?>(null) }
     var failed by remember { mutableStateOf(false) }
     // Unit tests have no network: don't start a real request there (the chips still render).
     val autoLoad = remember { android.os.Build.FINGERPRINT != "robolectric" }
-    LaunchedEffect(mood, tick) {
+    val label = topic ?: mood.label
+    val square = topic != null || mood.shelf.music
+    LaunchedEffect(mood, topic, tick) {
         if (!autoLoad && tick == 0) { items = emptyList(); return@LaunchedEffect }
         items = null; failed = false
-        val r = kotlinx.coroutines.withTimeoutOrNull(20_000) { runCatching { YouTube.shelf(context, mood.shelf) }.getOrNull() }
-        if (r == null) { failed = true; items = emptyList() } else items = r.distinctBy { it.id }.map { it.copy(music = mood.shelf.music) }.take(16)
+        val t = topic
+        val r = kotlinx.coroutines.withTimeoutOrNull(20_000) {
+            runCatching {
+                if (t != null) YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, t, t, "Your topic", true)).items
+                else YouTube.shelf(context, mood.shelf)
+            }.getOrNull()
+        }
+        if (r == null) { failed = true; items = emptyList() } else items = r.distinctBy { it.id }.map { it.copy(music = square) }.take(16)
     }
     Column(Modifier.fillMaxWidth().testTag("home_moods")) {
-        FoldHeader("moods", "Moods", "Pick a feeling — songs and clips to match", collapsed, onToggle)
+        FoldHeader("moods", "Moods", "Pick a feeling or one of your topics", collapsed, onToggle)
         if (collapsed) return@Column
         if (!online) {
             HintRow(
@@ -854,13 +868,25 @@ private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit, collapsed: Boole
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             items(Mood.entries.toList(), key = { it.name }) { m ->
-                val sel = m == mood
+                val sel = topic == null && m == mood
                 Text(
                     m.label, color = if (sel) p.onAccent else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.clip(RoundedCornerShape(50))
                         .background(if (sel) p.accent else p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.8f else 1f))
-                        .clickable(role = Role.Tab) { if (sel) tick++ else { mood = m; tick++ } }
+                        .clickable(role = Role.Tab) { if (sel) tick++ else { mood = m; topic = null; tick++ } }
                         .testTag("home_mood_${m.name.lowercase()}")
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+            }
+            items(topics, key = { "t_$it" }) { t ->
+                val sel = topic == t
+                Text(
+                    t, color = if (sel) p.onAccent else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(50))
+                        .background(if (sel) p.accent else p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.8f else 1f))
+                        .border(1.dp, p.accent.copy(alpha = if (sel) 0f else 0.35f), RoundedCornerShape(50))
+                        .clickable(role = Role.Tab, onClickLabel = "Play your topic $t") { if (sel) tick++ else { topic = t; tick++ } }
+                        .testTag("home_mood_topic")
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 )
             }
@@ -873,12 +899,12 @@ private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit, collapsed: Boole
             }
             list.isEmpty() -> HintRow(
                 Icons.Default.Album,
-                if (failed) "Couldn't load ${mood.label}" else "Tap a mood to load it",
+                if (failed) "Couldn't load $label" else "Tap a mood to load it",
                 if (failed) "Check your connection, then try again." else "Moods come from YouTube and YouTube Music.",
                 if (failed) "Try again" else "Load", onClick = { tick++ }, tag = "home_moods_retry",
             )
             else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                items(list, key = { "m_" + it.id }) { yt -> YtCard(yt, square = mood.shelf.music) { onPlay(yt, list) } }
+                items(list, key = { "m_" + it.id }) { yt -> YtCard(yt, square = square) { onPlay(yt, list) } }
             }
         }
     }

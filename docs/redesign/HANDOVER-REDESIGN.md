@@ -6,7 +6,31 @@ For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). T
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R3. Round 3 (start here)
+## R4. Round 4: fixes, security review, discovery (start here)
+
+**Branch.** `redesign/v4-complete`, from `7f31776` (the end of round 3). It is pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`. A CI branch on the main repo, a PR and a merge each need the owner's written approval.
+
+**What the owner asked for, and what was done**
+
+| Request | Root cause | Fix (files) |
+|---|---|---|
+| VirusTotal 2/67 (Kaspersky Miner.b, BitDefenderFalx Riskware) | `ExtensionScanner` stored miner, SMS, contacts and device-admin signatures as plain strings, and they were the only such strings in the APK. A silent-download permission was also left in for a dead code path | Fingerprinted rules, the dead silent-update path removed, `DOWNLOAD_WITHOUT_NOTIFICATION` removed. Rescan: **0/66**. See `docs/security/VT-REPORT-v1.5.1.md` and the "Antivirus heuristics" section of `docs/security/AUDIT.md` |
+| Manga extension install: "TypeReference constructed without actual type information" | R8 full mode stripped the generic `Signature` from the app's anonymous `FullTypeReference` subclasses and merged the four `TachiyomiRuntime.init` registrations into one raw class (`Lg86;` in v1.5.0) | Keep rules in `app/proguard-rules.pro` for `FullTypeReference`, `TypeReference`, Jackson `TypeReference` and Gson `TypeToken` subclasses. Verified with dexdump: 65 of 65 classes have a Signature |
+| Fast forward does nothing / jumps to 0 | Seeking was clamped with `coerceAtMost(duration)` while the duration was still the 1 ms placeholder | `player/SeekMath.kt`. Every seek path in `VideoPlayerModal.kt` uses it (button, double-tap, PiP, scrub, rewind, slider) |
+| Progress bar glitch | Several causes: the 1 ms placeholder drew a full bar; the 500 ms ticker stepped the thumb; the Now Playing touch mapping ignored the 7dp inset; the thumb snapped back after a drag; the slider seeked to 0 when the duration was unknown | `SeekMath`; a 250 ms ticker; a held seek target (`pendingSeek`); an inset-aware touch area; "--:--" and a disabled slider while the duration is unknown (`NowPlayingScreen.kt`, `VideoPlayerControls.kt`) |
+| Toasts must be at the bottom | The video player HUD sat at TopCenter. Raw `Toast`s appeared in Now Playing and on back-to-exit | The HUD moved to BottomCenter. Everything else goes through `AppMessages` (the bottom host, drawn above the players) |
+| YouTube / YouTube Music limited to fixed categories | Fixed `YtShelf` list | `youtube/YtDiscovery.kt` plans the feeds: For you, related to your history, your artists and channels, your topics, your searches, trending, and a daily rotating explore mix. Feeds page endlessly, topics are user-editable (add, long-press to remove, "Add as topic" from a search), related-search chips and Shuffle. Home moods now include the user's topics. `YtShelf` stays for back-compat |
+| Japanese identity faded | Kana were removed in rounds 2 and 3 | `ui/components/Kana.kt` is a single vocabulary of one short word per page, shown in a fixed place: tab overlines (音楽 · Music, 映像 · Videos), sub-page headers (`SubPageHeader`, used by 25 pages, e.g. 設定, 検索, 保存), Now Playing (再生中 / おやすみ) and YouTube (おすすめ, 検索). The kana are decorative: TalkBack skips them and the English titles stay. Settings › Look & feel › "Japanese accents" turns them off |
+
+**Tests added:** `ExtensionScannerTest` (16), `SeekMathTest` (8), `YtDiscoveryTest` (9), `KanaTest` (3).
+
+**Known issue.** On this machine `lintVitalAnalyzeRelease` crashed inside lint itself ("Unexpected owner function: null", Kotlin analysis API) while analysing `NowPlayingScreen.kt`. The local release build skipped that step. CI runs `lintDebug`, which passed on this branch (see the verification log below). The release-variant lint crash is a lint/analysis-API bug, not a code error; if CI's release job hits it, upgrade AGP/lint or restructure the local functions in `SeekBar`.
+
+**Not done in this round (honest scope).**
+- The deeper per-screen layout rework of the video player chrome, Search, Library, Downloads, the Sources hub and Live TV listed in R3 "What is left". Those screens get the new identity through the shared kit (headers, kana, dialogs, toasts) but keep their round 2/3 layouts.
+- No real device or TalkBack testing.
+
+## R3. Round 3
 
 **Why it exists.** The owner asked for a full UX rethink, not a theme. The app has 800+ users and they found it confusing. Requirements:
 - a guided Quick Setup / Explore tour on the real interface
@@ -228,6 +252,8 @@ All of this was actually run on this branch (Linux, JDK 17, Robolectric). Nothin
 
 | Command | Result |
 |---|---|
+| R4: `./gradlew :app:testDebugUnitTest :app:lintDebug --continue` | **BUILD SUCCESSFUL: 438 tests, 0 failures, 0 errors, 0 skipped. `lintDebug` passed** |
+| R4: `assembleRelease` (version 1.5.1/13 set temporarily, lintVital skipped) + throwaway-key signing | `Yumeiro-v1.5.1-security-review-scan.apk`, SHA-256 `858950a1...4dcc6`. VirusTotal **0/66** |
 | `./gradlew :app:testDebugUnitTest --no-configuration-cache --continue` | **BUILD SUCCESSFUL: 71 test classes, 409 tests, 0 failures, 0 errors, 0 skipped.** This includes `RedesignTourTest` (4 tours) and every existing test |
 | `./gradlew :app:testDebugUnitTest --tests '*RedesignTourTest*'` | 133 PNGs. Every `tour_*_missing.txt` is empty, so every tour stop ran |
 | The same tour on a baseline `af8349e` worktree | 132 PNGs. Only the `search` stop failed, because that tag flow did not exist yet |

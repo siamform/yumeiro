@@ -246,6 +246,9 @@ private fun VideoPlayerModalContent(
     var isControlsVisible by remember { mutableStateOf(true) }
     var isUserSeeking by remember { mutableStateOf(false) }
     var sliderProgress by remember(video.id) { mutableFloatStateOf(0f) }
+    // Target of the last slider seek, held on screen until the player reports it (no snap back).
+    var pendingSeekMs by remember(video.id) { mutableStateOf<Long?>(null) }
+    var pendingSeekAt by remember(video.id) { mutableLongStateOf(0L) }
     var playerError by remember(video.id) { mutableStateOf<String?>(null) }
 
     // Audio & Video Formats
@@ -322,10 +325,13 @@ private fun VideoPlayerModalContent(
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
+    var toastJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun showToast(msg: String) {
         toastMessage = msg
         isToastVisible = true
-        coroutineScope.launch {
+        // One timer: an older toast's timer must not hide a newer message early.
+        toastJob?.cancel()
+        toastJob = coroutineScope.launch {
             delay(2200L)
             isToastVisible = false
         }
@@ -1027,7 +1033,9 @@ private fun VideoPlayerModalContent(
                 when (intent?.getIntExtra(PipController.EXTRA_CONTROL, 0)) {
                     PipController.CONTROL_PLAY_PAUSE -> if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
                     PipController.CONTROL_REWIND -> exoPlayer.seekTo((exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L))
-                    PipController.CONTROL_FORWARD -> exoPlayer.seekTo(exoPlayer.currentPosition + 10_000L)
+                    PipController.CONTROL_FORWARD -> exoPlayer.seekTo(
+                        dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, 10_000L, dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs)),
+                    )
                 }
             }
         }
@@ -1077,17 +1085,21 @@ private fun VideoPlayerModalContent(
         var ticks = 0
         while (true) {
             if (isPlaying && !isUserSeeking) {
-                currentPositionMs = exoPlayer.currentPosition
+                val now = System.currentTimeMillis()
+                val pos = exoPlayer.currentPosition
+                currentPositionMs = dev.asfakul.yumeiro.player.SeekMath.displayed(pos, pendingSeekMs, pendingSeekAt, now)
+                if (dev.asfakul.yumeiro.player.SeekMath.settled(pos, pendingSeekMs, pendingSeekAt, now)) pendingSeekMs = null
                 if (exoPlayer.duration > 0) {
                     durationMs = exoPlayer.duration
                 }
                 // Persist resume position every ~5 s instead of every tick: saving on every
-                // tick recomposed the whole app (video lists) twice a second.
-                if (++ticks % 10 == 0) {
+                // tick recomposed the whole app (video lists) four times a second.
+                if (++ticks % 20 == 0) {
                     currentOnProgressUpdate(video.id, currentPositionMs, durationMs)
                 }
             }
-            delay(500L)
+            // 250 ms (was 500 ms): the thumb moved in visible half-second steps.
+            delay(250L)
         }
     }
 
@@ -1269,9 +1281,8 @@ private fun VideoPlayerModalContent(
                     }
                 },
                 onDoubleTapRight = {
-                    val knownDuration = exoPlayer.duration.takeIf { it > 0 } ?: durationMs.takeIf { it > 1L }
-                    val raw = exoPlayer.currentPosition + SEEK_STEP_MS
-                    val target = if (knownDuration != null) raw.coerceAtMost(knownDuration) else raw
+                    val target = dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
+                        dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
                     exoPlayer.seekTo(target)
                     currentPositionMs = target
                     isDoubleTapRewindVisible = false
@@ -1295,7 +1306,8 @@ private fun VideoPlayerModalContent(
                     // 1 pixel = ~120ms of scrub
                     val deltaMs = (deltaX * 120f).toLong()
                     val newDelta = scrubDeltaMs + deltaMs
-                    val newTarget = (scrubStartTimeMs + newDelta).coerceIn(0L, durationMs)
+                    val newTarget = dev.asfakul.yumeiro.player.SeekMath.clamp(scrubStartTimeMs + newDelta,
+                        dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
                     scrubDeltaMs = newTarget - scrubStartTimeMs
                     scrubTargetTimeMs = newTarget
                 },
@@ -1400,12 +1412,14 @@ private fun VideoPlayerModalContent(
                 .padding(end = 64.dp)
         )
 
+        // App-wide rule: messages sit at the bottom, never the top. Lifted above the seek bar.
         ToastHUD(
             message = toastMessage,
             isVisible = isToastVisible,
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 72.dp)
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(start = 24.dp, end = 24.dp, bottom = if (isControlsVisible) 132.dp else 40.dp)
         )
 
         // Locked Unlock Button
@@ -1495,7 +1509,7 @@ private fun VideoPlayerModalContent(
                         if (nextVideo != null) onNextVideo() else showToast("No next video")
                     },
                     onRewind10s = {
-                        val target = (exoPlayer.currentPosition - 10000L).coerceAtLeast(0L)
+                        val target = dev.asfakul.yumeiro.player.SeekMath.rewind(exoPlayer.currentPosition, SEEK_STEP_MS)
                         exoPlayer.seekTo(target)
                         currentPositionMs = target
                     },
@@ -1509,7 +1523,10 @@ private fun VideoPlayerModalContent(
                         }
                     },
                     onForward10s = {
-                        val target = (exoPlayer.currentPosition + 10000L).coerceAtMost(durationMs)
+                        // Was coerceAtMost(durationMs): with the 1L "unknown" placeholder that sent
+                        // fast forward back to 0:00. SeekMath only caps at a real duration.
+                        val target = dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
+                            dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
                         exoPlayer.seekTo(target)
                         currentPositionMs = target
                     },
@@ -1530,9 +1547,14 @@ private fun VideoPlayerModalContent(
                     isFullscreen = isFullscreen,
                     onToggleFullscreen = { isFullscreen = !isFullscreen },
                     onSeekProgressFinish = {
-                        val seekPos = (sliderProgress * durationMs).toLong()
-                        exoPlayer.seekTo(seekPos)
-                        currentPositionMs = seekPos
+                        val seekPos = dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress,
+                            dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
+                        if (seekPos != null) {
+                            exoPlayer.seekTo(seekPos)
+                            currentPositionMs = seekPos
+                            pendingSeekMs = seekPos
+                            pendingSeekAt = System.currentTimeMillis()
+                        }
                         isUserSeeking = false
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),

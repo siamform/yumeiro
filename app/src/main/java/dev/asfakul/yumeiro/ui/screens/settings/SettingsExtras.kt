@@ -98,6 +98,7 @@ fun AppearanceSettingsCard() {
     val mode by ThemeSettings.mode.collectAsState()
     val amoled by ThemeSettings.amoled.collectAsState()
     val ambient by ThemeSettings.ambient.collectAsState()
+    val kana by ThemeSettings.kana.collectAsState()
     SettingsCard {
         ThemeMode.entries.forEach { m ->
             Row(
@@ -148,6 +149,14 @@ fun AppearanceSettingsCard() {
             checked = ambient,
             onCheckedChange = { ThemeSettings.setAmbient(context, it) },
             testTag = "toggle_ambient",
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = "Japanese accents",
+            subtitle = "Small kana labels such as 設定 and 音楽 above page titles. Off: English only",
+            checked = kana,
+            onCheckedChange = { ThemeSettings.setKana(context, it) },
+            testTag = "toggle_kana",
         )
     }
 }

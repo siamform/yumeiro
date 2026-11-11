@@ -46,6 +46,7 @@ object ThemeSettings {
     private const val KEY_MODE = "theme_mode"
     private const val KEY_AMOLED = "amoled_black"
     private const val KEY_AMBIENT = "ambient_artwork"
+    private const val KEY_KANA = "kana_accents"
 
     private val _mode = MutableStateFlow(ThemeMode.SYSTEM)
     val mode: StateFlow<ThemeMode> = _mode.asStateFlow()
@@ -54,6 +55,9 @@ object ThemeSettings {
     private val _ambient = MutableStateFlow(true)
     /** Tint the page background with the colour of what's playing (Spotify / Apple Music style). */
     val ambient: StateFlow<Boolean> = _ambient.asStateFlow()
+    private val _kana = MutableStateFlow(true)
+    /** Small Japanese accents (kana overlines such as 設定 or 音楽) next to page titles. */
+    val kana: StateFlow<Boolean> = _kana.asStateFlow()
     @Volatile private var loaded = false
 
     fun init(context: Context) {
@@ -62,12 +66,18 @@ object ThemeSettings {
         _mode.value = runCatching { ThemeMode.valueOf(p.getString(KEY_MODE, ThemeMode.SYSTEM.name)!!) }.getOrDefault(ThemeMode.SYSTEM)
         _amoled.value = p.getBoolean(KEY_AMOLED, false)
         _ambient.value = p.getBoolean(KEY_AMBIENT, true)
+        _kana.value = p.getBoolean(KEY_KANA, true)
         loaded = true
     }
 
     fun setMode(context: Context, mode: ThemeMode) {
         _mode.value = mode
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_MODE, mode.name).apply()
+    }
+
+    fun setKana(context: Context, enabled: Boolean) {
+        _kana.value = enabled
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_KANA, enabled).apply()
     }
 
     fun setAmoled(context: Context, enabled: Boolean) {

@@ -8,7 +8,6 @@ package dev.asfakul.yumeiro.ui.screens.player
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.activity.compose.BackHandler
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
@@ -84,6 +83,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -91,6 +91,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -212,6 +213,10 @@ fun NowPlayingScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         EqualizerBars(color = SpotifyGreen, playing = playbackState.isPlaying, barCount = 4)
                         Spacer(Modifier.width(8.dp))
+                        if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) Text(
+                            if (sleepLeft != null) "おやすみ · " else "再生中 · ", style = OverlineStyle, color = SpotifyGreen, maxLines = 1,
+                            modifier = Modifier.clearAndSetSemantics { },
+                        )
                         Text(if (sleepLeft != null) "Sleep timer · ${sleepLeft}" else "Now playing", style = OverlineStyle,
                             color = SpotifyGreen, maxLines = 1)
                     }
@@ -485,16 +490,15 @@ private fun LyricsPanel(
         if (uri != null && id != null) {
             scope.launch {
                 val ok = TrackDetailsRepository.importLyrics(context, id, uri)
-                runCatching {
-                    Toast.makeText(context, if (ok) "Lyrics imported" else "That file has no readable lyrics", Toast.LENGTH_SHORT).show()
-                }
+                if (ok) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Lyrics imported")
+                else dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "That file has no readable lyrics")
                 if (ok) onReload()
             }
         }
     }
     val launchImport: () -> Unit = {
         runCatching { importLauncher.launch(arrayOf("*/*")) }.onFailure {
-            runCatching { Toast.makeText(context, "No file picker available", Toast.LENGTH_SHORT).show() }
+            dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "No file picker available")
         }
     }
 
@@ -775,20 +779,51 @@ private fun RailTool(
 }
 
 /**
- * Prototype seek bar: 4dp track at 20% contrast, accent fill, 14dp thumb. The live position is
- * read in the draw phase; the time labels recompose at most once per second.
+ * Seek bar: 4dp track at 16% contrast, accent fill, 14dp thumb. The live position is read in the
+ * draw phase; the time labels recompose at most once per second.
+ *
+ * Fixed glitches (see [dev.asfakul.yumeiro.player.SeekMath]):
+ *  - touch used `x / width` but the track is drawn inset by the thumb radius, so the thumb jumped
+ *    sideways on touch; touch now maps through the same inset as drawing;
+ *  - after a drag the bar snapped back to the old position until the player caught up; the seek
+ *    target is now held until the player reports it (or 2 s pass);
+ *  - an unknown duration (C.TIME_UNSET → coerced to 1 ms) drew a full bar; it now stays empty,
+ *    seeking is ignored and the label shows "--:--".
  */
 @Composable
 private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> Unit) {
-    val duration = durationMs.coerceAtLeast(1L)
+    val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
     var dragFraction by remember { mutableFloatStateOf(-1f) }
+    var pendingMs by remember { mutableStateOf<Long?>(null) }
+    var pendingAt by remember { mutableLongStateOf(0L) }
     val currentOnSeek by rememberUpdatedState(onSeek)
-    val currentDuration by rememberUpdatedState(duration)
+    val currentKnown by rememberUpdatedState(known)
     val accent = SpotifyGreen
     val accent2 = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent2
     val trackColor = TextPrimary.copy(alpha = 0.16f)
     val thumb = ChipSelectedColor
-    fun fraction(): Float = if (dragFraction >= 0f) dragFraction else (positionMs().toFloat() / duration).coerceIn(0f, 1f)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val inset = with(density) { 7.dp.toPx() }
+
+    fun shownMs(): Long = dev.asfakul.yumeiro.player.SeekMath.displayed(positionMs(), pendingMs, pendingAt, System.currentTimeMillis())
+    // Releases the held seek target once the player has caught up (state is never written in draw).
+    LaunchedEffect(pendingMs) {
+        while (pendingMs != null) {
+            kotlinx.coroutines.delay(100L)
+            if (dev.asfakul.yumeiro.player.SeekMath.settled(positionMs(), pendingMs, pendingAt, System.currentTimeMillis())) pendingMs = null
+        }
+    }
+    fun fraction(): Float = if (dragFraction >= 0f) dragFraction else dev.asfakul.yumeiro.player.SeekMath.fraction(shownMs(), currentKnown)
+    fun xToFraction(x: Float, width: Int): Float {
+        val usable = (width - inset * 2).coerceAtLeast(1f)
+        return ((x - inset) / usable).coerceIn(0f, 1f)
+    }
+    fun seekTo(f: Float) {
+        val target = dev.asfakul.yumeiro.player.SeekMath.positionFor(f, currentKnown) ?: return
+        pendingMs = target
+        pendingAt = System.currentTimeMillis()
+        currentOnSeek(target)
+    }
 
     Column(Modifier.fillMaxWidth()) {
         Box(
@@ -798,29 +833,27 @@ private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> 
                 .testTag("now_playing_seek_slider")
                 .semantics {
                     progressBarRangeInfo = ProgressBarRangeInfo(fraction(), 0f..1f)
-                    setProgress { v -> currentOnSeek((v.coerceIn(0f, 1f) * currentDuration).toLong()); true }
+                    setProgress { v -> if (currentKnown == null) false else { seekTo(v); true } }
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures { o ->
-                        val f = (o.x / size.width).coerceIn(0f, 1f)
-                        currentOnSeek((f * currentDuration).toLong())
-                    }
+                    detectTapGestures { o -> seekTo(xToFraction(o.x, size.width)) }
                 }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
-                        onDragStart = { o -> dragFraction = (o.x / size.width).coerceIn(0f, 1f) },
+                        onDragStart = { o -> if (currentKnown != null) dragFraction = xToFraction(o.x, size.width) },
                         onDragEnd = {
-                            if (dragFraction >= 0f) currentOnSeek((dragFraction * currentDuration).toLong())
+                            if (dragFraction >= 0f) seekTo(dragFraction)
                             dragFraction = -1f
                         },
                         onDragCancel = { dragFraction = -1f },
                     ) { change, _ ->
+                        if (currentKnown == null) return@detectHorizontalDragGestures
                         change.consume()
-                        dragFraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                        dragFraction = xToFraction(change.position.x, size.width)
                     }
                 }
                 .drawBehind {
-                    val h = 4.dp.toPx(); val r = 7.dp.toPx()
+                    val h = 4.dp.toPx(); val r = inset
                     val y = size.height / 2f
                     val usable = size.width - r * 2
                     val f = fraction()
@@ -833,14 +866,15 @@ private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> 
                 }
         )
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            val elapsedSec by remember(duration) {
+            val elapsedSec by remember(known) {
                 derivedStateOf {
-                    val ms = if (dragFraction >= 0f) (dragFraction * duration).toLong() else positionMs().coerceIn(0L, duration)
+                    val ms = if (dragFraction >= 0f && known != null) (dragFraction * known).toLong()
+                        else dev.asfakul.yumeiro.player.SeekMath.clamp(shownMs(), known)
                     ms / 1000L
                 }
             }
             Text(if (elapsedSec <= 0L) "00:00" else formatDuration(elapsedSec * 1000L), style = MaterialTheme.typography.labelMedium, color = TextSecondary)
-            Text(formatDuration(durationMs), style = MaterialTheme.typography.labelMedium, color = TextTertiary, textAlign = TextAlign.End)
+            Text(if (known != null) formatDuration(known) else "--:--", style = MaterialTheme.typography.labelMedium, color = TextTertiary, textAlign = TextAlign.End)
         }
     }
 }

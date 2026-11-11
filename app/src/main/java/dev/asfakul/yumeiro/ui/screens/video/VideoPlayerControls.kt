@@ -473,21 +473,22 @@ fun VideoPlayerBottomBar(
     compact: Boolean = false,
 ) {
     if (compact) {
-        val pos = if (isUserSeeking) (sliderProgress * durationMs).toLong() else currentPositionMs
-        val safe = if (durationMs > 0) durationMs else 1L
+        val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
+        val pos = if (isUserSeeking) dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress, known) ?: currentPositionMs else currentPositionMs
         Row(
             modifier = modifier.fillMaxWidth().padding(start = 12.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(formatDuration(pos), color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             Slider(
-                value = if (isUserSeeking) sliderProgress else (currentPositionMs.toFloat() / safe).coerceIn(0f, 1f),
+                value = if (isUserSeeking) sliderProgress else dev.asfakul.yumeiro.player.SeekMath.fraction(currentPositionMs, known),
                 onValueChange = onSeekProgressChange,
                 onValueChangeFinished = onSeekProgressFinish,
+                enabled = known != null,
                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = SpotifyGreen, inactiveTrackColor = Color.White.copy(alpha = 0.25f)),
                 modifier = Modifier.weight(1f).height(28.dp).padding(horizontal = 8.dp).testTag("video_seekbar")
             )
-            Text(formatDuration(durationMs), color = TextSecondary, fontSize = 11.sp)
+            Text(if (known != null) formatDuration(durationMs) else "--:--", color = TextSecondary, fontSize = 11.sp)
             IconButton(onClick = onToggleFullscreen, modifier = Modifier.testTag("video_fullscreen_btn")) {
                 Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, if (isFullscreen) "Exit fullscreen" else "Enter fullscreen", tint = Color.White, modifier = Modifier.size(22.dp))
             }
@@ -499,12 +500,11 @@ fun VideoPlayerBottomBar(
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
+        val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
         val displayPos = if (isUserSeeking) {
-            (sliderProgress * durationMs).toLong()
+            dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress, known) ?: currentPositionMs
         } else currentPositionMs
-
-        val safeDuration = if (durationMs > 0) durationMs else 1L
-        val remainingMs = (safeDuration - displayPos).coerceAtLeast(0L)
+        val remainingMs = ((known ?: displayPos) - displayPos).coerceAtLeast(0L)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -519,7 +519,7 @@ fun VideoPlayerBottomBar(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "-${formatDuration(remainingMs)}  /  ${formatDuration(durationMs)}",
+                    text = if (known != null) "-${formatDuration(remainingMs)}  /  ${formatDuration(durationMs)}" else "--:--",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 11.sp
@@ -540,11 +540,12 @@ fun VideoPlayerBottomBar(
             }
         }
 
-        val currentRatio = (currentPositionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+        val currentRatio = dev.asfakul.yumeiro.player.SeekMath.fraction(currentPositionMs, known)
         Slider(
             value = if (isUserSeeking) sliderProgress else currentRatio,
             onValueChange = onSeekProgressChange,
             onValueChangeFinished = onSeekProgressFinish,
+            enabled = known != null,
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
                 activeTrackColor = SpotifyGreen,

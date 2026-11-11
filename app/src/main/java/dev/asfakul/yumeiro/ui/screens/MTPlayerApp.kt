@@ -23,7 +23,6 @@ import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import android.os.SystemClock
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -364,6 +363,7 @@ fun MTPlayerApp(
                 .testTag("app_root_scaffold"),
             containerColor = Color.Transparent,
             topBar = {
+                val kanaOn = dev.asfakul.yumeiro.ui.components.kanaEnabled()
                 if (!isSubpage) {
                     MTTopBar(
                         // Home keeps the signature mark; Music and Videos show their source as the title.
@@ -375,9 +375,9 @@ fun MTPlayerApp(
                         },
                         overline = when (currentRoute) {
                             Screen.Home.route -> "◆ 夢色 YUMEIRO"
-                            Screen.Music.route -> "Music"
-                            Screen.Videos.route -> "Videos"
-                            else -> null
+                            Screen.Music.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("音楽", "Music", kanaOn)
+                            Screen.Videos.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("映像", "Videos", kanaOn)
+                            else -> dev.asfakul.yumeiro.ui.components.Kana.overline(dev.asfakul.yumeiro.ui.components.Kana.forTitle(topBarTitle), null, kanaOn)
                         },
                         onTitleClick = if (currentRoute == Screen.Music.route || currentRoute == Screen.Videos.route) {
                             { sourceMenuFor = if (sourceMenuFor == currentRoute) null else currentRoute }
@@ -1306,7 +1306,7 @@ fun MTPlayerApp(
                 context.findActivity()?.finish()
             } else {
                 lastBackPressAt = now
-                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
             }
         }
     }
