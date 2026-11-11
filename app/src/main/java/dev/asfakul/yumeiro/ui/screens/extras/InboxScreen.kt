@@ -106,7 +106,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
             val unread = items.count { !it.read }
             SubPageHeader(
                 title = "Notifications",
-                subtitle = if (items.isEmpty()) "通知 · Inbox" else if (unread > 0) "$unread new" else "${items.size} in your inbox",
+                subtitle = if (items.isEmpty()) "Nothing new yet" else if (unread > 0) "$unread new" else "${items.size} in your inbox",
                 onBack = onBack,
             ) {
                 if (unread > 0) IconButton(onClick = { Inbox.markAllRead(context) }, modifier = Modifier.testTag("inbox_mark_read")) {

@@ -93,7 +93,7 @@ fun SupportScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     Box(Modifier.fillMaxSize().pageBackground().testTag("support_screen")) {
         Column(Modifier.fillMaxSize()) {
-            SubPageHeader(title = "Buy me a coffee", subtitle = "応援 · Support Yumeiro", onBack = onBack)
+            SubPageHeader(title = "Buy me a coffee", subtitle = "Support Yumeiro", onBack = onBack)
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),

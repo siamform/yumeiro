@@ -112,13 +112,6 @@ val bottomNavItems = listOf(
         testTag = "nav_tab_videos"
     ),
     BottomNavItem(
-        route = Screen.Stream.route,
-        label = "Stream",
-        selectedIcon = Icons.Filled.LiveTv,
-        unselectedIcon = Icons.Outlined.LiveTv,
-        testTag = "nav_tab_stream"
-    ),
-    BottomNavItem(
         route = Screen.Library.route,
         label = "Library",
         selectedIcon = Icons.Filled.LibraryMusic,

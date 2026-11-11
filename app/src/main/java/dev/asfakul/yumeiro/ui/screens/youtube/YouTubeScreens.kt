@@ -296,7 +296,7 @@ private fun YtChip(label: String, selected: Boolean, onClick: () -> Unit) {
 private fun YtLabel(title: String, overline: String?) {
     Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 6.dp)) {
         if (overline != null) Text(overline.uppercase(), color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
-        Text(title, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+        Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp)
     }
 }
 
@@ -306,7 +306,7 @@ private fun YtShelfRow(title: String, icon: androidx.compose.ui.graphics.vector.
         Row(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(title, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             itemsIndexed(items, key = { i, it -> "${i}_${it.id}" }) { _, item ->

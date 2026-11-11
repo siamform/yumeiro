@@ -5,6 +5,13 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.SmartDisplay
+import androidx.compose.material.icons.filled.VideoLibrary
+import dev.asfakul.yumeiro.ui.components.ModeOption
+import dev.asfakul.yumeiro.ui.components.ModeSwitcher
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -160,7 +167,7 @@ fun OnlineHomeScreen(
                 Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Search, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("Search every Hue…", color = TextTertiary, fontSize = 13.sp)
+                    Text("Search every extension…", color = TextTertiary, fontSize = 13.sp)
                 }
             }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_market")) {
@@ -205,6 +212,14 @@ fun OnlineHomeScreen(
                         } else if (loadingNames.isNotEmpty()) item("hero_skel") {
                             dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, 380.dp, Modifier.padding(horizontal = 16.dp), RoundedCornerShape(24.dp))
                         }
+                        // Every extension gets its own banner; tapping one opens that extension's page.
+                        val banners = ready.mapNotNull { (n, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.let { Triple(n, it.title, it.items) } }
+                        if (banners.isNotEmpty()) item("ext_banners") {
+                            Column(Modifier.padding(top = 14.dp, bottom = 4.dp)) {
+                                SectionHeader("Your sources", subtitle = "${banners.size} extension${if (banners.size == 1) "" else "s"} ready")
+                                ExtensionBannerStrip(banners, onOpen = { selected = it })
+                            }
+                        }
                         if (continueItems.isNotEmpty()) item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
                         }
@@ -213,7 +228,7 @@ fun OnlineHomeScreen(
                             PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         if (feed.isNotEmpty()) item("feed_label") {
-                            FeedLabel("Spectrum", "mixed from ${ready.size} of ${providers.size} Hues")
+                            FeedLabel("Mixed for you", "from ${ready.size} of ${providers.size} extensions")
                         }
                         items(feed, key = { it.key }, contentType = { if (it is FeedEntry.Card) "card" else "shelf" }) { e ->
                             when (e) {
@@ -225,12 +240,12 @@ fun OnlineHomeScreen(
                             }
                         }
                         if (loadingNames.isNotEmpty()) item("feed_loading") {
-                            Column { SectionHeader("Painting ${loadingNames.size} more Hue${if (loadingNames.size == 1) "" else "s"}…"); FeedCardSkeleton() }
+                            Column { SectionHeader("Loading ${loadingNames.size} more extension${if (loadingNames.size == 1) "" else "s"}…"); FeedCardSkeleton() }
                         }
                         val failed = providers.filter { homes[it.name] is ProviderHome.Failed }
                         if (failed.isNotEmpty()) item("feed_failed") {
                             ProviderProblem(
-                                if (failed.size == 1) failed[0].name else "${failed.size} Hues didn't load",
+                                if (failed.size == 1) failed[0].name else "${failed.size} extensions didn't load",
                                 failed.joinToString(" · ") { it.name }.take(160),
                             ) { scope.launch { supervisorScope { failed.forEach { api -> launch { loadOne(api, true) } } } } }
                         }
@@ -292,31 +307,35 @@ private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
 
 /** Where the Videos tab gets its videos from. */
 enum class VideoSource(val label: String, val tag: String) {
-    ONLINE("Hues", "online"), YOUTUBE("YouTube", "youtube"), DEVICE("Device", "device");
+    ONLINE("Yumix", "online"), YOUTUBE("YouTube", "youtube"), DEVICE("Device", "device"), LIVE("Live TV", "live");
 
     companion object {
-        /** Hues when a network is up, device videos when offline. */
+        /** Yumix when a network is up, device videos when offline. */
         fun defaultFor(online: Boolean): VideoSource = if (online) ONLINE else DEVICE
     }
 }
 
-/** "Hues | YouTube | Device" switch shown at the top of the Videos tab. */
+/** The four Videos modes (Yumix · YouTube · Device · Live TV) as mode cards. */
 @Composable
-fun VideoSourceSwitch(source: VideoSource, onChange: (VideoSource) -> Unit, modifier: Modifier = Modifier) {
-    val brush = dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush()
-    Surface(shape = RoundedCornerShape(24.dp), color = GlassFill, modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().testTag("video_source_switch")) {
-        Row(Modifier.padding(4.dp)) {
-            VideoSource.entries.forEach { value ->
-                val sel = value == source
-                Box(
-                    Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(20.dp))
-                        .then(if (sel) Modifier.background(brush) else Modifier)
-                        .clickable { onChange(value) }.testTag("video_source_" + value.tag),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(value.label, color = if (sel) OnAccent else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
+fun VideoSourceSwitch(
+    source: VideoSource,
+    onChange: (VideoSource) -> Unit,
+    modifier: Modifier = Modifier,
+    extensionCount: Int = 0,
+    deviceCount: Int = 0,
+) {
+    ModeSwitcher(
+        options = VideoSource.entries.map { v ->
+            when (v) {
+                VideoSource.ONLINE -> ModeOption(v.tag, "Yumix", if (extensionCount == 0) "Add sources" else "$extensionCount sources", Icons.Default.AutoAwesome, "video_source_" + v.tag)
+                VideoSource.YOUTUBE -> ModeOption(v.tag, "YouTube", "No login", Icons.Default.SmartDisplay, "video_source_" + v.tag)
+                VideoSource.DEVICE -> ModeOption(v.tag, "Device", "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag)
+                VideoSource.LIVE -> ModeOption(v.tag, "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "video_source_" + v.tag)
             }
-        }
-    }
+        },
+        selectedKey = source.tag,
+        onSelect = { k -> VideoSource.entries.firstOrNull { it.tag == k }?.let(onChange) },
+        modifier = modifier,
+        testTag = "video_source_switch",
+    )
 }

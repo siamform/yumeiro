@@ -204,12 +204,10 @@ fun MTTopBar(
                     Spacer(Modifier.width(4.dp))
                 }
                 Column(Modifier.weight(1f)) {
-                    if (overline != null) {
+                    if (overline != null || offline) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            MoonPath(height = 12.dp)
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                overline.uppercase(), style = OverlineStyle, color = SpotifyGreen, maxLines = 1,
+                            if (overline != null) Text(
+                                overline, style = OverlineStyle, color = TextSecondary, maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
                             )
@@ -220,13 +218,10 @@ fun MTTopBar(
                         }
                         Spacer(Modifier.height(2.dp))
                     }
-                    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
-                    val titleBrush = androidx.compose.runtime.remember(p.textPrimary, p.accentBright) {
-                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(p.textPrimary, p.textPrimary, p.accentBright))
-                    }
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.headlineMedium.copy(brush = titleBrush),
+                        // Narrow phones (≤ 380dp) get one step smaller so "Good morning" never clips.
+                        style = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineLarge,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

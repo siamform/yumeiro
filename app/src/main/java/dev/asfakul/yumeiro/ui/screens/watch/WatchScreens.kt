@@ -160,12 +160,10 @@ fun PlayerBrandBar(
         Spacer(Modifier.width(8.dp))
         Text(
             "Yumeiro",
-            style = androidx.compose.ui.text.TextStyle(brush = brush, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 17.sp),
+            style = androidx.compose.ui.text.TextStyle(brush = brush, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp),
             maxLines = 1,
             modifier = Modifier.testTag("player_brand_name"),
         )
-        Spacer(Modifier.width(6.dp))
-        Text("夢色", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onClose, modifier = Modifier.testTag("watch_close")) {
             Icon(Icons.Default.Close, "Close player", tint = TextPrimary)
@@ -247,7 +245,7 @@ fun WatchTitle(title: String, overline: String? = null, meta: String? = null) {
             Text(overline.uppercase(), color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, maxLines = 1)
             Spacer(Modifier.height(4.dp))
         }
-        Text(title, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("watch_title"))
+        Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("watch_title"))
         if (!meta.isNullOrBlank()) {
             Spacer(Modifier.height(4.dp))
             Text(meta, color = TextTertiary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)

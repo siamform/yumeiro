@@ -212,7 +212,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 when {
                     shown.isEmpty() && (searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
                         Column(Modifier.fillMaxWidth()) {
-                            Text("Searching $searching Hue${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                            Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
                             PosterGridSkeleton(rows = 3)
                         }
                     failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,

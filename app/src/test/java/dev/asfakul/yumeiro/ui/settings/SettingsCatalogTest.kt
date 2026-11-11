@@ -25,7 +25,7 @@ class SettingsCatalogTest {
     }
 
     @Test fun `routes are the ones the app knows how to open`() {
-        val known = setOf("sources", "health", "tracking", "youtube", "together", "backup", "guide")
+        val known = setOf("sources", "health", "tracking", "youtube", "together", "backup", "guide", "setup")
         Category.entries.mapNotNull { it.route }.forEach { assertTrue("unknown route $it", it in known) }
     }
 

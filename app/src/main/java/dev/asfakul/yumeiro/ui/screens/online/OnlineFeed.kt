@@ -147,7 +147,7 @@ internal fun ChannelAvatar(name: String, selected: Boolean, size: androidx.compo
             else {
                 // Fallback (and what shows while the logo loads): the Hue's initials.
                 Text(
-                    name.trim().take(2).uppercase().ifBlank { "?" }, color = Color.White, fontFamily = Unbounded,
+                    name.trim().take(2).uppercase().ifBlank { "?" }, color = Color.White, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope,
                     fontWeight = FontWeight.Bold, fontSize = (size.value * 0.30f).sp, maxLines = 1,
                 )
                 HueLogo(name, Modifier.fillMaxSize())
@@ -164,7 +164,7 @@ internal fun ChannelStrip(channels: List<String>, loading: Set<String>, selected
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.testTag("online_channels"),
     ) {
-        item("mix") { ChannelChipItem("Spectrum", selected == null, mix = true, loading = false) { onSelect(null) } }
+        item("mix") { ChannelChipItem("All", selected == null, mix = true, loading = false) { onSelect(null) } }
         itemsIndexed(channels, key = { i, n -> "ch_${i}_$n" }) { _, name ->
             ChannelChipItem(name, selected == name, mix = false, loading = name in loading) { onSelect(if (selected == name) null else name) }
         }
@@ -211,7 +211,7 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         item.type?.takeIf { it.isNotBlank() }?.let { Text(it.uppercase(), color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp) }
-                        Text(item.name, color = Color.White, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text(item.name, color = Color.White, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -258,8 +258,8 @@ internal fun ChannelHeader(name: String, rows: Int, titles: Int, onSearch: () ->
             ChannelAvatar(name, selected = true, size = 72.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("Hue · $rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextSecondary, fontSize = 12.sp)
+                Text(name, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Extension · $rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextSecondary, fontSize = 12.sp)
             }
             Surface(shape = CircleShape, color = SpotifyGreen.copy(alpha = 0.18f), modifier = Modifier.size(42.dp).clickable(onClick = onSearch)) {
                 Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, "Search", tint = SpotifyGreen) }
@@ -274,7 +274,7 @@ internal fun FeedLabel(title: String, subtitle: String? = null) {
     Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(width = 4.dp, height = 18.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(SpotifyGreen, AccentSecondary))))
         Spacer(Modifier.width(10.dp))
-        Text(title, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         if (subtitle != null) {
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Default.Star, null, tint = SpotifyGreen, modifier = Modifier.size(12.dp))

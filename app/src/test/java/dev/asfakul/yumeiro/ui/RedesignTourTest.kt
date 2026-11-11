@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -144,6 +145,8 @@ class RedesignTourTest {
     }
 
     private fun awaitHome() {
+        dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.resetForTests()
+        dev.asfakul.yumeiro.ui.components.ScrollMemory.clear()
         rule.mainClock.advanceTimeBy(3_000)
         rule.waitUntil(10_000) { exists("nav_tab_music") }
         rule.waitUntil(10_000) {
@@ -151,14 +154,32 @@ class RedesignTourTest {
             rule.onAllNodes(androidx.compose.ui.test.hasText("0 songs"), true).fetchSemanticsNodes().isEmpty()
         }
         settle(1_000)
+        // The activity starts before the test body, so a scroll spot left by an earlier test can be
+        // restored on Home. Start every tour at the top, like a fresh launch.
+        dev.asfakul.yumeiro.ui.components.ScrollMemory.clear()
+        runCatching { rule.onNodeWithTag("home_list", true).performScrollToIndex(0) }
+        settle(600)
     }
 
     private fun tour() {
         awaitHome()
         stop("home") { snap("01_home") }
-        stop("home_feed") {
-            scrollTo("home_list", "home_feed_shuffle"); snap("02_home_feed")
-            rule.onNodeWithTag("home_list", true).performTouchInput { swipeUp() }; settle(); snap("03_home_feed_more")
+        stop("home_sections") {
+            for ((i, t) in listOf("home_next_episodes", "home_episodes_empty", "quick_card_store", "home_sources_banner", "home_moods_retry",
+                "home_new_arrivals", "home_most_played", "home_feed_shuffle", "home_random_more").withIndex()) {
+                if (runCatching { rule.onNodeWithTag("home_list", true).performScrollToNode(hasTestTag(t)) }.isSuccess) {
+                    settle(300); snap("02_home_${"%02d".format(i)}_$t")
+                }
+            }
+            home()
+        }
+        stop("setup_guide") {
+            rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show() }
+            waitFor("setup_guide"); snap("06_setup_welcome")
+            tap("setup_next"); snap("07_setup_where")
+            tap("setup_next"); snap("08_setup_checklist")
+            tap("setup_skip"); settle()
+            org.junit.Assert.assertFalse("setup guide closes on skip", exists("setup_guide"))
             home()
         }
         stop("search") {
@@ -170,7 +191,12 @@ class RedesignTourTest {
         stop("inbox") { tap("topbar_inbox_action"); settle(); snap("05_inbox"); back(); home() }
 
         // Music
-        stop("music") { tap("nav_tab_music"); snap("10_music_tracks") }
+        stop("music") { tap("nav_tab_music"); tap("music_source_device"); snap("10_music_tracks") }
+        stop("music_modes") {
+            tap("music_source_mix"); settle(800); snap("13_music_mode_mix")
+            tap("music_source_online"); settle(1_200); snap("14_music_mode_online")
+            tap("music_source_device"); settle()
+        }
         stop("music_tabs") {
             for (i in 1..4) if (exists("music_tab_$i")) { tap("music_tab_$i"); snap("11_music_tab_$i") }
             tap("music_tab_0")
@@ -203,15 +229,20 @@ class RedesignTourTest {
 
         // Videos
         stop("videos") {
-            home(); tap("nav_tab_videos"); snap("30_videos")
+            home(); tap("nav_tab_videos"); tap("video_source_device"); snap("30_videos")
             for (i in 0..4) if (exists("video_tab_$i")) { tap("video_tab_$i"); snap("31_videos_tab_$i") }
+        }
+        stop("video_modes") {
+            tap("video_source_online"); settle(1_500); snap("35_video_mode_extensions")
+            tap("video_source_youtube"); settle(1_500); snap("36_video_mode_youtube")
+            tap("video_source_device"); settle()
         }
         stop("hues") { home(); tap("quick_card_hues"); settle(1_500); snap("32_hues_home") }
         stop("youtube") { home(); tap("quick_card_youtube"); settle(1_500); snap("33_youtube") }
         stop("ytmusic") { home(); tap("quick_card_ytmusic"); settle(1_500); snap("34_youtube_music") }
 
         // Stream / Live TV
-        stop("stream") { home(); tap("nav_tab_stream"); snap("40_stream") }
+        stop("stream") { home(); tap("nav_tab_videos"); tap("video_source_live"); settle(1_000); snap("40_stream") }
         stop("market") { tap("market_entry", list = "stream_screen"); waitFor("market_screen"); snap("41_playlist_market"); back() }
 
         // Library
@@ -225,7 +256,7 @@ class RedesignTourTest {
         // Settings and every category
         stop("settings") { home(); tap("topbar_settings_action"); waitFor("settings_home"); snap("60_settings") }
         val cats = listOf("appearance", "player", "audio", "online", "downloads", "library", "sources", "source_status", "tracking",
-            "youtube", "together", "notifications", "background", "network", "privacy", "backup", "updates", "guide", "about")
+            "youtube", "together", "notifications", "background", "network", "privacy", "backup", "updates", "setup", "guide", "about")
         cats.forEachIndexed { i, c ->
             stop("settings_$c") {
                 if (!exists("settings_home")) { home(); tap("topbar_settings_action"); waitFor("settings_home") }
@@ -261,7 +292,14 @@ class RedesignTourTest {
         awaitHome()
         snap("01_home")
         stop("music") { tap("nav_tab_music"); snap("10_music") }
+        stop("videos") { home(); tap("nav_tab_videos"); snap("30_videos") }
+        stop("setup") {
+            rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show() }
+            waitFor("setup_guide"); snap("06_setup_welcome"); tap("setup_next"); tap("setup_next"); snap("08_setup_checklist"); tap("setup_skip")
+            home()
+        }
         stop("np") {
+            home(); tap("nav_tab_music")
             tap(firstTagWithPrefix("track_item_")); waitFor("now_playing_screen_root")
             if (exists("now_playing_error_dismiss")) tap("now_playing_error_dismiss")
             snap("21_now_playing")

@@ -16,11 +16,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,45 +30,45 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DownloadForOffline
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -77,58 +77,33 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import dev.asfakul.yumeiro.data.model.AudioTrack
 import dev.asfakul.yumeiro.data.model.StorageStats
 import dev.asfakul.yumeiro.data.model.VideoItem
+import dev.asfakul.yumeiro.online.OnlineBookmarks
+import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.ui.components.EmptyMediaView
 import dev.asfakul.yumeiro.ui.components.SkeletonBlock
 import dev.asfakul.yumeiro.ui.components.TrackArtwork
 import dev.asfakul.yumeiro.ui.components.VideoGridCard
-import dev.asfakul.yumeiro.ui.components.formatFileSize
+import dev.asfakul.yumeiro.ui.screens.extras.SetupGuide
+import dev.asfakul.yumeiro.ui.screens.extras.rememberSetupStatus
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
-import dev.asfakul.yumeiro.ui.theme.OverlineStyle
-import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
-import dev.asfakul.yumeiro.ui.theme.TextPrimary
-import dev.asfakul.yumeiro.ui.theme.TextSecondary
-import dev.asfakul.yumeiro.ui.theme.TextTertiary
-import dev.asfakul.yumeiro.ui.theme.Unbounded
-import dev.asfakul.yumeiro.ui.theme.glass
-import dev.asfakul.yumeiro.ui.theme.rememberGlassBorder
 import dev.asfakul.yumeiro.youtube.YouTube
 import dev.asfakul.yumeiro.youtube.YtHistory
 import dev.asfakul.yumeiro.youtube.YtItem
+import dev.asfakul.yumeiro.youtube.YtShelf
 
-// ---- Spacing scale (ArchiveTune-like rhythm: 16dp gutters, 28dp between sections) -----------
+// ---- Rhythm --------------------------------------------------------------------------------
 private val Gutter = 16.dp
-private val SectionGap = 28.dp
-private val HeaderGap = 12.dp
-private val TileGap = 10.dp
-private val ListRowHeight = 72.dp
-private val ListThumb = 56.dp
+private val SectionTop = 26.dp
 
-/** One box of the Home shortcut grid. */
-@Immutable
-data class HomeShortcut(
-    val key: String,
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    /** Big decorative kana / kanji watermark (anime vibe). */
-    val glyph: String,
-    val onClick: () -> Unit,
-    val badge: String? = null,
-    /** Two-word live status under the key name ("60 songs", "No login"). */
-    val meta: String = subtitle,
-)
-
-/** The last thing you watched (device video, Hue title or YouTube), shown next to "last played". */
+/** The last thing you watched (device video, Yumix title or YouTube), shown next to "last played". */
 @Immutable
 data class ResumeVideo(
     val title: String,
@@ -140,96 +115,35 @@ data class ResumeVideo(
     val onClick: () -> Unit,
 )
 
-/** Blocks of the endless "For you" feed. */
-private sealed interface FeedBlock {
-    val id: Int
-    data class Tracks(override val id: Int, val title: String, val tracks: List<AudioTrack>) : FeedBlock
-    data class Albums(override val id: Int, val title: String, val tracks: List<AudioTrack>) : FeedBlock
-    data class Videos(override val id: Int, val title: String, val videos: List<VideoItem>) : FeedBlock
-    data class YouTubeRow(override val id: Int, val title: String, val items: List<YtItem>, val music: Boolean) : FeedBlock
-    data class OnlinePicks(override val id: Int) : FeedBlock
+/** One tile of the Explore grid. */
+@Immutable
+private data class Feature(
+    val tag: String,
+    val title: String,
+    val status: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+    val badge: String? = null,
+)
+
+/** Mood shelves (real YouTube / YouTube Music lists, loaded on demand). */
+private enum class Mood(val label: String, val shelf: YtShelf) {
+    CHILL("Chill", YtShelf.LOFI),
+    ENERGY("Energy", YtShelf.WORKOUT),
+    ANIME_SONGS("Anime songs", YtShelf.JPOP),
+    HITS("Top hits", YtShelf.TOP_HITS),
+    TRENDING("Trending", YtShelf.TRENDING_MUSIC),
+    ANIME_CLIPS("Anime clips", YtShelf.ANIME),
+    SHOWS("Movies & shows", YtShelf.TRENDING_MOVIES),
 }
 
 /**
- * Builds an endless, shuffled mix of device songs, device videos and (when you have YouTube
- * history) YouTube suggestions. Each pool is reshuffled with a new seed every time it runs out,
- * so scrolling never ends and consecutive blocks don't repeat the same items.
+ * Home — "everything at a glance", in a fixed order so people always know where to look:
+ *  search → setup progress → continue → next episodes → Explore (every feature, with status)
+ *  → moods → new arrivals → most played / watched recently → random device videos → online, by
+ *  extension (one banner per extension). Nothing repeats: a device video appears at most once on
+ *  the page, and the random section never shows a video from the rows above it.
  */
-private class FeedGenerator(
-    private val tracks: List<AudioTrack>,
-    private val videos: List<VideoItem>,
-    private val hasOnline: Boolean,
-    private val seed: Long,
-) {
-    private var nextId = 0
-    private var step = 0
-    private var trackCycle = 0
-    private var videoCycle = 0
-    private var trackQueue = ArrayDeque<AudioTrack>()
-    private var videoQueue = ArrayDeque<VideoItem>()
-    private var onlinePlaced = false
-    var yt: List<YtItem> = emptyList()
-    var ytMusic: List<YtItem> = emptyList()
-    private var ytCursor = 0
-    private var ytMusicCursor = 0
-
-    val isEmpty: Boolean get() = tracks.isEmpty() && videos.isEmpty() && !hasOnline
-
-    private fun takeTracks(n: Int): List<AudioTrack> {
-        if (tracks.isEmpty()) return emptyList()
-        val out = ArrayList<AudioTrack>(n)
-        while (out.size < n.coerceAtMost(tracks.size)) {
-            if (trackQueue.isEmpty()) trackQueue = ArrayDeque(tracks.shuffled(java.util.Random(seed + 31L * trackCycle++)))
-            val t = trackQueue.removeFirst()
-            if (out.none { it.id == t.id }) out += t
-        }
-        return out
-    }
-
-    private fun takeVideos(n: Int): List<VideoItem> {
-        if (videos.isEmpty()) return emptyList()
-        val out = ArrayList<VideoItem>(n)
-        while (out.size < n.coerceAtMost(videos.size)) {
-            if (videoQueue.isEmpty()) videoQueue = ArrayDeque(videos.shuffled(java.util.Random(seed + 17L * videoCycle++)))
-            val v = videoQueue.removeFirst()
-            if (out.none { it.id == v.id }) out += v
-        }
-        return out
-    }
-
-    private fun takeYt(music: Boolean, n: Int): List<YtItem> {
-        val pool = if (music) ytMusic else yt
-        if (pool.isEmpty()) return emptyList()
-        val start = if (music) ytMusicCursor else ytCursor
-        val out = List(n.coerceAtMost(pool.size)) { pool[(start + it) % pool.size] }
-        if (music) ytMusicCursor = (start + n) % pool.size else ytCursor = (start + n) % pool.size
-        return out
-    }
-
-    /** Produces up to [count] blocks (fewer only when every pool is empty). */
-    fun next(count: Int): List<FeedBlock> {
-        val out = ArrayList<FeedBlock>(count)
-        var guard = 0
-        while (out.size < count && guard++ < count * 8) {
-            val s = step++
-            val block: FeedBlock? = when (s % 6) {
-                0 -> takeTracks(4).takeIf { it.isNotEmpty() }?.let { FeedBlock.Tracks(nextId++, if (s == 0) "Quick picks" else trackTitle(s), it) }
-                1 -> takeVideos(4).takeIf { it.isNotEmpty() }?.let { FeedBlock.Videos(nextId++, if (s == 1) "Watch next" else videoTitle(s), it) }
-                2 -> if (hasOnline && !onlinePlaced) { onlinePlaced = true; FeedBlock.OnlinePicks(nextId++) }
-                     else takeYt(false, 10).takeIf { it.isNotEmpty() }?.let { FeedBlock.YouTubeRow(nextId++, "On YouTube for you", it, music = false) }
-                3 -> takeTracks(10).takeIf { it.size >= 3 }?.let { FeedBlock.Albums(nextId++, if (s == 3) "Mix for you" else "Another mix", it) }
-                4 -> takeYt(true, 10).takeIf { it.isNotEmpty() }?.let { FeedBlock.YouTubeRow(nextId++, "Songs like yours", it, music = true) }
-                else -> takeVideos(2).takeIf { it.isNotEmpty() }?.let { FeedBlock.Videos(nextId++, "From your videos", it) }
-            }
-            if (block != null) out += block
-        }
-        return out
-    }
-
-    private fun trackTitle(s: Int) = listOf("Play these next", "From your music", "Deep cuts", "Fresh ears")[(s / 6) % 4]
-    private fun videoTitle(s: Int) = listOf("More to watch", "From your videos", "Rewatch", "Picked for tonight")[(s / 6) % 4]
-}
-
 @Composable
 fun HomeScreen(
     stats: StorageStats,
@@ -257,7 +171,11 @@ fun HomeScreen(
     onOpenSearch: () -> Unit = onNavigateToVideos,
     onOpenHueStore: () -> Unit = onNavigateToSettings,
     onOpenDownloads: () -> Unit = onNavigateToLibrary,
-    /** Number of installed + working extensions ("Hues"). */
+    onOpenManga: () -> Unit = onNavigateToLibrary,
+    onOpenSources: () -> Unit = onOpenHueStore,
+    onOpenMix: () -> Unit = onNavigateToMusic,
+    onOpenOnlineTitle: (OnlineItem) -> Unit = {},
+    /** Number of installed + working Yumix extensions. */
     huesCount: Int = 0,
     isPlaying: Boolean = false,
     durationMs: Long = 0L,
@@ -266,70 +184,79 @@ fun HomeScreen(
     onOpenNowPlaying: () -> Unit = {},
     /** Last watched video of any source (null → "nothing yet" card). */
     resumeVideo: ResumeVideo? = null,
-    /** Plays a YouTube suggestion from the feed (music → as a song, otherwise as a video). */
+    /** Plays a YouTube item (music → as a song, otherwise as a video). */
     onPlayYouTube: (YtItem, List<YtItem>) -> Unit = { _, _ -> },
-    /** Optional "Popular online" rows from installed extensions (woven into the feed). */
+    /** Online rows from installed extensions, one banner per extension. */
     onlinePicks: (@Composable (header: @Composable (String, () -> Unit) -> Unit) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val p = LocalMtPalette.current
     val continueTrack = selectedTrack ?: recentlyPlayed.firstOrNull()
 
     remember { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context); true }
-    val downloadItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsStateCompat()
-    val dlSummary = remember(downloadItems) {
-        val split = dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloadItems)
-        when {
-            split.active.isNotEmpty() -> "${split.active.size} in progress" to "${split.active.size}"
-            split.isEmpty -> "Save for offline" to null
-            else -> "${split.permanentCount} permanent · ${split.offlineCount} offline" to null
-        }
+    val downloadItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+    val activeDownloads = remember(downloadItems) { dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloadItems).active.size }
+    LaunchedEffect(Unit) { OnlineBookmarks.ensureLoaded(context) }
+    val bookmarks by OnlineBookmarks.items.collectAsState()
+    val hub by dev.asfakul.yumeiro.sources.SourceHub.state.collectAsState()
+    val mangaCount = remember(hub.generation) { dev.asfakul.yumeiro.sources.SourceHub.mangaProviders().size }
+    val setup = rememberSetupStatus()
+    val setupCardHidden by SetupGuide.cardHidden.collectAsState()
+
+    // ---- Next episodes: series with new episodes first, then what you are watching -------------
+    val nextEpisodes = remember(bookmarks) {
+        val fresh = bookmarks.filter { it.newEpisodes > 0 }.sortedByDescending { it.newEpisodes }
+        val watching = bookmarks.filter { it.newEpisodes == 0 && it.status == OnlineBookmarks.Status.WATCHING }.sortedByDescending { it.addedAt }
+        (fresh + watching).distinctBy { it.key }.take(12)
     }
-    val tiles = remember(stats.audioCount, stats.videoCount, huesCount, dlSummary) {
-        mapOf(
-            "music" to HomeShortcut("music", "Music", "${stats.audioCount} songs on device", Icons.Default.LibraryMusic, "音", onNavigateToMusic, meta = "${stats.audioCount} songs"),
-            "ytmusic" to HomeShortcut("ytmusic", "YT Music", "Stream any song", Icons.Default.Album, "歌", onOpenYouTubeMusic, meta = "Stream"),
-            "eq" to HomeShortcut("eq", "Equalizer", "Bass · 3D · presets", Icons.Default.GraphicEq, "響", onNavigateToEqualizer, meta = "Presets"),
-            "hues" to HomeShortcut("hues", "Hues", "Your extension channels · Spectrum feed", Icons.Default.AutoAwesome, "彩", onOpenHues,
-                badge = if (huesCount > 0) "$huesCount live" else null, meta = if (huesCount > 0) "$huesCount live" else "Add one"),
-            "videos" to HomeShortcut("videos", "Videos", "${stats.videoCount} on device", Icons.Default.VideoLibrary, "映", onNavigateToVideos, meta = "${stats.videoCount} files"),
-            "youtube" to HomeShortcut("youtube", "YouTube", "No login", Icons.Default.SmartDisplay, "動", onOpenYouTube, meta = "No login"),
-            "live" to HomeShortcut("live", "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "生", onOpenLive, meta = "IPTV"),
-            "library" to HomeShortcut("library", "Library", "Playlists · favorites · stats", Icons.Default.Bookmarks, "棚", onNavigateToLibrary, meta = "Yours"),
-            "store" to HomeShortcut("store", "Store", "Hue store · find more channels", Icons.Default.Storefront, "店", onOpenHueStore, meta = "Browse"),
-            "downloads" to HomeShortcut("downloads", "Downloads", "Downloads · ${dlSummary.first}", Icons.Default.DownloadForOffline, "保", onOpenDownloads, badge = dlSummary.second,
-                meta = if (dlSummary.second != null) "${dlSummary.second} active" else "Offline"),
+
+    // ---- Device rows, de-duplicated top to bottom ---------------------------------------------
+    val newArrivals = remember(allTracks, recentVideos) {
+        val t = allTracks.sortedByDescending { it.dateAdded }.take(10).map { Arrival(it.dateAdded, track = it) }
+        val v = recentVideos.sortedByDescending { it.dateAdded }.take(6).map { Arrival(it.dateAdded, video = it) }
+        (t + v).sortedByDescending { it.at }.take(12)
+    }
+    val watchedRecently = remember(recentVideos, newArrivals) {
+        val shown = newArrivals.mapNotNull { it.video?.id }.toSet()
+        recentVideos.filter { it.lastWatchedTimestamp > 0 && it.id !in shown }.sortedByDescending { it.lastWatchedTimestamp }.take(8)
+    }
+    var shuffleSeed by rememberSaveable { mutableStateOf(System.nanoTime()) }
+    var randomShown by rememberSaveable(shuffleSeed) { mutableIntStateOf(6) }
+    val randomPool = remember(recentVideos, newArrivals, watchedRecently, shuffleSeed) {
+        val shown = (newArrivals.mapNotNull { it.video?.id } + watchedRecently.map { it.id }).toSet()
+        recentVideos.filter { it.id !in shown }.distinctBy { it.id }.shuffled(java.util.Random(shuffleSeed))
+    }
+
+    // ---- YouTube "because you watched" (only if you have YouTube history) ---------------------
+    val ytHistory by YtHistory.items.collectAsState()
+    var ytRelated by remember { mutableStateOf<List<YtItem>>(emptyList()) }
+    LaunchedEffect(ytHistory.firstOrNull { !it.music }?.id) {
+        YtHistory.load(context)
+        val last = YtHistory.items.value.firstOrNull { !it.music } ?: return@LaunchedEffect
+        ytRelated = runCatching { YouTube.related(context, last.id, music = false).filterNot { it.live }.distinctBy { it.id } }.getOrDefault(emptyList()).take(12)
+    }
+
+    val features = remember(stats.audioCount, stats.videoCount, huesCount, activeDownloads, mangaCount) {
+        listOf(
+            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", Icons.Default.AutoAwesome, onOpenHues),
+            Feature("quick_card_youtube", "YouTube", "No login", Icons.Default.SmartDisplay, onOpenYouTube),
+            Feature("quick_card_live", "Live TV", "IPTV · M3U", Icons.Default.LiveTv, onOpenLive),
+            Feature("quick_card_ytmusic", "Online music", "YouTube Music", Icons.Default.Album, onOpenYouTubeMusic),
+            Feature("quick_card_music", "Device music", "${stats.audioCount} songs", Icons.Default.LibraryMusic, onNavigateToMusic),
+            Feature("quick_card_videos", "Device videos", "${stats.videoCount} files", Icons.Default.VideoLibrary, onNavigateToVideos),
+            Feature("quick_card_manga", "Manga", if (mangaCount > 0) "$mangaCount sources" else "Add sources", Icons.AutoMirrored.Filled.MenuBook, onOpenManga),
+            Feature("quick_card_mix", "Music mix", "Device + online", Icons.Default.Shuffle, onOpenMix),
+            Feature("quick_card_downloads", "Downloads", if (activeDownloads > 0) "$activeDownloads active" else "Offline", Icons.Default.DownloadForOffline, onOpenDownloads,
+                badge = activeDownloads.takeIf { it > 0 }?.toString()),
+            Feature("quick_card_audio_engine", "Equalizer", "Bass · 3D", Icons.Default.GraphicEq, onNavigateToEqualizer),
+            Feature("quick_card_library", "Library", "Playlists", Icons.Default.Bookmarks, onNavigateToLibrary),
+            Feature("quick_card_store", "Get sources", "Extension store", Icons.Default.Storefront, onOpenHueStore),
         )
     }
 
-    // ---- Endless feed state -----------------------------------------------------------------
-    var seed by remember { mutableStateOf(System.nanoTime()) }
-    val ytHistory by YtHistory.items.collectAsStateCompat()
-    val generator = remember(allTracks, recentVideos, onlinePicks != null, seed) {
-        FeedGenerator(allTracks, recentVideos, hasOnline = onlinePicks != null, seed = seed)
-    }
-    val blocks = remember(generator) { mutableStateListOf<FeedBlock>().apply { addAll(generator.next(6)) } }
-    var ytLoaded by remember(generator) { mutableIntStateOf(0) }
-    // YouTube suggestions: related to what you last played / watched there (only if you have history).
-    LaunchedEffect(generator, ytHistory.isNotEmpty()) {
-        YtHistory.load(context)
-        val history = YtHistory.items.value
-        if (history.isEmpty()) return@LaunchedEffect
-        val lastVideo = history.firstOrNull { !it.music }
-        val lastSong = history.firstOrNull { it.music }
-        runCatching {
-            if (lastVideo != null) generator.yt = YouTube.related(context, lastVideo.id, music = false).filterNot { it.live }
-            if (lastSong != null) generator.ytMusic = YouTube.related(context, lastSong.id, music = true)
-        }
-        ytLoaded++
-    }
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag("home_screen_root")
-    ) {
-        val wide = maxWidth >= 600.dp
+    BoxWithConstraints(modifier.fillMaxSize().testTag("home_screen_root")) {
+        val columns = if (maxWidth >= 600.dp) 6 else 3
         val videoColumns = when {
             maxWidth >= 1000.dp -> 4
             maxWidth >= 560.dp -> 3
@@ -339,26 +266,39 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().testTag("home_list"),
-            contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 8.dp, bottom = 170.dp),
+            contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 4.dp, bottom = 170.dp),
         ) {
-            // ---- Tonight: one resume panel (music above, video below) ------------------------
-            item(key = "continue_header", contentType = "header") {
-                dev.asfakul.yumeiro.ui.components.MoonSectionHeader(
-                    "Pick up where you left off", overline = "つづき · Tonight",
-                )
+            // ---- Search ----------------------------------------------------------------------
+            item(key = "search", contentType = "search") {
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp))
+                        .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.8f else 1f))
+                        .clickable(role = Role.Button, onClickLabel = "Search", onClick = onOpenSearch)
+                        .testTag("home_search").padding(horizontal = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Default.Search, null, tint = p.accent, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Search anime, movies, shows…", color = p.textTertiary, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                }
             }
+
+            // ---- Setup progress (until everything is ready or the card is dismissed) -----------
+            if (!setup.complete && !setupCardHidden) item(key = "setup", contentType = "setup") {
+                SetupCard(setup.count, setup.total, onOpen = { SetupGuide.show() }, onHide = { SetupGuide.hideCard(context) })
+            }
+
+            // ---- Continue ------------------------------------------------------------------
+            item(key = "continue_header", contentType = "header") { HomeHeader("Continue") }
             item(key = "continue_row", contentType = "continue") {
                 val isCurrent = continueTrack != null && selectedTrack?.id == continueTrack.id
-                dev.asfakul.yumeiro.ui.components.YumePanel(
-                    Modifier.fillMaxWidth().padding(top = 6.dp),
-                    shape = RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusLg),
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                        .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.7f else 1f))
                 ) {
                     ResumeMusicCard(
-                        track = continueTrack,
-                        isCurrent = isCurrent,
-                        isPlaying = isCurrent && isPlaying,
-                        durationMs = if (isCurrent) durationMs else 0L,
-                        positionMs = positionMs,
+                        track = continueTrack, isCurrent = isCurrent, isPlaying = isCurrent && isPlaying,
+                        durationMs = if (isCurrent) durationMs else 0L, positionMs = positionMs,
                         onClick = {
                             when {
                                 continueTrack == null -> onNavigateToMusic()
@@ -375,179 +315,239 @@ fun HomeScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(TextPrimary.copy(alpha = 0.07f)))
+                    Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(p.textPrimary.copy(alpha = 0.07f)))
                     ResumeVideoCard(resumeVideo, onEmptyClick = onNavigateToVideos, modifier = Modifier.fillMaxWidth())
                 }
             }
 
-            // ---- Spaces: every corner of Yumeiro as a kana key -----------------------------------
-            item(key = "bento_label", contentType = "header") {
-                dev.asfakul.yumeiro.ui.components.MoonSectionHeader(
-                    "Spaces", overline = "すべて · Everything in Yumeiro", modifier = Modifier.padding(top = SectionGap - 8.dp),
-                )
+            // ---- Next episodes --------------------------------------------------------------
+            item(key = "episodes_header", contentType = "header") {
+                HomeHeader("Next episodes", if (nextEpisodes.any { it.newEpisodes > 0 }) "New episodes from series you follow" else "Series you are watching", onMore = onOpenHues)
             }
-            item(key = "bento_listen", contentType = "bento") {
-                val cols = if (wide) 10 else 5
-                val keys = listOf(
-                    "music" to "quick_card_music", "ytmusic" to "quick_card_ytmusic", "eq" to "quick_card_audio_engine",
-                    "hues" to "quick_card_hues", "store" to "quick_card_store",
-                    "videos" to "quick_card_videos", "youtube" to "quick_card_youtube", "live" to "quick_card_live",
-                    "library" to "quick_card_library", "downloads" to "quick_card_downloads",
-                )
-                Column(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(TileGap)) {
-                    keys.chunked(cols).forEach { row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { (k, tag) -> KanaKey(tiles.getValue(k), Modifier.weight(1f), primary = k == "music", testTag = tag) }
+            item(key = "episodes", contentType = "episodes") {
+                if (nextEpisodes.isEmpty()) {
+                    HintRow(
+                        Icons.Default.NotificationsActive,
+                        "Follow a series to get reminders",
+                        "Open a title in Yumix and add it to My List — new episodes show up here.",
+                        "Browse Yumix", onOpenHues, tag = "home_episodes_empty",
+                    )
+                } else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().testTag("home_next_episodes")) {
+                    items(nextEpisodes, key = { "ep_" + it.key }) { b ->
+                        EpisodePoster(b.name, b.posterUrl, b.posterHeaders, if (b.newEpisodes > 0) "+${b.newEpisodes} new" else "Watching", b.newEpisodes > 0, b.api) {
+                            onOpenOnlineTitle(b.toItem())
                         }
                     }
                 }
             }
 
-            // ---- For you (endless) ----------------------------------------------------------
-            item(key = "feed_header", contentType = "header") {
-                Row(Modifier.fillMaxWidth().padding(top = SectionGap - 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    dev.asfakul.yumeiro.ui.components.MoonSectionHeader(
-                        "For you", overline = "おすすめ · Your music & videos, endlessly", modifier = Modifier.weight(1f),
-                    )
-                    dev.asfakul.yumeiro.ui.components.YumeIconButton(
-                        Icons.Default.Shuffle, "Shuffle feed", onClick = { seed = System.nanoTime() },
-                        modifier = Modifier.testTag("home_feed_shuffle"),
-                    )
+            // ---- Explore: every feature with its live status ---------------------------------
+            item(key = "explore_header", contentType = "header") { HomeHeader("Explore Yumeiro", "Everything the app can do, one tap away") }
+            item(key = "explore", contentType = "explore") {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    features.chunked(columns).forEach { row ->
+                        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { f -> FeatureTile(f, Modifier.weight(1f).fillMaxHeight()) }
+                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+            }
+            item(key = "sources_banner", contentType = "banner") {
+                SourcesBanner(huesCount, mangaCount, onOpenSources)
+            }
+
+            // ---- Moods ---------------------------------------------------------------------
+            item(key = "moods", contentType = "moods") { MoodSection(onPlayYouTube) }
+
+            // ---- New arrivals ----------------------------------------------------------------
+            if (newArrivals.isNotEmpty()) {
+                item(key = "new_header", contentType = "header") { HomeHeader("New arrivals", "Newest songs and videos on this phone") }
+                item(key = "new_row", contentType = "row") {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().testTag("home_new_arrivals")) {
+                        items(newArrivals, key = { a -> a.track?.let { "new_t_${it.id}" } ?: "new_v_${a.video?.id}" }) { a ->
+                            a.track?.let { t -> AlbumTile(t, selectedTrack?.id == t.id) { onTrackClick(t, newArrivals.mapNotNull { it.track }) } }
+                            a.video?.let { v -> SmallVideoCard(v) { onVideoClick(v, newArrivals.mapNotNull { it.video }) } }
+                        }
+                    }
                 }
             }
 
-            if (generator.isEmpty) {
-                item(key = "empty_feed") {
-                    Box(Modifier.padding(top = HeaderGap)) {
-                        EmptyMediaView(
-                            title = "Nothing on this device yet",
-                            subtitle = "Put music or videos in local storage and tap Scan — or open YT Music, YouTube or a Hue above.",
-                            buttonText = "Scan storage",
-                            onButtonClick = onRescanClick
+            // ---- Most played / watched recently ---------------------------------------------
+            if (mostPlayed.isNotEmpty()) {
+                item(key = "most_header", contentType = "header") { HomeHeader("Most played", "Your top songs", onMore = onNavigateToMusic) }
+                item(key = "most_row", contentType = "row") {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().testTag("home_most_played")) {
+                        items(mostPlayed.take(12), key = { "most_" + it.id }) { t -> AlbumTile(t, selectedTrack?.id == t.id, plays = t.playCount) { onTrackClick(t, mostPlayed) } }
+                    }
+                }
+            }
+            if (watchedRecently.isNotEmpty()) {
+                item(key = "watched_header", contentType = "header") { HomeHeader("Watched recently", "Videos on this phone", onMore = onNavigateToVideos) }
+                item(key = "watched_row", contentType = "row") {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        items(watchedRecently, key = { "w_" + it.id }) { v -> SmallVideoCard(v) { onVideoClick(v, watchedRecently) } }
+                    }
+                }
+            }
+
+            // ---- Random device videos (never a repeat) ----------------------------------------
+            if (randomPool.isNotEmpty()) {
+                item(key = "random_header", contentType = "header") {
+                    Row(Modifier.fillMaxWidth().padding(top = SectionTop).testTag("home_feed"), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Random videos", style = MaterialTheme.typography.titleLarge, color = p.textPrimary)
+                            Text("From this phone · no repeats", style = MaterialTheme.typography.bodySmall, color = p.textTertiary)
+                        }
+                        Row(
+                            Modifier.clip(RoundedCornerShape(50)).background(p.accent.copy(alpha = 0.14f))
+                                .clickable(role = Role.Button, onClickLabel = "Shuffle") { shuffleSeed = System.nanoTime() }
+                                .testTag("home_feed_shuffle").padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Default.Shuffle, "Shuffle videos", tint = p.accent, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Shuffle", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+                val shown = randomPool.take(randomShown)
+                shown.chunked(videoColumns).forEachIndexed { i, rowVideos ->
+                    item(key = "rv_${shuffleSeed}_$i", contentType = "video_row") {
+                        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).testTag("home_video_grid_row"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            rowVideos.forEach { v ->
+                                VideoGridCard(
+                                    video = v, onVideoClick = { onVideoClick(v, shown) },
+                                    onToggleFavorite = { onToggleVideoFavorite(v.id) }, onOptionsClick = { onVideoOptionsClick(v) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat(videoColumns - rowVideos.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+                item(key = "random_more", contentType = "more") {
+                    if (randomShown < randomPool.size) {
+                        Box(
+                            Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
+                                .border(1.dp, p.textPrimary.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                                .clickable { randomShown += 6 }.testTag("home_random_more"),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("Show ${minOf(6, randomPool.size - randomShown)} more", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                    } else {
+                        Text(
+                            "That's every video on this phone. Shuffle for a new order.",
+                            style = MaterialTheme.typography.bodySmall, color = p.textTertiary,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         )
                     }
                 }
             }
 
-            blocks.forEach { block ->
-                when (block) {
-                    is FeedBlock.Tracks -> {
-                        item(key = "f${block.id}_h", contentType = "feed_header") { FeedHeader(block.title) }
-                        items(block.tracks, key = { "f${block.id}_${it.id}" }, contentType = { "feed_track" }) { track ->
-                            FeedTrackRow(
-                                track = track,
-                                isCurrent = selectedTrack?.id == track.id,
-                                onClick = { onTrackClick(track, block.tracks) },
-                                onMore = { onTrackOptionsClick(track) },
-                            )
-                        }
-                    }
-                    is FeedBlock.Albums -> {
-                        item(key = "f${block.id}_h", contentType = "feed_header") { FeedHeader(block.title, onSeeAll = onNavigateToMusic) }
-                        item(key = "f${block.id}_row", contentType = "feed_albums") {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                                items(block.tracks, key = { "f${block.id}_a_${it.id}" }) { track ->
-                                    AlbumTile(track = track, isCurrent = selectedTrack?.id == track.id) { onTrackClick(track, block.tracks) }
-                                }
-                            }
-                        }
-                    }
-                    is FeedBlock.Videos -> {
-                        item(key = "f${block.id}_h", contentType = "feed_header") { FeedHeader(block.title, onSeeAll = onNavigateToVideos) }
-                        val rows = block.videos.chunked(videoColumns)
-                        rows.forEachIndexed { rowIndex, rowVideos ->
-                            item(key = "f${block.id}_r$rowIndex", contentType = "video_row") {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).testTag("home_video_grid_row"),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    rowVideos.forEach { video ->
-                                        VideoGridCard(
-                                            video = video,
-                                            onVideoClick = { onVideoClick(video, block.videos) },
-                                            onToggleFavorite = { onToggleVideoFavorite(video.id) },
-                                            onOptionsClick = { onVideoOptionsClick(video) },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                    repeat(videoColumns - rowVideos.size) { Spacer(modifier = Modifier.weight(1f)) }
-                                }
-                            }
-                        }
-                    }
-                    is FeedBlock.YouTubeRow -> {
-                        item(key = "f${block.id}_h", contentType = "feed_header") { FeedHeader(block.title, onSeeAll = if (block.music) onOpenYouTubeMusic else onOpenYouTube) }
-                        item(key = "f${block.id}_row", contentType = "feed_yt") {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                                items(block.items, key = { "f${block.id}_y_${it.id}" }) { yt ->
-                                    YtFeedCard(yt, square = block.music) { onPlayYouTube(yt, block.items) }
-                                }
-                            }
-                        }
-                    }
-                    is FeedBlock.OnlinePicks -> if (onlinePicks != null) {
-                        item(key = "f${block.id}_online", contentType = "online") {
-                            Column(Modifier.padding(top = SectionGap - 8.dp)) {
-                                onlinePicks { title, seeAll -> SectionHeader(title, onSeeAll = seeAll) }
-                            }
-                        }
+            // ---- Online, by extension -------------------------------------------------------
+            if (onlinePicks != null) item(key = "online", contentType = "online") {
+                Column(Modifier.padding(top = SectionTop - 10.dp)) {
+                    onlinePicks { title, seeAll -> HomeHeader(title, onMore = seeAll) }
+                }
+            }
+            if (ytRelated.isNotEmpty()) {
+                item(key = "yt_header", contentType = "header") { HomeHeader("On YouTube for you", "Because of what you watched", onMore = onOpenYouTube) }
+                item(key = "yt_row", contentType = "row") {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        items(ytRelated, key = { "yt_" + it.id }) { yt -> YtCard(yt, square = false) { onPlayYouTube(yt, ytRelated) } }
                     }
                 }
             }
 
-            if (!generator.isEmpty && blocks.size < MAX_FEED_BLOCKS) {
-                item(key = "feed_loader_${blocks.size}", contentType = "loader") {
-                    // Composed only when scrolled near the end → append the next page of blocks.
-                    LaunchedEffect(blocks.size, ytLoaded) {
-                        val more = generator.next(4)
-                        if (more.isNotEmpty()) blocks.addAll(more)
-                    }
-                    FeedLoadingSkeleton()
-                }
-            } else if (!generator.isEmpty) {
-                item(key = "feed_end") {
-                    Text(
-                        "You reached the bottom of the dream — shuffle for a new mix.",
-                        style = MaterialTheme.typography.bodySmall, color = TextTertiary,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+            if (allTracks.isEmpty() && recentVideos.isEmpty()) item(key = "empty_device") {
+                Box(Modifier.padding(top = SectionTop)) {
+                    EmptyMediaView(
+                        title = "Nothing on this device yet",
+                        subtitle = "Put music or videos in local storage and tap Scan — or use Yumix, YouTube or Online music above.",
+                        buttonText = "Scan storage",
+                        onButtonClick = onRescanClick
                     )
                 }
             }
+            item(key = "end") {
+                Text(
+                    "You're all caught up.", style = MaterialTheme.typography.bodySmall, color = p.textTertiary,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).testTag("home_end"),
+                )
+            }
         }
     }
 }
 
-private const val MAX_FEED_BLOCKS = 240
+/** One item of the New arrivals row (a song or a video). */
+@Immutable
+private data class Arrival(val at: Long, val track: AudioTrack? = null, val video: VideoItem? = null)
+
+// ---- Headers ------------------------------------------------------------------------------
 
 @Composable
-private fun <T> kotlinx.coroutines.flow.StateFlow<T>.collectAsStateCompat(): androidx.compose.runtime.State<T> = this.collectAsState()
-
-// ---- Section titles ---------------------------------------------------------------------------
-
-@Composable
-private fun SectionTitle(title: String, overline: String? = null, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth()) {
-        if (overline != null) {
-            Text(overline.uppercase(), style = OverlineStyle, color = SpotifyGreen, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(4.dp))
+private fun HomeHeader(title: String, subtitle: String? = null, onMore: (() -> Unit)? = null) {
+    val p = LocalMtPalette.current
+    Row(Modifier.fillMaxWidth().padding(top = SectionTop, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = p.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (onMore != null) Text(
+            "See all", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onMore).padding(horizontal = 10.dp, vertical = 8.dp),
+        )
     }
 }
 
-@Composable
-private fun FeedHeader(title: String, onSeeAll: (() -> Unit)? = null) {
-    SectionHeader(title, modifier = Modifier.padding(top = SectionGap - 8.dp, bottom = HeaderGap - 4.dp), onSeeAll = onSeeAll)
-}
-
+/** Kept public for other callers: a plain section header with an optional "See all". */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, onSeeAll: (() -> Unit)? = null) {
-    dev.asfakul.yumeiro.ui.components.MoonSectionHeader(title, modifier = modifier, onAction = onSeeAll)
+    Box(modifier) { HomeHeader(title, onMore = onSeeAll) }
 }
 
-// ---- Continue cards -------------------------------------------------------------------------------
+// ---- Setup card ---------------------------------------------------------------------------
 
-/** One row of the Tonight panel: art · eyebrow/title/subtitle · action, with a moon-path progress line. */
+@Composable
+private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> Unit) {
+    val p = LocalMtPalette.current
+    val shape = RoundedCornerShape(20.dp)
+    Column(
+        Modifier.fillMaxWidth().padding(top = 14.dp).clip(shape)
+            .background(p.accent.copy(alpha = if (p.isDark) 0.14f else 0.10f))
+            .border(1.dp, p.accent.copy(alpha = 0.35f), shape)
+            .clickable(role = Role.Button, onClick = onOpen)
+            .testTag("home_setup_card")
+            .padding(start = 16.dp, end = 6.dp, top = 12.dp, bottom = 14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Finish setting up", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.ExtraBold)
+                Text("$done of $total ready · sources, manga, DNS, alerts", style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Box(
+                Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Hide setup card", onClick = onHide).testTag("home_setup_hide"),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Default.Close, "Hide", tint = p.textTertiary, modifier = Modifier.size(18.dp)) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            val accent = p.accent
+            val track = p.textPrimary.copy(alpha = 0.10f)
+            Box(Modifier.weight(1f).height(6.dp).drawBehind {
+                val r = CornerRadius(size.height / 2)
+                drawRoundRect(track, cornerRadius = r)
+                drawRoundRect(accent, size = Size(size.width * (done.toFloat() / total).coerceIn(0f, 1f), size.height), cornerRadius = r)
+            })
+            Spacer(Modifier.width(12.dp))
+            Text("Continue", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+    }
+}
+
+// ---- Continue cards -----------------------------------------------------------------------
+
 @Composable
 private fun ResumeRow(
     modifier: Modifier,
@@ -560,8 +560,8 @@ private fun ResumeRow(
     art: @Composable () -> Unit,
     action: @Composable () -> Unit,
 ) {
-    val track20 = TextPrimary.copy(alpha = 0.10f)
     val p = LocalMtPalette.current
+    val track20 = p.textPrimary.copy(alpha = 0.10f)
     Row(
         modifier.clickable(onClick = onClick).testTag(tag).padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -569,22 +569,17 @@ private fun ResumeRow(
         art()
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(eyebrow, style = OverlineStyle, color = if (p.isDark) p.accentBright.copy(alpha = 0.9f) else p.accent, maxLines = 1)
-            Spacer(Modifier.height(3.dp))
-            Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(eyebrow, style = MaterialTheme.typography.labelMedium, color = p.textTertiary, maxLines = 1)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(8.dp))
             val accent = p.accent
-            val accent2 = p.accent2
             Box(
                 Modifier.fillMaxWidth().height(3.dp).drawBehind {
                     val r = CornerRadius(size.height / 2)
                     drawRoundRect(track20, cornerRadius = r)
                     val v = progress().coerceIn(0f, 1f)
-                    if (v > 0f) drawRoundRect(
-                        Brush.horizontalGradient(listOf(accent2, accent)),
-                        size = Size(size.width * v, size.height), cornerRadius = r,
-                    )
+                    if (v > 0f) drawRoundRect(accent, size = Size(size.width * v, size.height), cornerRadius = r)
                 }
             )
         }
@@ -604,31 +599,31 @@ private fun ResumeMusicCard(
     onPlayPause: () -> Unit,
     modifier: Modifier,
 ) {
+    val p = LocalMtPalette.current
     ResumeRow(
         modifier = modifier,
         tag = "home_continue_card",
         onClick = onClick,
-        eyebrow = if (isPlaying) "音 · NOW PLAYING" else "音 · LAST PLAYED",
+        eyebrow = if (isPlaying) "Playing now" else "Last played",
         title = track?.title ?: "Nothing played yet",
         subtitle = track?.artist ?: "Start a song and it waits for you here",
         progress = { if (isCurrent && durationMs > 0) positionMs().toFloat() / durationMs else 0f },
         art = {
-            Box(Modifier.size(64.dp)) {
-                if (track != null) {
-                    TrackArtwork(artUri = track.albumArtUri, key = track.id, size = 64.dp, cornerRadius = 12.dp, contentDescription = track.album)
-                } else EmptyArt(Icons.Default.MusicNote)
+            Box(Modifier.size(60.dp)) {
+                if (track != null) TrackArtwork(artUri = track.albumArtUri, key = track.id, size = 60.dp, cornerRadius = 12.dp, contentDescription = track.album)
+                else EmptyArt(Icons.Default.MusicNote)
             }
         },
         action = {
             Box(
-                Modifier.size(48.dp).clip(CircleShape).background(SpotifyGreen)
+                Modifier.size(48.dp).clip(CircleShape).background(p.accent)
                     .clickable(role = Role.Button, onClick = onPlayPause).testTag("home_continue_play"),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else if (track == null) "Open Music" else "Play",
-                    tint = LocalMtPalette.current.onAccent, modifier = Modifier.size(24.dp)
+                    tint = p.onAccent, modifier = Modifier.size(24.dp)
                 )
             }
         },
@@ -637,17 +632,18 @@ private fun ResumeMusicCard(
 
 @Composable
 private fun ResumeVideoCard(video: ResumeVideo?, onEmptyClick: () -> Unit, modifier: Modifier) {
+    val p = LocalMtPalette.current
     ResumeRow(
         modifier = modifier,
         tag = "home_continue_video",
         onClick = video?.onClick ?: onEmptyClick,
-        eyebrow = "映 · LAST WATCHED",
+        eyebrow = "Last watched",
         title = video?.title ?: "Nothing watched yet",
         subtitle = video?.subtitle ?: "Videos you start will resume from here",
         progress = { video?.progress ?: 0f },
         art = {
-            Box(Modifier.width(64.dp).height(64.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.35f))) {
+            Box(Modifier.width(60.dp).height(60.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.35f))) {
                     if (video?.thumbnail != null) {
                         if (video.thumbnailHeaders.isNotEmpty() && video.thumbnail is String) {
                             dev.asfakul.yumeiro.ui.screens.online.PosterImage(video.thumbnail, video.thumbnailHeaders, Modifier.fillMaxSize())
@@ -660,13 +656,10 @@ private fun ResumeVideoCard(video: ResumeVideo?, onEmptyClick: () -> Unit, modif
         },
         action = {
             Box(
-                Modifier.size(48.dp).clip(CircleShape).border(1.dp, SpotifyGreen.copy(alpha = 0.55f), CircleShape),
+                Modifier.size(48.dp).clip(CircleShape).border(1.5.dp, p.accent.copy(alpha = 0.6f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    if (video == null) Icons.Default.VideoLibrary else Icons.Default.PlayArrow,
-                    contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(22.dp),
-                )
+                Icon(if (video == null) Icons.Default.VideoLibrary else Icons.Default.PlayArrow, contentDescription = null, tint = p.accent, modifier = Modifier.size(22.dp))
             }
         },
     )
@@ -674,218 +667,228 @@ private fun ResumeVideoCard(video: ResumeVideo?, onEmptyClick: () -> Unit, modif
 
 @Composable
 private fun EmptyArt(icon: ImageVector) {
+    val p = LocalMtPalette.current
     Box(
-        Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(TextPrimary.copy(alpha = 0.06f)),
+        Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(p.textPrimary.copy(alpha = 0.06f)),
         contentAlignment = Alignment.Center
-    ) { Icon(icon, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(26.dp)) }
+    ) { Icon(icon, contentDescription = null, tint = p.textTertiary, modifier = Modifier.size(24.dp)) }
 }
 
-// ---- Spaces (kana keys) ---------------------------------------------------------------------------
+// ---- Next episodes --------------------------------------------------------------------------
 
-/**
- * A kana key: each corner of Yumeiro is one compact key with its kana (音 歌 響 彩 店 映 動 生 棚 保)
- * as the symbol, the name below and a short live status (song count, "3 live", downloads in
- * progress). Ten keys in two rows replace the old ~600dp bento wall, so the feed starts sooner,
- * while every destination stays one tap away and always visible. Only Music is filled gold.
- */
 @Composable
-private fun KanaKey(tile: HomeShortcut, modifier: Modifier, primary: Boolean, testTag: String) {
-    val palette = LocalMtPalette.current
-    val shape = RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusMd)
-    val accent = palette.accent
-    val accent2 = palette.accent2
-    val surface = palette.surfaceContainerHigh.copy(alpha = if (palette.isDark) 0.66f else 1f)
-    val glyphColor = if (primary) palette.onAccent else if (palette.isDark) palette.accentBright else palette.accent
-    val titleColor = if (primary) palette.onAccent else palette.textPrimary
-    val subColor = if (primary) palette.onAccent.copy(alpha = 0.74f) else palette.textTertiary
-    Column(
-        modifier
-            .height(96.dp)
-            .clip(shape)
-            .drawBehind {
-                if (primary) drawRect(Brush.linearGradient(listOf(accent, accent2), start = Offset.Zero, end = Offset(size.width, size.height)))
-                else drawRect(surface)
-            }
-            .border(1.dp, if (primary) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.04f))) else rememberGlassBorder(), shape)
-            .clickable(role = Role.Button, onClickLabel = "Open ${tile.title}", onClick = tile.onClick)
-            .semantics(mergeDescendants = true) { contentDescription = "${tile.title}, ${tile.subtitle}" + (tile.badge?.let { ", $it" } ?: "") }
-            .testTag(testTag)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(Modifier.fillMaxWidth().height(34.dp), contentAlignment = Alignment.Center) {
-            Text(tile.glyph, color = glyphColor, fontSize = 26.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            tile.badge?.let { b ->
-                Box(
-                    Modifier.align(Alignment.TopEnd).padding(end = 2.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(if (primary) Color.Black.copy(alpha = 0.18f) else palette.accent.copy(alpha = if (palette.isDark) 0.22f else 0.14f))
-                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                ) { Text(b.substringBefore(' '), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (primary) palette.onAccent else glyphColor, maxLines = 1) }
-            }
+private fun EpisodePoster(name: String, poster: String?, headers: Map<String, String>, badge: String, fresh: Boolean, source: String, onClick: () -> Unit) {
+    val p = LocalMtPalette.current
+    Column(Modifier.width(112.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("home_episode_$name")) {
+        Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+            dev.asfakul.yumeiro.ui.screens.online.PosterImage(poster, headers, Modifier.fillMaxSize())
+            Text(
+                badge, color = if (fresh) p.onAccent else Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(50))
+                    .background(if (fresh) p.accent else Color.Black.copy(alpha = 0.6f)).padding(horizontal = 8.dp, vertical = 3.dp),
+            )
         }
         Spacer(Modifier.height(6.dp))
-        Text(
-            tile.title,
-            style = MaterialTheme.typography.labelMedium.let { if (tile.title.length > 8) it.copy(fontSize = 10.5.sp, letterSpacing = 0.sp) else it },
-            fontWeight = FontWeight.Bold, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        Text(tile.meta, style = MaterialTheme.typography.labelSmall, color = subColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(name, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(source, style = MaterialTheme.typography.bodySmall, color = p.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
-
-// ---- Feed items ------------------------------------------------------------------------------------
 
 @Composable
-private fun FeedTrackRow(track: AudioTrack, isCurrent: Boolean, onClick: () -> Unit, onMore: () -> Unit) {
+private fun HintRow(icon: ImageVector, title: String, text: String, action: String, onClick: () -> Unit, tag: String) {
+    val p = LocalMtPalette.current
     Row(
-        Modifier
-            .fillMaxWidth()
-            .height(ListRowHeight)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp)
-            .testTag("home_feed_track_${track.id}"),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.6f else 1f))
+            .clickable(role = Role.Button, onClick = onClick).testTag(tag).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        TrackArtwork(artUri = track.albumArtUri, key = track.id, size = ListThumb, cornerRadius = 12.dp, contentDescription = track.album)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(track.title, style = MaterialTheme.typography.titleMedium, color = if (isCurrent) SpotifyGreen else TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(2.dp))
-            Text("${track.artist} · ${formatMs(track.durationMs)}", style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.size(40.dp).clip(CircleShape).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = p.accent, modifier = Modifier.size(20.dp))
         }
-        Box(
-            Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onMore),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = TextTertiary, modifier = Modifier.size(20.dp)) }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, fontWeight = FontWeight.Bold)
+            Text(text, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(action, color = p.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
     }
 }
+
+// ---- Explore ------------------------------------------------------------------------------
+
+@Composable
+private fun FeatureTile(f: Feature, modifier: Modifier) {
+    val p = LocalMtPalette.current
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier
+            .heightIn(min = 96.dp)
+            .clip(shape)
+            .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.7f else 1f))
+            .clickable(role = Role.Button, onClickLabel = "Open ${f.title}", onClick = f.onClick)
+            .semantics(mergeDescendants = true) { contentDescription = "${f.title}, ${f.status}" }
+            .testTag(f.tag)
+            .padding(12.dp),
+    ) {
+        Box(Modifier.fillMaxWidth()) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f)), contentAlignment = Alignment.Center) {
+                Icon(f.icon, null, tint = p.accent, modifier = Modifier.size(20.dp))
+            }
+            f.badge?.let {
+                Text(
+                    it, color = p.onAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.TopEnd).clip(RoundedCornerShape(50)).background(p.accent).padding(horizontal = 6.dp, vertical = 1.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(f.title, color = p.textPrimary, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(f.status, color = p.textTertiary, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun SourcesBanner(videoSources: Int, mangaSources: Int, onClick: () -> Unit) {
+    val p = LocalMtPalette.current
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp).clip(shape)
+            .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.7f else 1f))
+            .border(1.dp, p.textPrimary.copy(alpha = 0.06f), shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .testTag("home_sources_banner")
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Extension, null, tint = p.onAccent, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Sources & extensions", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.ExtraBold)
+            Text(
+                "$videoSources video · $mangaSources manga · Aniyomi, Mihon, Stremio, home servers",
+                style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text("Manage", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
+}
+
+// ---- Moods --------------------------------------------------------------------------------
+
+@Composable
+private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit) {
+    val context = LocalContext.current
+    val p = LocalMtPalette.current
+    var mood by rememberSaveable { mutableStateOf(Mood.CHILL) }
+    var tick by remember { mutableIntStateOf(0) }
+    var items by remember { mutableStateOf<List<YtItem>?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    // Unit tests have no network: don't start a real request there (the chips still render).
+    val autoLoad = remember { android.os.Build.FINGERPRINT != "robolectric" }
+    LaunchedEffect(mood, tick) {
+        if (!autoLoad && tick == 0) { items = emptyList(); return@LaunchedEffect }
+        items = null; failed = false
+        val r = kotlinx.coroutines.withTimeoutOrNull(20_000) { runCatching { YouTube.shelf(context, mood.shelf) }.getOrNull() }
+        if (r == null) { failed = true; items = emptyList() } else items = r.distinctBy { it.id }.map { it.copy(music = mood.shelf.music) }.take(16)
+    }
+    Column(Modifier.fillMaxWidth().testTag("home_moods")) {
+        HomeHeader("Moods", "Pick a feeling — songs and clips to match")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            items(Mood.entries.toList(), key = { it.name }) { m ->
+                val sel = m == mood
+                Text(
+                    m.label, color = if (sel) p.onAccent else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(50))
+                        .background(if (sel) p.accent else p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.8f else 1f))
+                        .clickable(role = Role.Tab) { if (sel) tick++ else { mood = m; tick++ } }
+                        .testTag("home_mood_${m.name.lowercase()}")
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        val list = items
+        when {
+            list == null -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(3) { SkeletonBlock(132.dp, 132.dp, shape = RoundedCornerShape(16.dp)) }
+            }
+            list.isEmpty() -> HintRow(
+                Icons.Default.Album,
+                if (failed) "Couldn't load ${mood.label}" else "Tap a mood to load it",
+                if (failed) "Check your connection, then try again." else "Moods come from YouTube and YouTube Music.",
+                if (failed) "Try again" else "Load", onClick = { tick++ }, tag = "home_moods_retry",
+            )
+            else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                items(list, key = { "m_" + it.id }) { yt -> YtCard(yt, square = mood.shelf.music) { onPlay(yt, list) } }
+            }
+        }
+    }
+}
+
+// ---- Cards ----------------------------------------------------------------------------------
 
 private fun formatMs(ms: Long): String {
     if (ms <= 0) return "—"
     val s = ms / 1000
-    return "%d:%02d".format(s / 60, s % 60)
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, (s / 60) % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
 
 @Composable
-private fun AlbumTile(track: AudioTrack, isCurrent: Boolean, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(132.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .testTag("home_added_${track.id}")
-    ) {
-        TrackArtwork(artUri = track.albumArtUri, key = track.id, size = 132.dp, cornerRadius = 16.dp, contentDescription = track.album)
-        Spacer(Modifier.height(8.dp))
-        Text(track.title, style = MaterialTheme.typography.titleSmall, color = if (isCurrent) SpotifyGreen else TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(track.artist, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-private fun YtFeedCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
-    val width = if (square) 132.dp else 232.dp
-    Column(Modifier.width(width).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).testTag("home_feed_yt_${item.id}")) {
-        Box(
-            Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).clip(RoundedCornerShape(16.dp))
-                .background(TextPrimary.copy(alpha = 0.06f))
-        ) {
-            AsyncImage(model = item.thumbnail, contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            if (!square && item.durationSec > 0) {
-                Text(
-                    formatMs(item.durationSec * 1000), style = MaterialTheme.typography.labelSmall, color = Color.White,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp))
-                        .background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 5.dp, vertical = 1.dp)
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(item.title, style = MaterialTheme.typography.titleSmall, color = TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(item.channel, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-private fun FeedLoadingSkeleton() {
-    Column(Modifier.fillMaxWidth().padding(top = SectionGap - 8.dp).testTag("home_feed_loading")) {
-        SkeletonBlock(width = 160.dp, height = 20.dp)
-        Spacer(Modifier.height(HeaderGap))
-        repeat(2) {
-            Row(Modifier.fillMaxWidth().height(ListRowHeight), verticalAlignment = Alignment.CenterVertically) {
-                SkeletonBlock(width = ListThumb, height = ListThumb, shape = RoundedCornerShape(12.dp))
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    SkeletonBlock(width = null, height = 14.dp, modifier = Modifier.fillMaxWidth(0.7f))
-                    Spacer(Modifier.height(8.dp))
-                    SkeletonBlock(width = null, height = 12.dp, modifier = Modifier.fillMaxWidth(0.45f))
-                }
-            }
-        }
-    }
-}
-
-// ---- Dream deck (shown at the top of Library) --------------------------------------------------------
-
-/** Overview of everything you have: songs, videos, Hues and storage, with a rescan button. */
-@Composable
-fun DreamDeckCard(stats: StorageStats, huesCount: Int, onRescanClick: () -> Unit, modifier: Modifier = Modifier) {
-    val palette = LocalMtPalette.current
-    val shape = RoundedCornerShape(24.dp)
-    val accent = palette.accent
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(palette.surfaceContainerHigh.copy(alpha = if (palette.isDark) 0.72f else 1f))
-            .drawBehind {
-                drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = 0.18f), Color.Transparent), center = Offset(size.width, 0f), radius = size.width * 0.6f), radius = size.width * 0.6f, center = Offset(size.width, 0f))
-            }
-            .border(1.dp, rememberGlassBorder(), shape)
-            .testTag("storage_stat_banner"),
-    ) {
+private fun AlbumTile(track: AudioTrack, isCurrent: Boolean, plays: Int = 0, onClick: () -> Unit) {
+    val p = LocalMtPalette.current
+    Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("home_added_${track.id}")) {
+        TrackArtwork(artUri = track.albumArtUri, key = track.id, size = 128.dp, cornerRadius = 14.dp, contentDescription = track.album)
+        Spacer(Modifier.height(6.dp))
+        Text(track.title, style = MaterialTheme.typography.titleSmall, color = if (isCurrent) p.accent else p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
-            "夢", color = palette.textPrimary.copy(alpha = 0.05f), fontSize = 120.sp, fontWeight = FontWeight.Black,
-            modifier = Modifier.align(Alignment.CenterEnd).offset(x = 8.dp),
+            if (plays > 0) "${track.artist} · $plays plays" else track.artist,
+            style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
-        Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 12.dp, top = 16.dp, bottom = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("YOUR DREAM DECK", style = OverlineStyle, color = SpotifyGreen)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Music, video, live & Hues — all in one", style = MaterialTheme.typography.titleMedium, color = TextPrimary, maxLines = 2)
-                }
-                if (stats.isScanning) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SpotifyGreen, strokeWidth = 2.5.dp)
-                } else {
-                    Box(
-                        Modifier.size(40.dp).glass(CircleShape)
-                            .clickable(role = Role.Button, onClick = onRescanClick)
-                            .testTag("banner_rescan_button"),
-                        contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Default.Refresh, contentDescription = "Rescan media", tint = TextPrimary, modifier = Modifier.size(20.dp)) }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatPill("${stats.audioCount}", "songs", Modifier.weight(1f))
-                StatPill("${stats.videoCount}", "videos", Modifier.weight(1f))
-                StatPill("$huesCount", "Hues", Modifier.weight(1f))
-                StatPill(formatFileSize(stats.totalStorageUsedBytes), "stored", Modifier.weight(1.25f))
-            }
-        }
     }
 }
 
 @Composable
-private fun StatPill(value: String, label: String, modifier: Modifier) {
-    Column(
-        modifier.clip(RoundedCornerShape(14.dp)).background(TextPrimary.copy(alpha = 0.06f))
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-    ) {
-        Text(value, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, maxLines = 1)
+private fun SmallVideoCard(video: VideoItem, onClick: () -> Unit) {
+    val p = LocalMtPalette.current
+    Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("home_small_video_${video.id}")) {
+        Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha = 0.35f))) {
+            AsyncImage(model = dev.asfakul.yumeiro.ui.image.VideoThumb(video.uri), contentDescription = video.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            if (video.durationMs > 0) Text(
+                formatMs(video.durationMs), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 5.dp, vertical = 1.dp),
+            )
+            if (video.durationMs > 0 && video.playbackPositionMs > 0) {
+                val accent = p.accent
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).drawBehind {
+                    drawRect(accent, size = Size(size.width * (video.playbackPositionMs.toFloat() / video.durationMs).coerceIn(0f, 1f), size.height))
+                })
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(video.title, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(video.folderName, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
+    val p = LocalMtPalette.current
+    val width = if (square) 132.dp else 220.dp
+    Column(Modifier.width(width).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("home_feed_yt_${item.id}")) {
+        Box(Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+            AsyncImage(model = item.thumbnail, contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            if (!square && item.durationSec > 0) Text(
+                formatMs(item.durationSec * 1000), color = Color.White, fontSize = 11.sp,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 5.dp, vertical = 1.dp),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(item.title, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(item.channel, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

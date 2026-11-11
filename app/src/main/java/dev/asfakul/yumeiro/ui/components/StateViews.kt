@@ -317,7 +317,7 @@ fun SubPageHeader(
 @Composable
 fun YumeiroMark(modifier: Modifier = Modifier, light: Boolean = false) {
     Text(
-        "\u2726 夢色 · YUMEIRO",
+        "Yumeiro",
         color = if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f) else dev.asfakul.yumeiro.ui.theme.SpotifyGreen,
         fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.6.sp, maxLines = 1,
         modifier = modifier.testTag("yumeiro_mark"),

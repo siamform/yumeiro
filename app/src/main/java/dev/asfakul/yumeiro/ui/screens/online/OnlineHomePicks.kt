@@ -24,6 +24,7 @@ import dev.asfakul.yumeiro.online.OnlineHistory
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.online.OnlineRow
+import androidx.compose.foundation.layout.padding
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -36,6 +37,11 @@ fun OnlineHomePicks(
     onSeeAll: () -> Unit,
     header: @Composable (title: String, onSeeAll: () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    /** Opens one extension row on its own page; null → [onSeeAll]. */
+    onOpenRow: ((OnlineRow) -> Unit)? = null,
+    /** Titles already shown elsewhere on Home (not repeated here). */
+    skipKeys: Set<String> = emptySet(),
+    showResume: Boolean = true,
 ) {
     val context = LocalContext.current
     val engine by ExtensionManager.state.collectAsState()
@@ -64,15 +70,22 @@ fun OnlineHomePicks(
     val resume = remember(history, providers) { history.filter { h -> providers.any { it.name == h.api } || ExtensionManager.provider(h.api) != null }.take(6) }
     if (resume.isEmpty() && (providers.isEmpty() || (visible != null && visible.isEmpty()))) return
     Column(modifier.fillMaxWidth().testTag("home_online_picks"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (resume.isNotEmpty()) {
+        if (showResume && resume.isNotEmpty()) {
             header("Continue watching", onSeeAll)
             PosterGrid(resume.map { it.toItem() }, onClick = onOpenTitle, rows = 1, showSource = true, padding = 0.dp,
                 progress = { item -> resume.firstOrNull { it.url == item.url && it.api == item.api }?.fraction })
         }
         if (visible == null) { if (providers.isNotEmpty()) PosterGridSkeleton(rows = 1) }
         else visible.forEach { row ->
-            header(if (visible.size == 1) "Popular online" else "${row.title} · ${row.api}", onSeeAll)
-            PosterGrid(row.items, onClick = onOpenTitle, horizontal = row.horizontal, rows = 2, padding = 0.dp)
+            // One banner per extension, then one row of its titles (nothing repeated from above).
+            val items = row.items.filterNot { it.key in skipKeys }
+            ExtensionBanner(
+                name = row.api, title = row.title, count = row.items.size,
+                cover = row.items.firstOrNull { it.posterUrl != null },
+                onClick = { if (onOpenRow != null && row.pageData != null) onOpenRow(row) else onSeeAll() },
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), height = 120.dp, action = "Browse",
+            )
+            if (items.isNotEmpty()) PosterGrid(items, onClick = onOpenTitle, horizontal = row.horizontal, rows = 1, padding = 0.dp)
         }
     }
 }

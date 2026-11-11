@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -705,27 +706,26 @@ fun MusicScreen(
     }
 }
 
-/** "Device | YouTube Music" switch at the top of the Music tab. */
+/** Where the Music tab plays from. Saved as [key] so the choice survives rotation. */
+enum class MusicMode(val key: String) { DEVICE("device"), ONLINE("online"), MIX("mix");
+    companion object { fun of(key: String?): MusicMode = entries.firstOrNull { it.key == key } ?: DEVICE }
+}
+
+/** The three Music modes (Device · Online · Mix) as mode cards at the top of the Music tab. */
 @androidx.compose.runtime.Composable
-fun MusicSourceSwitch(online: Boolean, onChange: (Boolean) -> Unit, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
-    val brush = dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush()
-    androidx.compose.material3.Surface(
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp), color = dev.asfakul.yumeiro.ui.theme.GlassFill,
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().testTag("music_source_switch"),
-    ) {
-        Row(androidx.compose.ui.Modifier.padding(4.dp)) {
-            listOf(false to "Device", true to "YouTube Music").forEach { (value, label) ->
-                val sel = value == online
-                Box(
-                    androidx.compose.ui.Modifier.weight(1f).height(36.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                        .then(if (sel) androidx.compose.ui.Modifier.background(brush) else androidx.compose.ui.Modifier)
-                        .clickable { onChange(value) }.testTag(if (value) "music_source_online" else "music_source_device"),
-                    contentAlignment = androidx.compose.ui.Alignment.Center,
-                ) {
-                    Text(label, color = if (sel) dev.asfakul.yumeiro.ui.theme.OnAccent else dev.asfakul.yumeiro.ui.theme.TextSecondary,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
-        }
-    }
+fun MusicSourceSwitch(mode: MusicMode, onChange: (MusicMode) -> Unit, songCount: Int, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
+    dev.asfakul.yumeiro.ui.components.ModeSwitcher(
+        options = listOf(
+            dev.asfakul.yumeiro.ui.components.ModeOption("device", "On device", if (songCount == 1) "1 song" else "$songCount songs",
+                androidx.compose.material.icons.Icons.Default.LibraryMusic, "music_source_device"),
+            dev.asfakul.yumeiro.ui.components.ModeOption("online", "Online", "YouTube Music",
+                androidx.compose.material.icons.Icons.Default.Album, "music_source_online"),
+            dev.asfakul.yumeiro.ui.components.ModeOption("mix", "Mix", "Device + online",
+                androidx.compose.material.icons.Icons.Default.Shuffle, "music_source_mix"),
+        ),
+        selectedKey = mode.key,
+        onSelect = { onChange(MusicMode.of(it)) },
+        modifier = modifier,
+        testTag = "music_source_switch",
+    )
 }

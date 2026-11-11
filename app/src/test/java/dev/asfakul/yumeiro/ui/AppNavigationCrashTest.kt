@@ -145,7 +145,7 @@ class AppNavigationCrashTest {
                 tap("playlist_item_workout_mix"); back()
             }
             tap("nav_tab_home")
-            tap("nav_tab_stream"); if (it == 0) snap("stream")
+            tap("nav_tab_videos"); tap("video_source_live"); if (it == 0) snap("stream")
             tap("nav_tab_videos"); tap("nav_tab_music"); tap("nav_tab_library"); if (it == 0) snap("library")
             back(); back()
             tap("nav_tab_music")
@@ -159,7 +159,7 @@ class AppNavigationCrashTest {
         rule.waitUntil(10_000) { rule.onAllNodesWithTag("nav_tab_music", true).fetchSemanticsNodes().isNotEmpty() }
         rule.mainClock.advanceTimeBy(1_000)
         snap("dark_home"); tap("nav_tab_videos"); snap("dark_videos")
-        tap("nav_tab_stream"); snap("dark_stream")
+        tap("nav_tab_videos"); tap("video_source_live"); snap("dark_stream")
         tap("topbar_settings_action"); snap("dark_settings")
         tap("open_user_guide"); waitFor("user_guide_screen"); snap("dark_user_guide"); back()
         waitFor("open_user_guide"); back()
@@ -212,7 +212,7 @@ class AppNavigationCrashTest {
         java.io.File(rule.activity.filesDir, "streams").deleteRecursively()
         dev.asfakul.yumeiro.stream.PlaylistStore.resetForTests()
         awaitHome()
-        tap("nav_tab_stream")
+        tap("nav_tab_videos"); tap("video_source_live")
         fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { rule.mainClock.advanceTimeBy(100); cond() }
         val list = rule.onNodeWithTag("stream_screen")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_mrgify_bdix"))
@@ -248,14 +248,14 @@ class AppNavigationCrashTest {
             })
         }
         awaitHome()
-        tap("nav_tab_stream")
+        tap("nav_tab_videos"); tap("video_source_live")
         fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { rule.mainClock.advanceTimeBy(100); cond() }
         val list = rule.onNodeWithTag("stream_screen")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_${p.id}"))
         tap("playlist_${p.id}")
         settle { exists("playlist_detail_screen") && exists("playlist_channels") }
         org.junit.Assert.assertFalse("channels are not shown on the Stream tab", exists("stream_screen"))
-        org.junit.Assert.assertFalse("bottom bar hidden on the sub page", exists("nav_tab_stream"))
+        org.junit.Assert.assertFalse("bottom bar hidden on the sub page", exists("nav_tab_videos"))
         snap("playlist_detail")
         back()
         settle { exists("stream_screen") && !exists("playlist_detail_screen") }

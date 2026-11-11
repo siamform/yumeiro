@@ -122,12 +122,10 @@ internal fun LibraryHero(
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .testTag(testTag),
     ) {
-        Text(glyph, color = TextPrimary.copy(alpha = 0.06f), fontSize = 132.sp, fontWeight = FontWeight.Black,
-            modifier = Modifier.align(Alignment.CenterEnd).offset(x = 10.dp, y = 6.dp))
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(overline.uppercase(), color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                    Text(overline, color = SpotifyGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(6.dp))
                     Text(title, color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Black, lineHeight = 30.sp, maxLines = 2)
                     Spacer(Modifier.height(4.dp))

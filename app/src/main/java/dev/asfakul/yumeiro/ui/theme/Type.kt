@@ -31,13 +31,15 @@ val Unbounded = FontFamily(
     Font(R.font.unbounded_800, FontWeight.ExtraBold),
 )
 
+// Titles use Manrope too: one calm, readable family across the app. Unbounded stays bundled for
+// the Yumeiro wordmark only (see MTTopBar), not for headings.
 private fun d(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = TextStyle(
-    fontFamily = Unbounded, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
+    fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
     letterSpacing = tracking.em,
 )
 
 /** Display style for hero titles ("For You", artist names, big numbers). */
-val DisplayStyle = d(30, 38, FontWeight.Bold, -0.03f)
+val DisplayStyle = d(28, 36, FontWeight.ExtraBold, -0.02f)
 
 private fun s(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = TextStyle(
     fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
@@ -45,14 +47,14 @@ private fun s(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = 
 )
 
 /** Overline style used for "NOW PLAYING", "CONTINUE LISTENING", section eyebrows. */
-val OverlineStyle = s(11, 16, FontWeight.Bold, 0.14f)
+val OverlineStyle = s(12, 16, FontWeight.SemiBold, 0.01f)
 
 val Typography = Typography(
-    displaySmall = d(30, 40, FontWeight.Bold, -0.03f),
-    headlineLarge = d(26, 34, FontWeight.Bold, -0.03f),
-    headlineMedium = d(23, 31, FontWeight.Bold, -0.03f),
-    headlineSmall = d(18, 26, FontWeight.SemiBold, -0.02f),
-    titleLarge = d(16, 23, FontWeight.SemiBold, -0.02f),
+    displaySmall = d(30, 38, FontWeight.ExtraBold, -0.02f),
+    headlineLarge = d(26, 34, FontWeight.ExtraBold, -0.02f),
+    headlineMedium = d(22, 30, FontWeight.Bold, -0.01f),
+    headlineSmall = d(19, 26, FontWeight.Bold, -0.01f),
+    titleLarge = d(17, 24, FontWeight.Bold, -0.01f),
     titleMedium = s(15, 21, FontWeight.Bold),
     titleSmall = s(13, 19, FontWeight.Bold),
     bodyLarge = s(15, 22, FontWeight.Medium),

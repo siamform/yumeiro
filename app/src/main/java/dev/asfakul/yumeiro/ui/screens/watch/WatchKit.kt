@@ -228,7 +228,7 @@ fun WatchServerBox(watching: String, hint: String, rows: List<WatchServerRow>, m
             Box(Modifier.width(3.dp).height(44.dp).clip(CircleShape).background(brush))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("\u2726 再生中 · NOW PLAYING", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text("Now playing", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(watching, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp))
                 Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
@@ -291,7 +291,7 @@ fun WatchNumberGrid(
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).testTag("watch_number_grid")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("エピソード · EPISODES", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text("Episodes", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(title, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Row(
@@ -407,7 +407,7 @@ fun BoxScope.WatchLightsOverlay() {
             ) {
                 Icon(Icons.Default.DarkMode, null, tint = LocalMtPalette.current.accent, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("月 · Dimmed for focus · tap to brighten", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                Text("Dimmed for focus · tap to brighten", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
             }
         }
     }

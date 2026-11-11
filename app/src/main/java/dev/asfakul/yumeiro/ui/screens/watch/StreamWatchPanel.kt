@@ -249,7 +249,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 item(key = "label") {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("チャンネル · CHANNELS", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                            Text("Channels", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                             Text("Up next on this list", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("${channels.size}", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)

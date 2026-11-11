@@ -212,7 +212,7 @@ fun NowPlayingScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         EqualizerBars(color = SpotifyGreen, playing = playbackState.isPlaying, barCount = 4)
                         Spacer(Modifier.width(8.dp))
-                        Text(if (sleepLeft != null) "おやすみ · SLEEP ${sleepLeft.uppercase()}" else "再生中 · NOW PLAYING", style = OverlineStyle,
+                        Text(if (sleepLeft != null) "Sleep timer · ${sleepLeft}" else "Now playing", style = OverlineStyle,
                             color = SpotifyGreen, maxLines = 1)
                     }
                     val from = track?.album?.takeIf { it.isNotBlank() }

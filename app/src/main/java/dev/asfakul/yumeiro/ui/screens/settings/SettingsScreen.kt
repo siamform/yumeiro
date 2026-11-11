@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Close
@@ -116,7 +117,8 @@ fun SettingsScreen(
     onClearListeningHistory: () -> Unit = {},
     onOpenPage: (String) -> Unit = {},
 ) {
-    var openName by rememberSaveable { mutableStateOf<String?>(null) }
+    // A category requested from elsewhere (setup guide → Network / Notifications) opens directly.
+    var openName by rememberSaveable { mutableStateOf<String?>(SettingsLaunch.take()) }
     var showGuide by rememberSaveable { mutableStateOf(false) }
     val open = SettingsCatalog.fromName(openName)
 
@@ -124,6 +126,7 @@ fun SettingsScreen(
         when (val r = c.route) {
             null -> openName = c.name
             "guide" -> showGuide = true
+            "setup" -> dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show()
             else -> onOpenPage(r)
         }
     }
@@ -178,6 +181,7 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.PRIVACY -> CategoryLook(Icons.Default.Shield, Violet)
     Category.BACKUP -> CategoryLook(Icons.Default.Restore, Teal)
     Category.UPDATES -> CategoryLook(Icons.Default.SystemUpdate, BrandAmber)
+    Category.SETUP -> CategoryLook(Icons.Filled.Explore, BrandGold)
     Category.GUIDE -> CategoryLook(Icons.AutoMirrored.Filled.MenuBook, BrandGold)
     Category.ABOUT -> CategoryLook(Icons.Default.Info, BrandCoral)
 }
@@ -445,3 +449,9 @@ fun SettingsDivider() {
 
 // endregion
 
+/** One-shot request to open Settings on a given [SettingsCatalog.Category] (by enum name). */
+object SettingsLaunch {
+    @Volatile private var pending: String? = null
+    fun request(category: SettingsCatalog.Category) { pending = category.name }
+    fun take(): String? = pending.also { pending = null }
+}
