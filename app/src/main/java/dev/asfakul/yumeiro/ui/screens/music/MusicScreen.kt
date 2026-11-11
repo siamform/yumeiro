@@ -711,21 +711,24 @@ enum class MusicMode(val key: String) { DEVICE("device"), ONLINE("online"), MIX(
     companion object { fun of(key: String?): MusicMode = entries.firstOrNull { it.key == key } ?: DEVICE }
 }
 
-/** The three Music modes (Device · Online · Mix) as mode cards at the top of the Music tab. */
-@androidx.compose.runtime.Composable
-fun MusicSourceSwitch(mode: MusicMode, onChange: (MusicMode) -> Unit, songCount: Int, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
-    dev.asfakul.yumeiro.ui.components.ModeSwitcher(
-        options = listOf(
-            dev.asfakul.yumeiro.ui.components.ModeOption("device", "On device", if (songCount == 1) "1 song" else "$songCount songs",
-                androidx.compose.material.icons.Icons.Default.LibraryMusic, "music_source_device"),
-            dev.asfakul.yumeiro.ui.components.ModeOption("online", "Online", "YouTube Music",
-                androidx.compose.material.icons.Icons.Default.Album, "music_source_online"),
-            dev.asfakul.yumeiro.ui.components.ModeOption("mix", "Mix", "Device + online",
-                androidx.compose.material.icons.Icons.Default.Shuffle, "music_source_mix"),
-        ),
-        selectedKey = mode.key,
-        onSelect = { onChange(MusicMode.of(it)) },
-        modifier = modifier,
-        testTag = "music_source_switch",
-    )
-}
+/** Header title of the Music tab for a mode ("On device", "Online", "Mix"). */
+fun musicSourceTitle(mode: MusicMode): String = when (mode) { MusicMode.DEVICE -> "On device"; MusicMode.ONLINE -> "Online"; MusicMode.MIX -> "Mix" }
+
+/** The Music source menu: where songs come from, each with its live status. */
+fun musicSourceOptions(songCount: Int, online: Boolean): List<dev.asfakul.yumeiro.ui.components.SourceOption> = listOf(
+    dev.asfakul.yumeiro.ui.components.SourceOption(
+        "device", "On device", "Songs, albums, artists and folders on this phone",
+        if (songCount == 1) "1 song" else "$songCount songs",
+        androidx.compose.material.icons.Icons.Default.LibraryMusic, "music_source_device", attention = songCount == 0,
+    ),
+    dev.asfakul.yumeiro.ui.components.SourceOption(
+        "online", "Online", "Search and stream from YouTube Music",
+        if (online) "Streaming" else "Needs internet",
+        androidx.compose.material.icons.Icons.Default.Album, "music_source_online", attention = !online,
+    ),
+    dev.asfakul.yumeiro.ui.components.SourceOption(
+        "mix", "Mix", "Your songs and online picks in one place",
+        if (online) "Device + online" else "Device part only",
+        androidx.compose.material.icons.Icons.Default.Shuffle, "music_source_mix",
+    ),
+)

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Extension
@@ -204,12 +205,15 @@ fun HomeScreen(
     val setup = rememberSetupStatus()
     val setupCardHidden by SetupGuide.cardHidden.collectAsState()
 
-    // ---- Next episodes: series with new episodes first, then what you are watching -------------
-    val nextEpisodes = remember(bookmarks) {
-        val fresh = bookmarks.filter { it.newEpisodes > 0 }.sortedByDescending { it.newEpisodes }
-        val watching = bookmarks.filter { it.newEpisodes == 0 && it.status == OnlineBookmarks.Status.WATCHING }.sortedByDescending { it.addedAt }
-        (fresh + watching).distinctBy { it.key }.take(12)
-    }
+    // ---- New episodes: series with new episodes first, then what you are watching --------------
+    LaunchedEffect(Unit) { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(context) }
+    val inbox by dev.asfakul.yumeiro.notify.Inbox.items.collectAsState()
+    val episodeCards = remember(bookmarks, inbox) { episodeCards(bookmarks, inbox) }
+    val freshSeries = episodeCards.count { it.fresh }
+    remember { HomeLayout.load(context); true }
+    val folded by HomeLayout.collapsed.collectAsState()
+    val fold: (String) -> Unit = { HomeLayout.toggle(context, it) }
+    val isOnline by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
 
     // ---- Device rows, de-duplicated top to bottom ---------------------------------------------
     val newArrivals = remember(allTracks, recentVideos) {
@@ -254,6 +258,27 @@ fun HomeScreen(
             Feature("quick_card_store", "Get sources", "Extension store", Icons.Default.Storefront, onOpenHueStore),
         )
     }
+    val byTag = remember(features) { features.associateBy { it.tag.removePrefix("quick_card_") } }
+    // Spaces: every shortcut stays, grouped by what you want to do. Listening comes first while
+    // music is loaded in the player; otherwise watching does.
+    val spaces = remember(stats.audioCount, stats.videoCount, huesCount, mangaCount, activeDownloads, selectedTrack != null) {
+        val watch = Space("watch", "Watch", "$huesCount sources · ${stats.videoCount} videos", Icons.Default.SmartDisplay) to listOf("hues", "youtube", "live", "videos")
+        val listen = Space("listen", "Listen", if (stats.audioCount == 1) "1 song" else "${stats.audioCount} songs", Icons.Default.LibraryMusic) to listOf("music", "ytmusic", "mix", "audio_engine")
+        val keep = Space("keep", "Read & keep", buildString {
+            append(if (mangaCount == 1) "1 manga source" else "$mangaCount manga sources")
+            if (activeDownloads > 0) append(" · $activeDownloads downloading")
+        }, Icons.Default.Bookmarks) to listOf("manga", "library", "downloads", "store")
+        if (selectedTrack != null) listOf(listen, watch, keep) else listOf(watch, listen, keep)
+    }
+    val contextLine = when {
+        freshSeries == 1 -> "${episodeCards.first { it.fresh }.bookmark.name} has a new episode waiting."
+        freshSeries > 1 -> "$freshSeries series you follow have new episodes."
+        continueTrack != null && selectedTrack != null -> "Still playing \u201c${continueTrack.title}\u201d."
+        continueTrack != null -> "Pick up \u201c${continueTrack.title}\u201d where you left off."
+        resumeVideo != null -> "Continue \u201c${resumeVideo.title}\u201d."
+        !isOnline -> "You're offline. Music and videos on this phone still play."
+        else -> "Play something from this phone, or explore online."
+    }
 
     BoxWithConstraints(modifier.fillMaxSize().testTag("home_screen_root")) {
         val columns = if (maxWidth >= 600.dp) 6 else 3
@@ -268,6 +293,8 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize().testTag("home_list"),
             contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 4.dp, bottom = 170.dp),
         ) {
+            // ---- Context: what is waiting, in one quiet line (real data only) -------------------
+            item(key = "context", contentType = "context") { ContextLine(contextLine) }
             // ---- Search ----------------------------------------------------------------------
             item(key = "search", contentType = "search") {
                 Row(
@@ -320,37 +347,39 @@ fun HomeScreen(
                 }
             }
 
-            // ---- Next episodes --------------------------------------------------------------
+            // ---- New episodes: a hero carousel ------------------------------------------------
             item(key = "episodes_header", contentType = "header") {
-                HomeHeader("Next episodes", if (nextEpisodes.any { it.newEpisodes > 0 }) "New episodes from series you follow" else "Series you are watching", onMore = onOpenHues)
+                FoldHeader(
+                    "episodes", "New episodes",
+                    when {
+                        freshSeries > 0 -> "From series you follow"
+                        episodeCards.isNotEmpty() -> "Series you are watching"
+                        else -> "Reminders from My List"
+                    },
+                    collapsed = "episodes" in folded, onToggle = { fold("episodes") },
+                    onMore = if (episodeCards.isNotEmpty()) onOpenHues else null,
+                )
             }
-            item(key = "episodes", contentType = "episodes") {
-                if (nextEpisodes.isEmpty()) {
-                    HintRow(
-                        Icons.Default.NotificationsActive,
-                        "Follow a series to get reminders",
-                        "Open a title in Yumix and add it to My List — new episodes show up here.",
-                        "Browse Yumix", onOpenHues, tag = "home_episodes_empty",
-                    )
-                } else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().testTag("home_next_episodes")) {
-                    items(nextEpisodes, key = { "ep_" + it.key }) { b ->
-                        EpisodePoster(b.name, b.posterUrl, b.posterHeaders, if (b.newEpisodes > 0) "+${b.newEpisodes} new" else "Watching", b.newEpisodes > 0, b.api) {
-                            onOpenOnlineTitle(b.toItem())
-                        }
-                    }
+            if ("episodes" !in folded) item(key = "episodes", contentType = "episodes") {
+                Box(Modifier.animateItem()) {
+                    if (episodeCards.isEmpty()) EpisodesEmpty(hasSources = huesCount > 0, onFind = onOpenHues, onAddSources = onOpenHueStore)
+                    else EpisodeCarousel(episodeCards) { onOpenOnlineTitle(it.bookmark.toItem()) }
                 }
             }
 
-            // ---- Explore: every feature with its live status ---------------------------------
-            item(key = "explore_header", contentType = "header") { HomeHeader("Explore Yumeiro", "Everything the app can do, one tap away") }
-            item(key = "explore", contentType = "explore") {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    features.chunked(columns).forEach { row ->
-                        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { f -> FeatureTile(f, Modifier.weight(1f).fillMaxHeight()) }
-                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
-                        }
-                    }
+            // ---- Spaces: every feature, grouped, each group folds -----------------------------
+            item(key = "explore_header", contentType = "header") {
+                FoldHeader("spaces", "Your spaces", "Everything Yumeiro does, grouped", collapsed = "spaces" in folded, onToggle = { fold("spaces") })
+            }
+            if ("spaces" !in folded) spaces.forEach { (space, tags) ->
+                item(key = "space_${space.key}", contentType = "space") {
+                    SpaceGroup(
+                        space = space,
+                        collapsed = "space_${space.key}" in folded,
+                        onToggle = { fold("space_${space.key}") },
+                        columns = 4,
+                        tiles = tags.mapNotNull { byTag[it] }.map { f -> { m: Modifier -> FeatureTile(f, m) } },
+                    )
                 }
             }
             item(key = "sources_banner", contentType = "banner") {
@@ -358,12 +387,12 @@ fun HomeScreen(
             }
 
             // ---- Moods ---------------------------------------------------------------------
-            item(key = "moods", contentType = "moods") { MoodSection(onPlayYouTube) }
+            item(key = "moods", contentType = "moods") { MoodSection(onPlayYouTube, collapsed = "moods" in folded, onToggle = { fold("moods") }, online = isOnline, onOffline = onNavigateToMusic) }
 
             // ---- New arrivals ----------------------------------------------------------------
             if (newArrivals.isNotEmpty()) {
-                item(key = "new_header", contentType = "header") { HomeHeader("New arrivals", "Newest songs and videos on this phone") }
-                item(key = "new_row", contentType = "row") {
+                item(key = "new_header", contentType = "header") { FoldHeader("new", "New arrivals", "Newest songs and videos on this phone", "new" in folded, { fold("new") }) }
+                if ("new" !in folded) item(key = "new_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().testTag("home_new_arrivals")) {
                         items(newArrivals, key = { a -> a.track?.let { "new_t_${it.id}" } ?: "new_v_${a.video?.id}" }) { a ->
                             a.track?.let { t -> AlbumTile(t, selectedTrack?.id == t.id) { onTrackClick(t, newArrivals.mapNotNull { it.track }) } }
@@ -375,16 +404,16 @@ fun HomeScreen(
 
             // ---- Most played / watched recently ---------------------------------------------
             if (mostPlayed.isNotEmpty()) {
-                item(key = "most_header", contentType = "header") { HomeHeader("Most played", "Your top songs", onMore = onNavigateToMusic) }
-                item(key = "most_row", contentType = "row") {
+                item(key = "most_header", contentType = "header") { FoldHeader("most", "Most played", "Your top songs", "most" in folded, { fold("most") }, onMore = onNavigateToMusic) }
+                if ("most" !in folded) item(key = "most_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().testTag("home_most_played")) {
                         items(mostPlayed.take(12), key = { "most_" + it.id }) { t -> AlbumTile(t, selectedTrack?.id == t.id, plays = t.playCount) { onTrackClick(t, mostPlayed) } }
                     }
                 }
             }
             if (watchedRecently.isNotEmpty()) {
-                item(key = "watched_header", contentType = "header") { HomeHeader("Watched recently", "Videos on this phone", onMore = onNavigateToVideos) }
-                item(key = "watched_row", contentType = "row") {
+                item(key = "watched_header", contentType = "header") { FoldHeader("watched", "Watched recently", "Videos on this phone", "watched" in folded, { fold("watched") }, onMore = onNavigateToVideos) }
+                if ("watched" !in folded) item(key = "watched_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                         items(watchedRecently, key = { "w_" + it.id }) { v -> SmallVideoCard(v) { onVideoClick(v, watchedRecently) } }
                     }
@@ -394,11 +423,10 @@ fun HomeScreen(
             // ---- Random device videos (never a repeat) ----------------------------------------
             if (randomPool.isNotEmpty()) {
                 item(key = "random_header", contentType = "header") {
-                    Row(Modifier.fillMaxWidth().padding(top = SectionTop).testTag("home_feed"), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Random videos", style = MaterialTheme.typography.titleLarge, color = p.textPrimary)
-                            Text("From this phone · no repeats", style = MaterialTheme.typography.bodySmall, color = p.textTertiary)
-                        }
+                    Row(Modifier.fillMaxWidth().testTag("home_feed"), verticalAlignment = Alignment.Bottom) {
+                        FoldHeader("random", "Random videos", "From this phone · no repeats", "random" in folded, { fold("random") }, modifier = Modifier.weight(1f))
+                        if ("random" !in folded) Spacer(Modifier.width(8.dp))
+                        if ("random" !in folded) Box(Modifier.padding(bottom = 12.dp)) {
                         Row(
                             Modifier.clip(RoundedCornerShape(50)).background(p.accent.copy(alpha = 0.14f))
                                 .clickable(role = Role.Button, onClickLabel = "Shuffle") { shuffleSeed = System.nanoTime() }
@@ -409,10 +437,10 @@ fun HomeScreen(
                             Spacer(Modifier.width(6.dp))
                             Text("Shuffle", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
+                        }
                     }
-                    Spacer(Modifier.height(12.dp))
                 }
-                val shown = randomPool.take(randomShown)
+                val shown = if ("random" in folded) emptyList() else randomPool.take(randomShown)
                 shown.chunked(videoColumns).forEachIndexed { i, rowVideos ->
                     item(key = "rv_${shuffleSeed}_$i", contentType = "video_row") {
                         Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).testTag("home_video_grid_row"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -427,7 +455,7 @@ fun HomeScreen(
                         }
                     }
                 }
-                item(key = "random_more", contentType = "more") {
+                if ("random" !in folded) item(key = "random_more", contentType = "more") {
                     if (randomShown < randomPool.size) {
                         Box(
                             Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
@@ -452,8 +480,8 @@ fun HomeScreen(
                 }
             }
             if (ytRelated.isNotEmpty()) {
-                item(key = "yt_header", contentType = "header") { HomeHeader("On YouTube for you", "Because of what you watched", onMore = onOpenYouTube) }
-                item(key = "yt_row", contentType = "row") {
+                item(key = "yt_header", contentType = "header") { FoldHeader("yt", "On YouTube for you", "Because of what you watched", "yt" in folded, { fold("yt") }, onMore = onOpenYouTube) }
+                if ("yt" !in folded) item(key = "yt_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                         items(ytRelated, key = { "yt_" + it.id }) { yt -> YtCard(yt, square = false) { onPlayYouTube(yt, ytRelated) } }
                     }
@@ -723,16 +751,16 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
     val shape = RoundedCornerShape(18.dp)
     Column(
         modifier
-            .heightIn(min = 96.dp)
+            .heightIn(min = 92.dp)
             .clip(shape)
-            .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.7f else 1f))
+            .background(p.background.copy(alpha = if (p.isDark) 0.55f else 0.9f))
             .clickable(role = Role.Button, onClickLabel = "Open ${f.title}", onClick = f.onClick)
             .semantics(mergeDescendants = true) { contentDescription = "${f.title}, ${f.status}" }
             .testTag(f.tag)
-            .padding(12.dp),
+            .padding(horizontal = 9.dp, vertical = 10.dp),
     ) {
         Box(Modifier.fillMaxWidth()) {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f)), contentAlignment = Alignment.Center) {
                 Icon(f.icon, null, tint = p.accent, modifier = Modifier.size(20.dp))
             }
             f.badge?.let {
@@ -743,7 +771,7 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text(f.title, color = p.textPrimary, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(f.title, color = p.textPrimary, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(f.status, color = p.textTertiary, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -780,7 +808,7 @@ private fun SourcesBanner(videoSources: Int, mangaSources: Int, onClick: () -> U
 // ---- Moods --------------------------------------------------------------------------------
 
 @Composable
-private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit) {
+private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit, collapsed: Boolean = false, onToggle: () -> Unit = {}, online: Boolean = true, onOffline: () -> Unit = {}) {
     val context = LocalContext.current
     val p = LocalMtPalette.current
     var mood by rememberSaveable { mutableStateOf(Mood.CHILL) }
@@ -796,7 +824,16 @@ private fun MoodSection(onPlay: (YtItem, List<YtItem>) -> Unit) {
         if (r == null) { failed = true; items = emptyList() } else items = r.distinctBy { it.id }.map { it.copy(music = mood.shelf.music) }.take(16)
     }
     Column(Modifier.fillMaxWidth().testTag("home_moods")) {
-        HomeHeader("Moods", "Pick a feeling — songs and clips to match")
+        FoldHeader("moods", "Moods", "Pick a feeling — songs and clips to match", collapsed, onToggle)
+        if (collapsed) return@Column
+        if (!online) {
+            HintRow(
+                Icons.Default.CloudOff, "Moods need the internet",
+                "They come from YouTube. Your own songs still play offline.",
+                "Device music", onOffline, tag = "home_moods_offline",
+            )
+            return@Column
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             items(Mood.entries.toList(), key = { it.name }) { m ->
                 val sel = m == mood

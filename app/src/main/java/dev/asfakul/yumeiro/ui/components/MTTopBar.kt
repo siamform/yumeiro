@@ -36,6 +36,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.togetherWith
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,6 +52,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -112,6 +115,11 @@ fun MTTopBar(
     showSearch: Boolean = true,
     /** No internet: shown as a quiet tag on the overline line instead of a banner over the title. */
     offline: Boolean = false,
+    /** Makes the title a source selector (Music · On device ⌄); null = plain title. */
+    onTitleClick: (() -> Unit)? = null,
+    /** The source menu under the title is open (chevron turns up). */
+    titleExpanded: Boolean = false,
+    titleTag: String? = null,
 ) {
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     // The text last committed; suggestions hide until the user types something new.
@@ -207,7 +215,7 @@ fun MTTopBar(
                     if (overline != null || offline) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (overline != null) Text(
-                                overline, style = OverlineStyle, color = TextSecondary, maxLines = 1,
+                                signatureOverline(overline), style = OverlineStyle, color = TextSecondary, maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
                             )
@@ -218,14 +226,15 @@ fun MTTopBar(
                         }
                         Spacer(Modifier.height(2.dp))
                     }
-                    Text(
+                    // Narrow phones (≤ 380dp) get one step smaller so "Good morning" never clips.
+                    val titleStyle = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineLarge
+                    if (onTitleClick == null) Text(
                         text = title,
-                        // Narrow phones (≤ 380dp) get one step smaller so "Good morning" never clips.
-                        style = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineLarge,
+                        style = titleStyle,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
-                    )
+                    ) else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
                 }
                 // One capsule for every header action (was three separate glass circles).
                 ActionCapsule {
@@ -280,3 +289,58 @@ private fun Modifier.androidx_semantics_offline(): Modifier =
     this.testTag("offline_banner").then(
         Modifier.semantics(mergeDescendants = true) { contentDescription = "You're offline, showing saved content" }
     )
+
+
+/** "◆ 夢色 YUMEIRO": the signature mark (Home only) with the diamond in the accent colour. */
+@Composable
+private fun signatureOverline(text: String): androidx.compose.ui.text.AnnotatedString {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    return androidx.compose.ui.text.buildAnnotatedString {
+        if (text.startsWith("◆")) {
+            pushStyle(androidx.compose.ui.text.SpanStyle(color = p.accent)); append("◆"); pop()
+            append(text.removePrefix("◆"))
+        } else append(text)
+    }
+}
+
+/**
+ * The tab title doubling as its source selector: "On device ⌄". One tap opens the source menu
+ * right below it; the chevron turns while it is open.
+ */
+@Composable
+private fun SourceTitle(title: String, style: androidx.compose.ui.text.TextStyle, expanded: Boolean, onClick: () -> Unit, tag: String?) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val reduced = reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "chevron")
+    Row(
+        Modifier.clip(RoundedCornerShape(14.dp))
+            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
+            .semantics { contentDescription = "Source: $title. ${if (expanded) "Menu open" else "Tap to change"}" }
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .padding(end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.animation.AnimatedContent(
+            targetState = title,
+            transitionSpec = {
+                if (reduced) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap())
+                else (androidx.compose.animation.slideInVertically(YuMotion.enter(false, 300)) { it / 2 } + androidx.compose.animation.fadeIn(YuMotion.enter(false, 250))) togetherWith
+                    (androidx.compose.animation.slideOutVertically(YuMotion.exit(false, 160)) { -it / 2 } + androidx.compose.animation.fadeOut(YuMotion.exit(false, 120)))
+            },
+            label = "sourceTitle",
+        ) { t ->
+            Text(t, style = style, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier.size(28.dp).clip(CircleShape).background(if (expanded) p.accent else p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null,
+                tint = if (expanded) p.onAccent else p.accent,
+                modifier = Modifier.size(20.dp).rotate(turn),
+            )
+        }
+    }
+}

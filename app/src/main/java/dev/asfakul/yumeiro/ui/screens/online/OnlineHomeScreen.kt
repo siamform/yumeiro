@@ -315,6 +315,30 @@ enum class VideoSource(val label: String, val tag: String) {
     }
 }
 
+/** The Videos source menu: Yumix · YouTube · Device · Live TV, each with its live status. */
+fun videoSourceOptions(extensionCount: Int, deviceCount: Int, online: Boolean): List<dev.asfakul.yumeiro.ui.components.SourceOption> =
+    VideoSource.entries.map { v ->
+        when (v) {
+            VideoSource.ONLINE -> dev.asfakul.yumeiro.ui.components.SourceOption(
+                v.tag, "Yumix", "Anime, movies and shows from your extensions",
+                when { extensionCount == 0 -> "Add sources"; !online -> "Needs internet"; else -> "$extensionCount sources" },
+                Icons.Default.AutoAwesome, "video_source_" + v.tag, attention = extensionCount == 0 || !online,
+            )
+            VideoSource.YOUTUBE -> dev.asfakul.yumeiro.ui.components.SourceOption(
+                v.tag, "YouTube", "Watch YouTube without signing in",
+                if (online) "No login" else "Needs internet", Icons.Default.SmartDisplay, "video_source_" + v.tag, attention = !online,
+            )
+            VideoSource.DEVICE -> dev.asfakul.yumeiro.ui.components.SourceOption(
+                v.tag, "Device", "Videos and folders on this phone",
+                if (deviceCount == 1) "1 file" else "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag,
+            )
+            VideoSource.LIVE -> dev.asfakul.yumeiro.ui.components.SourceOption(
+                v.tag, "Live TV", "IPTV channels from M3U playlists",
+                if (online) "IPTV · M3U" else "Needs internet", Icons.Default.LiveTv, "video_source_" + v.tag, attention = !online,
+            )
+        }
+    }
+
 /** The four Videos modes (Yumix · YouTube · Device · Live TV) as mode cards. */
 @Composable
 fun VideoSourceSwitch(
