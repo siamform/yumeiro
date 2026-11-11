@@ -32,13 +32,14 @@
 
     <!-- In-app updater: talk to GitHub Releases and hand the verified APK to the system installer -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Local network: DLNA / media-server discovery and Watch together on the same Wi-Fi need a
+         multicast lock (SSDP/mDNS). No location or Wi-Fi scanning is used. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!-- Seamless self-updates (Android 12+): lets the PackageInstaller session update THIS app in the
-         background without the "Install / Update?" confirmation, like Play-style updates. -->
-    <!-- Silent background download of the update APK (no DownloadManager notification) -->
-    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <!-- Updates always ask: the PackageInstaller session sets USER_ACTION_REQUIRED and the update
+         download shows its DownloadManager notification (DOWNLOAD_WITHOUT_NOTIFICATION was removed
+         in the v1.5.1 security review). -->
 
     <!-- Declared by Media3 only to refine its initial bandwidth estimate. Adaptive streams still
          adapt from measured throughput without it, so it is removed to keep permissions minimal. -->

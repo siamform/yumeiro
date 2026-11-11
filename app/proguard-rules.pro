@@ -122,6 +122,17 @@
 -keep class tachiyomi.** { *; }
 -keep class mihon.** { *; }
 -keep class uy.kohesive.injekt.** { *; }
+# Generic type tokens. Injekt's inline `addSingleton` / `addSingletonFactory` / `get` / `injectLazy`
+# create anonymous `FullTypeReference<T>` subclasses in the *calling* package (e.g.
+# TachiyomiRuntime$init$$inlined$addSingleton$1). R8 full mode drops the generic `Signature` of
+# classes that aren't kept and may merge them into one class; Injekt then reads a raw
+# `getGenericSuperclass()` and throws "Internal error: TypeReference constructed without actual type
+# information" — the v1.5.0 manga extension install failure (release builds only). Keep every
+# token subclass (name may still be obfuscated) together with its Signature attribute.
+-keep,allowobfuscation,allowshrinking class * extends uy.kohesive.injekt.api.FullTypeReference
+-keep,allowobfuscation,allowshrinking class * implements uy.kohesive.injekt.api.TypeReference
+-keep,allowobfuscation,allowshrinking class * extends com.fasterxml.jackson.core.type.TypeReference
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 # extensions-lib 1.6 (Keiyoushi): QuickJS API (app.cash.quickjs, on dokar QuickJS), zstd/brotli decoding, WebView boundary
 -keep class app.cash.quickjs.** { *; }
 -keep class com.squareup.zstd.** { *; }

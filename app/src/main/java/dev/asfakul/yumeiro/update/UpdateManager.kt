@@ -145,11 +145,6 @@ class UpdateManager private constructor(context: Context) {
                             at = System.currentTimeMillis(), link = "update",
                         ))
                     }
-                    if (!userInitiated && canGoSilent()) {
-                        // Messenger-style: fetch in the background, install when the app is idle.
-                        startDownload(silent = true)
-                        return@launch
-                    }
                     if (userInitiated) prefs.clearSnooze()
                     if (userInitiated || !prefs.isSnoozed(release.versionName)) _dialogVisible.value = true
                 } else {
@@ -222,10 +217,9 @@ class UpdateManager private constructor(context: Context) {
                     .setTitle("Yumeiro ${release.tagName}")
                     .setDescription("Downloading update…")
                     .setMimeType(APK_MIME)
-                    .setNotificationVisibility(
-                        if (silent) DownloadManager.Request.VISIBILITY_HIDDEN
-                        else DownloadManager.Request.VISIBILITY_VISIBLE,
-                    )
+                    // Always visible: an update download is never hidden from the user (no
+                    // DOWNLOAD_WITHOUT_NOTIFICATION permission; see docs/security/AUDIT.md).
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
                     .setAllowedOverMetered(true)
                     .setAllowedOverRoaming(true)
                     .setDestinationInExternalFilesDir(app, Environment.DIRECTORY_DOWNLOADS, "updates/${target.name}")
