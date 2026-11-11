@@ -23,7 +23,7 @@ The report is [ROUND-3.md](ROUND-3.md), the audit is [V3-SCOPE.md](V3-SCOPE.md) 
 - `ad4ef36`: selectors, motion, Home carousel and spaces
 - `ac9f569`: Explore tour, welcome, offline notices
 - `50d1c55`: tour fixes, carousel tests
-- then the docs commit
+- `5338924`: docs and screenshots
 
 It was pushed to `origin` (`siamform/yumeiro-redesign`) only. The `upstream` push URL is disabled on purpose.
 **Never push to `siamform/yumeiro`, and never open a PR without the owner's written approval.**
