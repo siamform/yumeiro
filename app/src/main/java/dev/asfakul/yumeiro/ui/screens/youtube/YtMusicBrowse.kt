@@ -465,10 +465,10 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmItem.Song) -> Unit) {
+internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmItem.Song) -> Unit) {
     val currentId = dev.asfakul.yumeiro.ui.components.LocalCurrentTrackId.current
     val playing = dev.asfakul.yumeiro.ui.components.LocalIsPlaying.current
-    val isCurrent = currentId == "yt:${item.id}"
+    val isCurrent = currentId == "yt:${item.videoId}"
     val accent = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent
     val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     val download = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) }
