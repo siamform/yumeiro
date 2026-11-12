@@ -7,6 +7,8 @@ package dev.asfakul.yumeiro.ui.screens.video
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -21,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -64,7 +67,16 @@ fun VideoGestureOverlay(
     onHoldSwipeDown: (() -> Unit)? = null,
     /** The hold was recognised (for a small haptic / hint). */
     onHoldStart: () -> Unit = {},
+    /**
+     * Two-finger pinch / spread: zoom factor since the last event and the two-finger pan in px.
+     * Null disables pinch-to-zoom (docked player, locked screen).
+     */
+    onPinch: ((zoom: Float, pan: Offset) -> Unit)? = null,
+    /** All fingers lifted after a pinch. */
+    onPinchEnd: () -> Unit = {},
 ) {
+    val currentOnPinch by rememberUpdatedState(onPinch)
+    val currentOnPinchEnd by rememberUpdatedState(onPinchEnd)
     val currentOnHoldSwipeDown by rememberUpdatedState(onHoldSwipeDown)
     val currentOnHoldStart by rememberUpdatedState(onHoldStart)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
@@ -138,6 +150,29 @@ fun VideoGestureOverlay(
                         } else awaitPointerEvent()
                         if (event == null) continue
                         currentEventUptime = event.changes.firstOrNull()?.uptimeMillis
+
+                        // A second finger turns any gesture into pinch-to-zoom (MX Player / VLC style).
+                        // A scrub that was under way is dropped, not committed, so the video doesn't jump.
+                        val pinch = currentOnPinch
+                        if (pinch != null && event.changes.count { it.pressed } >= 2) {
+                            pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
+                            lastTapTimeMs = 0L
+                            if (isDragging) {
+                                if (dragDirection == DragMode.SWIPE_DOWN || dragDirection == DragMode.HOLD_SWIPE_DOWN) currentOnSwipeDownProgress(0f)
+                                currentOnGestureEnd()
+                            }
+                            var e: androidx.compose.ui.input.pointer.PointerEvent = event
+                            while (true) {
+                                val zoom = e.calculateZoom()
+                                val pan = e.calculatePan()
+                                if (zoom != 1f || pan != Offset.Zero) pinch(zoom, pan)
+                                e.changes.forEach { if (it.positionChanged()) it.consume() }
+                                e = awaitPointerEvent()
+                                if (e.changes.none { it.pressed }) break
+                            }
+                            currentOnPinchEnd()
+                            return@awaitEachGesture
+                        }
                         val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
 
                         if (!pointer.pressed) {

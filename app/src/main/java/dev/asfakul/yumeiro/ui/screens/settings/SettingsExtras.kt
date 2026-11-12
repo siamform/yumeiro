@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -188,6 +189,18 @@ fun VideoPlayerSettingsCard() {
         SettingsDivider()
         SettingsToggleRow("Captions on by default", "Show embedded or loaded subtitles automatically (CC)", cc,
             { PlayerSettings.setCaptionsDefault(context, it) }, "toggle_cc_default")
+        SettingsDivider()
+        var subStyleOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                .clickable { subStyleOpen = true }
+                .padding(vertical = 8.dp)
+                .testTag("settings_subtitle_style"),
+        ) {
+            Text("Subtitle style", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("Size, colour, outline or box, and height above the bottom. Also in the player's subtitle menu", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+        }
+        if (subStyleOpen) dev.asfakul.yumeiro.ui.screens.video.SubtitleStyleDialog(onDismiss = { subStyleOpen = false })
         SettingsDivider()
         val back by PlayerSettings.backAction.collectAsState()
         Text("Back button while a video plays", color = TextPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))

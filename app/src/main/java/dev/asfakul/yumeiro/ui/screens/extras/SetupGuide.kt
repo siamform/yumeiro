@@ -375,3 +375,12 @@ fun SetupStepRow(step: SetupStep, done: Boolean, onClick: () -> Unit) {
         )
     }
 }
+
+/** Pure rules for when a first-run guide counts as "on screen" (unit-tested). */
+object OnboardingPlan {
+    /** Long enough to bridge welcome → tour (separate frames), short enough to feel instant. */
+    const val RELEASE_DEBOUNCE_MS = 1_500L
+
+    /** Splash, welcome/checklist or the explore tour is showing: extensions must wait. */
+    fun busy(splash: Boolean, setupOpen: Boolean, tourActive: Boolean): Boolean = splash || setupOpen || tourActive
+}

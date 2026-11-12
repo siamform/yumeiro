@@ -32,6 +32,10 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.navigationBarsPadding
 import android.app.Activity
@@ -265,6 +269,14 @@ private fun VideoPlayerModalContent(
 
     // Screen adjustments
     var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
+    remember(context) { dev.asfakul.yumeiro.player.SubtitleStyleSettings.init(context); 0 }
+    val subtitleStyle by dev.asfakul.yumeiro.player.SubtitleStyleSettings.style.collectAsState()
+    var showSubtitleStyleDialog by remember { mutableStateOf(false) }
+    // Pinch-to-zoom of the picture only (subtitles and controls stay put). Resets per video.
+    var videoZoom by remember(video.id) { mutableStateOf(dev.asfakul.yumeiro.player.VideoZoom.State()) }
+    var zoomHintVisible by remember { mutableStateOf(false) }
+    var zoomHintJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var playerAreaSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     var currentSpeed by remember { mutableFloatStateOf(1.0f) }
     var isScreenLocked by remember { mutableStateOf(false) }
     var isLockedUnlockPillVisible by remember { mutableStateOf(false) }
@@ -1184,7 +1196,7 @@ private fun VideoPlayerModalContent(
     }
 
     // Auto-hide controls timer (3.5 seconds)
-    val isAnyDialogOpen = showQualityDialog || showSpeedDialog || showAspectRatioDialog || showAudioTrackDialog || showSubtitleDialog || showVideoInfoDialog || playerError != null
+    val isAnyDialogOpen = showQualityDialog || showSpeedDialog || showAspectRatioDialog || showAudioTrackDialog || showSubtitleDialog || showSubtitleStyleDialog || showVideoInfoDialog || playerError != null
     // Remote / keyboard (TV, Fire TV, Bluetooth keyboards): every key press keeps the controls up
     // a little longer, so walking along the buttons never races the auto-hide.
     val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
@@ -1381,6 +1393,7 @@ private fun VideoPlayerModalContent(
                 }
             }
             .background(Color.Black)
+            .onSizeChanged { playerAreaSize = it }
             .onPreviewKeyEvent(onPlayerKey)
             .onFocusChanged { rootFocused = it.isFocused }
             .focusRequester(rootFocus)
@@ -1404,6 +1417,13 @@ private fun VideoPlayerModalContent(
             update = { playerView ->
                 if (playerView.player !== exoPlayer) playerView.player = exoPlayer
                 playerView.resizeMode = resizeMode
+                // Zoom only applies to the full player; docked, floating and PiP always show 100 %.
+                val z = if (docked || hideChrome) dev.asfakul.yumeiro.player.VideoZoom.State() else videoZoom
+                playerView.videoSurfaceView?.apply {
+                    scaleX = z.scale; scaleY = z.scale
+                    translationX = z.panX; translationY = z.panY
+                }
+                dev.asfakul.yumeiro.player.SubtitleStyleSettings.applyTo(playerView, subtitleStyle)
             },
             onRelease = { playerView -> playerView.player = null },
             modifier = Modifier.fillMaxSize()
@@ -1434,6 +1454,19 @@ private fun VideoPlayerModalContent(
                     else -> null
                 },
                 onHoldStart = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress) },
+                onPinch = if (isScreenLocked || docked) null else ({ zoomBy, pan ->
+                    videoZoom = dev.asfakul.yumeiro.player.VideoZoom.step(videoZoom, zoomBy, pan.x, pan.y,
+                        playerAreaSize.width.toFloat(), playerAreaSize.height.toFloat())
+                    zoomHintJob?.cancel()
+                    zoomHintVisible = true
+                }),
+                onPinchEnd = {
+                    val before = videoZoom.zoomed
+                    videoZoom = dev.asfakul.yumeiro.player.VideoZoom.settle(videoZoom)
+                    if (before && !videoZoom.zoomed) haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                    zoomHintJob?.cancel()
+                    zoomHintJob = coroutineScope.launch { delay(900L); zoomHintVisible = false }
+                },
                 isScreenLocked = isScreenLocked,
                 onSingleTap = {
                     isControlsVisible = !isControlsVisible
@@ -1519,6 +1552,35 @@ private fun VideoPlayerModalContent(
                     }
                 }
             )
+        }
+
+        // Pinch-to-zoom: live percentage while pinching, and a reset pill while zoomed.
+        if (!hideChrome && !docked) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = zoomHintVisible,
+                enter = fadeIn(), exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+            ) {
+                Text(
+                    dev.asfakul.yumeiro.player.VideoZoom.label(videoZoom.scale),
+                    color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp).testTag("video_zoom_hint"),
+                )
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = videoZoom.zoomed && isControlsVisible && !isScreenLocked && !zoomHintVisible,
+                enter = fadeIn(), exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+            ) {
+                Text(
+                    "Reset zoom · ${dev.asfakul.yumeiro.player.VideoZoom.label(videoZoom.scale)}",
+                    color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
+                        .clickable(role = androidx.compose.ui.semantics.Role.Button) { videoZoom = dev.asfakul.yumeiro.player.VideoZoom.State() }
+                        .heightIn(min = 40.dp).padding(horizontal = 16.dp, vertical = 10.dp).testTag("video_zoom_reset"),
+                )
+            }
         }
 
         // Buffering Indicator
@@ -1847,6 +1909,7 @@ private fun VideoPlayerModalContent(
                 currentResizeMode = resizeMode,
                 onResizeModeSelect = { mode, label ->
                     resizeMode = mode
+                    videoZoom = dev.asfakul.yumeiro.player.VideoZoom.State()
                     showToast("Aspect: $label")
                 },
                 onDismiss = { showAspectRatioDialog = false }
@@ -1910,8 +1973,13 @@ private fun VideoPlayerModalContent(
                     applySubtitleDelay(newDelayMs)
                     showToast("Subtitle delay: ${if (newDelayMs >= 0) "+$newDelayMs" else "$newDelayMs"} ms")
                 },
+                onOpenStyle = { showSubtitleDialog = false; showSubtitleStyleDialog = true },
                 onDismiss = { showSubtitleDialog = false }
             )
+        }
+
+        if (showSubtitleStyleDialog) {
+            SubtitleStyleDialog(onDismiss = { showSubtitleStyleDialog = false })
         }
 
         if (showOnlineSubtitleDialog) {

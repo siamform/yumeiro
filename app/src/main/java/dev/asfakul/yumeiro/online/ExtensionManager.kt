@@ -104,9 +104,16 @@ object ExtensionManager {
         if (started) return
         started = true
         val app = context.applicationContext
-        scope.launch { runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) } }
+        scope.launch {
+            // First run: nothing wakes up until the welcome screen / explore tour is done or skipped.
+            OnboardingGate.awaitOpen()
+            runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) }
+        }
         // Other ecosystems load in parallel; they publish into SourceHub as they become ready.
-        runCatching { dev.asfakul.yumeiro.sources.Bridges.start(app) }.onFailure { Log.e(TAG, "bridges", it) }
+        scope.launch {
+            OnboardingGate.awaitOpen()
+            runCatching { dev.asfakul.yumeiro.sources.Bridges.start(app) }.onFailure { Log.e(TAG, "bridges", it) }
+        }
     }
 
     /** Waits until saved extensions are loaded. Safe to call many times. */

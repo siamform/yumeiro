@@ -408,6 +408,8 @@ fun SubtitleOptionsDialog(
     onDisableSubtitles: () -> Unit,
     onAdjustDelay: (Long) -> Unit,
     onDismiss: () -> Unit,
+    /** Opens the subtitle look editor (size, colour, outline, position). */
+    onOpenStyle: (() -> Unit)? = null,
     /** Subtitles the source found after playback started (label → load). */
     moreFromSource: List<Pair<String, () -> Unit>> = emptyList(),
 ) {
@@ -528,6 +530,20 @@ fun SubtitleOptionsDialog(
                                 Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
+                    }
+                }
+
+                if (onOpenStyle != null) item {
+                    OutlinedButton(
+                        onClick = onOpenStyle,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SpotifyGreen),
+                        modifier = Modifier.fillMaxWidth().testTag("subtitle_style_btn"),
+                    ) {
+                        Icon(imageVector = Icons.Default.Subtitles, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "Subtitle style: size, colour, position", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
 

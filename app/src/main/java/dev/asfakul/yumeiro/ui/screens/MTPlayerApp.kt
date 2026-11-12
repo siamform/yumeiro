@@ -301,10 +301,16 @@ fun MTPlayerApp(
     LaunchedEffect(currentRoute) { if (sourceMenuFor != null && sourceMenuFor != currentRoute) sourceMenuFor = null }
     fun openMusic(mode: dev.asfakul.yumeiro.ui.screens.music.MusicMode) { musicModeKey = mode.key; navigateTop(Screen.Music.route) }
     fun openVideos(source: dev.asfakul.yumeiro.ui.screens.online.VideoSource) { videoSourcePicked = true; videoSource = source; navigateTop(Screen.Videos.route) }
+    // First run: extensions stay asleep until the welcome screen / tour is finished or skipped.
+    // Decided before any screen can call ExtensionManager.start.
+    val firstRunAtLaunch = remember { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.shouldAutoShow(context).also { dev.asfakul.yumeiro.online.OnboardingGate.begin(it) } }
     // Online extensions: load installed ones, then sync updates in the background (like stream playlists).
     LaunchedEffect(Unit) {
         ExtensionManager.start(context)
         if (Build.FINGERPRINT == "robolectric") return@LaunchedEffect
+        // A new user first finishes (or skips) the welcome screen and tour: no installs, syncs or
+        // "extension updated" messages over it.
+        dev.asfakul.yumeiro.online.OnboardingGate.awaitOpen()
         kotlinx.coroutines.delay(4_000)
         // First run: install one top-rated Movies, Anime and Sports extension so online video works right away.
         if (dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) {
@@ -1386,6 +1392,17 @@ fun MTPlayerApp(
         }
         // Popups take turns: never during splash, video, PiP, the update dialog or an open page.
         val tourStep by dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.step.collectAsState()
+        // Extensions stay asleep while a first-run guide is on screen (see OnboardingGate).
+        if (firstRunAtLaunch) {
+            LaunchedEffect(showSplash, setupOpen, tourStep) {
+                if (!dev.asfakul.yumeiro.online.OnboardingGate.isHeld) return@LaunchedEffect
+                if (dev.asfakul.yumeiro.ui.screens.extras.OnboardingPlan.busy(showSplash, setupOpen, tourStep != null)) return@LaunchedEffect
+                // Debounced: closing the welcome screen and starting the tour land in separate frames.
+                // If the guide never appears (or the user left it), extensions are not blocked forever.
+                kotlinx.coroutines.delay(dev.asfakul.yumeiro.ui.screens.extras.OnboardingPlan.RELEASE_DEBOUNCE_MS)
+                dev.asfakul.yumeiro.online.OnboardingGate.release()
+            }
+        }
         val popupBlocked = showSplash || setupOpen || tourStep != null || activePlayingVideo != null || inPip || updateDialogOpen || appPage != null ||
             (isNowPlayingExpanded && playbackState.currentTrack != null)
         dev.asfakul.yumeiro.ui.screens.extras.NotificationPromptHost(blocked = popupBlocked || !startupPermissionsDone)
