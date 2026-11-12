@@ -153,7 +153,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
         val (icon, tint) = when (m.kind) {
             AppMessages.Kind.SUCCESS -> Icons.Default.CheckCircle to SpotifyGreen
             AppMessages.Kind.ERROR -> Icons.Default.ErrorOutline to MaterialTheme.colorScheme.error
-            AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to Color(0xFFFFB74D)
+            AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to dev.asfakul.yumeiro.ui.theme.WarningTone
             AppMessages.Kind.INFO -> Icons.Default.Info to TextSecondary
         }
         // One opaque, theme-aware surface: the old pill was always dark (unreadable in light mode)

@@ -201,7 +201,7 @@ private fun PickCard(ext: RemoteExtension, selected: Boolean, enabled: Boolean, 
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ext.stars?.takeIf { it > 0 }?.let {
-                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFC94D), modifier = Modifier.size(12.dp))
+                        Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(12.dp))
                         Text(" $it", color = TextSecondary, fontSize = 11.sp)
                         Spacer(Modifier.width(8.dp))
                     }

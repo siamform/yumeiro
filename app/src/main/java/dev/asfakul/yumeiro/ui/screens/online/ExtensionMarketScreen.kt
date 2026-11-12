@@ -346,7 +346,7 @@ private fun RepoCard(r: ExtensionSources.RepoListing, onOpen: () -> Unit) {
                 r.error?.let { Text(it, color = ErrorColor, fontSize = 11.sp) }
             }
             r.stars?.takeIf { it > 0 }?.let {
-                Icon(Icons.Default.Star, null, tint = Color(0xFFFFC94D), modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(14.dp))
                 Text(" $it", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
@@ -390,7 +390,7 @@ private fun MarketCard(
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("market_stats_${ext.internalName}")) {
                         ext.stars?.takeIf { it > 0 }?.let {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Star, null, tint = Color(0xFFFFC94D), modifier = Modifier.size(12.dp))
+                                Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(12.dp))
                                 Text(" $it", color = TextSecondary, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
                         }

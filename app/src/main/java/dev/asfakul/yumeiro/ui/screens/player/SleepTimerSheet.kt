@@ -114,6 +114,6 @@ private fun Chip(label: String, tag: String, icon: Boolean = false, danger: Bool
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon) { Icon(Icons.Default.MusicNote, null, tint = p.accent, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)) }
-        Text(label, color = if (danger) Color(0xFFFF8A98) else p.textPrimary, fontWeight = FontWeight.SemiBold)
+        Text(label, color = if (danger) dev.asfakul.yumeiro.ui.theme.DangerTone else p.textPrimary, fontWeight = FontWeight.SemiBold)
     }
 }

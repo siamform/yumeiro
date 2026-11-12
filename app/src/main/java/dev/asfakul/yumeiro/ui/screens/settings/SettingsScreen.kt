@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -312,7 +313,7 @@ private fun CategoryList(cats: List<Category>, statuses: Map<Category, Status>, 
         if (i > 0) RowDivider()
         val look = c.look()
         val s = statuses[c]
-        CategoryRow(look.icon, look.tint, c.title, c.summary, "settings_cat_${c.name.lowercase()}", s?.text, s?.ok) { onOpen(c) }
+        CategoryRow(look.icon, look.tint.legibleOnTheme(), c.title, c.summary, "settings_cat_${c.name.lowercase()}", s?.text, s?.ok) { onOpen(c) }
     }
 }
 
@@ -331,7 +332,7 @@ private fun HealthStrip(statuses: Map<Category, Status>, onOpen: (Category) -> U
                     .border(1.dp, if (warn) warnColor.copy(alpha = 0.55f) else BrandGold.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
                     .clickable { onOpen(c) }.padding(12.dp).testTag("settings_health_${c.name.lowercase()}"),
             ) {
-                Icon(look.icon, null, tint = if (warn) warnColor else look.tint, modifier = Modifier.size(20.dp))
+                Icon(look.icon, null, tint = if (warn) warnColor else look.tint.legibleOnTheme(), modifier = Modifier.size(20.dp))
                 Spacer(Modifier.height(6.dp))
                 Text(when (c) { Category.BACKGROUND -> "Battery"; else -> c.title }, color = TextSecondary, fontSize = 11.sp, maxLines = 1)
                 Text(s?.text ?: "—", color = if (warn) warnColor else TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
@@ -359,7 +360,7 @@ private fun CategoryPage(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item("hero") { CategoryHero(look.icon, look.tint, c.title, c.summary, c.kana()) }
+            item("hero") { CategoryHero(look.icon, look.tint.legibleOnTheme(), c.title, c.summary, c.kana()) }
             when (c) {
                 Category.APPEARANCE -> item("c") { AppearanceSettingsCard() }
                 Category.PLAYER -> item("c") { VideoPlayerSettingsCard() }

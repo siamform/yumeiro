@@ -211,7 +211,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                             d.contentRating?.let { Pill(it, TextSecondary) }
                             d.score?.takeIf { it > 0 }?.let {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC94D), modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(14.dp))
                                     Text(String.format(java.util.Locale.US, " %.1f", it), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
