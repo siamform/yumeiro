@@ -114,7 +114,12 @@ fun LibraryScreen(
     onTrackOptionsClick: (AudioTrack) -> Unit,
     huesCount: Int = 0,
     onRescanClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenVideos: () -> Unit = {},
+    onOpenReading: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
+    onOpenTogether: () -> Unit = {},
 ) {
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -510,6 +515,11 @@ fun LibraryScreen(
                 recentlyPlayed = recentlyPlayed, mostPlayed = mostPlayed, currentPlayingTrack = currentPlayingTrack,
                 onPlay = onTrackClick, onOpenMusic = onNavigateToMusic, onOpenEqualizer = onNavigateToEqualizer,
                 onRescan = onRescanClick, onCreatePlaylist = { showCreateDialog = true }, onOpenPlaylist = { selectedPlaylistId = it },
+                shortcuts = libraryShortcuts(
+                    scanning = stats.isScanning, onVideos = onOpenVideos, onReading = onOpenReading, onEqualizer = onNavigateToEqualizer,
+                    onNewPlaylist = { showCreateDialog = true }, onRescan = onRescanClick, onHistory = onOpenHistory,
+                    onDownloads = onOpenDownloads, onTogether = onOpenTogether,
+                ),
             )
         }
     }

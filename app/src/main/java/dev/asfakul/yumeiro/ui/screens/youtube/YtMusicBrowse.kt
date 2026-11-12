@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -413,7 +414,7 @@ private fun YmVideoCover(song: YmItem.Song, onClick: () -> Unit) {
 private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, art: String? = null, onOpen: (YmBrowse) -> Unit, onSong: (YmItem.Song) -> Unit) {
     val pad = if (compact) 5.dp else 7.dp
     when (item) {
-        is YmItem.Song -> Row(
+        is YmItem.Song -> if (compact) QuickPickRow(item, art, pad, onSong) else Row(
             Modifier.fillMaxWidth().clickable { onSong(item) }.padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -453,6 +454,49 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
             Icon(Icons.Default.ChevronRight, null, tint = TextTertiary)
         }
         is YmItem.Mood -> MoodButton(item, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { onOpen(item.browse) }
+    }
+}
+
+/**
+ * Round 10: a Quick picks row has no trailing button any more (a column of download arrows read
+ * as a download list, not "tap to play"). The whole row plays; the song that's on gets a lit
+ * cover with moving bars and an accent title; long-press still offers Download. Duration (when
+ * YouTube Music sends it) sits quietly on the right instead.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmItem.Song) -> Unit) {
+    val currentId = dev.asfakul.yumeiro.ui.components.LocalCurrentTrackId.current
+    val playing = dev.asfakul.yumeiro.ui.components.LocalIsPlaying.current
+    val isCurrent = currentId == "yt:${item.id}"
+    val accent = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val download = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) }
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(if (isCurrent) accent.copy(alpha = 0.10f) else Color.Transparent)
+            .combinedClickable(
+                onClickLabel = "Play", onLongClickLabel = "Download song",
+                onLongClick = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); download() },
+                onClick = { onSong(item) },
+            )
+            .padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(50.dp).clip(RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+            PosterImage(item.thumbnail ?: art, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
+            if (isCurrent) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+                dev.asfakul.yumeiro.ui.components.EqualizerBars(Color.White, Modifier.size(20.dp).testTag("quick_pick_now_playing"), playing = playing)
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(item.title, color = if (isCurrent) accent else TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val line = listOfNotNull(if (item.video) "Video" else null, item.artistLine.takeIf { it.isNotBlank() }).joinToString(" • ")
+            if (line.isNotBlank()) Text(line, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (item.durationSec > 0) Text(formatYtDuration(item.durationSec), color = TextTertiary, fontSize = 11.5.sp, modifier = Modifier.padding(start = 8.dp))
     }
 }
 

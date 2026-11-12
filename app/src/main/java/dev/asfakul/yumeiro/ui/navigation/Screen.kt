@@ -57,6 +57,8 @@ sealed class Screen(val route: String) {
     data object OnlineLibrary : Screen("videos/library")
     /** Offline downloads: Permanent / Offline groups, settings and tips. */
     data object Downloads : Screen("videos/downloads")
+    /** Saved manga and continue reading (was Library's "Reading" tab). */
+    data object ReadingLibrary : Screen("library/reading")
     data object Extensions : Screen("videos/online/extensions")
     data object ExtensionMarket : Screen("videos/online/market")
     /** Aniyomi / Mihon / Stremio / JavaScript / home servers. */

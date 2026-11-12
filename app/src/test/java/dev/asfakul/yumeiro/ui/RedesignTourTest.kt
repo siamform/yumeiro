@@ -319,7 +319,7 @@ class RedesignTourTest {
         // Library
         stop("library") {
             home(); tap("nav_tab_library"); snap("50_library")
-            for (i in 1..2) if (exists("library_tab_$i")) { tap("library_tab_$i"); snap("51_library_tab_$i") }
+            listOf("lib_sc_videos", "lib_sc_reading").forEachIndexed { i, t -> if (exists(t)) { tap(t); snap("51_library_tab_${i + 1}"); back() } }
         }
         stop("downloads") { home(); tap("quick_card_downloads"); waitFor("downloads_screen"); snap("52_downloads"); back() }
         stop("store") { home(); tap("quick_card_store"); settle(1_500); snap("53_hue_store"); back() }

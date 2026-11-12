@@ -197,8 +197,10 @@ internal fun LazyListScope.musicOverview(
     onRescan: () -> Unit,
     onCreatePlaylist: () -> Unit,
     onOpenPlaylist: (String) -> Unit,
+    shortcuts: List<LibraryShortcut> = emptyList(),
 ) {
     val favorites = allTracks.filter { it.isFavorite }
+    if (shortcuts.isNotEmpty()) item(key = "shortcuts") { LibraryShortcutGrid(shortcuts, Modifier.padding(top = 4.dp)) }
     item(key = "hero") {
         LibraryHero(
             overline = "Your music", title = "Liked songs",
@@ -218,21 +220,6 @@ internal fun LazyListScope.musicOverview(
                 }
             },
         )
-    }
-    item(key = "tiles") {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            LibraryTile("Equalizer", "Presets & effects", Icons.Default.Equalizer, Modifier.weight(1f), "lib_eq_card", onOpenEqualizer)
-            LibraryTile("New playlist", "Build a mix", Icons.Default.Add, Modifier.weight(1f), "add_playlist_button", onCreatePlaylist)
-            Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(GlassFill).clickable(enabled = !stats.isScanning, onClick = onRescan).padding(14.dp).testTag("banner_rescan_button")) {
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(SpotifyGreen.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-                    if (stats.isScanning) CircularProgressIndicator(Modifier.size(18.dp), color = SpotifyGreen, strokeWidth = 2.dp)
-                    else Icon(Icons.Default.Refresh, null, tint = SpotifyGreen, modifier = Modifier.size(19.dp))
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(if (stats.isScanning) "Scanning…" else "Rescan", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("Find new files", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
-            }
-        }
     }
     if (recentlyPlayed.isNotEmpty()) {
         item(key = "recent_h") { LibrarySectionHeader("Jump back in", "Recently played") }
@@ -366,20 +353,3 @@ private fun ShelfCover(e: MangaLibrary.Entry, subtitle: String?, fill: Boolean =
     }
 }
 
-/** Music | Videos | Reading switch at the top of Library. */
-@Composable
-fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
-    val tabs = listOf(Triple("Music", Icons.Default.MusicNote, 0), Triple("Videos", Icons.Default.VideoLibrary, 1), Triple("Reading", Icons.AutoMirrored.Filled.MenuBook, 2))
-    Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(GlassFill).padding(4.dp).testTag("library_tabs")) {
-        tabs.forEach { (label, icon, i) ->
-            val sel = i == selected
-            Row(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(if (sel) SpotifyGreen else Color.Transparent)
-                .clickable(role = Role.Tab) { onSelect(i) }.testTag("library_tab_$i"),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = if (sel) OnAccent else TextSecondary, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(label, color = if (sel) OnAccent else TextSecondary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
-        }
-    }
-}

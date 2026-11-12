@@ -393,6 +393,7 @@ fun MTPlayerApp(
     val ambientColor = dev.asfakul.yumeiro.ui.theme.rememberAmbientColor(playbackState.currentTrack?.albumArtUri)
     androidx.compose.runtime.CompositionLocalProvider(
         dev.asfakul.yumeiro.ui.components.LocalIsPlaying provides playbackState.isPlaying,
+        dev.asfakul.yumeiro.ui.components.LocalCurrentTrackId provides playbackState.currentTrack?.id,
         dev.asfakul.yumeiro.ui.components.LocalReducedMotion provides reducedMotionOn,
         dev.asfakul.yumeiro.ui.components.LocalOfflineExits provides offlineExits,
         dev.asfakul.yumeiro.ui.theme.LocalAmbientColor provides ambientColor,
@@ -809,34 +810,6 @@ fun MTPlayerApp(
                         }
                         Screen.Library.route -> {
                             OpaquePage {
-                            var libTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
-                            Column(Modifier.fillMaxSize()) {
-                            dev.asfakul.yumeiro.ui.screens.library.LibraryTabs(libTab) { libTab = it }
-                            dev.asfakul.yumeiro.ui.components.TabSwap(libTab, { it }, Modifier.weight(1f), label = "library_tab") { lt ->
-                            if (lt == 1) dev.asfakul.yumeiro.ui.screens.library.VideoLibraryContent(
-                                deviceContinue = continueWatchingVideos,
-                                onOpenTitle = openOnline,
-                                onPlayVideo = viewModel::playVideo,
-                                onBrowseOnline = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
-                                onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
-                                onOpenDownloads = { navigateSub(Screen.Downloads.route) },
-                                header = {
-                                    val h by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
-                                    val b by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
-                                    val d by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
-                                    dev.asfakul.yumeiro.ui.screens.library.VideoLibraryHero(
-                                        historyCount = h.size, savedCount = b.size, downloadCount = d.size,
-                                        onHistory = { navigateSub(Screen.OnlineHistory.route) },
-                                        onDownloads = { navigateSub(Screen.Downloads.route) },
-                                        onTogether = { navigateSub(Screen.WatchTogether.route) },
-                                        onSources = { navigateSub(Screen.SourcesHub.route()) },
-                                    )
-                                },
-                            ) else if (lt == 2) dev.asfakul.yumeiro.ui.screens.library.ReadingLibraryContent(
-                                onBrowse = { navigateSub(Screen.Manga.route) },
-                                onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
-                                onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
-                            ) else
                             LibraryScreen(
                                 stats = stats,
                                 playlists = playlists,
@@ -861,9 +834,13 @@ fun MTPlayerApp(
                                 onTrackOptionsClick = viewModel::openTrackOptions,
                                 huesCount = dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState().value.installed.count { it.enabled },
                                 onRescanClick = viewModel::scanMedia,
+                                // Round 10: no more Music | Videos | Reading tabs — shortcuts open them.
+                                onOpenVideos = { navigateSub(Screen.OnlineLibrary.route) },
+                                onOpenReading = { navigateSub(Screen.ReadingLibrary.route) },
+                                onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                onOpenDownloads = { navigateSub(Screen.Downloads.route) },
+                                onOpenTogether = { navigateSub(Screen.WatchTogether.route) },
                             )
-                            }
-                            }
                             }
                         }
                     }
@@ -1052,6 +1029,33 @@ fun MTPlayerApp(
                                     onBrowseOnline = popSub,
                                     onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
                                     onOpenDownloads = { navigateSub(Screen.Downloads.route) },
+                                    // The old Library "Videos" tab header (stats + History / Downloads /
+                                    // Watch together / Sources) moved here with the tab.
+                                    header = {
+                                        val h by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
+                                        val b by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
+                                        val d by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+                                        dev.asfakul.yumeiro.ui.screens.library.VideoLibraryHero(
+                                            historyCount = h.size, savedCount = b.size, downloadCount = d.size,
+                                            onHistory = { navigateSub(Screen.OnlineHistory.route) },
+                                            onDownloads = { navigateSub(Screen.Downloads.route) },
+                                            onTogether = { navigateSub(Screen.WatchTogether.route) },
+                                            onSources = { navigateSub(Screen.SourcesHub.route()) },
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    page(subPad, Screen.ReadingLibrary.route) {
+                        OpaquePage {
+                            Column(Modifier.fillMaxSize()) {
+                                dev.asfakul.yumeiro.ui.screens.library.LibraryTopBar("Reading", onBack = popSub)
+                                dev.asfakul.yumeiro.ui.screens.library.ReadingLibraryContent(
+                                    onBrowse = { navigateSub(Screen.Manga.route) },
+                                    onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
+                                    onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
                                 )
                             }
                         }
