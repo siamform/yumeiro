@@ -1,12 +1,68 @@
 # Handover: Yumeiro redesign
 
-> **Round 8 is current.** Read §R8 first, then §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 10 is current.** Read §R10 first, then §R9, §R8, §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R8. Round 8: navigation feel, Live TV hub, Sub & Dub, shortcuts, antivirus review (start here)
+## R10. Round 10: TV mode, Android 7, ABI splits, link player, edge-case audit, Yumix/Library redesign (start here)
+
+**Branch.** `redesign/v7-dream`, pushed to `origin` (`siamform/yumeiro-redesign`) and, as the same
+branch name, to the production repo. Production `main` is untouched (`af8349e`). Nothing is merged;
+the owner approves first. A safety copy of every intermediate state is on `wip/r10-safety`.
+
+**Read these first:** [../EDGE-CASE-AUDIT.md](../EDGE-CASE-AUDIT.md) (issues P0–P3, checklist,
+conflict matrix, verification report), [../BEHAVIOR-SPEC.md](../BEHAVIOR-SPEC.md) (what every
+feature does on failure, interruption and recovery), [../TV.md](../TV.md).
+
+**What changed**
+
+- **Android 7.0+ and TVs.** minSdk 24 with desugaring (`OsCompat.kt` guards), PNG launcher icons
+  and a TV banner, ISRG Root X1 bundled for Android 7.0, app lock falls back to the device
+  credential on 7–8. TV mode (`ui/tv/`) is chosen at runtime or forced in Settings → Navigation bar
+  → Layout: left rail, visible focus, remote keys in the player, focus on Retry in the error card.
+- **ABI splits.** Release and preview builds produce `arm64-v8a`, `armeabi-v7a` and `universal`
+  APKs (`-Pyumeiro.abiSplits=false` turns splits off). The updater picks the device's ABI.
+- **Link player (studied from Hikari, rebuilt).** `stream/LinkHosts.kt` classifies hosts;
+  TeraBox/DiskWala are captured in a hidden WebView (`PageStreamFinderDialog.kt`, the page is shown
+  when it needs login or captcha); Pixeldrain, OneDrive and MediaFire become direct links.
+- **P0 fix.** `ACCESS_NETWORK_STATE` was stripped from the manifest since the first commit, so
+  offline detection never worked on devices. Restored; downloads now wait for a network.
+- **Other fixes.** Network-aware player wait (90 s), progress saved on `ON_STOP`, storage-full
+  stops downloads with a clear message, keyboard/remote attach doesn't restart video.
+- **Playback facts.** Size, duration, audio language under every player, with "≈" estimates and a
+  single notice for what a source doesn't share (`player/PlaybackFacts.kt`).
+- **Yumix hybrid feed.** `YumixFeed.kt`, `YumixFilter.kt`, `OnlineHomeHero.kt`: resume banner,
+  spotlight and new-episode slides, source filter sheet, categories (min 4 titles), latest
+  episodes, seeded shuffle for "More to explore". Channel strip removed from the feed.
+- **Library without tabs.** `LibraryShortcuts.kt`: eight colour shortcuts; Videos opens
+  `Screen.OnlineLibrary` (now with a hero header), Reading opens the new `Screen.ReadingLibrary`.
+- **Quick picks.** Rows without a download button (long-press → Download), now-playing highlight
+  via `LocalCurrentTrackId`.
+- **Bottom nav.** Pill 62 → 68 dp (icons 26/28 dp). The mini player stays 68 dp, so both match.
+
+**Open items.** P2-4 tracker retry after offline, P2-5 WebView audio focus, WebView on Android 7.0
+with Let's Encrypt, and everything under "Unverified" in the audit (needs real phones/TVs).
+Push notifications need the owner's Firebase files (see §R9).
+
+## R9. Round 9: tutor tour, dream backdrops, themed popups, Sub & Dub by language, drama source, FCM
+
+**Branch.** `redesign/v7-dream` at `ba065a4` (on both repos, not main).
+
+- `2de330d` tutor-style explore tour synced with the real UI, smooth See more/See less, 夢色 dream
+  backdrops (each theme has its own mood).
+- `7df5564` per-language Sub/Dub with an audio-language filter; built-in Yumeiro Drama short-drama
+  source (`YumeiroDramaTest`).
+- `f1dce9b`, `51b3c7d` themed player popups, dialog severity tones, toggle/contrast fixes in both
+  themes, theme-legible warning/star/category tints.
+- `ba065a4` FCM instant notices through the existing Worker `yumeiro-cloud` and D1 `yumeiro`
+  (new table `fcm_devices`, migration `server/migrations/0002_fcm_devices.sql`). Only
+  `firebase-messaging`; service account only as a Worker secret. **Not live:** needs the owner's
+  `google-services.json` values and service-account key, then the migration and a Worker deploy.
+  Steps in [../PUSH-FCM.md](../PUSH-FCM.md).
+
+## R8. Round 8: navigation feel, Live TV hub, Sub & Dub, shortcuts, antivirus review
 
 **Branch.** `redesign/v6-polish` (continues `redesign/v5-signature`). Pushed to `origin`
 (`siamform/yumeiro-redesign`) and, as a new branch with the same name, to the production repo
