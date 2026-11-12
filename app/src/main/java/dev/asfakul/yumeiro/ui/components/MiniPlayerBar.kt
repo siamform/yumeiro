@@ -147,7 +147,7 @@ fun MiniPlayerBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(DockMiniHeight)
-                        .padding(start = 12.dp, end = 8.dp),
+                        .padding(start = 12.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val swipe = remember(track.id) { Animatable(0f) }
@@ -179,8 +179,8 @@ fun MiniPlayerBar(
                     TrackArtwork(
                         artUri = track.albumArtUri,
                         key = track.id,
-                        size = 56.dp,
-                        cornerRadius = 14.dp,
+                        size = 48.dp,
+                        cornerRadius = 12.dp,
                         contentDescription = track.album
                     )
                     Spacer(Modifier.width(12.dp))
@@ -195,7 +195,7 @@ fun MiniPlayerBar(
                     MiniButton(Icons.Default.SkipPrevious, "Previous track", content, onPrevious, "mini_player_previous_button")
                     Box(
                         Modifier
-                            .size(52.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(accent)
                             .clickable(role = Role.Button, onClick = onTogglePlayPause)
@@ -206,7 +206,7 @@ fun MiniPlayerBar(
                             if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (playbackState.isPlaying) "Pause" else "Play",
                             tint = palette.onAccent,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                     MiniButton(Icons.Default.SkipNext, "Next track", content, onNext, "mini_player_next_button")
@@ -221,7 +221,7 @@ fun MiniPlayerBar(
 private fun MiniButton(icon: ImageVector, desc: String, tint: Color, onClick: () -> Unit, tag: String, iconSize: Int = 24) {
     Box(
         Modifier
-            .size(46.dp)
+            .size(44.dp)
             .clip(CircleShape)
             .clickable(role = Role.Button, onClick = onClick)
             .testTag(tag),
