@@ -137,6 +137,17 @@ android {
       signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
       buildConfigField("boolean", "AUTO_UPDATE_CHECK", "true")
     }
+    // Round 8: an R8-optimised build for owner / tester try-outs before a release. Same code as
+    // release, but it installs next to the store app (".preview"), is signed with the local debug
+    // key and never checks for updates, so it can't replace or update a real install.
+    create("preview") {
+      initWith(getByName("release"))
+      applicationIdSuffix = ".preview"
+      versionNameSuffix = "-preview"
+      signingConfig = signingConfigs.getByName("debug")
+      matchingFallbacks += listOf("release")
+      buildConfigField("boolean", "AUTO_UPDATE_CHECK", "false")
+    }
     debug {
       // Debug builds install side-by-side with the release app and never replace it.
       applicationIdSuffix = ".debug"
@@ -155,7 +166,16 @@ android {
     buildConfig = true
   }
 
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      // Small machines (2 cores / 8 GB) ran the Robolectric JVM out of memory. Opt in with
+      // -Pyumeiro.lowMemTests=true to cap the heap and recycle the test JVM.
+      if (providers.gradleProperty("yumeiro.lowMemTests").orNull == "true") {
+        all { it.maxHeapSize = "1600m"; it.setForkEvery(25) }
+      }
+    }
+  }
 
   packaging {
     resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }

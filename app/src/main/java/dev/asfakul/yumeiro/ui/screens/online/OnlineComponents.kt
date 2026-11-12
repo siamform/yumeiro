@@ -100,10 +100,13 @@ internal fun androidx.compose.foundation.layout.BoxScope.PosterTags(item: Online
     val audio = tags.firstOrNull { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.LANGUAGE }
     val top = (listOfNotNull(type) + release).take(max)
     val pad = if (compact) 5.dp else 8.dp
-    if (top.isNotEmpty()) Row(Modifier.align(Alignment.TopStart).padding(pad).testTag("poster_tags"), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        top.forEach { TagChip(it, compact, strong = it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE) }
+    // Round 8: the chips share the width that's left next to the score badge and ellipsize, so
+    // long release labels never run under the score or off the poster.
+    val scoreRoom = if ((item.score ?: 0.0) > 0) 34.dp else 0.dp
+    if (top.isNotEmpty()) Row(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(start = pad, top = pad, end = pad + scoreRoom).testTag("poster_tags"), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        top.forEach { Box(Modifier.weight(1f, fill = false)) { TagChip(it, compact, strong = it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE) } }
     }
-    if (audio != null) Box(Modifier.align(Alignment.BottomStart).padding(pad)) { TagChip(audio, compact, strong = false) }
+    if (audio != null) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(pad), contentAlignment = Alignment.BottomStart) { TagChip(audio, compact, strong = false) }
 }
 
 @Composable
@@ -115,7 +118,7 @@ private fun TagChip(tag: dev.asfakul.yumeiro.online.ReleaseTags.Tag, compact: Bo
     }
     val fg = if (strong && !tag.low) OnAccent else Color.White
     Text(
-        tag.label, color = fg, fontSize = if (compact) 8.5.sp else 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+        tag.label, color = fg, fontSize = if (compact) 8.5.sp else 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
         letterSpacing = 0.2.sp, lineHeight = if (compact) 10.sp else 12.sp,
         modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(fill)
             .border(0.5.dp, Color.White.copy(alpha = if (strong) 0f else 0.16f), RoundedCornerShape(5.dp))
@@ -147,9 +150,13 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(item.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
-        val sub = listOfNotNull(item.type, if (showSource) item.api else null).joinToString(" · ")
-        if (sub.isNotBlank()) Text(sub, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Round 8: the title always takes exactly two lines (minLines = maxLines = 2) and the meta
+        // line is always there, so every card in a shelf / grid row has the same height. Before, a
+        // long title made its card taller than its neighbours and the whole shelf jumped while
+        // scrolling sideways.
+        Text(item.name.replace('\n', ' '), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
+        val sub = listOfNotNull(item.type?.takeIf { it.isNotBlank() }, if (showSource) item.api else null).joinToString(" · ")
+        Text(sub.ifBlank { " " }, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

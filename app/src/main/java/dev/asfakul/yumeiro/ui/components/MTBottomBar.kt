@@ -7,7 +7,6 @@ package dev.asfakul.yumeiro.ui.components
 
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,7 +14,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -70,10 +67,9 @@ val DockJunctionCorner = 6.dp
  * The Yumeiro dock: one quiet ink bar holding the main destinations (Home · Music · Videos ·
  * Library by default; 3 to 6 items, see Settings → Navigation bar).
  *
- * Active state: a soft accent-tinted capsule with a hairline glides behind the active icon
- * (one shared spring-animated indicator), the icon fills and takes the accent colour, and a small seal dot sits
- * underneath. Inactive tabs
- * stay calm and readable. Tabs are icon-only (labels are announced to TalkBack and shown in Settings → Navigation bar). With the mini player
+ * Active state (Round 8, Snapchat-style): no capsule, circle or dot. The active icon switches
+ * to its solid glyph, fills with the accent colour and springs up a touch; inactive tabs are
+ * calm outlines. Tabs are icon-only (labels are announced to TalkBack and shown in Settings → Navigation bar). With the mini player
  * showing, both pieces form one joined stack.
  */
 @Composable
@@ -92,7 +88,6 @@ fun MTBottomBar(
     val shape = if (joinedWithMiniPlayer) {
         RoundedCornerShape(topStart = DockJunctionCorner, topEnd = DockJunctionCorner, bottomStart = DockOuterCorner, bottomEnd = DockOuterCorner)
     } else RoundedCornerShape(DockStandaloneCorner)
-    val selectedIndex = items.indexOfFirst { it.route == currentRoute }
     val activeTint = if (palette.isDark) palette.accentBright else palette.accent
     Box(
         modifier = modifier
@@ -101,7 +96,7 @@ fun MTBottomBar(
             .padding(start = DockHorizontalPadding, end = DockHorizontalPadding, bottom = DockBottomPadding)
             .testTag("mt_bottom_navigation_bar")
     ) {
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(DockNavHeight)
@@ -111,25 +106,9 @@ fun MTBottomBar(
                 .border(1.dp, border, shape)
         ) {
             val inner = 6.dp
-            val count = items.size.coerceAtLeast(1)
-            val tabW = (maxWidth - inner * 2) / count
-            val indicatorW = if (count >= 7) 42.dp else if (count == 6) 46.dp else 54.dp
-            val indicatorH = 40.dp
-            val top = (DockNavHeight - indicatorH) / 2
-            val target = inner + tabW * selectedIndex.coerceAtLeast(0) + (tabW - indicatorW) / 2
-            val x by animateDpAsState(target, Yume.settle(), label = "dockPillX")
-            val indicatorAlpha by animateFloatAsState(if (selectedIndex >= 0) 1f else 0f, label = "dockPillA")
-            val pillShape = RoundedCornerShape(16.dp)
-            Box(
-                Modifier
-                    .offset(x = x, y = top)
-                    .width(indicatorW)
-                    .height(indicatorH)
-                    .scale(indicatorAlpha)
-                    .clip(pillShape)
-                    .background(palette.accent.copy(alpha = if (palette.isDark) 0.20f else 0.14f))
-                    .border(1.dp, palette.accent.copy(alpha = if (palette.isDark) 0.36f else 0.28f), pillShape)
-            )
+            // Round 8: no indicator shape at all (the old sliding capsule / circle and the seal dot
+            // are gone). Like Snapchat, the active destination is shown by its glyph alone: it
+            // switches to the solid icon, fills with the accent colour and springs up a touch.
             Row(
                 modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = inner),
                 verticalAlignment = Alignment.CenterVertically
@@ -153,18 +132,16 @@ fun MTBottomBar(
                             .tourTarget(item.testTag),
                         contentAlignment = Alignment.Center,
                     ) {
-                        // Icon-only (no captions): one glyph per destination, the active one fills,
-                        // takes the accent and springs up a touch; a tiny seal dot marks it below.
-                        Icon(
-                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                            contentDescription = null,
-                            tint = tint,
-                            modifier = Modifier.size(25.dp).scale(pop)
-                        )
-                        Box(
-                            Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp)
-                                .size(4.dp).scale(if (isSelected) 1f else 0f).clip(RoundedCornerShape(50)).background(activeTint)
-                        )
+                        // Icon-only (no captions): the active glyph is the solid version in the accent
+                        // colour; inactive glyphs are outlines in a calm neutral.
+                        androidx.compose.animation.Crossfade(isSelected, animationSpec = androidx.compose.animation.core.tween(160), label = "navGlyph") { sel ->
+                            Icon(
+                                imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(if (sel) 27.dp else 25.dp).scale(pop).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
+                            )
+                        }
                     }
                 }
             }

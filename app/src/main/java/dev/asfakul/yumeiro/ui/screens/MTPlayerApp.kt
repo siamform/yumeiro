@@ -12,6 +12,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
 import dev.asfakul.yumeiro.ui.theme.pageBackground
 import dev.asfakul.yumeiro.ui.components.greetingForNow
 import androidx.compose.ui.graphics.Color
@@ -130,6 +131,10 @@ fun MTPlayerApp(
     val pageItemsNow by androidx.compose.runtime.rememberUpdatedState(pageItems)
     val tabPager = rememberPagerState { bottomNavItems.size }
     val tabScope = rememberCoroutineScope()
+    // Fade-through state for far tab jumps (see navigateTop).
+    val tabFade = remember { androidx.compose.animation.core.Animatable(1f) }
+    val tabShift = remember { androidx.compose.animation.core.Animatable(0f) }
+    val reducedMotionNow = remember { dev.asfakul.yumeiro.ui.components.isReducedMotion(navContext) }
     /** The visible top-level page: the pager's tab on the root, otherwise the navigation route. */
     val currentRoute = if (navRoute == Screen.Home.route) pageItems[tabPager.currentPage.coerceIn(0, pageItems.lastIndex)].route else navRoute
     val context = LocalContext.current
@@ -142,7 +147,7 @@ fun MTPlayerApp(
     // access cards). Home is always the root of the back stack: going "home" pops back to it
     // instead of restoring a saved state, which previously re-opened the last tab and made the
     // Home tab look dead.
-    val navigateTop: (String) -> Unit = remember(navController, tabPager) {
+    val navigateTop: (String) -> Unit = remember(navController, tabPager, tabFade, tabShift) {
         { route ->
             runCatching {
                 if (navController.currentDestination?.route != Screen.Home.route &&
@@ -153,9 +158,22 @@ fun MTPlayerApp(
             }
             val page = pageItemsNow.indexOfFirst { it.route == route }
             if (page >= 0 && page != tabPager.currentPage) tabScope.launch {
-                // Neighbouring tab: slide; far tab: jump (no flash of every page in between).
-                if (kotlin.math.abs(page - tabPager.currentPage) == 1) tabPager.animateScrollToPage(page)
-                else tabPager.scrollToPage(page)
+                // Neighbouring tab: the pager slides. Far tab (Home → Videos / Library, Spaces and
+                // dock shortcuts): this used to be scrollToPage, an instant cut with no motion at all,
+                // which is why Yumix, YouTube, Live TV and Library felt like "click and load" when
+                // opened from Home. Now it fades through: the current page leaves fast, the pager
+                // jumps while invisible (no page in between is composed), and the target fades in
+                // with a short glide from the side it lives on.
+                val dir = if (page > tabPager.currentPage) 1f else -1f
+                if (kotlin.math.abs(page - tabPager.currentPage) == 1 || reducedMotionNow) {
+                    tabPager.animateScrollToPage(page, animationSpec = androidx.compose.animation.core.tween(360, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized))
+                } else {
+                    tabFade.animateTo(0f, androidx.compose.animation.core.tween(110, easing = dev.asfakul.yumeiro.ui.components.YuMotion.EmphasizedAccelerate))
+                    tabPager.scrollToPage(page)
+                    tabShift.snapTo(dir)
+                    launch { tabShift.animateTo(0f, androidx.compose.animation.core.tween(320, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized)) }
+                    tabFade.animateTo(1f, androidx.compose.animation.core.tween(240, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Standard))
+                }
             }
         }
     }
@@ -589,6 +607,33 @@ fun MTPlayerApp(
                                 onNavigateToVideos = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE; navigateTop(Screen.Videos.route) },
                                 onOpenYouTubeMusic = { openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE) },
                                 onOpenMix = { openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX) },
+                                onOpenShortcut = { sc ->
+                                    fun settings(c: dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category) {
+                                        dev.asfakul.yumeiro.ui.screens.settings.SettingsLaunch.request(c)
+                                        navigateSub(Screen.Settings.route)
+                                    }
+                                    when (sc) {
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.MY_LIST -> navigateSub(Screen.OnlineLibrary.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.HISTORY -> navigateSub(Screen.OnlineHistory.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.MARKET -> navigateSub(Screen.ExtensionMarket.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.MIX -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.EQUALIZER -> navigateSub(Screen.Equalizer.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SOURCE_HEALTH -> navigateSub(Screen.SourceHealth.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.TOGETHER -> navigateSub(Screen.WatchTogether.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.THEME -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.APPEARANCE)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.DNS, dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NETWORK -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.NETWORK)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.TRACKING -> navigateSub(Screen.Tracking.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PLAYER -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PLAYER)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NAV_BAR -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.NAVIGATION)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NOTIFICATIONS -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.NOTIFICATIONS)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PRIVACY -> navigateSub(Screen.Privacy.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.BACKUP -> navigateSub(Screen.Backup.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.YOUTUBE_ACCOUNT -> navigateSub(Screen.YouTubeAccount.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SETTINGS -> navigateSub(Screen.Settings.route)
+                                    }
+                                },
                                 onOpenManga = { navigateSub(Screen.Manga.route) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route(0)) },
                                 onOpenOnlineTitle = openOnline,
@@ -624,7 +669,8 @@ fun MTPlayerApp(
                         Screen.Music.route -> {
                             OpaquePage {
                             Column(Modifier.fillMaxSize()) {
-                            if (musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX) {
+                            dev.asfakul.yumeiro.ui.components.FadeThrough(musicMode, Modifier.weight(1f), label = "music_mode") { mm ->
+                            if (mm == dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX) {
                                 dev.asfakul.yumeiro.ui.screens.music.MusicMixScreen(
                                     tracks = filteredTracks,
                                     mostPlayed = mostPlayed,
@@ -639,7 +685,7 @@ fun MTPlayerApp(
                                     onOpenDevice = { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.DEVICE.key },
                                     onOpenOnline = { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE.key },
                                 )
-                            } else if (musicOnline) {
+                            } else if (mm == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE) {
                                 Column(Modifier.fillMaxSize()) {
                                 if (!isOnline) dev.asfakul.yumeiro.ui.components.OfflineNotice("YouTube Music", tag = "offline_notice_music")
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
@@ -688,6 +734,7 @@ fun MTPlayerApp(
                             )
                             }
                             }
+                            }
                         }
                         Screen.Videos.route -> {
                             OpaquePage {
@@ -703,17 +750,19 @@ fun MTPlayerApp(
                                     tag = "offline_notice_videos",
                                 )
                             }
-                            if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE) {
+                            // Round 8: the source switch fades through instead of cutting to the new page.
+                            dev.asfakul.yumeiro.ui.components.FadeThrough(videoSource, Modifier.weight(1f), label = "video_source") { vs ->
+                            if (vs == dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE) {
                                 StreamScreen(
                                     onOpenPlaylist = { id -> navigateSub(Screen.PlaylistDetail.route(id)) },
                                     onOpenMarket = { navigateSub(Screen.Market.route) },
                                     onOpenWebsites = { navigateSub(Screen.WebSites.route) },
                                 )
-                            } else if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
+                            } else if (vs == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
                                     onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) },
                                 )
-                            } else if (videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE) {
+                            } else if (vs == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE) {
                                 OnlineHomeScreen(
                                     onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
                                     onOpenTitle = openOnline,
@@ -753,13 +802,15 @@ fun MTPlayerApp(
                             }
                             }
                             }
+                            }
                         }
                         Screen.Library.route -> {
                             OpaquePage {
                             var libTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
                             Column(Modifier.fillMaxSize()) {
                             dev.asfakul.yumeiro.ui.screens.library.LibraryTabs(libTab) { libTab = it }
-                            if (libTab == 1) dev.asfakul.yumeiro.ui.screens.library.VideoLibraryContent(
+                            dev.asfakul.yumeiro.ui.components.TabSwap(libTab, { it }, Modifier.weight(1f), label = "library_tab") { lt ->
+                            if (lt == 1) dev.asfakul.yumeiro.ui.screens.library.VideoLibraryContent(
                                 deviceContinue = continueWatchingVideos,
                                 onOpenTitle = openOnline,
                                 onPlayVideo = viewModel::playVideo,
@@ -778,7 +829,7 @@ fun MTPlayerApp(
                                         onSources = { navigateSub(Screen.SourcesHub.route()) },
                                     )
                                 },
-                            ) else if (libTab == 2) dev.asfakul.yumeiro.ui.screens.library.ReadingLibraryContent(
+                            ) else if (lt == 2) dev.asfakul.yumeiro.ui.screens.library.ReadingLibraryContent(
                                 onBrowse = { navigateSub(Screen.Manga.route) },
                                 onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
@@ -810,35 +861,23 @@ fun MTPlayerApp(
                             )
                             }
                             }
+                            }
                         }
                     }
                 }
                 NavHost(
                     navController = navController,
                     startDestination = Screen.Home.route,
-                    // Bottom-bar destinations switch instantly (no cross-fade of two
-                    // half-transparent pages). Settings / Equalizer slide in from the right over
-                    // an opaque page and slide back out on pop; nothing fades or scales.
                     // Pages are opaque and slide (no cross-fade of two half-transparent pages, which
                     // read as two pages mixed together): a sub-page comes in from the right over the
                     // page below, which drifts a little to the left; Back reverses it. Switching
                     // tabs happens inside the pager, so it never runs these.
-                    enterTransition = {
-                        if (reducedMotionOn) fadeIn(tween(150))
-                        else slideInHorizontally(tween(NAV_ANIM_MS, easing = dev.asfakul.yumeiro.ui.components.YuMotion.EmphasizedDecelerate)) { it }
-                    },
-                    exitTransition = {
-                        if (reducedMotionOn) fadeOut(tween(120))
-                        else slideOutHorizontally(tween(NAV_ANIM_MS, easing = dev.asfakul.yumeiro.ui.components.YuMotion.EmphasizedDecelerate)) { -it / 4 }
-                    },
-                    popEnterTransition = {
-                        if (reducedMotionOn) fadeIn(tween(150))
-                        else slideInHorizontally(tween(NAV_POP_MS, easing = FastOutSlowInEasing)) { -it / 4 }
-                    },
-                    popExitTransition = {
-                        if (reducedMotionOn) fadeOut(tween(120))
-                        else slideOutHorizontally(tween(NAV_POP_MS, easing = FastOutSlowInEasing)) { it }
-                    },
+                    // Round 8: shared push / pop motion (PageMotion). 420 ms emphasized push with the page
+                    // underneath drifting and dimming a little; Back is quicker (320 ms).
+                    enterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.push(reducedMotionOn) },
+                    exitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.pushExit(reducedMotionOn) },
+                    popEnterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popEnter(reducedMotionOn) },
+                    popExitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popExit(reducedMotionOn) },
                     sizeTransform = null
                 ) {
                     // The five bottom-bar tabs live in one pager: swipe anywhere on a page (rows and
@@ -852,7 +891,9 @@ fun MTPlayerApp(
                                 userScrollEnabled = tabSwipeEnabled,
                                 key = { pageItems[it].route },
                                 beyondViewportPageCount = 0,
-                                modifier = Modifier.fillMaxSize().padding(tabPad.value).consumeWindowInsets(tabPad.value).testTag("tab_pager"),
+                                modifier = Modifier.fillMaxSize().padding(tabPad.value).consumeWindowInsets(tabPad.value)
+                                    .graphicsLayer { alpha = tabFade.value; translationX = tabShift.value * 28.dp.toPx() }
+                                    .testTag("tab_pager"),
                             ) { page -> tabPage(page) }
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
                             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }) { tabBottomBar() }

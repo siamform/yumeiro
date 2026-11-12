@@ -232,7 +232,7 @@ class AppNavigationCrashTest {
         tap("playlist_menu_mrgify_bdix"); tap("playlist_delete"); tap("confirm_delete")
         settle { dev.asfakul.yumeiro.stream.PlaylistStore.get("mrgify_bdix") == null && !exists("playlist_mrgify_bdix") }
         // Restore brings it back.
-        list.performScrollToIndex(0)
+        list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlists_more"))
         rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
         tap("playlists_more"); tap("playlists_restore")
         settle { dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.let { p -> p.size == 1 && p.all { it.enabled } } }

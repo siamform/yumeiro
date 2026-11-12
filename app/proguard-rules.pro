@@ -51,7 +51,13 @@
 -keep class androidx.preference.** { *; }
 -keep class androidx.navigation.** { *; }
 -keep class androidx.recyclerview.** { *; }
--keep class androidx.core.** { *; }
+# Round 8 (security review): keep androidx.core for extensions, except the compat helpers for
+# phone identifiers (TelephonyManagerCompat.getImei), location requests and accessibility-service
+# lists. Yumeiro never calls them and has no phone / location permission; the blanket keep made
+# R8 ship them anyway, and antivirus heuristics read them as the app's own capabilities
+# ("telephony", "checks-gps"). Anything the app or a library really uses is still kept by R8's
+# normal reachability analysis.
+-keep class !androidx.core.telephony.**,!androidx.core.location.**,!androidx.core.accessibilityservice.**,androidx.core.** { *; }
 -keep class androidx.lifecycle.** { *; }
 -keep class androidx.webkit.** { *; }
 -keep class androidx.activity.** { *; }

@@ -211,8 +211,12 @@ fun OnlineHomeScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 val ready = providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } }
-                val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (selected ?: ""))
-                if (selected == null) {
+                // Round 8: "All" ⇄ extension page used to be a bare if/else (one-frame cut). It now
+                // slides in the direction of the tapped channel and Back returns to "All".
+                androidx.activity.compose.BackHandler(enabled = selected != null) { selected = null }
+                dev.asfakul.yumeiro.ui.components.TabSwap(selected, { n -> if (n == null) -1 else channelNames.indexOf(n) }, Modifier.fillMaxSize(), label = "yumix_channel") { sel ->
+                val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (sel ?: ""))
+                if (sel == null) {
                     val hero = remember(ready) { heroPicks(ready.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
                     // "Top picks": one mixed row across every extension (round-robin, de-duplicated).
                     val picks = remember(ready, hero) {
@@ -242,7 +246,11 @@ fun OnlineHomeScreen(
                     var exploreLimit by rememberSaveable { mutableStateOf(30) }
                     val exploreBusy by remember { derivedStateOf { explore.any { it.loading } } }
                     val exploreMore by remember { derivedStateOf { explore.any { it.hasNext } } }
-                    val groupsDone = groups.size >= ready.size && loadingNames.isEmpty()
+                    // Round 8: the endless grid used to wait until *every* extension had answered
+                    // (loadingNames.isEmpty()). One slow or hung extension therefore stopped "All" at
+                    // a loading skeleton forever. Explore now starts as soon as the sections for the
+                    // extensions that did answer are shown; late extensions join the grid when ready.
+                    val groupsDone = groups.size >= ready.size && ready.isNotEmpty()
                     fun pageExplore() {
                         val targets = explore.indices.filter { explore[it].hasNext && !explore[it].loading }.sortedBy { explore[it].items.size }.take(3)
                         if (targets.isEmpty()) return
@@ -329,7 +337,7 @@ fun OnlineHomeScreen(
                         }
                     }
                 } else {
-                    val name = selected ?: return@PullToRefreshBox
+                    val name: String = sel
                     val api = providers.firstOrNull { it.name == name }
                     val h = homes[name]
                     HuePage(
@@ -343,6 +351,7 @@ fun OnlineHomeScreen(
                         onRetry = { if (api != null) scope.launch { loadOne(api, true) } },
                         openItem = openItem, openInfo = openInfo,
                     )
+                }
                 }
             }
         }

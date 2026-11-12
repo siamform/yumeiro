@@ -86,6 +86,24 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.SpaceDashboard
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -95,6 +113,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -216,6 +236,11 @@ fun HomeScreen(
     onOpenManga: () -> Unit = onNavigateToLibrary,
     onOpenSources: () -> Unit = onOpenHueStore,
     onOpenMix: () -> Unit = onNavigateToMusic,
+    /**
+     * Round 8: the extra Spaces shortcuts behind "See more" (see [HomeShortcut]). The host maps
+     * each one to its page or Settings category.
+     */
+    onOpenShortcut: (HomeShortcut) -> Unit = {},
     onOpenOnlineTitle: (OnlineItem) -> Unit = {},
     /** Opens one extension row on its own page (paged "See all"). */
     onOpenRow: (OnlineRow) -> Unit = {},
@@ -314,6 +339,37 @@ fun HomeScreen(
                 badge = activeDownloads.takeIf { it > 0 }?.toString()),
         )
     }
+    // Round 8: everything else worth one tap (settings people look for most, plus pages that
+    // used to be three taps deep), in two labelled groups behind "See more".
+    val moreGo = remember {
+        listOf(
+            Feature("quick_card_search", "Search", "All sources", Icons.Default.Search, "探", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SEARCH) }),
+            Feature("quick_card_mylist", "My List", "Saved titles", Icons.Default.Bookmarks, "栞", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.MY_LIST) }),
+            Feature("quick_card_history", "History", "Keep watching", Icons.Default.History, "歴", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.HISTORY) }),
+            Feature("quick_card_market", "Market", "New extensions", Icons.Default.Storefront, "市", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.MARKET) }),
+            Feature("quick_card_websites", "Websites", "Saved sites", Icons.Default.Language, "網", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.WEBSITES) }),
+            Feature("quick_card_mix", "Music mix", "Songs + YT Music", Icons.Default.Shuffle, "混", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.MIX) }),
+            Feature("quick_card_equalizer", "Equalizer", "Sound presets", Icons.Default.Equalizer, "響", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.EQUALIZER) }),
+            Feature("quick_card_health", "Source health", "What works now", Icons.Default.MonitorHeart, "診", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.SOURCE_HEALTH) }),
+            Feature("quick_card_together", "Together", "Watch in sync", Icons.Default.Groups, "共", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.TOGETHER) }),
+        )
+    }
+    val moreSettings = remember {
+        listOf(
+            Feature("quick_card_theme", "Theme", "Colours · look", Icons.Default.Palette, "色", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.THEME) }),
+            Feature("quick_card_dns", "DNS", "Smart DNS · unblock", Icons.Default.Dns, "護", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.DNS) }),
+            Feature("quick_card_network", "Network", "VPN · blocked sites", Icons.Default.Wifi, "通", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.NETWORK) }),
+            Feature("quick_card_tracking", "Tracking", "AniList · MAL", Icons.Default.TrackChanges, "記", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.TRACKING) }),
+            Feature("quick_card_player", "Player", "PiP · captions", Icons.Default.PlayCircle, "奏", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.PLAYER) }),
+            Feature("quick_card_navbar", "Nav bar", "Tabs · shortcuts", Icons.Default.SpaceDashboard, "道", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.NAV_BAR) }),
+            Feature("quick_card_alerts", "Alerts", "Notifications", Icons.Default.Notifications, "知", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.NOTIFICATIONS) }),
+            Feature("quick_card_privacy", "Privacy", "Lock · incognito", Icons.Default.Lock, "錠", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.PRIVACY) }),
+            Feature("quick_card_backup", "Backup", "Save · restore", Icons.Default.Backup, "蔵", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.BACKUP) }),
+            Feature("quick_card_yt_account", "YT account", "Optional sign-in", Icons.Default.AccountCircle, "鍵", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.YOUTUBE_ACCOUNT) }),
+            Feature("quick_card_settings", "Settings", "Every option", Icons.Default.Settings, "設", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SETTINGS) }),
+        )
+    }
+    var spacesExpanded by rememberSaveable { mutableStateOf(false) }
     val contextLine = when {
         freshSeries == 1 -> "${episodeCards.first { it.fresh }.bookmark.name} has a new episode waiting."
         freshSeries > 1 -> "$freshSeries series you follow have new episodes."
@@ -358,6 +414,33 @@ fun HomeScreen(
                             repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
+                }
+                // Round 8: "See more" opens two more groups in place (rows animate in with the
+                // list's item animation; collapsing scrolls nothing away from under the thumb).
+                if (spacesExpanded) {
+                    listOf("go" to ("移" to "Go to") , "settings" to ("設" to "Quick settings")).forEach { (gk, label) ->
+                        val list = if (gk == "go") moreGo else moreSettings
+                        item(key = "spaces_more_h_$gk", contentType = "spaces_label") {
+                            SpacesGroupLabel(label.first, label.second, Modifier.animateItem())
+                        }
+                        list.chunked(spaceColumns).forEachIndexed { i, row ->
+                            item(key = "spaces_more_${gk}_$i", contentType = "spaces_row") {
+                                Row(Modifier.animateItem().fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces_more_row"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
+                                    repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
+                    }
+                }
+                item(key = "spaces_more", contentType = "spaces_more") {
+                    SpacesMoreButton(
+                        expanded = spacesExpanded,
+                        count = moreGo.size + moreSettings.size,
+                        preview = moreSettings.take(4),
+                        onClick = { spacesExpanded = !spacesExpanded },
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
 
@@ -807,6 +890,69 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
         Spacer(Modifier.height(8.dp))
         Text(f.title, color = p.textPrimary, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         Text(f.status, color = p.textTertiary, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+    }
+}
+
+/** Round 8: the extra Spaces shortcuts (mapped to pages / Settings categories by the host). */
+enum class HomeShortcut { SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
+
+@Composable
+private fun SpacesGroupLabel(kanji: String, title: String, modifier: Modifier = Modifier) {
+    val p = LocalMtPalette.current
+    Row(modifier.fillMaxWidth().padding(start = 4.dp, top = 6.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(kanji, color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.clearAndSetSemantics { })
+        Spacer(Modifier.width(8.dp))
+        Text(title.uppercase(), color = p.textTertiary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.semantics { heading() })
+    }
+}
+
+/**
+ * "See more / See less" for Spaces: a full-width quiet pill (48 dp+ touch target) that previews
+ * what's inside (a few of the hidden glyphs) and says how many shortcuts it holds. The chevron
+ * turns on toggle.
+ */
+@Composable
+private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Feature>, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalMtPalette.current
+    val reduced = dev.asfakul.yumeiro.ui.components.reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(
+        if (expanded) 180f else 0f,
+        if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 420f), label = "spacesChevron",
+    )
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .heightIn(min = 52.dp)
+            .clip(shape)
+            .background(p.textPrimary.copy(alpha = if (p.isDark) 0.06f else 0.05f))
+            .border(1.dp, p.textPrimary.copy(alpha = 0.08f), shape)
+            .clickable(role = Role.Button, onClickLabel = if (expanded) "Show fewer spaces" else "Show all spaces", onClick = onClick)
+            .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .testTag("home_spaces_more"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!expanded) {
+            Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                preview.forEach { f ->
+                    Box(
+                        Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(f.hue).border(1.5.dp, p.background, RoundedCornerShape(9.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(f.icon, null, tint = Color.White, modifier = Modifier.size(14.dp)) }
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(if (expanded) "See less" else "See more", color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(
+                if (expanded) "Back to the main spaces" else "$count more · theme, DNS, tracking, network…",
+                color = p.textTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(Icons.Default.ExpandMore, null, tint = p.textSecondary, modifier = Modifier.size(24.dp).graphicsLayer { rotationZ = turn })
     }
 }
 

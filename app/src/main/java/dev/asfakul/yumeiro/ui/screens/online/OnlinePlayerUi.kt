@@ -46,6 +46,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Cast
@@ -245,8 +248,34 @@ private fun SourcesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
             Text("Still finding sources…", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
         }
     }
+    // Round 8: same Sub / Dub split as the watch page, each group folds from its header.
+    val split = dev.asfakul.yumeiro.ui.screens.watch.AudioSplit
+    val groups = remember(state.links, state.version) {
+        val kinds = state.links.map { split.of(it.name + " " + it.source, state.version) }
+        val sub = state.links.indices.filter { kinds[it] != dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB }
+        val dub = state.links.indices.filter { kinds[it] == dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB }
+        if (sub.isNotEmpty() && dub.isNotEmpty()) listOf<Pair<dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind?, List<Int>>>(dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB to sub, dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB to dub) else listOf<Pair<dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind?, List<Int>>>(null to state.links.indices.toList())
+    }
+    val folded = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver(save = { it.toList() }, restore = { androidx.compose.runtime.mutableStateListOf<String>().apply { addAll(it) } })) { androidx.compose.runtime.mutableStateListOf<String>() }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        itemsIndexed(state.links, key = { _, l -> l.url }) { i, l ->
+        groups.forEach { (kind, idx) ->
+        val gk = kind?.name ?: "all"
+        val isFolded = gk in folded
+        if (kind != null) item(key = "hdr_$gk") {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClickLabel = if (isFolded) "Show ${kind.label} sources" else "Hide ${kind.label} sources") { if (isFolded) folded.remove(gk) else folded.add(gk) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp).testTag("online_player_source_group"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(if (kind == dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB) Icons.Default.Mic else Icons.Default.ClosedCaption, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("${kind.label} · ${idx.size}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Icon(if (isFolded) Icons.Default.ExpandMore else Icons.Default.ExpandLess, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+            }
+        }
+        if (!isFolded) items(idx, key = { i -> state.links[i].url + "#" + i }) { i ->
+            val l = state.links[i]
             val current = i == state.linkIndex
             val failed = l.url in state.failed
             Row(
@@ -261,6 +290,7 @@ private fun SourcesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
                 }
                 if (current) Icon(Icons.Default.CheckCircle, "Playing", tint = SpotifyGreen, modifier = Modifier.size(18.dp))
             }
+        }
         }
         if (state.subtitles.isNotEmpty()) item { Text("${state.subtitles.size} subtitle track${if (state.subtitles.size == 1) "" else "s"} available in Captions", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, modifier = Modifier.padding(6.dp)) }
     }
@@ -476,19 +506,46 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 else -> Icons.Default.HighQuality
             }
             val pos = { player?.positionMs?.invoke() ?: 0L }
-            val rows = versions.map { v ->
+            // Round 8: a version called "Sub" often carries dubbed links too. The current version's
+            // links are split by what each link says about itself into Sub and Dub groups (only
+            // when both kinds are really there); every group folds (tap the header) so long lists
+            // of sources stay tidy. Indices still point at state.links, so switching is unchanged.
+            val split = dev.asfakul.yumeiro.ui.screens.watch.AudioSplit
+            val rows = versions.flatMap { v ->
                 val isCurrent = v == state.version || versions.size == 1
-                val servers = if (isCurrent) {
-                    if (state.links.isEmpty()) listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (state.linksDone) "No sources" else "Finding sources…", false, "online_server_wait") {})
-                    else state.links.mapIndexed { i, l ->
-                        val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 18) it.take(17) + "…" else it }
-                        dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server") { OnlineSession.switchSource(context, i, pos()) }
+                if (isCurrent) {
+                    if (state.links.isEmpty()) return@flatMap listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(
+                        split.label(v, split.explicit(v)), iconFor(v),
+                        listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (state.linksDone) "No sources" else "Finding sources…", false, "online_server_wait") {}),
+                        startExpanded = true,
+                    ))
+                    val kinds = state.links.map { l -> split.of(l.name + " " + l.source, v) }
+                    val groups = state.links.indices.groupBy { kinds[it] }
+                    val ordered = listOf(dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB, null, dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB).filter { it in groups.keys }
+                    // Links that don't say join the version's own kind; only split when Sub and Dub both exist.
+                    val merged: List<Pair<dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind?, List<Int>>> =
+                        if (groups.keys.containsAll(listOf(dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB, dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB))) {
+                            ordered.filterNotNull().map { k -> k to (groups[k].orEmpty() + if (k == dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB) groups[null].orEmpty() else emptyList()).sorted() }
+                        } else listOf(groups.keys.firstOrNull { it != null } to state.links.indices.toList())
+                    merged.map { (kind, idx) ->
+                        // One version named "Sub" with nothing to split by: the extension didn't separate
+                        // audio, so don't promise subtitles only.
+                        val label = if (versions.size == 1 && merged.size == 1 && split.explicit(v) == dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB && kind != dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB) "Sub & Dub" else split.label(v, kind)
+                        dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(
+                            label,
+                            when (kind) { dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB -> Icons.Default.Mic; dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB -> Icons.Default.ClosedCaption; else -> iconFor(v) },
+                            idx.map { i ->
+                                val l = state.links[i]
+                                val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 22) it.take(21) + "…" else it }
+                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server") { OnlineSession.switchSource(context, i, pos()) }
+                            },
+                        )
                     }
                 } else {
                     val has = remember(state.episode, v) { OnlineSession.hasEpisodeIn(v) }
-                    listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (has) "Switch to $v" else "Not for this episode", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })
+                    listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(v, iconFor(v),
+                        listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (has) "Switch to $v" else "Not for this episode", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })))
                 }
-                dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(v, iconFor(v), servers)
             }
             val ep = state.episode
             dev.asfakul.yumeiro.ui.screens.watch.WatchServerBox(

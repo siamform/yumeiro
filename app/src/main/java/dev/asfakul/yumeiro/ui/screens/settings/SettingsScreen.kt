@@ -62,6 +62,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -121,6 +122,8 @@ fun SettingsScreen(
 ) {
     // A category requested from elsewhere (setup guide → Network / Notifications) opens directly.
     var openName by rememberSaveable { mutableStateOf<String?>(SettingsLaunch.take()) }
+    val launchRequest by SettingsLaunch.pending.collectAsState()
+    LaunchedEffect(launchRequest) { launchRequest?.let { openName = it; SettingsLaunch.consume(it) } }
     var showGuide by rememberSaveable { mutableStateOf(false) }
     val open = SettingsCatalog.fromName(openName)
 
@@ -483,7 +486,12 @@ fun SettingsDivider() {
 
 /** One-shot request to open Settings on a given [SettingsCatalog.Category] (by enum name). */
 object SettingsLaunch {
-    @Volatile private var pending: String? = null
-    fun request(category: SettingsCatalog.Category) { pending = category.name }
-    fun take(): String? = pending.also { pending = null }
+    // Round 8: a StateFlow instead of a one-shot field. Settings is reused from the back stack
+    // (SubNav pops back to it), so a request made while it already existed was never read and
+    // shortcuts like Home → Theme / DNS landed on the Settings list instead of the category.
+    private val _pending = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val pending: kotlinx.coroutines.flow.StateFlow<String?> = _pending
+    fun request(category: SettingsCatalog.Category) { _pending.value = category.name }
+    fun take(): String? = _pending.value.also { _pending.value = null }
+    fun consume(name: String) { _pending.compareAndSet(name, null) }
 }

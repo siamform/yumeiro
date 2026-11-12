@@ -1,10 +1,42 @@
 # Handover: Yumeiro redesign
 
-> **Round 7 is current.** Read §R7 first, then §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 8 is current.** Read §R8 first, then §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
+
+## R8. Round 8: navigation feel, Live TV hub, Sub & Dub, shortcuts, antivirus review (start here)
+
+**Branch.** `redesign/v6-polish` (continues `redesign/v5-signature`). Pushed to `origin`
+(`siamform/yumeiro-redesign`) and, as a new branch with the same name, to the production repo
+`siamform/yumeiro`. `main` there was not touched; there is no PR and no merge. Both need the
+owner's written approval after the owner tests the local build.
+
+| # | Request | Root cause | Fix (files under `app/src/main/java/dev/asfakul/yumeiro/`) |
+|---|---|---|---|
+| 1 | Extensions / Sources / other pages open "too fast, like click and load" | Three separate causes, found by tracing how each page is reached: (a) `navigateTop()` jumped between non-adjacent tabs with an instant `scrollToPage`; (b) many "pages" are not routes but in-place swaps (`when`/`if`) with no transition at all: Videos source switch, Music Device/Online/Mix, Library tabs, Sources hub tabs, Yumix All ⇄ extension page; (c) the NavHost push used a 340 ms emphasized-decelerate curve that covers ~70% of the distance in the first 80 ms, which reads as instant | New `ui/components/PageSwap.kt` (`PageMotion`, `TabSwap` = shared-axis X in reading order, `FadeThrough`). `ui/screens/MTPlayerApp.kt`: fade-through for far tab jumps, NavHost push 420 ms / pop 320 ms with the page underneath drifting and dimming; every in-place swap listed in (b) now uses `TabSwap` or `FadeThrough`. `OnlineHomeScreen.kt`: system Back on an extension page returns to All |
+| 2 | Bottom bar still shows a circle | — | `ui/components/MTBottomBar.kt`: capsule and seal dot removed. Active tab = filled glyph in the accent colour (Snapchat style, crossfade + spring pop), inactive = outline. `YumixLogo.Filled` added for the Yumix tab. Tags `nav_icon_filled` / `nav_icon_outline` |
+| 3 | Yumix "All" not endless; long titles break the shelves | `groupsDone` waited for every extension; one slow or hung extension blocked "More to explore" forever. Poster cards had a variable number of text lines, so rows had different heights | `OnlineHomeScreen.kt`: explore starts once every ready extension answered *or* failed. `OnlineComponents.kt`: `PosterCard` title is exactly 2 lines (newlines stripped), meta line always present; `PosterTags` chips share width with ellipsis |
+| 4 | Live TV opened on a form, not on channels | The page was a link-input form with playlist cards | New `ui/screens/stream/LiveTvHub.kt` + `StreamScreen.kt`: Live TV now opens on channels like Yumix: playlist strip (All + each enabled playlist), one titled channel shelf per playlist, or a group-filtered grid (endless, +48 per page) for one playlist. Below: a **Tools** grid of shortcuts (Play link, M3U file, Market, Websites, Add URL, New list, Sync, Recent). The link player is its own page (`stream_link_page`, Back returns). Playlist cards, restore, Market and Websites keep their tags (`market_entry`, `stream_websites`, `playlist_*`) |
+| 5 | Player "Sub" section also contains dubs; too many sources | Versions were labelled by the first word the source returned | `ui/screens/watch/WatchKit.kt`: `AudioSplit` (Sub / Dub by each link's own name, then its version), `ServerGroup` (tap to expand / collapse, folds above 8 sources). `OnlinePlayerUi.kt`: the watch page splits a version into Sub and Dub groups when both exist, labels a mixed single group "Sub & Dub", and the in-player Sources panel has the same foldable groups (`online_player_source_group`) |
+| 6 | More shortcuts in "Everything in Yumeiro" | Settings shortcuts opened the wrong category when Settings was already on the back stack (one-shot field read once) | `HomeScreen.kt`: `HomeShortcut` enum; the first 8 tiles stay, a "See more" button (`home_spaces_more`) reveals "Go to" (Search, My List, History, Market, Websites, Mix, Equalizer, Source health, Watch together) and "Quick settings" (Theme, DNS, Network, Tracking, Player, Nav bar, Notifications, Privacy, Backup, YouTube account, All settings). `SettingsScreen.kt`: `SettingsLaunch` is a `StateFlow`, observed while Settings is open |
+| 7 | VirusTotal 2/67 on v1.5.0 | See [../security/VT-REPORT-round8.md](../security/VT-REPORT-round8.md) | `app/proguard-rules.pro`: the blanket `-keep class androidx.core.**` no longer forces the unused IMEI / location-request / accessibility-list compat helpers into the APK |
+| 8 | Installable local build | — | `app/build.gradle.kts`: `preview` build type (R8 like release, `.preview` package, debug-key signed, no update checks). `./gradlew :app:assemblePreview` |
+
+**Tests.** New: `watch/AudioSplitTest` (3), `StreamDialogsTest.liveHubShowsChannelsAndLinkPage`.
+Updated for the new Live TV layout: `AppNavigationCrashTest`, `StreamDialogsTest`. Full suite:
+85 classes, 494 tests, 0 failures (Robolectric). On small machines run
+`./gradlew :app:testDebugUnitTest -Pyumeiro.lowMemTests=true` (caps the test JVM heap and
+recycles it every 25 classes; without it the 2-core / 8 GB sandbox ran out of memory).
+
+**Not verified on a device.** No emulator (no KVM) was available. Transition timing, the Live TV
+hub with large real playlists and the Sub/Dub split on real extensions need a phone check.
+
+**Next steps for the next developer.**
+1. Owner installs `Yumeiro-redesign-r8-preview.apk` (package `dev.asfakul.yumeiro.preview`, installs next to the real app).
+2. After approval: open a PR from `redesign/v6-polish` into `main` on `siamform/yumeiro` and let `release.yml` produce the CI-signed build. Rescan that APK on VirusTotal (a different signature changes the hash).
+3. If an engine still flags the CI build, send the prepared false-positive requests in the VT report (needs owner approval: it shares the APK with the vendor).
 
 ## R7. Round 7: owner bug list (21 items) (start here)
 

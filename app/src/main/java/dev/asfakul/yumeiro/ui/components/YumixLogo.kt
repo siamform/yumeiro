@@ -53,4 +53,40 @@ object YumixLogo {
             }
         }.build()
     }
+
+    /**
+     * Round 8: solid version for the active dock tab (Snapchat-style "the glyph fills with
+     * colour"). A filled disc with the play triangle cut out, plus the spark.
+     */
+    val Filled: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "YumixLogoFilled",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd) {
+                // Disc: centre (11, 13), r = 8.8.
+                moveTo(19.8f, 13f)
+                arcTo(8.8f, 8.8f, 0f, isMoreThanHalf = true, isPositiveArc = true, x1 = 2.2f, y1 = 13f)
+                arcTo(8.8f, 8.8f, 0f, isMoreThanHalf = true, isPositiveArc = true, x1 = 19.8f, y1 = 13f)
+                close()
+                // Play triangle hole (same shape as the outline mark, centred in the disc).
+                moveTo(9.2f, 9.1f)
+                quadTo(8.4f, 8.7f, 8.4f, 9.6f)
+                lineTo(8.4f, 16.4f)
+                quadTo(8.4f, 17.3f, 9.2f, 16.9f)
+                lineTo(14.9f, 13.6f)
+                quadTo(15.6f, 13f, 14.9f, 12.4f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(20f, 0.6f)
+                quadTo(20.4f, 3.2f, 23f, 3.6f)
+                quadTo(20.4f, 4f, 20f, 6.6f)
+                quadTo(19.6f, 4f, 17f, 3.6f)
+                quadTo(19.6f, 3.2f, 20f, 0.6f)
+                close()
+            }
+        }.build()
+    }
 }

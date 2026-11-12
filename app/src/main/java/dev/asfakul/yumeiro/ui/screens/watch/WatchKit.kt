@@ -30,6 +30,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -107,8 +112,36 @@ object WatchPrefs {
 /** One server button in [WatchServerBox]. */
 data class WatchServer(val label: String, val selected: Boolean, val tag: String, val onClick: () -> Unit)
 
-/** A row of servers (e.g. SUB / DUB for Hues, LINK / MODE for streams). */
-data class WatchServerRow(val label: String, val icon: ImageVector, val servers: List<WatchServer>)
+/**
+ * A group of servers (e.g. Sub / Dub for Hues, links / modes for streams).
+ * Round 8: groups are collapsible. [startExpanded] null = automatic (open when it holds the
+ * playing source or is short; long lists of other versions start folded).
+ */
+data class WatchServerRow(val label: String, val icon: ImageVector, val servers: List<WatchServer>, val startExpanded: Boolean? = null)
+
+/** Round 8: how many server chips a group may show before it starts folded. */
+const val SERVER_GROUP_FOLD_AT = 8
+
+/** Round 8: splits a version's links into Sub and Dub by what each link says about itself. */
+object AudioSplit {
+    enum class Kind(val label: String) { SUB("Sub"), DUB("Dub") }
+    private val dub = Regex("""(?i)(\bdub(bed)?\b|\bdual[ -]?audio\b|\b(eng(lish)?|hin(di)?|tam(il)?|tel(ugu)?|ban(gla)?|spa(nish)?|por(tuguese)?)[ -]?dub|\bdub[ -]?(eng|hin|tam|tel))""")
+    private val sub = Regex("""(?i)(\b(soft|hard)?sub(bed|s|titled)?\b|\braw\b)""")
+    /** What [text] says explicitly, or null when it doesn't say. */
+    fun explicit(text: String): Kind? = when { dub.containsMatchIn(text) -> Kind.DUB; sub.containsMatchIn(text) -> Kind.SUB; else -> null }
+    /** Kind of one link: its own name / source first, then the version it came from. */
+    fun of(linkText: String, version: String): Kind? = explicit(linkText) ?: explicit(version)
+    /**
+     * Label for a group of [kind] links inside [version]: the version itself when it already says
+     * so ("Sub", "English Dub"), "Sub" / "Dub" for the generic "Sources", else "Version · Dub".
+     */
+    fun label(version: String, kind: Kind?): String = when {
+        kind == null -> version
+        explicit(version) == kind -> version
+        version.isBlank() || version.equals("Sources", true) || explicit(version) != null -> kind.label
+        else -> "$version · ${kind.label}"
+    }
+}
 
 /**
  * Yumeiro's "moon dial": a glass card under the player with capsule toggles (Dim, Autoplay,
@@ -234,30 +267,74 @@ fun WatchServerBox(watching: String, hint: String, rows: List<WatchServerRow>, m
                 Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
             }
         }
-        rows.filter { it.servers.isNotEmpty() }.forEach { row ->
-            Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-                    Icon(row.icon, null, tint = p.accent, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(row.label, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.75f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        val shownRows = rows.filter { it.servers.isNotEmpty() }
+        shownRows.forEach { row ->
+            ServerGroup(row, single = shownRows.size == 1, brush = brush)
+        }
+    }
+}
+
+/**
+ * Round 8: one tap-to-expand group of sources. The header (icon, name, count, chevron) toggles
+ * it; while folded it still names the playing source so nothing is hidden by surprise.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ServerGroup(row: WatchServerRow, single: Boolean, brush: Brush) {
+    val p = LocalMtPalette.current
+    val playing = row.servers.firstOrNull { it.selected }
+    val auto = playing != null || row.servers.size <= SERVER_GROUP_FOLD_AT || single
+    var open by androidx.compose.runtime.saveable.rememberSaveable(row.label) { mutableStateOf(row.startExpanded ?: auto) }
+    val reduced = dev.asfakul.yumeiro.ui.components.reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(if (reduced) 0 else 220), label = "serverChevron")
+    Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp).testTag("watch_server_group")) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClickLabel = if (open) "Hide ${row.label} sources" else "Show ${row.label} sources") { open = !open }
+                .semantics { stateDescription = if (open) "Expanded" else "Collapsed" }
+                .padding(horizontal = 6.dp, vertical = 6.dp)
+                .testTag("watch_server_group_header"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(row.icon, null, tint = p.accent, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(row.label, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.88f), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val count = row.servers.size
+                val meta = when {
+                    !open && playing != null -> "Playing ${playing.label} · $count source${if (count == 1) "" else "s"}"
+                    else -> "$count source${if (count == 1) "" else "s"}"
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    row.servers.forEach { s ->
-                        Row(
-                            Modifier
-                                .clip(CircleShape)
-                                .then(if (s.selected) Modifier.background(brush) else Modifier.background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)).border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.10f), CircleShape))
-                                .clickable(enabled = !s.selected, onClick = s.onClick)
-                                .padding(horizontal = 13.dp, vertical = 7.dp)
-                                .testTag(s.tag),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (s.selected) {
-                                Icon(Icons.Default.PlayArrow, null, tint = p.onAccent, modifier = Modifier.size(13.dp))
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            Text(s.label, maxLines = 1, color = if (s.selected) p.onAccent else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(meta, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Default.ExpandMore, null, tint = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.6f), modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = turn })
+        }
+        AnimatedVisibility(
+            visible = open,
+            enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(if (reduced) 0 else 260)) + fadeIn(androidx.compose.animation.core.tween(if (reduced) 0 else 200, delayMillis = if (reduced) 0 else 60)),
+            exit = androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(if (reduced) 0 else 200)) + fadeOut(androidx.compose.animation.core.tween(if (reduced) 0 else 120)),
+        ) {
+            FlowRow(Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.servers.forEach { s ->
+                    Row(
+                        Modifier
+                            .heightIn(min = 36.dp)
+                            .widthIn(max = 220.dp)
+                            .clip(CircleShape)
+                            .then(if (s.selected) Modifier.background(brush) else Modifier.background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)).border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.10f), CircleShape))
+                            .clickable(enabled = !s.selected, onClick = s.onClick)
+                            .padding(horizontal = 13.dp, vertical = 7.dp)
+                            .testTag(s.tag),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (s.selected) {
+                            Icon(Icons.Default.PlayArrow, null, tint = p.onAccent, modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(4.dp))
                         }
+                        Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (s.selected) p.onAccent else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

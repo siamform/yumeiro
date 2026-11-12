@@ -95,12 +95,17 @@ fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = 0) {
     Column(Modifier.fillMaxSize().testTag("sources_hub")) {
         SubPageHeader(title = "Sources", onBack = onBack, subtitle = "Extensions, add-ons and home servers")
         PillTabRow(tabs = tabs, selectedIndex = tab, onSelect = { tab = it }, tagPrefix = "sources_tab")
-        when (tab) {
-            0 -> TachiyomiTab(TachiyomiExtensions.Kind.ANIME)
-            1 -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA)
-            2 -> StremioTab()
-            3 -> JsTab()
-            else -> ServersTab()
+        // Round 8: tabs glide along the X axis (they used to cut to the new tab in one frame).
+        dev.asfakul.yumeiro.ui.components.TabSwap(tab, { it }, Modifier.fillMaxSize(), label = "sources_tab") { t ->
+            Column(Modifier.fillMaxSize()) {
+                when (t) {
+                    0 -> TachiyomiTab(TachiyomiExtensions.Kind.ANIME)
+                    1 -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA)
+                    2 -> StremioTab()
+                    3 -> JsTab()
+                    else -> ServersTab()
+                }
+            }
         }
     }
 }
