@@ -193,7 +193,12 @@ private fun ResumeSlide(e: OnlineHistory.Entry, modifier: Modifier, offset: Floa
             .clickable(onClickLabel = "Resume") { onResume() }
             .testTag("online_hero_resume"),
     ) {
-        PosterImage(e.posterUrl, e.posterHeaders, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.25f; scaleY = 1.25f; translationX = offset * 60f })
+        if (e.posterUrl.isNullOrBlank()) {
+            // No artwork from the source: a calm per-title gradient instead of a placeholder icon
+            // sitting behind the title text.
+            val art = androidx.compose.runtime.remember(e.name) { dev.asfakul.yumeiro.ui.theme.artGradientFor(e.name) }
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(art.start, art.end))))
+        } else PosterImage(e.posterUrl, e.posterHeaders, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.25f; scaleY = 1.25f; translationX = offset * 60f })
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.15f), 0.45f to Color.Black.copy(alpha = 0.35f), 1f to Color.Black.copy(alpha = 0.92f))))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(16.dp)) {
             Text(

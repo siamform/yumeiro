@@ -18,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [36])
 class PlaybackFactsTest {
     private val ready = PlaybackDiagnostics.Snapshot(uri = "x", state = "READY", firstFrame = true)
 
