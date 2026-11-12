@@ -88,7 +88,10 @@ val fcmProjectId: String = fcmSafe(fcmProp("fcmProjectId", "YUMEIRO_FCM_PROJECT_
 val fcmSenderId: String = fcmSafe(fcmProp("fcmSenderId", "YUMEIRO_FCM_SENDER_ID").ifBlank { fcmProjectInfo?.get("project_number") as? String ?: "" })
 /** (appId, apiKey) for a package; props/env override the JSON, so CI needs no file. */
 fun fcmClient(pkg: String, suffix: String): Pair<String, String> {
-  val json = fcmFromJson(pkg)
+  // A Firebase project often registers only the store package. Preview/debug builds then reuse that
+  // client (same project, same key): their topics are channel-prefixed (`preview-…`, `debug-…`), so a
+  // test build never receives or sends real-user broadcasts. A dedicated client always wins.
+  val json = fcmFromJson(pkg) ?: fcmFromJson("dev.asfakul.yumeiro")
   val appId = fcmProp("fcmAppId$suffix", "YUMEIRO_FCM_APP_ID${suffix.uppercase().let { if (it.isEmpty()) "" else "_$it" }}").ifBlank { json?.first ?: "" }
   val key = fcmProp("fcmApiKey", "YUMEIRO_FCM_API_KEY").ifBlank { json?.second ?: "" }
   return fcmSafe(appId) to fcmSafe(key)

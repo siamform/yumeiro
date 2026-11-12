@@ -26,6 +26,7 @@ user notices), **P2** UX, **P3** optimisation.
 | # | Pri | Area | Issue | Root cause | Status |
 |---|---|---|---|---|---|
 | P0-1 | P0 | Network & offline | Offline detection never worked on real devices. The offline banner, offline search/page states, the player's wait-for-connection and WorkManager's network constraint all believed the device was always online. | The manifest stripped `ACCESS_NETWORK_STATE` (`tools:node="remove"`, from the initial commit) "to keep permissions minimal". Without it `ConnectivityManager` throws `SecurityException`, which `Connectivity` turned into "online" (`runCatching { … }.getOrDefault(true)`). | **Fixed.** Permission restored (normal install-time permission, no prompt). Checked in the merged release manifest. |
+| P0-2 | P0 | Build | Every clean clone failed to build (`resource raw/isrg_root_x1 not found`), so CI and any new developer were blocked; only the original machine built. Found in round 11. | `.gitignore` has `*.pem`, which silently excluded `app/src/main/res/raw/isrg_root_x1.pem` (the root bundled for P1-7). | **Fixed.** `!app/src/main/res/raw/isrg_root_x1.pem` exception, file re-added from letsencrypt.org (SHA-256 `96BCEC06…DF08C6` verified, valid to 2035). `BundledRootTest` checks the resource exists, parses as ISRG Root X1, matches the pinned fingerprint and is unexpired. |
 | P1-1 | P1 | Network / playback | A network drop during video playback used up the player's retry budget within seconds and ended on an error card even though the network came back. | Retries were time-based, not network-aware. | **Fixed.** Waits up to 90 s for a validated network, lets routes settle 0.8 s after a Wi-Fi ↔ mobile switch, then re-prepares at the same position. |
 | P1-2 | P1 | Downloads | Downloads started offline (or that lost the network) burned all their WorkManager retries and failed. | No network constraint (it could not work without P0-1). | **Fixed.** `NetworkType.CONNECTED` constraint; resumes from the `.part` file with a Range request. |
 | P1-3 | P1 | Downloads | A full disk made downloads retry forever with a generic error. | `ENOSPC` was treated as a transient IO error. | **Fixed.** Up-front free-space check plus `ENOSPC` detection; stops with "Storage full — needs about N MB more, M MB free". `DiskFullTest`. |
@@ -158,7 +159,7 @@ P0-1, P1-1 … P1-13, P2-1, P2-2, P2-3, P2-6 (section 1).
 - P2-4 tracker retry after offline (not verified either way).
 - P2-5 WebView page audio doesn't take audio focus (platform).
 - P1-7 WebView on Android 7.0 still rejects Let's Encrypt sites (platform).
-- Push notifications are built but not live: they need the owner's Firebase client config and service account (`PUSH-FCM.md`).
+- Push notifications: client config, D1 table, `ADMIN_TOKEN` and Worker deploy are done (round 11). Sending still needs the owner's `FCM_SERVICE_ACCOUNT` secret (`PUSH-FCM.md`).
 
 ### Unverified (needs a real device or live service)
 
@@ -168,7 +169,7 @@ P0-1, P1-1 … P1-13, P2-1, P2-2, P2-3, P2-6 (section 1).
 - OEM battery killers stopping downloads.
 - Real Android TV, Fire TV and 32-bit TV sticks (performance, remote quirks, voice keys).
 - Android 7.0 and 8.x on hardware (compiles at minSdk 24; not run on a device).
-- FCM delivery end to end (blocked on credentials).
+- FCM delivery end to end (blocked on the service-account secret; registration endpoints verified live and under a 2000-phone local load test).
 
 ### Device-dependent limitations
 

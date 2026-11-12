@@ -7,6 +7,22 @@ Yumeiro can deliver **announcements, app updates, maintenance alerts and message
 - **No secrets in the APK.** The app only carries the public Firebase *client* config (project id, app id, API key, sender id). The service account lives only in the Worker as a secret.
 - **Optional for forks.** A build without FCM config runs normally with push off (`Settings → Notifications` hides the Instant alerts switch).
 
+## Status (round 11, 2026-11-13)
+
+| Piece | State |
+|---|---|
+| Firebase project | `yumeiro-ab29e`, one Android client `dev.asfakul.yumeiro`. Config in `app/google-services.json` (gitignored), never committed |
+| Preview / debug builds | No own client registered, so `fcmClient()` in `app/build.gradle.kts` falls back to the `dev.asfakul.yumeiro` client (same project and key). Their topics stay `preview-…` / `debug-…`, so a test build never reaches real users. A dedicated client, if added later, wins automatically |
+| D1 migration `0002_fcm_devices` | Applied to the remote `yumeiro` database |
+| `ADMIN_TOKEN` Worker secret | Set (kept outside the repo by the owner) |
+| Worker `yumeiro-cloud` | Deployed with the FCM routes. Live checks passed: health, register, refresh, wrong token 403, bad FID 400, admin 401 without token, stats, unregister |
+| `FCM_SERVICE_ACCOUNT` Worker secret | **Missing.** Until it is set, `/v1/admin/notify` answers `503 fcm_not_configured`. Phones still register and subscribe to topics; only sending is blocked. Fix: `npx wrangler secret put FCM_SERVICE_ACCOUNT < service-account.json` from `server/` |
+| Firebase API key | Currently unrestricted (Firebase Installations accepted it for the `.preview` package too). Restrict it in Google Cloud → APIs & Services → Credentials to Android apps `dev.asfakul.yumeiro` (+ `.preview`, `.debug`) with their signing SHA-1, and to the Firebase Installations + FCM Registration APIs |
+
+### Load test
+
+`server/test/load/fcm-load.mjs` simulates 2000 phones against a **local** `wrangler dev` (never production; it deliberately trips rate limits and would spend D1 quota). Round 11 result: 2000 registers, 2000 refreshes and 2000 unregisters all 200; per-device limit returned 429 for 27 of 30 burst calls, per-IP limit 35 of 40; malformed bodies, bad FIDs and wrong tokens gave 400/403, never 500.
+
 ## How it works
 
 ```

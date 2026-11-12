@@ -1,12 +1,27 @@
 # Handover: Yumeiro redesign
 
-> **Round 10 is current.** Read §R10 first, then §R9, §R8, §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 11 is current.** Read §R11 first, then §R10, §R9, §R8, §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R10. Round 10: TV mode, Android 7, ABI splits, link player, edge-case audit, Yumix/Library redesign (start here)
+## R11. Round 11: Firebase live, clean-clone build fix, VirusTotal re-check (start here)
+
+**Branch.** `wip/r10-safety` on `origin` (`siamform/yumeiro-redesign`). Production `siamform/yumeiro` `main` is untouched (`af8349e`). No PR, no merge; waiting for the owner's approval of the local build.
+
+**What changed**
+
+1. **Firebase Cloud Messaging wired to the owner's project** (`yumeiro-ab29e`). `app/google-services.json` is local only (gitignored). `fcmClient()` in `app/build.gradle.kts` now falls back to the `dev.asfakul.yumeiro` client when the project has no `.preview` / `.debug` client, so test builds get push too; their topics stay channel-prefixed. Server side: D1 migration `0002_fcm_devices` applied, `ADMIN_TOKEN` secret set, Worker `yumeiro-cloud` redeployed and checked live. **Still missing: `FCM_SERVICE_ACCOUNT`** (owner must provide the service-account JSON). See [../PUSH-FCM.md](../PUSH-FCM.md) §Status.
+2. **P0 build bug fixed.** `*.pem` in `.gitignore` excluded `res/raw/isrg_root_x1.pem`, so every clean clone failed (`resource raw/isrg_root_x1 not found`). Exception added, file restored from letsencrypt.org (fingerprint verified), regression test `network/BundledRootTest.kt`. See [../EDGE-CASE-AUDIT.md](../EDGE-CASE-AUDIT.md) P0-2.
+3. **Load test** `server/test/load/fcm-load.mjs`: 2000 simulated phones against local `wrangler dev`; all checks passed (numbers in PUSH-FCM.md).
+4. **VirusTotal**: preview and release scan builds 0/66 with FCM included. Root cause of the v1.5.0 flags and the audit: [../security/VT-REPORT-r11.md](../security/VT-REPORT-r11.md).
+
+**Not verifiable here.** No emulator or device (no KVM in the sandbox): real FCM delivery, notification taps, TV remotes, gestures and performance still need a device check. Unit/Robolectric results are in §8.
+
+**Secrets.** None in git. Local only: `app/google-services.json`, `server/.dev.vars`, `local.properties`. The owner should rotate the API tokens that were shared in chat and restrict the Firebase API key.
+
+## R10. Round 10: TV mode, Android 7, ABI splits, link player, edge-case audit, Yumix/Library redesign
 
 **Branch.** `redesign/v7-dream`, pushed to `origin` (`siamform/yumeiro-redesign`) and, as the same
 branch name, to the production repo. Production `main` is untouched (`af8349e`). Nothing is merged;
@@ -417,6 +432,10 @@ All of this was actually run on this branch (Linux, JDK 17, Robolectric). Nothin
 
 | Command | Result |
 |---|---|
+| R11: `./gradlew :app:testDebugUnitTest -Pyumeiro.lowMemTests=true --no-configuration-cache --continue` (with the owner's `google-services.json` present) | **BUILD SUCCESSFUL: 97 test classes, 570 tests, 0 failures, 0 errors, 0 skipped**, including `BundledRootTest`, `FcmPlanTest`, `FcmDeliveryTest`; 288 screenshots refreshed |
+| R11: `./gradlew :app:assemblePreview` | BUILD SUCCESSFUL (lintVital passed). Universal preview APK SHA-256 `86e01922…fee350d`, VirusTotal **0/66** |
+| R11: `./gradlew :app:assembleRelease` (lintVital skipped for memory) + throwaway-key signing | `Yumeiro-r11-release-scan.apk`, SHA-256 `c8182ed4…a27b7f4`, VirusTotal **0/68** |
+| R11: server `npm test`, `tsc`, live Worker checks, `test/load/fcm-load.mjs` (2000 phones, local) | 17/17, clean, all live checks as expected, all load checks passed |
 | R4: `./gradlew :app:testDebugUnitTest :app:lintDebug --continue` | **BUILD SUCCESSFUL: 438 tests, 0 failures, 0 errors, 0 skipped. `lintDebug` passed** |
 | R4: `assembleRelease` (version 1.5.1/13 set temporarily, lintVital skipped) + throwaway-key signing | `Yumeiro-v1.5.1-security-review-scan.apk`, SHA-256 `858950a1...4dcc6`. VirusTotal **0/66** |
 | `./gradlew :app:testDebugUnitTest --no-configuration-cache --continue` | **BUILD SUCCESSFUL: 71 test classes, 409 tests, 0 failures, 0 errors, 0 skipped.** This includes `RedesignTourTest` (4 tours) and every existing test |
