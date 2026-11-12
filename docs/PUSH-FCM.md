@@ -16,7 +16,7 @@ Yumeiro can deliver **announcements, app updates, maintenance alerts and message
 | D1 migration `0002_fcm_devices` | Applied to the remote `yumeiro` database |
 | `ADMIN_TOKEN` Worker secret | Set (kept outside the repo by the owner) |
 | Worker `yumeiro-cloud` | Deployed with the FCM routes. Live checks passed: health, register, refresh, wrong token 403, bad FID 400, admin 401 without token, stats, unregister |
-| `FCM_SERVICE_ACCOUNT` Worker secret | **Missing.** Until it is set, `/v1/admin/notify` answers `503 fcm_not_configured`. Phones still register and subscribe to topics; only sending is blocked. Fix: `npx wrangler secret put FCM_SERVICE_ACCOUNT < service-account.json` from `server/` |
+| `FCM_SERVICE_ACCOUNT` Worker secret | Set 2026-11-13 (`firebase-adminsdk-fbsvc`). `/v1/admin/fcm/stats` reports `fcm: true`; a `dry_run` announcement on `preview-announcements` was accepted by FCM v1 |
 | Firebase API key | Currently unrestricted (Firebase Installations accepted it for the `.preview` package too). Restrict it in Google Cloud → APIs & Services → Credentials to Android apps `dev.asfakul.yumeiro` (+ `.preview`, `.debug`) with their signing SHA-1, and to the Firebase Installations + FCM Registration APIs |
 
 ### Load test
