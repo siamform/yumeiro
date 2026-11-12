@@ -163,7 +163,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                 val aniId = AniList.clientId().isNotBlank()
                 TrackerCard(
                     name = "AniList", tint = AniListBlue, user = AniList.user(), configured = aniId, tag = "anilist",
-                    onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl()?.let { open(it) } },
+                    onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl(context)?.let { open(it) } },
                     onSignOut = { AniList.signOut(context); refresh++ },
                 )
                 GuideCard(SetupGuides.anilist)
@@ -478,18 +478,27 @@ fun BackupScreen(onBack: () -> Unit) {
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
         }
     }
+    var restoreCode by remember(pending) { mutableStateOf(false) }
     pending?.let { (uri, m) ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { pending = null },
             title = { Text("Restore this backup?") },
-            text = { Text("Made with Yumeiro ${m.optString("version")} on ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(m.optLong("createdAt")))}." +
-                (if (m.optBoolean("extensions")) " Includes extensions." else "") + " Yumeiro restarts afterwards.") },
+            text = { Column {
+                Text("Made with Yumeiro ${m.optString("version").take(32)} on ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(m.optLong("createdAt")))}." +
+                    " Yumeiro restarts afterwards.")
+                if (m.optBoolean("hasCode")) {
+                    SettingsToggleRow("Also restore installed extensions",
+                        "Extensions run code. Only turn this on for a backup you made yourself, not one someone sent you.",
+                        restoreCode, { restoreCode = it }, "restore_include_code")
+                }
+            } },
             confirmButton = { TextButton(onClick = {
                 pending = null
+                val withCode = restoreCode && m.optBoolean("hasCode")
                 scope.launch {
                     busy = true
-                    runCatching { Backup.restore(context, uri) }
+                    runCatching { Backup.restore(context, uri, includeCode = withCode) }
                         .onSuccess { Backup.restartApp(context) }
                         .onFailure { busy = false; AppMessages.error(context, OnlineErrors.friendly(it)) }
                 }

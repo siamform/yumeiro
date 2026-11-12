@@ -1420,8 +1420,10 @@ private fun VideoPlayerModalContent(
                 // Zoom only applies to the full player; docked, floating and PiP always show 100 %.
                 val z = if (docked || hideChrome) dev.asfakul.yumeiro.player.VideoZoom.State() else videoZoom
                 playerView.videoSurfaceView?.apply {
-                    scaleX = z.scale; scaleY = z.scale
-                    translationX = z.panX; translationY = z.panY
+                    // Pan limits use the picture's own size (letterboxed video is smaller than the screen).
+                    val c = if (width > 0 && height > 0) dev.asfakul.yumeiro.player.VideoZoom.clampPan(z, width.toFloat(), height.toFloat()) else z
+                    scaleX = c.scale; scaleY = c.scale
+                    translationX = c.panX; translationY = c.panY
                 }
                 dev.asfakul.yumeiro.player.SubtitleStyleSettings.applyTo(playerView, subtitleStyle)
             },

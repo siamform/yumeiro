@@ -30,6 +30,38 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
+## What's new in the redesign
+
+The biggest Yumeiro update so far: a new design, TV support, and a few hundred fixes found by testing every screen
+like a crowd of new users would. Full notes: [CHANGELOG.md](CHANGELOG.md).
+
+| | |
+|---|---|
+| **New, friendlier design** | The *Tsuki no Michi* design system across the shell, Home, Now Playing and Settings. A taller, easier floating dock, themed pop-ups with clear warning / error tones, readable tints in light and dark, smooth page transitions. |
+| **A first-run guide** | A welcome screen that asks how you'll use the app (music, video, anime, live TV), then a short tutor-style tour. Extensions stay fully asleep until the guide is finished or skipped — no surprise installs or messages before you're in. |
+| **New Home** | Reorganised around *Continue watching*, colour shortcuts, Quick picks and an endless *For you* feed. Library without tabs: colour shortcuts to Videos and Reading. |
+| **Yumix** | The online video hub (formerly "online"): a hybrid feed with a filter sheet, a resume banner, categories, latest episodes and per-language Sub / Dub groups with an audio filter. Plus a built-in short-drama source. |
+| **Audio online** | YouTube Music quick picks, search, background play and song downloads, no Google account. |
+| **New video page** | A YouTube / HiAnime-style watch page under a docked player, with sources, dub, episodes and Live TV hub. |
+| **Video player** | **Pinch to zoom** (100–400 %, pan, snap back, reset pill). **Subtitle style**: size, colour, outline / shadow / box, bold and height, with a live preview — and subtitles still load from your device (.srt, .vtt, .ass, .ttml), online search, delay sync and track select. Playback facts (size, duration, audio). Seek fixes. |
+| **Android TV & Fire TV** | A left navigation rail, visible focus rings and full remote control. See [TV support](#android-tv-google-tv-and-fire-tv). |
+| **Runs on more devices** | Android 7.0+ (was 9), and smaller downloads: one APK per processor (`arm64-v8a`, `armeabi-v7a`) plus the universal APK. |
+| **Instant notices** | Optional Firebase push for announcements, updates and maintenance through the existing Yumeiro Cloud Worker. Off-switch per kind; no account, no IDs shared with anyone else. |
+| **Safer** | Fixed antivirus false positives at the cause (0 / 66 on VirusTotal for the preview build), a login-CSRF in tracker sign-in, private-file access through "Open with", backup restores that could carry code, and server abuse that could have stopped push for everyone. Details in [docs/security](docs/security). |
+
+## Android TV, Google TV and Fire TV
+
+Yumeiro installs on TV boxes and sticks from the same APKs (use `armeabi-v7a` for most Fire TV Sticks, `arm64-v8a`
+for newer Google TV devices, or the universal APK if unsure). On a TV it switches to TV mode on its own:
+
+- **Left navigation rail** instead of the bottom dock. Icon-only until focused, then it shows labels. D-pad Left from the left edge of any page opens it.
+- **Every button shows where you are**: a visible focus ring and lift on everything clickable, so the remote reaches every option.
+- **Player built for a remote**: Left / Right seek ±10 s, Centre toggles play, Up / Down show the controls, media keys work, the first Back hides the controls and the second leaves.
+- **Error cards take focus on Retry**, so you're never stuck.
+
+Tested in the emulator and by unit tests (`TvModeTest`, `TvLayoutTest`). More in [docs/TV.md](docs/TV.md).
+If something on your TV can't be reached with the remote, please [open an issue](https://github.com/siamform/yumeiro/issues) with the device name.
+
 ## One app instead of five
 
 Great apps exist for each piece of the puzzle — **CloudStream** for extensions, **ArchiveTune**, **InnerTune** and
@@ -97,10 +129,11 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ### Video
 - Grid of your device videos with **continue watching**
-- Gestures, PiP, background play, speed, audio tracks
+- Gestures, **pinch to zoom**, PiP, background play, speed, audio tracks
 - **Floating player** like YouTube — press back or swipe the video down to keep watching while you browse
 - Slim vertical brightness and volume bars, like your phone's own
 - **Subtitles**: embedded, local files, or search OpenSubtitles, SubDL and SubSource at once (free keys, your own)
+- **Subtitle style**: size, colour, outline, shadow or box, bold and height, with a live preview
 - **YouTube** with no login — trending, anime, AMV, live
 
 </td>
@@ -184,7 +217,9 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 
 ## Install
 
-1. Download `release-Yumeiro-vX.Y.Z.apk` from **[the website](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)).
+1. Pick your APK on **[the download page](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)):
+   `Yumeiro-vX.Y.Z-arm64-v8a.apk` (most phones from 2017 on, newer TVs), `Yumeiro-vX.Y.Z-armeabi-v7a.apk` (older
+   32-bit phones, most Fire TV Sticks) or `release-Yumeiro-vX.Y.Z.apk` (universal, runs everywhere).
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 

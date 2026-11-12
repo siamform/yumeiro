@@ -109,3 +109,49 @@ export function parseAiring(raw: unknown, follows: number[], nowS: number): [num
   return [...out.entries()].sort((a, b) => a[0] - b[0]);
 }
 
+
+// ---- abuse guards (R11 red-team) ----
+
+/** A device may replace its follow list at most this often; other check-ins keep the old list. */
+export const FOLLOW_CHANGE_COOLDOWN_S = 10 * 60;
+/** Only devices at least this old count toward overriding a confirmed airing time. */
+export const AIRING_VOTER_MIN_AGE_S = 3 * 86_400;
+
+/** Rows to add / remove so the stored follow list becomes [next]. Writes only what changed. */
+export function followDiff(current: number[], next: number[]): { add: number[]; remove: number[] } {
+  const cur = new Set(current);
+  const nxt = new Set(next);
+  return { add: next.filter((m) => !cur.has(m)), remove: current.filter((m) => !nxt.has(m)) };
+}
+
+export interface AiringRow { media_id: number; at: number; rolls: number }
+export interface PendingRow { media_id: number; at: number; device_id: string }
+export type AiringOp =
+  | { op: "set"; media_id: number; at: number }        // write confirmed time, rolls = 0, clear pending
+  | { op: "pending"; media_id: number; at: number };   // remember this device's vote
+
+/**
+ * Shared airing timetable, hardened against one bad phone poisoning it for everyone.
+ *
+ * - Unknown show → the first report is taken (nothing to protect yet).
+ * - The stored time is only a guess (rolled forward a week) → any report replaces it.
+ * - A confirmed time differs from the report → it changes only when two different devices, each at
+ *   least 3 days old, report the same new time. A single device can never move a confirmed time.
+ */
+export function planAiring(
+  reports: [number, number][], rows: AiringRow[], pending: PendingRow[], deviceId: string, deviceAgeS: number,
+): AiringOp[] {
+  const byId = new Map(rows.map((r) => [r.media_id, r]));
+  const pend = new Map(pending.map((p) => [p.media_id, p]));
+  const out: AiringOp[] = [];
+  for (const [id, at] of reports) {
+    const row = byId.get(id);
+    if (!row || row.rolls > 0) { if (!row || row.at !== at || row.rolls !== 0) out.push({ op: "set", media_id: id, at }); continue; }
+    if (row.at === at) continue;
+    if (deviceAgeS < AIRING_VOTER_MIN_AGE_S) continue;
+    const p = pend.get(id);
+    if (p && p.at === at && p.device_id !== deviceId) out.push({ op: "set", media_id: id, at });
+    else if (!p || p.at !== at) out.push({ op: "pending", media_id: id, at });
+  }
+  return out;
+}

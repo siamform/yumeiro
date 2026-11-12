@@ -67,3 +67,29 @@ test("airing reports keep followed ids and sane times only", () => {
   assert.deepEqual(parseAiring("nope", [1], now), []);
 });
 
+
+// ---- R11 abuse guards ----
+import { AIRING_VOTER_MIN_AGE_S, followDiff, planAiring } from "../src/logic.ts";
+
+test("followDiff writes only what changed", () => {
+  assert.deepEqual(followDiff([1, 2, 3], [2, 3, 4]), { add: [4], remove: [1] });
+  assert.deepEqual(followDiff([5, 6], [5, 6]), { add: [], remove: [] });
+});
+
+test("planAiring: first report and rolled guesses are taken", () => {
+  const ops = planAiring([[1, 1000], [2, 2000]], [{ media_id: 2, at: 1500, rolls: 1 }], [], "dev-a", 0);
+  assert.deepEqual(ops, [{ op: "set", media_id: 1, at: 1000 }, { op: "set", media_id: 2, at: 2000 }]);
+});
+
+test("planAiring: one device cannot move a confirmed time", () => {
+  const rows = [{ media_id: 7, at: 5000, rolls: 0 }];
+  const old = AIRING_VOTER_MIN_AGE_S + 1;
+  assert.deepEqual(planAiring([[7, 9000]], rows, [], "bad", 10), []); // young device: ignored
+  assert.deepEqual(planAiring([[7, 9000]], rows, [], "bad", old), [{ op: "pending", media_id: 7, at: 9000 }]);
+  // The same device voting again does not confirm it.
+  assert.deepEqual(planAiring([[7, 9000]], rows, [{ media_id: 7, at: 9000, device_id: "bad" }], "bad", old), []);
+  // A second, different, aged device agreeing confirms it.
+  assert.deepEqual(planAiring([[7, 9000]], rows, [{ media_id: 7, at: 9000, device_id: "bad" }], "good", old), [{ op: "set", media_id: 7, at: 9000 }]);
+  // Same as stored: no write at all.
+  assert.deepEqual(planAiring([[7, 5000]], rows, [], "x", old), []);
+});

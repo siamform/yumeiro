@@ -38,3 +38,14 @@ CREATE TABLE IF NOT EXISTS fcm_devices (
   seen        INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS fcm_devices_seen ON fcm_devices(seen);
+CREATE TABLE IF NOT EXISTS airing_pending (
+  media_id  INTEGER PRIMARY KEY,
+  at        INTEGER NOT NULL,
+  device_id TEXT NOT NULL,
+  reported  INTEGER NOT NULL
+);
+-- When each device last replaced its follow list (cooldown against write-budget burning).
+CREATE TABLE IF NOT EXISTS follow_changes (
+  device_id TEXT PRIMARY KEY,
+  at        INTEGER NOT NULL
+);

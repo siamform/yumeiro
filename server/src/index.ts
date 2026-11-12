@@ -6,8 +6,9 @@
 // Yumeiro Cloud: a tiny wake-up server. It never sends content, only "check now" pings to a
 // device's own UnifiedPush endpoint; the app then fetches what's new itself. See docs/SERVER.md.
 import {
-  AIRING_WAKE_DELAYS_S, MAX_ROLLS, ROLL_S, SILENT_DAYS, WAKES_PER_MESSAGE, airingWindow, chunk, parseFollows,
-  parseAiring, pushOutcome, randomToken, same, sha256, validEndpoint,
+  AIRING_WAKE_DELAYS_S, FOLLOW_CHANGE_COOLDOWN_S, MAX_ROLLS, ROLL_S, SILENT_DAYS, WAKES_PER_MESSAGE, airingWindow, chunk,
+  followDiff, parseFollows, parseAiring, planAiring, pushOutcome, randomToken, same, sha256, validEndpoint,
+  type AiringRow, type PendingRow,
 } from "./logic.ts";
 import {
   buildMessage, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
@@ -101,11 +102,11 @@ async function register(req: Request, env: Env): Promise<Response> {
 
   // An existing device proves itself with its token; knowing the endpoint is also proof
   // (it's the device's private push address), so a reinstall can take its row back.
-  let row: { id: string; follows_v: string; seen: number } | null = null;
+  let row: { id: string; follows_v: string; seen: number; created: number } | null = null;
   const auth = bearer(req);
   if (auth) {
-    const r = await env.DB.prepare("SELECT id, token_hash, follows_v, seen FROM devices WHERE id = ?")
-      .bind(auth.id).first<{ id: string; token_hash: string; follows_v: string; seen: number }>();
+    const r = await env.DB.prepare("SELECT id, token_hash, follows_v, seen, created FROM devices WHERE id = ?")
+      .bind(auth.id).first<{ id: string; token_hash: string; follows_v: string; seen: number; created: number }>();
     if (r && same(r.token_hash, await sha256(auth.token))) row = r;
   }
   if (row && env.DEVICE_SYNC && !(await env.DEVICE_SYNC.limit({ key: row.id })).success) return fail(429, "slow_down");
@@ -122,40 +123,76 @@ async function register(req: Request, env: Env): Promise<Response> {
     if (env.NEW_DEVICES && !(await env.NEW_DEVICES.limit({ key: req.headers.get("cf-connecting-ip") ?? "?" })).success) {
       return fail(429, "slow_down");
     }
-    const old = await env.DB.prepare("SELECT id FROM devices WHERE endpoint = ?").bind(endpoint).first<{ id: string }>();
+    const old = await env.DB.prepare("SELECT id, created FROM devices WHERE endpoint = ?").bind(endpoint).first<{ id: string; created: number }>();
     const id = old?.id ?? randomToken(12);
     token = randomToken();
     const th = await sha256(token);
     if (old) {
       await env.DB.prepare("UPDATE devices SET token_hash = ?, seen = ? WHERE id = ?").bind(th, t, id).run();
-      row = { id, follows_v: "?", seen: t };
+      row = { id, follows_v: "?", seen: t, created: old.created };
     } else {
       await env.DB.prepare("INSERT INTO devices (id, token_hash, endpoint, follows_v, created, seen) VALUES (?, ?, ?, '', ?, ?)")
         .bind(id, th, endpoint, t, t).run();
-      row = { id, follows_v: "", seen: t };
+      row = { id, follows_v: "", seen: t, created: t };
     }
   }
 
+  // Follow list: only changed rows are written, and at most once per 10 minutes per device, so one
+  // token can't burn the free plan's daily D1 write budget (that would stop push for everyone).
+  let followsPending = false;
   if (row.follows_v !== version) {
-    const stmts = [env.DB.prepare("DELETE FROM follows WHERE device_id = ?").bind(row.id)];
-    for (const ids of chunk(follows, 50)) {
-      stmts.push(env.DB.prepare(
-        `INSERT OR IGNORE INTO follows (media_id, device_id) VALUES ${ids.map(() => "(?, ?)").join(",")}`,
-      ).bind(...ids.flatMap((m) => [m, row!.id])));
+    const last = await env.DB.prepare("SELECT at FROM follow_changes WHERE device_id = ?").bind(row.id).first<{ at: number }>();
+    if (last && t - last.at < FOLLOW_CHANGE_COOLDOWN_S && row.follows_v !== "") {
+      followsPending = true; // the app sends the list again on its next check-in
+    } else {
+      const cur = (await env.DB.prepare("SELECT media_id FROM follows WHERE device_id = ?").bind(row.id).all<{ media_id: number }>())
+        .results.map((r) => r.media_id);
+      const { add, remove } = followDiff(cur, follows);
+      const stmts: D1PreparedStatement[] = [];
+      for (const ids of chunk(remove, 90)) {
+        stmts.push(env.DB.prepare(`DELETE FROM follows WHERE device_id = ? AND media_id IN (${ids.map(() => "?").join(",")})`).bind(row.id, ...ids));
+      }
+      for (const ids of chunk(add, 45)) {
+        stmts.push(env.DB.prepare(
+          `INSERT OR IGNORE INTO follows (media_id, device_id) VALUES ${ids.map(() => "(?, ?)").join(",")}`,
+        ).bind(...ids.flatMap((m) => [m, row!.id])));
+      }
+      stmts.push(env.DB.prepare("UPDATE devices SET follows_v = ? WHERE id = ?").bind(version, row.id));
+      stmts.push(env.DB.prepare("INSERT INTO follow_changes (device_id, at) VALUES (?, ?) ON CONFLICT(device_id) DO UPDATE SET at = excluded.at").bind(row.id, t));
+      await env.DB.batch(stmts);
     }
-    stmts.push(env.DB.prepare("UPDATE devices SET follows_v = ? WHERE id = ?").bind(version, row.id));
-    await env.DB.batch(stmts);
   }
 
-  // Shared timetable: only rows whose time actually changed are written; a report resets the weekly guess.
-  const airing = parseAiring(body.airing, follows, t);
-  if (airing.length) {
-    await env.DB.batch(chunk(airing, 45).map((ps) => env.DB.prepare(
-      `INSERT INTO airing (media_id, at, rolls) VALUES ${ps.map(() => "(?, ?, 0)").join(",")}
-       ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, rolls = 0 WHERE airing.at <> excluded.at OR airing.rolls <> 0`,
-    ).bind(...ps.flat())));
+  // Shared timetable: one phone can't move a confirmed time for everyone (see planAiring).
+  const reports = parseAiring(body.airing, follows, t);
+  let airingWrites = 0;
+  if (reports.length) {
+    const rows: AiringRow[] = [];
+    const pending: PendingRow[] = [];
+    for (const ids of chunk(reports.map(([m]) => m), 90)) {
+      const q = ids.map(() => "?").join(",");
+      rows.push(...(await env.DB.prepare(`SELECT media_id, at, rolls FROM airing WHERE media_id IN (${q})`).bind(...ids).all<AiringRow>()).results);
+      pending.push(...(await env.DB.prepare(`SELECT media_id, at, device_id FROM airing_pending WHERE media_id IN (${q})`).bind(...ids).all<PendingRow>()).results);
+    }
+    const ops = planAiring(reports, rows, pending, row.id, t - row.created);
+    const stmts: D1PreparedStatement[] = [];
+    for (const o of ops) {
+      if (o.op === "set") {
+        stmts.push(env.DB.prepare(
+          "INSERT INTO airing (media_id, at, rolls) VALUES (?, ?, 0) ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, rolls = 0",
+        ).bind(o.media_id, o.at));
+        if (pending.some((p) => p.media_id === o.media_id)) stmts.push(env.DB.prepare("DELETE FROM airing_pending WHERE media_id = ?").bind(o.media_id));
+      } else {
+        stmts.push(env.DB.prepare(
+          `INSERT INTO airing_pending (media_id, at, device_id, reported) VALUES (?, ?, ?, ?)
+           ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, device_id = excluded.device_id, reported = excluded.reported`,
+        ).bind(o.media_id, o.at, row.id, t));
+      }
+    }
+    for (const b of chunk(stmts, 50)) await env.DB.batch(b);
+    airingWrites = ops.length;
   }
-  return json({ id: row.id, token, follows: follows.length, airing: airing.length });
+  return json({ id: row.id, token, follows: follows.length, airing: airingWrites, follows_pending: followsPending });
 }
 
 async function unregister(req: Request, env: Env): Promise<Response> {
@@ -166,6 +203,7 @@ async function unregister(req: Request, env: Env): Promise<Response> {
   if (!same(r.token_hash, await sha256(auth.token))) return fail(403, "bad_token");
   await env.DB.batch([
     env.DB.prepare("DELETE FROM follows WHERE device_id = ?").bind(auth.id),
+    env.DB.prepare("DELETE FROM follow_changes WHERE device_id = ?").bind(auth.id),
     env.DB.prepare("DELETE FROM devices WHERE id = ?").bind(auth.id),
   ]);
   return json({ ok: true });
@@ -192,6 +230,8 @@ async function prune(env: Env): Promise<void> {
     env.DB.prepare("DELETE FROM devices WHERE seen < ?").bind(cut),
     env.DB.prepare("DELETE FROM airing WHERE media_id NOT IN (SELECT media_id FROM follows)"),
     env.DB.prepare("DELETE FROM fcm_devices WHERE seen < ?").bind(cut),
+    env.DB.prepare("DELETE FROM follow_changes WHERE device_id NOT IN (SELECT id FROM devices)"),
+    env.DB.prepare("DELETE FROM airing_pending WHERE reported < ? OR media_id NOT IN (SELECT media_id FROM airing)").bind(now() - 15 * DAY),
   ]);
 }
 

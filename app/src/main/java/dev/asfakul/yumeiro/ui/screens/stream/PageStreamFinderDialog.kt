@@ -113,6 +113,8 @@ class PageStreamCapture {
     /** @return the new capture, or null when the request isn't a stream (or was already seen). */
     fun onRequest(url: String, method: String, headers: Map<String, String>): CapturedStream? {
         if (!url.startsWith("http", ignoreCase = true)) return null
+        // A hostile page can call the JS bridge in a loop with endless unique URLs: cap memory.
+        if (url.length > MAX_URL || seen.size >= MAX_CAPTURES) return null
         // Ad clips (VAST / pre-roll / ad CDNs) are never offered as the stream.
         if (dev.asfakul.yumeiro.online.web.AdFilter.isAd(url)) return null
         val lower = url.lowercase()
@@ -172,6 +174,9 @@ class PageStreamCapture {
     }
 
     companion object {
+        /** More than any real page offers (qualities × audio tracks × mirrors). */
+        const val MAX_CAPTURES = 64
+        const val MAX_URL = 8_192
         private val LICENSE_HINTS = listOf("license", "licence", "widevine", "drm", "/wv", "getkey")
         private val SEGMENT_EXT = listOf(".ts", ".m4s", ".aac", ".mp4", ".m4a", ".m4v", ".cmfv", ".cmfa")
 
@@ -371,6 +376,7 @@ fun PageStreamFinderDialog(
                                 addJavascriptInterface(object {
                                     @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
                                     @JavascriptInterface fun onDrm(system: String) {
+                                        val system = system.take(40).filter { it.isLetterOrDigit() || it in ".-_ " }
                                         synchronized(capture) { capture.drmSystem = system }
                                         main.post { drmNote = "This page uses DRM ($system). It plays here only if the site's licence server accepts this app; protection is never bypassed." }
                                     }

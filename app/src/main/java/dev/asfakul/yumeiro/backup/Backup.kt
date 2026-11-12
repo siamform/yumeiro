@@ -69,37 +69,71 @@ object Backup {
         Summary(count, bytes, now, BuildConfig.VERSION_NAME)
     }
 
-    /** Reads only the manifest, so the UI can show what's inside before restoring. */
+    /** Restore limits: a hostile "backup" must not fill the phone (zip bomb). */
+    const val MAX_RESTORE_BYTES = 768L * 1024 * 1024
+    const val MAX_RESTORE_ENTRIES = 50_000
+    /** Paths under files/ that hold runnable code (extensions, Aniyomi/Mihon dex, JS providers). */
+    private val codePrefixes = (codeDirs + "js").map { "files/$it/" }
+    private fun readCapped(input: java.io.InputStream, max: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(8 * 1024)
+        while (out.size() < max) { val n = input.read(buf, 0, minOf(buf.size, max - out.size())); if (n < 0) break; out.write(buf, 0, n) }
+        return out.toByteArray()
+    }
+    internal fun isCode(name: String) = codePrefixes.any { name.startsWith(it) }
+
+    /**
+     * Reads the manifest so the UI can show what's inside before restoring. `hasCode` is worked out
+     * from the real entries (the manifest is just text and could lie).
+     */
     suspend fun inspect(context: Context, source: Uri): JSONObject = withContext(Dispatchers.IO) {
         val input = context.contentResolver.openInputStream(source) ?: error("Couldn't open that file")
+        var manifest: JSONObject? = null
+        var hasCode = false
+        var entries = 0
         ZipInputStream(input.buffered()).use { zip ->
             generateSequence { zip.nextEntry }.forEach { e ->
-                if (e.name == MANIFEST) return@withContext JSONObject(zip.readBytes().decodeToString())
+                if (++entries > MAX_RESTORE_ENTRIES) error("This backup has too many files")
+                if (e.name == MANIFEST) manifest = JSONObject(readCapped(zip, 256 * 1024).decodeToString())
+                else if (isCode(e.name)) hasCode = true
             }
         }
-        error("This isn't a Yumeiro backup")
+        (manifest ?: error("This isn't a Yumeiro backup")).put("hasCode", hasCode)
     }
 
     /**
      * Restores a backup. Existing data with the same names is replaced; anything else is kept.
-     * The app restarts afterwards so every screen reloads the restored data.
+     * Extension code is only restored when [includeCode] is set (the user ticked it), because a
+     * backup someone else shared could carry code. The app restarts afterwards.
      */
-    suspend fun restore(context: Context, source: Uri): Int = withContext(Dispatchers.IO) {
+    suspend fun restore(context: Context, source: Uri, includeCode: Boolean = false): Int = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         val manifest = inspect(app, source)
         require(manifest.optInt("format") in 1..FORMAT) { "This backup was made by a newer Yumeiro. Update the app first." }
         val staging = File(app.cacheDir, "restore").apply { deleteRecursively(); mkdirs() }
         var count = 0
+        var total = 0L
         val input = app.contentResolver.openInputStream(source) ?: error("Couldn't open that file")
-        ZipInputStream(input.buffered()).use { zip ->
-            generateSequence { zip.nextEntry }.forEach { e ->
-                if (e.isDirectory || e.name == MANIFEST) return@forEach
-                val target = safeTarget(staging, e.name) ?: return@forEach
-                target.parentFile?.mkdirs()
-                target.outputStream().use { zip.copyTo(it) }
-                count++
+        try {
+            ZipInputStream(input.buffered()).use { zip ->
+                generateSequence { zip.nextEntry }.forEach { e ->
+                    if (e.isDirectory || e.name == MANIFEST) return@forEach
+                    if (!includeCode && isCode(e.name)) return@forEach
+                    val target = safeTarget(staging, e.name) ?: return@forEach
+                    target.parentFile?.mkdirs()
+                    target.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = zip.read(buf); if (n < 0) break
+                            total += n
+                            if (total > MAX_RESTORE_BYTES) error("This backup is too large to restore")
+                            out.write(buf, 0, n)
+                        }
+                    }
+                    count++
+                }
             }
-        }
+        } catch (t: Throwable) { staging.deleteRecursively(); throw t }
         // Move staged files into place only after the whole archive was read successfully.
         File(staging, "prefs").listFiles()?.forEach { f ->
             if (f.nameWithoutExtension in excludedPrefs) return@forEach
@@ -121,6 +155,13 @@ object Backup {
     /** Rejects zip-slip paths and anything outside prefs/ and files/. */
     internal fun safeTarget(root: File, name: String): File? {
         if (!(name.startsWith("prefs/") || name.startsWith("files/"))) return null
+        // files/: only the top-level JSON stores and the known data / code folders, never anything else.
+        if (name.startsWith("files/")) {
+            val rel = name.removePrefix("files/")
+            val top = rel.substringBefore('/')
+            val ok = if ('/' !in rel) rel.endsWith(".json") && rel !in excludedFiles else top in dataDirs || top in codeDirs
+            if (!ok) return null
+        } else if (name.removePrefix("prefs/").let { '/' in it || !it.endsWith(".xml") }) return null
         if (name.contains("..") || name.contains('\\') || name.startsWith("/")) return null
         val f = File(root, name)
         return f.takeIf { it.canonicalPath.startsWith(root.canonicalPath + File.separator) }
