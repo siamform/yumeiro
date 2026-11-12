@@ -53,6 +53,7 @@ private fun ColorScheme.toPalette(isDark: Boolean) = MtPalette(
     surfaceContainerHigh = surfaceContainerHigh, surfaceVariant = surfaceContainerHighest, outline = outline,
     outlineVariant = outlineVariant, textPrimary = onSurface, textSecondary = onSurfaceVariant,
     textTertiary = onSurfaceVariant.copy(alpha = 0.78f),
+    scene = DreamScene.YOU,
 ).withAutoGradient()
 
 private fun MtPalette.amoled(): MtPalette = if (!isDark) this else copy(
@@ -82,6 +83,16 @@ fun rememberMtPalette(): MtPalette {
         } else if (systemDark) Palettes.Dark else Palettes.Light
     }
     return if (amoled) palette.amoled() else palette
+}
+
+/** The palette a theme mode would use, for previews in Settings (Material You shows the current one). */
+fun previewPaletteFor(mode: ThemeMode, systemDark: Boolean, current: MtPalette): MtPalette = when (mode) {
+    ThemeMode.LIGHT -> Palettes.Light
+    ThemeMode.DARK -> Palettes.Dark
+    ThemeMode.SYSTEM -> if (systemDark) Palettes.Dark else Palettes.Light
+    ThemeMode.TIME -> currentDayPart().palette()
+    ThemeMode.AFTERGLOW -> Palettes.Afterglow
+    ThemeMode.DYNAMIC -> if (current.scene == DreamScene.YOU) current else (if (systemDark) Palettes.Dark else Palettes.Light).copy(scene = DreamScene.YOU)
 }
 
 @Composable

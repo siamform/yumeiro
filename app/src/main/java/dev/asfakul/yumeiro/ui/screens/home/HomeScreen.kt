@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -136,6 +137,7 @@ import dev.asfakul.yumeiro.ui.components.TrackArtwork
 import dev.asfakul.yumeiro.ui.components.VideoGridCard
 import dev.asfakul.yumeiro.ui.components.YuSection
 import dev.asfakul.yumeiro.ui.screens.extras.SetupGuide
+import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import dev.asfakul.yumeiro.ui.screens.extras.rememberSetupStatus
 import dev.asfakul.yumeiro.ui.screens.online.PosterCard
 import dev.asfakul.yumeiro.ui.screens.online.PosterImage
@@ -409,25 +411,35 @@ fun HomeScreen(
                 }
                 features.chunked(spaceColumns).forEachIndexed { i, row ->
                     item(key = "spaces_$i", contentType = "spaces_row") {
-                        Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(Modifier.fillMaxWidth().then(if (i == 0) Modifier.tourTarget("home_spaces_grid") else Modifier).padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
                             repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
-                // Round 8: "See more" opens two more groups in place (rows animate in with the
-                // list's item animation; collapsing scrolls nothing away from under the thumb).
-                if (spacesExpanded) {
-                    listOf("go" to ("移" to "Go to") , "settings" to ("設" to "Quick settings")).forEach { (gk, label) ->
-                        val list = if (gk == "go") moreGo else moreSettings
-                        item(key = "spaces_more_h_$gk", contentType = "spaces_label") {
-                            SpacesGroupLabel(label.first, label.second, Modifier.animateItem())
-                        }
-                        list.chunked(spaceColumns).forEachIndexed { i, row ->
-                            item(key = "spaces_more_${gk}_$i", contentType = "spaces_row") {
-                                Row(Modifier.animateItem().fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces_more_row"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
-                                    repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
+                // Round 9: the extra groups live in ONE item that grows with expandVertically, so
+                // the rows below glide down/up with it instead of items popping in one by one.
+                item(key = "spaces_more_block", contentType = "spaces_more_block") {
+                    val reducedMore = dev.asfakul.yumeiro.ui.components.reducedMotion()
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = spacesExpanded,
+                        enter = if (reducedMore) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) else
+                            androidx.compose.animation.expandVertically(androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 260f), expandFrom = Alignment.Top) +
+                                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)),
+                        exit = if (reducedMore) androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap()) else
+                            androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 320f), shrinkTowards = Alignment.Top) +
+                                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(140)),
+                        label = "spacesMore",
+                    ) {
+                        Column(Modifier.fillMaxWidth().testTag("home_spaces_more_block")) {
+                            listOf("go" to ("移" to "Go to"), "settings" to ("設" to "Quick settings")).forEach { (gk, label) ->
+                                val list = if (gk == "go") moreGo else moreSettings
+                                SpacesGroupLabel(label.first, label.second)
+                                list.chunked(spaceColumns).forEach { row ->
+                                    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces_more_row"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
+                                        repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
+                                    }
                                 }
                             }
                         }
@@ -439,7 +451,6 @@ fun HomeScreen(
                         count = moreGo.size + moreSettings.size,
                         preview = moreSettings.take(4),
                         onClick = { spacesExpanded = !spacesExpanded },
-                        modifier = Modifier.animateItem(),
                     )
                 }
             }
@@ -931,10 +942,17 @@ private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Featur
             .clickable(role = Role.Button, onClickLabel = if (expanded) "Show fewer spaces" else "Show all spaces", onClick = onClick)
             .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
             .padding(horizontal = 14.dp, vertical = 10.dp)
-            .testTag("home_spaces_more"),
+            .testTag("home_spaces_more")
+            .tourTarget("home_spaces_more"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!expanded) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !expanded,
+            enter = if (reduced) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) else androidx.compose.animation.expandHorizontally(androidx.compose.animation.core.tween(260)) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, 80)),
+            exit = if (reduced) androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap()) else androidx.compose.animation.shrinkHorizontally(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)),
+            label = "spacesPreview",
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
             Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
                 preview.forEach { f ->
                     Box(
@@ -944,13 +962,24 @@ private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Featur
                 }
             }
             Spacer(Modifier.width(12.dp))
+            }
         }
-        Column(Modifier.weight(1f)) {
-            Text(if (expanded) "See less" else "See more", color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(
-                if (expanded) "Back to the main spaces" else "$count more · theme, DNS, tracking, network…",
-                color = p.textTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
+        androidx.compose.animation.AnimatedContent(
+            expanded, Modifier.weight(1f),
+            transitionSpec = {
+                if (reduced) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap())
+                else (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, 60)) + androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(260)) { if (targetState) it / 3 else -it / 3 }) togetherWith
+                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(110))
+            },
+            label = "spacesMoreText",
+        ) { open ->
+            Column {
+                Text(if (open) "See less" else "See more", color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(
+                    if (open) "Fold the extra shortcuts away" else "$count more · theme, DNS, tracking, network…",
+                    color = p.textTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         Icon(Icons.Default.ExpandMore, null, tint = p.textSecondary, modifier = Modifier.size(24.dp).graphicsLayer { rotationZ = turn })
     }

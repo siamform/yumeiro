@@ -116,6 +116,13 @@ fun AppearanceSettingsCard() {
                     Text(m.label, color = TextPrimary, style = MaterialTheme.typography.titleMedium)
                     Text(m.description, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
+                // Each theme's own 夢色 scene, so the vibe is visible before choosing it.
+                val preview = dev.asfakul.yumeiro.ui.theme.previewPaletteFor(m, androidx.compose.foundation.isSystemInDarkTheme(), dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current)
+                Box(
+                    Modifier.padding(start = 8.dp).size(width = 36.dp, height = 48.dp).clip(RoundedCornerShape(10.dp))
+                        .dreamScenePreview(preview)
+                        .border(if (mode == m) 2.dp else 1.dp, if (mode == m) SpotifyGreen else TextPrimary.copy(alpha = 0.14f), RoundedCornerShape(10.dp)),
+                )
             }
         }
         if (mode == ThemeMode.TIME) {
@@ -136,6 +143,8 @@ fun AppearanceSettingsCard() {
                 }
             }
         }
+        SettingsDivider()
+        BackdropSettingsSection()
         SettingsDivider()
         SettingsToggleRow(
             title = "Pure black (AMOLED)",

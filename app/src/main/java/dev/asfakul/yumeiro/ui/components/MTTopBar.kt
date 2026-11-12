@@ -376,6 +376,7 @@ private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, ta
             .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
             .semantics { contentDescription = "Source: $label. ${if (expanded) "Menu open" else "Tap to change"}" }
             .then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .tourTarget("topbar_source_pill")
             .padding(start = if (narrow) 8.dp else 10.dp, end = if (narrow) 3.dp else 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

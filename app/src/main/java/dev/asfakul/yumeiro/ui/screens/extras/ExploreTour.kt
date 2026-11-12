@@ -20,6 +20,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -75,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.components.reducedMotion
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,33 +102,48 @@ data class TourStop(
     val place: TourPlace,
     val advanceOnRoute: String? = null,
     val menuStop: Boolean = false,
+    /** What the tutor asks the user to try, shown as a "Your turn" line. Null = read-only stop. */
+    val tryIt: String? = null,
 )
 
 /**
- * The Explore tour: a short walk over the real interface. Nothing here is a mock — each stop
- * highlights a live control, and the user can tap it. Skippable at every step; the outcome is
- * remembered by [SetupGuide] and the tour can be replayed from Settings → Setup guide.
+ * The Explore tour: a short, tutor-style walk over the real interface. Nothing here is a mock —
+ * each stop highlights a live control (scrolled into view first), says what it is and, where it
+ * makes sense, asks the user to try it; doing so moves the lesson on. Skippable at every step;
+ * the outcome is remembered by [SetupGuide] and the tour can be replayed from Settings → Setup guide.
+ * Round 9: the copy now matches what is on screen (icon-only bottom bar, "See more", the source
+ * pill), and the spotlight hugs the exact control instead of the whole header.
  */
 object ExploreTour {
     val stops: List<TourStop> = listOf(
-        TourStop("home", "topbar_title", "Home is your starting point",
-            "It greets you, shows what's waiting — new episodes, where you left off — and keeps every feature in Spaces — tap Show all for the rest.", TourPlace.HOME),
+        TourStop("home", "topbar_title", "Hi, I'm Yume — your guide",
+            "This is Home. The greeting follows the time of day, and everything waiting for you — new episodes, where you left off — gathers below it. Two minutes, and you'll know your way around.", TourPlace.HOME),
+        TourStop("spaces", "home_spaces_grid", "Spaces: every feature, one tap away",
+            "Each tile opens a part of Yumeiro — Yumix, YouTube, Manga, Live TV and more. The small line under a tile tells you its state, like \"Add sources\".", TourPlace.HOME),
+        TourStop("spaces_more", "home_spaces_more", "More shortcuts live here",
+            "See more unfolds the rest in place — theme, DNS, tracking, network… — and See less folds them away again.", TourPlace.HOME,
+            tryIt = "Try it: tap See more, then Next"),
         TourStop("tab_music", "nav_tab_music", "Music",
-            "Your songs and YouTube Music live here. Tap Music to open it.", TourPlace.HOME, advanceOnRoute = "music"),
-        TourStop("music_source", "topbar_title", "Choose where music comes from",
-            "Tap the pill next to the title to switch between On device, Online and Mix. Try it now.", TourPlace.MUSIC, menuStop = true),
+            "The note icon in the bar at the bottom opens Music: songs on this phone and YouTube Music, side by side.", TourPlace.HOME,
+            advanceOnRoute = "music", tryIt = "Your turn: tap the note icon"),
+        TourStop("music_source", "topbar_source_pill", "Choose where music comes from",
+            "This pill beside the title switches between On device, Online and Mix. Every source keeps its own lists and search.", TourPlace.MUSIC,
+            menuStop = true, tryIt = "Your turn: tap the pill, then pick one"),
         TourStop("tab_videos", "nav_tab_videos", "Videos and streaming",
-            "Tap Videos. Extensions, YouTube, this phone's videos and Live TV are all in one place.", TourPlace.MUSIC, advanceOnRoute = "videos"),
-        TourStop("video_source", "topbar_title", "Pick what to watch",
-            "The pill next to the title switches between Yumix, YouTube, Device and Live TV. Each keeps its own screen and search.", TourPlace.VIDEOS_YUMIX, menuStop = true),
+            "The play icon opens Videos: extensions, YouTube, this phone's videos and Live TV in one place.", TourPlace.MUSIC,
+            advanceOnRoute = "videos", tryIt = "Your turn: tap the play icon"),
+        TourStop("video_source", "topbar_source_pill", "Pick what to watch",
+            "Same pill, new choices: Yumix, YouTube, Device and Live TV. Each keeps its own screen and search.", TourPlace.VIDEOS_YUMIX,
+            menuStop = true, tryIt = "Tap the pill to look — or Next to carry on"),
         TourStop("yumix", "yumix_sources", "Extensions and sources",
-            "Get sources from the market, or manage the ones you have. Yumix shows what they offer.", TourPlace.VIDEOS_YUMIX),
+            "The shop opens the Extension Market — anime, movies, Asian and short dramas. The puzzle piece manages the ones you've installed. Yumix then mixes what they offer.", TourPlace.VIDEOS_YUMIX),
         TourStop("tab_library", "nav_tab_library", "Library",
-            "Playlists, favourites, history, downloads and your manga shelf. Tap Library.", TourPlace.VIDEOS_YUMIX, advanceOnRoute = "library"),
-        TourStop("actions", "topbar_actions", "Alerts and settings",
-            "The bell has new episodes, downloads and reminders. Settings holds sources, network, look and sound.", TourPlace.LIBRARY),
+            "Playlists, favourites, history, downloads and your manga shelf.", TourPlace.VIDEOS_YUMIX,
+            advanceOnRoute = "library", tryIt = "Your turn: tap the library icon"),
+        TourStop("actions", "topbar_actions", "Search, alerts and settings",
+            "The magnifier searches the tab you're on. The bell collects new episodes, downloads and reminders. The gear opens Settings — sources, network, look and sound.", TourPlace.LIBRARY),
         TourStop("finish", null, "You're ready",
-            "Replay this tour or open the quick setup any time from Settings → Setup guide.", TourPlace.LIBRARY),
+            "That's the whole map. Replay this tour or open the quick setup any time from Settings → Setup guide.", TourPlace.LIBRARY),
     )
 
     private val _step = MutableStateFlow<Int?>(null)
@@ -149,13 +170,25 @@ object ExploreTour {
 /** Live positions of the controls the tour can point at (root coordinates). */
 object TourTargets {
     internal val bounds = mutableStateMapOf<String, Rect>()
+    internal var root by mutableStateOf(Size.Zero)
 }
 
-/** Registers this element as a tour target. Free while the tour is closed. */
-fun Modifier.tourTarget(key: String): Modifier = this.onGloballyPositioned { coords ->
-    if (!ExploreTour.active) return@onGloballyPositioned
-    val r = if (coords.isAttached) coords.boundsInRoot() else Rect.Zero
-    if (TourTargets.bounds[key] != r) TourTargets.bounds[key] = r
+/**
+ * Registers this element as a tour target. Free while the tour is closed; when its stop comes up
+ * the element is scrolled into view first so the spotlight never points off screen.
+ */
+fun Modifier.tourTarget(key: String): Modifier = composed {
+    val requester = remember { BringIntoViewRequester() }
+    val step by ExploreTour.step.collectAsState()
+    LaunchedEffect(step) {
+        val s = step ?: return@LaunchedEffect
+        if (ExploreTour.stops.getOrNull(s)?.target == key) { delay(260); runCatching { requester.bringIntoView() } }
+    }
+    this.bringIntoViewRequester(requester).onGloballyPositioned { coords ->
+        if (!ExploreTour.active) return@onGloballyPositioned
+        val r = if (coords.isAttached) coords.boundsInRoot() else Rect.Zero
+        if (TourTargets.bounds[key] != r) TourTargets.bounds[key] = r
+    }
 }
 
 /**
@@ -199,7 +232,14 @@ fun ExploreTourOverlay(
 
     val pad = with(density) { 6.dp.toPx() }
     val raw = stop.target?.let { TourTargets.bounds[it] }?.takeIf { it.width > 1f && it.height > 1f }
-    val hole = raw?.let { Rect(it.left - pad, it.top - pad, it.right + pad, it.bottom + pad) }
+    val screen = TourTargets.root
+    // Clamp to the screen: the ring used to spill past the right edge on edge-hugging controls.
+    val hole = raw?.let {
+        val edge = with(density) { 4.dp.toPx() }
+        val maxX = if (screen.width > 0f) screen.width - edge else Float.MAX_VALUE
+        val maxY = if (screen.height > 0f) screen.height - edge else Float.MAX_VALUE
+        Rect((it.left - pad).coerceAtLeast(edge), (it.top - pad).coerceAtLeast(edge), (it.right + pad).coerceAtMost(maxX), (it.bottom + pad).coerceAtMost(maxY))
+    }?.takeIf { it.width > 8f && it.height > 8f }
     val spec = if (reduced) snap<Float>() else tween(320)
     val l by animateFloatAsState(hole?.left ?: 0f, spec, label = "tourL")
     val t by animateFloatAsState(hole?.top ?: 0f, spec, label = "tourT")
@@ -212,7 +252,7 @@ fun ExploreTourOverlay(
     val scrim = Color.Black.copy(alpha = if (p.isDark) 0.66f else 0.52f)
     val corner = with(density) { 18.dp.toPx() }
 
-    BoxWithConstraints(Modifier.fillMaxSize().testTag("explore_tour")) {
+    BoxWithConstraints(Modifier.fillMaxSize().testTag("explore_tour").onGloballyPositioned { TourTargets.root = Size(it.size.width.toFloat(), it.size.height.toFloat()) }) {
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
         Canvas(Modifier.fillMaxSize().graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
@@ -250,6 +290,7 @@ fun ExploreTourOverlay(
         }
         TourCard(
             stop = stop, index = i, total = ExploreTour.stops.size,
+            pointerX = hole?.center?.x, pointerUp = below,
             modifier = cardMod.padding(horizontal = 20.dp),
             onNext = { ExploreTour.next() },
             onBack = { ExploreTour.back() },
@@ -263,51 +304,108 @@ fun ExploreTourOverlay(
 @Composable
 private fun TourCard(
     stop: TourStop, index: Int, total: Int, modifier: Modifier,
+    pointerX: Float?, pointerUp: Boolean,
     onNext: () -> Unit, onBack: () -> Unit, onSkip: () -> Unit, onDone: () -> Unit, onOpenSetup: () -> Unit,
 ) {
     val p = LocalMtPalette.current
     val reduced = reducedMotion()
+    val density = LocalDensity.current
     val last = index == total - 1
-    Column(
-        modifier.widthIn(max = 440.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp))
-            .background(p.surfaceContainerHigh).padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = 10.dp)
-            .testTag("tour_step_${stop.id}")
-            .semantics { liveRegion = LiveRegionMode.Polite },
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                repeat(total) { k ->
-                    Box(Modifier.height(4.dp).width(if (k == index) 18.dp else 6.dp).clip(CircleShape)
-                        .background(if (k <= index) p.accent else p.textPrimary.copy(alpha = 0.14f)))
+    var cardLeft by remember { mutableStateOf(0f) }
+    var cardWidth by remember { mutableStateOf(0f) }
+    val notch = 9.dp
+    val shape = RoundedCornerShape(24.dp)
+    Column(modifier.widthIn(max = 440.dp).fillMaxWidth()) {
+        // A small notch points from the card to the spotlight, like a tutor's finger.
+        @Composable fun Notch(up: Boolean) {
+            if (pointerX == null || cardWidth <= 0f) return
+            Canvas(Modifier.fillMaxWidth().height(notch)) {
+                val x = (pointerX - cardLeft).coerceIn(28.dp.toPx(), cardWidth - 28.dp.toPx())
+                val n = notch.toPx()
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    if (up) { moveTo(x - n, n); lineTo(x, 0f); lineTo(x + n, n) } else { moveTo(x - n, 0f); lineTo(x, n); lineTo(x + n, 0f) }
+                    close()
+                }
+                drawPath(path, p.surfaceContainerHigh)
+            }
+        }
+        if (pointerUp) Notch(true)
+        Column(
+            Modifier.fillMaxWidth()
+                .onGloballyPositioned { c -> cardLeft = c.boundsInRoot().left; cardWidth = c.size.width.toFloat() }
+                .clip(shape).background(p.surfaceContainerHigh)
+                .border(1.dp, p.accent.copy(alpha = if (p.isDark) 0.28f else 0.36f), shape)
+                .padding(start = 18.dp, end = 12.dp, top = 14.dp, bottom = 10.dp)
+                .testTag("tour_step_${stop.id}")
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The guide: a small 夢 seal in the theme accent.
+                Box(
+                    Modifier.size(30.dp).clip(CircleShape)
+                        .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(p.accent, p.accent.copy(alpha = 0.6f)))),
+                    contentAlignment = Alignment.Center,
+                ) { Text("夢", color = p.onAccent, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold) }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Yume · guide", color = p.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        repeat(total) { k ->
+                            val wdt by animateFloatAsState(if (k == index) 16f else 5f, if (reduced) snap() else tween(260), label = "tourDot")
+                            Box(Modifier.height(4.dp).width(wdt.dp).clip(CircleShape)
+                                .background(if (k <= index) p.accent else p.textPrimary.copy(alpha = 0.16f)))
+                        }
+                    }
+                }
+                Text("${index + 1}/$total", color = p.textTertiary, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            AnimatedContent(
+                targetState = stop,
+                transitionSpec = { if (reduced) fadeIn(snap()) togetherWith fadeOut(snap()) else fadeIn(tween(240, 60)) togetherWith fadeOut(tween(120)) },
+                label = "tourText",
+            ) { s ->
+                Column(Modifier.padding(end = 8.dp)) {
+                    Text(s.title, style = MaterialTheme.typography.titleLarge, color = p.textPrimary, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(6.dp))
+                    Text(s.body, style = MaterialTheme.typography.bodyMedium, color = p.textSecondary)
+                    if (s.tryIt != null) {
+                        Spacer(Modifier.height(10.dp))
+                        val bob = if (reduced) 0f else {
+                            val inf = rememberInfiniteTransition(label = "tourTry")
+                            inf.animateFloat(0f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "tourTryV").value
+                        }
+                        Row(
+                            Modifier.clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = if (p.isDark) 0.14f else 0.12f))
+                                .padding(horizontal = 10.dp, vertical = 7.dp).testTag("tour_try_${s.id}"),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Icon(
+                                androidx.compose.material.icons.Icons.Default.TouchApp, null, tint = p.accent,
+                                modifier = Modifier.size(18.dp).graphicsLayer { translationY = (if (pointerUp) -3f else 3f) * bob * density.density },
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(s.tryIt, color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
-            Text("${index + 1} of $total", color = p.textTertiary, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
-        }
-        Spacer(Modifier.height(12.dp))
-        AnimatedContent(
-            targetState = stop,
-            transitionSpec = { if (reduced) fadeIn(snap()) togetherWith fadeOut(snap()) else fadeIn(tween(220, 60)) togetherWith fadeOut(tween(120)) },
-            label = "tourText",
-        ) { s ->
-            Column(Modifier.padding(end = 8.dp)) {
-                Text(s.title, style = MaterialTheme.typography.titleLarge, color = p.textPrimary, fontWeight = FontWeight.ExtraBold)
-                Spacer(Modifier.height(6.dp))
-                Text(s.body, style = MaterialTheme.typography.bodyMedium, color = p.textSecondary)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!last) TourText("Skip tour", p.textTertiary, "tour_skip", onSkip)
+                else TourText("Open quick setup", p.accent, "tour_open_setup", onOpenSetup)
+                Spacer(Modifier.weight(1f))
+                if (index > 0 && !last) TourText("Back", p.textSecondary, "tour_back", onBack)
+                Box(
+                    Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(50)).background(p.accent)
+                        .clickable(role = Role.Button, onClick = if (last) onDone else onNext)
+                        .testTag(if (last) "tour_done" else "tour_next").padding(horizontal = 20.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(if (last) "Done" else "Next", color = p.onAccent, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (!last) TourText("Skip tour", p.textTertiary, "tour_skip", onSkip)
-            else TourText("Open quick setup", p.accent, "tour_open_setup", onOpenSetup)
-            Spacer(Modifier.weight(1f))
-            if (index > 0 && !last) TourText("Back", p.textSecondary, "tour_back", onBack)
-            Box(
-                Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(50)).background(p.accent)
-                    .clickable(role = Role.Button, onClick = if (last) onDone else onNext)
-                    .testTag(if (last) "tour_done" else "tour_next").padding(horizontal = 20.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text(if (last) "Done" else "Next", color = p.onAccent, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
-        }
+        if (!pointerUp) Notch(false)
     }
 }
 
