@@ -29,6 +29,10 @@ Cron every 10 min ── airing rows with at in (last run → now] ───┤ 
 | `GET /v1/health` | `200 {ok:true, v:2, cron_s}` when D1 answers and the 10-minute job ran in the last 30 min; `503 {ok:false}` otherwise. `cron_s` = seconds since the last run. Point an uptime monitor here. |
 | `POST /v1/devices` | Register or refresh. Optional `airing: [[anilistId, unixSeconds]]`: next-episode times the phone got from AniList; kept only for followed ids and times from 1 h ago to 15 days ahead. Check-ins limited to 3 per minute per device. New devices are limited to 5 per minute per IP (free rate-limit binding, best-effort, IPs not stored); `429 slow_down` otherwise. Body `{endpoint, anilist}`. Returns `{id, token}`. The token is only returned on first registration. Later calls send `Authorization: Bearer <id>.<token>`. Only the token's SHA-256 is stored. |
 | `DELETE /v1/devices` | Remove this device (Bearer). |
+| `POST /v1/fcm/devices` | Instant notices (FCM): register or refresh `{fid, topics, app_version, channel}`, weekly. Same `{id, token}` / Bearer scheme and limits as above. See [PUSH-FCM.md](PUSH-FCM.md). |
+| `DELETE /v1/fcm/devices` | Remove this phone's FCM row (Bearer). |
+| `POST /v1/admin/notify` | Owner only (`Authorization: Bearer $ADMIN_TOKEN`): send an announcement, update, maintenance or direct notice through FCM. |
+| `GET /v1/admin/fcm/stats` | Owner only: device counts per topic. |
 
 Why phones send airing times: AniList blocks requests from Cloudflare Workers ("You have been manually blocked", tested
 2026-11-10 from a probe Worker with plain, custom, Referer and browser headers: all 403). We don't work around a

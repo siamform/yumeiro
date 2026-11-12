@@ -107,6 +107,10 @@ fun NotificationSettingsCard() {
     val nudge by keyState(Key.NUDGES)
     val sound by keyState(Key.SOUND)
     val reminders by keyState(Key.REMINDERS)
+    val service by keyState(Key.SERVICE)
+    val instant by keyState(Key.FCM)
+    val pushStatus by dev.asfakul.yumeiro.notify.FcmPush.status.collectAsState()
+    val pushBuilt = remember { dev.asfakul.yumeiro.notify.FcmPush.configured() }
     val unread by Inbox.unread.collectAsState()
     var systemOn by remember { mutableStateOf(PermissionCenter.notificationsAllowed(context)) }
     var block by remember { mutableStateOf(dev.asfakul.yumeiro.notify.AppNotifier.block(context)) }
@@ -159,16 +163,36 @@ fun NotificationSettingsCard() {
             SettingsToggleRow("Yumeiro news", "New features, releases and announcements", news,
                 { ns.set(context, Key.NEWS, it) }, "toggle_notify_news")
             SettingsDivider()
+            SettingsToggleRow("Service alerts", "Planned maintenance, outages and messages for this device. Rare, but worth knowing", service,
+                { ns.set(context, Key.SERVICE, it) }, "toggle_notify_service")
+            SettingsDivider()
             SettingsToggleRow("Suggestions", "An occasional evening idea, like a movie or some music (at most every 3 days)", nudge,
                 { ns.setNudges(context, it) }, "toggle_notify_nudges")
             SettingsDivider()
             SettingsToggleRow("Yumeiro chime", "Play Yumeiro's own sound. Off makes notifications silent", sound,
                 { ns.set(context, Key.SOUND, it) }, "toggle_notify_sound")
         }
+        if (pushBuilt) {
+            SettingsDivider()
+            // Instant notices over Firebase Cloud Messaging. Opt-out for anyone who wants no Google push at all.
+            SettingsToggleRow(
+                "Instant alerts",
+                if (!instant) "Off. News, updates and service alerts still arrive with the background checks"
+                else "News, updates and service alerts the moment they're sent (Firebase Cloud Messaging) · ${pushStatus.label}",
+                instant, { ns.set(context, Key.FCM, it) }, "toggle_notify_instant",
+            )
+            val supportId = remember(pushStatus) { if (instant) dev.asfakul.yumeiro.notify.FcmPush.supportId() else null }
+            if (supportId != null) {
+                TextButton(
+                    onClick = { copyToClipboard(context, "Yumeiro support ID", supportId) },
+                    modifier = Modifier.testTag("notify_support_id"),
+                ) { Text("Copy support ID · $supportId", color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
+            }
+        }
         SettingsDivider()
         SettingsToggleRow("In-app reminders", "Now and then: join the Telegram community, star on GitHub, support the app", reminders,
             { ns.set(context, Key.REMINDERS, it) }, "toggle_notify_reminders")
-        Text("App updates are always announced when you open the app.",
+        Text(if (pushBuilt && instant) "App updates are always announced, instantly and when you open the app." else "App updates are always announced when you open the app.",
             color = TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }
@@ -196,7 +220,8 @@ fun BackgroundActivityCard() {
             "settings_battery", status = if (battery) "Unrestricted" else "Optimised", ok = battery,
             onClick = { PermissionCenter.openBatterySettings(context) },
         )
-        Text("Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
+        Text(if (dev.asfakul.yumeiro.notify.FcmPush.configured()) "News, updates and service alerts arrive instantly with Instant alerts. New episodes still rely on these checks being allowed to run; for on-time episode alerts, turn on Reliable alerts under Notifications (free, with ntfy)."
+            else "Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }

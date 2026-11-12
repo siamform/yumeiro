@@ -1320,6 +1320,23 @@ fun MTPlayerApp(
             )
         }
 
+        // One handler for in-app actions from the inbox and from tapped notifications (deep links).
+        val runInboxAction: (String) -> Unit = { link ->
+            when (link) {
+                "update" -> dev.asfakul.yumeiro.update.UpdateManager.get(context).showDialog()
+                "extensions" -> navigateSub(Screen.Extensions.route)
+                "market" -> navigateSub(Screen.ExtensionMarket.route)
+                "streams" -> navigateSub(Screen.Market.route)
+                "downloads" -> dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open()
+                "inbox" -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
+                "support" -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.SUPPORT)
+            }
+        }
+        val pendingAction by dev.asfakul.yumeiro.ui.screens.extras.AppPages.action.collectAsState()
+        LaunchedEffect(pendingAction, showSplash) {
+            if (pendingAction != null && !showSplash) dev.asfakul.yumeiro.ui.screens.extras.AppPages.consumeAction()?.let(runInboxAction)
+        }
+
         // Notification inbox / Support page, opened from the bell, a notification, a reminder or Settings.
         AnimatedVisibility(
             visible = appPage != null,
@@ -1332,16 +1349,7 @@ fun MTPlayerApp(
                     dev.asfakul.yumeiro.ui.screens.extras.SupportScreen(onBack = closePage)
                 else -> dev.asfakul.yumeiro.ui.screens.extras.InboxScreen(
                     onBack = closePage,
-                    onAction = { link ->
-                        closePage()
-                        when (link) {
-                            "update" -> dev.asfakul.yumeiro.update.UpdateManager.get(context).showDialog()
-                            "extensions" -> navigateSub(Screen.Extensions.route)
-                            "market" -> navigateSub(Screen.ExtensionMarket.route)
-                            "streams" -> navigateSub(Screen.Market.route)
-                            "support" -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.SUPPORT)
-                        }
-                    },
+                    onAction = { link -> closePage(); runInboxAction(link) },
                 )
             }
         }

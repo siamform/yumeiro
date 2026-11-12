@@ -94,7 +94,15 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
             intent.getStringExtra(dev.asfakul.yumeiro.notify.AppNotifier.EXTRA_ITEM)?.let {
                 dev.asfakul.yumeiro.notify.Inbox.markRead(this, it)
             }
-            dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
+            // A notice with a deep link opens its target straight away (validated again here: the
+            // intent could come from an old notification). Anything else lands in the inbox.
+            val link = dev.asfakul.yumeiro.notify.FcmPlan.safeLink(intent.getStringExtra(dev.asfakul.yumeiro.notify.AppNotifier.EXTRA_LINK))
+            val pages = dev.asfakul.yumeiro.ui.screens.extras.AppPages
+            when {
+                link == null || link == "inbox" -> pages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
+                link.startsWith("https://") -> if (!dev.asfakul.yumeiro.ui.screens.extras.Links.open(this, link)) pages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
+                else -> pages.runAction(link)
+            }
             return
         }
         dev.asfakul.yumeiro.widget.ContinueWidget.itemFrom(intent)?.let { dev.asfakul.yumeiro.widget.TitleNav.open(it); return }

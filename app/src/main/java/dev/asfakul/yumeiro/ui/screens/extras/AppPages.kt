@@ -23,6 +23,15 @@ object AppPages {
     val page: StateFlow<Page?> = _page.asStateFlow()
     fun open(p: Page) { _page.value = p }
     fun close() { _page.value = null }
+
+    /**
+     * An in-app action waiting to run (e.g. "update", "extensions") — set when a notification is
+     * tapped; the app shell runs it once it's composed and clears it. https links never go here.
+     */
+    private val _action = MutableStateFlow<String?>(null)
+    val action: StateFlow<String?> = _action.asStateFlow()
+    fun runAction(a: String) { _action.value = a }
+    fun consumeAction(): String? = _action.value.also { _action.value = null }
 }
 
 /** Which popup currently owns the screen, so two popups never show at once. */

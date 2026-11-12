@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.DoneAll
@@ -187,6 +188,7 @@ private fun iconFor(kind: Inbox.Kind): ImageVector = when (kind) {
     Inbox.Kind.NEWS -> Icons.Default.AutoAwesome
     Inbox.Kind.NUDGE -> Icons.Default.TipsAndUpdates
     Inbox.Kind.INFO -> Icons.Default.Notifications
+    Inbox.Kind.ALERT -> Icons.Default.Campaign
 }
 
 @Composable

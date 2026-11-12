@@ -26,6 +26,10 @@ object NotifySettings {
         PLAYLISTS("playlists", true),
         /** New features, releases and announcements from the Yumeiro feed. */
         NEWS("news", true),
+        /** Maintenance windows, outages and messages meant for this device. */
+        SERVICE("service", true),
+        /** Instant notices through Firebase Cloud Messaging (off = no Google push at all). */
+        FCM("fcm", true),
         /** Occasional "Feeling bored? Watch a movie" ideas. */
         NUDGES("nudges", true),
         /** Yumeiro's own chime instead of silence. */
@@ -58,6 +62,7 @@ object NotifySettings {
         flows.getValue(k).value = v
         prefs(c).edit().putBoolean(k.pref, v).apply()
         if (k == Key.BACKGROUND || k == Key.WIFI_ONLY) BackgroundWork.apply(c)
+        if (k == Key.NEWS || k == Key.SERVICE || k == Key.FCM) FcmPush.onSettingsChanged(c)
     }
 
     // Kept for existing callers.

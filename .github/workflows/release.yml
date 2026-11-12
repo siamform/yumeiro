@@ -107,6 +107,11 @@ jobs:
           LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          # Optional Firebase client config for instant notices (docs/PUSH-FCM.md). Not secret, but kept out of git.
+          YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
+          YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}
+          YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}
+          YUMEIRO_FCM_APP_ID: ${{ secrets.YUMEIRO_FCM_APP_ID }}
           # Only embedded while the repo is private (docs/GUIDE.md "Going private"): a token inside a
           # public APK can be extracted, and public releases need no token at all.
           MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}

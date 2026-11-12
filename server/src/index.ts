@@ -9,6 +9,9 @@ import {
   AIRING_WAKE_DELAYS_S, MAX_ROLLS, ROLL_S, SILENT_DAYS, WAKES_PER_MESSAGE, airingWindow, chunk, parseFollows,
   parseAiring, pushOutcome, randomToken, same, sha256, validEndpoint,
 } from "./logic.ts";
+import {
+  buildMessage, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
+} from "./fcm.ts";
 
 export interface Env {
   DB: D1Database;
@@ -21,6 +24,10 @@ export interface Env {
   NEW_DEVICES?: RateLimit;
   /** Per-device limit on check-ins, so one device can't loop writes. Legit apps check in a few times a day. */
   DEVICE_SYNC?: RateLimit;
+  /** Secret (wrangler secret put ADMIN_TOKEN): bearer for POST /v1/admin/notify. Unset = admin off. */
+  ADMIN_TOKEN?: string;
+  /** Secret (wrangler secret put FCM_SERVICE_ACCOUNT): the Firebase service-account JSON. Never in the app. */
+  FCM_SERVICE_ACCOUNT?: string;
 }
 
 interface WakeJob { endpoints: string[] }
@@ -43,6 +50,10 @@ export default {
       if (url.pathname === "/v1/health" && req.method === "GET") return await health(env);
       if (url.pathname === "/v1/devices" && req.method === "POST") return await register(req, env);
       if (url.pathname === "/v1/devices" && req.method === "DELETE") return await unregister(req, env);
+      if (url.pathname === "/v1/fcm/devices" && req.method === "POST") return await fcmRegister(req, env);
+      if (url.pathname === "/v1/fcm/devices" && req.method === "DELETE") return await fcmUnregister(req, env);
+      if (url.pathname === "/v1/admin/notify" && req.method === "POST") return await adminNotify(req, env);
+      if (url.pathname === "/v1/admin/fcm/stats" && req.method === "GET") return await adminStats(req, env);
       return fail(404, "not_found");
     } catch (e) {
       console.error("fetch", url.pathname, e);
@@ -180,7 +191,125 @@ async function prune(env: Env): Promise<void> {
     env.DB.prepare("DELETE FROM follows WHERE device_id IN (SELECT id FROM devices WHERE seen < ?)").bind(cut),
     env.DB.prepare("DELETE FROM devices WHERE seen < ?").bind(cut),
     env.DB.prepare("DELETE FROM airing WHERE media_id NOT IN (SELECT media_id FROM follows)"),
+    env.DB.prepare("DELETE FROM fcm_devices WHERE seen < ?").bind(cut),
   ]);
+}
+
+// ---- FCM devices (instant notices) ----
+// Same credential scheme as /v1/devices: the server hands out "<id>.<token>", stores only the
+// token's SHA-256. Knowing the FID (private to the phone and Firebase) also lets a reinstall reclaim its row.
+
+async function fcmRegister(req: Request, env: Env): Promise<Response> {
+  const body = await req.json<Record<string, unknown>>().catch(() => null);
+  if (!body) return fail(400, "bad_json");
+  const fid = validFid(body.fid);
+  if (!fid) return fail(400, "bad_fid");
+  const topics = parseTopics(body.topics).join(",");
+  const version = typeof body.app_version === "number" && Number.isInteger(body.app_version) && body.app_version > 0 && body.app_version < 2e9
+    ? body.app_version : 0;
+  const channel = body.channel === "preview" || body.channel === "debug" ? body.channel : "release";
+  const t = now();
+
+  let id: string | null = null;
+  const auth = bearer(req);
+  if (auth) {
+    const r = await env.DB.prepare("SELECT id, token_hash FROM fcm_devices WHERE id = ?").bind(auth.id)
+      .first<{ id: string; token_hash: string }>();
+    if (r && same(r.token_hash, await sha256(auth.token))) id = r.id;
+    else if (r) return fail(403, "bad_token");
+  }
+  if (id) {
+    if (env.DEVICE_SYNC && !(await env.DEVICE_SYNC.limit({ key: `fcm:${id}` })).success) return fail(429, "slow_down");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM fcm_devices WHERE fid = ? AND id <> ?").bind(fid, id), // FID moved to this row
+      env.DB.prepare("UPDATE fcm_devices SET fid = ?, topics = ?, app_version = ?, channel = ?, seen = ? WHERE id = ?")
+        .bind(fid, topics, version, channel, t, id),
+    ]);
+    return json({ id, token: null });
+  }
+  if (env.NEW_DEVICES && !(await env.NEW_DEVICES.limit({ key: req.headers.get("cf-connecting-ip") ?? "?" })).success) {
+    return fail(429, "slow_down");
+  }
+  const old = await env.DB.prepare("SELECT id FROM fcm_devices WHERE fid = ?").bind(fid).first<{ id: string }>();
+  const newId = old?.id ?? randomToken(12);
+  const token = randomToken();
+  const th = await sha256(token);
+  await env.DB.prepare(
+    `INSERT INTO fcm_devices (id, token_hash, fid, topics, app_version, channel, created, seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET token_hash = excluded.token_hash, fid = excluded.fid, topics = excluded.topics,
+       app_version = excluded.app_version, channel = excluded.channel, seen = excluded.seen`,
+  ).bind(newId, th, fid, topics, version, channel, t, t).run();
+  return json({ id: newId, token });
+}
+
+async function fcmUnregister(req: Request, env: Env): Promise<Response> {
+  const auth = bearer(req);
+  if (!auth) return fail(401, "no_token");
+  const r = await env.DB.prepare("SELECT token_hash FROM fcm_devices WHERE id = ?").bind(auth.id).first<{ token_hash: string }>();
+  if (!r) return json({ ok: true });
+  if (!same(r.token_hash, await sha256(auth.token))) return fail(403, "bad_token");
+  await env.DB.prepare("DELETE FROM fcm_devices WHERE id = ?").bind(auth.id).run();
+  return json({ ok: true });
+}
+
+// ---- admin: send notices ----
+
+/** "Authorization: Bearer <ADMIN_TOKEN>", rate-limited per IP so the token can't be guessed. */
+async function admin(req: Request, env: Env): Promise<Response | null> {
+  if (!env.ADMIN_TOKEN || env.ADMIN_TOKEN.length < 32) return fail(503, "admin_not_configured");
+  const ip = req.headers.get("cf-connecting-ip") ?? "?";
+  if (env.NEW_DEVICES && !(await env.NEW_DEVICES.limit({ key: `admin:${ip}` })).success) return fail(429, "slow_down");
+  const m = /^Bearer (\S{32,256})$/.exec(req.headers.get("authorization") ?? "");
+  if (!m || !(await sameSecret(m[1], env.ADMIN_TOKEN))) return fail(401, "unauthorized");
+  return null;
+}
+
+async function adminNotify(req: Request, env: Env): Promise<Response> {
+  const denied = await admin(req, env);
+  if (denied) return denied;
+  const sa = parseServiceAccount(env.FCM_SERVICE_ACCOUNT);
+  if (!sa) return fail(503, "fcm_not_configured");
+  const n = parseNotice(await req.json<Record<string, unknown>>().catch(() => null), () => randomToken(12));
+  if ("error" in n) return fail(400, n.error);
+  const t = now();
+
+  let target: { topic: string } | { fid: string };
+  if (n.kind === "direct") {
+    const row = await env.DB.prepare("SELECT fid FROM fcm_devices WHERE id = ?").bind(n.device_id!).first<{ fid: string }>();
+    if (!row) return fail(404, "unknown_device");
+    target = { fid: row.fid };
+  } else {
+    target = { topic: topicFor(n.kind, n.channel) };
+  }
+  let r: Awaited<ReturnType<typeof send>>;
+  try {
+    r = await send(sa, buildMessage(n as Notice, target, t), n.dry_run, t);
+  } catch (e) {
+    // OAuth refused (wrong / revoked key, clock) or FCM unreachable: say so instead of a bare 500.
+    console.error("fcm send", e instanceof Error ? e.message : "error");
+    return json({ ok: false, error: e instanceof Error && e.message.startsWith("oauth_") ? e.message : "fcm_unreachable", id: n.id }, 502);
+  }
+  if (r.outcome === "gone" && n.kind === "direct") {
+    await env.DB.prepare("DELETE FROM fcm_devices WHERE id = ?").bind(n.device_id!).run();
+    return json({ ok: false, error: "device_gone", id: n.id }, 410);
+  }
+  if (r.outcome !== "ok") return json({ ok: false, error: r.error ?? "send_failed", fcm_status: r.status, id: n.id }, r.outcome === "retry" ? 503 : 502);
+  return json({ ok: true, id: n.id, dry_run: n.dry_run, target: "topic" in target ? target.topic : "device", name: r.name ?? null });
+}
+
+/** Device counts per channel/topic, for the admin. No ids or FIDs leave the Worker. */
+async function adminStats(req: Request, env: Env): Promise<Response> {
+  const denied = await admin(req, env);
+  if (denied) return denied;
+  const rows = await env.DB.prepare("SELECT channel, topics, COUNT(*) AS n FROM fcm_devices GROUP BY channel, topics")
+    .all<{ channel: string; topics: string; n: number }>();
+  const topics: Record<string, number> = {};
+  let devices = 0;
+  for (const r of rows.results) {
+    devices += r.n;
+    for (const tp of r.topics.split(",").filter(Boolean)) topics[tp] = (topics[tp] ?? 0) + r.n;
+  }
+  return json({ devices, topics, fcm: parseServiceAccount(env.FCM_SERVICE_ACCOUNT) != null });
 }
 
 // ---- wake-ups ----

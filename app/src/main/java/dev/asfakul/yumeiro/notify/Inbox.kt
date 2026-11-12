@@ -24,7 +24,9 @@ object Inbox {
 
     enum class Kind(val label: String) {
         EPISODE("New episode"), EXTENSION("Extensions"), PLAYLIST("Streams"), UPDATE("App update"),
-        NEWS("What's new"), NUDGE("For you"), INFO("Yumeiro");
+        NEWS("What's new"), NUDGE("For you"), INFO("Yumeiro"),
+        /** Maintenance / outage notices and messages for this device (push). */
+        ALERT("Service alert");
         companion object { fun of(s: String?) = entries.firstOrNull { it.name.equals(s, true) } ?: INFO }
     }
 
