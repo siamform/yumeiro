@@ -147,6 +147,7 @@ object OnlineSession {
         val start = _state.value ?: return
         val data = start.data ?: return
         job = scope.launch {
+            AudioLanguages.init(context)
             val provider = ExtensionManager.provider(start.api)
             if (provider == null) {
                 _state.update { it?.copy(phase = Phase.FAILED, message = "The extension “${start.api}” isn't installed or is turned off.") }
@@ -165,7 +166,7 @@ object OnlineSession {
                 val t = System.currentTimeMillis()
                 if (!done && t - lastPublish < PUBLISH_GAP_MS) { pendingPublish = true; return }
                 lastPublish = t; pendingPublish = false
-                val sorted = OnlineRepository.sortLinks(links.distinctBy { it.url })
+                val sorted = OnlineRepository.sortLinks(links.distinctBy { it.url }, AudioLanguages.preferred.value, _state.value?.version.orEmpty())
                 _state.update { cur ->
                     if (cur == null || cur.data != data) return@update cur
                     // Keep the link in use at the same position when the list re-sorts.

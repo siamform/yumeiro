@@ -298,12 +298,21 @@ CATEGORY = {
 }
 
 
-def categories(types):
+SHORT_DRAMA = re.compile(
+    r"(?i)\b(dramabox|drama ?box|reelshort|reel ?short|shortmax|short ?max|netshort|goodshort|flextv|flex ?tv|dramawave|drama ?wave|"
+    r"freereels|free ?reels|flickreels|moboreels|topshort|stardust ?tv|shorttv|short ?tv|minidrama|mini ?drama|short ?drama[s]?|micro ?drama|"
+    r"vertical ?drama|dracin|onshort|melolo|dramabite|kalostv|sereal\+?)\b")
+
+
+def categories(types, *text):
     out = []
     for t in types:
         c = CATEGORY.get(t.lower().replace("_", ""), "Other")
         if c not in out:
             out.append(c)
+    # Same rule as the app (ExtensionFormats.withShortDrama): vertical-drama sources by name.
+    if any(x and SHORT_DRAMA.search(x) for x in text):
+        out = [c for c in out if c != "Other"] + ["Short drama"]
     return out or ["Other"]
 
 
@@ -456,7 +465,7 @@ def main():
                 continue
             seen.add(e["internalName"])
             e.update({"repoUrl": url, "repoName": name, "stars": stars, "origin": c["origin"], "verified": info["verified"],
-                      "categories": categories(e["tvTypes"])})
+                      "categories": categories(e["tvTypes"], e.get("name"), e.get("internalName"), e.get("description"))})
             old = prev_exts.get((url, e["internalName"]))
             changed = not old or old.get("version") != e["version"] or (e["sha256"] and old.get("sha256") != e["sha256"])
             e["updated"] = (old or {}).get("updated") if not changed else (pushed if not old and pushed else now())

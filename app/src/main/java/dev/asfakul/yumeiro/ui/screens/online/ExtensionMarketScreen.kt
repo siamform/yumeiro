@@ -128,7 +128,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
     val adult by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
     // 18+ extensions only when the user turned them on (Settings → Online videos).
     val safe = remember(data, adult) { data?.items.orEmpty().filter { adult || !it.isNsfw } }
-    val categories = remember(safe) { listOf("All") + PICK_CATEGORIES.filter { c -> safe.any { c in it.categories } } + listOf("Other", "18+").filter { c -> safe.any { c in it.categories } } }
+    val categories = remember(safe) { listOf("All") + PICK_CATEGORIES.filter { c -> c == "Short drama" || safe.any { c in it.categories } } + listOf("Other", "18+").filter { c -> safe.any { c in it.categories } } }
     val languages = remember(safe) { safe.mapNotNull { it.language?.lowercase()?.takeIf { l -> l.isNotBlank() } }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
     val visible = remember(safe, query, tab, category, language, sort, repoFilter, installedKeys, updates) {
         val q = query.trim()
@@ -255,7 +255,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 }
             }
             else -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { load(true) } }, modifier = Modifier.fillMaxSize()) {
-                if (visible.isEmpty()) StateMessage(
+                if (visible.isEmpty() && !(tab == MarketTab.DISCOVER && category == "Short drama")) StateMessage(
                     Icons.Default.SearchOff, "Nothing here",
                     when { query.isNotBlank() -> "No extension matches \"$query\"."; tab == MarketTab.INSTALLED -> "You haven't installed any extension yet."; else -> "No extensions in this list yet." },
                     tint = TextSecondary, testTag = "market_empty", modifier = Modifier.padding(top = 32.dp),
@@ -266,6 +266,9 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                             Text("Update all (${updates.size})", fontWeight = FontWeight.Bold)
                         }
                     }
+                    if (tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
+                        (query.isBlank() || "yumeiro drama short dramabox reelshort shortmax".contains(query.trim(), true))
+                    ) item("builtin_drama") { DramaBuiltinCard() }
                     items(visible, key = { it.key }) { ext ->
                         MarketCard(
                             ext = ext,

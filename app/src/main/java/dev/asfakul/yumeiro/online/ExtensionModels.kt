@@ -153,6 +153,10 @@ object ExtensionFormats {
     fun categoriesOf(tvTypes: List<String>): List<String> =
         tvTypes.map { CATEGORY[it.lowercase().replace("_", "")] ?: "Other" }.distinct().ifEmpty { listOf("Other") }
 
+    /** Adds "Short drama" for vertical-drama sources (DramaBox, ReelShort, ShortMax…), found by name. */
+    fun withShortDrama(categories: List<String>, vararg text: String?): List<String> =
+        if ("Short drama" !in categories && dev.asfakul.yumeiro.sources.drama.YumeiroDrama.isShortDrama(*text)) (categories - "Other") + "Short drama" else categories
+
     /** Parses `repo.json`. Throws when the file isn't a repository manifest. */
     fun parseRepo(url: String, text: String): ExtensionRepo {
         val trimmed = text.trimStart('\uFEFF', ' ', '\n', '\r', '\t')
@@ -193,7 +197,7 @@ object ExtensionFormats {
             description = o.optStringOrNull("description"),
             authors = o.optJSONArray("authors").strings(),
             tvTypes = o.optJSONArray("tvTypes").strings(),
-            categories = categoriesOf(o.optJSONArray("tvTypes").strings()),
+            categories = withShortDrama(categoriesOf(o.optJSONArray("tvTypes").strings()), o.optString("name"), internal, o.optStringOrNull("description")),
             language = o.optStringOrNull("language"),
             iconUrl = o.optStringOrNull("iconUrl")?.let { resolve(listUrl, it) },
             fileSize = if (o.has("fileSize") && !o.isNull("fileSize")) o.optLong("fileSize") else null,

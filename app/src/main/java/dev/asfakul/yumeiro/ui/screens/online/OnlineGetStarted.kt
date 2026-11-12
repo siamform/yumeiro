@@ -73,7 +73,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
 
 /** Categories offered on first run, in order. */
-internal val PICK_CATEGORIES = listOf("Anime", "Movies", "TV", "Asian drama", "Live", "Cartoon", "Documentary")
+internal val PICK_CATEGORIES = listOf("Anime", "Movies", "TV", "Asian drama", "Short drama", "Live", "Cartoon", "Documentary")
 
 /** Top-ranked, working, compatible extensions of one category (best copy only). */
 internal fun topPicks(all: List<RemoteExtension>, category: String, n: Int): List<RemoteExtension> =
@@ -104,7 +104,10 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
         loading = false
     }
     val all = catalog?.extensions.orEmpty()
-    val categories = remember(all) { PICK_CATEGORIES.filter { c -> topPicks(all, c, 1).isNotEmpty() } }
+    val categories = remember(all) {
+        val real = PICK_CATEGORIES.filter { c -> topPicks(all, c, 1).isNotEmpty() }
+        if (real.isEmpty()) real else PICK_CATEGORIES.filter { it in real || it == "Short drama" }
+    }
     val picks = remember(all, category) { topPicks(all, category, 8) }
     val byKey = remember(all) { all.associateBy { it.key } }
 
@@ -154,6 +157,7 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
                         categories.forEach { c -> OnlineChip(c, c == category, { category = c }, Modifier.testTag("online_pick_cat_$c")) }
                     }
                 }
+                if (category == "Short drama" || category == "Asian drama") item("builtin_drama") { DramaBuiltinCard() }
                 items(picks, key = { "pick_" + it.key }) { ext ->
                     val on = ext.key in chosen
                     val installed = extState.installed.any { it.key == ext.key }

@@ -32,6 +32,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.graphics.graphicsLayer
@@ -93,6 +97,7 @@ object WatchPrefs {
     @Volatile private var loaded = false
 
     fun init(context: Context) {
+        dev.asfakul.yumeiro.online.AudioLanguages.init(context)
         if (loaded) return
         loaded = true
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -117,20 +122,29 @@ data class WatchServer(val label: String, val selected: Boolean, val tag: String
  * Round 8: groups are collapsible. [startExpanded] null = automatic (open when it holds the
  * playing source or is short; long lists of other versions start folded).
  */
-data class WatchServerRow(val label: String, val icon: ImageVector, val servers: List<WatchServer>, val startExpanded: Boolean? = null)
+data class WatchServerRow(val label: String, val icon: ImageVector, val servers: List<WatchServer>, val startExpanded: Boolean? = null, val filterKey: String? = null)
+
+/** Round 9: one audio-language filter chip ("Original · Sub 4", "English 3"). */
+data class AudioFilterOption(val key: String, val label: String, val count: Int)
 
 /** Round 8: how many server chips a group may show before it starts folded. */
 const val SERVER_GROUP_FOLD_AT = 8
 
-/** Round 8: splits a version's links into Sub and Dub by what each link says about itself. */
+/**
+ * Sub / Dub split of a version's links, now per language (Round 9): "Sub", "Dub · English",
+ * "Dub · Hindi"… Reading of link text lives in [dev.asfakul.yumeiro.online.AudioLanguages].
+ */
 object AudioSplit {
     enum class Kind(val label: String) { SUB("Sub"), DUB("Dub") }
-    private val dub = Regex("""(?i)(\bdub(bed)?\b|\bdual[ -]?audio\b|\b(eng(lish)?|hin(di)?|tam(il)?|tel(ugu)?|ban(gla)?|spa(nish)?|por(tuguese)?)[ -]?dub|\bdub[ -]?(eng|hin|tam|tel))""")
-    private val sub = Regex("""(?i)(\b(soft|hard)?sub(bed|s|titled)?\b|\braw\b)""")
+    private val AL = dev.asfakul.yumeiro.online.AudioLanguages
+
+    private fun Kind?.of(k: dev.asfakul.yumeiro.online.AudioLanguages.Kind?): Kind? = when (k) { null -> null; dev.asfakul.yumeiro.online.AudioLanguages.Kind.SUB -> Kind.SUB; dev.asfakul.yumeiro.online.AudioLanguages.Kind.DUB -> Kind.DUB }
+
     /** What [text] says explicitly, or null when it doesn't say. */
-    fun explicit(text: String): Kind? = when { dub.containsMatchIn(text) -> Kind.DUB; sub.containsMatchIn(text) -> Kind.SUB; else -> null }
+    fun explicit(text: String): Kind? = null.of(AL.classify(text).kind)
     /** Kind of one link: its own name / source first, then the version it came from. */
-    fun of(linkText: String, version: String): Kind? = explicit(linkText) ?: explicit(version)
+    fun of(linkText: String, version: String): Kind? = null.of(AL.classify(linkText, version).kind)
+
     /**
      * Label for a group of [kind] links inside [version]: the version itself when it already says
      * so ("Sub", "English Dub"), "Sub" / "Dub" for the generic "Sources", else "Version · Dub".
@@ -140,6 +154,44 @@ object AudioSplit {
         explicit(version) == kind -> version
         version.isBlank() || version.equals("Sources", true) || explicit(version) != null -> kind.label
         else -> "$version · ${kind.label}"
+    }
+
+    /** One group of links (indices into the link list). [key] is the language filter key. */
+    data class Group(val kind: Kind?, val language: String?, val key: String, val label: String, val indices: List<Int>)
+
+    /**
+     * Groups [texts] (one per link: name + source) of [version]. Sub first, then each dub
+     * language (most sources first; [preferred] first of all), unlabelled dubs, then the rest.
+     * One group only when the links don't say anything different.
+     */
+    fun groups(texts: List<String>, version: String, preferred: String? = null, onlyVersion: Boolean = true): List<Group> {
+        val audio = texts.map { AL.classify(it, version) }
+        val byKey = texts.indices.groupBy { AL.filterKey(audio[it]) }
+        if (byKey.size <= 1) {
+            val key = byKey.keys.firstOrNull().orEmpty()
+            val a = audio.firstOrNull()
+            val kind = null.of(a?.kind)
+            val base = when {
+                kind == Kind.DUB && a?.language != null -> "${label(version, kind)} · ${AL.displayName(a.language)}"
+                // A version called "Sub" whose links say nothing: don't promise subtitles only.
+                onlyVersion && kind == Kind.SUB && explicit(version) == Kind.SUB && texts.none { AL.classify(it).kind != null } -> "Sub & Dub"
+                else -> label(version.ifBlank { "Sources" }, kind)
+            }
+            return listOf(Group(kind, a?.language, key, base, texts.indices.toList()))
+        }
+        val order = byKey.keys.sortedWith(
+            compareBy<String> { k -> when (k) { AL.ORIG -> 0; preferred -> 1; "" -> 4; AL.DUB_OTHER -> 3; else -> 2 } }
+                .thenByDescending { byKey[it]!!.size }.thenBy { it },
+        )
+        return order.map { k ->
+            val idx = byKey.getValue(k)
+            when (k) {
+                AL.ORIG -> Group(Kind.SUB, null, k, "Sub · original audio", idx)
+                AL.DUB_OTHER -> Group(Kind.DUB, null, k, "Dub · other", idx)
+                "" -> Group(null, null, k, "More sources", idx)
+                else -> Group(Kind.DUB, k, k, "Dub · ${AL.displayName(k)}", idx)
+            }
+        }
     }
 }
 
@@ -245,7 +297,10 @@ private fun StepButton(icon: ImageVector, label: String, onClick: (() -> Unit)?,
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun WatchServerBox(watching: String, hint: String, rows: List<WatchServerRow>, modifier: Modifier = Modifier) {
+fun WatchServerBox(
+    watching: String, hint: String, rows: List<WatchServerRow>, modifier: Modifier = Modifier,
+    audioOptions: List<AudioFilterOption> = emptyList(), audioSelected: String? = null, onAudioSelect: (String?) -> Unit = {},
+) {
     val p = LocalMtPalette.current
     val brush = dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush()
     Column(
@@ -267,9 +322,57 @@ fun WatchServerBox(watching: String, hint: String, rows: List<WatchServerRow>, m
                 Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
             }
         }
-        val shownRows = rows.filter { it.servers.isNotEmpty() }
+        if (audioOptions.size > 1) AudioFilterRow(audioOptions, audioSelected, onAudioSelect, Modifier.padding(bottom = 6.dp))
+        val active = audioSelected?.takeIf { sel -> audioOptions.any { it.key == sel } }
+        val shownRows = rows.filter { it.servers.isNotEmpty() && (active == null || it.filterKey == null || it.filterKey == active) }
         shownRows.forEach { row ->
             ServerGroup(row, single = shownRows.size == 1, brush = brush)
+        }
+    }
+}
+
+/**
+ * Round 9: "Find by language" — a row of audio chips over the sources. Picking one filters the
+ * groups and is remembered, so the next title starts on that language when it has it.
+ */
+@Composable
+fun AudioFilterRow(options: List<AudioFilterOption>, selected: String?, onSelect: (String?) -> Unit, modifier: Modifier = Modifier, onDark: Boolean = false) {
+    val p = LocalMtPalette.current
+    val ink = if (onDark) Color.White else dev.asfakul.yumeiro.ui.theme.PageInk
+    val active = selected?.takeIf { sel -> options.any { it.key == sel } }
+    Column(modifier.fillMaxWidth().testTag("watch_audio_filter")) {
+        Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Translate, null, tint = p.accent, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Audio language", color = ink.copy(alpha = 0.72f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+            Spacer(Modifier.weight(1f))
+            if (active != null) Text("Remembered", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            val chip: @Composable (String?, String, Int?, ImageVector?) -> Unit = { key, label, count, icon ->
+                val sel = key == active
+                Row(
+                    Modifier.heightIn(min = 34.dp).clip(CircleShape)
+                        .background(if (sel) p.accent else ink.copy(alpha = 0.06f))
+                        .border(1.dp, if (sel) p.accent else ink.copy(alpha = 0.12f), CircleShape)
+                        .clickable(onClickLabel = "Show $label sources") { onSelect(if (sel) null else key) }
+                        .semantics { this.selected = sel }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .testTag("watch_audio_" + (key ?: "all")),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (icon != null) { Icon(icon, null, tint = if (sel) p.onAccent else p.accent, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(5.dp)) }
+                    Text(label, color = if (sel) p.onAccent else ink.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    if (count != null) { Spacer(Modifier.width(5.dp)); Text("$count", color = if (sel) p.onAccent.copy(alpha = 0.8f) else ink.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+            chip(null, "All", options.sumOf { it.count }, null)
+            options.forEach { o ->
+                chip(o.key, o.label, o.count, when (o.key) { dev.asfakul.yumeiro.online.AudioLanguages.ORIG -> Icons.Default.ClosedCaption; "" -> null; else -> Icons.Default.Mic })
+            }
         }
     }
 }

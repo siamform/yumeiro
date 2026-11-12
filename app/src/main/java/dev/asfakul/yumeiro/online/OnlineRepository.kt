@@ -396,9 +396,11 @@ object OnlineRepository {
      * Best first: real video before audio-only files, then quality (CloudStream's "unknown" is 400
      * or 0 — ranked like a typical 720p), adaptive formats, MP4 before other containers, then name.
      */
-    fun sortLinks(links: List<OnlineLink>): List<OnlineLink> =
+    fun sortLinks(links: List<OnlineLink>, preferAudio: String? = null, version: String = ""): List<OnlineLink> =
         links.distinctBy { it.url }.sortedWith(
             compareBy<OnlineLink> { it.audioOnly }
+                // Round 9: the user's remembered audio language plays first when a source has it.
+                .thenBy { if (preferAudio == null) 0 else if (AudioLanguages.filterKey(AudioLanguages.classify(it.name + " " + it.source, version)) == preferAudio) 0 else 1 }
                 .thenByDescending { it.rank }
                 .thenByDescending { it.isHls || it.isDash }
                 .thenBy { if (it.container == "mp4" || it.container == "m3u8" || it.container == "mpd") 0 else 1 }

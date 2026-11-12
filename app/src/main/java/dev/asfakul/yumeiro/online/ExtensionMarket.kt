@@ -101,7 +101,7 @@ object ExtensionMarket {
                     rank = o.optInt("rank", 0),
                     primary = o.optBoolean("primary", true),
                     copies = o.optInt("copies", 1).coerceAtLeast(1),
-                    categories = o.optJSONArray("categories").strings().ifEmpty { ExtensionFormats.categoriesOf(o.optJSONArray("tvTypes").strings()) },
+                    categories = ExtensionFormats.withShortDrama(o.optJSONArray("categories").strings().ifEmpty { ExtensionFormats.categoriesOf(o.optJSONArray("tvTypes").strings()) }, o.optString("name"), o.optString("internalName"), o.optStringOrNull("description")),
                     compatNote = o.optStringOrNull("compat"),
                 )
             }
