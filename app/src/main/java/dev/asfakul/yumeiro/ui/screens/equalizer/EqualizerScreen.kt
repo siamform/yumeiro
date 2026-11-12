@@ -188,12 +188,7 @@ fun EqualizerScreen(
                         Switch(
                             checked = state.isEnabled,
                             onCheckedChange = onToggleEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = OnAccent,
-                                checkedTrackColor = SpotifyGreen,
-                                uncheckedThumbColor = TextTertiary,
-                                uncheckedTrackColor = DarkSurfaceVariant
-                            ),
+                            colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                             modifier = Modifier.testTag("equalizer_master_switch")
                         )
                     }

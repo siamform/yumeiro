@@ -122,7 +122,7 @@ object ExploreTour {
             "Each tile opens a part of Yumeiro — Yumix, YouTube, Manga, Live TV and more. The small line under a tile tells you its state, like \"Add sources\".", TourPlace.HOME),
         TourStop("spaces_more", "home_spaces_more", "More shortcuts live here",
             "See more unfolds the rest in place — theme, DNS, tracking, network… — and See less folds them away again.", TourPlace.HOME,
-            tryIt = "Try it: tap See more, then Next"),
+            tryIt = "Your turn: tap See more"),
         TourStop("tab_music", "nav_tab_music", "Music",
             "The note icon in the bar at the bottom opens Music: songs on this phone and YouTube Music, side by side.", TourPlace.HOME,
             advanceOnRoute = "music", tryIt = "Your turn: tap the note icon"),
@@ -154,6 +154,8 @@ object ExploreTour {
 
     fun start() { active = true; _step.value = 0 }
     fun next() { val s = _step.value ?: return; _step.value = (s + 1).coerceAtMost(stops.lastIndex) }
+    /** Moves on only if the tour is still on stop [id] (a tutor step the user just completed). */
+    fun advanceIfAt(id: String) { val s = _step.value ?: return; if (stops.getOrNull(s)?.id == id) next() }
     fun back() { val s = _step.value ?: return; if (s > 0) _step.value = s - 1 }
 
     /** Ends the tour. [completed] = reached the last stop; anything else counts as skipped. */

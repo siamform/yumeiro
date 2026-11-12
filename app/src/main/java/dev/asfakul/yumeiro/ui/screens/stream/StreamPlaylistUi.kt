@@ -157,7 +157,7 @@ internal fun PlaylistCard(
             }
             Switch(
                 checked = playlist.enabled, onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen),
+                colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                 modifier = Modifier.testTag("playlist_toggle_${playlist.id}"),
             )
             Box {
@@ -401,6 +401,7 @@ internal fun ChannelEditDialog(item: StreamRequest, onDismiss: () -> Unit, onSav
 @Composable
 internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
         title = { Text("Delete ${playlist.name}?", color = TextPrimary) },

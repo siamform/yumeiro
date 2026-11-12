@@ -39,6 +39,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.GppMaybe
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -48,6 +57,62 @@ import androidx.compose.ui.window.DialogProperties
 import dev.asfakul.yumeiro.ui.theme.BrandGold
 import dev.asfakul.yumeiro.ui.theme.LocalAmbientColor
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+
+/**
+ * Round 9: how much a popup matters. The tone colours the icon seal, the top stroke, the border
+ * and the main button, and adds a short plain-words badge ("Can't be undone"), so people can
+ * tell a tip from a destructive action at a glance (colour is never the only cue: icon + text).
+ */
+enum class DialogTone(val badge: String?) {
+    /** Regular choices and forms: the theme accent, no badge. */
+    NEUTRAL(null),
+    /** Helpful context ("Approve on Trakt", "Download?"). */
+    INFO("Good to know"),
+    SUCCESS("Done"),
+    /** Something to think about first (18+ content, risky extension, overwrite). */
+    WARNING("Heads up"),
+    /** Deletes or signs out: cannot be undone. */
+    DANGER("Can't be undone"),
+    /** Security / data-loss level. */
+    CRITICAL("Important");
+
+    fun color(dark: Boolean, accent: Color): Color = when (this) {
+        NEUTRAL, INFO -> accent
+        SUCCESS -> if (dark) Color(0xFF5BD69A) else Color(0xFF14784B)
+        WARNING -> if (dark) Color(0xFFFFC266) else Color(0xFF9A5B00)
+        DANGER, CRITICAL -> if (dark) Color(0xFFFF7A7A) else Color(0xFFB3261E)
+    }
+
+    fun defaultIcon(): androidx.compose.ui.graphics.vector.ImageVector? = when (this) {
+        NEUTRAL -> null
+        INFO -> androidx.compose.material.icons.Icons.Outlined.Info
+        SUCCESS -> androidx.compose.material.icons.Icons.Outlined.CheckCircle
+        WARNING -> androidx.compose.material.icons.Icons.Outlined.WarningAmber
+        DANGER -> androidx.compose.material.icons.Icons.Outlined.DeleteForever
+        CRITICAL -> androidx.compose.material.icons.Icons.Outlined.GppMaybe
+    }
+}
+
+/** Tone of the dialog being drawn; buttons inside can read it (e.g. [DialogConfirmButton]). */
+val LocalDialogTone = androidx.compose.runtime.staticCompositionLocalOf { DialogTone.NEUTRAL }
+
+/**
+ * The main action of a [TsukiDialog]: a filled pill in the dialog's tone (red for DANGER), so
+ * the primary choice is obvious and a destructive one looks destructive.
+ */
+@Composable
+fun DialogConfirmButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val p = LocalMtPalette.current
+    val tone = LocalDialogTone.current
+    val c = tone.color(p.isDark, if (p.isDark) p.accentBright else p.accent)
+    val on = if (c.luminance() > 0.45f) Color(0xFF15110C) else Color.White
+    androidx.compose.material3.Button(
+        onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 44.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = c, contentColor = on, disabledContainerColor = c.copy(alpha = 0.3f)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+    ) { androidx.compose.material3.Text(text, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+}
 
 /** True in screenshot tests: dialogs draw in place instead of in their own window. */
 val LocalPopupPreview = androidx.compose.runtime.staticCompositionLocalOf { false }
@@ -75,9 +140,13 @@ fun TsukiDialog(
     textContentColor: Color = Color.Unspecified,
     @Suppress("UNUSED_PARAMETER") tonalElevation: Dp = 0.dp,
     properties: DialogProperties = DialogProperties(),
+    tone: DialogTone = DialogTone.NEUTRAL,
 ) {
     val p = LocalMtPalette.current
-    val glow = LocalAmbientColor.current?.value ?: p.accent
+    val toneColor = tone.color(p.isDark, p.accent)
+    val glow = if (tone == DialogTone.NEUTRAL || tone == DialogTone.INFO) LocalAmbientColor.current?.value ?: p.accent else toneColor
+    // A tone without its own icon still gets one, so meaning never rests on colour alone.
+    val shownIcon: (@Composable () -> Unit)? = icon ?: tone.defaultIcon()?.let { v -> { androidx.compose.material3.Icon(v, null) } }
     val base = if (containerColor.isSpecified()) containerColor else p.surfaceContainer
     val surface = remember(base, glow, p.isDark) {
         Brush.verticalGradient(
@@ -88,8 +157,9 @@ fun TsukiDialog(
             ),
         )
     }
-    val hairline = remember(glow, p.isDark) {
-        Brush.linearGradient(listOf(BrandGold.copy(alpha = if (p.isDark) 0.55f else 0.7f), glow.copy(alpha = 0.18f), Color.White.copy(alpha = 0.06f)))
+    val seal = if (tone == DialogTone.NEUTRAL) BrandGold else toneColor
+    val hairline = remember(glow, p.isDark, seal) {
+        Brush.linearGradient(listOf(seal.copy(alpha = if (p.isDark) 0.55f else 0.7f), glow.copy(alpha = 0.18f), p.textPrimary.copy(alpha = 0.06f)))
     }
     val scale = remember { Animatable(0.92f) }
     val alpha = remember { Animatable(0f) }
@@ -116,29 +186,39 @@ fun TsukiDialog(
                 Box(
                     Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 3.dp)
                         .clip(RoundedCornerShape(bottomStart = 3.dp, bottomEnd = 3.dp))
-                        .background(Brush.horizontalGradient(listOf(p.accent2, p.accent, p.accent2)))
+                        .background(if (tone == DialogTone.NEUTRAL) Brush.horizontalGradient(listOf(p.accent2, p.accent, p.accent2)) else Brush.horizontalGradient(listOf(toneColor.copy(alpha = 0.6f), toneColor, toneColor.copy(alpha = 0.6f))))
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.heightIn(min = 20.dp))
                 // Header: seal-style icon tile beside the title (editorial, left-aligned).
-                if (icon != null || title != null) {
+                if (shownIcon != null || title != null) {
                     androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                        if (icon != null) {
+                        if (shownIcon != null) {
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
-                                    .background(Brush.linearGradient(listOf(glow.copy(alpha = if (p.isDark) 0.30f else 0.20f), BrandGold.copy(alpha = 0.10f))))
-                                    .border(1.dp, BrandGold.copy(alpha = 0.40f), RoundedCornerShape(14.dp)),
+                                    .background(Brush.linearGradient(listOf(glow.copy(alpha = if (p.isDark) 0.30f else 0.16f), seal.copy(alpha = 0.10f))))
+                                    .border(1.dp, seal.copy(alpha = 0.45f), RoundedCornerShape(14.dp)),
                             ) {
-                                CompositionLocalProvider(LocalContentColor provides if (iconContentColor.isSpecified()) iconContentColor else BrandGold) {
-                                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { icon() }
+                                // Light themes: BrandGold on cream is too faint, use the deeper accent.
+                                val sealInk = if (tone != DialogTone.NEUTRAL) toneColor else if (p.isDark) BrandGold else p.accent
+                                CompositionLocalProvider(LocalContentColor provides if (iconContentColor.isSpecified()) iconContentColor else sealInk) {
+                                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { shownIcon() }
                                 }
                             }
                             androidx.compose.foundation.layout.Spacer(Modifier.size(14.dp))
                         }
-                        if (title != null) {
-                            CompositionLocalProvider(LocalContentColor provides if (titleContentColor.isSpecified()) titleContentColor else p.textPrimary) {
-                                ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp, lineHeight = 24.sp, color = LocalContentColor.current)) {
-                                    Box(Modifier.weight(1f)) { title() }
+                        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                            tone.badge?.let { b ->
+                                androidx.compose.material3.Text(
+                                    b.uppercase(), color = toneColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp,
+                                    modifier = Modifier.padding(bottom = 2.dp).semantics { contentDescription = b },
+                                )
+                            }
+                            if (title != null) {
+                                CompositionLocalProvider(LocalContentColor provides if (titleContentColor.isSpecified()) titleContentColor else p.textPrimary) {
+                                    ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp, lineHeight = 24.sp, color = LocalContentColor.current)) {
+                                        Box(Modifier.semantics { heading() }) { title() }
+                                    }
                                 }
                             }
                         }
@@ -152,14 +232,18 @@ fun TsukiDialog(
                     }
                 }
                 Box(Modifier.fillMaxWidth().padding(bottom = 6.dp).height(0.5.dp).background(p.textTertiary.copy(alpha = 0.18f)))
-                CompositionLocalProvider(LocalContentColor provides if (p.isDark) p.accentBright else p.accent) {
+                CompositionLocalProvider(LocalContentColor provides if (p.isDark) p.accentBright else p.accent, LocalDialogTone provides tone) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         dismissButton?.invoke()
-                        confirmButton()
+                        // Destructive / warning confirms read in the tone colour even when the caller
+                        // passes a plain TextButton (its colour comes from colorScheme.primary).
+                        if (tone == DialogTone.DANGER || tone == DialogTone.CRITICAL || tone == DialogTone.WARNING) {
+                            MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = toneColor)) { confirmButton() }
+                        } else confirmButton()
                     }
                 }
             }

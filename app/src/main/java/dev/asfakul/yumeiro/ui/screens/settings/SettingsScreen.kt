@@ -466,12 +466,7 @@ fun SettingsToggleRow(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = OnAccent,
-                checkedTrackColor = SpotifyGreen,
-                uncheckedThumbColor = TextTertiary,
-                uncheckedTrackColor = DarkSurfaceVariant,
-            ),
+            colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
             modifier = Modifier.testTag(testTag),
         )
     }

@@ -291,4 +291,4 @@ internal fun Pill(text: String, color: Color = SpotifyGreen) {
 }
 
 internal val WarnColor: Color @Composable @ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.WarnTone
-internal val ErrorColor = Color(0xFFFF6B6B)
+internal val ErrorColor: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone

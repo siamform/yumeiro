@@ -1676,6 +1676,9 @@ private fun VideoPlayerModalContent(
             )
         }
 
+        // Round 9: the pickers follow the user's theme (light or dark) instead of a fixed dark
+        // sheet, so the player's popups match the rest of the app.
+        dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
         if (showQualityDialog) {
             QualityDialog(
                 options = qualityList,
@@ -1810,6 +1813,7 @@ private fun VideoPlayerModalContent(
                     }
                 },
             )
+        }
         }
     }
     if (docked) {

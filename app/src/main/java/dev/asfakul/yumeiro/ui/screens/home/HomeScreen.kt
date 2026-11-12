@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -409,11 +410,14 @@ fun HomeScreen(
                 item(key = "spaces_header", contentType = "header") {
                     YuSection("空間", "Spaces", "Everything in Yumeiro")
                 }
-                features.chunked(spaceColumns).forEachIndexed { i, row ->
-                    item(key = "spaces_$i", contentType = "spaces_row") {
-                        Row(Modifier.fillMaxWidth().then(if (i == 0) Modifier.tourTarget("home_spaces_grid") else Modifier).padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
-                            repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
+                // One item for the whole grid, so the tour's spotlight frames every tile (not just row 1).
+                item(key = "spaces_grid", contentType = "spaces_grid") {
+                    Column(Modifier.fillMaxWidth().tourTarget("home_spaces_grid")) {
+                        features.chunked(spaceColumns).forEach { row ->
+                            Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
+                                repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
                         }
                     }
                 }
@@ -450,7 +454,16 @@ fun HomeScreen(
                         expanded = spacesExpanded,
                         count = moreGo.size + moreSettings.size,
                         preview = moreSettings.take(4),
-                        onClick = { spacesExpanded = !spacesExpanded },
+                        onClick = {
+                            val opening = !spacesExpanded
+                            spacesExpanded = opening
+                            // Tutor: the user did what the tour asked (open See more) — let the grid
+                            // unfold, then move on by itself, like a teacher who saw you get it.
+                            if (opening) scope.launch {
+                                kotlinx.coroutines.delay(650)
+                                dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.advanceIfAt("spaces_more")
+                            }
+                        },
                     )
                 }
             }
@@ -729,7 +742,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(label, style = MaterialTheme.typography.bodyLarge, color = p.textPrimary, modifier = Modifier.weight(1f))
-                        Switch(checked = on, onCheckedChange = { HomeLayout.toggle(context, key) }, colors = SwitchDefaults.colors(checkedTrackColor = p.accent, checkedThumbColor = p.onAccent))
+                        Switch(checked = on, onCheckedChange = { HomeLayout.toggle(context, key) }, colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors())
                     }
                 }
             }

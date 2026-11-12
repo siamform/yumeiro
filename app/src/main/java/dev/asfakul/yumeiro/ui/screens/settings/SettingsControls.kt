@@ -252,6 +252,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
 
     pending?.let { a ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { pending = null },
             title = { Text(a.title) },
             text = { Text(a.body) },
@@ -263,7 +264,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
                             .onSuccess { AppMessages.success(context, a.done) }
                             .onFailure { AppMessages.error(context, "Couldn't clear. Try again") }
                     }
-                }, modifier = Modifier.testTag("privacy_confirm")) { Text("Clear", color = Color(0xFFFF8A80)) }
+                }, modifier = Modifier.testTag("privacy_confirm")) { Text("Clear", color = dev.asfakul.yumeiro.ui.theme.DangerTone) }
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
         )

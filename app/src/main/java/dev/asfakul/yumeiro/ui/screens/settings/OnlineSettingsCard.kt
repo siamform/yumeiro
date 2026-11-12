@@ -49,6 +49,7 @@ fun OnlineSettingsCard() {
     var edit by remember { mutableStateOf<String?>(null) }
 
     if (confirmAdult) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
         onDismissRequest = { confirmAdult = false },
         title = { Text("Show 18+ content?") },
         text = { Text("Adult extensions and titles will appear in the market, home and search. Confirm you are 18 or older and that this content is legal where you live.") },

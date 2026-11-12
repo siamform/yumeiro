@@ -306,6 +306,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     }
     confirmDelete?.let { ext ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmDelete = null },
             title = { Text("Remove ${ext.name}?") },
             text = { Text("Its sources disappear from Online. You can install it again from the market.") },
@@ -323,6 +324,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     }
     confirmRepo?.let { repo ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmRepo = null },
             title = { Text("Remove repository?") },
             text = { Text("${repo.name} won't appear in the market anymore. Extensions you installed from it stay installed.") },
@@ -359,6 +361,7 @@ private fun InstalledCard(
     }
     report?.takeIf { showReport }?.let { rep ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { showReport = false },
             title = { Text("Safety check · ${ext.name}") },
             text = {
@@ -398,7 +401,7 @@ private fun InstalledCard(
                 if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
                 else Switch(
                     checked = ext.enabled, onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen),
+                    colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                     modifier = Modifier.testTag("extension_toggle_${ext.internalName}"),
                 )
                 if (plugin?.openSettings != null && ext.enabled) IconButton(onClick = { openSettings() }, modifier = Modifier.testTag("extension_settings_${ext.internalName}")) {

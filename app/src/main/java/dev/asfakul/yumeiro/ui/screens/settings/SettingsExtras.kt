@@ -232,7 +232,7 @@ fun DeveloperCard() {
                 if (integrity == dev.asfakul.yumeiro.security.IntegrityGuard.Status.UNOFFICIAL) {
                     Text(
                         "Unofficial build — not signed by the Yumeiro developer. Download the real app from github.com/siamform/yumeiro",
-                        color = androidx.compose.ui.graphics.Color(0xFFFF8A80), style = MaterialTheme.typography.bodySmall,
+                        color = dev.asfakul.yumeiro.ui.theme.DangerTone, style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.testTag("unofficial_build_notice"),
                     )
                 }

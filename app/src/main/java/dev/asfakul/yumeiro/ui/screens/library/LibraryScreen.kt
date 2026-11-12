@@ -244,6 +244,7 @@ fun LibraryScreen(
     // Dialog: Delete Playlist
     playlistToDelete?.let { pl ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { playlistToDelete = null },
             title = {
                 Text(
@@ -270,7 +271,7 @@ fun LibraryScreen(
                         playlistToDelete = null
                     }
                 ) {
-                    Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+                    Text("Delete", color = dev.asfakul.yumeiro.ui.theme.DangerTone, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -351,7 +352,7 @@ fun LibraryScreen(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete playlist",
-                            tint = Color(0xFFFF6B6B),
+                            tint = dev.asfakul.yumeiro.ui.theme.DangerTone,
                             modifier = Modifier.size(20.dp)
                         )
                     }

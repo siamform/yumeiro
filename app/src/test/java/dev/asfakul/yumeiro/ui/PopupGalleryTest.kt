@@ -108,4 +108,33 @@ class PopupGalleryTest {
         rule.runOnUiThread { AppMessages.error(null, "Couldn't load this page", "Retry") {} }
         shot("dark_4")
     }
+
+    // Round 9: severity tones, the redesigned audio picker and the shared toggle colours.
+    private fun danger() = @Composable {
+        TsukiDialog(onDismissRequest = {}, tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
+            confirmButton = { TextButton({}) { Text("Delete") } }, dismissButton = { TextButton({}) { Text("Cancel") } },
+            title = { Text("Delete 3 downloads?") }, text = { Text("The files are removed from this phone. Your library and history stay.") })
+    }
+    @Test fun dangerLight() = gallery(false, 5, danger())
+    @Test fun dangerDark() = gallery(true, 5, danger())
+    private fun warning() = @Composable {
+        TsukiDialog(onDismissRequest = {}, tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
+            confirmButton = { TextButton({}) { Text("Show 18+") } }, dismissButton = { TextButton({}) { Text("Not now") } },
+            title = { Text("Show 18+ content?") }, text = { Text("Adult titles appear in search and on Home. You can hide them again any time.") })
+    }
+    @Test fun warningLight() = gallery(false, 6, warning())
+    @Test fun warningDark() = gallery(true, 6, warning())
+    private fun info() = @Composable {
+        TsukiDialog(onDismissRequest = {}, tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
+            confirmButton = { dev.asfakul.yumeiro.ui.components.DialogConfirmButton("Download", {}) }, dismissButton = { TextButton({}) { Text("Cancel") } },
+            title = { Text("Download Episode 4?") }, text = { Text("Quality 1080p · about 420 MB · 18 GB free") })
+    }
+    @Test fun infoLight() = gallery(false, 7, info())
+    @Test fun infoDark() = gallery(true, 7, info())
+    private val tracks = listOf(
+        dev.asfakul.yumeiro.ui.screens.video.AudioTrackInfo(groupIndex = 0, trackIndex = 0, language = "ja", label = null, isSelected = true, channels = 2, sampleRate = 48000, codec = "AAC"),
+        dev.asfakul.yumeiro.ui.screens.video.AudioTrackInfo(groupIndex = 1, trackIndex = 0, language = "en", label = "English (dub)", isSelected = false, channels = 6, sampleRate = 48000, codec = "E-AC3"),
+    )
+    @Test fun audioLight() = gallery(false, 8) { dev.asfakul.yumeiro.ui.screens.video.AudioTrackDialog(tracks, { _, _ -> }, {}) }
+    @Test fun audioDark() = gallery(true, 8) { dev.asfakul.yumeiro.ui.screens.video.AudioTrackDialog(tracks, { _, _ -> }, {}) }
 }

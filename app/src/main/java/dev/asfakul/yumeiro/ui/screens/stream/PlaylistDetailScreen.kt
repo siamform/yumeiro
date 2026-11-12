@@ -454,7 +454,7 @@ private fun PlaylistInfoCard(
                     }
                     Switch(
                         checked = playlist.autoUpdate, onCheckedChange = onAutoUpdate,
-                        colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen),
+                        colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                         modifier = Modifier.testTag("detail_auto_update"),
                     )
                 }

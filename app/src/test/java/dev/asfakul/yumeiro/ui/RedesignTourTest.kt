@@ -215,7 +215,13 @@ class RedesignTourTest {
             rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.show() }
             waitFor("setup_guide"); tap("setup_explore"); settle(900)
             waitFor("tour_step_home"); snap("07_tour_01_home")
-            tap("tour_next"); waitFor("tour_step_tab_music"); snap("07_tour_02_tab_music")
+            tap("tour_next"); settle(900); waitFor("tour_step_spaces"); snap("07_tour_02a_spaces")
+            tap("tour_next"); settle(900); waitFor("tour_step_spaces_more"); snap("07_tour_02b_spaces_more")
+            // Tutor step: really tap See more under the spotlight, the grid opens smoothly.
+            rule.onNodeWithTag("home_spaces_more", true).performClick(); settle(300)
+            org.junit.Assert.assertTrue("see more opens", exists("home_spaces_more_block"))
+            // Doing the step moves the tour on by itself.
+            settle(900); waitFor("tour_step_tab_music"); snap("07_tour_02_tab_music")
             // The highlighted tab is live: tapping the real Music tab moves the tour on.
             rule.onNodeWithTag("nav_tab_music", true).performClick(); settle(900)
             waitFor("tour_step_music_source"); snap("07_tour_03_music_source")
@@ -231,6 +237,7 @@ class RedesignTourTest {
             tap("tour_back"); settle(600); waitFor("tour_step_tab_library")
             tap("tour_next"); settle(600)
             tap("tour_next"); settle(600); waitFor("tour_step_finish"); snap("07_tour_10_finish")
+            org.junit.Assert.assertEquals(dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.stops.size, 11)
             tap("tour_done"); settle()
             org.junit.Assert.assertFalse("tour closes", exists("explore_tour"))
             org.junit.Assert.assertEquals(dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.Onboarding.EXPLORED, dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.onboarding.value)

@@ -142,6 +142,7 @@ fun PushAlertsCard() {
     )
 
     if (install) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
         onDismissRequest = { install = false },
         icon = { Icon(Icons.Default.NotificationsActive, null) },
         title = { Text("Install ntfy first") },

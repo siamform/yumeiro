@@ -300,6 +300,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
     }
     trustAsk?.let { e ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { trustAsk = null },
             icon = { Icon(Icons.Default.Verified, null) },
             title = { Text("Trust ${e.name}?") },

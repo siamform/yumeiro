@@ -135,10 +135,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                 Switch(
                     checked = autoCheck,
                     onCheckedChange = manager::setAutoCheckEnabled,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.Black, checkedTrackColor = SpotifyGreen,
-                        uncheckedThumbColor = TextTertiary, uncheckedTrackColor = DarkSurfaceVariant,
-                    ),
+                    colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                     modifier = Modifier.testTag("toggle_auto_update"),
                 )
             }
@@ -187,7 +184,7 @@ private fun StatusIcon(state: UpdateState) {
                 Text("NEW", style = MaterialTheme.typography.labelMedium, color = OnAccent, fontWeight = FontWeight.Black)
             }
         is UpdateState.Downloading -> Icon(Icons.Default.CloudDownload, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
-        is UpdateState.Failed -> Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(22.dp))
+        is UpdateState.Failed -> Icon(Icons.Default.ErrorOutline, null, tint = dev.asfakul.yumeiro.ui.theme.DangerTone, modifier = Modifier.size(22.dp))
         else -> Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
     }
 }
@@ -206,7 +203,7 @@ private fun statusText(state: UpdateState, lastChecked: Long): String = when (st
 @Composable
 private fun statusColor(state: UpdateState): Color = when (state) {
     is UpdateState.Available, is UpdateState.ReadyToInstall, is UpdateState.Downloading -> SpotifyGreen
-    is UpdateState.Failed -> Color(0xFFFF6B6B)
+    is UpdateState.Failed -> dev.asfakul.yumeiro.ui.theme.DangerTone
     else -> TextSecondary
 }
 

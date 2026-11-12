@@ -94,6 +94,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { Inbox.markAllRead(context) } }
 
     if (confirmClear) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirmClear = false },
         title = { Text("Clear all notifications?") },
         text = { Text("They are removed from this page. Your settings stay the same.") },

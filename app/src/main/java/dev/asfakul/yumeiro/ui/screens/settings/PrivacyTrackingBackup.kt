@@ -359,6 +359,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     }
     simklCode?.let { c ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
             title = { Text("Approve on Simkl") },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -371,6 +372,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     }
     lastfmUrl?.let { url ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
             title = { Text("Approve on Last.fm") },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -384,6 +386,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     }
     traktCode?.let { c ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
             title = { Text("Approve on Trakt") },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -477,6 +480,7 @@ fun BackupScreen(onBack: () -> Unit) {
     }
     pending?.let { (uri, m) ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { pending = null },
             title = { Text("Restore this backup?") },
             text = { Text("Made with Yumeiro ${m.optString("version")} on ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(m.optLong("createdAt")))}." +

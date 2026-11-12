@@ -68,6 +68,8 @@ val LocalMtPalette = staticCompositionLocalOf { Palettes.Dark }
 // ---- Accessors used by every screen ---------------------------------------------------------
 val SpotifyGreen: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accent
 /** Amber for warnings; darker on light surfaces so the text keeps its contrast. */
+/** Errors and destructive actions: light coral on dark themes, deep red on light ones (≥4.5:1). */
+val DangerTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E)
 val WarnTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFFB74D) else Color(0xFFB45309)
 val SpotifyGreenBright: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accentBright
 val AccentSecondary: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accent2
@@ -182,5 +184,25 @@ object Palettes {
         bgTop = Color(0xFF1C2A5A), bgMid = Color(0xFF0B1020), bgBottom = Color(0xFF05070D),
         navBar = Color(0xFF070A14), miniPlayer = Color(0xF5222E58), onChipSelected = Color(0xFF0B1020),
         scene = DreamScene.MIDNIGHT,
+    )
+}
+
+/**
+ * Round 9: one set of on/off toggle colours for the whole app. Material's defaults draw an
+ * "off" switch as a pale thumb on a pale track in light themes (≈1.2:1, it looked disabled); here
+ * the off thumb and border use the secondary text colour (≥3:1 against the track, WCAG 1.4.11),
+ * and the "on" thumb uses the accent's own on-colour instead of a fixed black/white.
+ */
+@Composable
+fun yumeSwitchColors(): androidx.compose.material3.SwitchColors {
+    val p = LocalMtPalette.current
+    return androidx.compose.material3.SwitchDefaults.colors(
+        checkedThumbColor = p.onAccent, checkedTrackColor = p.accent, checkedBorderColor = p.accent,
+        checkedIconColor = p.accent,
+        uncheckedThumbColor = p.textSecondary, uncheckedTrackColor = p.surfaceVariant,
+        uncheckedBorderColor = p.textSecondary.copy(alpha = 0.75f), uncheckedIconColor = p.surfaceVariant,
+        disabledCheckedTrackColor = p.accent.copy(alpha = 0.38f), disabledCheckedThumbColor = p.onAccent.copy(alpha = 0.8f),
+        disabledUncheckedThumbColor = p.textTertiary.copy(alpha = 0.5f), disabledUncheckedTrackColor = p.surfaceVariant.copy(alpha = 0.6f),
+        disabledUncheckedBorderColor = p.textTertiary.copy(alpha = 0.3f),
     )
 }

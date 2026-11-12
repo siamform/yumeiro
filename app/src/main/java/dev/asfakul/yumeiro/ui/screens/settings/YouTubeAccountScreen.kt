@@ -185,13 +185,14 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
     }
 
     if (askSignOut) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { askSignOut = false },
         icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
         title = { Text("Sign out of YouTube?") },
         text = { Text("The saved sign-in is deleted from this phone and YouTube goes back to anonymous playback.") },
         confirmButton = {
             TextButton(onClick = { askSignOut = false; YtAccount.signOut(context); AppMessages.success(context, "Signed out of YouTube") }, modifier = Modifier.testTag("yt_sign_out_confirm")) {
-                Text("Sign out", color = Color(0xFFFF8A80))
+                Text("Sign out", color = dev.asfakul.yumeiro.ui.theme.DangerTone)
             }
         },
         dismissButton = { TextButton(onClick = { askSignOut = false }) { Text("Cancel") } },
@@ -330,7 +331,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                 enabled = !busy,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SpotifyGreen, cursorColor = SpotifyGreen),
             )
-            error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, modifier = Modifier.testTag("yt_cookie_error")) }
+            error?.let { Text(it, color = dev.asfakul.yumeiro.ui.theme.DangerTone, fontSize = 13.sp, modifier = Modifier.testTag("yt_cookie_error")) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = {
@@ -357,6 +358,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
 
     unverified?.let { cookie ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { unverified = null },
             icon = { Icon(Icons.Default.Lock, null) },
             title = { Text("Couldn't check with YouTube") },

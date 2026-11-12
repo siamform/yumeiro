@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -140,15 +141,21 @@ fun DownloadPromptHost() {
     var dontAsk by remember(req) { mutableStateOf(false) }
 
     TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
         onDismissRequest = { DownloadPrompt.dismiss() },
         modifier = Modifier.testTag("download_confirm"),
+        icon = { Icon(Icons.Default.Download, null) },
         title = { Text("Download ${req.what}?", fontWeight = FontWeight.Bold) },
         text = { DownloadConfirmBody(req, keep, { keep = it }, dontAsk, { dontAsk = it }) },
         confirmButton = {
-            TextButton(onClick = {
-                if (dontAsk) DownloadSettings.setAskFirst(context, false)
-                DownloadPrompt.run(context, req, keep)
-            }, modifier = Modifier.testTag("download_confirm_start")) { Text(if (req.count > 1) "Download ${req.count}" else "Download", fontWeight = FontWeight.Bold) }
+            dev.asfakul.yumeiro.ui.components.DialogConfirmButton(
+                if (req.count > 1) "Download ${req.count}" else "Download",
+                onClick = {
+                    if (dontAsk) DownloadSettings.setAskFirst(context, false)
+                    DownloadPrompt.run(context, req, keep)
+                },
+                modifier = Modifier.testTag("download_confirm_start"),
+            )
         },
         dismissButton = {
             Row {
@@ -181,7 +188,7 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
             if (free > 0) "${DownloadPrompt.sizeText(free)} free" else null,
         ).joinToString(" · "))
         if (req.sizeBytes > 0 && free in 1 until req.sizeBytes)
-            Text("Not enough free space for this download.", color = Color(0xFFFF8A80), fontSize = 12.sp, modifier = Modifier.padding(start = 26.dp, top = 2.dp))
+            Text("Not enough free space for this download.", color = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(start = 26.dp, top = 2.dp))
 
         // Where
         Spacer(Modifier.height(10.dp))
