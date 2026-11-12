@@ -502,6 +502,11 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 }
             }
         }
+        item(key = "facts") {
+            val al = dev.asfakul.yumeiro.online.AudioLanguages
+            val srcAudio = state.link?.let { l -> al.filterKey(al.classify(l.name + " " + l.source, state.version)).takeIf { it.isNotEmpty() }?.let { al.keyLabel(it) } }
+            dev.asfakul.yumeiro.ui.screens.watch.PlaybackFactsRow(sourceAudio = srcAudio)
+        }
         item(key = "actions") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchActionsRow {
                 if (state.hasNext) dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.SkipNext, "Next episode", "online_watch_next", highlighted = true) { OnlineSession.next(context) }

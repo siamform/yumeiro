@@ -81,10 +81,16 @@ internal fun HeroCarousel(
     onPlay: (OnlineItem) -> Unit,
     onInfo: (OnlineItem) -> Unit,
     modifier: Modifier = Modifier,
+    /** Round 10: the last unfinished title leads the banner as a Resume card. */
+    resume: OnlineHistory.Entry? = null,
+    onResume: (OnlineHistory.Entry) -> Unit = {},
+    /** Slides that came from an extension's "latest episodes" row (labelled NEW EPISODE). */
+    newKeys: Set<String> = emptySet(),
 ) {
-    if (items.isEmpty()) return
+    val lead = if (resume != null) 1 else 0
+    if (items.isEmpty() && resume == null) return
     val context = LocalContext.current
-    val n = items.size
+    val n = items.size + lead
     val laps = if (n > 1) HERO_LAPS else 1
     val pager = rememberPagerState(initialPage = if (n > 1) (laps / 2) * n else 0) { n * laps }
     val saved by OnlineBookmarks.items.collectAsState()
@@ -100,13 +106,18 @@ internal fun HeroCarousel(
             pager, Modifier.fillMaxWidth().height(HERO_HEIGHT),
             contentPadding = PaddingValues(horizontal = if (n > 1) 20.dp else 16.dp),
             pageSpacing = 10.dp,
-            key = { "${items[it % n].key}#$it" },
+            key = { val r = it % n; (if (resume != null && r == 0) "resume:${resume.key}" else items[r - lead].key) + "#$it" },
             beyondViewportPageCount = 1,
         ) { page ->
-            val item = items[page % n]
             val real = page % n
             val offset = ((pager.currentPage - page) + pager.currentPageOffsetFraction).coerceIn(-1f, 1f)
             val k = 1f - kotlin.math.abs(offset)
+            if (resume != null && real == 0) {
+                ResumeSlide(resume, Modifier.fillMaxSize().graphicsLayer { val sc = 0.92f + 0.08f * k; scaleX = sc; scaleY = sc; alpha = 0.55f + 0.45f * k }, offset) { onResume(resume) }
+                return@HorizontalPager
+            }
+            val item = items[real - lead]
+            val isNew = item.key in newKeys
             Box(
                 Modifier.fillMaxSize()
                     .graphicsLayer { val sc = 0.92f + 0.08f * k; scaleX = sc; scaleY = sc; alpha = 0.55f + 0.45f * k }
@@ -122,7 +133,7 @@ internal fun HeroCarousel(
                     Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                         Column {
                             Text(
-                                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) "注目 · " else "") + "SPOTLIGHT  " + "%02d".format(java.util.Locale.US, real + 1) + " / " + "%02d".format(java.util.Locale.US, n),
+                                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) (if (isNew) "新着 · " else "注目 · ") else "") + (if (isNew) "NEW EPISODE  " else "SPOTLIGHT  ") + "%02d".format(java.util.Locale.US, real + 1) + " / " + "%02d".format(java.util.Locale.US, n),
                                 color = p.accentBright, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, maxLines = 1,
                             )
                             Spacer(Modifier.height(6.dp))
@@ -169,6 +180,58 @@ internal fun HeroCarousel(
 }
 
 internal val HERO_HEIGHT = 212.dp
+
+/**
+ * Round 10: the first banner slide — the title you were watching, with its episode, how far you
+ * got and one big Resume button (from the "Warm Cinema" prototype). Tapping anywhere resumes.
+ */
+@Composable
+private fun ResumeSlide(e: OnlineHistory.Entry, modifier: Modifier, offset: Float, onResume: () -> Unit) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    Box(
+        modifier.clip(RoundedCornerShape(24.dp)).background(Color.Black)
+            .clickable(onClickLabel = "Resume") { onResume() }
+            .testTag("online_hero_resume"),
+    ) {
+        PosterImage(e.posterUrl, e.posterHeaders, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.25f; scaleY = 1.25f; translationX = offset * 60f })
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.15f), 0.45f to Color.Black.copy(alpha = 0.35f), 1f to Color.Black.copy(alpha = 0.92f))))
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(16.dp)) {
+            Text(
+                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) "続き · " else "") + "CONTINUE WATCHING",
+                color = p.accentBright, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, maxLines = 1,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(e.name, color = Color.White, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val left = if (e.durationMs > 0) ((e.durationMs - e.positionMs).coerceAtLeast(0) / 60_000).toInt() else -1
+            Text(
+                listOfNotNull(e.episodeLabel, e.type, if (left > 0) "${left} min left" else null, e.api).joinToString("  ·  "),
+                color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = onResume, shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = dev.asfakul.yumeiro.ui.theme.OnAccent),
+                    contentPadding = PaddingValues(start = 14.dp, end = 18.dp), modifier = Modifier.height(40.dp).testTag("online_hero_resume_btn"),
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(e.episodeLabel?.let { "Resume ${shortEpisode(it)}" } ?: "Resume", fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                }
+                Spacer(Modifier.width(14.dp))
+                Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f))) {
+                    Box(Modifier.fillMaxWidth(e.fraction.coerceAtLeast(0.02f)).height(4.dp).clip(CircleShape).background(p.accent))
+                }
+            }
+        }
+    }
+}
+
+/** "S1 · E5" / "Episode 5" → "E5"; anything else stays as it is (kept short for the button). */
+internal fun shortEpisode(label: String): String {
+    Regex("(?i)\\bE(?:p(?:isode)?)?\\.?\\s*(\\d+)").find(label)?.let { return "E" + it.groupValues[1] }
+    return label.take(14)
+}
 private const val HERO_LAPS = 2000
 
 @Composable

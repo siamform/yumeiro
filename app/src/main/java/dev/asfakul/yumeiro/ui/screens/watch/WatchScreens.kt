@@ -10,6 +10,11 @@ import androidx.compose.material.icons.filled.Download
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -417,6 +422,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
                 overline = if (item.music) "YouTube Music" else if (item.live) "Live" else "YouTube",
                 meta = listOfNotNull(views, info?.uploaded ?: item.uploaded, item.durationSec.takeIf { it > 0 }?.let { formatYtDuration(it) }, info?.category).joinToString(" · "),
             )
+            PlaybackFactsRow()
         }
         item(key = "channel") {
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -523,3 +529,62 @@ fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit) {
 }
 
 // endregion
+
+/**
+ * Round 10: video size, length, audio language and file size of what is playing, read from the
+ * player (extensions rarely send them). Whatever the stream doesn't carry gets a one-line notice
+ * instead of silently missing.
+ */
+@Composable
+fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null) {
+    val snap by dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.collectAsState()
+    // The stream's own audio tag wins; else what the source link's name says ("Dub · English").
+    val f = remember(snap, sourceAudio) { dev.asfakul.yumeiro.player.PlaybackFacts.of(snap, sourceAudio) }
+    Column(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp).animateContentSize().testTag("watch_playback_facts")) {
+        if (f.pending) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                repeat(3) { SkeletonBlock(width = 64.dp, height = 22.dp) }
+                Spacer(Modifier.width(4.dp))
+                Text("Reading video details…", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+            }
+            return@Column
+        }
+        val chips = listOfNotNull(
+            f.resolution?.let { Icons.Default.HighQuality to it },
+            f.duration?.let { Icons.Default.Schedule to it },
+            f.audio?.let { Icons.Default.RecordVoiceOver to it },
+            f.size?.let { Icons.Default.SdStorage to it },
+        )
+        if (chips.isNotEmpty()) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            chips.forEach { (icon, label) ->
+                Surface(shape = RoundedCornerShape(8.dp), color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)) {
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(label, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                }
+            }
+        }
+        if (f.missing.isNotEmpty()) {
+            if (chips.isNotEmpty()) Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("watch_facts_missing")) {
+                Icon(Icons.Outlined.Info, null, tint = TextTertiary, modifier = Modifier.size(13.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "This source doesn't share its " + joinNatural(f.missing) + ".",
+                    color = TextTertiary, fontSize = 11.sp, lineHeight = 14.sp,
+                )
+            }
+        } else if (f.sizeEstimated) {
+            Spacer(Modifier.height(4.dp))
+            Text("Size estimated from the stream's bitrate.", color = TextTertiary, fontSize = 10.sp)
+        }
+    }
+}
+
+internal fun joinNatural(parts: List<String>): String = when (parts.size) {
+    0 -> ""
+    1 -> parts[0]
+    else -> parts.dropLast(1).joinToString(", ") + " or " + parts.last()
+}

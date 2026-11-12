@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Badge
@@ -119,6 +120,9 @@ fun OnlineHomeScreen(
         if (engine.ready) ExtensionManager.providers().filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) } else emptyList()
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    var showFilter by rememberSaveable { mutableStateOf(false) }
+    // One seed per visit: "More to explore" is shuffled, but stays put while you scroll.
+    val shuffleSeed = rememberSaveable { System.nanoTime() }
     val homes = remember { mutableStateMapOf<String, ProviderHome>() }
     var refreshing by remember { mutableStateOf(false) }
     var feedLimit by rememberSaveable { mutableStateOf(24) }
@@ -191,8 +195,21 @@ fun OnlineHomeScreen(
                     Icon(Icons.Default.Extension, "Extensions", tint = TextPrimary)
                 }
             }
+            // Round 10: one filter button replaces the row of round extension shortcuts. It opens a
+            // sheet listing every extension that's on; a dot shows when the feed is narrowed to one.
+            if (providers.size > 1) IconButton(onClick = { showFilter = true }, modifier = Modifier.testTag("online_filter")) {
+                BadgedBox(badge = { if (selected != null) Badge(containerColor = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }) {
+                    Icon(Icons.Default.FilterList, if (selected != null) "Filter: $selected" else "Filter by extension", tint = if (selected != null) dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent else TextPrimary)
+                }
+            }
             }
         }
+        if (showFilter) SourceFilterSheet(
+            names = channelNames, selected = selected,
+            status = { n -> when (val h = homes[n]) { is ProviderHome.Ready -> SourceStatus.Ready(h.rows.sumOf { it.items.size }); is ProviderHome.Failed -> SourceStatus.Failed; else -> SourceStatus.Loading } },
+            onPick = { selected = it; showFilter = false },
+            onDismiss = { showFilter = false },
+        )
 
         when {
             !engine.ready -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
@@ -218,11 +235,20 @@ fun OnlineHomeScreen(
                 val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (sel ?: ""))
                 if (sel == null) {
                     val hero = remember(ready) { heroPicks(ready.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
-                    // "Top picks": one mixed row across every extension (round-robin, de-duplicated).
-                    val picks = remember(ready, hero) {
-                        buildMixFeed(ready, 24, cardsPerShelf = Int.MAX_VALUE, skip = hero.map { it.key }.toSet())
+                    // Round 10 order: Resume → banners (spotlight + new episodes) → Continue → Fresh
+                    // from your sources → categories → Latest episodes → per-extension → endless mix.
+                    val latestAll = remember(ready) { YumixFeed.latest(ready, 30) }
+                    val banner = remember(hero, latestAll) { YumixFeed.bannerSlides(hero, latestAll) }
+                    val resume = remember(continueItems) { continueItems.firstOrNull { it.fraction < 0.92f } }
+                    val bannerKeys = remember(banner) { banner.first.map { it.key }.toSet() }
+                    val latest = remember(latestAll, bannerKeys) { latestAll.filter { it.key !in bannerKeys } }
+                    // "Fresh from your sources": one mixed row across every extension (round-robin, de-duplicated).
+                    val picks = remember(ready, bannerKeys) {
+                        buildMixFeed(ready, 24, cardsPerShelf = Int.MAX_VALUE, skip = bannerKeys)
                             .filterIsInstance<FeedEntry.Card>().map { it.item }
                     }
+                    val cats = remember(ready) { YumixFeed.categories(ready) }
+                    var cat by rememberSaveable { mutableStateOf<String?>(null) }
                     // Then one tidy section per extension: its first rows as shelves. More sections
                     // appear as you scroll, so many extensions never load a wall of rows at once.
                     var groupLimit by rememberSaveable { mutableStateOf(4) }
@@ -239,10 +265,10 @@ fun OnlineHomeScreen(
                         }
                         explore.removeAll { f -> ready.none { it.first == f.row.api } }
                     }
-                    val shownAbove = remember(hero, picks, groups) {
-                        HashSet<String>().apply { hero.forEach { add(it.key) }; picks.forEach { add(it.key) }; groups.forEach { g -> g.rows.forEach { r -> r.items.forEach { add(it.key) } } } }
+                    val shownAbove = remember(banner, picks, groups) {
+                        HashSet<String>().apply { banner.first.forEach { add(it.key) }; picks.forEach { add(it.key) }; groups.forEach { g -> g.rows.forEach { r -> r.items.forEach { add(it.key) } } } }
                     }
-                    val exploreItems by remember(shownAbove) { derivedStateOf { hueFeed(explore.toList(), null).filter { it.first.key !in shownAbove } } }
+                    val exploreItems by remember(shownAbove) { derivedStateOf { YumixFeed.blockShuffle(hueFeed(explore.toList(), null).filter { it.first.key !in shownAbove }, shuffleSeed) { it.first.key } } }
                     var exploreLimit by rememberSaveable { mutableStateOf(30) }
                     val exploreBusy by remember { derivedStateOf { explore.any { it.loading } } }
                     val exploreMore by remember { derivedStateOf { explore.any { it.hasNext } } }
@@ -277,9 +303,8 @@ fun OnlineHomeScreen(
                         }
                     }
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
-                        if (providers.size > 1) item("channels") { ChannelStrip(channelNames, loadingNames, null) { selected = it } }
-                        if (hero.isNotEmpty()) item("hero") {
-                            HeroCarousel(hero, onPlay = openItem, onInfo = openInfo)
+                        if (banner.first.isNotEmpty() || resume != null) item("hero") {
+                            HeroCarousel(banner.first, onPlay = openItem, onInfo = openInfo, resume = resume, onResume = { onOpenTitle(it.toItem()) }, newKeys = banner.second)
                         } else if (loadingNames.isNotEmpty()) item("hero_skel") {
                             dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), RoundedCornerShape(24.dp))
                         }
@@ -291,7 +316,13 @@ fun OnlineHomeScreen(
                             PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         if (picks.isNotEmpty()) item("feed_label") {
-                            PosterShelf("Top picks", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
+                            PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
+                        }
+                        if (cats.isNotEmpty()) item("categories") {
+                            CategoryShelf(cats, cat, onPick = { cat = it }, onClick = openInfo)
+                        }
+                        if (latest.isNotEmpty()) item("latest") {
+                            PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         groups.forEach { g ->
                             item("grp_h_" + g.name, contentType = "group_header") { ChannelSectionHeader(g.name, g.titles) { selected = g.name } }
@@ -346,7 +377,7 @@ fun OnlineHomeScreen(
                         loading = h == null || h is ProviderHome.Loading,
                         error = (h as? ProviderHome.Failed)?.message,
                         listState = listState,
-                        strip = { ChannelStrip(channelNames, loadingNames, name) { selected = it } },
+                        strip = { ActiveFilterBar(name, onChange = { showFilter = true }, onClear = { selected = null }) },
                         onSearch = onOpenSearch,
                         onRetry = { if (api != null) scope.launch { loadOne(api, true) } },
                         openItem = openItem, openInfo = openInfo,

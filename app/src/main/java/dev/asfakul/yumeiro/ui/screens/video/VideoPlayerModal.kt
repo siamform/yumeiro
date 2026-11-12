@@ -944,7 +944,7 @@ private fun VideoPlayerModalContent(
     // ExoPlayer listener lifecycle
     val currentOnProgressUpdate by rememberUpdatedState(onProgressUpdate)
     DisposableEffect(exoPlayer) {
-        dev.asfakul.yumeiro.player.PlaybackDiagnostics.reset(video.uri)
+        dev.asfakul.yumeiro.player.PlaybackDiagnostics.reset(video.uri, video.sizeBytes)
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { it.copy(firstFrame = true) }
@@ -987,6 +987,9 @@ private fun VideoPlayerModalContent(
             override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
                 if (exoPlayer.duration > 0) durationMs = exoPlayer.duration
                 isLiveStream = exoPlayer.isCurrentMediaItemLive
+                dev.asfakul.yumeiro.player.PlaybackDiagnostics.update {
+                    it.copy(durationMs = exoPlayer.duration.takeIf { d -> d > 0 && d != C.TIME_UNSET } ?: it.durationMs, live = exoPlayer.isCurrentMediaItemLive)
+                }
             }
 
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -999,6 +1002,7 @@ private fun VideoPlayerModalContent(
 
             override fun onTracksChanged(tracks: Tracks) {
                 updateTracksList(tracks)
+                dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { dev.asfakul.yumeiro.player.PlaybackFacts.fromTracks(it, tracks) }
                 // Captions on by default: make sure one is actually shown.
                 if (!isSubtitlesDisabled && !autoPickedText && tracks.groups.any { it.type == C.TRACK_TYPE_TEXT }) {
                     autoPickedText = true

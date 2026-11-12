@@ -203,6 +203,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                     overline = listOfNotNull("Live", base?.group).joinToString(" · "),
                     meta = listOfNotNull(format, playlistName?.takeIf { inPlaylist }?.let { "from $it" }).joinToString(" · ").ifBlank { null },
                 )
+                PlaybackFactsRow()
             }
             if (base != null) item(key = "servers") {
                 val current = modes[currentUrl]
