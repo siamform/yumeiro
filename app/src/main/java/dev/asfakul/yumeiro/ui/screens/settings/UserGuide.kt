@@ -113,7 +113,7 @@ fun UserGuideScreen(onBack: () -> Unit) {
     val chapters = guideChapters()
     Box(Modifier.fillMaxSize().pageBackground().testTag("user_guide_screen")) {
         LazyColumn(
-            Modifier.fillMaxSize().statusBarsPadding(),
+            Modifier.fillMaxSize().statusBarsPadding(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("user_guide"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {

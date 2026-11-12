@@ -63,6 +63,16 @@ object ScrollMemory {
         return state
     }
 
+    /** A [androidx.compose.foundation.ScrollState] (plain scrolling pages) that comes back to where [key] was left. */
+    @Composable
+    fun scroll(key: String): androidx.compose.foundation.ScrollState {
+        val saved = remember(key) { get(key) }
+        val state = remember(key) { androidx.compose.foundation.ScrollState(0) }
+        Track(key, saved, { if (state.maxValue == Int.MAX_VALUE) 0 else state.maxValue + 1 }, { state.value to 0 },
+            { state.isScrollInProgress }, { i, _ -> state.scrollTo(i) })
+        return state
+    }
+
     @Composable
     private fun Track(
         key: String,
@@ -79,7 +89,17 @@ object ScrollMemory {
                 withTimeoutOrNull(RESTORE_WAIT_MS) {
                     snapshotFlow { count() > saved.index || scrolling() }.first { it }
                 }
-                if (!scrolling() && count() > saved.index && position().first != saved.index) scrollTo(saved.index, saved.offset)
+                // Jump on the next frame, never inside the measure pass that delivered the rows:
+                // a list inside a pager / nav host is subcomposed during measure, and an immediate
+                // scrollToItem there threw "performMeasureAndLayout called during measure layout".
+                repeat(2) { attempt ->
+                    androidx.compose.runtime.withFrameNanos { }
+                    if (scrolling() || count() <= saved.index || position().first == saved.index) return@repeat
+                    val ok = runCatching { scrollTo(saved.index, saved.offset) }
+                        .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+                        .isSuccess
+                    if (ok || attempt == 1) return@repeat
+                }
                 restored[0] = true
             }
             snapshotFlow { position() }.collect { (i, o) -> if (restored[0]) put(key, i, o) }

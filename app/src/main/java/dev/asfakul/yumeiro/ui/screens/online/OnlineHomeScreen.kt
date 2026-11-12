@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.filled.VideoLibrary
@@ -79,6 +78,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
@@ -127,14 +127,25 @@ fun OnlineHomeScreen(
     // crashed "For you" with many extensions enabled.
     val gate = remember { Semaphore(3) }
 
+    // One fetch per extension at a time. Extensions finish loading one by one at start-up, and
+    // every new engine snapshot used to restart the whole feed effect: in-flight homes were
+    // cancelled and fetched again, so rows popped in, vanished and came back ("abnormal" loading).
+    // Fetches now run in the screen's scope and survive those restarts; a name is only fetched
+    // again when forced (pull to refresh, Retry) or after it failed.
+    val inflight = remember { HashMap<String, kotlinx.coroutines.Deferred<Unit>>() }
     suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean) {
         val name = api.name
         if (!force && homes[name] is ProviderHome.Ready) return
-        if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
-        val result = gate.withPermit {
-            runCatching { OnlineRepository.home(api, force) }
+        inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { running.await(); return } else running.cancel() }
+        val job = scope.async {
+            if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
+            val result = gate.withPermit {
+                runCatching { OnlineRepository.home(api, force) }
+            }
+            homes[name] = result.fold({ ProviderHome.Ready(it) }, { ProviderHome.Failed(OnlineErrors.friendly(it, "Couldn't load")) })
         }
-        homes[name] = result.fold({ ProviderHome.Ready(it) }, { ProviderHome.Failed(OnlineErrors.friendly(it, "Couldn't load")) })
+        inflight[name] = job
+        runCatching { job.await() }
     }
 
     suspend fun loadAll(force: Boolean) = supervisorScope {
@@ -142,8 +153,10 @@ fun OnlineHomeScreen(
         val ordered = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.sortedBy { if (it.name == selected) 0 else 1 }
         ordered.map { api -> launch { runCatching { loadOne(api, force) } } }.joinAll()
     }
-    LaunchedEffect(providers) {
-        homes.keys.retainAll(providers.map { it.name }.toSet())
+    val providerNames = remember(providers) { providers.map { it.name }.toSet() }
+    LaunchedEffect(providerNames) {
+        homes.keys.retainAll(providerNames)
+        inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)
     }
@@ -210,14 +223,57 @@ fun OnlineHomeScreen(
                     // appear as you scroll, so many extensions never load a wall of rows at once.
                     var groupLimit by rememberSaveable { mutableStateOf(4) }
                     val groups = remember(ready, groupLimit) { mixGroups(ready, groupLimit) }
-                    val nearEnd by remember { derivedStateOf { val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0; last >= listState.layoutInfo.totalItemsCount - 3 } }
-                    LaunchedEffect(nearEnd, groups.size, ready.size) { if (nearEnd && groups.size < ready.size) groupLimit += 3 }
+                    // Endless "More to explore": every row of every extension, round-robin, then the
+                    // next pages of those rows as you scroll (like a streaming app's bottomless home).
+                    val explore = remember { androidx.compose.runtime.mutableStateListOf<HueRowFeed>() }
+                    LaunchedEffect(ready) {
+                        val have = explore.mapTo(HashSet()) { it.row.api + "|" + it.row.title + "|" + it.row.pageData }
+                        ready.forEach { (_, rows) ->
+                            rows.filter { it.items.isNotEmpty() }.forEach { r ->
+                                if (have.add(r.api + "|" + r.title + "|" + r.pageData)) explore += HueRowFeed(r, r.items, 1, r.hasNext && r.pageData != null)
+                            }
+                        }
+                        explore.removeAll { f -> ready.none { it.first == f.row.api } }
+                    }
+                    val shownAbove = remember(hero, picks, groups) {
+                        HashSet<String>().apply { hero.forEach { add(it.key) }; picks.forEach { add(it.key) }; groups.forEach { g -> g.rows.forEach { r -> r.items.forEach { add(it.key) } } } }
+                    }
+                    val exploreItems by remember(shownAbove) { derivedStateOf { hueFeed(explore.toList(), null).filter { it.first.key !in shownAbove } } }
+                    var exploreLimit by rememberSaveable { mutableStateOf(30) }
+                    val exploreBusy by remember { derivedStateOf { explore.any { it.loading } } }
+                    val exploreMore by remember { derivedStateOf { explore.any { it.hasNext } } }
+                    val groupsDone = groups.size >= ready.size && loadingNames.isEmpty()
+                    fun pageExplore() {
+                        val targets = explore.indices.filter { explore[it].hasNext && !explore[it].loading }.sortedBy { explore[it].items.size }.take(3)
+                        if (targets.isEmpty()) return
+                        targets.forEach { explore[it] = explore[it].copy(loading = true) }
+                        targets.forEach { i ->
+                            scope.launch {
+                                val f = explore.getOrNull(i) ?: return@launch
+                                val api = providers.firstOrNull { it.name == f.row.api }
+                                val res = if (api == null) null else runCatching { OnlineRepository.page(api, f.row.pageName.orEmpty(), f.row.pageData.orEmpty(), f.page + 1) }.getOrNull()
+                                val cur = explore.getOrNull(i)?.takeIf { it.row == f.row } ?: return@launch
+                                val known = cur.items.mapTo(HashSet()) { it.key }
+                                val fresh = res?.items.orEmpty().filter { known.add(it.key) }
+                                explore[i] = cur.copy(items = cur.items + fresh, page = cur.page + 1, hasNext = res?.hasNext == true && fresh.isNotEmpty(), loading = false)
+                            }
+                        }
+                    }
+                    val nearEnd by remember { derivedStateOf { val info = listState.layoutInfo; val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0; info.totalItemsCount > 0 && last >= info.totalItemsCount - 6 } }
+                    LaunchedEffect(nearEnd, groups.size, ready.size, exploreItems.size, exploreBusy) {
+                        if (!nearEnd) return@LaunchedEffect
+                        when {
+                            groups.size < ready.size -> groupLimit += 3
+                            exploreLimit < exploreItems.size -> exploreLimit += 30
+                            !exploreBusy && exploreMore -> pageExplore()
+                        }
+                    }
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                         if (providers.size > 1) item("channels") { ChannelStrip(channelNames, loadingNames, null) { selected = it } }
                         if (hero.isNotEmpty()) item("hero") {
                             HeroCarousel(hero, onPlay = openItem, onInfo = openInfo)
                         } else if (loadingNames.isNotEmpty()) item("hero_skel") {
-                            dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, 380.dp, Modifier.padding(horizontal = 16.dp), RoundedCornerShape(24.dp))
+                            dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), RoundedCornerShape(24.dp))
                         }
                         if (continueItems.isNotEmpty()) item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
@@ -238,6 +294,23 @@ fun OnlineHomeScreen(
                                         onClick = openInfo, onSeeAll = if (row.pageData != null) ({ onOpenRow(row) }) else ({ selected = g.name }),
                                     )
                                 }
+                            }
+                        }
+                        if (groupsDone && exploreItems.isNotEmpty()) {
+                            item("explore_h") {
+                                dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} extensions", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
+                            }
+                            val rowsG = hueGridRows(exploreItems.take(exploreLimit))
+                            items(rowsG, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
+                                val wide = r.first().second
+                                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("explore_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    r.forEach { (item, _) -> PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) }
+                                    repeat((if (wide) 2 else 3) - r.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                            if (exploreBusy || exploreLimit < exploreItems.size) item("explore_more") { PosterGridSkeleton(1) }
+                            else if (!exploreMore) item("explore_end") {
+                                Text("You've reached the end. Pull down to refresh.", color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
                             }
                         }
                         if (loadingNames.isNotEmpty()) item("feed_loading") {
@@ -323,7 +396,7 @@ fun videoSourceOptions(extensionCount: Int, deviceCount: Int, online: Boolean): 
             VideoSource.ONLINE -> dev.asfakul.yumeiro.ui.components.SourceOption(
                 v.tag, "Yumix", "Anime, movies and shows from your extensions",
                 when { extensionCount == 0 -> "Add sources"; !online -> "Needs internet"; else -> "$extensionCount sources" },
-                Icons.Default.AutoAwesome, "video_source_" + v.tag, attention = extensionCount == 0 || !online,
+                dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag, attention = extensionCount == 0 || !online,
             )
             VideoSource.YOUTUBE -> dev.asfakul.yumeiro.ui.components.SourceOption(
                 v.tag, "YouTube", "Watch YouTube without signing in",
@@ -352,7 +425,7 @@ fun VideoSourceSwitch(
     ModeSwitcher(
         options = VideoSource.entries.map { v ->
             when (v) {
-                VideoSource.ONLINE -> ModeOption(v.tag, "Yumix", if (extensionCount == 0) "Add sources" else "$extensionCount sources", Icons.Default.AutoAwesome, "video_source_" + v.tag)
+                VideoSource.ONLINE -> ModeOption(v.tag, "Yumix", if (extensionCount == 0) "Add sources" else "$extensionCount sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag)
                 VideoSource.YOUTUBE -> ModeOption(v.tag, "YouTube", "No login", Icons.Default.SmartDisplay, "video_source_" + v.tag)
                 VideoSource.DEVICE -> ModeOption(v.tag, "Device", "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag)
                 VideoSource.LIVE -> ModeOption(v.tag, "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "video_source_" + v.tag)

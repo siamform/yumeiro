@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 object TabSearch {
     const val YT_VIDEO = "yt_video"
     const val YT_MUSIC = "yt_music"
+    const val MUSIC_MIX = "music_mix"
 
     private val _open = MutableStateFlow<String?>(null)
     val open: StateFlow<String?> = _open.asStateFlow()

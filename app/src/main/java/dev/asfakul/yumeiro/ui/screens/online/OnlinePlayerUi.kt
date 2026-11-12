@@ -317,14 +317,21 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
     val s by OnlineSession.state.collectAsState()
     val opening by OnlineSession.opening.collectAsState()
     opening?.let { item ->
+        val kind = remember(item.type) { dev.asfakul.yumeiro.ui.screens.watch.WatchKind.of(item.type) }
         // Details still loading: the watch page appears right away with skeletons.
         dev.asfakul.yumeiro.ui.screens.watch.WatchScaffold(
             backdrop = item.posterUrl, backdropHeaders = item.posterHeaders,
             onBack = { OnlineSession.cancelOpening() }, tag = "online_opening",
-            screen = { WatchScreenStatus("Opening…", onCancel = { OnlineSession.cancelOpening() }) },
+            screen = {
+                when (kind) {
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchKind.MOVIE -> WatchScreenStatus("Opening the film…", onCancel = { OnlineSession.cancelOpening() }, overline = "映画 · MOVIE")
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchKind.SERIES -> WatchScreenStatus("Loading episodes…", onCancel = { OnlineSession.cancelOpening() }, overline = "連続 · SERIES")
+                    else -> WatchScreenStatus("Opening…", onCancel = { OnlineSession.cancelOpening() })
+                }
+            },
         ) {
             dev.asfakul.yumeiro.ui.screens.watch.WatchTitle(item.name, overline = item.api, meta = listOfNotNull(item.type, item.quality).joinToString(" · "))
-            dev.asfakul.yumeiro.ui.screens.watch.WatchDetailsSkeleton()
+            dev.asfakul.yumeiro.ui.screens.watch.WatchDetailsSkeleton(kind)
         }
         return
     }
@@ -372,6 +379,13 @@ private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> U
         } else {
             CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
             Spacer(Modifier.height(10.dp))
+            // Film vs episode: the status says what is being opened.
+            Text(
+                if (state.episodes.size > 1) "連続 · EPISODE ${state.index + 1} OF ${state.episodes.size}" else "映画 · MOVIE",
+                color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp,
+                modifier = Modifier.testTag("online_resolving_kind"),
+            )
+            Spacer(Modifier.height(2.dp))
             Text(
                 if (state.links.isEmpty()) "Finding the best source…" else "Found ${state.links.size} source${if (state.links.size == 1) "" else "s"} — starting…",
                 color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,

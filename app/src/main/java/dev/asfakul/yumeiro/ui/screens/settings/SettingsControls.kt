@@ -316,7 +316,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
 fun SocialMediaCard() {
     val context = LocalContext.current
     SettingsCard {
-        Text("Yumeiro has its own community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
+        Text("Yumeiro has its own website (yumeiro.click) and community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
         Reminders.Social.entries.forEachIndexed { i, s ->
             if (i > 0) SettingsDivider()
@@ -324,6 +324,10 @@ fun SocialMediaCard() {
                 if (Links.open(context, s.url)) Reminders.recordFollow(context, s)
                 else AppMessages.error(context, "Couldn't open ${s.label}")
             }
+        }
+        SettingsDivider()
+        SettingsActionRow("Website", "Downloads, news and guides · yumeiro.click", "social_website") {
+            if (!Links.open(context, Reminders.WEBSITE_URL)) AppMessages.error(context, "Couldn't open the website")
         }
         SettingsDivider()
         SettingsActionRow("Star on GitHub", "github.com/siamform/yumeiro", "social_github") {

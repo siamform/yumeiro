@@ -60,7 +60,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -471,6 +475,10 @@ fun VideoPlayerBottomBar(
     modifier: Modifier = Modifier,
     /** Docked watch-page player: one slim row (time · seek bar · fullscreen). */
     compact: Boolean = false,
+    /** Live stream: a LIVE badge instead of a length. */
+    isLive: Boolean = false,
+    /** Still opening / buffering: the length shows a soft placeholder instead of "--:--". */
+    isLoading: Boolean = false,
 ) {
     if (compact) {
         val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
@@ -488,7 +496,8 @@ fun VideoPlayerBottomBar(
                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = SpotifyGreen, inactiveTrackColor = Color.White.copy(alpha = 0.25f)),
                 modifier = Modifier.weight(1f).height(28.dp).padding(horizontal = 8.dp).testTag("video_seekbar")
             )
-            Text(if (known != null) formatDuration(durationMs) else "--:--", color = TextSecondary, fontSize = 11.sp)
+            if (known != null) Text(formatDuration(durationMs), color = TextSecondary, fontSize = 11.sp)
+            else DurationPending(isLive = isLive, isLoading = isLoading)
             IconButton(onClick = onToggleFullscreen, modifier = Modifier.testTag("video_fullscreen_btn")) {
                 Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, if (isFullscreen) "Exit fullscreen" else "Enter fullscreen", tint = Color.White, modifier = Modifier.size(22.dp))
             }
@@ -518,12 +527,12 @@ fun VideoPlayerBottomBar(
                 fontWeight = FontWeight.SemiBold
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (known != null) "-${formatDuration(remainingMs)}  /  ${formatDuration(durationMs)}" else "--:--",
+                if (known != null) Text(
+                    text = "-${formatDuration(remainingMs)}  /  ${formatDuration(durationMs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 11.sp
-                )
+                ) else DurationPending(isLive = isLive, isLoading = isLoading)
                 IconButton(
                     onClick = onToggleFullscreen,
                     modifier = Modifier
@@ -598,5 +607,43 @@ fun LockedFloatingUnlockButton(
                 )
             }
         }
+    }
+}
+
+/**
+ * What the time label shows while the length isn't known: a LIVE badge for live streams, a soft
+ * pulsing pill while the stream opens, and nothing at all for a file that never reports a length
+ * (the old "--:--" read as broken).
+ */
+@Composable
+private fun DurationPending(isLive: Boolean, isLoading: Boolean) {
+    when {
+        isLive -> Text(
+            "LIVE",
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp,
+            modifier = Modifier
+                .background(Color(0xFFE5484D), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                .padding(horizontal = 7.dp, vertical = 2.dp)
+                .testTag("video_live_badge"),
+        )
+        isLoading -> {
+            val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "durPending")
+            val a by t.animateFloat(
+                0.18f, 0.42f,
+                androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(800), androidx.compose.animation.core.RepeatMode.Reverse),
+                label = "durPendingAlpha",
+            )
+            Box(
+                Modifier
+                    .size(width = 64.dp, height = 10.dp)
+                    .background(Color.White.copy(alpha = a), androidx.compose.foundation.shape.RoundedCornerShape(5.dp))
+                    .semantics { contentDescription = "Loading length" }
+                    .testTag("video_duration_pending"),
+            )
+        }
+        else -> Unit
     }
 }

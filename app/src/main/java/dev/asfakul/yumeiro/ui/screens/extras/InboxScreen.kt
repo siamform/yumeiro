@@ -129,7 +129,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 LazyColumn(
-                    Modifier.fillMaxSize().testTag("inbox_list"),
+                    Modifier.fillMaxSize().testTag("inbox_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("inbox"),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 48.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {

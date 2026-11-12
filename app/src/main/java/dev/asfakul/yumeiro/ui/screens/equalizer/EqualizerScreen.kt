@@ -125,7 +125,7 @@ fun EqualizerScreen(
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
-        LazyColumn(
+        LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("equalizer"), 
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),

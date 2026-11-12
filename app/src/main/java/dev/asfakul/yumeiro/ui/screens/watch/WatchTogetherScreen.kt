@@ -71,7 +71,7 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("watch_together")) {
         SubPageHeader(title = "Watch together", onBack = onBack, subtitle = "Same Wi-Fi · no account needed")
-        LazyColumn(contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("watch_together"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (status.role) {
                 WatchTogether.Role.HOST -> item("host") {
                     Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {

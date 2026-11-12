@@ -288,7 +288,7 @@ fun LibraryScreen(
 
         val playlistTracks = selectedPlaylist.trackIds.mapNotNull { trackMap[it] }
 
-        LazyColumn(
+        LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("library_main"), 
             modifier = modifier
                 .fillMaxSize()
                 .testTag("playlist_detail_view"),

@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -85,6 +88,7 @@ fun WebSitesScreen(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<SavedSites.Site?>(null) }
     var renaming by remember { mutableStateOf<SavedSites.Site?>(null) }
+    var help by rememberSaveable { mutableStateOf(false) }
 
     fun add() {
         val err = SavedSites.add(context, input)
@@ -101,6 +105,12 @@ fun WebSitesScreen(onBack: () -> Unit) {
         )
     }
 
+    if (help) TsukiDialog(
+        onDismissRequest = { help = false },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(SetupGuides.websites, startExpanded = true) } },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text("Got it") } },
+    )
+
     renaming?.let { site ->
         var name by remember(site.url) { mutableStateOf(site.name) }
         TsukiDialog(
@@ -114,9 +124,11 @@ fun WebSitesScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().testTag("websites_screen")) {
-        SubPageHeader(title = "Websites", onBack = onBack, subtitle = if (sites.isEmpty()) "Play videos from any site" else "${sites.size} saved")
+        SubPageHeader(title = "Websites", onBack = onBack, subtitle = if (sites.isEmpty()) "Play videos from any site" else "${sites.size} saved") {
+            IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "How websites work", tint = p.textSecondary) }
+        }
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("websites"),
             contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 140.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -162,7 +174,19 @@ fun WebSitesScreen(onBack: () -> Unit) {
             } else items(sites, key = { it.url }) { site ->
                 SiteRow(site, onOpen = { open = site }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) })
             }
-            item("guide") { GuideCard(SetupGuides.websites) }
+            // The step-by-step guide lives behind the "?" in the header (not in the list) so the
+            // saved sites stay the focus of the page.
+            item("help_hint") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).combinedClickable(onClickLabel = "How it works", onClick = { help = true })
+                        .padding(vertical = 10.dp).testTag("site_help_hint"),
+                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.HelpOutline, null, tint = p.textTertiary, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("How it works", color = p.textTertiary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+            }
         }
     }
 }

@@ -126,8 +126,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
         LazyVerticalGrid(
             GridCells.Fixed(1), Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+            verticalArrangement = Arrangement.spacedBy(10.dp), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("downloads")) {
             item("storage") {
                 StorageCard(used, free, days, quality, parallel, onSettings = { settingsOpen = !settingsOpen })
             }

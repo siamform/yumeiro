@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -56,7 +57,7 @@ import dev.asfakul.yumeiro.ui.theme.Yume
 val DockHorizontalPadding = 14.dp
 val DockBottomPadding = 12.dp
 val DockMaxWidth = 480.dp
-val DockNavHeight = 68.dp
+val DockNavHeight = 62.dp
 val DockMiniHeight = 68.dp
 val DockGap = 2.dp
 /** Space between the floating mini-player pill and the nav pill. */
@@ -70,9 +71,9 @@ val DockJunctionCorner = 6.dp
  * Library by default; 3 to 6 items, see Settings → Navigation bar).
  *
  * Active state: a soft accent-tinted capsule with a hairline glides behind the active icon
- * (one shared spring-animated indicator), the icon fills and takes the accent colour, and a short
- * brush-stroke underline sits under the label, like the stroke under a hanko seal. Inactive tabs
- * stay calm and readable. Every tab keeps its label (recognition over recall). With the mini player
+ * (one shared spring-animated indicator), the icon fills and takes the accent colour, and a small seal dot sits
+ * underneath. Inactive tabs
+ * stay calm and readable. Tabs are icon-only (labels are announced to TalkBack and shown in Settings → Navigation bar). With the mini player
  * showing, both pieces form one joined stack.
  */
 @Composable
@@ -112,66 +113,58 @@ fun MTBottomBar(
             val inner = 6.dp
             val count = items.size.coerceAtLeast(1)
             val tabW = (maxWidth - inner * 2) / count
-            val indicatorW = if (count >= 6) 46.dp else if (count == 5) 52.dp else 56.dp
-            val indicatorH = 30.dp
+            val indicatorW = if (count >= 7) 42.dp else if (count == 6) 46.dp else 54.dp
+            val indicatorH = 40.dp
+            val top = (DockNavHeight - indicatorH) / 2
             val target = inner + tabW * selectedIndex.coerceAtLeast(0) + (tabW - indicatorW) / 2
             val x by animateDpAsState(target, Yume.settle(), label = "dockPillX")
             val indicatorAlpha by animateFloatAsState(if (selectedIndex >= 0) 1f else 0f, label = "dockPillA")
-            val pillShape = RoundedCornerShape(50)
+            val pillShape = RoundedCornerShape(16.dp)
             Box(
                 Modifier
-                    .offset(x = x, y = 9.dp)
+                    .offset(x = x, y = top)
                     .width(indicatorW)
                     .height(indicatorH)
                     .scale(indicatorAlpha)
                     .clip(pillShape)
-                    .background(palette.accent.copy(alpha = if (palette.isDark) 0.18f else 0.14f))
-                    .border(1.dp, palette.accent.copy(alpha = if (palette.isDark) 0.38f else 0.30f), pillShape)
+                    .background(palette.accent.copy(alpha = if (palette.isDark) 0.20f else 0.14f))
+                    .border(1.dp, palette.accent.copy(alpha = if (palette.isDark) 0.36f else 0.28f), pillShape)
             )
             Row(
                 modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = inner),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { item ->
                     val isSelected = currentRoute == item.route
                     val tint by animateColorAsState(if (isSelected) activeTint else inactive, label = "navTint")
-                    val stroke by animateDpAsState(if (isSelected) 14.dp else 0.dp, Yume.settle(), label = "navStroke")
-                    Column(
+                    val pop by animateFloatAsState(if (isSelected) 1.12f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f), label = "navPop")
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = androidx.compose.foundation.LocalIndication.current,
+                                indication = null,
                                 role = Role.Tab,
+                                onClickLabel = item.label,
                             ) { if (!isSelected) onNavigateToRoute(item.route) }
-                            .semantics { selected = isSelected }
+                            .semantics { selected = isSelected; contentDescription = item.label }
                             .testTag(item.testTag)
                             .tourTarget(item.testTag),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Spacer(Modifier.height(9.dp))
-                        Box(Modifier.width(indicatorW).height(indicatorH), contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.label,
-                                tint = tint,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = item.label,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = if (count >= 6) androidx.compose.ui.unit.TextUnit(10.5f, androidx.compose.ui.unit.TextUnitType.Sp) else MaterialTheme.typography.labelMedium.fontSize,
-                            ),
-                            color = if (isSelected) palette.textPrimary else inactive,
-                            maxLines = 1,
-                            softWrap = false,
+                        // Icon-only (no captions): one glyph per destination, the active one fills,
+                        // takes the accent and springs up a touch; a tiny seal dot marks it below.
+                        Icon(
+                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = null,
+                            tint = tint,
+                            modifier = Modifier.size(25.dp).scale(pop)
                         )
-                        Spacer(Modifier.height(3.dp))
-                        Box(Modifier.width(stroke).height(2.dp).clip(RoundedCornerShape(50)).background(activeTint))
+                        Box(
+                            Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp)
+                                .size(4.dp).scale(if (isSelected) 1f else 0f).clip(RoundedCornerShape(50)).background(activeTint)
+                        )
                     }
                 }
             }

@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -1217,7 +1218,9 @@ fun SongActionBottomSheet(
     onAddToPlaylist: () -> Unit,
     onToggleFavorite: () -> Unit,
     onShowDetails: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** YouTube Music songs: save the audio to the phone. Null hides the row (device songs). */
+    onDownload: (() -> Unit)? = null,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1325,6 +1328,16 @@ fun SongActionBottomSheet(
                     onDismiss()
                 },
                 testTag = "sheet_action_toggle_fav"
+            )
+
+            if (onDownload != null) SheetActionRow(
+                title = "Download song",
+                icon = Icons.Default.Download,
+                onClick = {
+                    onDismiss()
+                    onDownload()
+                },
+                testTag = "sheet_action_download"
             )
 
             SheetActionRow(

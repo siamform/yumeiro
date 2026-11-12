@@ -1,12 +1,40 @@
 # Handover: Yumeiro redesign
 
-> **Round 6 is current.** Read §R6 first, then §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 7 is current.** Read §R7 first, then §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R6. Round 6: owner feedback on R5, new sources, settings rebuild (start here)
+## R7. Round 7: owner bug list (21 items) (start here)
+
+**Branch.** `redesign/v5-signature` (continues R6). Pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`; the CI branch there, the PR and the merge each still need the owner's written approval.
+
+| # | Request | Fix (files under `app/src/main/java/dev/asfakul/yumeiro/`) |
+|---|---|---|
+| 1 | Social / rating / alert popups broken in light theme | `ui/screens/extras/ReminderHost.kt`: opaque theme-aware card, `IconBadge` light fix; `LocalPopupPreview` (`ui/components/TsukiDialog.kt`) lets Robolectric render popups inline (`PopupGalleryTest`) |
+| 2 | Spaces above Continue | `ui/screens/home/HomeScreen.kt` |
+| 3 | Nameless (icon-only) bottom bar | `ui/components/MTBottomBar.kt`: icon dock (62 dp), rounded indicator capsule, spring pop, seal dot; labels kept for TalkBack (`contentDescription`, `onClickLabel`), `nav_tab_*` tags unchanged |
+| 4 | Yumix first banner too large | `ui/screens/online/OnlineHomeHero.kt`: "Spotlight" peeking card pager, 212 dp, endless, kana overline, Play / My List / Info |
+| 5 | Yumix video page not endless | `OnlineHomeScreen.kt`: endless "More to explore" grid fed from every row of every extension, then paged with `OnlineRepository.page` |
+| 6, 7, 18 | Glitchy transitions, page mixing, header vanishing on deep links (video > Yumix > extension) | `ui/screens/MTPlayerApp.kt`: top bar and dock live inside the Home destination (overlaid, measured), sub pages get an opaque `pageBackground()`, transitions are opaque slides (340 / 280 ms) with no cross-fade, so two pages are never drawn mixed and the header no longer disappears before the next page |
+| 8 | Jump 10 min forward went back to 0:00; "--:--" length | Root cause: progressive files without a seek index are unseekable in ExoPlayer, so any `seekTo` restarted at 0 and the length stayed unknown. `stream/StreamMediaFactory.kt` enables constant-bitrate seeking (length and seeking for those files). `ui/screens/video/VideoPlayerModal.kt`: every seek goes through `seekPlayer()` (refuses with a hint on a truly unseekable source instead of restarting; queues a seek made while the stream is opening; keeps the target on the bar), the length is read on `onTimelineChanged` and while paused, recovery resumes from the real position. `VideoPlayerControls.kt`: no "--:--"; a LIVE badge or a soft pulsing pill while loading |
+| 9 | Movie and series used the same player skeleton | `ui/screens/watch/WatchScreens.kt`: `WatchKind` (from the extension type) and kind-aware `WatchDetailsSkeleton` (movie: chips, Play, synopsis, cast, More like this; series: Sub/Dub, season tabs, episode rows); status line says 映画 MOVIE / 連続 EPISODE n OF m (`OnlinePlayerUi.kt`) |
+| 10 | Pages forget their scroll (Settings > User guide > back) | `ui/components/ScrollMemory.kt` (`list`, `grid`, new `scroll`) on ~25 pages; restore waits one frame (fixed "performMeasureAndLayout called during measure layout" inside pagers) |
+| 11 | Online music downloader in Music Online and Mix | Built on the app's existing NewPipe Extractor download pipeline (`online/download/YtDownloads.kt`, `DownloadWorker`). New `online/download/SongDownloads.kt` (one request, one host sheet in `MTPlayerApp`); download buttons on YT Music song rows (`YtMusicBrowse.kt` `SongDownloadButton`), Mix online rows and search results (`MusicMix.kt`), and "Download song" in the Now Playing song options (`SongActionBottomSheet`). Opens the quality sheet on Audio only (m4a / webm) |
+| 12 | Websites step-by-step guide in the way | `ui/screens/sites/WebSitesScreen.kt`: "?" header button and a "How it works" hint open the guide in a dialog |
+| 13 | Search box reloaded the page | YouTube / YT Music / Mix search bars float over the content (`YtSearchBar(floating = true)`), the page below is not re-laid out |
+| 14 | Website https://yumeiro.click | `notify/Reminders.kt` `WEBSITE_URL`; Settings Community, Support page, `DeveloperInfo` |
+| 15 | Mix had no search | `MusicMix.kt`: device matches (`mixDeviceMatches`, accent-folded, every word) + YT Music songs (debounced) |
+| 16 | More nav customisation | `ui/navigation/NavPrefs.kt`: up to 7 items, 3 shortcuts, 12 new shortcuts |
+| 17 | Async loading looked abnormal | `OnlineHomeScreen.kt`: one fetch per extension that survives engine snapshots (rows no longer vanish and reload while extensions start). `OnlineSearchScreen.kt`: search keyed on source names (no mid-search wipe) and the last finished search is reused when coming back |
+| 19 | Custom Yumix logo | `ui/components/YumixLogo.kt` (open mix ring, play triangle, 彩 spark; tintable `ImageVector`) used in the dock, Spaces tile, source switcher and the Mix avatar |
+| 20 | Just released not endless | Home hero endless, Just released up to 24 |
+| 21 | Review and test | `R7LogicTest` (Mix search, WatchKind, SongDownloads), full suite + lint (see §8) |
+
+**Not verified on a device.** Seeking behaviour per source format, transition smoothness and download speed still need a phone check.
+
+## R6. Round 6: owner feedback on R5, new sources, settings rebuild
 
 **Branch.** `redesign/v5-signature` (continues R5). Pushed only to `origin` (`siamform/yumeiro-redesign`). Nothing was pushed to `siamform/yumeiro`; the CI branch there, the PR and the merge each still need the owner's written approval.
 

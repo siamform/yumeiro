@@ -95,7 +95,7 @@ fun SupportScreen(onBack: () -> Unit) {
         Column(Modifier.fillMaxSize()) {
             SubPageHeader(title = "Buy me a coffee", subtitle = "Support Yumeiro", onBack = onBack)
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp),
+                Modifier.fillMaxSize().verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("support")).padding(horizontal = 16.dp).padding(bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SupportYumeiroCard(full = true, showCoffee = false)
@@ -115,6 +115,7 @@ fun SupportScreen(onBack: () -> Unit) {
                             Reminders.Social.entries.forEach { s ->
                                 TextButton(onClick = { if (Links.open(context, s.url)) Reminders.recordFollow(context, s) }) { Text(s.label, color = SpotifyGreen, fontSize = 13.sp) }
                             }
+                            TextButton(onClick = { Links.open(context, Reminders.WEBSITE_URL) }, modifier = Modifier.testTag("support_website")) { Text("yumeiro.click", color = SpotifyGreen, fontSize = 13.sp) }
                         }
                     }
                 }

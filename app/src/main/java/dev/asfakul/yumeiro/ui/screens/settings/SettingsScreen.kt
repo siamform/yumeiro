@@ -245,7 +245,7 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
             }
         }
         LazyColumn(
-            Modifier.fillMaxSize().testTag("settings_home"),
+            Modifier.fillMaxSize().testTag("settings_home"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("settings_home"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -352,7 +352,7 @@ private fun CategoryPage(
     Column(Modifier.fillMaxSize().testTag("settings_page_${c.name.lowercase()}")) {
         SubPageHeader(title = c.title, onBack = onBack, subtitle = c.group.label)
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("settings_" + c.name),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

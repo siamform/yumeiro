@@ -183,7 +183,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             return@Column
         }
         PullToRefreshBox(isRefreshing = checking, onRefresh = { scope.launch { check(true) } }, modifier = Modifier.fillMaxSize()) {
-            LazyColumn(Modifier.fillMaxSize().testTag("extensions_list"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(Modifier.fillMaxSize().testTag("extensions_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("extensions"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (updates.isNotEmpty()) item("updates") {
                     Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth().testTag("extensions_updates")) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {

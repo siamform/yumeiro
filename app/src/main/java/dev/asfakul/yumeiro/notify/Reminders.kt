@@ -29,6 +29,8 @@ object Reminders {
     }
 
     const val GITHUB_URL = "https://github.com/siamform/yumeiro"
+    /** The official Yumeiro website: downloads, news and guides. */
+    const val WEBSITE_URL = "https://yumeiro.click"
     const val EVERY_MS = 4L * 60 * 60 * 1000
     /** Coffee and star (until starred) are the ones that keep the project going, so they come back sooner. */
     const val OFTEN_MS = 2L * 60 * 60 * 1000

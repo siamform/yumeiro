@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import dev.asfakul.yumeiro.youtube.YtAccount
 
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
@@ -302,30 +304,18 @@ private fun YtBrowse(
         return
     }
 
-    Column(modifier.fillMaxSize()) {
+    // The search bar floats over the page (slides down from under the top bar) instead of pushing
+    // the whole feed down: opening search no longer re-lays out ("reloads") the page under it.
+    Box(modifier.fillMaxSize()) {
+
         val searchKey = if (music) dev.asfakul.yumeiro.ui.components.TabSearch.YT_MUSIC else dev.asfakul.yumeiro.ui.components.TabSearch.YT_VIDEO
         val asked by dev.asfakul.yumeiro.ui.components.TabSearch.open.collectAsState()
         val barOpen = asked == searchKey || query.isNotEmpty() || submitted != null
-        androidx.compose.animation.AnimatedVisibility(
-            visible = barOpen,
-            enter = androidx.compose.animation.expandVertically(dev.asfakul.yumeiro.ui.components.YuMotion.enter(dev.asfakul.yumeiro.ui.components.reducedMotion(), 260)) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically(dev.asfakul.yumeiro.ui.components.YuMotion.exit(dev.asfakul.yumeiro.ui.components.reducedMotion(), 200)) + androidx.compose.animation.fadeOut(),
-        ) {
-            YtSearchBar(
-                query, placeholder, music, autoFocus = asked == searchKey,
-                onChange = { query = it; if (it.isBlank()) { submitted = null; results = null } }, onSearch = { search(query) },
-                onClear = { query = ""; submitted = null; results = null; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
-            )
-        }
-        dev.asfakul.yumeiro.ui.components.SuggestionList(
-            query = query, suggestions = suggestions,
-            onPick = { search(it.text) }, onFill = { query = it.text },
-            tag = "youtube_suggestions",
-        )
+        Column(Modifier.fillMaxSize().padding(top = if (submitted != null) YT_SEARCH_BAR_H else 0.dp)) {
         val res = results
         val sub = submitted
         if (sub != null && res != null) {
-            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_results:" + sub)
             YtEndlessTrigger(listState, res.canLoadMore) { searchMore(sub) }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_results"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("res_head") {
@@ -371,7 +361,7 @@ private fun YtBrowse(
         if (chip != FOR_YOU && selected != null) {
             LaunchedEffect(selected.id) { if (pagedFeeds[selected.id] == null) loadFeedPage(selected) }
             val page = pagedFeeds[selected.id] ?: Paged(loading = true)
-            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_feed:" + selected.id)
             YtEndlessTrigger(listState, selected.pages && page.canLoadMore) { loadFeedPage(selected) }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_feed_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("feed_head") {
@@ -400,7 +390,7 @@ private fun YtBrowse(
             val videos = remember(stream, shorts) { if (shorts.size >= 3) stream.filterNot { it in shorts } else stream }
             val anyLoading = feeds.any { shelves[it.id] == null || shelves[it.id] is Load.Loading } || pagedFeeds.values.any { it.loading }
             val allFailed = feeds.isNotEmpty() && feeds.all { shelves[it.id] is Load.Failed }
-            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_foryou")
             val pageable = feeds.filter { it.pages && (pagedFeeds[it.id]?.canLoadMore ?: true) }
             var turn by remember { mutableStateOf(0) }
             YtEndlessTrigger(listState, videos.isNotEmpty() && pageable.isNotEmpty() && pagedFeeds.values.none { it.loading }) {
@@ -441,7 +431,7 @@ private fun YtBrowse(
                     )
                 }
             }
-        } else LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), contentPadding = PaddingValues(bottom = 160.dp)) {
+        } else LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("youtube_home"), contentPadding = PaddingValues(bottom = 160.dp)) {
             item("for_you_head") {
                 Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -487,6 +477,25 @@ private fun YtBrowse(
                     color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
                 )
             }
+        }
+            }
+        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(2f)) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = barOpen,
+            enter = androidx.compose.animation.slideInVertically(dev.asfakul.yumeiro.ui.components.YuMotion.enter(dev.asfakul.yumeiro.ui.components.reducedMotion(), 240)) { -it / 2 } + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically(dev.asfakul.yumeiro.ui.components.YuMotion.exit(dev.asfakul.yumeiro.ui.components.reducedMotion(), 180)) { -it / 2 } + androidx.compose.animation.fadeOut(),
+        ) {
+            YtSearchBar(
+                query, placeholder, music, autoFocus = asked == searchKey, floating = true,
+                onChange = { query = it; if (it.isBlank()) { submitted = null; results = null } }, onSearch = { search(query) },
+                onClear = { query = ""; submitted = null; results = null; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
+            )
+        }
+        dev.asfakul.yumeiro.ui.components.SuggestionList(
+            query = query, suggestions = suggestions,
+            onPick = { search(it.text) }, onFill = { query = it.text },
+            tag = "youtube_suggestions",
+        )
         }
     }
 
@@ -583,14 +592,20 @@ private fun YtTopicsDialog(topics: List<String>, music: Boolean, onRemove: (Stri
     if (adding) YtAddTopicDialog(music, onDismiss = { adding = false }) { onAdd(it); adding = false }
 }
 
+/** Height the floating search bar takes (50dp + 2 × 6dp), reserved above results. */
+internal val YT_SEARCH_BAR_H = 62.dp
+
 @Composable
-internal fun YtSearchBar(query: String, placeholder: String, music: Boolean, autoFocus: Boolean = false, onChange: (String) -> Unit, onSearch: () -> Unit, onClear: () -> Unit) {
+internal fun YtSearchBar(query: String, placeholder: String, music: Boolean, autoFocus: Boolean = false, floating: Boolean = false, onChange: (String) -> Unit, onSearch: () -> Unit, onClear: () -> Unit) {
     val border = rememberGlassBorder()
+    val pal = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(50.dp).clip(RoundedCornerShape(25.dp))
-            .background(GlassFill).border(1.dp, border, RoundedCornerShape(25.dp)).padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(50.dp)
+            .then(if (floating) Modifier.shadow(10.dp, RoundedCornerShape(25.dp), ambientColor = Color.Black.copy(alpha = 0.4f), spotColor = Color.Black.copy(alpha = 0.4f)) else Modifier)
+            .clip(RoundedCornerShape(25.dp))
+            .background(if (floating) pal.surfaceContainerHigh else GlassFill).border(1.dp, border, RoundedCornerShape(25.dp)).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))

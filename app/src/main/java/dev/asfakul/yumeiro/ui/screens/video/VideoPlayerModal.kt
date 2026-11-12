@@ -243,6 +243,7 @@ private fun VideoPlayerModalContent(
     var currentPositionMs by remember(video.id) { mutableLongStateOf(video.playbackPositionMs) }
     var durationMs by remember(video.id) { mutableLongStateOf(if (video.durationMs > 0) video.durationMs else 1L) }
     var isBuffering by remember(video.id) { mutableStateOf(false) }
+    var isLiveStream by remember(video.id) { mutableStateOf(false) }
     var isControlsVisible by remember { mutableStateOf(true) }
     var isUserSeeking by remember { mutableStateOf(false) }
     var sliderProgress by remember(video.id) { mutableFloatStateOf(0f) }
@@ -409,6 +410,31 @@ private fun VideoPlayerModalContent(
             playWhenReady = autoPlayStart
         }
     }
+    /**
+     * Every user seek goes through here. A source ExoPlayer reports as unseekable (a progressive
+     * file without any seek index) restarts at 0:00 on any seekTo — that was the "jump 10 min
+     * forward and it plays from 00" bug — so such a seek is refused with a hint instead. While the
+     * stream is still opening the target is kept and applied once the player knows the media.
+     */
+    var queuedSeekMs by remember(video.id) { mutableStateOf<Long?>(null) }
+    fun seekPlayer(target: Long) {
+        val t = target.coerceAtLeast(0L)
+        val prepared = !exoPlayer.currentTimeline.isEmpty && exoPlayer.playbackState != Player.STATE_IDLE
+        if (!prepared) {
+            queuedSeekMs = t; currentPositionMs = t
+            pendingSeekMs = t; pendingSeekAt = System.currentTimeMillis()
+            return
+        }
+        if (!exoPlayer.isCurrentMediaItemSeekable && !exoPlayer.isCurrentMediaItemLive) {
+            showToast("This source can't skip ahead — try another source to jump")
+            currentPositionMs = exoPlayer.currentPosition
+            return
+        }
+        exoPlayer.seekTo(t)
+        currentPositionMs = t
+        pendingSeekMs = t
+        pendingSeekAt = System.currentTimeMillis()
+    }
     androidx.compose.runtime.DisposableEffect(exoPlayer) {
         dev.asfakul.yumeiro.watch.WatchTogether.bind(exoPlayer)
         onDispose { dev.asfakul.yumeiro.watch.WatchTogether.bind(null) }
@@ -547,7 +573,9 @@ private fun VideoPlayerModalContent(
             return
         }
         val current = StreamRepository.requestFor(video.uri) ?: originalRequest
-        val pos0 = exoPlayer.currentPosition.coerceAtLeast(video.playbackPositionMs)
+        // Where the viewer actually is (they may have rewound before the resume point); the
+        // resume point only stands in while the player hasn't reported a position yet.
+        val pos0 = queuedSeekMs ?: exoPlayer.currentPosition.takeIf { it > 0L } ?: video.playbackPositionMs
         val refused = facts.httpStatus in dev.asfakul.yumeiro.online.AccessLadder.ACCESS_CODES
         // Refreshable sources (YouTube): signed URLs expire → fetch a fresh one, keep the position.
         if (refused || facts.isNetwork) {
@@ -921,7 +949,15 @@ private fun VideoPlayerModalContent(
                     if (exoPlayer.duration > 0) {
                         durationMs = exoPlayer.duration
                     }
+                    queuedSeekMs?.let { q -> queuedSeekMs = null; seekPlayer(q) }
                 }
+            }
+
+            // The duration is known as soon as the media is parsed, well before READY: the bar
+            // shows the real length instead of a placeholder while the first frames buffer.
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                if (exoPlayer.duration > 0) durationMs = exoPlayer.duration
+                isLiveStream = exoPlayer.isCurrentMediaItemLive
             }
 
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -1037,8 +1073,8 @@ private fun VideoPlayerModalContent(
             override fun onReceive(c: Context?, intent: Intent?) {
                 when (intent?.getIntExtra(PipController.EXTRA_CONTROL, 0)) {
                     PipController.CONTROL_PLAY_PAUSE -> if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                    PipController.CONTROL_REWIND -> exoPlayer.seekTo((exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L))
-                    PipController.CONTROL_FORWARD -> exoPlayer.seekTo(
+                    PipController.CONTROL_REWIND -> seekPlayer((exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L))
+                    PipController.CONTROL_FORWARD -> seekPlayer(
                         dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, 10_000L, dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs)),
                     )
                 }
@@ -1089,6 +1125,8 @@ private fun VideoPlayerModalContent(
     LaunchedEffect(isPlaying, isUserSeeking) {
         var ticks = 0
         while (true) {
+            // Duration also while paused/buffering (it used to wait for the first playing tick).
+            if (exoPlayer.duration > 0 && exoPlayer.duration != durationMs) durationMs = exoPlayer.duration
             if (isPlaying && !isUserSeeking) {
                 val now = System.currentTimeMillis()
                 val pos = exoPlayer.currentPosition
@@ -1274,9 +1312,7 @@ private fun VideoPlayerModalContent(
                     isControlsVisible = !isControlsVisible
                 },
                 onDoubleTapLeft = {
-                    val target = (exoPlayer.currentPosition - SEEK_STEP_MS).coerceAtLeast(0L)
-                    exoPlayer.seekTo(target)
-                    currentPositionMs = target
+                    seekPlayer((exoPlayer.currentPosition - SEEK_STEP_MS).coerceAtLeast(0L))
                     isDoubleTapForwardVisible = false
                     isDoubleTapRewindVisible = true
                     doubleTapHideJob?.cancel()
@@ -1288,8 +1324,7 @@ private fun VideoPlayerModalContent(
                 onDoubleTapRight = {
                     val target = dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
                         dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
-                    exoPlayer.seekTo(target)
-                    currentPositionMs = target
+                    seekPlayer(target)
                     isDoubleTapRewindVisible = false
                     isDoubleTapForwardVisible = true
                     doubleTapHideJob?.cancel()
@@ -1317,8 +1352,7 @@ private fun VideoPlayerModalContent(
                     scrubTargetTimeMs = newTarget
                 },
                 onScrubCommit = {
-                    exoPlayer.seekTo(scrubTargetTimeMs)
-                    currentPositionMs = scrubTargetTimeMs
+                    seekPlayer(scrubTargetTimeMs)
                 },
                 onBrightnessDelta = { delta ->
                     val newBrightness = (currentBrightness + delta).coerceIn(0.02f, 1.0f)
@@ -1514,9 +1548,7 @@ private fun VideoPlayerModalContent(
                         if (nextVideo != null) onNextVideo() else showToast("No next video")
                     },
                     onRewind10s = {
-                        val target = dev.asfakul.yumeiro.player.SeekMath.rewind(exoPlayer.currentPosition, SEEK_STEP_MS)
-                        exoPlayer.seekTo(target)
-                        currentPositionMs = target
+                        seekPlayer(dev.asfakul.yumeiro.player.SeekMath.rewind(exoPlayer.currentPosition, SEEK_STEP_MS))
                     },
                     onPlayPause = {
                         if (isEnded) {
@@ -1532,8 +1564,7 @@ private fun VideoPlayerModalContent(
                         // fast forward back to 0:00. SeekMath only caps at a real duration.
                         val target = dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
                             dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
-                        exoPlayer.seekTo(target)
-                        currentPositionMs = target
+                        seekPlayer(target)
                     },
                     modifier = Modifier.align(Alignment.Center),
                     compact = docked,
@@ -1544,6 +1575,8 @@ private fun VideoPlayerModalContent(
                     currentPositionMs = currentPositionMs,
                     durationMs = durationMs,
                     sliderProgress = sliderProgress,
+                    isLive = isLiveStream,
+                    isLoading = isBuffering || resolving,
                     isUserSeeking = isUserSeeking,
                     onSeekProgressChange = { newProgress ->
                         isUserSeeking = true
@@ -1554,12 +1587,7 @@ private fun VideoPlayerModalContent(
                     onSeekProgressFinish = {
                         val seekPos = dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress,
                             dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
-                        if (seekPos != null) {
-                            exoPlayer.seekTo(seekPos)
-                            currentPositionMs = seekPos
-                            pendingSeekMs = seekPos
-                            pendingSeekAt = System.currentTimeMillis()
-                        }
+                        if (seekPos != null) seekPlayer(seekPos)
                         isUserSeeking = false
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),

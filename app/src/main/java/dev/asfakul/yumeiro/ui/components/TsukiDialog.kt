@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -47,6 +48,9 @@ import androidx.compose.ui.window.DialogProperties
 import dev.asfakul.yumeiro.ui.theme.BrandGold
 import dev.asfakul.yumeiro.ui.theme.LocalAmbientColor
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+
+/** True in screenshot tests: dialogs draw in place instead of in their own window. */
+val LocalPopupPreview = androidx.compose.runtime.staticCompositionLocalOf { false }
 
 /**
  * Yumeiro's alert: a drop-in replacement for Material's `AlertDialog` (same parameters) drawn in
@@ -91,7 +95,7 @@ fun TsukiDialog(
     val alpha = remember { Animatable(0f) }
     LaunchedEffect(Unit) { alpha.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow)) }
     LaunchedEffect(Unit) { scale.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)) }
-    Dialog(onDismissRequest = onDismissRequest, properties = properties) {
+    val card: @Composable () -> Unit = {
         // Opaque surface + real border: the old version drew a gradient inside a *transparent*
         // Surface with a shadow, which showed a dark box / broken edges behind the card on many
         // phones (and let the page bleed through in light mode). The wash is now painted inside
@@ -161,6 +165,8 @@ fun TsukiDialog(
             }
         }
     }
+    if (LocalPopupPreview.current) Box(Modifier.fillMaxSize().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) { card() }
+    else Dialog(onDismissRequest = onDismissRequest, properties = properties) { card() }
 }
 
 private fun Color.isSpecified() = this != Color.Unspecified

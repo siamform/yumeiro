@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -177,7 +176,7 @@ internal fun ChannelAvatar(name: String, selected: Boolean, size: androidx.compo
             Modifier.fillMaxSize().clip(CircleShape).background(if (mix) signature else Brush.linearGradient(listOf(art.start, art.end))),
             contentAlignment = Alignment.Center,
         ) {
-            if (mix) Icon(Icons.Default.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(size * 0.42f))
+            if (mix) Icon(dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "Yumix mix", tint = Color.White, modifier = Modifier.size(size * 0.46f))
             else {
                 // Fallback (and what shows while the logo loads): the Hue's initials.
                 Text(

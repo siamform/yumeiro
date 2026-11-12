@@ -181,10 +181,14 @@ fun PlayerBrandBar(
 
 /** Spinner + status line centred in the 16:9 screen. */
 @Composable
-fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag: String = "watch_status") {
+fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag: String = "watch_status", overline: String? = null) {
     Column(Modifier.align(Alignment.Center).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally) {
         CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(34.dp))
         Spacer(Modifier.height(10.dp))
+        if (overline != null) {
+            Text(overline, color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, modifier = Modifier.testTag("watch_status_kind"))
+            Spacer(Modifier.height(2.dp))
+        }
         Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         if (onCancel != null) {
             Spacer(Modifier.height(8.dp))
@@ -211,6 +215,77 @@ fun BoxScope.WatchScreenError(message: String, onRetry: () -> Unit, onClose: () 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = onClose) { Text("Close", color = Color.White) }
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
+        }
+    }
+}
+
+/** What is opening — the watch page skeleton is shaped after the page that will appear. */
+enum class WatchKind {
+    MOVIE, SERIES, GENERIC;
+
+    companion object {
+        /** From an extension's content type ("Movie", "AnimeMovie", "TvSeries", "Anime", "OVA"…). */
+        fun of(type: String?): WatchKind {
+            val t = type?.lowercase()?.replace(" ", "")?.replace("_", "") ?: return GENERIC
+            return when {
+                "movie" in t || t == "film" || t == "documentary" || t == "torrent" -> MOVIE
+                "series" in t || "anime" in t || t == "ova" || "drama" in t || "cartoon" in t || t == "tv" || "show" in t -> SERIES
+                else -> GENERIC
+            }
+        }
+    }
+}
+
+/**
+ * Skeleton for the watch page, shaped after what loads: a film gets synopsis, cast and
+ * "More like this" posters; a series / anime gets season tabs and episode rows (the old single
+ * skeleton showed episode rows under a movie).
+ */
+@Composable
+fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
+    when (kind) {
+        WatchKind.GENERIC -> WatchDetailsSkeleton(modifier = modifier)
+        WatchKind.MOVIE -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_movie"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(3) { SkeletonBlock(width = 56.dp, height = 22.dp, shape = RoundedCornerShape(6.dp)) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SkeletonBlock(width = 132.dp, height = 40.dp, shape = CircleShape)
+                repeat(3) { SkeletonBlock(width = 40.dp, height = 40.dp, shape = CircleShape) }
+            }
+            Spacer(Modifier.height(2.dp))
+            repeat(3) { SkeletonBlock(width = null, height = 12.dp) }
+            SkeletonBlock(width = 210.dp, height = 12.dp)
+            Spacer(Modifier.height(6.dp))
+            SkeletonBlock(width = 90.dp, height = 14.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                repeat(5) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SkeletonBlock(width = 52.dp, height = 52.dp, shape = CircleShape)
+                        SkeletonBlock(width = 44.dp, height = 9.dp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            SkeletonBlock(width = 120.dp, height = 14.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(4) { SkeletonBlock(width = 96.dp, height = 144.dp, shape = RoundedCornerShape(12.dp)) }
+            }
+        }
+        WatchKind.SERIES -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_series"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(2) { SkeletonBlock(width = 64.dp, height = 28.dp, shape = CircleShape) }
+                Spacer(Modifier.weight(1f))
+                SkeletonBlock(width = 92.dp, height = 28.dp, shape = CircleShape)
+            }
+            SkeletonBlock(width = null, height = 12.dp)
+            SkeletonBlock(width = 230.dp, height = 12.dp)
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(4) { SkeletonBlock(width = 78.dp, height = 32.dp, shape = RoundedCornerShape(10.dp)) }
+            }
+            Spacer(Modifier.height(2.dp))
+            repeat(5) { WatchRowSkeleton() }
         }
     }
 }

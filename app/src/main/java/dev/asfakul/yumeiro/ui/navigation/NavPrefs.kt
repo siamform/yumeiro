@@ -23,6 +23,28 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SmartDisplay
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.outlined.Equalizer
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,14 +53,16 @@ import kotlinx.coroutines.flow.asStateFlow
  * Settings → Navigation bar: which tabs the bottom bar shows.
  *
  * Four tabs by default (Home, Music, Videos, Library). Music, Videos and Library can be hidden
- * (they stay one tap away on Home), and up to two shortcuts can be added (Manga, Live TV,
- * Downloads, Extensions, Sources, YouTube, Search), so the bar holds 3 to 6 items. Home is
+ * (they stay one tap away on Home), and up to three shortcuts can be added (any feature: Yumix,
+ * YouTube, YouTube Music, Mix, Manga, Live TV, Websites, Downloads, My List, History, Extensions,
+ * Market, Sources, Source health, Search, Equalizer, Watch together, Inbox, Settings…), so the
+ * icon-only bar holds 3 to 7 items. Home is
  * always first and can't be removed: it is where everything else is reachable from.
  */
 object NavPrefs {
     const val MIN_ITEMS = 3
-    const val MAX_ITEMS = 6
-    const val MAX_SHORTCUTS = 2
+    const val MAX_ITEMS = 7
+    const val MAX_SHORTCUTS = 3
     const val SHORTCUT_PREFIX = "shortcut:"
 
     /** A shortcut the user can pin to the bar; tapping it opens that page. */
@@ -51,6 +75,18 @@ object NavPrefs {
         YOUTUBE("youtube", "YouTube", "Videos from YouTube", nav("youtube", "YouTube", Icons.Filled.SmartDisplay, Icons.Outlined.SmartDisplay)),
         SEARCH("search", "Search", "Search every extension at once", nav("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)),
         WEBSITES("websites", "Websites", "Play videos from sites you saved", nav("websites", "Sites", Icons.Filled.Language, Icons.Outlined.Language)),
+        YUMIX("yumix", "Yumix", "Anime, movies and shows from your extensions", nav("yumix", "Yumix", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, dev.asfakul.yumeiro.ui.components.YumixLogo.Icon)),
+        YTMUSIC("ytmusic", "YouTube Music", "Songs, albums and artists online", nav("ytmusic", "YT Music", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
+        MIX("mix", "Music mix", "Your songs and YouTube Music woven together", nav("mix", "Mix", Icons.Filled.Shuffle, Icons.Outlined.Shuffle)),
+        DEVICE_VIDEOS("device_videos", "Device videos", "Videos and folders on this phone", nav("device_videos", "Device", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary)),
+        MY_LIST("mylist", "My List", "Titles you saved in Yumix", nav("mylist", "My List", Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)),
+        HISTORY("history", "History", "Continue what you were watching", nav("history", "History", Icons.Filled.History, Icons.Outlined.History)),
+        MARKET("market", "Extension market", "Find and install new extensions", nav("market", "Market", Icons.Filled.Storefront, Icons.Outlined.Storefront)),
+        HEALTH("health", "Source health", "Which sources work right now", nav("health", "Health", Icons.Filled.MonitorHeart, Icons.Outlined.MonitorHeart)),
+        EQUALIZER("equalizer", "Equalizer", "Sound presets and bands", nav("equalizer", "EQ", Icons.Filled.Equalizer, Icons.Outlined.Equalizer)),
+        WATCH_TOGETHER("watch_together", "Watch together", "Watch in sync with friends", nav("watch_together", "Together", Icons.Filled.Groups, Icons.Outlined.Groups)),
+        INBOX("inbox", "Inbox", "News and messages from Yumeiro", nav("inbox", "Inbox", Icons.Filled.Inbox, Icons.Outlined.Inbox)),
+        SETTINGS("settings", "Settings", "Every option in one place", nav("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)),
         ;
         companion object { fun of(id: String?): Shortcut? = entries.firstOrNull { it.id == id } }
     }

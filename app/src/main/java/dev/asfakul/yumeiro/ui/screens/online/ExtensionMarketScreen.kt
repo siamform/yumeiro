@@ -245,7 +245,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 modifier = Modifier.padding(top = 32.dp),
             )
             tab == MarketTab.REPOS -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { load(true) } }, modifier = Modifier.fillMaxSize()) {
-                LazyColumn(Modifier.fillMaxSize().testTag("market_repos"), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(Modifier.fillMaxSize().testTag("market_repos"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("market_repos"), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item("repo_note") {
                         Text("Found automatically from CloudStream's community list and GitHub. Curated repositories are checked and mirrored by the market.", color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp)
                     }
@@ -260,7 +260,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     when { query.isNotBlank() -> "No extension matches \"$query\"."; tab == MarketTab.INSTALLED -> "You haven't installed any extension yet."; else -> "No extensions in this list yet." },
                     tint = TextSecondary, testTag = "market_empty", modifier = Modifier.padding(top = 32.dp),
                 )
-                else LazyColumn(Modifier.fillMaxSize().testTag("market_list"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                else LazyColumn(Modifier.fillMaxSize().testTag("market_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("market_list"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (tab == MarketTab.INSTALLED && updates.isNotEmpty()) item("update_all") {
                         Button(onClick = { updateAll() }, colors = ButtonDefaults.buttonColors(containerColor = WarnColor, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().testTag("market_update_all")) {
                             Text("Update all (${updates.size})", fontWeight = FontWeight.Bold)

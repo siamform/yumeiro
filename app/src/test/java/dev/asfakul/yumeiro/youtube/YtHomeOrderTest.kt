@@ -43,12 +43,14 @@ class YtHomeOrderTest {
         assertEquals(null, AudioQuality.choose(emptyList(), AudioQuality.Tier.CD))
     }
 
-    @Test fun navBarStaysBetweenThreeAndSix() {
+    @Test fun navBarStaysBetweenThreeAndSeven() {
         val all = NavPrefs.Config()
         val s = NavPrefs.Shortcut.entries
         val clamped = NavPrefs.sanitize(all.copy(shortcuts = s + s))
-        assertTrue(clamped.size <= 6)
-        assertTrue(clamped.shortcuts.size <= 2)
+        assertTrue(clamped.size <= NavPrefs.MAX_ITEMS)
+        assertTrue(clamped.shortcuts.size <= NavPrefs.MAX_SHORTCUTS)
+        assertTrue(NavPrefs.Shortcut.entries.size >= 20)
+        assertEquals(NavPrefs.Shortcut.entries.size, NavPrefs.Shortcut.entries.map { it.id }.toSet().size)
         val tiny = NavPrefs.sanitize(NavPrefs.Config(tabs = emptyList()))
         assertTrue(tiny.size >= 3)
         assertEquals(all.tabs.first(), tiny.tabs.first())

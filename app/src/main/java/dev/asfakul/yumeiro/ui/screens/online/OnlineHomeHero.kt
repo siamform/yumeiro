@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -67,8 +70,10 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
 
 /**
- * Featured titles at the top of Online (the big banner MovieBox / CloudStream / DramaBox open
- * with): swipeable, advances on its own, Play + My List + Info.
+ * "Spotlight": the featured titles at the top of Yumix as a compact, endless card carousel. Each
+ * card is a cinematic strip (blurred-dark backdrop, crisp poster on the right, kana overline,
+ * title, tags and Play / My List / Info) and the neighbours peek in at the sides. About 1/3 of the
+ * height of the old full-bleed banner, so the shelves start right below it.
  */
 @Composable
 internal fun HeroCarousel(
@@ -79,65 +84,100 @@ internal fun HeroCarousel(
 ) {
     if (items.isEmpty()) return
     val context = LocalContext.current
-    val pager = rememberPagerState { items.size }
+    val n = items.size
+    val laps = if (n > 1) HERO_LAPS else 1
+    val pager = rememberPagerState(initialPage = if (n > 1) (laps / 2) * n else 0) { n * laps }
     val saved by OnlineBookmarks.items.collectAsState()
-    LaunchedEffect(items.size) {
-        while (items.size > 1) {
-            delay(6_000)
-            if (!pager.isScrollInProgress) pager.animateScrollToPage((pager.currentPage + 1) % items.size)
+    LaunchedEffect(n) {
+        while (n > 1) {
+            delay(6_500)
+            if (!pager.isScrollInProgress) pager.animateScrollToPage(pager.currentPage + 1, animationSpec = androidx.compose.animation.core.tween(650, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
     }
-    val bg = MaterialTheme.colorScheme.background
-    BoxWithConstraints(modifier.fillMaxWidth().testTag("online_hero")) {
-        val h = (maxWidth * 1.2f).coerceAtMost(560.dp).coerceAtLeast(360.dp)
-        HorizontalPager(pager, Modifier.fillMaxWidth().height(h), key = { items.getOrNull(it)?.key ?: "hero_$it" }) { page ->
-            val item = items.getOrNull(page) ?: return@HorizontalPager
-            Box(Modifier.fillMaxSize().clickable { onInfo(item) }) {
-                PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.35f), 0.25f to Color.Transparent, 0.55f to Color.Transparent, 1f to bg)))
-                Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 20.dp, vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val tags = listOfNotNull(item.type, item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }, item.score?.takeIf { it > 0 }?.let { "★ %.1f".format(java.util.Locale.US, it) }, item.api)
-                    Text(tags.joinToString("  ·  "), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                    Spacer(Modifier.height(6.dp))
-                    Text(item.name, color = Color.White, fontSize = 26.sp, lineHeight = 30.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val isSaved = saved.any { it.api == item.api && it.url == item.url }
-                        HeroIconButton(if (isSaved) Icons.Default.Check else Icons.Default.Add, if (isSaved) "Saved" else "My List") {
-                            val now = OnlineBookmarks.toggle(context, item)
-                            dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    Column(modifier.fillMaxWidth().testTag("online_hero")) {
+        HorizontalPager(
+            pager, Modifier.fillMaxWidth().height(HERO_HEIGHT),
+            contentPadding = PaddingValues(horizontal = if (n > 1) 20.dp else 16.dp),
+            pageSpacing = 10.dp,
+            key = { "${items[it % n].key}#$it" },
+            beyondViewportPageCount = 1,
+        ) { page ->
+            val item = items[page % n]
+            val real = page % n
+            val offset = ((pager.currentPage - page) + pager.currentPageOffsetFraction).coerceIn(-1f, 1f)
+            val k = 1f - kotlin.math.abs(offset)
+            Box(
+                Modifier.fillMaxSize()
+                    .graphicsLayer { val sc = 0.92f + 0.08f * k; scaleX = sc; scaleY = sc; alpha = 0.55f + 0.45f * k }
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.Black)
+                    .clickable(onClickLabel = "Details") { onInfo(item) }
+                    .testTag("online_hero_card"),
+            ) {
+                PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.25f; scaleY = 1.25f; translationX = offset * 60f })
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.92f), 0.55f to Color.Black.copy(alpha = 0.72f), 1f to Color.Black.copy(alpha = 0.25f))))
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to p.accent.copy(alpha = 0.28f))))
+                Row(Modifier.fillMaxSize().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text(
+                                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) "注目 · " else "") + "SPOTLIGHT  " + "%02d".format(java.util.Locale.US, real + 1) + " / " + "%02d".format(java.util.Locale.US, n),
+                                color = p.accentBright, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, maxLines = 1,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(item.name, color = Color.White, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Spacer(Modifier.height(6.dp))
+                            val tags = listOfNotNull(item.type, item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }, item.score?.takeIf { it > 0 }?.let { "★ %.1f".format(java.util.Locale.US, it) })
+                            Text((tags + item.api).joinToString("  ·  "), color = Color.White.copy(alpha = 0.72f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Button(
-                            onClick = { onPlay(item) }, shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
-                            contentPadding = PaddingValues(horizontal = 28.dp, vertical = 10.dp), modifier = Modifier.testTag("online_hero_play"),
-                        ) {
-                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(22.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Play", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { onPlay(item) }, shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                                contentPadding = PaddingValues(start = 14.dp, end = 18.dp), modifier = Modifier.height(40.dp).testTag("online_hero_play"),
+                            ) {
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Play", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                            val isSaved = saved.any { it.api == item.api && it.url == item.url }
+                            HeroRoundButton(if (isSaved) Icons.Default.Check else Icons.Default.Add, if (isSaved) "Remove from My List" else "Add to My List") {
+                                val now = OnlineBookmarks.toggle(context, item)
+                                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
+                            }
+                            HeroRoundButton(Icons.Outlined.Info, "Info") { onInfo(item) }
                         }
-                        HeroIconButton(Icons.Outlined.Info, "Info") { onInfo(item) }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.08f))) {
+                        PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
                     }
                 }
             }
         }
-        if (items.size > 1) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            repeat(items.size) { i ->
-                val sel = i == pager.currentPage
+        if (n > 1) Row(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            val cur = pager.currentPage % n
+            repeat(n.coerceAtMost(12)) { i ->
+                val sel = i == cur
                 val w by animateDpAsState(if (sel) 18.dp else 6.dp, label = "dot")
-                val c by animateColorAsState(if (sel) SpotifyGreen else Color.White.copy(alpha = 0.35f), label = "dotc")
-                Box(Modifier.height(6.dp).width(w).clip(CircleShape).background(c))
+                val c by animateColorAsState(if (sel) p.accent else p.textTertiary.copy(alpha = 0.4f), label = "dotc")
+                Box(Modifier.height(5.dp).width(w).clip(CircleShape).background(c))
             }
         }
     }
 }
 
+internal val HERO_HEIGHT = 212.dp
+private const val HERO_LAPS = 2000
+
 @Composable
-private fun HeroIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    Column(Modifier.width(64.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, label, tint = Color.White, modifier = Modifier.size(24.dp))
-        Text(label, color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, maxLines = 1)
-    }
+private fun HeroRoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))
+            .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape).clickable(onClickLabel = label, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, label, tint = Color.White, modifier = Modifier.size(20.dp)) }
 }
 
 /** "Top 10" row: big outlined rank numbers next to posters. */

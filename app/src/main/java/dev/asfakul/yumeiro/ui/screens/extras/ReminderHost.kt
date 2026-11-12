@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -143,45 +144,66 @@ fun ReminderHost(blocked: Boolean) {
 }
 
 @Composable
-private fun CardShell(tag: String, onClose: () -> Unit, content: @Composable () -> Unit) {
+private fun CardShell(tag: String, onClose: () -> Unit, inline: Boolean = false, content: @Composable () -> Unit) {
+    // inline: drawn in place (screenshot tests); the app always shows it as a dialog.
+    if (inline || dev.asfakul.yumeiro.ui.components.LocalPopupPreview.current) { ReminderSurface(tag, Modifier.padding(horizontal = 28.dp), content); return }
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        ReminderSurface(tag, Modifier.padding(horizontal = 28.dp), content)
+    }
+}
+
+/**
+ * The card itself. The old shell painted a gradient on a *transparent* Surface with a 20dp shadow,
+ * so the shadow was drawn over the card body: grey smudged edges and a muddy middle in light theme.
+ * Now the Surface is opaque in the theme colour, the wash sits inside it and the border is a real
+ * border, matching [dev.asfakul.yumeiro.ui.components.TsukiDialog].
+ */
+@Composable
+internal fun ReminderSurface(tag: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val palette = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     val glow = dev.asfakul.yumeiro.ui.theme.LocalAmbientColor.current?.value ?: palette.accent
     val shape = RoundedCornerShape(28.dp)
-    val scale = remember { androidx.compose.animation.core.Animatable(0.9f) }
-    LaunchedEffect(Unit) { scale.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            shape = shape,
-            color = androidx.compose.ui.graphics.Color.Transparent,
-            shadowElevation = 20.dp,
-            modifier = Modifier.padding(horizontal = 28.dp).fillMaxWidth()
-                .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
-                .clip(shape)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            androidx.compose.ui.graphics.lerp(palette.surfaceContainer, glow, if (palette.isDark) 0.22f else 0.10f),
-                            palette.surfaceContainer,
-                            palette.surface,
-                        ),
-                    ),
-                )
-                .border(1.dp, Brush.linearGradient(listOf(BrandGold.copy(alpha = 0.6f), glow.copy(alpha = 0.2f), androidx.compose.ui.graphics.Color.White.copy(alpha = 0.05f))), shape)
-                .testTag(tag),
-        ) { Box(Modifier.padding(horizontal = 22.dp, vertical = 24.dp)) { content() } }
+    val base = palette.surfaceContainer
+    val wash = remember(base, glow, palette.isDark) {
+        Brush.verticalGradient(
+            listOf(
+                androidx.compose.ui.graphics.lerp(base, glow, if (palette.isDark) 0.20f else 0.08f),
+                base,
+                if (palette.isDark) palette.surface else base,
+            ),
+        )
     }
+    val hairline = remember(glow, palette.isDark) {
+        Brush.linearGradient(listOf(BrandGold.copy(alpha = if (palette.isDark) 0.55f else 0.7f), glow.copy(alpha = 0.2f), BrandGold.copy(alpha = 0.15f)))
+    }
+    val scale = remember { androidx.compose.animation.core.Animatable(0.94f) }
+    LaunchedEffect(Unit) { scale.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.75f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)) }
+    Surface(
+        shape = shape,
+        color = base,
+        contentColor = palette.textPrimary,
+        shadowElevation = if (palette.isDark) 20.dp else 10.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, hairline),
+        modifier = modifier.fillMaxWidth().widthIn(max = 460.dp)
+            .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
+            .testTag(tag),
+    ) { Box(Modifier.background(wash).padding(horizontal = 22.dp, vertical = 24.dp)) { content() } }
 }
 
 /** Round gold-rimmed badge carrying the card's icon. */
 @Composable
 private fun IconBadge(icon: ImageVector, size: androidx.compose.ui.unit.Dp = 60.dp) {
-    val glow = dev.asfakul.yumeiro.ui.theme.LocalAmbientColor.current?.value ?: SpotifyGreen
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val glow = dev.asfakul.yumeiro.ui.theme.LocalAmbientColor.current?.value ?: p.accent
+    // Light theme: a solid accent disc with a light glyph (pale gold on cream was unreadable).
+    val fill = if (p.isDark) Brush.radialGradient(listOf(glow.copy(alpha = 0.42f), BrandGold.copy(alpha = 0.08f)))
+    else Brush.linearGradient(listOf(p.accentBright, p.accent))
+    val tint = if (p.isDark) BrandGold else p.onAccent
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(size).clip(CircleShape)
-            .background(Brush.radialGradient(listOf(glow.copy(alpha = 0.42f), BrandGold.copy(alpha = 0.08f))))
-            .border(1.dp, BrandGold.copy(alpha = 0.5f), CircleShape),
-    ) { Icon(icon, null, tint = BrandGold, modifier = Modifier.size(size * 0.48f)) }
+        modifier = Modifier.size(size).clip(CircleShape).background(fill)
+            .border(1.dp, if (p.isDark) BrandGold.copy(alpha = 0.5f) else p.accent.copy(alpha = 0.35f), CircleShape),
+    ) { Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.48f)) }
 }
 
 /** Brand colour of each social network (their own guidelines), so the buttons are recognisable at a glance. */
@@ -191,8 +213,8 @@ private fun brandColor(s: Reminders.Social) = when (s) {
 }
 
 @Composable
-private fun ReminderCard(icon: ImageVector, tag: String, title: String, body: String, action: String, onAction: () -> Unit, onClose: () -> Unit) {
-    CardShell(tag, onClose) {
+internal fun ReminderCard(icon: ImageVector, tag: String, title: String, body: String, action: String, onAction: () -> Unit, onClose: () -> Unit, inline: Boolean = false) {
+    CardShell(tag, onClose, inline) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
             IconBadge(icon)
             Spacer(Modifier.height(14.dp))
@@ -211,16 +233,16 @@ private fun ReminderCard(icon: ImageVector, tag: String, title: String, body: St
 }
 
 @Composable
-private fun FollowCard(onClose: () -> Unit) {
+internal fun FollowCard(inline: Boolean = false, onClose: () -> Unit) {
     val context = LocalContext.current
     val total = Reminders.FOLLOW_COUNTDOWN_S
     var left by remember { mutableIntStateOf(total) }
     LaunchedEffect(Unit) { while (left > 0) { delay(1_000); left-- }; onClose() }
-    CardShell("reminder_follow", onClose) {
+    CardShell("reminder_follow", onClose, inline) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(60.dp)) {
                 IconBadge(Icons.Default.People, 52.dp)
-                CircularProgressIndicator(progress = { left / total.toFloat() }, color = BrandGold, trackColor = androidx.compose.ui.graphics.Color.Transparent, strokeWidth = 3.dp, modifier = Modifier.size(60.dp))
+                CircularProgressIndicator(progress = { left / total.toFloat() }, color = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) BrandGold else dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, trackColor = androidx.compose.ui.graphics.Color.Transparent, strokeWidth = 3.dp, modifier = Modifier.size(60.dp))
             }
             Spacer(Modifier.height(12.dp))
             Text("Join the Yumeiro community", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)

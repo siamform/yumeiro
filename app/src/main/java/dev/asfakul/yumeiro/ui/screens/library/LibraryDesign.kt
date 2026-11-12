@@ -322,7 +322,7 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
     val entries by MangaLibrary.entries.collectAsState()
     val reading = remember(entries) { entries.filter { it.lastChapterUrl != null }.sortedByDescending { it.updatedAt } }
     val saved = remember(entries) { entries.filter { it.saved }.sortedBy { it.title.lowercase() } }
-    LazyColumn(modifier.fillMaxSize().testTag("reading_library"), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 140.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    LazyColumn(modifier.fillMaxSize().testTag("reading_library"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("reading_library"), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 140.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item("hero") {
             LibraryHero(overline = "Your shelf", title = "Manga & comics", subtitle = if (entries.isEmpty()) "Read from Mihon, Aniyomi and JavaScript sources" else "${saved.size} saved · ${reading.size} in progress",
                 glyph = "本", testTag = "lib_reading_hero", onClick = onBrowse,

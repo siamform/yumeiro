@@ -102,7 +102,7 @@ fun PrivacyScreen(onBack: () -> Unit) {
     val hide by Privacy.hideInRecents.collectAsState()
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Privacy", onBack = onBack)
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("privacy")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
             Section("Incognito mode", "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.") {
                 SettingsToggleRow("Incognito", if (incognito) "On — history is paused" else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
             }
@@ -155,7 +155,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().testTag("tracking_screen")) {
         SubPageHeader(title = "Tracking", onBack = onBack, subtitle = "Watched episodes update your lists automatically")
         androidx.compose.runtime.key(refresh) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("tracking")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList, MyAnimeList and Trakt need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
 
@@ -461,7 +461,7 @@ fun BackupScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Backup & restore", onBack = onBack)
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("backup")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
             Section("Create a backup", "Settings, history, My List, playlists, sources, repositories, home servers and manga progress in one .zip. Save it to Drive, an SD card or anywhere you like.") {
                 SettingsToggleRow("Include installed extensions", "Bigger file, but sources work right after restoring", includeExt, { includeExt = it }, "backup_include_ext")
                 Button(onClick = { create.launch(Backup.suggestedName()) }, enabled = !busy, shape = RoundedCornerShape(20.dp),

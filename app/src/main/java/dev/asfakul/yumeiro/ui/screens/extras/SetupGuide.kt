@@ -335,7 +335,7 @@ private fun WelcomePage(onExplore: () -> Unit, onSkip: () -> Unit, onChecklist: 
 @Composable
 private fun ChecklistPage(status: SetupStatus, onAction: (SetupStep) -> Unit) {
     val p = LocalMtPalette.current
-    LazyColumn(Modifier.fillMaxSize().testTag("setup_checklist"), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("setup_checklist"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("setup_checklist"), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)) {
         item {
             Text("Set up the essentials", style = MaterialTheme.typography.headlineLarge, color = p.textPrimary, modifier = Modifier.padding(horizontal = 4.dp))
             Spacer(Modifier.height(6.dp))

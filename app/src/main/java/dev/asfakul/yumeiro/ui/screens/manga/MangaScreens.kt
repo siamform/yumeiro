@@ -172,7 +172,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
     var loading by remember(provider.id, feed, query) { mutableStateOf(false) }
     var error by remember(provider.id, feed, query) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val grid = rememberLazyGridState()
+    val grid = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("manga_browse:" + provider.id + ":" + feed + ":" + query)
 
     fun more() {
         if (loading || !hasNext) return

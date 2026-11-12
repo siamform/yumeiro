@@ -216,7 +216,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
 
     Column(Modifier.fillMaxSize()) {
         if (loading || busy != null) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_tachiyomi_" + kind.name), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text(
                     if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
@@ -332,7 +332,7 @@ private fun StremioTab() {
     }
     Column(Modifier.fillMaxSize()) {
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_stremio"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
                     color = TextSecondary, fontSize = 13.sp)
@@ -387,7 +387,7 @@ private fun JsTab() {
 
     Column(Modifier.fillMaxSize()) {
         if (loading) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_js"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text("JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.",
                     color = TextSecondary, fontSize = 13.sp)
@@ -458,7 +458,7 @@ private fun ServersTab() {
 
     Column(Modifier.fillMaxSize()) {
         if (scanning) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_servers"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_servers"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_servers"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text("Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore.",
                     color = TextSecondary, fontSize = 13.sp)

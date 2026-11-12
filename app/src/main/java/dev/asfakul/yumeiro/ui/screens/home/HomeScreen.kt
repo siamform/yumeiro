@@ -33,7 +33,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
@@ -304,7 +303,7 @@ fun HomeScreen(
 
     val features = remember(stats.audioCount, stats.videoCount, huesCount, activeDownloads, mangaCount) {
         listOf(
-            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", Icons.Default.AutoAwesome, "彩", SpaceHues.Kobai, onOpenHues),
+            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "彩", SpaceHues.Kobai, onOpenHues),
             Feature("quick_card_youtube", "YouTube", "Videos", Icons.Default.SmartDisplay, "映", SpaceHues.Shu, onOpenYouTube),
             Feature("quick_card_ytmusic", "YT Music", "Songs", Icons.Default.Album, "歌", SpaceHues.Fuji, onOpenYouTubeMusic),
             Feature("quick_card_store", "Extensions", if (huesCount > 0) "$huesCount on" else "Get some", Icons.Default.Extension, "拡", SpaceHues.Yamabuki, onOpenHueStore),
@@ -345,6 +344,21 @@ fun HomeScreen(
                     setup.count, setup.total, onOpen = { SetupGuide.show(checklist = true) }, onHide = { SetupGuide.hideCard(context) },
                     onExplore = if (onboarding != SetupGuide.Onboarding.EXPLORED) ({ dev.asfakul.yumeiro.ui.screens.extras.ExploreTour.start() }) else null,
                 )
+            }
+
+            // ---- 空間 Spaces: every feature in one grid ---------------------------------------------
+            if ("spaces" !in hidden) {
+                item(key = "spaces_header", contentType = "header") {
+                    YuSection("空間", "Spaces", "Everything in Yumeiro")
+                }
+                features.chunked(spaceColumns).forEachIndexed { i, row ->
+                    item(key = "spaces_$i", contentType = "spaces_row") {
+                        Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
+                            repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
             }
 
             // ---- つづき Continue -----------------------------------------------------------------
@@ -423,7 +437,7 @@ fun HomeScreen(
                     when {
                         episodeCards.isNotEmpty() -> EpisodeCarousel(episodeCards) { onOpenOnlineTitle(it.bookmark.toItem()) }
                         latest -> Column {
-                            val picks = arrivals.take(8)
+                            val picks = arrivals.take(24)
                             val slides = remember(picks) {
                                 picks.map { HeroSlide(it.key, it.name, it.posterUrl, it.posterHeaders, "Latest", fresh = false, line = it.type, meta = it.api, cta = "Open") }
                             }
@@ -436,21 +450,6 @@ fun HomeScreen(
                         }
                         feed.loading && huesCount > 0 -> SkeletonBlock(null, 184.dp, shape = RoundedCornerShape(24.dp))
                         else -> EpisodesEmpty(hasSources = huesCount > 0, onFind = onOpenHues, onAddSources = onOpenHueStore)
-                    }
-                }
-            }
-
-            // ---- 空間 Spaces: every feature in one grid ---------------------------------------------
-            if ("spaces" !in hidden) {
-                item(key = "spaces_header", contentType = "header") {
-                    YuSection("空間", "Spaces", "Everything in Yumeiro")
-                }
-                features.chunked(spaceColumns).forEachIndexed { i, row ->
-                    item(key = "spaces_$i", contentType = "spaces_row") {
-                        Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
-                            repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
-                        }
                     }
                 }
             }

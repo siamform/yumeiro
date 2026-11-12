@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.zIndex
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -35,6 +36,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ChevronRight
@@ -221,27 +223,18 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
             YmDetail(top, onBack = { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }, onOpen = open, onPlay = ::play)
             return@AnimatedContent
         }
-        Column(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()) {
+
             val asked by dev.asfakul.yumeiro.ui.components.TabSearch.open.collectAsState()
             val key = dev.asfakul.yumeiro.ui.components.TabSearch.YT_MUSIC
             val barOpen = asked == key || query.isNotEmpty() || submitted != null
-            androidx.compose.animation.AnimatedVisibility(barOpen) {
-                YtSearchBar(
-                    query, "Songs, albums, artists, podcasts", music = true, autoFocus = asked == key,
-                    onChange = { query = it; if (it.isBlank()) { submitted = null; results = YmState(loading = false) } },
-                    onSearch = { search(query) },
-                    onClear = { query = ""; submitted = null; results = YmState(loading = false); dev.asfakul.yumeiro.ui.components.TabSearch.close(key) },
-                )
-            }
-            dev.asfakul.yumeiro.ui.components.SuggestionList(
-                query = query, suggestions = suggestions, onPick = { search(it.text) }, onFill = { query = it.text }, tag = "ytmusic_suggestions",
-            )
+            Column(Modifier.fillMaxSize().padding(top = if (submitted != null) YT_SEARCH_BAR_H else 0.dp)) {
             val sub = submitted
             if (sub != null) {
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("ytmusic_search_filters")) {
                     itemsIndexed(YtMusicApi.Filter.entries, key = { _, f -> f.name }) { _, f -> YtChip(f.label, f == filter) { if (f != filter) search(sub, f) } }
                 }
-                val state = rememberLazyListState()
+                val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_results:" + sub + ":" + filter.name)
                 YtEndlessTrigger(state, results.canLoadMore) { moreResults() }
                 LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_results"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
                     pageBody(results, home = false, onOpen = open, onPlay = ::play, onRetry = { search(sub) })
@@ -258,7 +251,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                     YtChip(c.title, chip == c.browse.params) { chip = c.browse.params ?: CHIP_HOME }
                 }
             }
-            val state = rememberLazyListState()
+            val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_home:" + chip)
             YtEndlessTrigger(state, home.canLoadMore) { moreHome() }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_music_list"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (chip == CHIP_EXPLORE) item("explore_tiles") { ExploreTiles(open) }
@@ -276,6 +269,24 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                         Text("Use simple discovery instead", color = SpotifyGreen)
                     }
                 }
+            }
+                    }
+            Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(2f)) {
+            androidx.compose.animation.AnimatedVisibility(
+                barOpen,
+                enter = androidx.compose.animation.slideInVertically(dev.asfakul.yumeiro.ui.components.YuMotion.enter(dev.asfakul.yumeiro.ui.components.reducedMotion(), 240)) { -it / 2 } + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.slideOutVertically(dev.asfakul.yumeiro.ui.components.YuMotion.exit(dev.asfakul.yumeiro.ui.components.reducedMotion(), 180)) { -it / 2 } + androidx.compose.animation.fadeOut(),
+            ) {
+                YtSearchBar(
+                    query, "Songs, albums, artists, podcasts", music = true, autoFocus = asked == key, floating = true,
+                    onChange = { query = it; if (it.isBlank()) { submitted = null; results = YmState(loading = false) } },
+                    onSearch = { search(query) },
+                    onClear = { query = ""; submitted = null; results = YmState(loading = false); dev.asfakul.yumeiro.ui.components.TabSearch.close(key) },
+                )
+            }
+            dev.asfakul.yumeiro.ui.components.SuggestionList(
+                query = query, suggestions = suggestions, onPick = { search(it.text) }, onFill = { query = it.text }, tag = "ytmusic_suggestions",
+            )
             }
         }
     }
@@ -424,6 +435,7 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
                 if (line.isNotBlank()) Text(line, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (item.durationSec > 0 && !compact) Text(formatYtDuration(item.durationSec), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
+            SongDownloadButton { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) }
         }
         is YmItem.Collection -> Row(
             Modifier.fillMaxWidth().clickable { onOpen(item.browse) }.padding(horizontal = 16.dp, vertical = pad).testTag("ytmusic_collection_row"),
@@ -528,7 +540,7 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
     val header = state.page?.header
     val songs = state.page?.shelves?.flatMap { it.items }?.filterIsInstance<YmItem.Song>().orEmpty()
     val art = header?.thumbnail?.takeIf { header.artist.not() }
-    val listState = rememberLazyListState()
+    val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_detail:" + target.browseId + ":" + target.params)
     YtEndlessTrigger(listState, state.canLoadMore) { more() }
     LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_detail"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
         item("bar") {
@@ -590,3 +602,11 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
     }
 }
 
+
+/** Trailing "download this song" action on a song row (opens the shared audio download sheet). */
+@Composable
+internal fun SongDownloadButton(onClick: () -> Unit) {
+    androidx.compose.material3.IconButton(onClick = onClick, modifier = Modifier.size(40.dp).testTag("song_download")) {
+        Icon(Icons.Default.Download, contentDescription = "Download song", tint = TextTertiary, modifier = Modifier.size(20.dp))
+    }
+}

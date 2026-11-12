@@ -120,7 +120,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("youtube_account")) {
         SubPageHeader(title = "YouTube account", onBack = onBack, subtitle = "Optional · off unless you sign in")
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -308,7 +308,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("yt_paste_page")) {
         SubPageHeader(title = "Paste cookie", onBack = { if (!busy) onDone(false) }, subtitle = "Advanced · for when Google blocks the sign-in page", handleBack = false)
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account_2")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
                     IconTile(Icons.Default.Lock, YouTubeRed, size = 38)

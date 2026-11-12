@@ -124,7 +124,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
             if (results.isNotEmpty()) IconButton(onClick = ::share) { Icon(Icons.Default.Share, "Share report", tint = TextSecondary) }
         }
         if (running) LinearProgressIndicator(progress = { if (apis.isEmpty()) 0f else done / apis.size.toFloat() }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("source_health"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("run") {
                 Button(onClick = { runAll() }, enabled = !running && apis.isNotEmpty(), shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) {

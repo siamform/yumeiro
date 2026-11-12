@@ -190,18 +190,26 @@ internal fun EpisodeCarousel(cards: List<EpisodeCard>, onOpen: (EpisodeCard) -> 
  * https://m3.material.io/components/carousel/guidelines). Every slide is a button. It advances by
  * itself every 6 s, pauses while touched, and stands still with reduced motion on.
  */
+/** Laps of the virtual strip behind an endless carousel (plenty: 6 s per slide). */
+private const val LOOP_LAPS = 2_000
+
 @Composable
 internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) -> Unit) {
     val p = LocalMtPalette.current
     val reduced = reducedMotion()
-    val pager = rememberPagerState { slides.size }
+    // Endless: with two or more slides the pager wraps both ways (it starts in the middle of a
+    // long virtual strip), so swiping or auto-advance never hits an end.
+    val n = slides.size
+    val loop = n > 1
+    val virtual = if (loop) n * LOOP_LAPS else n
+    val pager = rememberPagerState(initialPage = if (loop) (LOOP_LAPS / 2) * n else 0) { virtual }
     var held by remember { mutableStateOf(false) }
     val auto = remember { android.os.Build.FINGERPRINT != "robolectric" }
-    LaunchedEffect(slides.size, held, reduced) {
-        if (!auto || reduced || held || slides.size < 2) return@LaunchedEffect
+    LaunchedEffect(n, held, reduced) {
+        if (!auto || reduced || held || n < 2) return@LaunchedEffect
         while (true) {
             delay(6_000)
-            if (!pager.isScrollInProgress) pager.animateScrollToPage((pager.currentPage + 1) % slides.size)
+            if (!pager.isScrollInProgress) pager.animateScrollToPage((pager.currentPage + 1).coerceAtMost(virtual - 1))
         }
     }
     Column(Modifier.fillMaxWidth()) {
@@ -209,7 +217,7 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
             state = pager,
             contentPadding = PaddingValues(end = if (slides.size > 1) 40.dp else 0.dp),
             pageSpacing = 10.dp,
-            key = { slides[it].key },
+            key = { "${slides[it % n].key}#$it" },
             modifier = Modifier.fillMaxWidth().testTag(tag)
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -218,16 +226,21 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
                     }
                 },
         ) { page ->
-            val s = slides[page]
-            val offset = ((pager.currentPage - page) + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
-            Box(Modifier.graphicsLayer { if (!reduced) { val k = 1f - 0.05f * offset; scaleX = k; scaleY = k; alpha = 1f - 0.3f * offset } }) {
-                HeroSlideCard(s) { onOpen(page) }
+            val real = page % n
+            val s = slides[real]
+            Box(Modifier.graphicsLayer {
+                if (!reduced) {
+                    val offset = ((pager.currentPage - page) + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
+                    val k = 1f - 0.05f * offset; scaleX = k; scaleY = k; alpha = 1f - 0.3f * offset
+                }
+            }) {
+                HeroSlideCard(s) { onOpen(real) }
             }
         }
         if (slides.size > 1) {
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.Center) {
-                repeat(slides.size) { i ->
-                    val sel = i == pager.currentPage
+                repeat(slides.size.coerceAtMost(12)) { i ->
+                    val sel = i == pager.currentPage % n
                     val w by animateDpAsState(if (sel) 18.dp else 5.dp, YuMotion.move(reduced, 250), label = "dot")
                     Box(Modifier.padding(horizontal = 2.5.dp).height(5.dp).width(w).clip(CircleShape)
                         .background(if (sel) p.accent else p.textPrimary.copy(alpha = 0.16f)))

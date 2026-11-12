@@ -127,9 +127,52 @@ fun MusicMixScreen(
     val queue = remember(woven) { woven.map { when (it) { is MixEntry.Device -> it.track; is MixEntry.Online -> YouTubePlayback.toTrack(it.item) } } }
     fun playAt(i: Int) { queue.getOrNull(i)?.let { onPlayTrack(it, queue) } }
 
-    LazyColumn(
-        modifier.fillMaxSize().testTag("music_mix"),
-        contentPadding = PaddingValues(bottom = 170.dp),
+    // Search (the magnifier in the top bar): device songs filter instantly, YouTube Music songs
+    // arrive after a short pause in typing. Both play from the results.
+    val asked by dev.asfakul.yumeiro.ui.components.TabSearch.open.collectAsState()
+    val searchKey = dev.asfakul.yumeiro.ui.components.TabSearch.MUSIC_MIX
+    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    val searching = asked == searchKey || query.isNotBlank()
+    val deviceHits = remember(query, tracks) { mixDeviceMatches(tracks, query) }
+    var onlineHits by remember { mutableStateOf<List<YtItem>>(emptyList()) }
+    var onlineBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(query, online) {
+        val q = query.trim()
+        if (q.length < 2 || !online) { onlineHits = emptyList(); onlineBusy = false; return@LaunchedEffect }
+        onlineBusy = true
+        kotlinx.coroutines.delay(350)
+        val page = runCatching { dev.asfakul.yumeiro.youtube.music.YtMusicApi.search(context, q, dev.asfakul.yumeiro.youtube.music.YtMusicApi.Filter.SONGS) }.getOrNull()
+        onlineHits = page?.shelves.orEmpty().flatMap { it.items }.filterIsInstance<dev.asfakul.yumeiro.youtube.music.YmItem.Song>().distinctBy { it.videoId }.take(30).map { it.toYt() }
+        onlineBusy = false
+    }
+
+    Box(modifier.fillMaxSize()) {
+    if (query.isNotBlank()) LazyColumn(
+        Modifier.fillMaxSize().testTag("music_mix_results"),
+        contentPadding = PaddingValues(top = dev.asfakul.yumeiro.ui.screens.youtube.YT_SEARCH_BAR_H, bottom = 170.dp),
+    ) {
+        item("dev_head") { MixHeader("On this phone", if (deviceHits.isEmpty()) "No matching songs" else "${deviceHits.size} song${if (deviceHits.size == 1) "" else "s"}") }
+        itemsIndexed(deviceHits.take(50), key = { _, t -> "sd" + t.id }) { _, t -> MixRow(MixEntry.Device(t), t.id == currentTrackId) { onPlayTrack(t, deviceHits) } }
+        item("net_head") {
+            MixHeader("YouTube Music", when {
+                !online -> "Offline: connect to search online"
+                query.trim().length < 2 -> "Type a little more"
+                onlineBusy -> "Searching…"
+                onlineHits.isEmpty() -> "No songs found"
+                else -> "${onlineHits.size} songs"
+            })
+        }
+        if (onlineBusy && onlineHits.isEmpty()) items(4, key = { "sk$it" }) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                dev.asfakul.yumeiro.ui.components.SkeletonBlock(48.dp, 48.dp, shape = RoundedCornerShape(10.dp))
+                Spacer(Modifier.width(12.dp))
+                Column { dev.asfakul.yumeiro.ui.components.SkeletonBlock(180.dp, 12.dp); Spacer(Modifier.height(6.dp)); dev.asfakul.yumeiro.ui.components.SkeletonBlock(110.dp, 10.dp) }
+            }
+        }
+        itemsIndexed(onlineHits, key = { _, y -> "so" + y.id }) { _, y -> MixRow(MixEntry.Online(y), YouTubePlayback.toTrack(y).id == currentTrackId) { onPlayOnline(y, onlineHits) } }
+    } else LazyColumn(
+        Modifier.fillMaxSize().testTag("music_mix"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("music_mix"),
+        contentPadding = PaddingValues(top = if (searching) dev.asfakul.yumeiro.ui.screens.youtube.YT_SEARCH_BAR_H else 0.dp, bottom = 170.dp),
     ) {
         item("hero") {
             val shape = RoundedCornerShape(22.dp)
@@ -191,7 +234,33 @@ fun MusicMixScreen(
         if (recentlyPlayed.isNotEmpty()) item("recent") { TrackShelf("Played recently", "Device and online", recentlyPlayed.take(12), currentTrackId, onPlayTrack) }
         if (fresh.isNotEmpty()) item("fresh") { TrackShelf("New on this phone", "Newest files first", fresh, currentTrackId, onPlayTrack) }
     }
+    androidx.compose.animation.AnimatedVisibility(
+        visible = searching,
+        enter = androidx.compose.animation.slideInVertically(dev.asfakul.yumeiro.ui.components.YuMotion.enter(dev.asfakul.yumeiro.ui.components.reducedMotion(), 240)) { -it / 2 } + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.slideOutVertically(dev.asfakul.yumeiro.ui.components.YuMotion.exit(dev.asfakul.yumeiro.ui.components.reducedMotion(), 180)) { -it / 2 } + androidx.compose.animation.fadeOut(),
+        modifier = Modifier.align(Alignment.TopCenter).testTag("music_mix_search_bar"),
+    ) {
+        dev.asfakul.yumeiro.ui.screens.youtube.YtSearchBar(
+            query, "Search your songs and YouTube Music", music = true, autoFocus = asked == searchKey, floating = true,
+            onChange = { query = it }, onSearch = { },
+            onClear = { query = ""; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
+        )
+    }
+    }
 }
+
+/** Device songs whose title, artist or album contain every word of [query] (case/accents folded). Pure; unit-tested. */
+internal fun mixDeviceMatches(tracks: List<AudioTrack>, query: String): List<AudioTrack> {
+    val words = fold(query).split(' ').filter { it.isNotBlank() }
+    if (words.isEmpty()) return emptyList()
+    return tracks.asSequence().filter { t ->
+        val hay = fold(t.title + " " + t.artist + " " + t.album)
+        words.all { hay.contains(it) }
+    }.distinctBy { it.id }.sortedBy { if (fold(it.title).startsWith(words.first())) 0 else 1 }.toList()
+}
+
+private fun fold(s: String): String =
+    java.text.Normalizer.normalize(s.lowercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").trim()
 
 private sealed interface MixEntry {
     val key: String
@@ -220,6 +289,7 @@ private fun MixRow(e: MixEntry, current: Boolean, onClick: () -> Unit) {
             Text(artist, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         val online = e is MixEntry.Online
+        if (e is MixEntry.Online) dev.asfakul.yumeiro.ui.screens.youtube.SongDownloadButton { dev.asfakul.yumeiro.online.download.SongDownloads.ask(e.item) }
         Text(
             if (online) "Online" else "Device",
             color = if (online) p.accent else p.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold,

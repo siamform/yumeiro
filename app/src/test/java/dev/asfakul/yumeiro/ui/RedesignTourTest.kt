@@ -38,7 +38,7 @@ import org.robolectric.annotation.Config
  * and saves a screenshot of each to build/screenshots/tour_<theme>_<name>.png. Each stop is
  * independent: if one cannot be reached it is recorded in build/screenshots/tour_<theme>_missing.txt
  * and the tour returns to Home and goes on, so one broken stop never hides the others.
- * Also asserts that the redesigned shell keeps its contracts (labelled tabs, mini-player swipe).
+ * Also asserts that the redesigned shell keeps its contracts (icon-only dock tabs with accessible labels, mini-player swipe).
  */
 @RunWith(RobolectricTestRunner::class)
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
