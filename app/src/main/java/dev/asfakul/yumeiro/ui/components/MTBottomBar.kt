@@ -55,8 +55,15 @@ import dev.asfakul.yumeiro.ui.theme.Yume
 val DockHorizontalPadding = 14.dp
 val DockBottomPadding = 12.dp
 val DockMaxWidth = 480.dp
-val DockNavHeight = 62.dp
-val DockMiniHeight = 68.dp
+/*
+ * Round 10: the dock was 62 dp (nav) + 68 dp (mini player) and read as cramped. Heights now follow
+ * a 54 / 46 split of the joined stack: the nav pill is 68 dp (Material 3's flexible bar is 64 dp,
+ * the iOS floating tab capsule 62 pt; a floating icon-only pill needs a little more) and the mini
+ * player 80 dp, with its artwork and play button scaled to match. Pages measure the dock, so
+ * content padding follows automatically.
+ */
+val DockNavHeight = 68.dp
+val DockMiniHeight = 80.dp
 val DockGap = 2.dp
 /** Space between the floating mini-player pill and the nav pill. */
 val DockPillGap = 10.dp
@@ -145,7 +152,7 @@ fun MTBottomBar(
                                 imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
                                 contentDescription = null,
                                 tint = tint,
-                                modifier = Modifier.size(if (sel) 27.dp else 25.dp).scale(pop).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
+                                modifier = Modifier.size(if (sel) 28.dp else 26.dp).scale(pop).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
                             )
                         }
                     }
