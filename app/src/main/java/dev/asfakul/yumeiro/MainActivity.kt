@@ -12,6 +12,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.asfakul.yumeiro.player.PipController
 import dev.asfakul.yumeiro.stream.IncomingMedia
@@ -42,6 +44,7 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         val unofficial = dev.asfakul.yumeiro.security.IntegrityGuard.isUnofficial(this)
         UpdateManager.get(this).onAppStart(autoCheckAllowedForBuild = BuildConfig.AUTO_UPDATE_CHECK && !unofficial)
         handleIntent(intent)
+        dev.asfakul.yumeiro.ui.tv.TvMode.init(this)
 
         setContent {
             val palette = rememberMtPalette()
@@ -50,10 +53,16 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
                 else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
-            MTPlayerTheme(palette = palette) {
-                val viewModel: MainViewModel = viewModel()
-                MTPlayerApp(viewModel = viewModel)
-                dev.asfakul.yumeiro.ui.screens.extras.AppLockGate(this@MainActivity)
+            // TV layout: what the device reports, unless Settings → Navigation bar → Layout overrides it.
+            val tvDetected = androidx.compose.runtime.remember { dev.asfakul.yumeiro.ui.tv.TvMode.detect(this@MainActivity) }
+            val tvPref by dev.asfakul.yumeiro.ui.tv.TvMode.pref.collectAsState()
+            val tv = dev.asfakul.yumeiro.ui.tv.TvMode.resolve(tvPref, tvDetected)
+            androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.tv.LocalTvMode provides tv) {
+                MTPlayerTheme(palette = palette) {
+                    val viewModel: MainViewModel = viewModel()
+                    MTPlayerApp(viewModel = viewModel)
+                    dev.asfakul.yumeiro.ui.screens.extras.AppLockGate(this@MainActivity)
+                }
             }
         }
     }
@@ -71,6 +80,15 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
+    }
+
+    @Deprecated("Only for the Android 7–8 app-lock screen (no BiometricPrompt there).")
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == dev.asfakul.yumeiro.security.Privacy.REQ_CONFIRM_CREDENTIAL) {
+            dev.asfakul.yumeiro.security.Privacy.onCredentialResult(resultCode == RESULT_OK)
+        }
     }
 
     /** Android 9–11: enter picture-in-picture when the user presses Home during video playback. */

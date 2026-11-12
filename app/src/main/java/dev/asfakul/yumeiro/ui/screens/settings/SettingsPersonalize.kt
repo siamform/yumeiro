@@ -125,6 +125,25 @@ fun NavigationBarSettingsCard() {
                 }
             }
         }
+        GroupLabel("Layout")
+        SettingsCard {
+            remember(context) { dev.asfakul.yumeiro.ui.tv.TvMode.init(context); 0 }
+            val layoutPref by dev.asfakul.yumeiro.ui.tv.TvMode.pref.collectAsState()
+            val detectedTv = remember(context) { dev.asfakul.yumeiro.ui.tv.TvMode.detect(context) }
+            Text(
+                "TV layout puts a rail on the left and is made for a remote. Automatic picks it on TVs" +
+                    (if (detectedTv) " (this device is one)." else "; this device looks like a phone or tablet."),
+                color = TextSecondary, fontSize = 13.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                dev.asfakul.yumeiro.ui.tv.TvMode.Pref.entries.forEach { p ->
+                    SelectChip(label = p.label, selected = layoutPref == p, tag = "nav_settings_layout_${p.name.lowercase()}") {
+                        dev.asfakul.yumeiro.ui.tv.TvMode.set(context, p)
+                    }
+                }
+            }
+        }
         SettingsCard {
             SettingsActionRow("Reset to default", "Home, Music, Videos and Library", "nav_settings_reset") {
                 NavPrefs.reset(context); AppMessages.success(context, "Navigation bar reset")

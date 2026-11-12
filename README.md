@@ -18,7 +18,7 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
   <a href="https://github.com/siamform/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/siamform/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
 </p>
 <p>
-  <img alt="Android 9+" src="https://img.shields.io/badge/Android-9%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
+  <img alt="Android 7+" src="https://img.shields.io/badge/Android-7%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-F5C46B?style=flat-square&logo=kotlin&logoColor=white&labelColor=16161A" />
   <a href="LICENSE"><img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-F5C46B?style=flat-square&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
@@ -188,7 +188,7 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
-Android 9 or newer. Phones, tablets and Android TV.
+Android 7.0 or newer. Phones, tablets, Android TV, Google TV and Fire TV. Pick `arm64-v8a` (most devices), `armeabi-v7a` (older 32-bit phones and many TV sticks) or the universal APK.
 
 ## Verify a release
 

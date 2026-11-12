@@ -468,6 +468,33 @@ fun MTPlayerApp(
                     )
                 }
     }
+    val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+    val onBarNavigate: (String) -> Unit = { route ->
+        val shortcut = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.of(route.removePrefix(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX))
+        when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
+            null -> navigateTop(route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MANGA -> navigateSub(Screen.Manga.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.LIVE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.DOWNLOADS -> navigateSub(Screen.Downloads.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS -> navigateSub(Screen.Extensions.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SOURCES -> navigateSub(Screen.SourcesHub.route(0))
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YOUTUBE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YUMIX -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YTMUSIC -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MIX -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.DEVICE_VIDEOS -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MY_LIST -> navigateSub(Screen.OnlineLibrary.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.HISTORY -> navigateSub(Screen.OnlineHistory.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MARKET -> navigateSub(Screen.ExtensionMarket.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.HEALTH -> navigateSub(Screen.SourceHealth.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EQUALIZER -> navigateSub(Screen.Equalizer.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WATCH_TOGETHER -> navigateSub(Screen.WatchTogether.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS -> navigateSub(Screen.Settings.route)
+        }
+    }
     val tabBottomBar: @Composable () -> Unit = {
                 run {
                     // One floating dock: the mini player joins the nav bar while music is playing.
@@ -475,7 +502,8 @@ fun MTPlayerApp(
                     Column(modifier = Modifier.fillMaxWidth().widthIn(max = dev.asfakul.yumeiro.ui.components.DockMaxWidth)) {
                         // ArchiveTune-style dock: with music playing, the mini player sits right on
                         // the nav bar (small junction corners, rounded outer corners) as one piece.
-                        val dockJoined = playbackState.currentTrack != null
+                        // On the TV layout the rail is the navigation, so the mini player floats alone.
+                        val dockJoined = playbackState.currentTrack != null && !tvLayout
                         MiniPlayerBar(
                             attachedToNav = dockJoined,
                             playbackState = playbackState,
@@ -487,35 +515,10 @@ fun MTPlayerApp(
                             positionMs = positionProvider
                         )
 
-                        MTBottomBar(
+                        if (!tvLayout) MTBottomBar(
                             currentRoute = tabRoute,
                             items = barItems,
-                            onNavigateToRoute = { route ->
-                                val shortcut = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.of(route.removePrefix(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX))
-                                when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
-                                    null -> navigateTop(route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MANGA -> navigateSub(Screen.Manga.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.LIVE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.DOWNLOADS -> navigateSub(Screen.Downloads.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS -> navigateSub(Screen.Extensions.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SOURCES -> navigateSub(Screen.SourcesHub.route(0))
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YOUTUBE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YUMIX -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YTMUSIC -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MIX -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.DEVICE_VIDEOS -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MY_LIST -> navigateSub(Screen.OnlineLibrary.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.HISTORY -> navigateSub(Screen.OnlineHistory.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MARKET -> navigateSub(Screen.ExtensionMarket.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.HEALTH -> navigateSub(Screen.SourceHealth.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EQUALIZER -> navigateSub(Screen.Equalizer.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WATCH_TOGETHER -> navigateSub(Screen.WatchTogether.route)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
-                                    dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS -> navigateSub(Screen.Settings.route)
-                                }
-                            },
+                            onNavigateToRoute = onBarNavigate,
                             joinedWithMiniPlayer = dockJoined,
                         )
                     }
@@ -540,7 +543,7 @@ fun MTPlayerApp(
             )
             val density = androidx.compose.ui.platform.LocalDensity.current
             val tabNow = PaddingValues(
-                innerPadding.calculateStartPadding(layoutDir), maxOf(tabTopH, innerPadding.calculateTopPadding()),
+                innerPadding.calculateStartPadding(layoutDir) + (if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp), maxOf(tabTopH, innerPadding.calculateTopPadding()),
                 innerPadding.calculateEndPadding(layoutDir), maxOf(tabBottomH, innerPadding.calculateBottomPadding()),
             )
             val tabPad = remember { mutableStateOf(tabNow) }
@@ -895,8 +898,16 @@ fun MTPlayerApp(
                                     .graphicsLayer { alpha = tabFade.value; translationX = tabShift.value * 28.dp.toPx() }
                                     .testTag("tab_pager"),
                             ) { page -> tabPage(page) }
-                            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
-                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }) { tabBottomBar() }
+                            val railPad = if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp
+                            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
+                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }) { tabBottomBar() }
+                            if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvNavRail(
+                                currentRoute = tabRoute,
+                                items = barItems,
+                                onNavigate = onBarNavigate,
+                                onSettings = { navigateSub(Screen.Settings.route) },
+                                modifier = Modifier.align(Alignment.CenterStart),
+                            )
                         }
                     }
                     // Old direct routes of the tabs (deep links, saved state) land on the pager page.

@@ -34,12 +34,10 @@ internal object ApkInstaller {
 
     class VerificationException(message: String) : Exception(message)
 
-    fun canInstallPackages(context: Context): Boolean =
-        context.packageManager.canRequestPackageInstalls()
+    fun canInstallPackages(context: Context): Boolean = dev.asfakul.yumeiro.OsCompat.canInstallPackages(context)
 
     /** Intent that opens "Install unknown apps" for this app (Android 8+). */
-    fun unknownSourcesSettingsIntent(context: Context): Intent =
-        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
+    fun unknownSourcesSettingsIntent(context: Context): Intent = dev.asfakul.yumeiro.OsCompat.unknownSourcesIntent(context)
 
     suspend fun verify(context: Context, apk: File, expectedSha256: String?) = withContext(Dispatchers.IO) {
         if (!apk.exists() || apk.length() == 0L) throw VerificationException("The downloaded file is missing.")
@@ -54,8 +52,7 @@ internal object ApkInstaller {
         }
 
         val pm = context.packageManager
-        @Suppress("DEPRECATION")
-        val flags = PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
+        val flags = dev.asfakul.yumeiro.OsCompat.SIGNING_FLAGS
         val archive: PackageInfo = pm.getPackageArchiveInfo(apk.absolutePath, flags)
             ?: throw VerificationException("The downloaded file is not a valid APK.")
 
@@ -64,7 +61,7 @@ internal object ApkInstaller {
         }
 
         val installed = pm.getPackageInfo(context.packageName, flags)
-        if (archive.longVersionCode <= installed.longVersionCode) {
+        if (dev.asfakul.yumeiro.OsCompat.versionCode(archive) <= dev.asfakul.yumeiro.OsCompat.versionCode(installed)) {
             throw VerificationException("The downloaded version is not newer than the installed one.")
         }
 
@@ -82,7 +79,7 @@ internal object ApkInstaller {
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(context.packageName)
             setSize(apk.length())
-            setInstallReason(android.content.pm.PackageManager.INSTALL_REASON_USER)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setInstallReason(android.content.pm.PackageManager.INSTALL_REASON_USER)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED)
@@ -129,14 +126,5 @@ internal object ApkInstaller {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    @Suppress("DEPRECATION")
-    private fun signerDigests(info: PackageInfo): Set<String> {
-        val signatures = info.signingInfo?.let { si ->
-            if (si.hasMultipleSigners()) si.apkContentsSigners else si.signingCertificateHistory
-        } ?: info.signatures ?: return emptySet()
-        val md = MessageDigest.getInstance("SHA-256")
-        return signatures.filterNotNull().map { sig ->
-            md.digest(sig.toByteArray()).joinToString("") { "%02x".format(it) }
-        }.toSet()
-    }
+    private fun signerDigests(info: PackageInfo): Set<String> = dev.asfakul.yumeiro.OsCompat.signerDigests(info).toSet()
 }

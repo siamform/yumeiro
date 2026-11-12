@@ -35,9 +35,11 @@ object PipController {
     /** Set by the video screen; MainActivity calls it from onUserLeaveHint (Android 9–11). */
     @Volatile var onUserLeaveHint: (() -> Unit)? = null
 
-    fun isSupported(context: Context): Boolean =
-        context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    /** PiP needs Android 8 (the params/actions API) and a device that offers it (many TVs don't). */
+    fun isSupported(context: Context): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+        runCatching { context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }.getOrDefault(false)
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun params(context: Context, width: Int, height: Int, playing: Boolean, autoEnter: Boolean, sourceHint: Rect? = null): PictureInPictureParams {
         val b = PictureInPictureParams.Builder()
         if (width > 0 && height > 0) {
@@ -54,10 +56,11 @@ object PipController {
         return b.build()
     }
 
-    fun enter(activity: Activity, width: Int, height: Int, playing: Boolean): Boolean = runCatching {
+    fun enter(activity: Activity, width: Int, height: Int, playing: Boolean): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && runCatching {
         activity.enterPictureInPictureMode(params(activity, width, height, playing, autoEnter = false))
     }.getOrDefault(false)
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun actions(context: Context, playing: Boolean): List<RemoteAction> = listOf(
         action(context, CONTROL_REWIND, android.R.drawable.ic_media_rew, "Rewind 10s"),
         if (playing) action(context, CONTROL_PLAY_PAUSE, android.R.drawable.ic_media_pause, "Pause")
@@ -65,6 +68,7 @@ object PipController {
         action(context, CONTROL_FORWARD, android.R.drawable.ic_media_ff, "Forward 10s"),
     )
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun action(context: Context, control: Int, icon: Int, title: String): RemoteAction {
         val intent = Intent(ACTION_PIP_CONTROL).setPackage(context.packageName).putExtra(EXTRA_CONTROL, control)
         val pi = PendingIntent.getBroadcast(context, control, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

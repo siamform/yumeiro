@@ -23,6 +23,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.flow.first
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -380,6 +387,8 @@ private fun VideoPlayerModalContent(
     var errorTitle by remember(video.id) { mutableStateOf<String?>(null) }
     var errorDetail by remember(video.id) { mutableStateOf<String?>(null) }
     var errorAction by remember(video.id) { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    var pageFinder by remember(video.id) { mutableStateOf<Resolution.NeedsBrowser?>(null) }
+    var waitingForNetwork by remember(video.id) { mutableStateOf(false) }
     var errorCanRetry by remember(video.id) { mutableStateOf(true) }
     var qualityList by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
     var selectedQuality by remember(video.id) { mutableStateOf<QualityOption?>(null) }
@@ -489,15 +498,17 @@ private fun VideoPlayerModalContent(
                     canRetry = false,
                 )
             }
-            is Resolution.NeedsBrowser -> showErrorCard(
-                "This is a web page",
-                "${r.reason}\n\nOpen the link from Videos → Live TV: it can load the page and pick up the stream its player uses (with the page's own session and headers).",
-                canRetry = false,
-                action = "Open in browser" to {
-                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                    Unit
-                },
-            )
+            // Round 10: the link finder opens right here (it used to send the user to Live TV or out
+            // to a browser). Known file hosts start straight away in auto mode.
+            is Resolution.NeedsBrowser -> {
+                if (r.auto) pageFinder = r
+                showErrorCard(
+                    "This is a web page",
+                    r.reason,
+                    canRetry = false,
+                    action = "Find the video" to { pageFinder = r },
+                )
+            }
             is Resolution.Handoff -> showErrorCard(
                 "Open in ${r.platform}",
                 r.reason,
@@ -577,6 +588,15 @@ private fun VideoPlayerModalContent(
         // resume point only stands in while the player hasn't reported a position yet.
         val pos0 = queuedSeekMs ?: exoPlayer.currentPosition.takeIf { it > 0L } ?: video.playbackPositionMs
         val refused = facts.httpStatus in dev.asfakul.yumeiro.online.AccessLadder.ACCESS_CODES
+        // Round 10: the connection is gone (not the source). Retrying, refreshing or failing over
+        // now would only burn the attempts and end on an error card; wait for the network instead
+        // and pick up at the same position the moment it is back.
+        if (facts.isNetwork && !dev.asfakul.yumeiro.network.Connectivity.online.value) {
+            waitingForNetwork = true
+            isBuffering = true
+            showToast("You're offline — playback resumes when the connection is back")
+            return
+        }
         // Refreshable sources (YouTube): signed URLs expire → fetch a fresh one, keep the position.
         if (refused || facts.isNetwork) {
             val refresher = dev.asfakul.yumeiro.stream.StreamRefreshers.find(originalRequest)
@@ -646,6 +666,15 @@ private fun VideoPlayerModalContent(
             RecoveryAction.Reprobe -> resolveAndPlay(current.copy(format = StreamFormat.AUTO), pos, thorough = true)
             is RecoveryAction.Fail -> showErrorCard(action.title, action.message)
         }
+    }
+
+    LaunchedEffect(waitingForNetwork) {
+        if (!waitingForNetwork) return@LaunchedEffect
+        dev.asfakul.yumeiro.network.Connectivity.online.first { it }
+        delay(800L) // let DNS / routes settle after a Wi-Fi ↔ mobile switch
+        waitingForNetwork = false
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = true
     }
 
     /** Adds a side-loaded subtitle, keeps the current position and turns captions on. */
@@ -1045,6 +1074,10 @@ private fun VideoPlayerModalContent(
     DisposableEffect(lifecycleOwner, exoPlayer) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
+                // Save the position now: after ON_STOP the system may kill the process at any time
+                // (low memory, force-stop, battery saver) and the 5 s tick would lose the last seconds.
+                val pos = exoPlayer.currentPosition
+                if (pos > 0L && !exoPlayer.currentTimeline.isEmpty) currentOnProgressUpdate(video.id, pos, exoPlayer.duration.takeIf { it > 0L } ?: durationMs)
                 val inPip = activity?.let { Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && it.isInPictureInPictureMode } == true
                 // Background play disabled: pause when the app leaves the screen (unless in PiP).
                 if (!inPip && !currentIsInPip && exoPlayer.isPlaying && !currentBackgroundPlay) {
@@ -1060,7 +1093,7 @@ private fun VideoPlayerModalContent(
     val pipSupported = remember { PipController.isSupported(context) }
     LaunchedEffect(isPlaying, autoPipEnabled, activeVideoFormat, pipSupported) {
         val act = activity ?: return@LaunchedEffect
-        if (!pipSupported) return@LaunchedEffect
+        if (!pipSupported || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@LaunchedEffect
         val w = activeVideoFormat?.width?.takeIf { it > 0 } ?: video.width
         val h = activeVideoFormat?.height?.takeIf { it > 0 } ?: video.height
         runCatching { act.setPictureInPictureParams(PipController.params(context, w, h, isPlaying, autoPipEnabled && isPlaying)) }
@@ -1148,9 +1181,15 @@ private fun VideoPlayerModalContent(
 
     // Auto-hide controls timer (3.5 seconds)
     val isAnyDialogOpen = showQualityDialog || showSpeedDialog || showAspectRatioDialog || showAudioTrackDialog || showSubtitleDialog || showVideoInfoDialog || playerError != null
-    LaunchedEffect(isControlsVisible, isPlaying, isAnyDialogOpen, isScreenLocked) {
+    // Remote / keyboard (TV, Fire TV, Bluetooth keyboards): every key press keeps the controls up
+    // a little longer, so walking along the buttons never races the auto-hide.
+    val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+    val inputModeManager = androidx.compose.ui.platform.LocalInputModeManager.current
+    val keyDriven = tvLayout || inputModeManager.inputMode == androidx.compose.ui.input.InputMode.Keyboard
+    var keyTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(isControlsVisible, isPlaying, isAnyDialogOpen, isScreenLocked, keyTick) {
         if (isControlsVisible && isPlaying && !isAnyDialogOpen && !isScreenLocked) {
-            delay(3500L)
+            delay(if (keyDriven) 5000L else 3500L)
             isControlsVisible = false
         }
     }
@@ -1204,7 +1243,10 @@ private fun VideoPlayerModalContent(
         }
     }
     BackHandler(enabled = !minimized) {
-        if (isFullscreen && !isScreenLocked) {
+        if (keyDriven && isControlsVisible && !isScreenLocked && !isEnded && playerError == null && !hideChrome) {
+            // Remote Back first closes the controls (as on every TV player), the next Back leaves.
+            isControlsVisible = false
+        } else if (isFullscreen && !isScreenLocked) {
             isFullscreen = false
         } else if (isScreenLocked) {
             isLockedUnlockPillVisible = true
@@ -1215,6 +1257,83 @@ private fun VideoPlayerModalContent(
         } else {
             leavePlayer()
         }
+    }
+    pageFinder?.let { pf ->
+        dev.asfakul.yumeiro.ui.screens.stream.PageStreamFinderDialog(
+            pageUrl = pf.pageUrl,
+            reason = pf.reason,
+            base = pf.base,
+            // The found stream replaces this item in the same player (one player, never two).
+            onPlay = { req -> pageFinder = null; dev.asfakul.yumeiro.stream.IncomingMedia.open(context, req) },
+            onDismiss = { pageFinder = null },
+            auto = pf.auto,
+        )
+    }
+    // D-pad / remote: the player surface holds focus while the controls are hidden.
+    //  OK / Enter → play-pause and show the controls (focus on play-pause) · Left / Right → −/+10 s
+    //  Up / Down → show the controls · media keys work at any time · Back closes the controls first.
+    val rootFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val playFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    var rootFocused by remember { mutableStateOf(false) }
+    // With a remote, the player opens with focus on play-pause (nothing focused = keys go nowhere).
+    var focusPlayPending by remember { mutableStateOf(keyDriven) }
+    LaunchedEffect(isControlsVisible, focusPlayPending, minimized) {
+        if (minimized || !keyDriven) return@LaunchedEffect
+        androidx.compose.runtime.withFrameNanos { }
+        if (isControlsVisible && focusPlayPending) {
+            // The controls may still be composing (first frame, loading spinner): retry briefly.
+            for (i in 0 until 12) {
+                if (runCatching { playFocus.requestFocus() }.isSuccess) break
+                delay(80)
+            }
+            focusPlayPending = false
+        }
+        else if (!isControlsVisible) runCatching { rootFocus.requestFocus() }
+    }
+    fun keyRewind() {
+        seekPlayer(dev.asfakul.yumeiro.player.SeekMath.rewind(exoPlayer.currentPosition, SEEK_STEP_MS))
+        isDoubleTapForwardVisible = false; isDoubleTapRewindVisible = true
+        doubleTapHideJob?.cancel(); doubleTapHideJob = coroutineScope.launch { delay(700L); isDoubleTapRewindVisible = false }
+    }
+    fun keyForward() {
+        seekPlayer(dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
+            dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs)))
+        isDoubleTapRewindVisible = false; isDoubleTapForwardVisible = true
+        doubleTapHideJob?.cancel(); doubleTapHideJob = coroutineScope.launch { delay(700L); isDoubleTapForwardVisible = false }
+    }
+    fun keyPlayPause() { if (isEnded) replayFromStart() else if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }
+    val onPlayerKey: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = handler@{ e ->
+        if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown || minimized || hideChrome) return@handler false
+        val k = e.key
+        val K = androidx.compose.ui.input.key.Key
+        // Media keys (remote transport buttons, headset) whatever has focus.
+        when (k) {
+            K.MediaPlayPause, K.HeadsetHook -> { keyPlayPause(); return@handler true }
+            K.MediaPlay -> { if (isEnded) replayFromStart() else exoPlayer.play(); return@handler true }
+            K.MediaPause -> { exoPlayer.pause(); return@handler true }
+            K.MediaFastForward -> { keyForward(); return@handler true }
+            K.MediaRewind -> { keyRewind(); return@handler true }
+            K.MediaNext -> { if (nextVideo != null) onNextVideo() else showToast("No next video"); return@handler true }
+            K.MediaPrevious -> { if (hasPreviousVideo) onPreviousVideo() else { exoPlayer.seekTo(0L); currentPositionMs = 0L }; return@handler true }
+        }
+        if (isAnyDialogOpen) return@handler false
+        val dpad = k == K.DirectionCenter || k == K.Enter || k == K.NumPadEnter || k == K.DirectionLeft ||
+            k == K.DirectionRight || k == K.DirectionUp || k == K.DirectionDown
+        if (!dpad) return@handler false
+        if (isScreenLocked) {
+            isLockedUnlockPillVisible = true
+            coroutineScope.launch { delay(3000L); isLockedUnlockPillVisible = false }
+            return@handler false // let focus reach the unlock button
+        }
+        keyTick++
+        if (!rootFocused) return@handler false // focus is on a control: normal D-pad navigation
+        when (k) {
+            K.DirectionLeft -> keyRewind()
+            K.DirectionRight -> keyForward()
+            K.DirectionUp, K.DirectionDown -> { isControlsVisible = true; focusPlayPending = true }
+            else -> { keyPlayPause(); isControlsVisible = true; focusPlayPending = true }
+        }
+        true
     }
     // An error while floating opens the full player so the suggestions are readable.
     LaunchedEffect(playerError, minimized) { if (minimized && playerError != null) onExpand() }
@@ -1258,6 +1377,10 @@ private fun VideoPlayerModalContent(
                 }
             }
             .background(Color.Black)
+            .onPreviewKeyEvent(onPlayerKey)
+            .onFocusChanged { rootFocused = it.isFocused }
+            .focusRequester(rootFocus)
+            .focusable()
             .testTag("video_player_root")
     ) {
         // Video Surface via Media3 PlayerView
@@ -1534,8 +1657,9 @@ private fun VideoPlayerModalContent(
                     compact = docked,
                 )
 
-                // Center playback controls (Rewind, Play/Pause, Forward)
-                VideoPlayerCenterControls(
+                // Center playback controls (Rewind, Play/Pause, Forward). Not under an error card:
+                // the dimmed buttons showed through it and could take D-pad focus.
+                if (playerError == null) VideoPlayerCenterControls(
                     isPlaying = isPlaying,
                     isEnded = isEnded,
                     hasPrevious = hasPreviousVideo,
@@ -1568,6 +1692,7 @@ private fun VideoPlayerModalContent(
                     },
                     modifier = Modifier.align(Alignment.Center),
                     compact = docked,
+                    playFocus = playFocus,
                 )
 
                 // Bottom Scrubber Bar

@@ -389,6 +389,7 @@ fun StreamScreen(
             base = pf.base,
             onPlay = { req -> pageFinder = null; IncomingMedia.open(context, req) },
             onDismiss = { pageFinder = null },
+            auto = pf.auto,
         )
     }
 

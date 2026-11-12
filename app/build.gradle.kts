@@ -102,7 +102,9 @@ android {
 
   defaultConfig {
     applicationId = "dev.asfakul.yumeiro"
-    minSdk = 28 // Android 9 (Pie)
+    // Android 7.0: most TV boxes and Fire TV sticks (Fire OS 6 = Android 7.1) and older phones.
+    // API 26–28 calls are guarded (OsCompat, PipController, Privacy); java.time is desugared.
+    minSdk = 24
     targetSdk = 37 // Android 17
     versionCode = appVersionCode
     versionName = appVersionName
@@ -207,6 +209,21 @@ android {
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+    // java.time & co. on Android 7 (our code, NewPipe's extractor and CloudStream use them).
+    isCoreLibraryDesugaringEnabled = true
+  }
+
+  // One APK per processor plus a universal one (all share applicationId, key and versionCode, so
+  // they install over each other). The release workflow names the universal APK exactly like the
+  // single APK before, so older in-app updaters keep picking a build that runs everywhere.
+  splits {
+    abi {
+      val wanted = providers.gradleProperty("yumeiro.abiSplits").orNull != "false"
+      isEnable = wanted
+      reset()
+      include("arm64-v8a", "armeabi-v7a")
+      isUniversalApk = true
+    }
   }
 
   buildFeatures {
@@ -246,6 +263,7 @@ android {
 }
 
 dependencies {
+  coreLibraryDesugaring(libs.desugar.jdk.libs)
   // Security floor for vulnerable transitive libraries (OSV scan, 2026-11-07).
   constraints {
     implementation("org.jsoup:jsoup:1.24.1") { because("GHSA-65r4-943x-97jj, GHSA-pmhh-3w7g-xqp8 (via CloudStream library)") }

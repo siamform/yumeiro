@@ -70,4 +70,42 @@ class LinkHostsTest {
         assertEquals("My Site", SavedSites.defaultName("https://www.my-site.co.uk/x"))
         assertEquals("Archive", SavedSites.defaultName("https://archive.org"))
     }
+
+    // ---- Round 10 ------------------------------------------------------------------------------
+    @Test fun knownFileHostsStartTheirPlayerAutomatically() {
+        val t = LinkHosts.classify("https://www.terabox.com/sharing/link?surl=abc") as LinkHosts.Browser
+        assertEquals(true, t.auto)
+        assertEquals(true, (LinkHosts.classify("https://www.diskwala.com/app/xyz") as LinkHosts.Browser).auto)
+        assertEquals("TeraBox", (LinkHosts.classify("https://dubox.com/s/1abc") as LinkHosts.Browser).host)
+    }
+
+    @Test fun pixeldrainFilePageBecomesTheFileApi() {
+        val r = LinkHosts.classify("https://pixeldrain.com/u/AbC123xy") as LinkHosts.Direct
+        assertEquals("https://pixeldrain.com/api/file/AbC123xy", r.url)
+        assertEquals("Pixeldrain", r.host)
+        // Lists aren't single files: left to the page resolver.
+        assertEquals(null, LinkHosts.pixeldrainDirect("https://pixeldrain.com/l/AbC123xy"))
+    }
+
+    @Test fun oneDriveShareUsesTheDocumentedSharesEndpoint() {
+        val link = "https://1drv.ms/v/s!AkFoo123?e=xyz"
+        val b64 = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(link.toByteArray())
+        assertEquals("https://api.onedrive.com/v1.0/shares/u!$b64/root/content", LinkHosts.oneDriveDirect(link))
+        assertEquals(false, LinkHosts.oneDriveDirect(link)!!.contains("="))
+        assertEquals("https://contoso.sharepoint.com/:v:/g/personal/a/EAbc?e=1&download=1",
+            LinkHosts.oneDriveDirect("https://contoso.sharepoint.com/:v:/g/personal/a/EAbc?e=1"))
+        assertEquals(null, LinkHosts.oneDriveDirect("https://contoso.sharepoint.com/sites/x/page.aspx"))
+    }
+
+    @Test fun mediaFirePageRevealsItsDownloadButton() {
+        val html = """<a class="input popsok" aria-label="Download file" href="https://download2390.mediafire.com/abc/def/movie.mp4" id="downloadButton">"""
+        assertEquals("https://download2390.mediafire.com/abc/def/movie.mp4", LinkHosts.mediaFireDownload(html))
+        assertEquals(true, LinkHosts.isMediaFire("https://www.mediafire.com/file/abc/movie.mp4/file"))
+        assertEquals(null, LinkHosts.mediaFireDownload("<html>no button</html>"))
+    }
+
+    @Test fun teraBoxWebPlayerStreamIsRecognisedAsHls() {
+        val u = "https://www.terabox.com/share/streaming?uk=1&shareid=2&type=M3U8_AUTO_720&fid=3&sign=x&timestamp=4"
+        assertEquals(MediaKind.HLS, StreamSniffer.fromUrl(u)?.kind)
+    }
 }

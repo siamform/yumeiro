@@ -3,7 +3,14 @@
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
+@file:OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
+
 package dev.asfakul.yumeiro.ui
+
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 
 import androidx.compose.ui.test.performSemanticsAction
 import android.Manifest
@@ -420,15 +427,21 @@ class AppNavigationCrashTest {
         }
         reveal()
         val first = title()
-        if (exists("error_close_btn")) waitFor("error_next_video_btn")
-        press("video_next_btn")
+        // With an error card up, the card's own "skip to next" is the way forward (the centre
+        // controls stay hidden under it); otherwise the centre next button.
+        if (exists("error_close_btn")) { waitFor("error_next_video_btn"); press("error_next_video_btn") }
+        else press("video_next_btn")
         rule.mainClock.advanceTimeBy(600)
         waitFor("video_player_root")
         reveal()
         val second = title()
         org.junit.Assert.assertNotEquals(first, second)
         snap("video_next")
-        press("video_previous_btn")
+        // Previous via the remote / headset transport key (works whatever is on screen).
+        rule.onNodeWithTag("video_player_root", true).requestFocus()
+        rule.onRoot().performKeyInput { pressKey(androidx.compose.ui.input.key.Key.MediaPrevious) }
+        rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
+        waitFor("video_player_root")
         reveal()
         org.junit.Assert.assertEquals(first, title())
         back()

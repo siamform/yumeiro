@@ -1,6 +1,6 @@
 # Architecture
 
-Yumeiro is one Android module (`app/`), Kotlin + Jetpack Compose, minSdk 28. CloudStream's plugin API is embedded
+Yumeiro is one Android module (`app/`), Kotlin + Jetpack Compose, minSdk 24 (Android 7.0, for TV boxes; see docs/TV.md). CloudStream's plugin API is embedded
 (`com.lagradost.cloudstream3`) and is the common contract every online source speaks.
 
 ## Big picture

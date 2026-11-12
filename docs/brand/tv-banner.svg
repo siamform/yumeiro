@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180">
+<defs>
+<radialGradient id="bg" cx="90" cy="40" r="300" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2A2433"/><stop offset="0.5" stop-color="#16141C"/><stop offset="1" stop-color="#0B0B0E"/></radialGradient>
+<radialGradient id="glow" cx="80" cy="92" r="90" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F5C46B" stop-opacity="0.28"/><stop offset="1" stop-color="#F5C46B" stop-opacity="0"/></radialGradient>
+<linearGradient id="moon" x1="24" y1="84" x2="84" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE2A8"/><stop offset="0.6" stop-color="#F5C46B"/><stop offset="1" stop-color="#E0913A"/></linearGradient>
+<linearGradient id="play" x1="60" y1="34" x2="80" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#F5C46B"/></linearGradient>
+</defs>
+<rect width="320" height="180" fill="url(#bg)"/><rect width="320" height="180" fill="url(#glow)"/>
+<g transform="translate(18,36) scale(1.0)"><path d="M81.37,66.29 A30,30 0 1 1 51.23,24.13 A26,26 0 0 0 81.37,66.29 Z" fill="url(#moon)"/>
+<path d="M61.5,36.5 L61.5,57.5 L78.5,47 Z" fill="url(#play)" stroke="url(#play)" stroke-width="5" stroke-linejoin="round"/></g>
+<text x="128" y="98" font-family="Inter, Roboto, 'Noto Sans', sans-serif" font-size="40" font-weight="700" fill="#F7F2EA" letter-spacing="0.5">Yumeiro</text>
+<text x="130" y="124" font-family="'Noto Sans CJK JP','Noto Sans JP', sans-serif" font-size="13" fill="#F5C46B" letter-spacing="1.5">夢色 · dream colour</text>
+</svg>

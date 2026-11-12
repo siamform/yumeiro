@@ -289,7 +289,7 @@ object PushWake {
     /** Low-key notification for the few seconds a wake-up runs on Android 9-11 (expedited work). */
     internal fun foregroundInfo(c: Context): ForegroundInfo {
         val nm = c.getSystemService(NotificationManager::class.java)
-        if (nm?.getNotificationChannel(SYNC_CHANNEL) == null) runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm?.getNotificationChannel(SYNC_CHANNEL) == null) runCatching {
             nm?.createNotificationChannel(NotificationChannel(SYNC_CHANNEL, "Background checks", NotificationManager.IMPORTANCE_MIN).apply {
                 description = "Shown briefly while Yumeiro checks for new episodes"; setShowBadge(false)
             })

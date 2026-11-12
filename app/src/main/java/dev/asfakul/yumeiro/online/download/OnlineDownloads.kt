@@ -266,7 +266,9 @@ object OnlineDownloads {
     fun start(context: Context, id: String) {
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
             .setInputData(workDataOf(DownloadWorker.KEY_ID to id))
-            // No network constraint: the app doesn't hold ACCESS_NETWORK_STATE; failures retry with backoff.
+            // Round 10: waits for a connection (and resumes from the .part file) instead of burning
+            // its retries while offline; failures still retry with backoff.
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
             .addTag(DownloadWorker.TAG)
             .build()
         WorkManager.getInstance(context.applicationContext).enqueueUniqueWork("dl_$id", ExistingWorkPolicy.KEEP, request)

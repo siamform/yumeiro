@@ -104,7 +104,10 @@ fun MTPlayerTheme(palette: MtPalette = rememberMtPalette(), content: @Composable
             shapes = MTPlayerShapes,
         ) {
             val pressTint = (if (palette.isDark) Color.White else Color.Black).copy(alpha = 0.07f)
-            val indication = remember(pressTint) { SoftPressIndication(pressTint) }
+            // D-pad / keyboard focus ring in the accent colour; the TV layout also lifts the focused item.
+            val tv = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+            val focusRing = if (palette.isDark) palette.accentBright else palette.accent
+            val indication = remember(pressTint, focusRing, tv) { SoftPressIndication(pressTint, focusRing, if (tv) 1.04f else 1f) }
             // Material components that still draw ripples get a soft accent-tinted one.
             val rippleConfig = remember(palette.accent) {
                 androidx.compose.material3.RippleConfiguration(

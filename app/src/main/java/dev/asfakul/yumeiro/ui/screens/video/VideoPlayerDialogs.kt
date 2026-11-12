@@ -63,7 +63,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -882,6 +884,14 @@ fun PlaybackErrorOverlay(
                     dev.asfakul.yumeiro.ui.components.ErrorSuggestions(parsed.tips)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
+                // Remote / keyboard: land on the obvious next step so OK works without hunting.
+                val primaryFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+                val keyDriven = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current ||
+                    androidx.compose.ui.platform.LocalInputModeManager.current.inputMode == androidx.compose.ui.input.InputMode.Keyboard
+                LaunchedEffect(showRetry, keyDriven) {
+                    if (!keyDriven) return@LaunchedEffect
+                    for (i in 0 until 10) { if (runCatching { primaryFocus.requestFocus() }.isSuccess) break; kotlinx.coroutines.delay(60) }
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -890,6 +900,7 @@ fun PlaybackErrorOverlay(
                         onClick = onClose,
                         modifier = Modifier
                             .weight(1f)
+                            .then(if (showRetry) Modifier else Modifier.focusRequester(primaryFocus))
                             .testTag("error_close_btn")
                     ) {
                         Text("Close", color = TextPrimary)
@@ -899,6 +910,7 @@ fun PlaybackErrorOverlay(
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier
                             .weight(1f)
+                            .focusRequester(primaryFocus)
                             .testTag("error_retry_btn")
                     ) {
                         Icon(imageVector = Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))

@@ -76,6 +76,26 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.net.URI
 
+private const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+
+/**
+ * Covers the working page in auto mode: what is happening, and a way to see the page. The page
+ * keeps running underneath (players only start while laid out).
+ */
+@Composable
+private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.background(DarkSurface).testTag("page_finder_auto"), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
+            androidx.compose.material3.CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(42.dp))
+            Text("Finding the video on $host", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
+            androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {
+                Text("Show the page", color = SpotifyGreen)
+            }
+        }
+    }
+}
+
 /** A media request seen while the page was loading / playing. */
 data class CapturedStream(
     val url: String,
@@ -174,6 +194,46 @@ class PageStreamCapture {
   scan(); setInterval(scan, 1500);
 })();
 """
+
+        /**
+         * Auto mode: starts the page's own player once (muted, so no surprise sound) — first any
+         * `<video>` already on the page, else the visible play button of the common web players.
+         * Nothing is clicked while a video is already playing, so it never toggles playback off.
+         */
+        const val AUTOPLAY_JS = """
+(function(){
+  try {
+    var vs = Array.prototype.slice.call(document.querySelectorAll('video'));
+    if (vs.some(function(v){ return !v.paused && !v.ended; })) return 'playing';
+    var started = false;
+    vs.forEach(function(v){ try { v.muted = true; var p = v.play(); if (p && p.catch) p.catch(function(){}); started = true; } catch(e){} });
+    if (started) return 'video';
+    var sel = ['.vjs-big-play-button','.plyr__control--overlaid','.jw-icon-display','.dplayer-mobile-play','.art-control-play',
+      '.play-btn','.video-play-btn','.btn-play','.play-button','[class*="play-icon"]','[class*="playBtn"]','[class*="play-btn"]',
+      '[aria-label="Play"]','button[title="Play"]'];
+    for (var i = 0; i < sel.length; i++) {
+      var b = document.querySelector(sel[i]);
+      if (b && b.offsetParent !== null) { b.click(); return 'button'; }
+    }
+    return 'none';
+  } catch(e) { return 'error'; }
+})();
+"""
+
+        /** How long auto mode waits for the page's stream before showing the page itself. */
+        const val AUTO_TIMEOUT_MS = 25_000L
+        /** After the first capture, a short wait so a manifest (HLS / DASH) wins over a plain file. */
+        const val AUTO_SETTLE_MS = 1_200L
+
+        /** Pages that need the user: sign-in, verification. Auto mode shows them right away. */
+        fun needsUser(url: String): Boolean {
+            val u = url.lowercase()
+            return listOf("/login", "passport.", "/signin", "/sign-in", "/auth/", "captcha", "/verify").any { it in u }
+        }
+
+        /** Best capture for auto play: manifests first, then whole video files; never audio-only. */
+        fun bestForAuto(list: List<CapturedStream>): CapturedStream? =
+            list.firstOrNull { it.kind == MediaKind.HLS || it.kind == MediaKind.DASH } ?: list.firstOrNull { it.kind == MediaKind.VIDEO }
     }
 }
 
@@ -191,8 +251,15 @@ fun PageStreamFinderDialog(
     base: StreamRequest?,
     onPlay: (StreamRequest) -> Unit,
     onDismiss: () -> Unit,
+    /** Start the page's player by itself and play the first stream (known file hosts). */
+    auto: Boolean = false,
 ) {
     val capture = remember(pageUrl) { PageStreamCapture() }
+    // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
+    var autoActive by remember(pageUrl) { mutableStateOf(auto) }
+    var autoStep by remember(pageUrl) { mutableStateOf("Opening the link") }
+    var autoNote by remember(pageUrl) { mutableStateOf<String?>(null) }
+    var played by remember(pageUrl) { mutableStateOf(false) }
     val found = remember(pageUrl) { mutableStateListOf<CapturedStream>() }
     var progress by remember { mutableIntStateOf(0) }
     var pageTitle by remember { mutableStateOf("") }
@@ -209,6 +276,9 @@ fun PageStreamFinderDialog(
     }
 
     fun play(c: CapturedStream) {
+        if (played) return // a second capture or a double tap never opens two players
+        played = true
+        autoActive = false
         val wv = webViewRef
         val request = synchronized(capture) {
             capture.toRequest(
@@ -220,6 +290,34 @@ fun PageStreamFinderDialog(
         }
         wv?.onPause()
         onPlay(request)
+    }
+
+    if (auto) {
+        // Give up waiting after a while: the page is shown with an honest note instead of a spinner forever.
+        androidx.compose.runtime.LaunchedEffect(pageUrl) {
+            kotlinx.coroutines.delay(PageStreamCapture.AUTO_TIMEOUT_MS)
+            if (autoActive && !played) {
+                autoActive = false
+                autoNote = "Yumeiro couldn't start this video by itself. Start it on the page and it will play here."
+            }
+        }
+        // First capture → short settle (prefer a manifest) → play.
+        androidx.compose.runtime.LaunchedEffect(pageUrl, found.size, autoActive) {
+            if (!autoActive || played || found.isEmpty()) return@LaunchedEffect
+            autoStep = "Picking up the stream"
+            kotlinx.coroutines.delay(PageStreamCapture.AUTO_SETTLE_MS)
+            PageStreamCapture.bestForAuto(found.toList())?.let { play(it) }
+        }
+        // Nudge the page's player a few times while the page settles (players load late).
+        androidx.compose.runtime.LaunchedEffect(pageUrl, progress >= 100, autoActive) {
+            if (!autoActive || progress < 100) return@LaunchedEffect
+            autoStep = "Starting its player"
+            repeat(8) {
+                if (!autoActive || played) return@LaunchedEffect
+                webViewRef?.evaluateJavascript(PageStreamCapture.AUTOPLAY_JS, null)
+                kotlinx.coroutines.delay(2_000L)
+            }
+        }
     }
 
     DisposableEffect(pageUrl) {
@@ -243,10 +341,10 @@ fun PageStreamFinderDialog(
                     IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
-                if (showHint) {
-                    Surface(color = GlassFill, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { showHint = false }) {
+                if (showHint && !autoActive) {
+                    Surface(color = GlassFill, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { showHint = false }.testTag("page_finder_hint")) {
                         Text(
-                            reason + "\n\nStart playback on the page; detected streams appear below. Tap to hide.",
+                            (autoNote ?: reason) + "\n\nStart playback on the page; detected streams appear below. Tap to hide.",
                             color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(10.dp),
                         )
                     }
@@ -263,8 +361,11 @@ fun PageStreamFinderDialog(
                                 webViewRef = this
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
-                                settings.mediaPlaybackRequiresUserGesture = true
+                                // Auto mode may start the page's player (muted) without a tap.
+                                settings.mediaPlaybackRequiresUserGesture = !auto
                                 base?.userAgent?.let { settings.userAgentString = it }
+                                // File hosts serve their web player to desktop browsers; on mobile UAs they push their app.
+                                if (auto && base?.userAgent == null) settings.userAgentString = DESKTOP_UA
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 addJavascriptInterface(object {
@@ -294,6 +395,10 @@ fun PageStreamFinderDialog(
                                     }
                                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                         url?.let { currentUrl = it }
+                                        if (autoActive && url != null && PageStreamCapture.needsUser(url)) {
+                                            autoActive = false
+                                            autoNote = "Sign in or finish the check on the page once; the video then plays here."
+                                        }
                                         view?.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
                                     }
                                     override fun onPageFinished(view: WebView?, url: String?) {
@@ -308,6 +413,12 @@ fun PageStreamFinderDialog(
                             }
                             page
                         },
+                    )
+                    if (autoActive) AutoFindCard(
+                        host = PlatformRules.hostOf(pageUrl) ?: "the page",
+                        step = autoStep,
+                        onShowPage = { autoActive = false },
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
                 Surface(color = DarkSurface, modifier = Modifier.fillMaxWidth()) {

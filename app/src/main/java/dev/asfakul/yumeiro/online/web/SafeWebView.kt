@@ -74,7 +74,7 @@ object SafeWebView {
 
     /** Logs the renderer crash, disposes the view and keeps the app alive. */
     fun handleRenderGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
-        Log.w(TAG, "WebView renderer gone (crashed=${detail?.didCrash()}) — disposing it, the app keeps running")
+        Log.w(TAG, "WebView renderer gone (crashed=${if (android.os.Build.VERSION.SDK_INT >= 26) detail?.didCrash() else null}) — disposing it, the app keeps running")
         dispose(view)
         return true
     }

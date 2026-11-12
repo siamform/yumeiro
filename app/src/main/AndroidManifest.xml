@@ -41,11 +41,11 @@
          download shows its DownloadManager notification (DOWNLOAD_WITHOUT_NOTIFICATION was removed
          in the v1.5.1 security review). -->
 
-    <!-- Declared by Media3 only to refine its initial bandwidth estimate. Adaptive streams still
-         adapt from measured throughput without it, so it is removed to keep permissions minimal. -->
-    <uses-permission
-        android:name="android.permission.ACCESS_NETWORK_STATE"
-        tools:node="remove" />
+    <!-- Round 10: required. It used to be removed "to keep permissions minimal", but without it
+         ConnectivityManager throws, so the offline banner, offline search / page exits, the
+         player's wait-for-connection and WorkManager's network constraint never saw the device go
+         offline. A normal install-time permission: it reads only whether a network is up. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Online downloads run as a foreground data-sync job (WorkManager) with a progress notification -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
@@ -84,7 +84,7 @@
             android:exported="true"
             android:supportsPictureInPicture="true"
             android:enableOnBackInvokedCallback="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode"
             android:launchMode="singleTop"
             android:label="@string/app_name"
             android:theme="@style/Theme.MyApplication">

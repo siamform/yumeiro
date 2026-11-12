@@ -58,6 +58,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.animateFloat
@@ -345,6 +346,8 @@ fun VideoPlayerCenterControls(
     onNext: () -> Unit = {},
     /** Docked watch-page player: smaller buttons, prev / next live in the strip under the player. */
     compact: Boolean = false,
+    /** Lets a remote / keyboard land on play-pause when the controls open (TV). */
+    playFocus: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     Row(
         modifier = modifier.padding(horizontal = 12.dp),
@@ -360,6 +363,7 @@ fun VideoPlayerCenterControls(
                 .size(if (compact) 50.dp else 72.dp)
                 .clip(CircleShape)
                 .background(Color.White)
+                .then(if (playFocus != null) Modifier.focusRequester(playFocus) else Modifier)
                 .clickable { onPlayPause() }
                 .testTag("video_play_pause_btn"),
             contentAlignment = Alignment.Center

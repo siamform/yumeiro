@@ -383,7 +383,7 @@ object TachiyomiExtensions {
         else meta.getInt("$prefix.nsfw") == 1 || (warning ?: 0) > 0
         val sig = signatures(pkg).lastOrNull()
         val trusted = sig != null && "${pkg.packageName}:$sig" in trustedSet(context)
-        val base = Installed(pkg.packageName, name, kind, versionName, pkg.longVersionCode, lib, nsfw, sig, trusted, 0)
+        val base = Installed(pkg.packageName, name, kind, versionName, dev.asfakul.yumeiro.OsCompat.versionCode(pkg), lib, nsfw, sig, trusted, 0)
 
         val libOk = when (kind) {
             Kind.ANIME -> lib != null && lib in SUPPORTED_ANIME_LIB
@@ -437,22 +437,11 @@ object TachiyomiExtensions {
     }
 
     /** SHA-256 fingerprints of the APK's signing certificates. */
-    @Suppress("DEPRECATION")
-    private fun signatures(info: PackageInfo): List<String> {
-        val signing = info.signingInfo
-        val sigs = when {
-            signing == null -> info.signatures?.toList().orEmpty()
-            signing.hasMultipleSigners() -> signing.apkContentsSigners.toList()
-            else -> signing.signingCertificateHistory.toList()
-        }
-        return sigs.map { s ->
-            MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
-        }
-    }
+    private fun signatures(info: PackageInfo): List<String> = dev.asfakul.yumeiro.OsCompat.signerDigests(info)
 
     @Suppress("DEPRECATION")
     private val FLAGS = PackageManager.GET_CONFIGURATIONS or PackageManager.GET_META_DATA or
-        PackageManager.GET_SIGNATURES or PackageManager.GET_SIGNING_CERTIFICATES
+        dev.asfakul.yumeiro.OsCompat.SIGNING_FLAGS
 
     // endregion
 }

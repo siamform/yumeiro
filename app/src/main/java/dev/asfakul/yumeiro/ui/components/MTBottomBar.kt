@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,16 +118,21 @@ fun MTBottomBar(
                     val isSelected = currentRoute == item.route
                     val tint by animateColorAsState(if (isSelected) activeTint else inactive, label = "navTint")
                     val pop by animateFloatAsState(if (isSelected) 1.12f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f), label = "navPop")
+                    // Keyboard / D-pad focus: a ring around the tab (touch never focuses it).
+                    val tabSource = remember { MutableInteractionSource() }
+                    val tabFocused by tabSource.collectIsFocusedAsState()
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
+                                interactionSource = tabSource,
                                 indication = null,
                                 role = Role.Tab,
                                 onClickLabel = item.label,
                             ) { if (!isSelected) onNavigateToRoute(item.route) }
+                            .padding(vertical = 6.dp)
+                            .then(if (tabFocused) Modifier.border(2.dp, activeTint, RoundedCornerShape(16.dp)) else Modifier)
                             .semantics { selected = isSelected; contentDescription = item.label }
                             .testTag(item.testTag)
                             .tourTarget(item.testTag),

@@ -24,8 +24,11 @@ sealed interface Resolution {
     /** The link is a channel list (M3U / M3U8 / PLS). */
     data class Playlist(val name: String?, val channels: List<StreamRequest>, val source: StreamRequest) : Resolution
 
-    /** A web page whose player builds the stream at runtime: open it in the page browser. */
-    data class NeedsBrowser(val pageUrl: String, val reason: String, val base: StreamRequest) : Resolution
+    /**
+     * A web page whose player builds the stream at runtime: open it in the link finder.
+     * [auto]: a known file host whose player the finder starts by itself (TeraBox, DiskWala).
+     */
+    data class NeedsBrowser(val pageUrl: String, val reason: String, val base: StreamRequest, val auto: Boolean = false) : Resolution
 
     /** Only the platform's own app may play it (YouTube, DRM subscription services). */
     data class Handoff(val url: String, val platform: String, val reason: String) : Resolution
@@ -88,7 +91,7 @@ object StreamResolver {
             ).let { r ->
                 if (r is Resolution.Failed) Resolution.Failed(r.title, r.message + " If this is a ${route.host} file, check that it's shared as \"Anyone with the link\".") else r
             }
-            is LinkHosts.Browser -> return Resolution.NeedsBrowser(route.pageUrl, route.reason, request)
+            is LinkHosts.Browser -> return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
             is LinkHosts.Torrent -> {
                 val server = TorrentSettings.server.value
                 if (server.isBlank()) return Resolution.Handoff(
@@ -191,6 +194,15 @@ object StreamResolver {
             val p = StreamProbe.probe(request.copy(url = next, referer = request.referer ?: pageUrl), userAgent, client)
             if (p.ok && p.sniff.kind == MediaKind.WEB_PAGE) return resolvePage(p, request, userAgent, client, depth + 1)
             if (p.ok && p.sniff.isPlayableMedia) return Resolution.Playable(request.copy(url = next, format = p.sniff.format, pageUrl = pageUrl), p.sniff)
+        }
+
+        // MediaFire file pages carry their download button address in the HTML.
+        if (LinkHosts.isMediaFire(pageUrl)) LinkHosts.mediaFireDownload(html)?.let { dl ->
+            val candidate = request.copy(url = dl, title = request.title.ifBlank { page.title.orEmpty() }, referer = request.referer ?: pageUrl, pageUrl = request.pageUrl ?: pageUrl)
+            val p = StreamProbe.probe(candidate, userAgent, client)
+            if (p.ok && (p.sniff.isPlayableMedia || (p.sniff.kind == MediaKind.UNKNOWN && p.text == null))) {
+                return Resolution.Playable(candidate.copy(format = if (p.sniff.isPlayableMedia) p.sniff.format else StreamFormat.PROGRESSIVE), p.sniff)
+            }
         }
 
         var tried = 0

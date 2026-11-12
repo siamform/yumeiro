@@ -52,7 +52,7 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew testDebugUnitTest      # Robolectric unit + Compose UI tests
 ```
 
-- Gradle 9.x, AGP with `compileSdk 37`, `minSdk 28`, Kotlin + Compose (BOM in `gradle/libs.versions.toml`).
+- Gradle 9.x, AGP with `compileSdk 37`, `minSdk 24`, Kotlin + Compose (BOM in `gradle/libs.versions.toml`).
 - CloudStream library `com.lagradost:cloudstream3` runs the `.cs3` extensions.
 - NewPipeExtractor `v0.26.5` (JitPack) powers YouTube. The CloudStream library pulls an old
   `com.github.teamnewpipe:NewPipeExtractor`; `app/build.gradle.kts` substitutes it with the
