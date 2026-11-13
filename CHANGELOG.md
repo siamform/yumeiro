@@ -24,6 +24,9 @@ The redesign was built in a separate working repository on top of v1.5.0 (`af834
 - **Themed dialogs** with severity tones (info, warning, error), theme-legible warning / star / category tints, kana accents (optional).
 
 ### Fixed
+- **Captions no longer hide under the seek bar**: they move up while the player controls show and go back down when they hide.
+- **Backdrop**: back to the dark night sky of v1.5.0, with one quiet detail per theme.
+- **TV**: a single Settings entry (on the rail), the Yumeiro logo at the top of the rail, no stray glyphs.
 - Seek bar jumps and scrubbing glitches; endless Yumix feed loading; smooth navigation between tabs.
 - Manga extension install crash.
 - A clean clone failed to build (bundled ISRG root certificate was ignored by git).

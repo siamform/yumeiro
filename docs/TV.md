@@ -36,7 +36,7 @@ Unit tested: `TvModeTest` (decision table), `TvLayoutTest` (rail, focus, remote 
 
 | Area | Behaviour |
 |---|---|
-| Navigation | The bottom dock is replaced by a left rail (`TvNavRail.kt`). It is icon-only until focus moves onto it, then it shows labels. D-pad Left from the left edge of any page enters the rail; Right goes back to the content. |
+| Navigation | The bottom dock is replaced by a left rail (`TvNavRail.kt`). It is icon-only until focus moves onto it, then it shows labels. D-pad Left from the left edge of any page enters the rail; Right goes back to the content. The Yumeiro logo sits at the top of the rail and Settings at the bottom; the Home header shows no second Settings button on TV. |
 | Focus | Every clickable shows a visible focus ring and lift (`PressIndication.kt`, focus-visible indication). Without this, D-pad users could not see where they were. |
 | Video player | The surface holds focus while the controls are hidden. Left/Right seek ±10 s, Centre/Enter and media Play-Pause toggle, Up/Down show the controls, media FF/RW seek, Back first hides the controls and the second Back leaves. Controls stay up 5 s after the last key press (3.5 s on touch). The player opens with focus on play-pause. |
 | Error card | The playback error card takes focus on **Retry**, and the faded transport buttons are no longer drawn through it. |

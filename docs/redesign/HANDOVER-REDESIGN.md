@@ -1,12 +1,34 @@
 # Handover: Yumeiro redesign
 
-> **Round 11 is current.** Read §R11 first, then §R10, §R9, §R8, §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
+> **Round 11 is current.** Read §R11b and §R11 first, then §R10, §R9, §R8, §R7, §R6, §R5, §R4, §R3, §0 (round 2), then round 1. Later rounds override earlier ones where they disagree.
 
 For the next agent or developer. Read this first, then [REPORT.md](REPORT.md). The project-wide
 handover from the previous agent is [../HANDOVER.md](../HANDOVER.md). It still describes the app,
 its modules and its release process, and nothing in it was changed.
 
-## R11. Round 11: Firebase live, clean-clone build fix, VirusTotal re-check (start here)
+## R11b. Round 11, owner feedback: production night backdrop, TV rail, captions, real screenshots (start here)
+
+**Branches.** App: `r11-final` on `siamform/yumeiro` (also pushed to `wip/r10-safety` on `siamform/yumeiro-redesign`). Website: `r11-redesign` on `siamform/yumeiro-web`. Never merge, never push web `main`; wait for the owner.
+
+**What changed**
+
+1. **DreamBackdrop** uses the production dark night-sky base again (the R9 painted scenes were rejected). Each theme adds one different quiet detail on top; no moon scenes.
+2. **TV**: one Settings entry only (the rail's, at the bottom); the Home header no longer repeats it. The Yumeiro logo sits at the top of the rail. The "◆" glyph is gone. Tests: `TvLayoutTest` (`railDropsAPinnedSettingsShortcut`, `darkHomeAndRail`).
+3. **Captions above the seek bar**: while the controls show, the subtitle view gets bottom padding equal to the controls' height, and loses it when they hide. Test: `CaptionsAboveControlsTest`.
+4. **Real-extension screenshots** (`RealExtensionShotsTest`, skipped unless two env vars are set). It installs the real *Internet Archive* extension by Luna712 through `ExtensionManager.install` and drives search ("Big Buck Bunny"), the title page, the Extensions page and the player with a caption. The extension repo has no licence, so its code is **never** vendored; the test loads a file you download yourself:
+   - Download `InternetArchiveProvider.cs3` from `https://raw.githubusercontent.com/Luna712/Luna712-CloudStream-Extensions/builds/InternetArchiveProvider.cs3` and convert its dex to a jar with dex2jar (`d2j-dex2jar`, dex-tools 2.4.x).
+   - Take one frame of Big Buck Bunny (CC BY 3.0, Blender Foundation), for example `ffmpeg -ss 65 -i big_buck_bunny_720p_surround.avi -frames:v 1 bbb_720.png` from archive.org item `BigBuckBunny_124`.
+   - `export YUMEIRO_IA_JAR=/path/ia.jar YUMEIRO_BBB_FRAME=/path/bbb_720.png` and run `./gradlew --no-daemon -Pyumeiro.lowMemTests=true :app:testDebugUnitTest --tests '*RealExtensionShotsTest'`.
+   - Robolectric cannot decode video, so the player shot composites the BBB frame into the PlayerView content frame (zoom mode, no side bars) under the real subtitle view and controls. Output goes to `app/build/screenshots/real_*.png`.
+   - `ExtensionManager.loaderFactory` (`@VisibleForTesting`) lets the test swap `PathClassLoader` for a `URLClassLoader`.
+   - Known small flaws: the extension favicon is blank, and the player position reads "-:-".
+5. **Never use the live Featured / online audio rows in marketing shots**: they show real public figures. `RedesignTourTest.darkTour` uses placeholder data and is the source for the website and press images.
+
+**Website** (`yumeiro-web`, `r11-redesign`): production look restored (ink `#0e0e11`, gold `#f5c46b`, self-hosted Zodiak / Satoshi / Shippori Mincho subset, gold 夢色 hero with phones). New player and real-extensions sections with the BBB credit, privacy / terms / 404 pages, sitemap, robots, canonicals, JSON-LD, `llms.txt`, security headers, `MEDIA.md`. `site.url` is `https://yumeiro.click`. Press images are rebuilt with `python3 scripts/press.py`.
+
+**Low-memory rule** (8 GB box): never run Gradle tests next to another heavy job; always `--no-daemon -Pyumeiro.lowMemTests=true`, in the foreground.
+
+## R11. Round 11: Firebase live, clean-clone build fix, VirusTotal re-check
 
 **Branch.** `wip/r10-safety` on `origin` (`siamform/yumeiro-redesign`). Production `siamform/yumeiro` `main` is untouched (`af8349e`). No PR, no merge; waiting for the owner's approval of the local build.
 
