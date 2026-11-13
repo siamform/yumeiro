@@ -47,7 +47,7 @@ jobs:
         run: ./gradlew testMobileDebugUnitTest
 
       - name: Unit tests (TV app, TV-only behaviour)
-        run: ./gradlew testTvDebugUnitTest --tests 'dev.asfakul.yumeiro.tv.*' --tests 'dev.asfakul.yumeiro.update.*'
+        run: ./gradlew testTvDebugUnitTest --tests 'dev.asfakul.yumeiro.EditionTest' --tests 'dev.asfakul.yumeiro.update.*'
 
       - name: Lint
         run: ./gradlew lintMobileDebug
