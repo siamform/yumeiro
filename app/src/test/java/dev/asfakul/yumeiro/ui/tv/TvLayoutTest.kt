@@ -116,7 +116,7 @@ class TvLayoutTest {
 
     @Test fun railDropsAPinnedSettingsShortcut() {
         val settings = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS.item
-        val music = dev.asfakul.yumeiro.ui.navigation.BottomNavItem("music", "Music", androidx.compose.material.icons.Icons.Filled.Settings, androidx.compose.material.icons.Icons.Filled.Settings, "nav_tab_music")
+        val music = settings.copy(route = "music", label = "Music")
         assertTrue(railItems(listOf(music, settings)) == listOf(music))
     }
 
