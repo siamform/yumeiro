@@ -306,6 +306,8 @@ fun MTPlayerApp(
     val firstRunAtLaunch = remember { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.shouldAutoShow(context).also { dev.asfakul.yumeiro.online.OnboardingGate.begin(it) } }
     // Online extensions: load installed ones, then sync updates in the background (like stream playlists).
     LaunchedEffect(Unit) {
+        // Round 12: tell the user what the last restore / reset did (applied before this screen).
+        dev.asfakul.yumeiro.backup.BackupMeta.takeNote(context)?.let { dev.asfakul.yumeiro.ui.components.AppMessages.success(context, it) }
         ExtensionManager.start(context)
         if (Build.FINGERPRINT == "robolectric") return@LaunchedEffect
         // A new user first finishes (or skips) the welcome screen and tour: no installs, syncs or

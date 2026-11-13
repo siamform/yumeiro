@@ -108,12 +108,54 @@ object ExtensionManager {
             // First run: nothing wakes up until the welcome screen / explore tour is done or skipped.
             OnboardingGate.awaitOpen()
             runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) }
+            // Round 12: after a restore (or a lost file) download missing extensions again.
+            runCatching { repairMissing(app) }.onFailure { Log.w(TAG, "repair", it) }
         }
         // Other ecosystems load in parallel; they publish into SourceHub as they become ready.
         scope.launch {
             OnboardingGate.awaitOpen()
             runCatching { dev.asfakul.yumeiro.sources.Bridges.start(app) }.onFailure { Log.e(TAG, "bridges", it) }
         }
+    }
+
+    /** Progress of re-downloading extensions after a restore: done / total, null when idle. */
+    private val _repair = MutableStateFlow<Pair<Int, Int>?>(null)
+    val repair: StateFlow<Pair<Int, Int>?> = _repair.asStateFlow()
+
+    /** Installed extensions whose file is gone (restored without files, or deleted by the system). */
+    fun missingFiles(context: Context): List<InstalledExtension> =
+        _state.value.installed.filter { it.fileName.isBlank() || !File(pluginDir(context), it.fileName).isFile }
+
+    /**
+     * Downloads every extension whose file is missing from where it was installed from, with the
+     * same safety check as an auto-update. Returns (repaired, failed).
+     */
+    suspend fun repairMissing(context: Context): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        ensureLoaded(context)
+        val missing = missingFiles(context).filter { it.sourceUrl.startsWith("http") }
+        if (missing.isEmpty()) { dev.asfakul.yumeiro.backup.BackupMeta.clearPendingDownloads(context); return@withContext 0 to 0 }
+        if (!dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) return@withContext 0 to missing.size
+        var ok = 0; var failed = 0
+        _repair.value = 0 to missing.size
+        for (ext in missing) {
+            markBusy(ext.key, true)
+            try {
+                val bytes = downloadFirst(listOf(ext.sourceUrl))
+                gate(ExtensionReview.Mode.AUTO, ext.name, ext.version, ext.repoName, true, bytes)
+                mutex.withLock {
+                    val current = _state.value.installed.firstOrNull { it.key == ext.key } ?: ext
+                    installBytes(context, current.copy(sha256 = sha256(bytes), updatedAt = System.currentTimeMillis()), bytes, current)
+                }
+                ok++
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                Log.w(TAG, "repair ${ext.name}", t); failed++
+            } finally { markBusy(ext.key, false); _repair.value = (ok + failed) to missing.size }
+        }
+        _repair.value = null
+        if (failed == 0) dev.asfakul.yumeiro.backup.BackupMeta.clearPendingDownloads(context)
+        if (ok > 0) OnlineRepository.clearCaches()
+        ok to failed
     }
 
     /** Waits until saved extensions are loaded. Safe to call many times. */
