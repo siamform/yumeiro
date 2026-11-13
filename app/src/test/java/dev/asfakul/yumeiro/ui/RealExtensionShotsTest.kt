@@ -182,12 +182,14 @@ class RealExtensionShotsTest {
             val pv = find(rule.activity.window.decorView) ?: error("no PlayerView")
             val content = pv.findViewById<androidx.media3.ui.AspectRatioFrameLayout>(androidx.media3.ui.R.id.exo_content_frame)
             content.setAspectRatio(16f / 9f)
+            // Fill the frame (like the player's Zoom mode) so the shot has no black side bars.
+            content.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_shutter)?.visibility = android.view.View.GONE
             val subs = pv.subtitleView!!
             val at = (0 until content.childCount).firstOrNull { content.getChildAt(it) === subs } ?: content.childCount
             content.addView(android.widget.ImageView(rule.activity).apply {
                 setImageBitmap(android.graphics.BitmapFactory.decodeFile(frame))
-                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
             }, at, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         repeat(4) {
