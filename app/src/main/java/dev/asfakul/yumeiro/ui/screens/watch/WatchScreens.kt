@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.filled.Download
 
 import android.content.Intent
@@ -569,7 +570,7 @@ fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null)
         if (f.missing.isNotEmpty()) {
             if (chips.isNotEmpty()) Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("watch_facts_missing")) {
-                Icon(Icons.Outlined.Info, null, tint = TextTertiary, modifier = Modifier.size(13.dp))
+                Icon(androidx.compose.material.icons.Icons.Outlined.VisibilityOff, null, tint = TextTertiary, modifier = Modifier.size(13.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(
                     "This source doesn't share its " + joinNatural(f.missing) + ".",

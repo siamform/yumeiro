@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.material.icons.outlined.AutoAwesome
 import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -190,7 +191,7 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.UPDATES -> CategoryLook(Icons.Default.SystemUpdate, BrandAmber)
     Category.SETUP -> CategoryLook(Icons.Filled.Explore, BrandGold)
     Category.GUIDE -> CategoryLook(Icons.AutoMirrored.Filled.MenuBook, BrandGold)
-    Category.ABOUT -> CategoryLook(Icons.Default.Info, BrandCoral)
+    Category.ABOUT -> CategoryLook(androidx.compose.material.icons.Icons.Outlined.AutoAwesome, BrandCoral)
 }
 
 /** The page's Japanese name, shown as a watermark on its banner. */

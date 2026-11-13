@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.ui.draw.clipToBounds
 import dev.asfakul.yumeiro.ui.theme.rememberArtBrush
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -1343,7 +1344,7 @@ fun SongActionBottomSheet(
 
             SheetActionRow(
                 title = "Song details",
-                icon = Icons.Default.Info,
+                icon = androidx.compose.material.icons.Icons.Outlined.LibraryMusic,
                 onClick = {
                     onDismiss()
                     onShowDetails()

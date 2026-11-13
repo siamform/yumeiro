@@ -306,6 +306,9 @@ fun AudioTrackDialog(
 ) {
     // Round 9 redesign: language names instead of raw codes, the playing track is obvious
     // (check + "Playing"), unsupported tracks explain why, and the sheet follows the app theme.
+    // Round 12: grouped by language, only the playing one open, "Show more" for long lists.
+    val audioToggled = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    val audioPages = remember { androidx.compose.runtime.mutableStateMapOf<String, Int>() }
     TsukiDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("audio_track_dialog"),
@@ -325,7 +328,7 @@ fun AudioTrackDialog(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Default.Info, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Audiotrack, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(
                         "This video has one audio track, so there's nothing to switch. For another language, pick a Dub source in Sources.",
@@ -337,7 +340,8 @@ fun AudioTrackDialog(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(audioTracks) { index, track ->
+                    trackGroupItems("audio_track", audioTracks.map { it.language }, audioTracks.indexOfFirst { it.isSelected }, audioToggled, audioPages) { index ->
+                        val track = audioTracks[index]
                         val isSelected = track.isSelected
                         val channelStr = when (track.channels) {
                             1 -> "Mono"
@@ -415,6 +419,8 @@ fun SubtitleOptionsDialog(
     /** Subtitles the source found after playback started (label → load). */
     moreFromSource: List<Pair<String, () -> Unit>> = emptyList(),
 ) {
+    val subToggled = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    val subPages = remember { androidx.compose.runtime.mutableStateMapOf<String, Int>() }
     TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -592,9 +598,10 @@ fun SubtitleOptionsDialog(
                     }
                 }
 
-                itemsIndexed(subtitleTracks) { index, track ->
+                trackGroupItems("subtitle_track", subtitleTracks.map { it.language }, if (isSubtitlesDisabled) -1 else subtitleTracks.indexOfFirst { it.isSelected }, subToggled, subPages) { index ->
+                    val track = subtitleTracks[index]
                     val isSelected = !isSubtitlesDisabled && track.isSelected
-                    val label = track.label ?: track.language?.uppercase() ?: "Subtitle Track ${index + 1}"
+                    val label = track.label?.takeIf { it.isNotBlank() } ?: TrackGroups.languageName(track.language) ?: "Subtitle track ${index + 1}"
 
                     Surface(
                         shape = RoundedCornerShape(10.dp),

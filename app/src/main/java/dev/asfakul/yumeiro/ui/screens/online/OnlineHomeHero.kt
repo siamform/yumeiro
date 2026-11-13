@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.graphicsLayer
@@ -157,7 +158,7 @@ internal fun HeroCarousel(
                                 val now = OnlineBookmarks.toggle(context, item)
                                 dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
                             }
-                            HeroRoundButton(Icons.Outlined.Info, "Info") { onInfo(item) }
+                            HeroRoundButton(androidx.compose.material.icons.Icons.Outlined.Description, "Details") { onInfo(item) }
                         }
                     }
                     Spacer(Modifier.width(14.dp))

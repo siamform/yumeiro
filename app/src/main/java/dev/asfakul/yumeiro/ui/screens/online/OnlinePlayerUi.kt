@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -270,6 +271,9 @@ private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 
     val activeAudio = audioPref?.takeIf { sel -> audioOptions.any { it.key == sel } }
     val groups = allGroups.filter { activeAudio == null || allGroups.size == 1 || it.key == activeAudio }
     val folded = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver(save = { it.toList() }, restore = { androidx.compose.runtime.mutableStateListOf<String>().apply { addAll(it) } })) { androidx.compose.runtime.mutableStateListOf<String>() }
+    // Round 12: only the group that's playing starts open; long groups show a page at a time.
+    val defaultOpen = (groups.firstOrNull { state.linkIndex in it.indices } ?: groups.firstOrNull())?.key?.ifBlank { "all" }
+    val pages = remember(state.links.size, state.version) { androidx.compose.runtime.mutableStateMapOf<String, Int>() }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (audioOptions.size > 1) item(key = "audio_filter") {
             dev.asfakul.yumeiro.ui.screens.watch.AudioFilterRow(audioOptions, audioPref, { k -> pickAudio(context, state, k, positionMs()) }, onDark = ink.luminance() > 0.5f)
@@ -278,11 +282,11 @@ private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 
         val kind = g.kind
         val idx = g.indices
         val gk = g.key.ifBlank { "all" }
-        val isFolded = gk in folded
+        val isFolded = kind != null && groups.size > 1 && ((gk == defaultOpen) == (gk in folded))
         if (kind != null) item(key = "hdr_$gk") {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
-                    .clickable(onClickLabel = if (isFolded) "Show ${g.label} sources" else "Hide ${g.label} sources") { if (isFolded) folded.remove(gk) else folded.add(gk) }
+                    .clickable(onClickLabel = if (isFolded) "Show ${g.label} sources" else "Hide ${g.label} sources") { if (gk in folded) folded.remove(gk) else folded.add(gk) }
                     .padding(horizontal = 8.dp, vertical = 6.dp).testTag("online_player_source_group"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -292,7 +296,8 @@ private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 
                 Icon(if (isFolded) Icons.Default.ExpandMore else Icons.Default.ExpandLess, null, tint = ink.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
             }
         }
-        if (!isFolded) items(idx, key = { i -> state.links[i].url + "#" + i }) { i ->
+        val shown = dev.asfakul.yumeiro.ui.screens.watch.visibleServerCount(idx.size, idx.indexOf(state.linkIndex), pages[gk] ?: 1)
+        if (!isFolded) items(idx.take(shown), key = { i -> state.links[i].url + "#" + i }) { i ->
             val l = state.links[i]
             val current = i == state.linkIndex
             val failed = l.url in state.failed
@@ -302,11 +307,25 @@ private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(l.name, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(listOf(l.qualityLabel, l.formatLabel, l.source.takeIf { it != l.name }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
-                        color = if (failed) errInk else ink.copy(alpha = 0.55f), fontSize = 11.sp, maxLines = 1)
+                    Text(l.name.ifBlank { l.source }, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val facts = remember(l) { dev.asfakul.yumeiro.online.SourceFacts.of(l, state.version) }
+                    Text(listOf(facts.line, l.source.takeIf { it != l.name }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
+                        color = when { failed -> errInk; facts.low -> dev.asfakul.yumeiro.ui.theme.WarnTone; else -> ink.copy(alpha = 0.55f) }, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("online_player_source_detail"))
                 }
                 if (current) Icon(Icons.Default.CheckCircle, "Playing", tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+            }
+        }
+        val more = idx.size - shown
+        if (!isFolded && more > 0) item(key = "more_$gk") {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, ink.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+                    .clickable { pages[gk] = (pages[gk] ?: 1) + 1 }.padding(10.dp).testTag("online_player_source_more"),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.ExpandMore, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Show ${minOf(more, dev.asfakul.yumeiro.ui.screens.watch.SERVER_PAGE)} more" + if (more > dev.asfakul.yumeiro.ui.screens.watch.SERVER_PAGE) " of $more" else "", color = SpotifyGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         }
@@ -553,8 +572,10 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                             when (g.kind) { dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB -> Icons.Default.Mic; dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB -> Icons.Default.ClosedCaption; else -> iconFor(v) },
                             g.indices.map { i ->
                                 val l = state.links[i]
-                                val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 22) it.take(21) + "…" else it }
-                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server") { OnlineSession.switchSource(context, i, pos()) }
+                                val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 40) it.take(39) + "…" else it }
+                                // Round 12: quality, release, format, size and audio under every source.
+                                val facts = dev.asfakul.yumeiro.online.SourceFacts.of(l, v)
+                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server", detail = facts.line, low = facts.low) { OnlineSession.switchSource(context, i, pos()) }
                             },
                             filterKey = if (groups.size > 1) g.key else null,
                         )

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
+import androidx.compose.material.icons.outlined.Album
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.Bedtime
@@ -391,7 +392,7 @@ fun NowPlayingScreen(
                 RailTool(Icons.AutoMirrored.Filled.QueueMusic, "Up next", selected = panel == PANEL_QUEUE,
                     onClick = { panel = if (panel == PANEL_QUEUE) PANEL_ART else PANEL_QUEUE },
                     modifier = Modifier.weight(1f).testTag("now_playing_queue_toggle_button"), description = "Toggle queue")
-                RailTool(Icons.Default.Info, "Info", selected = panel == PANEL_INFO,
+                RailTool(androidx.compose.material.icons.Icons.Outlined.Album, "Info", selected = panel == PANEL_INFO,
                     onClick = { panel = if (panel == PANEL_INFO) PANEL_ART else PANEL_INFO },
                     modifier = Modifier.weight(1f).testTag("now_playing_info_button"), description = "Toggle Song Info")
                 if (sleepTimer != null) {
