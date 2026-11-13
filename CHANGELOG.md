@@ -7,7 +7,31 @@ All notable changes to Yumeiro. Version numbers are set by the release workflow 
 
 The redesign was built in a separate working repository on top of v1.5.0 (`af8349e`) and lands here in one pull request.
 
+### Current (v1.5.0) vs new
+
+| Area | Current: v1.5.0 | New: this release |
+|---|---|---|
+| Adding extensions | A separate add flow per format (CloudStream repo, Aniyomi/Mihon repo, Stremio, JavaScript, servers) | **Add anything**: one field, file picker or "Open with" link for every format; the app detects the kind and installs it in the right place |
+| CloudStream compatibility | Plugins that need Jetpack Compose (their own settings UI) or extractors removed in CloudStream 4.8 failed to load | 2,247 of the 2,248 market plugins link against the app (audit in `docs/EXTENSION-COMPAT.md`); the one left drives CloudStream's own screens |
+| Incoming links | Only media files and playlists | Also `cloudstreamrepo://`, `stremio://`, `aniyomi://`, `tachiyomi://`, `mihon://`, `mangayomi://`, `.cs3` and extension `.apk` files |
+| Android versions | Android 9+ | Android 7.0+ |
+| APKs | One universal APK | `arm64-v8a`, `armeabi-v7a` and universal |
+| TV | Phone layout on a TV; some options unreachable with a remote (#25) | TV mode: left rail, visible focus, remote-first player |
+| Home | Previous Home | Continue watching, colour shortcuts, Quick picks, endless For you feed |
+| Yumix (online video) | Feed with extension rows | Hybrid feed, YouTube-style category bar (All, Anime, Movies, Series), filter sheet, resume banner, latest episodes, Sub/Dub per language |
+| Player | Fixed picture size; captions could sit under the seek bar | Pinch to zoom 100 to 400 %, subtitle style editor, captions move above the seek bar while the controls show, playback facts |
+| Watch page | Previous layout | Watch page under a docked player, source and subtitle pickers, download popup with keep options |
+| First run | Extensions loaded at once | Welcome choice, explore tour, setup checklist; extensions wait until the guide is done |
+| Background | Original gradient | Same original gradient and glow (painted scene experiments removed), or your own photo |
+| Library | Tabs | No tabs: colour shortcuts, Videos and Reading pages |
+| Notices | Pull only | Optional instant notices through Firebase Cloud Messaging |
+| Antivirus | Flagged 2 / 67 on VirusTotal | 0 / 66 (preview) and 0 / 68 (release) |
+| Security | See the fixes below | Login CSRF, private-file access, backup restore, stream finder and server abuse guards fixed |
+
 ### New
+- **Add anything (auto-detect)**: Extensions menu and the Sources hub header take any link, short code (as in CloudStream) or file, and "Open with" from other apps lands there too. Detected: CloudStream plugin, repository or plugin list; Aniyomi or Mihon repository or extension APK; Stremio add-on; Mangayomi JavaScript repository; Jellyfin, Emby or Plex server (sign-in follows). A confirm dialog shows what was found before anything installs.
+- **Extension compatibility**: restored the extractors CloudStream 4.8 removed (`GMPlayer`, `Okrulink`, `VidSrcExtractor`, `VidSrcTo`, `Vidguardto` 1 to 3, `Vidplay` and subclasses) and a JVM locale shim, and R8 now keeps the public Compose API that plugins with their own settings use. `scripts/extension_link_audit.py` re-checks every plugin against a built APK.
+- **Yumix category bar**: All, Anime, Movies and Series as small chips under the header, like YouTube.
 - **Video pinch to zoom**: two fingers zoom the picture 100–400 % and pan it without opening black edges; it snaps back near 100 %, shows the zoom level, and a *Reset zoom* pill appears with the controls. Only the picture scales, so subtitles and controls stay sharp. A second finger cancels a seek drag instead of jumping.
 - **Subtitle style**: size (75–200 %), colour, outline / shadow / box / none, bold, height above the bottom, and *keep the file's own colours*. Live preview. In the player's subtitle menu and in Settings → Video player. The default still follows Android's caption settings.
 - **Android TV, Google TV and Fire TV**: TV mode with a left navigation rail, visible focus on every control, and a remote-first player (seek, play/pause, controls, media keys, Back). Addresses "can't click all the options with the Firestick remote" (#25).
@@ -25,7 +49,7 @@ The redesign was built in a separate working repository on top of v1.5.0 (`af834
 
 ### Fixed
 - **Captions no longer hide under the seek bar**: they move up while the player controls show and go back down when they hide.
-- **Backdrop**: back to the dark night sky of v1.5.0, with one quiet detail per theme.
+- **Backdrop**: the original Yumeiro gradient and glow again; the painted scenes (moon, sun, shapes) are gone. Older "Calm" settings map to it.
 - **TV**: a single Settings entry (on the rail), the Yumeiro logo at the top of the rail, no stray glyphs.
 - Seek bar jumps and scrubbing glitches; endless Yumix feed loading; smooth navigation between tabs.
 - Manga extension install crash.
@@ -41,4 +65,5 @@ The redesign was built in a separate working repository on top of v1.5.0 (`af834
 - **Yumeiro Cloud (server)**: a single phone can no longer move the shared airing timetable for everyone (changes to a confirmed time need two devices, each at least 3 days old); follow lists are written as diffs and at most once per 10 minutes per device, so nobody can burn the free plan's daily database write budget and stop push for all users. Needs migration `server/migrations/0003_abuse_guards.sql`.
 
 ### Tests
+- `UniversalAddTest` (detection without a network), the extension link audit over 2,248 market plugins, a live load probe of the plugins that needed the restored extractors, and `RealAppShotsTest` tours with real SoraAnime and CineStream feeds.
 - 590+ JVM / Robolectric tests (TV layout and mode, navigation crash paths, playback recovery, zoom maths, subtitle style, onboarding gate, intent and backup guards) and 20 server tests, all passing.
