@@ -127,6 +127,15 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         intent?.data?.let { uri ->
             if (dev.asfakul.yumeiro.online.anime.AnimeSync.handleRedirect(this, uri) { msg -> runOnUiThread { dev.asfakul.yumeiro.ui.components.AppMessages.show(this, msg) } }) return
         }
+        // Extension, repository and add-on links / files (any ecosystem) go to "Add anything".
+        val incoming = intent?.data ?: intent?.takeIf { it.action == Intent.ACTION_SEND }?.let {
+            @Suppress("DEPRECATION") (it.getParcelableExtra(Intent.EXTRA_STREAM) as? android.net.Uri)
+                ?: it.getStringExtra(Intent.EXTRA_TEXT)?.trim()?.takeIf { t -> !t.contains(' ') }?.let(android.net.Uri::parse)
+        }
+        val incomingName = incoming?.takeIf { it.scheme == "content" }?.let { u ->
+            runCatching { contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } }.getOrNull()
+        }
+        if (incoming != null && dev.asfakul.yumeiro.ui.screens.sources.UniversalAddInbox.offer(incoming, incomingName)) return
         IncomingMedia.handle(this, intent)
     }
 }

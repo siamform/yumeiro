@@ -148,6 +148,26 @@
                 <data android:scheme="rtsp" />
                 <data android:scheme="rtsps" />
             </intent-filter>
+            <!-- Extension / repository / add-on links of every supported ecosystem ("Add anything") -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cloudstreamrepo" />
+                <data android:scheme="stremio" />
+                <data android:scheme="aniyomi" />
+                <data android:scheme="tachiyomi" />
+                <data android:scheme="mihon" />
+                <data android:scheme="mangayomi" />
+            </intent-filter>
+            <!-- Extension files shared from a file manager or browser (.cs3, Aniyomi/Mihon .apk) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
             <!-- Share a link to the app -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

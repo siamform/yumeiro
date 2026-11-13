@@ -49,6 +49,9 @@ import java.io.File
  *
  * Opt-in, needs network:
  *   YUMEIRO_IA_JAR     dex2jar output of InternetArchiveProvider.cs3 (the extension's code as a JVM jar)
+ *   YUMEIRO_EXT_DIR    folder with SoraAnime.jar and CineStream.jar (dex2jar output of the real .cs3 files);
+ *                      they fill Yumix with real anime (AniList catalogue) and movies and series (TMDb, Kitsu and Simkl catalogues).
+ *                      The Internet Archive extension is installed later, only to play the public-domain film.
  *   YUMEIRO_FRAME      a frame from the film the tour opens (JPEG/PNG)
  *   YUMEIRO_REAL_OUT   output folder (default build/screenshots/real)
  */
@@ -58,6 +61,7 @@ import java.io.File
 class RealAppShotsTest {
     private val jar: String? = System.getenv("YUMEIRO_IA_JAR")
     private val frame: String? = System.getenv("YUMEIRO_FRAME")
+    private val extDir: String = System.getenv("YUMEIRO_EXT_DIR") ?: (System.getProperty("user.home") + "/shots-work/ext")
     private var tv = false
     private val grant = object : org.junit.rules.ExternalResource() {
         override fun before() {
@@ -66,8 +70,8 @@ class RealAppShotsTest {
             shadowOf(app).grantPermissions(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.POST_NOTIFICATIONS)
             dev.asfakul.yumeiro.online.OnboardingGate.release()
             dev.asfakul.yumeiro.network.Connectivity.overrideForTests(true)
-            val jarUrl = File(jar!!).toURI().toURL()
-            ExtensionManager.loaderFactory = { f, parent -> java.net.URLClassLoader(arrayOf(jarUrl, f.toURI().toURL()), parent) }
+            val jars = (listOf(File(jar!!)) + FEED.map { File(extDir, it.first + ".jar") }.filter { it.exists() }).map { it.toURI().toURL() }
+            ExtensionManager.loaderFactory = { f, parent -> java.net.URLClassLoader((jars + f.toURI().toURL()).toTypedArray(), parent) }
             coil.Coil.setImageLoader(coil.ImageLoader.Builder(app).components { add(SyncNetImages(app)) }.crossfade(false).respectCacheHeaders(false).build())
             val dm = app.resources.configuration
             tv = dm.screenWidthDp >= 900 && dm.screenHeightDp <= 600
@@ -186,6 +190,21 @@ class RealAppShotsTest {
         File(out, "${prefix}log.txt").writeText(log.toString())
     }
 
+    /** Real anime and movie extensions for the Yumix feed (installed the same way the market does). */
+    private fun installFeed() {
+        rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.setOnboarding(ctx, dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.Onboarding.SKIPPED) }
+        runBlocking {
+            FEED.forEach { (name, meta) ->
+                if (!File(extDir, "$name.jar").exists()) return@forEach
+                runCatching { ExtensionManager.install(ctx, RemoteExtension(
+                    internalName = name, name = name, version = meta[0].toInt(), url = meta[1], authors = listOf(meta[2]), description = meta[3],
+                    tvTypes = meta[4].split(","), language = "en", iconUrl = null, repoUrl = meta[5], repoName = meta[6],
+                ), ExtensionReview.Mode.AUTO) }.onFailure { log.append("install $name FAIL $it\n") }
+            }
+        }
+        pause(3_000)
+    }
+
     private fun installIa() {
         rule.runOnUiThread { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.setOnboarding(ctx, dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.Onboarding.SKIPPED) }
         runBlocking {
@@ -242,6 +261,7 @@ class RealAppShotsTest {
     private fun playFilm() {
         rule.onAllNodesWithTag("online_search_input", true)[0].performTextClearance()
         type("online_search_input", FILM_ID); pause(10_000)
+        rule.onAllNodes(hasTestTag("online_search_source_Internet Archive"), true).fetchSemanticsNodes().firstOrNull()?.let { tap("online_search_source_Internet Archive"); pause(800) }
         tap("online_poster", 0)
     }
     private fun closePlayer() {
@@ -256,7 +276,7 @@ class RealAppShotsTest {
     /** The full phone tour (also used for the light theme). */
     private fun phoneTour(p: String) {
         prefix = p
-        installIa()
+        installFeed()
         // Music first: the video player stays docked (or floating) once it is open.
         step("11_music_online", 20_000) { tap("nav_tab_music"); tap("music_source_switch"); tap("music_source_online") }
         step("11_music_online", 1_000) { nudge("youtube_music_list") }
@@ -272,12 +292,14 @@ class RealAppShotsTest {
         step("13b_closed", 1_000) { back(); if (exists("youtube_search_close")) tap("youtube_search_close") }
         step("03_yumix", 25_000) { tap("nav_tab_videos"); tap("video_source_switch"); tap("video_source_online") }
         step("03_yumix", 1_000) { nudge("online_home_list") }
+        step("03b_yumix_category", 6_000) { tap(if (exists("online_category_ANIME")) "online_category_ANIME" else "online_category_MOVIES") }
+        step("03c_yumix_all", 2_000) { tap("online_category_all") }
         step("07_extensions", 4_000) { tap("online_extensions") }
         step("08_market_discover", 12_000) { back(); tap("online_market") }
         step("09_market_installed", 3_000) { tap("market_tab_installed") }
         step("10_market_repos", 3_000) { tap("market_tab_repos") }
-        step("08b_market_search", 8_000) { tap("market_tab_discover"); tap("market_search_toggle"); rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction(), true)[0].performTextInput("archive") }
-        step("04_search", 1_000) { back(); back(); openFilm() }
+        step("08b_market_search", 8_000) { tap("market_tab_discover"); tap("market_search_toggle"); rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction(), true)[0].performTextInput("anime") }
+        step("04_search", 1_000) { back(); back(); installIa(); openFilm() }
         step("05_watch", 10_000) { playFilm(); pause(4_000); paintFrame(null) }
         step("05_watch_caption", 500) { paintFrame(CAPTION) }
         step("06_watch_download", 2_000, dialog = "download_confirm") { tap("online_watch_download"); paintFrame(null) }
@@ -312,11 +334,13 @@ class RealAppShotsTest {
     }
 
     private fun tvTour(p: String) {
-        prefix = p; installIa()
+        prefix = p; installFeed()
         step("01_home", 3_000) { rule.waitUntil(15_000) { rule.mainClock.advanceTimeBy(100); exists("tv_nav_rail") } }
         step("03_yumix", 25_000) { tap("nav_tab_videos"); tap("video_source_switch"); tap("video_source_online") }
         step("03_yumix", 1_000) { nudge("online_home_list") }
-        step("04_search", 1_000) { openFilm() }
+        step("03b_yumix_category", 6_000) { tap(if (exists("online_category_ANIME")) "online_category_ANIME" else "online_category_MOVIES") }
+        step("03c_yumix_all", 2_000) { tap("online_category_all") }
+        step("04_search", 1_000) { installIa(); openFilm() }
         step("05_player", 10_000) { playFilm(); pause(4_000); paintFrame(CAPTION) }
         step("07_extensions", 4_000) { closePlayer(); back(); back(); if (!exists("online_extensions")) { tap("nav_tab_videos") }; tap("online_extensions") }
         step("08_market", 12_000) { back(); tap("online_market") }
@@ -335,6 +359,11 @@ class RealAppShotsTest {
     private companion object {
         /** Public domain (Internet Archive item gullivers-travels-1939_202312, Public Domain Mark 1.0). */
         const val FILM_QUERY = "Gulliver's Travels 1939"
+        /** name to [version, url, author, description, types, repo url, repo name] */
+        val FEED = listOf(
+            "SoraAnime" to listOf("1", "https://raw.githubusercontent.com/Pendztagram/extcloud/builds/SoraAnime.cs3", "Pendztagram", "Anime catalogue from AniList", "Anime,AnimeMovie,OVA", "https://raw.githubusercontent.com/Pendztagram/extcloud/builds/repo.json", "ExtCloud"),
+            "CineStream" to listOf("487", "https://raw.githubusercontent.com/SaurabhKaperwan/CSX/builds/CineStream.cs3", "megix", "Movies, series, anime and Asian drama catalogues (TMDb, Kitsu, Simkl)", "TvSeries,Movie,AsianDrama,Anime", "https://raw.githubusercontent.com/SaurabhKaperwan/CSX/builds/CS.json", "Megix Repo"),
+        )
         const val FILM_ID = "gullivers-travels-1939_202312"
         const val CAPTION = "[orchestral music]"
         const val SONG_QUERY = "NCS Elektronomia Sky High"

@@ -322,6 +322,9 @@ dependencies {
 
   // Online: runs CloudStream-compatible extensions (MainAPI providers / extractors).
   implementation(libs.cloudstream.library)
+  // Rhino already ships at runtime with the CloudStream library; compile against it for the
+  // restored Vidguard extractor (com/lagradost/cloudstream3/extractors/Vidguard.kt).
+  compileOnly(libs.rhino)
   implementation(libs.cast.framework) // Chromecast
   // Push: Firebase Cloud Messaging only. Initialised by hand from BuildConfig (no google-services
   // plugin, no Analytics); a build without FCM config simply runs with push off.

@@ -1411,6 +1411,7 @@ fun MTPlayerApp(
         // Styled in-app messages (falls back to system toasts when no host is attached).
         dev.asfakul.yumeiro.ui.screens.online.BrowserCheckHost()
         dev.asfakul.yumeiro.ui.screens.online.ExtensionReviewHost()
+        dev.asfakul.yumeiro.ui.screens.sources.UniversalAddHost()
         dev.asfakul.yumeiro.ui.screens.downloads.DownloadPromptHost()
         AppMessageHost(bottomPadding = if (isSubpage) androidx.compose.ui.unit.Dp(24f) else androidx.compose.ui.unit.Dp(150f))
 

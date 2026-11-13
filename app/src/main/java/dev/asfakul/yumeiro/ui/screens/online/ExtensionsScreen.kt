@@ -103,6 +103,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     var showAddMenu by remember { mutableStateOf(false) }
     var showRepoDialog by remember { mutableStateOf(false) }
     var showLinkDialog by remember { mutableStateOf(false) }
+    var showAnyDialog by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<InstalledExtension?>(null) }
     var confirmRepo by remember { mutableStateOf<ExtensionManager.RepoRef?>(null) }
     var working by remember { mutableStateOf(false) }
@@ -145,8 +146,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             val name = runCatching {
                 context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
             }.getOrNull()
-            runCatching { ExtensionManager.installFromFile(context, uri, name) }
-                .onSuccess { AppMessages.success(context, "${it.name} added"); afterChange() }
+            dev.asfakul.yumeiro.sources.UniversalAdd.addFile(context, uri, name)
+                .onSuccess { AppMessages.success(context, it.message); afterChange() }
                 .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) AppMessages.error(context, OnlineErrors.friendly(it)) }
             working = false
         }
@@ -166,9 +167,11 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.testTag("extensions_add")) {
                 Icon(Icons.Default.Add, "Add", tint = TextPrimary)
                 DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                    DropdownMenuItem(text = { Text("Add anything (auto-detect)") }, leadingIcon = { Icon(Icons.Default.Add, null) },
+                        onClick = { showAddMenu = false; showAnyDialog = true }, modifier = Modifier.testTag("extensions_add_any"))
                     DropdownMenuItem(text = { Text("Add repository") }, leadingIcon = { Icon(Icons.Default.Storefront, null) },
                         onClick = { showAddMenu = false; showRepoDialog = true }, modifier = Modifier.testTag("extensions_add_repo"))
-                    DropdownMenuItem(text = { Text("Install from file (.cs3)") }, leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
+                    DropdownMenuItem(text = { Text("Install from file (.cs3 or .apk)") }, leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
                         onClick = { showAddMenu = false; picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("extensions_add_file"))
                     DropdownMenuItem(text = { Text("Install from link") }, leadingIcon = { Icon(Icons.Default.Link, null) },
                         onClick = { showAddMenu = false; showLinkDialog = true }, modifier = Modifier.testTag("extensions_add_link"))
@@ -284,6 +287,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             }
         }
     }
+    if (showAnyDialog) dev.asfakul.yumeiro.ui.screens.sources.UniversalAddDialog(onDismiss = { showAnyDialog = false; afterChange() },
+        onServer = { AppMessages.show(context, it.message); onOpenSources() })
     if (showRepoDialog) InputDialog(
         title = "Add repository", label = "Repository link", hint = "https://…/repo.json or a GitHub repo",
         confirm = "Add", onDismiss = { showRepoDialog = false },
@@ -295,12 +300,12 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         }
     }
     if (showLinkDialog) InputDialog(
-        title = "Install from link", label = "Extension link", hint = "https://…/Extension.cs3",
+        title = "Install from link", label = "Extension link", hint = "https://…/Extension.cs3 (any format is detected)",
         confirm = "Install", onDismiss = { showLinkDialog = false },
     ) { text, done ->
         scope.launch {
-            runCatching { ExtensionManager.installFromUrl(context, text) }
-                .onSuccess { AppMessages.success(context, "${it.name} installed"); done(null); showLinkDialog = false; afterChange() }
+            dev.asfakul.yumeiro.sources.UniversalAdd.add(context, text)
+                .onSuccess { AppMessages.success(context, it.message); done(null); showLinkDialog = false; afterChange() }
                 .onFailure { if (it is dev.asfakul.yumeiro.online.ExtensionReview.Declined) { done(null); showLinkDialog = false } else done(OnlineErrors.friendly(it)) }
         }
     }

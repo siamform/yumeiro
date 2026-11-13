@@ -65,7 +65,7 @@ fun Modifier.dreamScenePreview(p: MtPalette, intensity: Float = 1f, scene: Boole
 }
 
 /**
- * Settings → Appearance → Backdrop: scene / your photo / calm, plus intensity. The photo stays on
+ * Settings → Appearance → Backdrop: the original Yumeiro background or your photo, plus glow intensity. The photo stays on
  * the device (app storage), is downscaled on import and drawn blurred under a theme scrim.
  */
 @Composable
@@ -90,7 +90,7 @@ fun BackdropSettingsSection() {
     Text("夢色 — the picture behind every page. Each theme has its own scene.", color = p.textTertiary, fontSize = 12.5.sp, lineHeight = 17.sp)
     Spacer(Modifier.height(10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-        BackdropStyle.entries.forEach { s ->
+        BackdropStyle.entries.filter { it != BackdropStyle.CALM }.forEach { s ->
             val sel = style == s
             val shape = RoundedCornerShape(16.dp)
             Column(
@@ -123,7 +123,7 @@ fun BackdropSettingsSection() {
             SmallTextButton("Remove photo", p.textSecondary, "backdrop_photo_remove") { BackdropSettings.removePhoto(context) }
         }
     }
-    if (style != BackdropStyle.CALM) {
+    run {
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Intensity", color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))

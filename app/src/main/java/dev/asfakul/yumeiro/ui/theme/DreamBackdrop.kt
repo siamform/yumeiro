@@ -35,25 +35,18 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 夢色 "dream colour" backdrops. Every theme paints its own scene behind every page, so each one
- * carries a different mood instead of being the same gradient in another colour:
- *
- *  All themes share the production night-sky base (ink gradient, ambient halo, faint sparkles
- *  on dark themes) and add one quiet detail each:
- *  - Tsuki Night: low mist. Evening: a warm dusk line. Midnight: one faint ribbon.
- *  - Afterglow: a few embers. Washi Day: a faint ensō circle. Morning: a mist band.
- *  - Noon: two small clouds. Afternoon: one golden beam. Material You: a second bloom.
- *
- * The user can switch to their own photo (softly blurred and dimmed so text keeps its contrast)
- * or a calm plain gradient, and set the intensity. Scenes are vector shapes built once per size in
- * `drawWithCache` (see [pageBackground]); nothing animates, so it costs no battery.
+ * Page backdrop choice. The default is the original Yumeiro background (theme gradient, ambient
+ * halo and echo, faint sparkles on dark themes). The user can switch to their own photo, softly
+ * blurred and dimmed so text keeps its contrast. [DreamScene] only names the theme now; no theme
+ * draws extra shapes.
  */
 enum class DreamScene { TSUKI, WASHI, AFTERGLOW, MORNING, NOON, AFTERNOON, EVENING, MIDNIGHT, YOU }
 
 enum class BackdropStyle(val label: String, val detail: String) {
-    SCENE("Dream scene", "Each theme paints its own scene"),
+    SCENE("Yumeiro", "The original gradient and glow"),
     PHOTO("Your photo", "A picture of yours, softly blurred"),
-    CALM("Calm", "Just the theme gradient"),
+    /** Older saved value; treated as [SCENE]. Not shown in settings. */
+    CALM("Yumeiro", "The original gradient and glow"),
 }
 
 /** Persisted backdrop choice (shares the appearance preferences file). */
@@ -81,6 +74,7 @@ object BackdropSettings {
         _intensity.value = p.getFloat(KEY_INTENSITY, 1f).coerceIn(0.3f, 1.6f)
         _photoVersion.value = if (photoFile(context).exists()) p.getLong(KEY_PHOTO_V, 1L).coerceAtLeast(1L) else 0L
         if (_style.value == BackdropStyle.PHOTO && _photoVersion.value == 0L) _style.value = BackdropStyle.SCENE
+        if (_style.value == BackdropStyle.CALM) _style.value = BackdropStyle.SCENE
         loaded = true
     }
 
@@ -153,88 +147,13 @@ internal class SceneLayer(private val ops: List<DrawScope.(Float) -> Unit>) {
 }
 
 /**
- * Builds the quiet detail for [p] in window coordinates ([w] × [windowH]). Each op receives the
- * page's top offset in the window so stacked pages line up into one continuous picture.
- *
- * Round 11: the scene no longer replaces the page. Every theme keeps the production night-sky
- * base drawn by [pageBackground] (ink gradient, one ambient halo, its echo and the nine faint
- * sparkles on dark themes) and adds exactly one quiet detail of its own. No moon, no big shapes:
- * the base is what users liked, the detail only tells the themes apart.
+ * Kept for the settings preview and older callers. Round 11c: no scene shapes at all (no moon,
+ * sun, clouds, rings or beams). Every theme uses the original Yumeiro background drawn by
+ * [pageBackground]: the theme gradient, the ambient halo and its echo, and faint sparkles on
+ * dark themes, exactly as on main.
  */
-internal fun buildScene(p: MtPalette, w: Float, windowH: Float, k: Float): SceneLayer {
-    val ops = mutableListOf<DrawScope.(Float) -> Unit>()
-    val a = k.coerceIn(0.3f, 1.6f)
-    val ink = p.textPrimary
-    val rnd = java.util.Random(0x7E1AL + p.scene.ordinal)
-    fun dust(n: Int, y0: Float, y1: Float, maxR: Float, alpha: Float, tint: Color) {
-        val s = List(n) { Triple(Offset(rnd.nextFloat() * w, y0 + rnd.nextFloat() * (y1 - y0)), 0.5f + rnd.nextFloat() * maxR, alpha * (0.35f + rnd.nextFloat() * 0.65f)) }
-        ops += { top -> s.forEach { (c, r, al) -> drawCircle(tint.copy(alpha = (al * a).coerceAtMost(0.6f)), r, Offset(c.x, c.y - top)) } }
-    }
-    fun band(color: Color, y0: Float, y1: Float, alpha: Float) {
-        val col = color.copy(alpha = (alpha * a).coerceAtMost(0.5f))
-        ops += { top -> drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.5f to col, 1f to Color.Transparent, startY = y0 - top, endY = y1 - top)) }
-    }
-    when (p.scene) {
-        // Tsuki Night: low mist along the bottom of the sky.
-        DreamScene.TSUKI -> band(ink, windowH * 0.80f, windowH * 1.04f, 0.030f)
-        // Evening: a warm dusk line on the horizon.
-        DreamScene.EVENING -> band(p.accent2, windowH * 0.84f, windowH * 1.06f, 0.07f)
-        // Midnight: one thin, very faint ribbon across the upper sky.
-        DreamScene.MIDNIGHT -> {
-            val y = windowH * 0.16f
-            val path = Path().apply {
-                moveTo(-w * 0.1f, y + w * 0.10f)
-                cubicTo(w * 0.3f, y - w * 0.06f, w * 0.6f, y + w * 0.16f, w * 1.1f, y)
-                lineTo(w * 1.1f, y + w * 0.06f)
-                cubicTo(w * 0.6f, y + w * 0.22f, w * 0.3f, y, -w * 0.1f, y + w * 0.16f)
-                close()
-            }
-            val c = p.accent.copy(alpha = (0.07f * a).coerceAtMost(0.25f))
-            ops += { top -> translateY(-top) { drawPath(path, c) } }
-        }
-        // Afterglow: a few embers rising near the bottom.
-        DreamScene.AFTERGLOW -> dust(12, windowH * 0.62f, windowH * 0.98f, 1.6f, 0.22f, p.accentBright)
-        // Washi Day: a faint open ensō brush circle.
-        DreamScene.WASHI -> {
-            val ec = Offset(w * 0.84f, windowH * 0.30f); val er = w * 0.26f
-            val enso = ink.copy(alpha = (0.035f * a).coerceAtMost(0.15f))
-            ops += { top ->
-                drawArc(enso, 200f, 300f, false, Offset(ec.x - er, ec.y - er - top), Size(er * 2, er * 2), style = Stroke(w * 0.018f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
-            }
-        }
-        // Morning: one soft mist band.
-        DreamScene.MORNING -> band(Color.White, windowH * 0.26f, windowH * 0.38f, 0.40f)
-        // Noon: two small, faint clouds.
-        DreamScene.NOON -> {
-            val clouds = List(2) { i ->
-                val cx = w * (0.14f + 0.50f * i); val cy = windowH * (0.08f + 0.06f * i)
-                val s = w * 0.05f
-                listOf(Offset(cx, cy) to s, Offset(cx + s * 0.9f, cy - s * 0.3f) to s * 0.85f, Offset(cx + s * 1.7f, cy) to s * 0.7f)
-            }.flatten()
-            val cloudCol = Color.White.copy(alpha = (0.35f * a).coerceAtMost(0.7f))
-            ops += { top -> clouds.forEach { (c, r) -> drawCircle(cloudCol, r, Offset(c.x, c.y - top)) } }
-        }
-        // Afternoon: a single golden beam from the top-right corner.
-        DreamScene.AFTERNOON -> {
-            val path = Path().apply {
-                moveTo(w * 1.05f, -windowH * 0.02f); lineTo(w * 0.34f, windowH * 0.70f); lineTo(w * 0.48f, windowH * 0.70f); close()
-            }
-            val c = p.accentBright.copy(alpha = (0.05f * a).coerceAtMost(0.3f))
-            ops += { top -> translateY(-top) { drawPath(path, Brush.verticalGradient(listOf(c, Color.Transparent), startY = 0f, endY = windowH * 0.70f)) } }
-        }
-        // Material You: a second wallpaper-colour bloom low on the page.
-        DreamScene.YOU -> {
-            val col = p.accent2.copy(alpha = (0.10f * a).coerceAtMost(0.4f))
-            ops += { top -> drawRect(Brush.radialGradient(0f to col, 1f to Color.Transparent, center = Offset(w * 1.0f, windowH * 0.70f - top), radius = w * 0.8f)) }
-        }
-    }
-    return SceneLayer(ops)
-}
-
-private inline fun DrawScope.translateY(dy: Float, block: DrawScope.() -> Unit) {
-    drawContext.transform.translate(0f, dy)
-    try { block() } finally { drawContext.transform.translate(0f, -dy) }
-}
+@Suppress("UNUSED_PARAMETER")
+internal fun buildScene(p: MtPalette, w: Float, windowH: Float, k: Float): SceneLayer = SceneLayer(emptyList())
 
 /** Draws the user's photo cover-cropped over the window, then a theme scrim for contrast. */
 internal fun DrawScope.drawBackdropPhoto(img: ImageBitmap, p: MtPalette, top: Float, windowH: Float, k: Float) {

@@ -160,6 +160,11 @@ object ExtensionFormats {
     /** Parses `repo.json`. Throws when the file isn't a repository manifest. */
     fun parseRepo(url: String, text: String): ExtensionRepo {
         val trimmed = text.trimStart('\uFEFF', ' ', '\n', '\r', '\t')
+        // A bare plugins.json (some authors only share that): it is its own single plugin list.
+        if (trimmed.startsWith("[")) {
+            require(runCatching { JSONArray(trimmed).optJSONObject(0)?.has("internalName") == true }.getOrDefault(false)) { "Not a CloudStream plugin list" }
+            return ExtensionRepo(url = url, name = repoNameFromUrl(url), description = null, iconUrl = null, pluginLists = listOf(url))
+        }
         require(trimmed.startsWith("{")) { "Not a CloudStream repository" }
         val o = JSONObject(trimmed)
         val lists = o.optJSONArray("pluginLists").strings()
@@ -221,11 +226,15 @@ object ExtensionFormats {
 
 /**
  * Turns what users paste into a repository URL: full repo.json links stay as they are, GitHub repo
- * pages map to their raw `repo.json`, and CloudStream short codes are not supported (no lookup
- * service is used).
+ * pages map to their raw `repo.json`, and `cloudstreamrepo://` links are unwrapped. Short codes are
+ * resolved only by [dev.asfakul.yumeiro.sources.UniversalAdd] when the user types one.
  */
 fun normalizeRepoUrl(input: String): String {
-    val s = input.trim().removeSuffix("/")
+    var s = input.trim().removeSuffix("/")
+    // CloudStream's add-repo links: cloudstreamrepo://<url> and https://cs.repo/?<url>
+    Regex("^(cloudstreamrepo://|https://cs\\.repo/\\??)").find(s)?.let { m ->
+        s = s.removePrefix(m.value).let { if (it.startsWith("http://") || it.startsWith("https://")) it else "https://$it" }
+    }
     val gh = Regex("^https?://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?(?:/(?:tree|blob)/([^/]+)(/.*)?)?$").find(s)
     if (gh != null) {
         val (owner, repo, branch, path) = gh.destructured

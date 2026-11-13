@@ -148,29 +148,48 @@ internal fun ActiveFilterBar(name: String, onChange: () -> Unit, onClear: () -> 
     }
 }
 
-/** Category chips (Anime, Movies, Drama, Romance, Sports…) with the picked category's titles below. */
+/**
+ * Round 11c: compact category chips at the top of Yumix, under the header (like YouTube's chip
+ * bar). "All" shows the normal feed; any other chip switches the page to that category's titles.
+ * Chips are small (32 dp tall, 13 sp) but each keeps a 44 dp touch target.
+ */
 @Composable
-internal fun CategoryShelf(cats: List<Pair<YumixFeed.Category, List<OnlineItem>>>, picked: String?, onPick: (String) -> Unit, onClick: (OnlineItem) -> Unit) {
+internal fun CategoryBar(cats: List<Pair<YumixFeed.Category, List<OnlineItem>>>, picked: String?, onPick: (String?) -> Unit) {
+    val current = cats.firstOrNull { it.first.name == picked }?.first
+    LazyRow(
+        Modifier.fillMaxWidth().testTag("online_categories"),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        item("all") { CategoryChip("All", current == null, "online_category_all") { onPick(null) } }
+        items(cats, key = { it.first.name }) { (c, _) ->
+            CategoryChip(c.label, c == current, "online_category_${c.name}") { onPick(if (c == current) null else c.name) }
+        }
+    }
+}
+
+@Composable
+private fun CategoryChip(label: String, sel: Boolean, tag: String, onClick: () -> Unit) {
     val p = LocalMtPalette.current
-    val current = cats.firstOrNull { it.first.name == picked } ?: cats.first()
-    Column(Modifier.testTag("online_categories")) {
-        SectionHeader("Browse by category", "From every extension you have on")
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(cats, key = { it.first.name }) { (c, list) ->
-                val sel = c == current.first
-                val bg by animateColorAsState(if (sel) p.accent else p.surfaceContainerHigh, label = "cat_bg")
-                Box(
-                    Modifier.clip(CircleShape).background(bg)
-                        .selectable(selected = sel, role = Role.Tab) { onPick(c.name) }
-                        .padding(horizontal = 14.dp, vertical = 8.dp).testTag("online_category_${c.name}"),
-                ) {
-                    Text("${c.label}  ${list.size}", color = if (sel) p.onAccent else p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                }
-            }
+    val bg by animateColorAsState(if (sel) p.textPrimary else p.textPrimary.copy(alpha = 0.08f), label = "cat_bg")
+    Box(
+        Modifier.heightIn(min = 44.dp).selectable(selected = sel, role = Role.Tab, onClick = onClick).testTag(tag),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(10.dp)).background(bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+            Text(label, color = if (sel) p.background else p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
-        Spacer(Modifier.padding(top = 2.dp))
-        LazyRow(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(current.second, key = { current.first.name + it.key }) { PosterCard(it, onClick = { onClick(it) }, width = 112.dp, showSource = true) }
-        }
+    }
+}
+
+/** The picked category's titles as a three-column grid (rows of [PosterCard]). */
+internal fun categoryGridRows(items: List<OnlineItem>): List<List<OnlineItem>> = items.chunked(3)
+
+@Composable
+internal fun CategoryGridRow(row: List<OnlineItem>, onClick: (OnlineItem) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp).testTag("online_category_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        row.forEach { item -> PosterCard(item, onClick = { onClick(item) }, showSource = true, modifier = Modifier.weight(1f)) }
+        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
     }
 }

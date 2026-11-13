@@ -224,7 +224,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                             is ProviderResult.Failed -> "$n (!)"
                             null -> n
                         }
-                        OnlineChip(label, filter == n, { filter = if (filter == n) null else n })
+                        OnlineChip(label, filter == n, { filter = if (filter == n) null else n }, Modifier.testTag("online_search_source_$n"))
                     }
                 }
                 val shown = if (filter == null) all else all.filter { it.api == filter }

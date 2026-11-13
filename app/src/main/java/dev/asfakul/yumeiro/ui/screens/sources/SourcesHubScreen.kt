@@ -93,7 +93,11 @@ fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = 0) {
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext) }
 
     Column(Modifier.fillMaxSize().testTag("sources_hub")) {
-        SubPageHeader(title = "Sources", onBack = onBack, subtitle = "Extensions, add-ons and home servers")
+        var any by remember { mutableStateOf(false) }
+        SubPageHeader(title = "Sources", onBack = onBack, subtitle = "Extensions, add-ons and home servers") {
+            TextButton(onClick = { any = true }, modifier = Modifier.testTag("sources_add_any")) { Text("Add anything", color = SpotifyGreen) }
+        }
+        if (any) UniversalAddDialog(onDismiss = { any = false }, onServer = { out -> AppMessages.show(context, out.message); tab = 4 })
         PillTabRow(tabs = tabs, selectedIndex = tab, onSelect = { tab = it }, tagPrefix = "sources_tab")
         // Round 8: tabs glide along the X axis (they used to cut to the new tab in one frame).
         dev.asfakul.yumeiro.ui.components.TabSwap(tab, { it }, Modifier.fillMaxSize(), label = "sources_tab") { t ->

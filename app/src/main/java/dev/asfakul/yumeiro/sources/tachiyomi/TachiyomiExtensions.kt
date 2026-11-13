@@ -425,6 +425,10 @@ object TachiyomiExtensions {
         else -> value.toString().trim().toDoubleOrNull()
     }
 
+    /** Aniyomi or Mihon, read from the APK's manifest (features and meta-data), or null for any other APK. */
+    fun apkKind(context: Context, apk: File): Kind? =
+        context.packageManager.getPackageArchiveInfo(apk.absolutePath, FLAGS)?.let(::kindOf)
+
     private fun kindOf(info: PackageInfo): Kind? {
         val features = info.reqFeatures.orEmpty().mapNotNull { it.name }
         return when {

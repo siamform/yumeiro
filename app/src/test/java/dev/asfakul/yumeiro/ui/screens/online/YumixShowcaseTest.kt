@@ -75,15 +75,21 @@ class YumixShowcaseTest {
             val (slides, newKeys) = YumixFeed.bannerSlides(feed.flatMap { it.second.first().items.take(3) }, latest)
             HeroCarousel(slides, onPlay = {}, onInfo = {}, resume = resume, onResume = { resumed = it.name }, newKeys = newKeys)
             PosterShelf("Fresh from your sources", "Mixed from 2 of 2 extensions", feed.flatMap { it.second[1].items }, horizontal = false, onClick = {}, onSeeAll = null)
-            CategoryShelf(YumixFeed.categories(feed), picked, onPick = { picked = it }, onClick = {})
+            CategoryBar(YumixFeed.categories(feed), picked, onPick = { picked = it })
+            YumixFeed.categories(feed).firstOrNull { it.first.name == picked }?.second?.let { list -> categoryGridRows(list).forEach { CategoryGridRow(it) {} } }
             PosterShelf("Latest episodes", "New from 1 extension(s)", latest, horizontal = false, onClick = {}, onSeeAll = null)
         }
         save("r10_yumix_all_feed")
         rule.onNodeWithTag("online_hero_resume_btn").performClick()
         assertEquals("Frieren: Beyond Journey's End", resumed)
+        rule.onNodeWithTag("online_category_all").assertIsSelected()
         rule.onNodeWithTag("online_category_SPORTS").performClick()
         rule.mainClock.advanceTimeBy(400)
         rule.onNodeWithTag("online_category_SPORTS").assertIsSelected()
+        assertEquals("SPORTS", picked)
+        rule.onNodeWithTag("online_category_SPORTS").performClick()
+        rule.mainClock.advanceTimeBy(400)
+        assertEquals(null, picked)
         save("r10_yumix_category_sports")
     }
 

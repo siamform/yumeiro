@@ -109,6 +109,7 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
+rhino = { group = "org.mozilla", name = "rhino", version = "1.8.1" }
 cloudstream-library = { group = "com.github.recloudstream.cloudstream", name = "library-android", version.ref = "cloudstreamLibrary" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }

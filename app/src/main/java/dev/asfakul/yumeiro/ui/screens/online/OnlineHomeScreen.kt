@@ -236,7 +236,7 @@ fun OnlineHomeScreen(
                 if (sel == null) {
                     val hero = remember(ready) { heroPicks(ready.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
                     // Round 10 order: Resume → banners (spotlight + new episodes) → Continue → Fresh
-                    // from your sources → categories → Latest episodes → per-extension → endless mix.
+                    // from your sources → Latest episodes (categories are the chip bar on top) → per-extension → endless mix.
                     val latestAll = remember(ready) { YumixFeed.latest(ready, 30) }
                     val banner = remember(hero, latestAll) { YumixFeed.bannerSlides(hero, latestAll) }
                     val resume = remember(continueItems) { continueItems.firstOrNull { it.fraction < 0.92f } }
@@ -249,6 +249,7 @@ fun OnlineHomeScreen(
                     }
                     val cats = remember(ready) { YumixFeed.categories(ready) }
                     var cat by rememberSaveable { mutableStateOf<String?>(null) }
+                    androidx.activity.compose.BackHandler(enabled = cat != null) { cat = null }
                     // Then one tidy section per extension: its first rows as shelves. More sections
                     // appear as you scroll, so many extensions never load a wall of rows at once.
                     var groupLimit by rememberSaveable { mutableStateOf(4) }
@@ -302,7 +303,14 @@ fun OnlineHomeScreen(
                             !exploreBusy && exploreMore -> pageExplore()
                         }
                     }
+                    val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
+                        if (cats.isNotEmpty()) item("categories") {
+                            CategoryBar(cats, cat, onPick = { cat = it })
+                        }
+                        if (catItems != null) {
+                            items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
+                        } else {
                         if (banner.first.isNotEmpty() || resume != null) item("hero") {
                             HeroCarousel(banner.first, onPlay = openItem, onInfo = openInfo, resume = resume, onResume = { onOpenTitle(it.toItem()) }, newKeys = banner.second)
                         } else if (loadingNames.isNotEmpty()) item("hero_skel") {
@@ -317,9 +325,6 @@ fun OnlineHomeScreen(
                         }
                         if (picks.isNotEmpty()) item("feed_label") {
                             PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
-                        }
-                        if (cats.isNotEmpty()) item("categories") {
-                            CategoryShelf(cats, cat, onPick = { cat = it }, onClick = openInfo)
                         }
                         if (latest.isNotEmpty()) item("latest") {
                             PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
@@ -365,6 +370,7 @@ fun OnlineHomeScreen(
                         val searchOnly = providers.filter { !runCatching { it.hasMainPage }.getOrDefault(false) }
                         if (searchOnly.isNotEmpty()) item("search_only") {
                             SearchOnlyCard(searchOnly.joinToString(", ") { it.name }, onOpenSearch)
+                        }
                         }
                     }
                 } else {

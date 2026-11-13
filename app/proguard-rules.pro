@@ -64,6 +64,11 @@
 -keep class com.google.android.gms.cast.** { *; }
 -keep class com.google.android.gms.common.api.** { *; }
 -keep class androidx.viewpager2.** { *; }
+# Newer extensions (StreamPlay and others from late 2025 on) draw their settings with Jetpack
+# Compose from the host app, like CloudStream 4.6+. Keep Compose's public API by name; R8 may still
+# optimise the bodies, so the app's own Compose code stays fast. Found by the extension link audit
+# (docs/EXTENSION-COMPAT.md): without this, 101 Compose classes were missing in release builds.
+-keep,allowoptimization class androidx.compose.runtime.**, androidx.compose.ui.**, androidx.compose.foundation.**, androidx.compose.material3.**, androidx.compose.material.**, androidx.compose.animation.** { public protected *; }
 -keep class androidx.constraintlayout.** { *; }
 -keep class com.google.android.material.** { *; }
 -keep class dev.asfakul.yumeiro.online.web.** { *; }
