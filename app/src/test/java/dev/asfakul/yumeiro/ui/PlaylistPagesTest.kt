@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.stream.PlaylistMarket
@@ -77,7 +78,7 @@ class PlaylistPagesTest {
         settle { has("playlist_channels") && has("channel_search") }
         rule.onNodeWithTag("channel_search").performTextInput("zzz-nothing")
         settle { has("playlist_no_match") }
-        rule.onNodeWithTag("playlist_no_match_primary").performClick()
+        rule.onNodeWithTag("playlist_no_match_primary").performScrollTo().performClick()
         settle { !has("playlist_no_match") }
     }
 

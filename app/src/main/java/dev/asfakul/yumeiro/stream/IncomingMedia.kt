@@ -43,6 +43,7 @@ object IncomingMedia {
             else -> null
         }
         uri ?: return false
+        if (pointsIntoPrivateStorage(context, uri)) return false
         when (uri.scheme?.lowercase()) {
             "http", "https", "rtsp", "rtsps", "rtmp" -> open(context, StreamRequest(url = uri.toString()))
             "content", "file" -> _pending.value = VideoItem(
@@ -56,6 +57,22 @@ object IncomingMedia {
             else -> return false
         }
         return true
+    }
+
+    /**
+     * Another app must not be able to make us open our own private files (file:///data/data/<us>/…
+     * or our own content provider) — the classic "file theft via VIEW intent" pattern, since the
+     * player can save or share what it opens.
+     */
+    internal fun pointsIntoPrivateStorage(context: Context, uri: Uri): Boolean {
+        val scheme = uri.scheme?.lowercase()
+        if (scheme == "content") return uri.authority?.startsWith(context.packageName) == true
+        if (scheme != "file") return false
+        val path = runCatching { java.io.File(uri.path ?: return true).canonicalPath }.getOrNull() ?: return true
+        val roots = listOfNotNull(context.applicationInfo.dataDir, context.filesDir?.parent, context.cacheDir?.parent,
+            "/data/data/${context.packageName}", "/data/user/0/${context.packageName}")
+            .mapNotNull { runCatching { java.io.File(it).canonicalPath }.getOrNull() }
+        return roots.any { path == it || path.startsWith("$it/") }
     }
 
     private fun extractUrl(text: String): String? =

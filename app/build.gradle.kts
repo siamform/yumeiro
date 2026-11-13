@@ -65,6 +65,38 @@ val obfuscatedToken = updaterToken.toByteArray(Charsets.UTF_8)
  * read tokens), so only quotes, backslashes, spaces and other punctuation are dropped. Stripping `-`
  * and `_` (the old `isLetterOrDigit` filter) turned a valid Trakt ID into one Trakt rejects with 401.
  */
+/**
+ * Firebase Cloud Messaging *client* config (never the service account — that lives only in the
+ * Worker as a secret). Read from an untracked app/google-services.json (picks the client whose
+ * package matches each build type) or from Gradle properties / environment variables. Blank values
+ * turn push off; the app still builds and runs. App ids contain ':' so they get their own filter.
+ */
+fun fcmSafe(value: String): String = value.trim().filter { it.isLetterOrDigit() || it in "-_.:" }
+val fcmJson: Map<String, Any?>? = rootProject.file("app/google-services.json").takeIf { it.exists() }
+  ?.let { @Suppress("UNCHECKED_CAST") (groovy.json.JsonSlurper().parse(it) as? Map<String, Any?>) }
+@Suppress("UNCHECKED_CAST")
+fun fcmFromJson(pkg: String): Pair<String, String>? {
+  val clients = fcmJson?.get("client") as? List<Map<String, Any?>> ?: return null
+  val c = clients.firstOrNull { ((it["client_info"] as? Map<String, Any?>)?.get("android_client_info") as? Map<String, Any?>)?.get("package_name") == pkg } ?: return null
+  val appId = (c["client_info"] as? Map<String, Any?>)?.get("mobilesdk_app_id") as? String ?: return null
+  val key = ((c["api_key"] as? List<Map<String, Any?>>)?.firstOrNull())?.get("current_key") as? String ?: ""
+  return appId to key
+}
+fun fcmProp(prop: String, env: String): String = providers.gradleProperty(prop).orNull ?: System.getenv(env) ?: ""
+val fcmProjectInfo = fcmJson?.get("project_info") as? Map<*, *>
+val fcmProjectId: String = fcmSafe(fcmProp("fcmProjectId", "YUMEIRO_FCM_PROJECT_ID").ifBlank { fcmProjectInfo?.get("project_id") as? String ?: "" })
+val fcmSenderId: String = fcmSafe(fcmProp("fcmSenderId", "YUMEIRO_FCM_SENDER_ID").ifBlank { fcmProjectInfo?.get("project_number") as? String ?: "" })
+/** (appId, apiKey) for a package; props/env override the JSON, so CI needs no file. */
+fun fcmClient(pkg: String, suffix: String): Pair<String, String> {
+  // A Firebase project often registers only the store package. Preview/debug builds then reuse that
+  // client (same project, same key): their topics are channel-prefixed (`preview-…`, `debug-…`), so a
+  // test build never receives or sends real-user broadcasts. A dedicated client always wins.
+  val json = fcmFromJson(pkg) ?: fcmFromJson("dev.asfakul.yumeiro")
+  val appId = fcmProp("fcmAppId$suffix", "YUMEIRO_FCM_APP_ID${suffix.uppercase().let { if (it.isEmpty()) "" else "_$it" }}").ifBlank { json?.first ?: "" }
+  val key = fcmProp("fcmApiKey", "YUMEIRO_FCM_API_KEY").ifBlank { json?.second ?: "" }
+  return fcmSafe(appId) to fcmSafe(key)
+}
+
 fun buildConfigSafe(value: String): String = value.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' || it == '.' }
 
 android {
@@ -73,7 +105,9 @@ android {
 
   defaultConfig {
     applicationId = "dev.asfakul.yumeiro"
-    minSdk = 28 // Android 9 (Pie)
+    // Android 7.0: most TV boxes and Fire TV sticks (Fire OS 6 = Android 7.1) and older phones.
+    // API 26–28 calls are guarded (OsCompat, PipController, Privacy); java.time is desugared.
+    minSdk = 24
     targetSdk = 37 // Android 17
     versionCode = appVersionCode
     versionName = appVersionName
@@ -112,6 +146,10 @@ android {
     // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.
     buildConfigField("String", "CLOUD_HOST", "\"${(providers.gradleProperty("cloudHost").orNull ?: System.getenv("YUMEIRO_CLOUD_HOST") ?: "api.yumeiro.click").let(::buildConfigSafe)}\"")
     buildConfigField("String", "TMDB_API_KEY", "\"${optionalKey("tmdbApiKey", "TMDB_API_KEY")}\"")
+
+    // Push (FCM). Per-build-type app id/key are set in buildTypes below.
+    buildConfigField("String", "FCM_PROJECT_ID", "\"$fcmProjectId\"")
+    buildConfigField("String", "FCM_SENDER_ID", "\"$fcmSenderId\"")
   }
 
   signingConfigs {
@@ -136,18 +174,59 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
       buildConfigField("boolean", "AUTO_UPDATE_CHECK", "true")
+      fcmClient("dev.asfakul.yumeiro", "").let { (id, key) ->
+        buildConfigField("String", "FCM_APP_ID", "\"$id\"")
+        buildConfigField("String", "FCM_API_KEY", "\"$key\"")
+      }
+      buildConfigField("String", "PUSH_CHANNEL", "\"release\"")
+    }
+    // Round 8: an R8-optimised build for owner / tester try-outs before a release. Same code as
+    // release, but it installs next to the store app (".preview"), is signed with the local debug
+    // key and never checks for updates, so it can't replace or update a real install.
+    create("preview") {
+      initWith(getByName("release"))
+      applicationIdSuffix = ".preview"
+      versionNameSuffix = "-preview"
+      signingConfig = signingConfigs.getByName("debug")
+      matchingFallbacks += listOf("release")
+      buildConfigField("boolean", "AUTO_UPDATE_CHECK", "false")
+      fcmClient("dev.asfakul.yumeiro.preview", "Preview").let { (id, key) ->
+        buildConfigField("String", "FCM_APP_ID", "\"$id\"")
+        buildConfigField("String", "FCM_API_KEY", "\"$key\"")
+      }
+      buildConfigField("String", "PUSH_CHANNEL", "\"preview\"")
     }
     debug {
       // Debug builds install side-by-side with the release app and never replace it.
       applicationIdSuffix = ".debug"
       versionNameSuffix = "-debug"
       buildConfigField("boolean", "AUTO_UPDATE_CHECK", "false")
+      fcmClient("dev.asfakul.yumeiro.debug", "Debug").let { (id, key) ->
+        buildConfigField("String", "FCM_APP_ID", "\"$id\"")
+        buildConfigField("String", "FCM_API_KEY", "\"$key\"")
+      }
+      buildConfigField("String", "PUSH_CHANNEL", "\"debug\"")
     }
   }
 
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+    // java.time & co. on Android 7 (our code, NewPipe's extractor and CloudStream use them).
+    isCoreLibraryDesugaringEnabled = true
+  }
+
+  // One APK per processor plus a universal one (all share applicationId, key and versionCode, so
+  // they install over each other). The release workflow names the universal APK exactly like the
+  // single APK before, so older in-app updaters keep picking a build that runs everywhere.
+  splits {
+    abi {
+      val wanted = providers.gradleProperty("yumeiro.abiSplits").orNull != "false"
+      isEnable = wanted
+      reset()
+      include("arm64-v8a", "armeabi-v7a")
+      isUniversalApk = true
+    }
   }
 
   buildFeatures {
@@ -155,7 +234,16 @@ android {
     buildConfig = true
   }
 
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      // Small machines (2 cores / 8 GB) ran the Robolectric JVM out of memory. Opt in with
+      // -Pyumeiro.lowMemTests=true to cap the heap and recycle the test JVM.
+      if (providers.gradleProperty("yumeiro.lowMemTests").orNull == "true") {
+        all { it.maxHeapSize = "1600m"; it.setForkEvery(25) }
+      }
+    }
+  }
 
   packaging {
     resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
@@ -178,6 +266,7 @@ android {
 }
 
 dependencies {
+  coreLibraryDesugaring(libs.desugar.jdk.libs)
   // Security floor for vulnerable transitive libraries (OSV scan, 2026-11-07).
   constraints {
     implementation("org.jsoup:jsoup:1.24.1") { because("GHSA-65r4-943x-97jj, GHSA-pmhh-3w7g-xqp8 (via CloudStream library)") }
@@ -233,7 +322,14 @@ dependencies {
 
   // Online: runs CloudStream-compatible extensions (MainAPI providers / extractors).
   implementation(libs.cloudstream.library)
+  // Rhino already ships at runtime with the CloudStream library; compile against it for the
+  // restored Vidguard extractor (com/lagradost/cloudstream3/extractors/Vidguard.kt).
+  compileOnly(libs.rhino)
   implementation(libs.cast.framework) // Chromecast
+  // Push: Firebase Cloud Messaging only. Initialised by hand from BuildConfig (no google-services
+  // plugin, no Analytics); a build without FCM config simply runs with push off.
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.messaging)
   implementation(libs.androidx.mediarouter)
   implementation(libs.jackson.module.kotlin) // same Jackson the CloudStream library already ships; extensions use it
   implementation(libs.nicehttp) // CloudStream's `app` HTTP helper, wired to our OkHttp client

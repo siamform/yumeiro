@@ -20,5 +20,6 @@ object Bridges {
         dev.asfakul.yumeiro.sources.stremio.StremioAddons.start(app)
         dev.asfakul.yumeiro.sources.servers.HomeServers.start(app)
         dev.asfakul.yumeiro.sources.js.JsSources.start(app)
+        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.start(app)
     }
 }

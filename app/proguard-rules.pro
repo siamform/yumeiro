@@ -51,13 +51,24 @@
 -keep class androidx.preference.** { *; }
 -keep class androidx.navigation.** { *; }
 -keep class androidx.recyclerview.** { *; }
--keep class androidx.core.** { *; }
+# Round 8 (security review): keep androidx.core for extensions, except the compat helpers for
+# phone identifiers (TelephonyManagerCompat.getImei), location requests and accessibility-service
+# lists. Yumeiro never calls them and has no phone / location permission; the blanket keep made
+# R8 ship them anyway, and antivirus heuristics read them as the app's own capabilities
+# ("telephony", "checks-gps"). Anything the app or a library really uses is still kept by R8's
+# normal reachability analysis.
+-keep class !androidx.core.telephony.**,!androidx.core.location.**,!androidx.core.accessibilityservice.**,androidx.core.** { *; }
 -keep class androidx.lifecycle.** { *; }
 -keep class androidx.webkit.** { *; }
 -keep class androidx.activity.** { *; }
 -keep class com.google.android.gms.cast.** { *; }
 -keep class com.google.android.gms.common.api.** { *; }
 -keep class androidx.viewpager2.** { *; }
+# Newer extensions (StreamPlay and others from late 2025 on) draw their settings with Jetpack
+# Compose from the host app, like CloudStream 4.6+. Keep Compose's public API by name; R8 may still
+# optimise the bodies, so the app's own Compose code stays fast. Found by the extension link audit
+# (docs/EXTENSION-COMPAT.md): without this, 101 Compose classes were missing in release builds.
+-keep,allowoptimization class androidx.compose.runtime.**, androidx.compose.ui.**, androidx.compose.foundation.**, androidx.compose.material3.**, androidx.compose.material.**, androidx.compose.animation.** { public protected *; }
 -keep class androidx.constraintlayout.** { *; }
 -keep class com.google.android.material.** { *; }
 -keep class dev.asfakul.yumeiro.online.web.** { *; }
@@ -122,6 +133,17 @@
 -keep class tachiyomi.** { *; }
 -keep class mihon.** { *; }
 -keep class uy.kohesive.injekt.** { *; }
+# Generic type tokens. Injekt's inline `addSingleton` / `addSingletonFactory` / `get` / `injectLazy`
+# create anonymous `FullTypeReference<T>` subclasses in the *calling* package (e.g.
+# TachiyomiRuntime$init$$inlined$addSingleton$1). R8 full mode drops the generic `Signature` of
+# classes that aren't kept and may merge them into one class; Injekt then reads a raw
+# `getGenericSuperclass()` and throws "Internal error: TypeReference constructed without actual type
+# information" — the v1.5.0 manga extension install failure (release builds only). Keep every
+# token subclass (name may still be obfuscated) together with its Signature attribute.
+-keep,allowobfuscation,allowshrinking class * extends uy.kohesive.injekt.api.FullTypeReference
+-keep,allowobfuscation,allowshrinking class * implements uy.kohesive.injekt.api.TypeReference
+-keep,allowobfuscation,allowshrinking class * extends com.fasterxml.jackson.core.type.TypeReference
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 # extensions-lib 1.6 (Keiyoushi): QuickJS API (app.cash.quickjs, on dokar QuickJS), zstd/brotli decoding, WebView boundary
 -keep class app.cash.quickjs.** { *; }
 -keep class com.squareup.zstd.** { *; }

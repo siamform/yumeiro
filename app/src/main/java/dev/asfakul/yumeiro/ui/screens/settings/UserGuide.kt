@@ -113,7 +113,7 @@ fun UserGuideScreen(onBack: () -> Unit) {
     val chapters = guideChapters()
     Box(Modifier.fillMaxSize().pageBackground().testTag("user_guide_screen")) {
         LazyColumn(
-            Modifier.fillMaxSize().statusBarsPadding(),
+            Modifier.fillMaxSize().statusBarsPadding(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("user_guide"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -125,7 +125,7 @@ fun UserGuideScreen(onBack: () -> Unit) {
                     ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = p.textPrimary) }
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("GUIDE · 使い方", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                        Text("User guide", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                         Text("How Yumeiro works", color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
                     }
                 }
@@ -234,7 +234,7 @@ private fun AppMapCard() {
     ) {
         Text("The app at a glance", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(4.dp))
-        Text("Five tabs in the floating dock at the bottom. The bar above it is the music player.", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        Text("Four tabs in the floating dock at the bottom. The bar above it is the music player.", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(14.dp))
         // Mock dock
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.Black.copy(alpha = if (p.isDark) 0.35f else 0.06f)).padding(10.dp)) {
@@ -254,7 +254,7 @@ private fun AppMapCard() {
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp, 6.dp, 16.dp, 16.dp)).background(Color.White.copy(alpha = 0.08f)).padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                listOf(Icons.Default.Home to "Home", Icons.Default.MusicNote to "Music", Icons.Default.VideoLibrary to "Videos", Icons.Default.LiveTv to "Stream", Icons.Default.LibraryMusic to "Library").forEach { (i, l) ->
+                listOf(Icons.Default.Home to "Home", Icons.Default.MusicNote to "Music", Icons.Default.VideoLibrary to "Videos", Icons.Default.LibraryMusic to "Library").forEach { (i, l) ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(i, null, tint = p.accent, modifier = Modifier.size(18.dp))
                         Text(l, color = p.textPrimary, fontSize = 9.sp)
@@ -264,10 +264,9 @@ private fun AppMapCard() {
         }
         Spacer(Modifier.height(12.dp))
         listOf(
-            "Home" to "Continue where you left off, shortcuts, and an endless For you mix",
+            "Home" to "Continue, new episodes, Spaces, moods, most played and an endless Yumix random",
             "Music" to "Songs, albums, artists, folders and YouTube Music",
-            "Videos" to "Device videos, YouTube and Hues (extensions)",
-            "Stream" to "Links, IPTV playlists and the playlist market",
+            "Videos" to "Yumix (extensions), YouTube, device videos and Live TV — links, IPTV and the playlist market live in Live TV",
             "Library" to "Your collection overview, playlists, favourites and history",
         ).forEach { (t, d) ->
             Row(Modifier.padding(vertical = 3.dp)) {
@@ -313,12 +312,12 @@ private fun RowScope.Zone(label: String, icon: ImageVector, tint: Color) {
 private fun HomeDiagram() {
     val p = LocalMtPalette.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Continue listening & watching", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text("Continue", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MockTile(Modifier.weight(1f), Icons.Default.MusicNote, "Last song")
             MockTile(Modifier.weight(1f), Icons.Default.SmartDisplay, "Last video")
         }
-        Text("Shortcuts", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text("Spaces", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(Icons.Default.MusicNote, Icons.Default.Equalizer, Icons.Default.Extension, Icons.Default.LiveTv).forEach {
                 Box(Modifier.weight(1f).height(30.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
@@ -326,7 +325,7 @@ private fun HomeDiagram() {
                 }
             }
         }
-        Text("For you  ·  keeps loading as you scroll ↓", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text("Yumix random  ·  keeps loading as you scroll ↓", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         repeat(2) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(p.accent.copy(alpha = 0.35f)))
@@ -387,11 +386,11 @@ private fun guideChapters(): List<GuideChapter> = listOf(
         "home", Icons.Default.Home, "Home",
         "Your starting point. It remembers what you played last and keeps suggesting more.",
         listOf(
-            "Tap the song or video card under Continue listening & watching to pick up where you stopped.",
-            "Use Shortcuts to jump to music, YouTube Music, the equalizer, Hues, YouTube or live TV.",
-            "Scroll down: the For you mix never ends. Tap the shuffle button for a fresh mix.",
+            "Tap the song or video card under Continue to pick up where you stopped.",
+            "Spaces jump to every part of Yumeiro. Eight show at first; tap Show all for the rest.",
+            "Mood of the hour changes with the time of day; tap Shuffle for another. Yumix random at the bottom never ends.",
         ),
-        tip = "Search and Settings are always in the top-right corner of Home.",
+        tip = "Customize home (at the bottom) turns sections on or off. Search, alerts and Settings sit in the top-right corner.",
     ) { HomeDiagram() },
     GuideChapter(
         "music", Icons.Default.MusicNote, "Music & Now Playing",
@@ -425,30 +424,30 @@ private fun guideChapters(): List<GuideChapter> = listOf(
     ) { FloatingDiagram() },
     GuideChapter(
         "watch", Icons.Default.PlayArrow, "Watch page: the moon dial",
-        "Under every Hue, YouTube and Stream player sits Yumeiro's moon dial and source card.",
+        "Under every Yumix, YouTube and Live TV player sits Yumeiro's moon dial and source card.",
         listOf(
             "Dim veils everything except the player; tap anywhere to brighten again.",
             "Autoplay starts the video as soon as it opens; Auto-advance (Auto-zap for live TV) moves to the next one when it ends or fails.",
-            "Skip intros jumps over openings when the Hue marks them.",
+            "Skip intros jumps over openings when the extension marks them.",
             "The source card shows what is playing. Stuck on black? Tap another source or open-as mode. Yumeiro remembers what worked for each site.",
             "Long series show an episode board: pick a range, type a number in Jump to #, tap a tile.",
         ),
     ) { Flow("Moon dial" to Icons.Default.Tune, "Source card" to Icons.Default.LiveTv, "Episode board" to Icons.Default.PlayArrow) },
     GuideChapter(
-        "hues", Icons.Default.Extension, "Hues (extensions)",
-        "Hues are CloudStream-compatible extensions that add online catalogues for anime, movies and shows.",
+        "hues", Icons.Default.Extension, "Yumix (extensions)",
+        "Yumix extensions are CloudStream-compatible extensions that add online catalogues for anime, movies and shows.",
         listOf(
-            "Open the Hue store from Home → Shortcuts, add a repository link, then install the extensions you want.",
-            "Browse a Hue or open For you to see picks from all of them; tap a title, then an episode.",
+            "Open the Yumix store from Home → Explore, add a repository link, then install the extensions you want.",
+            "Browse an extension or open For you to see picks from all of them; tap a title, then an episode.",
             "Yumeiro picks the best source and automatically switches server if one fails.",
         ),
-        tip = "Only install Hues for content you have the right to watch.",
-    ) { Flow("Add repo" to Icons.Default.Link, "Install Hue" to Icons.Default.Extension, "Pick title" to Icons.Default.Search, "Watch" to Icons.Default.PlayArrow) },
+        tip = "Only install extensions for content you have the right to watch.",
+    ) { Flow("Add repo" to Icons.Default.Link, "Install extension" to Icons.Default.Extension, "Pick title" to Icons.Default.Search, "Watch" to Icons.Default.PlayArrow) },
     GuideChapter(
-        "stream", Icons.Default.LiveTv, "Stream: links & live TV",
+        "stream", Icons.Default.LiveTv, "Live TV: links & IPTV",
         "Paste any video link or IPTV playlist. Yumeiro inspects it and plays it in a watch page with the channel list below.",
         listOf(
-            "Open Stream, paste a link (or open an .m3u file / pick one in the playlist market) and tap Play.",
+            "Open Videos → Live TV, paste a link (or open an .m3u file / pick one in the playlist market) and tap Play.",
             "Yumeiro checks the link. If the server refuses it, it retries automatically like a browser, like the site's own player and like VLC.",
             "While watching, switch channels from the list under the player or use Previous / Next channel.",
         ),

@@ -72,6 +72,7 @@ fun ExtensionReviewHost() {
     var confirmDanger by remember(r) { mutableStateOf(false) }
     val danger = r.report.level == ExtensionScanner.Level.DANGER || !r.report.readable
     TsukiDialog(
+        tone = (if (danger) dev.asfakul.yumeiro.ui.components.DialogTone.CRITICAL else if (r.report.level == ExtensionScanner.Level.SAFE) dev.asfakul.yumeiro.ui.components.DialogTone.SUCCESS else dev.asfakul.yumeiro.ui.components.DialogTone.WARNING),
         onDismissRequest = { ExtensionReview.answer(false) },
         modifier = Modifier.testTag("extension_review"),
         icon = {

@@ -119,11 +119,11 @@ fun VideoScreen(
     modifier: Modifier = Modifier
 ) {
     val tabs = listOf(
-        "All Videos",
+        "All videos",
         "Folders",
-        "Continue (${continueWatching.size})",
-        "Recent (${recentlyWatched.size})",
-        "Favorites (${favorites.size})"
+        if (continueWatching.isEmpty()) "Continue" else "Continue · ${continueWatching.size}",
+        if (recentlyWatched.isEmpty()) "Recent" else "Recent · ${recentlyWatched.size}",
+        if (favorites.isEmpty()) "Favorites" else "Favorites · ${favorites.size}"
     )
 
     var showSortMenu by remember { mutableStateOf(false) }
@@ -138,59 +138,7 @@ fun VideoScreen(
             .fillMaxSize()
             .testTag("video_screen_root")
     ) {
-        // Search & Filter header
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                placeholder = {
-                    Text("Search offline videos by title or folder...", color = TextTertiary, fontSize = 13.sp)
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = SpotifyGreen,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(
-                            onClick = { onSearchQueryChange("") },
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear search",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = SpotifyGreen,
-                    unfocusedBorderColor = DarkOutline,
-                    focusedContainerColor = GlassFill,
-                    unfocusedContainerColor = GlassFill,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("video_search_input")
-            )
-        }
-
+        // Search is the top-bar magnifier (same query), so the page starts with its tabs.
         // Tab Row (only if not drilling down in folder)
         if (selectedFolder == null) {
             PillTabRow(tabs = tabs, selectedIndex = activeTab, onSelect = onTabChange, tagPrefix = "video_tab")
@@ -218,7 +166,7 @@ fun VideoScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to Folders",
+                            contentDescription = "Back to folders",
                             tint = Color.White
                         )
                     }
@@ -233,7 +181,7 @@ fun VideoScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "${selectedFolder.videoCount} videos • ${formatFileSize(selectedFolder.totalSizeBytes)}",
+                            text = "${if (selectedFolder.videoCount == 1) "1 video" else "${selectedFolder.videoCount} videos"} · ${formatFileSize(selectedFolder.totalSizeBytes)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextTertiary,
                             fontSize = 11.sp
@@ -383,8 +331,8 @@ fun VideoScreen(
                     if (folderVideos.isEmpty()) {
                         EmptyMediaView(
                             title = "No videos in ${selectedFolder.name}",
-                            subtitle = "This folder does not contain any matching videos.",
-                            buttonText = "Back to Folders",
+                            subtitle = "Nothing in this folder matches. Try another folder.",
+                            buttonText = "Back to folders",
                             onButtonClick = onBackFromFolder,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -404,8 +352,8 @@ fun VideoScreen(
                     if (videos.isEmpty()) {
                         EmptyMediaView(
                             title = "No offline videos found",
-                            subtitle = "Place MP4, MKV, WebM, or 3GP video files in your device storage and tap Rescan.",
-                            buttonText = "Rescan Videos",
+                            subtitle = "Copy MP4, MKV or WebM files to this phone, then scan again.",
+                            buttonText = "Scan again",
                             onButtonClick = onRescanClick,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -501,8 +449,8 @@ fun VideoScreen(
                         if (visibleFolders.isEmpty()) {
                             EmptyMediaView(
                                 title = "No video folders found",
-                                subtitle = "Folders with offline video files will appear here.",
-                                buttonText = "Rescan Media",
+                                subtitle = "Folders that hold videos show up here.",
+                                buttonText = "Scan again",
                                 onButtonClick = onRescanClick,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -534,8 +482,8 @@ fun VideoScreen(
                     if (continueWatching.isEmpty()) {
                         EmptyMediaView(
                             title = "No videos in progress",
-                            subtitle = "When you pause a video or exit playback, your resume point will be saved here automatically.",
-                            buttonText = "Browse Videos",
+                            subtitle = "Stop a video part-way and it waits for you here.",
+                            buttonText = "Browse videos",
                             onButtonClick = { onTabChange(0) },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -554,9 +502,9 @@ fun VideoScreen(
                 activeTab == 3 -> {
                     if (recentlyWatched.isEmpty()) {
                         EmptyMediaView(
-                            title = "No watch history",
-                            subtitle = "Videos you play will be recorded here in chronological order.",
-                            buttonText = "Explore Videos",
+                            title = "No watch history yet",
+                            subtitle = "Videos you play show up here, newest first.",
+                            buttonText = "Browse videos",
                             onButtonClick = { onTabChange(0) },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -576,8 +524,8 @@ fun VideoScreen(
                     if (favorites.isEmpty()) {
                         EmptyMediaView(
                             title = "No favorite videos yet",
-                            subtitle = "Tap the heart icon on any video card to pin it to your favorites vault.",
-                            buttonText = "View All Videos",
+                            subtitle = "Tap the heart on any video to keep it here.",
+                            buttonText = "Browse videos",
                             onButtonClick = { onTabChange(0) },
                             modifier = Modifier.fillMaxSize()
                         )

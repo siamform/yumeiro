@@ -134,7 +134,7 @@ fun NetworkSettingsCard() {
                         val r = withContext(Dispatchers.IO) { SmartDns.test("example.com", cfg) }
                         testResult = r.fold(
                             { (addrs, ms) -> "${cfg.provider.label}: example.com → ${addrs.firstOrNull()?.hostAddress ?: "?"} in $ms ms" },
-                            { "Failed: ${it.message ?: it.javaClass.simpleName}" },
+                            { "Failed · ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "no answer")}" },
                         )
                         testing = false
                     }

@@ -103,9 +103,14 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     var showAddMenu by remember { mutableStateOf(false) }
     var showRepoDialog by remember { mutableStateOf(false) }
     var showLinkDialog by remember { mutableStateOf(false) }
+    var showAnyDialog by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<InstalledExtension?>(null) }
     var confirmRepo by remember { mutableStateOf<ExtensionManager.RepoRef?>(null) }
     var working by remember { mutableStateOf(false) }
+    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var searchOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var status by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
+    var showFilters by remember { mutableStateOf(false) }
 
     suspend fun check(force: Boolean) {
         checking = true
@@ -141,8 +146,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             val name = runCatching {
                 context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
             }.getOrNull()
-            runCatching { ExtensionManager.installFromFile(context, uri, name) }
-                .onSuccess { AppMessages.success(context, "${it.name} added"); afterChange() }
+            dev.asfakul.yumeiro.sources.UniversalAdd.addFile(context, uri, name)
+                .onSuccess { AppMessages.success(context, it.message); afterChange() }
                 .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) AppMessages.error(context, OnlineErrors.friendly(it)) }
             working = false
         }
@@ -153,20 +158,27 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             title = "Extensions", onBack = onBack,
             subtitle = if (engine.ready) "${engine.installed.size} installed · ${engine.enabledCount} active" else "Loading…",
         ) {
+            if (engine.installed.size > 1) {
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "extensions_search_toggle", "Search installed extensions")
+                dev.asfakul.yumeiro.ui.components.FilterIconButton(if (status != "all") 1 else 0, { showFilters = true }, "extensions_filter")
+            }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, "More sources", tint = TextPrimary) }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, "Market", tint = TextPrimary) }
             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.testTag("extensions_add")) {
                 Icon(Icons.Default.Add, "Add", tint = TextPrimary)
                 DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                    DropdownMenuItem(text = { Text("Add anything (auto-detect)") }, leadingIcon = { Icon(Icons.Default.Add, null) },
+                        onClick = { showAddMenu = false; showAnyDialog = true }, modifier = Modifier.testTag("extensions_add_any"))
                     DropdownMenuItem(text = { Text("Add repository") }, leadingIcon = { Icon(Icons.Default.Storefront, null) },
                         onClick = { showAddMenu = false; showRepoDialog = true }, modifier = Modifier.testTag("extensions_add_repo"))
-                    DropdownMenuItem(text = { Text("Install from file (.cs3)") }, leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
+                    DropdownMenuItem(text = { Text("Install from file (.cs3 or .apk)") }, leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
                         onClick = { showAddMenu = false; picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("extensions_add_file"))
                     DropdownMenuItem(text = { Text("Install from link") }, leadingIcon = { Icon(Icons.Default.Link, null) },
                         onClick = { showAddMenu = false; showLinkDialog = true }, modifier = Modifier.testTag("extensions_add_link"))
                 }
             }
         }
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search installed extensions", "extensions_search")
         if (working) androidx.compose.material3.LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
 
         if (!engine.ready) {
@@ -174,7 +186,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             return@Column
         }
         PullToRefreshBox(isRefreshing = checking, onRefresh = { scope.launch { check(true) } }, modifier = Modifier.fillMaxSize()) {
-            LazyColumn(Modifier.fillMaxSize().testTag("extensions_list"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(Modifier.fillMaxSize().testTag("extensions_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("extensions"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (updates.isNotEmpty()) item("updates") {
                     Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth().testTag("extensions_updates")) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -204,7 +216,22 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     StateMessage(Icons.Default.Extension, "No extensions installed", "Extensions add online sources: home rows, search, details and streams.",
                         primary = "Browse market" to onOpenMarket, secondary = "Add a repository" to { showRepoDialog = true }, testTag = "extensions_empty")
                 }
-                items(engine.installed.sortedBy { it.name.lowercase() }, key = { it.key }) { ext ->
+                val shown = engine.installed.sortedBy { it.name.lowercase() }.filter { ext ->
+                    val q = query.trim()
+                    (q.isEmpty() || ext.name.contains(q, true) || ext.internalName.contains(q, true) || ext.repoName.orEmpty().contains(q, true)) &&
+                        when (status) {
+                            "on" -> ext.enabled
+                            "off" -> !ext.enabled
+                            "problems" -> engine.info(ext.key).error != null
+                            "updates" -> updates.any { it.first.key == ext.key }
+                            else -> true
+                        }
+                }
+                if (engine.installed.isNotEmpty() && shown.isEmpty()) item("no_match") {
+                    StateMessage(Icons.Default.Extension, "No extension matches", if (query.isNotBlank()) "Nothing installed matches \"${query.trim()}\"." else "No extension is in this state.",
+                        primary = "Clear filters" to { query = ""; status = "all"; searchOpen = false }, testTag = "extensions_no_match")
+                }
+                items(shown, key = { it.key }) { ext ->
                     val info = engine.info(ext.key)
                     val upd = updates.firstOrNull { it.first.key == ext.key }?.second
                     InstalledCard(
@@ -251,6 +278,17 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         }
     }
 
+    if (showFilters) dev.asfakul.yumeiro.ui.components.FilterSheet(
+        onDismiss = { showFilters = false }, onReset = if (status != "all") ({ status = "all" }) else null, resultCount = null, tag = "extensions_filter_sheet",
+    ) {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Show") {
+            listOf("all" to "All", "on" to "On", "off" to "Off", "problems" to "Needs attention", "updates" to "Has update").forEach { (k, l) ->
+                OnlineChip(l, status == k, { status = k }, Modifier.testTag("extensions_status_$k"))
+            }
+        }
+    }
+    if (showAnyDialog) dev.asfakul.yumeiro.ui.screens.sources.UniversalAddDialog(onDismiss = { showAnyDialog = false; afterChange() },
+        onServer = { AppMessages.show(context, it.message); onOpenSources() })
     if (showRepoDialog) InputDialog(
         title = "Add repository", label = "Repository link", hint = "https://…/repo.json or a GitHub repo",
         confirm = "Add", onDismiss = { showRepoDialog = false },
@@ -262,17 +300,18 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         }
     }
     if (showLinkDialog) InputDialog(
-        title = "Install from link", label = "Extension link", hint = "https://…/Extension.cs3",
+        title = "Install from link", label = "Extension link", hint = "https://…/Extension.cs3 (any format is detected)",
         confirm = "Install", onDismiss = { showLinkDialog = false },
     ) { text, done ->
         scope.launch {
-            runCatching { ExtensionManager.installFromUrl(context, text) }
-                .onSuccess { AppMessages.success(context, "${it.name} installed"); done(null); showLinkDialog = false; afterChange() }
+            dev.asfakul.yumeiro.sources.UniversalAdd.add(context, text)
+                .onSuccess { AppMessages.success(context, it.message); done(null); showLinkDialog = false; afterChange() }
                 .onFailure { if (it is dev.asfakul.yumeiro.online.ExtensionReview.Declined) { done(null); showLinkDialog = false } else done(OnlineErrors.friendly(it)) }
         }
     }
     confirmDelete?.let { ext ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmDelete = null },
             title = { Text("Remove ${ext.name}?") },
             text = { Text("Its sources disappear from Online. You can install it again from the market.") },
@@ -290,6 +329,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     }
     confirmRepo?.let { repo ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmRepo = null },
             title = { Text("Remove repository?") },
             text = { Text("${repo.name} won't appear in the market anymore. Extensions you installed from it stay installed.") },
@@ -326,6 +366,7 @@ private fun InstalledCard(
     }
     report?.takeIf { showReport }?.let { rep ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { showReport = false },
             title = { Text("Safety check · ${ext.name}") },
             text = {
@@ -341,7 +382,7 @@ private fun InstalledCard(
     fun openSettings() {
         val open = plugin?.openSettings ?: return
         val host = com.lagradost.cloudstream3.CommonActivity.activity ?: context
-        runCatching { open(host) }.onFailure { AppMessages.error(context, "${ext.name} settings couldn't open: ${it.message ?: it.javaClass.simpleName}") }
+        runCatching { open(host) }.onFailure { AppMessages.error(context, "${ext.name} settings couldn't open. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try updating the extension.")}") }
     }
     editUrl?.let { api ->
         InputDialog(
@@ -365,7 +406,7 @@ private fun InstalledCard(
                 if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
                 else Switch(
                     checked = ext.enabled, onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen),
+                    colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                     modifier = Modifier.testTag("extension_toggle_${ext.internalName}"),
                 )
                 if (plugin?.openSettings != null && ext.enabled) IconButton(onClick = { openSettings() }, modifier = Modifier.testTag("extension_settings_${ext.internalName}")) {

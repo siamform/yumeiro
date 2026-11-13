@@ -45,6 +45,8 @@ data class MtPalette(
     /** Selected filter pill fill + text. */
     val chipSelected: Color = textPrimary,
     val onChipSelected: Color = background,
+    /** The 夢色 backdrop scene this theme paints behind every page (see DreamBackdrop.kt). */
+    val scene: DreamScene = if (isDark) DreamScene.TSUKI else DreamScene.WASHI,
 )
 
 /** Pale moonlight "spark" used for live badges, sparkles and focus rings. */
@@ -65,6 +67,17 @@ val LocalMtPalette = staticCompositionLocalOf { Palettes.Dark }
 
 // ---- Accessors used by every screen ---------------------------------------------------------
 val SpotifyGreen: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accent
+/** Amber for warnings; darker on light surfaces so the text keeps its contrast. */
+/** Errors and destructive actions: light coral on dark themes, deep red on light ones (≥4.5:1). */
+val DangerTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E)
+/** Amber for warnings: bright on dark, deep enough on light paper to pass 3:1 for icons. */
+val WarningTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFFB74D) else Color(0xFF9A5B00)
+/** Rating star: the bright gold washes out on light surfaces, so light themes get a deeper amber. */
+val StarTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFFC94D) else Color(0xFFB7791F)
+/** Pastel accent tints (settings categories, chips) deepened on light themes so icons stay legible. */
+@Composable @ReadOnlyComposable
+fun Color.legibleOnTheme(): Color = if (LocalMtPalette.current.isDark) this else androidx.compose.ui.graphics.lerp(this, Color(0xFF1A1208), 0.42f)
+val WarnTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFFB74D) else Color(0xFFB45309)
 val SpotifyGreenBright: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accentBright
 val AccentSecondary: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.accent2
 val OnAccent: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.current.onAccent
@@ -143,6 +156,7 @@ object Palettes {
         navBar = Color(0xFF0A0908), glass = Color(0x14EDE8DF),
         miniPlayer = Color(0xF52A1A12), onMiniPlayer = Color(0xFFEDE8DF),
         chipSelected = Color(0xFFEDE8DF), onChipSelected = Color(0xFF0C0B0A),
+        scene = DreamScene.AFTERGLOW,
     )
 
     // Time-of-day moods
@@ -151,20 +165,23 @@ object Palettes {
         background = Color(0xFFFFF8F4), surfaceContainer = Color(0xFFFFF0E8), surfaceContainerHigh = Color(0xFFFCE6DA),
         surfaceVariant = Color(0xFFF8E3D8), outline = Color(0xFFEBD3C6), outlineVariant = Color(0xFFF6E7DE),
         textPrimary = Color(0xFF241510), textSecondary = Color(0xFF6B5148), textTertiary = Color(0xFF8A6E64),
+        scene = DreamScene.MORNING,
     ).withAutoGradient()
     val Noon = Light.copy(      // 11–15: crisp, bright sky
         accent = Color(0xFF0B6FBF), accentBright = Color(0xFF38A3F1), accent2 = Color(0xFF06B6D4),
         background = Color(0xFFF5FAFF), surfaceContainer = Color(0xFFEAF4FD), surfaceContainerHigh = Color(0xFFDDEDFB),
         surfaceVariant = Color(0xFFDCEAF7), outline = Color(0xFFC9DCEE), outlineVariant = Color(0xFFE3EEF8),
         textPrimary = Color(0xFF0F1B2A), textSecondary = Color(0xFF4B5C70), textTertiary = Color(0xFF64768A),
+        scene = DreamScene.NOON,
     ).withAutoGradient()
     val Afternoon = Light.copy( // 15–18: golden hour
         accent = Color(0xFF9A6216), accentBright = Color(0xFFD69E2E), accent2 = Color(0xFFE8613C),
         background = Color(0xFFFFFBF2), surfaceContainer = Color(0xFFFDF3DF), surfaceContainerHigh = Color(0xFFF9EACB),
         surfaceVariant = Color(0xFFF5E6C8), outline = Color(0xFFE8D6B0), outlineVariant = Color(0xFFF4E9D2),
         textPrimary = Color(0xFF221A0C), textSecondary = Color(0xFF65563A), textTertiary = Color(0xFF7F6E50),
+        scene = DreamScene.AFTERNOON,
     ).withAutoGradient()
-    val Evening = Dark       // 18–22: the signature Tsuki Night
+    val Evening = Dark.copy(scene = DreamScene.EVENING) // 18–22: Tsuki Night at dusk
     val Midnight = Dark.copy(   // 22–05: deep navy, low glare
         accent = Color(0xFF7FA6FF), accentBright = Color(0xFF9DBBFF), accent2 = BrandCyan, onAccent = Color(0xFF05070D),
         background = Color(0xFF0B1020), surface = Color(0xFF111830), surfaceContainer = Color(0xFF0E1428),
@@ -173,5 +190,26 @@ object Palettes {
         textSecondary = Color(0xFFB8C2DC), textTertiary = Color(0xFF8D98B5),
         bgTop = Color(0xFF1C2A5A), bgMid = Color(0xFF0B1020), bgBottom = Color(0xFF05070D),
         navBar = Color(0xFF070A14), miniPlayer = Color(0xF5222E58), onChipSelected = Color(0xFF0B1020),
+        scene = DreamScene.MIDNIGHT,
+    )
+}
+
+/**
+ * Round 9: one set of on/off toggle colours for the whole app. Material's defaults draw an
+ * "off" switch as a pale thumb on a pale track in light themes (≈1.2:1, it looked disabled); here
+ * the off thumb and border use the secondary text colour (≥3:1 against the track, WCAG 1.4.11),
+ * and the "on" thumb uses the accent's own on-colour instead of a fixed black/white.
+ */
+@Composable
+fun yumeSwitchColors(): androidx.compose.material3.SwitchColors {
+    val p = LocalMtPalette.current
+    return androidx.compose.material3.SwitchDefaults.colors(
+        checkedThumbColor = p.onAccent, checkedTrackColor = p.accent, checkedBorderColor = p.accent,
+        checkedIconColor = p.accent,
+        uncheckedThumbColor = p.textSecondary, uncheckedTrackColor = p.surfaceVariant,
+        uncheckedBorderColor = p.textSecondary.copy(alpha = 0.75f), uncheckedIconColor = p.surfaceVariant,
+        disabledCheckedTrackColor = p.accent.copy(alpha = 0.38f), disabledCheckedThumbColor = p.onAccent.copy(alpha = 0.8f),
+        disabledUncheckedThumbColor = p.textTertiary.copy(alpha = 0.5f), disabledUncheckedTrackColor = p.surfaceVariant.copy(alpha = 0.6f),
+        disabledUncheckedBorderColor = p.textTertiary.copy(alpha = 0.3f),
     )
 }

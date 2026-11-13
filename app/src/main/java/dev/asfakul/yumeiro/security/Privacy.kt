@@ -87,7 +87,8 @@ object Privacy {
         } else context.getSystemService(android.app.KeyguardManager::class.java)?.isDeviceSecure == true
     }
 
-    fun onStop() { backgroundAt = SystemClock.elapsedRealtime() }
+    /** The confirm-credential screen is our own lock, not the user leaving: don't re-lock behind it. */
+    fun onStop() { if (pendingCredential == null) backgroundAt = SystemClock.elapsedRealtime() }
 
     fun onStart(activity: Activity) {
         load(activity)
@@ -108,7 +109,24 @@ object Privacy {
         else activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 
+    /** Android 7–8 have no BiometricPrompt: the system's own PIN / pattern / fingerprint screen. */
+    const val REQ_CONFIRM_CREDENTIAL = 0x7a1
+    private var pendingCredential: ((Boolean) -> Unit)? = null
+
+    /** MainActivity forwards the confirm-credential result here. */
+    fun onCredentialResult(ok: Boolean) { pendingCredential?.invoke(ok); pendingCredential = null }
+
     private fun authenticate(activity: Activity, title: String, done: (Boolean) -> Unit) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            val km = activity.getSystemService(android.app.KeyguardManager::class.java)
+            @Suppress("DEPRECATION")
+            val intent = km?.createConfirmDeviceCredentialIntent(title, "Use your screen lock")
+            if (intent == null) { done(false); return }
+            pendingCredential = done
+            @Suppress("DEPRECATION")
+            runCatching { activity.startActivityForResult(intent, REQ_CONFIRM_CREDENTIAL) }.onFailure { pendingCredential = null; done(false) }
+            return
+        }
         val builder = BiometricPrompt.Builder(activity).setTitle(title).setSubtitle("Use your fingerprint, face or screen lock")
         // API 30+: the unlock is bound to a Keystore key that only works right after a strong
         // biometric or the device PIN, so a hooked callback alone can't open the app.

@@ -10,6 +10,11 @@ import androidx.compose.material.icons.filled.Download
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -109,13 +114,17 @@ fun WatchScaffold(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    // This page is drawn inside the dark player layer; only the 16:9 video area stays dark. The
+    // app bar and details use the user's theme (as the docked watch page does), so a light theme
+    // no longer flashes a dark page while a stream is being found.
+    val app = dev.asfakul.yumeiro.ui.theme.LocalAppPalette.current ?: dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     Column(
-        Modifier.fillMaxSize().background(DarkBackground).statusBarsPadding()
+        Modifier.fillMaxSize().background(app.background).statusBarsPadding()
             .clickable(remember { MutableInteractionSource() }, null) {}
             .testTag(tag)
     ) {
         // Same app bar as the docked player, so nothing jumps when the stream starts.
-        PlayerBrandBar(onMinimize = onBack, onClose = onBack, minimizeLabel = "Back")
+        dev.asfakul.yumeiro.ui.theme.AppThemeLayer { PlayerBrandBar(onMinimize = onBack, onClose = onBack, minimizeLabel = "Back") }
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
             if (backdrop != null) {
                 PosterImage(backdrop, backdropHeaders, Modifier.fillMaxSize().blur(18.dp))
@@ -125,7 +134,11 @@ fun WatchScaffold(
             }
             screen()
         }
-        Column(Modifier.fillMaxWidth().weight(1f)) { content() }
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
+                Column(Modifier.fillMaxSize().background(app.background)) { content() }
+            }
+        }
     }
 }
 
@@ -160,12 +173,10 @@ fun PlayerBrandBar(
         Spacer(Modifier.width(8.dp))
         Text(
             "Yumeiro",
-            style = androidx.compose.ui.text.TextStyle(brush = brush, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 17.sp),
+            style = androidx.compose.ui.text.TextStyle(brush = brush, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp),
             maxLines = 1,
             modifier = Modifier.testTag("player_brand_name"),
         )
-        Spacer(Modifier.width(6.dp))
-        Text("夢色", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onClose, modifier = Modifier.testTag("watch_close")) {
             Icon(Icons.Default.Close, "Close player", tint = TextPrimary)
@@ -175,10 +186,14 @@ fun PlayerBrandBar(
 
 /** Spinner + status line centred in the 16:9 screen. */
 @Composable
-fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag: String = "watch_status") {
+fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag: String = "watch_status", overline: String? = null) {
     Column(Modifier.align(Alignment.Center).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally) {
         CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(34.dp))
         Spacer(Modifier.height(10.dp))
+        if (overline != null) {
+            Text(overline, color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, modifier = Modifier.testTag("watch_status_kind"))
+            Spacer(Modifier.height(2.dp))
+        }
         Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         if (onCancel != null) {
             Spacer(Modifier.height(8.dp))
@@ -195,7 +210,7 @@ fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag
 @Composable
 fun BoxScope.WatchScreenError(message: String, onRetry: () -> Unit, onClose: () -> Unit, tag: String = "watch_error") {
     Column(Modifier.align(Alignment.Center).padding(horizontal = 24.dp).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFFFB74D), modifier = Modifier.size(28.dp))
+        Icon(Icons.Default.ErrorOutline, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(28.dp))
         Spacer(Modifier.height(6.dp))
         Text(message, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(4.dp))
@@ -205,6 +220,77 @@ fun BoxScope.WatchScreenError(message: String, onRetry: () -> Unit, onClose: () 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = onClose) { Text("Close", color = Color.White) }
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
+        }
+    }
+}
+
+/** What is opening — the watch page skeleton is shaped after the page that will appear. */
+enum class WatchKind {
+    MOVIE, SERIES, GENERIC;
+
+    companion object {
+        /** From an extension's content type ("Movie", "AnimeMovie", "TvSeries", "Anime", "OVA"…). */
+        fun of(type: String?): WatchKind {
+            val t = type?.lowercase()?.replace(" ", "")?.replace("_", "") ?: return GENERIC
+            return when {
+                "movie" in t || t == "film" || t == "documentary" || t == "torrent" -> MOVIE
+                "series" in t || "anime" in t || t == "ova" || "drama" in t || "cartoon" in t || t == "tv" || "show" in t -> SERIES
+                else -> GENERIC
+            }
+        }
+    }
+}
+
+/**
+ * Skeleton for the watch page, shaped after what loads: a film gets synopsis, cast and
+ * "More like this" posters; a series / anime gets season tabs and episode rows (the old single
+ * skeleton showed episode rows under a movie).
+ */
+@Composable
+fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
+    when (kind) {
+        WatchKind.GENERIC -> WatchDetailsSkeleton(modifier = modifier)
+        WatchKind.MOVIE -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_movie"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(3) { SkeletonBlock(width = 56.dp, height = 22.dp, shape = RoundedCornerShape(6.dp)) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SkeletonBlock(width = 132.dp, height = 40.dp, shape = CircleShape)
+                repeat(3) { SkeletonBlock(width = 40.dp, height = 40.dp, shape = CircleShape) }
+            }
+            Spacer(Modifier.height(2.dp))
+            repeat(3) { SkeletonBlock(width = null, height = 12.dp) }
+            SkeletonBlock(width = 210.dp, height = 12.dp)
+            Spacer(Modifier.height(6.dp))
+            SkeletonBlock(width = 90.dp, height = 14.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                repeat(5) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SkeletonBlock(width = 52.dp, height = 52.dp, shape = CircleShape)
+                        SkeletonBlock(width = 44.dp, height = 9.dp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            SkeletonBlock(width = 120.dp, height = 14.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(4) { SkeletonBlock(width = 96.dp, height = 144.dp, shape = RoundedCornerShape(12.dp)) }
+            }
+        }
+        WatchKind.SERIES -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_series"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(2) { SkeletonBlock(width = 64.dp, height = 28.dp, shape = CircleShape) }
+                Spacer(Modifier.weight(1f))
+                SkeletonBlock(width = 92.dp, height = 28.dp, shape = CircleShape)
+            }
+            SkeletonBlock(width = null, height = 12.dp)
+            SkeletonBlock(width = 230.dp, height = 12.dp)
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(4) { SkeletonBlock(width = 78.dp, height = 32.dp, shape = RoundedCornerShape(10.dp)) }
+            }
+            Spacer(Modifier.height(2.dp))
+            repeat(5) { WatchRowSkeleton() }
         }
     }
 }
@@ -247,7 +333,7 @@ fun WatchTitle(title: String, overline: String? = null, meta: String? = null) {
             Text(overline.uppercase(), color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, maxLines = 1)
             Spacer(Modifier.height(4.dp))
         }
-        Text(title, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("watch_title"))
+        Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, lineHeight = 24.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("watch_title"))
         if (!meta.isNullOrBlank()) {
             Spacer(Modifier.height(4.dp))
             Text(meta, color = TextTertiary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -336,6 +422,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
                 overline = if (item.music) "YouTube Music" else if (item.live) "Live" else "YouTube",
                 meta = listOfNotNull(views, info?.uploaded ?: item.uploaded, item.durationSec.takeIf { it > 0 }?.let { formatYtDuration(it) }, info?.category).joinToString(" · "),
             )
+            PlaybackFactsRow()
         }
         item(key = "channel") {
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -442,3 +529,62 @@ fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit) {
 }
 
 // endregion
+
+/**
+ * Round 10: video size, length, audio language and file size of what is playing, read from the
+ * player (extensions rarely send them). Whatever the stream doesn't carry gets a one-line notice
+ * instead of silently missing.
+ */
+@Composable
+fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null) {
+    val snap by dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.collectAsState()
+    // The stream's own audio tag wins; else what the source link's name says ("Dub · English").
+    val f = remember(snap, sourceAudio) { dev.asfakul.yumeiro.player.PlaybackFacts.of(snap, sourceAudio) }
+    Column(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp).animateContentSize().testTag("watch_playback_facts")) {
+        if (f.pending) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                repeat(3) { SkeletonBlock(width = 64.dp, height = 22.dp) }
+                Spacer(Modifier.width(4.dp))
+                Text("Reading video details…", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+            }
+            return@Column
+        }
+        val chips = listOfNotNull(
+            f.resolution?.let { Icons.Default.HighQuality to it },
+            f.duration?.let { Icons.Default.Schedule to it },
+            f.audio?.let { Icons.Default.RecordVoiceOver to it },
+            f.size?.let { Icons.Default.SdStorage to it },
+        )
+        if (chips.isNotEmpty()) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            chips.forEach { (icon, label) ->
+                Surface(shape = RoundedCornerShape(8.dp), color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)) {
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(label, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                }
+            }
+        }
+        if (f.missing.isNotEmpty()) {
+            if (chips.isNotEmpty()) Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("watch_facts_missing")) {
+                Icon(Icons.Outlined.Info, null, tint = TextTertiary, modifier = Modifier.size(13.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "This source doesn't share its " + joinNatural(f.missing) + ".",
+                    color = TextTertiary, fontSize = 11.sp, lineHeight = 14.sp,
+                )
+            }
+        } else if (f.sizeEstimated) {
+            Spacer(Modifier.height(4.dp))
+            Text("Size estimated from the stream's bitrate.", color = TextTertiary, fontSize = 10.sp)
+        }
+    }
+}
+
+internal fun joinNatural(parts: List<String>): String = when (parts.size) {
+    0 -> ""
+    1 -> parts[0]
+    else -> parts.dropLast(1).joinToString(", ") + " or " + parts.last()
+}

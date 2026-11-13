@@ -54,6 +54,19 @@ internal data class HueRowFeed(val row: OnlineRow, val items: List<OnlineItem>, 
  * Round-robin merge of a Hue's playlists into one YouTube-style feed (row0[0], row1[0], row0[1]…),
  * de-duplicated by title key. [only] restricts the feed to one playlist (the "tabs" at the top).
  */
+/** Chunks the channel feed into grid rows: consecutive portrait items by 3, landscape by 2. */
+internal fun hueGridRows(feed: List<Pair<OnlineItem, Boolean>>): List<List<Pair<OnlineItem, Boolean>>> {
+    val out = ArrayList<List<Pair<OnlineItem, Boolean>>>()
+    var cur = ArrayList<Pair<OnlineItem, Boolean>>()
+    for (e in feed) {
+        val per = if (e.second) 2 else 3
+        if (cur.isNotEmpty() && (cur.first().second != e.second || cur.size >= per)) { out += cur; cur = ArrayList() }
+        cur += e
+    }
+    if (cur.isNotEmpty()) out += cur
+    return out
+}
+
 internal fun hueFeed(rows: List<HueRowFeed>, only: Int?): List<Pair<OnlineItem, Boolean>> {
     val src = if (only != null) listOfNotNull(rows.getOrNull(only)) else rows
     val out = ArrayList<Pair<OnlineItem, Boolean>>()
@@ -133,7 +146,7 @@ internal fun HuePage(
         item("channel_header") { ChannelHeader(name, feeds.size, feed.size, onSearch) }
         when {
             api != null && !runCatching { api.hasMainPage }.getOrDefault(false) -> item("nomain") { HueNotice("$name is search-only — use search to find titles") }
-            rows == null && loading -> items(3, key = { "load_$it" }) { FeedCardSkeleton() }
+            rows == null && loading -> item("load") { PosterGridSkeleton(3) }
             error != null -> item("fail") { HueNotice("$name didn't load: $error", "Retry", onRetry) }
             feeds.isEmpty() -> item("empty") { HueNotice("Nothing to show on $name right now") }
             else -> {
@@ -143,14 +156,17 @@ internal fun HuePage(
                         items(feeds.size, key = { "tab_$it" }) { i -> OnlineChip(feeds[i].row.title, only == i, { only = if (only == i) null else i }) }
                     }
                 }
-                if (only == null) {
-                    val hero = heroPicks(listOf(feeds.first().items), max = 6)
-                    if (hero.isNotEmpty()) item("hero") { HeroCarousel(hero, onPlay = openItem, onInfo = openInfo) }
+                // An organised poster grid (3 portrait / 2 landscape per row) instead of one huge card each.
+                val gridRows = hueGridRows(feed)
+                items(gridRows, key = { r -> "hg_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
+                    val wide = r.first().second
+                    val per = if (wide) 2 else 3
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("hue_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        r.forEach { (item, _) -> PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) }
+                        repeat(per - r.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
-                items(feed, key = { "hf_" + it.first.key }, contentType = { "card" }) { (item, horizontal) ->
-                    FeedCard(item, horizontal, onClick = { openInfo(item) }, onChannel = {})
-                }
-                if (pagingBusy) items(2, key = { "more_$it" }) { FeedCardSkeleton() }
+                if (pagingBusy) item("more") { PosterGridSkeleton() }
                 else if (!canLoadMore) item("end") {
                     Text(
                         "You're all caught up on $name", color = TextTertiary, fontSize = 12.sp,

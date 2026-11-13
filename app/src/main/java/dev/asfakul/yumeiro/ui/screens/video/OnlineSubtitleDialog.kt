@@ -117,7 +117,7 @@ fun OnlineSubtitleDialog(
                 val merged = mutableListOf<OnlineSubtitle>()
                 for (i in 0 until (all.maxOfOrNull { it.size } ?: 0)) all.forEach { l -> l.getOrNull(i)?.let(merged::add) }
                 merged.sortedByDescending { it.hashMatch }
-            }.onSuccess { results = it }.onFailure { error = it.message ?: "Search failed" }
+            }.onSuccess { results = it }.onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Subtitle search failed. Try again.") }
             loading = false; searched = true
         }
     }
@@ -181,7 +181,7 @@ fun OnlineSubtitleDialog(
                                     scope.launch {
                                         runCatching { (sites.firstOrNull { it.name == sub.provider } ?: provider).download(context, sub) }
                                             .onSuccess { onLoaded(it) }
-                                            .onFailure { error = it.message ?: "Download failed" }
+                                            .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't download that subtitle.") }
                                         downloadingId = null
                                     }
                                 }

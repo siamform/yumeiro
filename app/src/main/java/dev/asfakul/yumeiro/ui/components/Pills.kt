@@ -33,13 +33,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.ChipSelectedColor
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnChipSelectedColor
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 
-/** Filter pill: 36dp capsule; selected = tonal moonlight accent, idle = glass. */
+/** Filter pill: 36dp capsule; selected = signature gold with dark onAccent ink (readable contrast), idle = glass. */
 @Composable
 fun FilterPill(
     label: String,
@@ -59,15 +61,16 @@ fun FilterPill(
                 else Modifier.background(GlassFill, shape).border(1.dp, TextPrimary.copy(alpha = 0.07f), shape)
             )
             .clickable(role = Role.Tab, onClick = onClick)
+            .semantics { this.selected = selected }
             .padding(horizontal = 16.dp)
             .then(if (testTag.isNotEmpty()) Modifier.testTag(testTag) else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = if (selected) Color.White else TextPrimary, modifier = Modifier.size(16.dp))
+            Icon(icon, null, tint = if (selected) dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.onAccent else TextPrimary, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
         }
-        Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) Color.White else TextPrimary, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.onAccent else TextPrimary, maxLines = 1)
     }
 }
 

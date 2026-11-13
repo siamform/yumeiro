@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Many IPTV / camera streams are served over plain HTTP, so user-entered stream URLs may use
-  cleartext. Only system CAs are trusted (no user-installed CAs). The in-app updater and
+  cleartext. Only system CAs are trusted (no user-installed CAs), plus Let's Encrypt's ISRG Root X1:
+  Android 7.0 (API 24, many TV boxes) predates it, and without it every Let's Encrypt site fails
+  there. Newer Android already ships the same root, so this changes nothing on them. The in-app updater and
   subtitle search only ever use HTTPS endpoints (enforced in code).
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="false">

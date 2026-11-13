@@ -24,8 +24,11 @@ sealed interface Resolution {
     /** The link is a channel list (M3U / M3U8 / PLS). */
     data class Playlist(val name: String?, val channels: List<StreamRequest>, val source: StreamRequest) : Resolution
 
-    /** A web page whose player builds the stream at runtime: open it in the page browser. */
-    data class NeedsBrowser(val pageUrl: String, val reason: String, val base: StreamRequest) : Resolution
+    /**
+     * A web page whose player builds the stream at runtime: open it in the link finder.
+     * [auto]: a known file host whose player the finder starts by itself (TeraBox, DiskWala).
+     */
+    data class NeedsBrowser(val pageUrl: String, val reason: String, val base: StreamRequest, val auto: Boolean = false) : Resolution
 
     /** Only the platform's own app may play it (YouTube, DRM subscription services). */
     data class Handoff(val url: String, val platform: String, val reason: String) : Resolution
@@ -65,7 +68,15 @@ object StreamResolver {
             val req = id?.let { runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, it) }.getOrNull() }
             if (req != null) return@withContext Resolution.Playable(req, Sniff(MediaKind.VIDEO, "YouTube", "extractor"))
         }
-        resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
+        TorrentSettings.init(context.applicationContext)
+        val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
+        // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
+        if (r is Resolution.Handoff && r.platform == "YouTube" && request.group != "YouTube") {
+            val id = dev.asfakul.yumeiro.youtube.YouTube.idFrom(r.url)
+            val req = id?.let { runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, it) }.getOrNull() }
+            if (req != null) return@withContext Resolution.Playable(req, Sniff(MediaKind.VIDEO, "YouTube", "extractor"))
+        }
+        r
     }
 
     /**
@@ -73,6 +84,25 @@ object StreamResolver {
      * Player-side resolution uses `false` so confident links start instantly.
      */
     fun resolveBlocking(request: StreamRequest, userAgent: String, client: OkHttpClient, thorough: Boolean = true): Resolution {
+        when (val route = LinkHosts.classify(request.url)) {
+            is LinkHosts.Direct -> return resolveBlocking(
+                request.copy(url = route.url, title = request.title.ifBlank { route.host }, pageUrl = request.pageUrl ?: request.url.trim()),
+                userAgent, client, thorough = true,
+            ).let { r ->
+                if (r is Resolution.Failed) Resolution.Failed(r.title, r.message + " If this is a ${route.host} file, check that it's shared as \"Anyone with the link\".") else r
+            }
+            is LinkHosts.Browser -> return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
+            is LinkHosts.Torrent -> {
+                val server = TorrentSettings.server.value
+                if (server.isBlank()) return Resolution.Handoff(
+                    route.link, "a torrent app",
+                    "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Network, or open this link in a torrent app.",
+                )
+                return resolveBlocking(request.copy(url = LinkHosts.torrServerUrl(server, route.link, request.title), format = StreamFormat.AUTO), userAgent, client, thorough = true)
+                    .let { r -> if (r is Resolution.Failed) Resolution.Failed("TorrServer didn't answer", "Check that TorrServer is running at $server. ${r.message}") else r }
+            }
+            null -> Unit
+        }
         val url = request.url.trim()
         val scheme = url.substringBefore("://", "").lowercase()
         when (scheme) {
@@ -166,11 +196,20 @@ object StreamResolver {
             if (p.ok && p.sniff.isPlayableMedia) return Resolution.Playable(request.copy(url = next, format = p.sniff.format, pageUrl = pageUrl), p.sniff)
         }
 
+        // MediaFire file pages carry their download button address in the HTML.
+        if (LinkHosts.isMediaFire(pageUrl)) LinkHosts.mediaFireDownload(html)?.let { dl ->
+            val candidate = request.copy(url = dl, title = request.title.ifBlank { page.title.orEmpty() }, referer = request.referer ?: pageUrl, pageUrl = request.pageUrl ?: pageUrl)
+            val p = StreamProbe.probe(candidate, userAgent, client)
+            if (p.ok && (p.sniff.isPlayableMedia || (p.sniff.kind == MediaKind.UNKNOWN && p.text == null))) {
+                return Resolution.Playable(candidate.copy(format = if (p.sniff.isPlayableMedia) p.sniff.format else StreamFormat.PROGRESSIVE), p.sniff)
+            }
+        }
+
         var tried = 0
         for (c in page.candidates) {
             if (tried >= MAX_PAGE_CANDIDATES) break
             if (PlatformRules.isYouTube(c.url)) {
-                return Resolution.Handoff(c.url, "YouTube", "This page plays a YouTube video. YouTube videos can only be played through YouTube's own player — open it in the YouTube app.")
+                return Resolution.Handoff(c.url, "YouTube", "This page plays a YouTube video that couldn't be loaded here. Try again, or open it in the YouTube app.")
             }
             if (c.origin == "iframe") {
                 if (depth >= MAX_IFRAME_DEPTH) continue

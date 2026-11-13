@@ -3,7 +3,14 @@
  * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
  * Do not remove or alter this notice.
  */
+@file:OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
+
 package dev.asfakul.yumeiro.ui
+
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 
 import androidx.compose.ui.test.performSemanticsAction
 import android.Manifest
@@ -96,11 +103,14 @@ class AppNavigationCrashTest {
     @get:Rule val chain: org.junit.rules.RuleChain = org.junit.rules.RuleChain.outerRule(grantRule).around(rule)
 
     private fun tap(tag: String) {
+        // Music and Videos pick their source from the title menu: open it first.
+        val menu = Regex("^(music|video)_source_(?!switch|menu)").find(tag)?.groupValues?.get(1)
+        if (menu != null && rule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) tap("${menu}_source_switch")
         if (tag.startsWith("quick_card_")) {
             // The bento grid lives in a LazyColumn; bring the tile into view on small test screens.
             rule.waitUntil(5_000) { rule.onAllNodesWithTag("home_list", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-            rule.onNodeWithTag("home_list", useUnmergedTree = true)
-                .performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
+            val list = rule.onNodeWithTag("home_list", useUnmergedTree = true)
+            list.performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
             rule.waitForIdle()
         }
         rule.waitUntil(5_000) { rule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
@@ -145,7 +155,7 @@ class AppNavigationCrashTest {
                 tap("playlist_item_workout_mix"); back()
             }
             tap("nav_tab_home")
-            tap("nav_tab_stream"); if (it == 0) snap("stream")
+            tap("nav_tab_videos"); tap("video_source_live"); if (it == 0) snap("stream")
             tap("nav_tab_videos"); tap("nav_tab_music"); tap("nav_tab_library"); if (it == 0) snap("library")
             back(); back()
             tap("nav_tab_music")
@@ -159,7 +169,7 @@ class AppNavigationCrashTest {
         rule.waitUntil(10_000) { rule.onAllNodesWithTag("nav_tab_music", true).fetchSemanticsNodes().isNotEmpty() }
         rule.mainClock.advanceTimeBy(1_000)
         snap("dark_home"); tap("nav_tab_videos"); snap("dark_videos")
-        tap("nav_tab_stream"); snap("dark_stream")
+        tap("nav_tab_videos"); tap("video_source_live"); snap("dark_stream")
         tap("topbar_settings_action"); snap("dark_settings")
         tap("open_user_guide"); waitFor("user_guide_screen"); snap("dark_user_guide"); back()
         waitFor("open_user_guide"); back()
@@ -167,8 +177,10 @@ class AppNavigationCrashTest {
         tap("nav_tab_music"); snap("dark_music")
         tap("music_tab_1"); snap("dark_albums")
         tap("nav_tab_library"); snap("dark_library")
-        tap("library_tab_1"); snap("dark_library_videos"); tap("library_tab_2"); snap("dark_library_reading"); tap("library_tab_0")
-        tap("nav_tab_home"); tap("quick_card_audio_engine"); snap("dark_equalizer"); back()
+        tap("lib_sc_videos"); waitFor("video_library"); snap("dark_library_videos"); back()
+        waitFor("lib_sc_reading"); tap("lib_sc_reading"); waitFor("reading_library"); snap("dark_library_reading"); back()
+        waitFor("library_shortcuts")
+        tap("nav_tab_home"); tap("quick_card_downloads"); snap("dark_downloads"); back()
         tap("nav_tab_music"); tap("music_tab_0")
         tap(firstTagWithPrefix("track_item_")); waitFor("now_playing_screen_root")
         // The fake test files can't be decoded; capture the error tip, then dismiss it for clean shots.
@@ -212,7 +224,7 @@ class AppNavigationCrashTest {
         java.io.File(rule.activity.filesDir, "streams").deleteRecursively()
         dev.asfakul.yumeiro.stream.PlaylistStore.resetForTests()
         awaitHome()
-        tap("nav_tab_stream")
+        tap("nav_tab_videos"); tap("video_source_live")
         fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { rule.mainClock.advanceTimeBy(100); cond() }
         val list = rule.onNodeWithTag("stream_screen")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_mrgify_bdix"))
@@ -229,7 +241,7 @@ class AppNavigationCrashTest {
         tap("playlist_menu_mrgify_bdix"); tap("playlist_delete"); tap("confirm_delete")
         settle { dev.asfakul.yumeiro.stream.PlaylistStore.get("mrgify_bdix") == null && !exists("playlist_mrgify_bdix") }
         // Restore brings it back.
-        list.performScrollToIndex(0)
+        list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlists_more"))
         rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
         tap("playlists_more"); tap("playlists_restore")
         settle { dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.let { p -> p.size == 1 && p.all { it.enabled } } }
@@ -248,14 +260,14 @@ class AppNavigationCrashTest {
             })
         }
         awaitHome()
-        tap("nav_tab_stream")
+        tap("nav_tab_videos"); tap("video_source_live")
         fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { rule.mainClock.advanceTimeBy(100); cond() }
         val list = rule.onNodeWithTag("stream_screen")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_${p.id}"))
         tap("playlist_${p.id}")
         settle { exists("playlist_detail_screen") && exists("playlist_channels") }
         org.junit.Assert.assertFalse("channels are not shown on the Stream tab", exists("stream_screen"))
-        org.junit.Assert.assertFalse("bottom bar hidden on the sub page", exists("nav_tab_stream"))
+        org.junit.Assert.assertFalse("bottom bar hidden on the sub page", exists("nav_tab_videos"))
         snap("playlist_detail")
         back()
         settle { exists("stream_screen") && !exists("playlist_detail_screen") }
@@ -272,9 +284,9 @@ class AppNavigationCrashTest {
     @Test fun quickNavigationThenHomeDoesNotCrash() {
         awaitHome()
         repeat(2) {
-            for (card in listOf("quick_card_music", "quick_card_videos", "quick_card_library", "quick_card_audio_engine")) {
+            for (card in listOf("quick_card_hues", "quick_card_youtube", "quick_card_ytmusic", "quick_card_downloads")) {
                 tap(card)
-                if (card == "quick_card_audio_engine") back() else tap("nav_tab_home")
+                if (card == "quick_card_downloads") back() else tap("nav_tab_home")
                 waitFor("home_screen_root")
                 tap(card)
                 back()
@@ -282,8 +294,8 @@ class AppNavigationCrashTest {
             }
         }
         // Mixed: quick card, then bottom tabs, then Home again.
-        tap("quick_card_music"); tap("nav_tab_videos"); tap("nav_tab_home"); waitFor("home_screen_root")
-        tap("quick_card_videos"); tap("nav_tab_library"); tap("nav_tab_home"); waitFor("home_screen_root")
+        tap("quick_card_ytmusic"); tap("nav_tab_videos"); tap("nav_tab_home"); waitFor("home_screen_root")
+        tap("quick_card_hues"); tap("nav_tab_library"); tap("nav_tab_home"); waitFor("home_screen_root")
         snap("home_after_quick_nav")
     }
 
@@ -417,15 +429,21 @@ class AppNavigationCrashTest {
         }
         reveal()
         val first = title()
-        if (exists("error_close_btn")) waitFor("error_next_video_btn")
-        press("video_next_btn")
+        // With an error card up, the card's own "skip to next" is the way forward (the centre
+        // controls stay hidden under it); otherwise the centre next button.
+        if (exists("error_close_btn")) { waitFor("error_next_video_btn"); press("error_next_video_btn") }
+        else press("video_next_btn")
         rule.mainClock.advanceTimeBy(600)
         waitFor("video_player_root")
         reveal()
         val second = title()
         org.junit.Assert.assertNotEquals(first, second)
         snap("video_next")
-        press("video_previous_btn")
+        // Previous via the remote / headset transport key (works whatever is on screen).
+        rule.onNodeWithTag("video_player_root", true).requestFocus()
+        rule.onRoot().performKeyInput { pressKey(androidx.compose.ui.input.key.Key.MediaPrevious) }
+        rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
+        waitFor("video_player_root")
         reveal()
         org.junit.Assert.assertEquals(first, title())
         back()

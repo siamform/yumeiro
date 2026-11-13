@@ -215,12 +215,23 @@ internal class GitHubReleaseClient(
 
         private fun userAgent() = "Yumeiro/${BuildConfig.VERSION_NAME} (Android)"
 
+        private val ABI_NAMES = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+
+        /** The processor a per-ABI APK name is for, or null for the universal APK. */
+        fun abiOf(name: String): String? {
+            val base = name.lowercase().removeSuffix(".apk")
+            return ABI_NAMES.firstOrNull { base.endsWith("-$it") }
+        }
+
+        fun deviceAbis(): List<String> = runCatching { android.os.Build.SUPPORTED_ABIS.toList() }.getOrDefault(emptyList())
+
         /** Parses a GitHub `release` JSON object. Exposed for unit tests. */
-        fun parseRelease(json: String, source: UpdateSource): ReleaseInfo {
+        fun parseRelease(json: String, source: UpdateSource, abis: List<String> = deviceAbis()): ReleaseInfo {
             val obj = JSONObject(json)
             val assets = obj.optJSONArray("assets")
                 ?: throw UpdateCheckException("The latest release has no files attached.")
             var best: JSONObject? = null
+            val byAbi = HashMap<String, JSONObject>()
             var sumsUrl: String? = null
             for (i in 0 until assets.length()) {
                 val a = assets.getJSONObject(i)
@@ -228,9 +239,12 @@ internal class GitHubReleaseClient(
                 // API URL first (see resolveDownload); the browser URL stays as a fallback in getSums.
                 if (name == "SHA256SUMS.txt") { sumsUrl = (a.optString("url").ifBlank { null } ?: a.optString("browser_download_url")).ifBlank { null }; continue }
                 if (!name.endsWith(".apk", ignoreCase = true)) continue
+                // Per-processor builds: "Yumeiro-v1.2.0-arm64-v8a.apk" (smaller download).
+                abiOf(name)?.let { byAbi.putIfAbsent(it, a); continue }
                 if (best == null || name.startsWith("release-", ignoreCase = true)) best = a
             }
-            val apk = best ?: throw UpdateCheckException("The latest release doesn't contain an APK.")
+            // The device's preferred processor first; the universal APK otherwise.
+            val apk = abis.firstNotNullOfOrNull { byAbi[it] } ?: best ?: byAbi.values.firstOrNull() ?: throw UpdateCheckException("The latest release doesn't contain an APK.")
             val tag = obj.optString("tag_name")
             val body = obj.optString("body")
             val digest = apk.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")

@@ -30,6 +30,8 @@ object AppNotifier {
     private const val TAG = "AppNotifier"
     const val ACTION_OPEN_INBOX = "dev.asfakul.yumeiro.action.OPEN_INBOX"
     const val EXTRA_ITEM = "inbox_item"
+    /** Optional deep link of the tapped notice: an https URL or an in-app action (see FcmPlan.ACTIONS). */
+    const val EXTRA_LINK = "inbox_link"
 
     /**
      * Channels (v3 = the soft "tsuki" chime). Android never changes a channel's sound after it is
@@ -40,6 +42,7 @@ object AppNotifier {
         DISCOVER("yumeiro_discover_v3", "New extensions & streams", "New extensions in the market and new stream playlists", NotificationManager.IMPORTANCE_DEFAULT),
         NEWS("yumeiro_news_v3", "What's new", "New features, releases and announcements", NotificationManager.IMPORTANCE_DEFAULT),
         NUDGE("yumeiro_suggestions_v3", "Suggestions", "An occasional idea for something to watch or listen to", NotificationManager.IMPORTANCE_LOW),
+        ALERTS("yumeiro_alerts_v3", "Service alerts", "Maintenance, outages and messages for this device", NotificationManager.IMPORTANCE_HIGH),
     }
     private val OLD_CHANNELS = listOf(
         "new_episodes", "discover_new", "discover_nudge",
@@ -112,6 +115,7 @@ object AppNotifier {
         Inbox.Kind.PLAYLIST -> NotifySettings.Key.PLAYLISTS
         Inbox.Kind.NEWS, Inbox.Kind.INFO -> NotifySettings.Key.NEWS
         Inbox.Kind.NUDGE -> NotifySettings.Key.NUDGES
+        Inbox.Kind.ALERT -> NotifySettings.Key.SERVICE
         Inbox.Kind.UPDATE -> null
     }
 
@@ -119,6 +123,7 @@ object AppNotifier {
         Inbox.Kind.EPISODE -> Channel.EPISODES
         Inbox.Kind.EXTENSION, Inbox.Kind.PLAYLIST -> Channel.DISCOVER
         Inbox.Kind.NUDGE -> Channel.NUDGE
+        Inbox.Kind.ALERT -> Channel.ALERTS
         else -> Channel.NEWS
     }
 
@@ -163,6 +168,7 @@ object AppNotifier {
 
     private fun show(c: Context, item: Inbox.Item, notificationId: Int) {
         val open = Intent(c, MainActivity::class.java).setAction(ACTION_OPEN_INBOX).putExtra(EXTRA_ITEM, item.id)
+            .apply { item.link?.let { putExtra(EXTRA_LINK, it) } }
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pi = PendingIntent.getActivity(c, notificationId, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val b = NotificationCompat.Builder(c, channelFor(item.kind).id)
@@ -174,9 +180,18 @@ object AppNotifier {
             .setAutoCancel(true)
             .setColor(0xFF8B5CF6.toInt())
         if (NotifySettings.get(c, NotifySettings.Key.SOUND)) b.setSound(soundUri(c)) else b.setSilent(true)
-        b.setPriority(if (item.kind == Inbox.Kind.NUDGE) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_DEFAULT)
+        b.setPriority(when (item.kind) {
+            Inbox.Kind.NUDGE -> NotificationCompat.PRIORITY_LOW
+            Inbox.Kind.ALERT -> NotificationCompat.PRIORITY_HIGH
+            else -> NotificationCompat.PRIORITY_DEFAULT
+        })
             .setWhen(item.at).setShowWhen(true)
-            .setCategory(if (item.kind == Inbox.Kind.EPISODE) NotificationCompat.CATEGORY_RECOMMENDATION else NotificationCompat.CATEGORY_SOCIAL)
+            .setCategory(when (item.kind) {
+                Inbox.Kind.EPISODE -> NotificationCompat.CATEGORY_RECOMMENDATION
+                Inbox.Kind.ALERT -> NotificationCompat.CATEGORY_STATUS
+                Inbox.Kind.UPDATE -> NotificationCompat.CATEGORY_RECOMMENDATION
+                else -> NotificationCompat.CATEGORY_SOCIAL
+            })
         // Never let a bad notification crash a background worker.
         if (Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(c, android.Manifest.permission.POST_NOTIFICATIONS) !=
             android.content.pm.PackageManager.PERMISSION_GRANTED) return

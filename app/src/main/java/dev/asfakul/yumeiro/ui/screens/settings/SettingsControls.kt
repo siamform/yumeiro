@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -71,19 +73,23 @@ internal fun SettingsActionRow(
     status: String? = null, ok: Boolean? = null, danger: Boolean = false, onClick: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(vertical = 10.dp).testTag(testTag),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 8.dp).testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = if (danger) Color(0xFFFF8A80) else TextPrimary)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp, color = if (danger) dev.asfakul.yumeiro.ui.theme.WarnTone else TextPrimary)
+            Spacer(Modifier.height(2.dp))
+            Text(subtitle, fontSize = 12.5.sp, lineHeight = 17.sp, color = TextTertiary)
         }
         Spacer(Modifier.width(10.dp))
-        if (ok != null) Icon(
-            if (ok) Icons.Default.CheckCircle else Icons.Default.ErrorOutline, null,
-            tint = if (ok) SpotifyGreen else Color(0xFFFFB74D), modifier = Modifier.size(18.dp),
-        )
-        if (status != null) { Spacer(Modifier.width(4.dp)); Text(status, color = if (ok == false) Color(0xFFFFB74D) else TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        when {
+            status != null -> StatusChip(status, ok)
+            ok != null -> Icon(
+                if (ok) Icons.Default.CheckCircle else Icons.Default.ErrorOutline, null,
+                tint = if (ok) SpotifyGreen else dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(2.dp))
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextTertiary)
     }
 }
@@ -101,6 +107,10 @@ fun NotificationSettingsCard() {
     val nudge by keyState(Key.NUDGES)
     val sound by keyState(Key.SOUND)
     val reminders by keyState(Key.REMINDERS)
+    val service by keyState(Key.SERVICE)
+    val instant by keyState(Key.FCM)
+    val pushStatus by dev.asfakul.yumeiro.notify.FcmPush.status.collectAsState()
+    val pushBuilt = remember { dev.asfakul.yumeiro.notify.FcmPush.configured() }
     val unread by Inbox.unread.collectAsState()
     var systemOn by remember { mutableStateOf(PermissionCenter.notificationsAllowed(context)) }
     var block by remember { mutableStateOf(dev.asfakul.yumeiro.notify.AppNotifier.block(context)) }
@@ -153,16 +163,36 @@ fun NotificationSettingsCard() {
             SettingsToggleRow("Yumeiro news", "New features, releases and announcements", news,
                 { ns.set(context, Key.NEWS, it) }, "toggle_notify_news")
             SettingsDivider()
+            SettingsToggleRow("Service alerts", "Planned maintenance, outages and messages for this device. Rare, but worth knowing", service,
+                { ns.set(context, Key.SERVICE, it) }, "toggle_notify_service")
+            SettingsDivider()
             SettingsToggleRow("Suggestions", "An occasional evening idea, like a movie or some music (at most every 3 days)", nudge,
                 { ns.setNudges(context, it) }, "toggle_notify_nudges")
             SettingsDivider()
             SettingsToggleRow("Yumeiro chime", "Play Yumeiro's own sound. Off makes notifications silent", sound,
                 { ns.set(context, Key.SOUND, it) }, "toggle_notify_sound")
         }
+        if (pushBuilt) {
+            SettingsDivider()
+            // Instant notices over Firebase Cloud Messaging. Opt-out for anyone who wants no Google push at all.
+            SettingsToggleRow(
+                "Instant alerts",
+                if (!instant) "Off. News, updates and service alerts still arrive with the background checks"
+                else "News, updates and service alerts the moment they're sent (Firebase Cloud Messaging) · ${pushStatus.label}",
+                instant, { ns.set(context, Key.FCM, it) }, "toggle_notify_instant",
+            )
+            val supportId = remember(pushStatus) { if (instant) dev.asfakul.yumeiro.notify.FcmPush.supportId() else null }
+            if (supportId != null) {
+                TextButton(
+                    onClick = { copyToClipboard(context, "Yumeiro support ID", supportId) },
+                    modifier = Modifier.testTag("notify_support_id"),
+                ) { Text("Copy support ID · $supportId", color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
+            }
+        }
         SettingsDivider()
-        SettingsToggleRow("In-app reminders", "Now and then: follow the developer, star on GitHub, support the app", reminders,
+        SettingsToggleRow("In-app reminders", "Now and then: join the Telegram community, star on GitHub, support the app", reminders,
             { ns.set(context, Key.REMINDERS, it) }, "toggle_notify_reminders")
-        Text("App updates are always announced when you open the app.",
+        Text(if (pushBuilt && instant) "App updates are always announced, instantly and when you open the app." else "App updates are always announced when you open the app.",
             color = TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }
@@ -190,7 +220,8 @@ fun BackgroundActivityCard() {
             "settings_battery", status = if (battery) "Unrestricted" else "Optimised", ok = battery,
             onClick = { PermissionCenter.openBatterySettings(context) },
         )
-        Text("Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
+        Text(if (dev.asfakul.yumeiro.notify.FcmPush.configured()) "News, updates and service alerts arrive instantly with Instant alerts. New episodes still rely on these checks being allowed to run; for on-time episode alerts, turn on Reliable alerts under Notifications (free, with ntfy)."
+            else "Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }
@@ -246,6 +277,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
 
     pending?.let { a ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { pending = null },
             title = { Text(a.title) },
             text = { Text(a.body) },
@@ -257,7 +289,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
                             .onSuccess { AppMessages.success(context, a.done) }
                             .onFailure { AppMessages.error(context, "Couldn't clear. Try again") }
                     }
-                }, modifier = Modifier.testTag("privacy_confirm")) { Text("Clear", color = Color(0xFFFF8A80)) }
+                }, modifier = Modifier.testTag("privacy_confirm")) { Text("Clear", color = dev.asfakul.yumeiro.ui.theme.DangerTone) }
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
         )
@@ -310,14 +342,18 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
 fun SocialMediaCard() {
     val context = LocalContext.current
     SettingsCard {
-        Text("Follow the developer for news, ideas and sneak peeks.", color = TextSecondary,
+        Text("Yumeiro has its own website (yumeiro.click) and community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
         Reminders.Social.entries.forEachIndexed { i, s ->
             if (i > 0) SettingsDivider()
-            SettingsActionRow(s.label, s.url.removePrefix("https://www."), "social_${s.name.lowercase()}") {
+            SettingsActionRow(s.label, "${s.detail} · ${s.url.removePrefix("https://")}", "social_${s.name.lowercase()}") {
                 if (Links.open(context, s.url)) Reminders.recordFollow(context, s)
                 else AppMessages.error(context, "Couldn't open ${s.label}")
             }
+        }
+        SettingsDivider()
+        SettingsActionRow("Website", "Downloads, news and guides · yumeiro.click", "social_website") {
+            if (!Links.open(context, Reminders.WEBSITE_URL)) AppMessages.error(context, "Couldn't open the website")
         }
         SettingsDivider()
         SettingsActionRow("Star on GitHub", "github.com/siamform/yumeiro", "social_github") {

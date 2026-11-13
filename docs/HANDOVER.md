@@ -52,7 +52,7 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew testDebugUnitTest      # Robolectric unit + Compose UI tests
 ```
 
-- Gradle 9.x, AGP with `compileSdk 37`, `minSdk 28`, Kotlin + Compose (BOM in `gradle/libs.versions.toml`).
+- Gradle 9.x, AGP with `compileSdk 37`, `minSdk 24`, Kotlin + Compose (BOM in `gradle/libs.versions.toml`).
 - CloudStream library `com.lagradost:cloudstream3` runs the `.cs3` extensions.
 - NewPipeExtractor `v0.26.5` (JitPack) powers YouTube. The CloudStream library pulls an old
   `com.github.teamnewpipe:NewPipeExtractor`; `app/build.gradle.kts` substitutes it with the
@@ -951,9 +951,20 @@ kept platform bar defaults — a white status bar over the dark header. `FullScr
 `BrowserCheckHost.kt`) makes that window draw edge-to-edge with transparent bars, the app background and
 icon colours from the current theme.
 
-**Known gap.** `ca.mpreg.imagedecoder` (4 extensions: webtoonlib, randomscan, toonlook, procomic) isn't bundled:
-it adds ~12 MB of native code for 4 sources. Those load but fail on images that need it.
+**Image decoder (not a real gap).** `ca.mpreg.imagedecoder` (Mihon's native decoder, ~12 MB) isn't bundled. Four
+extensions use it, through Keiyoushi's `lib/imagedecoder`, to decode scrambled page tiles before reassembling them:
+webtoonlib, randomscan, toonlook, procomic. That library tries Mihon's decoder, then Tachiyomi's, then Android's
+`BitmapFactory`. A decoder that fails to link is dropped for good, so in Yumeiro it goes straight to `BitmapFactory`
+and pages show normally (JPEG / PNG / WebP / GIF on every Android version). The only losses: AVIF on Android < 12,
+JPEG XL on any version (BitmapFactory can't read them), and HDR pages shown in SDR. Add the decoder only if users
+report broken pages on those sources, ideally only in the arm64 build.
 
 **Tests.** `TachiyomiIndexTest` (v1, stubs, repo.json, v2 JSON/gzip/proto, the real Keiyoushi `index.pb`
 fixture, normalizeRepo, lib versions, MemoStore) and `KeiyoushiLinkageTest`.
+
+## 28. Add anything and the extension link audit (branch `r11-final`)
+
+- **Add anything.** Extensions menu "Add anything (auto-detect)" and the Sources hub header button take any link, short code or file; `MainActivity` also routes VIEW/SEND intents (`cloudstreamrepo`, `stremio`, `aniyomi`, `tachiyomi`, `mihon`, `mangayomi`, `.cs3`, `.apk`) to `UniversalAddInbox`, confirmed by `UniversalAddHost`. Detection is pure and unit tested (`UniversalAddTest`).
+- **Audit.** `scripts/extension_link_audit.py` checks every `.cs3` against the APK dex. Of 2,248 market plugins, 2,182 were clean; 52 needed Compose (R8 was stripping it; now kept in `proguard-rules.pro`), 12 needed extractors CloudStream 4.8 removed (restored under `com/lagradost/cloudstream3/extractors/`, Rhino is `compileOnly`), 1 needed a JVM locale shim. doGior StreamCenter uses CloudStream app internals and stays unsupported.
+- Full table and re-run steps: `docs/EXTENSION-COMPAT.md`.
 

@@ -18,7 +18,7 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
   <a href="https://github.com/siamform/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/siamform/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
 </p>
 <p>
-  <img alt="Android 9+" src="https://img.shields.io/badge/Android-9%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
+  <img alt="Android 7+" src="https://img.shields.io/badge/Android-7%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-F5C46B?style=flat-square&logo=kotlin&logoColor=white&labelColor=16161A" />
   <a href="LICENSE"><img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-F5C46B?style=flat-square&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
@@ -29,6 +29,38 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 </div>
 
 ---
+
+## What's new in the redesign
+
+The biggest Yumeiro update so far: a new design, TV support, and a few hundred fixes found by testing every screen
+like a crowd of new users would. Full notes: [CHANGELOG.md](CHANGELOG.md).
+
+| | |
+|---|---|
+| **New, friendlier design** | The *Tsuki no Michi* design system across the shell, Home, Now Playing and Settings. A taller, easier floating dock, themed pop-ups with clear warning / error tones, readable tints in light and dark, smooth page transitions. |
+| **A first-run guide** | A welcome screen that asks how you'll use the app (music, video, anime, live TV), then a short tutor-style tour. Extensions stay fully asleep until the guide is finished or skipped — no surprise installs or messages before you're in. |
+| **New Home** | Reorganised around *Continue watching*, colour shortcuts, Quick picks and an endless *For you* feed. Library without tabs: colour shortcuts to Videos and Reading. |
+| **Yumix** | The online video hub (formerly "online"): a hybrid feed with a filter sheet, a resume banner, categories, latest episodes and per-language Sub / Dub groups with an audio filter. Plus a built-in short-drama source. |
+| **Audio online** | YouTube Music quick picks, search, background play and song downloads, no Google account. |
+| **New video page** | A YouTube / HiAnime-style watch page under a docked player, with sources, dub, episodes and Live TV hub. |
+| **Video player** | **Pinch to zoom** (100–400 %, pan, snap back, reset pill). **Subtitle style**: size, colour, outline / shadow / box, bold and height, with a live preview — and subtitles still load from your device (.srt, .vtt, .ass, .ttml), online search, delay sync and track select. Playback facts (size, duration, audio). Seek fixes. |
+| **Android TV & Fire TV** | A left navigation rail, visible focus rings and full remote control. See [TV support](#android-tv-google-tv-and-fire-tv). |
+| **Runs on more devices** | Android 7.0+ (was 9), and smaller downloads: one APK per processor (`arm64-v8a`, `armeabi-v7a`) plus the universal APK. |
+| **Instant notices** | Optional Firebase push for announcements, updates and maintenance through the existing Yumeiro Cloud Worker. Off-switch per kind; no account, no IDs shared with anyone else. |
+| **Safer** | Fixed antivirus false positives at the cause (0 / 66 on VirusTotal for the preview build), a login-CSRF in tracker sign-in, private-file access through "Open with", backup restores that could carry code, and server abuse that could have stopped push for everyone. Details in [docs/security](docs/security). |
+
+## Android TV, Google TV and Fire TV
+
+Yumeiro installs on TV boxes and sticks from the same APKs (use `armeabi-v7a` for most Fire TV Sticks, `arm64-v8a`
+for newer Google TV devices, or the universal APK if unsure). On a TV it switches to TV mode on its own:
+
+- **Left navigation rail** instead of the bottom dock. Icon-only until focused, then it shows labels. D-pad Left from the left edge of any page opens it.
+- **Every button shows where you are**: a visible focus ring and lift on everything clickable, so the remote reaches every option.
+- **Player built for a remote**: Left / Right seek ±10 s, Centre toggles play, Up / Down show the controls, media keys work, the first Back hides the controls and the second leaves.
+- **Error cards take focus on Retry**, so you're never stuck.
+
+Tested in the emulator and by unit tests (`TvModeTest`, `TvLayoutTest`). More in [docs/TV.md](docs/TV.md).
+If something on your TV can't be reached with the remote, please [open an issue](https://github.com/siamform/yumeiro/issues) with the device name.
 
 ## One app instead of five
 
@@ -45,6 +77,7 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 | **Fixes refused streams for you** | Before showing an error, Yumeiro retries the link with different headers, fetches fresh links, and if needed captures the stream from the page itself. |
 | **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. Prefer **1DM** or **ADM**? Pick it in Settings → Downloads and episodes go straight to it, with the right headers. |
 | **Every extension format** | CloudStream `.cs3`, Aniyomi anime and Mihon/Tachiyomi manga APKs, Stremio add-ons and Mangayomi-style JavaScript sources, side by side in one Sources hub. |
+| **Add anything** | Paste any link or short code, or open any file: Yumeiro detects whether it is a CloudStream plugin, repository or list, an Aniyomi or Mihon repository or APK, a Stremio add-on, a JavaScript repository or a Jellyfin, Emby or Plex server, and installs it in the right place. 2,247 of the 2,248 CloudStream extensions in the market load ([compatibility audit](docs/EXTENSION-COMPAT.md)). |
 | **A market for every format** | No more hunting for repo links: each Sources tab has a Discover list of repositories and add-ons found on GitHub and in Stremio's catalogs, ranked by stars, recent updates and size, with search, sort and one-tap Add. Pasting a link by hand still works. |
 | **Your home servers** | Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV and SMB shares show up as sources, with natural episode order. |
 | **Track, back up, stay private** | AniList, MyAnimeList, Kitsu and Trakt; one-file backup and restore; app lock and incognito mode. |
@@ -58,21 +91,40 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 
 <div align="center">
 
-<img src="docs/screenshots/player-landscape-dark.jpg" width="760" alt="Full-screen player playing an anime episode, with subtitles, Skip intro and quick controls" />
+<img src="docs/redesign/shots/real/player-dark.webp" width="760" alt="Full-screen player showing Gulliver's Travels (1939) with a caption" />
 
-**Full-screen player** · subtitles from OpenSubtitles, SubDL and SubSource · Skip intro · audio, captions, speed and picture-in-picture one tap away
+**Full-screen player** with captions · Gulliver's Travels (1939), Fleischer Studios, [Public Domain Mark 1.0](https://creativecommons.org/publicdomain/mark/1.0/), via [archive.org](https://archive.org/details/gullivers-travels-1939_202312)
 
-| Hues (anime, movies, drama, live) | Inside a Hue | Watching an episode |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/hues-home-dark.jpg" width="230" alt="Hues home with the featured title and Continue watching" /> | <img src="docs/screenshots/hue-channel-dark.jpg" width="230" alt="AnimeHue with Top 10 and new episodes" /> | <img src="docs/screenshots/watch-dark.jpg" width="230" alt="Episode playing, with sources, dub and episode list" /> |
-| **Home** | **Now Playing** | **Music** |
-| <img src="docs/screenshots/home-dark.jpg" width="230" alt="Home" /> | <img src="docs/screenshots/now-playing-dark.jpg" width="230" alt="Now Playing" /> | <img src="docs/screenshots/music-dark.jpg" width="230" alt="Music" /> |
-| **Videos** | **Stream (live TV playlists)** | **Library** |
-| <img src="docs/screenshots/videos-dark.jpg" width="230" alt="Videos" /> | <img src="docs/screenshots/stream-dark.jpg" width="230" alt="Stream" /> | <img src="docs/screenshots/library-dark.jpg" width="230" alt="Library" /> |
-| **Built-in user guide** | **Song info + sleep timer** | **Errors come with a fix** |
-| <img src="docs/screenshots/user-guide-dark.jpg" width="230" alt="User guide" /> | <img src="docs/screenshots/song-info-dark.jpg" width="230" alt="Song info with sleep timer" /> | <img src="docs/screenshots/error-tip-dark.jpg" width="230" alt="Error with a suggestion" /> |
+| Screen | Dark | Light |
+|:---|:---:|:---:|
+| **Home** | <img src="docs/redesign/shots/real/home-dark.webp" width="200" alt="Home with spaces, Continue watching and the mini player, dark theme" /> | <img src="docs/redesign/shots/real/home-light.webp" width="200" alt="Home with spaces, Continue watching and the mini player, light theme" /> |
+| **Shortcuts** | <img src="docs/redesign/shots/real/shortcuts-dark.webp" width="200" alt="Every shortcut on Home, dark theme" /> | <img src="docs/redesign/shots/real/shortcuts-light.webp" width="200" alt="Every shortcut on Home, light theme" /> |
+| **Music Online** | <img src="docs/redesign/shots/real/music-online-dark.webp" width="200" alt="Music Online search for Sky High from YouTube Music, dark theme" /> | <img src="docs/redesign/shots/real/music-online-light.webp" width="200" alt="Music Online search for Sky High from YouTube Music, light theme" /> |
+| **Now Playing** | <img src="docs/redesign/shots/real/now-playing-dark.webp" width="200" alt="Now Playing, a real song from YouTube Music, dark theme" /> | <img src="docs/redesign/shots/real/now-playing-light.webp" width="200" alt="Now Playing, a real song from YouTube Music, light theme" /> |
+| **Up next** | <img src="docs/redesign/shots/real/up-next-dark.webp" width="200" alt="Up next queue, dark theme" /> | <img src="docs/redesign/shots/real/up-next-light.webp" width="200" alt="Up next queue, light theme" /> |
+| **Mini player** | <img src="docs/redesign/shots/real/mini-player-dark.webp" width="200" alt="Song results with the mini player, dark theme" /> | <img src="docs/redesign/shots/real/mini-player-light.webp" width="200" alt="Song results with the mini player, light theme" /> |
+| **Yumix** | <img src="docs/redesign/shots/real/yumix-dark.webp" width="200" alt="Yumix feed with live anime and movies from SoraAnime and CineStream, dark theme" /> | <img src="docs/redesign/shots/real/yumix-light.webp" width="200" alt="Yumix feed with live anime and movies from SoraAnime and CineStream, light theme" /> |
+| **Yumix: Anime** | <img src="docs/redesign/shots/real/yumix-category-dark.webp" width="200" alt="Yumix filtered to Anime, dark theme" /> | <img src="docs/redesign/shots/real/yumix-category-light.webp" width="200" alt="Yumix filtered to Anime, light theme" /> |
+| **Installed extensions** | <img src="docs/redesign/shots/real/extensions-dark.webp" width="200" alt="Extensions page with CineStream and SoraAnime installed, dark theme" /> | <img src="docs/redesign/shots/real/extensions-light.webp" width="200" alt="Extensions page with CineStream and SoraAnime installed, light theme" /> |
+| **Market: installable** | <img src="docs/redesign/shots/real/market-search-dark.webp" width="200" alt="Extension market search with Install buttons, dark theme" /> | <img src="docs/redesign/shots/real/market-search-light.webp" width="200" alt="Extension market search with Install buttons, light theme" /> |
+| **Market: sources** | <img src="docs/redesign/shots/real/market-repos-dark.webp" width="200" alt="Extension repositories, dark theme" /> | <img src="docs/redesign/shots/real/market-repos-light.webp" width="200" alt="Extension repositories, light theme" /> |
+| **Docked player** | <img src="docs/redesign/shots/real/watch-dark.webp" width="200" alt="A film playing in the docked player with a caption, dark theme" /> | <img src="docs/redesign/shots/real/watch-light.webp" width="200" alt="A film playing in the docked player with a caption, light theme" /> |
+| **Download popup** | <img src="docs/redesign/shots/real/download-dark.webp" width="200" alt="Download popup with quality and save options, dark theme" /> | <img src="docs/redesign/shots/real/download-light.webp" width="200" alt="Download popup with quality and save options, light theme" /> |
+| **Settings** | <img src="docs/redesign/shots/real/settings-dark.webp" width="200" alt="Settings, dark theme" /> | <img src="docs/redesign/shots/real/settings-light.webp" width="200" alt="Settings, light theme" /> |
+| **Sources hub** | <img src="docs/redesign/shots/real/sources-dark.webp" width="200" alt="Sources hub for anime, manga, Stremio and JavaScript, dark theme" /> | <img src="docs/redesign/shots/real/sources-light.webp" width="200" alt="Sources hub for anime, manga, Stremio and JavaScript, light theme" /> |
+| **Market: installed** | <img src="docs/redesign/shots/real/market-installed-dark.webp" width="200" alt="Installed tab of the extension market, dark theme" /> | <img src="docs/redesign/shots/real/market-installed-light.webp" width="200" alt="Installed tab of the extension market, light theme" /> |
 
-<sub>Screens are rendered from the app's real UI. Titles and artwork in the Hues shots are original samples made for this README, not real catalogue content.</sub>
+**On a TV** (Android TV, Google TV, Fire TV)
+
+| Dark | Light |
+|:---:|:---:|
+| <img src="docs/redesign/shots/real/tv-home-dark.webp" width="380" alt="TV home with the navigation rail, dark theme" /> | <img src="docs/redesign/shots/real/tv-home-light.webp" width="380" alt="TV home with the navigation rail, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-yumix-dark.webp" width="380" alt="Yumix on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-yumix-light.webp" width="380" alt="Yumix on a TV, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-music-dark.webp" width="380" alt="Music Online on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-music-light.webp" width="380" alt="Music Online on a TV, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-settings-dark.webp" width="380" alt="Settings on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-settings-light.webp" width="380" alt="Settings on a TV, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-search-dark.webp" width="380" alt="Search on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-search-light.webp" width="380" alt="Search on a TV, light theme" /> |
+
+<sub>Captured from the live app by <code>RealAppShotsTest</code> with the real SoraAnime and CineStream extensions (posters from AniList, TMDb, Kitsu and Simkl), the Internet Archive extension for the public-domain film only, and live YouTube Music. Feed artwork, extension names and icons belong to their owners. The song is "Sky High" by Elektronomia (NoCopyrightSounds). Video can't decode in the test JVM, so the player shows a real frame from the film's stream; the caption line is added by the test.</sub>
 
 </div>
 
@@ -97,10 +149,11 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 ### Video
 - Grid of your device videos with **continue watching**
-- Gestures, PiP, background play, speed, audio tracks
+- Gestures, **pinch to zoom**, PiP, background play, speed, audio tracks
 - **Floating player** like YouTube — press back or swipe the video down to keep watching while you browse
 - Slim vertical brightness and volume bars, like your phone's own
 - **Subtitles**: embedded, local files, or search OpenSubtitles, SubDL and SubSource at once (free keys, your own)
+- **Subtitle style**: size, colour, outline, shadow or box, bold and height, with a live preview
 - **YouTube** with no login — trending, anime, AMV, live
 
 </td>
@@ -184,11 +237,13 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 
 ## Install
 
-1. Download `release-Yumeiro-vX.Y.Z.apk` from **[the website](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)).
+1. Pick your APK on **[the download page](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)):
+   `Yumeiro-vX.Y.Z-arm64-v8a.apk` (most phones from 2017 on, newer TVs), `Yumeiro-vX.Y.Z-armeabi-v7a.apk` (older
+   32-bit phones, most Fire TV Sticks) or `release-Yumeiro-vX.Y.Z.apk` (universal, runs everywhere).
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
-Android 9 or newer. Phones, tablets and Android TV.
+Android 7.0 or newer. Phones, tablets, Android TV, Google TV and Fire TV. Pick `arm64-v8a` (most devices), `armeabi-v7a` (older 32-bit phones and many TV sticks) or the universal APK.
 
 ## Verify a release
 

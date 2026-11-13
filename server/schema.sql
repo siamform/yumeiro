@@ -24,3 +24,28 @@ CREATE TABLE IF NOT EXISTS airing (
   rolls    INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS airing_at ON airing(at);
+-- Instant notices (Firebase Cloud Messaging). One row per phone with Instant alerts on: its Firebase
+-- installation id (FID) so the admin can message one device, and its topics (for counts only —
+-- broadcasts go to FCM topics, not through this table). Silent 45 days → deleted with the rest.
+CREATE TABLE IF NOT EXISTS fcm_devices (
+  id          TEXT PRIMARY KEY,         -- random, given to the app at registration
+  token_hash  TEXT NOT NULL,            -- SHA-256 of the device's secret token
+  fid         TEXT NOT NULL UNIQUE,     -- Firebase installation id (FCM target)
+  topics      TEXT NOT NULL DEFAULT '', -- comma list, e.g. "announcements,maintenance,updates"
+  app_version INTEGER NOT NULL DEFAULT 0,
+  channel     TEXT NOT NULL DEFAULT 'release', -- release | preview | debug
+  created     INTEGER NOT NULL,
+  seen        INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS fcm_devices_seen ON fcm_devices(seen);
+CREATE TABLE IF NOT EXISTS airing_pending (
+  media_id  INTEGER PRIMARY KEY,
+  at        INTEGER NOT NULL,
+  device_id TEXT NOT NULL,
+  reported  INTEGER NOT NULL
+);
+-- When each device last replaced its follow list (cooldown against write-budget burning).
+CREATE TABLE IF NOT EXISTS follow_changes (
+  device_id TEXT PRIMARY KEY,
+  at        INTEGER NOT NULL
+);

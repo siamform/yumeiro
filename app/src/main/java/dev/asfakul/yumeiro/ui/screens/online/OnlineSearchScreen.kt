@@ -80,6 +80,15 @@ private sealed interface ProviderResult {
     data class Failed(val message: String) : ProviderResult
 }
 
+/**
+ * Last finished search, so coming back from a title page shows the same results instantly
+ * instead of clearing the list and asking every extension again.
+ */
+private object OnlineSearchMemory {
+    var key: String? = null
+    var results: Map<String, ProviderResult> = emptyMap()
+}
+
 /** Searches every enabled extension at once; results appear per source as they arrive. */
 @Composable
 fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, onOpenExtensions: () -> Unit) {
@@ -108,7 +117,16 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         if (q.length >= 2 && q != submitted) { delay(450); submitted = q }
         if (q.isEmpty()) submitted = ""
     }
-    LaunchedEffect(submitted, providers, attempt) {
+    // Keyed on the *names* of the sources: a new engine snapshot (another extension finished
+    // loading) used to clear the results mid-search and start over.
+    val providerNames = remember(providers) { providers.map { it.name }.sorted() }
+    LaunchedEffect(submitted, providerNames, attempt) {
+        val key = "$submitted|" + providerNames.joinToString(",")
+        // Retry always asks again; otherwise a finished search for the same words is reused.
+        if (attempt == 0 && submitted.isNotBlank() && OnlineSearchMemory.key == key && OnlineSearchMemory.results.values.none { it is ProviderResult.Searching }) {
+            if (results.isEmpty()) results.putAll(OnlineSearchMemory.results)
+            return@LaunchedEffect
+        }
         results.clear()
         if (submitted.isBlank() || providers.isEmpty()) return@LaunchedEffect
         providers.forEach { results[it.name] = ProviderResult.Searching }
@@ -116,6 +134,8 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         OnlineRepository.search(submitted, providers).collect { u ->
             results[u.api] = if (u.error != null) ProviderResult.Failed(u.error) else ProviderResult.Done(u.items)
         }
+        OnlineSearchMemory.key = key
+        OnlineSearchMemory.results = results.toMap()
     }
 
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
@@ -204,7 +224,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                             is ProviderResult.Failed -> "$n (!)"
                             null -> n
                         }
-                        OnlineChip(label, filter == n, { filter = if (filter == n) null else n })
+                        OnlineChip(label, filter == n, { filter = if (filter == n) null else n }, Modifier.testTag("online_search_source_$n"))
                     }
                 }
                 val shown = if (filter == null) all else all.filter { it.api == filter }
@@ -212,7 +232,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 when {
                     shown.isEmpty() && (searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
                         Column(Modifier.fillMaxWidth()) {
-                            Text("Searching $searching Hue${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                            Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
                             PosterGridSkeleton(rows = 3)
                         }
                     failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,

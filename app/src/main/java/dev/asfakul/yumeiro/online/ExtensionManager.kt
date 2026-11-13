@@ -104,9 +104,16 @@ object ExtensionManager {
         if (started) return
         started = true
         val app = context.applicationContext
-        scope.launch { runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) } }
+        scope.launch {
+            // First run: nothing wakes up until the welcome screen / explore tour is done or skipped.
+            OnboardingGate.awaitOpen()
+            runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) }
+        }
         // Other ecosystems load in parallel; they publish into SourceHub as they become ready.
-        runCatching { dev.asfakul.yumeiro.sources.Bridges.start(app) }.onFailure { Log.e(TAG, "bridges", it) }
+        scope.launch {
+            OnboardingGate.awaitOpen()
+            runCatching { dev.asfakul.yumeiro.sources.Bridges.start(app) }.onFailure { Log.e(TAG, "bridges", it) }
+        }
     }
 
     /** Waits until saved extensions are loaded. Safe to call many times. */
@@ -463,6 +470,13 @@ object ExtensionManager {
 
     // region loading
 
+    /**
+     * Builds the class loader for one extension file. Tests on the JVM (Robolectric cannot open DEX)
+     * swap this for a loader over a converted jar; the app always uses [PathClassLoader].
+     */
+    @androidx.annotation.VisibleForTesting
+    internal var loaderFactory: (File, ClassLoader) -> ClassLoader = { f, parent -> PathClassLoader(f.absolutePath, parent) }
+
     private fun loadInternal(context: Context, ext: InstalledExtension): LoadInfo {
         val file = File(pluginDir(context), ext.fileName)
         if (!file.exists()) return LoadInfo(error = "File missing — reinstall it")
@@ -471,7 +485,7 @@ object ExtensionManager {
         }
         return try {
             runCatching { file.setReadOnly() }
-            val loader = PathClassLoader(file.absolutePath, context.classLoader)
+            val loader = loaderFactory(file, context.classLoader)
             val manifestText = loader.getResourceAsStream("manifest.json")?.use { it.readBytes().decodeToString() }
                 ?: return LoadInfo(error = "No manifest in the extension")
             val manifest = JSONObject(manifestText)

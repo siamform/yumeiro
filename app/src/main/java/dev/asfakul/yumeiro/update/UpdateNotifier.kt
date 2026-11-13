@@ -30,6 +30,7 @@ internal object UpdateNotifier {
 
     private fun ensureChannel(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return // no channels before Android 8
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "App updates", NotificationManager.IMPORTANCE_DEFAULT).apply {

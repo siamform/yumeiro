@@ -93,14 +93,23 @@ fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = 0) {
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext) }
 
     Column(Modifier.fillMaxSize().testTag("sources_hub")) {
-        SubPageHeader(title = "Sources", onBack = onBack, subtitle = "Extensions, add-ons and home servers")
+        var any by remember { mutableStateOf(false) }
+        SubPageHeader(title = "Sources", onBack = onBack, subtitle = "Extensions, add-ons and home servers") {
+            TextButton(onClick = { any = true }, modifier = Modifier.testTag("sources_add_any")) { Text("Add anything", color = SpotifyGreen) }
+        }
+        if (any) UniversalAddDialog(onDismiss = { any = false }, onServer = { out -> AppMessages.show(context, out.message); tab = 4 })
         PillTabRow(tabs = tabs, selectedIndex = tab, onSelect = { tab = it }, tagPrefix = "sources_tab")
-        when (tab) {
-            0 -> TachiyomiTab(TachiyomiExtensions.Kind.ANIME)
-            1 -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA)
-            2 -> StremioTab()
-            3 -> JsTab()
-            else -> ServersTab()
+        // Round 8: tabs glide along the X axis (they used to cut to the new tab in one frame).
+        dev.asfakul.yumeiro.ui.components.TabSwap(tab, { it }, Modifier.fillMaxSize(), label = "sources_tab") { t ->
+            Column(Modifier.fillMaxSize()) {
+                when (t) {
+                    0 -> TachiyomiTab(TachiyomiExtensions.Kind.ANIME)
+                    1 -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA)
+                    2 -> StremioTab()
+                    3 -> JsTab()
+                    else -> ServersTab()
+                }
+            }
         }
     }
 }
@@ -130,9 +139,9 @@ internal fun HubCard(
                 }
                 if (!subtitle.isNullOrBlank()) Text(subtitle, color = TextTertiary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (warning != null) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    Icon(Icons.Default.Warning, null, tint = androidx.compose.ui.graphics.Color(0xFFFFB74D), modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Warning, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(warning, color = androidx.compose.ui.graphics.Color(0xFFFFB74D), fontSize = 11.sp, maxLines = 3)
+                    Text(warning, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 11.sp, maxLines = 3)
                 }
             }
             trailing()
@@ -216,7 +225,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
 
     Column(Modifier.fillMaxSize()) {
         if (loading || busy != null) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_tachiyomi_" + kind.name), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text(
                     if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
@@ -224,7 +233,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                     color = TextSecondary, fontSize = 13.sp,
                 )
             }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon, startExpanded = repos.isEmpty()) }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon) }
             item("market") {
                 val repoUrls = repos.map { it.url }.toSet()
                 RepoMarket(
@@ -295,6 +304,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
     }
     trustAsk?.let { e ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { trustAsk = null },
             icon = { Icon(Icons.Default.Verified, null) },
             title = { Text("Trust ${e.name}?") },
@@ -332,12 +342,12 @@ private fun StremioTab() {
     }
     Column(Modifier.fillMaxSize()) {
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_stremio"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
                     color = TextSecondary, fontSize = 13.sp)
             }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio, startExpanded = addons.isEmpty()) }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio) }
             item("market") {
                 val have = addons.map { it.manifestUrl }.toSet()
                 AddonMarket(isAdded = { StremioAddons.normalize(it) in have }, startExpanded = addons.isEmpty(), onAdd = { addUrl(it) })
@@ -387,12 +397,12 @@ private fun JsTab() {
 
     Column(Modifier.fillMaxSize()) {
         if (loading) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_js"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text("JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.",
                     color = TextSecondary, fontSize = 13.sp)
             }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript, startExpanded = state.repos.isEmpty()) }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript) }
             item("market") {
                 val have = state.repos.toSet()
                 RepoMarket(
@@ -458,12 +468,12 @@ private fun ServersTab() {
 
     Column(Modifier.fillMaxSize()) {
         if (scanning) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_servers"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_servers"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_servers"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("about") {
                 Text("Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore.",
                     color = TextSecondary, fontSize = 13.sp)
             }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.servers, startExpanded = servers.isEmpty()) }
+            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.servers) }
             item("add") {
                 SectionTitle("Add a server")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

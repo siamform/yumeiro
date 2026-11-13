@@ -120,7 +120,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("youtube_account")) {
         SubPageHeader(title = "YouTube account", onBack = onBack, subtitle = "Optional · off unless you sign in")
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -179,19 +179,20 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                 }
             }
 
-            GuideCard(SetupGuides.youtube, startExpanded = !st.signedIn)
+            GuideCard(SetupGuides.youtube)
             GuideCard(SetupGuides.youtubeCookie)
         }
     }
 
     if (askSignOut) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { askSignOut = false },
         icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
         title = { Text("Sign out of YouTube?") },
         text = { Text("The saved sign-in is deleted from this phone and YouTube goes back to anonymous playback.") },
         confirmButton = {
             TextButton(onClick = { askSignOut = false; YtAccount.signOut(context); AppMessages.success(context, "Signed out of YouTube") }, modifier = Modifier.testTag("yt_sign_out_confirm")) {
-                Text("Sign out", color = Color(0xFFFF8A80))
+                Text("Sign out", color = dev.asfakul.yumeiro.ui.theme.DangerTone)
             }
         },
         dismissButton = { TextButton(onClick = { askSignOut = false }) { Text("Cancel") } },
@@ -308,7 +309,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("yt_paste_page")) {
         SubPageHeader(title = "Paste cookie", onBack = { if (!busy) onDone(false) }, subtitle = "Advanced · for when Google blocks the sign-in page", handleBack = false)
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account_2")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
                     IconTile(Icons.Default.Lock, YouTubeRed, size = 38)
@@ -330,7 +331,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                 enabled = !busy,
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SpotifyGreen, cursorColor = SpotifyGreen),
             )
-            error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, modifier = Modifier.testTag("yt_cookie_error")) }
+            error?.let { Text(it, color = dev.asfakul.yumeiro.ui.theme.DangerTone, fontSize = 13.sp, modifier = Modifier.testTag("yt_cookie_error")) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = {
@@ -351,12 +352,13 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     else Text("Check and save", fontWeight = FontWeight.SemiBold)
                 }
             }
-            GuideCard(SetupGuides.youtubeCookie, startExpanded = true)
+            GuideCard(SetupGuides.youtubeCookie)
         }
     }
 
     unverified?.let { cookie ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { unverified = null },
             icon = { Icon(Icons.Default.Lock, null) },
             title = { Text("Couldn't check with YouTube") },

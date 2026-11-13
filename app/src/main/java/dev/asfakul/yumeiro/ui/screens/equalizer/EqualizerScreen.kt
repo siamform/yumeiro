@@ -102,52 +102,30 @@ fun EqualizerScreen(
             .fillMaxSize()
             .testTag("equalizer_screen_root"),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Equalizer & Sound FX",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+            dev.asfakul.yumeiro.ui.components.SubPageHeader(
+                title = "Equalizer",
+                onBack = onBackClick,
+                subtitle = "Shape how every song sounds",
+                handleBack = false,
+                modifier = Modifier.testTag("equalizer_back_button"),
+            ) {
+                IconButton(
+                    onClick = onResetToDefault,
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .testTag("equalizer_reset_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = "Reset to flat",
+                        tint = TextSecondary
                     )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .testTag("equalizer_back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = onResetToDefault,
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .testTag("equalizer_reset_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.RestartAlt,
-                            contentDescription = "Reset to Default",
-                            tint = TextSecondary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = TextPrimary
-                )
-            )
+                }
+            }
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
-        LazyColumn(
+        LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("equalizer"), 
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -194,13 +172,13 @@ fun EqualizerScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "Audio Equalizer Engine",
+                                    text = "Equalizer",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = if (state.isEnabled) "Active • Attached to Media Session" else "Bypassed (Flat Output)",
+                                    text = if (state.isEnabled) "On · applied to everything you play" else "Off · you hear the original sound",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (state.isEnabled) SpotifyGreen else TextTertiary
                                 )
@@ -210,12 +188,7 @@ fun EqualizerScreen(
                         Switch(
                             checked = state.isEnabled,
                             onCheckedChange = onToggleEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = OnAccent,
-                                checkedTrackColor = SpotifyGreen,
-                                uncheckedThumbColor = TextTertiary,
-                                uncheckedTrackColor = DarkSurfaceVariant
-                            ),
+                            colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                             modifier = Modifier.testTag("equalizer_master_switch")
                         )
                     }
@@ -237,7 +210,7 @@ fun EqualizerScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "FREQUENCY RESPONSE CURVE",
+                                text = "音響 · RESPONSE",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = SpotifyGreen,
                                 fontWeight = FontWeight.Bold,
@@ -311,10 +284,19 @@ fun EqualizerScreen(
             // Frequency Band Sliders
             item {
                 Text(
-                    text = "Frequency Bands",
+                    text = "Bands",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
+                )
+            }
+
+            if (state.bands.isEmpty()) item("bands_empty") {
+                Text(
+                    text = if (state.isSupportedOnDevice) "Bands appear once a song starts playing." else "This phone's audio driver doesn't offer equalizer bands. Presets and enhancements still work where available.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(vertical = 4.dp).testTag("equalizer_bands_empty")
                 )
             }
 
@@ -331,7 +313,7 @@ fun EqualizerScreen(
             // Sound Enhancements: Bass Boost & Virtualizer
             item {
                 Text(
-                    text = "Sound Enhancements",
+                    text = "Enhancements",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
@@ -342,8 +324,8 @@ fun EqualizerScreen(
             // Bass Boost Card
             item {
                 EffectSliderCard(
-                    title = "Bass Boost",
-                    subtitle = if (state.isBassBoostSupported) "Deep low-frequency punch" else "Not supported on this device",
+                    title = "Bass boost",
+                    subtitle = if (state.isBassBoostSupported) "More low-end punch" else "Not available on this phone",
                     value = state.bassBoostStrength,
                     maxValue = 1000,
                     icon = Icons.Default.VolumeUp,
@@ -356,8 +338,8 @@ fun EqualizerScreen(
             // Virtualizer / 3D Audio Card
             item {
                 EffectSliderCard(
-                    title = "3D Surround Virtualizer",
-                    subtitle = if (state.isVirtualizerSupported) "Spatial audio wideness" else "Not supported on this device",
+                    title = "Surround",
+                    subtitle = if (state.isVirtualizerSupported) "Wider, roomier sound" else "Not available on this phone",
                     value = state.virtualizerStrength,
                     maxValue = 1000,
                     icon = Icons.Default.SurroundSound,

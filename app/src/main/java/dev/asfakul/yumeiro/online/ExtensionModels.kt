@@ -153,9 +153,18 @@ object ExtensionFormats {
     fun categoriesOf(tvTypes: List<String>): List<String> =
         tvTypes.map { CATEGORY[it.lowercase().replace("_", "")] ?: "Other" }.distinct().ifEmpty { listOf("Other") }
 
+    /** Adds "Short drama" for vertical-drama sources (DramaBox, ReelShort, ShortMax…), found by name. */
+    fun withShortDrama(categories: List<String>, vararg text: String?): List<String> =
+        if ("Short drama" !in categories && dev.asfakul.yumeiro.sources.drama.YumeiroDrama.isShortDrama(*text)) (categories - "Other") + "Short drama" else categories
+
     /** Parses `repo.json`. Throws when the file isn't a repository manifest. */
     fun parseRepo(url: String, text: String): ExtensionRepo {
         val trimmed = text.trimStart('\uFEFF', ' ', '\n', '\r', '\t')
+        // A bare plugins.json (some authors only share that): it is its own single plugin list.
+        if (trimmed.startsWith("[")) {
+            require(runCatching { JSONArray(trimmed).optJSONObject(0)?.has("internalName") == true }.getOrDefault(false)) { "Not a CloudStream plugin list" }
+            return ExtensionRepo(url = url, name = repoNameFromUrl(url), description = null, iconUrl = null, pluginLists = listOf(url))
+        }
         require(trimmed.startsWith("{")) { "Not a CloudStream repository" }
         val o = JSONObject(trimmed)
         val lists = o.optJSONArray("pluginLists").strings()
@@ -193,7 +202,7 @@ object ExtensionFormats {
             description = o.optStringOrNull("description"),
             authors = o.optJSONArray("authors").strings(),
             tvTypes = o.optJSONArray("tvTypes").strings(),
-            categories = categoriesOf(o.optJSONArray("tvTypes").strings()),
+            categories = withShortDrama(categoriesOf(o.optJSONArray("tvTypes").strings()), o.optString("name"), internal, o.optStringOrNull("description")),
             language = o.optStringOrNull("language"),
             iconUrl = o.optStringOrNull("iconUrl")?.let { resolve(listUrl, it) },
             fileSize = if (o.has("fileSize") && !o.isNull("fileSize")) o.optLong("fileSize") else null,
@@ -217,11 +226,15 @@ object ExtensionFormats {
 
 /**
  * Turns what users paste into a repository URL: full repo.json links stay as they are, GitHub repo
- * pages map to their raw `repo.json`, and CloudStream short codes are not supported (no lookup
- * service is used).
+ * pages map to their raw `repo.json`, and `cloudstreamrepo://` links are unwrapped. Short codes are
+ * resolved only by [dev.asfakul.yumeiro.sources.UniversalAdd] when the user types one.
  */
 fun normalizeRepoUrl(input: String): String {
-    val s = input.trim().removeSuffix("/")
+    var s = input.trim().removeSuffix("/")
+    // CloudStream's add-repo links: cloudstreamrepo://<url> and https://cs.repo/?<url>
+    Regex("^(cloudstreamrepo://|https://cs\\.repo/\\??)").find(s)?.let { m ->
+        s = s.removePrefix(m.value).let { if (it.startsWith("http://") || it.startsWith("https://")) it else "https://$it" }
+    }
     val gh = Regex("^https?://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?(?:/(?:tree|blob)/([^/]+)(/.*)?)?$").find(s)
     if (gh != null) {
         val (owner, repo, branch, path) = gh.destructured

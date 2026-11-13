@@ -28,7 +28,7 @@ object SourceHub {
     enum class Ecosystem(val label: String) {
         CLOUDSTREAM("CloudStream"), ANIYOMI("Aniyomi"), MIHON("Mihon"), STREMIO("Stremio"),
         JAVASCRIPT("JavaScript"), JELLYFIN("Jellyfin"), EMBY("Emby"), PLEX("Plex"), DLNA("DLNA"),
-        SMB("SMB share"), WEBDAV("WebDAV"),
+        SMB("SMB share"), WEBDAV("WebDAV"), YUMEIRO("Yumeiro"),
     }
 
     data class State(

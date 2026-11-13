@@ -144,6 +144,7 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
     }
     var confirmClear by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     if (confirmClear) dev.asfakul.yumeiro.ui.components.TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirmClear = false },
         title = { Text(if (showAdult) "Clear 18+ history?" else "Clear watch history?") },
         text = { Text(if (showAdult) "Removes every 18+ title and its resume position from this device." else "Removes every title and resume position from this device. This can't be undone.") },

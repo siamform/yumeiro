@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -49,6 +51,10 @@ fun Modifier.pageBackground(): Modifier = composed {
     val p = LocalMtPalette.current
     val ambientState = LocalAmbientColor.current
     val view = LocalView.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    remember(context) { BackdropSettings.init(context) }
+    val intensity by BackdropSettings.intensity.collectAsState()
+    val photo by rememberBackdropPhoto()
     val offsetY = remember { mutableFloatStateOf(0f) }
     this
         .onGloballyPositioned { offsetY.floatValue = it.positionInRoot().y }
@@ -61,7 +67,7 @@ fun Modifier.pageBackground(): Modifier = composed {
                 0f to p.bgTop, 0.42f to p.bgMid, 1f to p.bgBottom,
                 startY = -top, endY = windowH - top
             )
-            val glowA = if (p.isDark) 0.20f else 0.14f
+            val glowA = (if (p.isDark) 0.20f else 0.14f) * intensity.coerceIn(0.5f, 1.3f)
             val halo = Brush.radialGradient(
                 0f to ambient.copy(alpha = glowA), 0.55f to ambient.copy(alpha = glowA * 0.35f), 1f to Color.Transparent,
                 center = Offset(w * 0.78f, -top - w * 0.10f), radius = w * 1.05f,
@@ -70,10 +76,13 @@ fun Modifier.pageBackground(): Modifier = composed {
                 listOf(ambient.copy(alpha = glowA * 0.28f), Color.Transparent),
                 center = Offset(w * 0.05f, -top + windowH * 0.55f), radius = w * 0.8f,
             )
-            val sparkles = if (p.isDark) sparkleField(w, windowH * 0.45f) else emptyList()
+            val img = photo
+            // The production night sky stays under every dark scene; a photo replaces it.
+            val sparkles = if (img == null && p.isDark) sparkleField(w, windowH * 0.45f) else emptyList()
             val starColor = Color.White
             onDrawBehind {
                 drawRect(brush)
+                if (img != null) drawBackdropPhoto(img, p, top, windowH, intensity)
                 drawRect(halo)
                 drawRect(echo)
                 sparkles.forEach { (c, r, a) ->

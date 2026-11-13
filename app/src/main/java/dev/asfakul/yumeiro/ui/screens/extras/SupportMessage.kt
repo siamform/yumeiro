@@ -102,16 +102,18 @@ fun SupportYumeiroCard(modifier: Modifier = Modifier, full: Boolean = false, sho
                 onClick = { AppPages.open(AppPages.Page.SUPPORT) },
                 colors = ButtonDefaults.buttonColors(containerColor = CoffeeYellow, contentColor = Color(0xFF1A1A1A)),
                 shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).testTag("support_card_coffee"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 10.dp),
             ) {
                 Icon(Icons.Default.Coffee, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                Text("Buy me a coffee", fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                Text("Buy a coffee", fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             OutlinedButton(
                 onClick = { if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context) },
                 shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).testTag("support_card_star"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 10.dp),
             ) {
                 Icon(Icons.Default.Star, null, tint = BrandGold, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                Text("Star on GitHub", color = TextPrimary, fontSize = 13.sp, maxLines = 1)
+                Text("Star on GitHub", color = TextPrimary, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
         }
     }

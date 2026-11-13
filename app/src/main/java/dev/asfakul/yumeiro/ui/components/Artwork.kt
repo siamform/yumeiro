@@ -41,6 +41,9 @@ import dev.asfakul.yumeiro.ui.theme.rememberArtBrush
 /** Whether music is currently playing (drives the animated "now playing" bars in lists). */
 val LocalIsPlaying = compositionLocalOf { true }
 
+/** Id of the track in the player (e.g. "yt:<videoId>"), or null — lets rows mark the song that's on. */
+val LocalCurrentTrackId = compositionLocalOf<String?> { null }
+
 /**
  * Prototype-style artwork: a deterministic gradient tile (with a soft note glyph) that the real
  * album art is drawn over. If the art is missing or fails, the gradient stays — never a blank box.

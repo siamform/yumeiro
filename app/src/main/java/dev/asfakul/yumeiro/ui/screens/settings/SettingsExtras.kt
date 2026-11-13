@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,19 +77,21 @@ import dev.asfakul.yumeiro.ui.theme.palette
 object DeveloperInfo {
     const val NAME = "Asfakul Siam"
     const val HANDLE = "siamform"
-    const val WEBSITE = "https://yumeiro.click/"
+    const val WEBSITE = dev.asfakul.yumeiro.notify.Reminders.WEBSITE_URL
     const val GITHUB = "https://github.com/siamform"
     const val SOURCE = "https://github.com/siamform/yumeiro"
 }
 
 @Composable
 internal fun SettingsCard(content: @Composable () -> Unit) {
+    // Same glass + moon hairline as the Settings home groups, so every page reads as one system.
+    val shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeLg
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = shape,
         colors = CardDefaults.cardColors(containerColor = GlassFill),
-        border = null,
-    ) { Column(Modifier.padding(14.dp)) { content() } }
+        border = androidx.compose.foundation.BorderStroke(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline()),
+    ) { Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) { content() } }
 }
 
 @Composable
@@ -98,6 +101,7 @@ fun AppearanceSettingsCard() {
     val mode by ThemeSettings.mode.collectAsState()
     val amoled by ThemeSettings.amoled.collectAsState()
     val ambient by ThemeSettings.ambient.collectAsState()
+    val kana by ThemeSettings.kana.collectAsState()
     SettingsCard {
         ThemeMode.entries.forEach { m ->
             Row(
@@ -113,6 +117,13 @@ fun AppearanceSettingsCard() {
                     Text(m.label, color = TextPrimary, style = MaterialTheme.typography.titleMedium)
                     Text(m.description, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
+                // Each theme's own 夢色 scene, so the vibe is visible before choosing it.
+                val preview = dev.asfakul.yumeiro.ui.theme.previewPaletteFor(m, androidx.compose.foundation.isSystemInDarkTheme(), dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current)
+                Box(
+                    Modifier.padding(start = 8.dp).size(width = 36.dp, height = 48.dp).clip(RoundedCornerShape(10.dp))
+                        .dreamScenePreview(preview)
+                        .border(if (mode == m) 2.dp else 1.dp, if (mode == m) SpotifyGreen else TextPrimary.copy(alpha = 0.14f), RoundedCornerShape(10.dp)),
+                )
             }
         }
         if (mode == ThemeMode.TIME) {
@@ -134,6 +145,8 @@ fun AppearanceSettingsCard() {
             }
         }
         SettingsDivider()
+        BackdropSettingsSection()
+        SettingsDivider()
         SettingsToggleRow(
             title = "Pure black (AMOLED)",
             subtitle = "Use true black backgrounds in dark themes",
@@ -148,6 +161,14 @@ fun AppearanceSettingsCard() {
             checked = ambient,
             onCheckedChange = { ThemeSettings.setAmbient(context, it) },
             testTag = "toggle_ambient",
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = "Japanese accents",
+            subtitle = "Small kana labels such as 設定 and 音楽 above page titles. Off: English only",
+            checked = kana,
+            onCheckedChange = { ThemeSettings.setKana(context, it) },
+            testTag = "toggle_kana",
         )
     }
 }
@@ -168,6 +189,18 @@ fun VideoPlayerSettingsCard() {
         SettingsDivider()
         SettingsToggleRow("Captions on by default", "Show embedded or loaded subtitles automatically (CC)", cc,
             { PlayerSettings.setCaptionsDefault(context, it) }, "toggle_cc_default")
+        SettingsDivider()
+        var subStyleOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                .clickable { subStyleOpen = true }
+                .padding(vertical = 8.dp)
+                .testTag("settings_subtitle_style"),
+        ) {
+            Text("Subtitle style", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("Size, colour, outline or box, and height above the bottom. Also in the player's subtitle menu", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+        }
+        if (subStyleOpen) dev.asfakul.yumeiro.ui.screens.video.SubtitleStyleDialog(onDismiss = { subStyleOpen = false })
         SettingsDivider()
         val back by PlayerSettings.backAction.collectAsState()
         Text("Back button while a video plays", color = TextPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
@@ -212,7 +245,7 @@ fun DeveloperCard() {
                 if (integrity == dev.asfakul.yumeiro.security.IntegrityGuard.Status.UNOFFICIAL) {
                     Text(
                         "Unofficial build — not signed by the Yumeiro developer. Download the real app from github.com/siamform/yumeiro",
-                        color = androidx.compose.ui.graphics.Color(0xFFFF8A80), style = MaterialTheme.typography.bodySmall,
+                        color = dev.asfakul.yumeiro.ui.theme.DangerTone, style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.testTag("unofficial_build_notice"),
                     )
                 }
@@ -231,39 +264,11 @@ fun DeveloperCard() {
             }
         }
         Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.SUPPORT) },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFDD00), contentColor = Color(0xFF1A1A1A)),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth().height(46.dp).testTag("buy_me_a_coffee"),
-        ) {
-            Icon(Icons.Default.Coffee, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Buy me a coffee", fontWeight = FontWeight.Bold)
-        }
-        Spacer(Modifier.height(10.dp))
-        // The developer's links live here (they are about the developer, not app settings).
+        // Developer links only. Support and the Telegram community each have one card below,
+        // so nothing on the About page is shown twice.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
             DevLink(Icons.Default.Language, null, "Website", "dev_website") { open(DeveloperInfo.WEBSITE) }
             DevLink(null, R.drawable.ic_brand_github, "GitHub", "dev_github") { open(DeveloperInfo.GITHUB) }
-            dev.asfakul.yumeiro.notify.Reminders.Social.entries.forEach { sm ->
-                val icon = when (sm) {
-                    dev.asfakul.yumeiro.notify.Reminders.Social.FACEBOOK -> R.drawable.ic_brand_facebook
-                    dev.asfakul.yumeiro.notify.Reminders.Social.INSTAGRAM -> R.drawable.ic_brand_instagram
-                    dev.asfakul.yumeiro.notify.Reminders.Social.LINKEDIN -> R.drawable.ic_brand_linkedin
-                }
-                DevLink(null, icon, sm.label, "social_${sm.name.lowercase()}") {
-                    if (dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, sm.url)) dev.asfakul.yumeiro.notify.Reminders.recordFollow(context, sm)
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        androidx.compose.material3.TextButton(
-            onClick = { if (dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, dev.asfakul.yumeiro.notify.Reminders.GITHUB_URL)) dev.asfakul.yumeiro.notify.Reminders.recordStar(context) },
-            modifier = Modifier.fillMaxWidth().testTag("social_github_star"),
-        ) {
-            Icon(Icons.Default.Star, null, tint = BrandViolet, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp))
-            Text("Star Yumeiro on GitHub", color = TextPrimary, fontSize = 13.sp)
         }
         Spacer(Modifier.height(12.dp))
         Text(

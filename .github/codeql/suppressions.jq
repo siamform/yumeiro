@@ -5,6 +5,8 @@
 #     - eu/kanade/**: vendored Tachiyomi/Aniyomi API; generateId() = MD5 must match upstream ids.
 #     - youtube/YtAuthHash.kt: SAPISIDHASH is SHA-1 by YouTube's definition (request signing, not storage).
 #     - scrobble/LastFmSignature.kt: Last.fm's api_sig is MD5 by Last.fm's definition (request signing).
+#     - com/lagradost/cloudstream3/extractors/{Vidplay,VidSrcTo}.kt: CloudStream v4.5.2 extractors (shipped
+#       because extensions call them); the sites encode their stream ids with RC4, so decoding must use RC4.
 #  2. Certificate pinning on hosts Yumeiro does not control (Kitsu/Trakt APIs rotate certs;
 #     Plex is user-hosted; the UnifiedPush server in notify/PushWake.kt is whatever the user's
 #     push app uses, e.g. ntfy.sh or self-hosted; youtube/YtAccount.kt checks a pasted cookie with
@@ -22,14 +24,21 @@
 #     Same rule in the captcha / site sign-in page (ui/screens/online/BrowserCheckHost.kt): Cloudflare,
 #     Turnstile, hCaptcha and site logins are JavaScript. No JS bridge, file and content access off,
 #     navigations / pop-ups / sub-requests filtered by AdShield, the pop-up probe runs without JavaScript.
+#  4. The stream finder page (ui/screens/stream/PageStreamFinderDialog.kt) opens a site's own video player,
+#     which is JavaScript. Its bridge "MTFinder" exposes only two @JavascriptInterface methods that take a
+#     string (a media URL to record, a DRM system name filtered to 40 safe chars); no other Java is reachable
+#     (minSdk > 17). File and content access off, non-http schemes blocked, ads filtered (SafeWebView, AdFilter).
 def suppressed:
   (.ruleId // .rule.id) as $r
   | (.locations[0].physicalLocation.artifactLocation.uri // "") as $u
   | ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
-      and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$)")))
+      and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$|com/lagradost/cloudstream3/extractors/(Vidplay|VidSrcTo)\\.kt$)")))
     or (($r == "java/android/missing-certificate-pinning")
       and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource))\\.kt$")))
     or (($r == "java/android/websettings-javascript-enabled")
       and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt")
-        or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")));
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt")))
+    or (($r == "java/android/webview-addjavascriptinterface")
+      and ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt"));
 .runs |= map(.results |= map(select(suppressed | not)))

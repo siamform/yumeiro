@@ -107,6 +107,11 @@ jobs:
           LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          # Optional Firebase client config for instant notices (docs/PUSH-FCM.md). Not secret, but kept out of git.
+          YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
+          YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}
+          YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}
+          YUMEIRO_FCM_APP_ID: ${{ secrets.YUMEIRO_FCM_APP_ID }}
           # Only embedded while the repo is private (docs/GUIDE.md "Going private"): a token inside a
           # public APK can be extracted, and public releases need no token at all.
           MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
@@ -125,26 +130,35 @@ jobs:
         id: apk
         run: |
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-          SRC=$(ls app/build/outputs/apk/release/*.apk | grep -v unsigned | head -1)
+          OUT=app/build/outputs/apk/release
+          # ABI splits: app-universal-release.apk + app-arm64-v8a-release.apk + app-armeabi-v7a-release.apk.
+          # The universal one keeps the old single-APK name, so older in-app updaters still pick it.
+          SRC=$(ls $OUT/*universal*.apk 2>/dev/null | grep -v unsigned | head -1)
+          [ -z "$SRC" ] && SRC=$(ls $OUT/*.apk | grep -v unsigned | head -1)
           if [ -z "$SRC" ]; then echo "::error::No signed APK produced"; exit 1; fi
-
-          ACTUAL=$("$BT/apksigner" verify --print-certs "$SRC" | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
           EXPECTED=$(tr -d '[:space:]' < .github/release-signing-cert.sha256)
-          echo "Signing cert: $ACTUAL"
-          if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::APK is not signed with the constant release key (expected $EXPECTED)"
-            exit 1
-          fi
-
-          NAME="release-${APP_NAME}-v${{ steps.version.outputs.version_name }}.apk"
+          V="${{ steps.version.outputs.version_name }}"
+          NAME="release-${APP_NAME}-v${V}.apk"
           mkdir -p dist
-          cp "$SRC" "dist/$NAME"
+          check() {
+            ACTUAL=$("$BT/apksigner" verify --print-certs "$1" | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
+            echo "Signing cert of $1: $ACTUAL"
+            if [ "$ACTUAL" != "$EXPECTED" ]; then
+              echo "::error::$1 is not signed with the constant release key (expected $EXPECTED)"; exit 1
+            fi
+            # Release builds must never be debuggable.
+            if "$BT/aapt2" dump badging "$1" | grep -q "application-debuggable"; then
+              echo "::error::$1 is debuggable"; exit 1
+            fi
+          }
+          check "$SRC"; cp "$SRC" "dist/$NAME"
+          for ABI in arm64-v8a armeabi-v7a; do
+            F=$(ls $OUT/*-$ABI-release.apk 2>/dev/null | head -1)
+            [ -z "$F" ] && continue
+            check "$F"; cp "$F" "dist/${APP_NAME}-v${V}-${ABI}.apk"
+          done
           SHA=$(sha256sum "dist/$NAME" | awk '{print $1}')
-          (cd dist && sha256sum "$NAME" > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
-          # Release builds must never be debuggable.
-          if "$BT/aapt2" dump badging "dist/$NAME" | grep -q "application-debuggable"; then
-            echo "::error::Release APK is debuggable"; exit 1
-          fi
+          (cd dist && sha256sum *.apk > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
@@ -176,7 +190,7 @@ jobs:
           git tag -a "$TAG" -m "Yumeiro $TAG"
           git push origin "$TAG"
           gh release create "$TAG" \
-            "dist/${{ steps.apk.outputs.name }}" \
+            dist/*.apk \
             dist/SHA256SUMS.txt \
             --title "Yumeiro $TAG" \
             --notes-file dist/RELEASE_NOTES.md \

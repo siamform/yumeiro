@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,6 +37,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.togetherWith
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,7 +48,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -106,6 +115,18 @@ fun MTTopBar(
     unreadCount: Int = 0,
     /** False on tabs that have their own search box (Videos, Stream, online Music). */
     showSearch: Boolean = true,
+    /** No internet: shown as a quiet tag on the overline line instead of a banner over the title. */
+    offline: Boolean = false,
+    /** Makes the title a source selector (Music · On device ⌄); null = plain title. */
+    onTitleClick: (() -> Unit)? = null,
+    /** The source menu under the title is open (chevron turns up). */
+    titleExpanded: Boolean = false,
+    titleTag: String? = null,
+    /** With [onTitleClick]: the current source, shown as a translucent pill next to the title ("Music  Mix ⌄"). */
+    sourceLabel: String? = null,
+    /** Replaces the inline library search (e.g. Yumix opens the all-extension search page). */
+    onSearchClick: (() -> Unit)? = null,
+    searchDescription: String = "Search your library",
 ) {
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     // The text last committed; suggestions hide until the user types something new.
@@ -119,7 +140,7 @@ fun MTTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 8.dp)
+            .padding(start = 20.dp, end = 14.dp, top = 8.dp, bottom = 6.dp)
     ) {
         if (isSearchExpanded && showSearch) {
             Column(Modifier.fillMaxWidth()) {
@@ -197,61 +218,179 @@ fun MTTopBar(
                     )
                     Spacer(Modifier.width(4.dp))
                 }
-                Column(Modifier.weight(1f)) {
-                    if (overline != null) {
-                        Text("✦ " + overline.uppercase(), style = OverlineStyle, color = SpotifyGreen, maxLines = 1)
+                Column(Modifier.weight(1f).tourTarget("topbar_title")) {
+                    if (overline != null || offline) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (overline != null) Text(
+                                signatureOverline(overline), style = OverlineStyle, color = TextSecondary, maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (offline) {
+                                Spacer(Modifier.width(8.dp))
+                                OfflineTag()
+                            }
+                        }
                         Spacer(Modifier.height(2.dp))
                     }
-                    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
-                    val titleBrush = androidx.compose.runtime.remember(p.textPrimary, p.accentBright) {
-                        androidx.compose.ui.graphics.Brush.linearGradient(listOf(p.textPrimary, p.textPrimary, p.accentBright))
-                    }
-                    Text(
+                    // Narrow phones (≤ 380dp) get one step smaller so "Good morning" never clips.
+                    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
+                    val titleStyle = if (narrow) dev.asfakul.yumeiro.ui.theme.PageTitleCompactStyle else dev.asfakul.yumeiro.ui.theme.PageTitleStyle
+                    if (onTitleClick == null) Text(
                         text = title,
-                        style = MaterialTheme.typography.headlineMedium.copy(brush = titleBrush),
+                        style = titleStyle,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
-                    )
+                    ) else if (sourceLabel != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The page title always shows in full; on narrow phones the pill gives way instead.
+                        Text(title, style = titleStyle, color = TextPrimary, maxLines = 1, softWrap = false)
+                        Spacer(Modifier.width(if (narrow) 6.dp else 10.dp))
+                        SourcePill(sourceLabel, titleExpanded, onTitleClick, titleTag, narrow, Modifier.weight(1f, fill = false))
+                    } else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
                 }
-                if (showSearch) GlassIconButton(
-                    icon = Icons.Default.Search,
-                    contentDescription = "Search your library",
-                    onClick = { isSearchExpanded = true },
-                    modifier = Modifier.testTag("topbar_search_action")
-                )
-                Box {
-                    GlassIconButton(
+                // Seal-shaped header actions: separate tiles read faster than one capsule.
+                Row(Modifier.tourTarget("topbar_actions"), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (showSearch) TopAction(
+                        icon = Icons.Default.Search,
+                        contentDescription = searchDescription,
+                        onClick = { if (onSearchClick != null) onSearchClick() else isSearchExpanded = true },
+                        modifier = Modifier.testTag("topbar_search_action")
+                    )
+                    TopAction(
                         icon = if (unreadCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,
                         contentDescription = if (unreadCount > 0) "Notifications, $unreadCount new" else "Notifications",
                         onClick = onInboxClick,
+                        badge = unreadCount,
+                        badgeTag = "topbar_inbox_badge",
                         modifier = Modifier.testTag("topbar_inbox_action")
                     )
-                    if (unreadCount > 0) {
-                        Box(
-                            Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 2.dp)
-                                .size(if (unreadCount > 9) 20.dp else 17.dp)
-                                .background(SpotifyGreen, CircleShape)
-                                .testTag("topbar_inbox_badge"),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                if (unreadCount > 9) "9+" else unreadCount.toString(),
-                                color = dev.asfakul.yumeiro.ui.theme.OnAccent,
-                                fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1,
-                            )
-                        }
+                    // On TV the rail already has Settings at the bottom; one entry is enough.
+                    if (!showBackButton && !dev.asfakul.yumeiro.ui.tv.LocalTvMode.current) {
+                        TopAction(
+                            icon = Icons.Outlined.Settings,
+                            contentDescription = "Open Settings",
+                            onClick = onSettingsClick,
+                            modifier = Modifier.testTag("topbar_settings_action")
+                        )
                     }
-                }
-                if (!showBackButton) {
-                    GlassIconButton(
-                        icon = Icons.Outlined.Settings,
-                        contentDescription = "Open Settings",
-                        onClick = onSettingsClick,
-                        modifier = Modifier.testTag("topbar_settings_action")
-                    )
                 }
             }
         }
+    }
+}
+
+
+/** Compact offline marker for headers ("オフライン · Offline"); local music and videos keep working. */
+@Composable
+fun OfflineTag(modifier: Modifier = Modifier) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    Row(
+        modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .background(p.textPrimary.copy(alpha = 0.08f))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .androidx_semantics_offline(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.CloudOff, null, tint = p.textSecondary, modifier = Modifier.size(12.dp))
+        Spacer(Modifier.width(4.dp))
+        Text("Offline", style = MaterialTheme.typography.labelSmall, color = p.textSecondary, maxLines = 1)
+    }
+}
+
+private fun Modifier.androidx_semantics_offline(): Modifier =
+    this.testTag("offline_banner").then(
+        Modifier.semantics(mergeDescendants = true) { contentDescription = "You're offline, showing saved content" }
+    )
+
+
+/** "夢色 · YUMEIRO": the signature overline (Home only); 夢色 is drawn in the accent colour. */
+@Composable
+private fun signatureOverline(text: String): androidx.compose.ui.text.AnnotatedString {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    return androidx.compose.ui.text.buildAnnotatedString {
+        if (text.startsWith("夢色")) {
+            pushStyle(androidx.compose.ui.text.SpanStyle(color = p.accent)); append("夢色"); pop()
+            append(text.removePrefix("夢色"))
+        } else append(text)
+    }
+}
+
+/**
+ * The tab title doubling as its source selector: "On device ⌄". One tap opens the source menu
+ * right below it; the chevron turns while it is open.
+ */
+@Composable
+private fun SourceTitle(title: String, style: androidx.compose.ui.text.TextStyle, expanded: Boolean, onClick: () -> Unit, tag: String?) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val reduced = reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "chevron")
+    Row(
+        Modifier.clip(RoundedCornerShape(14.dp))
+            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
+            .semantics { contentDescription = "Source: $title. ${if (expanded) "Menu open" else "Tap to change"}" }
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .padding(end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.animation.AnimatedContent(
+            targetState = title,
+            transitionSpec = {
+                if (reduced) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap())
+                else (androidx.compose.animation.slideInVertically(YuMotion.enter(false, 300)) { it / 2 } + androidx.compose.animation.fadeIn(YuMotion.enter(false, 250))) togetherWith
+                    (androidx.compose.animation.slideOutVertically(YuMotion.exit(false, 160)) { -it / 2 } + androidx.compose.animation.fadeOut(YuMotion.exit(false, 120)))
+            },
+            label = "sourceTitle",
+        ) { t ->
+            Text(t, style = style, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier.size(28.dp).clip(CircleShape).background(if (expanded) p.accent else p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null,
+                tint = if (expanded) p.onAccent else p.accent,
+                modifier = Modifier.size(20.dp).rotate(turn),
+            )
+        }
+    }
+}
+
+
+/**
+ * The tab's source as a see-through glass pill ("Mix ⌄"): the translucent fill and hairline say
+ * "this changes" while the page title stays put. Animates when the source changes.
+ */
+@Composable
+private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, tag: String?, narrow: Boolean = false, modifier: Modifier = Modifier) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val reduced = reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "pillChevron")
+    val shape = RoundedCornerShape(50)
+    Row(
+        modifier.height(if (narrow) 26.dp else 28.dp).clip(shape)
+            .background(if (expanded) p.accent.copy(alpha = 0.22f) else p.textPrimary.copy(alpha = if (p.isDark) 0.08f else 0.06f))
+            .border(1.dp, if (expanded) p.accent.copy(alpha = 0.6f) else p.textPrimary.copy(alpha = if (p.isDark) 0.18f else 0.14f), shape)
+            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
+            .semantics { contentDescription = "Source: $label. ${if (expanded) "Menu open" else "Tap to change"}" }
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier)
+            .tourTarget("topbar_source_pill")
+            .padding(start = if (narrow) 8.dp else 10.dp, end = if (narrow) 3.dp else 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.animation.AnimatedContent(
+            modifier = Modifier.weight(1f, fill = false),
+            targetState = label,
+            transitionSpec = {
+                if (reduced) androidx.compose.animation.fadeIn(androidx.compose.animation.core.snap()) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.snap())
+                else (androidx.compose.animation.slideInVertically(YuMotion.enter(false, 300)) { it / 2 } + androidx.compose.animation.fadeIn(YuMotion.enter(false, 250))) togetherWith
+                    (androidx.compose.animation.slideOutVertically(YuMotion.exit(false, 160)) { -it / 2 } + androidx.compose.animation.fadeOut(YuMotion.exit(false, 120)))
+            },
+            label = "sourcePill",
+        ) { t -> Text(t, color = TextPrimary, fontSize = if (narrow) 11.sp else 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, letterSpacing = 0.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null, tint = p.accent, modifier = Modifier.size(16.dp).rotate(turn))
     }
 }

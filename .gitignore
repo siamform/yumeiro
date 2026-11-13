@@ -25,6 +25,8 @@ keystore.properties
 *.p12
 *.pfx
 *.pem
+# Public CA root (not a secret) trusted on Android 7.0 via network_security_config.xml.
+!app/src/main/res/raw/isrg_root_x1.pem
 *.key
 keystore.b64
 *.keystore.b64

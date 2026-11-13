@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.ui.screens.stream.CapturedStream
+import dev.asfakul.yumeiro.ui.screens.stream.PageStreamCapture
+
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.Headers
@@ -178,5 +181,20 @@ class StreamDetectionTest {
         assertNull(req.headers["Accept"])
         assertEquals(DrmScheme.WIDEVINE, req.drmScheme)
         assertEquals("https://lic.x/widevine/license", req.drmLicenseUrl)
+    }
+
+    @Test fun autoModePrefersAManifestAndNeverAudioOnly() {
+        val mp4 = CapturedStream("https://cdn.x/v.mp4", dev.asfakul.yumeiro.stream.MediaKind.VIDEO, "MP4", emptyMap())
+        val hls = CapturedStream("https://cdn.x/v.m3u8", dev.asfakul.yumeiro.stream.MediaKind.HLS, "HLS", emptyMap())
+        val aac = CapturedStream("https://cdn.x/a.aac", dev.asfakul.yumeiro.stream.MediaKind.AUDIO, "AAC", emptyMap())
+        org.junit.Assert.assertEquals(hls, PageStreamCapture.bestForAuto(listOf(mp4, hls)))
+        org.junit.Assert.assertEquals(mp4, PageStreamCapture.bestForAuto(listOf(aac, mp4)))
+        org.junit.Assert.assertNull(PageStreamCapture.bestForAuto(listOf(aac)))
+    }
+
+    @Test fun autoModeStepsAsideForSignInAndChecks() {
+        org.junit.Assert.assertTrue(PageStreamCapture.needsUser("https://www.terabox.com/login?redirect=x"))
+        org.junit.Assert.assertTrue(PageStreamCapture.needsUser("https://passport.example.com/x"))
+        org.junit.Assert.assertFalse(PageStreamCapture.needsUser("https://www.terabox.com/sharing/link?surl=abc"))
     }
 }

@@ -126,8 +126,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
         LazyVerticalGrid(
             GridCells.Fixed(1), Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+            verticalArrangement = Arrangement.spacedBy(10.dp), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("downloads")) {
             item("storage") {
                 StorageCard(used, free, days, quality, parallel, onSettings = { settingsOpen = !settingsOpen })
             }
@@ -223,7 +222,7 @@ private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, paralle
                 Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(listOfNotNull(DownloadPrompt.sizeText(used).ifBlank { "Nothing" } + " used", if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
+                    Text(listOfNotNull((DownloadPrompt.sizeText(used).takeIf { it.isNotBlank() && used > 0 }?.let { "$it used" } ?: "No space used yet"), if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     Text("Auto-delete: ${DownloadSettings.autoDeleteLabel(days)} · Quality: ${DownloadSettings.qualityLabel(quality)} · $parallel at once",
                         color = TextTertiary, fontSize = 12.sp)
@@ -269,7 +268,7 @@ private fun EmptyDownloads(onBrowse: () -> Unit) {
         Spacer(Modifier.height(4.dp))
         Text("Save episodes, movies, YouTube videos and music to watch or listen without internet.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
-        Text("Find something to save", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text("Find something to save", color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
             modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(SpotifyGreen).clickable(onClick = onBrowse).padding(horizontal = 18.dp, vertical = 8.dp))
     }
 }
@@ -298,7 +297,7 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
                 OnlineDownloads.Status.PAUSED -> "Paused · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "0 MB" }} · tap ↓ to resume"
                 OnlineDownloads.Status.FAILED -> d.error ?: "Failed"
             }
-            Text(line, color = if (d.status == OnlineDownloads.Status.FAILED) Color(0xFFFF8A80) else TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(line, color = if (d.status == OnlineDownloads.Status.FAILED) dev.asfakul.yumeiro.ui.theme.DangerTone else TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (d.status == OnlineDownloads.Status.RUNNING) {
                 Spacer(Modifier.height(5.dp))
                 if (d.total > 0) LinearProgressIndicator(progress = { d.fraction }, modifier = Modifier.fillMaxWidth().height(3.dp), color = SpotifyGreen)
@@ -372,6 +371,7 @@ internal fun DownloadFolderRow(f: DownloadGroups.Folder, days: Int, expanded: Bo
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", tint = TextSecondary)
     }
     if (confirm) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirm = false },
         title = { Text("Delete ${list.size} download${if (list.size == 1) "" else "s"}?") },
         text = { Text("${f.name}: these files will be removed from this phone. Other copies of the series stay.") },

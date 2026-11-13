@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -63,6 +64,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -127,6 +130,7 @@ object AppMessages {
     }
 
     fun success(context: android.content.Context?, text: String) = show(context, text, Kind.SUCCESS)
+    fun info(context: android.content.Context?, text: String) = show(context, text, Kind.INFO)
     fun error(context: android.content.Context?, text: String, actionLabel: String? = null, action: (() -> Unit)? = null) =
         show(context, text, Kind.ERROR, actionLabel, action)
 
@@ -149,18 +153,20 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
         val (icon, tint) = when (m.kind) {
             AppMessages.Kind.SUCCESS -> Icons.Default.CheckCircle to SpotifyGreen
             AppMessages.Kind.ERROR -> Icons.Default.ErrorOutline to MaterialTheme.colorScheme.error
-            AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to Color(0xFFFFB74D)
+            AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to dev.asfakul.yumeiro.ui.theme.WarningTone
             AppMessages.Kind.INFO -> Icons.Default.Info to TextSecondary
         }
-        val toastShape = RoundedCornerShape(20.dp)
-        val baseFill = DarkSurfaceContainerHigh
+        // One opaque, theme-aware surface: the old pill was always dark (unreadable in light mode)
+        // and drew its fill inside a transparent Surface, so the shadow and edges broke on glass.
+        val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+        val toastShape = RoundedCornerShape(18.dp)
+        val baseFill = if (p.isDark) DarkSurfaceContainerHigh else Color(0xFFFFFBF4)
+        val fill = androidx.compose.ui.graphics.lerp(baseFill, tint, if (p.isDark) 0.10f else 0.06f)
         Surface(
-            shape = toastShape, color = Color.Transparent, shadowElevation = 12.dp,
+            shape = toastShape, color = fill, contentColor = p.textPrimary, shadowElevation = 10.dp, tonalElevation = 0.dp,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = 0.50f), dev.asfakul.yumeiro.ui.theme.BrandGold.copy(alpha = 0.14f)))),
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().testTag("app_message")
                 .semantics { liveRegion = LiveRegionMode.Polite }
-                .clip(toastShape)
-                .background(Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.lerp(baseFill, tint, 0.18f), baseFill, baseFill)))
-                .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = 0.55f), dev.asfakul.yumeiro.ui.theme.BrandGold.copy(alpha = 0.12f))), toastShape)
                 .clickable { AppMessages.dismiss(m.id) },
         ) {
             Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -168,7 +174,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
                     Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
                 }
                 Spacer(Modifier.width(10.dp))
-                Text(m.text, color = TextPrimary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+                Text(m.text, color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
                 if (m.actionLabel != null && m.action != null) {
                     TextButton(onClick = { AppMessages.dismiss(m.id); runCatching { m.action.invoke() } }, modifier = Modifier.testTag("app_message_action")) {
                         Text(m.actionLabel, color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -205,7 +211,7 @@ fun SkeletonBlock(width: Dp?, height: Dp, modifier: Modifier = Modifier, shape: 
 /** Placeholder with the shape of a list row (icon + two lines). */
 @Composable
 fun SkeletonRow(modifier: Modifier = Modifier, trailing: Boolean = false) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = modifier.fillMaxWidth().testTag("skeleton_row")) {
+    Surface(shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeMd, color = GlassFill, modifier = modifier.fillMaxWidth().testTag("skeleton_row")) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             SkeletonBlock(44.dp, 44.dp, shape = RoundedCornerShape(12.dp))
             Spacer(Modifier.width(12.dp))
@@ -243,14 +249,22 @@ fun StateMessage(
         modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp).testTag(testTag),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(Modifier.size(72.dp).clip(CircleShape).background(tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        // Moon motif: a soft halo ring with the state icon, then the gold stroke under the title.
+        Box(
+            Modifier.size(84.dp).clip(CircleShape)
+                .background(Brush.radialGradient(listOf(tint.copy(alpha = 0.20f), tint.copy(alpha = 0.04f))))
+                .border(1.dp, rememberMoonHairline(), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(34.dp))
         }
-        Spacer(Modifier.height(16.dp))
-        Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(18.dp))
+        Text(title, color = TextPrimary, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.width(22.dp).height(dev.asfakul.yumeiro.ui.theme.Yume.moonStroke).clip(CircleShape).background(tint.copy(alpha = 0.8f)))
         message?.let {
             Spacer(Modifier.height(6.dp))
-            Text(it, color = TextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center, lineHeight = 18.sp)
+            Text(it, color = TextSecondary, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 420.dp))
         }
         if (suggestions) {
             val tips = androidx.compose.runtime.remember(title, message) { ErrorHelp.suggestionsFor("$title ${message.orEmpty()}") }
@@ -262,11 +276,12 @@ fun StateMessage(
             Button(
                 onClick = primary.second, shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                modifier = Modifier.testTag("${testTag}_primary"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 24.dp),
+                modifier = Modifier.heightIn(min = 48.dp).testTag("${testTag}_primary"),
             ) { Text(primary.first, fontWeight = FontWeight.Bold) }
         }
         secondary?.let { (label, onClick) ->
-            TextButton(onClick = onClick, modifier = Modifier.testTag("${testTag}_secondary")) { Text(label, color = TextSecondary) }
+            TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp).testTag("${testTag}_secondary")) { Text(label, color = TextSecondary, fontWeight = FontWeight.SemiBold) }
         }
     }
 }
@@ -290,13 +305,23 @@ fun SubPageHeader(
         modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack, modifier = Modifier.testTag("subpage_back")) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary)
-        }
+        YumeIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack, modifier = Modifier.testTag("subpage_back"))
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
-            YumeiroMark()
-            Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("subpage_title"))
-            subtitle?.let { Text(it, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            // Editorial overline: the page's kanji in the accent, then the brand (設定 · YUMEIRO).
+            // The kanji is decorative, so TalkBack skips it; the title below is the heading.
+            val kana = if (kanaEnabled()) androidx.compose.runtime.remember(title) { Kana.forTitle(title) } else null
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (kana != null) {
+                    Text(kana, style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = dev.asfakul.yumeiro.ui.theme.SpotifyGreen, maxLines = 1,
+                        modifier = Modifier.testTag("subpage_kana").clearAndSetSemantics { })
+                    Text("  ·  ", style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, modifier = Modifier.clearAndSetSemantics { })
+                }
+                Text("YUMEIRO", style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = if (kana != null) TextTertiary else dev.asfakul.yumeiro.ui.theme.SpotifyGreen, maxLines = 1,
+                    modifier = Modifier.testTag("yumeiro_mark").clearAndSetSemantics { })
+            }
+            Text(title, color = TextPrimary, style = dev.asfakul.yumeiro.ui.theme.PageTitleCompactStyle, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp).testTag("subpage_title").semantics { heading() })
+            subtitle?.let { Text(it, color = TextSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp)) }
         }
         actions()
     }
@@ -309,7 +334,7 @@ fun SubPageHeader(
 @Composable
 fun YumeiroMark(modifier: Modifier = Modifier, light: Boolean = false) {
     Text(
-        "\u2726 夢色 · YUMEIRO",
+        "Yumeiro",
         color = if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f) else dev.asfakul.yumeiro.ui.theme.SpotifyGreen,
         fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.6.sp, maxLines = 1,
         modifier = modifier.testTag("yumeiro_mark"),
@@ -319,16 +344,18 @@ fun YumeiroMark(modifier: Modifier = Modifier, light: Boolean = false) {
 /** Slim "you're offline" pill shown at the top of the app while there is no internet. */
 @Composable
 fun OfflineBanner(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().statusBarsPadding().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+    // Sits at the bottom of sub-pages so it never covers a header, back button or title.
+    Box(modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
         androidx.compose.material3.Surface(
             shape = RoundedCornerShape(50),
-            color = androidx.compose.ui.graphics.Color(0xFF2B2B2B).copy(alpha = 0.94f),
+            color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.surfaceContainerHigh.copy(alpha = 0.96f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, dev.asfakul.yumeiro.ui.theme.SpotifyGreen.copy(alpha = 0.25f)),
             modifier = Modifier.testTag("offline_banner"),
         ) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(androidx.compose.material.icons.Icons.Default.CloudOff, null, tint = androidx.compose.ui.graphics.Color(0xFFFFB74D), modifier = Modifier.size(14.dp))
+                Icon(androidx.compose.material.icons.Icons.Default.CloudOff, null, tint = dev.asfakul.yumeiro.ui.theme.SpotifyGreen, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("You're offline · showing saved content", color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("You're offline · showing saved content", color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

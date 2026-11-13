@@ -66,7 +66,13 @@ object StreamMediaFactory {
         val adFilter = AdFilterDataSource.Factory(DefaultDataSource.Factory(appContext, http))
         val dataSourceFactory: DataSource.Factory = SafeSubtitleDataSource.Factory(adFilter)
         val defaultDrm = DefaultDrmSessionManagerProvider().apply { setDrmHttpDataSourceFactory(http) }
-        val msf = DefaultMediaSourceFactory(dataSourceFactory)
+        // Progressive files without a seek index (MP3/AAC/AMR streams, some TS) used to be
+        // "unseekable": duration showed --:-- and every jump restarted the file at 0:00. Constant
+        // bitrate seeking estimates both from the byte length, so those sources skip like any other.
+        val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
+            .setConstantBitrateSeekingEnabled(true)
+            .setConstantBitrateSeekingAlwaysEnabled(true)
+        val msf = DefaultMediaSourceFactory(dataSourceFactory, extractors)
             .setSubtitleParserFactory(SniffingSubtitleParserFactory())
             .setLoadErrorHandlingPolicy(dev.asfakul.yumeiro.player.StreamLoadErrorPolicy())
             .setLiveMinSpeed(0.97f)

@@ -31,13 +31,21 @@ val Unbounded = FontFamily(
     Font(R.font.unbounded_800, FontWeight.ExtraBold),
 )
 
-private fun d(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = TextStyle(
+// "夢色 editorial" type system (R5). Unbounded — the wide wordmark face — sets page titles and
+// section headings so Yumeiro reads like a magazine masthead; Manrope carries everything you
+// read. The scale is deliberately compact (phone-first, 8dp rhythm): 26 / 22 / 18 / 16 / 14 / 13 / 12.
+private fun u(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = TextStyle(
     fontFamily = Unbounded, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
     letterSpacing = tracking.em,
 )
 
+private fun d(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = TextStyle(
+    fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
+    letterSpacing = tracking.em,
+)
+
 /** Display style for hero titles ("For You", artist names, big numbers). */
-val DisplayStyle = d(30, 38, FontWeight.Bold, -0.03f)
+val DisplayStyle = d(26, 32, FontWeight.ExtraBold, -0.02f)
 
 private fun s(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = TextStyle(
     fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
@@ -45,20 +53,27 @@ private fun s(size: Int, line: Int, weight: FontWeight, tracking: Float = 0f) = 
 )
 
 /** Overline style used for "NOW PLAYING", "CONTINUE LISTENING", section eyebrows. */
-val OverlineStyle = s(11, 16, FontWeight.Bold, 0.14f)
+val OverlineStyle = s(11, 15, FontWeight.Bold, 0.08f)
+
+/** Section heading on Home and tab pages (Unbounded, 16sp). */
+val SectionTitleStyle = u(16, 22, FontWeight.SemiBold, -0.01f)
+
+/** Page title in the top bar (Unbounded). */
+val PageTitleStyle = u(22, 28, FontWeight.SemiBold, -0.02f)
+val PageTitleCompactStyle = u(19, 24, FontWeight.SemiBold, -0.02f)
 
 val Typography = Typography(
-    displaySmall = d(30, 40, FontWeight.Bold, -0.03f),
-    headlineLarge = d(26, 34, FontWeight.Bold, -0.03f),
-    headlineMedium = d(23, 31, FontWeight.Bold, -0.03f),
-    headlineSmall = d(18, 26, FontWeight.SemiBold, -0.02f),
-    titleLarge = d(16, 23, FontWeight.SemiBold, -0.02f),
-    titleMedium = s(15, 21, FontWeight.Bold),
-    titleSmall = s(13, 19, FontWeight.Bold),
-    bodyLarge = s(15, 22, FontWeight.Medium),
-    bodyMedium = s(13, 19, FontWeight.Medium),
-    bodySmall = s(12, 17, FontWeight.Medium),
-    labelLarge = s(14, 20, FontWeight.Bold),
-    labelMedium = s(12, 17, FontWeight.Bold, 0.02f),
-    labelSmall = s(11, 16, FontWeight.Bold, 0.06f),
+    displaySmall = u(26, 32, FontWeight.SemiBold, -0.02f),
+    headlineLarge = u(22, 28, FontWeight.SemiBold, -0.02f),
+    headlineMedium = d(20, 26, FontWeight.ExtraBold, -0.01f),
+    headlineSmall = d(18, 24, FontWeight.Bold, -0.01f),
+    titleLarge = d(16, 22, FontWeight.ExtraBold, -0.01f),
+    titleMedium = s(14, 20, FontWeight.Bold),
+    titleSmall = s(13, 18, FontWeight.Bold),
+    bodyLarge = s(14, 20, FontWeight.Medium),
+    bodyMedium = s(13, 18, FontWeight.Medium),
+    bodySmall = s(12, 16, FontWeight.Medium),
+    labelLarge = s(13, 18, FontWeight.Bold),
+    labelMedium = s(12, 16, FontWeight.Bold, 0.02f),
+    labelSmall = s(11, 14, FontWeight.Bold, 0.06f),
 )

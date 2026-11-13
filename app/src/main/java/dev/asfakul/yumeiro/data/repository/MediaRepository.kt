@@ -389,7 +389,7 @@ class OfflineMediaRepository(
                             albumId = albumId,
                             sizeBytes = size,
                             isFavorite = isFav,
-                            folderName = folderName,
+                            folderName = displayFolderName(folderName, folderPath),
                             folderPath = folderPath,
                             dateAdded = dateAdded,
                             playCount = playCount
@@ -500,12 +500,12 @@ class OfflineMediaRepository(
                     val bucketName = if (bucketCol >= 0) cursor.getString(bucketCol) else null
                     val relativePath = if (relPathCol >= 0) cursor.getString(relPathCol) else null
 
-                    val folderName = when {
+                    val folderName = displayFolderName(when {
                         !bucketName.isNullOrBlank() -> bucketName
                         dataPath.isNotBlank() -> File(dataPath).parentFile?.name ?: "Videos"
                         !relativePath.isNullOrBlank() -> relativePath.trim('/').split('/').lastOrNull() ?: "Videos"
                         else -> "Videos"
-                    }
+                    }, dataPath)
 
                     val folderPath = when {
                         dataPath.isNotBlank() -> File(dataPath).parentFile?.absolutePath ?: ""
@@ -810,4 +810,19 @@ class OfflineMediaRepository(
         const val KEY_PLAY_COUNTS = "play_counts_json"
     }
 
+}
+
+/**
+ * A folder name people can read: MediaStore reports "<unknown>" (or nothing) for some files and
+ * the storage root's own name ("0", "1234-ABCD") for files saved at the top of a drive.
+ */
+internal fun displayFolderName(name: String?, path: String = ""): String {
+    val n = name?.trim().orEmpty()
+    val parent = java.io.File(path).parentFile?.parentFile?.name.orEmpty()
+    return when {
+        n.isEmpty() || n.equals("<unknown>", true) || n.equals("unknown", true) -> "Internal storage"
+        n == "0" && (path.contains("/emulated/") || parent == "emulated") -> "Internal storage"
+        Regex("^[0-9A-F]{4}-[0-9A-F]{4}$").matches(n) -> "SD card"
+        else -> n
+    }
 }

@@ -46,6 +46,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Cast
@@ -77,6 +80,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +98,12 @@ private enum class Panel { EPISODES, SOURCES, SUBTITLES }
 
 private val PanelColor = Color(0xF2121418)
 private val ChipColor = Color.White.copy(alpha = 0.14f)
+
+/**
+ * Text colour of the Episodes / Sources / Subtitles lists. White over video; the theme's own
+ * text colour when the same lists open as a sheet from the (themed) watch page.
+ */
+private val LocalPanelInk = androidx.compose.runtime.staticCompositionLocalOf { Color.White }
 
 /** Online controls drawn over the video player: Episodes, Sources, Sub/Dub, Next. */
 @Composable
@@ -176,7 +186,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
                 }
                 when (panel) {
                     Panel.EPISODES -> EpisodesPanel(state) { i -> panel = null; OnlineSession.playEpisode(context, i) }
-                    Panel.SOURCES -> SourcesPanel(state) { i -> panel = null; OnlineSession.switchSource(context, i, positionMs()) }
+                    Panel.SOURCES -> SourcesPanel(state, positionMs) { i -> panel = null; OnlineSession.switchSource(context, i, positionMs()) }
                     Panel.SUBTITLES -> SubtitlesPanel(state) { sub -> panel = null; OnlineSession.addSubtitle(context, sub, positionMs()) }
                     null -> {}
                 }
@@ -199,6 +209,8 @@ private fun PlayerChip(icon: androidx.compose.ui.graphics.vector.ImageVector, la
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EpisodesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
+    val ink = LocalPanelInk.current
+    val errInk = if (ink.luminance() > 0.5f) ErrorColor else Color(0xFFB3261E)
     val seasons = remember(state.episodes) { state.episodes.map { it.season }.distinct() }
     var season by remember(state.index) { mutableStateOf(state.episode?.season) }
     val historyVersion by OnlineHistory.version.collectAsState()
@@ -214,20 +226,20 @@ private fun EpisodesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
             val current = i == state.index
             val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(state.api, e.data) }
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.06f))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else ink.copy(alpha = 0.06f))
                     .clickable { onPick(i) }.padding(10.dp).testTag("online_player_episode"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(ink.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
                     if (current) Icon(Icons.Default.PlayArrow, null, tint = SpotifyGreen)
-                    else Text("${e.episode ?: i + 1}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    else Text("${e.episode ?: i + 1}", color = ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(e.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(e.label, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (p != null && p.fraction > 0.01f) {
                         Spacer(Modifier.height(4.dp))
-                        LinearProgressIndicator(progress = { p.fraction }, color = SpotifyGreen, trackColor = Color.White.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth().height(3.dp))
+                        LinearProgressIndicator(progress = { p.fraction }, color = SpotifyGreen, trackColor = ink.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth().height(3.dp))
                     }
                 }
                 if (p?.finished == true) Icon(Icons.Default.CheckCircle, "Watched", tint = SpotifyGreen.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
@@ -237,32 +249,68 @@ private fun EpisodesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
 }
 
 @Composable
-private fun SourcesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
+private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 0L }, onPick: (Int) -> Unit) {
+    val ink = LocalPanelInk.current
+    val errInk = if (ink.luminance() > 0.5f) ErrorColor else Color(0xFFB3261E)
     if (!state.linksDone) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Still finding sources…", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text("Still finding sources…", color = ink.copy(alpha = 0.6f), fontSize = 12.sp)
         }
     }
+    // Round 9: same per-language Sub / Dub groups and audio chips as the watch page.
+    val context = LocalContext.current
+    val split = dev.asfakul.yumeiro.ui.screens.watch.AudioSplit
+    val audioPref by dev.asfakul.yumeiro.online.AudioLanguages.preferred.collectAsState()
+    val audioOptions = remember(state.links, state.version) { audioOptionsFor(state.links, state.version) }
+    val allGroups = remember(state.links, state.version, audioPref) {
+        split.groups(state.links.map { it.name + " " + it.source }, state.version, audioPref).let { g -> if (g.size == 1) listOf(g[0].copy(kind = null)) else g }
+    }
+    val activeAudio = audioPref?.takeIf { sel -> audioOptions.any { it.key == sel } }
+    val groups = allGroups.filter { activeAudio == null || allGroups.size == 1 || it.key == activeAudio }
+    val folded = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver(save = { it.toList() }, restore = { androidx.compose.runtime.mutableStateListOf<String>().apply { addAll(it) } })) { androidx.compose.runtime.mutableStateListOf<String>() }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        itemsIndexed(state.links, key = { _, l -> l.url }) { i, l ->
+        if (audioOptions.size > 1) item(key = "audio_filter") {
+            dev.asfakul.yumeiro.ui.screens.watch.AudioFilterRow(audioOptions, audioPref, { k -> pickAudio(context, state, k, positionMs()) }, onDark = ink.luminance() > 0.5f)
+        }
+        groups.forEach { g ->
+        val kind = g.kind
+        val idx = g.indices
+        val gk = g.key.ifBlank { "all" }
+        val isFolded = gk in folded
+        if (kind != null) item(key = "hdr_$gk") {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClickLabel = if (isFolded) "Show ${g.label} sources" else "Hide ${g.label} sources") { if (isFolded) folded.remove(gk) else folded.add(gk) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp).testTag("online_player_source_group"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(if (kind == dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB) Icons.Default.Mic else Icons.Default.ClosedCaption, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("${g.label} · ${idx.size}", color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Icon(if (isFolded) Icons.Default.ExpandMore else Icons.Default.ExpandLess, null, tint = ink.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+            }
+        }
+        if (!isFolded) items(idx, key = { i -> state.links[i].url + "#" + i }) { i ->
+            val l = state.links[i]
             val current = i == state.linkIndex
             val failed = l.url in state.failed
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.06f))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else ink.copy(alpha = 0.06f))
                     .clickable { onPick(i) }.padding(12.dp).testTag("online_player_source"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(l.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(l.name, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(listOf(l.qualityLabel, l.formatLabel, l.source.takeIf { it != l.name }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
-                        color = if (failed) ErrorColor else Color.White.copy(alpha = 0.55f), fontSize = 11.sp, maxLines = 1)
+                        color = if (failed) errInk else ink.copy(alpha = 0.55f), fontSize = 11.sp, maxLines = 1)
                 }
                 if (current) Icon(Icons.Default.CheckCircle, "Playing", tint = SpotifyGreen, modifier = Modifier.size(18.dp))
             }
         }
-        if (state.subtitles.isNotEmpty()) item { Text("${state.subtitles.size} subtitle track${if (state.subtitles.size == 1) "" else "s"} available in Captions", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, modifier = Modifier.padding(6.dp)) }
+        }
+        if (state.subtitles.isNotEmpty()) item { Text("${state.subtitles.size} subtitle track${if (state.subtitles.size == 1) "" else "s"} available in Captions", color = ink.copy(alpha = 0.5f), fontSize = 11.sp, modifier = Modifier.padding(6.dp)) }
     }
 }
 
@@ -317,14 +365,21 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
     val s by OnlineSession.state.collectAsState()
     val opening by OnlineSession.opening.collectAsState()
     opening?.let { item ->
+        val kind = remember(item.type) { dev.asfakul.yumeiro.ui.screens.watch.WatchKind.of(item.type) }
         // Details still loading: the watch page appears right away with skeletons.
         dev.asfakul.yumeiro.ui.screens.watch.WatchScaffold(
             backdrop = item.posterUrl, backdropHeaders = item.posterHeaders,
             onBack = { OnlineSession.cancelOpening() }, tag = "online_opening",
-            screen = { WatchScreenStatus("Opening…", onCancel = { OnlineSession.cancelOpening() }) },
+            screen = {
+                when (kind) {
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchKind.MOVIE -> WatchScreenStatus("Opening the film…", onCancel = { OnlineSession.cancelOpening() }, overline = "映画 · MOVIE")
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchKind.SERIES -> WatchScreenStatus("Loading episodes…", onCancel = { OnlineSession.cancelOpening() }, overline = "連続 · SERIES")
+                    else -> WatchScreenStatus("Opening…", onCancel = { OnlineSession.cancelOpening() })
+                }
+            },
         ) {
             dev.asfakul.yumeiro.ui.screens.watch.WatchTitle(item.name, overline = item.api, meta = listOfNotNull(item.type, item.quality).joinToString(" · "))
-            dev.asfakul.yumeiro.ui.screens.watch.WatchDetailsSkeleton()
+            dev.asfakul.yumeiro.ui.screens.watch.WatchDetailsSkeleton(kind)
         }
         return
     }
@@ -372,6 +427,13 @@ private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> U
         } else {
             CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
             Spacer(Modifier.height(10.dp))
+            // Film vs episode: the status says what is being opened.
+            Text(
+                if (state.episodes.size > 1) "連続 · EPISODE ${state.index + 1} OF ${state.episodes.size}" else "映画 · MOVIE",
+                color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp,
+                modifier = Modifier.testTag("online_resolving_kind"),
+            )
+            Spacer(Modifier.height(2.dp))
             Text(
                 if (state.links.isEmpty()) "Finding the best source…" else "Found ${state.links.size} source${if (state.links.size == 1) "" else "s"} — starting…",
                 color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
@@ -440,6 +502,11 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 }
             }
         }
+        item(key = "facts") {
+            val al = dev.asfakul.yumeiro.online.AudioLanguages
+            val srcAudio = state.link?.let { l -> al.filterKey(al.classify(l.name + " " + l.source, state.version)).takeIf { it.isNotEmpty() }?.let { al.keyLabel(it) } }
+            dev.asfakul.yumeiro.ui.screens.watch.PlaybackFactsRow(sourceAudio = srcAudio)
+        }
         item(key = "actions") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchActionsRow {
                 if (state.hasNext) dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.SkipNext, "Next episode", "online_watch_next", highlighted = true) { OnlineSession.next(context) }
@@ -462,25 +529,49 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 else -> Icons.Default.HighQuality
             }
             val pos = { player?.positionMs?.invoke() ?: 0L }
-            val rows = versions.map { v ->
+            // Round 8: a version called "Sub" often carries dubbed links too. The current version's
+            // links are split by what each link says about itself into Sub and Dub groups (only
+            // when both kinds are really there); every group folds (tap the header) so long lists
+            // of sources stay tidy. Indices still point at state.links, so switching is unchanged.
+            val split = dev.asfakul.yumeiro.ui.screens.watch.AudioSplit
+            val audioPref by dev.asfakul.yumeiro.online.AudioLanguages.preferred.collectAsState()
+            val audioOptions = remember(state.links, state.version) { audioOptionsFor(state.links, state.version) }
+            val rows = versions.flatMap { v ->
                 val isCurrent = v == state.version || versions.size == 1
-                val servers = if (isCurrent) {
-                    if (state.links.isEmpty()) listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (state.linksDone) "No sources" else "Finding sources…", false, "online_server_wait") {})
-                    else state.links.mapIndexed { i, l ->
-                        val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 18) it.take(17) + "…" else it }
-                        dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server") { OnlineSession.switchSource(context, i, pos()) }
+                if (isCurrent) {
+                    if (state.links.isEmpty()) return@flatMap listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(
+                        split.label(v, split.explicit(v)), iconFor(v),
+                        listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (state.linksDone) "No sources" else "Finding sources…", false, "online_server_wait") {}),
+                        startExpanded = true,
+                    ))
+                    // Round 9: grouped per audio language ("Sub · original audio", "Dub · English",
+                    // "Dub · Hindi"…), so dubs in different languages no longer pile into one row.
+                    val groups = split.groups(state.links.map { l -> l.name + " " + l.source }, v, audioPref, onlyVersion = versions.size == 1)
+                    groups.map { g ->
+                        dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(
+                            g.label,
+                            when (g.kind) { dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.DUB -> Icons.Default.Mic; dev.asfakul.yumeiro.ui.screens.watch.AudioSplit.Kind.SUB -> Icons.Default.ClosedCaption; else -> iconFor(v) },
+                            g.indices.map { i ->
+                                val l = state.links[i]
+                                val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 22) it.take(21) + "…" else it }
+                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server") { OnlineSession.switchSource(context, i, pos()) }
+                            },
+                            filterKey = if (groups.size > 1) g.key else null,
+                        )
                     }
                 } else {
                     val has = remember(state.episode, v) { OnlineSession.hasEpisodeIn(v) }
-                    listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (has) "Switch to $v" else "Not for this episode", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })
+                    listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(v, iconFor(v),
+                        listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (has) "Switch to $v" else "Not for this episode", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })))
                 }
-                dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(v, iconFor(v), servers)
             }
             val ep = state.episode
             dev.asfakul.yumeiro.ui.screens.watch.WatchServerBox(
                 watching = if (ep != null) "Episode ${ep.episode ?: state.index + 1}" + (ep.name?.takeIf { it.isNotBlank() && !it.equals("Episode ${ep.episode}", true) }?.let { " · $it" } ?: "") else d.name,
                 hint = "Stuck on black? Tap another source. Yumeiro already retries refused ones with fresh links and headers.",
                 rows = rows,
+                audioOptions = audioOptions, audioSelected = audioPref,
+                onAudioSelect = { k -> pickAudio(context, state, k, pos()) },
             )
         }
         item(key = "plot") {
@@ -570,18 +661,21 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
     }
 
     if (sheet != null) {
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = PanelColor) {
-            Text(if (sheet == Sheet.SOURCES) "Sources" else "Subtitles", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        val sheetPal = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = sheetPal.surfaceContainer, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
+          androidx.compose.runtime.CompositionLocalProvider(LocalPanelInk provides sheetPal.textPrimary) {
+            Text(if (sheet == Sheet.SOURCES) "Sources" else "Subtitles", color = sheetPal.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             Box(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
                 Column {
                     when (sheet) {
-                        Sheet.SOURCES -> SourcesPanel(state) { i -> sheet = null; OnlineSession.switchSource(context, i, player?.positionMs?.invoke() ?: 0L) }
+                        Sheet.SOURCES -> SourcesPanel(state, { player?.positionMs?.invoke() ?: 0L }) { i -> sheet = null; OnlineSession.switchSource(context, i, player?.positionMs?.invoke() ?: 0L) }
                         Sheet.SUBTITLES -> SubtitlesPanel(state) { sub -> sheet = null; OnlineSession.addSubtitle(context, sub, player?.positionMs?.invoke() ?: 0L) }
                         null -> {}
                     }
                 }
             }
         }
+          }
     }
 }
 
@@ -619,6 +713,8 @@ private fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.Pla
 /** Searches every subtitle site with a free key (OpenSubtitles, SubDL, SubSource) for the playing title / episode. */
 @Composable
 private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yumeiro.online.OnlineSubtitle) -> Unit) {
+    val ink = LocalPanelInk.current
+    val errInk = if (ink.luminance() > 0.5f) ErrorColor else Color(0xFFB3261E)
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val osKey by dev.asfakul.yumeiro.online.OnlineSettings.openSubtitlesKey.collectAsState()
@@ -645,20 +741,20 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
         item {
             Text(
                 if (state.subtitles.isEmpty()) "No subtitles came with this source." else "${state.subtitles.size} subtitle track${if (state.subtitles.size == 1) "" else "s"} from the source — pick them in Captions.",
-                color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp, modifier = Modifier.padding(4.dp),
+                color = ink.copy(alpha = 0.55f), fontSize = 11.sp, modifier = Modifier.padding(4.dp),
             )
         }
         if (!anyKey) item {
-            Text("Search OpenSubtitles, SubDL and SubSource: add any of their free API keys in Settings → Online videos.", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+            Text("Search OpenSubtitles, SubDL and SubSource: add any of their free API keys in Settings → Online videos.", color = ink.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
         }
         val sites = outcome?.providers?.joinToString(", ") ?: hub.configured().joinToString(", ")
-        if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text("Searching $sites (${lang.uppercase()})…", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp) } }
+        if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text("Searching $sites (${lang.uppercase()})…", color = ink.copy(alpha = 0.6f), fontSize = 12.sp) } }
         outcome?.errors?.forEach { (site, e) -> item(key = "err_$site") { Text("$site: $e", color = ErrorColor, fontSize = 12.sp, modifier = Modifier.padding(6.dp)) } }
         val hits = outcome?.hits.orEmpty()
-        if (outcome != null && hits.isEmpty() && !busy) item { Text("Nothing found in this language.", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(6.dp)) }
+        if (outcome != null && hits.isEmpty() && !busy) item { Text("Nothing found in this language.", color = ink.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(6.dp)) }
         itemsIndexed(hits, key = { _, r -> r.key }) { _, r ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.06f)).clickable(enabled = fetching == null) {
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ink.copy(alpha = 0.06f)).clickable(enabled = fetching == null) {
                     fetching = r.key
                     scope.launch {
                         val link = runCatching {
@@ -666,15 +762,15 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
                         }
                         fetching = null
                         link.onSuccess { onPick(dev.asfakul.yumeiro.online.OnlineSubtitle("${r.language.uppercase()} · ${r.provider}", it, emptyMap())) }
-                            .onFailure { dev.asfakul.yumeiro.ui.components.AppMessages.error(context, it.message ?: "Couldn't get the subtitle") }
+                            .onFailure { dev.asfakul.yumeiro.ui.components.AppMessages.error(context, dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't get the subtitle.")) }
                     }
                 }.padding(12.dp).testTag("online_subtitle_result"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(r.release, color = Color.White, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(r.release, color = ink, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(listOfNotNull(r.provider, r.language.uppercase(), "${r.downloads} downloads".takeIf { r.downloads > 0 }, "HI".takeIf { r.hearingImpaired },
-                        "season pack".takeIf { r.seasonPack }, r.uploader).joinToString(" · "), color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp)
+                        "season pack".takeIf { r.seasonPack }, r.uploader).joinToString(" · "), color = ink.copy(alpha = 0.55f), fontSize = 11.sp)
                 }
                 if (fetching == r.key) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             }
@@ -705,6 +801,29 @@ private fun castCurrent(context: android.content.Context, state: OnlineSession.S
 }
 
 /** "Download" in the player: asks where/how first ([dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt]). */
+/** Round 9: audio-language chips for the current links (only when they really differ). */
+internal fun audioOptionsFor(links: List<dev.asfakul.yumeiro.online.OnlineLink>, version: String): List<dev.asfakul.yumeiro.ui.screens.watch.AudioFilterOption> {
+    val al = dev.asfakul.yumeiro.online.AudioLanguages
+    val keys = links.map { al.filterKey(al.classify(it.name + " " + it.source, version)) }
+    val counts = keys.groupingBy { it }.eachCount()
+    if (counts.size <= 1) return emptyList()
+    return counts.entries.sortedWith(compareBy<Map.Entry<String, Int>> { when (it.key) { al.ORIG -> 0; "" -> 3; al.DUB_OTHER -> 2; else -> 1 } }.thenByDescending { it.value })
+        .map { dev.asfakul.yumeiro.ui.screens.watch.AudioFilterOption(it.key, al.keyLabel(it.key), it.value) }
+}
+
+/** Remembers [key] as the preferred audio and moves playback to it when the current source isn't. */
+internal fun pickAudio(context: android.content.Context, state: OnlineSession.State, key: String?, positionMs: Long) {
+    val al = dev.asfakul.yumeiro.online.AudioLanguages
+    al.setPreferred(context, key)
+    if (key == null) return
+    val keyOf = { l: dev.asfakul.yumeiro.online.OnlineLink -> al.filterKey(al.classify(l.name + " " + l.source, state.version)) }
+    val current = state.links.getOrNull(state.linkIndex)
+    if (current != null && keyOf(current) == key) return
+    val target = state.links.indexOfFirst { keyOf(it) == key && it.url !in state.failed }.takeIf { it >= 0 } ?: return
+    OnlineSession.switchSource(context, target, positionMs)
+    dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Switched to ${al.keyLabel(key)}", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+}
+
 internal fun askDownloadCurrent(context: android.content.Context, state: OnlineSession.State) {
     val s = dev.asfakul.yumeiro.online.download.DownloadSettings.also { it.init(context) }
     val choice = s.downloader.value

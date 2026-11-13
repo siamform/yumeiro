@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.DoneAll
@@ -94,6 +95,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { Inbox.markAllRead(context) } }
 
     if (confirmClear) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirmClear = false },
         title = { Text("Clear all notifications?") },
         text = { Text("They are removed from this page. Your settings stay the same.") },
@@ -106,7 +108,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
             val unread = items.count { !it.read }
             SubPageHeader(
                 title = "Notifications",
-                subtitle = if (items.isEmpty()) "通知 · Inbox" else if (unread > 0) "$unread new" else "${items.size} in your inbox",
+                subtitle = if (items.isEmpty()) "Nothing new yet" else if (unread > 0) "$unread new" else "${items.size} in your inbox",
                 onBack = onBack,
             ) {
                 if (unread > 0) IconButton(onClick = { Inbox.markAllRead(context) }, modifier = Modifier.testTag("inbox_mark_read")) {
@@ -129,7 +131,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 LazyColumn(
-                    Modifier.fillMaxSize().testTag("inbox_list"),
+                    Modifier.fillMaxSize().testTag("inbox_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("inbox"),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 48.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -186,6 +188,7 @@ private fun iconFor(kind: Inbox.Kind): ImageVector = when (kind) {
     Inbox.Kind.NEWS -> Icons.Default.AutoAwesome
     Inbox.Kind.NUDGE -> Icons.Default.TipsAndUpdates
     Inbox.Kind.INFO -> Icons.Default.Notifications
+    Inbox.Kind.ALERT -> Icons.Default.Campaign
 }
 
 @Composable

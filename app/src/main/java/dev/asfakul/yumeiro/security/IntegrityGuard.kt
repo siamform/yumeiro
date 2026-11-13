@@ -42,13 +42,6 @@ object IntegrityGuard {
         return if (digests.any { it == want }) Status.OFFICIAL else Status.UNOFFICIAL
     }
 
-    @Suppress("DEPRECATION")
-    private fun signerDigests(context: Context): List<String> {
-        val pm = context.packageManager
-        val info = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-        val signing = info.signingInfo ?: return emptyList()
-        val sigs = if (signing.hasMultipleSigners()) signing.apkContentsSigners else signing.signingCertificateHistory
-        val md = MessageDigest.getInstance("SHA-256")
-        return sigs.orEmpty().map { sig -> md.digest(sig.toByteArray()).joinToString("") { "%02x".format(it) } }
-    }
+    private fun signerDigests(context: Context): List<String> =
+        dev.asfakul.yumeiro.OsCompat.signerDigests(context.packageManager.getPackageInfo(context.packageName, dev.asfakul.yumeiro.OsCompat.SIGNING_FLAGS))
 }

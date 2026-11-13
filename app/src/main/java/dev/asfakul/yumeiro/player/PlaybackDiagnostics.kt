@@ -23,12 +23,24 @@ object PlaybackDiagnostics {
         val height: Int = 0,
         val positionMs: Long = 0,
         val error: String? = null,
+        /** Round 10: what the watch page shows under the player (see PlaybackFacts). */
+        val durationMs: Long = 0,
+        val live: Boolean = false,
+        /** BCP-47 / ISO code of the selected audio track, or null when the stream doesn't say. */
+        val audioLanguage: String? = null,
+        val audioLabel: String? = null,
+        val audioTracks: Int = 0,
+        val audioChannels: Int = 0,
+        /** Bits per second of the selected video + audio, 0 when unknown (used for a size estimate). */
+        val bitrate: Int = 0,
+        /** Exact size when the source knows it (device files), else 0. */
+        val sizeBytes: Long = 0,
     )
 
     private val _state = MutableStateFlow(Snapshot())
     val state: StateFlow<Snapshot> = _state.asStateFlow()
 
-    fun reset(uri: String) = update { Snapshot(uri = uri) }
+    fun reset(uri: String, sizeBytes: Long = 0) = update { Snapshot(uri = uri, sizeBytes = sizeBytes.coerceAtLeast(0)) }
 
     fun update(change: (Snapshot) -> Snapshot) {
         val next = change(_state.value)

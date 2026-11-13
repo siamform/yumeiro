@@ -34,8 +34,10 @@ cloudstreamLibrary = "4.8.0"
 nicehttp = "0.4.18"
 # YouTube / YouTube Music / SoundCloud without login (same extractor NewPipe, ArchiveTune and AuraMusic use).
 newpipeExtractor = "v0.26.5"
-jackson = "2.22.4"
+jackson = "2.19.4" # 2.20+ uses MethodHandle.invokeExact (needs minSdk 26); keep <= 2.19 while minSdk is 24
 castFramework = "23.0.0"
+# Push (FCM only — no Analytics, Auth or Firestore). BoM 35.2.0 → firebase-messaging 26.0.2.
+firebaseBom = "35.2.0"
 mediarouter = "1.8.1"
 
 # Testing
@@ -47,6 +49,7 @@ espressoCore = "3.7.0"
 robolectric = "4.16.1"
 
 [libraries]
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.5" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileInstaller" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -106,7 +109,10 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
+rhino = { group = "org.mozilla", name = "rhino", version = "1.8.1" }
 cloudstream-library = { group = "com.github.recloudstream.cloudstream", name = "library-android", version.ref = "cloudstreamLibrary" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "castFramework" }
 androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }

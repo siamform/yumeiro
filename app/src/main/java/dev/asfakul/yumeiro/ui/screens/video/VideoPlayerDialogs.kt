@@ -63,7 +63,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -131,7 +133,7 @@ fun PlaybackSpeedDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Playback Speed",
+                    text = "Playback speed",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -172,7 +174,7 @@ fun PlaybackSpeedDialog(
                                     ) {
                                         Text(
                                             text = "${speed}x",
-                                            color = if (isSelected) Color.Black else TextPrimary,
+                                            color = if (isSelected) dev.asfakul.yumeiro.ui.theme.OnAccent else TextPrimary,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             fontSize = 13.sp
                                         )
@@ -222,7 +224,7 @@ fun AspectRatioDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Aspect Ratio",
+                    text = "Aspect ratio",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -300,99 +302,88 @@ fun AudioTrackDialog(
     onSelectTrack: (groupIndex: Int, trackIndex: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Round 9 redesign: language names instead of raw codes, the playing track is obvious
+    // (check + "Playing"), unsupported tracks explain why, and the sheet follows the app theme.
     TsukiDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("audio_track_dialog"),
+        icon = { Icon(Icons.Default.Audiotrack, null) },
         title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Audiotrack,
-                    contentDescription = null,
-                    tint = SpotifyGreen,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text("Audio", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text(
-                    text = "Audio Tracks",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
+                    if (audioTracks.size > 1) "${audioTracks.size} tracks · tap one to switch" else "Language and sound of this video",
+                    color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Normal,
                 )
             }
         },
         text = {
             if (audioTracks.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Icon(Icons.Default.Info, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Single default audio track detected in this stream.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        "This video has one audio track, so there's nothing to switch. For another language, pick a Dub source in Sources.",
+                        style = MaterialTheme.typography.bodyMedium, color = TextSecondary,
                     )
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     itemsIndexed(audioTracks) { index, track ->
                         val isSelected = track.isSelected
                         val channelStr = when (track.channels) {
                             1 -> "Mono"
-                            2 -> "Stereo (2.0)"
-                            6 -> "5.1 Surround"
-                            8 -> "7.1 Surround"
-                            else -> if (track.channels > 0) "${track.channels} ch" else "Stereo"
+                            2 -> "Stereo"
+                            6 -> "5.1 surround"
+                            8 -> "7.1 surround"
+                            else -> if (track.channels > 0) "${track.channels} ch" else null
                         }
-                        val title = track.label ?: track.language?.uppercase() ?: "Track ${index + 1}"
-
+                        val langName = track.language?.takeIf { it.isNotBlank() && it != "und" }?.let { code ->
+                            runCatching { java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.ENGLISH) }.getOrNull()
+                                ?.takeIf { it.isNotBlank() && !it.equals(code, true) } ?: code.uppercase()
+                        }
+                        val title = track.label?.takeIf { it.isNotBlank() } ?: langName ?: "Track ${index + 1}"
+                        val pick = { if (track.supported) { onSelectTrack(track.groupIndex, track.trackIndex); onDismiss() } }
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) SpotifyGreen.copy(alpha = 0.15f) else DarkSurfaceContainer,
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) SpotifyGreen.copy(alpha = 0.14f) else DarkSurfaceContainer,
+                            border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.55f)) else null,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    onSelectTrack(track.groupIndex, track.trackIndex)
-                                    onDismiss()
-                                }
+                                .heightIn(min = 56.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable(enabled = track.supported, onClickLabel = "Play $title") { pick() }
                                 .testTag("audio_track_item_$index")
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
-                                    selected = isSelected,
-                                    onClick = {
-                                        onSelectTrack(track.groupIndex, track.trackIndex)
-                                        onDismiss()
-                                    },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = SpotifyGreen,
-                                        unselectedColor = TextSecondary
-                                    )
+                                    selected = isSelected, onClick = { pick() }, enabled = track.supported,
+                                    colors = RadioButtonDefaults.colors(selectedColor = SpotifyGreen, unselectedColor = TextSecondary)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) SpotifyGreen else if (track.supported) TextPrimary else TextSecondary
+                                        text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
+                                        color = if (track.supported) TextPrimary else TextSecondary, maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
                                     Text(
-                                        text = listOfNotNull(track.codec, channelStr, if (track.sampleRate > 0) "${track.sampleRate / 1000} kHz" else null,
-                                            if (!track.supported) "can't play on this phone" else null).joinToString(" • "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary,
-                                        fontSize = 11.sp
+                                        text = listOfNotNull(
+                                            langName?.takeIf { it != title },
+                                            track.codec, channelStr,
+                                            if (track.sampleRate > 0) "${track.sampleRate / 1000} kHz" else null,
+                                            if (!track.supported) "this phone can't decode it" else null,
+                                        ).joinToString(" · "),
+                                        style = MaterialTheme.typography.bodySmall, color = TextSecondary, fontSize = 11.sp
                                     )
                                 }
+                                if (isSelected) Text("Playing", color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -400,15 +391,8 @@ fun AudioTrackDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)
-            ) {
-                Text("Close")
-            }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("audio_track_done")) { Text("Done", fontWeight = FontWeight.Bold) }
         },
-        containerColor = DarkSurface,
-        tonalElevation = 6.dp
     )
 }
 
@@ -424,6 +408,8 @@ fun SubtitleOptionsDialog(
     onDisableSubtitles: () -> Unit,
     onAdjustDelay: (Long) -> Unit,
     onDismiss: () -> Unit,
+    /** Opens the subtitle look editor (size, colour, outline, position). */
+    onOpenStyle: (() -> Unit)? = null,
     /** Subtitles the source found after playback started (label → load). */
     moreFromSource: List<Pair<String, () -> Unit>> = emptyList(),
 ) {
@@ -547,6 +533,20 @@ fun SubtitleOptionsDialog(
                     }
                 }
 
+                if (onOpenStyle != null) item {
+                    OutlinedButton(
+                        onClick = onOpenStyle,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SpotifyGreen),
+                        modifier = Modifier.fillMaxWidth().testTag("subtitle_style_btn"),
+                    ) {
+                        Icon(imageVector = Icons.Default.Subtitles, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "Subtitle style: size, colour, position", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+
                 // Section 2: Tracks
                 item {
                     HorizontalDivider(color = DarkOutline)
@@ -582,7 +582,7 @@ fun SubtitleOptionsDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Subtitles Off",
+                                text = "Subtitles off",
                                 color = if (isSubtitlesDisabled) SpotifyGreen else TextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -701,7 +701,7 @@ fun SubtitleOptionsDialog(
                         colors = SliderDefaults.colors(
                             thumbColor = SpotifyGreen,
                             activeTrackColor = SpotifyGreen,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                            inactiveTrackColor = TextPrimary.copy(alpha = 0.2f)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -749,7 +749,7 @@ fun VideoInfoDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Video Details",
+                    text = "Video details",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -767,12 +767,12 @@ fun VideoInfoDialog(
                     value = if (video.width > 0 && video.height > 0) "${video.width} × ${video.height} (${video.resolution})" else video.resolution
                 )
                 InfoRow(label = "Duration", value = formatDuration(video.durationMs))
-                InfoRow(label = "File Size", value = formatFileSize(video.sizeBytes))
+                InfoRow(label = "File size", value = formatFileSize(video.sizeBytes))
 
                 videoFormat?.let { vf ->
-                    InfoRow(label = "Video Codec", value = vf.sampleMimeType ?: "Hardware H.264/HEVC")
+                    InfoRow(label = "Video codec", value = vf.sampleMimeType ?: "Hardware H.264/HEVC")
                     if (vf.frameRate > 0) {
-                        InfoRow(label = "Frame Rate", value = "%.2f fps".format(vf.frameRate))
+                        InfoRow(label = "Frame rate", value = "%.2f fps".format(vf.frameRate))
                     }
                     if (vf.bitrate > 0) {
                         InfoRow(label = "Bitrate", value = "${vf.bitrate / 1000} kbps")
@@ -780,7 +780,7 @@ fun VideoInfoDialog(
                 }
 
                 audioFormat?.let { af ->
-                    InfoRow(label = "Audio Codec", value = af.sampleMimeType ?: "AAC / PCM")
+                    InfoRow(label = "Audio codec", value = af.sampleMimeType ?: "AAC / PCM")
                     if (af.channelCount > 0) {
                         val ch = when (af.channelCount) {
                             1 -> "Mono"
@@ -842,7 +842,7 @@ fun PlaybackErrorOverlay(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     onNextVideo: (() -> Unit)? = null,
-    title: String = "Unsupported Video Format",
+    title: String = "Can't play this video",
     /** Full explanation; when null the generic decoder text is shown with [errorMessage] appended. */
     detail: String? = null,
     actionLabel: String? = null,
@@ -883,7 +883,7 @@ fun PlaybackErrorOverlay(
                 Spacer(modifier = Modifier.height(8.dp))
                 val parsed = remember(detail, errorMessage, title) {
                     dev.asfakul.yumeiro.ui.components.ErrorHelp.parse(
-                        detail ?: "This device's hardware decoders could not play this file, or the media stream is corrupted. $errorMessage"
+                        detail ?: errorMessage.ifBlank { "This phone's decoders couldn't play this file, or the file is damaged." }
                     ).let { if (it.tips.isEmpty()) it.copy(tips = dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor("$title $errorMessage")) else it }
                 }
                 Column(
@@ -900,6 +900,14 @@ fun PlaybackErrorOverlay(
                     dev.asfakul.yumeiro.ui.components.ErrorSuggestions(parsed.tips)
                 }
                 Spacer(modifier = Modifier.height(20.dp))
+                // Remote / keyboard: land on the obvious next step so OK works without hunting.
+                val primaryFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+                val keyDriven = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current ||
+                    androidx.compose.ui.platform.LocalInputModeManager.current.inputMode == androidx.compose.ui.input.InputMode.Keyboard
+                LaunchedEffect(showRetry, keyDriven) {
+                    if (!keyDriven) return@LaunchedEffect
+                    for (i in 0 until 10) { if (runCatching { primaryFocus.requestFocus() }.isSuccess) break; kotlinx.coroutines.delay(60) }
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -908,6 +916,7 @@ fun PlaybackErrorOverlay(
                         onClick = onClose,
                         modifier = Modifier
                             .weight(1f)
+                            .then(if (showRetry) Modifier else Modifier.focusRequester(primaryFocus))
                             .testTag("error_close_btn")
                     ) {
                         Text("Close", color = TextPrimary)
@@ -917,6 +926,7 @@ fun PlaybackErrorOverlay(
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier
                             .weight(1f)
+                            .focusRequester(primaryFocus)
                             .testTag("error_retry_btn")
                     ) {
                         Icon(imageVector = Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))

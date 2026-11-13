@@ -38,9 +38,9 @@ done
 [ ${#bucket[@]} -eq 0 ] && { echo "- Maintenance release"; echo; }
 
 echo "---"
-echo "**Install:** download \`$apk\` below. Android 9 (API 28) or newer is required."
+echo "**Install:** \`$apk\` works on every device (phone, tablet, Android TV, Fire TV). Smaller downloads: \`*-arm64-v8a.apk\` for most phones and TVs from 2017 on, \`*-armeabi-v7a.apk\` for older 32-bit devices and many TV sticks. Android 7.0 (API 24) or newer is required. In-app updates pick the right one automatically."
 echo
-echo "**SHA-256:** \`$sha\`"
+echo "**SHA-256 (universal):** \`$sha\` · all files: \`SHA256SUMS.txt\`"
 echo
 if [ -n "$prev" ]; then
   echo "**Full Changelog**: $server/$repo/compare/$prev...v$version"

@@ -21,7 +21,11 @@ updates:
       # Robolectric 4.17 breaks every Robolectric unit test (IllegalAccessException in
       # AndroidInterceptors). Re-check when 4.17.x / 4.18 ships.
       - dependency-name: "org.robolectric:robolectric"
-        versions: ["4.17", "4.17.*"]
+        versions: ["[4.17,4.18)"]
+      # jackson-module-kotlin 2.20+ calls MethodHandle.invokeExact, which D8 rejects below minSdk 26.
+      # The app supports Android 7 (minSdk 24); CloudStream only needs 2.13.
+      - dependency-name: "com.fasterxml.jackson.module:jackson-module-kotlin"
+        versions: ["[2.20,)"]
   # Server dev tools (wrangler pulls in miniflare → undici / sharp). Updating wrangler as a group fixes
   # transitive alerts that per-package security updates can't. Nothing here ships in the Worker bundle.
   - package-ecosystem: npm

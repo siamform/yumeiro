@@ -27,6 +27,21 @@ data class SetupGuide(
 }
 
 object SetupGuides {
+    val websites = SetupGuide(
+        id = "websites",
+        title = "Watch any website in Yumeiro's player",
+        intro = "Save a video site once. It opens in Yumeiro's page browser with pop-ups and ad overlays blocked; when its player starts a video, Yumeiro picks up the stream and plays it in its own player (speed, subtitles, background play, downloads).",
+        steps = listOf(
+            SetupGuide.Step("Tap Add website and type the address, for example archive.org."),
+            SetupGuide.Step("Open the site, find a video and press play on the page."),
+            SetupGuide.Step("Detected streams appear at the bottom. Tap one to play it in Yumeiro."),
+        ),
+        tips = listOf(
+            "Sign in on the page if the site asks; cookies stay inside Yumeiro's browser.",
+            "DRM-protected services (Netflix, Prime Video and others) only play in their own apps. Yumeiro never bypasses protection.",
+        ),
+    )
+
 
     // region sources
 

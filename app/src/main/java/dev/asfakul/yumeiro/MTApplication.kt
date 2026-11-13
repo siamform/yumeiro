@@ -29,7 +29,11 @@ class MTApplication : Application(), ImageLoaderFactory {
         // Feed (new extensions / playlists / news) and occasional suggestions (each switchable in Settings).
         runCatching { dev.asfakul.yumeiro.notify.DiscoveryWorker.schedule(this) }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
+        // Instant notices (FCM): set up Firebase from BuildConfig and sync registration/topics in the background.
+        runCatching { dev.asfakul.yumeiro.notify.FcmPush.start(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
+        runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
+        runCatching { dev.asfakul.yumeiro.stream.TorrentSettings.init(this) }
         runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.resumeQueued(this) }
         runCatching {
             dev.asfakul.yumeiro.online.download.OnlineDownloads.cleanup(this)

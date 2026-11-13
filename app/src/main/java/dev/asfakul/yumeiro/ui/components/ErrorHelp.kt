@@ -54,6 +54,10 @@ object ErrorHelp {
         fun has(vararg k: String) = k.any { it in t }
         val out = mutableListOf<String>()
         when {
+            has("on device", "on this phone", "file not found", "filenotfound", "file was moved", "enoent") -> {
+                out += "The file was moved or deleted — rescan your music or videos"
+                out += "Check that the SD card or USB storage is still connected"
+            }
             has("broken link", "expected url scheme", "no scheme was found", "unexpected url") -> {
                 out += "The site sent a broken link for this source — pick another source from the list"
                 out += "Retry in a moment — sites often fix their links quickly"
@@ -104,7 +108,7 @@ object ErrorHelp {
                 out += "Open it in an external player from the ⋮ menu"
             }
             has("extension", "plugin", "provider", "hue") -> {
-                out += "Update the extension in Hues → Installed"
+                out += "Update the extension in Yumix → Installed"
                 out += "Try another server or another extension"
             }
             has("storage", "space", "disk", "enospc") -> out += "Free some storage space and retry"
@@ -131,7 +135,7 @@ object ErrorHelp {
             "null", "index", "doesn't support", "unreadable").any { it in t }
         val specific = suggestionsFor(text).takeUnless { it.firstOrNull()?.startsWith("Retry — many") == true }
         val out = (specific ?: listOf("Retry — many problems are temporary", "Try another source or server")).toMutableList()
-        if (outdated) out += "Check for an update in Hues → Installed (tap Check for update)"
+        if (outdated) out += "Check for an update in Yumix → Installed (tap Check for update)"
         return out.distinct().take(4)
     }
 }

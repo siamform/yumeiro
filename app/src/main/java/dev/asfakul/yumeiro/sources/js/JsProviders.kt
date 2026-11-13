@@ -139,6 +139,8 @@ class JsMangaProvider(private val entry: JsSources.Entry) : MangaProvider {
 
     private val engine get() = JsSources.engine(entry)
 
+    override fun coverHeaders(): Map<String, String> = baseUrl?.takeIf { it.startsWith("http") }?.let { mapOf("Referer" to it.trimEnd('/') + "/") }.orEmpty()
+
     private fun page(e: JsonElement) = JsShapes.pages(e).let { (items, next) -> MangaListPage(items.map { MangaItem(id, it.link, it.name, it.image) }, next) }
 
     override suspend fun popular(page: Int) = page(engine.call("getPopular($page)"))

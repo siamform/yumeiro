@@ -55,6 +55,8 @@ result elsewhere still fails the gate.
 | `java/android/missing-certificate-pinning` | `online/subtitles/OpenSubtitles.kt`, `online/subtitles/SubDL.kt`, `online/subtitles/SubSource.kt` | Third-party subtitle APIs behind CDNs that rotate certificates without notice; a pin would break subtitle search for every user. HTTPS-only for these domains in `network_security_config.xml`, system CAs only, and the user's key header is removed from any hop that leaves the site or drops to HTTP (`SubtitleNet.keyScoped`, `SubtitleKeyScopeTest`). Added 2026-11-09 (PR #17). |
 | `java/android/missing-certificate-pinning` | `notify/CloudAlerts.kt` | Yumeiro Cloud (`server/`, a Cloudflare Worker at `api.yumeiro.click`). Cloudflare issues and rotates the edge certificate automatically, so a pin would silently break push alerts for every user. Only the push endpoint and AniList ids are sent; HTTPS-only for `yumeiro.click` in `network_security_config.xml`. Added 2026-11-09. |
 | same | `tracking/Simkl.kt`, `scrobble/LastFm.kt`, `lyrics/LrcLib.kt` | Third-party APIs (Simkl, Last.fm, LRCLIB) that rotate certificates; a pin would break tracking, scrobbling and online lyrics for every user. HTTPS-only for `simkl.com`, `audioscrobbler.com`, `last.fm`, `lrclib.net` in `network_security_config.xml`, system CAs only. Tokens and session keys are sealed with `SecretBox`. Added 2026-11-09 (§22). |
+| `java/weak-cryptographic-algorithm` | `app/src/main/java/com/lagradost/cloudstream3/extractors/Vidplay.kt`, `.../VidSrcTo.kt` | CloudStream v4.5.2 extractors, restored in R11b because real extensions call them. The sites encode their stream ids with RC4, so decoding has to use RC4; it only reads third-party page data and protects nothing of ours. Added 2026-11-13 (PR #27). |
+| `java/android/websettings-javascript-enabled`, `java/android/webview-addjavascriptinterface` | `ui/screens/stream/PageStreamFinderDialog.kt` | The stream finder opens a site's own video player, which needs JavaScript. The `MTFinder` bridge exposes only two `@JavascriptInterface` methods that take a string (a media URL to record; a DRM system name cut to 40 safe characters). With minSdk 24 no other Java method is reachable from the page. File and content access are off, non-http schemes are blocked, and ads are filtered (`SafeWebView`, `AdFilter`). Added 2026-11-13 (PR #27). |
 
 Fixed instead of suppressed (PR #17): `websettings-allow-content-access` x4 in `BrowserCheckHost.kt` (explicit
 `allowFileAccess`/`allowContentAccess = false` on the page and the pop-up probe; no WebView held in Compose state). Rule of thumb
@@ -104,3 +106,57 @@ The CodeQL action is diff-informed on pull requests: it reports only alerts on l
 Re-indenting or moving old code (as PR #17 did in `BrowserCheckHost.kt`) makes its old findings "new". `main` is
 only fully scanned by the monthly schedule. Run the CodeQL workflow by hand (`workflow_dispatch`) on `main` after a
 big refactor to see the full picture.
+
+## Antivirus heuristics (2026-11-11, v1.5.1)
+
+**What was flagged.** On VirusTotal, v1.5.0 (`release-Yumeiro-v1.5.0.apk`, SHA-256 `2dd2cfec707a7ef557576cf6b3d7b546c3d2d6814baa6bcb58e79a1bae0f8924`) was flagged by 2 of 67 engines:
+- Kaspersky: `Not-a-virus:HEUR:RiskTool.AndroidOS.Miner.b`
+- BitDefenderFalx: `Android.Riskware.Agent.gHMOM`
+
+VirusTotal put the file in the pua/miner categories and tagged it `checks-gps`, `telephony`, `contains-elf` and `reflection`. The full write-up is in [VT-REPORT-v1.5.1.md](VT-REPORT-v1.5.1.md).
+
+**Root cause.** The extension safety check (`online/ExtensionScanner.kt`) stored its threat signatures as plain strings, for example `stratum+tcp`, `xmrig`, `coinhive`, `cryptonight`, `content://sms`, `Landroid/telephony/SmsManager;`, `ContactsContract` and `android/app/admin/`. Nothing else in Yumeiro references these strings, so the APK looked as if it contained a miner and an SMS or contacts stealer. Heuristic engines match those strings without knowing that the app only *looks for* them in third-party extensions.
+
+**Fix (no feature removed):**
+1. The scanner now stores a 64-bit FNV-1a fingerprint of every normalised indicator rather than the indicator itself. This is the same approach antivirus signature databases use. Detection is unchanged:
+   - `ExtensionScannerTest.everyIndicatorStillTriggersItsRule` feeds every readable indicator into the scanner.
+   - `fingerprintsMatchReadableIndicators` checks that the shipped table equals the readable list.
+   - `lookalikesDoNotTrigger` checks that near-miss strings do not match.
+
+   The readable list lives in `ExtensionScannerTest.INDICATORS` and in the "Readable indicator list" below. Nothing is hidden from reviewers.
+2. Removed `DOWNLOAD_WITHOUT_NOTIFICATION`. It only served a silent self-update path that was already unreachable (`canGoSilent()` always returned false). That path is deleted, so update downloads always show the system notification, and installs still go through the system installer confirmation (`USER_ACTION_REQUIRED`).
+3. Commented the remaining sensitive permissions in the manifest.
+
+**Kept on purpose (legitimate, documented):**
+- `REQUEST_INSTALL_PACKAGES`: the in-app updater. The user always confirms the install.
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: an opt-in in the Permission Center, needed for on-time episode alerts.
+- `RECEIVE_BOOT_COMPLETED`: WorkManager reschedules jobs after a reboot.
+- `ACCESS_WIFI_STATE` and `CHANGE_WIFI_MULTICAST_STATE`: DLNA discovery and Watch together on the local network.
+- `checks-gps`: androidx.appcompat `TwilightManager` (day/night) calls `LocationManager` guarded by a permission check. Yumeiro does not request any location permission, so the call always falls back. This is library code.
+- `telephony`: Media3 and androidx use `TelephonyManager` for network-type detection (adaptive streaming). No phone number, IMEI or SIM data is read, and `READ_PHONE_STATE` is not requested.
+- `contains-elf`: native libraries for FFmpeg decoding (nextlib), QuickJS (JavaScript sources), zstd and libass (subtitles).
+- `reflection` and `DexClassLoader`: needed to load user-installed Aniyomi, Mihon and CloudStream extensions. Each one is checked by the extension safety check first.
+
+**Readable indicator list** (what the fingerprints stand for). Prefixes: `t:` type, `c:` class prefix, `p:` package, `m:` method, `s:` URI scheme, `u:` scheme and authority, `h:` host suffix, `w:` word, `x:` exact string.
+
+| Rule | Indicators |
+|---|---|
+| Runs system commands | `m:Ljava/lang/Runtime;->exec`, `m:Ljava/lang/ProcessBuilder;-><init>`, `m:Ljava/lang/ProcessBuilder;->start` |
+| Loads hidden code | `t:Ldalvik/system/DexClassLoader;`, `t:Ldalvik/system/InMemoryDexClassLoader;`, `m:Ldalvik/system/PathClassLoader;-><init>`, `t:Ldalvik/system/DexFile;` |
+| Loads native code | `System`/`Runtime` `load` and `loadLibrary` |
+| Reads or sends SMS | `t:Landroid/telephony/SmsManager;`, `u:content://sms`, `u:content://mms` |
+| Reads contacts or call log | `ContactsContract`, `CallLog`, `content://contacts`, `content://call_log`, `content://com.android.contacts` |
+| Tracks location | `LocationManager` `requestLocationUpdates` / `getLastKnownLocation` / `getCurrentLocation`, `com/google/android/gms/location/` |
+| Records camera or microphone | `android/hardware/camera2/`, `Camera`, `AudioRecord`, `MediaRecorder` |
+| Installs apps or controls the device | `PackageInstaller`, `android/app/admin/`, `android/accessibilityservice/`, `application/vnd.android.package-archive` |
+| Reads your accounts | `AccountManager` `getAccounts` / `getAccountsByType` / `getPassword` / `peekAuthToken` |
+| Crypto miner | `stratum+tcp`, `stratum+ssl`, `coinhive`, `coin-hive`, `xmrig`, `cryptonight` |
+| Reads device identifiers | `TelephonyManager`, `android_id` (with a `Settings$Secure` read) |
+| Lists your installed apps | `PackageManager` `getInstalledPackages` / `getInstalledApplications` / `queryIntentActivities` |
+| Reads the clipboard | `ClipboardManager` `getPrimaryClip` / `getText` |
+| Defines code at run time | `ClassLoader->defineClass` |
+| Analytics or ad trackers | google-analytics.com, googletagmanager.com, app-measurement.com, appsflyer.com, doubleclick.net, graph.facebook.com, adjust.com, branch.io, mixpanel.com, onesignal.com |
+| JavaScript bridge in a web page | `WebView->addJavascriptInterface` |
+| Notifications or services | `NotificationManager->notify`, `androidx/work/`, `startService`, `startForegroundService` |
+
+To add or change an indicator, edit `ExtensionScannerTest.INDICATORS`. Then regenerate the fingerprint table with `ExtensionScanner.fingerprint(key)`; the test prints any mismatch.

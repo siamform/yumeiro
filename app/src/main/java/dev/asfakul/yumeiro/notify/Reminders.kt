@@ -9,12 +9,12 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * In-app reminders: follow the developer, star Yumeiro on GitHub, support the project.
+ * In-app reminders: join the Yumeiro community on Telegram, star Yumeiro on GitHub, support the project.
  *
  * Rules:
  *  - "Support" (buy me a coffee) and "Star" come back every 2 hours ([OFTEN_MS]); "Follow"
  *    every 4 hours ([EVERY_MS]).
- *  - "Follow" counts taps that really opened Facebook / Instagram / LinkedIn. After 3 such
+ *  - "Follow" counts taps that really opened the Telegram channel or group. After 3 such
  *    taps it only comes back once a day. Same for "Star" after the user opened GitHub once.
  *  - Never two at once, and at least [MIN_GAP_MS] between any two reminders, so they are
  *    spread out over the day. None in the first [GRACE_MS] after install.
@@ -22,13 +22,15 @@ import android.content.SharedPreferences
  */
 object Reminders {
     enum class Kind { FOLLOW, STAR, SUPPORT }
-    enum class Social(val label: String, val url: String) {
-        FACEBOOK("Facebook", "https://www.facebook.com/siam1p"),
-        INSTAGRAM("Instagram", "https://www.instagram.com/asfakul_siam"),
-        LINKEDIN("LinkedIn", "https://www.linkedin.com/in/asfakulislamsiam"),
+    /** The Yumeiro community on Telegram: the news channel and the chat group. */
+    enum class Social(val label: String, val detail: String, val url: String) {
+        TELEGRAM_CHANNEL("Telegram channel", "News, releases and sneak peeks", "https://t.me/yumeiroofficial"),
+        TELEGRAM_GROUP("Telegram group", "Chat with the community, ask for help, share ideas", "https://t.me/chatyumeiroofficial"),
     }
 
     const val GITHUB_URL = "https://github.com/siamform/yumeiro"
+    /** The official Yumeiro website: downloads, news and guides. */
+    const val WEBSITE_URL = "https://yumeiro.click"
     const val EVERY_MS = 4L * 60 * 60 * 1000
     /** Coffee and star (until starred) are the ones that keep the project going, so they come back sooner. */
     const val OFTEN_MS = 2L * 60 * 60 * 1000

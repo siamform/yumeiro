@@ -48,6 +48,20 @@ data class YtItem(
 /** A page of results plus the token for the next one. */
 data class YtPage(val items: List<YtItem>, val next: Page?)
 
+/**
+ * A YouTube channel header plus the tabs it offers (Videos, Shorts, Live). Tabs are opened with
+ * [YouTube.channelTab] using the channel url and one of [tabs].
+ */
+data class YtChannel(
+    val url: String,
+    val name: String,
+    val avatar: String?,
+    val banner: String?,
+    val subscribers: Long,
+    val description: String,
+    val tabs: List<String>,
+)
+
 /** Built-in shelves shown on the YouTube and YouTube Music home pages. */
 enum class YtShelf(val title: String, val kioskId: String?, val query: String?, val music: Boolean) {
     TRENDING_MUSIC("Trending music", "trending_music", null, true),
@@ -111,6 +125,33 @@ object YouTube {
         if (items.isNotEmpty()) listCache[key] = Timed(System.currentTimeMillis(), items)
         items
     }
+
+    /**
+     * One page of a planned [YtFeed]. Searches page forever (pass the returned `next`); kiosks and
+     * related lists are a single page. First pages are cached like shelves.
+     */
+    suspend fun feed(context: Context, feed: YtFeed, page: Page? = null, force: Boolean = false): YtPage = withContext(Dispatchers.IO) {
+        init(context)
+        val key = "feed:${feed.id}"
+        if (page == null) listCache[key]?.takeIf { !force && fresh(it.at, LIST_TTL_MS) }?.let { return@withContext YtPage(it.value, pageTokens[key]) }
+        val result = when (feed.kind) {
+            YtFeed.Kind.KIOSK -> YtPage(
+                runCatching { kiosk(feed.arg, feed.music) }.getOrElse {
+                    Log.w(TAG, "kiosk ${feed.arg}", it)
+                    searchBlocking(feed.title, if (feed.music) Filter.SONGS else Filter.VIDEOS, null).items
+                },
+                null,
+            )
+            YtFeed.Kind.RELATED -> YtPage(infoBlocking(feed.arg, false).relatedItems.mapNotNull { it.toYt(feed.music) }, null)
+            YtFeed.Kind.QUERY -> searchBlocking(feed.arg, if (feed.music) Filter.SONGS else Filter.VIDEOS, page)
+        }
+        if (page == null && result.items.isNotEmpty()) {
+            listCache[key] = Timed(System.currentTimeMillis(), result.items)
+            if (result.next != null) pageTokens[key] = result.next else pageTokens.remove(key)
+        }
+        result
+    }
+    private val pageTokens = ConcurrentHashMap<String, Page>()
 
     private fun fallbackSearch(shelf: YtShelf): List<YtItem> {
         val q = shelf.query ?: shelf.title
@@ -187,6 +228,44 @@ object YouTube {
 
     // endregion
 
+    // region channels
+    private val channelTabs = ConcurrentHashMap<String, org.schabi.newpipe.extractor.linkhandler.ListLinkHandler>()
+    private val channelCache = ConcurrentHashMap<String, Timed<YtChannel>>()
+
+    /** Channel header + the tabs we can list (videos / shorts / live, in that order). */
+    suspend fun channel(context: Context, url: String): YtChannel = withContext(Dispatchers.IO) {
+        init(context)
+        channelCache[url]?.takeIf { fresh(it.at, LIST_TTL_MS) }?.let { return@withContext it.value }
+        val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(service, url)
+        val wanted = listOf(
+            org.schabi.newpipe.extractor.channel.tabs.ChannelTabs.VIDEOS,
+            org.schabi.newpipe.extractor.channel.tabs.ChannelTabs.SHORTS,
+            org.schabi.newpipe.extractor.channel.tabs.ChannelTabs.LIVESTREAMS,
+        )
+        val tabs = info.tabs.mapNotNull { h -> h.contentFilters.firstOrNull()?.takeIf { it in wanted }?.let { it to h } }
+            .sortedBy { wanted.indexOf(it.first) }
+        tabs.forEach { (name, h) -> channelTabs["$url|$name"] = h }
+        YtChannel(
+            url = url, name = info.name.orEmpty(), avatar = bestImage(info.avatars), banner = bestImage(info.banners),
+            subscribers = info.subscriberCount, description = info.description.orEmpty(), tabs = tabs.map { it.first },
+        ).also { channelCache[url] = Timed(System.currentTimeMillis(), it) }
+    }
+
+    /** One page of a channel tab opened by [channel]. */
+    suspend fun channelTab(context: Context, url: String, tab: String, page: Page? = null): YtPage = withContext(Dispatchers.IO) {
+        init(context)
+        val handler = channelTabs["$url|$tab"] ?: run { channel(context, url); channelTabs["$url|$tab"] }
+            ?: return@withContext YtPage(emptyList(), null)
+        if (page == null) {
+            val info = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(service, handler)
+            YtPage(info.relatedItems.mapNotNull { it.toYt(false) }, info.nextPage?.takeIf { Page.isValid(it) })
+        } else {
+            val more = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getMoreItems(service, handler, page)
+            YtPage(more.items.mapNotNull { it.toYt(false) }, more.nextPage?.takeIf { Page.isValid(it) })
+        }
+    }
+    // endregion
+
     private fun fresh(at: Long, ttl: Long) = System.currentTimeMillis() - at < ttl
 
     internal fun bestImage(images: List<Image>?): String? =
@@ -211,6 +290,35 @@ fun formatYtDuration(sec: Long): String {
     val h = sec / 3600; val m = (sec % 3600) / 60; val s = sec % 60
     return if (h > 0) "%d:%02d:%02d".format(java.util.Locale.US, h, m, s) else "%d:%02d".format(java.util.Locale.US, m, s)
 }
+
+/** "1.2M subscribers"; empty when hidden. */
+fun formatYtSubscribers(count: Long): String =
+    if (count < 0) "" else formatYtViews(count).replace("views", "subscribers")
+
+/**
+ * YouTube-style home order: take items from every ready feed in turn (first feed leads), dropping
+ * repeats, so the page reads as one mixed stream instead of separate shelves.
+ */
+fun interleaveFeeds(lists: List<List<YtItem>>, limit: Int = Int.MAX_VALUE): List<YtItem> {
+    val out = ArrayList<YtItem>()
+    val seen = HashSet<String>()
+    val its = lists.map { it.iterator() }
+    var progressed = true
+    while (progressed && out.size < limit) {
+        progressed = false
+        for (it in its) {
+            while (it.hasNext()) {
+                val x = it.next()
+                if (seen.add(x.id)) { out += x; progressed = true; break }
+            }
+            if (out.size >= limit) break
+        }
+    }
+    return out
+}
+
+/** Short vertical clips (under a minute, not live) for the Shorts shelf. */
+fun YtItem.isShort(): Boolean = !live && durationSec in 1..60 || url.contains("/shorts/")
 
 /** "1.2M views" style. */
 fun formatYtViews(views: Long): String = when {

@@ -5,62 +5,78 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.navigation.bottomNavItems
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
-import dev.asfakul.yumeiro.ui.theme.rememberGlassBorder
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import dev.asfakul.yumeiro.ui.theme.Yume
 
-// ---- Floating bottom dock metrics (mirrors ArchiveTune's joined mini-player + nav stack) ----
-val DockHorizontalPadding = 16.dp
-val DockBottomPadding = 14.dp
+// ---- Floating bottom dock metrics -----------------------------------------------------------
+val DockHorizontalPadding = 14.dp
+val DockBottomPadding = 12.dp
 val DockMaxWidth = 480.dp
-val DockNavHeight = 76.dp
-val DockMiniHeight = 76.dp
+/*
+ * Round 10: the bottom nav pill was 62 dp and read as cramped; it is now 68 dp (Material 3's
+ * flexible bar is 64 dp, the iOS floating tab capsule 62 pt). The music mini player keeps its
+ * original 68 dp. Pages measure the dock, so content padding follows automatically.
+ */
+val DockNavHeight = 68.dp
+val DockMiniHeight = 68.dp
 val DockGap = 2.dp
 /** Space between the floating mini-player pill and the nav pill. */
 val DockPillGap = 10.dp
-val DockStandaloneCorner = 26.dp
-val DockOuterCorner = 24.dp
+val DockStandaloneCorner = 24.dp
+val DockOuterCorner = 22.dp
 val DockJunctionCorner = 6.dp
 
 /**
- * Floating navigation capsule. When the mini player is showing, both form ONE joined stack:
- * the mini player has big outer corners on top and small "junction" corners where it meets the
- * nav bar, which mirrors them — so it reads as a single floating dock instead of two bars.
- * The active tab gets a tonal accent pill (single hue) whose width springs in.
+ * The Yumeiro dock: one quiet ink bar holding the main destinations (Home · Music · Videos ·
+ * Library by default; 3 to 6 items, see Settings → Navigation bar).
+ *
+ * Active state (Round 8, Snapchat-style): no capsule, circle or dot. The active icon switches
+ * to its solid glyph, fills with the accent colour and springs up a touch; inactive tabs are
+ * calm outlines. Tabs are icon-only (labels are announced to TalkBack and shown in Settings → Navigation bar). With the mini player
+ * showing, both pieces form one joined stack.
  */
 @Composable
 fun MTBottomBar(
@@ -69,15 +85,16 @@ fun MTBottomBar(
     modifier: Modifier = Modifier,
     /** True while the mini player is docked right above this bar. */
     joinedWithMiniPlayer: Boolean = false,
+    /** What the bar shows (main tabs, then pinned shortcuts). */
+    items: List<dev.asfakul.yumeiro.ui.navigation.BottomNavItem> = bottomNavItems,
 ) {
     val palette = LocalMtPalette.current
-    val inactive = if (palette.isDark) palette.textSecondary.copy(alpha = 0.78f) else palette.textTertiary
-    val border = rememberGlassBorder()
+    val inactive = if (palette.isDark) palette.textSecondary.copy(alpha = 0.80f) else palette.textSecondary
+    val border = palette.textPrimary.copy(alpha = if (palette.isDark) 0.07f else 0.08f)
     val shape = if (joinedWithMiniPlayer) {
         RoundedCornerShape(topStart = DockJunctionCorner, topEnd = DockJunctionCorner, bottomStart = DockOuterCorner, bottomEnd = DockOuterCorner)
     } else RoundedCornerShape(DockStandaloneCorner)
-    val pillColor = palette.accent.copy(alpha = if (palette.isDark) 0.20f else 0.14f)
-    val selectedTint = if (palette.isDark) palette.accentBright else palette.accent
+    val activeTint = if (palette.isDark) palette.accentBright else palette.accent
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -85,57 +102,58 @@ fun MTBottomBar(
             .padding(start = DockHorizontalPadding, end = DockHorizontalPadding, bottom = DockBottomPadding)
             .testTag("mt_bottom_navigation_bar")
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(DockNavHeight)
-                // Joined: a lighter shadow so no dark seam shows where the mini player meets it.
-                .shadow(if (joinedWithMiniPlayer) 4.dp else 12.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+                .shadow(if (joinedWithMiniPlayer) 2.dp else 6.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
                 .clip(shape)
                 .background(palette.navBar, shape)
                 .border(1.dp, border, shape)
-                .padding(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            bottomNavItems.forEach { item ->
-                val isSelected = currentRoute == item.route
-                val pillWidth by animateDpAsState(if (isSelected) 56.dp else 32.dp, spring(dampingRatio = 0.7f, stiffness = 420f), label = "navPill")
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 60.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = androidx.compose.foundation.LocalIndication.current,
-                            role = Role.Tab,
-                        ) { if (!isSelected) onNavigateToRoute(item.route) }
-                        .testTag(item.testTag),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
+            val inner = 6.dp
+            // Round 8: no indicator shape at all (the old sliding capsule / circle and the seal dot
+            // are gone). Like Snapchat, the active destination is shown by its glyph alone: it
+            // switches to the solid icon, fills with the accent colour and springs up a touch.
+            Row(
+                modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = inner),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { item ->
+                    val isSelected = currentRoute == item.route
+                    val tint by animateColorAsState(if (isSelected) activeTint else inactive, label = "navTint")
+                    val pop by animateFloatAsState(if (isSelected) 1.12f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f), label = "navPop")
+                    // Keyboard / D-pad focus: a ring around the tab (touch never focuses it).
+                    val tabSource = remember { MutableInteractionSource() }
+                    val tabFocused by tabSource.collectIsFocusedAsState()
                     Box(
-                        Modifier
-                            .width(pillWidth)
-                            .height(30.dp)
-                            .clip(CircleShape)
-                            .then(if (isSelected) Modifier.background(pillColor) else Modifier),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(
+                                interactionSource = tabSource,
+                                indication = null,
+                                role = Role.Tab,
+                                onClickLabel = item.label,
+                            ) { if (!isSelected) onNavigateToRoute(item.route) }
+                            .padding(vertical = 6.dp)
+                            .then(if (tabFocused) Modifier.border(2.dp, activeTint, RoundedCornerShape(16.dp)) else Modifier)
+                            .semantics { selected = isSelected; contentDescription = item.label }
+                            .testTag(item.testTag)
+                            .tourTarget(item.testTag),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                            contentDescription = item.label,
-                            tint = if (isSelected) selectedTint else inactive,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        // Icon-only (no captions): the active glyph is the solid version in the accent
+                        // colour; inactive glyphs are outlines in a calm neutral.
+                        androidx.compose.animation.Crossfade(isSelected, animationSpec = androidx.compose.animation.core.tween(160), label = "navGlyph") { sel ->
+                            Icon(
+                                imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(if (sel) 28.dp else 26.dp).scale(pop).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) palette.textPrimary else inactive,
-                        maxLines = 1
-                    )
                 }
             }
         }

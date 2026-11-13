@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -132,6 +131,40 @@ fun buildMixFeed(channels: List<Pair<String, List<OnlineRow>>>, maxCards: Int, c
     return feed
 }
 
+/** One extension's section on the Yumix mix page. */
+data class MixGroup(val name: String, val rows: List<OnlineRow>, val titles: Int)
+
+/**
+ * Splits the mix page into one section per extension (its first [rowsPerGroup] non-empty rows),
+ * in the extensions' order, at most [maxGroups]. Pure; unit-tested.
+ */
+fun mixGroups(channels: List<Pair<String, List<OnlineRow>>>, maxGroups: Int, rowsPerGroup: Int = 2): List<MixGroup> =
+    channels.asSequence()
+        .map { (name, rows) -> name to rows.filter { it.items.isNotEmpty() } }
+        .filter { it.second.isNotEmpty() }
+        .take(maxGroups.coerceAtLeast(0))
+        .map { (name, rows) -> MixGroup(name, rows.take(rowsPerGroup), rows.sumOf { it.items.size }) }
+        .toList()
+
+/** Slim section header for an extension: logo, name, title count and "View" (no banner). */
+@Composable
+internal fun ChannelSectionHeader(name: String, titles: Int, onOpen: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 10.dp, top = 22.dp, bottom = 0.dp)
+            .clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = "Open $name", onClick = onOpen)
+            .padding(vertical = 4.dp).testTag("online_group_header"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ChannelAvatar(name, selected = false, size = 30.dp)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("$titles titles", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+        }
+        Text("View", color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
+    }
+}
+
 /** Circular channel avatar: extension initial over its own gradient, with a glowing ring when selected. */
 @Composable
 internal fun ChannelAvatar(name: String, selected: Boolean, size: androidx.compose.ui.unit.Dp = 58.dp, mix: Boolean = false) {
@@ -143,11 +176,11 @@ internal fun ChannelAvatar(name: String, selected: Boolean, size: androidx.compo
             Modifier.fillMaxSize().clip(CircleShape).background(if (mix) signature else Brush.linearGradient(listOf(art.start, art.end))),
             contentAlignment = Alignment.Center,
         ) {
-            if (mix) Icon(Icons.Default.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(size * 0.42f))
+            if (mix) Icon(dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "Yumix mix", tint = Color.White, modifier = Modifier.size(size * 0.46f))
             else {
                 // Fallback (and what shows while the logo loads): the Hue's initials.
                 Text(
-                    name.trim().take(2).uppercase().ifBlank { "?" }, color = Color.White, fontFamily = Unbounded,
+                    name.trim().take(2).uppercase().ifBlank { "?" }, color = Color.White, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope,
                     fontWeight = FontWeight.Bold, fontSize = (size.value * 0.30f).sp, maxLines = 1,
                 )
                 HueLogo(name, Modifier.fillMaxSize())
@@ -164,7 +197,7 @@ internal fun ChannelStrip(channels: List<String>, loading: Set<String>, selected
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.testTag("online_channels"),
     ) {
-        item("mix") { ChannelChipItem("Spectrum", selected == null, mix = true, loading = false) { onSelect(null) } }
+        item("mix") { ChannelChipItem("All", selected == null, mix = true, loading = false) { onSelect(null) } }
         itemsIndexed(channels, key = { i, n -> "ch_${i}_$n" }) { _, name ->
             ChannelChipItem(name, selected == name, mix = false, loading = name in loading) { onSelect(if (selected == name) null else name) }
         }
@@ -211,7 +244,7 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         item.type?.takeIf { it.isNotBlank() }?.let { Text(it.uppercase(), color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp) }
-                        Text(item.name, color = Color.White, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text(item.name, color = Color.White, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -247,24 +280,20 @@ private fun Badge(text: String) {
     }
 }
 
-/** Header of a single channel (extension) page: avatar, name, stats, search shortcut. */
+/** Slim bar on a single extension page: logo, name, stats and search — no banner. */
 @Composable
 internal fun ChannelHeader(name: String, rows: Int, titles: Int, onSearch: () -> Unit) {
-    val art = remember(name) { artGradientFor(name) }
-    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(26.dp))
-        .background(Brush.linearGradient(listOf(art.start.copy(alpha = 0.55f), art.end.copy(alpha = 0.25f), Color.Transparent)))
-        .testTag("online_channel_header")) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            ChannelAvatar(name, selected = true, size = 72.dp)
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(name, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("Hue · $rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextSecondary, fontSize = 12.sp)
-            }
-            Surface(shape = CircleShape, color = SpotifyGreen.copy(alpha = 0.18f), modifier = Modifier.size(42.dp).clickable(onClick = onSearch)) {
-                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, "Search", tint = SpotifyGreen) }
-            }
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 2.dp).testTag("online_channel_header"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ChannelAvatar(name, selected = true, size = 40.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("$rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextTertiary, fontSize = 12.sp)
         }
+        androidx.compose.material3.IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search $name", tint = TextPrimary) }
     }
 }
 
@@ -274,7 +303,7 @@ internal fun FeedLabel(title: String, subtitle: String? = null) {
     Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(width = 4.dp, height = 18.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(SpotifyGreen, AccentSecondary))))
         Spacer(Modifier.width(10.dp))
-        Text(title, color = TextPrimary, fontFamily = Unbounded, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         if (subtitle != null) {
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Default.Star, null, tint = SpotifyGreen, modifier = Modifier.size(12.dp))

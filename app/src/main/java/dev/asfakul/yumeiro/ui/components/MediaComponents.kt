@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -41,6 +42,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
@@ -79,6 +84,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -217,12 +224,13 @@ fun TrackItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(dev.asfakul.yumeiro.ui.theme.Yume.radiusMd))
             .background(
-                if (isChecked) SpotifyGreen.copy(alpha = 0.22f)
-                else if (isSelected) GlassFill
+                if (isChecked) SpotifyGreen.copy(alpha = 0.20f)
+                else if (isSelected) SpotifyGreen.copy(alpha = 0.07f)
                 else Color.Transparent
             )
+            .then(if (isSelected) Modifier.moonPathMark() else Modifier)
             .combinedClickable(
                 onClick = {
                     if (isSelectionMode && onCheckedChange != null) onCheckedChange(!isChecked) else onTrackClick()
@@ -282,8 +290,8 @@ fun TrackItemRow(
         } else {
             Text(
                 text = formatDuration(track.durationMs),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                style = MaterialTheme.typography.labelMedium,
+                color = TextTertiary
             )
         }
 
@@ -622,7 +630,7 @@ fun VideoRowCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${video.folderName} • ${formatFileSize(video.sizeBytes)}",
+                    text = "${video.folderName} · ${formatFileSize(video.sizeBytes)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextTertiary,
                     fontSize = 11.sp,
@@ -847,14 +855,15 @@ fun VideoFolderCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${folder.videoCount} videos • ${formatFileSize(folder.totalSizeBytes)}",
+                    text = "${if (folder.videoCount == 1) "1 video" else "${folder.videoCount} videos"} · ${formatFileSize(folder.totalSizeBytes)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 11.sp
                 )
-                if (folder.path.isNotBlank() && folder.path != folder.name) {
+                val shortPath = dev.asfakul.yumeiro.ui.screens.music.shortFolderPath(folder.path)
+                if (shortPath != null && shortPath != folder.name) {
                     Text(
-                        text = folder.path,
+                        text = shortPath,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextTertiary,
                         fontSize = 10.sp,
@@ -893,7 +902,7 @@ fun VideoDetailsDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Video Details",
+                text = "Video details",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
@@ -909,7 +918,7 @@ fun VideoDetailsDialog(
                 DetailItem(label = "Title", value = video.title)
                 DetailItem(label = "Duration", value = formatDuration(video.durationMs))
                 DetailItem(label = "Resolution", value = "${video.resolution} (${if (video.width > 0 && video.height > 0) "${video.width}x${video.height}" else "Auto"})")
-                DetailItem(label = "File Size", value = formatFileSize(video.sizeBytes))
+                DetailItem(label = "File size", value = formatFileSize(video.sizeBytes))
                 DetailItem(label = "Folder", value = video.folderName)
                 if (video.folderPath.isNotBlank()) {
                     DetailItem(label = "Location", value = video.folderPath)
@@ -968,7 +977,7 @@ fun VideoDetailsDialog(
                     },
                     modifier = Modifier.testTag("dialog_hide_folder_btn")
                 ) {
-                    Text("Hide Folder", color = TextSecondary)
+                    Text("Hide folder", color = TextSecondary)
                 }
             }
         },
@@ -989,7 +998,7 @@ fun ManageHiddenFoldersDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Hidden Video Folders",
+                text = "Hidden video folders",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
@@ -1075,7 +1084,7 @@ fun ManageHiddenFoldersDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
                     modifier = Modifier.testTag("unhide_all_folders_btn")
                 ) {
-                    Text("Unhide All", color = OnAccent, fontWeight = FontWeight.Bold)
+                    Text("Unhide all", color = OnAccent, fontWeight = FontWeight.Bold)
                 }
             } else {
                 TextButton(onClick = onDismiss) {
@@ -1101,68 +1110,36 @@ fun EmptyMediaView(
     subtitle: String,
     buttonText: String,
     onButtonClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(GlassFill),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = null,
-                tint = SpotifyGreen,
-                modifier = Modifier.size(36.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
-            lineHeight = 18.sp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+    // The icon follows what is empty, so a video page never shows a music note.
+    val t = title.lowercase()
+    val shown = icon ?: when {
+        "favorite" in t || "favourite" in t -> Icons.Default.FavoriteBorder
+        "folder" in t -> Icons.Default.Folder
+        "playlist" in t -> Icons.Default.QueueMusic
+        "history" in t || "progress" in t -> Icons.Default.History
+        "video" in t -> Icons.Default.Movie
+        "album" in t -> Icons.Default.Album
+        "artist" in t -> Icons.Default.Person
+        else -> Icons.Default.MusicNote
+    }
+    val scan = "scan" in buttonText.lowercase()
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        StateMessage(icon = shown, title = title, message = subtitle, primary = null, testTag = "empty_state", suggestions = false)
         Button(
             onClick = onButtonClick,
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
-            modifier = Modifier.testTag("empty_state_action_button")
+            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 22.dp),
+            modifier = Modifier.defaultMinSize(minHeight = 48.dp).testTag("empty_state_action_button"),
         ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-                tint = OnAccent,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = buttonText,
-                color = OnAccent,
-                fontWeight = FontWeight.Bold
-            )
+            if (scan) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(text = buttonText, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -1194,7 +1171,7 @@ fun PermissionPromptCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Storage Access Required",
+                    text = "Storage access required",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -1218,7 +1195,7 @@ fun PermissionPromptCard(
                 modifier = Modifier.testTag("grant_permission_button")
             ) {
                 Text(
-                    text = "Grant Media Access",
+                    text = "Grant media access",
                     color = OnAccent,
                     fontWeight = FontWeight.Bold
                 )
@@ -1241,17 +1218,22 @@ fun SongActionBottomSheet(
     onAddToPlaylist: () -> Unit,
     onToggleFavorite: () -> Unit,
     onShowDetails: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** YouTube Music songs: save the audio to the phone. Null hides the row (device songs). */
+    onDownload: (() -> Unit)? = null,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = DarkSurfaceContainerHigh,
+        shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
+        dragHandle = { MoonSheetHandle() },
         modifier = modifier.testTag("song_action_bottom_sheet")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .testTag("song_action_sheet_content")
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             // Track Header
@@ -1295,7 +1277,7 @@ fun SongActionBottomSheet(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${track.artist} • ${track.album}",
+                        text = "${track.artist} · ${track.album}",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,
@@ -1308,7 +1290,7 @@ fun SongActionBottomSheet(
 
             // Action Items
             SheetActionRow(
-                title = "Play Next",
+                title = "Play next",
                 icon = Icons.Default.PlayArrow,
                 onClick = {
                     onPlayNext()
@@ -1318,7 +1300,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = "Add to Queue",
+                title = "Add to queue",
                 icon = Icons.Default.PlaylistAdd,
                 onClick = {
                     onAddToQueue()
@@ -1328,7 +1310,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = "Add to Playlist...",
+                title = "Add to playlist…",
                 icon = Icons.Default.QueueMusic,
                 onClick = {
                     onDismiss()
@@ -1338,7 +1320,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = if (track.isFavorite) "Remove from Favorites" else "Add to Favorites",
+                title = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
                 icon = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 iconTint = if (track.isFavorite) SpotifyGreen else TextPrimary,
                 onClick = {
@@ -1348,8 +1330,18 @@ fun SongActionBottomSheet(
                 testTag = "sheet_action_toggle_fav"
             )
 
+            if (onDownload != null) SheetActionRow(
+                title = "Download song",
+                icon = Icons.Default.Download,
+                onClick = {
+                    onDismiss()
+                    onDownload()
+                },
+                testTag = "sheet_action_download"
+            )
+
             SheetActionRow(
-                title = "Song Details",
+                title = "Song details",
                 icon = Icons.Default.Info,
                 onClick = {
                     onDismiss()
@@ -1409,7 +1401,7 @@ fun AddToPlaylistDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (isCreatingNew) "Create New Playlist" else "Add to Playlist",
+                text = if (isCreatingNew) "Create new playlist" else "Add to playlist",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -1464,7 +1456,7 @@ fun AddToPlaylistDialog(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "New Playlist...",
+                                    text = "New playlist…",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = SpotifyGreen
@@ -1547,7 +1539,7 @@ fun SongDetailsDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Song Information",
+                text = "Song info",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -1559,7 +1551,7 @@ fun SongDetailsDialog(
                 DetailItem(label = "Artist", value = track.artist)
                 DetailItem(label = "Album", value = track.album)
                 DetailItem(label = "Duration", value = formatDuration(track.durationMs))
-                DetailItem(label = "File Size", value = formatFileSize(track.sizeBytes))
+                DetailItem(label = "File size", value = formatFileSize(track.sizeBytes))
                 DetailItem(label = "Folder", value = track.folderName)
                 if (track.folderPath.isNotBlank()) {
                     DetailItem(label = "Path", value = track.folderPath)
@@ -1675,4 +1667,25 @@ fun BatchActionBar(
             }
         }
     }
+}
+
+
+/**
+ * The moon-path selection mark: a short gold stroke on the leading edge of the row that is
+ * playing (or selected). Same motif as the dock indicator, section headers and dialogs.
+ */
+fun Modifier.moonPathMark(): Modifier = composed {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val a = p.accent
+    val b = p.accent2
+    this.then(Modifier.drawBehind {
+        val w = 3.dp.toPx()
+        val h = size.height * 0.46f
+        drawRoundRect(
+            androidx.compose.ui.graphics.Brush.verticalGradient(listOf(a, b), startY = (size.height - h) / 2f, endY = (size.height + h) / 2f),
+            topLeft = androidx.compose.ui.geometry.Offset(0f, (size.height - h) / 2f),
+            size = androidx.compose.ui.geometry.Size(w, h),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w),
+        )
+    })
 }

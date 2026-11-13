@@ -110,15 +110,19 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             throw e
         } catch (e: Throwable) {
             Log.w(LOG, "download ${item.title}", e)
-            val msg = when (e) {
+            val diskFull = e is DiskFull || DiskFull.isDiskFull(e)
+            val msg = when {
+                diskFull -> (e as? DiskFull)?.message ?: "Storage full — free up space, then tap retry"
+                else -> when (e) {
                 is HttpStatus -> "Server answered HTTP ${e.code}" + if (e.code == 401 || e.code == 403) {
                     if (item.kind == OnlineDownloads.Kind.LINK) " — the link may have expired; play the episode again and retry" else " — tap retry for a fresh link"
                 } else ""
                 is NoLink -> e.message ?: "No downloadable source"
                 is IOException -> e.message?.takeIf { it.isNotBlank() && !it.startsWith("HTTP") }?.let { "Network error — $it" } ?: "Network error — will retry"
                 else -> e.message ?: "Download failed"
-            }
-            if (e is IOException && e !is HttpStatus && e !is NoLink && runAttemptCount < 3) return Result.retry()
+            } }
+            // A full disk doesn't get better by retrying; the partial file stays for a later resume.
+            if (!diskFull && e is IOException && e !is HttpStatus && e !is NoLink && runAttemptCount < 3) return Result.retry()
             OnlineDownloads.failed(id, msg)
             done(notifId, label, "Download failed: $msg · tap to retry in Downloads")
             return Result.failure()
@@ -168,6 +172,11 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             val length = body.contentLength()
             val total = if (length > 0) length + (if (resumed) have else 0) else -1
             var done = if (resumed) have else 0L
+            // Not enough room for the rest of the file: stop before filling the storage to the brim.
+            if (total > 0) {
+                val free = OnlineDownloads.freeBytes(applicationContext)
+                if (free in 0 until (total - done) + DiskFull.MARGIN) throw DiskFull(total - done, free)
+            }
             FileOutputStream(part, resumed).use { fos ->
                 body.byteStream().use { input ->
                     val buf = ByteArray(64 * 1024)
@@ -249,5 +258,24 @@ class DownloadCleanupWorker(context: Context, params: WorkerParameters) : Corout
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         runCatching { OnlineDownloads.cleanup(applicationContext) }
         Result.success()
+    }
+}
+
+/** The storage can't hold the rest of a download (checked up front, or ENOSPC while writing). */
+internal class DiskFull(needed: Long, free: Long) : java.io.IOException(
+    "Storage full — needs about ${needed / (1024 * 1024)} MB more, ${free / (1024 * 1024)} MB free. Free up space, then tap retry",
+) {
+    companion object {
+        /** Keeps room for the OS and other apps. */
+        const val MARGIN = 64L * 1024 * 1024
+        fun isDiskFull(e: Throwable): Boolean {
+            var t: Throwable? = e
+            while (t != null) {
+                val m = t.message.orEmpty()
+                if ("ENOSPC" in m || "No space left" in m) return true
+                t = t.cause
+            }
+            return false
+        }
     }
 }

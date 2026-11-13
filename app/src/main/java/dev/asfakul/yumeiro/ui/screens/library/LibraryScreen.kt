@@ -114,7 +114,12 @@ fun LibraryScreen(
     onTrackOptionsClick: (AudioTrack) -> Unit,
     huesCount: Int = 0,
     onRescanClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenVideos: () -> Unit = {},
+    onOpenReading: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
+    onOpenTogether: () -> Unit = {},
 ) {
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -137,7 +142,7 @@ fun LibraryScreen(
             },
             title = {
                 Text(
-                    text = "New Playlist",
+                    text = "New playlist",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -200,7 +205,7 @@ fun LibraryScreen(
             onDismissRequest = { playlistToRename = null },
             title = {
                 Text(
-                    text = "Rename Playlist",
+                    text = "Rename playlist",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -244,10 +249,11 @@ fun LibraryScreen(
     // Dialog: Delete Playlist
     playlistToDelete?.let { pl ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { playlistToDelete = null },
             title = {
                 Text(
-                    text = "Delete Playlist?",
+                    text = "Delete playlist?",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -270,7 +276,7 @@ fun LibraryScreen(
                         playlistToDelete = null
                     }
                 ) {
-                    Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+                    Text("Delete", color = dev.asfakul.yumeiro.ui.theme.DangerTone, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -288,7 +294,7 @@ fun LibraryScreen(
 
         val playlistTracks = selectedPlaylist.trackIds.mapNotNull { trackMap[it] }
 
-        LazyColumn(
+        LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("library_main"), 
             modifier = modifier
                 .fillMaxSize()
                 .testTag("playlist_detail_view"),
@@ -337,7 +343,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Rename Playlist",
+                            contentDescription = "Rename playlist",
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -350,8 +356,8 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Playlist",
-                            tint = Color(0xFFFF6B6B),
+                            contentDescription = "Delete playlist",
+                            tint = dev.asfakul.yumeiro.ui.theme.DangerTone,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -375,7 +381,7 @@ fun LibraryScreen(
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = OnAccent)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Play All", color = OnAccent, fontWeight = FontWeight.Bold)
+                            Text("Play all", color = OnAccent, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -402,8 +408,8 @@ fun LibraryScreen(
                 item {
                     EmptyMediaView(
                         title = "Playlist is empty",
-                        subtitle = "Go to Music tab, long-press any track or click 3 dots, and choose 'Add to Playlist'.",
-                        buttonText = "Browse Music",
+                        subtitle = "In Music, tap ⋮ on any song and choose Add to playlist.",
+                        buttonText = "Browse music",
                         onButtonClick = onNavigateToMusic
                     )
                 }
@@ -455,7 +461,7 @@ fun LibraryScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Move Up",
+                                        contentDescription = "Move up",
                                         tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -470,7 +476,7 @@ fun LibraryScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Move Down",
+                                        contentDescription = "Move down",
                                         tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -509,6 +515,11 @@ fun LibraryScreen(
                 recentlyPlayed = recentlyPlayed, mostPlayed = mostPlayed, currentPlayingTrack = currentPlayingTrack,
                 onPlay = onTrackClick, onOpenMusic = onNavigateToMusic, onOpenEqualizer = onNavigateToEqualizer,
                 onRescan = onRescanClick, onCreatePlaylist = { showCreateDialog = true }, onOpenPlaylist = { selectedPlaylistId = it },
+                shortcuts = libraryShortcuts(
+                    scanning = stats.isScanning, onVideos = onOpenVideos, onReading = onOpenReading, onEqualizer = onNavigateToEqualizer,
+                    onNewPlaylist = { showCreateDialog = true }, onRescan = onRescanClick, onHistory = onOpenHistory,
+                    onDownloads = onOpenDownloads, onTogether = onOpenTogether,
+                ),
             )
         }
     }

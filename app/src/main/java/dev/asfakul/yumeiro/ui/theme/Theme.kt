@@ -53,6 +53,7 @@ private fun ColorScheme.toPalette(isDark: Boolean) = MtPalette(
     surfaceContainerHigh = surfaceContainerHigh, surfaceVariant = surfaceContainerHighest, outline = outline,
     outlineVariant = outlineVariant, textPrimary = onSurface, textSecondary = onSurfaceVariant,
     textTertiary = onSurfaceVariant.copy(alpha = 0.78f),
+    scene = DreamScene.YOU,
 ).withAutoGradient()
 
 private fun MtPalette.amoled(): MtPalette = if (!isDark) this else copy(
@@ -84,6 +85,16 @@ fun rememberMtPalette(): MtPalette {
     return if (amoled) palette.amoled() else palette
 }
 
+/** The palette a theme mode would use, for previews in Settings (Material You shows the current one). */
+fun previewPaletteFor(mode: ThemeMode, systemDark: Boolean, current: MtPalette): MtPalette = when (mode) {
+    ThemeMode.LIGHT -> Palettes.Light
+    ThemeMode.DARK -> Palettes.Dark
+    ThemeMode.SYSTEM -> if (systemDark) Palettes.Dark else Palettes.Light
+    ThemeMode.TIME -> currentDayPart().palette()
+    ThemeMode.AFTERGLOW -> Palettes.Afterglow
+    ThemeMode.DYNAMIC -> if (current.scene == DreamScene.YOU) current else (if (systemDark) Palettes.Dark else Palettes.Light).copy(scene = DreamScene.YOU)
+}
+
 @Composable
 fun MTPlayerTheme(palette: MtPalette = rememberMtPalette(), content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalMtPalette provides palette) {
@@ -93,7 +104,10 @@ fun MTPlayerTheme(palette: MtPalette = rememberMtPalette(), content: @Composable
             shapes = MTPlayerShapes,
         ) {
             val pressTint = (if (palette.isDark) Color.White else Color.Black).copy(alpha = 0.07f)
-            val indication = remember(pressTint) { SoftPressIndication(pressTint) }
+            // D-pad / keyboard focus ring in the accent colour; the TV layout also lifts the focused item.
+            val tv = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+            val focusRing = if (palette.isDark) palette.accentBright else palette.accent
+            val indication = remember(pressTint, focusRing, tv) { SoftPressIndication(pressTint, focusRing, if (tv) 1.04f else 1f) }
             // Material components that still draw ripples get a soft accent-tinted one.
             val rippleConfig = remember(palette.accent) {
                 androidx.compose.material3.RippleConfiguration(

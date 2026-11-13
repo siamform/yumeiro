@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.ui.screens.online
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,19 +85,55 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
     )
 }
 
+/**
+ * Release tags over a poster: kind (Movie / Series / Anime) and release source top-left, audio
+ * (Bengali, Hindi, Dual, Multi, Dub) bottom-left. Small translucent glass chips so the art stays
+ * the hero; theatre recordings (CAM / TS) get an amber tint as a quality hint.
+ */
+@Composable
+internal fun androidx.compose.foundation.layout.BoxScope.PosterTags(item: OnlineItem, compact: Boolean = false, max: Int = 3) {
+    val tags = item.tags
+    if (tags.isEmpty()) return
+    val type = tags.firstOrNull { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE }
+    val release = tags.filter { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.SOURCE || it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.RESOLUTION }
+        .take(if (compact) 1 else 2)
+    val audio = tags.firstOrNull { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.LANGUAGE }
+    val top = (listOfNotNull(type) + release).take(max)
+    val pad = if (compact) 5.dp else 8.dp
+    // Round 8: the chips share the width that's left next to the score badge and ellipsize, so
+    // long release labels never run under the score or off the poster.
+    val scoreRoom = if ((item.score ?: 0.0) > 0) 34.dp else 0.dp
+    if (top.isNotEmpty()) Row(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(start = pad, top = pad, end = pad + scoreRoom).testTag("poster_tags"), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        top.forEach { Box(Modifier.weight(1f, fill = false)) { TagChip(it, compact, strong = it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE) } }
+    }
+    if (audio != null) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(pad), contentAlignment = Alignment.BottomStart) { TagChip(audio, compact, strong = false) }
+}
+
+@Composable
+private fun TagChip(tag: dev.asfakul.yumeiro.online.ReleaseTags.Tag, compact: Boolean, strong: Boolean) {
+    val fill = when {
+        tag.low -> Color(0xFFB4690E).copy(alpha = 0.88f)
+        strong -> SpotifyGreen.copy(alpha = 0.92f)
+        else -> Color(0xFF0E0B14).copy(alpha = 0.62f)
+    }
+    val fg = if (strong && !tag.low) OnAccent else Color.White
+    Text(
+        tag.label, color = fg, fontSize = if (compact) 8.5.sp else 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        letterSpacing = 0.2.sp, lineHeight = if (compact) 10.sp else 12.sp,
+        modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(fill)
+            .border(0.5.dp, Color.White.copy(alpha = if (strong) 0f else 0.16f), RoundedCornerShape(5.dp))
+            .padding(horizontal = if (compact) 4.dp else 6.dp, vertical = if (compact) 1.dp else 2.dp),
+    )
+}
+
 @Composable
 internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.dp, horizontal: Boolean = false, showSource: Boolean = false, modifier: Modifier? = null, progress: Float? = null) {
     val w = if (horizontal) width * 1.6f else width
-    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster")) {
+    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster").padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
-            val badge = item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }
-            if (badge != null) {
-                Text(
-                    badge, color = OnAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
-                )
-            }
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
+            PosterTags(item, compact = true)
             item.score?.takeIf { it > 0 }?.let { s ->
                 Row(
                     Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp),
@@ -105,7 +143,6 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
                     Text(String.format(java.util.Locale.US, "%.1f", s), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
             if (progress != null && progress > 0f) {
                 Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
                     Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(3.dp).background(SpotifyGreen))
@@ -113,9 +150,13 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(item.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
-        val sub = listOfNotNull(item.type, if (showSource) item.api else null).joinToString(" · ")
-        if (sub.isNotBlank()) Text(sub, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Round 8: the title always takes exactly two lines (minLines = maxLines = 2) and the meta
+        // line is always there, so every card in a shelf / grid row has the same height. Before, a
+        // long title made its card taller than its neighbours and the whole shelf jumped while
+        // scrolling sideways.
+        Text(item.name.replace('\n', ' '), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
+        val sub = listOfNotNull(item.type?.takeIf { it.isNotBlank() }, if (showSource) item.api else null).joinToString(" · ")
+        Text(sub.ifBlank { " " }, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -249,5 +290,5 @@ internal fun Pill(text: String, color: Color = SpotifyGreen) {
     }
 }
 
-internal val WarnColor = Color(0xFFFFB74D)
-internal val ErrorColor = Color(0xFFFF6B6B)
+internal val WarnColor: Color @Composable @ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.WarnTone
+internal val ErrorColor: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone

@@ -107,6 +107,7 @@ fun PlaylistMarketScreen(
     val playlists by PlaylistStore.playlists.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
+    var searching by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<PlaylistMarket.Entry?>(null) }
     var updatingAll by remember { mutableStateOf(false) }
     val busy = remember { mutableStateMapOf<String, Boolean>() }
@@ -179,12 +180,14 @@ fun PlaylistMarketScreen(
                 ?: if (state is PlaylistMarket.State.Error) "Offline" else "Loading…",
             onBack = onBack,
         ) {
+            if (ready != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(open = searching || query.isNotEmpty(), onToggle = { searching = !(searching || query.isNotEmpty()); if (!searching) query = "" }, tag = "market_search_toggle", description = "Search playlists")
             val refreshing = ready?.refreshing == true || state is PlaylistMarket.State.Loading
             IconButton(onClick = { reload() }, enabled = !refreshing, modifier = Modifier.testTag("market_reload")) {
                 if (refreshing) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 else Icon(Icons.Default.Refresh, "Check for updates", tint = TextSecondary)
             }
         }
+        if (ready != null) dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching || query.isNotEmpty(), query = query, onQuery = { query = it }, placeholder = "Search playlists, countries, repos", tag = "market_search")
         when (val s = state) {
             PlaylistMarket.State.Idle, PlaylistMarket.State.Loading -> Column(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("market_loading"),
@@ -208,7 +211,7 @@ fun PlaylistMarketScreen(
                 ) {
                     s.warning?.let { w ->
                         item(key = "warning") {
-                            Text(w, color = Color(0xFFFFB74D), fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(GlassFill).padding(10.dp).testTag("market_warning"))
+                            Text(w, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(GlassFill).padding(10.dp).testTag("market_warning"))
                         }
                     }
                     if (updates.isNotEmpty()) item(key = "updates") {
@@ -224,13 +227,6 @@ fun PlaylistMarketScreen(
                     }
                     item(key = "search") {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                query, { query = it }, singleLine = true, colors = streamFieldColors(),
-                                leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
-                                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear search", tint = TextSecondary) } },
-                                placeholder = { Text("Search playlists, countries, repos") },
-                                modifier = Modifier.fillMaxWidth().testTag("market_search"),
-                            )
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 item(key = "all") { Chip("All", filter == null) { filter = null } }
                                 if (installedBy.isNotEmpty()) item(key = "installed") { Chip("Installed (${installedBy.size})", filter == FILTER_INSTALLED) { filter = FILTER_INSTALLED } }
@@ -242,7 +238,7 @@ fun PlaylistMarketScreen(
                     if (visible.isEmpty()) item(key = "none") {
                         StateMessage(
                             icon = Icons.Default.SearchOff, title = "No playlists found",
-                            message = if (query.isNotBlank()) "Nothing matches \"${query.trim()}\"." else "Nothing in this section yet.",
+                            message = if (query.isNotBlank()) "Nothing matches “${query.trim()}”." else "Nothing in this section yet.",
                             primary = "Clear filters" to { query = ""; filter = null }, testTag = "market_empty",
                         )
                     } else items(visible, key = { "m_${it.id}" }, contentType = { "entry" }) { e ->
@@ -283,7 +279,7 @@ fun PlaylistMarketScreen(
                     e.repo?.let { DetailLine("Repository", it + (e.stars?.let { s -> " · ★ $s" } ?: "")) }
                     if (e.updated > 0) DetailLine("Changed", relativeTime(e.updated))
                     if (e.topGroups.isNotEmpty()) DetailLine("Groups", e.topGroups.joinToString(", "))
-                    if (!e.ok) Text("The source could not be reached on the last check; the last good copy is offered.", color = Color(0xFFFFB74D), fontSize = 12.sp)
+                    if (!e.ok) Text("The source could not be reached on the last check; the last good copy is offered.", color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp)
                     e.repo?.let { r ->
                         TextButton(onClick = {
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$r")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -356,7 +352,7 @@ private fun MarketCard(
                     entry.repo?.let { Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)) }
                     entry.health?.let { h ->
                         Spacer(Modifier.width(6.dp))
-                        val c = when { h >= 0.6f -> SpotifyGreen; h >= 0.25f -> Color(0xFFFFB74D); else -> TextTertiary }
+                        val c = when { h >= 0.6f -> SpotifyGreen; h >= 0.25f -> dev.asfakul.yumeiro.ui.theme.WarnTone; else -> TextTertiary }
                         Box(Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(c))
                         Spacer(Modifier.width(3.dp))
                         Text("${(h * 100).toInt()}%", color = TextTertiary, fontSize = 11.sp)

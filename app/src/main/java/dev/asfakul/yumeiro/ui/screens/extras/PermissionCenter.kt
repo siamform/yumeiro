@@ -31,7 +31,7 @@ object PermissionCenter {
 
     fun notificationsAllowed(c: Context): Boolean = AppNotifier.systemAllowed(c)
 
-    fun installAllowed(c: Context): Boolean = c.packageManager.canRequestPackageInstalls()
+    fun installAllowed(c: Context): Boolean = dev.asfakul.yumeiro.OsCompat.canInstallPackages(c)
 
     fun batteryUnrestricted(c: Context): Boolean =
         c.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(c.packageName) == true
@@ -45,12 +45,12 @@ object PermissionCenter {
     }
 
     fun openNotificationSettings(c: Context) {
-        val ok = start(c, Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, c.packageName))
+        val ok = start(c, dev.asfakul.yumeiro.OsCompat.notificationSettingsIntent(c))
         if (!ok) openAppSettings(c)
     }
 
     fun openInstallSettings(c: Context) {
-        val ok = start(c, Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${c.packageName}")))
+        val ok = start(c, dev.asfakul.yumeiro.OsCompat.unknownSourcesIntent(c))
         if (!ok) openAppSettings(c)
     }
 

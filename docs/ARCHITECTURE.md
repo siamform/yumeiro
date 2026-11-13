@@ -1,6 +1,6 @@
 # Architecture
 
-Yumeiro is one Android module (`app/`), Kotlin + Jetpack Compose, minSdk 28. CloudStream's plugin API is embedded
+Yumeiro is one Android module (`app/`), Kotlin + Jetpack Compose, minSdk 24 (Android 7.0, for TV boxes; see docs/TV.md). CloudStream's plugin API is embedded
 (`com.lagradost.cloudstream3`) and is the common contract every online source speaks.
 
 ## Big picture
@@ -33,6 +33,8 @@ Rule: a bridge converts its ecosystem into `MainAPI` (or `MangaProvider`) and pu
 
 | Package | What lives there |
 |---|---|
+| `sources/UniversalAdd.kt`, `ui/screens/sources/UniversalAddUi.kt` | "Add anything": one field, file or incoming link for every format. Detects CloudStream plugin, repo or list, Aniyomi/Mihon repo or APK, Stremio, Mangayomi JS, Jellyfin/Emby/Plex and routes to the right engine. See EXTENSION-COMPAT.md. |
+| `com/lagradost/cloudstream3/extractors/`, `utils/SubtitleHelperPlatformJvm.kt` | Extractors removed from CloudStream library 4.8 and a JVM shim, restored so older plugins still link. |
 | `sources/SourceHub.kt`, `Bridges.kt` | Registry of bridged sources and their ecosystem badge; starts all bridges once per process. |
 | `sources/tachiyomi/` | `TachiyomiExtensions` (repos, `index.min.json`, APK download, same-signer check on update, DEX load), `TachiyomiRuntime` (Injekt graph extensions expect), `AniyomiProvider`, `MihonMangaProvider`. |
 | `eu/kanade/tachiyomi/**`, `tachiyomi/**`, `mihon/**` | Vendored Aniyomi/Mihon source API (Apache-2.0) the extension APKs link against. Keep class names; ProGuard keeps them. |

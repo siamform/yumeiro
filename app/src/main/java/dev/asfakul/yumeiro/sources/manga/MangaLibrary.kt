@@ -60,6 +60,17 @@ object MangaLibrary {
     fun toggleSaved(context: Context, item: MangaItem) =
         upsert(context, Entry(item.providerId, item.url, item.title, item.cover)) { it.copy(saved = !it.saved, title = item.title, cover = item.cover ?: it.cover) }
 
+    /** Keeps a stored entry's title / cover current once the title page has loaded (no reorder). */
+    fun refreshMeta(context: Context, providerId: String, url: String, title: String?, cover: String?) {
+        load(context)
+        val cur = get(providerId, url) ?: return
+        val t = title?.takeIf { it.isNotBlank() } ?: cur.title
+        val c = cover?.takeIf { it.isNotBlank() } ?: cur.cover
+        if (t == cur.title && c == cur.cover) return
+        _entries.value = _entries.value.map { if (it.key == cur.key) it.copy(title = t, cover = c) else it }
+        save(context)
+    }
+
     fun progress(context: Context, item: MangaItem, chapter: MangaChapter, page: Int, finished: Boolean) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         upsert(context, Entry(item.providerId, item.url, item.title, item.cover)) {

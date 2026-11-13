@@ -102,7 +102,7 @@ fun PrivacyScreen(onBack: () -> Unit) {
     val hide by Privacy.hideInRecents.collectAsState()
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Privacy", onBack = onBack)
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("privacy")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
             Section("Incognito mode", "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.") {
                 SettingsToggleRow("Incognito", if (incognito) "On — history is paused" else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
             }
@@ -155,7 +155,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().testTag("tracking_screen")) {
         SubPageHeader(title = "Tracking", onBack = onBack, subtitle = "Watched episodes update your lists automatically")
         androidx.compose.runtime.key(refresh) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("tracking")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList, MyAnimeList and Trakt need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
 
@@ -163,10 +163,10 @@ fun TrackingScreen(onBack: () -> Unit) {
                 val aniId = AniList.clientId().isNotBlank()
                 TrackerCard(
                     name = "AniList", tint = AniListBlue, user = AniList.user(), configured = aniId, tag = "anilist",
-                    onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl()?.let { open(it) } },
+                    onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl(context)?.let { open(it) } },
                     onSignOut = { AniList.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.anilist, startExpanded = !aniId && AniList.user() == null)
+                GuideCard(SetupGuides.anilist)
 
                 val malId = MyAnimeList.clientId().isNotBlank()
                 TrackerCard(
@@ -359,6 +359,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     }
     simklCode?.let { c ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
             title = { Text("Approve on Simkl") },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -371,6 +372,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     }
     lastfmUrl?.let { url ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
             title = { Text("Approve on Last.fm") },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -384,6 +386,7 @@ fun TrackingScreen(onBack: () -> Unit) {
     }
     traktCode?.let { c ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
             title = { Text("Approve on Trakt") },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -461,7 +464,7 @@ fun BackupScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Backup & restore", onBack = onBack)
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("backup")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
             Section("Create a backup", "Settings, history, My List, playlists, sources, repositories, home servers and manga progress in one .zip. Save it to Drive, an SD card or anywhere you like.") {
                 SettingsToggleRow("Include installed extensions", "Bigger file, but sources work right after restoring", includeExt, { includeExt = it }, "backup_include_ext")
                 Button(onClick = { create.launch(Backup.suggestedName()) }, enabled = !busy, shape = RoundedCornerShape(20.dp),
@@ -475,17 +478,27 @@ fun BackupScreen(onBack: () -> Unit) {
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
         }
     }
+    var restoreCode by remember(pending) { mutableStateOf(false) }
     pending?.let { (uri, m) ->
         TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { pending = null },
             title = { Text("Restore this backup?") },
-            text = { Text("Made with Yumeiro ${m.optString("version")} on ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(m.optLong("createdAt")))}." +
-                (if (m.optBoolean("extensions")) " Includes extensions." else "") + " Yumeiro restarts afterwards.") },
+            text = { Column {
+                Text("Made with Yumeiro ${m.optString("version").take(32)} on ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(m.optLong("createdAt")))}." +
+                    " Yumeiro restarts afterwards.")
+                if (m.optBoolean("hasCode")) {
+                    SettingsToggleRow("Also restore installed extensions",
+                        "Extensions run code. Only turn this on for a backup you made yourself, not one someone sent you.",
+                        restoreCode, { restoreCode = it }, "restore_include_code")
+                }
+            } },
             confirmButton = { TextButton(onClick = {
                 pending = null
+                val withCode = restoreCode && m.optBoolean("hasCode")
                 scope.launch {
                     busy = true
-                    runCatching { Backup.restore(context, uri) }
+                    runCatching { Backup.restore(context, uri, includeCode = withCode) }
                         .onSuccess { Backup.restartApp(context) }
                         .onFailure { busy = false; AppMessages.error(context, OnlineErrors.friendly(it)) }
                 }

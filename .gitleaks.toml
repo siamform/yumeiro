@@ -8,8 +8,22 @@ title = "yumeiro"
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Mirrored third-party playlists (market/streams branches) - not Yumeiro secrets"
 paths = [
   '''(^|/)playlists/[^/]+\.m3u8?$''',
+]
+
+# Saved third-party web pages used as parser fixtures. Commit 7df5564 kept the site's public ad-slot
+# placement ids (data-ad-key, visible in every visitor's page source); they were replaced with a
+# placeholder afterwards. Scoped to that attribute in those fixture files only.
+[[allowlists]]
+description = "Public ad-slot ids in saved third-party drama pages (test fixtures)"
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''^app/src/test/resources/drama/[^/]+\.html$''',
+]
+regexes = [
+  '''data-ad-key="[0-9a-f]{32}"''',
 ]

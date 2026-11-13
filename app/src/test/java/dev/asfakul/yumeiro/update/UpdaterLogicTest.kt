@@ -47,6 +47,20 @@ class UpdaterLogicTest {
     """.trimIndent()
 
     @Test
+    fun parseRelease_prefersTheDevicesProcessorThenUniversal() {
+        fun asset(id: Int, name: String) = """{"id":$id,"name":"$name","size":1,"url":"https://api.github.com/a/$id","browser_download_url":"https://github.com/d/$name"}"""
+        val json = """{"tag_name":"v1.2.0","name":"v1.2.0","body":"","assets":[
+            ${asset(1, "release-Yumeiro-v1.2.0.apk")},${asset(2, "Yumeiro-v1.2.0-armeabi-v7a.apk")},
+            ${asset(3, "Yumeiro-v1.2.0-arm64-v8a.apk")},${asset(4, "SHA256SUMS.txt")}]}"""
+        assertEquals("Yumeiro-v1.2.0-arm64-v8a.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("arm64-v8a", "armeabi-v7a")).asset.name)
+        assertEquals("Yumeiro-v1.2.0-armeabi-v7a.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("armeabi-v7a")).asset.name)
+        assertEquals("x86 TV box gets the universal APK", "release-Yumeiro-v1.2.0.apk",
+            GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("x86")).asset.name)
+        assertEquals("x86_64", GitHubReleaseClient.abiOf("Yumeiro-v1-x86_64.apk"))
+        assertNull(GitHubReleaseClient.abiOf("release-Yumeiro-v1.2.0.apk"))
+    }
+
+    @Test
     fun parseRelease_picksApkAndVersionCode() {
         val r = GitHubReleaseClient.parseRelease(sampleRelease, UpdateSource.PUBLIC)
         assertEquals("1.2.0", r.versionName)

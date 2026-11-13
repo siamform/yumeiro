@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook as MenuBookMirrored
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.ViewCarousel
@@ -139,6 +140,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                 primary = "Open sources" to onOpenSources, testTag = "manga_empty")
             return@Column
         }
+        val online by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
+        if (!online) dev.asfakul.yumeiro.ui.components.OfflineNotice("Reading from manga sources", tag = "offline_notice_manga")
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(providers, key = { it.id }) { p ->
                 FilterPill(label = p.name + if (p.lang.isNotBlank() && p.lang != "all") " · ${p.lang.uppercase()}" else "",
@@ -169,7 +172,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
     var loading by remember(provider.id, feed, query) { mutableStateOf(false) }
     var error by remember(provider.id, feed, query) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val grid = rememberLazyGridState()
+    val grid = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("manga_browse:" + provider.id + ":" + feed + ":" + query)
 
     fun more() {
         if (loading || !hasNext) return
@@ -211,7 +214,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
             StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { more() }, testTag = "manga_error")
         } }
         if (!loading && error == null && items.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-            Text("Nothing here.", color = TextTertiary, modifier = Modifier.padding(24.dp))
+            StateMessage(Icons.Default.MenuBook, "Nothing in this list", "This source returned no titles here. Try another list, another source, or search.", testTag = "manga_nothing")
         }
     }
 }
@@ -219,8 +222,9 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
 @Composable
 private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (MangaItem) -> Unit) {
     Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable { onClick(m) }) {
-        AsyncImage(model = m.cover, contentDescription = m.title, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill))
+        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+            MangaCoverImage(m.providerId, m.cover, Modifier.fillMaxSize())
+        }
         Spacer(Modifier.height(6.dp))
         Text(m.title, color = TextPrimary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
         if (subtitle != null) Text(subtitle, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -229,7 +233,7 @@ private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.un
 
 /** Title page: cover, description, save toggle and the chapter list. */
 @Composable
-fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: () -> Unit, onRead: (MangaItem, MangaChapter) -> Unit) {
+fun MangaDetailScreen(providerId: String, url: String, title: String, cover: String? = null, onBack: () -> Unit, onRead: (MangaItem, MangaChapter) -> Unit) {
     val context = LocalContext.current
     val provider = remember(providerId) { SourceHub.manga(providerId) }
     var details by remember { mutableStateOf<MangaDetails?>(null) }
@@ -245,7 +249,10 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
         runCatching { details = provider.details(url); chapters = provider.chapters(url) }.onFailure { error = OnlineErrors.friendly(it) }
     }
     val entry = library.firstOrNull { it.providerId == providerId && it.url == url }
-    val item = MangaItem(providerId, url, details?.title ?: title, details?.cover ?: entry?.cover)
+    val item = MangaItem(providerId, url, details?.title?.takeIf { it.isNotBlank() } ?: title,
+        details?.cover?.takeIf { it.isNotBlank() } ?: entry?.cover ?: cover?.takeIf { it.isNotBlank() })
+    // Saved before the details arrived (or saved from an older build without a cover): fill it in now.
+    LaunchedEffect(details, entry?.key) { details?.let { d -> MangaLibrary.refreshMeta(context, providerId, url, d.title, d.cover ?: cover) } }
     val sorted = chapters?.let { if (newestFirst) it else it.reversed() }
 
     Column(Modifier.fillMaxSize().testTag("manga_detail")) {
@@ -257,8 +264,9 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item("head") {
                 Row {
-                    AsyncImage(item.cover, null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.width(112.dp).aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill))
+                    Box(Modifier.width(112.dp).aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+                        MangaCoverImage(providerId, item.cover, Modifier.fillMaxSize())
+                    }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
@@ -311,6 +319,14 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, onBack: ()
             }
         }
     }
+}
+
+/** Cover art with the headers its source needs; falls back to a book glyph when it can't load. */
+@Composable
+fun MangaCoverImage(providerId: String, cover: String?, modifier: Modifier = Modifier) {
+    val hub by SourceHub.state.collectAsState()
+    val headers = remember(providerId, hub.generation) { runCatching { SourceHub.manga(providerId)?.coverHeaders() }.getOrNull().orEmpty() }
+    dev.asfakul.yumeiro.ui.screens.online.PosterImage(cover, headers, modifier, fallbackIcon = Icons.AutoMirrored.Filled.MenuBookMirrored)
 }
 
 private val pageCache = object : android.util.LruCache<String, Bitmap>(64 * 1024 * 1024) {

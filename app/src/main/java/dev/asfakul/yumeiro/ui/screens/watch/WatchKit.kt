@@ -30,6 +30,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,6 +97,7 @@ object WatchPrefs {
     @Volatile private var loaded = false
 
     fun init(context: Context) {
+        dev.asfakul.yumeiro.online.AudioLanguages.init(context)
         if (loaded) return
         loaded = true
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -107,8 +117,83 @@ object WatchPrefs {
 /** One server button in [WatchServerBox]. */
 data class WatchServer(val label: String, val selected: Boolean, val tag: String, val onClick: () -> Unit)
 
-/** A row of servers (e.g. SUB / DUB for Hues, LINK / MODE for streams). */
-data class WatchServerRow(val label: String, val icon: ImageVector, val servers: List<WatchServer>)
+/**
+ * A group of servers (e.g. Sub / Dub for Hues, links / modes for streams).
+ * Round 8: groups are collapsible. [startExpanded] null = automatic (open when it holds the
+ * playing source or is short; long lists of other versions start folded).
+ */
+data class WatchServerRow(val label: String, val icon: ImageVector, val servers: List<WatchServer>, val startExpanded: Boolean? = null, val filterKey: String? = null)
+
+/** Round 9: one audio-language filter chip ("Original · Sub 4", "English 3"). */
+data class AudioFilterOption(val key: String, val label: String, val count: Int)
+
+/** Round 8: how many server chips a group may show before it starts folded. */
+const val SERVER_GROUP_FOLD_AT = 8
+
+/**
+ * Sub / Dub split of a version's links, now per language (Round 9): "Sub", "Dub · English",
+ * "Dub · Hindi"… Reading of link text lives in [dev.asfakul.yumeiro.online.AudioLanguages].
+ */
+object AudioSplit {
+    enum class Kind(val label: String) { SUB("Sub"), DUB("Dub") }
+    private val AL = dev.asfakul.yumeiro.online.AudioLanguages
+
+    private fun Kind?.of(k: dev.asfakul.yumeiro.online.AudioLanguages.Kind?): Kind? = when (k) { null -> null; dev.asfakul.yumeiro.online.AudioLanguages.Kind.SUB -> Kind.SUB; dev.asfakul.yumeiro.online.AudioLanguages.Kind.DUB -> Kind.DUB }
+
+    /** What [text] says explicitly, or null when it doesn't say. */
+    fun explicit(text: String): Kind? = null.of(AL.classify(text).kind)
+    /** Kind of one link: its own name / source first, then the version it came from. */
+    fun of(linkText: String, version: String): Kind? = null.of(AL.classify(linkText, version).kind)
+
+    /**
+     * Label for a group of [kind] links inside [version]: the version itself when it already says
+     * so ("Sub", "English Dub"), "Sub" / "Dub" for the generic "Sources", else "Version · Dub".
+     */
+    fun label(version: String, kind: Kind?): String = when {
+        kind == null -> version
+        explicit(version) == kind -> version
+        version.isBlank() || version.equals("Sources", true) || explicit(version) != null -> kind.label
+        else -> "$version · ${kind.label}"
+    }
+
+    /** One group of links (indices into the link list). [key] is the language filter key. */
+    data class Group(val kind: Kind?, val language: String?, val key: String, val label: String, val indices: List<Int>)
+
+    /**
+     * Groups [texts] (one per link: name + source) of [version]. Sub first, then each dub
+     * language (most sources first; [preferred] first of all), unlabelled dubs, then the rest.
+     * One group only when the links don't say anything different.
+     */
+    fun groups(texts: List<String>, version: String, preferred: String? = null, onlyVersion: Boolean = true): List<Group> {
+        val audio = texts.map { AL.classify(it, version) }
+        val byKey = texts.indices.groupBy { AL.filterKey(audio[it]) }
+        if (byKey.size <= 1) {
+            val key = byKey.keys.firstOrNull().orEmpty()
+            val a = audio.firstOrNull()
+            val kind = null.of(a?.kind)
+            val base = when {
+                kind == Kind.DUB && a?.language != null -> "${label(version, kind)} · ${AL.displayName(a.language)}"
+                // A version called "Sub" whose links say nothing: don't promise subtitles only.
+                onlyVersion && kind == Kind.SUB && explicit(version) == Kind.SUB && texts.none { AL.classify(it).kind != null } -> "Sub & Dub"
+                else -> label(version.ifBlank { "Sources" }, kind)
+            }
+            return listOf(Group(kind, a?.language, key, base, texts.indices.toList()))
+        }
+        val order = byKey.keys.sortedWith(
+            compareBy<String> { k -> when (k) { AL.ORIG -> 0; preferred -> 1; "" -> 4; AL.DUB_OTHER -> 3; else -> 2 } }
+                .thenByDescending { byKey[it]!!.size }.thenBy { it },
+        )
+        return order.map { k ->
+            val idx = byKey.getValue(k)
+            when (k) {
+                AL.ORIG -> Group(Kind.SUB, null, k, "Sub · original audio", idx)
+                AL.DUB_OTHER -> Group(Kind.DUB, null, k, "Dub · other", idx)
+                "" -> Group(null, null, k, "More sources", idx)
+                else -> Group(Kind.DUB, k, k, "Dub · ${AL.displayName(k)}", idx)
+            }
+        }
+    }
+}
 
 /**
  * Yumeiro's "moon dial": a glass card under the player with capsule toggles (Dim, Autoplay,
@@ -212,7 +297,10 @@ private fun StepButton(icon: ImageVector, label: String, onClick: (() -> Unit)?,
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun WatchServerBox(watching: String, hint: String, rows: List<WatchServerRow>, modifier: Modifier = Modifier) {
+fun WatchServerBox(
+    watching: String, hint: String, rows: List<WatchServerRow>, modifier: Modifier = Modifier,
+    audioOptions: List<AudioFilterOption> = emptyList(), audioSelected: String? = null, onAudioSelect: (String?) -> Unit = {},
+) {
     val p = LocalMtPalette.current
     val brush = dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush()
     Column(
@@ -228,36 +316,128 @@ fun WatchServerBox(watching: String, hint: String, rows: List<WatchServerRow>, m
             Box(Modifier.width(3.dp).height(44.dp).clip(CircleShape).background(brush))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("\u2726 再生中 · NOW PLAYING", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text("Now playing", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(watching, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp))
                 Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
             }
         }
-        rows.filter { it.servers.isNotEmpty() }.forEach { row ->
-            Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-                    Icon(row.icon, null, tint = p.accent, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(row.label, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.75f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        if (audioOptions.size > 1) AudioFilterRow(audioOptions, audioSelected, onAudioSelect, Modifier.padding(bottom = 6.dp))
+        val active = audioSelected?.takeIf { sel -> audioOptions.any { it.key == sel } }
+        val shownRows = rows.filter { it.servers.isNotEmpty() && (active == null || it.filterKey == null || it.filterKey == active) }
+        shownRows.forEach { row ->
+            ServerGroup(row, single = shownRows.size == 1, brush = brush)
+        }
+    }
+}
+
+/**
+ * Round 9: "Find by language" — a row of audio chips over the sources. Picking one filters the
+ * groups and is remembered, so the next title starts on that language when it has it.
+ */
+@Composable
+fun AudioFilterRow(options: List<AudioFilterOption>, selected: String?, onSelect: (String?) -> Unit, modifier: Modifier = Modifier, onDark: Boolean = false) {
+    val p = LocalMtPalette.current
+    val ink = if (onDark) Color.White else dev.asfakul.yumeiro.ui.theme.PageInk
+    val active = selected?.takeIf { sel -> options.any { it.key == sel } }
+    Column(modifier.fillMaxWidth().testTag("watch_audio_filter")) {
+        Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Translate, null, tint = p.accent, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Audio language", color = ink.copy(alpha = 0.72f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+            Spacer(Modifier.weight(1f))
+            if (active != null) Text("Remembered", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            val chip: @Composable (String?, String, Int?, ImageVector?) -> Unit = { key, label, count, icon ->
+                val sel = key == active
+                Row(
+                    Modifier.heightIn(min = 34.dp).clip(CircleShape)
+                        .background(if (sel) p.accent else ink.copy(alpha = 0.06f))
+                        .border(1.dp, if (sel) p.accent else ink.copy(alpha = 0.12f), CircleShape)
+                        .clickable(onClickLabel = "Show $label sources") { onSelect(if (sel) null else key) }
+                        .semantics { this.selected = sel }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .testTag("watch_audio_" + (key ?: "all")),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (icon != null) { Icon(icon, null, tint = if (sel) p.onAccent else p.accent, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(5.dp)) }
+                    Text(label, color = if (sel) p.onAccent else ink.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    if (count != null) { Spacer(Modifier.width(5.dp)); Text("$count", color = if (sel) p.onAccent.copy(alpha = 0.8f) else ink.copy(alpha = 0.5f), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    row.servers.forEach { s ->
-                        Row(
-                            Modifier
-                                .clip(CircleShape)
-                                .then(if (s.selected) Modifier.background(brush) else Modifier.background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)).border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.10f), CircleShape))
-                                .clickable(enabled = !s.selected, onClick = s.onClick)
-                                .padding(horizontal = 13.dp, vertical = 7.dp)
-                                .testTag(s.tag),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (s.selected) {
-                                Icon(Icons.Default.PlayArrow, null, tint = p.onAccent, modifier = Modifier.size(13.dp))
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            Text(s.label, maxLines = 1, color = if (s.selected) p.onAccent else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+            chip(null, "All", options.sumOf { it.count }, null)
+            options.forEach { o ->
+                chip(o.key, o.label, o.count, when (o.key) { dev.asfakul.yumeiro.online.AudioLanguages.ORIG -> Icons.Default.ClosedCaption; "" -> null; else -> Icons.Default.Mic })
+            }
+        }
+    }
+}
+
+/**
+ * Round 8: one tap-to-expand group of sources. The header (icon, name, count, chevron) toggles
+ * it; while folded it still names the playing source so nothing is hidden by surprise.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ServerGroup(row: WatchServerRow, single: Boolean, brush: Brush) {
+    val p = LocalMtPalette.current
+    val playing = row.servers.firstOrNull { it.selected }
+    val auto = playing != null || row.servers.size <= SERVER_GROUP_FOLD_AT || single
+    var open by androidx.compose.runtime.saveable.rememberSaveable(row.label) { mutableStateOf(row.startExpanded ?: auto) }
+    val reduced = dev.asfakul.yumeiro.ui.components.reducedMotion()
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(if (reduced) 0 else 220), label = "serverChevron")
+    Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp).testTag("watch_server_group")) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClickLabel = if (open) "Hide ${row.label} sources" else "Show ${row.label} sources") { open = !open }
+                .semantics { stateDescription = if (open) "Expanded" else "Collapsed" }
+                .padding(horizontal = 6.dp, vertical = 6.dp)
+                .testTag("watch_server_group_header"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(row.icon, null, tint = p.accent, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(row.label, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.88f), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val count = row.servers.size
+                val meta = when {
+                    !open && playing != null -> "Playing ${playing.label} · $count source${if (count == 1) "" else "s"}"
+                    else -> "$count source${if (count == 1) "" else "s"}"
+                }
+                Text(meta, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Default.ExpandMore, null, tint = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.6f), modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = turn })
+        }
+        AnimatedVisibility(
+            visible = open,
+            enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(if (reduced) 0 else 260)) + fadeIn(androidx.compose.animation.core.tween(if (reduced) 0 else 200, delayMillis = if (reduced) 0 else 60)),
+            exit = androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(if (reduced) 0 else 200)) + fadeOut(androidx.compose.animation.core.tween(if (reduced) 0 else 120)),
+        ) {
+            FlowRow(Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.servers.forEach { s ->
+                    Row(
+                        Modifier
+                            .heightIn(min = 36.dp)
+                            .widthIn(max = 220.dp)
+                            .clip(CircleShape)
+                            .then(if (s.selected) Modifier.background(brush) else Modifier.background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)).border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.10f), CircleShape))
+                            .clickable(enabled = !s.selected, onClick = s.onClick)
+                            .padding(horizontal = 13.dp, vertical = 7.dp)
+                            .testTag(s.tag),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (s.selected) {
+                            Icon(Icons.Default.PlayArrow, null, tint = p.onAccent, modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(4.dp))
                         }
+                        Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (s.selected) p.onAccent else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.88f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -291,7 +471,7 @@ fun WatchNumberGrid(
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).testTag("watch_number_grid")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("エピソード · EPISODES", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text("Episodes", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(title, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Row(
@@ -407,7 +587,7 @@ fun BoxScope.WatchLightsOverlay() {
             ) {
                 Icon(Icons.Default.DarkMode, null, tint = LocalMtPalette.current.accent, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("月 · Dimmed for focus · tap to brighten", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                Text("Dimmed for focus · tap to brighten", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
             }
         }
     }

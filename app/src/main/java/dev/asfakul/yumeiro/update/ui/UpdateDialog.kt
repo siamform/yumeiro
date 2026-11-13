@@ -96,7 +96,7 @@ import dev.asfakul.yumeiro.update.UpdateConfig
 import dev.asfakul.yumeiro.update.UpdateSource
 import dev.asfakul.yumeiro.update.UpdateState
 
-private val ErrorRed = Color(0xFFFF6B6B)
+private val ErrorRed: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone
 
 /**
  * The update popup. Renders one of: available → downloading → ready → installing, or failed.

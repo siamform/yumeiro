@@ -74,7 +74,7 @@ fun SleepTimerSheet(
 ) {
     val p = LocalMtPalette.current
     val remaining = rememberSleepRemaining(state)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("sleep_timer_sheet")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Bedtime, null, tint = p.accent, modifier = Modifier.size(22.dp))
@@ -114,6 +114,6 @@ private fun Chip(label: String, tag: String, icon: Boolean = false, danger: Bool
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon) { Icon(Icons.Default.MusicNote, null, tint = p.accent, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)) }
-        Text(label, color = if (danger) Color(0xFFFF8A98) else p.textPrimary, fontWeight = FontWeight.SemiBold)
+        Text(label, color = if (danger) dev.asfakul.yumeiro.ui.theme.DangerTone else p.textPrimary, fontWeight = FontWeight.SemiBold)
     }
 }
