@@ -33,6 +33,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
@@ -256,6 +258,8 @@ private fun VideoPlayerModalContent(
     var isBuffering by remember(video.id) { mutableStateOf(false) }
     var isLiveStream by remember(video.id) { mutableStateOf(false) }
     var isControlsVisible by remember { mutableStateOf(true) }
+    // Window y of the seek bar row's top; captions are lifted above it while the controls show.
+    var seekBarTopPx by remember { mutableStateOf<Int?>(null) }
     var isUserSeeking by remember { mutableStateOf(false) }
     var sliderProgress by remember(video.id) { mutableFloatStateOf(0f) }
     // Target of the last slider seek, held on screen until the player reports it (no snap back).
@@ -1425,7 +1429,8 @@ private fun VideoPlayerModalContent(
                     scaleX = c.scale; scaleY = c.scale
                     translationX = c.panX; translationY = c.panY
                 }
-                dev.asfakul.yumeiro.player.SubtitleStyleSettings.applyTo(playerView, subtitleStyle)
+                val controlsUp = isControlsVisible && !isScreenLocked && !hideChrome
+                dev.asfakul.yumeiro.player.SubtitleStyleSettings.applyTo(playerView, subtitleStyle, if (controlsUp) seekBarTopPx else null)
             },
             onRelease = { playerView -> playerView.player = null },
             modifier = Modifier.fillMaxSize()
@@ -1783,7 +1788,8 @@ private fun VideoPlayerModalContent(
                         if (seekPos != null) seekPlayer(seekPos)
                         isUserSeeking = false
                     },
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                        .trackWindowTop { seekBarTopPx = it },
                     compact = docked,
                 )
             }
@@ -2094,3 +2100,7 @@ internal fun codecName(mime: String?): String? {
         else -> m.substringAfter('/').uppercase().take(10)
     }
 }
+
+/** Reports the window y of this element's top edge (rounded), only when it changes. */
+private fun Modifier.trackWindowTop(onTop: (Int) -> Unit): Modifier =
+    this.then(Modifier.onGloballyPositioned { onTop(it.positionInWindow().y.toInt()) })

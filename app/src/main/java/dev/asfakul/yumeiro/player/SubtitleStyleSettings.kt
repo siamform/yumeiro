@@ -105,22 +105,50 @@ object SubtitleStyleSettings {
             if (s.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT)
     }
 
-    /** Applies [s] to the player's subtitle view. Cheap; safe to call on every recomposition. */
-    fun applyTo(view: PlayerView, s: SubtitleStyle) {
+    /** Space kept between the captions and the top of the seek bar, as a fraction of the picture. */
+    const val CONTROLS_GAP = 0.02f
+    /** Captions never climb above the middle of the picture, even on a very short docked player. */
+    const val MAX_BOTTOM_PADDING = 0.6f
+
+    /**
+     * Bottom padding of the captions (fraction of the subtitle view's height).
+     *
+     * [subtitleTopPx] / [subtitleHeightPx] place the subtitle view in window pixels; [obstructionTopPx]
+     * is the window y of the top of the visible player controls (seek bar row), or null while they are
+     * hidden. While the controls show, the captions are lifted just above them (YouTube does the same);
+     * when they hide, the captions drop back to the user's height. Pure, so it is unit-tested.
+     */
+    fun bottomPaddingFraction(s: SubtitleStyle, subtitleTopPx: Int, subtitleHeightPx: Int, obstructionTopPx: Int?): Float {
+        val base = SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION + if (s.followSystem) 0f else s.lift
+        if (obstructionTopPx == null || subtitleHeightPx <= 0) return base
+        val overlapPx = subtitleTopPx + subtitleHeightPx - obstructionTopPx
+        if (overlapPx <= 0) return base
+        val needed = overlapPx.toFloat() / subtitleHeightPx + CONTROLS_GAP
+        return maxOf(base, needed).coerceAtMost(MAX_BOTTOM_PADDING)
+    }
+
+    /**
+     * Applies [s] to the player's subtitle view. Cheap; safe to call on every recomposition.
+     * [obstructionTopPx]: window y of the top of the visible controls, null while they are hidden.
+     */
+    fun applyTo(view: PlayerView, s: SubtitleStyle, obstructionTopPx: Int? = null) {
         val sv = view.subtitleView ?: return
-        if (view.getTag(dev.asfakul.yumeiro.R.id.subtitle_style_tag) == s) return
-        view.setTag(dev.asfakul.yumeiro.R.id.subtitle_style_tag, s)
+        val loc = IntArray(2).also { sv.getLocationInWindow(it) }
+        val padding = bottomPaddingFraction(s, loc[1], sv.height, obstructionTopPx)
+        val key = s to padding
+        if (view.getTag(dev.asfakul.yumeiro.R.id.subtitle_style_tag) == key) return
+        view.setTag(dev.asfakul.yumeiro.R.id.subtitle_style_tag, key)
         if (s.followSystem) {
             sv.setUserDefaultStyle()
             sv.setUserDefaultTextSize()
-            sv.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION)
+            sv.setBottomPaddingFraction(padding)
             sv.setApplyEmbeddedStyles(true)
             sv.setApplyEmbeddedFontSizes(true)
             return
         }
         sv.setStyle(captionStyle(s))
         sv.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * s.size)
-        sv.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION + s.lift)
+        sv.setBottomPaddingFraction(padding)
         sv.setApplyEmbeddedStyles(s.keepFileStyling)
         // Our size choice wins over sizes inside the file, so "Bigger" always means bigger.
         sv.setApplyEmbeddedFontSizes(false)
