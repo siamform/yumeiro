@@ -245,13 +245,37 @@ class RequestAwareHttpFactory(
             .setUserAgent(r?.userAgent ?: defaultUserAgent)
             .setDefaultRequestProperties(extra.snapshot + (r?.requestHeaders() ?: emptyMap()))
             .createDataSource()
-        return if (r == null || (r.subtitles.none { it.headers.isNotEmpty() } && r.audioTracks.none { it.headers.isNotEmpty() })) delegate
+        val base = if (r == null || (r.subtitles.none { it.headers.isNotEmpty() } && r.audioTracks.none { it.headers.isNotEmpty() })) delegate
         else PerUrlHeadersDataSource(delegate) { uri -> r.headersFor(uri) }
+        return SizeProbeDataSource(base, r?.url)
     }
 
     override fun setDefaultRequestProperties(defaultRequestProperties: Map<String, String>): HttpDataSource.Factory {
         extra.clearAndSet(defaultRequestProperties); return this
     }
+}
+
+/**
+ * Round 12: reads the real file size from the response of the video's own URL (progressive MP4 /
+ * MKV links from extensions), so "Video details" and the facts under the player stop saying 0.
+ * Costs nothing: the headers are already there. Only the main URL counts, never subtitles,
+ * audio tracks, playlists or segments.
+ */
+@OptIn(UnstableApi::class)
+internal class SizeProbeDataSource(private val delegate: HttpDataSource, private val resolvedUrl: String? = null) : HttpDataSource by delegate {
+    override fun open(dataSpec: DataSpec): Long {
+        val n = delegate.open(dataSpec)
+        runCatching {
+            val snap = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value
+            val u = dataSpec.uri.toString()
+            if (snap.sizeBytes <= 0 && snap.uri.isNotBlank() && (u == snap.uri || u == resolvedUrl)) {
+                val total = dev.asfakul.yumeiro.player.PlaybackFacts.totalSizeFromHeaders(delegate.responseHeaders, dataSpec.position == 0L)
+                if (total > 0) dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { if (it.uri == snap.uri && it.sizeBytes <= 0) it.copy(sizeBytes = total) else it }
+            }
+        }
+        return n
+    }
+    override fun addTransferListener(transferListener: TransferListener) = delegate.addTransferListener(transferListener)
 }
 
 /** Sends a subtitle's / audio track's own headers (they can differ from the video's). */

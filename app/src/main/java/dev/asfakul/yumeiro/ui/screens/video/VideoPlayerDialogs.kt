@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
@@ -70,6 +71,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -742,7 +744,7 @@ fun VideoInfoDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    imageVector = Icons.Default.Movie,
                     contentDescription = null,
                     tint = SpotifyGreen,
                     modifier = Modifier.size(24.dp)
@@ -761,13 +763,12 @@ fun VideoInfoDialog(
                 modifier = Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                InfoRow(label = "Title", value = video.title)
-                InfoRow(
-                    label = "Resolution",
-                    value = if (video.width > 0 && video.height > 0) "${video.width} × ${video.height} (${video.resolution})" else video.resolution
-                )
-                InfoRow(label = "Duration", value = formatDuration(video.durationMs))
-                InfoRow(label = "File size", value = formatFileSize(video.sizeBytes))
+                // Round 12: streams have no size / length in their VideoItem (both 0), so the
+                // values come from what the player actually opened and decoded; anything the
+                // source really doesn't say reads "Not provided" instead of a fake "0 MB".
+                val snap by dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.collectAsState()
+                val rows = videoDetailRows(video, snap, videoFormat, audioFormat)
+                rows.forEach { (label, value) -> InfoRow(label = label, value = value) }
 
                 videoFormat?.let { vf ->
                     InfoRow(label = "Video codec", value = vf.sampleMimeType ?: "Hardware H.264/HEVC")
@@ -792,7 +793,7 @@ fun VideoInfoDialog(
                     }
                 }
 
-                InfoRow(label = "Folder", value = video.folderName)
+                if (video.folderName.isNotBlank()) InfoRow(label = "Folder", value = video.folderName)
                 if (video.folderPath.isNotBlank()) {
                     InfoRow(label = "Path", value = video.folderPath)
                 }
@@ -809,6 +810,53 @@ fun VideoInfoDialog(
         },
         containerColor = DarkSurface,
         tonalElevation = 6.dp
+    )
+}
+
+/**
+ * Title, resolution, duration, size and audio for "Video details". Library files bring their own
+ * numbers; streams fall back to [snap] (what the player decoded, and the size from the server's
+ * response). Pure so it is unit-tested.
+ */
+internal fun videoDetailRows(
+    video: VideoItem,
+    snap: dev.asfakul.yumeiro.player.PlaybackDiagnostics.Snapshot,
+    videoFormat: Format? = null,
+    audioFormat: Format? = null,
+): List<Pair<String, String>> {
+    val facts = dev.asfakul.yumeiro.player.PlaybackFacts.of(snap)
+    val notProvided = if (facts.pending) "Reading…" else "Not provided by the source"
+    val w = video.width.takeIf { it > 0 } ?: snap.width.takeIf { it > 0 } ?: videoFormat?.width?.takeIf { it > 0 } ?: 0
+    val h = video.height.takeIf { it > 0 } ?: snap.height.takeIf { it > 0 } ?: videoFormat?.height?.takeIf { it > 0 } ?: 0
+    val resolution = when {
+        w > 0 && h > 0 -> "$w × $h (${dev.asfakul.yumeiro.player.PlaybackFacts.qualityName(w, h)})"
+        video.resolution.isNotBlank() -> video.resolution
+        else -> notProvided
+    }
+    val duration = when {
+        snap.live -> "Live"
+        video.durationMs > 0 -> formatDuration(video.durationMs)
+        snap.durationMs > 0 -> formatDuration(snap.durationMs)
+        else -> notProvided
+    }
+    val size = when {
+        video.sizeBytes > 0 -> formatFileSize(video.sizeBytes)
+        snap.live -> "Live stream"
+        facts.size != null -> if (facts.sizeEstimated) "${facts.size} (estimated from bitrate)" else facts.size
+        else -> notProvided
+    }
+    val audioSnap = if (snap.audioLanguage == null && audioFormat != null) snap.copy(
+        audioLanguage = audioFormat.language?.takeIf { it.isNotBlank() && !it.equals("und", true) },
+        audioLabel = audioFormat.label,
+        audioChannels = audioFormat.channelCount.coerceAtLeast(0),
+    ) else snap
+    val audio = dev.asfakul.yumeiro.player.PlaybackFacts.audioName(audioSnap) ?: if (facts.pending) "Reading…" else "Language not tagged in the stream"
+    return listOf(
+        "Title" to video.title,
+        "Resolution" to resolution,
+        "Duration" to duration,
+        "File size" to size,
+        "Audio" to audio,
     )
 }
 

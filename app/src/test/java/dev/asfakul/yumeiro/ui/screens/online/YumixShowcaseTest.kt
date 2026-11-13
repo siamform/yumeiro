@@ -25,7 +25,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTextInput
 import dev.asfakul.yumeiro.online.OnlineHistory
 import dev.asfakul.yumeiro.online.OnlineItem
@@ -130,14 +130,13 @@ class YumixShowcaseTest {
         rule.onNodeWithTag("online_filter_SuperStream").assertDoesNotExist()
         rule.onNodeWithTag("online_filter_all").assertDoesNotExist()
         save("r12_yumix_filter_search")
-        rule.onNodeWithTag("online_filter_search").performTextClearance()
-        rule.onNodeWithTag("online_filter_search").performTextInput("zzz")
+        rule.onNodeWithTag("online_filter_search").performTextReplacement("zzz")
         rule.mainClock.advanceTimeBy(400)
         rule.onNodeWithTag("online_filter_empty").assertExists()
         rule.onNodeWithTag("online_filter_search_clear").performClick()
         rule.mainClock.advanceTimeBy(400)
         rule.onNodeWithTag("online_filter_all").assertExists()
-        rule.onNodeWithTag("online_filter_search").performTextInput("fenix")
+        rule.onNodeWithTag("online_filter_search").performTextReplacement("fenix")
         rule.mainClock.advanceTimeBy(400)
         rule.onNodeWithTag("online_filter_Animé Fénix").performClick()
         rule.mainClock.advanceTimeBy(400)
