@@ -4,7 +4,7 @@ Everything here is free.
 
 ## Website (now)
 
-`https://yumeiro.click/download` redirects to the newest signed APK (or `?id=<assetId>` for a specific asset).
+`https://yumeiro.click/download` lists the builds per processor. `https://yumeiro.click/get?abi=arm64-v8a|armeabi-v7a|universal` redirects to the newest signed APK for that processor (universal if the release has no split build), `?id=<assetId>` to a specific asset, and `https://yumeiro.click/tv` is the short link for TV remotes.
 It asks the GitHub API for a short-lived signed link, so it keeps working when `github.com/.../releases/download/...`
 returns 504. Use this link everywhere instead of the raw release URL.
 
