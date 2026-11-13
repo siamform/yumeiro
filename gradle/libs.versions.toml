@@ -34,7 +34,7 @@ cloudstreamLibrary = "4.8.0"
 nicehttp = "0.4.18"
 # YouTube / YouTube Music / SoundCloud without login (same extractor NewPipe, ArchiveTune and AuraMusic use).
 newpipeExtractor = "v0.26.5"
-jackson = "2.22.4"
+jackson = "2.19.4" # 2.20+ uses MethodHandle.invokeExact (needs minSdk 26); keep <= 2.19 while minSdk is 24
 castFramework = "23.0.0"
 # Push (FCM only — no Analytics, Auth or Firestore). BoM 35.2.0 → firebase-messaging 26.0.2.
 firebaseBom = "35.2.0"
