@@ -542,7 +542,8 @@ private fun VideoPlayerModalContent(
     fun resolveAndPlay(request: StreamRequest, positionMs: Long, thorough: Boolean) {
         resolving = true
         isBuffering = true
-        coroutineScope.launch {
+        // The player only accepts calls on the main thread, so the result is always handled there.
+        coroutineScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
             val r = runCatching { StreamResolver.resolve(context, request, thorough) }
                 .getOrElse { Resolution.Failed("Couldn't open the link", dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Check the link and try again.")) }
             handleResolution(r, positionMs)
