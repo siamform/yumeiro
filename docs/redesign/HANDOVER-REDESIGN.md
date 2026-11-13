@@ -467,3 +467,10 @@ All of this was actually run on this branch (Linux, JDK 17, Robolectric). Nothin
 | `./gradlew :app:assembleDebug` | BUILD SUCCESSFUL. `app-debug.apk` was built (not installed on any device) |
 | Test-tag diff of `app/src/main` (baseline vs branch) | No tag lost (see §3) |
 | `git diff af8349e -- app/src/main/java/dev/asfakul/yumeiro/ui/theme/Color.kt app/build.gradle.kts` | Empty: colours and dependencies are unchanged |
+
+## R11b: real feed shots and extension compatibility
+
+- `RealAppShotsTest` now installs **SoraAnime** (ExtCloud) and **CineStream** (Megix Repo) for the feed, from the jars in `YUMEIRO_EXT_DIR` (dex2jar `-dsn -cf`). The Internet Archive extension is only used for the public-domain film in the watch and player shots. New steps: `03b_yumix_category` (Anime chip) and `03c_yumix_all`. Market search is "anime". The music shots use the NCS song search (`12_music_search`), since the personalised music home shows real artists and podcast hosts.
+- The background is the original production gradient again (no moon, sun, stickers or shapes). Yumix has a YouTube-style category bar under the header (All, Anime, Movies, Series).
+- "Add anything" auto-detect and the extension link audit: see `docs/EXTENSION-COMPAT.md` and HANDOVER section 28.
+
