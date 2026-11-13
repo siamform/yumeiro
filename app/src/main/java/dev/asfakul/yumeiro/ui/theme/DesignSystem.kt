@@ -79,7 +79,8 @@ fun Modifier.pageBackground(): Modifier = composed {
             )
             val img = photo
             val scene = if (style == BackdropStyle.SCENE || (style == BackdropStyle.PHOTO && img == null)) buildScene(p, w, windowH, intensity) else null
-            val sparkles = if (scene == null && img == null && p.isDark) sparkleField(w, windowH * 0.45f) else emptyList()
+            // The production night sky stays under every dark scene; a photo replaces it.
+            val sparkles = if (img == null && p.isDark) sparkleField(w, windowH * 0.45f) else emptyList()
             val starColor = Color.White
             onDrawBehind {
                 drawRect(brush)

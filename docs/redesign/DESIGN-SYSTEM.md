@@ -55,7 +55,7 @@ Colours and fonts are **unchanged**. Round 3 adds interaction components and mot
 **Principles added**
 - One clear source per page, which the user changes from the title. No permanent source cards.
 - Show the important things first (context line, new episodes). Everything else folds, and folding is remembered.
-- The brand signature ("◆ 夢色 YUMEIRO" + greeting) appears **only on Home**.
+- The brand signature ("夢色 · YUMEIRO" + greeting, no glyph) appears **only on Home**.
 - Every new animation has a reduced-motion version.
 - Never fake data. If the app doesn't know something (a release date), say what it does know (the found date).
 

@@ -30,7 +30,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.asfakul.yumeiro.ui.navigation.BottomNavItem
+import dev.asfakul.yumeiro.ui.navigation.NavPrefs
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 
 /** Width the content keeps free for the collapsed rail. */
@@ -63,7 +67,7 @@ private val TvRailOpenWidth = 248.dp
 
 /**
  * TV navigation: a slim ink rail on the left edge (a bottom bar is out of reach of a remote and
- * eats the short side of a 16:9 screen). Collapsed it shows only glyphs, so the content keeps the
+ * eats the short side of a 16:9 screen). Collapsed it shows only icons, so the content keeps the
  * screen. When focus enters it (D-pad Left from the page), it opens over the content with labels,
  * like a drawer of dream colours, and closes again the moment focus goes back to the page.
  * The same items as the phone bar (Settings → Navigation bar), plus Settings at the bottom.
@@ -98,15 +102,20 @@ fun TvNavRail(
             Modifier.fillMaxHeight().padding(vertical = 28.dp, horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // Brand mark: the crescent of the launcher icon in the accent colour.
-            Row(Modifier.height(48.dp).padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("◆", color = palette.accent, fontSize = 18.sp)
+            // Brand mark: the app logo (same tile as the launcher icon), the name when the rail opens.
+            Row(Modifier.height(52.dp).padding(start = 6.dp).testTag("tv_rail_logo"), verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(R.drawable.ic_app_logo),
+                    contentDescription = "Yumeiro",
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)),
+                )
                 AnimatedVisibility(focusedInside, enter = fadeIn(tween(160)), exit = fadeOut(tween(90))) {
                     Text("  Yumeiro", color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
             Spacer(Modifier.height(12.dp))
-            items.forEach { item ->
+            // Settings lives once, at the bottom of the rail; a pinned Settings shortcut would repeat it.
+            railItems(items).forEach { item ->
                 RailItem(
                     label = item.label,
                     selected = currentRoute == item.route,
@@ -127,6 +136,10 @@ fun TvNavRail(
         }
     }
 }
+
+/** Bar items shown on the rail: everything except a pinned Settings shortcut (the rail has its own). */
+internal fun railItems(items: List<BottomNavItem>): List<BottomNavItem> =
+    items.filterNot { it.route == NavPrefs.SHORTCUT_PREFIX + NavPrefs.Shortcut.SETTINGS.id }
 
 @Composable
 private fun RailItem(

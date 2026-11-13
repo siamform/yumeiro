@@ -33,20 +33,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * 夢色 "dream colour" backdrops. Every theme paints its own scene behind every page, so each one
  * carries a different mood instead of being the same gradient in another colour:
  *
- *  - Tsuki Night: a crescent moon, a quiet star field and low mist.
- *  - Washi Day: warm paper fibres, a soft sun wash and a faint ensō brush circle.
- *  - Afterglow: an ember horizon with drifting sparks.
- *  - Time of day: sunrise mist (morning), clear sky and clouds (noon), golden light beams
- *    (afternoon), dusk with first stars (evening) and an aurora (midnight).
- *  - Material You: soft wallpaper-colour blooms.
+ *  All themes share the production night-sky base (ink gradient, ambient halo, faint sparkles
+ *  on dark themes) and add one quiet detail each:
+ *  - Tsuki Night: low mist. Evening: a warm dusk line. Midnight: one faint ribbon.
+ *  - Afterglow: a few embers. Washi Day: a faint ensō circle. Morning: a mist band.
+ *  - Noon: two small clouds. Afternoon: one golden beam. Material You: a second bloom.
  *
  * The user can switch to their own photo (softly blurred and dimmed so text keeps its contrast)
  * or a calm plain gradient, and set the intensity. Scenes are vector shapes built once per size in
@@ -156,127 +152,80 @@ internal class SceneLayer(private val ops: List<DrawScope.(Float) -> Unit>) {
     fun draw(scope: DrawScope, top: Float) { ops.forEach { scope.it(top) } }
 }
 
-private fun stars(rnd: java.util.Random, n: Int, w: Float, h: Float, maxR: Float, alpha: Float): List<Triple<Offset, Float, Float>> =
-    List(n) { Triple(Offset(rnd.nextFloat() * w, rnd.nextFloat() * h), 0.6f + rnd.nextFloat() * maxR, alpha * (0.35f + rnd.nextFloat() * 0.65f)) }
-
 /**
- * Builds the scene for [p] in window coordinates ([w] × [windowH]). Each op receives the page's
- * top offset in the window so stacked pages line up into one continuous picture.
+ * Builds the quiet detail for [p] in window coordinates ([w] × [windowH]). Each op receives the
+ * page's top offset in the window so stacked pages line up into one continuous picture.
+ *
+ * Round 11: the scene no longer replaces the page. Every theme keeps the production night-sky
+ * base drawn by [pageBackground] (ink gradient, one ambient halo, its echo and the nine faint
+ * sparkles on dark themes) and adds exactly one quiet detail of its own. No moon, no big shapes:
+ * the base is what users liked, the detail only tells the themes apart.
  */
 internal fun buildScene(p: MtPalette, w: Float, windowH: Float, k: Float): SceneLayer {
     val ops = mutableListOf<DrawScope.(Float) -> Unit>()
     val a = k.coerceIn(0.3f, 1.6f)
     val ink = p.textPrimary
     val rnd = java.util.Random(0x7E1AL + p.scene.ordinal)
-    fun starField(n: Int, h: Float, maxR: Float, alpha: Float, tint: Color = Color.White) {
-        val s = stars(rnd, n, w, h, maxR, alpha * a)
-        ops += { top -> s.forEach { (c, r, al) -> drawCircle(tint.copy(alpha = al.coerceAtMost(1f)), r, Offset(c.x, c.y - top)) } }
-    }
-    fun glow(color: Color, cx: Float, cy: Float, radius: Float, alpha: Float) {
-        val col = color.copy(alpha = (alpha * a).coerceAtMost(1f))
-        ops += { top ->
-            drawRect(Brush.radialGradient(0f to col, 0.6f to col.copy(alpha = col.alpha * 0.3f), 1f to Color.Transparent, center = Offset(cx, cy - top), radius = radius))
-        }
+    fun dust(n: Int, y0: Float, y1: Float, maxR: Float, alpha: Float, tint: Color) {
+        val s = List(n) { Triple(Offset(rnd.nextFloat() * w, y0 + rnd.nextFloat() * (y1 - y0)), 0.5f + rnd.nextFloat() * maxR, alpha * (0.35f + rnd.nextFloat() * 0.65f)) }
+        ops += { top -> s.forEach { (c, r, al) -> drawCircle(tint.copy(alpha = (al * a).coerceAtMost(0.6f)), r, Offset(c.x, c.y - top)) } }
     }
     fun band(color: Color, y0: Float, y1: Float, alpha: Float) {
-        val col = color.copy(alpha = (alpha * a).coerceAtMost(1f))
+        val col = color.copy(alpha = (alpha * a).coerceAtMost(0.5f))
         ops += { top -> drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.5f to col, 1f to Color.Transparent, startY = y0 - top, endY = y1 - top)) }
     }
     when (p.scene) {
-        DreamScene.TSUKI, DreamScene.EVENING -> {
-            val evening = p.scene == DreamScene.EVENING
-            val moonC = Offset(w * 0.80f, windowH * 0.085f)
-            val mr = w * 0.085f
-            glow(p.accentBright, moonC.x, moonC.y, w * 0.55f, if (evening) 0.10f else 0.14f)
-            // Crescent: the moon disc minus an offset disc (even-odd path, no offscreen layer).
-            val crescent = Path().apply {
-                fillType = PathFillType.EvenOdd
-                addOval(androidx.compose.ui.geometry.Rect(moonC, mr))
-                addOval(androidx.compose.ui.geometry.Rect(Offset(moonC.x + mr * 0.42f, moonC.y - mr * 0.22f), mr * 0.9f))
-            }
-            val moonCol = lerp(p.accentBright, Color.White, 0.55f).copy(alpha = (0.30f * a).coerceAtMost(0.85f))
-            ops += { top -> translateY(-top) { drawPath(crescent, moonCol) } }
-            starField(if (evening) 18 else 34, windowH * (if (evening) 0.35f else 0.55f), 1.6f, 0.30f)
-            if (evening) {
-                glow(p.accent2, w * 0.15f, windowH * 1.02f, w * 1.1f, 0.16f)
-                band(p.accent, windowH * 0.78f, windowH * 1.05f, 0.06f)
-            } else band(ink, windowH * 0.80f, windowH * 1.02f, 0.035f)
-        }
+        // Tsuki Night: low mist along the bottom of the sky.
+        DreamScene.TSUKI -> band(ink, windowH * 0.80f, windowH * 1.04f, 0.030f)
+        // Evening: a warm dusk line on the horizon.
+        DreamScene.EVENING -> band(p.accent2, windowH * 0.84f, windowH * 1.06f, 0.07f)
+        // Midnight: one thin, very faint ribbon across the upper sky.
         DreamScene.MIDNIGHT -> {
-            starField(60, windowH * 0.7f, 1.5f, 0.38f)
-            // Aurora: two soft ribbons waving across the upper sky.
-            listOf(p.accent to 0.16f, p.accent2 to 0.10f).forEachIndexed { i, (col, al) ->
-                val path = Path().apply {
-                    val y = windowH * (0.10f + i * 0.07f)
-                    moveTo(-w * 0.1f, y + w * 0.12f)
-                    cubicTo(w * 0.25f, y - w * 0.10f, w * 0.55f, y + w * 0.22f, w * 1.1f, y - w * 0.02f)
-                    lineTo(w * 1.1f, y + w * 0.16f)
-                    cubicTo(w * 0.55f, y + w * 0.36f, w * 0.25f, y + w * 0.06f, -w * 0.1f, y + w * 0.30f)
-                    close()
-                }
-                val c = col.copy(alpha = (al * a).coerceAtMost(0.6f))
-                ops += { top -> translateY(-top) { drawPath(path, Brush.verticalGradient(listOf(Color.Transparent, c, Color.Transparent), startY = windowH * 0.02f, endY = windowH * 0.40f)) } }
+            val y = windowH * 0.16f
+            val path = Path().apply {
+                moveTo(-w * 0.1f, y + w * 0.10f)
+                cubicTo(w * 0.3f, y - w * 0.06f, w * 0.6f, y + w * 0.16f, w * 1.1f, y)
+                lineTo(w * 1.1f, y + w * 0.06f)
+                cubicTo(w * 0.6f, y + w * 0.22f, w * 0.3f, y, -w * 0.1f, y + w * 0.16f)
+                close()
             }
-            band(Color(0xFF000000), windowH * 0.82f, windowH * 1.1f, 0.25f)
+            val c = p.accent.copy(alpha = (0.07f * a).coerceAtMost(0.25f))
+            ops += { top -> translateY(-top) { drawPath(path, c) } }
         }
+        // Afterglow: a few embers rising near the bottom.
+        DreamScene.AFTERGLOW -> dust(12, windowH * 0.62f, windowH * 0.98f, 1.6f, 0.22f, p.accentBright)
+        // Washi Day: a faint open ensō brush circle.
         DreamScene.WASHI -> {
-            glow(p.accentBright, w * 0.12f, windowH * 0.02f, w * 0.95f, 0.16f)
-            // Ensō: one open brush circle, very faint.
-            val ec = Offset(w * 0.84f, windowH * 0.30f); val er = w * 0.30f
-            val enso = ink.copy(alpha = (0.045f * a).coerceAtMost(0.2f))
+            val ec = Offset(w * 0.84f, windowH * 0.30f); val er = w * 0.26f
+            val enso = ink.copy(alpha = (0.035f * a).coerceAtMost(0.15f))
             ops += { top ->
-                drawArc(enso, 200f, 300f, false, Offset(ec.x - er, ec.y - er - top), Size(er * 2, er * 2), style = Stroke(w * 0.022f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                drawArc(enso, 200f, 300f, false, Offset(ec.x - er, ec.y - er - top), Size(er * 2, er * 2), style = Stroke(w * 0.018f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
             }
-            // Paper fibres.
-            val fibres = List(70) {
-                val x = rnd.nextFloat() * w; val y = rnd.nextFloat() * windowH
-                val len = 8f + rnd.nextFloat() * 26f; val ang = rnd.nextFloat() * PI.toFloat()
-                Triple(Offset(x, y), Offset(x + cos(ang) * len, y + sin(ang) * len), 0.02f + rnd.nextFloat() * 0.035f)
-            }
-            ops += { top -> fibres.forEach { (s, e, al) -> drawLine(ink.copy(alpha = (al * a).coerceAtMost(0.2f)), Offset(s.x, s.y - top), Offset(e.x, e.y - top), 1.1f) } }
         }
-        DreamScene.AFTERGLOW -> {
-            glow(p.accent, w * 0.5f, windowH * 0.02f, w * 1.15f, 0.20f)
-            glow(p.accent2, w * 0.95f, windowH * 0.55f, w * 0.7f, 0.10f)
-            band(p.accent, windowH * 0.20f, windowH * 0.34f, 0.05f)
-            val embers = List(26) { Triple(Offset(rnd.nextFloat() * w, windowH * (0.15f + rnd.nextFloat() * 0.8f)), 1.2f + rnd.nextFloat() * 2.6f, 0.10f + rnd.nextFloat() * 0.25f) }
-            ops += { top -> embers.forEach { (c, r, al) -> drawCircle(p.accentBright.copy(alpha = (al * a).coerceAtMost(0.9f)), r, Offset(c.x, c.y - top)) } }
-        }
-        DreamScene.MORNING -> {
-            glow(p.accentBright, w * 0.18f, windowH * 0.06f, w * 0.85f, 0.26f)
-            glow(p.accent2, w * 0.95f, windowH * 0.18f, w * 0.6f, 0.12f)
-            band(Color.White, windowH * 0.22f, windowH * 0.34f, 0.55f)
-            band(Color.White, windowH * 0.52f, windowH * 0.62f, 0.40f)
-        }
+        // Morning: one soft mist band.
+        DreamScene.MORNING -> band(Color.White, windowH * 0.26f, windowH * 0.38f, 0.40f)
+        // Noon: two small, faint clouds.
         DreamScene.NOON -> {
-            glow(p.accentBright, w * 0.85f, windowH * 0.0f, w * 0.9f, 0.20f)
-            // Soft clouds: clusters of white ovals.
-            val clouds = List(4) { i ->
-                val cx = w * (0.1f + 0.28f * i + rnd.nextFloat() * 0.08f); val cy = windowH * (0.07f + rnd.nextFloat() * 0.18f)
-                val s = w * (0.07f + rnd.nextFloat() * 0.05f)
+            val clouds = List(2) { i ->
+                val cx = w * (0.14f + 0.50f * i); val cy = windowH * (0.08f + 0.06f * i)
+                val s = w * 0.05f
                 listOf(Offset(cx, cy) to s, Offset(cx + s * 0.9f, cy - s * 0.3f) to s * 0.85f, Offset(cx + s * 1.7f, cy) to s * 0.7f)
             }.flatten()
-            val cloudCol = Color.White.copy(alpha = (0.55f * a).coerceAtMost(0.95f))
+            val cloudCol = Color.White.copy(alpha = (0.35f * a).coerceAtMost(0.7f))
             ops += { top -> clouds.forEach { (c, r) -> drawCircle(cloudCol, r, Offset(c.x, c.y - top)) } }
         }
+        // Afternoon: a single golden beam from the top-right corner.
         DreamScene.AFTERNOON -> {
-            glow(p.accentBright, w * 1.0f, windowH * 0.0f, w * 1.1f, 0.24f)
-            // Golden beams falling from the top-right corner.
-            listOf(0.20f, 0.42f, 0.66f).forEachIndexed { i, f ->
-                val path = Path().apply {
-                    moveTo(w * 1.05f, -windowH * 0.02f)
-                    lineTo(w * (f - 0.08f), windowH * 0.75f)
-                    lineTo(w * (f + 0.06f), windowH * 0.75f)
-                    close()
-                }
-                val c = p.accentBright.copy(alpha = ((0.07f - i * 0.015f) * a).coerceAtMost(0.4f))
-                ops += { top -> translateY(-top) { drawPath(path, Brush.verticalGradient(listOf(c, Color.Transparent), startY = 0f, endY = windowH * 0.75f)) } }
+            val path = Path().apply {
+                moveTo(w * 1.05f, -windowH * 0.02f); lineTo(w * 0.34f, windowH * 0.70f); lineTo(w * 0.48f, windowH * 0.70f); close()
             }
+            val c = p.accentBright.copy(alpha = (0.05f * a).coerceAtMost(0.3f))
+            ops += { top -> translateY(-top) { drawPath(path, Brush.verticalGradient(listOf(c, Color.Transparent), startY = 0f, endY = windowH * 0.70f)) } }
         }
+        // Material You: a second wallpaper-colour bloom low on the page.
         DreamScene.YOU -> {
-            glow(p.accent, w * 0.05f, windowH * 0.05f, w * 0.9f, if (p.isDark) 0.18f else 0.16f)
-            glow(p.accent2, w * 1.0f, windowH * 0.45f, w * 0.8f, 0.12f)
-            glow(p.accentBright, w * 0.2f, windowH * 0.95f, w * 0.8f, 0.08f)
+            val col = p.accent2.copy(alpha = (0.10f * a).coerceAtMost(0.4f))
+            ops += { top -> drawRect(Brush.radialGradient(0f to col, 1f to Color.Transparent, center = Offset(w * 1.0f, windowH * 0.70f - top), radius = w * 0.8f)) }
         }
     }
     return SceneLayer(ops)

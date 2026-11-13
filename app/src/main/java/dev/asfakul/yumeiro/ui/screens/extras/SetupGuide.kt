@@ -281,7 +281,7 @@ private fun WelcomePage(onExplore: () -> Unit, onSkip: () -> Unit, onChecklist: 
                 }
                 Column(Modifier.fillMaxWidth().alpha(textAlpha)) {
                     Text(
-                        "◆ 夢色 YUMEIRO", color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                        "夢色 YUMEIRO", color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(18.dp))

@@ -431,7 +431,7 @@ fun MTPlayerApp(
                             else -> null
                         },
                         overline = when (tabRoute) {
-                            Screen.Home.route -> "◆ 夢色 · YUMEIRO"
+                            Screen.Home.route -> "夢色 · YUMEIRO"
                             Screen.Music.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("音楽", "LISTEN", kanaOn)
                             Screen.Videos.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("映像", "WATCH", kanaOn)
                             else -> dev.asfakul.yumeiro.ui.components.Kana.overline(dev.asfakul.yumeiro.ui.components.Kana.forTitle(topBarTitle), null, kanaOn)

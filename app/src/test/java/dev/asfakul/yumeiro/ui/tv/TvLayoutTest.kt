@@ -79,6 +79,11 @@ class TvLayoutTest {
         awaitHome()
         assertTrue("TV rail shown", exists("tv_nav_rail"))
         assertFalse("no phone bottom bar on TV", exists("mt_bottom_navigation_bar"))
+        // One Settings entry on TV: the rail's. The top bar one is hidden.
+        assertTrue("rail Settings shown", exists("tv_nav_settings"))
+        assertFalse("no top-bar Settings on TV", exists("topbar_settings_action"))
+        assertTrue("app logo at the top of the rail", exists("tv_rail_logo"))
+        assertFalse("no diamond glyph anywhere", rule.onAllNodesWithText("◆", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         shot("tv_home")
 
         // A TV has no touch: the window is in non-touch (keyboard) mode, so clickables are focusable.
@@ -107,6 +112,12 @@ class TvLayoutTest {
         rule.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
         settle(1_500)
         assertTrue("Videos page open", exists("video_source_switch"))
+    }
+
+    @Test fun railDropsAPinnedSettingsShortcut() {
+        val settings = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS.item
+        val music = dev.asfakul.yumeiro.ui.navigation.BottomNavItem("music", "Music", androidx.compose.material.icons.Icons.Filled.Settings, androidx.compose.material.icons.Icons.Filled.Settings, "nav_tab_music")
+        assertTrue(railItems(listOf(music, settings)) == listOf(music))
     }
 
     private fun leaveTouchMode() {

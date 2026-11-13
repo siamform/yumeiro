@@ -265,7 +265,8 @@ fun MTTopBar(
                         badgeTag = "topbar_inbox_badge",
                         modifier = Modifier.testTag("topbar_inbox_action")
                     )
-                    if (!showBackButton) {
+                    // On TV the rail already has Settings at the bottom; one entry is enough.
+                    if (!showBackButton && !dev.asfakul.yumeiro.ui.tv.LocalTvMode.current) {
                         TopAction(
                             icon = Icons.Outlined.Settings,
                             contentDescription = "Open Settings",
@@ -304,14 +305,14 @@ private fun Modifier.androidx_semantics_offline(): Modifier =
     )
 
 
-/** "◆ 夢色 YUMEIRO": the signature mark (Home only) with the diamond in the accent colour. */
+/** "夢色 · YUMEIRO": the signature overline (Home only); 夢色 is drawn in the accent colour. */
 @Composable
 private fun signatureOverline(text: String): androidx.compose.ui.text.AnnotatedString {
     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     return androidx.compose.ui.text.buildAnnotatedString {
-        if (text.startsWith("◆")) {
-            pushStyle(androidx.compose.ui.text.SpanStyle(color = p.accent)); append("◆"); pop()
-            append(text.removePrefix("◆"))
+        if (text.startsWith("夢色")) {
+            pushStyle(androidx.compose.ui.text.SpanStyle(color = p.accent)); append("夢色"); pop()
+            append(text.removePrefix("夢色"))
         } else append(text)
     }
 }
