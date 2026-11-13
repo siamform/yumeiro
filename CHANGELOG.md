@@ -1,9 +1,48 @@
 # Changelog
 
-All notable changes to Yumeiro. Version numbers are set by the release workflow from the commit types
-(Conventional Commits), so the first release that contains these notes gets the next version after v1.5.0.
+All notable changes to Yumeiro.
 
-## Redesign (R1 to R11): next release after v1.5.0
+## v1.7.0: bring back the legacy
+
+1.5.0 was the release people loved; 1.6.0 felt slow, reloaded everything, lost data on restore and mixed the phone and TV experience. 1.7.0 goes back to what made Yumeiro good (fast, reliable, yours) and fixes those problems at the root.
+
+### 1.6.0 vs 1.7.0
+
+| Area | v1.6.0 | v1.7.0 |
+|---|---|---|
+| Loading | Home, search and details loaded from the network every time | Saved pages: opened pages show instantly from storage and refresh in the background; posters keep a large disk cache (2 % of free space, 64 to 512 MB) |
+| Cache and cookies | Grew without limits, only manual clearing | Time limits like a browser: pages refresh after N hours, are deleted after N days, a size cap, and website cookies clear every N days (all adjustable) |
+| Backup | One file, partial restore, often broke the running app | Backup v2: pick sections, saved on the phone (Documents/Yumeiro), automatic backups, staged restore that applies on a clean restart, a safety backup before every restore |
+| Reset | Clear data from Android settings | Reset center: clear cache, cookies, history, extensions or settings, each with a backup first; erase everything |
+| Extensions after restore | Had to be found and added again | Restored with the backup, missing files downloaded again automatically |
+| TV | One app for phone and TV | Two apps: **Yumeiro** for phones and tablets, **Yumeiro TV** for Android TV, Google TV and Fire TV, each tuned separately |
+| Sources | Name only | Quality, release type, format, size and audio on every source; only the playing group opens; Show more paging so long lists never freeze |
+| Audio and subtitle tracks | One long list | Grouped by language, only the playing language open, Show more paging |
+| Video details | Missing size, duration and audio for streams | Real size, duration and audio |
+| Yumix | Extension filter without search | Search box in the extension filter |
+
+### Two apps: Yumeiro and Yumeiro TV
+- Built separately (`mobile` and `tv` product flavors). Yumeiro TV always uses the ten-foot layout and is tuned for TV sticks: smaller memory image cache, 16-bit posters, no crossfades, a leaner video buffer, landscape only and no picture in picture.
+- The phone app has no TV launcher entry any more. Installed on a TV, it offers Yumeiro TV through the updater; it installs over the phone app and keeps everything.
+- Release files: `Yumeiro-v<version>-<abi>.apk` and `release-Yumeiro-v<version>.apk` for phones, `Yumeiro-TV-v<version>-<abi>.tv.apk` and `Yumeiro-TV-v<version>-universal.tv.apk` for TVs. Each app's updater takes only its own files (1.6.0 updaters never pick TV files).
+- The TV home has a single Settings entry (at the bottom of the rail), with the Yumeiro logo at the top.
+
+### Backup, storage and reset
+- Settings, Backup, storage & reset: back up library, history, progress, extensions and repositories, settings, trackers and downloads list; choose a folder; restore any backup with counts per section.
+- Restore is staged: it is written first and applied on a clean restart, so nothing is half restored. A safety backup is taken before every restore and reset.
+- Automatic backups daily or weekly, with a number to keep.
+
+### Speed
+- Saved pages for home rows, searches (up to 1 hour) and details. A refresh still happens in the background.
+- Larger poster disk cache sized from free space.
+
+### Sources and tracks
+- Each source shows quality, release (WEB-DL, BluRay, CAM...), format (HLS, DASH, MP4, MKV), size and audio when known; low quality copies are marked.
+- Only the group that is playing is expanded; 10 at a time with Show more.
+- Audio and subtitle choices grouped by language with Show more.
+- The small "i" info icons were replaced with clearer icons everywhere.
+
+## v1.6.0: redesign (R1 to R11)
 
 The redesign was built in a separate working repository on top of v1.5.0 (`af8349e`) and lands here in one pull request.
 

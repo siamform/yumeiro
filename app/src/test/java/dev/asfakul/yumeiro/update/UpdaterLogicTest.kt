@@ -57,6 +57,8 @@ class UpdaterLogicTest {
         assertEquals("x86 TV box gets the universal APK", "release-Yumeiro-v1.2.0.apk",
             GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("x86")).asset.name)
         assertEquals("x86_64", GitHubReleaseClient.abiOf("Yumeiro-v1-x86_64.apk"))
+        assertEquals("no TV files: the TV app finds nothing", true,
+            runCatching { GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("arm64-v8a"), tv = true) }.isFailure)
         assertNull(GitHubReleaseClient.abiOf("release-Yumeiro-v1.2.0.apk"))
     }
 
@@ -130,5 +132,29 @@ class UpdaterLogicTest {
         assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com/fork/yumeiro/market/index.json"))
         assertFalse(TrustedSources.isOfficialCatalogUrl("http://raw.githubusercontent.com/siamform/yumeiro/market/index.json"))
         assertFalse(TrustedSources.isOfficialCatalogUrl("https://raw.githubusercontent.com:8443/siamform/yumeiro/market/index.json"))
+    }
+
+    /** 1.7.0: phone and TV apps live in one release; each takes only its own files. */
+    @Test
+    fun parseRelease_phoneAndTvAppsTakeOnlyTheirOwnFiles() {
+        fun asset(id: Int, name: String) = """{"id":$id,"name":"$name","size":1,"url":"https://api.github.com/a/$id","browser_download_url":"https://github.com/d/$name"}"""
+        val json = """{"tag_name":"v1.7.0","name":"v1.7.0","body":"","assets":[
+            ${asset(1, "release-Yumeiro-v1.7.0.apk")},${asset(2, "Yumeiro-v1.7.0-armeabi-v7a.apk")},
+            ${asset(3, "Yumeiro-v1.7.0-arm64-v8a.apk")},${asset(4, "Yumeiro-TV-v1.7.0-universal.tv.apk")},
+            ${asset(5, "Yumeiro-TV-v1.7.0-arm64-v8a.tv.apk")},${asset(6, "Yumeiro-TV-v1.7.0-armeabi-v7a.tv.apk")}]}"""
+        val arm64 = listOf("arm64-v8a", "armeabi-v7a")
+        assertEquals("Yumeiro-v1.7.0-arm64-v8a.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, arm64).asset.name)
+        assertEquals("Yumeiro-TV-v1.7.0-arm64-v8a.tv.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, arm64, tv = true).asset.name)
+        assertEquals("Yumeiro-TV-v1.7.0-armeabi-v7a.tv.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("armeabi-v7a"), tv = true).asset.name)
+        assertEquals("Yumeiro-TV-v1.7.0-universal.tv.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("x86"), tv = true).asset.name)
+        assertEquals("release-Yumeiro-v1.7.0.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, listOf("x86")).asset.name)
+        assertEquals("arm64-v8a", GitHubReleaseClient.abiOf("Yumeiro-TV-v1.7.0-arm64-v8a.tv.apk"))
+        assertNull(GitHubReleaseClient.abiOf("Yumeiro-TV-v1.7.0-universal.tv.apk"))
+        // What a 1.6 updater does: it only knows "-<abi>.apk" endings, so it never sees TV files.
+        for (n in listOf("Yumeiro-TV-v1.7.0-arm64-v8a.tv.apk", "Yumeiro-TV-v1.7.0-armeabi-v7a.tv.apk")) {
+            val base = n.lowercase().removeSuffix(".apk")
+            assertEquals(false, listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86").any { base.endsWith("-$it") })
+            assertEquals(false, n.startsWith("release-"))
+        }
     }
 }
