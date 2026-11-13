@@ -20,6 +20,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.swipeUp
 import com.lagradost.cloudstream3.APIHolder
 import dev.asfakul.yumeiro.data.model.VideoItem
 import dev.asfakul.yumeiro.online.ExtensionManager
@@ -87,7 +90,10 @@ class RealExtensionShotsTest {
 
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
     private fun waitFor(ms: Long = 30_000, cond: () -> Boolean) = rule.waitUntil(ms) { cond() }
-    private fun pause(ms: Long) { val end = System.currentTimeMillis() + ms; while (System.currentTimeMillis() < end) { rule.waitForIdle(); Thread.sleep(100) } }
+    private fun pause(ms: Long) {
+        val end = System.currentTimeMillis() + ms
+        while (System.currentTimeMillis() < end) { rule.mainClock.advanceTimeBy(200); rule.waitForIdle(); Thread.sleep(100) }
+    }
 
     private fun shot(name: String) {
         rule.waitForIdle()
@@ -97,9 +103,18 @@ class RealExtensionShotsTest {
         }
     }
 
-    private fun bigBuckBunny() = runBlocking {
-        val api = APIHolder.allProviders.first { it.name == "Internet Archive" }
-        api.search("Big Buck Bunny", 1)!!.items.first { it.name.equals("Big Buck Bunny", true) }
+    /**
+     * Loads the same image URLs the screen loads into Coil's cache. Coil hands results to the main
+     * looper, which is this test thread, so it loads on a worker while the looper keeps turning.
+     */
+    private fun warm(urls: List<String>) {
+        val ctx = context
+        val t = Thread {
+            val loader = coil.Coil.imageLoader(ctx)
+            urls.forEach { u -> runBlocking { loader.execute(coil.request.ImageRequest.Builder(ctx).data(u).build()) } }
+        }.apply { start() }
+        val until = System.currentTimeMillis() + 90_000
+        while (t.isAlive && System.currentTimeMillis() < until) { rule.waitForIdle(); Thread.sleep(100) }
     }
 
     @Test fun searchTitleAndExtensions() {
@@ -119,14 +134,31 @@ class RealExtensionShotsTest {
         waitFor { has("online_search_input") }
         rule.onNodeWithTag("online_search_input").performTextInput("Big Buck Bunny")
         rule.onNodeWithTag("online_search_input").performImeAction()
+        // Warm the image cache with the same URLs the poster grid loads. Coil hands results to the
+        // main looper, which is this test thread, so load on a worker and keep the looper turning.
+        val urls = runBlocking { APIHolder.allProviders.first { it.name == "Internet Archive" }.search("Big Buck Bunny", 1)!!.items.take(12).mapNotNull { it.posterUrl } }
+        warm(urls)
         waitFor { has("online_search_results") }
+        pause(4_000)
+        // Nudge the grid so every poster cell runs a fresh layout pass and picks up its cached image.
+        rule.onNodeWithTag("online_search_results").performTouchInput { swipeUp(); }
+        pause(1_500)
+        rule.onNodeWithTag("online_search_results").performScrollToIndex(0)
         pause(6_000) // posters
         shot("real_search_big_buck_bunny")
 
-        url = bigBuckBunny().url
+        // The Blender Foundation's own upload (the same page the extension opens from search).
+        val bbbUrl = "https://archive.org/details/BigBuckBunny_124"
+        val loaded = runBlocking { APIHolder.allProviders.first { it.name == "Internet Archive" }.load(bbbUrl) }
+        warm(listOfNotNull(loaded?.posterUrl, loaded?.backgroundPosterUrl))
+        url = bbbUrl
         page = "title"
         waitFor { has("online_detail_title") || has("online_detail_error") }
-        pause(6_000)
+        pause(3_000)
+        rule.onNodeWithTag("online_detail_list").performTouchInput { swipeUp() }
+        pause(1_000)
+        rule.onNodeWithTag("online_detail_list").performScrollToIndex(0)
+        pause(4_000)
         shot("real_title_big_buck_bunny")
 
         page = "extensions"
@@ -141,7 +173,7 @@ class RealExtensionShotsTest {
         val video = VideoItem(
             id = "bbb", title = "Big Buck Bunny", durationMs = 596_000L,
             uri = "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4",
-            width = 1280, height = 720, resolution = "720p", folderName = "Internet Archive", playbackPositionMs = 65_000L,
+            width = 1280, height = 720, resolution = "720p", folderName = "Internet Archive",
         )
         rule.setContent { MTPlayerTheme { VideoPlayerModal(video = video, onClose = {}, onProgressUpdate = { _, _, _ -> }) } }
         waitFor { has("video_player_root") }
@@ -150,14 +182,23 @@ class RealExtensionShotsTest {
             val pv = find(rule.activity.window.decorView) ?: error("no PlayerView")
             val content = pv.findViewById<androidx.media3.ui.AspectRatioFrameLayout>(androidx.media3.ui.R.id.exo_content_frame)
             content.setAspectRatio(16f / 9f)
+            pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_shutter)?.visibility = android.view.View.GONE
+            val subs = pv.subtitleView!!
+            val at = (0 until content.childCount).firstOrNull { content.getChildAt(it) === subs } ?: content.childCount
             content.addView(android.widget.ImageView(rule.activity).apply {
                 setImageBitmap(android.graphics.BitmapFactory.decodeFile(frame))
                 scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            }, 1, android.widget.FrameLayout.LayoutParams(-1, -1))
-            pv.subtitleView?.setCues(listOf(androidx.media3.common.text.Cue.Builder().setText("[birds singing]").build()))
+            }, at, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
-        rule.mainClock.advanceTimeBy(800)
-        rule.waitForIdle()
+        repeat(4) {
+            rule.runOnUiThread {
+                val subs = find(rule.activity.window.decorView)!!.subtitleView!!
+                subs.visibility = android.view.View.VISIBLE
+                subs.setCues(listOf(androidx.media3.common.text.Cue.Builder().setText("[birds singing]").build()))
+            }
+            rule.mainClock.advanceTimeBy(250)
+            rule.waitForIdle()
+        }
         shot("real_player_captions")
     }
 
