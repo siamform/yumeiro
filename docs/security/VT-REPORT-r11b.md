@@ -33,7 +33,18 @@ Date: 2026-11-13. Branch: `r11-final` (same head as `redesign-final`). Earlier r
 
 ## VirusTotal
 
-The automated upload was blocked by VirusTotal's reCAPTCHA (two rounds solved, both rejected), and the hash is not yet in VirusTotal. To finish, upload the universal APK by hand at <https://www.virustotal.com/gui/home/upload> and check:
-<https://www.virustotal.com/gui/file/5e7bbd69ef6be7c0fcd459c0bcc1dabfbd8013ff0b67a81bbb86337dd6cce3b0/detection>
+Fresh first submission, 2026-11-13 12:58 UTC.
 
-R11 (same permissions, same native libraries, same Rhino) scored 0/66 and 0/68, and the R11b code changes add no pattern the engines flagged in v1.5.0.
+| Build | SHA-256 | Detections | Report |
+|---|---|---|---|
+| R11b preview, universal | `5e7bbd69ef6be7c0fcd459c0bcc1dabfbd8013ff0b67a81bbb86337dd6cce3b0` | **0 / 66** (BitDefender, BitDefenderFalx, Avast, AVG, Avira undetected; tags `android`, `apk`, `contains-elf`) | <https://www.virustotal.com/gui/file/5e7bbd69ef6be7c0fcd459c0bcc1dabfbd8013ff0b67a81bbb86337dd6cce3b0/detection> |
+
+Same result as R11 (0/66 preview, 0/68 release). The published v1.5.0 was 2/67.
+
+## CodeQL is not an antivirus
+
+CodeQL reads the source code on GitHub and points at lines a reviewer should look at. It never sees the APK, phones and
+stores don't use it, and its alerts can't block an install or mark the app as malware. The high alerts on PR #27 were
+RC4 decoding in two CloudStream extractors (the sites' own format) and JavaScript in the stream finder page (a site's own
+player); both are reviewed in [AUDIT.md](AUDIT.md). The medium ones are "no certificate pinning" on hosts Yumeiro
+doesn't control and WebView settings that are already off at runtime.
