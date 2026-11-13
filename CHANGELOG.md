@@ -3,7 +3,7 @@
 All notable changes to Yumeiro. Version numbers are set by the release workflow from the commit types
 (Conventional Commits), so the first release that contains these notes gets the next version after v1.5.0.
 
-## Redesign (R1–R11) — next release after v1.5.0
+## Redesign (R1 to R11): next release after v1.5.0
 
 The redesign was built in a separate working repository on top of v1.5.0 (`af8349e`) and lands here in one pull request.
 
