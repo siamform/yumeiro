@@ -114,6 +114,20 @@ class TvLayoutTest {
         assertTrue("Videos page open", exists("video_source_switch"))
     }
 
+    /** The same home on a dark theme (website and store shots): tv_home_dark.png, tv_rail_dark.png. */
+    @Test @Config(qualifiers = "w960dp-h540dp-land-night-xhdpi")
+    fun darkHomeAndRail() {
+        awaitHome()
+        assertTrue(exists("tv_rail_logo"))
+        shot("tv_home_dark")
+        leaveTouchMode()
+        rule.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
+        settle(300)
+        rule.onNodeWithTag("tv_nav_tab_music", useUnmergedTree = true).requestFocus()
+        settle(600)
+        shot("tv_rail_dark")
+    }
+
     @Test fun railDropsAPinnedSettingsShortcut() {
         val settings = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS.item
         val music = settings.copy(route = "music", label = "Music")
