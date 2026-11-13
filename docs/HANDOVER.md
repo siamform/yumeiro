@@ -968,3 +968,55 @@ fixture, normalizeRepo, lib versions, MemoStore) and `KeiyoushiLinkageTest`.
 - **Audit.** `scripts/extension_link_audit.py` checks every `.cs3` against the APK dex. Of 2,248 market plugins, 2,182 were clean; 52 needed Compose (R8 was stripping it; now kept in `proguard-rules.pro`), 12 needed extractors CloudStream 4.8 removed (restored under `com/lagradost/cloudstream3/extractors/`, Rhino is `compileOnly`), 1 needed a JVM locale shim. doGior StreamCenter uses CloudStream app internals and stays unsupported.
 - Full table and re-run steps: `docs/EXTENSION-COMPAT.md`.
 
+
+## 29. v1.7.0 "bring back the legacy" (branch `r12-features`)
+
+1.5.0 was loved, 1.6.0 was not (slow, reloaded everything, broken restore, phone and TV mixed).
+1.7.0 fixes those at the root. Everything below is on `r12-features` (mirrored to
+`siamform/yumeiro-redesign`). The website side is siamform/yumeiro-web PR #3 (branch `r12-v170`).
+
+### Two apps (see `docs/TV-AND-PHONE.md`)
+- Product flavors `mobile` (Yumeiro) and `tv` (Yumeiro TV), dimension `device`, same
+  `applicationId`, key and version code. `Edition.kt` holds every difference.
+- TV manifest overlay: `app/src/tv/AndroidManifest.xml`. The main manifest has no leanback
+  launcher or banner any more.
+- Release files: phone names unchanged; TV files end in `.tv.apk`. `GitHubReleaseClient.parseRelease(tv=)`
+  filters by edition; the phone app on a detected TV is offered the TV file as an update.
+- Gradle task names changed: `testMobileDebugUnitTest`, `assembleMobileDebug`, `assembleTvDebug`,
+  `assembleMobileRelease assembleTvRelease`, `lintMobileDebug`, `connectedMobileDebugAndroidTest`.
+  CI, release, device-check and CodeQL workflows are updated.
+
+### Backup v2 and reset center (`backup/`)
+- `Backup.kt`: format 2 zip with sections (library, history, progress, extensions, extension files,
+  settings, trackers, downloads list) and a `PrefCodec` for SharedPreferences.
+- `BackupStore.kt`: backups on phone storage, `Download/Yumeiro/Backups` (MediaStore on Android 10+,
+  legacy folder with WRITE_EXTERNAL_STORAGE maxSdk 28), or a folder the user picks; list, delete, prune.
+- `PendingRestore.kt`: restores are staged, then applied in `MTApplication.onCreate` before anything
+  opens a database, after a restart through `RestartActivity` (process `:restart`). A safety backup is
+  taken before every restore and reset. `BackupMeta.takeNote` shows the result on next launch.
+- Extensions: `ExtensionManager.repairMissing` re-downloads plugin files missing after a restore;
+  `TachiyomiExtensions.reinstallAfterRestore` asks to reinstall Aniyomi/Mihon APKs.
+- `AutoBackupWorker.kt`: periodic WorkManager job, skipped when the fingerprint is unchanged, prunes to N.
+- `ResetCenter.kt`: clear cache, cookies, history, extensions, settings; erase everything.
+- UI: `ui/screens/settings/BackupCenterScreen.kt` ("Backup, storage & reset").
+- Tests: `backup/BackupV2Test.kt`.
+
+### Saved pages, cache and cookie time limits (`cache/`)
+- `DataCache.kt`: disk cache for online home rows, searches (1 h max) and details, keyed
+  `what|api.name|mainUrl|extra`, used by `OnlineRepository` (shows saved page, refreshes in background).
+  Settings: refresh hours, delete after days, max MB, cookie days (default 30). `DataCache.janitor`
+  runs at start and enforces all limits, including clearing WebView/OkHttp cookies when due.
+- `ImageCacheSize.kt`: Coil disk cache = 2 % of free space, 64 to 512 MB.
+
+### Sources and tracks
+- `online/SourceFacts.kt` parses quality, release type, format, size, audio and low quality from
+  source names. Watch page and in-player source panel open only the playing group and page 10 at a
+  time (`watch_server_more`, `online_player_source_more`).
+- `ui/screens/video/TrackGroups.kt` groups audio and subtitle tracks by language.
+- All "i" info icons replaced.
+
+### What remains
+- Mockups for website and social (RealAppShotsTest / RedesignTourTest) for the new Backup screen,
+  sources and TV app.
+- A real-device pass of restore on Android 7, 10 and 14 and of Yumeiro TV on a Fire TV stick.
+- FCM_SERVICE_ACCOUNT Worker secret is still missing (see `docs/PUSH-FCM.md`).
