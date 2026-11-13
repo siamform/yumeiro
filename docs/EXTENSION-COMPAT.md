@@ -60,7 +60,7 @@ Known upstream problems, which behave the same in CloudStream:
 ## Re-running
 
 ```sh
-./gradlew --no-daemon -Dorg.gradle.jvmargs=-Xmx3g :app:assemblePreview
+./gradlew --no-daemon -Dorg.gradle.jvmargs=-Xmx3g :app:assembleMobilePreview :app:assembleTvPreview
 mkdir -p /tmp/apkdex && unzip -o -q app/build/outputs/apk/preview/*universal*.apk 'classes*.dex' -d /tmp/apkdex
 python3 scripts/extension_link_audit.py --apk-dex /tmp/apkdex --plugins <folder of .cs3> --out audit.json
 ```

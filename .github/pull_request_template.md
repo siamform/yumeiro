@@ -4,7 +4,7 @@
 
 ## How it was tested
 
-- [ ] `./gradlew assembleDebug testDebugUnitTest lintDebug` passes locally
+- [ ] `./gradlew assembleMobileDebug assembleTvDebug testMobileDebugUnitTest lintMobileDebug` passes locally
 - [ ] Tried on a device or emulator (Android version: )
 
 ## Security checklist

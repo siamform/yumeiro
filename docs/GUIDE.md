@@ -178,10 +178,10 @@ sdk.dir=/path/to/Android/sdk
 
 ```bash
 # Debug build (applicationId suffix .debug, installs next to the release app)
-./gradlew assembleDebug
+./gradlew assembleMobileDebug
 
 # Unit + screenshot tests
-./gradlew testDebugUnitTest
+./gradlew testMobileDebugUnitTest
 
 # Signed release build (needs the release keystore, see below)
 ./gradlew assembleRelease

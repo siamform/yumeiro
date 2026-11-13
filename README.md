@@ -335,8 +335,8 @@ From CloudStream-format extensions that *you* choose to install. Yumeiro ships o
 ```bash
 git clone https://github.com/siamform/yumeiro.git
 cd yumeiro
-./gradlew assembleDebug        # JDK 17+, Android SDK 37
-./gradlew testDebugUnitTest    # unit + UI tests
+./gradlew assembleMobileDebug        # JDK 17+, Android SDK 37
+./gradlew testMobileDebugUnitTest    # unit + UI tests
 ```
 
 Architecture, release pipeline, updater internals and the full feature list are in **[docs/GUIDE.md](docs/GUIDE.md)**

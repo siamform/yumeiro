@@ -120,7 +120,7 @@ object StreamMediaFactory {
                 DefaultLoadControl.Builder()
                     .setBufferDurationsMs(
                         /* minBufferMs = */ 20_000,
-                        /* maxBufferMs = */ 50_000,
+                        /* maxBufferMs = */ dev.asfakul.yumeiro.Edition.maxBufferMs,
                         /* bufferForPlaybackMs = */ 1_500,
                         /* bufferForPlaybackAfterRebufferMs = */ 3_000,
                     )

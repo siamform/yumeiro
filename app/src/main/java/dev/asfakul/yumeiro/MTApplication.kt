@@ -54,9 +54,11 @@ class MTApplication : Application(), ImageLoaderFactory {
             add(VideoThumbnailFetcher.Keyer())
             add(VideoThumbnailFetcher.Factory(this@MTApplication))
         }
-        .memoryCache { MemoryCache.Builder(this).maxSizePercent(0.20).build() }
+        .memoryCache { MemoryCache.Builder(this).maxSizePercent(Edition.imageMemoryShare).build() }
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("image_cache")).maxSizeBytes(dev.asfakul.yumeiro.cache.ImageCacheSize.bytes(this)).build() }
-        .crossfade(150)
+        // TV: no crossfade (cheap TV GPUs drop frames while a rail scrolls) and 16-bit posters.
+        .crossfade(if (Edition.isTv) 0 else 150)
+        .allowRgb565(Edition.isTv)
         .respectCacheHeaders(false)
         .build()
 }

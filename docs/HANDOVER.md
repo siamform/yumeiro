@@ -48,8 +48,8 @@ and YouTube Music. No account system anywhere; everything works signed-out.
 ```bash
 # JDK 21, Android SDK with platforms;android-37.0 + build-tools;37.0.0
 echo "sdk.dir=$ANDROID_HOME" > local.properties
-./gradlew assembleDebug          # ~5–6 min cold
-./gradlew testDebugUnitTest      # Robolectric unit + Compose UI tests
+./gradlew assembleMobileDebug          # ~5–6 min cold
+./gradlew testMobileDebugUnitTest      # Robolectric unit + Compose UI tests
 ```
 
 - Gradle 9.x, AGP with `compileSdk 37`, `minSdk 24`, Kotlin + Compose (BOM in `gradle/libs.versions.toml`).

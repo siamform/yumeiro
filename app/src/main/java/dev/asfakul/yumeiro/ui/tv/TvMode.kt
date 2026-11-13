@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * One APK for phones, tablets and TVs: the TV ("ten-foot") layout is chosen at runtime.
+ * Round 12: Yumeiro TV is its own app (always this layout). In the phone app the TV ("ten-foot")
+ * layout is still chosen at runtime, for boxes running a phone image and for people who
+ * sideloaded the phone app on a TV (they're offered Yumeiro TV, see [TvSwitch]).
  *
  * Detection is deliberately conservative. A TV is a device that says so (UI mode television,
  * the leanback feature, Fire TV / Google TV markers) or a big screen with no touchscreen at all.
@@ -68,7 +70,8 @@ object TvMode {
         return !touchscreen && smallestWidthDp >= 360
     }
 
-    fun resolve(pref: Pref, detected: Boolean): Boolean = when (pref) {
+    /** The TV app is always in TV layout; the phone app follows the choice / detection. */
+    fun resolve(pref: Pref, detected: Boolean, tvApp: Boolean = dev.asfakul.yumeiro.Edition.isTv): Boolean = if (tvApp) true else when (pref) {
         Pref.AUTO -> detected
         Pref.TV -> true
         Pref.PHONE -> false

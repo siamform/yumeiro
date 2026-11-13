@@ -18,8 +18,8 @@ For the current maintainer and whoever picks this up next.
 
 ```bash
 export JAVA_HOME=/path/to/jdk-21 ANDROID_HOME=/path/to/android-sdk
-./gradlew :app:testDebugUnitTest      # JVM + Robolectric tests, includes Compose screenshot tests
-./gradlew :app:assembleDebug          # installable debug APK (dev.asfakul.yumeiro.debug)
+./gradlew :app:testMobileDebugUnitTest      # JVM + Robolectric tests, includes Compose screenshot tests
+./gradlew :app:assembleMobileDebug          # installable debug APK (dev.asfakul.yumeiro.debug)
 ./gradlew :app:assembleRelease        # R8 check; needs MT_KEYSTORE_* env vars to sign
 ```
 
@@ -36,7 +36,7 @@ Screenshot tests write PNGs to `app/build/screenshots/`. Look at them after UI c
 
 ## Release checklist
 
-1. `testDebugUnitTest` green, `assembleRelease` builds.
+1. `testMobileDebugUnitTest` green, `assembleRelease` builds.
 2. `version.properties` bumped (or rely on auto-bump) and `fastlane/metadata/android/en-US/changelogs/<code>.txt` added.
 3. `docs/HANDOVER.md` section for the update, README if user-visible.
 4. Merge PR → release workflow → check the release page, `https://yumeiro.click/download` and `https://yumeiro.click/get?abi=arm64-v8a`.

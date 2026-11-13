@@ -125,8 +125,8 @@ fun NavigationBarSettingsCard() {
                 }
             }
         }
-        GroupLabel("Layout")
-        SettingsCard {
+        if (!dev.asfakul.yumeiro.Edition.isTv) GroupLabel("Layout")
+        if (!dev.asfakul.yumeiro.Edition.isTv) SettingsCard {
             remember(context) { dev.asfakul.yumeiro.ui.tv.TvMode.init(context); 0 }
             val layoutPref by dev.asfakul.yumeiro.ui.tv.TvMode.pref.collectAsState()
             val detectedTv = remember(context) { dev.asfakul.yumeiro.ui.tv.TvMode.detect(context) }

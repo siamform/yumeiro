@@ -34,7 +34,12 @@ class UpdateManager private constructor(context: Context) {
 
     private val app = context.applicationContext
     private val prefs = UpdatePreferences(app)
-    private val client = GitHubReleaseClient()
+    // Round 12: the phone app running on a TV fetches Yumeiro TV (same package: it installs over).
+    private val client = GitHubReleaseClient(wantTv = { wantsTvEdition() })
+
+    /** The TV app, or the phone app on a device that is a TV. */
+    internal fun wantsTvEdition(): Boolean =
+        dev.asfakul.yumeiro.Edition.isTv || runCatching { dev.asfakul.yumeiro.ui.tv.TvMode.detect(app) }.getOrDefault(false)
     private val downloadManager = app.getSystemService(DownloadManager::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -140,7 +145,7 @@ class UpdateManager private constructor(context: Context) {
                     runCatching {
                         dev.asfakul.yumeiro.notify.Inbox.add(app, dev.asfakul.yumeiro.notify.Inbox.Item(
                             id = "update-${release.versionName}", kind = dev.asfakul.yumeiro.notify.Inbox.Kind.UPDATE,
-                            title = "Yumeiro v${release.versionName} is available",
+                            title = if (GitHubReleaseClient.isTvAsset(release.asset.name) && !dev.asfakul.yumeiro.Edition.isTv) "Yumeiro TV is ready for this TV" else "Yumeiro v${release.versionName} is available",
                             body = "Tap to see what's new and update. Nothing installs without your OK.",
                             at = System.currentTimeMillis(), link = "update",
                         ))
@@ -160,6 +165,8 @@ class UpdateManager private constructor(context: Context) {
     }
 
     private fun isNewer(release: ReleaseInfo): Boolean {
+        // A different app for this device (phone build on a TV): offer it even at the same version.
+        if (GitHubReleaseClient.isTvAsset(release.asset.name) != dev.asfakul.yumeiro.Edition.isTv) return true
         val code = release.versionCode
         if (code != null && code > 0) return code > UpdateConfig.currentVersionCode
         return SemVer.isNewer(release.versionName, UpdateConfig.currentVersionName)

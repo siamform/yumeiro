@@ -25,6 +25,8 @@ import java.net.URL
 internal class GitHubReleaseClient(
     private val token: String = UpdateConfig.token,
     private val endpoint: String = UpdateConfig.latestReleaseApi,
+    /** Round 12: which app's files to pick (TV or phone); asked each check. */
+    private val wantTv: () -> Boolean = { dev.asfakul.yumeiro.Edition.isTv },
 ) {
 
     class UpdateCheckException(message: String, cause: Throwable? = null) : IOException(message, cause)
@@ -33,13 +35,13 @@ internal class GitHubReleaseClient(
         var authError: Throwable? = null
         if (token.isNotBlank()) {
             try {
-                return@withContext withTrustedChecksum(parseRelease(get(endpoint, token), UpdateSource.AUTHENTICATED))
+                return@withContext withTrustedChecksum(parseRelease(get(endpoint, token), UpdateSource.AUTHENTICATED, tv = wantTv()))
             } catch (t: Throwable) {
                 authError = t
             }
         }
         try {
-            withTrustedChecksum(parseRelease(get(endpoint, null), UpdateSource.PUBLIC))
+            withTrustedChecksum(parseRelease(get(endpoint, null), UpdateSource.PUBLIC, tv = wantTv()))
         } catch (t: Throwable) {
             val reason = when {
                 t is HttpStatusException && t.code == 404 ->
@@ -217,16 +219,23 @@ internal class GitHubReleaseClient(
 
         private val ABI_NAMES = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
 
+        /**
+         * Round 12: Yumeiro TV files end in ".tv.apk" ("Yumeiro-TV-v1.7.0-arm64-v8a.tv.apk"). The
+         * suffix is chosen so 1.6 and older updaters (which only know "-<abi>.apk" and
+         * "release-…apk") never mistake a TV file for a phone one.
+         */
+        fun isTvAsset(name: String): Boolean = name.lowercase().endsWith(".tv.apk")
+
         /** The processor a per-ABI APK name is for, or null for the universal APK. */
         fun abiOf(name: String): String? {
-            val base = name.lowercase().removeSuffix(".apk")
+            val base = name.lowercase().removeSuffix(".apk").removeSuffix(".tv")
             return ABI_NAMES.firstOrNull { base.endsWith("-$it") }
         }
 
         fun deviceAbis(): List<String> = runCatching { android.os.Build.SUPPORTED_ABIS.toList() }.getOrDefault(emptyList())
 
         /** Parses a GitHub `release` JSON object. Exposed for unit tests. */
-        fun parseRelease(json: String, source: UpdateSource, abis: List<String> = deviceAbis()): ReleaseInfo {
+        fun parseRelease(json: String, source: UpdateSource, abis: List<String> = deviceAbis(), tv: Boolean = false): ReleaseInfo {
             val obj = JSONObject(json)
             val assets = obj.optJSONArray("assets")
                 ?: throw UpdateCheckException("The latest release has no files attached.")
@@ -239,12 +248,14 @@ internal class GitHubReleaseClient(
                 // API URL first (see resolveDownload); the browser URL stays as a fallback in getSums.
                 if (name == "SHA256SUMS.txt") { sumsUrl = (a.optString("url").ifBlank { null } ?: a.optString("browser_download_url")).ifBlank { null }; continue }
                 if (!name.endsWith(".apk", ignoreCase = true)) continue
+                // The phone app takes phone files only, the TV app TV files only.
+                if (isTvAsset(name) != tv) continue
                 // Per-processor builds: "Yumeiro-v1.2.0-arm64-v8a.apk" (smaller download).
                 abiOf(name)?.let { byAbi.putIfAbsent(it, a); continue }
                 if (best == null || name.startsWith("release-", ignoreCase = true)) best = a
             }
             // The device's preferred processor first; the universal APK otherwise.
-            val apk = abis.firstNotNullOfOrNull { byAbi[it] } ?: best ?: byAbi.values.firstOrNull() ?: throw UpdateCheckException("The latest release doesn't contain an APK.")
+            val apk = abis.firstNotNullOfOrNull { byAbi[it] } ?: best ?: byAbi.values.firstOrNull() ?: throw UpdateCheckException(if (tv) "The latest release has no Yumeiro TV file yet." else "The latest release doesn't contain an APK.")
             val tag = obj.optString("tag_name")
             val body = obj.optString("body")
             val digest = apk.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")
