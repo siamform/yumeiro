@@ -346,6 +346,10 @@ class RealAppShotsTest {
         step("08_market", 12_000) { back(); tap("online_market") }
         step("11_music_online", 20_000) { back(); tap("nav_tab_music"); tap("music_source_switch"); tap("music_source_online") }
         step("11_music_online", 1_000) { nudge("youtube_music_list") }
+        // The music home is personalised and full of real artists; the shots use the NCS search.
+        step("12_music_search", 12_000) { tap("topbar_search_action"); type("youtube_search", SONG_QUERY); pause(3_000); if (exists("ytmusic_suggestions_row")) tap("ytmusic_suggestions_row") }
+        step("12_music_search", 1_000) { nudge("ytmusic_results") }
+        step("17_settings", 3_000) { back(); if (exists("youtube_search_close")) tap("youtube_search_close") }
         step("17_settings", 3_000) { tap("topbar_settings_action") }
         step("01_home_after", 4_000) { back(); tap("nav_tab_home") }
     }
