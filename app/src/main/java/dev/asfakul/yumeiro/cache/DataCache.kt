@@ -68,7 +68,7 @@ object DataCache {
 
     internal fun fileFor(ns: String, key: String): File? {
         val r = root ?: return null
-        val h = MessageDigest.getInstance("SHA-1").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }
+        val h = MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }
         return File(File(r, ns.filter { it.isLetterOrDigit() || it == '_' }), "$h.json")
     }
 
