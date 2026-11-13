@@ -962,3 +962,9 @@ report broken pages on those sources, ideally only in the arm64 build.
 **Tests.** `TachiyomiIndexTest` (v1, stubs, repo.json, v2 JSON/gzip/proto, the real Keiyoushi `index.pb`
 fixture, normalizeRepo, lib versions, MemoStore) and `KeiyoushiLinkageTest`.
 
+## 28. Add anything and the extension link audit (branch `r11-final`)
+
+- **Add anything.** Extensions menu "Add anything (auto-detect)" and the Sources hub header button take any link, short code or file; `MainActivity` also routes VIEW/SEND intents (`cloudstreamrepo`, `stremio`, `aniyomi`, `tachiyomi`, `mihon`, `mangayomi`, `.cs3`, `.apk`) to `UniversalAddInbox`, confirmed by `UniversalAddHost`. Detection is pure and unit tested (`UniversalAddTest`).
+- **Audit.** `scripts/extension_link_audit.py` checks every `.cs3` against the APK dex. Of 2,248 market plugins, 2,182 were clean; 52 needed Compose (R8 was stripping it; now kept in `proguard-rules.pro`), 12 needed extractors CloudStream 4.8 removed (restored under `com/lagradost/cloudstream3/extractors/`, Rhino is `compileOnly`), 1 needed a JVM locale shim. doGior StreamCenter uses CloudStream app internals and stays unsupported.
+- Full table and re-run steps: `docs/EXTENSION-COMPAT.md`.
+
