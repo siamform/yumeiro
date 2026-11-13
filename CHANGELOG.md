@@ -12,7 +12,7 @@ All notable changes to Yumeiro.
 |---|---|---|
 | Loading | Home, search and details loaded from the network every time | Saved pages: opened pages show instantly from storage and refresh in the background; posters keep a large disk cache (2 % of free space, 64 to 512 MB) |
 | Cache and cookies | Grew without limits, only manual clearing | Time limits like a browser: pages refresh after N hours, are deleted after N days, a size cap, and website cookies clear every N days (all adjustable) |
-| Backup | One file, partial restore, often broke the running app | Backup v2: pick sections, saved on the phone (Documents/Yumeiro), automatic backups, staged restore that applies on a clean restart, a safety backup before every restore |
+| Backup | One file, partial restore, often broke the running app | Backup v2: pick sections, saved on the phone (Download/Yumeiro/Backups), automatic backups, staged restore that applies on a clean restart, a safety backup before every restore |
 | Reset | Clear data from Android settings | Reset center: clear cache, cookies, history, extensions or settings, each with a backup first; erase everything |
 | Extensions after restore | Had to be found and added again | Restored with the backup, missing files downloaded again automatically |
 | TV | One app for phone and TV | Two apps: **Yumeiro** for phones and tablets, **Yumeiro TV** for Android TV, Google TV and Fire TV, each tuned separately |
@@ -30,7 +30,7 @@ All notable changes to Yumeiro.
 ### Backup, storage and reset
 - Settings, Backup, storage & reset: back up library, history, progress, extensions and repositories, settings, trackers and downloads list; choose a folder; restore any backup with counts per section.
 - Restore is staged: it is written first and applied on a clean restart, so nothing is half restored. A safety backup is taken before every restore and reset.
-- Automatic backups daily or weekly, with a number to keep.
+- Automatic backups every few days (daily by default), skipped when nothing changed, keeping only the newest few.
 
 ### Speed
 - Saved pages for home rows, searches (up to 1 hour) and details. A refresh still happens in the background.
