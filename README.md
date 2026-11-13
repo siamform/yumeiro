@@ -90,21 +90,39 @@ Great apps exist for each piece of the puzzle — **CloudStream** for extensions
 
 <div align="center">
 
-<img src="docs/screenshots/player-landscape-dark.jpg" width="760" alt="Full-screen player playing an anime episode, with subtitles, Skip intro and quick controls" />
+<img src="docs/redesign/shots/real/player-dark.webp" width="760" alt="Full-screen player showing Gulliver's Travels (1939) with a caption" />
 
-**Full-screen player** · subtitles from OpenSubtitles, SubDL and SubSource · Skip intro · audio, captions, speed and picture-in-picture one tap away
+**Full-screen player** with captions · Gulliver's Travels (1939), Fleischer Studios, [Public Domain Mark 1.0](https://creativecommons.org/publicdomain/mark/1.0/), via [archive.org](https://archive.org/details/gullivers-travels-1939_202312)
 
-| Hues (anime, movies, drama, live) | Inside a Hue | Watching an episode |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/hues-home-dark.jpg" width="230" alt="Hues home with the featured title and Continue watching" /> | <img src="docs/screenshots/hue-channel-dark.jpg" width="230" alt="AnimeHue with Top 10 and new episodes" /> | <img src="docs/screenshots/watch-dark.jpg" width="230" alt="Episode playing, with sources, dub and episode list" /> |
-| **Home** | **Now Playing** | **Music** |
-| <img src="docs/screenshots/home-dark.jpg" width="230" alt="Home" /> | <img src="docs/screenshots/now-playing-dark.jpg" width="230" alt="Now Playing" /> | <img src="docs/screenshots/music-dark.jpg" width="230" alt="Music" /> |
-| **Videos** | **Stream (live TV playlists)** | **Library** |
-| <img src="docs/screenshots/videos-dark.jpg" width="230" alt="Videos" /> | <img src="docs/screenshots/stream-dark.jpg" width="230" alt="Stream" /> | <img src="docs/screenshots/library-dark.jpg" width="230" alt="Library" /> |
-| **Built-in user guide** | **Song info + sleep timer** | **Errors come with a fix** |
-| <img src="docs/screenshots/user-guide-dark.jpg" width="230" alt="User guide" /> | <img src="docs/screenshots/song-info-dark.jpg" width="230" alt="Song info with sleep timer" /> | <img src="docs/screenshots/error-tip-dark.jpg" width="230" alt="Error with a suggestion" /> |
+| Screen | Dark | Light |
+|:---|:---:|:---:|
+| **Home** | <img src="docs/redesign/shots/real/home-dark.webp" width="200" alt="Home with spaces, Continue watching and the mini player, dark theme" /> | <img src="docs/redesign/shots/real/home-light.webp" width="200" alt="Home with spaces, Continue watching and the mini player, light theme" /> |
+| **Shortcuts** | <img src="docs/redesign/shots/real/shortcuts-dark.webp" width="200" alt="Every shortcut on Home, dark theme" /> | <img src="docs/redesign/shots/real/shortcuts-light.webp" width="200" alt="Every shortcut on Home, light theme" /> |
+| **Music Online** | <img src="docs/redesign/shots/real/music-online-dark.webp" width="200" alt="Music Online with live YouTube Music picks, dark theme" /> | <img src="docs/redesign/shots/real/music-online-light.webp" width="200" alt="Music Online with live YouTube Music picks, light theme" /> |
+| **Now Playing** | <img src="docs/redesign/shots/real/now-playing-dark.webp" width="200" alt="Now Playing, a real song from YouTube Music, dark theme" /> | <img src="docs/redesign/shots/real/now-playing-light.webp" width="200" alt="Now Playing, a real song from YouTube Music, light theme" /> |
+| **Up next** | <img src="docs/redesign/shots/real/up-next-dark.webp" width="200" alt="Up next queue, dark theme" /> | <img src="docs/redesign/shots/real/up-next-light.webp" width="200" alt="Up next queue, light theme" /> |
+| **Mini player** | <img src="docs/redesign/shots/real/mini-player-dark.webp" width="200" alt="Song results with the mini player, dark theme" /> | <img src="docs/redesign/shots/real/mini-player-light.webp" width="200" alt="Song results with the mini player, light theme" /> |
+| **Yumix** | <img src="docs/redesign/shots/real/yumix-dark.webp" width="200" alt="Yumix feed from the Internet Archive extension, dark theme" /> | <img src="docs/redesign/shots/real/yumix-light.webp" width="200" alt="Yumix feed from the Internet Archive extension, light theme" /> |
+| **Installed extensions** | <img src="docs/redesign/shots/real/extensions-dark.webp" width="200" alt="Extensions page with the installed extension, dark theme" /> | <img src="docs/redesign/shots/real/extensions-light.webp" width="200" alt="Extensions page with the installed extension, light theme" /> |
+| **Market: installable** | <img src="docs/redesign/shots/real/market-search-dark.webp" width="200" alt="Extension market search with Install buttons, dark theme" /> | <img src="docs/redesign/shots/real/market-search-light.webp" width="200" alt="Extension market search with Install buttons, light theme" /> |
+| **Market: sources** | <img src="docs/redesign/shots/real/market-repos-dark.webp" width="200" alt="Extension repositories, dark theme" /> | <img src="docs/redesign/shots/real/market-repos-light.webp" width="200" alt="Extension repositories, light theme" /> |
+| **Docked player** | <img src="docs/redesign/shots/real/watch-dark.webp" width="200" alt="A film playing in the docked player with a caption, dark theme" /> | <img src="docs/redesign/shots/real/watch-light.webp" width="200" alt="A film playing in the docked player with a caption, light theme" /> |
+| **Download popup** | <img src="docs/redesign/shots/real/download-dark.webp" width="200" alt="Download popup with quality and save options, dark theme" /> | <img src="docs/redesign/shots/real/download-light.webp" width="200" alt="Download popup with quality and save options, light theme" /> |
+| **Settings** | <img src="docs/redesign/shots/real/settings-dark.webp" width="200" alt="Settings, dark theme" /> | <img src="docs/redesign/shots/real/settings-light.webp" width="200" alt="Settings, light theme" /> |
+| **Sources hub** | <img src="docs/redesign/shots/real/sources-dark.webp" width="200" alt="Sources hub for anime, manga, Stremio and JavaScript, dark theme" /> | <img src="docs/redesign/shots/real/sources-light.webp" width="200" alt="Sources hub for anime, manga, Stremio and JavaScript, light theme" /> |
+| **Market: installed** | <img src="docs/redesign/shots/real/market-installed-dark.webp" width="200" alt="Installed tab of the extension market, dark theme" /> | <img src="docs/redesign/shots/real/market-installed-light.webp" width="200" alt="Installed tab of the extension market, light theme" /> |
 
-<sub>Screens are rendered from the app's real UI. Titles and artwork in the Hues shots are original samples made for this README, not real catalogue content.</sub>
+**On a TV** (Android TV, Google TV, Fire TV)
+
+| Dark | Light |
+|:---:|:---:|
+| <img src="docs/redesign/shots/real/tv-home-dark.webp" width="380" alt="TV home with the navigation rail, dark theme" /> | <img src="docs/redesign/shots/real/tv-home-light.webp" width="380" alt="TV home with the navigation rail, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-yumix-dark.webp" width="380" alt="Yumix on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-yumix-light.webp" width="380" alt="Yumix on a TV, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-music-dark.webp" width="380" alt="Music Online on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-music-light.webp" width="380" alt="Music Online on a TV, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-settings-dark.webp" width="380" alt="Settings on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-settings-light.webp" width="380" alt="Settings on a TV, light theme" /> |
+| <img src="docs/redesign/shots/real/tv-search-dark.webp" width="380" alt="Search on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-search-light.webp" width="380" alt="Search on a TV, light theme" /> |
+
+<sub>Captured from the live app by <code>RealAppShotsTest</code> with the real Internet Archive extension by Luna712 and live YouTube Music feeds. Feed artwork, extension names and icons belong to their owners. The song is "Sky High" by Elektronomia (NoCopyrightSounds). Video can't decode in the test JVM, so the player shows a real frame from the film's stream; the caption line is added by the test.</sub>
 
 </div>
 
