@@ -138,9 +138,9 @@ object BackdropSettings {
     }
 
     /** Decodes [uri] with its shorter side near [target] px, upright, as a software bitmap. */
-    internal fun decodeScaled(context: Context, uri: Uri, target: Int): android.graphics.Bitmap? {
+    internal fun decodeScaled(context: Context, uri: Uri, target: Int, useDecoder: Boolean = true): android.graphics.Bitmap? {
         val cr = context.contentResolver
-        if (android.os.Build.VERSION.SDK_INT >= 28) {
+        if (useDecoder && android.os.Build.VERSION.SDK_INT >= 28) {
             val viaDecoder = runCatching {
                 android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(cr, uri)) { d, info, _ ->
                     d.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE

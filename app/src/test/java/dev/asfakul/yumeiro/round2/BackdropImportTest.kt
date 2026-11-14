@@ -59,12 +59,12 @@ class BackdropImportTest {
         File("build/backdrop-import.txt").writeText(report.toString())
     }
 
-    /** Android 8.1: no ImageDecoder, so this is the BitmapFactory path that refused every picture in 1.8.0. */
-    @Config(sdk = [27])
-    @Test fun bitmapFactoryPathImports() = runBlocking {
-        BackdropSettings.init(ctx)
-        assertNull(BackdropSettings.importPhoto(ctx, image("old.jpg", 3000, 2000, Bitmap.CompressFormat.JPEG)))
-        assertNull(BackdropSettings.importPhoto(ctx, image("old.png", 720, 1280, Bitmap.CompressFormat.PNG)))
+    /** The BitmapFactory path (the only one in 1.8.0, where its bounds probe refused every picture). */
+    @Test fun bitmapFactoryPathDecodes() {
+        val a = BackdropSettings.decodeScaled(ctx, image("old.jpg", 3000, 2000, Bitmap.CompressFormat.JPEG), 540, useDecoder = false)
+        val b = BackdropSettings.decodeScaled(ctx, image("old.png", 720, 1280, Bitmap.CompressFormat.PNG), 540, useDecoder = false)
+        assertTrue("jpg ${a?.width}x${a?.height}", a != null && minOf(a.width, a.height) >= 540)
+        assertTrue("png ${b?.width}x${b?.height}", b != null && b.width == 720)
     }
 
     @Test fun badPicturesSayWhy() = runBlocking {
