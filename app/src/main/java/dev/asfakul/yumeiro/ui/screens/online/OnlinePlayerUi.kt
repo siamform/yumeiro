@@ -187,7 +187,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
                 }
                 when (panel) {
                     Panel.EPISODES -> EpisodesPanel(state) { i -> panel = null; OnlineSession.playEpisode(context, i) }
-                    Panel.SOURCES -> SourcesPanel(state, positionMs) { i -> panel = null; OnlineSession.switchSource(context, i, positionMs()) }
+                    Panel.SOURCES -> SourcesPanel(state, player.selectAudio) { i -> panel = null; OnlineSession.switchSource(context, i, positionMs()) }
                     Panel.SUBTITLES -> SubtitlesPanel(state) { sub -> panel = null; OnlineSession.addSubtitle(context, sub, positionMs()) }
                     null -> {}
                 }
@@ -250,7 +250,7 @@ private fun EpisodesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
 }
 
 @Composable
-private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 0L }, onPick: (Int) -> Unit) {
+private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Boolean = { false }, onPick: (Int) -> Unit) {
     val ink = LocalPanelInk.current
     val errInk = if (ink.luminance() > 0.5f) ErrorColor else Color(0xFFB3261E)
     if (!state.linksDone) {
@@ -276,7 +276,7 @@ private fun SourcesPanel(state: OnlineSession.State, positionMs: () -> Long = { 
     val pages = remember(state.links.size, state.version) { androidx.compose.runtime.mutableStateMapOf<String, Int>() }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (audioOptions.size > 1) item(key = "audio_filter") {
-            dev.asfakul.yumeiro.ui.screens.watch.AudioFilterRow(audioOptions, audioPref, { k -> pickAudio(context, state, k, positionMs()) }, onDark = ink.luminance() > 0.5f)
+            dev.asfakul.yumeiro.ui.screens.watch.AudioFilterRow(audioOptions, audioPref, { k -> pickAudio(context, state, k, selectAudio) }, onDark = ink.luminance() > 0.5f)
         }
         groups.forEach { g ->
         val kind = g.kind
@@ -592,7 +592,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 hint = "Stuck on black? Tap another source. Yumeiro already retries refused ones with fresh links and headers.",
                 rows = rows,
                 audioOptions = audioOptions, audioSelected = audioPref,
-                onAudioSelect = { k -> pickAudio(context, state, k, pos()) },
+                onAudioSelect = { k -> pickAudio(context, state, k) { key -> player?.selectAudio?.invoke(key) == true } },
             )
         }
         item(key = "plot") {
@@ -689,7 +689,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
             Box(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {
                 Column {
                     when (sheet) {
-                        Sheet.SOURCES -> SourcesPanel(state, { player?.positionMs?.invoke() ?: 0L }) { i -> sheet = null; OnlineSession.switchSource(context, i, player?.positionMs?.invoke() ?: 0L) }
+                        Sheet.SOURCES -> SourcesPanel(state, { key -> player?.selectAudio?.invoke(key) == true }) { i -> sheet = null; OnlineSession.switchSource(context, i, player?.positionMs?.invoke() ?: 0L) }
                         Sheet.SUBTITLES -> SubtitlesPanel(state) { sub -> sheet = null; OnlineSession.addSubtitle(context, sub, player?.positionMs?.invoke() ?: 0L) }
                         null -> {}
                     }
@@ -832,17 +832,22 @@ internal fun audioOptionsFor(links: List<dev.asfakul.yumeiro.online.OnlineLink>,
         .map { dev.asfakul.yumeiro.ui.screens.watch.AudioFilterOption(it.key, al.keyLabel(it.key), it.value) }
 }
 
-/** Remembers [key] as the preferred audio and moves playback to it when the current source isn't. */
-internal fun pickAudio(context: android.content.Context, state: OnlineSession.State, key: String?, positionMs: Long) {
+/**
+ * Remembers [key] as the preferred audio and switches the audio track of the video that is
+ * playing. Round 13: it never changes the source any more (picking a language used to jump to
+ * another source and start it from scratch); the source list just puts matching sources first.
+ */
+internal fun pickAudio(context: android.content.Context, state: OnlineSession.State, key: String?, selectAudio: (String) -> Boolean) {
     val al = dev.asfakul.yumeiro.online.AudioLanguages
     al.setPreferred(context, key)
     if (key == null) return
-    val keyOf = { l: dev.asfakul.yumeiro.online.OnlineLink -> al.filterKey(al.classify(l.name + " " + l.source, state.version)) }
+    if (selectAudio(key)) {
+        dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Audio: ${al.keyLabel(key)}", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+        return
+    }
     val current = state.links.getOrNull(state.linkIndex)
-    if (current != null && keyOf(current) == key) return
-    val target = state.links.indexOfFirst { keyOf(it) == key && it.url !in state.failed }.takeIf { it >= 0 } ?: return
-    OnlineSession.switchSource(context, target, positionMs)
-    dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Switched to ${al.keyLabel(key)}", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+    if (current != null && al.filterKey(al.classify(current.name + " " + current.source, state.version)) == key) return
+    dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "This video has no ${al.keyLabel(key)} audio track. Sources with it are listed first.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
 }
 
 internal fun askDownloadCurrent(context: android.content.Context, state: OnlineSession.State) {

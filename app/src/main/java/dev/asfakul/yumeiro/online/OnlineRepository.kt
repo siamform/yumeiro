@@ -430,16 +430,21 @@ object OnlineRepository {
      * Best first: real video before audio-only files, then quality (CloudStream's "unknown" is 400
      * or 0 — ranked like a typical 720p), adaptive formats, MP4 before other containers, then name.
      */
-    fun sortLinks(links: List<OnlineLink>, preferAudio: String? = null, version: String = ""): List<OnlineLink> =
-        links.distinctBy { it.url }.sortedWith(
+    fun sortLinks(links: List<OnlineLink>, preferAudio: String? = null, version: String = ""): List<OnlineLink> {
+        // Round 13: the audio key is worked out once per link, not inside the comparator (which
+        // ran the language regexes thousands of times per re-sort).
+        val unique = links.distinctBy { it.url }
+        val audioMiss = if (preferAudio == null) null else unique.associate { it.url to (AudioLanguages.filterKey(AudioLanguages.classify(it.name + " " + it.source, version)) != preferAudio) }
+        return unique.sortedWith(
             compareBy<OnlineLink> { it.audioOnly }
                 // Round 9: the user's remembered audio language plays first when a source has it.
-                .thenBy { if (preferAudio == null) 0 else if (AudioLanguages.filterKey(AudioLanguages.classify(it.name + " " + it.source, version)) == preferAudio) 0 else 1 }
+                .thenBy { if (audioMiss?.get(it.url) == true) 1 else 0 }
                 .thenByDescending { it.rank }
                 .thenByDescending { it.isHls || it.isDash }
                 .thenBy { if (it.container == "mp4" || it.container == "m3u8" || it.container == "mpd") 0 else 1 }
                 .thenBy { it.name.lowercase() }
         )
+    }
 
     // endregion
 
