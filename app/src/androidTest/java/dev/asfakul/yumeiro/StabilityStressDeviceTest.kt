@@ -179,6 +179,7 @@ class StabilityStressDeviceTest {
                     val st = Looper.getMainLooper().thread.stackTrace.take(14).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
                     log("main sample $i: $st"); SystemClock.sleep(400)
                 }
+                log("busy states: " + changingStates(3_000))
                 log("gfx: " + shellOut("dumpsys gfxinfo ${ctx.packageName}").lineSequence().filter { "Total frames" in it || "Janky" in it }.joinToString(" | "))
                 shell("input keyevent 4"); idle(1_000); return@repeat
             }
@@ -195,6 +196,23 @@ class StabilityStressDeviceTest {
         throw AssertionError("tab bar never came back at $where · ${onScreen()}")
     }
     private var recoveries = 0
+
+    /** Which snapshot states keep changing (an endless recomposition is a state written every frame). */
+    private fun changingStates(ms: Long): String {
+        val hits = ConcurrentHashMap<String, AtomicInteger>()
+        var applies = 0
+        val handle = androidx.compose.runtime.snapshots.Snapshot.registerApplyObserver { changed, _ ->
+            applies++
+            for (o in changed) {
+                // Runs on main: no regex here (the stress test itself flags regex on main).
+                val d = runCatching { o.toString() }.getOrDefault(o.javaClass.name).take(110) + " #" + System.identityHashCode(o).toString(16)
+                hits.getOrPut(d) { AtomicInteger() }.incrementAndGet()
+            }
+        }
+        SystemClock.sleep(ms)
+        handle.dispose()
+        return "applies=$applies · " + hits.entries.sortedByDescending { it.value.get() }.take(12).joinToString(" | ") { "${it.value.get()}× ${it.key}" }
+    }
 
     private fun focusLine(): String = runCatching {
         shellOut("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()

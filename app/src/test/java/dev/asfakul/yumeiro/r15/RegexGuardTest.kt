@@ -66,4 +66,68 @@ class RegexGuardTest {
         }
         assertTrue("Regex compiled per call (hoist to a constant or use RegexCache):\n" + hits.joinToString("\n"), hits.isEmpty())
     }
+
+    /**
+     * Hoisting moved each pattern's cost into its class's static initialiser, and that runs on
+     * whichever thread touches the class first — the main thread, when the first touch is a
+     * composable (run 43643387375: `YumixFeed$Category.<clinit>` and `YumixFilterKt.<clinit>` on
+     * main). Every class that holds a pattern constant is therefore initialised by
+     * [dev.asfakul.yumeiro.text.RegexWarmup] on a background thread; this keeps that list complete.
+     */
+    @Test fun everyPatternHolderIsWarmedOffMain() {
+        val listed = dev.asfakul.yumeiro.text.RegexWarmup.CLASSES.toSet()
+        val holders = patternHolders()
+        val missing = holders.filterKeys { it !in listed }
+        assertTrue("Add these to RegexWarmup.CLASSES:\n" + missing.entries.joinToString("\n") { "\"${it.key}\", // ${it.value}" }, missing.isEmpty())
+        // Every listed name must be a real class, or the warm-up silently skips it.
+        val bad = listed.filter { runCatching { Class.forName(it, false, javaClass.classLoader) }.isFailure }
+        assertTrue("RegexWarmup.CLASSES names that do not exist: $bad", bad.isEmpty())
+    }
+
+    private val typeName = Regex("""\b(?:object|class|interface)\s+([A-Za-z_][A-Za-z0-9_]*)""")
+    private val companion = Regex("""\bcompanion\s+object\b""")
+    private val jvmName = Regex("""@file:JvmName\("([^"]+)"\)""")
+    private val pkgLine = Regex("""^package\s+([\w.]+)""")
+
+    /** JVM class name → first source location, for every class with a pattern constant. */
+    private fun patternHolders(): Map<String, String> {
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.isDirectory }
+        val out = LinkedHashMap<String, String>()
+        root.walkTopDown().filter { it.isFile && it.extension == "kt" }.forEach { f ->
+            val rel = f.relativeTo(root).invariantSeparatorsPath
+            if (rel == "dev/asfakul/yumeiro/text/RegexCache.kt") return@forEach
+            val text = f.readText()
+            val pkg = text.lineSequence().firstNotNullOfOrNull { pkgLine.find(it.trim())?.groupValues?.get(1) } ?: ""
+            val facade = jvmName.find(text)?.groupValues?.get(1) ?: (f.nameWithoutExtension + "Kt")
+            val stack = ArrayList<String?>() // type name for a class/object body, null for any other block
+            var pendingType: String? = null
+            f.readLines().forEachIndexed { i, line ->
+                val trimmed = line.trim()
+                var code = rawLit.replace(line, "\"\"")
+                code = stringLit.replace(code, "\"\"")
+                code = charLit.replace(code, "''").substringBefore("//")
+                if (!trimmed.startsWith("//") && !trimmed.startsWith("*") && pat.containsMatchIn(line) && !line.contains("by lazy")) {
+                    val types = stack.filterNotNull().filter { it != "Companion" }
+                    val name = if (types.isEmpty()) "$pkg.$facade" else "$pkg." + types.joinToString("$")
+                    out.putIfAbsent(name, "$rel:${i + 1}")
+                }
+                code.forEachIndexed { ci, ch ->
+                    if (ch == '{') {
+                        val before = code.substring(0, ci)
+                        val t = when {
+                            companion.containsMatchIn(before) -> "Companion"
+                            else -> typeName.findAll(before).lastOrNull()?.groupValues?.get(1)
+                        } ?: pendingType?.takeIf { before.isBlank() || before.trimEnd().endsWith(")") || ':' in before }
+                        stack += t
+                        pendingType = null
+                    } else if (ch == '}' && stack.isNotEmpty()) stack.removeAt(stack.size - 1)
+                }
+                if ('{' !in code) {
+                    val t = if (companion.containsMatchIn(code)) "Companion" else typeName.findAll(code).lastOrNull()?.groupValues?.get(1)
+                    if (t != null && !Regex("""\bfun\b""").containsMatchIn(code)) pendingType = t
+                }
+            }
+        }
+        return out
+    }
 }
