@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.ui.screens.music
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -268,11 +269,16 @@ private sealed interface MixEntry {
     data class Online(val item: YtItem) : MixEntry { override val key get() = YouTubePlayback.toTrack(item).id }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MixRow(e: MixEntry, current: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp).testTag("music_mix_row"),
+        Modifier.fillMaxWidth().combinedClickable(
+            onClick = onClick,
+            onLongClickLabel = if (e is MixEntry.Online) "Download song" else null,
+            onLongClick = if (e is MixEntry.Online) ({ dev.asfakul.yumeiro.online.download.SongDownloads.ask(e.item) }) else null,
+        ).padding(horizontal = 16.dp, vertical = 6.dp).testTag("music_mix_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
@@ -289,7 +295,6 @@ private fun MixRow(e: MixEntry, current: Boolean, onClick: () -> Unit) {
             Text(artist, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         val online = e is MixEntry.Online
-        if (e is MixEntry.Online) dev.asfakul.yumeiro.ui.screens.youtube.SongDownloadButton { dev.asfakul.yumeiro.online.download.SongDownloads.ask(e.item) }
         Text(
             if (online) "Online" else "Device",
             color = if (online) p.accent else p.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold,

@@ -117,6 +117,7 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import dev.asfakul.yumeiro.data.model.PlaybackState
 import dev.asfakul.yumeiro.data.model.PlayerRepeatMode
@@ -285,7 +286,7 @@ fun NowPlayingScreen(
                             onReload = { lyricsReload++ },
                         )
                         PANEL_QUEUE -> QueuePanel(playbackState, onPlayQueueIndex)
-                        PANEL_INFO -> if (track != null) SongInfoPanel(track) else EmptyPanel("Nothing is playing")
+                        PANEL_INFO -> if (track != null) SongInfoPanel(track, playbackState.audioCodec) else EmptyPanel("Nothing is playing")
                         else -> ArtworkPanel(
                             track = track,
                             lyrics = lyricsState.lyrics,
@@ -315,6 +316,12 @@ fun NowPlayingScreen(
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize * 1.07f),
                         color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
+                    // What's playing, technically: "Opus · 160 kbps · 48 kHz · Stereo" (Lossless badge for FLAC, ALAC, PCM).
+                    val codec = playbackState.audioCodec
+                    if (codec != null && !codec.isEmpty) {
+                        Spacer(Modifier.height(6.dp))
+                        CodecLine(codec)
+                    }
                 }
                 if (track != null) {
                     Box(
@@ -661,7 +668,26 @@ private fun QueuePanel(playbackState: PlaybackState, onPlayQueueIndex: (Int) -> 
 }
 
 @Composable
-private fun SongInfoPanel(track: AudioTrack) {
+private fun CodecLine(codec: dev.asfakul.yumeiro.player.AudioCodecInfo) {
+    val accent = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("now_playing_codec")) {
+        if (codec.lossless) {
+            Text(
+                "Lossless", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.14f))
+                    .padding(horizontal = 7.dp, vertical = 2.dp).testTag("now_playing_lossless"),
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(
+            codec.summary, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.AudioCodecInfo? = null) {
     val context = LocalContext.current
     val details by produceState<TrackDetails?>(null, track.uri) {
         value = runCatching { TrackDetailsRepository.loadDetails(context, track.uri) }.getOrNull() ?: TrackDetails()
@@ -679,9 +705,14 @@ private fun SongInfoPanel(track: AudioTrack) {
         d?.discNumber?.let { add("Disc" to it) }
         add("Duration" to formatDuration(track.durationMs))
         d?.format?.let { add("Format" to it) }
-        d?.bitrateKbps?.let { add("Bitrate" to "$it kbps") }
-        d?.sampleRateHz?.let { add("Sample rate" to String.format(Locale.US, "%.1f kHz", it / 1000f)) }
-        d?.bitsPerSample?.let { add("Bit depth" to "$it-bit") }
+        // Live from the decoder first (works for online songs too), the file's tags otherwise.
+        codec?.codecName?.let { add("Codec" to (if (codec.lossless) "$it (lossless)" else it)) }
+        codec?.codecs?.takeIf { it.isNotBlank() && !it.equals(codec.codecName, true) }?.let { add("Codec string" to it) }
+        (codec?.bitrateLabel ?: d?.bitrateKbps?.let { "$it kbps" })?.let { add("Bitrate" to it) }
+        (codec?.sampleRateLabel ?: d?.sampleRateHz?.let { String.format(Locale.US, "%.1f kHz", it / 1000f) })?.let { add("Sample rate" to it) }
+        (codec?.bitDepthLabel ?: d?.bitsPerSample?.let { "$it-bit" })?.let { add("Bit depth" to it) }
+        codec?.channelsLabel?.let { add("Channels" to it) }
+        codec?.decoder?.let { add("Decoder" to "${codec.decoderKind} · $it") }
         if (track.sizeBytes > 0) add("Size" to formatFileSize(track.sizeBytes))
         if (track.playCount > 0) add("Plays" to track.playCount.toString())
         add("Folder" to track.folderName)

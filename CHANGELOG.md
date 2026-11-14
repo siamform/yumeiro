@@ -36,6 +36,10 @@ All notable changes to Yumeiro.
 - Saved pages for home rows, searches (up to 1 hour) and details. A refresh still happens in the background.
 - Larger poster disk cache sized from free space.
 
+### Music player
+- Codec details under the artist in Now Playing, live from the decoder: codec (Opus, AAC-LC, HE-AAC, MP3, FLAC, ALAC, Dolby...), bitrate, sample rate, bit depth and channels, with a Lossless badge for FLAC, ALAC and PCM. Song info adds the codec string and whether the decoder is hardware or software. Works for songs on the device and online songs.
+- Online music search and song lists no longer show a download icon on every row. Long-press a song (or use the song options) to download it.
+
 ### Sources and tracks
 - Each source shows quality, release (WEB-DL, BluRay, CAM...), format (HLS, DASH, MP4, MKV), size and audio when known; low quality copies are marked.
 - Only the group that is playing is expanded; 10 at a time with Show more.

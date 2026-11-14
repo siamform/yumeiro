@@ -410,12 +410,18 @@ private fun YmVideoCover(song: YmItem.Song, onClick: () -> Unit) {
 }
 
 /** One row: a song (tap plays) or a collection (tap opens). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, art: String? = null, onOpen: (YmBrowse) -> Unit, onSong: (YmItem.Song) -> Unit) {
     val pad = if (compact) 5.dp else 7.dp
     when (item) {
         is YmItem.Song -> if (compact) QuickPickRow(item, art, pad, onSong) else Row(
-            Modifier.fillMaxWidth().clickable { onSong(item) }.padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
+            // No download icon on song rows (it cluttered search results): long-press downloads.
+            Modifier.fillMaxWidth().combinedClickable(
+                onClickLabel = "Play", onLongClickLabel = "Download song",
+                onLongClick = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) },
+                onClick = { onSong(item) },
+            ).padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val thumb = item.thumbnail ?: art
@@ -436,7 +442,6 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
                 if (line.isNotBlank()) Text(line, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (item.durationSec > 0 && !compact) Text(formatYtDuration(item.durationSec), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
-            SongDownloadButton { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) }
         }
         is YmItem.Collection -> Row(
             Modifier.fillMaxWidth().clickable { onOpen(item.browse) }.padding(horizontal = 16.dp, vertical = pad).testTag("ytmusic_collection_row"),
@@ -647,10 +652,3 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
 }
 
 
-/** Trailing "download this song" action on a song row (opens the shared audio download sheet). */
-@Composable
-internal fun SongDownloadButton(onClick: () -> Unit) {
-    androidx.compose.material3.IconButton(onClick = onClick, modifier = Modifier.size(40.dp).testTag("song_download")) {
-        Icon(Icons.Default.Download, contentDescription = "Download song", tint = TextTertiary, modifier = Modifier.size(20.dp))
-    }
-}

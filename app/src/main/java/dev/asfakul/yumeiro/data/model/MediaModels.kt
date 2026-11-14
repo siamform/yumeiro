@@ -138,5 +138,7 @@ data class PlaybackState(
     val repeatMode: PlayerRepeatMode = PlayerRepeatMode.OFF,
     val queue: List<AudioTrack> = emptyList(),
     val currentQueueIndex: Int = -1,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    /** What is being decoded now (codec, bitrate, sample rate, channels, decoder); null until known. */
+    val audioCodec: dev.asfakul.yumeiro.player.AudioCodecInfo? = null,
 )
