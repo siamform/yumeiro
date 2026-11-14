@@ -80,14 +80,15 @@ fun BackdropSettingsSection() {
     val scope = rememberCoroutineScope()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) scope.launch {
-            val ok = BackdropSettings.importPhoto(context, uri)
-            if (ok) AppMessages.success(context, "Backdrop updated") else AppMessages.error(context, "That picture couldn't be opened. Try another one.")
+            val err = BackdropSettings.importPhoto(context, uri)
+            if (err == null) AppMessages.success(context, "Backdrop updated") else AppMessages.error(context, err)
         }
     }
     val pick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
     Text("Backdrop", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
     Text("夢色 — the picture behind every page. Each theme has its own scene.", color = p.textTertiary, fontSize = 12.5.sp, lineHeight = 17.sp)
+    Text("Your photo: " + BackdropSettings.ACCEPTED, color = p.textTertiary, fontSize = 11.5.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 2.dp).testTag("backdrop_accepted"))
     Spacer(Modifier.height(10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
         BackdropStyle.entries.filter { it != BackdropStyle.CALM }.forEach { s ->

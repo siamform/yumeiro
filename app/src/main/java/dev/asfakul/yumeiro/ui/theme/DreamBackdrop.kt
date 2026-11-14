@@ -91,37 +91,78 @@ object BackdropSettings {
 
     internal fun photoFile(context: Context) = File(context.filesDir, FILE)
 
+    /** Shown under the picker: what the import accepts. */
+    const val ACCEPTED = "JPEG, PNG, WebP, GIF (first frame), BMP, HEIC/HEIF (Android 9+) and AVIF (Android 12+). Up to 60 MB and at least 200 × 200 px; larger pictures are scaled down."
+
     /**
-     * Copies the picked image into app storage, downscaled (the backdrop is drawn blurred, so
-     * 540 px is plenty and keeps memory tiny). Returns false when the image can't be read.
+     * Round 2, order 8: copies the picked image into app storage, downscaled (the backdrop is
+     * drawn blurred, so 540 px is plenty). Returns null when it worked, else the reason to show.
+     *
+     * The old import decoded with BitmapFactory only and reported every problem as "couldn't be
+     * opened": HEIC/AVIF photos on phones whose BitmapFactory lacks them, cloud items that need a
+     * moment to download, and any failure after the file was already saved all ended the same way.
+     * Now Android 9+ decodes with ImageDecoder (HEIF, AVIF, WebP, EXIF turns applied, software
+     * bitmap so it can be scaled and saved), older phones with BitmapFactory, and each failure
+     * names its cause and lands in Crash reports.
      */
-    suspend fun importPhoto(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            val cr = context.contentResolver
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return@runCatching false
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching false
-            var sample = 1
-            while (bounds.outWidth / (sample * 2) >= 540 && bounds.outHeight / (sample * 2) >= 540) sample *= 2
-            val raw = cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
-                ?: return@runCatching false
-            // Round 13: camera photos are stored sideways with an EXIF turn; apply it so the
-            // backdrop isn't rotated.
-            val turn = runCatching {
-                cr.openInputStream(uri)?.use { android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }
-            }.getOrNull()?.let { when (it) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f } } ?: 0f
-            val bmp = if (turn == 0f) raw else android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height,
-                android.graphics.Matrix().apply { postRotate(turn) }, true).also { if (it !== raw) raw.recycle() }
+    suspend fun importPhoto(context: Context, uri: Uri): String? = withContext(Dispatchers.IO) {
+        val cr = context.contentResolver
+        val type = runCatching { cr.getType(uri) }.getOrNull().orEmpty()
+        val size = runCatching { cr.openAssetFileDescriptor(uri, "r")?.use { it.length } }.getOrNull() ?: -1L
+        if (size > 60L * 1024 * 1024) return@withContext "That picture is over 60 MB. Pick a smaller one."
+        if (type.startsWith("video/")) return@withContext "That's a video. Pick a photo instead."
+        val result = runCatching {
+            val bmp = decodeScaled(context, uri, 540) ?: return@runCatching "This picture's format isn't supported here ($type). Try a JPEG or PNG."
+            if (bmp.width < 200 && bmp.height < 200) { bmp.recycle(); return@runCatching "That picture is too small (${bmp.width} × ${bmp.height}). Use one at least 200 × 200 px." }
             val tmp = File(context.filesDir, "$FILE.tmp")
             tmp.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, it) }
             bmp.recycle()
             if (!tmp.renameTo(photoFile(context))) { tmp.copyTo(photoFile(context), overwrite = true); tmp.delete() }
-            val v = System.currentTimeMillis()
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong(KEY_PHOTO_V, v).apply()
-            _photoVersion.value = v
-            setStyle(context, BackdropStyle.PHOTO)
-            true
-        }.getOrDefault(false)
+            null
+        }.getOrElse { e ->
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("Backdrop photo import ($type, $size bytes)", e)
+            when (e) {
+                is java.io.FileNotFoundException, is SecurityException -> "Yumeiro couldn't read that picture. If it's only in the cloud, download it to the phone first."
+                is OutOfMemoryError -> "That picture is too large to open on this phone. Pick a smaller one."
+                else -> "That picture couldn't be opened (${e.javaClass.simpleName}). Try a JPEG or PNG."
+            }
+        }
+        if (result != null) return@withContext result
+        val v = System.currentTimeMillis()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong(KEY_PHOTO_V, v).apply()
+        _photoVersion.value = v
+        setStyle(context, BackdropStyle.PHOTO)
+        null
+    }
+
+    /** Decodes [uri] with its shorter side near [target] px, upright, as a software bitmap. */
+    internal fun decodeScaled(context: Context, uri: Uri, target: Int): android.graphics.Bitmap? {
+        val cr = context.contentResolver
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            val viaDecoder = runCatching {
+                android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(cr, uri)) { d, info, _ ->
+                    d.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+                    d.isMutableRequired = false
+                    val w = info.size.width; val h = info.size.height
+                    val short = minOf(w, h)
+                    if (short > target * 2) { val f = target.toFloat() / short; d.setTargetSize((w * f).toInt().coerceAtLeast(1), (h * f).toInt().coerceAtLeast(1)) }
+                }
+            }
+            viaDecoder.getOrNull()?.let { return it }
+            // ImageDecoder refused (rare formats): fall through to BitmapFactory.
+        }
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: throw java.io.FileNotFoundException(uri.toString())
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= target && bounds.outHeight / (sample * 2) >= target) sample *= 2
+        val raw = cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return null
+        // Camera photos are stored sideways with an EXIF turn; apply it so the backdrop isn't rotated.
+        val turn = runCatching {
+            cr.openInputStream(uri)?.use { android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }
+        }.getOrNull()?.let { when (it) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f } } ?: 0f
+        return if (turn == 0f) raw else android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height,
+            android.graphics.Matrix().apply { postRotate(turn) }, true).also { if (it !== raw) raw.recycle() }
     }
 
     fun removePhoto(context: Context) {
