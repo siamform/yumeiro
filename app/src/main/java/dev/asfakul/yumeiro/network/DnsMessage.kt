@@ -153,11 +153,18 @@ internal class DnsWireClient(
         plain.soTimeout = timeoutMs
         val socket: Socket = if (tls) {
             val name = tlsHost ?: throw IOException("Resolver has no TLS name")
-            (SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(plain, name, port, true).also {
-                val ssl = it as SSLSocket
-                ssl.sslParameters = ssl.sslParameters.apply { endpointIdentificationAlgorithm = "HTTPS" }
-                ssl.startHandshake()
+            val ssl = (SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(plain, name, port, true) as SSLSocket
+            // Hostname checked twice: by the TLS stack (endpoint identification) and explicitly
+            // against the resolver's name after the handshake. System CAs only.
+            val params = ssl.sslParameters
+            params.endpointIdentificationAlgorithm = "HTTPS"
+            ssl.sslParameters = params
+            ssl.startHandshake()
+            if (!javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(name, ssl.session)) {
+                runCatching { ssl.close() }
+                throw javax.net.ssl.SSLPeerUnverifiedException("DNS-over-TLS certificate doesn't match $name")
             }
+            ssl
         } else plain
         socket.use { s ->
             val out = DataOutputStream(s.getOutputStream())

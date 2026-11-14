@@ -28,17 +28,34 @@
 #     which is JavaScript. Its bridge "MTFinder" exposes only two @JavascriptInterface methods that take a
 #     string (a media URL to record, a DRM system name filtered to 40 safe chars); no other Java is reachable
 #     (minSdk > 17). File and content access off, non-http schemes blocked, ads filtered (SafeWebView, AdFilter).
+#     Same for the off-screen stream capture (online/web/HeadlessCapture.kt, same "MTFinder" bridge shape) and the
+#     background site check (online/web/BrowserCheck.kt, no bridge): both load a site's own JavaScript page.
+#  5. More third-party hosts for rule 2 (same reasoning, HTTPS-only, system CAs): AniList / AniSkip / ARM id
+#     mapping (online/anime/{AniList,AniSkip,AnimeIds}.kt), YouTube Music (youtube/music/YtMusicApi.kt), Firebase
+#     Cloud Messaging via Google (notify/FcmPush.kt), the extension market repo lists on GitHub / user repos
+#     (online/ExtensionMarket.kt), user-pasted links (sources/UniversalAdd.kt) and subtitle search
+#     (subtitles/OnlineSubtitles.kt).
+#  6. websettings-allow-content-access on WebViews whose settings are set false where they are created
+#     (page.settings.allowFileAccess/allowContentAccess = false, plus SafeWebView.harden). The query treats
+#     later reads of a WebView held in a variable / Compose state as new, unconfigured WebViews.
 def suppressed:
   (.ruleId // .rule.id) as $r
   | (.locations[0].physicalLocation.artifactLocation.uri // "") as $u
   | ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
       and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$|com/lagradost/cloudstream3/extractors/(Vidplay|VidSrcTo)\\.kt$)")))
     or (($r == "java/android/missing-certificate-pinning")
-      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource))\\.kt$")))
+      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource)|online/anime/(AniList|AniSkip|AnimeIds)|youtube/music/YtMusicApi|notify/FcmPush|online/ExtensionMarket|sources/UniversalAdd|subtitles/OnlineSubtitles)\\.kt$")))
     or (($r == "java/android/websettings-javascript-enabled")
       and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt")
         or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")
-        or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt")))
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/HeadlessCapture.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/BrowserCheck.kt")))
     or (($r == "java/android/webview-addjavascriptinterface")
-      and ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt"));
+      and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/HeadlessCapture.kt")))
+    or (($r == "java/android/websettings-allow-content-access")
+      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(ui/screens/stream/PageStreamFinderDialog|ui/screens/settings/YouTubeAccountScreen|online/web/HeadlessCapture)\\.kt$")))
+    or ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
+      and ($u == "app/src/main/java/dev/asfakul/yumeiro/online/download/HlsDownloader.kt"));
 .runs |= map(.results |= map(select(suppressed | not)))
