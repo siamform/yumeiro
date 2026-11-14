@@ -25,6 +25,16 @@ object PrefsWarmup {
         "pinned_extensions",
         "download_settings",
         "provider_overrides",
+        // Second StrictMode pass (device run 43629395323):
+        "mt_streams",             // StreamRepository
+        "mt_updater",             // UpdatePreferences
+        "yu_opening_kinds",       // OpeningKinds
+        "watch_prefs",            // AudioLanguages
+        "mt_subtitle_style",      // SubtitleStyleSettings
+        "mt_player",              // PlayerSettings
+        "yu_last_played",         // LastPlayed
+        "yumeiro_listening",      // ListeningTime
+        "browser_check",          // BrowserCheck cached UA
     )
 
     fun start(context: Context) {
@@ -34,6 +44,8 @@ object PrefsWarmup {
                 // contains() waits for the load, so the file is parsed here and not on the main thread.
                 runCatching { app.getSharedPreferences(name, Context.MODE_PRIVATE).contains("") }
             }
+            // Loading the FFmpeg native libraries reads the APK; do it here, not when the first player is built.
+            runCatching { dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegAvailable }
         }, "yu-prefs").apply { priority = Thread.NORM_PRIORITY }.start()
     }
 }

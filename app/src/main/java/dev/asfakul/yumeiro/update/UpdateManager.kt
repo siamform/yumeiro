@@ -440,7 +440,8 @@ class UpdateManager private constructor(context: Context) {
 
     private fun cleanupStaleApks() {
         if (prefs.downloadId >= 0) return
-        updatesDir()?.listFiles()?.forEach { it.delete() }
+        // R15: listing and deleting files is disk I/O; StrictMode flagged it on the main thread at startup.
+        scope.launch(Dispatchers.IO) { updatesDir()?.listFiles()?.forEach { it.delete() } }
     }
 
     private fun updatesDir(): File? =
