@@ -430,7 +430,7 @@ private fun VideoPlayerModalContent(
         StreamMediaFactory.createPlayer(context, video.uri).apply {
             // Round 13: default speed and default quality from Settings → Quality and audio.
             dev.asfakul.yumeiro.player.VideoPrefs.speed.value.takeIf { it != 1f }?.let { playbackParameters = PlaybackParameters(it) }
-            if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value) runCatching {
+            if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) runCatching {
                 setVideoEffects(listOf(dev.asfakul.yumeiro.player.Anime4kEffect(dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.value)))
             }
             dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 }?.let { h ->
@@ -1265,6 +1265,19 @@ private fun VideoPlayerModalContent(
         }
     }
 
+    // Round 2 (heat): the phone got hot during playback, so drop the Anime4K GPU pass (the
+    // picture stays at its engine level); it comes back when the phone cools down.
+    val heat by dev.asfakul.yumeiro.player.HeatGuard.level.collectAsState()
+    var heatTouched by remember(exoPlayer) { mutableStateOf(false) }
+    LaunchedEffect(exoPlayer, heat) {
+        val gpuWanted = dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value || engineHeight != null
+        if (!gpuWanted) return@LaunchedEffect
+        if (heat == dev.asfakul.yumeiro.player.HeatGuard.Level.HOT || heatTouched) {
+            heatTouched = true
+            applyEngineLevel(exoPlayer, engineHeight, upscale = false)
+        }
+    }
+
     // Black-screen guard: audio playing but no new video frames → flush the decoder, then fail over.
     val blackWatch = remember(exoPlayer) { dev.asfakul.yumeiro.player.BlackFrameWatchdog() }
     LaunchedEffect(exoPlayer, isPlaying) {
@@ -1316,8 +1329,9 @@ private fun VideoPlayerModalContent(
                     currentOnProgressUpdate(video.id, currentPositionMs, durationMs)
                 }
             }
-            // 250 ms (was 500 ms): the thumb moved in visible half-second steps.
-            delay(250L)
+            // 250 ms (was 500 ms): the thumb moved in visible half-second steps. Round 2: only
+            // while the seek bar is on screen; 1 s when hidden, slower again when the phone is warm.
+            delay(dev.asfakul.yumeiro.player.HeatGuard.interval(if (isControlsVisible) 250L else 1_000L))
         }
     }
 
@@ -2293,7 +2307,7 @@ internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, heigh
     val prefs = dev.asfakul.yumeiro.player.VideoPrefs
     val fx = buildList<androidx.media3.common.Effect> {
         if (height != null) add(androidx.media3.effect.Presentation.createForHeight(height))
-        if (upscale || prefs.anime4k.value) add(dev.asfakul.yumeiro.player.Anime4kEffect(prefs.gpuTier.value))
+        if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kEffect(prefs.gpuTier.value))
     }
     runCatching {
         player.setVideoEffects(fx)

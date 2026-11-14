@@ -28,6 +28,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         dev.asfakul.yumeiro.security.Privacy.load(this)
         // Foreground/background tracking for seamless (Messenger-style) background updates.
         dev.asfakul.yumeiro.update.AppVisibility.install(this)
+        // Round 2: thermal status + battery saver slow polling and extension work down.
+        runCatching { dev.asfakul.yumeiro.player.HeatGuard.install(this) }
         // Per-host header profiles that unlocked refused (HTTP 403) streams before.
         runCatching { dev.asfakul.yumeiro.online.AccessLadder.attach(this) }
         // YouTube / YouTube Music (no login): NewPipe init + fresh-link refresher for 403/expiry.

@@ -91,7 +91,7 @@ fun PlayerInfoOverlay(player: ExoPlayer, title: String, modifier: Modifier = Mod
                 }
                 value?.let { f.label to it }
             }
-            delay(1000)
+            delay(dev.asfakul.yumeiro.player.HeatGuard.interval(1000))
         }
     }
     PlayerInfoPanel(rows, modifier)
