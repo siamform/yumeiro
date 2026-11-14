@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipNext
@@ -307,8 +308,8 @@ fun VideoPlayerTopBar(
                     .testTag("video_info_btn")
             ) {
                 Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Video info",
+                    imageVector = androidx.compose.material.icons.Icons.Outlined.Movie,
+                    contentDescription = "Video details",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )

@@ -357,8 +357,10 @@ fun HomeScreen(
             Feature("quick_card_together", "Together", "Watch in sync", Icons.Default.Groups, "共", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.TOGETHER) }),
         )
     }
-    val moreSettings = remember {
-        listOf(
+    // On TV the rail already has Settings at the bottom: one Settings entry on the TV home, not two.
+    val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+    val moreSettings = remember(tvLayout) {
+        listOfNotNull(
             Feature("quick_card_theme", "Theme", "Colours · look", Icons.Default.Palette, "色", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.THEME) }),
             Feature("quick_card_dns", "DNS", "Smart DNS · unblock", Icons.Default.Dns, "護", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.DNS) }),
             Feature("quick_card_network", "Network", "VPN · blocked sites", Icons.Default.Wifi, "通", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.NETWORK) }),
@@ -369,7 +371,7 @@ fun HomeScreen(
             Feature("quick_card_privacy", "Privacy", "Lock · incognito", Icons.Default.Lock, "錠", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.PRIVACY) }),
             Feature("quick_card_backup", "Backup", "Save · restore", Icons.Default.Backup, "蔵", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.BACKUP) }),
             Feature("quick_card_yt_account", "YT account", "Optional sign-in", Icons.Default.AccountCircle, "鍵", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.YOUTUBE_ACCOUNT) }),
-            Feature("quick_card_settings", "Settings", "Every option", Icons.Default.Settings, "設", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SETTINGS) }),
+            if (tvLayout) null else Feature("quick_card_settings", "Settings", "Every option", Icons.Default.Settings, "設", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SETTINGS) }),
         )
     }
     var spacesExpanded by rememberSaveable { mutableStateOf(false) }

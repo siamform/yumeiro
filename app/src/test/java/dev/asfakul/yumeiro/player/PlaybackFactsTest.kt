@@ -63,4 +63,25 @@ class PlaybackFactsTest {
         val f = PlaybackFacts.of(PlaybackDiagnostics.Snapshot(uri = "x", state = "BUFFERING"))
         assertTrue(f.pending && f.missing.isEmpty())
     }
+
+    // Round 12: real size from the server's response headers.
+    @Test fun sizeFromContentRangeEvenWhenRanged() {
+        val h = mapOf("Content-Type" to listOf("video/mp4"), "Content-Range" to listOf("bytes 1000-1999/734003200"), "Content-Length" to listOf("1000"))
+        assertEquals(734003200L, PlaybackFacts.totalSizeFromHeaders(h, fromStart = false))
+    }
+
+    @Test fun sizeFromContentLengthOnlyFromByteZero() {
+        val h = mapOf("content-type" to listOf("video/x-matroska"), "content-length" to listOf("1500000000"))
+        assertEquals(1_500_000_000L, PlaybackFacts.totalSizeFromHeaders(h, fromStart = true))
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(h, fromStart = false))
+    }
+
+    @Test fun playlistsSegmentsAndCompressedBodiesSayNothing() {
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(mapOf("Content-Type" to listOf("application/vnd.apple.mpegurl"), "Content-Length" to listOf("90000000")), true))
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(mapOf("Content-Type" to listOf("application/dash+xml"), "Content-Range" to listOf("bytes 0-9/90000000")), true))
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(mapOf("Content-Type" to listOf("video/mp2t"), "Content-Length" to listOf("200000")), true))
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(mapOf("Content-Encoding" to listOf("gzip"), "Content-Length" to listOf("90000000")), true))
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(mapOf("Content-Range" to listOf("bytes 0-9/*")), false))
+        assertEquals(0L, PlaybackFacts.totalSizeFromHeaders(emptyMap(), true))
+    }
 }

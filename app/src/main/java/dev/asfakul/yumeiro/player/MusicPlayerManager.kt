@@ -60,7 +60,45 @@ class MusicPlayerManager(
      */
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
+    /** Decoder name from the analytics callback (the Format alone doesn't carry it). */
+    private var audioDecoderName: String? = null
+
+    private fun refreshCodec() {
+        val selected = runCatching {
+            player.currentTracks.groups.firstOrNull { it.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && it.isSelected }
+                ?.let { g -> (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { g.getTrackFormat(it) } }
+        }.getOrNull()
+        val decoded = runCatching { player.audioFormat }.getOrNull()
+        // The decoded format knows the real sample rate and PCM depth; the track format the bitrate.
+        val a = AudioCodecInfo.from(selected, audioDecoderName)
+        val b = AudioCodecInfo.from(decoded, audioDecoderName)
+        val info = when {
+            a == null -> b
+            b == null -> a
+            else -> a.copy(
+                mime = a.mime ?: b.mime, codecs = a.codecs ?: b.codecs, bitrate = a.bitrate ?: b.bitrate,
+                sampleRate = a.sampleRate ?: b.sampleRate, channels = a.channels ?: b.channels, bitDepth = a.bitDepth ?: b.bitDepth,
+            )
+        }
+        if (info != _playbackState.value.audioCodec) _playbackState.update { it.copy(audioCodec = info) }
+    }
+
+    private val analyticsListener = object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+        override fun onAudioDecoderInitialized(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long,
+        ) { audioDecoderName = decoderName; refreshCodec() }
+
+        override fun onAudioInputFormatChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            format: androidx.media3.common.Format,
+            decoderReuseEvaluation: androidx.media3.exoplayer.DecoderReuseEvaluation?,
+        ) { refreshCodec() }
+    }
+
     private val playerListener = object : Player.Listener {
+        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) { refreshCodec() }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playbackState.update { it.copy(isPlaying = isPlaying) }
             if (isPlaying) {
@@ -105,7 +143,8 @@ class MusicPlayerManager(
                         currentQueueIndex = currentIndex,
                         currentPositionMs = 0L,
                         durationMs = if (track.durationMs > 0) track.durationMs else 0L,
-                        errorMessage = null
+                        errorMessage = null,
+                        audioCodec = null,
                     )
                 }
                 // playTrack() already records the first track of a newly loaded queue.
@@ -145,6 +184,8 @@ class MusicPlayerManager(
 
     init {
         player.addListener(playerListener)
+        runCatching { player.addAnalyticsListener(analyticsListener) }
+        refreshCodec()
         // If music is already playing (activity recreated), reconnect to the session now;
         // otherwise connect lazily on first playback.
         if (player.mediaItemCount > 0) connectSession()
@@ -399,6 +440,7 @@ class MusicPlayerManager(
     fun release() {
         stopProgressTracker()
         player.removeListener(playerListener)
+        runCatching { player.removeAnalyticsListener(analyticsListener) }
         scope.cancel()
         controllerFuture?.let { future -> runCatching { MediaController.releaseFuture(future) } }
         controllerFuture = null

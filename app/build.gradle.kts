@@ -209,6 +209,26 @@ android {
     }
   }
 
+  // Round 12 (1.7.0): the phone app and the TV app are two separate builds. They share the code and
+  // the package name (one is installed per device, data and updates carry over), but each has its
+  // own manifest (no Leanback launcher on phones; Leanback, banner, no picture-in-picture on TVs),
+  // its own tuning (BuildConfig.IS_TV_APP) and its own release files, so a phone never downloads
+  // the TV build and the other way round. See docs/TV-AND-PHONE.md.
+  flavorDimensions += "device"
+  productFlavors {
+    create("mobile") {
+      dimension = "device"
+      isDefault = true
+      buildConfigField("boolean", "IS_TV_APP", "false")
+      buildConfigField("String", "EDITION", "\"phone\"")
+    }
+    create("tv") {
+      dimension = "device"
+      buildConfigField("boolean", "IS_TV_APP", "true")
+      buildConfigField("String", "EDITION", "\"tv\"")
+    }
+  }
+
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17

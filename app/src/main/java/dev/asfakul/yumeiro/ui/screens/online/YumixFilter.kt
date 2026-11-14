@@ -41,6 +41,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -88,12 +92,29 @@ internal fun SourceFilterSheet(
                     Text("Clear", color = p.accent, fontWeight = FontWeight.SemiBold)
                 }
             }
+            // Round 12: with dozens of extensions the list got long; a search box narrows it as
+            // you type (accent and case blind, every word must match, in any order).
+            var query by rememberSaveable { mutableStateOf("") }
+            val shown = remember(names, query) { filterExtensionNames(names, query) }
+            if (names.size >= SEARCH_FROM) {
+                dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                    query = query, onQuery = { query = it.take(60) }, hint = "Search ${names.size} extensions",
+                    tag = "online_filter_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                item("all") { FilterRow(null, "All extensions", "Everything mixed in one feed", selected == null) { onPick(null) } }
-                items(names, key = { it }) { n ->
+                if (query.isBlank()) item("all") { FilterRow(null, "All extensions", "Everything mixed in one feed", selected == null) { onPick(null) } }
+                if (shown.isEmpty()) item("none") {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("online_filter_empty")) {
+                        Text("No extension called \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Check the spelling, or clear the search to see all ${names.size}.", color = p.textSecondary, fontSize = 12.sp)
+                        TextButton(onClick = { query = "" }, modifier = Modifier.testTag("online_filter_search_clear")) { Text("Clear search", color = p.accent, fontWeight = FontWeight.SemiBold) }
+                    }
+                }
+                items(shown, key = { it }) { n ->
                     val sub = when (val st = status(n)) {
                         SourceStatus.Loading -> "Loading…"
-                        SourceStatus.Failed -> "Didn't load — open it to retry"
+                        SourceStatus.Failed -> "Didn't load. Open it to retry"
                         is SourceStatus.Ready -> if (st.titles == 0) "Search only" else "${st.titles} titles on its home"
                     }
                     FilterRow(n, n, sub, selected == n, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed) { onPick(n) }
@@ -101,6 +122,25 @@ internal fun SourceFilterSheet(
             }
         }
     }
+}
+
+/** The search box shows from this many extensions on (a handful fits on screen anyway). */
+internal const val SEARCH_FROM = 6
+
+/** Lower-case, accent-free form used to compare extension names with what was typed. */
+private fun foldName(s: String): String =
+    java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
+
+/**
+ * Extensions whose name holds every word of [query] (accent and case blind). Names that start
+ * with the query come first, then the rest in their original order. Blank query = all names.
+ */
+internal fun filterExtensionNames(names: List<String>, query: String): List<String> {
+    val words = foldName(query).split(Regex("[\\s._-]+")).filter { it.isNotBlank() }
+    if (words.isEmpty()) return names
+    val hits = names.filter { n -> val f = foldName(n); words.all { it in f } }
+    val first = words.first()
+    return hits.sortedBy { n -> if (foldName(n).startsWith(first)) 0 else 1 }
 }
 
 @Composable

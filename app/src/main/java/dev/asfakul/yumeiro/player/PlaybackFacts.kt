@@ -107,6 +107,27 @@ object PlaybackFacts {
         return if (h > 0) String.format(Locale.US, "%d:%02d:%02d", h, m, sec) else String.format(Locale.US, "%d:%02d", m, sec)
     }
 
+    /**
+     * Round 12: total file size from an HTTP response, or 0 when it can't be told. "Content-Range:
+     * bytes 0-99/12345" gives the whole file even for a ranged request; a plain Content-Length only
+     * counts when the request started at byte 0 (otherwise it's just the rest). Playlists (HLS /
+     * DASH) and their small segments say nothing about the video's size, so they are ignored.
+     */
+    fun totalSizeFromHeaders(headers: Map<String, List<String>>, fromStart: Boolean): Long {
+        fun h(name: String) = headers.entries.firstOrNull { it.key.equals(name, true) }?.value?.firstOrNull()?.trim()
+        val type = h("Content-Type")?.lowercase().orEmpty()
+        if (MANIFEST_TYPES.any { it in type }) return 0
+        h("Content-Range")?.substringAfter('/', "")?.trim()?.toLongOrNull()?.takeIf { it > 0 }?.let { return it }
+        if (!fromStart) return 0
+        val enc = h("Content-Encoding")?.lowercase()
+        if (enc != null && enc != "identity") return 0
+        return h("Content-Length")?.toLongOrNull()?.takeIf { it > MIN_FILE_BYTES } ?: 0
+    }
+
+    private val MANIFEST_TYPES = listOf("mpegurl", "dash+xml", "vnd.ms-sstr", "text/", "json", "xml")
+    /** Below this a "file" is a segment, a playlist or an error page, not the video. */
+    private const val MIN_FILE_BYTES = 512L * 1024
+
     internal fun formatBytes(b: Long): String = when {
         b >= 1L shl 30 -> String.format(Locale.US, "%.2f GB", b / (1L shl 30).toDouble())
         b >= 1L shl 20 -> String.format(Locale.US, "%.0f MB", b / (1L shl 20).toDouble())

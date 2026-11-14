@@ -141,7 +141,29 @@ object TachiyomiExtensions {
         if (started) return
         started = true
         val app = context.applicationContext
-        scope.launch { runCatching { reload(app) }.onFailure { Log.e(TAG, "start", it) } }
+        scope.launch {
+            runCatching { reload(app) }.onFailure { Log.e(TAG, "start", it) }
+            runCatching { reinstallAfterRestore(app) }.onFailure { Log.w(TAG, "restore", it) }
+        }
+    }
+
+    /** Round 12: a restore without extension files lists the packages; download them from the repos again. */
+    private suspend fun reinstallAfterRestore(context: Context) {
+        val raw = dev.asfakul.yumeiro.backup.BackupMeta.pendingTachiyomi(context)
+        val wanted = runCatching { org.json.JSONArray(raw) }.getOrNull()?.let { a ->
+            (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { o -> o.optString("pkg") to o.optString("kind") } }
+        }.orEmpty().filter { it.first.isNotBlank() }
+        if (wanted.isEmpty()) { dev.asfakul.yumeiro.backup.BackupMeta.clearPendingTachiyomi(context); return }
+        if (!dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) return
+        val have = _state.value.installed.map { it.pkg }.toSet()
+        var failed = false
+        Kind.entries.forEach { kind ->
+            val need = wanted.filter { it.second.equals(kind.name, true) && it.first !in have }.map { it.first }.toSet()
+            if (need.isEmpty()) return@forEach
+            val found = runCatching { available(context, kind) }.getOrElse { failed = true; emptyList() }.filter { it.entry.pkg in need }
+            found.forEach { item -> if (install(context, item).isFailure) failed = true }
+        }
+        if (!failed) dev.asfakul.yumeiro.backup.BackupMeta.clearPendingTachiyomi(context)
     }
 
     // region repos

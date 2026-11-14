@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.ui.draw.clipToBounds
 import dev.asfakul.yumeiro.ui.theme.rememberArtBrush
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -128,7 +129,8 @@ fun formatDuration(ms: Long): String {
 }
 
 fun formatFileSize(bytes: Long): String {
-    if (bytes <= 0) return "0 MB"
+    // Round 12: 0 means "not known" (streams, some content providers), never a real empty file.
+    if (bytes <= 0) return "Unknown"
     val mb = bytes / (1024.0 * 1024.0)
     return if (mb >= 1024) {
         String.format(Locale.US, "%.1f GB", mb / 1024.0)
@@ -506,7 +508,7 @@ fun VideoGridCard(
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
+                    if (video.sizeBytes > 0) Text(
                         text = formatFileSize(video.sizeBytes),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextTertiary,
@@ -630,7 +632,7 @@ fun VideoRowCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${video.folderName} · ${formatFileSize(video.sizeBytes)}",
+                    text = if (video.sizeBytes > 0) "${video.folderName} · ${formatFileSize(video.sizeBytes)}" else video.folderName,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextTertiary,
                     fontSize = 11.sp,
@@ -1342,7 +1344,7 @@ fun SongActionBottomSheet(
 
             SheetActionRow(
                 title = "Song details",
-                icon = Icons.Default.Info,
+                icon = androidx.compose.material.icons.Icons.Outlined.LibraryMusic,
                 onClick = {
                     onDismiss()
                     onShowDetails()

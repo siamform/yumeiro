@@ -31,7 +31,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
       - name: Build APKs
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+        run: ./gradlew --no-daemon assembleMobileDebug assembleMobileDebugAndroidTest
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
@@ -47,7 +47,7 @@ jobs:
           script: |
             adb logcat -c || true
             (adb logcat -v time > logcat.txt &) ; sleep 1
-            FILTER="${TEST_FILTER:-}"; case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.ExtensionCompatDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
+            FILTER="${TEST_FILTER:-}"; case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac; ARG=""; if [ -n "$FILTER" ]; then ARG="-Pandroid.testInstrumentationRunnerArguments.class=$FILTER"; else ARG="-Pandroid.testInstrumentationRunnerArguments.class=dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.ExtensionCompatDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest"; fi; ./gradlew --no-daemon connectedMobileDebugAndroidTest $ARG || echo "TESTS_FAILED" > failed.txt
             adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots shots || true
             adb shell screencap -p /sdcard/last.png && adb pull /sdcard/last.png shots/last.png || true
       - name: Upload results

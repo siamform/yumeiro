@@ -1,9 +1,82 @@
 # Changelog
 
-All notable changes to Yumeiro. Version numbers are set by the release workflow from the commit types
-(Conventional Commits), so the first release that contains these notes gets the next version after v1.5.0.
+All notable changes to Yumeiro.
 
-## Redesign (R1 to R11): next release after v1.5.0
+## v1.7.0: bring back the legacy
+
+1.5.0 was the release people loved; 1.6.0 felt slow, reloaded everything, lost data on restore and mixed the phone and TV experience. 1.7.0 goes back to what made Yumeiro good (fast, reliable, yours) and fixes those problems at the root.
+
+### 1.6.0 vs 1.7.0
+
+| Area | v1.6.0 | v1.7.0 |
+|---|---|---|
+| Loading | Home, search and details loaded from the network every time | Saved pages: opened pages show instantly from storage and refresh in the background; posters keep a large disk cache (2 % of free space, 64 to 512 MB) |
+| Cache and cookies | Grew without limits, only manual clearing | Time limits like a browser: pages refresh after N hours, are deleted after N days, a size cap, and website cookies clear every N days (all adjustable) |
+| Backup | One file, partial restore, often broke the running app | Backup v2: pick sections, saved on the phone (Download/Yumeiro/Backups), automatic backups, staged restore that applies on a clean restart, a safety backup before every restore |
+| Reset | Clear data from Android settings | Reset center: clear cache, cookies, history, extensions or settings, each with a backup first; erase everything |
+| Extensions after restore | Had to be found and added again | Restored with the backup, missing files downloaded again automatically |
+| TV | One app for phone and TV | Two apps: **Yumeiro** for phones and tablets, **Yumeiro TV** for Android TV, Google TV and Fire TV, each tuned separately |
+| Sources | Name only | Quality, release type, format, size and audio on every source; only the playing group opens; Show more paging so long lists never freeze |
+| Audio and subtitle tracks | One long list | Grouped by language, only the playing language open, Show more paging |
+| Video details | Missing size, duration and audio for streams | Real size, duration and audio |
+| Yumix | Extension filter without search | Search box in the extension filter |
+
+### Two apps: Yumeiro and Yumeiro TV
+- Built separately (`mobile` and `tv` product flavors). Yumeiro TV always uses the ten-foot layout and is tuned for TV sticks: smaller memory image cache, 16-bit posters, no crossfades, a leaner video buffer, landscape only and no picture in picture.
+- The phone app has no TV launcher entry any more. Installed on a TV, it offers Yumeiro TV through the updater; it installs over the phone app and keeps everything.
+- Release files: `Yumeiro-v<version>-<abi>.apk` and `release-Yumeiro-v<version>.apk` for phones, `Yumeiro-TV-v<version>-<abi>.tv.apk` and `Yumeiro-TV-v<version>-universal.tv.apk` for TVs. Each app's updater takes only its own files (1.6.0 updaters never pick TV files).
+- The TV home has a single Settings entry (at the bottom of the rail), with the Yumeiro logo at the top.
+
+### Backup, storage and reset
+- Settings, Backup, storage & reset: back up library, history, progress, extensions and repositories, settings, trackers and downloads list; choose a folder; restore any backup with counts per section.
+- Restore is staged: it is written first and applied on a clean restart, so nothing is half restored. A safety backup is taken before every restore and reset.
+- Automatic backups every few days (daily by default), skipped when nothing changed, keeping only the newest few.
+
+### Speed
+- Saved pages for home rows, searches (up to 1 hour) and details. A refresh still happens in the background.
+- Larger poster disk cache sized from free space.
+
+### Music player
+- Codec details under the artist in Now Playing, live from the decoder: codec (Opus, AAC-LC, HE-AAC, MP3, FLAC, ALAC, Dolby...), bitrate, sample rate, bit depth and channels, with a Lossless badge for FLAC, ALAC and PCM. Song info adds the codec string and whether the decoder is hardware or software. Works for songs on the device and online songs.
+- Online music search and song lists no longer show a download icon on every row. Long-press a song (or use the song options) to download it.
+
+### Sources and tracks
+- Each source shows quality, release (WEB-DL, BluRay, CAM...), format (HLS, DASH, MP4, MKV), size and audio when known; low quality copies are marked.
+- Only the group that is playing is expanded; 10 at a time with Show more.
+- Audio and subtitle choices grouped by language with Show more.
+- The small "i" info icons were replaced with clearer icons everywhere.
+
+### Video and Yumix
+- Video details show the real size, duration and audio for streams (1.6.0 left them empty for most online videos).
+- Yumix: a search box in the extension filter sheet, so long extension lists are quick to filter.
+
+### Cache and cookies
+- Saved pages work like a browser cache: each kind has a refresh age and a delete age, the whole cache has a size cap, and old entries clear themselves. Settings, Backup, storage & reset shows the size and lets you change the limits.
+- Website cookies (used by sign-ins and site checks) clear every N days, or never.
+
+### Security and privacy
+- Extension install: the extension's manifest is read in memory, no temporary file in the shared temp folder.
+- Private DNS (DNS-over-TLS): the resolver's certificate name is checked again after the handshake.
+- Android cloud backup is off in both apps (`allowBackup="false"`). Yumeiro's own backup replaces it, keeps sign-in tokens out of Google Drive and still lets Android 12+ phone-to-phone transfer follow the rules in `data_extraction_rules.xml`.
+- Saved page file names use SHA-256.
+- CodeQL: the full scan of this release reports 0 open alerts (1.6.0 had 32). Accepted results are listed rule by rule, with reasons, in `docs/security/AUDIT.md`.
+- No open Dependabot or secret-scanning alerts.
+
+### Fixed
+- Restore no longer breaks the running app: it is applied on a clean restart, and a backup that fails twice is dropped instead of looping.
+- Extensions missing after a restore are downloaded again.
+- Long source, audio and subtitle lists no longer freeze the watch page.
+- Yumeiro TV no longer shows the phone/TV layout chooser or the extra Settings card on its home.
+
+### Tests
+- 640+ JVM / Robolectric tests, 0 failures. New: Backup v2 round trip, staged restore, resets, prune and saved pages (run on Android 7, 10, 14 and 16), both app editions, updater edition picking, source facts, language track groups, codec details and the music rows.
+- CI builds, tests and lints the phone app and the TV app separately.
+
+### For developers
+- Gradle tasks: `assembleMobileRelease`, `assembleTvRelease` (and `Preview` / `Debug`). Edition switches live in `Edition.kt`.
+- Handover: `docs/HANDOVER.md` §29 and `docs/TV-AND-PHONE.md`.
+
+## v1.6.0: redesign (R1 to R11)
 
 The redesign was built in a separate working repository on top of v1.5.0 (`af8349e`) and lands here in one pull request.
 

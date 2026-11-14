@@ -25,6 +25,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTextInput
 import dev.asfakul.yumeiro.online.OnlineHistory
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.online.OnlineRow
@@ -110,6 +112,35 @@ class YumixShowcaseTest {
         rule.onNodeWithTag("online_filter_all").performClick()
         rule.mainClock.advanceTimeBy(400)
         assertNull(sel)
+    }
+
+    @Test fun filterSheetSearchNarrowsLongLists() {
+        // Real-world extension names (CloudStream repos) so the search reads like the app.
+        val names = listOf("HiAnime", "AnimePahe", "Anizone", "Gogoanime", "SuperStream", "Moviesdrive", "Cinemathek", "Pelisplus", "Animé Fénix", "VidSrc")
+        var sel: String? by mutableStateOf(null)
+        page {
+            var open by remember { mutableStateOf(true) }
+            if (open) SourceFilterSheet(names, sel, status = { SourceStatus.Ready(12) }, onPick = { sel = it }, onDismiss = { open = false })
+        }
+        rule.mainClock.advanceTimeBy(800)
+        rule.onNodeWithTag("online_filter_search").assertExists().performTextInput("anim")
+        rule.mainClock.advanceTimeBy(400)
+        rule.onNodeWithTag("online_filter_AnimePahe").assertExists()
+        rule.onNodeWithTag("online_filter_Animé Fénix").assertExists()
+        rule.onNodeWithTag("online_filter_SuperStream").assertDoesNotExist()
+        rule.onNodeWithTag("online_filter_all").assertDoesNotExist()
+        save("r12_yumix_filter_search")
+        rule.onNodeWithTag("online_filter_search").performTextReplacement("zzz")
+        rule.mainClock.advanceTimeBy(400)
+        rule.onNodeWithTag("online_filter_empty").assertExists()
+        rule.onNodeWithTag("online_filter_search_clear").performClick()
+        rule.mainClock.advanceTimeBy(400)
+        rule.onNodeWithTag("online_filter_all").assertExists()
+        rule.onNodeWithTag("online_filter_search").performTextReplacement("fenix")
+        rule.mainClock.advanceTimeBy(400)
+        rule.onNodeWithTag("online_filter_Animé Fénix").performClick()
+        rule.mainClock.advanceTimeBy(400)
+        assertEquals("Animé Fénix", sel)
     }
 
     @Test fun playbackFactsUnderPlayer() {

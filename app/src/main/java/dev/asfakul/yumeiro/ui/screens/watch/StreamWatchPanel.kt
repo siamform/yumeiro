@@ -210,7 +210,8 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 val rows = buildList {
                     if (alternatives.size > 1) add(
                         WatchServerRow("Sources for this channel", Icons.Default.LiveTv, alternatives.mapIndexed { i, alt ->
-                            WatchServer("Source ${i + 1}", alt.url == currentUrl, "stream_server_link") { StreamWatch.play(context, alt) }
+                            WatchServer("Source ${i + 1}", alt.url == currentUrl, "stream_server_link",
+                                detail = listOfNotNull(alt.resolvedFormat().label, runCatching { android.net.Uri.parse(alt.url).host }.getOrNull()?.removePrefix("www.")).joinToString(" · ")) { StreamWatch.play(context, alt) }
                         })
                     )
                     add(

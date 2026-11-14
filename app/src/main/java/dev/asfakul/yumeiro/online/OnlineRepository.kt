@@ -181,6 +181,8 @@ object OnlineRepository {
     private const val CACHE_MS = 15 * 60 * 1000L
     /** Same query, same Hue: reuse results for a while (typing back and forth, retries). */
     private const val SEARCH_CACHE_MS = 10 * 60 * 1000L
+    /** Searches saved on the phone stay fresh for at most an hour (new uploads show up). */
+    private const val SEARCH_DISK_MS = 60 * 60 * 1000L
     /** Rows requested per provider for the home page. */
     private const val ROWS_PER_PROVIDER = 4
 
@@ -193,7 +195,8 @@ object OnlineRepository {
     /** Search results the user tapped, so details can show a title + poster instantly. */
     val previews = ConcurrentHashMap<String, OnlineItem>()
 
-    fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear() }
+    /** Forgets loaded pages (memory and the copy saved on the phone): settings or extensions changed. */
+    fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear(); runCatching { dev.asfakul.yumeiro.cache.DataCache.clearAll() } }
 
     /** Items a home row already showed (for an instant "See all"). */
     fun cachedRow(api: String, pageData: String): List<OnlineItem>? =
@@ -204,6 +207,12 @@ object OnlineRepository {
     /** Home rows of [api] (its main page). Cached for a while unless [force]. */
     suspend fun home(api: MainAPI, force: Boolean = false): List<OnlineRow> = withContext(ExtensionGuard.dispatcher + ExtensionGuard.coroutineHandler) {
         homeCache[api.name]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
+        // Round 12: saved on the phone too, so reopening Yumix doesn't ask every extension again.
+        val diskKey = diskKey(api, "home")
+        if (!force) dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)?.takeIf { it.isNotEmpty() }?.let { rows ->
+            homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
+            return@withContext rows
+        }
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
         val pages = runCatching { api.mainPage }.getOrDefault(emptyList()).take(ROWS_PER_PROVIDER)
         // supervisorScope: one broken row (or one extension bug) never cancels the others.
@@ -229,9 +238,21 @@ object OnlineRepository {
                 }
             }.onFailure { Log.w(TAG, "home rows ${api.name}/${page.name}", it) }.getOrDefault(emptyList())
         }.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
-        if (rows.isNotEmpty()) homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
+        if (rows.isNotEmpty()) {
+            homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
+            dev.asfakul.yumeiro.cache.DataCache.write("home", diskKey, dev.asfakul.yumeiro.cache.OnlineCodec.rows(rows))
+        }
         rows
     }
+
+    /** Disk cache key: the provider and its current domain (a domain change starts fresh). */
+    private fun diskKey(api: MainAPI, what: String, extra: String = ""): String =
+        "$what|${api.name}|${runCatching { api.mainUrl }.getOrDefault("")}|$extra"
+
+    /** Rows saved on the phone for [api] regardless of age (shown while fresh ones load), or null. */
+    fun savedHome(api: MainAPI): List<OnlineRow>? =
+        dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey(api, "home"), maxAgeMs = dev.asfakul.yumeiro.cache.DataCache.Settings.keepDays * 86_400_000L)
+            ?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)
 
     /** One page of a home row ("See all"), [page] starting at 1. */
     suspend fun page(api: MainAPI, pageName: String, pageData: String, page: Int): OnlinePage = withContext(Dispatchers.IO) {
@@ -274,6 +295,12 @@ object OnlineRepository {
     private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
         val key = "${api.name}|${q.lowercase()}"
         searchCache[key]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_CACHE_MS }?.let { return it.value }
+        val dk = diskKey(api, "search", q.lowercase())
+        dev.asfakul.yumeiro.cache.DataCache.read("search", dk, maxAgeMs = minOf(dev.asfakul.yumeiro.cache.DataCache.Settings.freshMs, SEARCH_DISK_MS))
+            ?.let(dev.asfakul.yumeiro.cache.OnlineCodec::items)?.takeIf { it.isNotEmpty() }?.let { saved ->
+                searchCache[key] = Timed(System.currentTimeMillis(), saved)
+                return saved
+            }
         val results = try {
             api.search(q, 1)?.items
         } catch (e: NotImplementedError) { null } ?: api.search(q).orEmpty()
@@ -281,6 +308,7 @@ object OnlineRepository {
         if (items.isNotEmpty()) {
             if (searchCache.size > 64) searchCache.clear()
             searchCache[key] = Timed(System.currentTimeMillis(), items)
+            dev.asfakul.yumeiro.cache.DataCache.write("search", dk, dev.asfakul.yumeiro.cache.OnlineCodec.items(items))
         }
         return items
     }
@@ -292,9 +320,15 @@ object OnlineRepository {
     suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail = withContext(Dispatchers.IO) {
         val key = "${api.name}|$url"
         detailCache[key]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
+        val dk = diskKey(api, "detail", url)
+        if (!force) dev.asfakul.yumeiro.cache.DataCache.read("detail", dk)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::detail)?.let { saved ->
+            detailCache[key] = Timed(System.currentTimeMillis(), saved)
+            return@withContext saved
+        }
         val resp = withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { withTimeout(LOAD_TIMEOUT) { api.load(url) } } ?: throw IllegalStateException("This title isn't available anymore")
         val detail = map(api, resp)
         detailCache[key] = Timed(System.currentTimeMillis(), detail)
+        if (detail.unsupportedReason == null) dev.asfakul.yumeiro.cache.DataCache.write("detail", dk, dev.asfakul.yumeiro.cache.OnlineCodec.detail(detail))
         detail
     }
 

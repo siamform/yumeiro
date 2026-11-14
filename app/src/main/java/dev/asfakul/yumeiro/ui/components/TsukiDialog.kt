@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -85,7 +86,7 @@ enum class DialogTone(val badge: String?) {
 
     fun defaultIcon(): androidx.compose.ui.graphics.vector.ImageVector? = when (this) {
         NEUTRAL -> null
-        INFO -> androidx.compose.material.icons.Icons.Outlined.Info
+        INFO -> androidx.compose.material.icons.Icons.Outlined.Lightbulb
         SUCCESS -> androidx.compose.material.icons.Icons.Outlined.CheckCircle
         WARNING -> androidx.compose.material.icons.Icons.Outlined.WarningAmber
         DANGER -> androidx.compose.material.icons.Icons.Outlined.DeleteForever

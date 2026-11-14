@@ -14,6 +14,11 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <!-- Backups in Download/Yumeiro/Backups on Android 7 to 9 only (10+ needs no permission). -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <!-- Media playback notification + "update ready" notification (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -50,8 +55,7 @@
     <!-- Online downloads run as a foreground data-sync job (WorkManager) with a progress notification -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
-    <!-- Android TV: installable on TVs (Leanback launcher), works without a touchscreen -->
-    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- Works without a touchscreen (Chromebooks, keyboards). The TV app adds Leanback in src/tv. -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <!-- External download managers (Settings → Downloads → Download with): only these packages are
@@ -67,8 +71,7 @@
 
     <application
         android:name=".MTApplication"
-        android:banner="@drawable/tv_banner"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -91,7 +94,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
 
             <!-- AniList / MyAnimeList sign-in redirects -->
@@ -286,6 +288,14 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+        <!-- Round 12: restarts the app after a restore (own process, see backup/Restart.kt). -->
+        <activity
+            android:name=".backup.RestartActivity"
+            android:process=":restart"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 
 </manifest>

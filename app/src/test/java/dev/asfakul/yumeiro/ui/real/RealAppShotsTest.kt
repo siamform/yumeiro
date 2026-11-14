@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.MainActivity
@@ -288,7 +289,7 @@ class RealAppShotsTest {
         }
         step("15_up_next", 3_000) { tap("now_playing_queue_toggle_button") }
         step("16_mini_player", 3_000) { tap("now_playing_queue_toggle_button"); tap("now_playing_collapse_button") }
-        step("13_song_download", 4_000, popup = true) { tap("song_download", 1) }
+        step("13_song_download", 4_000, popup = true) { rule.onAllNodesWithTag("youtube_song", true)[1].performTouchInput { longClick() } }
         step("13b_closed", 1_000) { back(); if (exists("youtube_search_close")) tap("youtube_search_close") }
         step("03_yumix", 25_000) { tap("nav_tab_videos"); tap("video_source_switch"); tap("video_source_online") }
         step("03_yumix", 1_000) { nudge("online_home_list") }

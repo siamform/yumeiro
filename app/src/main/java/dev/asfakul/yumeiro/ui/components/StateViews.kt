@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.material.icons.outlined.Lightbulb
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -154,7 +155,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
             AppMessages.Kind.SUCCESS -> Icons.Default.CheckCircle to SpotifyGreen
             AppMessages.Kind.ERROR -> Icons.Default.ErrorOutline to MaterialTheme.colorScheme.error
             AppMessages.Kind.WARNING -> Icons.Default.WarningAmber to dev.asfakul.yumeiro.ui.theme.WarningTone
-            AppMessages.Kind.INFO -> Icons.Default.Info to TextSecondary
+            AppMessages.Kind.INFO -> androidx.compose.material.icons.Icons.Outlined.Lightbulb to TextSecondary
         }
         // One opaque, theme-aware surface: the old pill was always dark (unreadable in light mode)
         // and drew its fill inside a transparent Surface, so the shadow and edges broke on glass.

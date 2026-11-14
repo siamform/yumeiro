@@ -15,6 +15,11 @@ import dev.asfakul.yumeiro.ui.image.VideoThumbnailFetcher
 class MTApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
+        // The helper process that restarts the app after a restore does nothing else.
+        if (dev.asfakul.yumeiro.backup.Restart.isRestartProcess(this)) return
+        // Round 12: a staged restore / reset is applied before anything reads a setting or file.
+        dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
+        dev.asfakul.yumeiro.cache.DataCache.init(this)
         // Must come first: a crashing extension must never take the whole app down.
         dev.asfakul.yumeiro.online.ExtensionGuard.install()
         dev.asfakul.yumeiro.security.Privacy.load(this)
@@ -39,6 +44,9 @@ class MTApplication : Application(), ImageLoaderFactory {
             dev.asfakul.yumeiro.online.download.OnlineDownloads.cleanup(this)
             dev.asfakul.yumeiro.online.download.OnlineDownloads.scheduleCleanup(this)
         }
+        runCatching { dev.asfakul.yumeiro.backup.AutoBackupWorker.schedule(this) }
+        // Time limits for saved pages and website cookies, off the main thread.
+        Thread({ runCatching { dev.asfakul.yumeiro.cache.DataCache.runJanitor(this) } }, "yu-janitor").apply { priority = Thread.MIN_PRIORITY }.start()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
@@ -46,9 +54,11 @@ class MTApplication : Application(), ImageLoaderFactory {
             add(VideoThumbnailFetcher.Keyer())
             add(VideoThumbnailFetcher.Factory(this@MTApplication))
         }
-        .memoryCache { MemoryCache.Builder(this).maxSizePercent(0.20).build() }
-        .diskCache { DiskCache.Builder().directory(cacheDir.resolve("image_cache")).maxSizeBytes(64L * 1024 * 1024).build() }
-        .crossfade(150)
+        .memoryCache { MemoryCache.Builder(this).maxSizePercent(Edition.imageMemoryShare).build() }
+        .diskCache { DiskCache.Builder().directory(cacheDir.resolve("image_cache")).maxSizeBytes(dev.asfakul.yumeiro.cache.ImageCacheSize.bytes(this)).build() }
+        // TV: no crossfade (cheap TV GPUs drop frames while a rail scrolls) and 16-bit posters.
+        .crossfade(if (Edition.isTv) 0 else 150)
+        .allowRgb565(Edition.isTv)
         .respectCacheHeaders(false)
         .build()
 }
