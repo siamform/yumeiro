@@ -157,9 +157,39 @@ class StabilityStressDeviceTest {
         rule.onNodeWithTag(tag, true).performClick(); true
     }.getOrElse { log("no node $tag: ${it.javaClass.simpleName}: ${it.message?.take(120)} · on screen: ${onScreen()}"); false }
 
+    private fun hasNode(tag: String, ms: Long): Boolean = runCatching {
+        rule.waitUntil(ms) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }; true
+    }.getOrDefault(false)
+
+    /**
+     * Swipes and D-pad keys can open a detail page or Settings (where the bottom bar is hidden by
+     * design), and Back on the home root leaves the app. Device run 43632313418 showed both, so later
+     * taps found no tab. Come back to the tab bar before each round; if that fails, the app really
+     * is stuck, and the test says so.
+     */
+    private fun backToTabs(where: String) {
+        repeat(4) { attempt ->
+            if (hasNode("nav_tab_home", 3_000)) { if (attempt > 0) recoveries++; return }
+            val alive = runCatching { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+            if (alive) {
+                log("recover[$where]: tab bar hidden, pressing Back · ${onScreen()}")
+                shell("input keyevent 4")
+            } else {
+                log("recover[$where]: app left the screen (${focusLine()}), relaunching")
+                shell("am start -W -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
+            }
+            idle(1_000)
+        }
+        throw AssertionError("tab bar never came back at $where · ${onScreen()}")
+    }
+    private var recoveries = 0
+
+    private fun focusLine(): String = runCatching {
+        shellOut("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
+    }.getOrDefault("?")
+
     /** What is actually shown when a node is missing: window focus, test tags and visible text. */
-    private fun onScreen(): String = runCatching {
-        val focus = shellOut("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
+    private fun onScreen(): String = focusLine() + " · " + runCatching {
         val nodes = rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes()
         val tags = LinkedHashSet<String>(); val texts = LinkedHashSet<String>()
         fun walk(n: androidx.compose.ui.semantics.SemanticsNode) {
@@ -168,7 +198,7 @@ class StabilityStressDeviceTest {
             n.children.forEach { walk(it) }
         }
         nodes.forEach { walk(it) }
-        "$focus · roots=${nodes.size} · tags=${tags.take(30)} · text=$texts"
+        "roots=${nodes.size} · tags=${tags.take(30)} · text=$texts"
     }.getOrElse { "(could not read: ${it.javaClass.simpleName})" }
 
     @Test fun pagerFocusAndScrollStress() {
@@ -178,7 +208,8 @@ class StabilityStressDeviceTest {
         memory("start")
         repeat(rounds) { r ->
             for (tab in listOf("nav_tab_home", "nav_tab_videos", "nav_tab_music", "nav_tab_library")) {
-                tap(tab); idle(1_200)
+                backToTabs("round ${r + 1} $tab")
+                assertTrue("tab $tab did not respond", tap(tab)); idle(1_200)
                 // Fling the feed down and back (pager prefetch + lazy item prefetch + image loads).
                 repeat(5) { shell("input swipe ${w / 2} ${h * 3 / 4} ${w / 2} ${h / 5} 120"); idle(250) }
                 repeat(2) { shell("input swipe ${w / 2} ${h / 5} ${w / 2} ${h * 3 / 4} 120"); idle(250) }
@@ -192,7 +223,9 @@ class StabilityStressDeviceTest {
             memory("round ${r + 1}")
         }
         // Video sources: Yumix (online), YouTube and the device list each have their own feed.
-        if (tap("nav_tab_videos")) for (src in listOf("video_source_online", "video_source_youtube", "video_source_device")) {
+        for (src in listOf("video_source_online", "video_source_youtube", "video_source_device")) {
+            backToTabs("source $src")
+            assertTrue("videos tab did not respond", tap("nav_tab_videos")); idle(800)
             if (tap("video_source_switch") || tap("video_source_menu")) idle(600)
             if (tap(src)) {
                 idle(3_000)
@@ -204,7 +237,7 @@ class StabilityStressDeviceTest {
         memory("end")
         watching = false
         SystemClock.sleep(50)
-        log("main-thread samples: ${samples.get()} · max stall ${maxStall.get()}ms · stalls≥700ms ${stalls.get()}")
+        log("main-thread samples: ${samples.get()} · max stall ${maxStall.get()}ms · stalls≥700ms ${stalls.get()} · navigation recoveries $recoveries")
         val appHits = regexHits.filterKeys { k -> k.startsWith("dev.asfakul") || k.startsWith("com.lagradost") || k.startsWith("eu.kanade") }
         regexHits.entries.sortedByDescending { it.value.get() }.forEach { log("regex-on-main x${it.value.get()}: ${it.key}") }
         if (regexHits.isEmpty()) log("regex-on-main: none")

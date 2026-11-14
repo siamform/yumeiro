@@ -30,7 +30,10 @@ object StarterExtensions {
     }
 
     /** Installs the starters if this is the first run; returns the names installed. */
-    suspend fun ensure(context: Context): List<String> {
+    suspend fun ensure(context: Context): List<String> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { ensureOnIo(context) }
+
+    // Called from a LaunchedEffect on the main thread; the first prefs read is disk I/O (StrictMode, run 43632313418).
+    private suspend fun ensureOnIo(context: Context): List<String> {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (p.getBoolean(KEY_DONE, false)) return emptyList()
         ExtensionManager.ensureLoaded(context)
