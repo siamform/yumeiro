@@ -183,4 +183,55 @@ class PlayerSwitchDeviceTest {
             assertTrue("YouTube ${alt.label}: no sound", af != null && a > 10)
         }
     }
+
+    /**
+     * "No audio although the video has several sources": a master playlist with several audio
+     * renditions (AAC, AC-3, E-AC-3 alternates). Every audio track must give decoded sound, the
+     * same way the in-player audio picker switches it.
+     */
+    @Test fun d_everyAudioRenditionIsAudible() {
+        val uri = "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8"
+        val p = newPlayer(uri)
+        main { StreamMediaFactory.setMedia(p, uri, title = "multi-audio"); p.prepare(); p.playWhenReady = true }
+        assumeTrue("test stream reachable", waitFirstFrame(p))
+        SystemClock.sleep(2_000)
+        val audio = main { p.currentTracks.groups.withIndex().filter { it.value.type == C.TRACK_TYPE_AUDIO }.map { it.value } }
+        log("audio groups: " + audio.joinToString { g -> (0 until g.length).joinToString("/") { g.getTrackFormat(it).let { f -> "${f.sampleMimeType}(${f.channelCount}ch, sel=${g.isTrackSelected(it)})" } } })
+        assertTrue("an audio track is selected at start", main { p.currentTracks.groups.any { it.type == C.TRACK_TYPE_AUDIO && it.isSelected } })
+        val (_, a0) = playFor(p, 4_000)
+        assertTrue("default audio silent", a0 > 20)
+        for (g in audio) for (i in 0 until g.length) {
+            val f = g.getTrackFormat(i)
+            val playable = g.isTrackSupported(i) || dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegSupports(f.sampleMimeType)
+            if (!playable) { log("audio ${f.sampleMimeType}: not decodable here (skipped)"); continue }
+            error.set(null)
+            main {
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                    .setOverrideForType(TrackSelectionOverride(g.mediaTrackGroup, i)).build()
+            }
+            SystemClock.sleep(3_000)
+            val (v, a) = playFor(p, 5_000)
+            val af = main { p.audioFormat }
+            log("audio ${f.sampleMimeType} ${f.channelCount}ch: playing ${af?.sampleMimeType}, +$a audio buffers, +$v frames, error=${error.get()?.errorCodeName}")
+            assertTrue("audio ${f.sampleMimeType}: ${error.get()?.errorCodeName}", error.get() == null)
+            assertTrue("audio ${f.sampleMimeType}: no sound", af != null && a > 20)
+        }
+    }
+
+    /** Separate audio file merged with a video-only stream (YouTube DASH / extension links). */
+    @Test fun e_separateAudioIsMerged() {
+        val video = "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd"
+        val p = newPlayer("merge:test")
+        val req = StreamRequest(url = video, title = "merge", format = dev.asfakul.yumeiro.stream.StreamFormat.DASH, formatFromSource = true,
+            audioTracks = listOf(dev.asfakul.yumeiro.stream.StreamAudio("https://storage.googleapis.com/exoplayer-test-media-0/play.mp3", label = "Extra")))
+        main { StreamRepository.register("merge:test", req); StreamMediaFactory.setMedia(p, "merge:test", title = "merge"); p.prepare(); p.playWhenReady = true }
+        assumeTrue("test stream reachable", waitFirstFrame(p))
+        val (v, a) = playFor(p, 6_000)
+        val af = main { p.audioFormat }
+        log("merged audio: ${af?.sampleMimeType}, +$a audio buffers, +$v frames, error=${error.get()?.errorCodeName}")
+        assertTrue("merged: ${error.get()?.errorCodeName}", error.get() == null)
+        assertTrue("merged: no sound", af != null && a > 20)
+        assertTrue("merged: no picture", v > 20)
+    }
 }

@@ -86,13 +86,16 @@ object ScrollMemory {
         LaunchedEffect(key) {
             if (saved != null && !restored[0]) {
                 // Wait until the rows are back (they load asynchronously), unless the user scrolls first.
-                withTimeoutOrNull(RESTORE_WAIT_MS) {
-                    snapshotFlow { count() > saved.index || scrolling() }.first { it }
-                }
+                val touched = withTimeoutOrNull(RESTORE_WAIT_MS) {
+                    snapshotFlow { if (scrolling()) 2 else if (count() > saved.index) 1 else 0 }.first { it > 0 }
+                } ?: 2
+                // R15: once the user has scrolled (or the rows never came back) the saved spot is
+                // dropped for good. A late restore used to yank a live scroll back to the old spot
+                // ("scrolling suddenly stops"), e.g. when the rows arrived between two flings.
                 // Jump on the next frame, never inside the measure pass that delivered the rows:
                 // a list inside a pager / nav host is subcomposed during measure, and an immediate
                 // scrollToItem there threw "performMeasureAndLayout called during measure layout".
-                repeat(2) { attempt ->
+                if (touched == 1) repeat(2) { attempt ->
                     androidx.compose.runtime.withFrameNanos { }
                     if (scrolling() || count() <= saved.index || position().first == saved.index) return@repeat
                     val ok = runCatching { scrollTo(saved.index, saved.offset) }

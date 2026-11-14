@@ -100,8 +100,30 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** One loaded YouTube Music page with the shelves/rows appended by "load more". */
-private data class YmState(val page: YmPage? = null, val loading: Boolean = true, val error: String? = null, val more: Boolean = false) {
-    val canLoadMore get() = page?.continuation != null && !more && !loading
+private data class YmState(val page: YmPage? = null, val loading: Boolean = true, val error: String? = null, val more: Boolean = false, val fails: Int = 0) {
+    val canLoadMore get() = page?.continuation != null && !more && !loading && fails < MAX_MORE_FAILS
+}
+
+private const val MAX_MORE_FAILS = 3
+
+/**
+ * R15 Phase 3 (ADR-008, see ui/feed/LiveFeed.kt): YouTube Music's home, search results and open
+ * pages live for the process. They were `remember {}` state: leaving the Music tab reloaded the
+ * home (spinner, then the cached copy at the old scroll spot), a late "load more" for an old chip
+ * overwrote the new chip's page, and one failed "load more" cleared the continuation so the feed
+ * stopped for good.
+ */
+private object YmStore {
+    val home = mutableStateOf(YmState())
+    /** Which chip [home] belongs to. */
+    var homeFor: String? = null
+    var homeGen = 0
+    val chips = mutableStateOf<List<YmChip>>(emptyList())
+    val results = mutableStateOf(YmState(loading = false))
+    var resultsGen = 0
+    val stack = mutableStateListOf<YmBrowse>()
+    val endlessUsed = mutableStateOf(emptySet<String>())
+    val endlessMisses = mutableStateOf(0)
 }
 
 private const val CHIP_HOME = "home"
@@ -119,17 +141,18 @@ private const val CHIP_EXPLORE = "explore"
 @Composable
 internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val app = context.applicationContext
+    val io = dev.asfakul.yumeiro.ui.feed.FeedScope.main
     val focus = LocalFocusManager.current
-    val stack = remember { mutableStateListOf<YmBrowse>() }
+    val stack = YmStore.stack
     var chip by rememberSaveable { mutableStateOf(CHIP_HOME) }
-    var chips by remember { mutableStateOf<List<YmChip>>(emptyList()) }
-    var home by remember { mutableStateOf(YmState()) }
+    var chips by YmStore.chips
+    var home by YmStore.home
 
     var query by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf<String?>(null) }
     var filter by rememberSaveable { mutableStateOf(YtMusicApi.Filter.ALL) }
-    var results by remember { mutableStateOf(YmState(loading = false)) }
+    var results by YmStore.results
     var suggestions by remember { mutableStateOf<List<dev.asfakul.yumeiro.ui.components.Suggestion>>(emptyList()) }
 
     LaunchedEffect(Unit) { YtHistory.load(context) }
@@ -143,81 +166,113 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
         onPlay(first, list.ifEmpty { listOf(first) })
     }
 
+    var endlessUsed by YmStore.endlessUsed
+    var endlessMisses by YmStore.endlessMisses
     fun loadHome(force: Boolean = false) {
-        home = YmState(loading = true)
-        scope.launch {
-            val target = when (chip) {
+        val g = ++YmStore.homeGen
+        val forChip = chip
+        YmStore.homeFor = forChip
+        endlessUsed = emptySet(); endlessMisses = 0
+        // Stale-while-revalidate on a forced refresh: the page on screen stays until the new one is in.
+        home = if (force && home.page != null) home.copy(more = false, error = null) else YmState(loading = true)
+        io.launch {
+            val target = when (forChip) {
                 CHIP_HOME -> YmBrowse(YtMusicApi.HOME)
                 CHIP_EXPLORE -> YmBrowse(YtMusicApi.EXPLORE)
-                else -> chips.firstOrNull { it.browse.params == chip }?.browse ?: YmBrowse(YtMusicApi.HOME)
+                else -> chips.firstOrNull { it.browse.params == forChip }?.browse ?: YmBrowse(YtMusicApi.HOME)
             }
-            home = runCatching { YtMusicApi.browse(context, target, force) }.fold(
+            val r = runCatching { YtMusicApi.browse(app, target, force) }
+            if (g != YmStore.homeGen) return@launch
+            home = r.fold(
                 { p ->
-                    if (target.browseId == YtMusicApi.HOME && p.chips.isNotEmpty() && chip == CHIP_HOME) chips = p.chips
+                    if (target.browseId == YtMusicApi.HOME && p.chips.isNotEmpty() && forChip == CHIP_HOME) chips = p.chips
                     YmState(p, loading = false)
                 },
-                { YmState(loading = false, error = friendly(it)) },
+                { e -> if (home.page != null) home.copy(loading = false) else YmState(loading = false, error = friendly(e)) },
             )
         }
     }
-    // Round 13: endless Home (ArchiveTune style). When YouTube Music's own pages run out, keep
-    // adding "Similar to …" shelves from the listening history and the songs already shown.
-    var endlessUsed by remember(chip) { mutableStateOf(emptySet<String>()) }
-    var endlessMisses by remember(chip) { mutableStateOf(0) }
-    val endlessOpen = chip == CHIP_HOME && home.page != null && home.page?.continuation == null && !home.more && !home.loading && endlessMisses < 6 &&
+    // Round 13: endless Home (ArchiveTune style). When YouTube Music's own pages run out (or keep
+    // failing), keep adding "Similar to …" shelves from the listening history and the songs shown.
+    val endlessOpen = chip == CHIP_HOME && home.page != null && (home.page?.continuation == null || home.fails >= MAX_MORE_FAILS) &&
+        !home.more && !home.loading && endlessMisses < 6 &&
         endlessUsed.size < dev.asfakul.yumeiro.youtube.music.YmEndless.MAX_SHELVES * 2
     fun moreEndless() {
         val cur = home
         val page = cur.page ?: return
         val seed = dev.asfakul.yumeiro.youtube.music.YmEndless.nextSeed(listened, page.shelves, endlessUsed) ?: run { endlessMisses = 99; return }
         endlessUsed = dev.asfakul.yumeiro.youtube.music.YmEndless.use(endlessUsed, seed)
+        val g = YmStore.homeGen
         home = cur.copy(more = true)
-        scope.launch {
-            val related = runCatching { dev.asfakul.yumeiro.youtube.YouTube.related(context, seed.id, music = true) }.getOrDefault(emptyList())
+        io.launch {
+            val related = runCatching { dev.asfakul.yumeiro.youtube.YouTube.related(app, seed.id, music = true) }.getOrDefault(emptyList())
             val shelf = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 dev.asfakul.yumeiro.youtube.music.YmEndless.shelfFor(seed, related, dev.asfakul.yumeiro.youtube.music.YmEndless.shownIds(page.shelves))
             }
+            if (g != YmStore.homeGen) return@launch
             if (shelf == null) endlessMisses++ else endlessMisses = 0
-            home = cur.copy(page = page.copy(shelves = if (shelf == null) page.shelves else page.shelves + shelf), more = false)
+            // R15: applied to the page as it is *now* (append only), never to the copy from before the call.
+            val now = home
+            val p = now.page ?: return@launch
+            home = now.copy(page = if (shelf == null) p else p.copy(shelves = p.shelves + shelf), more = false)
         }
     }
     fun moreHome() {
         val cur = home
-        if (cur.page?.continuation == null && endlessOpen) { moreEndless(); return }
+        if (endlessOpen) { moreEndless(); return }
         val token = cur.page?.continuation ?: return
         if (!cur.canLoadMore) return
+        val g = YmStore.homeGen
         home = cur.copy(more = true)
-        scope.launch {
-            home = runCatching { YtMusicApi.more(context, "browse", token) }.fold(
-                { p -> cur.copy(page = cur.page.copy(shelves = cur.page.shelves + p.shelves, continuation = p.continuation), more = false) },
-                { cur.copy(more = false, page = cur.page.copy(continuation = null)) },
-            )
+        io.launch {
+            val r = runCatching { YtMusicApi.more(app, "browse", token) }
+            if (g != YmStore.homeGen) return@launch
+            r.onSuccess { p ->
+                val now = home
+                val pg = now.page ?: return@launch
+                home = now.copy(page = pg.copy(shelves = pg.shelves + p.shelves, continuation = p.continuation), more = false, fails = 0)
+            }.onFailure {
+                // R15: a failed page keeps the continuation and is retried with backoff (it used to end the feed).
+                val fails = home.fails + 1
+                kotlinx.coroutines.delay((1_500L shl (fails - 1).coerceIn(0, 3)).coerceAtMost(12_000L))
+                if (g == YmStore.homeGen) home = home.copy(more = false, fails = fails)
+            }
         }
     }
-    LaunchedEffect(chip) { loadHome() }
+    // Back on the tab: the same page, no reload. A new chip loads its own page.
+    LaunchedEffect(chip) { if (YmStore.homeFor != chip || (home.page == null && !home.loading)) loadHome() }
     LaunchedEffect(netOnline) { if (netOnline && home.error != null) loadHome() }
 
     fun search(q: String, f: YtMusicApi.Filter = filter) {
         val text = q.trim().takeIf { it.isNotEmpty() } ?: return
         query = text; submitted = text; filter = f; suggestions = emptyList(); focus.clearFocus()
         dev.asfakul.yumeiro.ui.components.RecentSearches.add(context, "ytmusic", text)
+        val g = ++YmStore.resultsGen
         results = YmState(loading = true)
-        scope.launch {
-            results = runCatching { YtMusicApi.search(context, text, f) }.fold(
-                { YmState(it, loading = false) }, { YmState(loading = false, error = friendly(it)) },
-            )
+        io.launch {
+            val r = runCatching { YtMusicApi.search(app, text, f) }
+            if (g != YmStore.resultsGen) return@launch
+            results = r.fold({ YmState(it, loading = false) }, { YmState(loading = false, error = friendly(it)) })
         }
     }
     fun moreResults() {
         val cur = results
         val token = cur.page?.continuation ?: return
         if (!cur.canLoadMore) return
+        val g = YmStore.resultsGen
         results = cur.copy(more = true)
-        scope.launch {
-            results = runCatching { YtMusicApi.more(context, "search", token) }.fold(
-                { p -> cur.copy(page = cur.page.copy(shelves = mergeRows(cur.page.shelves, p.shelves), continuation = p.continuation), more = false) },
-                { cur.copy(more = false, page = cur.page.copy(continuation = null)) },
-            )
+        io.launch {
+            val r = runCatching { YtMusicApi.more(app, "search", token) }
+            if (g != YmStore.resultsGen) return@launch
+            r.onSuccess { p ->
+                val now = results
+                val pg = now.page ?: return@launch
+                results = now.copy(page = pg.copy(shelves = mergeRows(pg.shelves, p.shelves), continuation = p.continuation), more = false, fails = 0)
+            }.onFailure {
+                val fails = results.fails + 1
+                kotlinx.coroutines.delay((1_500L shl (fails - 1).coerceIn(0, 3)).coerceAtMost(12_000L))
+                if (g == YmStore.resultsGen) results = results.copy(more = false, fails = fails)
+            }
         }
     }
     LaunchedEffect(query) {
@@ -234,7 +289,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
 
     val open: (YmBrowse) -> Unit = { stack.add(it) }
     BackHandler(enabled = stack.isNotEmpty()) { stack.removeAt(stack.lastIndex) }
-    BackHandler(enabled = stack.isEmpty() && submitted != null) { submitted = null; query = ""; results = YmState(loading = false) }
+    BackHandler(enabled = stack.isEmpty() && submitted != null) { submitted = null; query = ""; YmStore.resultsGen++; results = YmState(loading = false) }
 
     AnimatedContent(
         targetState = stack.lastOrNull(),
@@ -302,9 +357,9 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
             ) {
                 YtSearchBar(
                     query, "Songs, albums, artists, podcasts", music = true, autoFocus = asked == key, floating = true,
-                    onChange = { query = it; if (it.isBlank()) { submitted = null; results = YmState(loading = false) } },
+                    onChange = { query = it; if (it.isBlank()) { submitted = null; YmStore.resultsGen++; results = YmState(loading = false) } },
                     onSearch = { search(query) },
-                    onClear = { query = ""; submitted = null; results = YmState(loading = false); dev.asfakul.yumeiro.ui.components.TabSearch.close(key) },
+                    onClear = { query = ""; submitted = null; YmStore.resultsGen++; results = YmState(loading = false); dev.asfakul.yumeiro.ui.components.TabSearch.close(key) },
                 )
             }
             dev.asfakul.yumeiro.ui.components.SuggestionList(

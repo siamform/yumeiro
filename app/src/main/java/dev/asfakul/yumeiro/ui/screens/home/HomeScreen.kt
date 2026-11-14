@@ -329,8 +329,9 @@ fun HomeScreen(
     }
 
     // ---- Yumix random (endless, grouped by extension) / device fallback -----------------------
-    var shuffleSeed by rememberSaveable { mutableStateOf(System.nanoTime()) }
-    val random = remember(shuffleSeed) { YumixRandom(shuffleSeed) }
+    var shuffleSeed by rememberSaveable { mutableStateOf(HomeMemory.seed) }
+    // R15: the same page as before when coming back to Home (HomeMemory), a new one on Shuffle.
+    val random = remember(shuffleSeed) { HomeMemory.random(shuffleSeed) }
     LaunchedEffect(random, channels.size) {
         if (channels.isNotEmpty() && random.groups.size < 3) random.more(channels, feed.providers, count = 3)
     }
@@ -668,7 +669,7 @@ fun HomeScreen(
                         "乱", "Yumix random", if (online) "Endless picks, by extension" else "Shuffled from this phone",
                         modifier = Modifier.testTag("home_feed"),
                         trailing = {
-                            GlassPill("Shuffle", onClick = { shuffleSeed = System.nanoTime() }, leading = Icons.Default.Shuffle, tag = "home_feed_shuffle", clickLabel = "Shuffle")
+                            GlassPill("Shuffle", onClick = { shuffleSeed = System.nanoTime(); HomeMemory.seed = shuffleSeed }, leading = Icons.Default.Shuffle, tag = "home_feed_shuffle", clickLabel = "Shuffle")
                         },
                     )
                 }

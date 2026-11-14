@@ -48,20 +48,35 @@ object YumeiroDrama {
     /** Catalog adapters, in priority order. */
     internal val catalogs: List<DramaCatalog> by lazy { listOf(OnShortCatalog()) }
 
+    /** One health service for the app: verdicts are shared by the feed, search and playback. */
+    internal val health: DramaHealth by lazy { DramaHealth() }
+
     fun start(context: Context) {
-        val on = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ON, true)
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val on = prefs.getBoolean(KEY_ON, true)
         _enabled.value = on
+        // R15: studio verdicts survive restarts ("state|time" per studio), and every studio is
+        // probed in the background at start, so Yumix never waits on the slow index to decide.
+        val hp = context.getSharedPreferences("$PREFS.health", Context.MODE_PRIVATE)
+        health.saved = hp.all.mapNotNull { (k, v) ->
+            val parts = (v as? String)?.split('|') ?: return@mapNotNull null
+            val st = runCatching { DramaHealth.State.valueOf(parts[0]) }.getOrNull() ?: return@mapNotNull null
+            k to (st to (parts.getOrNull(1)?.toLongOrNull() ?: 0L))
+        }.toMap()
+        health.persist = { k, st, at -> hp.edit().putString(k, "${st.name}|$at").apply() }
         publish(on)
+        if (on) catalogs.forEach { health.prewarm(it) }
     }
 
     fun setEnabled(context: Context, on: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ON, on).apply()
         _enabled.value = on
         publish(on)
+        if (on) catalogs.forEach { health.prewarm(it) }
     }
 
     private fun publish(on: Boolean) {
-        if (on) SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.YUMEIRO, listOf(YumeiroDramaProvider(catalogs)))
+        if (on) SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.YUMEIRO, listOf(YumeiroDramaProvider(catalogs, health)))
         else SourceHub.remove(BRIDGE)
     }
 
@@ -77,7 +92,11 @@ object YumeiroDrama {
 }
 
 /** CloudStream-compatible face of [YumeiroDrama]; ids are `drama:<catalog>|<series url>[|<episode>]`. */
-class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val health: DramaHealth = DramaHealth()) : MainAPI() {
+class YumeiroDramaProvider(
+    private val catalogs: List<DramaCatalog>,
+    private val health: DramaHealth = DramaHealth(),
+    private val clock: () -> Long = { System.currentTimeMillis() },
+) : MainAPI() {
     override var name = YumeiroDrama.NAME
     override var mainUrl = "https://yumeiro.click/drama"
     override var lang = "en"
@@ -99,7 +118,7 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val
         // Round 2: a studio whose episodes can't be played right now gets no shelf, so the feed
         // never offers a title that fails on tap.
         if (health.check(c, platform, shows) == DramaHealth.State.DOWN) return newHomePageResponse(request.name, emptyList(), false)
-        return newHomePageResponse(request.name, shows.map { it.toResult(c) }, shows.size >= 12)
+        return newHomePageResponse(request.name, shows.filter { !health.isTitleDown(it.url) }.map { it.toResult(c) }, shows.size >= 12)
     }
 
 
@@ -113,10 +132,23 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val
 
     override suspend fun search(query: String): List<SearchResponse> = search(query, 1).items
 
+    /**
+     * R15: the cards every shelf / search handed out. When a series page stalls (ONShort pages
+     * took 25-50 s under load on 2026-11-14, past the 35 s detail budget) the detail screen is
+     * built from the card at once and the page keeps loading in the background for playback.
+     */
+    private val cards = java.util.concurrent.ConcurrentHashMap<String, DramaShow>()
+    private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
     override suspend fun load(url: String): LoadResponse {
         val (cid, seriesUrl) = parseId(url)
         val c = catalog(cid)
-        val s = c.series(seriesUrl)
+        val card = cards[seriesUrl]?.takeIf { (it.episodes ?: 0) > 0 }
+        val s = if (card == null) c.series(seriesUrl) else {
+            val page = background.async { c.series(seriesUrl) }
+            withTimeoutOrNull(SERIES_WAIT_MS) { runCatching { page.await() }.getOrNull() }
+                ?: DramaSeries(card.title, seriesUrl, card.cover, null, card.platform, card.episodes!!, null)
+        }
         val eps = (1..s.episodes).map { n ->
             // fix = false: CloudStream's default fixUrl() would turn the id into "$mainUrl/drama:..." (Round 2 bug).
             newEpisode("drama:${c.id}|${s.url}|$n", { name = "Episode $n"; episode = n; season = 1 }, false)
@@ -137,12 +169,12 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val
         val s = c.series(seriesUrl)
         val (streams, via) = streamsOrMirror(c, s, n)
         val audio = s.language?.let { languageLabel(it) }?.let { "$it audio" } ?: "Original audio"
-        streams.sources.entries.sortedByDescending { it.key.toIntOrNull() ?: 0 }.forEach { (q, u) ->
+        streams.sources.entries.sortedByDescending { DramaStreams.qualityOf(it.key) }.forEach { (q, u) ->
             val type = if (u.contains(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-            val label = listOfNotNull(c.label, via ?: s.platform, q.takeIf { it.isNotBlank() }?.let { "${it}p" }, audio).joinToString(" · ")
+            val label = listOfNotNull(c.label, via ?: s.platform, q.substringBefore('~').takeIf { it.isNotBlank() }?.let { "${it}p" }, q.substringAfter('~', "").takeIf { it.isNotBlank() }?.let { "server ${it.toInt() + 1}" }, audio).joinToString(" · ")
             callback(newExtractorLink(name, label, u, type) {
                 referer = streams.referer.orEmpty()
-                quality = q.toIntOrNull() ?: 0
+                quality = DramaStreams.qualityOf(q)
             })
         }
         streams.subtitles.forEach { sub ->
@@ -157,17 +189,35 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val
      * streams and, for a mirror, the platform it came from.
      */
     private suspend fun streamsOrMirror(c: DramaCatalog, s: DramaSeries, n: Int): Pair<DramaStreams, String?> {
-        val first = runCatching { c.streams(s, n) }
-        first.getOrNull()?.takeIf { health.playable(it) }?.let { return it to null }
+        // R15: one deadline for the whole answer, inside OnlineRepository's 75 s links budget. The
+        // catalog host (onshort.net) has ~15 s bursts of 502s and hangs; a hung try is retried
+        // while time is left instead of eating the budget, and mirrors share what remains.
+        val deadline = clock() + LINKS_BUDGET_MS
+        fun left() = deadline - clock()
+        var first: Result<DramaStreams> = Result.failure(java.net.SocketTimeoutException("The studio's server didn't answer in time"))
+        var tries = 0
+        while (left() > MIN_TRY_MS && tries < 3) {
+            tries++
+            val r = withTimeoutOrNull(minOf(left(), TRY_MS)) { runCatching { c.streams(s, n) } }
+            if (r != null) first = r
+            r?.getOrNull()?.takeIf { health.playable(it) }?.let { return it to null }
+            // A real refusal won't change on a retry: go to the mirrors.
+            if (r != null && (r.isSuccess || r.exceptionOrNull()?.let(DramaHealth::refused) == true)) break
+            kotlinx.coroutines.delay(minOf(RETRY_GAP_MS, maxOf(0L, left() - MIN_TRY_MS)))
+        }
         val key = DramaHealth.titleKey(s.title)
-        val mirrors = runCatching { withTimeoutOrNull(20_000) { c.search(s.title) } }.getOrNull().orEmpty()
+        val mirrors = if (left() < MIN_TRY_MS) emptyList() else runCatching { withTimeoutOrNull(minOf(left(), 20_000)) { c.search(s.title) } }.getOrNull().orEmpty()
             .filter { it.url != s.url && DramaHealth.titleKey(it.title) == key && (it.episodes ?: n) >= n && !health.isDown(c, it.platform) }
             .take(4)
         for (m in mirrors) {
-            val r = runCatching { withTimeoutOrNull(25_000) { c.streams(c.series(m.url), n) } }.getOrNull()
+            if (left() < MIN_TRY_MS) break
+            val r = runCatching { withTimeoutOrNull(minOf(left(), 25_000)) { c.streams(c.series(m.url), n) } }.getOrNull()
             if (r != null && health.playable(r)) return r to m.platform
         }
-        s.platform?.let { health.markDown(c, it) }
+        // Only a real refusal marks the studio down (and hides its shelf); a busy host does not.
+        // A title the studio refuses is dropped from its shelf; the studio itself stays unless the
+        // health probe finds it refusing everything.
+        if (first.exceptionOrNull()?.let(DramaHealth::refused) == true || first.isSuccess) health.markTitleDown(s.url)
         val why = first.exceptionOrNull()?.message ?: "its video server refused the link"
         throw java.io.IOException(
             "${s.platform ?: c.label} isn't serving this episode right now (the studio's server refused it" +
@@ -176,11 +226,19 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val
     }
 
     private fun DramaShow.toResult(c: DramaCatalog): SearchResponse =
-        newTvSeriesSearchResponse(title, "drama:${c.id}|$url", TvType.AsianDrama, fix = false) {
+        also { if (cards.size > 4_000) cards.clear(); cards[url] = it }.let { _ -> newTvSeriesSearchResponse(title, "drama:${c.id}|$url", TvType.AsianDrama, fix = false) {
             posterUrl = cover
-        }
+        } }
 
     companion object {
+        /** R15: the whole loadLinks answer (OnlineRepository allows 75 s). */
+        internal const val LINKS_BUDGET_MS = 68_000L
+        internal const val TRY_MS = 30_000L
+        internal const val MIN_TRY_MS = 6_000L
+        internal const val RETRY_GAP_MS = 1_500L
+        /** How long the detail screen waits for a series page before using the shelf card. */
+        const val SERIES_WAIT_MS = 15_000L
+
         /**
          * The part after `drama:`. Accepts ids that were rewritten by CloudStream's fixUrl()
          * (`https://yumeiro.click/drama/drama:onshort|...`), which 1.8.0 and earlier saved in

@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.sources.drama
 
 import dev.asfakul.yumeiro.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -14,12 +15,16 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_ONSHORTCATALOG_1 = Regex("""/onshort-([a-z0-9_-]+)/v1/""")
@@ -39,7 +44,27 @@ private val RX_ONSHORTCATALOG_3 = Regex("""(\d+)\s+listed episodes""")
 class OnShortCatalog(
     private val base: String = "https://onshort.net",
     private val fetch: suspend (url: String, headers: Map<String, String>) -> Pair<Int, String> = ::httpGet,
+    private val gate: OnShortGate = OnShortGate(),
+    private val post: suspend (url: String, headers: Map<String, String>, body: String) -> Pair<Int, String> = ::httpPost,
+    /** Clock for the shelf / series caches (tests move it). */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : DramaCatalog {
+    /**
+     * R15: every call goes through [OnShortGate]. The site answers bursts of HTTP 502 (about 15 s)
+     * and sometimes hangs for 25 s+ when it gets many calls at once (measured 2026-11-14). Without
+     * the gate one stalled series page failed the whole title ("the banner shows but it never
+     * plays") and a 502 during the health probe hid the studio from the feed.
+     */
+    override val recentlyBusy: Boolean get() = gate.recentlyBusy()
+
+    private suspend fun gated(u: String, h: Map<String, String>, tries: Int = 0): Pair<Int, String> = gate.call(u, tries) { fetch(u, h) }
+    /** A cached answer is reused while its signed links have more than 75 s left (as the web player does). */
+    private fun fresh(st: DramaStreams, at: Long): Boolean {
+        val nowMs = System.currentTimeMillis()
+        return if (st.expiresAt > 0) st.expiresAt * 1000 - nowMs > 75_000 else nowMs - at < EPISODE_TTL
+    }
+    /** Episode answers (rest-get transport): one call serves every quality and later replays. */
+    private val episodeCache = ConcurrentHashMap<String, Pair<Long, DramaStreams>>()
     override val id = "onshort"
     override val label = "ONShort"
     // Round 2: more studios. A platform whose episodes the site can't serve right now is hidden
@@ -57,27 +82,69 @@ class OnShortCatalog(
     /** Runtime JSON per post id (all episodes at once). */
     private val runtimeCache = ConcurrentHashMap<String, Pair<Long, Map<Int, DramaStreams>>>()
 
+    /**
+     * R15: shelves are stale-while-revalidate. A fresh answer (< [SHELF_TTL]) is reused; when the
+     * site stalls (ReelShort / DramaWave shelves timed out on 2026-11-14) the last good shelf is
+     * served instead of an empty row, so dramas don't vanish from the feed.
+     */
+    private val shelfCache = ConcurrentHashMap<String, Pair<Long, List<DramaShow>>>()
+
     override suspend fun shelf(platform: DramaPlatform, page: Int): List<DramaShow> {
         val url = if (page <= 1) "$base/platform/${platform.slug}/" else "$base/platform/${platform.slug}/page/$page/"
-        val (code, body) = fetch(url, mapOf("Accept" to "text/html"))
-        if (code == 404) return emptyList()
-        if (code !in 200..299) throw IOException("${platform.name} shelf answered HTTP $code")
-        return OnShortParser.cards(body, base)
+        val cached = shelfCache[url]
+        if (cached != null && clock() - cached.first < SHELF_TTL) return cached.second
+        val r = runCatching {
+            val (code, body) = gated(url, mapOf("Accept" to "text/html"))
+            if (code == 404) return@runCatching emptyList()
+            if (code !in 200..299) throw IOException("${platform.name} shelf answered HTTP $code")
+            OnShortParser.cards(body, base)
+        }
+        r.exceptionOrNull()?.let { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (cached != null && clock() - cached.first < STALE_TTL) return cached.second
+            throw e
+        }
+        val shows = r.getOrThrow()
+        if (shows.isNotEmpty() || cached == null) shelfCache[url] = clock() to shows
+        return shows.ifEmpty { cached?.second.orEmpty() }
     }
 
     override suspend fun search(query: String): List<DramaShow> {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
-        val (code, body) = fetch("$base/wp-json/onshort-theme/v1/search?q=$q&limit=48&lang=en", mapOf("Accept" to "application/json"))
+        val (code, body) = gated("$base/wp-json/onshort-theme/v1/search?q=$q&limit=48&lang=en", mapOf("Accept" to "application/json"))
         if (code !in 200..299) throw IOException("Search answered HTTP $code")
         return OnShortParser.searchResults(body)
     }
 
+    /** R15: one fetch per series page at a time (the detail screen, playback and the health probe share it). */
+    private val seriesInFlight = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<DramaSeries>>()
+    private val loads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
     override suspend fun series(url: String): DramaSeries {
-        seriesCache[url]?.let { (at, s) -> if (System.currentTimeMillis() - at < SERIES_TTL) return s }
-        val (code, body) = fetch(url, mapOf("Accept" to "text/html"))
-        if (code !in 200..299) throw IOException("Series page answered HTTP $code")
-        val s = OnShortParser.series(body, url) ?: throw IOException("This series has no player")
-        seriesCache[url] = System.currentTimeMillis() to s
+        seriesCache[url]?.let { (at, s) -> if (clock() - at < SERIES_TTL) return s }
+        val fresh = loads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { fetchSeries(url) }
+        val d = seriesInFlight.putIfAbsent(url, fresh)?.also { fresh.cancel() }
+            ?: fresh.also { it.invokeOnCompletion { _ -> seriesInFlight.remove(url, fresh) }; it.start() }
+        return d.await()
+    }
+
+    private suspend fun fetchSeries(url: String): DramaSeries {
+        val cached = seriesCache[url]
+        cached?.let { (at, s) -> if (clock() - at < SERIES_TTL) return s }
+        // R15: a stalled series page ("Daddy, Save Me" timed out twice on 2026-11-14) reuses the
+        // last parsed page; episode links are fetched fresh anyway, so a stale page is safe.
+        val r = runCatching {
+            val (code, body) = gated(url, mapOf("Accept" to "text/html"))
+            if (code !in 200..299) throw IOException("Series page answered HTTP $code")
+            OnShortParser.series(body, url) ?: throw IOException("This series has no player")
+        }
+        r.exceptionOrNull()?.let { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (cached != null && clock() - cached.first < STALE_TTL) return cached.second
+            throw e
+        }
+        val s = r.getOrThrow()
+        seriesCache[url] = clock() to s
         return s
     }
 
@@ -97,7 +164,7 @@ class OnShortCatalog(
                     for (attempt in 0 until 3) {
                         val sep = if (rt.contains('?')) '&' else '?'
                         val u = if (attempt == 2) "$rt${sep}force=1" else rt
-                        val (code, body) = fetch(u, mapOf("Referer" to referer, "Accept" to "application/json", "Cache-Control" to "no-cache"))
+                        val (code, body) = gated(u, mapOf("Referer" to referer, "Accept" to "application/json", "Cache-Control" to "no-cache"))
                         if (code !in 200..299 && attempt == 2) throw IOException("Runtime answered HTTP $code")
                         if (code in 200..299) parsed = OnShortParser.runtime(body, referer)
                         if (episode in parsed) break
@@ -109,57 +176,114 @@ class OnShortCatalog(
             }.onFailure { lastError = it }
         }
         // 2. REST with the page's session ticket (refreshed from every answer).
+        val epKey = "${h["post"]}|$episode"
+        episodeCache[epKey]?.takeIf { fresh(it.second, it.first) }?.let { return it.second }
         val endpoint = h["endpoint"].orEmpty()
         if (endpoint.isNotBlank() && h["post"] != null) {
             val endpoints = listOf(endpoint, h["endpointAlt"].orEmpty()).filter { it.isNotBlank() }.distinct()
             var ticket = h["ticket"].orEmpty()
-            for (ep in endpoints) {
-                val sep = if (ep.contains('?')) '&' else '?'
-                val u = "$ep${sep}post=${h["post"]}&episode=$episode&_t=${System.currentTimeMillis()}"
-                for (attempt in 0..1) {
-                    val r = runCatching {
-                        fetch(u, mapOf("Referer" to referer, "X-ONShort-Player" to "1", "X-ONShort-Ticket" to ticket, "Accept" to "application/json", "Cache-Control" to "no-cache"))
-                    }.onFailure { lastError = it }.getOrNull() ?: break
-                    OnShortParser.ticketOf(r.second)?.let { ticket = it }
-                    if ((r.first == 401 || r.first == 403) && attempt == 0) {
-                        // Ticket expired: the answer carries a fresh one; otherwise reload the page once.
-                        if (OnShortParser.ticketOf(r.second) == null) {
-                            seriesCache.remove(series.url)
-                            runCatching { series(series.url).hints["ticket"] }.getOrNull()?.let { ticket = it }
+            // The web player asks again with force=1 when the answer says "retryable" (the site
+            // refreshes the studio's media then); so do we, once, on each endpoint.
+            for (force in listOf(false, true)) {
+                var retry = false
+                for ((ei, ep) in endpoints.withIndex()) {
+                    val sep = if (ep.contains('?')) '&' else '?'
+                    val u = "$ep${sep}post=${h["post"]}&episode=$episode&_t=${System.currentTimeMillis()}" + if (force) "&force=1" else ""
+                    // Like the web player: a busy (502) main route goes straight to the other route;
+                    // the last route gets the gate's full retries.
+                    val tries = if (ei < endpoints.size - 1) 1 else 0
+                    for (attempt in 0..1) {
+                        val r = runCatching {
+                            gated(u, mapOf("Referer" to referer, "X-ONShort-Player" to "1", "X-ONShort-Ticket" to ticket, "Accept" to "application/json", "Cache-Control" to "no-cache"), tries)
+                        }.onFailure { lastError = it }.getOrNull() ?: break
+                        OnShortParser.ticketOf(r.second)?.let { ticket = it }
+                        if ((r.first == 401 || r.first == 403) && attempt == 0) {
+                            // Ticket expired: the answer carries a fresh one; otherwise reload the page once.
+                            if (OnShortParser.ticketOf(r.second) == null) {
+                                seriesCache.remove(series.url)
+                                runCatching { series(series.url).hints["ticket"] }.getOrNull()?.let { ticket = it }
+                            }
+                            continue
                         }
-                        continue
+                        if (r.first in 200..299) {
+                            val s = OnShortParser.episode(r.second, referer)
+                            if (s != null && s.sources.isNotEmpty()) { episodeCache[epKey] = System.currentTimeMillis() to s; return s }
+                        }
+                        if (OnShortParser.retryable(r.second)) retry = true
+                        lastError = IOException("Episode $episode answered HTTP ${r.first}")
+                        break
                     }
-                    if (r.first in 200..299) {
-                        val s = OnShortParser.episode(r.second, referer)
-                        if (s != null && s.sources.isNotEmpty()) return s
-                    }
-                    lastError = IOException("Episode $episode answered HTTP ${r.first}")
-                    break
                 }
+                if (!retry) break
+            }
+        }
+        // 2b. POST gateway transports ("same-page" posts to the series page, "root-post" to /index.php).
+        val transport = h["transport"].orEmpty()
+        if ((transport == "same-page" || transport == "root-post") && h["post"] != null && h["ticket"] != null) {
+            val gateway = if (transport == "root-post") "$base/index.php" else series.url.substringBefore('#')
+            for (force in listOf(false, true)) {
+                val body = buildString {
+                    append("onshort_player_action=").append(URLEncoder.encode(h["action"].orEmpty().ifBlank { "episode" }, "UTF-8"))
+                    append("&post=").append(h["post"]).append("&episode=").append(episode)
+                    append("&ticket=").append(URLEncoder.encode(h["ticket"].orEmpty(), "UTF-8")).append("&variant=0")
+                    if (force) append("&force=1")
+                }
+                val r = runCatching { gate.call(gateway) { post(gateway, mapOf("Referer" to referer, "X-ONShort-Player" to "1", "Accept" to "application/json"), body) } }
+                    .onFailure { lastError = it }.getOrNull() ?: break
+                if (r.first in 200..299) OnShortParser.episode(r.second, referer)?.takeIf { it.sources.isNotEmpty() }?.let { episodeCache[epKey] = System.currentTimeMillis() to it; return it }
+                lastError = IOException("Episode $episode answered HTTP ${r.first}")
+                if (!OnShortParser.retryable(r.second)) break
             }
         }
         // 3. Legacy per-platform endpoint.
         val platform = h["platformSlug"]
         if (!platform.isNullOrBlank() && h["post"] != null) {
             runCatching {
-                val (code, body) = fetch("$base/wp-json/onshort-$platform/v1/series/${h["post"]}/episode/$episode", mapOf("Referer" to referer, "Accept" to "application/json"))
+                val (code, body) = gated("$base/wp-json/onshort-$platform/v1/series/${h["post"]}/episode/$episode", mapOf("Referer" to referer, "Accept" to "application/json"))
                 if (code in 200..299) OnShortParser.episode(body, referer)?.takeIf { it.sources.isNotEmpty() }?.let { return it }
                 throw IOException("Episode $episode answered HTTP $code")
-            }.onFailure { lastError = it }
+            }.onFailure { e ->
+                // The legacy route is only a fallback: its 404 must not hide the real reason
+                // (e.g. "HTTP 424, studio unlock refused") from the REST answer above.
+                if (lastError == null || !e.message.orEmpty().endsWith("HTTP 404")) lastError = e
+            }
         }
         throw lastError ?: IOException("No stream for episode $episode")
     }
 
     companion object {
         private const val SERIES_TTL = 5 * 60_000L
+        private const val SHELF_TTL = 10 * 60_000L
+        /** How long a stale shelf / series page may stand in for a stalled answer. */
+        private const val STALE_TTL = 24 * 60 * 60_000L
         private const val RUNTIME_TTL = 10 * 60_000L
+        /** Signed CDN links in an episode answer stay valid well beyond this. */
+        private const val EPISODE_TTL = 4 * 60_000L
 
         suspend fun httpGet(url: String, headers: Map<String, String>): Pair<Int, String> = withContext(Dispatchers.IO) {
             val req = Request.Builder().url(url).apply {
                 header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Mobile Safari/537.36")
                 headers.forEach { (k, v) -> header(k, v) }
             }.build()
-            NetworkClient.get().newCall(req).execute().use { r -> r.code to r.body.string() }
+            // A hung answer is cut and retried by the gate (the client's own read timeout is 20 s
+            // per read, which let one page take a minute). JSON answers are small: 12 s. HTML pages
+            // (shelves, series) are 150-400 KB and the site renders them slowly under load: 25 s.
+            val call = NetworkClient.get().newCall(req)
+            val html = headers["Accept"].orEmpty().startsWith("text/html")
+            call.timeout().timeout(if (html) 25L else 12L, java.util.concurrent.TimeUnit.SECONDS)
+            call.execute().use { r -> r.code to r.body.string() }
+        }
+
+        suspend fun httpPost(url: String, headers: Map<String, String>, body: String): Pair<Int, String> = withContext(Dispatchers.IO) {
+            val req = Request.Builder().url(url)
+                .post(body.toRequestBody("application/x-www-form-urlencoded;charset=UTF-8".toMediaType()))
+                .apply {
+                    header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Mobile Safari/537.36")
+                    headers.forEach { (k, v) -> header(k, v) }
+                }.build()
+            val call = NetworkClient.get().newCall(req)
+            call.timeout().timeout(12, java.util.concurrent.TimeUnit.SECONDS)
+            call.execute().use { r -> r.code to r.body.string() }
         }
     }
 }
@@ -221,6 +345,7 @@ object OnShortParser {
             hints = buildMap {
                 put("post", d("post"))
                 put("transport", d("transport"))
+                d("player-action").takeIf { it.isNotBlank() }?.let { put("action", it) }
                 if (runtime.isNotBlank()) put("runtime", runtime)
                 d("player-endpoint").takeIf { it.isNotBlank() }?.let { put("endpoint", it) }
                 d("player-endpoint-alt").takeIf { it.isNotBlank() }?.let { put("endpointAlt", it) }
@@ -229,6 +354,10 @@ object OnShortParser {
             },
         ).let { s -> s.copy(hints = s.hints + ("tags" to doc.select(".tag-box .tag-cloud span").joinToString("|") { it.text() })) }
     }
+
+    /** `{ok:false, retryable:true}`: the site asks for another try (its player retries with force=1). */
+    fun retryable(body: String): Boolean =
+        runCatching { ((json.parseToJsonElement(body) as? JsonObject)?.get("retryable") as? JsonPrimitive)?.contentOrNull == "true" }.getOrDefault(false)
 
     fun ticketOf(body: String): String? =
         runCatching { (json.parseToJsonElement(body) as? JsonObject)?.s("ticket") }.getOrNull()?.ifBlank { null }
@@ -254,15 +383,98 @@ object OnShortParser {
         val sources = LinkedHashMap<String, String>()
         (o["sources"] as? JsonObject)?.forEach { (q, v) -> (v as? JsonPrimitive)?.contentOrNull?.takeIf { it.startsWith("http") }?.let { sources[q.filter(Char::isDigit)] = it } }
         o.s("url")?.takeIf { it.startsWith("http") }?.let { u -> if (u !in sources.values) sources[o.s("quality")?.filter(Char::isDigit).orEmpty()] = u }
+        // R15: the site's player also tries `candidates` (other servers of the same episode).
+        (o["candidates"] as? JsonArray).orEmpty().forEach { c ->
+            val co = c as? JsonObject
+            val u = (co?.s("url") ?: (c as? JsonPrimitive)?.contentOrNull)?.trim()
+            if (u == null || !u.startsWith("http") || u in sources.values) return@forEach
+            val q = co?.s("quality")?.filter(Char::isDigit).orEmpty()
+            var k = q; var i = 1
+            while (k in sources) { k = "$q~$i"; i++ }
+            sources[k] = u
+        }
         if (sources.isEmpty()) return null
+        val expires = o.s("expires_at")?.toDoubleOrNull()?.toLong() ?: 0L
         val subs = (o["subtitles"] as? JsonArray).orEmpty().mapNotNull { s ->
             val so = s as? JsonObject ?: return@mapNotNull null
             val u = so.s("url") ?: so.s("src") ?: return@mapNotNull null
             DramaSubtitle(u, so.s("lang") ?: so.s("language"), so.s("label"))
         }
-        return DramaStreams(sources, subs, referer)
+        return DramaStreams(sources, subs, referer, expires)
     }
 
     private fun JsonObject.s(k: String): String? = (this[k] as? JsonPrimitive)?.contentOrNull
     @Suppress("unused") private fun JsonElement.str(): String? = (this as? JsonPrimitive)?.contentOrNull
+}
+
+/**
+ * R15: polite, self-healing access to one flaky host.
+ *  - at most [maxConcurrent] calls at once and [minGapMs] between call starts (bursts are what
+ *    trigger the site's 502 windows);
+ *  - HTTP 429 / 502 / 503 / 504, timeouts and dropped connections are retried with backoff
+ *    ([backoffMs]) up to [attempts] times; while one call backs off, the others wait too
+ *    (shared cool-down), so the app stops hammering a host that is already struggling.
+ * Other answers (200, 4xx) are returned as they are.
+ */
+class OnShortGate(
+    private val maxConcurrent: Int = 2,
+    private val minGapMs: Long = 250L,
+    private val attempts: Int = 4,
+    private val backoffMs: (attempt: Int) -> Long = { a -> longArrayOf(1_200L, 3_000L, 6_000L, 9_000L)[a.coerceIn(0, 3)] },
+    private val now: () -> Long = System::currentTimeMillis,
+) {
+    private val permits = kotlinx.coroutines.sync.Semaphore(maxConcurrent)
+    private val spacing = kotlinx.coroutines.sync.Mutex()
+    @Volatile private var lastStart = 0L
+    @Volatile private var coolUntil = 0L
+    @Volatile private var lastBusyAt = 0L
+    private val waiting = java.util.concurrent.atomic.AtomicInteger()
+
+    /** True when the host was busy within the last minute or calls are queued behind the limit. */
+    fun recentlyBusy(): Boolean = now() - lastBusyAt < 60_000L || coolUntil > now() || waiting.get() > maxConcurrent
+
+    /** Runs [block] with the gate's limits; [tries] > 0 overrides the number of attempts. */
+    suspend fun call(url: String, tries: Int = 0, block: suspend () -> Pair<Int, String>): Pair<Int, String> {
+        var last: Pair<Int, String>? = null
+        var error: Throwable? = null
+        val attempts = if (tries > 0) tries else attempts
+        for (attempt in 0 until attempts) {
+            waiting.incrementAndGet()
+            val r = try { permits.withPermit {
+                spacing.withLock {
+                    val wait = maxOf(coolUntil - now(), lastStart + minGapMs - now())
+                    if (wait > 0) kotlinx.coroutines.delay(wait)
+                    lastStart = now()
+                }
+                runCatching { block() }
+            } } finally { waiting.decrementAndGet() }
+            val v = r.getOrNull()
+            if (v != null && !transient(v.first)) return v
+            // Only an answer that says "busy" (429/5xx) marks the host busy. A timeout does not:
+            // a hung studio (ShortMax) must not look like a busy host, or it is never hidden.
+            if (v != null) lastBusyAt = now()
+            if (v == null) {
+                val e = r.exceptionOrNull()!!
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (!retryable(e)) throw e
+                // A hung host rarely answers seconds later: one more try, then give up.
+                if (error != null) throw e
+                error = e
+            } else last = v
+            if (attempt < attempts - 1) {
+                val b = backoffMs(attempt)
+                coolUntil = maxOf(coolUntil, now() + b)
+                kotlinx.coroutines.delay(b)
+            }
+        }
+        return last ?: throw (error ?: IOException("No answer from $url"))
+    }
+
+    companion object {
+        fun transient(code: Int) = code == 429 || code == 502 || code == 503 || code == 504
+        fun retryable(e: Throwable): Boolean = generateSequence(e) { it.cause }.any {
+            it is java.io.InterruptedIOException || it is java.net.SocketException || it is okhttp3.internal.http2.StreamResetException ||
+                (it is IOException && it.message.orEmpty().contains("unexpected end of stream", true))
+        }
+    }
 }

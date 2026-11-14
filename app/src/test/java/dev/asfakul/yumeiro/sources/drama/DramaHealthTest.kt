@@ -80,7 +80,7 @@ class DramaHealthTest {
 
     @Test fun titleKeyIgnoresQuotesAndDubTags() {
         assertEquals(DramaHealth.titleKey("The Lightbringer’s Return"), DramaHealth.titleKey("The Lightbringer's Return (Dubbed)"))
-        assertTrue(DramaHealth.refused(IOException("Episode 1 answered HTTP 503")))
+        assertTrue(!DramaHealth.refused(IOException("Episode 1 answered HTTP 503"))) // R15: busy host, retried, never hides a studio
         assertTrue(!DramaHealth.refused(IOException("timeout")))
     }
 }

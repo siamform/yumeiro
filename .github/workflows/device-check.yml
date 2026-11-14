@@ -23,7 +23,7 @@ permissions:
 jobs:
   emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 110
     strategy:
       fail-fast: false
       matrix:
@@ -64,18 +64,7 @@ jobs:
           heap-size: ${{ matrix.heap }}
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            adb logcat -c || true
-            (adb logcat -v time > logcat.txt &) ; sleep 1
-            FILTER="${TEST_FILTER:-dev.asfakul.yumeiro.StabilityStressDeviceTest,dev.asfakul.yumeiro.PlayerSwitchDeviceTest,dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.SurfaceModeDeviceTest}"; case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac
-            R=6; H=false
-            ./gradlew --no-daemon connectedMobileDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=$FILTER -Pandroid.testInstrumentationRunnerArguments.rounds=$R -Pandroid.testInstrumentationRunnerArguments.hprof=$H || echo "TESTS_FAILED" > failed.txt
-            mkdir -p stress && adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/stress stress/ || true
-            adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots stress/ || true
-            adb shell dumpsys meminfo dev.asfakul.yumeiro.debug > stress/meminfo.txt || true
-            adb shell dumpsys activity exit-info dev.asfakul.yumeiro.debug > stress/exit-info.txt || true
-            adb shell ls /data/anr > stress/anr-list.txt 2>&1 || true
-            grep -E "YuStress|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|MTDeviceTest|StrictMode|ANR in|FATAL|OutOfMemory|lowmemorykiller" logcat.txt > stress/logcat-key.txt || true
+          script: bash scripts/device-check.sh
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

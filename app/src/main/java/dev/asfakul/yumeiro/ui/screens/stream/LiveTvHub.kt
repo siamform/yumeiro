@@ -73,6 +73,13 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 @Immutable
 internal data class LiveLoad(val loading: Boolean = true, val channels: List<StreamRequest> = emptyList(), val error: String? = null)
 
+/** R15: Live TV channel lists for the process (see StreamScreen.loadLive and ui/feed/LiveFeed.kt). */
+internal object LiveTvMemory {
+    val loads = androidx.compose.runtime.mutableStateMapOf<String, LiveLoad>()
+    val stamps = HashMap<String, Long>()
+    val gen = HashMap<String, Int>()
+}
+
 /** One shortcut tile in the Live TV "Tools" grid. */
 @Immutable
 internal data class LiveTool(val tag: String, val title: String, val status: String, val icon: ImageVector, val hue: Color, val onClick: () -> Unit)

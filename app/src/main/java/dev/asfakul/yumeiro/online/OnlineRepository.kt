@@ -187,6 +187,8 @@ object OnlineRepository {
     private const val SEARCH_DISK_MS = 60 * 60 * 1000L
     /** Rows requested per provider for the home page. */
     private const val ROWS_PER_PROVIDER = 4
+    /** At most this many batches of [ROWS_PER_PROVIDER] pages while earlier ones came back empty. */
+    private const val MAX_PAGE_BATCHES = 3
 
     /** Round 2: extension calls at once follow the phone's heat (6 cool, 4 warm, 2 hot). */
     private object parallel { suspend fun <T> withPermit(block: suspend () -> T): T = dev.asfakul.yumeiro.player.HeatGuard.limited(block = block) }
@@ -220,9 +222,30 @@ object OnlineRepository {
             return@withContext rows
         }
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
-        val pages = runCatching { api.mainPage }.getOrDefault(emptyList()).take(ROWS_PER_PROVIDER)
+        val allPages = runCatching { api.mainPage }.getOrDefault(emptyList())
+        // R15: the first ROWS_PER_PROVIDER pages are asked; when they come back empty or broken
+        // (a studio that is down, a row that timed out) the next pages are asked too, up to
+        // MAX_PAGE_BATCHES batches. Before, a provider whose first four rows were empty (Yumeiro
+        // Drama with four busy studios) vanished from the feed although it had other rows.
+        val rows = mutableListOf<OnlineRow>()
+        var batch = 0
+        while (batch < MAX_PAGE_BATCHES && rows.size < ROWS_PER_PROVIDER) {
+            val pages = allPages.drop(batch * ROWS_PER_PROVIDER).take(ROWS_PER_PROVIDER)
+            if (pages.isEmpty()) break
+            rows += homeBatch(api, pages)
+            batch++
+        }
+        val result = rows.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
+        if (result.isNotEmpty()) {
+            homeCache[api.name] = Timed(System.currentTimeMillis(), result)
+            dev.asfakul.yumeiro.cache.DataCache.write("home", diskKey, dev.asfakul.yumeiro.cache.OnlineCodec.rows(result))
+        }
+        result
+    }
+
+    private suspend fun homeBatch(api: MainAPI, pages: List<com.lagradost.cloudstream3.MainPageData>): List<OnlineRow> {
         // supervisorScope: one broken row (or one extension bug) never cancels the others.
-        val rows = supervisorScope {
+        return supervisorScope {
             pages.map { page ->
                 async {
                     parallel.withPermit {
@@ -243,12 +266,7 @@ object OnlineRepository {
                     )
                 }
             }.onFailure { Log.w(TAG, "home rows ${api.name}/${page.name}", it) }.getOrDefault(emptyList())
-        }.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
-        if (rows.isNotEmpty()) {
-            homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
-            dev.asfakul.yumeiro.cache.DataCache.write("home", diskKey, dev.asfakul.yumeiro.cache.OnlineCodec.rows(rows))
-        }
-        rows
+        }.filter { it.items.isNotEmpty() }
     }
 
     private val diskServed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()

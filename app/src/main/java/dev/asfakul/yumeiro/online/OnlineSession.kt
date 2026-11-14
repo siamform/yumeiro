@@ -284,6 +284,12 @@ object OnlineSession {
     fun switchSource(context: Context, linkIndex: Int, positionMs: Long) {
         val s = _state.value ?: return
         if (linkIndex !in s.links.indices) return
+        // R15: a manual pick wins. A failover that was still waiting for its gap used to fire after
+        // the pick and replace it; and the picked link gets a fresh chance (it may have failed before),
+        // so when it is dead the normal rotation moves on from it again.
+        failoverJob?.cancel(); failoverJob = null
+        val picked = s.links[linkIndex].url
+        if (picked in s.failed) _state.update { cur -> cur?.copy(failed = cur.failed - picked) }
         playCurrent(context.applicationContext, linkIndex, positionMs)
     }
 

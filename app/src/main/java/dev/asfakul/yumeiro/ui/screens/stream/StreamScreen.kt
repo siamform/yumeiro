@@ -342,16 +342,22 @@ fun StreamScreen(
     var liveSel by rememberSaveable { mutableStateOf<String?>(null) }
     var liveGroup by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
     var liveLimit by rememberSaveable(liveSel, liveGroup) { mutableStateOf(LIVE_PAGE) }
-    val loads = remember { mutableStateMapOf<String, LiveLoad>() }
-    val loadedStamp = remember { HashMap<String, Long>() }
+    // R15 Phase 3 (ADR-008): the channel lists live for the process (LiveTvMemory), and loads run
+    // in FeedScope. They were `remember {}` state: coming back to Live TV reloaded every playlist
+    // (the list emptied, then refilled from the cache under the user's finger) and a load cut off
+    // by leaving the tab stayed "loading" for good.
+    val loads = LiveTvMemory.loads
+    val loadedStamp = LiveTvMemory.stamps
     fun loadLive(p: StreamPlaylist, force: Boolean = false) {
+        val g = (LiveTvMemory.gen[p.id] ?: 0) + 1
+        LiveTvMemory.gen[p.id] = g
         loads[p.id] = LiveLoad(loading = true, channels = loads[p.id]?.channels.orEmpty())
-        scope.launch {
+        dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
             try {
                 val list = PlaylistStore.channels(app, p.id, forceRefresh = force)
-                loads[p.id] = LiveLoad(loading = false, channels = list)
+                if (LiveTvMemory.gen[p.id] == g) loads[p.id] = LiveLoad(loading = false, channels = list)
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
-                loads[p.id] = LiveLoad(loading = false, channels = loads[p.id]?.channels.orEmpty(), error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't load this playlist."))
+                if (LiveTvMemory.gen[p.id] == g) loads[p.id] = LiveLoad(loading = false, channels = loads[p.id]?.channels.orEmpty(), error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't load this playlist."))
             }
         }
     }

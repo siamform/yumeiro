@@ -155,12 +155,44 @@ fun YouTubeMusicScreen(onPlay: (YtItem, List<YtItem>) -> Unit, modifier: Modifie
     )
 }
 
-/** A paged list: items so far, the token for more, and whether a page is loading. */
-private data class Paged(val items: List<YtItem> = emptyList(), val next: Page? = null, val loading: Boolean = false, val error: String? = null) {
-    val canLoadMore get() = next != null && !loading
-}
 
 private const val FOR_YOU = "for_you"
+
+/**
+ * R15 Phase 3 (ADR-008): the discovery state of YouTube / YouTube Music lives for the process, not
+ * for the composable. The plan, the shelves, every chip's endless list, the For-you stream and the
+ * search results used to be `remember {}` state; leaving the tab or swiping the pager threw them
+ * away, the list came back from the cache at the old scroll index ("scrolling stops and shows
+ * saved data"), loads cancelled mid-way stayed "loading" forever, and a late answer for an old
+ * query or plan overwrote the screen. See ui/feed/LiveFeed.kt.
+ */
+private class YtBrowseStore {
+    var plan: List<YtFeed> = emptyList()
+    var planKey: Any? = null
+    val shelves = mutableStateMapOf<String, Load<List<YtItem>>>()
+    var shelfGen = 0
+    private val paged = HashMap<String, dev.asfakul.yumeiro.ui.feed.LivePaged<YtItem, Page>>()
+    /** Every chip's endless list (created on first use; kept while the plan has the feed). */
+    fun feed(context: android.content.Context, f: YtFeed): dev.asfakul.yumeiro.ui.feed.LivePaged<YtItem, Page> {
+        val app = context.applicationContext
+        return paged.getOrPut(f.id) {
+            dev.asfakul.yumeiro.ui.feed.LivePaged({ it.id }, { cur -> YouTube.feed(app, f, cur).let { it.items to it.next } }, describe = ::friendly)
+        }
+    }
+    fun forget(keep: Set<String>) { paged.keys.retainAll(keep); shelves.keys.retainAll(keep) }
+    /** The For-you stream: append-only, shorts on their own shelf. */
+    val videos = dev.asfakul.yumeiro.ui.feed.AppendOnly<YtItem> { it.id }
+    val shorts = dev.asfakul.yumeiro.ui.feed.AppendOnly<YtItem> { it.id }
+    var turn = 0
+    var resultsFor by mutableStateOf<String?>(null)
+    val results = dev.asfakul.yumeiro.ui.feed.LivePaged<YtItem, Page>({ it.id }, { _ -> emptyList<YtItem>() to null }, describe = ::friendly)
+    var related by mutableStateOf<List<String>>(emptyList())
+
+    companion object {
+        val video = YtBrowseStore()
+        val music = YtBrowseStore()
+    }
+}
 
 /**
  * Dynamic discovery (replaces the fixed category list):
@@ -187,8 +219,8 @@ private fun YtBrowse(
     var submitted by rememberSaveable { mutableStateOf<String?>(null) }
     var suggestions by remember { mutableStateOf<List<dev.asfakul.yumeiro.ui.components.Suggestion>>(emptyList()) }
     val recentScope = if (music) "ytmusic" else "youtube"
-    var results by remember { mutableStateOf<Paged?>(null) }
-    var relatedSearches by remember { mutableStateOf<List<String>>(emptyList()) }
+    val store = remember(music) { if (music) YtBrowseStore.music else YtBrowseStore.video }
+    val app = context.applicationContext
     var chip by rememberSaveable { mutableStateOf(FOR_YOU) }
     var topics by remember { mutableStateOf(YtTopics.load(context, music)) }
     var shuffle by remember { mutableStateOf(YtTopics.shuffleCount(context)) }
@@ -207,41 +239,50 @@ private fun YtBrowse(
     // play doesn't reshuffle the page under the user's finger.
     val historySeed = remember(mine) { mine.take(24) }
     val searches = remember(submitted) { dev.asfakul.yumeiro.ui.components.RecentSearches.load(context, recentScope) }
+    // R15: the plan is frozen once the For-you stream shows cards. A new play or search used to
+    // re-plan it (new feed ids) and reshuffle the whole page under the user's finger; now only an
+    // explicit change (topics, Shuffle) starts a new plan.
     val feeds = remember(music, historySeed, topics, searches, shuffle) {
-        YtDiscovery.plan(YtDiscovery.Input(music, historySeed, topics, searches, java.time.LocalDate.now().toEpochDay() + shuffle * 101))
+        val key = Triple(music, topics, shuffle)
+        if (store.plan.isEmpty() || store.planKey != key || (store.videos.items.isEmpty() && store.shelves.values.none { it is Load.Ready })) {
+            val fresh = YtDiscovery.plan(YtDiscovery.Input(music, historySeed, topics, searches, java.time.LocalDate.now().toEpochDay() + shuffle * 101))
+            if (store.planKey != null && store.planKey != key) { store.videos.clear(); store.shorts.clear(); store.turn = 0 }
+            store.plan = fresh
+            store.planKey = key
+            store.forget(fresh.mapTo(HashSet()) { it.id })
+        }
+        store.plan
     }
-    val shelves = remember { mutableStateMapOf<String, Load<List<YtItem>>>() }
-    val pagedFeeds = remember { mutableStateMapOf<String, Paged>() }
+    val shelves = store.shelves
 
+    /** Loads in the process scope (never cancelled by leaving the tab); a stale answer is dropped. */
     fun loadShelves(force: Boolean) {
         val gate = Semaphore(2)
+        if (force) store.shelfGen++
+        val g = store.shelfGen
         feeds.forEach { f ->
-            if (!force && shelves[f.id] is Load.Ready) return@forEach
-            shelves[f.id] = Load.Loading
-            scope.launch {
-                shelves[f.id] = gate.withPermit {
-                    runCatching { YouTube.feed(context, f, force = force) }.fold(
+            val cur = shelves[f.id]
+            if (!force && (cur is Load.Ready || cur is Load.Loading)) return@forEach
+            // Stale-while-revalidate: cards already on screen stay while the new copy loads.
+            if (cur !is Load.Ready) shelves[f.id] = Load.Loading
+            dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
+                val r = gate.withPermit {
+                    runCatching { YouTube.feed(app, f, force = force) }.fold(
                         { if (it.items.isEmpty()) Load.Failed("Nothing here right now.") else Load.Ready(it.items) },
                         { Load.Failed(friendly(it)) },
                     )
                 }
+                if (g != store.shelfGen && shelves[f.id] !is Load.Loading) return@launch
+                if (r is Load.Failed && shelves[f.id] is Load.Ready) return@launch
+                shelves[f.id] = r
             }
         }
     }
     LaunchedEffect(feeds) { loadShelves(false) }
     LaunchedEffect(netOnline) { if (netOnline && shelves.values.any { it is Load.Failed }) loadShelves(false) }
 
-    fun loadFeedPage(f: YtFeed, reset: Boolean = false) {
-        val cur = if (reset) Paged() else pagedFeeds[f.id] ?: Paged()
-        if (cur.loading || (!reset && cur.items.isNotEmpty() && cur.next == null)) return
-        pagedFeeds[f.id] = cur.copy(loading = true, error = null)
-        scope.launch {
-            pagedFeeds[f.id] = runCatching { YouTube.feed(context, f, cur.next) }.fold(
-                { p -> Paged((cur.items + p.items).distinctBy { it.id }, p.next) },
-                { cur.copy(loading = false, error = friendly(it)) },
-            )
-        }
-    }
+    /** A chip's endless list: first page on first open, then more as the list nears its end. */
+    fun openFeed(f: YtFeed) { store.feed(app, f).let { if (!it.started && !it.loading) it.more() } }
 
     LaunchedEffect(query) {
         if (query.isBlank() || query == submitted) { suggestions = emptyList(); return@LaunchedEffect }
@@ -259,29 +300,25 @@ private fun YtBrowse(
             .map { dev.asfakul.yumeiro.ui.components.Suggestion(it, SuggestionKind.QUERY) }
         suggestions = (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8)
     }
-    fun searchMore(text: String) {
-        val cur = results ?: Paged()
-        if (cur.loading) return
-        results = cur.copy(loading = true, error = null)
-        scope.launch {
-            results = runCatching { YouTube.search(context, text, searchFilter, cur.next) }.fold(
-                { p -> Paged((cur.items + p.items).distinctBy { it.id }, p.next) },
-                { cur.copy(loading = false, error = friendly(it)) },
-            )
+    /** R15: a new search drops every answer of the previous one (it used to overwrite the new list). */
+    fun startResults(text: String) {
+        store.resultsFor = text
+        store.related = emptyList()
+        store.results.reset { cur -> YouTube.search(app, text, searchFilter, cur).let { it.items to it.next } }
+        store.results.more()
+        dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
+            val s = runCatching { YouTube.suggestions(app, text) }.getOrDefault(emptyList())
+            if (store.resultsFor == text) store.related = YtDiscovery.relatedChips(text, s, topics)
         }
     }
     fun search(q: String) {
         val text = q.trim().takeIf { it.isNotEmpty() } ?: return
         query = text; submitted = text; suggestions = emptyList(); focus.clearFocus()
         dev.asfakul.yumeiro.ui.components.RecentSearches.add(context, recentScope, text)
-        results = Paged()
-        relatedSearches = emptyList()
-        searchMore(text)
-        scope.launch {
-            val s = runCatching { YouTube.suggestions(context, text) }.getOrDefault(emptyList())
-            relatedSearches = YtDiscovery.relatedChips(text, s, topics)
-        }
+        startResults(text)
     }
+    // Back on the tab (or after the process was restored) with a search open: same results, or a fresh load.
+    LaunchedEffect(submitted) { submitted?.let { if (store.resultsFor != it) startResults(it) } }
     fun pin(topic: String) {
         val t = YtDiscovery.cleanTopic(topic) ?: return
         topics = YtDiscovery.withTopic(topics, t)
@@ -312,11 +349,12 @@ private fun YtBrowse(
         val asked by dev.asfakul.yumeiro.ui.components.TabSearch.open.collectAsState()
         val barOpen = asked == searchKey || query.isNotEmpty() || submitted != null
         Column(Modifier.fillMaxSize().padding(top = if (submitted != null) YT_SEARCH_BAR_H else 0.dp)) {
-        val res = results
         val sub = submitted
-        if (sub != null && res != null) {
+        val res = store.results
+        if (sub != null && store.resultsFor == sub) {
             val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_results:" + sub)
-            YtEndlessTrigger(listState, res.canLoadMore) { searchMore(sub) }
+            val relatedSearches = store.related
+            YtEndlessTrigger(listState, res.canLoadMore) { res.more() }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_results"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("res_head") {
                     YtFeedHeader(
@@ -331,10 +369,10 @@ private fun YtBrowse(
                 }
                 if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
                 if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem("No results for “$sub”.", null) }
-                itemsIndexed(res.items, key = { i, it -> "r${i}_${it.id}" }) { _, item ->
+                itemsIndexed(res.items, key = { _, it -> "r_${it.id}" }) { _, item ->
                     if (music) SongRow(item) { onPlay(item, res.items) } else YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, res.items) }
                 }
-                if (res.error != null) item("err") { YtProblem(res.error) { searchMore(sub) } }
+                res.error?.let { e -> item("err") { YtProblem(e) { res.retry() } } }
                 if (res.items.isNotEmpty() && res.loading) item("more") { YtLoadingMore() }
             }
             return@Column
@@ -351,7 +389,7 @@ private fun YtBrowse(
                 YtChip(
                     f.title.take(28), chip == f.id,
                     onLongClick = if (topic) ({ unpin(f.title) }) else null,
-                ) { chip = f.id; if (pagedFeeds[f.id] == null) loadFeedPage(f) }
+                ) { chip = f.id; openFeed(f) }
             }
             item("c_add") { YtChip("Topic", false, leading = Icons.Default.Add, modifier = Modifier.testTag("youtube_add_topic")) { addingTopic = true } }
             if (!music && topics.isNotEmpty()) item("c_edit") { YtChip("Edit topics", false, modifier = Modifier.testTag("youtube_edit_topics_chip")) { editingTopics = true } }
@@ -359,10 +397,10 @@ private fun YtBrowse(
 
         val selected = feeds.firstOrNull { it.id == chip }
         if (chip != FOR_YOU && selected != null) {
-            LaunchedEffect(selected.id) { if (pagedFeeds[selected.id] == null) loadFeedPage(selected) }
-            val page = pagedFeeds[selected.id] ?: Paged(loading = true)
+            LaunchedEffect(selected.id) { openFeed(selected) }
+            val page = store.feed(app, selected)
             val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_feed:" + selected.id)
-            YtEndlessTrigger(listState, selected.pages && page.canLoadMore) { loadFeedPage(selected) }
+            YtEndlessTrigger(listState, selected.pages && page.started && page.canLoadMore) { page.more() }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_feed_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("feed_head") {
                     YtFeedHeader(
@@ -371,11 +409,11 @@ private fun YtBrowse(
                         canPin = selected.kind == YtFeed.Kind.QUERY,
                     )
                 }
-                if (page.items.isEmpty() && page.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
-                itemsIndexed(page.items, key = { i, it -> "fi${i}_${it.id}" }) { _, item ->
+                if (page.items.isEmpty() && (page.loading || !page.started) && page.error == null) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
+                itemsIndexed(page.items, key = { _, it -> "fi_${it.id}" }) { _, item ->
                     if (music) SongRow(item) { onPlay(item, page.items) } else YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, page.items) }
                 }
-                if (page.error != null) item("ferr") { YtProblem(page.error) { loadFeedPage(selected, reset = page.items.isEmpty()) } }
+                page.error?.let { e -> item("ferr") { YtProblem(e) { page.retry() } } }
                 if (page.items.isNotEmpty() && page.loading) item("fmore") { YtLoadingMore() }
                 if (!selected.pages && page.items.isNotEmpty()) item("fend") {
                     Text("That's the whole list. Search or pick another chip for more.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
@@ -384,19 +422,29 @@ private fun YtBrowse(
         } else if (!music) {
             // YouTube home: one mixed stream of full-width videos with a Shorts shelf and
             // "Watch again" woven in, paging forever from the planned feeds.
-            val lists = feeds.map { f -> pagedFeeds[f.id]?.items?.takeIf { it.isNotEmpty() } ?: (shelves[f.id] as? Load.Ready)?.value.orEmpty() }
-            val stream = remember(lists) { interleaveFeeds(lists) }
-            val shorts = remember(stream) { stream.filter { it.isShort() }.take(12) }
-            val videos = remember(stream, shorts) { if (shorts.size >= 3) stream.filterNot { it in shorts } else stream }
-            val anyLoading = feeds.any { shelves[it.id] == null || shelves[it.id] is Load.Loading } || pagedFeeds.values.any { it.loading }
+            // R15: append-only. New pages are interleaved and added at the end; cards on screen
+            // never move, vanish or get replaced (the stream used to be rebuilt from every list on
+            // each page, so everything below the first changed feed shifted under the finger).
+            val paged = feeds.map { f -> store.feed(app, f) }
+            LaunchedEffect(store, feeds) {
+                androidx.compose.runtime.snapshotFlow {
+                    feeds.mapIndexed { i, f -> paged[i].items.toList().ifEmpty { (shelves[f.id] as? Load.Ready)?.value.orEmpty() } }
+                }.collect { lists ->
+                    val merged = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { interleaveFeeds(lists) }
+                    store.shorts.append(merged.filter { it.isShort() })
+                    store.videos.append(merged.filterNot { it.isShort() })
+                }
+            }
+            val videos = store.videos.items
+            val shorts = store.shorts.items
+            val anyLoading = feeds.any { shelves[it.id] == null || shelves[it.id] is Load.Loading } || paged.any { it.loading }
             val allFailed = feeds.isNotEmpty() && feeds.all { shelves[it.id] is Load.Failed }
             val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_foryou")
-            val pageable = feeds.filter { it.pages && (pagedFeeds[it.id]?.canLoadMore ?: true) }
-            var turn by remember { mutableStateOf(0) }
-            YtEndlessTrigger(listState, videos.isNotEmpty() && pageable.isNotEmpty() && pagedFeeds.values.none { it.loading }) {
+            val pageable = feeds.indices.filter { feeds[it].pages && paged[it].canLoadMore }
+            YtEndlessTrigger(listState, videos.isNotEmpty() && pageable.isNotEmpty() && paged.none { it.loading }) {
                 // Two feeds per step keeps the stream varied without flooding the network.
-                repeat(minOf(2, pageable.size)) { k -> loadFeedPage(pageable[(turn + k) % pageable.size]) }
-                turn += 2
+                repeat(minOf(2, pageable.size)) { k -> paged[pageable[(store.turn + k) % pageable.size]].more() }
+                store.turn += 2
             }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (videos.isEmpty() && anyLoading && netOnline) itemsIndexed(List(4) { it }, key = { i, _ -> "hsk$i" }) { _, _ ->
@@ -409,13 +457,13 @@ private fun YtBrowse(
                     }
                 }
                 if (videos.isEmpty() && allFailed) item("home_err") { YtProblem((shelves[feeds.first().id] as Load.Failed).message) { loadShelves(true) } }
-                itemsIndexed(videos, key = { i, it -> "h${i}_${it.id}" }) { i, item ->
-                    YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, videos) }
-                    if (i == 1 && shorts.size >= 3) {
+                itemsIndexed(videos, key = { _, it -> "h_${it.id}" }) { i, item ->
+                    YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, videos.toList()) }
+                    if (i == 1 && shorts.isNotEmpty()) {
                         Column(Modifier.padding(vertical = 8.dp).testTag("youtube_shorts_shelf")) {
                             YtLabel("Shorts", "ショート")
                             LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                itemsIndexed(shorts, key = { k, s -> "s${k}_${s.id}" }) { _, s -> YtShortCard(s, Modifier.width(150.dp)) { onPlay(s, shorts) } }
+                                itemsIndexed(shorts, key = { _, s -> "s_${s.id}" }) { _, s -> YtShortCard(s, Modifier.width(150.dp)) { onPlay(s, shorts.toList()) } }
                             }
                         }
                     }
@@ -423,7 +471,7 @@ private fun YtBrowse(
                         YtShelfRow("Watch again", null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
                     }
                 }
-                if (videos.isNotEmpty() && pagedFeeds.values.any { it.loading }) item("home_more") { YtLoadingMore() }
+                if (videos.isNotEmpty() && paged.any { it.loading }) item("home_more") { YtLoadingMore() }
                 item("note") {
                     Text(
                         "Streams come straight from YouTube without an account. Your topics, searches and history stay on this device.",
@@ -467,7 +515,7 @@ private fun YtBrowse(
                         Load.Loading -> if (netOnline) Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = RoundedCornerShape(18.dp)) } } }
                         is Load.Failed -> Unit
                         is Load.Ready -> YtShelfRow(f.title, f.overline, if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, l.value, music,
-                            onSeeAll = { chip = f.id; if (pagedFeeds[f.id] == null) loadFeedPage(f) }) { onPlay(it, l.value) }
+                            onSeeAll = { chip = f.id; openFeed(f) }) { onPlay(it, l.value) }
                     }
                 }
             }
@@ -487,8 +535,8 @@ private fun YtBrowse(
         ) {
             YtSearchBar(
                 query, placeholder, music, autoFocus = asked == searchKey, floating = true,
-                onChange = { query = it; if (it.isBlank()) { submitted = null; results = null } }, onSearch = { search(query) },
-                onClear = { query = ""; submitted = null; results = null; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
+                onChange = { query = it; if (it.isBlank()) submitted = null }, onSearch = { search(query) },
+                onClear = { query = ""; submitted = null; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
             )
         }
         dev.asfakul.yumeiro.ui.components.SuggestionList(

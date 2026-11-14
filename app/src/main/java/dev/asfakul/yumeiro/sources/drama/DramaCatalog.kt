@@ -30,6 +30,9 @@ interface DramaCatalog {
     suspend fun search(query: String): List<DramaShow>
     suspend fun series(url: String): DramaSeries
     suspend fun streams(series: DramaSeries, episode: Int): DramaStreams
+
+    /** R15: the catalog's host answered "busy" (429 / 5xx) or made calls wait in the last minute. */
+    val recentlyBusy: Boolean get() = false
 }
 
 data class DramaPlatform(val slug: String, val name: String)
@@ -58,8 +61,18 @@ data class DramaSeries(
 data class DramaSubtitle(val url: String, val language: String?, val label: String?)
 
 data class DramaStreams(
-    /** Quality (e.g. "720") → media URL; "" when the catalog doesn't say. */
+    /**
+     * Quality (e.g. "720") → media URL; "" when the catalog doesn't say. Alternate servers for the
+     * same quality are keyed "720~1", "720~2" (see [qualityOf]).
+     */
     val sources: Map<String, String>,
     val subtitles: List<DramaSubtitle>,
     val referer: String?,
-)
+    /** Epoch seconds when the signed links stop working (0 = unknown). */
+    val expiresAt: Long = 0L,
+) {
+    companion object {
+        /** "720~2" → 720; "" → 0. */
+        fun qualityOf(key: String): Int = key.substringBefore('~').toIntOrNull() ?: 0
+    }
+}

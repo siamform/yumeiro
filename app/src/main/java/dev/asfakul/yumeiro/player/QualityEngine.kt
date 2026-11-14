@@ -37,6 +37,8 @@ object QualityEngine {
         /** Round 2: a level the engine renders from the playing stream (no reload); null = a real rendition. */
         val engineHeight: Int? = null,
         val upscale: Boolean = false,
+        /** R15: [open] switches by itself (another Yumix source) and returns null on success. */
+        val selfSwitch: Boolean = false,
         val open: suspend (Context, Long) -> StreamRequest?,
     )
 
@@ -96,19 +98,33 @@ object QualityEngine {
         val s = dev.asfakul.yumeiro.online.OnlineSession.state.value ?: return emptyList()
         if (s.phase != dev.asfakul.yumeiro.online.OnlineSession.Phase.PLAYING) return emptyList()
         val byHeight = s.links.withIndex()
-            .filter { (_, l) -> !l.audioOnly && l.quality in 144..4320 && l.url !in s.failed }
-            .groupBy { it.value.quality }
+            // R15: every height the sources have (the download sheet lists them all); a height whose
+            // only sources failed earlier is still offered and retried when picked.
+            .filter { (_, l) -> !l.audioOnly && l.quality in 144..4320 }
+            .groupBy { snap(it.value.quality) }
         if (byHeight.size < 2) return emptyList()
         val playing = s.link?.quality
         return byHeight.keys.sortedDescending().map { h ->
-            val first = byHeight.getValue(h).first()
-            Alt(label(h), h, note = first.value.name.ifBlank { first.value.source }, current = h == playing || (playing == null && h == currentHeight)) { c, pos ->
+            val all = byHeight.getValue(h)
+            val first = all.firstOrNull { it.value.url !in s.failed } ?: all.first()
+            val failedOnly = all.all { it.value.url in s.failed }
+            Alt(label(h), h, note = first.value.name.ifBlank { first.value.source } + if (failedOnly) " · failed earlier, will retry" else "", current = (playing != null && h == snap(playing)) || (playing == null && h == currentHeight), selfSwitch = true) { c, pos ->
                 val cur = dev.asfakul.yumeiro.online.OnlineSession.state.value
                 val i = cur?.links?.indexOfFirst { it.url == first.value.url } ?: -1
                 if (i >= 0) dev.asfakul.yumeiro.online.OnlineSession.switchSource(c, i, pos)
                 null
             }
         }
+    }
+
+    /**
+     * R15: the stream's own track ladder plus every real alternative (downloader heights for
+     * YouTube, other sources for Yumix) whose height the ladder doesn't have. Engine levels are
+     * only for streams without a ladder. Pure → unit-tested.
+     */
+    internal fun extraHeights(trackHeights: List<Int>, alts: List<Alt>): List<Alt> {
+        val have = trackHeights.map { snap(it) }.toSet()
+        return alts.filter { it.engineHeight == null && it.note != "Original from the source" && snap(it.height) !in have }
     }
 
     /** The download sheet's video heights (+ playable extras), highest first. Pure → unit-tested. */

@@ -39,8 +39,33 @@ internal class ExtensionFeed {
     var providers by mutableStateOf<List<MainAPI>>(emptyList())
     var loading by mutableStateOf(false)
     val names: List<String> get() = providers.map { it.name }
-    /** Extension name → its rows, in provider order, only those that loaded something. */
-    val ready: List<Pair<String, List<OnlineRow>>> get() = providers.mapNotNull { p -> homes[p.name]?.takeIf { it.isNotEmpty() }?.let { p.name to it } }
+    /** R15: the order the extensions answered in. Sections only ever append below the ones shown. */
+    val order = mutableStateListOf<String>()
+    internal var loadedFor: List<String>? = null
+    internal var gen = 0
+    fun put(name: String, rows: List<OnlineRow>) {
+        homes[name] = rows
+        if (rows.isNotEmpty() && name !in order) order += name
+    }
+    /** Extension name → its rows, in the order they arrived, only those that loaded something. */
+    val ready: List<Pair<String, List<OnlineRow>>> get() {
+        val live = providers.mapTo(HashSet()) { it.name }
+        return order.filter { it in live }.mapNotNull { n -> homes[n]?.takeIf { it.isNotEmpty() }?.let { n to it } }
+    }
+}
+
+/**
+ * R15 Phase 3 (ADR-008): Home's extension rows and its endless Yumix random page live for the
+ * process. They were `remember {}` state: leaving Home and coming back rebuilt both, the rows came
+ * back from the cache in a different order and the random page was re-dealt from them, so the
+ * list restored at the old scroll spot showed other cards ("the screen shows saved data").
+ */
+internal object HomeMemory {
+    val feed = ExtensionFeed()
+    /** The Yumix random seed for this process; Shuffle replaces it. */
+    var seed: Long = System.nanoTime()
+    private var random: YumixRandom? = null
+    fun random(seed: Long): YumixRandom = random?.takeIf { it.seed == seed } ?: YumixRandom(seed).also { random = it }
 }
 
 @Composable
@@ -56,22 +81,35 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
             .filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }
         else emptyList()
     }
-    val feed = remember { ExtensionFeed() }
+    val feed = HomeMemory.feed
     LaunchedEffect(providers) {
         feed.providers = providers
-        feed.homes.keys.retainAll(providers.map { it.name }.toSet())
+        val names = providers.map { it.name }
+        feed.homes.keys.retainAll(names.toSet())
+        feed.order.retainAll(names.toSet())
         if (providers.isEmpty()) return@LaunchedEffect
+        // Back on Home with the same extensions: the rows on screen stay, nothing reloads.
+        if (feed.loadedFor == names && !feed.loading) return@LaunchedEffect
+        feed.loadedFor = names
+        val g = ++feed.gen
         feed.loading = true
-        val gate = Semaphore(3)
-        supervisorScope {
-            providers.map { api ->
-                launch {
-                    val rows = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
-                    feed.homes[api.name] = rows.orEmpty().filter { it.items.isNotEmpty() }
-                }
-            }.joinAll()
+        // Loads in the process scope: leaving Home no longer cancels them half-way.
+        dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
+            val gate = Semaphore(3)
+            supervisorScope {
+                providers.map { api ->
+                    launch {
+                        val rows = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
+                        if (g == feed.gen) {
+                            // A failed refresh never wipes rows that are already shown.
+                            val fresh = rows.orEmpty().filter { it.items.isNotEmpty() }
+                            if (fresh.isNotEmpty() || feed.homes[api.name].isNullOrEmpty()) feed.put(api.name, fresh)
+                        }
+                    }
+                }.joinAll()
+            }
+            if (g == feed.gen) feed.loading = false
         }
-        feed.loading = false
     }
     return feed
 }
@@ -106,7 +144,7 @@ internal fun newArrivals(channels: List<Pair<String, List<OnlineRow>>>, max: Int
  * out of loaded titles the next page of one of its rows is fetched. Shuffling reseeds everything.
  */
 @Stable
-internal class YumixRandom(private val seed: Long) {
+internal class YumixRandom(val seed: Long) {
     data class Group(val key: String, val api: String, val items: List<OnlineItem>, val row: OnlineRow?)
 
     private val pools = HashMap<String, MutableList<OnlineItem>>()

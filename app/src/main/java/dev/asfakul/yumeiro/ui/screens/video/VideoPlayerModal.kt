@@ -521,6 +521,26 @@ private fun VideoPlayerModalContent(
         startedOnce = true
     }
 
+    /**
+     * R15: one quality switch at a time (a second tap cancels the first); the old picture keeps
+     * playing while the new stream is built off the main thread, the new one starts where playback
+     * is *now*, and only a real failure says so (a Yumix source switch returns null on success).
+     */
+    fun switchToAlt(alt: dev.asfakul.yumeiro.player.QualityEngine.Alt, pos: Long) {
+        showToast("Quality: ${alt.label}")
+        qualitySwitchJob?.cancel()
+        qualitySwitchJob = coroutineScope.launch {
+            val r = runCatching { alt.open(context, pos) }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+            val req = r.getOrNull()
+            when {
+                req != null -> startResolved(req, exoPlayer.currentPosition.takeIf { it > 0L } ?: pos)
+                alt.selfSwitch && r.isSuccess -> Unit
+                else -> showToast("Couldn't switch to ${alt.label} — still playing the current quality")
+            }
+        }
+    }
+
     fun handleResolution(r: Resolution, positionMs: Long) {
         when (r) {
             is Resolution.Playable -> startResolved(r.request, positionMs)
@@ -2060,28 +2080,22 @@ private fun VideoPlayerModalContent(
                         showToast("Quality: ${alt.label}")
                         return@QualityDialog
                     }
-                    showToast("Quality: ${alt.label}")
-                    // R15: one switch at a time (a second tap cancels the first), the old picture
-                    // keeps playing while the new stream is built off the main thread, the new one
-                    // starts where playback is *now*, and a failed switch says so.
-                    qualitySwitchJob?.cancel()
-                    qualitySwitchJob = coroutineScope.launch {
-                        val r = runCatching { alt.open(context, pos) }
-                            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
-                            .getOrNull()
-                        if (r != null) startResolved(r, exoPlayer.currentPosition.takeIf { it > 0L } ?: pos)
-                        else showToast("Couldn't switch to ${alt.label} — still playing the current quality")
-                    }
+                    switchToAlt(alt, pos)
                 },
                 onDismiss = { showQualityDialog = false },
             )
         }
         if (showQualityDialog && qualityList.size > 1) {
+            // R15: the stream's ladder + the downloader's / other sources' heights it lacks, so the
+            // list matches the download sheet (Video, YouTube and Yumix alike).
+            val extras = dev.asfakul.yumeiro.player.QualityEngine.extraHeights(qualityList.map { it.height }, altQualities.mapNotNull { it.alt })
+                .map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = a.note ?: "Another stream of this video") }
             QualityDialog(
-                options = qualityList,
+                options = (qualityList + extras).sortedByDescending { it.height },
                 selected = selectedQuality,
                 autoLabel = "Auto",
                 onSelect = { option ->
+                    option?.alt?.let { alt -> if (!alt.current) switchToAlt(alt, exoPlayer.currentPosition); return@QualityDialog }
                     val builder = exoPlayer.trackSelectionParameters.buildUpon()
                         .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
                         .setMaxVideoBitrate(Int.MAX_VALUE)
