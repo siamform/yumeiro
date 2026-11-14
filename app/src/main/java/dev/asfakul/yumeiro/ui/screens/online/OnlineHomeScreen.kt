@@ -340,11 +340,12 @@ fun OnlineHomeScreen(
                             PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         groups.forEach { g ->
-                            item("grp_h_" + g.name, contentType = "group_header") { ChannelSectionHeader(g.name, g.titles) { selected = g.name } }
+                            // Round 2, order 4: no "extension name + View" header between sections; the
+                            // shelf's small subtitle says which extension it is from.
                             g.rows.forEachIndexed { i, row ->
                                 item("grp_${g.name}_${i}_${row.title}", contentType = "shelf") {
                                     PosterShelf(
-                                        row.title, subtitle = null, items = row.items, horizontal = row.horizontal,
+                                        row.title, subtitle = g.name, items = row.items, horizontal = row.horizontal,
                                         onClick = openInfo, onSeeAll = if (row.pageData != null) ({ onOpenRow(row) }) else ({ selected = g.name }),
                                     )
                                 }

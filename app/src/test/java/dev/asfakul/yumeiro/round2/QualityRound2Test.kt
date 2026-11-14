@@ -6,6 +6,7 @@
 package dev.asfakul.yumeiro.round2
 
 import androidx.test.core.app.ApplicationProvider
+import dev.asfakul.yumeiro.online.download.YtDownloadOptions
 import dev.asfakul.yumeiro.online.download.YtDownloads
 import dev.asfakul.yumeiro.player.QualityEngine
 import dev.asfakul.yumeiro.stream.StreamRequest
@@ -52,15 +53,14 @@ class QualityRound2Test {
     }
 
     @Test fun youTubePlayerListIsTheDownloadList() {
-        val V = dev.asfakul.yumeiro.online.download.YtDownloadOptions
         val videos = listOf(
-            V.Video(137, 1080, 30, "mp4", "avc1.640028", 50_000_000, true), V.Video(248, 1080, 30, "webm", "vp9", 40_000_000, true),
-            V.Video(136, 720, 30, "mp4", "avc1.4d401f", 25_000_000, true), V.Video(135, 480, 30, "mp4", "avc1.4d401e", 12_000_000, true),
-            V.Video(134, 360, 30, "mp4", "avc1.4d401e", 8_000_000, true), V.Video(160, 144, 30, "mp4", "avc1.4d400c", 2_000_000, true),
-            V.Video(313, 2160, 30, "webm", "vp9", 300_000_000, true), V.Video(18, 360, 30, "mp4", "avc1.42001E", 9_000_000, false),
+            YtDownloadOptions.Video(137, 1080, 30, "mp4", "avc1.640028", 50_000_000, true), YtDownloadOptions.Video(248, 1080, 30, "webm", "vp9", 40_000_000, true),
+            YtDownloadOptions.Video(136, 720, 30, "mp4", "avc1.4d401f", 25_000_000, true), YtDownloadOptions.Video(135, 480, 30, "mp4", "avc1.4d401e", 12_000_000, true),
+            YtDownloadOptions.Video(134, 360, 30, "mp4", "avc1.4d401e", 8_000_000, true), YtDownloadOptions.Video(160, 144, 30, "mp4", "avc1.4d400c", 2_000_000, true),
+            YtDownloadOptions.Video(313, 2160, 30, "webm", "vp9", 300_000_000, true), YtDownloadOptions.Video(18, 360, 30, "mp4", "avc1.42001E", 9_000_000, false),
         )
-        val audios = listOf(V.Audio(140, 128_000, "m4a", "mp4a.40.2", 3_000_000), V.Audio(251, 160_000, "webm", "opus", 3_500_000))
-        val dl = V.build(videos, audios, 34)
+        val audios = listOf(YtDownloadOptions.Audio(140, 128_000, "m4a", "mp4a.40.2", 3_000_000), YtDownloadOptions.Audio(251, 160_000, "webm", "opus", 3_500_000))
+        val dl = YtDownloadOptions.build(videos, audios, 34)
         val dlHeights = dl.filter { !it.audioOnly }.map { it.height }.distinct().sortedDescending()
         assertEquals(listOf(2160, 1080, 720, 480, 360, 144), dlHeights)
         assertEquals(dlHeights, QualityEngine.youTubeLadder(dl))

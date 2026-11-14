@@ -98,7 +98,7 @@ internal fun SourceFilterSheet(
             val shown = remember(names, query) { filterExtensionNames(names, query) }
             if (names.size >= SEARCH_FROM) {
                 dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                    query = query, onQuery = { query = it.take(60) }, hint = "Search ${names.size} extensions",
+                    query = query, onQuery = { query = it.take(60) }, hint = "Search extensions",
                     tag = "online_filter_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                 )
             }
@@ -124,8 +124,8 @@ internal fun SourceFilterSheet(
     }
 }
 
-/** The search box shows from this many extensions on (a handful fits on screen anyway). */
-internal const val SEARCH_FROM = 6
+/** Round 2, order 4: the search box is always there (it used to appear only from 6 extensions). */
+internal const val SEARCH_FROM = 1
 
 /** Lower-case, accent-free form used to compare extension names with what was typed. */
 private fun foldName(s: String): String =
