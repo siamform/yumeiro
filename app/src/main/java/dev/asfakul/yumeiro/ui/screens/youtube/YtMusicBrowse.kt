@@ -160,8 +160,30 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
             )
         }
     }
+    // Round 13: endless Home (ArchiveTune style). When YouTube Music's own pages run out, keep
+    // adding "Similar to …" shelves from the listening history and the songs already shown.
+    var endlessUsed by remember(chip) { mutableStateOf(emptySet<String>()) }
+    var endlessMisses by remember(chip) { mutableStateOf(0) }
+    val endlessOpen = chip == CHIP_HOME && home.page != null && home.page?.continuation == null && !home.more && !home.loading && endlessMisses < 6 &&
+        endlessUsed.size < dev.asfakul.yumeiro.youtube.music.YmEndless.MAX_SHELVES * 2
+    fun moreEndless() {
+        val cur = home
+        val page = cur.page ?: return
+        val seed = dev.asfakul.yumeiro.youtube.music.YmEndless.nextSeed(listened, page.shelves, endlessUsed) ?: run { endlessMisses = 99; return }
+        endlessUsed = dev.asfakul.yumeiro.youtube.music.YmEndless.use(endlessUsed, seed)
+        home = cur.copy(more = true)
+        scope.launch {
+            val related = runCatching { dev.asfakul.yumeiro.youtube.YouTube.related(context, seed.id, music = true) }.getOrDefault(emptyList())
+            val shelf = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                dev.asfakul.yumeiro.youtube.music.YmEndless.shelfFor(seed, related, dev.asfakul.yumeiro.youtube.music.YmEndless.shownIds(page.shelves))
+            }
+            if (shelf == null) endlessMisses++ else endlessMisses = 0
+            home = cur.copy(page = page.copy(shelves = if (shelf == null) page.shelves else page.shelves + shelf), more = false)
+        }
+    }
     fun moreHome() {
         val cur = home
+        if (cur.page?.continuation == null && endlessOpen) { moreEndless(); return }
         val token = cur.page?.continuation ?: return
         if (!cur.canLoadMore) return
         home = cur.copy(more = true)
@@ -253,7 +275,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 }
             }
             val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_home:" + chip)
-            YtEndlessTrigger(state, home.canLoadMore) { moreHome() }
+            YtEndlessTrigger(state, home.canLoadMore || endlessOpen) { moreHome() }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_music_list"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (chip == CHIP_EXPLORE) item("explore_tiles") { ExploreTiles(open) }
                 if (chip == CHIP_HOME && listened.isNotEmpty()) item("listen_again") {

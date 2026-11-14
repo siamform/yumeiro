@@ -293,7 +293,20 @@ fun MTPlayerApp(
         }
     }
     // Music modes: on device · online (YouTube Music) · mix of both. Saved as a key string.
-    var musicModeKey by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.ui.screens.music.MusicMode.DEVICE.key) }
+    // Round 13: Online when there is internet, On device when not, switching by itself as the
+    // connection changes. Once the user picks a mode it sticks, except that losing the connection
+    // always leaves Online for On device (Online cannot play anything offline).
+    var musicModePicked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var musicModeKey by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(dev.asfakul.yumeiro.ui.screens.music.MusicMode.defaultFor(dev.asfakul.yumeiro.network.Connectivity.isOnline(context)).key)
+    }
+    LaunchedEffect(Unit) {
+        dev.asfakul.yumeiro.network.Connectivity.online.collect { online ->
+            musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.follow(
+                dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(musicModeKey), online, musicModePicked,
+            ).key
+        }
+    }
     val musicMode = dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(musicModeKey)
     val musicOnline = musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE
     // Which tab's source menu is open (Music or Videos route), null = closed.
@@ -1155,7 +1168,7 @@ fun MTPlayerApp(
                     else dev.asfakul.yumeiro.ui.screens.online.videoSourceOptions(sourceExtCount, stats.videoCount, isOnline),
                     selectedKey = if (musicMenu) musicMode.key else videoSource.tag,
                     onSelect = { key ->
-                        if (musicMenu) musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(key).key
+                        if (musicMenu) { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(key).key; musicModePicked = true }
                         else dev.asfakul.yumeiro.ui.screens.online.VideoSource.entries.firstOrNull { it.tag == key }?.let { videoSourcePicked = true; videoSource = it }
                         sourceMenuFor = null
                     },
