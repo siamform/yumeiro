@@ -217,6 +217,12 @@ class StabilityStressDeviceTest {
         return applies to ("applies=$applies · " + hits.entries.sortedByDescending { it.value.get() }.take(12).joinToString(" | ") { "${it.value.get()}× ${it.key}" })
     }
 
+    /** Frames rendered since the last `dumpsys gfxinfo reset` (-1 when unreadable). */
+    private fun renderedFrames(): Int = runCatching {
+        shellOut("dumpsys gfxinfo ${ctx.packageName}").lineSequence().first { "Total frames rendered" in it }
+            .substringAfter(':').trim().toInt()
+    }.getOrDefault(-1)
+
     private fun focusLine(): String = runCatching {
         shellOut("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
     }.getOrDefault("?")
@@ -257,12 +263,23 @@ class StabilityStressDeviceTest {
             for (pattern in listOf(listOf(20, 20, 20, 22, 22, 22), listOf(22, 22, 22, 22, 20, 21), listOf(20, 20, 22, 19, 22, 22))) {
                 for (k in pattern) { shell("input keyevent $k"); SystemClock.sleep(150) }
                 SystemClock.sleep(1_500)
-                val windows = List(3) { stateChanges(2_000) }
-                val counts = windows.map { it.first }
-                log("focus[$where] after ${pattern.joinToString(",")}: applies per 2 s $counts · ${windows.last().second.take(900)}")
-                if (counts.min() > 40) {
-                    spins += "$where after keys $pattern: $counts · ${windows.last().second.take(600)}"
-                    log("focus[$where] SPIN: main ${Looper.getMainLooper().thread.stackTrace.take(16).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }}")
+                // Frames actually rendered per 2 s (gfxinfo): catches loops that never write a snapshot
+                // state (bring-into-view / scroll animations on the frame clock), which the earlier
+                // spin reported as hadSnapshotChanges=false. Snapshot applies are logged alongside.
+                val windows = List(3) {
+                    shellOut("dumpsys gfxinfo ${ctx.packageName} reset")
+                    val st = stateChanges(2_000)
+                    renderedFrames() to st
+                }
+                val frames = windows.map { it.first }
+                val counts = windows.map { it.second.first }
+                log("focus[$where] after ${pattern.joinToString(",")}: frames per 2 s $frames · applies per 2 s $counts · ${windows.last().second.second.take(900)}")
+                if (frames.min() > 40 || counts.min() > 40) {
+                    spins += "$where after keys $pattern: frames $frames applies $counts · ${windows.last().second.second.take(600)}"
+                    repeat(4) {
+                        log("focus[$where] SPIN: main ${Looper.getMainLooper().thread.stackTrace.take(24).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }}")
+                        SystemClock.sleep(97)
+                    }
                     break
                 }
             }
