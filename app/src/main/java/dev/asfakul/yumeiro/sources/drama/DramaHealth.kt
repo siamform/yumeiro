@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.sources.drama
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -52,14 +55,19 @@ class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () ->
             var local = false
             var refusedHard = false
             var state = State.DOWN
-            for (sample in shows.take(2)) {
-                val r = withTimeoutOrNull(20_000) {
-                    runCatching { c.streams(c.series(sample.url), 1).sources.isNotEmpty() }
-                }
-                if (r?.getOrNull() == true) { state = State.OK; break }
-                val e = r?.exceptionOrNull()
-                if (e != null && localNetwork(e)) local = true
-                if (e != null && refused(e)) refusedHard = true
+            val results = coroutineScope {
+                shows.take(2).map { sample ->
+                    async {
+                        withTimeoutOrNull(15_000) {
+                            runCatching { c.streams(c.series(sample.url), 1).sources.isNotEmpty() }
+                        } ?: Result.failure(java.io.IOException("timeout"))
+                    }
+                }.awaitAll()
+            }
+            if (results.any { it.getOrNull() == true }) state = State.OK
+            results.mapNotNull { it.exceptionOrNull() }.forEach { e ->
+                if (localNetwork(e)) local = true
+                if (refused(e)) refusedHard = true
             }
             if (state == State.DOWN && local && !refusedHard) state = State.UNKNOWN
             // Soft failures (timeouts) are rechecked after 10 minutes, refusals after 30.
