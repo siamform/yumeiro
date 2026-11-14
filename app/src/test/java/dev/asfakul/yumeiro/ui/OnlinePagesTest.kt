@@ -46,6 +46,10 @@ class OnlinePagesTest {
     private fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { cond() }
 
     @Test fun switchesBetweenDeviceAndOnline() {
+        // Yumeiro Drama is on by default from 1.8.0; with it off, a fresh install has no sources
+        // and shows the get-started page.
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, false)
         var market = 0; var manage = 0
         rule.setContent {
             MTPlayerTheme {
@@ -63,6 +67,7 @@ class OnlinePagesTest {
         assertEquals(1, market); assertEquals(1, manage)
         rule.onNodeWithTag("video_source_device").performClick()
         settle { !has("online_home") }
+        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, true)
     }
 
     @Test fun extensionsPageShowsEmptyStateAndAddMenu() {
