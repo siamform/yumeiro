@@ -30,6 +30,22 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
+## What's new in 1.8.1
+
+A correction release: every item was re-tested instead of trusting earlier notes. Full notes:
+[CHANGELOG.md](CHANGELOG.md). What is done, still unproven and planned: [docs/STATUS-v1.8.1.md](docs/STATUS-v1.8.1.md).
+
+| | |
+|---|---|
+| **Yumeiro Drama plays again** | Every title opens and plays, tap to finish. Studios whose video server is down are hidden and re-checked; the same title plays from another studio when one fails. |
+| **One quality list** | The player and the download sheet show the same qualities. Single-quality streams and local videos get Yumeiro's own levels (GPU scaling, Anime4K upscale). |
+| **Honest Library** | Only your likes, your own playlists and play time measured from real listening. Jump back in is ready when the app opens. |
+| **Cooler phone** | A heat guard follows thermal status and battery saver: slower tickers in the background, fewer extension calls at once, Anime4K paused when hot, no endless source collecting. |
+| **Crash reports on your phone** | Settings, Crash reports: read, share or delete crash, freeze and native-crash reports. Nothing is sent anywhere. |
+| **Theme pictures work** | JPEG, PNG, WebP, GIF, BMP, HEIC/HEIF and AVIF open again, with clear reasons when a file is refused. |
+| **Notifications on time** | Settings, Background, "Keep notifications on time": live checks with one-tap fixes, plus step-by-step settings for Xiaomi, Samsung, Huawei/Honor, OPPO/realme/OnePlus, vivo, Tecno/Infinix/itel, ASUS, Nokia and Meizu. |
+| **Simpler loading and Yumix** | A neutral loader unless the next screen is certain; no extension headers between Yumix sections; search in the extension list. |
+
 ## What's new in the redesign
 
 The biggest Yumeiro update so far: a new design, TV support, and a few hundred fixes found by testing every screen
@@ -328,6 +344,21 @@ Re-signed copies are detected by the app and marked **Unofficial build** in Sett
 
 From CloudStream-format extensions that *you* choose to install. Yumeiro ships only one public-domain extension
 (Internet Archive). Only add extensions for content you have the right to stream.
+</details>
+
+<details>
+<summary><b>Notifications arrive late or not at all. What can I do?</b></summary>
+
+Open Settings, Background, **Keep notifications on time**. It checks notifications, background checks, battery
+optimisation and Android's background restrictions, then shows the steps for your phone maker (auto-start,
+sleeping apps, app launch) with a button that opens the right page.
+</details>
+
+<details>
+<summary><b>The app crashed. Where is the report?</b></summary>
+
+Settings, **Crash reports**. Reports stay on your phone (web addresses, e-mails and tokens are removed). Tap
+Share to send one with your bug report.
 </details>
 
 ## Build from source
