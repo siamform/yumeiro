@@ -1042,6 +1042,33 @@ private fun VideoPlayerModalContent(
         onDispose { hostView.keepScreenOn = false }
     }
 
+    // Round 13: Settings → Quality and audio → Default player. "Another app" hands the stream to
+    // an installed player (VLC, MX Player, mpv) once it is known to load; "Ask" offers both.
+    var externalChecked by remember(video.id) { mutableStateOf(false) }
+    var askPlayer by remember(video.id) { mutableStateOf(false) }
+    val closeNow by rememberUpdatedState(onClose)
+    fun handOffExternal() {
+        val cfg = exoPlayer.currentMediaItem?.localConfiguration ?: return
+        val mime = cfg.mimeType?.takeIf { it.startsWith("video/") || it.startsWith("application/") } ?: "video/*"
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(cfg.uri, mime)
+            .putExtra("title", video.title)
+            .putExtra("position", pos.toInt()) // MX Player
+            .putExtra("from_start", pos <= 0L) // VLC
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        val ok = runCatching { context.startActivity(Intent.createChooser(i, "Play with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+        if (!ok) { showToast("No other video player is installed"); return }
+        exoPlayer.pause()
+        closeNow()
+    }
+    if (askPlayer) dev.asfakul.yumeiro.ui.components.TsukiDialog(
+        onDismissRequest = { askPlayer = false; exoPlayer.play() },
+        title = { Text("Play with") },
+        text = { Text("Watch in Yumeiro, or open this video in another player app.") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; exoPlayer.play() }, modifier = Modifier.testTag("ask_player_yumeiro")) { Text("Yumeiro") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; handOffExternal() }, modifier = Modifier.testTag("ask_player_external")) { Text("Another app") } },
+    )
+
     // ExoPlayer listener lifecycle
     val currentOnProgressUpdate by rememberUpdatedState(onProgressUpdate)
     DisposableEffect(exoPlayer) {
@@ -1065,6 +1092,14 @@ private fun VideoPlayerModalContent(
                 if (isEnded) {
                     currentPositionMs = durationMs
                     currentOnProgressUpdate(video.id, durationMs, durationMs)
+                }
+                if (playbackState == Player.STATE_READY && !externalChecked) {
+                    externalChecked = true
+                    when (dev.asfakul.yumeiro.player.VideoPrefs.defaultPlayer.value) {
+                        dev.asfakul.yumeiro.player.VideoPrefs.DefaultPlayer.EXTERNAL -> handOffExternal()
+                        dev.asfakul.yumeiro.player.VideoPrefs.DefaultPlayer.ASK -> { exoPlayer.pause(); askPlayer = true }
+                        dev.asfakul.yumeiro.player.VideoPrefs.DefaultPlayer.YUMEIRO -> Unit
+                    }
                 }
                 if (playbackState == Player.STATE_READY) {
                     // The header variant that got past the refusal is remembered for this host.
@@ -1826,6 +1861,10 @@ private fun VideoPlayerModalContent(
                     modifier = Modifier.align(Alignment.TopCenter),
                     compact = docked,
                 )
+
+                // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
+                val infoOverlay by dev.asfakul.yumeiro.player.VideoPrefs.infoOverlay.collectAsState()
+                if (infoOverlay && !docked) PlayerInfoOverlay(exoPlayer, video.title, Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 76.dp))
 
                 // Center playback controls (Rewind, Play/Pause, Forward). Not under an error card:
                 // the dimmed buttons showed through it and could take D-pad focus.

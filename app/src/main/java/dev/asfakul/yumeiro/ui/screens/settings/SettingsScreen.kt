@@ -364,9 +364,13 @@ private fun CategoryPage(
             item("hero") { CategoryHero(look.icon, look.tint.legibleOnTheme(), c.title, c.summary, c.kana()) }
             when (c) {
                 Category.APPEARANCE -> item("c") { AppearanceSettingsCard() }
-                Category.PLAYER -> item("c") { VideoPlayerSettingsCard() }
+                Category.PLAYER -> {
+                    item("c") { VideoPlayerSettingsCard() }
+                    item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
+                }
                 Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
                 Category.AUDIO -> {
+                    item("qa") { GroupLabel("Video"); QualityAndAudioEntry() }
                     item("q") { GroupLabel("Quality"); AudioQualityCard() }
                     item("c") {
                         GroupLabel("Sound")
