@@ -157,4 +157,15 @@ class UpdaterLogicTest {
             assertEquals(false, n.startsWith("release-"))
         }
     }
+
+    @org.junit.Test
+    fun round13_single_universal_files_are_picked_on_every_processor() {
+        fun asset(id: Int, name: String) = """{"id":$id,"name":"$name","size":1,"url":"https://api.github.com/a/$id","browser_download_url":"https://github.com/d/$name"}"""
+        val json = """{"tag_name":"v1.8.0","name":"v1.8.0","body":"","assets":[${asset(1, "release-Yumeiro-v1.8.0.apk")},${asset(2, "Yumeiro-TV-v1.8.0.tv.apk")}]}"""
+        for (abis in listOf(listOf("arm64-v8a", "armeabi-v7a"), listOf("armeabi-v7a"), listOf("x86_64", "x86"), listOf("x86"))) {
+            assertEquals("release-Yumeiro-v1.8.0.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, abis).asset.name)
+            assertEquals("Yumeiro-TV-v1.8.0.tv.apk", GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, abis, tv = true).asset.name)
+        }
+        assertNull(GitHubReleaseClient.abiOf("Yumeiro-TV-v1.8.0.tv.apk"))
+    }
 }

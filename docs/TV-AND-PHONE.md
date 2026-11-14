@@ -20,9 +20,12 @@ Firebase stays valid and one installs over the other with all data kept.
   TV file and treats it as an update even at the same version.
 
 ## Release file names
-- Phone: `release-Yumeiro-v<V>.apk` (universal), `Yumeiro-v<V>-arm64-v8a.apk`, `Yumeiro-v<V>-armeabi-v7a.apk`.
-- TV: `Yumeiro-TV-v<V>-universal.tv.apk`, `Yumeiro-TV-v<V>-arm64-v8a.tv.apk`, `Yumeiro-TV-v<V>-armeabi-v7a.tv.apk`.
-  The `.tv.apk` ending means 1.6.0 updaters (which match `-<abi>.apk` or `release-`) never pick them.
+Round 13 (1.8.0): one universal APK per edition, no per-processor files. Each carries native
+libraries for `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64` (the release workflow fails if one is missing).
+- Phone (Android 9+): `release-Yumeiro-v<V>.apk`.
+- TV (Android 7.0+): `Yumeiro-TV-v<V>.tv.apk`.
+  The `.tv.apk` ending means phone updaters (1.6.0 and later) never pick it; TV updaters take it as
+  the universal TV file. 1.7.0 releases also had `-<abi>` files; updaters still understand both.
 
 ## Gradle tasks
 ```
