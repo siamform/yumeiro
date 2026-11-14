@@ -257,14 +257,19 @@ object WatchTogether {
     // endregion
 
     /** Called by the video player while it is on screen. */
+    private var bound: Pair<Player, Player.Listener>? = null
+
     fun bind(p: Player?) {
+        // R15: the player is reused for the next video (PlaybackSession), so the previous listener
+        // must go, or every video added one more publisher to the same player.
+        bound?.let { (old, l) -> old.removeListener(l) }; bound = null
         player = p
         if (p != null && _status.value.role == Role.HOST) {
             p.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) { if (player === p) publishFromPlayer() }
                 override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) { if (player === p) publishFromPlayer() }
                 override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) { if (player === p) publishFromPlayer() }
-            })
+            }.also { bound = p to it })
             tick()
         }
     }

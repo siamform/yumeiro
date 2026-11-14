@@ -131,7 +131,7 @@ low-memory kills reported by `ApplicationExitInfo` are labelled "Closed to free 
 from `UI_MODE_TYPE_TELEVISION` and gets D-pad focus paths (see `docs/TV-AND-PHONE.md`). The emulator matrix
 runs a low-RAM Android 13 device (2 GB RAM, 192 MB heap → low-end path) and a current Android image.
 
-## 6. Feeds **[done for Yumix; in progress for YouTube, music, live TV]**
+## 6. Feeds **[done for Yumix, Home, YouTube, online music, Live TV]**
 
 Rules for every endless feed:
 
@@ -150,9 +150,14 @@ Rules for every endless feed:
 5. **Fetches survive navigation.** They run in the store's scope, so leaving a tab doesn't cancel them half
    way (a row stuck "loading").
 
-Tests: `LiveFeedTest` (append-only, retry, merge), `YumixFeedTest`.
+6. **One store type for every feed (ADR-008).** `LiveFeed` / `LivePaged` hold the rows, the arrival order and
+   a generation number. A load started for an older generation can't overwrite a newer one, and a failed
+   refresh never wipes rows that are on screen. Home uses `HomeMemory` (rows in arrival order, a shuffle
+   seed kept for the process), Live TV uses `LiveTvMemory` (per-playlist loads and stamps).
 
-## 7. Playback **[in progress]**
+Tests: `LiveFeedTest` (append-only, retry, merge), `LivePagedTest`, `YumixFeedTest`.
+
+## 7. Playback **[player ownership done; recovery state machine still in the modal]**
 
 ### Today
 
@@ -196,14 +201,42 @@ stateDiagram-v2
   screen. "View downloads" from the download toast moves the video to the floating player and opens
   Downloads.
 
+### Player ownership (built in R15)
+
+`player/PlaybackSession` owns the one `ExoPlayer` of the process:
+
+- `acquire(key, uri)` returns a `Lease`. The next video reuses the same player (stopped, media cleared,
+  speed, volume and track overrides back to their defaults) when the profile matches (network vs local
+  file) and it never ran GPU effects. Otherwise the old player is released before a new one is built, so
+  two players never exist together. Before R15 the next episode built a second player while the first
+  was still alive: two sets of codecs and two media buffers on a 2 GB phone.
+- Listeners are added through the lease. A handover revokes the old lease first: its listeners are
+  removed, and its last position and duration are frozen for the old screen's final progress save. This
+  stops the old screen from reacting to the new video's events, which ExoPlayer sends synchronously.
+- On close the player pauses and is released after `GRACE_MS` (3 s). Reopening the same video inside the
+  grace resumes it with no reload. `onTrimMemory(RUNNING_LOW)` releases a closed player at once.
+- Header and DRM lookups read `PlaybackSession.currentUri`, so a reused player sends the new video's
+  headers.
+
+Tests: `PlaybackSessionTest` (reuse, fencing, grace, resume, local vs network) and
+`PlaybackSessionDeviceTest` (three videos in a row through the real app = one player built, two reuses;
+close → released after the grace; reopen inside the grace → resumed).
+
 Migration (one step at a time, each with a device test):
 1. **[done]** YouTube stream request off main; codec-aware rendition choice; start position passed to
    `setMedia`.
-2. **[in progress]** Engine levels and DASH rendition switching verified by `PlayerSwitchDeviceTest` on the
+2. **[done]** Engine levels and DASH rendition switching, verified by `PlayerSwitchDeviceTest` on the
    emulator.
-3. **[planned]** Move player creation and the failover timers out of `VideoPlayerModal` into
-   `PlaybackSession`; the modal becomes a surface.
-4. **[planned]** Surface-mode rules (download → floating + Downloads; new video → full screen).
+3. **[done]** Player creation, lifetime and listener ownership moved to `PlaybackSession`.
+   **[done] 3b.** Recovery moved out of the composable: `StartWatch` (no picture: gives up after 12 s with
+   10 s of no download, or 45 s in all; paused time does not count) and `StallWatch` (buffer frozen 25 s)
+   in `player/SourceWatch.kt`, and `RecoveryRouter` (the order: GPU effect → local file → offline wait →
+   link refresh → header ladder → quick retry → next source → generic bounded recovery). Retry and
+   "stable playback" timers are lease-owned (`Lease.schedule`), so `revoke()`/`detach()` cancel them and a
+   retry for one video can never fire on the next. Tests: `RecoveryStateTest`, `PlaybackSessionTest`
+   (timer fence).
+4. **[done]** Surface-mode rules (download → floating + Downloads; new video → full screen),
+   `PlayerSurfaceRules` + `SurfaceModeDeviceTest`.
 
 ## 8. Failure modes
 
@@ -274,7 +307,8 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
 
 ### ADR-006: Player owned by a process-scoped PlaybackSession
 
-- **Status:** Accepted, migration in progress (§7).
+- **Status:** Accepted. Ownership done (`PlaybackSession`, §7); recovery clocks and routing done (step 3b).
+  The `PlaybackService` + `MediaController` move stays future work (see Consequences).
 - **Context:** The player is tied to one composable, so player lifetime, surfaces and recovery depend on UI
   composition.
 - **Decision:** One `PlaybackSession` owns the `ExoPlayer` and the playback state machine; UI surfaces attach.
@@ -291,6 +325,51 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
   logcat and optional heap dumps.
 - **Alternatives:** Robolectric only (what v1.8.1 relied on; can't show ANRs, OOMs or decoder behaviour).
 - **Consequences:** Each run costs about 30–45 minutes of CI time, so runs are manual.
+
+### ADR-008: One live-feed store for every endless feed
+
+- **Status:** Accepted, implemented (Yumix, Home, YouTube, online music, Live TV).
+- **Context:** Every tab had its own copy of "load rows, keep them in `remember`, reload from disk when the
+  page comes back". The disk copy could be hours old, so a live scroll was replaced by stale data.
+- **Decision:** `LiveFeed` / `LivePaged` (process scope) with arrival order, append-only pages and a
+  generation guard; loads run in `FeedScope`, never in the composable's scope.
+- **Alternatives:** `beyondViewportPageCount` > 0 (more memory and prefetch work; the ANR cause); a
+  `ViewModel` per tab (same lifetime as a process object here, more plumbing).
+- **Consequences:** A feed survives tab switches; every store must be bounded and cleared on "Clear caches".
+
+### ADR-009: Drama studio health as a background service
+
+- **Status:** Accepted, implemented (`DramaHealth`, `YumeiroDramaProvider`).
+- **Context:** Dramas often didn't appear and the banner showed episodes that never played: studios that
+  refuse every episode were still shown, and each episode request could hang for 35 s.
+- **Decision:** One `DramaHealth` checks each studio in the background and hides studios that refuse
+  everything. Episode links run under one deadline (68 s): up to 3 tries on a hang, a refusal goes straight
+  to mirrors, mirrors share what's left.
+- **Consequences:** Studios come back by themselves when they recover. Evidence: live run b21, 24 of 24
+  shown dramas played (`docs/evidence/round3/drama-live-b21.txt`).
+
+### ADR-010: Forced downloading in the built-in engine (ForceGrab)
+
+- **Status:** Accepted, implemented (`online/download/ForceGrab.kt`).
+- **Context:** Some sources "don't allow downloads": they refuse a plain request, serve DASH, or keep the
+  sound in a separate track.
+- **Decision:** IDM-style engine: multi-connection byte ranges (2 connections on low-end phones, 4
+  otherwise; 4 MB chunks, resumable with a `.chunks` file), header escalation on 401/403 (the player's
+  headers, then browser UA + Origin + Sec-Fetch + WebView cookies, then without Referer), DASH saved as
+  one file (one container family per pair, main or phone-language audio, joined with `MediaMuxer`), and
+  torrents handed to TorrServer. DRM is never bypassed: protected tracks are skipped, and our own scan
+  catches `<ContentProtection>` tags media3 drops.
+- **Alternatives:** Hand everything to an external downloader (can't join DASH or split audio; such
+  sources are now kept in the app).
+- **Consequences:** More parallel requests per download, bounded by the shared client's per-host limit.
+  Evidence: `ForceGrabTest` (live byte-identical multi-connection and resumed downloads),
+  `ForceDownloadDeviceTest` (DASH save on the emulator).
+
+### ADR-011: Pinned extensions
+
+- **Status:** Accepted, implemented (`online/PinnedExtensions.kt`).
+- **Decision:** Up to 8 pins kept in prefs, shown first in "Show videos from" and as a chip bar under
+  the extension bar. 48 dp touch targets, labelled for TalkBack (UI/UX Pro Max rules).
 
 ## 11. Risks
 

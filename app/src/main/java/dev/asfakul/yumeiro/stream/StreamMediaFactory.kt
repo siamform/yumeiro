@@ -56,12 +56,27 @@ object StreamMediaFactory {
     /** Media buffer budget for a heap of [memoryClassMb]: ~1/6 of it, kept between 16 and 64 MB. */
     fun bufferBudgetBytes(memoryClassMb: Int): Int = (memoryClassMb / 6).coerceIn(16, 64) * 1024 * 1024
 
-    fun createPlayer(context: Context, uri: String): ExoPlayer {
+    /** Players that ever ran GPU effects: never reused for another video (the effect pipeline stays). */
+    private val withEffects: MutableSet<ExoPlayer> = Collections.newSetFromMap(Collections.synchronizedMap(WeakHashMap()))
+
+    /** Every `setVideoEffects` goes through here so [PlaybackSession] knows the player can't be reused. */
+    fun setEffects(player: ExoPlayer, effects: List<androidx.media3.common.Effect>) {
+        if (effects.isNotEmpty()) withEffects += player
+        player.setVideoEffects(effects)
+    }
+
+    fun usedEffects(player: ExoPlayer): Boolean = player in withEffects
+
+    /**
+     * [uriNow] is the key of the video the player is playing now (headers, DRM): a player reused by
+     * [dev.asfakul.yumeiro.player.PlaybackSession] for the next video looks up that video's request.
+     */
+    fun createPlayer(context: Context, uri: String, uriNow: () -> String = { uri }): ExoPlayer {
         val appContext = context.applicationContext
         val defaultUa = Util.getUserAgent(appContext, "Yumeiro")
         // Headers are looked up on every connection so a stream resolved (or refreshed) after the
         // player was created still gets its Referer / Cookie / token headers.
-        val http = RequestAwareHttpFactory(appContext, defaultUa) { StreamRepository.requestFor(uri) }
+        val http = RequestAwareHttpFactory(appContext, defaultUa) { StreamRepository.requestFor(uriNow()) }
         // HLS playlists pass through the ad-break filter (the mid-stream "black screen" ads).
         val adFilter = AdFilterDataSource.Factory(DefaultDataSource.Factory(appContext, http))
         val dataSourceFactory: DataSource.Factory = SafeSubtitleDataSource.Factory(adFilter)
@@ -78,7 +93,7 @@ object StreamMediaFactory {
             .setLiveMinSpeed(0.97f)
             .setLiveMaxSpeed(1.03f)
             .setDrmSessionManagerProvider(DrmSessionManagerProvider { item ->
-                val request = StreamRepository.requestFor(uri)
+                val request = StreamRepository.requestFor(uriNow())
                 if (request != null && request.drmScheme == DrmScheme.CLEARKEY && !request.clearKeys.isNullOrBlank()) {
                     DefaultDrmSessionManager.Builder()
                         .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)

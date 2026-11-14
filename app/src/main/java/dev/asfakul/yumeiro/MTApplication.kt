@@ -69,6 +69,8 @@ class MTApplication : Application(), ImageLoaderFactory {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, level) }
+        // A closed player kept for its short reopen grace goes at once when memory is tight.
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) runCatching { dev.asfakul.yumeiro.player.PlaybackSession.releaseIfDetached() }
     }
 
     override fun onLowMemory() {

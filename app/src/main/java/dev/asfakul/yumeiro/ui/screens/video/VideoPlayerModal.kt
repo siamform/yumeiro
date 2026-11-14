@@ -401,7 +401,10 @@ private fun VideoPlayerModalContent(
     var refreshAttempts by remember(video.id) { mutableStateOf(0) }
     /** Header variant being tried after a refusal; learned for the host once playback starts. */
     var ladderStep by remember(video.id) { mutableStateOf<dev.asfakul.yumeiro.online.AccessLadder.Step?>(null) }
-    val needsResolve = remember(video.id) { isNetworkStream && !StreamResolver.isConfident(originalRequest) }
+    // R15 (ADR-006): the player comes from the process-wide PlaybackSession (one player at a time;
+    // the next video reuses it instead of building a second one next to it).
+    val lease = remember(video.id) { dev.asfakul.yumeiro.player.PlaybackSession.acquire(context, video.id, video.uri) }
+    val needsResolve = remember(video.id) { !lease.resumed && isNetworkStream && !StreamResolver.isConfident(originalRequest) }
     var resolving by remember(video.id) { mutableStateOf(needsResolve) }
     var errorTitle by remember(video.id) { mutableStateOf<String?>(null) }
     var errorDetail by remember(video.id) { mutableStateOf<String?>(null) }
@@ -423,16 +426,18 @@ private fun VideoPlayerModalContent(
             dnsLabel = { NetworkSettings.dns.value.provider.label },
         )
     }
-    var retryJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    var stableJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var qualitySwitchJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    val exoPlayer = remember(video.id) {
-        StreamMediaFactory.createPlayer(context, video.uri).apply {
+    val exoPlayer = remember(lease) {
+        lease.player.apply {
+          if (lease.resumed) {
+            // Reopened before the grace ran out: same media, same place, same settings.
+            playWhenReady = autoPlayStart
+          } else {
             // Round 13: default speed and default quality from Settings → Quality and audio.
             dev.asfakul.yumeiro.player.VideoPrefs.speed.value.takeIf { it != 1f }?.let { playbackParameters = PlaybackParameters(it) }
             if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) runCatching {
-                setVideoEffects(listOf(dev.asfakul.yumeiro.player.Anime4kEffect(dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.value)))
+                dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(this, listOf(dev.asfakul.yumeiro.player.Anime4kEffect(dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.value)))
             }
             dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 }?.let { h ->
                 trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxVideoSize(Int.MAX_VALUE, h).build()
@@ -450,6 +455,7 @@ private fun VideoPlayerModalContent(
                 }
             }
             playWhenReady = autoPlayStart
+          }
         }
     }
     /**
@@ -477,11 +483,11 @@ private fun VideoPlayerModalContent(
         pendingSeekMs = t
         pendingSeekAt = System.currentTimeMillis()
     }
-    androidx.compose.runtime.DisposableEffect(exoPlayer) {
+    androidx.compose.runtime.DisposableEffect(lease) {
         dev.asfakul.yumeiro.watch.WatchTogether.bind(exoPlayer)
         onDispose { dev.asfakul.yumeiro.watch.WatchTogether.bind(null) }
     }
-    val healthMonitor = remember(exoPlayer) {
+    val healthMonitor = remember(lease) {
         PlaybackHealthMonitor(exoPlayer, onLowBandwidth = { action ->
             showToast(
                 when (action) {
@@ -609,20 +615,20 @@ private fun VideoPlayerModalContent(
     // hands over to the next source instead of leaving a black screen.
     if (onFatalError != null) {
         LaunchedEffect(video.id) {
-            // Gives up only on a source that is really stuck: no picture after 30 s *and* nothing
-            // new downloaded for the last 15 s (a slow but working source keeps its chance, up to 90 s).
-            var waited = 0L
-            var stalled = 0L
-            var lastBuffered = -1L
-            // Round 13: was 30 s / 15 s (up to 90 s). A source that sends nothing for 10 s after
-            // 12 s of trying now hands over, so rotation feels automatic instead of stuck.
-            while (waited < 45_000L && !(waited >= 12_000L && stalled >= 10_000L)) {
-                delay(1_000L); waited += 1_000L
-                val d = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value
-                if (d.firstFrame || playerError != null) return@LaunchedEffect
-                if (!exoPlayer.playWhenReady || resolving) { waited -= 1_000L; continue } // paused / still resolving: don't count
-                val buffered = exoPlayer.totalBufferedDuration
-                if (buffered > lastBuffered) { stalled = 0L; lastBuffered = buffered } else stalled += 1_000L
+            // Gives up only on a source that is really stuck: no picture after 12 s *and* nothing
+            // new downloaded for the last 10 s, or no picture after 45 s (paused time doesn't count).
+            // ADR-006 step 3b: the clock itself is a tested state machine (SourceWatch.kt).
+            val watch = dev.asfakul.yumeiro.player.StartWatch()
+            while (true) {
+                delay(1_000L)
+                val v = watch.tick(
+                    firstFrame = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value.firstFrame,
+                    failed = playerError != null,
+                    counting = exoPlayer.playWhenReady && !resolving,
+                    bufferedMs = exoPlayer.totalBufferedDuration,
+                )
+                if (v == dev.asfakul.yumeiro.player.StartWatch.Verdict.STARTED) return@LaunchedEffect
+                if (v == dev.asfakul.yumeiro.player.StartWatch.Verdict.GIVE_UP) break
             }
             val d = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value
             if (!d.firstFrame && playerError == null) {
@@ -638,17 +644,16 @@ private fun VideoPlayerModalContent(
         // Round 13: a source that started but then buffers forever (dead CDN, expired token
         // mid-file) also moves on to the next source, at the same position.
         LaunchedEffect(video.id) {
-            var stuck = 0L
-            var lastBuffered = -1L
+            val watch = dev.asfakul.yumeiro.player.StallWatch()
             while (true) {
                 delay(1_000L)
-                val buffering = exoPlayer.playbackState == Player.STATE_BUFFERING && exoPlayer.playWhenReady && !resolving && !waitingForNetwork
-                val firstFrame = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value.firstFrame
-                if (!buffering || !firstFrame || !dev.asfakul.yumeiro.network.Connectivity.online.value) { stuck = 0L; lastBuffered = -1L; continue }
-                val buffered = exoPlayer.bufferedPosition
-                if (buffered > lastBuffered + 500L) { lastBuffered = buffered; stuck = 0L } else stuck += 1_000L
-                if (stuck >= 25_000L) {
-                    stuck = 0L
+                val dead = watch.tick(
+                    buffering = exoPlayer.playbackState == Player.STATE_BUFFERING && exoPlayer.playWhenReady && !resolving && !waitingForNetwork,
+                    firstFrame = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value.firstFrame,
+                    online = dev.asfakul.yumeiro.network.Connectivity.online.value,
+                    bufferedPositionMs = exoPlayer.bufferedPosition,
+                )
+                if (dead) {
                     showToast("This source stopped sending video — trying another")
                     if (onFatalError(exoPlayer.currentPosition)) return@LaunchedEffect
                 }
@@ -658,97 +663,96 @@ private fun VideoPlayerModalContent(
 
     /** Applies error-specific, bounded recovery for network streams. */
     fun recoverFrom(error: PlaybackException) {
-        // Round 13: the GPU enhancement can't run on this video (HDR, protected or a GPU that
-        // refuses the shader): play without it instead of failing.
-        if (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED && dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value) {
-            runCatching { exoPlayer.setVideoEffects(emptyList()) }
-            showToast("Anime4K is off for this video (not supported here)")
-            exoPlayer.prepare(); exoPlayer.playWhenReady = true
-            return
-        }
         ladderStep = null
-        stableJob?.cancel()
+        lease.cancel("stable")
         val facts = ErrorFacts.from(error)
-        if (!isNetworkStream) {
-            if (onFatalError?.invoke(exoPlayer.currentPosition) == true) return
-            playerError = when {
-                error.errorCodeName.contains("FILE_NOT_FOUND") -> "This file was moved or deleted."
-                error.errorCodeName.contains("NO_PERMISSION") -> "Yumeiro can't read this file. Allow media access in Settings."
-                error.errorCodeName.contains("DECOD") || error.errorCodeName.contains("FORMAT") -> "This phone can't decode this video's format. It may play in another app or after converting to MP4."
-                else -> "This video couldn't play (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})."
-            }
-            isBuffering = false
-            return
-        }
         val current = StreamRepository.requestFor(video.uri) ?: originalRequest
         // Where the viewer actually is (they may have rewound before the resume point); the
         // resume point only stands in while the player hasn't reported a position yet.
         val pos0 = queuedSeekMs ?: exoPlayer.currentPosition.takeIf { it > 0L } ?: video.playbackPositionMs
-        val refused = facts.httpStatus in dev.asfakul.yumeiro.online.AccessLadder.ACCESS_CODES
-        // Round 10: the connection is gone (not the source). Retrying, refreshing or failing over
-        // now would only burn the attempts and end on an error card; wait for the network instead
-        // and pick up at the same position the moment it is back.
-        if (facts.isNetwork && !dev.asfakul.yumeiro.network.Connectivity.online.value) {
-            waitingForNetwork = true
-            isBuffering = true
-            showToast("You're offline — playback resumes when the connection is back")
-            return
+        // ADR-006 step 3b: the order of the steps is RecoveryRouter (pure, unit-tested); this
+        // function only performs the step it returns.
+        val step = dev.asfakul.yumeiro.player.RecoveryRouter.route(
+            dev.asfakul.yumeiro.player.RecoveryRouter.Input(
+                facts = facts,
+                gpuEffectFailed = error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED && dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value,
+                networkStream = isNetworkStream,
+                online = dev.asfakul.yumeiro.network.Connectivity.online.value,
+                canRefresh = dev.asfakul.yumeiro.stream.StreamRefreshers.find(originalRequest) != null,
+                refreshAttempts = refreshAttempts,
+                onlineSource = onFatalError != null,
+                quickRetries = onlineQuickRetries,
+                accessCodes = dev.asfakul.yumeiro.online.AccessLadder.ACCESS_CODES,
+            ),
+        ) {
+            if (onFatalError == null) dev.asfakul.yumeiro.online.AccessLadder.hint(originalRequest.url, originalRequest.pageUrl)
+            dev.asfakul.yumeiro.online.AccessLadder.next(originalRequest)
         }
-        // Refreshable sources (YouTube): signed URLs expire → fetch a fresh one, keep the position.
-        if (refused || facts.isNetwork) {
-            val refresher = dev.asfakul.yumeiro.stream.StreamRefreshers.find(originalRequest)
-            if (refresher != null && refreshAttempts < 2) {
+        android.util.Log.i("VideoPlayer", "${error.errorCodeName} (HTTP ${facts.httpStatus}) → ${step::class.simpleName}")
+        when (step) {
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.DropGpuEffect -> {
+                // The GPU enhancement can't run on this video (HDR, protected or a GPU that
+                // refuses the shader): play without it instead of failing.
+                runCatching { dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(exoPlayer, emptyList()) }
+                showToast("Anime4K is off for this video (not supported here)")
+                exoPlayer.prepare(); exoPlayer.playWhenReady = true
+                return
+            }
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.LocalFailure -> {
+                if (onFatalError?.invoke(exoPlayer.currentPosition) == true) return
+                playerError = when {
+                    error.errorCodeName.contains("FILE_NOT_FOUND") -> "This file was moved or deleted."
+                    error.errorCodeName.contains("NO_PERMISSION") -> "Yumeiro can't read this file. Allow media access in Settings."
+                    error.errorCodeName.contains("DECOD") || error.errorCodeName.contains("FORMAT") -> "This phone can't decode this video's format. It may play in another app or after converting to MP4."
+                    else -> "This video couldn't play (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})."
+                }
+                isBuffering = false
+                return
+            }
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.WaitForNetwork -> {
+                // The connection is gone (not the source): wait for it instead of burning attempts.
+                waitingForNetwork = true
+                isBuffering = true
+                showToast("You're offline — playback resumes when the connection is back")
+                return
+            }
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.RefreshLink -> {
+                // Signed URLs expire (YouTube): fetch a fresh one, keep the position.
                 refreshAttempts++
                 isBuffering = true
                 showToast("Refreshing the stream link")
                 coroutineScope.launch {
                     val fresh = runCatching { dev.asfakul.yumeiro.stream.StreamRefreshers.refresh(context, originalRequest) }.getOrNull()
+                    if (lease.revoked) return@launch
                     if (fresh != null) startResolved(fresh, pos0) else showErrorCard("Couldn't refresh the stream", "The video's link expired and a new one couldn't be fetched. Check your connection and retry.")
                 }
                 return
             }
-        }
-        // Online extension links refused by the host: try header variants (browser fetch metadata,
-        // site / host referer, no referer, player UA) before failing over to the next source.
-        // Re-probing the same URL (the old Refresh path) only burned the token's remaining life.
-        // Stream tab links (IPTV, direct links) get the same header ladder; when it is exhausted the
-        // normal recovery re-resolves the link (which probes the ladder again on a fresh token).
-        if (refused && onFatalError == null && facts.httpStatus != 451) {
-            dev.asfakul.yumeiro.online.AccessLadder.hint(originalRequest.url, originalRequest.pageUrl)
-            val attempt = dev.asfakul.yumeiro.online.AccessLadder.next(originalRequest)
-            if (attempt != null) {
+            is dev.asfakul.yumeiro.player.RecoveryRouter.Step.HeaderVariant -> {
+                // Header variants (browser fetch metadata, referer, player UA) before failing over.
+                val attempt = step.attempt
                 showToast("Access denied — ${attempt.step.label.lowercase()}")
                 ladderStep = attempt.step
                 startResolved(attempt.request, pos0)
                 return
             }
-        }
-        if (refused && onFatalError != null) {
-            val attempt = dev.asfakul.yumeiro.online.AccessLadder.next(originalRequest)
-            if (attempt != null) {
-                android.util.Log.i("VideoPlayer", "HTTP ${facts.httpStatus} → ${attempt.step}")
-                showToast("Access denied — ${attempt.step.label.lowercase()}")
-                ladderStep = attempt.step
-                startResolved(attempt.request, pos0)
-                return
-            }
-            if (onFatalError(pos0)) return
-            showErrorCard("Access denied (HTTP ${facts.httpStatus})", onlineRefusedDetail("Access denied (HTTP ${facts.httpStatus})"), canRetry = false)
-            return
-        }
-        // Round 13: online sources rotate right away. One quick retry for a network blip, then the
-        // next source; the slow retry / refresh chain below used to keep the first source for
-        // minutes, so it looked like rotation never happened.
-        if (onFatalError != null) {
-            if (facts.isNetwork && onlineQuickRetries < 1) {
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.QuickRetry -> {
                 onlineQuickRetries++
                 isBuffering = true
-                retryJob?.cancel()
-                retryJob = coroutineScope.launch { delay(800L); exoPlayer.prepare(); exoPlayer.playWhenReady = true }
+                lease.schedule("retry", 800L) { exoPlayer.prepare(); exoPlayer.playWhenReady = true }
                 return
             }
-            showToast("This source failed — trying the next one")
-            if (onFatalError(pos0)) return
+            is dev.asfakul.yumeiro.player.RecoveryRouter.Step.NextSource -> {
+                if (step.refused) {
+                    if (onFatalError?.invoke(pos0) == true) return
+                    showErrorCard("Access denied (HTTP ${facts.httpStatus})", onlineRefusedDetail("Access denied (HTTP ${facts.httpStatus})"), canRetry = false)
+                    return
+                }
+                showToast("This source failed — trying the next one")
+                if (onFatalError?.invoke(pos0) == true) return
+                // No other source: the generic recovery below gets its chance.
+            }
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.Generic -> Unit
         }
         val action = recovery.decide(facts, canRefresh = true, autoFormat = originalRequest.format == StreamFormat.AUTO || originalRequest.formatFromSource)
         val pos = exoPlayer.currentPosition
@@ -756,9 +760,7 @@ private fun VideoPlayerModalContent(
             is RecoveryAction.Retry -> {
                 isBuffering = true
                 showToast("${action.reason} (attempt ${action.attempt} of ${action.maxAttempts})")
-                retryJob?.cancel()
-                retryJob = coroutineScope.launch {
-                    delay(action.delayMs)
+                lease.schedule("retry", action.delayMs) {
                     exoPlayer.prepare()
                     exoPlayer.playWhenReady = true
                 }
@@ -1059,7 +1061,7 @@ private fun VideoPlayerModalContent(
     // Behave like a real player: keep the screen awake while a video plays or is about to resume
     // after buffering, and let it sleep again once paused, ended or closed.
     val hostView = androidx.compose.ui.platform.LocalView.current
-    var wantsPlay by remember(exoPlayer) { mutableStateOf(exoPlayer.playWhenReady) }
+    var wantsPlay by remember(lease) { mutableStateOf(exoPlayer.playWhenReady) }
     val keepAwake = dev.asfakul.yumeiro.player.ScreenWake.shouldKeepOn(isPlaying, isBuffering, wantsPlay, isEnded)
     DisposableEffect(hostView, keepAwake) {
         hostView.keepScreenOn = keepAwake
@@ -1095,7 +1097,7 @@ private fun VideoPlayerModalContent(
 
     // ExoPlayer listener lifecycle
     val currentOnProgressUpdate by rememberUpdatedState(onProgressUpdate)
-    DisposableEffect(exoPlayer) {
+    DisposableEffect(lease) {
         dev.asfakul.yumeiro.player.PlaybackDiagnostics.reset(video.uri, video.sizeBytes)
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
@@ -1130,11 +1132,7 @@ private fun VideoPlayerModalContent(
                     ladderStep?.let { dev.asfakul.yumeiro.online.AccessLadder.learn(video.uri, it) }
                     ladderStep = null
                     clearErrorCard()
-                    stableJob?.cancel()
-                    stableJob = coroutineScope.launch {
-                        delay(PlaybackRecovery.STABLE_RESET_MS)
-                        recovery.onStablePlayback()
-                    }
+                    lease.schedule("stable", PlaybackRecovery.STABLE_RESET_MS) { recovery.onStablePlayback() }
                     if (exoPlayer.duration > 0) {
                         durationMs = exoPlayer.duration
                     }
@@ -1182,21 +1180,23 @@ private fun VideoPlayerModalContent(
                 recoverFrom(error)
             }
         }
-        exoPlayer.addListener(listener)
-        healthMonitor.attach()
+        lease.addListener(listener)
+        healthMonitor.attach(lease)
 
         VideoSessionBridge.player = exoPlayer
         onDispose {
-            exoPlayer.removeListener(listener)
-            healthMonitor.detach()
-            retryJob?.cancel()
-            stableJob?.cancel()
+            lease.removeListener(listener)
+            healthMonitor.detach(lease)
+            lease.cancel("retry")
+            lease.cancel("stable")
             if (VideoSessionBridge.player === exoPlayer) VideoSessionBridge.player = null
             context.stopService(Intent(context, VideoPlaybackService::class.java))
-            val finalPos = exoPlayer.currentPosition
-            val finalDur = exoPlayer.duration
+            // The lease's own numbers: if the player already moved on to the next video, these
+            // are this video's last position and length (frozen at the handover).
+            val finalPos = lease.positionMs
+            val finalDur = lease.durationMs
             currentOnProgressUpdate(video.id, finalPos, finalDur)
-            exoPlayer.release()
+            dev.asfakul.yumeiro.player.PlaybackSession.detach(lease)
         }
     }
 
@@ -1208,7 +1208,7 @@ private fun VideoPlayerModalContent(
     // service to foreground once the app is already in the background, so the session is
     // connected while the player is visible (as soon as playback starts) and kept until the
     // player closes or background play is turned off in Settings.
-    DisposableEffect(exoPlayer, backgroundPlayEnabled) {
+    DisposableEffect(lease, backgroundPlayEnabled) {
         var controllerFuture: ListenableFuture<MediaController>? = null
         val connect = {
             if (controllerFuture == null && android.os.Build.FINGERPRINT != "robolectric") {
@@ -1225,17 +1225,17 @@ private fun VideoPlayerModalContent(
         }
         if (backgroundPlayEnabled) {
             if (exoPlayer.isPlaying || exoPlayer.playWhenReady) connect()
-            exoPlayer.addListener(sessionListener)
+            lease.addListener(sessionListener)
         }
         onDispose {
-            exoPlayer.removeListener(sessionListener)
+            lease.removeListener(sessionListener)
             controllerFuture?.let { runCatching { MediaController.releaseFuture(it) } }
             controllerFuture = null
             runCatching { context.stopService(Intent(context, VideoPlaybackService::class.java)) }
         }
     }
 
-    DisposableEffect(lifecycleOwner, exoPlayer) {
+    DisposableEffect(lifecycleOwner, lease) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 // Save the position now: after ON_STOP the system may kill the process at any time
@@ -1265,7 +1265,7 @@ private fun VideoPlayerModalContent(
             { isControlsVisible = false; PipController.enter(act, w, h, true) }
         } else null
     }
-    DisposableEffect(exoPlayer) {
+    DisposableEffect(lease) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
                 when (intent?.getIntExtra(PipController.EXTRA_CONTROL, 0)) {
@@ -1290,8 +1290,8 @@ private fun VideoPlayerModalContent(
     // Round 2 (heat): the phone got hot during playback, so drop the Anime4K GPU pass (the
     // picture stays at its engine level); it comes back when the phone cools down.
     val heat by dev.asfakul.yumeiro.player.HeatGuard.level.collectAsState()
-    var heatTouched by remember(exoPlayer) { mutableStateOf(false) }
-    LaunchedEffect(exoPlayer, heat) {
+    var heatTouched by remember(lease) { mutableStateOf(false) }
+    LaunchedEffect(lease, heat) {
         val gpuWanted = dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value || engineHeight != null
         if (!gpuWanted) return@LaunchedEffect
         if (heat == dev.asfakul.yumeiro.player.HeatGuard.Level.HOT || heatTouched) {
@@ -1301,8 +1301,8 @@ private fun VideoPlayerModalContent(
     }
 
     // Black-screen guard: audio playing but no new video frames → flush the decoder, then fail over.
-    val blackWatch = remember(exoPlayer) { dev.asfakul.yumeiro.player.BlackFrameWatchdog() }
-    LaunchedEffect(exoPlayer, isPlaying) {
+    val blackWatch = remember(lease) { dev.asfakul.yumeiro.player.BlackFrameWatchdog() }
+    LaunchedEffect(lease, isPlaying) {
         if (!isPlaying) return@LaunchedEffect
         while (true) {
             delay(1_000L)
@@ -1997,7 +1997,7 @@ private fun VideoPlayerModalContent(
             )
         }
 
-        val handle = remember(exoPlayer) {
+        val handle = remember(lease) {
             PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() }, selectAudio = { k -> selectAudioByKey(k) })
         }
         androidx.compose.runtime.CompositionLocalProvider(LocalPlayerDocked provides docked) {
@@ -2234,7 +2234,7 @@ private fun VideoPlayerModalContent(
         }
     }
     if (docked) {
-        val dockHandle = remember(exoPlayer) {
+        val dockHandle = remember(lease) {
             PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() }, selectAudio = { k -> selectAudioByKey(k) })
         }
         Column(Modifier.fillMaxWidth().weight(1f).testTag("watch_page")) {
@@ -2339,7 +2339,7 @@ internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, heigh
         if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kEffect(prefs.gpuTier.value))
     }
     runCatching {
-        player.setVideoEffects(fx)
+        dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(player, fx)
         val p = player.trackSelectionParameters
         player.trackSelectionParameters = p.buildUpon().setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true).build()
         player.trackSelectionParameters = p

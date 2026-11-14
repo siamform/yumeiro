@@ -52,6 +52,9 @@ class PlaybackHealthMonitor(
 
     fun attach() = player.addAnalyticsListener(this)
     fun detach() = player.removeAnalyticsListener(this)
+    /** R15: through the [PlaybackSession] lease, so a handover to the next video removes it first. */
+    fun attach(lease: PlaybackSession.Lease) = lease.addAnalyticsListener(this)
+    fun detach(lease: PlaybackSession.Lease) = lease.removeAnalyticsListener(this)
 
     /** Fresh snapshot including the live values read from the player. */
     fun snapshot(): PlaybackHealth {
