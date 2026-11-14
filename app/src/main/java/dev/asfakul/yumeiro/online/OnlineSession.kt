@@ -294,6 +294,17 @@ object OnlineSession {
     }
 
     /**
+     * Device tests only: adds [link] (for example a dead one) to the current episode's sources and
+     * returns its index, so a test can pick it by hand through [switchSource].
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun addLinkForTest(link: OnlineLink): Int {
+        var index = -1
+        _state.update { cur -> cur?.let { index = it.links.size; it.copy(links = it.links + link) } }
+        return index
+    }
+
+    /**
      * The current link failed: tries the next one automatically. Returns false when there's
      * nothing left to try (the player then shows its error).
      */

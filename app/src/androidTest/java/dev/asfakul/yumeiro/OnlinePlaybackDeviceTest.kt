@@ -154,8 +154,66 @@ class OnlinePlaybackDeviceTest {
         }
         shot("ui_after_open")
         if (rule.onAllNodesWithTag("online_detail_play", true).fetchSemanticsNodes().isNotEmpty()) rule.onNodeWithTag("online_detail_play", true).performClick()
+        // Phase 2: the time row shows 00:00, never "--:--", while the video opens. Sample the
+        // player's texts until the first frame (or 20 s) and fail on any "--:--".
+        val seen = LinkedHashSet<String>()
+        val t0 = System.currentTimeMillis()
+        while (System.currentTimeMillis() - t0 < 20_000 && !PlaybackDiagnostics.state.value.firstFrame) {
+            runCatching {
+                rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().forEach { root ->
+                    fun walk(n: androidx.compose.ui.semantics.SemanticsNode) {
+                        n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }
+                            ?.forEach { t -> if (':' in t.text && t.text.length <= 12) seen += t.text }
+                        n.children.forEach { walk(it) }
+                    }
+                    walk(root)
+                }
+            }
+            Thread.sleep(150)
+        }
+        Log.i("MTDeviceTest", "time labels while opening: $seen")
+        assertTrue("time row showed --:-- while opening: $seen", seen.none { "--:--" in it })
         val s = waitForPlayback("ui_flow")
         assertTrue("ui flow: $s", s.firstFrame)
+    }
+
+    /**
+     * Phase 2: rotation works, and a source the user picks by hand that turns out dead must rotate
+     * again on its own. Play a real title, add a dead source to its list, pick it through the same
+     * call the source panel uses, and require playback to come back on a working source.
+     */
+    @Test fun d_manualPickOfADeadSourceRotatesAgain() {
+        installArchive()
+        val api = ExtensionManager.provider("Internet Archive")!!
+        val url = playableUrl ?: "https://archive.org/details/his_girl_friday"
+        val detail = runBlocking { OnlineRepository.load(api, url) }
+        rule.runOnUiThread { dev.asfakul.yumeiro.online.OnlineSession.play(ctx, detail) }
+        val first = waitForPlayback("dead_pick_first", 120_000)
+        assertTrue("title did not play first: $first", first.firstFrame)
+        rule.waitUntil(60_000) { dev.asfakul.yumeiro.online.OnlineSession.state.value?.linksDone == true }
+        val dead = "http://127.0.0.1:9/yumeiro-dead-source.mp4"
+        val deadIndex = dev.asfakul.yumeiro.online.OnlineSession.addLinkForTest(
+            dev.asfakul.yumeiro.online.OnlineLink("Dead source", "test", dead, null, 720, isHls = false, isDash = false, headers = emptyMap()),
+        )
+        assertTrue("dead link not added", deadIndex >= 0)
+        val uris = LinkedHashSet<String>()
+        PlaybackDiagnostics.reset("")
+        rule.runOnUiThread { dev.asfakul.yumeiro.online.OnlineSession.switchSource(ctx, deadIndex, 5_000) }
+        // The pick must really be tried (a manual pick wins), then rotation must move off it.
+        rule.waitUntil(30_000) { PlaybackDiagnostics.state.value.uri.also { if (it.isNotEmpty()) uris += it }.contains("yumeiro-dead-source") }
+        val ok = runCatching {
+            rule.waitUntil(120_000) {
+                val d = PlaybackDiagnostics.state.value
+                if (d.uri.isNotEmpty()) uris += d.uri
+                val st = dev.asfakul.yumeiro.online.OnlineSession.state.value
+                d.firstFrame && !d.uri.contains("yumeiro-dead-source") && st?.linkIndex != deadIndex
+            }
+        }.isSuccess
+        val st = dev.asfakul.yumeiro.online.OnlineSession.state.value
+        Log.i("MTDeviceTest", "dead pick: rotated=$ok linkIndex=${st?.linkIndex} dead=$deadIndex failed=${st?.failed?.map { it.takeLast(40) }} uris=${uris.map { it.take(90) }}")
+        shot("dead_pick_final")
+        assertTrue("a dead manual pick did not rotate to a working source: uris=$uris state=${st?.phase}/${st?.message}", ok)
+        assertTrue("dead source not marked failed", st?.failed?.contains(dead) == true)
     }
 
     companion object {
