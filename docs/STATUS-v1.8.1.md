@@ -29,7 +29,7 @@ sandbox (no KVM), so nothing below was confirmed on a real device.
 - Quality: the live YouTube test cannot run from the sandbox (YouTube blocks datacenter IPs). It needs a run on a home connection.
 - Heat: measured only in code and tests. Next: `adb shell dumpsys thermalservice` and `dumpsys batterystats` during 30 minutes of video on a real phone, before and after.
 - Notifications: the maker settings pages are well-known class names. Each one must be opened on a real phone of that brand, since makers rename them between versions (the guide falls back to App info if a page is missing).
-- TV APK was not rebuilt locally at 1.8.1 before release; the release workflow builds it.
+- TV: the 1.8.1 TV preview APK builds (versionCode 16, all four ABIs), but it was not run on a TV or TV emulator.
 
 ## Future (proposed)
 
