@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import androidx.compose.ui.focus.onFocusChanged
 import android.content.Context
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -204,9 +205,11 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
     val virtual = if (loop) n * LOOP_LAPS else n
     val pager = rememberPagerState(initialPage = if (loop) (LOOP_LAPS / 2) * n else 0) { virtual }
     var held by remember { mutableStateOf(false) }
+    // Also paused while D-pad / keyboard focus is inside (WAI carousel rule; see HeroCarousel).
+    var focused by remember { mutableStateOf(false) }
     val auto = remember { android.os.Build.FINGERPRINT != "robolectric" }
-    LaunchedEffect(n, held, reduced) {
-        if (!auto || reduced || held || n < 2) return@LaunchedEffect
+    LaunchedEffect(n, held, focused, reduced) {
+        if (!auto || reduced || held || focused || n < 2) return@LaunchedEffect
         while (true) {
             delay(6_000)
             if (!pager.isScrollInProgress && dev.asfakul.yumeiro.player.HeatGuard.allowDecorativeMotion()) pager.animateScrollToPage((pager.currentPage + 1).coerceAtMost(virtual - 1))
@@ -219,6 +222,7 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
             pageSpacing = 10.dp,
             key = { "${slides[it % n].key}#$it" },
             modifier = Modifier.fillMaxWidth().testTag(tag)
+                .onFocusChanged { if (focused != it.hasFocus) focused = it.hasFocus }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false); held = true

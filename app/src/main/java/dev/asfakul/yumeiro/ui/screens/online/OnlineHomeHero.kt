@@ -5,6 +5,12 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.border
@@ -98,16 +104,31 @@ internal fun HeroCarousel(
     val laps = if (n > 1) HERO_LAPS else 1
     val pager = rememberPagerState(initialPage = if (n > 1) (laps / 2) * n else 0) { n * laps }
     val saved by OnlineBookmarks.items.collectAsState()
-    LaunchedEffect(n) {
-        while (n > 1) {
+    // Auto-advance stops while a finger is on it, while D-pad / keyboard focus is inside (a slide
+    // moving under a focused card made focus and bring-into-view fight; WAI carousel rule) and
+    // with reduced motion.
+    var held by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var focused by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val reduced = androidx.compose.runtime.remember { dev.asfakul.yumeiro.ui.components.isReducedMotion(context) }
+    LaunchedEffect(n, held, focused, reduced) {
+        if (n < 2 || held || focused || reduced) return@LaunchedEffect
+        while (true) {
             delay(6_500)
-            if (!pager.isScrollInProgress) pager.animateScrollToPage(pager.currentPage + 1, animationSpec = androidx.compose.animation.core.tween(650, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            if (!pager.isScrollInProgress && dev.asfakul.yumeiro.player.HeatGuard.allowDecorativeMotion()) pager.animateScrollToPage(pager.currentPage + 1, animationSpec = androidx.compose.animation.core.tween(650, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
     }
     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     Column(modifier.fillMaxWidth().testTag("online_hero")) {
         HorizontalPager(
-            pager, Modifier.fillMaxWidth().height(HERO_HEIGHT),
+            pager,
+            Modifier.fillMaxWidth().height(HERO_HEIGHT)
+                .onFocusChanged { if (focused != it.hasFocus) focused = it.hasFocus }
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false); held = true
+                        waitForUpOrCancellation(); held = false
+                    }
+                },
             contentPadding = PaddingValues(horizontal = if (n > 1) 20.dp else 16.dp),
             pageSpacing = 10.dp,
             key = { val r = it % n; (if (resume != null && r == 0) "resume:${resume.key}" else items[r - lead].key) + "#$it" },
