@@ -220,6 +220,19 @@ fun BackgroundActivityCard() {
             "settings_battery", status = if (battery) "Unrestricted" else "Optimised", ok = battery,
             onClick = { PermissionCenter.openBatterySettings(context) },
         )
+        // Round 2 (order 9): the full checklist plus this phone maker's own steps.
+        var guide by remember { mutableStateOf(false) }
+        var guideTick by remember { mutableStateOf(0) }
+        LifecycleResumeEffect(Unit) { guideTick++; onPauseOrDispose { } }
+        val gs = remember(guideTick, guide) { dev.asfakul.yumeiro.notify.ReliabilityGuide.status(context) }
+        SettingsDivider()
+        SettingsActionRow(
+            "Keep notifications on time",
+            if (gs.vendor.aggressive) "Step-by-step for ${gs.vendor.name}: auto-start, battery and sleeping apps" else "Check everything that can hold notifications back",
+            "settings_reliability_guide", status = if (gs.allGood) "All set" else "Check", ok = gs.allGood,
+            onClick = { guide = true },
+        )
+        if (guide) dev.asfakul.yumeiro.ui.screens.extras.ReliabilityGuideDialog(onClose = { guide = false })
         Text(if (dev.asfakul.yumeiro.notify.FcmPush.configured()) "News, updates and service alerts arrive instantly with Instant alerts. New episodes still rely on these checks being allowed to run; for on-time episode alerts, turn on Reliable alerts under Notifications (free, with ntfy)."
             else "Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
