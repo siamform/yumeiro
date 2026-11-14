@@ -114,7 +114,7 @@ object BackdropSettings {
         if (size > 60L * 1024 * 1024) return@withContext "That picture is over 60 MB. Pick a smaller one."
         if (type.startsWith("video/")) return@withContext "That's a video. Pick a photo instead."
         val result = runCatching {
-            val bmp = decodeScaled(context, uri, 540) ?: return@runCatching "This picture's format isn't supported here ($type). Try a JPEG or PNG."
+            val bmp = decodeScaled(context, uri, 540) ?: return@runCatching "This picture's format isn't supported here" + (type.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "") + ". Try a JPEG or PNG."
             if (bmp.width < 200 && bmp.height < 200) { bmp.recycle(); return@runCatching "That picture is too small (${bmp.width} × ${bmp.height}). Use one at least 200 × 200 px." }
             val tmp = File(context.filesDir, "$FILE.tmp")
             tmp.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, it) }

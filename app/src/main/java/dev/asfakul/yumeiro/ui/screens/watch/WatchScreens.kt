@@ -231,7 +231,9 @@ enum class WatchKind {
     /** Round 13: a direct video (a file or stream link): only the player is coming. */
     DIRECT,
     /** Round 13: a title that opens its own page (poster, info, episodes) before playback. */
-    PAGE;
+    PAGE,
+    /** Round 2: not known yet whether a page or the player comes next: one neutral loader. */
+    NEUTRAL;
 
     companion object {
         private val MEDIA_URL = Regex("""\.(m3u8|mpd|mp4|mkv|webm|mov|avi|ts|flv)(\?|#|$)""", RegexOption.IGNORE_CASE)
@@ -241,13 +243,17 @@ enum class WatchKind {
          * source did the last time ([opensPage] = the same source and type opened a title page).
          */
         fun forOpening(type: String?, url: String, opensPage: Boolean?): WatchKind {
+            // Round 2, order 3: the type-based guess showed a film or player skeleton before a page
+            // (and the reverse) on a source's first taps. Only certain facts pick a shape now: a
+            // media link or live channel plays directly; otherwise [opensPage] must come from the
+            // same source + type behaving the same way twice in a row (OpeningKinds). Anything
+            // else gets the neutral loader.
             val t = type?.lowercase().orEmpty()
-            if (MEDIA_URL.containsMatchIn(url) || "live" in t || t == "direct" || t == "others") return DIRECT
-            val k = of(type)
-            return when {
-                opensPage == true && k != SERIES -> PAGE
-                opensPage == false && k == GENERIC -> DIRECT
-                else -> k
+            if (MEDIA_URL.containsMatchIn(url) || "live" in t || t == "direct") return DIRECT
+            return when (opensPage) {
+                true -> if (of(type) == SERIES) SERIES else PAGE
+                false -> DIRECT
+                null -> NEUTRAL
             }
         }
 
@@ -272,6 +278,11 @@ enum class WatchKind {
 fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
     when (kind) {
         WatchKind.GENERIC -> WatchDetailsSkeleton(modifier = modifier)
+        // Neither a page layout nor player controls: two soft lines, fits both flows.
+        WatchKind.NEUTRAL -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_neutral"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SkeletonBlock(width = 200.dp, height = 12.dp)
+            SkeletonBlock(width = 140.dp, height = 12.dp)
+        }
         WatchKind.DIRECT -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_direct"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 repeat(4) { SkeletonBlock(width = 40.dp, height = 40.dp, shape = CircleShape) }

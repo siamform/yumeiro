@@ -82,7 +82,7 @@ class Round13LogicTest {
     @Test fun watch_kind_for_opening() {
         assertEquals(WatchKind.DIRECT, WatchKind.forOpening("Movie", "https://cdn/x/video.m3u8?t=1", null))
         assertEquals(WatchKind.DIRECT, WatchKind.forOpening("Live", "https://site/channel", null))
-        assertEquals(WatchKind.MOVIE, WatchKind.forOpening("Movie", "https://site/movie/1", null))
+        assertEquals(WatchKind.NEUTRAL, WatchKind.forOpening("Movie", "https://site/movie/1", null)) // Round 2: no guessing
         assertEquals(WatchKind.PAGE, WatchKind.forOpening("Movie", "https://site/movie/1", true))
         assertEquals(WatchKind.SERIES, WatchKind.forOpening("TvSeries", "https://site/show/1", true))
         assertEquals(WatchKind.DIRECT, WatchKind.forOpening(null, "https://site/x", false))
