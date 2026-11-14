@@ -2,6 +2,49 @@
 
 All notable changes to Yumeiro.
 
+## v1.8.0: player first
+
+1.5.0 never showed "Yumeiro is not responding". 1.8.0 audits the player against it, moves heavy work off the main thread and rebuilds source handling, then fixes performance, Yumix, Music, Manga, backup and notifications.
+
+### Player
+- No more freezes or "not responding": source gathering runs on one background thread, the list publishes at most every 0.7 s, audio language detection is computed once per link (it ran thousands of regexes per re-sort on the main thread) and sorting uses precomputed keys.
+- Video with no audio fixed: on phones the audio path is always decoded to PCM (some devices accepted a passthrough format and played silence) and FFmpeg is tried first for surround formats (AC-3, E-AC-3, DTS, TrueHD).
+- The captcha page is blocked: a site check is solved silently in the background and never opens the blank interactive page.
+- Automatic source rotation: one quick retry, then the next source. A source that shows no first frame (12 s, 10 s on fast links) or stalls for 25 s moves on by itself.
+- Picking a language only changes the audio track of the video that is playing; it never switches to another source.
+- Every video has a quality selector, YouTube included. Streams without quality options get Yumeiro's own ladder (snapped to 144p to 4320p) from the real track heights.
+- Missing episode thumbnails are filled in from ani.zip and TVmaze.
+
+### Sources
+- Never all at once: 10 are shown, Load more fetches 10 more each time.
+- Gathered silently in the background, staggered, never simultaneous. Playback starts the moment the first good source is ready; discovery never blocks it.
+
+### Loading skeletons
+- The skeleton matches what is opening: direct videos (only the player is coming), movies, series, and titles that open their own page first. Yumeiro remembers which sources open a page.
+
+### Settings
+- Settings → Player → Player info: a "Stats for nerds" overlay shown with the controls. Pick the fields: resolution, source, provider, quality, video codec, audio codec, frame rate, video bitrate, buffer, dropped frames, decoder, speed, audio track, subtitle track and audio boost.
+- Settings → Audio → Quality and audio: default quality (Auto), default audio (Sub/Dub, Sub by default), default speed, video decoder (Hardware+ recommended), video renderer (Auto recommended), Anime4K enhancement (sharpen for clean 1080p sources), Anime4K GPU tier (mid-range by default), default player, player controls (reorder or hide buttons) and resume playback.
+
+### Performance
+- Smoother scrolling, especially on low-end phones: stable list keys, low-end devices (3 GB or less, 4 cores or less) skip crossfades and decode posters in 16-bit.
+- The extension market no longer hangs: filtering and the source list are worked out off the main thread.
+- Jump back in shows the real last-played item again, video or audio, at the correct position, as in 1.5.0.
+
+### Yumix, Music and Manga
+- Yumix: the extension bar hides when you scroll down and comes back on a small scroll up. Search inside "Show videos from" a section (it loads more pages as you search, up to 2000 titles). Yumix Drama is on by default.
+- Music: Online by default when online, On-device when offline, switching automatically (a mode you pick yourself is kept while it works). The online feed is endless: after the home shelves end, "Similar to ..." shelves keep coming from your history and the songs on the page, spread over artists (concept from ArchiveTune).
+- Manga: redesigned like Yumix, with a source strip, a source sheet with search and language filters, live search, Popular/Latest/Saved, and a bar that hides on scroll.
+
+### Data and system
+- Restore is at the top of the backup center: restore the latest backup, pick a file, or find the backup folder (Download/Yumeiro/Backups).
+- Notifications work when the app is closed and arrive one at a time at their proper times (a background clock every 3 hours, at least 12 minutes between notifications, re-armed after reboot and update).
+- A gallery photo theme now applies across the whole app (correct rotation, lighter scrim, shared decoded image).
+
+### Build
+- One universal APK per edition, with native libraries for arm64-v8a, armeabi-v7a, x86 and x86_64. `release-Yumeiro-v<version>.apk` for phones and tablets (Android 9 and newer) and `Yumeiro-TV-v<version>.tv.apk` for TVs (Android 7.0 and newer). No more per-processor files.
+- Note: phones on Android 7 and 8 stay on 1.7.0 (the phone baseline is now Android 9).
+
 ## v1.7.0: bring back the legacy
 
 1.5.0 was the release people loved; 1.6.0 felt slow, reloaded everything, lost data on restore and mixed the phone and TV experience. 1.7.0 goes back to what made Yumeiro good (fast, reliable, yours) and fixes those problems at the root.

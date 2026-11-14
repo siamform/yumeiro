@@ -18,7 +18,7 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
   <a href="https://github.com/siamform/yumeiro/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/siamform/yumeiro?style=for-the-badge&color=F5C46B&labelColor=16161A" /></a>
 </p>
 <p>
-  <img alt="Android 7+" src="https://img.shields.io/badge/Android-7%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
+  <img alt="Android 9+ (TV 7+)" src="https://img.shields.io/badge/Android-9%2B%20%C2%B7%20TV%207%2B-F5C46B?style=flat-square&logo=android&logoColor=white&labelColor=16161A" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-F5C46B?style=flat-square&logo=kotlin&logoColor=white&labelColor=16161A" />
   <a href="LICENSE"><img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-F5C46B?style=flat-square&labelColor=16161A" /></a>
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
@@ -45,7 +45,7 @@ like a crowd of new users would. Full notes: [CHANGELOG.md](CHANGELOG.md).
 | **New video page** | A YouTube / HiAnime-style watch page under a docked player, with sources, dub, episodes and Live TV hub. |
 | **Video player** | **Pinch to zoom** (100–400 %, pan, snap back, reset pill). **Subtitle style**: size, colour, outline / shadow / box, bold and height, with a live preview — and subtitles still load from your device (.srt, .vtt, .ass, .ttml), online search, delay sync and track select. Playback facts (size, duration, audio). Seek fixes. |
 | **Android TV & Fire TV** | A left navigation rail, visible focus rings and full remote control. See [TV support](#android-tv-google-tv-and-fire-tv). |
-| **Runs on more devices** | Android 7.0+ (was 9), and smaller downloads: one APK per processor (`arm64-v8a`, `armeabi-v7a`) plus the universal APK. |
+| **One APK for every device** | A single universal APK per edition (arm64-v8a, armeabi-v7a, x86, x86_64 inside). Phones and tablets on Android 9+, Yumeiro TV on Android 7.0+. |
 | **Instant notices** | Optional Firebase push for announcements, updates and maintenance through the existing Yumeiro Cloud Worker. Off-switch per kind; no account, no IDs shared with anyone else. |
 | **Safer** | Fixed antivirus false positives at the cause (0 / 66 on VirusTotal for the preview build), a login-CSRF in tracker sign-in, private-file access through "Open with", backup restores that could carry code, and server abuse that could have stopped push for everyone. Details in [docs/security](docs/security). |
 
@@ -243,7 +243,7 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
-Android 7.0 or newer. Phones, tablets, Android TV, Google TV and Fire TV. Pick `arm64-v8a` (most devices), `armeabi-v7a` (older 32-bit phones and many TV sticks) or the universal APK.
+Phones and tablets: Android 9 or newer, `release-Yumeiro-v<version>.apk`. Android TV, Google TV and Fire TV: Android 7.0 or newer, `Yumeiro-TV-v<version>.tv.apk`. Each is one universal APK that runs on every processor (arm64-v8a, armeabi-v7a, x86, x86_64).
 
 ## Verify a release
 
