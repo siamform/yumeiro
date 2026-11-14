@@ -45,15 +45,30 @@ class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () ->
         val lock = locks.getOrPut(key(c, platform.slug)) { Mutex() }
         return lock.withLock {
             states[key(c, platform.slug)]?.takeIf { now() - it.at < ttlMs }?.let { return@withLock it.state }
-            val sample = shows.firstOrNull() ?: return@withLock State.UNKNOWN
-            val state = withTimeoutOrNull(30_000) {
-                runCatching {
-                    val s = c.series(sample.url)
-                    if (c.streams(s, 1).sources.isNotEmpty()) State.OK else State.DOWN
-                }.getOrElse { e -> if (refused(e)) State.DOWN else State.UNKNOWN }
-            } ?: State.UNKNOWN
-            // UNKNOWN (timeout / our network) is kept briefly so a flaky moment isn't remembered.
-            val e = Entry(state, if (state == State.UNKNOWN) now() - ttlMs + 60_000L else now())
+            if (shows.isEmpty()) return@withLock State.UNKNOWN
+            // The shelf itself just loaded, so our network works: a studio that refuses, hangs or
+            // 404s on its first two titles can't play for the user either. Only a local network
+            // failure (no DNS / no route) leaves the shelf visible.
+            var local = false
+            var refusedHard = false
+            var state = State.DOWN
+            for (sample in shows.take(2)) {
+                val r = withTimeoutOrNull(20_000) {
+                    runCatching { c.streams(c.series(sample.url), 1).sources.isNotEmpty() }
+                }
+                if (r?.getOrNull() == true) { state = State.OK; break }
+                val e = r?.exceptionOrNull()
+                if (e != null && localNetwork(e)) local = true
+                if (e != null && refused(e)) refusedHard = true
+            }
+            if (state == State.DOWN && local && !refusedHard) state = State.UNKNOWN
+            // Soft failures (timeouts) are rechecked after 10 minutes, refusals after 30.
+            val at = when {
+                state == State.UNKNOWN -> now() - ttlMs + 60_000L
+                state == State.DOWN && !refusedHard -> now() - ttlMs + 10 * 60_000L
+                else -> now()
+            }
+            val e = Entry(state, at)
             names.forEach { n -> states[key(c, n)] = e }
             state
         }
@@ -63,7 +78,12 @@ class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () ->
         /** The server answered and said no (HTTP 4xx / 5xx, or no stream in a valid answer). */
         fun refused(e: Throwable): Boolean {
             val m = e.message.orEmpty()
-            return Regex("""answered HTTP (4\d\d|5\d\d)""").containsMatchIn(m) || m.startsWith("No stream for episode") || m.contains("has no player")
+            return Regex("""answered HTTP (4\d\d|5\d\d)""").containsMatchIn(m) || m.startsWith("No stream for episode") || m.contains("has no player") ||
+                Regex("""\((4\d\d|5\d\d)\)""").containsMatchIn(m)
+        }
+
+        fun localNetwork(e: Throwable): Boolean = generateSequence(e) { it.cause }.any {
+            it is java.net.UnknownHostException || it is java.net.ConnectException || it is java.net.NoRouteToHostException
         }
 
         fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
