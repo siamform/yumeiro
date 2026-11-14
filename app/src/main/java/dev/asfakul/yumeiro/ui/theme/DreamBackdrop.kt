@@ -98,8 +98,10 @@ object BackdropSettings {
      * Round 2, order 8: copies the picked image into app storage, downscaled (the backdrop is
      * drawn blurred, so 540 px is plenty). Returns null when it worked, else the reason to show.
      *
-     * The old import decoded with BitmapFactory only and reported every problem as "couldn't be
-     * opened": HEIC/AVIF photos on phones whose BitmapFactory lacks them, cloud items that need a
+     * Root cause of the "picture couldn't be opened" toast (since the R1-R11b redesign, PR #27):
+     * the size probe was `openInputStream(uri)?.use { decodeStream(.., inJustDecodeBounds) } ?: fail`,
+     * and decodeStream always returns null in bounds-only mode, so every picture was refused.
+     * The old import also decoded with BitmapFactory only and reported every problem the same way: HEIC/AVIF photos on phones whose BitmapFactory lacks them, cloud items that need a
      * moment to download, and any failure after the file was already saved all ended the same way.
      * Now Android 9+ decodes with ImageDecoder (HEIF, AVIF, WebP, EXIF turns applied, software
      * bitmap so it can be scaled and saved), older phones with BitmapFactory, and each failure
@@ -152,7 +154,10 @@ object BackdropSettings {
             // ImageDecoder refused (rare formats): fall through to BitmapFactory.
         }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: throw java.io.FileNotFoundException(uri.toString())
+        // decodeStream returns null with inJustDecodeBounds by design; only a missing stream is an error
+        // (the 1.8.0 import treated that null as failure, so every picture was refused).
+        val input = cr.openInputStream(uri) ?: throw java.io.FileNotFoundException(uri.toString())
+        input.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
         while (bounds.outWidth / (sample * 2) >= target && bounds.outHeight / (sample * 2) >= target) sample *= 2
