@@ -114,7 +114,8 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
         val c = catalog(cid)
         val s = c.series(seriesUrl)
         val eps = (1..s.episodes).map { n ->
-            newEpisode("drama:${c.id}|${s.url}|$n") { name = "Episode $n"; episode = n; season = 1 }
+            // fix = false: CloudStream's default fixUrl() would turn the id into "$mainUrl/drama:..." (Round 2 bug).
+            newEpisode("drama:${c.id}|${s.url}|$n", { name = "Episode $n"; episode = n; season = 1 }, false)
         }
         return newTvSeriesLoadResponse(s.title, url, TvType.AsianDrama, eps) {
             posterUrl = s.cover
@@ -124,7 +125,7 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val parts = data.removePrefix("drama:").split('|')
+        val parts = stripId(data).split('|')
         if (parts.size < 3) return false
         val c = catalog(parts[0])
         val n = parts.last().toIntOrNull() ?: return false
@@ -147,13 +148,24 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
     }
 
     private fun DramaShow.toResult(c: DramaCatalog): SearchResponse =
-        newTvSeriesSearchResponse(title, "drama:${c.id}|$url", TvType.AsianDrama) {
+        newTvSeriesSearchResponse(title, "drama:${c.id}|$url", TvType.AsianDrama, fix = false) {
             posterUrl = cover
         }
 
     companion object {
+        /**
+         * The part after `drama:`. Accepts ids that were rewritten by CloudStream's fixUrl()
+         * (`https://yumeiro.click/drama/drama:onshort|...`), which 1.8.0 and earlier saved in
+         * history, bookmarks and Yumix feeds.
+         */
+        fun stripId(id: String): String {
+            val t = id.trim()
+            val i = t.indexOf("drama:")
+            return if (i >= 0) t.substring(i + "drama:".length) else t
+        }
+
         fun parseId(url: String): Pair<String, String> {
-            val body = url.removePrefix("drama:")
+            val body = stripId(url)
             val cid = body.substringBefore('|')
             return cid to body.substringAfter('|')
         }
