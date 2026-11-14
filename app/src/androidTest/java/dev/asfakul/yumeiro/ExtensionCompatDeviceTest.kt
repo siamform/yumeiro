@@ -24,7 +24,7 @@ import java.io.IOException
 class ExtensionCompatDeviceTest {
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    @Test fun popularExtensionsLoad() = runBlocking {
+    @Test fun popularExtensionsLoad() = runBlocking<Unit> {
         ExtensionManager.start(ctx); ExtensionManager.ensureLoaded(ctx)
         val failures = mutableListOf<String>()
         var loaded = 0

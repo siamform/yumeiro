@@ -131,7 +131,7 @@ object StreamMediaFactory {
             // The byte budget is capped by the app's heap so 1080p/4K extension streams can't
             // grow the buffer until the process is killed (the "freeze then force close" bug).
             val memoryClass = (appContext.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)?.memoryClass ?: 192
-            builder.setLoadControl(
+            builder.setLoadControl(StarvationSafeLoadControl(
                 DefaultLoadControl.Builder()
                     .setBufferDurationsMs(
                         /* minBufferMs = */ 20_000,
@@ -142,7 +142,7 @@ object StreamMediaFactory {
                     .setTargetBufferBytes(bufferBudgetBytes(memoryClass))
                     .setPrioritizeTimeOverSizeThresholds(false)
                     .build()
-            )
+            ))
         }
         return builder.build().also { factories[it] = msf; adFilters[it] = adFilter }
     }

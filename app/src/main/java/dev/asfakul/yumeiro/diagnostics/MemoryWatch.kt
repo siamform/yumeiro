@@ -178,12 +178,31 @@ object MainThreadWatchdog {
                     val msg = "main thread stalled > ${STALL_MS}ms\n    at $stack"
                     Log.w("YuStall", msg)
                     MemoryWatch.breadcrumb("stall " + (Looper.getMainLooper().thread.stackTrace.firstOrNull()?.toString() ?: "?"))
-                    // Wait for it to recover before measuring again.
-                    while (ran.get() == 0L && running) runCatching { Thread.sleep(100) }
+                    // Wait for it to recover before measuring again. A long stall is sampled every
+                    // second: the first sample alone often shows framework code (Compose slot table,
+                    // binder) and not which screen or call of ours is slow.
+                    var nextSample = SystemClock.uptimeMillis() + 1000
+                    while (ran.get() == 0L && running) {
+                        runCatching { Thread.sleep(100) }
+                        if (ran.get() == 0L && SystemClock.uptimeMillis() >= nextSample) {
+                            nextSample += 1000
+                            val trace = Looper.getMainLooper().thread.stackTrace
+                            Log.w("YuStall", "still stalled ${SystemClock.uptimeMillis() - posted}ms, ours: " + appFrames(trace) +
+                                " | top: " + trace.take(3).joinToString(" < ") { it.className.substringAfterLast('.') + "." + it.methodName })
+                        }
+                    }
                     Log.w("YuStall", "main thread recovered after ${SystemClock.uptimeMillis() - posted}ms")
                 }
                 runCatching { Thread.sleep(1000) }
             }
         }, "yu-watchdog").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
+
+    /** The first frames that belong to the app (composables included), innermost first. */
+    internal fun appFrames(trace: Array<StackTraceElement>, max: Int = 8): String =
+        trace.asSequence()
+            .filter { it.className.startsWith("dev.asfakul.yumeiro.") && !it.className.startsWith("dev.asfakul.yumeiro.diagnostics.") }
+            .filter { !it.className.endsWith("ExtensionGuard") || it.methodName != "install\$lambda\$1" }
+            .map { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber }
+            .distinct().take(max).joinToString(" < ").ifEmpty { "(framework only)" }
 }

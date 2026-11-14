@@ -150,7 +150,7 @@ class StabilityStressDeviceTest {
     private fun tap(tag: String): Boolean = runCatching {
         rule.waitUntil(20_000) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag(tag, true).performClick(); true
-    }.getOrElse { log("no node $tag"); false }
+    }.getOrElse { log("no node $tag: ${it.javaClass.simpleName}: ${it.message?.take(300)}"); false }
 
     @Test fun pagerFocusAndScrollStress() {
         val dm = ctx.resources.displayMetrics

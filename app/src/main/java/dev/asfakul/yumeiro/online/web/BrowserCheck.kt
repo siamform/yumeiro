@@ -77,29 +77,69 @@ object BrowserCheck {
         "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
 
     fun init(context: Context) {
-        appContext = context.applicationContext
-        // WebView start-up must happen on the main thread. Reading the default user agent from a
-        // worker thread makes it wait for the main thread — a dead lock (frozen app, then "isn't
-        // responding") whenever the main thread was itself waiting for that worker.
-        if (onMainThread()) userAgent() else main.post { runCatching { userAgent() } }
+        val app = context.applicationContext
+        appContext = app
+        // R15 (device run 43626650174): starting WebView to read its user agent took 1.6 s of the
+        // main thread during app start (with the first screen still composing, the system raised
+        // "isn't responding"). The agent only changes when WebView updates, so it is kept on disk
+        // per WebView version and WebView is started for it only once the app is idle.
+        Thread({
+            val cached = runCatching { cachedAgent(app) }.getOrNull()
+            if (cached != null) remember(cached) else main.postDelayed({
+                Looper.myQueue().addIdleHandler { runCatching { userAgent() }; false }
+            }, WARM_UP_DELAY_MS)
+        }, "yu-browser-ua").start()
+    }
+
+    private const val WARM_UP_DELAY_MS = 8_000L
+    private const val UA_PREFS = "browser_check"
+
+    /** Identifies the installed WebView build: a different build has a different user agent. */
+    private fun webViewBuild(ctx: Context): String = runCatching {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            WebView.getCurrentWebViewPackage()?.let { it.packageName + "@" + it.versionName }
+        } else null
+    }.getOrNull() ?: ("sdk" + android.os.Build.VERSION.SDK_INT + "/" + android.os.Build.FINGERPRINT)
+
+    private fun cachedAgent(ctx: Context): String? {
+        val p = ctx.getSharedPreferences(UA_PREFS, Context.MODE_PRIVATE)
+        val ua = p.getString("ua", null) ?: return null
+        return ua.takeIf { p.getString("ua_build", null) == webViewBuild(ctx) && it.isNotBlank() }
+    }
+
+    private fun remember(value: String) {
+        ua = value
+        runCatching { WebViewResolver.webViewUserAgent = value }
+    }
+
+    /**
+     * Used off the main thread before WebView has been started: same shape as a WebView agent, with
+     * this phone's Android version and the installed WebView's Chrome version. Not stored.
+     */
+    internal fun estimatedAgent(androidRelease: String, webViewVersion: String?): String {
+        val chrome = webViewVersion?.takeIf { it.firstOrNull()?.isDigit() == true }?.substringBefore(' ') ?: "130.0.0.0"
+        return "Mozilla/5.0 (Linux; Android $androidRelease; K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/$chrome Mobile Safari/537.36"
     }
 
     /** The WebView's own user agent (clearance cookies are only valid with it). */
     fun userAgent(): String {
         ua?.let { return it }
         val ctx = appContext ?: return FALLBACK_UA
-        val value = if (onMainThread()) {
-            runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull()
-        } else {
-            // Ask the main thread and wait briefly; never block a worker on it indefinitely.
-            val latch = java.util.concurrent.CountDownLatch(1)
-            var got: String? = null
-            main.post { got = runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull(); latch.countDown() }
-            latch.await(3, java.util.concurrent.TimeUnit.SECONDS)
-            got
-        } ?: return FALLBACK_UA // not cached: the real one is picked up next time
-        ua = value
-        runCatching { WebViewResolver.webViewUserAgent = value }
+        if (!onMainThread()) {
+            // Never start WebView for a worker: that blocks on the main thread (dead lock when the main
+            // thread waits for this worker, and a long freeze during start-up). Disk copy first.
+            runCatching { cachedAgent(ctx) }.getOrNull()?.let { remember(it); return it }
+            val version = runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) WebView.getCurrentWebViewPackage()?.versionName else null
+            }.getOrNull()
+            return estimatedAgent(android.os.Build.VERSION.RELEASE ?: "14", version)
+        }
+        val value = runCatching { WebSettings.getDefaultUserAgent(ctx) }.getOrNull() ?: return FALLBACK_UA
+        remember(value)
+        Thread({
+            val build = runCatching { webViewBuild(ctx) }.getOrNull()
+            runCatching { ctx.getSharedPreferences(UA_PREFS, Context.MODE_PRIVATE).edit().putString("ua", value).putString("ua_build", build).apply() }
+        }, "yu-browser-ua-save").start()
         return value
     }
 

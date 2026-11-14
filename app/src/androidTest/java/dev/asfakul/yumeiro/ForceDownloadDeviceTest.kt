@@ -36,7 +36,7 @@ class ForceDownloadDeviceTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext
     private val client = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(40, TimeUnit.SECONDS).build()
 
-    @Test fun dashStreamIsSavedWithVideoAndAudio() = runBlocking {
+    @Test fun dashStreamIsSavedWithVideoAndAudio() = runBlocking<Unit> {
         val url = "https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd"
         val dir = File(ctx.getExternalFilesDir(null), "stress").apply { mkdirs() }
         val out = File(dir, "dash-angel-one.mp4").apply { delete() }
@@ -58,7 +58,7 @@ class ForceDownloadDeviceTest {
     }
 
     /** SegmentTemplate stream (about 160 numbered segments per track), the common case on video sites. */
-    @Test fun segmentedDashStreamIsSavedWithVideoAndAudio() = runBlocking {
+    @Test fun segmentedDashStreamIsSavedWithVideoAndAudio() = runBlocking<Unit> {
         val url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd"
         val dir = File(ctx.getExternalFilesDir(null), "stress").apply { mkdirs() }
         val out = File(dir, "dash-bbb.mp4").apply { delete() }
