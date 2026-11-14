@@ -288,6 +288,50 @@ class StabilityStressDeviceTest {
         assertTrue("screen never settled after D-pad focus:\n" + spins.joinToString("\n"), spins.isEmpty())
     }
 
+    /**
+     * Run 43650046635 (both devices): the stress test's spin came back as 1,717 snapshot applies in
+     * 3 s, with main inside DefaultPagerNestedScrollConnection.onPreScroll → PagerState.dispatchRawDelta
+     * and a pager offset stuck at -0.48. The tab pager takes every UserInput nested pre-scroll while it
+     * sits between pages, and a focused card's bring-into-view is a UserInput scroll. So a tab swipe
+     * still settling when D-pad keys move focus leaves bring-into-view and the pager pulling against
+     * each other. Recreate that: swipe the tab pager and send D-pad keys while it settles, at several
+     * delays, and require the screen to stop drawing.
+     */
+    @Test fun swipeThenDpadSettles() {
+        val dm = ctx.resources.displayMetrics
+        val w = dm.widthPixels; val h = dm.heightPixels
+        backToTabs("swipe+dpad")
+        assertTrue(tap("nav_tab_home")); idle(3_000)
+        shell("input keyevent 20"); SystemClock.sleep(300); shell("input keyevent 20"); SystemClock.sleep(600)
+        val spins = ArrayList<String>()
+        for ((i, gap) in listOf(0L, 120L, 250L, 400L, 600L, 0L, 120L, 250L).withIndex()) {
+            val toLeft = i % 2 == 0
+            if (toLeft) shell("input swipe ${w * 3 / 4} ${h / 2} ${w / 3} ${h / 2} 120")
+            else shell("input swipe ${w / 3} ${h / 2} ${w * 3 / 4} ${h / 2} 120")
+            SystemClock.sleep(gap)
+            shell("input keyevent 22 22 21 22 20 22")
+            SystemClock.sleep(2_000)
+            val windows = List(3) {
+                shellOut("dumpsys gfxinfo ${ctx.packageName} reset")
+                val st = stateChanges(2_000)
+                renderedFrames() to st
+            }
+            val frames = windows.map { it.first }
+            val counts = windows.map { it.second.first }
+            log("swipe+dpad[$i gap=$gap]: frames per 2 s $frames · applies per 2 s $counts · ${windows.last().second.second.take(500)}")
+            if (frames.min() > 40 || counts.min() > 40) {
+                spins += "attempt $i (gap $gap ms): frames $frames applies $counts · ${windows.last().second.second.take(500)}"
+                repeat(3) {
+                    log("swipe+dpad SPIN: main ${Looper.getMainLooper().thread.stackTrace.take(24).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }}")
+                    SystemClock.sleep(97)
+                }
+                break
+            }
+        }
+        shell("input keyevent 4"); idle(800)
+        assertTrue("screen never settled after a tab swipe + D-pad:\n" + spins.joinToString("\n"), spins.isEmpty())
+    }
+
     @Test fun pagerFocusAndScrollStress() {
         val dm = ctx.resources.displayMetrics
         val w = dm.widthPixels; val h = dm.heightPixels
