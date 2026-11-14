@@ -170,7 +170,19 @@ class StabilityStressDeviceTest {
     private fun backToTabs(where: String) {
         repeat(4) { attempt ->
             if (hasNode("nav_tab_home", 3_000)) { if (attempt > 0) recoveries++; return }
-            val alive = runCatching { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+            val probe = runCatching { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().isNotEmpty() }
+            val busy = probe.exceptionOrNull()?.takeIf { it.javaClass.simpleName == "ComposeNotIdleException" }
+            if (busy != null) {
+                // The screen is there but never settles: say exactly what is busy and what main is doing.
+                log("recover[$where]: compose never idle (${focusLine()}): ${busy.message?.replace('\n', ' ')?.take(900)}")
+                repeat(5) { i ->
+                    val st = Looper.getMainLooper().thread.stackTrace.take(14).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
+                    log("main sample $i: $st"); SystemClock.sleep(400)
+                }
+                log("gfx: " + shellOut("dumpsys gfxinfo ${ctx.packageName}").lineSequence().filter { "Total frames" in it || "Janky" in it }.joinToString(" | "))
+                shell("input keyevent 4"); idle(1_000); return@repeat
+            }
+            val alive = probe.getOrDefault(false)
             if (alive) {
                 log("recover[$where]: tab bar hidden, pressing Back · ${onScreen()}")
                 shell("input keyevent 4")
