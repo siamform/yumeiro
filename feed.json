@@ -1,0 +1,101 @@
+{
+ "version": 1,
+ "generated": "2026-11-14T03:11:43Z",
+ "items": [
+  {
+   "id": "ext-a5e5b5255a",
+   "kind": "extension",
+   "title": "31 new extensions",
+   "body": "AngulismoTvProvider, ArabSeed, CimaLeek, CineBDIX, DiziRoll and 26 more extensions",
+   "at": "2026-11-14T03:11:43Z",
+   "link": "market"
+  },
+  {
+   "id": "release-v1.6.0",
+   "kind": "release",
+   "title": "Yumeiro v1.6.0 is out",
+   "body": "Yumeiro v1.6.0 New features - Yumeiro redesign R1 to R11b: TV mode, Add anything, Yumix, pinch zoom, subtitle style, security fixes (27) (ff7cb19) — Asfakul Siam --- Install: release-Yumeiro-v1.6.0.apk works on every device (phone, tablet, Android TV, Fire TV). Smaller downloads:",
+   "at": "2026-11-13T14:00:11Z",
+   "link": "update"
+  },
+  {
+   "id": "ext-bda9be150f",
+   "kind": "extension",
+   "title": "287 new extensions",
+   "body": "AnimPow, Animely, AniyomiCompatExtension_AniyomiProvider, Arabico_Anime4upPack, Arabico_AnimeBlkomProvider and 282 more extensions",
+   "at": "2026-11-11T02:45:48Z",
+   "link": "market"
+  },
+  {
+   "id": "release-v1.5.0",
+   "kind": "release",
+   "title": "Yumeiro v1.5.0 is out",
+   "body": "Yumeiro v1.5.0 New features - Mihon: extension lib 1.6 and the new store index (Keiyoushi) (23) (af8349e) — Asfakul Siam --- Install: download release-Yumeiro-v1.5.0.apk below. Android 9 (API 28) or newer is required. SHA-256: 2dd2cfec707a7ef557576cf6b3d7b546c3d2d6814baa6bcb58e79",
+   "at": "2026-11-10T05:34:25Z",
+   "link": "update"
+  },
+  {
+   "id": "release-v1.4.0",
+   "kind": "release",
+   "title": "Yumeiro v1.4.0 is out",
+   "body": "Yumeiro v1.4.0 New features - Sources: markets for every format, working alerts, yumeiro.click links (22) (3b7d1c7) — Asfakul Siam Maintenance - Server: update wrangler to fix undici and sharp alerts; monthly grouped npm updates (21) (d49ffd3) — Asfakul Siam --- Install: download",
+   "at": "2026-11-10T03:59:04Z",
+   "link": "update"
+  },
+  {
+   "id": "release-v1.3.0",
+   "kind": "release",
+   "title": "Yumeiro v1.3.0 is out",
+   "body": "Yumeiro v1.3.0 New features - Simkl, Last.fm scrobbling, LRCLIB lyrics, Trakt without secret, airing alerts server (19) (7587b90) — Asfakul Siam --- Install: download release-Yumeiro-v1.3.0.apk below. Android 9 (API 28) or newer is required. SHA-256: 816688ba96b34f360dfc642b9853d",
+   "at": "2026-11-09T18:20:43Z",
+   "link": "update"
+  },
+  {
+   "id": "release-v1.2.0",
+   "kind": "release",
+   "title": "Yumeiro v1.2.0 is out",
+   "body": "Yumeiro v1.2.0 New features - SubDL/SubSource subtitles, external download managers, ad shiel… (17) (f7182be) — Asfakul Siam --- Install: download release-Yumeiro-v1.2.0.apk below. Android 9 (API 28) or newer is required. SHA-256: ffd88bc0ebdbf04a71545d0116281ec59680cdfb7ec714047",
+   "at": "2026-11-09T10:11:14Z",
+   "link": "update"
+  },
+  {
+   "id": "release-v1.1.1",
+   "kind": "release",
+   "title": "Yumeiro v1.1.1 is out",
+   "body": "Yumeiro v1.1.1 Bug fixes - Broken extension links, extension updater + safety check, site sign-in, audio and subtitles (16) (ef54fff) — Asfakul Siam --- Install: download release-Yumeiro-v1.1.1.apk below. Android 9 (API 28) or newer is required. SHA-256: 003ee2cd8b8363ef8d35f042b",
+   "at": "2026-11-09T06:18:52Z",
+   "link": "update"
+  },
+  {
+   "id": "ext-2963d54b48",
+   "kind": "extension",
+   "title": "1111 new extensions",
+   "body": "1Jour1Film, 3isk, 4KFilmIzlesene, 4KHDHub, 5TV and 1106 more extensions",
+   "at": "2026-11-08T02:26:52Z",
+   "link": "market"
+  },
+  {
+   "id": "pl-c3ee13844a",
+   "kind": "playlist",
+   "title": "280 new stream playlists",
+   "body": "Afghanistan, Albania, Algeria, Angola, Argentina and 275 more playlists",
+   "at": "2026-11-08T02:26:52Z",
+   "link": "streams"
+  },
+  {
+   "id": "release-v1.0.0",
+   "kind": "release",
+   "title": "Yumeiro v1.0.0 is out",
+   "body": "Yumeiro v1.0.0 Bug fixes - Ci: make gradlew executable (6) (5480de5) — Asfakul Siam Build & CI - Security: drop committed pycache, pass device-check input via env, embed updater token only for private repo (4404ac1) — siamform - Run data workflows every 3 days (32607b9) — siamfor",
+   "at": "2026-11-07T20:08:46Z",
+   "link": "update"
+  },
+  {
+   "id": "news-welcome-inbox",
+   "kind": "news",
+   "title": "Meet your notification inbox",
+   "body": "New episodes, extensions, stream playlists and Yumeiro news now land here. Choose what you hear about in Settings > Notifications.",
+   "at": "2026-11-07T12:00:00Z"
+  }
+ ]
+}
