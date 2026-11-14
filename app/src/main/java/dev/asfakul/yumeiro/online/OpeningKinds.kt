@@ -19,22 +19,32 @@ object OpeningKinds {
 
     internal fun key(api: String, type: String?): String = api.lowercase() + "|" + type?.lowercase()?.trim().orEmpty()
 
+    private val streak = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /** Round 2: known only after the same answer twice in a row; null = show the neutral loader. */
     fun opensPage(context: Context, item: OnlineItem): Boolean? {
         load(context)
-        return cache[key(item.api, item.type)]
+        val k = key(item.api, item.type)
+        return cache[k]?.takeIf { (streak[k] ?: 0) >= CONFIDENT }
     }
 
     fun learn(context: Context, item: OnlineItem, opensPage: Boolean) {
         load(context)
         val k = key(item.api, item.type)
-        if (cache[k] == opensPage) return
-        cache[k] = opensPage
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(k, opensPage).apply()
+        val n = if (cache[k] == opensPage) ((streak[k] ?: 0) + 1).coerceAtMost(99) else 1
+        if (cache[k] == opensPage && streak[k] == n) return
+        cache[k] = opensPage; streak[k] = n
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(k, opensPage).putInt("$k#n", n).apply()
     }
+
+    internal const val CONFIDENT = 2
 
     private fun load(context: Context) {
         if (loaded) return
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).all.forEach { (k, v) -> if (v is Boolean) cache[k] = v }
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).all.forEach { (k, v) ->
+            if (v is Boolean) cache[k] = v
+            if (v is Int && k.endsWith("#n")) streak[k.removeSuffix("#n")] = v
+        }
         loaded = true
     }
 }

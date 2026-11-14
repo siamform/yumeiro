@@ -186,7 +186,8 @@ object OnlineRepository {
     /** Rows requested per provider for the home page. */
     private const val ROWS_PER_PROVIDER = 4
 
-    private val parallel = Semaphore(6)
+    /** Round 2: extension calls at once follow the phone's heat (6 cool, 4 warm, 2 hot). */
+    private object parallel { suspend fun <T> withPermit(block: suspend () -> T): T = dev.asfakul.yumeiro.player.HeatGuard.limited(block = block) }
     private const val MAX_ROW_ITEMS = 40
     private const val MAX_ROWS_PER_PROVIDER = 12
     private data class Timed<T>(val at: Long, val value: T)

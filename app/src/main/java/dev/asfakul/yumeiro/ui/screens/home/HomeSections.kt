@@ -209,7 +209,7 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
         if (!auto || reduced || held || n < 2) return@LaunchedEffect
         while (true) {
             delay(6_000)
-            if (!pager.isScrollInProgress) pager.animateScrollToPage((pager.currentPage + 1).coerceAtMost(virtual - 1))
+            if (!pager.isScrollInProgress && dev.asfakul.yumeiro.player.HeatGuard.allowDecorativeMotion()) pager.animateScrollToPage((pager.currentPage + 1).coerceAtMost(virtual - 1))
         }
     }
     Column(Modifier.fillMaxWidth()) {

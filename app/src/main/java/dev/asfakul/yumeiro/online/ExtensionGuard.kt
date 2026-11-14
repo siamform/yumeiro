@@ -97,6 +97,7 @@ object ExtensionGuard {
         swallowed.incrementAndGet()
         lastSwallowed = t.toString()
         Log.e(TAG, "Swallowed a crash from extension code on $where", t)
+        dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("Extension code on $where (the app kept running)", t)
     }
 
     /** True when [error] (or a cause) has a stack frame from extension code. Pure → unit-testable. */

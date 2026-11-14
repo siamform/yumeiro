@@ -179,6 +179,12 @@ internal fun PlaylistMosaic(tracks: List<AudioTrack>, key: String, size: Dp) {
     }
 }
 
+/** Real listening time: "0m", "42m", "3h 05m". Pure. */
+internal fun listenedLabel(ms: Long): String {
+    val m = (ms / 60_000L).coerceAtLeast(0L)
+    return if (m < 60) "${m}m" else "${m / 60}h ${"%02d".format(m % 60)}m"
+}
+
 internal fun songsLabel(n: Int, ms: Long): String =
     (if (n == 1) "1 song" else "$n songs") + if (ms > 0) " · " + formatDuration(ms) else ""
 
@@ -198,8 +204,13 @@ internal fun LazyListScope.musicOverview(
     onCreatePlaylist: () -> Unit,
     onOpenPlaylist: (String) -> Unit,
     shortcuts: List<LibraryShortcut> = emptyList(),
+    listenedMs: Long = 0L,
+    allPlaylists: List<Playlist> = playlists,
 ) {
+    // Round 2: only what the user did. Liked = songs they hearted; playlists = ones they made
+    // (the internal liked list is shown as the hero, not counted twice); play time = measured.
     val favorites = allTracks.filter { it.isFavorite }
+    @Suppress("NAME_SHADOWING") val playlists = allPlaylists.filter { it.id != "favorites_default" }
     if (shortcuts.isNotEmpty()) item(key = "shortcuts") { LibraryShortcutGrid(shortcuts, Modifier.padding(top = 4.dp)) }
     item(key = "hero") {
         LibraryHero(
@@ -208,14 +219,14 @@ internal fun LazyListScope.musicOverview(
             glyph = "夢", testTag = "lib_fav_card", onClick = onOpenMusic,
             trailing = {
                 RoundAction(Icons.Default.PlayArrow, "Play liked songs", filled = true, testTag = "lib_play_liked") {
-                    val q = favorites.ifEmpty { allTracks }; q.firstOrNull()?.let { onPlay(it, q) }
+                    if (favorites.isEmpty()) onOpenMusic() else onPlay(favorites.first(), favorites)
                 }
             },
             bottom = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("storage_stat_banner")) {
                     HeroStat("${stats.audioCount}", "songs", Modifier.weight(1f))
                     HeroStat("${playlists.size}", "playlists", Modifier.weight(1f))
-                    HeroStat(formatDuration(stats.totalAudioDurationMs), "playtime", Modifier.weight(1.2f))
+                    HeroStat(listenedLabel(listenedMs), "listened", Modifier.weight(1.2f))
                     HeroStat(formatFileSize(stats.totalStorageUsedBytes), "on device", Modifier.weight(1.2f))
                 }
             },

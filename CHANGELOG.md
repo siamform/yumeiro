@@ -2,6 +2,53 @@
 
 All notable changes to Yumeiro.
 
+## v1.8.1: every title plays
+
+A correction release. Every item was re-tested instead of trusting earlier notes, and four
+things that 1.8.0 described as working were not. They are named below.
+
+### Corrections to earlier notes
+- Yumeiro Drama did not open any title in 1.8.0 ("Unknown drama catalog"). CloudStream rewrote the internal drama id into a web address, so the studio could not be found.
+- "Streams without quality options get Yumeiro's own ladder" (1.8.0) was not true: the YouTube and Yumix players still showed one quality for single-quality streams.
+- Custom theme pictures were refused with "picture couldn't be opened" since 1.6: the size check always failed.
+- Library showed demo playlists and an estimated play time, not your own data.
+
+### Yumeiro Drama
+- Every title opens and plays, tap to finish, for both new and saved (1.8.0) ids.
+- Studio health check: a studio whose video server refuses or hangs is hidden (and re-checked later) instead of showing titles that cannot play. If one studio fails, the same title plays from another studio.
+- 10 studios in the catalog; the ones that answer today are shown.
+
+### Quality
+- One source of truth: the player and the download sheet use the same quality list.
+- Streams with a single quality get Yumeiro's own levels: lower levels scaled on the GPU, one upscaled level with Anime4K. Works for local videos too.
+
+### Loading
+- A neutral loader ("Getting it ready") is used unless the next screen is certain. Shaped skeletons appear only for direct video links, or when the same source opened the same kind of screen twice in a row.
+
+### Yumix
+- No extension header between feed sections; the extension name is on each shelf.
+- The "Show videos from" list always has a search field.
+
+### Home and Library
+- Jump back in is filled when the app opens (it used to wait for Yumix to load).
+- Library shows only your likes, your own playlists and play time measured from real listening.
+
+### Heat and battery
+- New heat guard: follows the phone's thermal status and battery saver. Position tickers slow down in the background and when the phone is warm, the video ticker runs fast only while the seek bar is visible, extension calls at once drop from 6 to 4 (warm) or 2 (hot), Anime4K pauses while the phone is hot, and backup sources stop being collected once enough are ready.
+
+### Crash reports
+- Crashes, freezes (ANR) and native crashes are saved on the phone. Settings, Crash reports: read, share or delete them. Nothing is sent anywhere.
+
+### Custom theme picture
+- Pictures open again (JPEG, PNG, WebP, GIF first frame, BMP, HEIC/HEIF, AVIF on Android 12+), with the accepted types and sizes shown, and a clear reason when a file is refused.
+
+### Notifications
+- "Keep notifications on time" guide (Settings, Background): checks notifications, background checks, battery optimisation, restricted background use and Android's standby restriction, each with a one-tap fix, then step-by-step settings for Xiaomi, Samsung, Huawei/Honor, OPPO/realme/OnePlus, vivo/iQOO, Tecno/Infinix/itel, ASUS, Nokia and Meizu with a button that opens the right page.
+- The "notifications are held back" prompt now also appears on phones whose maker stops apps even with battery optimisation off.
+
+### Tests
+- 755 unit tests pass. New: drama health and live tap-to-play, quality engine, loader, library, heat guard, crash log, picture import (both decoders), notification guide.
+
 ## v1.8.0: player first
 
 1.5.0 never showed "Yumeiro is not responding". 1.8.0 audits the player against it, moves heavy work off the main thread and rebuilds source handling, then fixes performance, Yumix, Music, Manga, backup and notifications.

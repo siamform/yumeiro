@@ -415,6 +415,8 @@ private fun VideoPlayerModalContent(
     var showQualityDialog by remember { mutableStateOf(false) }
     // Round 13: qualities built by the engine when the stream itself has one rendition.
     var altQualities by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
+    /** Round 2: engine-rendered level in use (null = the source's own picture). */
+    var engineHeight by remember(video.id) { mutableStateOf<Int?>(null) }
     val recovery = remember(video.id) {
         PlaybackRecovery(
             alternativeDns = { NetworkSettings.dns.value.usesAlternative },
@@ -428,7 +430,7 @@ private fun VideoPlayerModalContent(
         StreamMediaFactory.createPlayer(context, video.uri).apply {
             // Round 13: default speed and default quality from Settings → Quality and audio.
             dev.asfakul.yumeiro.player.VideoPrefs.speed.value.takeIf { it != 1f }?.let { playbackParameters = PlaybackParameters(it) }
-            if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value) runCatching {
+            if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) runCatching {
                 setVideoEffects(listOf(dev.asfakul.yumeiro.player.Anime4kEffect(dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.value)))
             }
             dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 }?.let { h ->
@@ -572,11 +574,11 @@ private fun VideoPlayerModalContent(
     // (YouTube resolutions, or other sources of this episode by resolution). Runs off the main thread.
     val onlineLinkCount = dev.asfakul.yumeiro.online.OnlineSession.state.collectAsState().value?.links?.size ?: 0
     val playingHeight = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } } ?: 0
-    LaunchedEffect(video.id, onlineLinkCount / 5, playingHeight > 0) {
-        if (!isNetworkStream) return@LaunchedEffect
-        val req = StreamRepository.requestFor(video.uri) ?: originalRequest
+    LaunchedEffect(video.id, onlineLinkCount / 5, playingHeight, engineHeight) {
+        // Round 2: local files too (engine levels), and YouTube / Yumix share the downloader's list.
+        val req = if (isNetworkStream) StreamRepository.requestFor(video.uri) ?: originalRequest else null
         val alts = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            runCatching { dev.asfakul.yumeiro.player.QualityEngine.alternatives(context, req, playingHeight) }.getOrDefault(emptyList())
+            runCatching { dev.asfakul.yumeiro.player.QualityEngine.alternatives(context, req, playingHeight, engineHeight) }.getOrDefault(emptyList())
         }
         altQualities = alts.map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = if (a.current) "Playing now" else a.note) }
     }
@@ -1263,6 +1265,19 @@ private fun VideoPlayerModalContent(
         }
     }
 
+    // Round 2 (heat): the phone got hot during playback, so drop the Anime4K GPU pass (the
+    // picture stays at its engine level); it comes back when the phone cools down.
+    val heat by dev.asfakul.yumeiro.player.HeatGuard.level.collectAsState()
+    var heatTouched by remember(exoPlayer) { mutableStateOf(false) }
+    LaunchedEffect(exoPlayer, heat) {
+        val gpuWanted = dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value || engineHeight != null
+        if (!gpuWanted) return@LaunchedEffect
+        if (heat == dev.asfakul.yumeiro.player.HeatGuard.Level.HOT || heatTouched) {
+            heatTouched = true
+            applyEngineLevel(exoPlayer, engineHeight, upscale = false)
+        }
+    }
+
     // Black-screen guard: audio playing but no new video frames → flush the decoder, then fail over.
     val blackWatch = remember(exoPlayer) { dev.asfakul.yumeiro.player.BlackFrameWatchdog() }
     LaunchedEffect(exoPlayer, isPlaying) {
@@ -1314,8 +1329,9 @@ private fun VideoPlayerModalContent(
                     currentOnProgressUpdate(video.id, currentPositionMs, durationMs)
                 }
             }
-            // 250 ms (was 500 ms): the thumb moved in visible half-second steps.
-            delay(250L)
+            // 250 ms (was 500 ms): the thumb moved in visible half-second steps. Round 2: only
+            // while the seek bar is on screen; 1 s when hidden, slower again when the phone is warm.
+            delay(dev.asfakul.yumeiro.player.HeatGuard.interval(if (isControlsVisible) 250L else 1_000L))
         }
     }
 
@@ -1843,8 +1859,8 @@ private fun VideoPlayerModalContent(
                         val h = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } }
                         when {
                             qualityList.size > 1 -> selectedQuality?.label ?: h?.let { "Auto · ${it}p" } ?: "Auto"
-                            h != null -> dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(h))
                             altQualities.isNotEmpty() -> altQualities.firstOrNull { it.alt?.current == true }?.label ?: "Quality"
+                            h != null -> dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(h))
                             else -> null
                         }
                     },
@@ -2021,11 +2037,21 @@ private fun VideoPlayerModalContent(
                 options = altQualities.ifEmpty { only },
                 selected = null,
                 autoLabel = null,
-                footer = if (altQualities.isEmpty()) "This source sends a single quality. Other sources in the list may have more." else null,
+                footer = when {
+                    altQualities.any { it.alt?.engineHeight != null } -> "This source sends one quality. Yumeiro renders the other levels from it on your GPU."
+                    altQualities.isEmpty() -> "Quality options appear when the first frame is shown."
+                    else -> null
+                },
                 onSelect = { option ->
                     val alt = option?.alt ?: return@QualityDialog
                     if (alt.current) return@QualityDialog
                     val pos = exoPlayer.currentPosition
+                    if (alt.engineHeight != null || (engineHeight != null && alt.note == "Original from the source")) {
+                        applyEngineLevel(exoPlayer, alt.engineHeight, alt.upscale)
+                        engineHeight = alt.engineHeight
+                        showToast("Quality: ${alt.label}")
+                        return@QualityDialog
+                    }
                     showToast("Quality: ${alt.label}")
                     coroutineScope.launch {
                         val r = runCatching { alt.open(context, pos) }.getOrNull()
@@ -2268,3 +2294,25 @@ internal fun codecName(mime: String?): String? {
 /** Reports the window y of this element's top edge (rounded), only when it changes. */
 private fun Modifier.trackWindowTop(onTop: (Int) -> Unit): Modifier =
     this.then(Modifier.onGloballyPositioned { onTop(it.positionInWindow().y.toInt()) })
+
+
+/**
+ * Round 2: renders an engine quality level from the playing stream. Lower levels are scaled down
+ * on the GPU (media3 Presentation), the upper level is scaled up and sharpened with Anime4K.
+ * [height] null = back to the source picture (keeping Anime4K if the user turned it on).
+ * Video is briefly disabled and re-enabled so the renderer rebuilds its pipeline with the effects.
+ */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, height: Int?, upscale: Boolean) {
+    val prefs = dev.asfakul.yumeiro.player.VideoPrefs
+    val fx = buildList<androidx.media3.common.Effect> {
+        if (height != null) add(androidx.media3.effect.Presentation.createForHeight(height))
+        if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kEffect(prefs.gpuTier.value))
+    }
+    runCatching {
+        player.setVideoEffects(fx)
+        val p = player.trackSelectionParameters
+        player.trackSelectionParameters = p.buildUpon().setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true).build()
+        player.trackSelectionParameters = p
+    }
+}

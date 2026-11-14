@@ -256,6 +256,10 @@ android {
       if (providers.gradleProperty("yumeiro.lowMemTests").orNull == "true") {
         all { it.maxHeapSize = "1600m"; it.setForkEvery(25) }
       }
+      // Live network tests (Yumeiro Drama tap-to-play): -Pyumeiro.live=true.
+      if (providers.gradleProperty("yumeiro.live").orNull == "true") {
+        all { it.systemProperty("yumeiro.live", "true") }
+      }
     }
   }
 

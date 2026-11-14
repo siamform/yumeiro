@@ -60,6 +60,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -132,6 +133,7 @@ fun LibraryScreen(
 
     val trackMap = remember(allTracks) { allTracks.associateBy { it.id } }
     val selectedPlaylist = playlists.firstOrNull { it.id == selectedPlaylistId }
+    val listenedMs by dev.asfakul.yumeiro.player.ListeningTime.total.collectAsState()
 
     // Dialog: Create Playlist
     if (showCreateDialog) {
@@ -520,6 +522,7 @@ fun LibraryScreen(
                     onNewPlaylist = { showCreateDialog = true }, onRescan = onRescanClick, onHistory = onOpenHistory,
                     onDownloads = onOpenDownloads, onTogether = onOpenTogether,
                 ),
+                listenedMs = listenedMs,
             )
         }
     }

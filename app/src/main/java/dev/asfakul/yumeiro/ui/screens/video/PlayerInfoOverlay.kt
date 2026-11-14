@@ -91,9 +91,15 @@ fun PlayerInfoOverlay(player: ExoPlayer, title: String, modifier: Modifier = Mod
                 }
                 value?.let { f.label to it }
             }
-            delay(1000)
+            delay(dev.asfakul.yumeiro.player.HeatGuard.interval(1000))
         }
     }
+    PlayerInfoPanel(rows, modifier)
+}
+
+/** The panel itself (rows of label → value). Split out so previews and mock shots use the real look. */
+@Composable
+internal fun PlayerInfoPanel(rows: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     if (rows.isEmpty()) return
     Column(
         modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.62f))

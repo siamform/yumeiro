@@ -37,10 +37,14 @@ class OnShortCatalog(
 ) : DramaCatalog {
     override val id = "onshort"
     override val label = "ONShort"
+    // Round 2: more studios. A platform whose episodes the site can't serve right now is hidden
+    // by YumeiroDramaProvider's health check (ShortMax and FlexTV were down at the source on 2026-11-14).
     override val platforms = listOf(
-        DramaPlatform("dramabox", "DramaBox"), DramaPlatform("shortmax", "ShortMax"),
+        DramaPlatform("dramabox", "DramaBox"), DramaPlatform("reelshort", "ReelShort"),
         DramaPlatform("netshort", "NetShort"), DramaPlatform("dramawave", "DramaWave"),
-        DramaPlatform("goodshort", "GoodShort"), DramaPlatform("flextv", "FlexTV"),
+        DramaPlatform("goodshort", "GoodShort"), DramaPlatform("shortmax", "ShortMax"),
+        DramaPlatform("dramabite", "DramaBite"), DramaPlatform("shortswave", "ShortsWave"),
+        DramaPlatform("stardusttv", "StardustTV"), DramaPlatform("flextv", "FlexTV"),
     )
 
     /** Parsed series pages for a few minutes, so every episode doesn't refetch the page. */

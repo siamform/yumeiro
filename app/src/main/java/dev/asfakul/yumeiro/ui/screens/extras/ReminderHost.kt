@@ -99,26 +99,22 @@ fun ReminderHost(blocked: Boolean) {
     // A video/update/PiP taking over closes the card instead of drawing on top of it.
     LaunchedEffect(blocked) { if (blocked && showing != null) close() }
 
-    // Background checks stopped running (the phone's battery manager kills them): say so once per launch.
-    var stalledShown by remember { mutableStateOf(false) }
+    // Round 2 (order 9): background checks stalled, a setting blocks them, or a strict phone maker
+    // hasn't been set up yet: open the "Keep notifications on time" guide (paced: 3 times, a week apart).
+    // The old card only appeared while battery optimisation was on, so phones whose maker kills apps
+    // anyway (Xiaomi auto-start, Samsung sleeping apps...) never saw it.
+    var guideShown by remember { mutableStateOf(false) }
     LaunchedEffect(blocked) {
         if (blocked || Build.FINGERPRINT == "robolectric") return@LaunchedEffect
         delay(8_000)
-        if (dev.asfakul.yumeiro.notify.BackgroundHealth.stalledAtLaunch && !PermissionCenter.batteryUnrestricted(context) &&
-            showing == null && PopupGate.claim(GATE_REMINDER)) {
-            stalledShown = true
+        if (showing == null && runCatching { dev.asfakul.yumeiro.notify.ReliabilityGuide.shouldPrompt(context) }.getOrDefault(false) &&
+            PopupGate.claim(GATE_REMINDER)) {
+            dev.asfakul.yumeiro.notify.ReliabilityGuide.markPrompted(context)
+            guideShown = true
         }
     }
-    if (stalledShown) {
-        val done = { stalledShown = false; dev.asfakul.yumeiro.notify.BackgroundHealth.acknowledge(); PopupGate.release(GATE_REMINDER) }
-        ReminderCard(
-            icon = Icons.Default.NotificationsActive, tag = "reminder_battery",
-            title = "Notifications are being held back",
-            body = "Your phone stopped Yumeiro's background checks to save battery, so new-episode alerts arrive late. Let Yumeiro run in the background to get them on time.",
-            action = "Allow background",
-            onAction = { PermissionCenter.openBatterySettings(context); done() },
-            onClose = done,
-        )
+    if (guideShown) {
+        ReliabilityGuideDialog(onClose = { guideShown = false; dev.asfakul.yumeiro.notify.BackgroundHealth.acknowledge(); PopupGate.release(GATE_REMINDER) })
     }
 
     when (showing) {

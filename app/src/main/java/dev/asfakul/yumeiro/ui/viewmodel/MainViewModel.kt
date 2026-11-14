@@ -250,6 +250,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Round 13: Home → Continue keeps the song really played last and where it was left
         // (saved every 5 s of playback and on every pause / track change, off the main thread).
         dev.asfakul.yumeiro.player.LastPlayed.init(application)
+        // Round 2, order 5: Home → Jump back in reads online watch history too; it used to load
+        // only when a Yumix page opened, so the card was stale until then.
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(application) }
+            runCatching { dev.asfakul.yumeiro.youtube.YtHistory.load(application) }
+        }
+        // Real music listening time for Library (only while audio is actually playing).
+        dev.asfakul.yumeiro.player.ListeningTime.track(application, viewModelScope, playerManager.playbackState.map { it.isPlaying })
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             playerManager.playbackState
                 .map { st -> Triple(st.currentTrack, st.isPlaying, st.currentPositionMs / 5000) }

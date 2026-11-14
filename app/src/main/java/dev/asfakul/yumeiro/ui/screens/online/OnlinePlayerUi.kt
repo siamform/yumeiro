@@ -390,7 +390,7 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.SERIES -> WatchScreenStatus("Loading episodes…", onCancel = { OnlineSession.cancelOpening() }, overline = "連続 · SERIES")
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.DIRECT -> WatchScreenStatus("Starting the video…", onCancel = { OnlineSession.cancelOpening() }, overline = "再生 · PLAY")
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.PAGE -> WatchScreenStatus("Opening the title page…", onCancel = { OnlineSession.cancelOpening() }, overline = "作品 · TITLE")
-                    else -> WatchScreenStatus("Opening…", onCancel = { OnlineSession.cancelOpening() })
+                    else -> WatchScreenStatus("Getting it ready…", onCancel = { OnlineSession.cancelOpening() }, overline = "夢色 · ${item.api}")
                 }
             },
         ) {

@@ -18,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -221,9 +222,15 @@ object OnlineSession {
                     if (_state.value?.data == data) playCurrent(context, 0, resumeMs)
                 }
             }
-            val ticker = launch { while (true) { delay(150); startIfReady(false); if (pendingPublish && started) publish(false) } }
+            // Round 2 (heat): 300 ms instead of 150 ms, slower again when the phone is warm.
+            val ticker = launch { while (true) { delay(dev.asfakul.yumeiro.player.HeatGuard.interval(300)); startIfReady(false); if (pendingPublish && started) publish(false) } }
             val ok = withTimeoutOrNull(FIRST_LINK_TIMEOUT_MS + 60_000L) {
-                OnlineRepository.links(provider, data).collect { ev ->
+                OnlineRepository.links(provider, data).transformWhile { ev ->
+                    emit(ev)
+                    // Round 2 (heat): once a video plays and enough backups are in, stop asking the
+                    // extension for more mirrors (each one is more network, parsing and battery).
+                    !GatherCap.enough(started, links.values.count { !it.audioOnly }, subs.size, System.currentTimeMillis() - firstAt)
+                }.collect { ev ->
                     when (ev) {
                         is LinkEvent.Link -> {
                             if (links.isEmpty()) firstAt = System.currentTimeMillis()
@@ -238,6 +245,7 @@ object OnlineSession {
                 true
             }
             ticker.cancel()
+            if (ok == true && _state.value?.let { it.data == data && !it.linksDone } == true) publish(true)
             if (ok == null) publish(true, "The source took too long to answer.")
             startIfReady(true)
             if (!started) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: "No playable sources were found.") }
@@ -418,4 +426,12 @@ object OnlineSession {
         val s = _state.value ?: return
         if (s.phase != Phase.PLAYING) end()
     }
+}
+
+/** Round 2 (heat): when collecting more backup links stops being worth it. */
+internal object GatherCap {
+    /** Subtitles often arrive late, so without any we keep listening for [SUB_WAIT_MS]. */
+    const val SUB_WAIT_MS = 20_000L
+    fun enough(started: Boolean, playable: Int, subtitles: Int, sinceFirstMs: Long, cap: Int = dev.asfakul.yumeiro.player.HeatGuard.linkCap()): Boolean =
+        started && playable >= cap && (subtitles > 0 || sinceFirstMs >= SUB_WAIT_MS)
 }

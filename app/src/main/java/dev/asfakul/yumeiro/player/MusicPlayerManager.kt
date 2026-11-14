@@ -247,7 +247,8 @@ class MusicPlayerManager(
         progressJob = scope.launch {
             while (isActive) {
                 updateCurrentPosition()
-                delay(300)
+                // Round 2: 300 ms on screen, 2 s in the background, slower when the phone is warm.
+                delay(HeatGuard.interval(300, dev.asfakul.yumeiro.update.AppVisibility.isForeground))
             }
         }
     }

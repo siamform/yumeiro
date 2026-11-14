@@ -70,20 +70,16 @@ object PermissionCenter {
         start(c, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
 
-    /** Vendor "auto-start / background" pages that the Android exemption alone doesn't cover. */
-    internal fun vendorBatteryIntents(manufacturer: String): List<Pair<String, String>> = when (manufacturer.lowercase()) {
-        "xiaomi", "redmi", "poco" -> listOf("com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity")
-        "huawei", "honor" -> listOf("com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
-        "oppo", "realme", "oneplus" -> listOf("com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity")
-        "vivo", "iqoo" -> listOf("com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
-        "samsung" -> listOf("com.samsung.android.lool" to "com.samsung.android.sm.battery.ui.BatteryActivity")
-        else -> emptyList()
-    }
+    /** Vendor "auto-start / background" pages (Round 2: one list, with fallbacks, in [dev.asfakul.yumeiro.notify.ReliabilityGuide]). */
+    internal fun vendorBatteryIntents(manufacturer: String): List<Pair<String, String>> =
+        dev.asfakul.yumeiro.notify.ReliabilityGuide.vendorFor(manufacturer).pages
 
     /** Only after the Android exemption is granted: the vendor page is the second, separate switch. */
     fun openVendorBatterySettings(c: Context): Boolean {
         if (!batteryUnrestricted(c)) return false
-        return vendorBatteryIntents(Build.MANUFACTURER).any { (pkg, cls) -> start(c, Intent().setClassName(pkg, cls)) }
+        val v = dev.asfakul.yumeiro.notify.ReliabilityGuide.vendor()
+        if (dev.asfakul.yumeiro.notify.ReliabilityGuide.availablePages(c, v).isEmpty()) return false
+        return dev.asfakul.yumeiro.notify.ReliabilityGuide.openVendorPage(c, v)
     }
 
     /**
