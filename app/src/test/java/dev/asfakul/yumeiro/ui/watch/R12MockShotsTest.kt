@@ -80,4 +80,17 @@ class R12MockShotsTest {
         val tracks = langs.mapIndexed { i, l -> AudioTrackInfo(0, i, l, null, if (i % 2 == 0) 6 else 2, 48000, isSelected = i == 3) }
         AudioTrackDialog(tracks, { _, _ -> }, {})
     }
+
+    /** Now Playing with the live codec line (FLAC, lossless badge). Sample track, not a real release. */
+    @Test fun nowPlayingCodec() = shot("04_now_playing_codec") {
+        val track = dev.asfakul.yumeiro.data.model.AudioTrack("local:1", "Night Drive", "Yumeiro Sessions", "Sample", 213_000, "content://sample/1")
+        dev.asfakul.yumeiro.ui.screens.player.NowPlayingScreen(
+            playbackState = dev.asfakul.yumeiro.data.model.PlaybackState(
+                currentTrack = track, durationMs = 213_000, currentPositionMs = 84_000,
+                audioCodec = dev.asfakul.yumeiro.player.AudioCodecInfo("audio/flac", sampleRate = 96_000, channels = 2, bitDepth = 24),
+            ),
+            onClose = {}, onTogglePlayPause = {}, onNext = {}, onPrevious = {}, onSeek = {},
+            onToggleShuffle = {}, onCycleRepeat = {}, onToggleFavorite = {}, onPlayQueueIndex = {}, onDismissError = {},
+        )
+    }
 }
