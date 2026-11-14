@@ -22,11 +22,12 @@ object ReliabilityGuide {
     private const val PREFS = "reliability_guide"
 
     /** One phone maker's extra settings. [pages] are tried in order; the first that opens wins. */
-    data class Vendor(val key: String, val name: String, val steps: List<String>, val pages: List<ComponentName>) {
+    data class Vendor(val key: String, val name: String, val steps: List<String>, val pages: List<Pair<String, String>>) {
         val aggressive: Boolean get() = key != "android"
     }
 
-    private fun cn(pkg: String, cls: String) = ComponentName(pkg, if (cls.startsWith(".")) pkg + cls else cls)
+    /** (package, activity class): plain strings so the list is testable without Android. */
+    private fun cn(pkg: String, cls: String) = pkg to cls
     private const val LOCK = "Open Recents, then long-press (or pull down on) Yumeiro and tap the lock, so clearing Recents never closes it"
 
     /** Brand names as reported by [Build.MANUFACTURER] (and [Build.BRAND]) → the maker's guide. */
@@ -145,7 +146,7 @@ object ReliabilityGuide {
     // region vendor pages
 
     /** Pages of [v] that exist on this phone (exported and resolvable), in order. */
-    fun availablePages(c: Context, v: Vendor = vendor()): List<ComponentName> = v.pages.filter { cnm ->
+    fun availablePages(c: Context, v: Vendor = vendor()): List<ComponentName> = v.pages.map { (p, k) -> ComponentName(p, k) }.filter { cnm ->
         runCatching {
             val info = c.packageManager.getActivityInfo(cnm, PackageManager.MATCH_DEFAULT_ONLY)
             info.exported

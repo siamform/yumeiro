@@ -72,7 +72,7 @@ object PermissionCenter {
 
     /** Vendor "auto-start / background" pages (Round 2: one list, with fallbacks, in [dev.asfakul.yumeiro.notify.ReliabilityGuide]). */
     internal fun vendorBatteryIntents(manufacturer: String): List<Pair<String, String>> =
-        dev.asfakul.yumeiro.notify.ReliabilityGuide.vendorFor(manufacturer).pages.map { it.packageName to it.className }
+        dev.asfakul.yumeiro.notify.ReliabilityGuide.vendorFor(manufacturer).pages
 
     /** Only after the Android exemption is granted: the vendor page is the second, separate switch. */
     fun openVendorBatterySettings(c: Context): Boolean {
