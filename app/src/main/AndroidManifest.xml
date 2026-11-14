@@ -7,6 +7,7 @@
     -->
 
     <!-- Read local music / videos (Android 13+ granular media permissions) -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- Read local media on Android 9 – 12 only -->
@@ -215,6 +216,17 @@
         <receiver
             android:name=".update.InstallResultReceiver"
             android:exported="false" />
+
+        <!-- Round 13: paced notifications and the background clock (alarms work with the app closed);
+             re-armed after a reboot or an update. -->
+        <receiver
+            android:name=".notify.NotifyAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Posts "Updated to vX" after a seamless background update replaced the app -->
         <receiver

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.ui.theme.pageBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -76,7 +77,7 @@ fun QualityAndAudioEntry() {
     }
     if (open) Dialog(onDismissRequest = { open = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val p = LocalMtPalette.current
-        Column(Modifier.fillMaxSize().background(p.background).statusBarsPadding().testTag("settings_page_quality_audio")) {
+        Column(Modifier.fillMaxSize().background(p.background).pageBackground().statusBarsPadding().testTag("settings_page_quality_audio")) {
             dev.asfakul.yumeiro.ui.components.SubPageHeader(title = "Quality and audio", onBack = { open = false }, subtitle = "Audio quality & sound", handleBack = false)
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item("q") { QualityAndAudioCard() }

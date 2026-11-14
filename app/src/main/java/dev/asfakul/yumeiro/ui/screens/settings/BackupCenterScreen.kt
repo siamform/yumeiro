@@ -145,6 +145,36 @@ fun BackupScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(top = 8.dp).testTag("backup_repair_progress"))
             }
 
+            // Round 13: Restore gets its own block at the top, so it's never hidden behind the list.
+            // After a reinstall Android may hide the old backups from the app; "Choose a backup file"
+            // always works because the user picks the file in the system file picker.
+            Block("Restore", "Bring back your settings, lists, sources and extensions from a backup") {
+                val latest = items.firstOrNull()
+                if (latest != null) {
+                    Button(
+                        onClick = { openPreview { BackupStore.open(context, latest) } },
+                        enabled = busy == null, shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                        modifier = Modifier.fillMaxWidth().testTag("restore_latest"),
+                    ) { Text("Restore latest backup · ${whenText(latest.modified)}", maxLines = 1) }
+                    Spacer(Modifier.height(8.dp))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = { file.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
+                        enabled = busy == null, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).testTag("restore_pick_file"),
+                    ) { Text("Choose a backup file", maxLines = 1) }
+                    OutlinedButton(
+                        onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } },
+                        enabled = busy == null, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).testTag("restore_find_folder"),
+                    ) { Text("Find my backups", maxLines = 1) }
+                }
+                Text(
+                    "You see what's inside and pick what to bring back before anything changes. Your current data is backed up first.",
+                    color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+
             // Make a backup
             Block("Back up", "Saved to: $location") {
                 Backup.Section.entries.forEach { s ->
