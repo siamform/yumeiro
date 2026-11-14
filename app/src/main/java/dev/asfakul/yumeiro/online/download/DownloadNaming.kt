@@ -39,18 +39,21 @@ object DownloadNaming {
     }
 
     fun extensionFor(link: OnlineLink): String = when {
+        // R15: DASH and split video/audio are joined into one MP4 (WebM when both tracks are WebM).
+        link.isDash -> "mp4"
+        link.audioTracks.isNotEmpty() -> if (link.container == "webm") "webm" else "mp4"
         link.isHls -> "ts"
         link.container in setOf("mp4", "mkv", "webm", "m4v", "mov", "avi") -> link.container!!
         else -> "mp4"
     }
 
     /**
-     * The link to save for an episode: never DASH (needs a manifest player), best one within
+     * The link to save for an episode: DASH only when [allowDash] (forced download), best one within
      * [maxHeight] (0 = best), then unknown-quality links, then the smallest one above the limit.
      * [links] are expected in [dev.asfakul.yumeiro.online.OnlineRepository.sortLinks] order.
      */
-    fun pickLink(links: List<OnlineLink>, maxHeight: Int): OnlineLink? {
-        val ok = links.filter { !it.isDash && !it.audioOnly }
+    fun pickLink(links: List<OnlineLink>, maxHeight: Int, allowDash: Boolean = false): OnlineLink? {
+        val ok = links.filter { (allowDash || !it.isDash) && !it.audioOnly }
         if (ok.isEmpty()) return null
         if (maxHeight <= 0) return ok.maxByOrNull { it.quality.coerceAtLeast(0) }?.takeIf { it.quality > 0 } ?: ok.first()
         return ok.filter { it.quality in 1..maxHeight }.maxByOrNull { it.quality }

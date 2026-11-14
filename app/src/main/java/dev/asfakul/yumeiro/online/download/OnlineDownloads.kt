@@ -82,6 +82,10 @@ object OnlineDownloads {
         val publicUri: String? = null,
         /** File name without extension for EPISODE items (extension known once the link is found). */
         val baseName: String? = null,
+        /** R15 forced download: a DASH manifest (saved by [DashGrab]). */
+        val isDash: Boolean = false,
+        /** R15 forced download: separate audio file joined with the video after both are saved. */
+        val audioUrl: String? = null,
     ) {
         val fraction: Float get() = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
         val active: Boolean get() = status == Status.QUEUED || status == Status.RUNNING
@@ -152,7 +156,7 @@ object OnlineDownloads {
         val choice = DownloadSettings.downloader.value
         val s = OnlineSession.state.value ?: return "Nothing is playing"
         val link = s.link ?: return "No source yet"
-        ExternalDownloader.unsupportedReason(choice, link.isHls, link.isDash)?.let { return it }
+        ExternalDownloader.unsupportedReason(choice, link.isHls, link.isDash, splitAudio = link.audioTracks.isNotEmpty())?.let { return it }
         if (choice != ExternalDownloader.CHOOSER && ExternalDownloader.installed(context).none { it.pkg == choice }) return "${ExternalDownloader.label(choice)} isn't installed"
         return ExternalDownloader.send(context, choice, link.url, headersFor(link), ExternalDownloader.fileName(s.title, s.episode?.label, link.isHls))
     }
@@ -164,13 +168,14 @@ object OnlineDownloads {
         folder: String = "", version: String? = null, keep: Boolean? = null,
     ): String? {
         ensureLoaded(context)
-        if (link.isDash) return "This source can't be saved (DASH). Pick another source."
+        // R15 forced download: DASH and split video/audio sources are saved too (ForceGrab).
         val id = (api + "|" + titleUrl + "|" + (episodeLabel ?: "")).hashCode().toUInt().toString(16)
         get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
         val ext = DownloadNaming.extensionFor(link)
         val name = safeName(listOfNotNull(title.takeIf { it.isNotBlank() }, link.qualityLabel.takeIf { it.isNotBlank() }).joinToString(" ")) + "-" + id + "." + ext
         val item = Item(id, title, api, titleUrl, episodeLabel, posterUrl, posterHeaders, link.url, link.isHls, headersFor(link), name,
-            folder = folder, version = version, keep = keep ?: DownloadSettings.keepByDefault.value, quality = link.qualityLabel.ifBlank { null })
+            folder = folder, version = version, keep = keep ?: DownloadSettings.keepByDefault.value, quality = link.qualityLabel.ifBlank { null },
+            isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first)
         update { list -> listOf(item) + list.filterNot { it.id == id } }
         start(context, id)
         return null
@@ -327,8 +332,10 @@ object OnlineDownloads {
         }.onFailure { Log.w(TAG, "save", it) }
     }
 
+    private val RX_BAD_NAME = Regex("""[\\/:*?"<>|\u0000-\u001f]""")
+    private val RX_SPACES = Regex("\\s+")
     internal fun safeName(s: String): String =
-        s.replace(Regex("""[\\/:*?"<>|\u0000-\u001f]"""), " ").replace(Regex("\\s+"), " ").trim().take(80).ifBlank { "video" }
+        s.replace(RX_BAD_NAME, " ").replace(RX_SPACES, " ").trim().take(80).ifBlank { "video" }
 
     private fun json(i: Item) = JSONObject()
         .put("id", i.id).put("title", i.title).put("api", i.api).put("titleUrl", i.titleUrl).put("episode", i.episodeLabel)
@@ -338,7 +345,7 @@ object OnlineDownloads {
         .put("kind", i.kind.name).put("folder", i.folder).put("ver", i.version).put("data", i.data).put("order", i.order)
         .put("ytId", i.ytId).put("vItag", i.videoItag).put("aItag", i.audioItag).put("container", i.container)
         .put("keep", i.keep).put("finishedAt", i.finishedAt).put("quality", i.quality).put("publicUri", i.publicUri)
-        .put("base", i.baseName)
+        .put("base", i.baseName).put("dash", i.isDash).put("audio", i.audioUrl)
 
     private fun from(o: JSONObject): Item? {
         fun map(k: String) = o.optJSONObject(k)?.let { h -> h.keys().asSequence().associateWith { h.optString(it) } }.orEmpty()
@@ -355,6 +362,7 @@ object OnlineDownloads {
             kind = kind, folder = o.optString("folder"), version = str("ver"), data = str("data"), order = o.optInt("order"),
             ytId = str("ytId"), videoItag = o.optInt("vItag", -1), audioItag = o.optInt("aItag", -1), container = str("container"),
             keep = o.optBoolean("keep"), finishedAt = o.optLong("finishedAt"), quality = str("quality"), publicUri = str("publicUri"), baseName = str("base"),
+            isDash = o.optBoolean("dash"), audioUrl = str("audio"),
         )
     }
 }

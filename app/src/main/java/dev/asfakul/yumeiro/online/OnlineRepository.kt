@@ -164,7 +164,8 @@ data class OnlineSubtitle(val language: String, val url: String, val headers: Ma
 sealed interface LinkEvent {
     data class Link(val link: OnlineLink) : LinkEvent
     data class Subtitle(val subtitle: OnlineSubtitle) : LinkEvent
-    data class Skipped(val reason: String) : LinkEvent
+    /** [url]: set for torrents, which the player skips but a forced download can fetch through TorrServer. */
+    data class Skipped(val reason: String, val url: String? = null) : LinkEvent
     data class Done(val ok: Boolean, val error: String? = null) : LinkEvent
 }
 
@@ -440,7 +441,7 @@ object OnlineRepository {
     private fun mapLinkFixed(link: ExtractorLink, url: String): LinkEvent = when {
         // Protected streams aren't played: this app doesn't bypass DRM.
         link is DrmExtractorLink -> LinkEvent.Skipped("DRM-protected source skipped")
-        link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped("Torrent source skipped")
+        link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped("Torrent source skipped", link.url)
         !UrlFix.isHttp(url) -> LinkEvent.Skipped("Unsupported link")
         else -> LinkEvent.Link(
             OnlineLink(

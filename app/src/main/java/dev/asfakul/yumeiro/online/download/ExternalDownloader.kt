@@ -52,9 +52,11 @@ object ExternalDownloader {
     }
 
     /** Why [choice] can't take this link (null = it can). DASH never; HLS only where the app saves streams. */
-    fun unsupportedReason(choice: String, isHls: Boolean, isDash: Boolean): String? = when {
+    fun unsupportedReason(choice: String, isHls: Boolean, isDash: Boolean, splitAudio: Boolean = false): String? = when {
         choice == IN_APP -> "built-in"
         isDash -> "This source (DASH) can't be handed to another app"
+        // Another app would save the picture without the sound; the built-in downloader joins both.
+        splitAudio -> "This source keeps its sound in a separate track, so the built-in downloader saves it"
         isHls && choice != CHOOSER && KNOWN.firstOrNull { it.pkg == choice }?.hls == false -> "${label(choice)} can't save streaming (HLS) links"
         else -> null
     }

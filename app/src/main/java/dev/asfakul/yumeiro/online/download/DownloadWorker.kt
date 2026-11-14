@@ -18,6 +18,7 @@ import androidx.work.WorkerParameters
 import dev.asfakul.yumeiro.network.NetworkClient
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.LinkEvent
+import kotlinx.coroutines.async
 import dev.asfakul.yumeiro.online.OnlineLink
 import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.online.web.BrowserCheck
@@ -77,7 +78,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             if (item.kind == OnlineDownloads.Kind.EPISODE && (item.url.isBlank() || item.fileName.isBlank() || runAttemptCount > 0)) {
                 item = resolveEpisode(item)
             }
-            val out = OnlineDownloads.fileOf(applicationContext, item)
+            var out = OnlineDownloads.fileOf(applicationContext, item)
             val part = File(out.parentFile, out.name + ".part")
             val onProgress: (Long, Long) -> Unit = { done, total ->
                 OnlineDownloads.progress(id, done, total)
@@ -90,7 +91,14 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
             val bytes = when (item.kind) {
                 OnlineDownloads.Kind.YT_VIDEO, OnlineDownloads.Kind.YT_AUDIO -> YtDownloads.download(applicationContext, client, item, part, onProgress)
-                else -> if (item.isHls) HlsDownloader(client, item.headers).download(item.url, part, onProgress) else direct(client, item, part, onProgress)
+                else -> forced(client, item, part, onProgress) { webm ->
+                    // A DASH stream whose tracks are both WebM is saved as .webm.
+                    if (webm && out.extension.equals("mp4", true)) {
+                        val renamed = File(out.parentFile, out.nameWithoutExtension + ".webm")
+                        OnlineDownloads.resolved(id) { it.copy(fileName = it.fileName.substringBeforeLast('.') + ".webm") }
+                        out = renamed
+                    }
+                }
             }
             if (!part.renameTo(out)) { out.delete(); part.copyTo(out, overwrite = true); part.delete() }
             if ((item.kind == OnlineDownloads.Kind.YT_VIDEO || item.kind == OnlineDownloads.Kind.YT_AUDIO) && DownloadSettings.saveYouTubeToPhone.value) {
@@ -135,11 +143,13 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         ExtensionManager.ensureLoaded(applicationContext)
         val provider = ExtensionManager.provider(item.api) ?: throw NoLink("Extension \"${item.api}\" isn't installed")
         val links = ArrayList<OnlineLink>()
+        val torrents = ArrayList<String>()
         var error: String? = null
         withTimeoutOrNull(LINK_TIMEOUT_MS) {
             OnlineRepository.links(provider, data).collect { ev ->
                 when (ev) {
                     is LinkEvent.Link -> links += ev.link
+                    is LinkEvent.Skipped -> ev.url?.let { torrents += it }
                     is LinkEvent.Done -> if (!ev.ok) error = ev.error
                     else -> Unit
                 }
@@ -147,19 +157,61 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         }
         val sorted = OnlineRepository.sortLinks(links)
         // Links that need a separate audio file can't be saved as one file; use them only as a last resort.
+        // R15 forced download: a plain file first, then split video/audio, then DASH (ForceGrab).
         val link = DownloadNaming.pickLink(sorted.filter { it.audioTracks.isEmpty() }, DownloadSettings.quality.value)
             ?: DownloadNaming.pickLink(sorted, DownloadSettings.quality.value)
-            ?: throw NoLink(error ?: if (links.isEmpty()) "No sources found for this episode" else "No downloadable source (only DASH/torrent)")
+            ?: DownloadNaming.pickLink(sorted, DownloadSettings.quality.value, allowDash = true)
+            ?: torrents.firstOrNull()?.let { t -> OnlineLink("Torrent", "Torrent", t, null, -1, false, false, emptyMap()) }
+            ?: throw NoLink(error ?: if (links.isEmpty()) "No sources found for this episode" else "No downloadable source")
         val ext = DownloadNaming.extensionFor(link)
         val base = item.baseName ?: DownloadNaming.clean(item.episodeLabel ?: "Episode ${item.order + 1}", 90)
         // Same file name on retries so a partial file resumes.
         val name = if (item.fileName.isNotBlank() && item.fileName.substringAfterLast('.') == ext) item.fileName else "$base.$ext"
         OnlineDownloads.resolved(item.id) {
-            it.copy(url = link.url, isHls = link.isHls, headers = OnlineDownloads.headersFor(link), fileName = name, quality = link.qualityLabel.ifBlank { null })
+            it.copy(url = link.url, isHls = link.isHls, headers = OnlineDownloads.headersFor(link), fileName = name, quality = link.qualityLabel.ifBlank { null },
+                isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first)
         }
         return OnlineDownloads.get(item.id) ?: throw NoLink("Removed")
     }
 
+    /**
+     * R15 forced download (see [ForceGrab]): DASH, split video + audio, torrents through
+     * TorrServer, HLS, and direct files over several connections with header escalation.
+     */
+    private suspend fun forced(client: OkHttpClient, item: OnlineDownloads.Item, part: File, progress: (Long, Long) -> Unit, onWebm: (Boolean) -> Unit): Long {
+        val lowEnd = dev.asfakul.yumeiro.DeviceClass.lowEnd
+        val space: (Long) -> Unit = { need ->
+            val free = OnlineDownloads.freeBytes(applicationContext)
+            if (free in 0 until need + DiskFull.MARGIN) throw DiskFull(need, free)
+        }
+        fun direct(url: String, headers: Map<String, String>, f: File, p: (Long, Long) -> Unit) =
+            Segmented(client, ForceGrab.connections(lowEnd), space).let { s -> suspend { s.download(url, headers, f, p) } }
+        return when {
+            item.isDash -> DashGrab(client, item.headers).download(item.url, part, DownloadSettings.quality.value, lowEnd, progress).also { onWebm(it.webm) }.bytes
+            item.audioUrl != null -> {
+                val v = File(part.parentFile, part.name + ".v"); val a = File(part.parentFile, part.name + ".a")
+                var vb = 0L; var ab = 0L
+                kotlinx.coroutines.coroutineScope {
+                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v) { d, _ -> vb = d; progress(vb + ab, -1) }() }
+                    val aj = this.async { direct(item.audioUrl, item.headers, a) { d, _ -> ab = d; progress(vb + ab, -1) }() }
+                    vj.await(); aj.await()
+                }
+                MediaMux.merge(v, a, part, webm = item.fileName.endsWith(".webm", true))
+                v.delete(); a.delete()
+                part.length()
+            }
+            item.isHls -> HlsDownloader(client, item.headers).download(item.url, part, progress)
+            dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
+                dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
+                val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
+                if (server.isBlank()) throw NoLink("This is a torrent. Add your TorrServer address in Settings › Network to download it")
+                direct(dev.asfakul.yumeiro.stream.LinkHosts.torrServerUrl(server, item.url, item.title, m3u = false), emptyMap(), part, progress)()
+            }
+            else -> direct(item.url, item.headers, part, progress)()
+        }
+    }
+
+    @Suppress("unused") // R15: kept for reference; [forced] / [Segmented] replaced it.
     private suspend fun direct(client: OkHttpClient, item: OnlineDownloads.Item, part: File, progress: (Long, Long) -> Unit): Long {
         val have = if (part.exists()) part.length() else 0L
         val b = Request.Builder().url(item.url)

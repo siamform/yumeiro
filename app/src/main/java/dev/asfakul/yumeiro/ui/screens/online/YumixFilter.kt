@@ -32,10 +32,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,6 +62,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_YUMIXFILTER_1 = Regex("[\\s._-]+")
+private val RX_MARKS = Regex("\\p{M}+")
 
 internal sealed interface SourceStatus {
     data object Loading : SourceStatus
@@ -78,6 +82,8 @@ internal fun SourceFilterSheet(
     status: (String) -> SourceStatus,
     onPick: (String?) -> Unit,
     onDismiss: () -> Unit,
+    pins: List<String> = emptyList(),
+    onTogglePin: ((String) -> Unit)? = null,
 ) {
     val p = LocalMtPalette.current
     ModalBottomSheet(
@@ -98,7 +104,8 @@ internal fun SourceFilterSheet(
             // Round 12: with dozens of extensions the list got long; a search box narrows it as
             // you type (accent and case blind, every word must match, in any order).
             var query by rememberSaveable { mutableStateOf("") }
-            val shown = remember(names, query) { filterExtensionNames(names, query) }
+            // R15 Phase 5: pinned extensions first (in pin order), then the rest.
+            val shown = remember(names, query, pins) { dev.asfakul.yumeiro.online.PinnedExtensions.pinnedFirst(filterExtensionNames(names, query), pins) }
             if (names.size >= SEARCH_FROM) {
                 dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
                     query = query, onQuery = { query = it.take(60) }, hint = "Search extensions",
@@ -120,7 +127,10 @@ internal fun SourceFilterSheet(
                         SourceStatus.Failed -> "Didn't load. Open it to retry"
                         is SourceStatus.Ready -> if (st.titles == 0) "Search only" else "${st.titles} titles on its home"
                     }
-                    FilterRow(n, n, sub, selected == n, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed) { onPick(n) }
+                    FilterRow(
+                        n, n, sub, selected == n, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed,
+                        pinned = n in pins, onTogglePin = onTogglePin?.let { t -> { t(n) } },
+                    ) { onPick(n) }
                 }
             }
         }
@@ -132,7 +142,7 @@ internal const val SEARCH_FROM = 1
 
 /** Lower-case, accent-free form used to compare extension names with what was typed. */
 private fun foldName(s: String): String =
-    java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
+    java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(RX_MARKS, "").lowercase(java.util.Locale.ROOT)
 
 /**
  * Extensions whose name holds every word of [query] (accent and case blind). Names that start
@@ -162,7 +172,10 @@ internal fun <T> filterByTitle(items: List<T>, query: String, title: (T) -> Stri
 internal const val SECTION_SEARCH_CAP = 2000
 
 @Composable
-private fun FilterRow(name: String?, title: String, sub: String, sel: Boolean, loading: Boolean = false, failed: Boolean = false, onClick: () -> Unit) {
+private fun FilterRow(
+    name: String?, title: String, sub: String, sel: Boolean, loading: Boolean = false, failed: Boolean = false,
+    pinned: Boolean = false, onTogglePin: (() -> Unit)? = null, onClick: () -> Unit,
+) {
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.14f) else Color.Transparent, label = "filter_bg")
     Row(
@@ -181,6 +194,37 @@ private fun FilterRow(name: String?, title: String, sub: String, sel: Boolean, l
         when {
             sel -> Icon(Icons.Default.Check, "Selected", tint = p.accent, modifier = Modifier.size(22.dp))
             loading -> CircularProgressIndicator(Modifier.size(16.dp), color = p.textTertiary, strokeWidth = 2.dp)
+        }
+        // R15 Phase 5: pin a favourite. A 48 dp toggle of its own, so it never selects the row.
+        if (onTogglePin != null && name != null) IconToggleButton(
+            checked = pinned, onCheckedChange = { onTogglePin() },
+            modifier = Modifier.size(48.dp).testTag("online_filter_pin_$name"),
+        ) {
+            Icon(
+                if (pinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
+                if (pinned) "Unpin $title" else "Pin $title",
+                tint = if (pinned) p.accent else p.textTertiary, modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+/**
+ * R15 Phase 5: one-tap chips for the pinned extensions, beside the "Show videos from" filter.
+ * "All" clears the filter; a pinned chip shows only that extension (tap again for all).
+ */
+@Composable
+internal fun PinnedExtensionBar(pins: List<String>, selected: String?, onPick: (String?) -> Unit) {
+    if (pins.isEmpty()) return
+    LazyRow(
+        Modifier.fillMaxWidth().testTag("online_pinned_bar"),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        item("all") { CategoryChip("All", selected == null, "online_pinned_all") { onPick(null) } }
+        items(pins, key = { it }) { n ->
+            CategoryChip(n, selected == n, "online_pinned_$n") { onPick(if (selected == n) null else n) }
         }
     }
 }

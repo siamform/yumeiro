@@ -47,6 +47,8 @@ class ExternalDownloaderTest {
         assertNull(ExternalDownloader.unsupportedReason("com.dv.adm", isHls = false, isDash = false))
         assertNotNull(ExternalDownloader.unsupportedReason(ExternalDownloader.CHOOSER, isHls = false, isDash = true))
         assertNotNull(ExternalDownloader.unsupportedReason(ExternalDownloader.IN_APP, isHls = false, isDash = false))
+        // R15: split video + audio stays in the app (another app would save it silent).
+        assertNotNull(ExternalDownloader.unsupportedReason("idm.internet.download.manager", isHls = false, isDash = false, splitAudio = true))
     }
 
     @Test fun fileNamesAreSafe() {

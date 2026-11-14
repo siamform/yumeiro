@@ -271,8 +271,22 @@ fun OnlineHomeScreen(
             }
         }
         }
+        // R15 Phase 5: favourite extensions, one tap away (only those that are on).
+        val pinsAll by dev.asfakul.yumeiro.online.PinnedExtensions.pins.collectAsState()
+        val pins = remember(pinsAll, channelNames) { pinsAll.filter { it in channelNames } }
+        remember { dev.asfakul.yumeiro.online.PinnedExtensions.init(context); true }
+        if (providers.size > 1 && pins.isNotEmpty()) androidx.compose.animation.AnimatedVisibility(
+            visible = barHide.visible || showFilter,
+            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
+        ) { PinnedExtensionBar(pins, selected) { selected = it } }
         if (showFilter) SourceFilterSheet(
             names = channelNames, selected = selected,
+            pins = pins,
+            onTogglePin = { n ->
+                if (!dev.asfakul.yumeiro.online.PinnedExtensions.toggle(context, n))
+                    android.widget.Toast.makeText(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions", android.widget.Toast.LENGTH_SHORT).show()
+            },
             status = { n -> when (val h = homes[n]) { is ProviderHome.Ready -> SourceStatus.Ready(h.rows.sumOf { it.items.size }); is ProviderHome.Failed -> SourceStatus.Failed; else -> SourceStatus.Loading } },
             onPick = { selected = it; showFilter = false },
             onDismiss = { showFilter = false },

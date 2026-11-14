@@ -156,7 +156,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
                 if (other != null) PlayerChip(Icons.Default.Translate, "${state.version.ifBlank { "Default" }} → ${other.ifBlank { "Default" }}", "online_player_version") { OnlineSession.switchVersion(context, other) }
             }
             if (state.hasNext) PlayerChip(Icons.Default.SkipNext, "Next", "online_player_next") { OnlineSession.next(context) }
-            if (state.link != null && state.link?.isDash != true && state.detail.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) PlayerChip(Icons.Default.Download, "Download", "online_player_download") {
+            if (state.link != null && state.detail.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) PlayerChip(Icons.Default.Download, "Download", "online_player_download") {
                 askDownloadCurrent(context, state)
             }
         }
@@ -534,7 +534,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.ClosedCaption, "Subtitles", "online_watch_subtitles") { sheet = Sheet.SUBTITLES }
                 val castOk = remember { dev.asfakul.yumeiro.cast.CastSupport.available(context) }
                 if (castOk && state.link != null && player != null) dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.Cast, "Cast", "online_watch_cast") { castCurrent(context, state, player) }
-                if (state.link != null && state.link?.isDash != true && d.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) {
+                if (state.link != null && d.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) {
                     dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.Download, "Download", "online_watch_download") {
                         askDownloadCurrent(context, state)
                     }
