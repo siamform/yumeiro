@@ -25,9 +25,10 @@ class SiteAccessTest {
         assertTrue(SiteLogins.matches(hosts, "api.site.to"))
         assertFalse(SiteLogins.matches(hosts, "notsite.to"))
     }
-    @Test fun blockedMessageOffersTheSite() {
+    @Test fun blockedMessageNeverOffersACaptchaPage() {
+        // Round 13: the interactive captcha page is gone (it only showed a blank screen).
         val m = BrowserCheck.blockedMessage("site.to")
-        assertTrue(m.contains("site.to") && m.contains("Open site"))
+        assertTrue(m.contains("site.to") && !m.contains("Open site") && !m.contains("captcha"))
     }
     @Test fun signupGuideMentionsHostAndWarnsAboutPayment() {
         val s = SignupSteps.steps("site.to")

@@ -210,14 +210,11 @@ object BrowserCheck {
             }
             Log.i(TAG, "Checking $host in a WebView")
             headless(page)?.let { return@withLock it.also { cleared[host] = it } }
-            val now = System.currentTimeMillis()
-            val recentlyDeclined = (declined[host] ?: 0L) > now - 10 * 60_000
-            if (!interactive || recentlyDeclined || CommonActivity.activity == null) return@withLock null
-            // Solved by hand a moment ago and the site asks again: don't pop the page up over and
-            // over. Offer it calmly instead (one message, the user opens it when ready).
-            if (BrowserCheckPolicy.tooSoon(askedAt[host], now)) { noteAskAgain(host, url); return@withLock null }
-            askedAt[host] = now
-            askUser(page, host)?.also { cleared[host] = it }
+            // Round 13: the interactive captcha page is gone. It only ever showed a blank screen
+            // (Turnstile / hCaptcha refuse to render inside an app WebView), so a check that the
+            // silent pass can't clear now just fails this source and playback moves to the next.
+            declined[host] = System.currentTimeMillis()
+            null
         }
     }
 
@@ -309,43 +306,9 @@ object BrowserCheck {
         "(function(){try{var t=(document.title||'').toLowerCase();var b=(document.body&&document.body.innerText||'').toLowerCase();" +
             "return !!document.getElementById('cf-error-details')||t.indexOf('attention required')>=0||b.indexOf('sorry, you have been blocked')>=0;}catch(e){return false}})()"
 
-    private suspend fun askUser(url: String, host: String): Clearance? {
-        val done = CompletableDeferred<Boolean>()
-        _pending.value = Pending(url, host, done)
-        val ok = try {
-            withTimeoutOrNull(INTERACTIVE_MS) {
-                while (!done.isCompleted) {
-                    delay(500)
-                    if (hasClearance(webCookies(url))) { done.complete(true); break }
-                }
-                done.await()
-            } ?: false
-        } finally {
-            if (_pending.value?.done === done) _pending.value = null
-        }
-        if (!ok) { declined[host] = System.currentTimeMillis(); return null }
-        return Clearance(webCookies(url), userAgent())
-    }
-
     private val blockedNoticeAt = ConcurrentHashMap<String, Long>()
     private val askedAt = ConcurrentHashMap<String, Long>()
     private val askAgainNoticeAt = ConcurrentHashMap<String, Long>()
-
-    /** "Check again" as a single tap-to-open message, at most once per [BrowserCheckPolicy.ASK_COOLDOWN_MS]. */
-    private fun noteAskAgain(host: String, url: String) {
-        val now = System.currentTimeMillis()
-        if (BrowserCheckPolicy.tooSoon(askAgainNoticeAt[host], now)) return
-        askAgainNoticeAt[host] = now
-        val ctx = appContext ?: return
-        val root = challengePage(url, method = "POST")
-        main.post {
-            runCatching {
-                dev.asfakul.yumeiro.ui.components.AppMessages.show(ctx, "$host wants another quick check", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "Open") {
-                    openSite(root, Purpose.CHECK)
-                }
-            }
-        }
-    }
 
     /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
     private fun noteBlocked(host: String, url: String = "https://$host/") {
@@ -354,19 +317,12 @@ object BrowserCheck {
         if (now - last < 5 * 60_000) return
         blockedNoticeAt[host] = now
         val ctx = appContext ?: return
-        val root = challengePage(url, method = "POST")
-        main.post {
-            runCatching {
-                dev.asfakul.yumeiro.ui.components.AppMessages.error(
-                    ctx, blockedMessage(host), "Open site",
-                ) { openSite(root, Purpose.CHECK) }
-            }
-        }
+        main.post { runCatching { dev.asfakul.yumeiro.ui.components.AppMessages.error(ctx, blockedMessage(host)) } }
     }
 
     /** The firewall notice. Pure → unit-testable. */
     fun blockedMessage(host: String) =
-        "$host's firewall refused this source. Tap Open site to pass its captcha or sign in — or turn off VPN / custom DNS and try again."
+        "$host's firewall refused this source, so Yumeiro skipped it. Turning off a VPN or custom DNS can help."
 
     /** Called by the UI when the check page itself turned out to be a firewall block. */
     fun onBlocked(host: String) {

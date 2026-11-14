@@ -799,19 +799,6 @@ private fun VideoPlayerModalContent(
      * the decoders so the new track starts aligned. If the track doesn't start within 10 s (or
      * fails), the previous one comes back instead of leaving a frozen black screen.
      */
-    /** Round 13: language picks from the source list land here (same video, other audio track). */
-    fun selectAudioByKey(key: String): Boolean {
-        val groups = exoPlayer.currentTracks.groups
-        val audio = groups.withIndex().filter { it.value.type == C.TRACK_TYPE_AUDIO }
-            .flatMap { (gi, g) -> (0 until g.length).map { ti -> Triple(gi, ti, g.getTrackFormat(ti).language) } }
-        if (audio.size < 2) return false
-        val hit = dev.asfakul.yumeiro.online.AudioLanguages.trackFor(key, audio.map { it.third }).takeIf { it >= 0 } ?: return false
-        val (gi, ti) = audio[hit].let { it.first to it.second }
-        if (groups[gi].isTrackSelected(ti)) return true
-        switchAudio(gi, ti)
-        return true
-    }
-
     fun switchAudio(groupIndex: Int, trackIndex: Int) {
         val tracks = exoPlayer.currentTracks
         if (groupIndex !in 0 until tracks.groups.size) return
@@ -844,6 +831,20 @@ private fun VideoPlayerModalContent(
         }
         showToast("Switched audio track")
     }
+
+    /** Round 13: language picks from the source list land here (same video, other audio track). */
+    fun selectAudioByKey(key: String): Boolean {
+        val groups = exoPlayer.currentTracks.groups
+        val audio = groups.withIndex().filter { it.value.type == C.TRACK_TYPE_AUDIO }
+            .flatMap { (gi, g) -> (0 until g.length).map { ti -> Triple(gi, ti, g.getTrackFormat(ti).language) } }
+        if (audio.size < 2) return false
+        val hit = dev.asfakul.yumeiro.online.AudioLanguages.trackFor(key, audio.map { it.third }).takeIf { it >= 0 } ?: return false
+        val (gi, ti) = audio[hit].let { it.first to it.second }
+        if (groups[gi].isTrackSelected(ti)) return true
+        switchAudio(gi, ti)
+        return true
+    }
+
 
     /** Re-reads subtitle files with the new delay (cues are timed when they're parsed). */
     fun applySubtitleDelay(ms: Long) {
