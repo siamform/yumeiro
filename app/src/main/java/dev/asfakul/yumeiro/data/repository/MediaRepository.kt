@@ -193,10 +193,10 @@ class OfflineMediaRepository(
     )
     private val _playCounts = MutableStateFlow(loadPlayCounts())
 
+    // Round 2: no demo playlists. "Workout Energy" and "Late Night Chill" were seeded on first run
+    // and looked like the user's own; only the internal liked-songs list is created here.
     private fun defaultPlaylists() = listOf(
         Playlist(id = "favorites_default", name = "Favorite Tracks", trackIds = favoriteIds.toList()),
-        Playlist(id = "workout_mix", name = "Workout Energy", trackIds = emptyList()),
-        Playlist(id = "chill_vibes", name = "Late Night Chill", trackIds = emptyList())
     )
 
     private fun loadPlaylists(): List<Playlist> = runCatching {
@@ -212,9 +212,11 @@ class OfflineMediaRepository(
                 createdAt = obj.optLong("createdAt", System.currentTimeMillis())
             )
         }
-        if (loaded.none { it.id == "favorites_default" }) {
-            listOf(Playlist(id = "favorites_default", name = "Favorite Tracks", trackIds = favoriteIds.toList())) + loaded
-        } else loaded
+        // Seeded demo playlists the user never filled are removed (kept if songs were added).
+        val cleaned = loaded.filterNot { it.id in SEEDED_DEMO && it.trackIds.isEmpty() }
+        if (cleaned.none { it.id == "favorites_default" }) {
+            listOf(Playlist(id = "favorites_default", name = "Favorite Tracks", trackIds = favoriteIds.toList())) + cleaned
+        } else cleaned
     }.getOrElse { defaultPlaylists() }
 
     private fun loadPlayCounts(): Map<String, Int> = runCatching {
@@ -805,6 +807,7 @@ class OfflineMediaRepository(
 
     private companion object {
         const val KEY_FAVORITES = "favorite_track_ids"
+        val SEEDED_DEMO = setOf("workout_mix", "chill_vibes")
         const val KEY_PLAYLISTS = "playlists_json"
         const val KEY_RECENT = "recently_played_ids"
         const val KEY_PLAY_COUNTS = "play_counts_json"
