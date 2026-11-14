@@ -45,7 +45,7 @@ class DramaHealthTest {
     @Test fun idsSurviveFixUrlAndOldForm() {
         assertEquals("onshort" to "https://onshort.net/a/", YumeiroDramaProvider.parseId("drama:onshort|https://onshort.net/a/"))
         assertEquals("onshort" to "https://onshort.net/a/", YumeiroDramaProvider.parseId("https://yumeiro.click/drama/drama:onshort|https://onshort.net/a/"))
-        val p = YumeiroDramaProvider(listOf(Fake(emptySet())))
+        val p = YumeiroDramaProvider(listOf(Fake(emptySet())), DramaHealth(reach = { true }))
         val home = runBlocking { p.getMainPage(1, MainPageRequest("Good", "onshort|good", false)) }
         val item = home.items.first().list.first()
         assertTrue(item.url, item.url.startsWith("drama:onshort|"))
@@ -57,7 +57,7 @@ class DramaHealthTest {
     }
 
     @Test fun downStudioHasNoShelfAndItsTitlesPlayFromAMirror() {
-        val p = YumeiroDramaProvider(listOf(Fake(setOf("bad"))))
+        val p = YumeiroDramaProvider(listOf(Fake(setOf("bad"))), DramaHealth(reach = { true }))
         val bad = runBlocking { p.getMainPage(1, MainPageRequest("Bad", "onshort|bad", false)) }
         assertTrue(bad.items.all { it.list.isEmpty() })
         val good = runBlocking { p.getMainPage(1, MainPageRequest("Good", "onshort|good", false)) }
@@ -69,6 +69,13 @@ class DramaHealthTest {
         // Without a mirror: a clear reason, not a crash or an unknown-catalog error.
         val e = runCatching { links(p, "drama:onshort|https://x/bad-2/|1") }.exceptionOrNull()
         assertTrue(e?.message.orEmpty(), e?.message.orEmpty().contains("isn't serving this episode"))
+    }
+
+    @Test fun indexThatServesDeadLinksIsDown() {
+        // Index answers with a link but the CDN refuses it (DramaBite on 2026-11-14: 403).
+        val p = YumeiroDramaProvider(listOf(Fake(emptySet())), DramaHealth(reach = { throw IOException("Stream answered HTTP 403") }))
+        val r = runBlocking { p.getMainPage(1, MainPageRequest("Good", "onshort|good", false)) }
+        assertTrue(r.items.all { it.list.isEmpty() })
     }
 
     @Test fun titleKeyIgnoresQuotesAndDubTags() {

@@ -77,7 +77,7 @@ object YumeiroDrama {
 }
 
 /** CloudStream-compatible face of [YumeiroDrama]; ids are `drama:<catalog>|<series url>[|<episode>]`. */
-class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI() {
+class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>, private val health: DramaHealth = DramaHealth()) : MainAPI() {
     override var name = YumeiroDrama.NAME
     override var mainUrl = "https://yumeiro.click/drama"
     override var lang = "en"
@@ -102,7 +102,6 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
         return newHomePageResponse(request.name, shows.map { it.toResult(c) }, shows.size >= 12)
     }
 
-    private val health = DramaHealth()
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         if (page > 1 || query.isBlank()) return newSearchResponseList(emptyList(), false)
@@ -159,17 +158,17 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
      */
     private suspend fun streamsOrMirror(c: DramaCatalog, s: DramaSeries, n: Int): Pair<DramaStreams, String?> {
         val first = runCatching { c.streams(s, n) }
-        first.getOrNull()?.takeIf { it.sources.isNotEmpty() }?.let { return it to null }
+        first.getOrNull()?.takeIf { health.playable(it) }?.let { return it to null }
         val key = DramaHealth.titleKey(s.title)
         val mirrors = runCatching { withTimeoutOrNull(20_000) { c.search(s.title) } }.getOrNull().orEmpty()
             .filter { it.url != s.url && DramaHealth.titleKey(it.title) == key && (it.episodes ?: n) >= n && !health.isDown(c, it.platform) }
             .take(4)
         for (m in mirrors) {
             val r = runCatching { withTimeoutOrNull(25_000) { c.streams(c.series(m.url), n) } }.getOrNull()
-            if (r != null && r.sources.isNotEmpty()) return r to m.platform
+            if (r != null && health.playable(r)) return r to m.platform
         }
         s.platform?.let { health.markDown(c, it) }
-        val why = first.exceptionOrNull()?.message
+        val why = first.exceptionOrNull()?.message ?: "its video server refused the link"
         throw java.io.IOException(
             "${s.platform ?: c.label} isn't serving this episode right now (the studio's server refused it" +
                 (why?.let { ": $it" } ?: "") + "). No other copy of this drama was found. Try another title.",

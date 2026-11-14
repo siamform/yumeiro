@@ -5,7 +5,12 @@
  */
 package dev.asfakul.yumeiro.sources.drama
 
+import dev.asfakul.yumeiro.network.NetworkClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
+import okhttp3.Request
+import java.io.IOException
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
@@ -24,7 +29,12 @@ import java.util.concurrent.ConcurrentHashMap
  * counts as down; a network error on our side does not hide anything. Results last 30 minutes,
  * one probe per studio at a time.
  */
-class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () -> Long = System::currentTimeMillis) {
+class DramaHealth(
+    private val ttlMs: Long = 30 * 60_000L,
+    private val now: () -> Long = System::currentTimeMillis,
+    /** Asks the video server itself: an index can hand out signed links its CDN refuses (DramaBite: 403). */
+    private val reach: suspend (DramaStreams) -> Boolean = ::defaultReach,
+) {
     enum class State { OK, DOWN, UNKNOWN }
 
     private data class Entry(val state: State, val at: Long)
@@ -38,6 +48,10 @@ class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () ->
         val e = states[key(c, platform)] ?: return false
         return e.state == State.DOWN && now() - e.at < ttlMs
     }
+
+    /** False only when the video server clearly refuses; a slow answer is left to the player. */
+    suspend fun playable(st: DramaStreams): Boolean =
+        st.sources.isNotEmpty() && (withTimeoutOrNull(10_000) { runCatching { reach(st) }.getOrElse { localNetwork(it) } } ?: true)
 
     fun markDown(c: DramaCatalog, platform: String) { states[key(c, platform)] = Entry(State.DOWN, now()) }
 
@@ -59,7 +73,7 @@ class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () ->
                 shows.take(2).map { sample ->
                     async {
                         withTimeoutOrNull(15_000) {
-                            runCatching { c.streams(c.series(sample.url), 1).sources.isNotEmpty() }
+                            runCatching { c.streams(c.series(sample.url), 1).let { it.sources.isNotEmpty() && reach(it) } }
                         } ?: Result.failure(java.io.IOException("timeout"))
                     }
                 }.awaitAll()
@@ -83,6 +97,22 @@ class DramaHealth(private val ttlMs: Long = 30 * 60_000L, private val now: () ->
     }
 
     companion object {
+        /** First source answers 2xx with media (not an HTML error page); first 2 KB only. */
+        suspend fun defaultReach(st: DramaStreams): Boolean = withContext(Dispatchers.IO) {
+            val url = st.sources.entries.maxByOrNull { it.key.toIntOrNull() ?: 0 }?.value ?: return@withContext false
+            val req = Request.Builder().url(url)
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Mobile Safari/537.36")
+                .header("Range", "bytes=0-2047")
+                .apply { st.referer?.let { header("Referer", it) } }
+                .build()
+            NetworkClient.get().newCall(req).execute().use { r ->
+                if (!r.isSuccessful) throw IOException("Stream answered HTTP ${r.code}")
+                val head = r.body.source().let { src -> src.request(64); src.buffer.snapshot().utf8().take(64) }
+                !head.trimStart().startsWith("<")
+            }
+        }
+
+
         /** The server answered and said no (HTTP 4xx / 5xx, or no stream in a valid answer). */
         fun refused(e: Throwable): Boolean {
             val m = e.message.orEmpty()
