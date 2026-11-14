@@ -82,9 +82,8 @@ object QualityEngine {
     private suspend fun youTube(context: Context, id: String, currentHeight: Int): List<Alt> {
         val info = runCatching { dev.asfakul.yumeiro.youtube.YouTube.info(context, id, false) }.getOrNull() ?: return emptyList()
         // Same list as the download sheet (one source of truth), plus anything playable it skips.
-        val heights = dev.asfakul.yumeiro.online.download.YtDownloads.options(info).filter { !it.audioOnly }.map { it.height } +
-            info.videoOnlyStreams.filter { it.isUrl }.map { it.height } + info.videoStreams.filter { it.isUrl }.map { it.height }
-        return ladder(heights).map { h ->
+        val extra = info.videoOnlyStreams.filter { it.isUrl }.map { it.height } + info.videoStreams.filter { it.isUrl }.map { it.height }
+        return youTubeLadder(dev.asfakul.yumeiro.online.download.YtDownloads.options(info), extra).map { h ->
             Alt(label(h), h, current = h == currentHeight) { c, _ -> dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(c, id, maxHeight = h) }
         }
     }
@@ -107,6 +106,10 @@ object QualityEngine {
             }
         }
     }
+
+    /** The download sheet's video heights (+ playable extras), highest first. Pure → unit-tested. */
+    internal fun youTubeLadder(choices: List<dev.asfakul.yumeiro.online.download.YtDownloadOptions.Choice>, extra: List<Int> = emptyList()): List<Int> =
+        ladder(choices.filter { !it.audioOnly }.map { it.height } + extra)
 
     /** Distinct, sensible heights, highest first. Pure → unit-tested. */
     internal fun ladder(heights: List<Int>): List<Int> =

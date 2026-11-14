@@ -51,12 +51,30 @@ class QualityRound2Test {
         assertEquals("aqz-KE-bpKQ", QualityEngine.youTubeId(r))
     }
 
+    @Test fun youTubePlayerListIsTheDownloadList() {
+        val V = dev.asfakul.yumeiro.online.download.YtDownloadOptions
+        val videos = listOf(
+            V.Video(137, 1080, 30, "mp4", "avc1.640028", 50_000_000, true), V.Video(248, 1080, 30, "webm", "vp9", 40_000_000, true),
+            V.Video(136, 720, 30, "mp4", "avc1.4d401f", 25_000_000, true), V.Video(135, 480, 30, "mp4", "avc1.4d401e", 12_000_000, true),
+            V.Video(134, 360, 30, "mp4", "avc1.4d401e", 8_000_000, true), V.Video(160, 144, 30, "mp4", "avc1.4d400c", 2_000_000, true),
+            V.Video(313, 2160, 30, "webm", "vp9", 300_000_000, true), V.Video(18, 360, 30, "mp4", "avc1.42001E", 9_000_000, false),
+        )
+        val audios = listOf(V.Audio(140, 128_000, "m4a", "mp4a.40.2", 3_000_000), V.Audio(251, 160_000, "webm", "opus", 3_500_000))
+        val dl = V.build(videos, audios, 34)
+        val dlHeights = dl.filter { !it.audioOnly }.map { it.height }.distinct().sortedDescending()
+        assertEquals(listOf(2160, 1080, 720, 480, 360, 144), dlHeights)
+        assertEquals(dlHeights, QualityEngine.youTubeLadder(dl))
+    }
+
     /** Live: the player list for a YouTube video equals the download sheet's heights. */
     @Test fun youTubePlayerMatchesDownloader() = runBlocking {
         assumeTrue(System.getProperty("yumeiro.live") == "true")
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val id = "aqz-KE-bpKQ" // Big Buck Bunny 60fps 4K, (c) Blender Foundation, CC BY 3.0
-        val dl = YtDownloads.options(YouTube.info(ctx, id, false)).filter { !it.audioOnly }.map { QualityEngine.snap(it.height) }.distinct().sortedDescending()
+        val info = runCatching { YouTube.info(ctx, id, false) }
+        // YouTube refuses anonymous access from data-centre IPs ("confirm you're not a bot").
+        assumeTrue("YouTube blocked this IP: ${info.exceptionOrNull()?.message}", info.isSuccess)
+        val dl = YtDownloads.options(info.getOrThrow()).filter { !it.audioOnly }.map { QualityEngine.snap(it.height) }.distinct().sortedDescending()
         val r = StreamRequest(url = "https://www.youtube.com/watch?v=$id", title = "Big Buck Bunny")
         val player = QualityEngine.alternatives(ctx, r, 720).map { it.height }
         File("build/quality-live").mkdirs()
