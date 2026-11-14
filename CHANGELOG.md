@@ -46,6 +46,36 @@ All notable changes to Yumeiro.
 - Audio and subtitle choices grouped by language with Show more.
 - The small "i" info icons were replaced with clearer icons everywhere.
 
+### Video and Yumix
+- Video details show the real size, duration and audio for streams (1.6.0 left them empty for most online videos).
+- Yumix: a search box in the extension filter sheet, so long extension lists are quick to filter.
+
+### Cache and cookies
+- Saved pages work like a browser cache: each kind has a refresh age and a delete age, the whole cache has a size cap, and old entries clear themselves. Settings, Backup, storage & reset shows the size and lets you change the limits.
+- Website cookies (used by sign-ins and site checks) clear every N days, or never.
+
+### Security and privacy
+- Extension install: the extension's manifest is read in memory, no temporary file in the shared temp folder.
+- Private DNS (DNS-over-TLS): the resolver's certificate name is checked again after the handshake.
+- Android cloud backup is off in both apps (`allowBackup="false"`). Yumeiro's own backup replaces it, keeps sign-in tokens out of Google Drive and still lets Android 12+ phone-to-phone transfer follow the rules in `data_extraction_rules.xml`.
+- Saved page file names use SHA-256.
+- CodeQL: the full scan of this release reports 0 open alerts (1.6.0 had 32). Accepted results are listed rule by rule, with reasons, in `docs/security/AUDIT.md`.
+- No open Dependabot or secret-scanning alerts.
+
+### Fixed
+- Restore no longer breaks the running app: it is applied on a clean restart, and a backup that fails twice is dropped instead of looping.
+- Extensions missing after a restore are downloaded again.
+- Long source, audio and subtitle lists no longer freeze the watch page.
+- Phone and TV settings no longer leak into each other (TV-only layout options are gone from the phone app and the other way round).
+
+### Tests
+- 640+ JVM / Robolectric tests, 0 failures. New: Backup v2 round trip, staged restore, resets, prune and saved pages (run on Android 7, 10, 14 and 16), both app editions, updater edition picking, source facts, language track groups, codec details and the music rows.
+- CI builds, tests and lints the phone app and the TV app separately.
+
+### For developers
+- Gradle tasks: `assembleMobileRelease`, `assembleTvRelease` (and `Preview` / `Debug`). Edition switches live in `Edition.kt`.
+- Handover: `docs/HANDOVER.md` §29 and `docs/TV-AND-PHONE.md`.
+
 ## v1.6.0: redesign (R1 to R11)
 
 The redesign was built in a separate working repository on top of v1.5.0 (`af8349e`) and lands here in one pull request.
