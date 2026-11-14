@@ -139,8 +139,18 @@ object AppNotifier {
         ensureChannels(c)
         val why = block(c, item.kind)
         if (why != Block.NONE) { Log.i(TAG, "inbox only (${why.name}): ${item.id}"); return true }
-        show(c, item, notificationId)
+        // Round 13: paced, so a catch-up run never drops a pile of notifications at once.
+        NotifyPacer.offer(c, item, notificationId) { i, n -> show(c, i, n) }
         return true
+    }
+
+    /** Shows a queued item now ([NotifyPacer]); settings and system blocks are checked again. */
+    fun showNow(c: Context, item: Inbox.Item, notificationId: Int) {
+        NotifySettings.init(c)
+        settingFor(item.kind)?.let { if (!NotifySettings.get(c, it)) return }
+        ensureChannels(c)
+        if (block(c, item.kind) != Block.NONE) return
+        show(c, item, notificationId)
     }
 
     /**
@@ -162,8 +172,8 @@ object AppNotifier {
         if (more <= 0 || block(c, Inbox.Kind.NEWS) != Block.NONE) return
         ensureChannels(c)
         val now = System.currentTimeMillis()
-        show(c, Inbox.Item("summary-$now", Inbox.Kind.NEWS, "$more more updates",
-            "Open your Yumeiro inbox to see everything that's new.", now), 0x7198)
+        NotifyPacer.offer(c, Inbox.Item("summary-$now", Inbox.Kind.NEWS, "$more more updates",
+            "Open your Yumeiro inbox to see everything that's new.", now), 0x7198) { i, n -> show(c, i, n) }
     }
 
     private fun show(c: Context, item: Inbox.Item, notificationId: Int) {

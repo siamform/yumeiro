@@ -103,8 +103,15 @@ object BackdropSettings {
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching false
             var sample = 1
             while (bounds.outWidth / (sample * 2) >= 540 && bounds.outHeight / (sample * 2) >= 540) sample *= 2
-            val bmp = cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
+            val raw = cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
                 ?: return@runCatching false
+            // Round 13: camera photos are stored sideways with an EXIF turn; apply it so the
+            // backdrop isn't rotated.
+            val turn = runCatching {
+                cr.openInputStream(uri)?.use { android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }
+            }.getOrNull()?.let { when (it) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f } } ?: 0f
+            val bmp = if (turn == 0f) raw else android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height,
+                android.graphics.Matrix().apply { postRotate(turn) }, true).also { if (it !== raw) raw.recycle() }
             val tmp = File(context.filesDir, "$FILE.tmp")
             tmp.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, it) }
             bmp.recycle()
@@ -131,12 +138,30 @@ internal fun rememberBackdropPhoto(): State<ImageBitmap?> {
     BackdropSettings.init(context)
     val version by BackdropSettings.photoVersion.collectAsState()
     val style by BackdropSettings.style.collectAsState()
-    return produceState<ImageBitmap?>(null, version, style) {
-        value = if (version == 0L || style != BackdropStyle.PHOTO) null else withContext(Dispatchers.IO) {
+    return produceState(PhotoCache.peek(version, style), version, style) {
+        value = PhotoCache.get(context, version, style)
+    }
+}
+
+/**
+ * Round 13: the photo backdrop looked like it did nothing. It was decoded at 1/8 of an already
+ * small copy (about 67 px wide) under an 80% scrim, so only a faint tint showed, and every page
+ * decoded it again. Now one decoded copy (half size: still soft, but clearly the photo) is shared
+ * by every page in the app.
+ */
+private object PhotoCache {
+    @Volatile private var key: Long = 0L
+    @Volatile private var img: ImageBitmap? = null
+
+    fun peek(version: Long, style: BackdropStyle): ImageBitmap? = if (style == BackdropStyle.PHOTO && version != 0L && version == key) img else null
+
+    suspend fun get(context: Context, version: Long, style: BackdropStyle): ImageBitmap? {
+        if (version == 0L || style != BackdropStyle.PHOTO) return null
+        peek(version, style)?.let { return it }
+        return withContext(Dispatchers.IO) {
             runCatching {
-                val f = BackdropSettings.photoFile(context)
-                BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap()
-            }.getOrNull()
+                BitmapFactory.decodeFile(BackdropSettings.photoFile(context).path, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap()
+            }.getOrNull()?.also { key = version; img = it }
         }
     }
 }
@@ -164,7 +189,9 @@ internal fun DrawScope.drawBackdropPhoto(img: ImageBitmap, p: MtPalette, top: Fl
     drawImage(img, IntOffset.Zero, IntSize(img.width, img.height), IntOffset(dx.toInt(), dy.toInt()), IntSize(dw.toInt() + 1, dh.toInt() + 1),
         filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
     // Stronger scrim at lower intensity; text tiers keep AA contrast at every setting.
-    val base = if (p.isDark) 0.80f else 0.82f
-    val scrim = (base - (k - 1f) * 0.18f).coerceIn(0.62f, 0.92f)
+    // Round 13: lighter scrim so the photo is really seen across the app; cards and text sit on
+    // glass surfaces that keep their own contrast.
+    val base = if (p.isDark) 0.60f else 0.66f
+    val scrim = (base - (k - 1f) * 0.18f).coerceIn(0.42f, 0.84f)
     drawRect(Brush.verticalGradient(0f to p.bgTop.copy(alpha = scrim - 0.08f), 0.45f to p.bgMid.copy(alpha = scrim), 1f to p.bgBottom.copy(alpha = scrim + 0.04f), startY = -top, endY = windowH - top))
 }

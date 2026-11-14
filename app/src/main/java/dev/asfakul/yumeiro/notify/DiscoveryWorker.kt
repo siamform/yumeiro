@@ -50,6 +50,9 @@ object BackgroundWork {
     /** Applies the current settings: schedules both workers, or cancels them when background work is off. */
     fun apply(c: Context, policy: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.UPDATE) {
         val wm = runCatching { WorkManager.getInstance(c.applicationContext) }.getOrNull() ?: return
+        // Round 13: an alarm clock next to WorkManager, so checks also run while the app is closed
+        // on phones that hold back jobs of rarely opened apps (cancelled when background work is off).
+        runCatching { BackgroundClock.arm(c) }
         if (!NotifySettings.get(c, NotifySettings.Key.BACKGROUND)) {
             wm.cancelUniqueWork(DiscoveryWorker.WORK)
             wm.cancelUniqueWork(NewEpisodesWorker.WORK)

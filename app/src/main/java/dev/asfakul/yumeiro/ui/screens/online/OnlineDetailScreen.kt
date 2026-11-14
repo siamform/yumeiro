@@ -160,7 +160,7 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
 @Composable
 private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, onPlay: (version: String, index: Int) -> Unit) {
     val versions = d.versions
-    var version by rememberSaveable(d.url) { mutableStateOf(versions.firstOrNull().orEmpty()) }
+    var version by rememberSaveable(d.url) { mutableStateOf(dev.asfakul.yumeiro.online.OnlineSession.defaultVersion(versions)) }
     if (version !in versions && versions.isNotEmpty()) version = versions.first()
     val seasons = remember(d, version) { d.seasons(version) }
     var seasonIndex by rememberSaveable(d.url, version) { mutableIntStateOf(0) }
@@ -168,6 +168,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
     val ordered = remember(d, version) { OnlineSession.episodesOf(d, version) }
     val episodes = remember(ordered, season) { ordered.withIndex().filter { season == null || it.value.season == season.number } }
     val historyVersion by OnlineHistory.version.collectAsState()
+    // Round 13: thumbnails for episodes the extension sends without one.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(d.api, d.url) { dev.asfakul.yumeiro.online.EpisodeStills.ensure(ctx, d) }
+    val stillsMap by dev.asfakul.yumeiro.online.EpisodeStills.stills.collectAsState()
+    val stills = stillsMap[dev.asfakul.yumeiro.online.EpisodeStills.keyOf(d)]
     val resume = remember(historyVersion, d.url) { OnlineHistory.entry(d.api, d.url) }
     // Episode to continue: the one in history (same version when possible), else the first.
     val resumeIndex = remember(resume, ordered) { resume?.episodeData?.let { ed -> ordered.indexOfFirst { it.data == ed } }?.takeIf { it >= 0 } }
@@ -313,7 +318,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             } else {
                 items(episodes, key = { "ep_" + it.index + it.value.data }) { (i, e) ->
                     val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(d.api, e.data) }
-                    EpisodeRow(e, progress = p?.fraction ?: 0f, watched = p?.finished == true, trailing = { EpisodeDownloadIcon(d, version, i, e) }) { onPlay(version, i) }
+                    EpisodeRow(e, d, stills, progress = p?.fraction ?: 0f, watched = p?.finished == true, trailing = { EpisodeDownloadIcon(d, version, i, e) }) { onPlay(version, i) }
                 }
             }
         }
@@ -329,12 +334,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
 }
 
 @Composable
-private fun EpisodeRow(e: OnlineEpisode, progress: Float = 0f, watched: Boolean = false, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
+private fun EpisodeRow(e: OnlineEpisode, d: OnlineDetail, stills: Map<String, String>?, progress: Float = 0f, watched: Boolean = false, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable(onClick = onClick).testTag("online_episode")) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))) {
-                if (e.posterUrl != null) PosterImage(e.posterUrl, emptyMap(), Modifier.fillMaxSize())
-                else Box(Modifier.fillMaxSize().background(SpotifyGreen.copy(alpha = 0.12f)))
+                EpisodeThumb(d, e, stills, Modifier.fillMaxSize())
                 Icon(if (watched) Icons.Default.CheckCircle else Icons.Default.PlayArrow, null, tint = if (watched) SpotifyGreen else Color.White, modifier = Modifier.align(Alignment.Center).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)).padding(3.dp))
                 if (progress > 0.01f) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.2f))) {
                     Box(Modifier.fillMaxWidth(progress).height(3.dp).background(SpotifyGreen))

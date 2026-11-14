@@ -247,6 +247,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         scanMedia()
+        // Round 13: Home → Continue keeps the song really played last and where it was left
+        // (saved every 5 s of playback and on every pause / track change, off the main thread).
+        dev.asfakul.yumeiro.player.LastPlayed.init(application)
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            playerManager.playbackState
+                .map { st -> Triple(st.currentTrack, st.isPlaying, st.currentPositionMs / 5000) }
+                .distinctUntilChanged()
+                .collect { (t, _, _) ->
+                    val st = playerManager.playbackState.value
+                    if (t != null && st.currentPositionMs >= 0) dev.asfakul.yumeiro.player.LastPlayed.saveAudio(application, t, st.currentPositionMs, st.durationMs)
+                }
+        }
     }
 
     fun onSearchQueryChange(query: String) {
@@ -390,8 +402,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Playback actions
-    fun playTrack(track: AudioTrack, queue: List<AudioTrack> = filteredAudioTracks.value) {
-        playerManager.playTrack(track, queue)
+    fun playTrack(track: AudioTrack, queue: List<AudioTrack> = filteredAudioTracks.value, startMs: Long = 0L) {
+        playerManager.playTrack(track, queue, startMs)
         // Selecting a song opens the full player page; the mini player is the collapsed form.
         _isNowPlayingExpanded.value = true
     }

@@ -81,13 +81,16 @@ object YouTubeStreams {
         )
     }
 
+    /** Round 13: Settings → Quality and audio → Default quality (Auto = up to 1080p). */
+    fun defaultHeight(): Int = dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 } ?: 1080
+
     /** A playable request for video [id]. [force] re-extracts (fresh URLs after a 403/expiry). */
     /**
      * [safe] = YouTube's own fallback path after a refused / expired link was already refreshed once:
      * skip the split DASH streams (range requests are what YouTube refuses most) and use HLS or the
      * muxed progressive stream instead.
      */
-    suspend fun videoRequest(context: Context, id: String, maxHeight: Int = 1080, force: Boolean = false, safe: Boolean = false): StreamRequest {
+    suspend fun videoRequest(context: Context, id: String, maxHeight: Int = defaultHeight(), force: Boolean = false, safe: Boolean = false): StreamRequest {
         if (force) YouTube.invalidate(id)
         val info = YouTube.info(context, id, force)
         return buildVideoRequest(context, id, info, maxHeight, safe)

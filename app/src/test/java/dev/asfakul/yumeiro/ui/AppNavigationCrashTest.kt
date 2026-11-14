@@ -300,7 +300,13 @@ class AppNavigationCrashTest {
     }
 
     @Test fun homeShowsVideosAsGrid() {
+        // The phone's own videos fill Yumix random only when no online source is on; Yumeiro
+        // Drama is on by default from 1.8.0, so turn it off for this check.
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, false)
         awaitHome()
+        rule.mainClock.advanceTimeBy(1_000)
+        rule.waitForIdle()
         // The vertical home list (the tabs themselves are a horizontal pager).
         val list = androidx.compose.ui.test.hasScrollAction() and
             androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange)
@@ -315,6 +321,7 @@ class AppNavigationCrashTest {
         }
         org.junit.Assert.assertEquals("two videos per row on a phone", 2, cardsInRow)
         snap("home_video_grid")
+        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, true)
     }
 
     @Test fun swipeAnywhereMovesBetweenTabsAndBackReturnsHome() {

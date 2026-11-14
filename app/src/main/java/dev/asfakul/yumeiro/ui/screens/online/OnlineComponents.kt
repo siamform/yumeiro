@@ -292,3 +292,31 @@ internal fun Pill(text: String, color: Color = SpotifyGreen) {
 
 internal val WarnColor: Color @Composable @ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.WarnTone
 internal val ErrorColor: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone
+
+
+/**
+ * Round 13: an episode's thumbnail. The extension's picture, else one from the public catalogues
+ * ([dev.asfakul.yumeiro.online.EpisodeStills]), else the series artwork dimmed with the episode
+ * number on top, so a row never shows an empty box.
+ */
+@androidx.compose.runtime.Composable
+internal fun EpisodeThumb(d: dev.asfakul.yumeiro.online.OnlineDetail, e: dev.asfakul.yumeiro.online.OnlineEpisode, stills: Map<String, String>?, modifier: Modifier = Modifier) {
+    val own = dev.asfakul.yumeiro.online.EpisodeStills.imageFor(d, e, stills)
+    androidx.compose.foundation.layout.Box(modifier) {
+        if (own != null) PosterImage(own, emptyMap(), Modifier.matchParentSize())
+        else {
+            PosterImage(d.backgroundUrl ?: d.posterUrl, d.posterHeaders, Modifier.matchParentSize())
+            androidx.compose.foundation.layout.Box(
+                Modifier.matchParentSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)),
+                contentAlignment = androidx.compose.ui.Alignment.BottomStart,
+            ) {
+                androidx.compose.material3.Text(
+                    e.episode?.let { "E$it" } ?: "",
+                    color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontSize = androidx.compose.ui.unit.TextUnit(13f, androidx.compose.ui.unit.TextUnitType.Sp),
+                    modifier = Modifier.padding(6.dp),
+                )
+            }
+        }
+    }
+}

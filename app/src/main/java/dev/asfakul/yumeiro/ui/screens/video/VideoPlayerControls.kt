@@ -64,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -176,158 +177,174 @@ fun VideoPlayerTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Video quality (adaptive streams with several variants)
-            if (qualityLabel != null) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color.White.copy(alpha = 0.14f),
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable(onClick = onQualityClick)
-                        .testTag("video_quality_btn")
-                ) {
-                    Text(
-                        text = qualityLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+            // Round 13: Settings → Quality and audio → Player controls (order and hidden buttons).
+            val order by dev.asfakul.yumeiro.player.VideoPrefs.controls.collectAsState()
+            val hidden by dev.asfakul.yumeiro.player.VideoPrefs.hidden.collectAsState()
+            order.filter { it !in hidden }.forEach { control ->
+                when (control) {
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.QUALITY -> {
+                        // Video quality (adaptive streams with several variants)
+                        if (qualityLabel != null) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color.White.copy(alpha = 0.14f),
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable(onClick = onQualityClick)
+                                    .testTag("video_quality_btn")
+                            ) {
+                                Text(
+                                    text = qualityLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.AUDIO -> {
+                        // Audio track
+                        IconButton(
+                            onClick = onAudioTrackClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_audio_track_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Audiotrack,
+                                contentDescription = "Audio tracks",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.SUBTITLES -> {
+                        // CC on / off
+                        IconButton(
+                            onClick = onCaptionsToggle,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_cc_btn")
+                        ) {
+                            Icon(
+                                imageVector = if (captionsOn) Icons.Default.ClosedCaption else Icons.Default.ClosedCaptionDisabled,
+                                contentDescription = if (captionsOn) "Captions on" else "Captions off",
+                                tint = if (captionsOn) Color.White else Color.White.copy(alpha = 0.55f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Subtitles
+                        IconButton(
+                            onClick = onSubtitleClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_subtitle_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Subtitles,
+                                contentDescription = "Subtitles",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.SPEED -> {
+                        // Speed
+                        IconButton(
+                            onClick = onSpeedClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_speed_btn")
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Speed,
+                                    contentDescription = "Speed",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "${currentSpeed}x",
+                                    color = SpotifyGreen,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.ASPECT -> {
+                        // Aspect ratio
+                        IconButton(
+                            onClick = onAspectRatioClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_aspect_ratio_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AspectRatio,
+                                contentDescription = "Aspect ratio",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.PIP -> {
+                        // PiP mode
+                        if (isPipSupported) {
+                            IconButton(
+                                onClick = onPipClick,
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .testTag("video_pip_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PictureInPicture,
+                                    contentDescription = "Picture in picture",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.INFO -> {
+                        // Video details
+                        IconButton(
+                            onClick = onInfoClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_info_btn")
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Outlined.Movie,
+                                contentDescription = "Video details",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK -> {
+                        // Lock screen
+                        IconButton(
+                            onClick = onLockClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_screen_lock_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = "Lock controls",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
-            }
-
-            // Audio track
-            IconButton(
-                onClick = onAudioTrackClick,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_audio_track_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Audiotrack,
-                    contentDescription = "Audio tracks",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // CC on / off
-            IconButton(
-                onClick = onCaptionsToggle,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_cc_btn")
-            ) {
-                Icon(
-                    imageVector = if (captionsOn) Icons.Default.ClosedCaption else Icons.Default.ClosedCaptionDisabled,
-                    contentDescription = if (captionsOn) "Captions on" else "Captions off",
-                    tint = if (captionsOn) Color.White else Color.White.copy(alpha = 0.55f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Subtitles
-            IconButton(
-                onClick = onSubtitleClick,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_subtitle_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Subtitles,
-                    contentDescription = "Subtitles",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Speed
-            IconButton(
-                onClick = onSpeedClick,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_speed_btn")
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Speed,
-                        contentDescription = "Speed",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "${currentSpeed}x",
-                        color = SpotifyGreen,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp
-                    )
-                }
-            }
-
-            // Aspect ratio
-            IconButton(
-                onClick = onAspectRatioClick,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_aspect_ratio_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AspectRatio,
-                    contentDescription = "Aspect ratio",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // PiP mode
-            if (isPipSupported) {
-                IconButton(
-                    onClick = onPipClick,
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .testTag("video_pip_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PictureInPicture,
-                        contentDescription = "Picture in picture",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Video details
-            IconButton(
-                onClick = onInfoClick,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_info_btn")
-            ) {
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Outlined.Movie,
-                    contentDescription = "Video details",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Lock screen
-            IconButton(
-                onClick = onLockClick,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("video_screen_lock_btn")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LockOpen,
-                    contentDescription = "Lock controls",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
             }
         }
     }

@@ -123,35 +123,32 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
     }
     LaunchedEffect(engine.repos.size) { load(false) }
 
+    // Round 13: the market hung on phones with thousands of listings, because filtering and
+    // sorting ran on the main thread on every keystroke and every engine update. All of it now
+    // runs on a background thread; the screen keeps showing the last result until the new one is ready.
     val installedKeys = remember(engine.installed) { engine.installed.associateBy { it.key } }
-    val updates = remember(data, engine.installed) { ExtensionManager.updatesFrom(data?.items.orEmpty()).associate { it.first.key to it.second } }
     val adult by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
-    // 18+ extensions only when the user turned them on (Settings → Online videos).
-    val safe = remember(data, adult) { data?.items.orEmpty().filter { adult || !it.isNsfw } }
-    val categories = remember(safe) { listOf("All") + PICK_CATEGORIES.filter { c -> c == "Short drama" || safe.any { c in it.categories } } + listOf("Other", "18+").filter { c -> safe.any { c in it.categories } } }
-    val languages = remember(safe) { safe.mapNotNull { it.language?.lowercase()?.takeIf { l -> l.isNotBlank() } }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
-    val visible = remember(safe, query, tab, category, language, sort, repoFilter, installedKeys, updates) {
-        val q = query.trim()
-        safe.asSequence()
-            .filter {
-                when (tab) {
-                    MarketTab.INSTALLED -> it.key in installedKeys
-                    // One card per extension unless browsing a single repository or searching.
-                    else -> it.primary || repoFilter != null || q.isNotEmpty() || it.key in installedKeys
-                }
-            }
-            .filter { repoFilter == null || it.repoUrl.equals(repoFilter, true) }
-            .filter { category == "All" || category in it.categories }
-            .filter { language == null || it.language.equals(language, true) }
-            .filter { q.isEmpty() || it.name.contains(q, true) || it.internalName.contains(q, true) || it.description.orEmpty().contains(q, true) || it.repoName.contains(q, true) || it.authors.any { a -> a.contains(q, true) } }
-            .let { seq ->
-                when (sort) {
-                    MarketSort.TOP -> seq.sortedWith(compareByDescending<RemoteExtension> { it.key in updates }.thenBy { it.isDown }.thenByDescending { it.score }.thenByDescending { it.stars ?: 0 }.thenBy { it.name.lowercase() })
-                    MarketSort.UPDATED -> seq.sortedByDescending { it.updated }
-                    MarketSort.NAME -> seq.sortedBy { it.name.lowercase() }
-                }
-            }
-            .toList()
+    val derived by androidx.compose.runtime.produceState(MarketDerived(), data, adult, engine.installed) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val items = data?.items.orEmpty()
+            val updates = ExtensionManager.updatesFrom(items).associate { it.first.key to it.second }
+            // 18+ extensions only when the user turned them on (Settings → Online videos).
+            val safe = items.filter { adult || !it.isNsfw }
+            val categories = listOf("All") + PICK_CATEGORIES.filter { c -> c == "Short drama" || safe.any { c in it.categories } } + listOf("Other", "18+").filter { c -> safe.any { c in it.categories } }
+            val languages = safe.mapNotNull { it.language?.lowercase()?.takeIf { l -> l.isNotBlank() } }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }
+            MarketDerived(safe, updates, categories, languages)
+        }
+    }
+    val safe = derived.safe
+    val updates = derived.updates
+    val categories = derived.categories
+    val languages = derived.languages
+    // Typing waits a moment before filtering so each key press stays instant.
+    val visible by androidx.compose.runtime.produceState(emptyList<RemoteExtension>(), safe, query, tab, category, language, sort, repoFilter, installedKeys, updates) {
+        if (query.isNotBlank()) kotlinx.coroutines.delay(120)
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            marketVisible(safe, query, tab, category, language, sort, repoFilter, installedKeys.keys, updates.keys)
+        }
     }
     val activeFilters = (if (category != "All") 1 else 0) + (if (language != null) 1 else 0) + (if (sort != MarketSort.TOP) 1 else 0) + (if (repoFilter != null) 1 else 0)
     val repos = remember(data) { data?.repos.orEmpty().sortedWith(compareByDescending<ExtensionSources.RepoListing> { it.origin == "user" }.thenByDescending { it.verified }.thenByDescending { it.stars ?: 0 }.thenByDescending { it.count }) }
@@ -269,7 +266,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     if (tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
                         (query.isBlank() || "yumeiro drama short dramabox reelshort shortmax".contains(query.trim(), true))
                     ) item("builtin_drama") { DramaBuiltinCard() }
-                    items(visible, key = { it.key }) { ext ->
+                    items(visible, key = { it.key }, contentType = { "market_card" }) { ext ->
                         MarketCard(
                             ext = ext,
                             installedVersion = installedKeys[ext.key]?.version,
@@ -442,4 +439,40 @@ internal fun formatSize(bytes: Long): String = when {
     bytes < 1024 -> "$bytes B"
     bytes < 1024 * 1024 -> "${bytes / 1024} KB"
     else -> String.format(java.util.Locale.US, "%.1f MB", bytes / 1048576.0)
+}
+
+/** What the market derives from the listing (computed off the main thread). */
+private data class MarketDerived(
+    val safe: List<RemoteExtension> = emptyList(),
+    val updates: Map<String, RemoteExtension> = emptyMap(),
+    val categories: List<String> = listOf("All"),
+    val languages: List<String> = emptyList(),
+)
+
+/** The market cards for the current tab, filters, search and sort. Pure, runs on a background thread. */
+private fun marketVisible(
+    safe: List<RemoteExtension>, query: String, tab: MarketTab, category: String, language: String?, sort: MarketSort,
+    repoFilter: String?, installedKeys: Set<String>, updates: Set<String>,
+): List<RemoteExtension> {
+    val q = query.trim()
+    return safe.asSequence()
+        .filter {
+            when (tab) {
+                MarketTab.INSTALLED -> it.key in installedKeys
+                // One card per extension unless browsing a single repository or searching.
+                else -> it.primary || repoFilter != null || q.isNotEmpty() || it.key in installedKeys
+            }
+        }
+        .filter { repoFilter == null || it.repoUrl.equals(repoFilter, true) }
+        .filter { category == "All" || category in it.categories }
+        .filter { language == null || it.language.equals(language, true) }
+        .filter { q.isEmpty() || it.name.contains(q, true) || it.internalName.contains(q, true) || it.description.orEmpty().contains(q, true) || it.repoName.contains(q, true) || it.authors.any { a -> a.contains(q, true) } }
+        .let { seq ->
+            when (sort) {
+                MarketSort.TOP -> seq.sortedWith(compareByDescending<RemoteExtension> { it.key in updates }.thenBy { it.isDown }.thenByDescending { it.score }.thenByDescending { it.stars ?: 0 }.thenBy { it.name.lowercase() })
+                MarketSort.UPDATED -> seq.sortedByDescending { it.updated }
+                MarketSort.NAME -> seq.sortedBy { it.name.lowercase() }
+            }
+        }
+        .toList()
 }

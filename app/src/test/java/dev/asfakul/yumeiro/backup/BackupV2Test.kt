@@ -27,7 +27,7 @@ import java.io.File
 
 /** Round 12: backup format 2, staged restore, resets, the saved-pages cache. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [24, 29, 34, 36]) // Android 7, 10, 14, 16
+@Config(sdk = [28, 29, 34, 36]) // Android 9 (phone baseline from 1.8.0), 10, 14, 16
 class BackupV2Test {
     private val ctx: Context = ApplicationProvider.getApplicationContext()
 

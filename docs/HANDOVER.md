@@ -1020,3 +1020,18 @@ fixture, normalizeRepo, lib versions, MemoStore) and `KeiyoushiLinkageTest`.
   sources and TV app.
 - A real-device pass of restore on Android 7, 10 and 14 and of Yumeiro TV on a Fire TV stick.
 - FCM_SERVICE_ACCOUNT Worker secret is still missing (see `docs/PUSH-FCM.md`).
+
+## 30. v1.8.0 "player first" (branch `r13-player`)
+
+Brief: player stability first (audit vs 1.5.0), then sources, settings, performance, Yumix/Music/Manga, data, build. Full list in CHANGELOG.md.
+
+- **ANR root causes**: `AudioLanguages.classify` regexes ran inside the `sortLinks` comparator on the main thread (now hoisted, LRU cached, keys precomputed); `OnlineSession` gathered every source at once (now `Dispatchers.Default.limitedParallelism(1)`, staggered 350 ms, published every 700 ms, `PAGE = 10` + `loadMore`).
+- **Silent audio**: `player/YumeiroRenderersFactory` forces a PCM sink on phones and puts FFmpeg first for surround codecs.
+- **Captcha**: `BrowserCheck.solve` never opens the interactive page.
+- **Rotation**: one quick retry then failover; no-first-frame watchdog 12 s / 10 s; stall 25 s. Language pick = `selectAudio` only (`AudioLanguages.trackFor`).
+- **New files**: `online/EpisodeStills.kt` (ani.zip, TVmaze), `player/QualityEngine.kt`, `player/Anime4kEffect.kt` (media3-effect), `player/VideoPrefs.kt` (prefs `yu_video_prefs`), `player/LastPlayed.kt`, `ui/screens/settings/QualityAudioSettings.kt`, `ui/screens/video/PlayerInfoOverlay.kt`, `online/OpeningKinds.kt` (WatchKind DIRECT/PAGE), `ui/components/HideOnScroll.kt`, `youtube/music/YmEndless.kt`, `DeviceClass.kt`, `notify/NotifyPacer.kt` (+ `NotifyAlarmReceiver`, BOOT_COMPLETED).
+- **Music mode**: `MusicMode.defaultFor/follow`, a user pick is kept (`musicModePicked`) unless it is Online while offline.
+- **Manga**: `MangaScreens.kt` redesigned; chosen source in prefs `manga_home`.
+- **Build**: one universal APK per edition (`ndk.abiFilters` all four, no `splits`). Phone minSdk 28, TV flavor minSdk 24. `release.yml` checks each APK contains all four `lib/` folders.
+- **Tests**: `app/src/test/.../round13/` (Round13LogicTest, Round13JsonTest), `UpdaterLogicTest.round13_single_universal_files_are_picked_on_every_processor`.
+- **Open**: FCM_SERVICE_ACCOUNT Worker secret (docs/PUSH-FCM.md); on-device check of the ANR and audio fixes; phones on Android 7/8 cannot install 1.8.0 (their 1.7.0 updater will offer it and Android will refuse it).

@@ -180,7 +180,8 @@ object ExtensionSources {
         repo to items
     }
 
-    suspend fun all(context: Context, force: Boolean = false): Available = coroutineScope {
+    // Round 13: merging thousands of listings ran on the caller (the main thread in the market screen).
+    suspend fun all(context: Context, force: Boolean = false): Available = withContext(Dispatchers.Default) { coroutineScope {
         val market = async { ExtensionMarket.load(context, force) }
         val userRepos = ExtensionManager.state.value.repos
         val custom = userRepos.map { ref ->
@@ -200,5 +201,5 @@ object ExtensionSources {
         val warning = (ExtensionMarket.state.value as? ExtensionMarket.State.Ready)?.warning
             ?: (ExtensionMarket.state.value as? ExtensionMarket.State.Error)?.message
         Available(items, marketRepos.filter { it.url.lowercase() !in customUrls } + custom.map { it.first }, warning)
-    }
+    } }
 }

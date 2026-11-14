@@ -221,7 +221,7 @@ fun VideoPlayerModal(
 
 @Composable
 private fun VideoPlayerModalContent(
-    video: VideoItem,
+    videoIn: VideoItem,
     onClose: () -> Unit,
     onProgressUpdate: (String, Long, Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -240,6 +240,9 @@ private fun VideoPlayerModalContent(
     onGiveUp: (() -> Boolean)? = null,
 ) {
     val context = LocalContext.current
+    remember { dev.asfakul.yumeiro.player.VideoPrefs.init(context); true }
+    // Round 13: Settings → Quality and audio → Resume playback (off = always start at 0:00).
+    val video = remember(videoIn) { if (dev.asfakul.yumeiro.player.VideoPrefs.resume.value) videoIn else videoIn.copy(playbackPositionMs = 0L) }
     val coroutineScope = rememberCoroutineScope()
     remember { dev.asfakul.yumeiro.ui.screens.watch.WatchPrefs.init(context); true }
     val autoNextOn by dev.asfakul.yumeiro.ui.screens.watch.WatchPrefs.autoNext.collectAsState()
@@ -281,7 +284,7 @@ private fun VideoPlayerModalContent(
     var zoomHintVisible by remember { mutableStateOf(false) }
     var zoomHintJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var playerAreaSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-    var currentSpeed by remember { mutableFloatStateOf(1.0f) }
+    var currentSpeed by remember { mutableFloatStateOf(dev.asfakul.yumeiro.player.VideoPrefs.speed.value) }
     var isScreenLocked by remember { mutableStateOf(false) }
     var isLockedUnlockPillVisible by remember { mutableStateOf(false) }
     // The player opens in the normal (portrait) layout with system bars visible. Only the
@@ -406,9 +409,12 @@ private fun VideoPlayerModalContent(
     var pageFinder by remember(video.id) { mutableStateOf<Resolution.NeedsBrowser?>(null) }
     var waitingForNetwork by remember(video.id) { mutableStateOf(false) }
     var errorCanRetry by remember(video.id) { mutableStateOf(true) }
+    var onlineQuickRetries by remember(video.id) { mutableStateOf(0) }
     var qualityList by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
     var selectedQuality by remember(video.id) { mutableStateOf<QualityOption?>(null) }
     var showQualityDialog by remember { mutableStateOf(false) }
+    // Round 13: qualities built by the engine when the stream itself has one rendition.
+    var altQualities by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
     val recovery = remember(video.id) {
         PlaybackRecovery(
             alternativeDns = { NetworkSettings.dns.value.usesAlternative },
@@ -420,6 +426,14 @@ private fun VideoPlayerModalContent(
 
     val exoPlayer = remember(video.id) {
         StreamMediaFactory.createPlayer(context, video.uri).apply {
+            // Round 13: default speed and default quality from Settings → Quality and audio.
+            dev.asfakul.yumeiro.player.VideoPrefs.speed.value.takeIf { it != 1f }?.let { playbackParameters = PlaybackParameters(it) }
+            if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value) runCatching {
+                setVideoEffects(listOf(dev.asfakul.yumeiro.player.Anime4kEffect(dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.value)))
+            }
+            dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 }?.let { h ->
+                trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxVideoSize(Int.MAX_VALUE, h).build()
+            }
             if (!PlayerSettings.captionsDefault.value) {
                 trackSelectionParameters = trackSelectionParameters.buildUpon()
                     .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
@@ -554,6 +568,19 @@ private fun VideoPlayerModalContent(
         if (needsResolve) resolveAndPlay(originalRequest, video.playbackPositionMs, thorough = false)
     }
 
+    // Round 13: when the stream has no quality ladder of its own, ask the engine for one
+    // (YouTube resolutions, or other sources of this episode by resolution). Runs off the main thread.
+    val onlineLinkCount = dev.asfakul.yumeiro.online.OnlineSession.state.collectAsState().value?.links?.size ?: 0
+    val playingHeight = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } } ?: 0
+    LaunchedEffect(video.id, onlineLinkCount / 5, playingHeight > 0) {
+        if (!isNetworkStream) return@LaunchedEffect
+        val req = StreamRepository.requestFor(video.uri) ?: originalRequest
+        val alts = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { dev.asfakul.yumeiro.player.QualityEngine.alternatives(context, req, playingHeight) }.getOrDefault(emptyList())
+        }
+        altQualities = alts.map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = if (a.current) "Playing now" else a.note) }
+    }
+
     // Online sources: a link that never shows a picture (stuck loading, or audio without video)
     // hands over to the next source instead of leaving a black screen.
     if (onFatalError != null) {
@@ -563,7 +590,9 @@ private fun VideoPlayerModalContent(
             var waited = 0L
             var stalled = 0L
             var lastBuffered = -1L
-            while (waited < 90_000L && !(waited >= 30_000L && stalled >= 15_000L)) {
+            // Round 13: was 30 s / 15 s (up to 90 s). A source that sends nothing for 10 s after
+            // 12 s of trying now hands over, so rotation feels automatic instead of stuck.
+            while (waited < 45_000L && !(waited >= 12_000L && stalled >= 10_000L)) {
                 delay(1_000L); waited += 1_000L
                 val d = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value
                 if (d.firstFrame || playerError != null) return@LaunchedEffect
@@ -582,10 +611,37 @@ private fun VideoPlayerModalContent(
                 }
             }
         }
+        // Round 13: a source that started but then buffers forever (dead CDN, expired token
+        // mid-file) also moves on to the next source, at the same position.
+        LaunchedEffect(video.id) {
+            var stuck = 0L
+            var lastBuffered = -1L
+            while (true) {
+                delay(1_000L)
+                val buffering = exoPlayer.playbackState == Player.STATE_BUFFERING && exoPlayer.playWhenReady && !resolving && !waitingForNetwork
+                val firstFrame = dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value.firstFrame
+                if (!buffering || !firstFrame || !dev.asfakul.yumeiro.network.Connectivity.online.value) { stuck = 0L; lastBuffered = -1L; continue }
+                val buffered = exoPlayer.bufferedPosition
+                if (buffered > lastBuffered + 500L) { lastBuffered = buffered; stuck = 0L } else stuck += 1_000L
+                if (stuck >= 25_000L) {
+                    stuck = 0L
+                    showToast("This source stopped sending video — trying another")
+                    if (onFatalError(exoPlayer.currentPosition)) return@LaunchedEffect
+                }
+            }
+        }
     }
 
     /** Applies error-specific, bounded recovery for network streams. */
     fun recoverFrom(error: PlaybackException) {
+        // Round 13: the GPU enhancement can't run on this video (HDR, protected or a GPU that
+        // refuses the shader): play without it instead of failing.
+        if (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED && dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value) {
+            runCatching { exoPlayer.setVideoEffects(emptyList()) }
+            showToast("Anime4K is off for this video (not supported here)")
+            exoPlayer.prepare(); exoPlayer.playWhenReady = true
+            return
+        }
         ladderStep = null
         stableJob?.cancel()
         val facts = ErrorFacts.from(error)
@@ -655,6 +711,20 @@ private fun VideoPlayerModalContent(
             if (onFatalError(pos0)) return
             showErrorCard("Access denied (HTTP ${facts.httpStatus})", onlineRefusedDetail("Access denied (HTTP ${facts.httpStatus})"), canRetry = false)
             return
+        }
+        // Round 13: online sources rotate right away. One quick retry for a network blip, then the
+        // next source; the slow retry / refresh chain below used to keep the first source for
+        // minutes, so it looked like rotation never happened.
+        if (onFatalError != null) {
+            if (facts.isNetwork && onlineQuickRetries < 1) {
+                onlineQuickRetries++
+                isBuffering = true
+                retryJob?.cancel()
+                retryJob = coroutineScope.launch { delay(800L); exoPlayer.prepare(); exoPlayer.playWhenReady = true }
+                return
+            }
+            showToast("This source failed — trying the next one")
+            if (onFatalError(pos0)) return
         }
         val action = recovery.decide(facts, canRefresh = true, autoFormat = originalRequest.format == StreamFormat.AUTO || originalRequest.formatFromSource)
         val pos = exoPlayer.currentPosition
@@ -795,6 +865,20 @@ private fun VideoPlayerModalContent(
         }
         showToast("Switched audio track")
     }
+
+    /** Round 13: language picks from the source list land here (same video, other audio track). */
+    fun selectAudioByKey(key: String): Boolean {
+        val groups = exoPlayer.currentTracks.groups
+        val audio = groups.withIndex().filter { it.value.type == C.TRACK_TYPE_AUDIO }
+            .flatMap { (gi, g) -> (0 until g.length).map { ti -> Triple(gi, ti, g.getTrackFormat(ti).language) } }
+        if (audio.size < 2) return false
+        val hit = dev.asfakul.yumeiro.online.AudioLanguages.trackFor(key, audio.map { it.third }).takeIf { it >= 0 } ?: return false
+        val (gi, ti) = audio[hit].let { it.first to it.second }
+        if (groups[gi].isTrackSelected(ti)) return true
+        switchAudio(gi, ti)
+        return true
+    }
+
 
     /** Re-reads subtitle files with the new delay (cues are timed when they're parsed). */
     fun applySubtitleDelay(ms: Long) {
@@ -958,6 +1042,33 @@ private fun VideoPlayerModalContent(
         onDispose { hostView.keepScreenOn = false }
     }
 
+    // Round 13: Settings → Quality and audio → Default player. "Another app" hands the stream to
+    // an installed player (VLC, MX Player, mpv) once it is known to load; "Ask" offers both.
+    var externalChecked by remember(video.id) { mutableStateOf(false) }
+    var askPlayer by remember(video.id) { mutableStateOf(false) }
+    val closeNow by rememberUpdatedState(onClose)
+    fun handOffExternal() {
+        val cfg = exoPlayer.currentMediaItem?.localConfiguration ?: return
+        val mime = cfg.mimeType?.takeIf { it.startsWith("video/") || it.startsWith("application/") } ?: "video/*"
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(cfg.uri, mime)
+            .putExtra("title", video.title)
+            .putExtra("position", pos.toInt()) // MX Player
+            .putExtra("from_start", pos <= 0L) // VLC
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        val ok = runCatching { context.startActivity(Intent.createChooser(i, "Play with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+        if (!ok) { showToast("No other video player is installed"); return }
+        exoPlayer.pause()
+        closeNow()
+    }
+    if (askPlayer) dev.asfakul.yumeiro.ui.components.TsukiDialog(
+        onDismissRequest = { askPlayer = false; exoPlayer.play() },
+        title = { Text("Play with") },
+        text = { Text("Watch in Yumeiro, or open this video in another player app.") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; exoPlayer.play() }, modifier = Modifier.testTag("ask_player_yumeiro")) { Text("Yumeiro") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; handOffExternal() }, modifier = Modifier.testTag("ask_player_external")) { Text("Another app") } },
+    )
+
     // ExoPlayer listener lifecycle
     val currentOnProgressUpdate by rememberUpdatedState(onProgressUpdate)
     DisposableEffect(exoPlayer) {
@@ -981,6 +1092,14 @@ private fun VideoPlayerModalContent(
                 if (isEnded) {
                     currentPositionMs = durationMs
                     currentOnProgressUpdate(video.id, durationMs, durationMs)
+                }
+                if (playbackState == Player.STATE_READY && !externalChecked) {
+                    externalChecked = true
+                    when (dev.asfakul.yumeiro.player.VideoPrefs.defaultPlayer.value) {
+                        dev.asfakul.yumeiro.player.VideoPrefs.DefaultPlayer.EXTERNAL -> handOffExternal()
+                        dev.asfakul.yumeiro.player.VideoPrefs.DefaultPlayer.ASK -> { exoPlayer.pause(); askPlayer = true }
+                        dev.asfakul.yumeiro.player.VideoPrefs.DefaultPlayer.YUMEIRO -> Unit
+                    }
                 }
                 if (playbackState == Player.STATE_READY) {
                     // The header variant that got past the refusal is remembered for this host.
@@ -1409,7 +1528,15 @@ private fun VideoPlayerModalContent(
         AndroidView(
             factory = { ctx ->
                 // Inflated so the surface type can be a TextureView (only settable from XML).
-                (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
+                // Round 13: Settings → Quality and audio → Video renderer (Auto = TextureView on
+                // phones for the floating / docked players, SurfaceView on TV).
+                val surface = when (dev.asfakul.yumeiro.player.VideoPrefs.renderer.value) {
+                    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.SURFACE -> true
+                    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.TEXTURE -> false
+                    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.AUTO -> dev.asfakul.yumeiro.Edition.isTv
+                }
+                val layout = if (surface) dev.asfakul.yumeiro.R.layout.yumeiro_player_view_surface else dev.asfakul.yumeiro.R.layout.yumeiro_player_view
+                (android.view.LayoutInflater.from(ctx).inflate(layout, null) as PlayerView).apply {
                     player = exoPlayer
                     useController = false
                     this.resizeMode = resizeMode
@@ -1711,12 +1838,16 @@ private fun VideoPlayerModalContent(
                         activity?.let { PipController.enter(it, w, h, isPlaying) }
                     },
                     onInfoClick = { showVideoInfoDialog = true },
-                    qualityLabel = if (qualityList.size > 1) {
-                        selectedQuality?.label ?: activeVideoFormat?.let { f ->
-                            val h = minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 }
-                            if (h != null) "Auto · ${h}p" else null
-                        } ?: "Auto"
-                    } else null,
+                    // Round 13: every video has a quality button (tracks, engine-built or the one it has).
+                    qualityLabel = run {
+                        val h = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } }
+                        when {
+                            qualityList.size > 1 -> selectedQuality?.label ?: h?.let { "Auto · ${it}p" } ?: "Auto"
+                            h != null -> dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(h))
+                            altQualities.isNotEmpty() -> altQualities.firstOrNull { it.alt?.current == true }?.label ?: "Quality"
+                            else -> null
+                        }
+                    },
                     onQualityClick = { showQualityDialog = true },
                     onLockClick = {
                         isScreenLocked = true
@@ -1730,6 +1861,10 @@ private fun VideoPlayerModalContent(
                     modifier = Modifier.align(Alignment.TopCenter),
                     compact = docked,
                 )
+
+                // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
+                val infoOverlay by dev.asfakul.yumeiro.player.VideoPrefs.infoOverlay.collectAsState()
+                if (infoOverlay && !docked) PlayerInfoOverlay(exoPlayer, video.title, Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 76.dp))
 
                 // Center playback controls (Rewind, Play/Pause, Forward). Not under an error card:
                 // the dimmed buttons showed through it and could take D-pad focus.
@@ -1819,7 +1954,7 @@ private fun VideoPlayerModalContent(
         }
 
         val handle = remember(exoPlayer) {
-            PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() })
+            PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() }, selectAudio = { k -> selectAudioByKey(k) })
         }
         androidx.compose.runtime.CompositionLocalProvider(LocalPlayerDocked provides docked) {
             overlay?.invoke(this, isControlsVisible && !isScreenLocked && !hideChrome, handle)
@@ -1879,7 +2014,28 @@ private fun VideoPlayerModalContent(
         // Round 9: the pickers follow the user's theme (light or dark) instead of a fixed dark
         // sheet, so the player's popups match the rest of the app.
         dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
-        if (showQualityDialog) {
+        if (showQualityDialog && qualityList.size <= 1) {
+            val h = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } }
+            val only = h?.let { listOf(QualityOption(dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(it)), -1, -1, it, activeVideoFormat?.bitrate ?: 0, note = "The quality this stream has")) }.orEmpty()
+            QualityDialog(
+                options = altQualities.ifEmpty { only },
+                selected = null,
+                autoLabel = null,
+                footer = if (altQualities.isEmpty()) "This source sends a single quality. Other sources in the list may have more." else null,
+                onSelect = { option ->
+                    val alt = option?.alt ?: return@QualityDialog
+                    if (alt.current) return@QualityDialog
+                    val pos = exoPlayer.currentPosition
+                    showToast("Quality: ${alt.label}")
+                    coroutineScope.launch {
+                        val r = runCatching { alt.open(context, pos) }.getOrNull()
+                        if (r != null) startResolved(r, pos)
+                    }
+                },
+                onDismiss = { showQualityDialog = false },
+            )
+        }
+        if (showQualityDialog && qualityList.size > 1) {
             QualityDialog(
                 options = qualityList,
                 selected = selectedQuality,
@@ -2024,7 +2180,7 @@ private fun VideoPlayerModalContent(
     }
     if (docked) {
         val dockHandle = remember(exoPlayer) {
-            PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() })
+            PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() }, selectAudio = { k -> selectAudioByKey(k) })
         }
         Column(Modifier.fillMaxWidth().weight(1f).testTag("watch_page")) {
             dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
@@ -2053,7 +2209,14 @@ internal fun onlineRefusedDetail(title: String): String =
 val LocalPlayerDocked = androidx.compose.runtime.staticCompositionLocalOf { false }
 
 /** What overlays (online controls, skip buttons) may read from / do to the player. */
-class PlayerHandle(val positionMs: () -> Long, val durationMs: () -> Long, val seekTo: (Long) -> Unit, val pause: () -> Unit = {})
+class PlayerHandle(
+    val positionMs: () -> Long,
+    val durationMs: () -> Long,
+    val seekTo: (Long) -> Unit,
+    val pause: () -> Unit = {},
+    /** Round 13: switches the audio track of the playing video to filter key / language; false when it has none. */
+    val selectAudio: (String) -> Boolean = { false },
+)
 
 
 /** Tap-to-expand layer, play/pause + close and a thin progress line for the floating player. */

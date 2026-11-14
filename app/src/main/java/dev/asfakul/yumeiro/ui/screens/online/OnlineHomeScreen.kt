@@ -59,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
@@ -176,10 +177,18 @@ fun OnlineHomeScreen(
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
-    Column(modifier.fillMaxSize().testTag("online_home")) {
+    // Round 13: the extension bar slides away while scrolling down and comes back on a small
+    // scroll up (like YouTube's bottom navigation), so the feed gets the whole screen.
+    val barHide = remember { dev.asfakul.yumeiro.ui.components.HideOnScroll() }
+    Column(modifier.fillMaxSize().nestedScroll(barHide).testTag("online_home")) {
         // Search lives in the top bar (one magnifier per tab); this slim strip only says what feeds the
         // page and keeps the market / extension manager one tap away.
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = barHide.visible || showFilter,
+            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
+        ) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp).testTag("online_extension_bar"), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} extension${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
                 style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
@@ -203,6 +212,7 @@ fun OnlineHomeScreen(
                 }
             }
             }
+        }
         }
         if (showFilter) SourceFilterSheet(
             names = channelNames, selected = selected,

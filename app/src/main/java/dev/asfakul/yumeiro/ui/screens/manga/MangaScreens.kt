@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -46,6 +48,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Extension
@@ -77,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -115,7 +120,13 @@ import kotlinx.coroutines.withContext
 
 private enum class Feed { POPULAR, LATEST, SEARCH }
 
-/** Manga home: pick a source (Mihon or JavaScript), browse popular / latest, or search. */
+/**
+ * Manga home, Round 13 redesign in the Yumix layout: a slim source strip on top (which source,
+ * change it, manage sources) that slides away while scrolling down and returns on a small scroll
+ * up; a search box that searches the chosen source as you type; Popular / Latest / Saved chips;
+ * then the endless cover grid. Source choice is a sheet with search and a language filter, so
+ * 50 installed sources stay easy to pick from.
+ */
 @Composable
 fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpenSources: () -> Unit) {
     val context = LocalContext.current
@@ -123,16 +134,29 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
     val adult by OnlineSettings.adult.collectAsState()
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext); MangaLibrary.load(context) }
     val providers = remember(hub.generation, adult) { SourceHub.mangaProviders().filter { adult || !it.nsfw }.sortedBy { it.name.lowercase() } }
-    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val prefs = remember { context.getSharedPreferences("manga_home", 0) }
+    var selectedId by rememberSaveable { mutableStateOf(prefs.getString("source", null)) }
     val provider = providers.firstOrNull { it.id == selectedId } ?: providers.firstOrNull()
     var feed by rememberSaveable { mutableStateOf(Feed.POPULAR) }
+    var savedOnly by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf("") }
+    var showSources by remember { mutableStateOf(false) }
     val library by MangaLibrary.entries.collectAsState()
+    val pal = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    // Search as you type, after a short pause (each search is a network call to the source).
+    LaunchedEffect(query) {
+        val q = query.trim()
+        if (q.isEmpty()) { submitted = ""; if (feed == Feed.SEARCH) feed = Feed.POPULAR; return@LaunchedEffect }
+        if (q.length < 2) return@LaunchedEffect
+        kotlinx.coroutines.delay(650)
+        submitted = q; feed = Feed.SEARCH; savedOnly = false
+    }
+    val barHide = remember { dev.asfakul.yumeiro.ui.components.HideOnScroll() }
 
     Column(Modifier.fillMaxSize().testTag("manga_home")) {
-        SubPageHeader(title = "Manga", onBack = onBack, subtitle = if (providers.isEmpty()) "Add a source to start reading" else "${providers.size} sources") {
-            IconButton(onClick = onOpenSources) { Icon(Icons.Default.Extension, "Sources", tint = TextPrimary) }
+        SubPageHeader(title = "Manga", onBack = onBack, subtitle = if (providers.isEmpty()) "Add a source to start reading" else provider?.name) {
+            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("manga_manage_sources")) { Icon(Icons.Default.Extension, "Manage sources", tint = TextPrimary) }
         }
         if (providers.isEmpty()) {
             StateMessage(Icons.Default.MenuBook, "No manga sources yet",
@@ -142,25 +166,134 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
         }
         val online by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
         if (!online) dev.asfakul.yumeiro.ui.components.OfflineNotice("Reading from manga sources", tag = "offline_notice_manga")
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(providers, key = { it.id }) { p ->
-                FilterPill(label = p.name + if (p.lang.isNotBlank() && p.lang != "all") " · ${p.lang.uppercase()}" else "",
-                    selected = p.id == provider?.id, onClick = { selectedId = p.id; if (feed == Feed.SEARCH && submitted.isBlank()) feed = Feed.POPULAR })
+        Column(Modifier.fillMaxSize().nestedScroll(barHide)) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = barHide.visible || query.isNotEmpty(),
+                enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+            ) {
+                Column {
+                    // Source strip (same shape as Yumix's extension bar).
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp).testTag("manga_source_bar"), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            dev.asfakul.yumeiro.ui.components.Kana.overline("漫画", "${providers.size} source${if (providers.size == 1) "" else "s"}", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
+                            style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Row(
+                            Modifier.clip(RoundedCornerShape(50)).background(pal.accent.copy(alpha = 0.14f))
+                                .clickable(onClickLabel = "Change source") { showSources = true }
+                                .padding(horizontal = 12.dp, vertical = 7.dp).testTag("manga_source_pick"),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Default.FilterList, null, tint = pal.accent, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                (provider?.name ?: "Pick a source") + (provider?.lang?.takeIf { it.isNotBlank() && it != "all" }?.let { " · ${it.uppercase()}" } ?: ""),
+                                color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 180.dp),
+                            )
+                        }
+                    }
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                        query = query, onQuery = { query = it.take(80) }, hint = "Search ${provider?.name.orEmpty()}",
+                        tag = "manga_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (feed == Feed.SEARCH) item("f_search") { FilterPill("Results for \"$submitted\"", true, {}) }
+                        item("f_pop") { FilterPill("Popular", feed == Feed.POPULAR && !savedOnly, { query = ""; feed = Feed.POPULAR; savedOnly = false }) }
+                        if (provider?.supportsLatest == true) item("f_new") { FilterPill("Latest", feed == Feed.LATEST && !savedOnly, { query = ""; feed = Feed.LATEST; savedOnly = false }) }
+                        item("f_saved") { FilterPill("Saved", savedOnly, { query = ""; savedOnly = true }) }
+                    }
+                }
+            }
+            if (showSources) MangaSourceSheet(providers, provider?.id, onPick = {
+                selectedId = it; prefs.edit().putString("source", it).apply(); showSources = false
+                if (feed == Feed.SEARCH && submitted.isBlank()) feed = Feed.POPULAR
+            }, onDismiss = { showSources = false })
+            val saved = library.filter { it.saved }
+            when {
+                savedOnly -> SavedGrid(saved, onOpenTitle)
+                provider != null -> MangaGrid(provider, feed, submitted, saved, onOpenTitle)
             }
         }
-        OutlinedTextField(
-            query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
-            placeholder = { Text("Search ${provider?.name.orEmpty()}") },
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submitted = query.trim(); feed = if (submitted.isBlank()) Feed.POPULAR else Feed.SEARCH }),
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("manga_search"),
-        )
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterPill("Popular", feed == Feed.POPULAR, { feed = Feed.POPULAR })
-            if (provider?.supportsLatest == true) FilterPill("Latest", feed == Feed.LATEST, { feed = Feed.LATEST })
+    }
+}
+
+/** Saved titles from every source, newest read first. */
+@Composable
+private fun SavedGrid(saved: List<MangaLibrary.Entry>, onOpen: (MangaItem) -> Unit) {
+    if (saved.isEmpty()) {
+        StateMessage(Icons.Default.BookmarkBorder, "Nothing saved yet", "Tap the bookmark on a title to keep it here.", testTag = "manga_saved_empty")
+        return
+    }
+    LazyVerticalGrid(GridCells.Adaptive(108.dp), modifier = Modifier.fillMaxSize().testTag("manga_saved_grid"),
+        contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        items(saved, key = { it.key }, contentType = { "cover" }) { e ->
+            Cover(MangaItem(e.providerId, e.url, e.title, e.cover), subtitle = e.lastChapterName) { onOpen(it) }
         }
-        val saved = library.filter { it.saved }
-        if (provider != null) MangaGrid(provider, feed, submitted, saved, onOpenTitle)
+    }
+}
+
+/** "Read from": every source in one searchable list, with a language filter. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    val pal = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    var q by rememberSaveable { mutableStateOf("") }
+    var lang by rememberSaveable { mutableStateOf<String?>(null) }
+    val langs = remember(providers) { providers.map { it.lang.ifBlank { "all" } }.distinct().sorted() }
+    val shown = remember(providers, q, lang) {
+        val byLang = providers.filter { lang == null || it.lang.ifBlank { "all" } == lang }
+        val names = dev.asfakul.yumeiro.ui.screens.online.filterExtensionNames(byLang.map { it.name }, q)
+        val order = names.withIndex().associate { it.value to it.index }
+        byLang.filter { it.name in order }.sortedBy { order[it.name] }
+    }
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss, containerColor = pal.surface,
+        shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
+        dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() },
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("manga_source_sheet")) {
+            Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp)) {
+                Text("Read from", color = pal.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("${providers.size} manga sources installed", color = pal.textSecondary, fontSize = 12.sp)
+            }
+            if (providers.size >= 6) dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                query = q, onQuery = { q = it.take(60) }, hint = "Search ${providers.size} sources",
+                tag = "manga_source_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            if (langs.size > 1) LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item("l_all") { FilterPill("All languages", lang == null, { lang = null }) }
+                items(langs, key = { it }) { l -> FilterPill(if (l == "all") "Multi" else l.uppercase(), lang == l, { lang = l }) }
+            }
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
+                if (shown.isEmpty()) item("none") {
+                    Text("No source matches", color = pal.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp).testTag("manga_source_none"))
+                }
+                items(shown, key = { it.id }) { p ->
+                    val sel = p.id == selected
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
+                            .background(if (sel) pal.accent.copy(alpha = 0.14f) else Color.Transparent, RoundedCornerShape(16.dp))
+                            .clickable { onPick(p.id) }.padding(horizontal = 10.dp, vertical = 8.dp).testTag("manga_source_${p.id}"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        dev.asfakul.yumeiro.ui.screens.online.ChannelAvatar(p.name, selected = sel, size = 40.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(p.name, color = pal.textPrimary, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                listOfNotNull(p.lang.takeIf { it.isNotBlank() && it != "all" }?.uppercase() ?: "Multi-language", p.ecosystem.takeIf { it.isNotBlank() }, if (p.supportsLatest) "Latest" else null, if (p.nsfw) "18+" else null).joinToString(" · "),
+                                color = pal.textSecondary, fontSize = 12.sp, maxLines = 1,
+                            )
+                        }
+                        if (sel) Icon(Icons.Default.Check, "Selected", tint = pal.accent, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -206,7 +339,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
                 }
             }
         }
-        items(items, key = { it.url }) { m -> Cover(m, null) { onOpen(it) } }
+        items(items, key = { it.url }, contentType = { "cover" }) { m -> Cover(m, null) { onOpen(it) } }
         if (loading) item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
         }

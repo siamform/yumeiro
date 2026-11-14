@@ -34,6 +34,7 @@ object YtHistory {
     fun add(context: Context, item: YtItem) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         load(context)
+        if (!item.music) dev.asfakul.yumeiro.player.LastPlayed.markYouTube(context, item.id)
         val next = (listOf(item) + _items.value.filterNot { it.id == item.id }).take(MAX)
         _items.value = next
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()

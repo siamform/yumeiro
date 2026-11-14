@@ -716,7 +716,17 @@ fun MusicScreen(
 
 /** Where the Music tab plays from. Saved as [key] so the choice survives rotation. */
 enum class MusicMode(val key: String) { DEVICE("device"), ONLINE("online"), MIX("mix");
-    companion object { fun of(key: String?): MusicMode = entries.firstOrNull { it.key == key } ?: DEVICE }
+    companion object {
+        fun of(key: String?): MusicMode = entries.firstOrNull { it.key == key } ?: DEVICE
+        /** Round 13: the mode the Music tab opens in. */
+        fun defaultFor(online: Boolean): MusicMode = if (online) ONLINE else DEVICE
+        /** The mode after the connection changes: follow it until the user picks; offline always leaves Online. Pure. */
+        fun follow(current: MusicMode, online: Boolean, picked: Boolean): MusicMode = when {
+            !online && current == ONLINE -> DEVICE
+            picked -> current
+            else -> defaultFor(online)
+        }
+    }
 }
 
 /** Header title of the Music tab for a mode ("On device", "Online", "Mix"). */

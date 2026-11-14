@@ -292,7 +292,7 @@ fun LibraryScreen(
         // Detailed Playlist View
         BackHandler { selectedPlaylistId = null }
 
-        val playlistTracks = selectedPlaylist.trackIds.mapNotNull { trackMap[it] }
+        val playlistTracks = remember(selectedPlaylist.trackIds, trackMap) { selectedPlaylist.trackIds.mapNotNull { trackMap[it] } }
 
         LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("library_main"), 
             modifier = modifier
@@ -414,7 +414,7 @@ fun LibraryScreen(
                     )
                 }
             } else {
-                itemsIndexed(playlistTracks) { index, track ->
+                itemsIndexed(playlistTracks, key = { i, t -> "${t.id}_$i" }) { index, track ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()

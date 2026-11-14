@@ -256,6 +256,8 @@ fun HomeScreen(
     onOpenNowPlaying: () -> Unit = {},
     /** Last watched video of any source (null → "nothing yet" card). */
     resumeVideo: ResumeVideo? = null,
+    /** Round 13: plays the last song from where it was left (Home → Continue). */
+    onResumeTrack: ((AudioTrack, Long) -> Unit)? = null,
     /** Plays a YouTube item (music → as a song, otherwise as a video). */
     onPlayYouTube: (YtItem, List<YtItem>) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
@@ -263,7 +265,15 @@ fun HomeScreen(
     val context = LocalContext.current
     val p = LocalMtPalette.current
     val scope = rememberCoroutineScope()
-    val continueTrack = selectedTrack ?: recentlyPlayed.firstOrNull()
+    // Round 13: the song really played last (any source) and where it was left, as in 1.5.
+    val lastAudio by dev.asfakul.yumeiro.player.LastPlayed.audio.collectAsState()
+    val continueTrack = selectedTrack ?: lastAudio?.track ?: recentlyPlayed.firstOrNull()
+    val savedAudio = lastAudio?.takeIf { selectedTrack == null && it.track.id == continueTrack?.id }
+    val resumeTrack: (AudioTrack) -> Unit = { t ->
+        val at = savedAudio?.positionMs?.takeIf { p -> savedAudio.durationMs <= 0 || p < savedAudio.durationMs - 3_000 } ?: 0L
+        val queue = recentlyPlayed.ifEmpty { allTracks }.let { q -> if (q.any { it.id == t.id }) q else listOf(t) }
+        if (onResumeTrack != null && at > 0) onResumeTrack(t, at) else onTrackClick(t, queue)
+    }
 
     remember { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context); true }
     val downloadItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
@@ -480,7 +490,7 @@ fun HomeScreen(
                     when {
                         continueTrack == null -> onNavigateToMusic()
                         isCurrent -> onTogglePlayPause()
-                        else -> onTrackClick(continueTrack, recentlyPlayed.ifEmpty { allTracks })
+                        else -> resumeTrack(continueTrack)
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(RowGap)) {
@@ -489,12 +499,12 @@ fun HomeScreen(
                         eyebrow = if (isCurrent && isPlaying) "Music · playing" else "Music · last played",
                         title = continueTrack?.title ?: "Nothing yet",
                         subtitle = continueTrack?.artist ?: "Play a song to see it here",
-                        progress = { if (isCurrent && durationMs > 0) positionMs().toFloat() / durationMs else 0f },
+                        progress = { if (isCurrent && durationMs > 0) positionMs().toFloat() / durationMs else savedAudio?.fraction ?: 0f },
                         onClick = {
                             when {
                                 continueTrack == null -> onNavigateToMusic()
                                 isCurrent -> onOpenNowPlaying()
-                                else -> onTrackClick(continueTrack, recentlyPlayed.ifEmpty { allTracks })
+                                else -> resumeTrack(continueTrack)
                             }
                         },
                         kanji = "音",

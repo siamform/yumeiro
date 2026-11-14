@@ -30,8 +30,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 object OnlineSession {
     private const val TAG = "OnlineSession"
-    /** After the first link arrives, wait this long for better ones before starting. */
-    private const val GATHER_MS = 2_000L
+    /**
+     * After the first playable link arrives, wait this long for a better one in the same burst
+     * before starting. Round 13: was 2 s; playback now starts almost the moment the user taps.
+     */
+    private const val GATHER_MS = 350L
+    /** Sources are shown (and handed to the UI) ten at a time; "Load more" adds ten. */
+    const val PAGE = 10
     /** Hard cap on waiting for any link. */
     private const val FIRST_LINK_TIMEOUT_MS = 80_000L
 
@@ -59,7 +64,12 @@ object OnlineSession {
         val refreshed: Boolean = false,
         /** Headless page capture already tried for this episode. */
         val captured: Boolean = false,
+        /** Round 13: how many sources the lists show ([PAGE] at a time, "Load more" adds a page). */
+        val visible: Int = PAGE,
     ) {
+        /** Sources the lists show right now (the playing one always included). */
+        val shownLinks: Int get() = maxOf(visible, linkIndex + 1).coerceAtMost(links.size)
+        val hiddenLinks: Int get() = (links.size - shownLinks).coerceAtLeast(0)
         val episode: OnlineEpisode? get() = episodes.getOrNull(index)
         val data: String? get() = episode?.data ?: detail.playData
         val hasNext: Boolean get() = index >= 0 && index < episodes.lastIndex
@@ -69,10 +79,16 @@ object OnlineSession {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    /**
+     * Round 13: source gathering, de-duplication and sorting run here, one event at a time, so
+     * the main thread only receives finished state (it used to do all of it, a cause of ANRs).
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val gather = Dispatchers.Default.limitedParallelism(1)
     private var lastFailoverAt = 0L
     private var failoverJob: kotlinx.coroutines.Job? = null
     private const val FAILOVER_GAP_MS = 900L
-    private const val PUBLISH_GAP_MS = 300L
+    private const val PUBLISH_GAP_MS = 700L
     private val _state = MutableStateFlow<State?>(null)
     val state: StateFlow<State?> = _state.asStateFlow()
     private var job: Job? = null
@@ -90,16 +106,32 @@ object OnlineSession {
         job?.cancel()
         _opening.value = item
         job = scope.launch {
-            val provider = ExtensionManager.provider(item.api)
+            val provider = kotlinx.coroutines.withContext(Dispatchers.Default) { ExtensionManager.provider(item.api) }
             val detail = provider?.let { p -> runCatching { OnlineRepository.load(p, item.url) }.onFailure { Log.w(TAG, "open ${item.name}", it) }.getOrNull() }
             if (_opening.value != item) return@launch
             _opening.value = null
+            val direct = detail != null && detail.episodes.values.all { it.isEmpty() } && detail.playData != null && detail.unsupportedReason == null
+            // Round 13: remembered so the next tap on this source shows the right skeleton.
+            if (detail != null) OpeningKinds.learn(app, item, opensPage = !direct)
             when {
-                detail != null && detail.episodes.values.all { it.isEmpty() } && detail.playData != null && detail.unsupportedReason == null -> play(app, detail)
+                direct -> play(app, detail!!)
                 else -> onShowTitle(item) // episodes to choose, or the title page explains the problem
             }
         }
     }
+
+    /**
+     * Round 13: the version that plays when the user didn't pick one, from Settings → Audio →
+     * Quality and audio → Default audio (Sub unless the user chose Dub).
+     */
+    fun defaultVersion(versions: List<String>): String {
+        val dub = dev.asfakul.yumeiro.player.VideoPrefs.audio.value == dev.asfakul.yumeiro.player.VideoPrefs.AudioDefault.DUB
+        val want = if (dub) "dub" else "sub"
+        return versions.firstOrNull { it.contains(want, ignoreCase = true) } ?: versions.firstOrNull().orEmpty()
+    }
+
+    private fun defaultAudioKey(): String =
+        if (dev.asfakul.yumeiro.player.VideoPrefs.audio.value == dev.asfakul.yumeiro.player.VideoPrefs.AudioDefault.DUB) AudioLanguages.DUB_OTHER else AudioLanguages.ORIG
 
     fun cancelOpening() { _opening.value = null; job?.cancel() }
 
@@ -124,7 +156,7 @@ object OnlineSession {
      * Resolves and plays [episodeIndex] of [version] (or the movie when there are no episodes).
      * [resumeMs] null → resume from watch history.
      */
-    fun play(context: Context, detail: OnlineDetail, version: String = detail.versions.firstOrNull().orEmpty(), episodeIndex: Int = -1, resumeMs: Long? = null) {
+    fun play(context: Context, detail: OnlineDetail, version: String = defaultVersion(detail.versions), episodeIndex: Int = -1, resumeMs: Long? = null) {
         val app = context.applicationContext
         OnlineHistory.ensureLoaded(app)
         val episodes = episodesOf(detail, version)
@@ -146,7 +178,7 @@ object OnlineSession {
         job?.cancel()
         val start = _state.value ?: return
         val data = start.data ?: return
-        job = scope.launch {
+        job = scope.launch(gather) {
             AudioLanguages.init(context)
             val provider = ExtensionManager.provider(start.api)
             if (provider == null) {
@@ -155,40 +187,50 @@ object OnlineSession {
             }
             var started = false
             var firstAt = 0L
-            val links = mutableListOf<OnlineLink>()
-            val subs = mutableListOf<OnlineSubtitle>()
+            val links = LinkedHashMap<String, OnlineLink>()
+            val subs = LinkedHashMap<String, OnlineSubtitle>()
             var skipped = 0
-            // Extensions can emit dozens of links/subtitles in a burst; re-sorting and pushing state
-            // for each one recomposed the player on every event and made the UI stutter or freeze.
+            // Extensions can emit dozens of links/subtitles in a burst. They are gathered silently
+            // here and handed to the UI in staggered batches, never one recomposition per link.
             var lastPublish = 0L
             var pendingPublish = false
             fun publish(done: Boolean, error: String? = null) {
                 val t = System.currentTimeMillis()
                 if (!done && t - lastPublish < PUBLISH_GAP_MS) { pendingPublish = true; return }
                 lastPublish = t; pendingPublish = false
-                val sorted = OnlineRepository.sortLinks(links.distinctBy { it.url }, AudioLanguages.preferred.value, _state.value?.version.orEmpty())
+                val sorted = OnlineRepository.sortLinks(links.values.toList(), AudioLanguages.preferred.value ?: defaultAudioKey(), _state.value?.version.orEmpty(), dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height)
+                val subList = subs.values.toList()
                 _state.update { cur ->
                     if (cur == null || cur.data != data) return@update cur
                     // Keep the link in use at the same position when the list re-sorts.
                     val keep = cur.link?.url
                     val idx = keep?.let { u -> sorted.indexOfFirst { it.url == u } }?.takeIf { it >= 0 } ?: cur.linkIndex
-                    cur.copy(links = sorted, subtitles = subs.distinctBy { it.url }, linkIndex = idx, linksDone = done, skipped = skipped,
+                    cur.copy(links = sorted, subtitles = subList, linkIndex = idx, linksDone = done, skipped = skipped,
                         message = if (done && sorted.isEmpty()) error ?: "No playable sources were found." else cur.message)
                 }
             }
-            fun startIfReady(force: Boolean) {
+            suspend fun startIfReady(force: Boolean) {
                 if (started || links.isEmpty()) return
-                if (!force && System.currentTimeMillis() - firstAt < GATHER_MS) return
+                // Starts on the first link that has a picture (an audio-only link waits for the burst).
+                val playable = links.values.any { !it.audioOnly }
+                if (!force && (!playable || System.currentTimeMillis() - firstAt < GATHER_MS)) return
                 started = true
+                lastPublish = 0L
                 publish(false)
-                playCurrent(context, 0, resumeMs)
+                kotlinx.coroutines.withContext(Dispatchers.Main.immediate) {
+                    if (_state.value?.data == data) playCurrent(context, 0, resumeMs)
+                }
             }
-            val ticker = launch { while (true) { delay(500); startIfReady(false); if (pendingPublish && started) publish(false) } }
+            val ticker = launch { while (true) { delay(150); startIfReady(false); if (pendingPublish && started) publish(false) } }
             val ok = withTimeoutOrNull(FIRST_LINK_TIMEOUT_MS + 60_000L) {
                 OnlineRepository.links(provider, data).collect { ev ->
                     when (ev) {
-                        is LinkEvent.Link -> { if (links.isEmpty()) firstAt = System.currentTimeMillis(); links += ev.link; if (started) publish(false) }
-                        is LinkEvent.Subtitle -> { subs += ev.subtitle; if (started) publish(false) }
+                        is LinkEvent.Link -> {
+                            if (links.isEmpty()) firstAt = System.currentTimeMillis()
+                            links.putIfAbsent(ev.link.url, ev.link)
+                            if (started) publish(false) else startIfReady(false)
+                        }
+                        is LinkEvent.Subtitle -> { subs.putIfAbsent(ev.subtitle.url, ev.subtitle); if (started) publish(false) }
                         is LinkEvent.Skipped -> skipped++
                         is LinkEvent.Done -> { publish(true, ev.error); startIfReady(true) }
                     }
@@ -202,17 +244,23 @@ object OnlineSession {
         }
     }
 
+    /** "Load more" in the source lists: shows the next [PAGE] sources (already gathered in the background). */
+    fun loadMore() {
+        _state.update { it?.copy(visible = (it.shownLinks + PAGE).coerceAtMost(it.links.size.coerceAtLeast(PAGE))) }
+    }
+
     private fun playCurrent(context: Context, linkIndex: Int, resumeMs: Long?) {
         val s = _state.value ?: return
         val link = s.links.getOrNull(linkIndex) ?: return
         val data = s.data ?: return
         val id = videoIdFor(s.api, data) + ":" + link.url.hashCode().toUInt().toString(16)
         val resume = resumeMs ?: OnlineHistory.progressOf(s.api, data)?.takeIf { !it.finished }?.positionMs ?: 0L
-        _state.value = s.copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null)
+        _state.update { cur -> (cur ?: s).copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null, visible = maxOf(s.visible, linkIndex + 1)) }
         Log.i(TAG, "play ${s.title} via ${link.name} (${link.qualityLabel}, ${link.formatLabel}) ${link.url.take(120)}")
-        OnlinePlayback.registerInterceptors(ExtensionManager.provider(s.api), link)
+        val provider = ExtensionManager.provider(s.api)
+        OnlinePlayback.registerInterceptors(provider, link)
         val request = OnlinePlayback.request(s.title, link, s.subtitles, s.detail.posterUrl)
-        val site = runCatching { ExtensionManager.provider(s.api)?.mainUrl }.getOrNull()
+        val site = runCatching { provider?.mainUrl }.getOrNull()
         AccessLadder.reset(request.url); AccessLadder.hint(request.url, site)
         IncomingMedia.open(context, request, remember = false, id = id, positionMs = resume, folder = s.detail.api)
     }
@@ -246,7 +294,7 @@ object OnlineSession {
         val failed = s.failed + (s.link?.url ?: "")
         val next = s.links.indices.firstOrNull { it != s.linkIndex && s.links[it].url !in failed }
         if (next != null) {
-            _state.value = s.copy(failed = failed)
+            _state.update { cur -> (cur ?: s).copy(failed = failed) }
             Log.w(TAG, "failover → ${s.links[next].name}")
             // Dead links can fail within milliseconds of each other; tearing players down and up
             // that fast starved the main thread (ANR / force close). Space failovers out.
@@ -254,8 +302,10 @@ object OnlineSession {
             val wait = (lastFailoverAt + FAILOVER_GAP_MS - now).coerceIn(0L, FAILOVER_GAP_MS)
             lastFailoverAt = now + wait
             failoverJob?.cancel()
-            if (wait == 0L) playCurrent(app, next, positionMs)
-            else failoverJob = scope.launch { delay(wait); if (_state.value?.data == s.data) playCurrent(app, next, positionMs) }
+            val nextUrl = s.links[next].url
+            val go = { val cur = _state.value; val i = cur?.links?.indexOfFirst { it.url == nextUrl } ?: -1; if (cur?.data == s.data && i >= 0) playCurrent(app, i, positionMs) }
+            if (wait == 0L) go()
+            else failoverJob = scope.launch { delay(wait); go() }
             return true
         }
         // Every link refused. Signed links expire / bind to the extraction session, so extract
@@ -304,7 +354,7 @@ object OnlineSession {
     fun playEpisode(context: Context, index: Int) {
         val s = _state.value ?: return
         if (index !in s.episodes.indices) return
-        _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet())
+        _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet(), visible = PAGE)
         resolve(context.applicationContext, null)
     }
 
@@ -331,13 +381,13 @@ object OnlineSession {
             dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "${version.ifBlank { "That version" }} isn't available for $what yet. Still playing ${s.version.ifBlank { "the current version" }}.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
             return
         }
-        _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet())
+        _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE)
         resolve(context.applicationContext, null)
     }
 
     fun retry(context: Context) {
         val s = _state.value ?: return
-        _state.value = s.copy(phase = Phase.RESOLVING, links = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet())
+        _state.value = s.copy(phase = Phase.RESOLVING, links = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE)
         resolve(context.applicationContext, null)
     }
 

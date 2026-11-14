@@ -105,12 +105,15 @@ android {
 
   defaultConfig {
     applicationId = "dev.asfakul.yumeiro"
-    // Android 7.0: most TV boxes and Fire TV sticks (Fire OS 6 = Android 7.1) and older phones.
-    // API 26–28 calls are guarded (OsCompat, PipController, Privacy); java.time is desugared.
-    minSdk = 24
+    // Round 13: phones need Android 9 (API 28); Yumeiro TV keeps Android 7.0 (API 24) for TV boxes
+    // and Fire TV sticks (Fire OS 6 = Android 7.1), set on the tv flavor below. API 26–28 calls
+    // stay guarded (OsCompat, PipController, Privacy); java.time is desugared.
+    minSdk = 28
     targetSdk = 37 // Android 17
     versionCode = appVersionCode
     versionName = appVersionName
+    // Round 13: one universal APK with native code for every Android processor.
+    ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64") }
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -224,6 +227,7 @@ android {
     }
     create("tv") {
       dimension = "device"
+      minSdk = 24
       buildConfigField("boolean", "IS_TV_APP", "true")
       buildConfigField("String", "EDITION", "\"tv\"")
     }
@@ -236,18 +240,8 @@ android {
     isCoreLibraryDesugaringEnabled = true
   }
 
-  // One APK per processor plus a universal one (all share applicationId, key and versionCode, so
-  // they install over each other). The release workflow names the universal APK exactly like the
-  // single APK before, so older in-app updaters keep picking a build that runs everywhere.
-  splits {
-    abi {
-      val wanted = providers.gradleProperty("yumeiro.abiSplits").orNull != "false"
-      isEnable = wanted
-      reset()
-      include("arm64-v8a", "armeabi-v7a")
-      isUniversalApk = true
-    }
-  }
+  // Round 13: no per-processor APKs any more. Each edition ships as ONE universal APK (phone and
+  // TV) with native libraries for arm64-v8a, armeabi-v7a, x86 and x86_64 (see ndk.abiFilters).
 
   buildFeatures {
     compose = true
@@ -268,12 +262,9 @@ android {
   packaging {
     resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     jniLibs {
-      // FFmpeg (NextLib) is ~10 MB per ABI. Phones are ARM; x86/x86_64 (emulators, a few
-      // Chromebooks) fall back to the platform decoders (FfmpegLibrary.isAvailable() is false there).
-      for (abi in listOf("x86", "x86_64")) {
-        for (lib in listOf("ass", "avcodec", "avutil", "media3ext", "swresample", "swscale")) excludes += "lib/$abi/lib$lib.so"
-      }
-      // Compressed in the APK (~9 MB instead of ~21 MB for the two ARM ABIs).
+      // Round 13: FFmpeg (NextLib) ships for all four ABIs, so x86 / x86_64 devices (Chromebooks,
+      // emulators, some TV boxes) get the same decoders as ARM phones. Size is not a concern.
+      // Compressed in the APK.
       useLegacyPackaging = true
     }
   }
@@ -331,6 +322,8 @@ dependencies {
   implementation(libs.media3.exoplayer.dash)
   implementation(libs.media3.exoplayer.smoothstreaming)
   implementation(libs.media3.exoplayer.rtsp)
+  // Round 13: GPU video effects (Anime4K-style line and detail enhancement).
+  implementation(libs.media3.effect)
   // OkHttp data source: one HTTP stack for probing, playlists and playback, with DNS fallback / DoH.
   implementation(libs.media3.datasource.okhttp)
   // FFmpeg audio fallback: AC-3 / E-AC-3 / DTS / TrueHD / Opus / Vorbis tracks the phone can't decode played silent.

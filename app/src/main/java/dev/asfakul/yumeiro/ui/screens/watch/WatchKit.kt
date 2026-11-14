@@ -319,6 +319,8 @@ private fun StepButton(icon: ImageVector, label: String, onClick: (() -> Unit)?,
 fun WatchServerBox(
     watching: String, hint: String, rows: List<WatchServerRow>, modifier: Modifier = Modifier,
     audioOptions: List<AudioFilterOption> = emptyList(), audioSelected: String? = null, onAudioSelect: (String?) -> Unit = {},
+    /** Round 13: sources not shown yet (10 at a time). 0 = no "Load more" button. */
+    moreSources: Int = 0, onLoadMore: () -> Unit = {},
 ) {
     val p = LocalMtPalette.current
     val brush = dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush()
@@ -348,6 +350,22 @@ fun WatchServerBox(
         shownRows.forEachIndexed { i, row ->
             ServerGroup(row, single = shownRows.size == 1, brush = brush, initiallyOpen = i == openAt)
         }
+        if (moreSources > 0) LoadMoreSources(moreSources, p.accent, dev.asfakul.yumeiro.ui.theme.PageInk, onLoadMore, Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp))
+    }
+}
+
+/** Round 13: one "Load more" button under the source list; each tap shows 10 more. */
+@Composable
+fun LoadMoreSources(more: Int, accent: Color, ink: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
+            .border(1.dp, ink.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+            .clickable(onClickLabel = "Load more sources") { onClick() }.padding(horizontal = 14.dp, vertical = 10.dp).testTag("sources_load_more"),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.ExpandMore, null, tint = accent, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Load more · ${minOf(more, SERVER_PAGE)} of $more", color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

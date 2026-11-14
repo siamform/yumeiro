@@ -75,30 +75,44 @@ object AudioLanguages {
     private val subWord = word("sub|subs|subbed|subtitled|softsub|hardsub|soft[ -]?sub|hard[ -]?sub|raw|vostfr|vost|legendado|vietsub|sub[ -]?esp|sub[ -]?eng")
     private val spellings: List<Pair<String, Regex>> = LANGS.flatMap { (code, names) -> names.map { code to word(Regex.escape(it)) } }
     private val bracketCode = Regex("[\\[(|·\\-_/]\\s*([A-Za-z]{2})\\s*(?=[\\])|·\\-_/]|$)")
+    // Round 13: compiled once. These used to be rebuilt on every call, and sorting 100+ links
+    // called classify() thousands of times on the main thread (a cause of player ANRs).
+    private val dubbedBefore = Regex("(?i)([\\p{L}]+)[ -]?(?:dub|dubbed|audio)\\b")
+    private val dubbedAfter = Regex("(?i)\\b(?:dub|audio)[ -:]?([\\p{L}]+)")
+    private val subsBefore = Regex("(?i)([\\p{L}]+)[ -]?(?:sub|subs|subbed|subtitles?)\\b")
+    private val subsAfter = Regex("(?i)\\b(?:sub|subs|subtitles?)[ -:]?([\\p{L}]+)")
+    private val wordToCode: Map<String, String> = HashMap<String, String>().apply { LANGS.forEach { (code, names) -> names.forEach { putIfAbsent(it, code) } } }
+    private val classifyCache = object : LinkedHashMap<String, Audio>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Audio>?) = size > 2048
+    }
 
     /** Spoken language mentioned in [text], or null. "Dual/Multi audio" → [MULTI]. */
     fun languageOf(text: String): String? {
         if (text.isBlank()) return null
         if (multiWord.containsMatchIn(text)) return MULTI
         // Language right before/after "dub"/"audio" wins over subtitle languages ("Japanese audio, English subs").
-        val dubbed = Regex("(?i)([\\p{L}]+)[ -]?(?:dub|dubbed|audio)\\b").findAll(text).mapNotNull { m -> codeOfWord(m.groupValues[1]) }.firstOrNull()
-            ?: Regex("(?i)\\b(?:dub|audio)[ -:]?([\\p{L}]+)").findAll(text).mapNotNull { m -> codeOfWord(m.groupValues[1]) }.firstOrNull()
+        val dubbed = dubbedBefore.findAll(text).mapNotNull { m -> codeOfWord(m.groupValues[1]) }.firstOrNull()
+            ?: dubbedAfter.findAll(text).mapNotNull { m -> codeOfWord(m.groupValues[1]) }.firstOrNull()
         if (dubbed != null) return dubbed
         // Ignore languages that only describe subtitles ("Eng sub", "English subtitles").
-        val withoutSubs = text.replace(Regex("(?i)([\\p{L}]+)[ -]?(?:sub|subs|subbed|subtitles?)\\b"), " ")
-            .replace(Regex("(?i)\\b(?:sub|subs|subtitles?)[ -:]?([\\p{L}]+)"), " ")
+        val withoutSubs = text.replace(subsBefore, " ").replace(subsAfter, " ")
         spellings.firstOrNull { (_, r) -> r.containsMatchIn(withoutSubs) }?.let { return it.first }
         bracketCode.findAll(" $withoutSubs").map { it.groupValues[1].lowercase() }.firstOrNull { it in CODE2 }?.let { return it }
         return null
     }
 
     private fun codeOfWord(w: String): String? {
-        val l = w.lowercase()
-        return LANGS.entries.firstOrNull { (_, names) -> names.any { it == l } }?.key
+        return wordToCode[w.lowercase()]
     }
 
     /** Sub / Dub and language for one link. [version] is the extension's version label. */
     fun classify(linkText: String, version: String = ""): Audio {
+        val key = version + "\u0000" + linkText
+        synchronized(classifyCache) { classifyCache[key] }?.let { return it }
+        return classifyUncached(linkText, version).also { a -> synchronized(classifyCache) { classifyCache[key] = a } }
+    }
+
+    private fun classifyUncached(linkText: String, version: String): Audio {
         val lang = languageOf(linkText)
         val explicitDub = dubWord.containsMatchIn(linkText)
         val explicitSub = !explicitDub && subWord.containsMatchIn(linkText)
@@ -131,6 +145,34 @@ object AudioLanguages {
         a.language != null -> a.language
         a.kind == Kind.DUB -> DUB_OTHER
         else -> ""
+    }
+
+    /** 2-letter code for a track language ("jpn", "ja-JP", "en_US" → "ja", "ja", "en"). */
+    fun normalizeTrackLanguage(lang: String?): String? {
+        val l = lang?.trim()?.lowercase()?.replace('_', '-')?.substringBefore('-')?.takeIf { it.isNotBlank() && it != "und" } ?: return null
+        if (l.length == 2) return l
+        return iso3[l] ?: LANGS.entries.firstOrNull { (_, names) -> l in names }?.key ?: l
+    }
+
+    private val iso3: Map<String, String> by lazy {
+        HashMap<String, String>().apply {
+            java.util.Locale.getISOLanguages().forEach { c -> runCatching { java.util.Locale(c).isO3Language }.getOrNull()?.let { put(it, c) } }
+            put("chi", "zh"); put("fre", "fr"); put("ger", "de"); put("dut", "nl"); put("per", "fa"); put("cze", "cs"); put("gre", "el")
+        }
+    }
+
+    /**
+     * Round 13: which of the playing video's audio tracks fits filter [key] ("orig", "dub", or a
+     * language code). [languages] are the tracks' language tags in order. Returns the index or -1.
+     */
+    fun trackFor(key: String, languages: List<String?>): Int {
+        val codes = languages.map { normalizeTrackLanguage(it) }
+        return when (key) {
+            ORIG -> codes.indexOfFirst { it in ORIGINAL_AUDIO }
+            DUB_OTHER -> codes.indexOfFirst { it != null && it !in ORIGINAL_AUDIO }
+            MULTI, "" -> -1
+            else -> codes.indexOfFirst { it == key }
+        }
     }
 
     const val ORIG = "orig"
