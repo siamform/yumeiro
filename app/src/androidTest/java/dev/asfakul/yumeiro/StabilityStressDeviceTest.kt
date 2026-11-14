@@ -173,6 +173,7 @@ class StabilityStressDeviceTest {
             val probe = runCatching { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().isNotEmpty() }
             val busy = probe.exceptionOrNull()?.takeIf { it.javaClass.simpleName == "ComposeNotIdleException" }
             if (busy != null) {
+                composeSpins++
                 // The screen is there but never settles: say exactly what is busy and what main is doing.
                 log("recover[$where]: compose never idle (${focusLine()}): ${busy.message?.replace('\n', ' ')?.take(900)}")
                 repeat(5) { i ->
@@ -196,6 +197,8 @@ class StabilityStressDeviceTest {
         throw AssertionError("tab bar never came back at $where · ${onScreen()}")
     }
     private var recoveries = 0
+    /** Times Compose never went idle (an endless recomposition). Any is a failure, even if Back cleared it. */
+    private var composeSpins = 0
 
     /** Which snapshot states keep changing (an endless recomposition is a state written every frame). */
     private fun changingStates(ms: Long): String = stateChanges(ms).second
@@ -368,12 +371,14 @@ class StabilityStressDeviceTest {
         memory("end")
         watching = false
         SystemClock.sleep(50)
-        log("main-thread samples: ${samples.get()} · max stall ${maxStall.get()}ms · stalls≥700ms ${stalls.get()} · navigation recoveries $recoveries")
+        log("main-thread samples: ${samples.get()} · max stall ${maxStall.get()}ms · stalls≥700ms ${stalls.get()} · navigation recoveries $recoveries · compose spins $composeSpins")
         val appHits = regexHits.filterKeys { k -> k.startsWith("dev.asfakul") || k.startsWith("com.lagradost") || k.startsWith("eu.kanade") }
         regexHits.entries.sortedByDescending { it.value.get() }.forEach { log("regex-on-main x${it.value.get()}: ${it.key}") }
         if (regexHits.isEmpty()) log("regex-on-main: none")
         assertTrue("app code compiled a regex on the main thread:\n" + appHits.keys.joinToString("\n"), appHits.isEmpty())
         assertTrue("main thread stalled ${maxStall.get()}ms (ANR territory)", maxStall.get() < 4_000)
+        log("compose spins: $composeSpins")
+        assertTrue("Compose never went idle $composeSpins time(s): an endless recomposition (see busy states above)", composeSpins == 0)
     }
 
     companion object { private const val MB = 1024L * 1024L }
