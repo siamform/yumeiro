@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_YTWATCH_HOT_1 = Regex("(?i)<br\\s*/?>")
+private val RX_YTWATCH_HOT_2 = Regex("<[^>]+>")
+
 /**
  * State of the YouTube watch page (player on top, details + "Up next" below, like the YouTube
  * app). Opens instantly from the tapped [YtItem] (so the page shows a skeleton right away), then
@@ -88,6 +92,6 @@ object YtWatch {
     fun end() { job?.cancel(); job = null; _state.value = null }
 
     internal fun stripHtml(s: String): String =
-        s.replace(Regex("(?i)<br\\s*/?>"), "\n").replace(Regex("<[^>]+>"), "")
+        s.replace(RX_YTWATCH_HOT_1, "\n").replace(RX_YTWATCH_HOT_2, "")
             .replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">").trim()
 }

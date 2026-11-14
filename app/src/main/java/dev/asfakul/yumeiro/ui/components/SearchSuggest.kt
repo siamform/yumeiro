@@ -50,6 +50,10 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import java.text.Normalizer
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_SEARCHSUGGEST_HOT_1 = Regex("\\p{M}+")
+private val RX_SEARCHSUGGEST_HOT_2 = Regex("[^\\p{L}\\p{N}]+")
+
 /** One typeahead suggestion. [detail] is a short second line ("Artist", "Hue · Anime"). */
 data class Suggestion(val text: String, val kind: Kind, val detail: String? = null) {
     enum class Kind(val icon: ImageVector) {
@@ -68,9 +72,9 @@ data class Suggestion(val text: String, val kind: Kind, val detail: String? = nu
 object SearchSuggest {
     /** Lowercase, accents removed, punctuation collapsed — so "Pokémon" matches "pokemon". */
     fun fold(s: String): String = Normalizer.normalize(s, Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "")
+        .replace(RX_SEARCHSUGGEST_HOT_1, "")
         .lowercase()
-        .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+        .replace(RX_SEARCHSUGGEST_HOT_2, " ")
         .trim()
 
     /**

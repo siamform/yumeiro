@@ -7,6 +7,9 @@ package dev.asfakul.yumeiro.online.download
 
 import dev.asfakul.yumeiro.online.OnlineLink
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_DOWNLOADNAMING_HOT_1 = Regex("\\s+")
+
 /**
  * Folder and file names for offline copies, plus the pure rules around them (unit-tested).
  *
@@ -18,7 +21,7 @@ object DownloadNaming {
     private val ILLEGAL = Regex("""[\\/:*?"<>|\u0000-\u001f]""")
 
     fun clean(s: String, max: Int = 80): String =
-        s.replace(ILLEGAL, " ").replace(Regex("\\s+"), " ").trim().trim('.').take(max).trim().ifBlank { "video" }
+        s.replace(ILLEGAL, " ").replace(RX_DOWNLOADNAMING_HOT_1, " ").trim().trim('.').take(max).trim().ifBlank { "video" }
 
     /** `Title-(Extension-(Sub))`; without a version: `Title-(Extension)`. */
     fun seriesFolder(title: String, extension: String, version: String?): String {

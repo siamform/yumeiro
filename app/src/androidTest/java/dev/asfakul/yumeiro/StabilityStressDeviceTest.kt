@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 @RunWith(AndroidJUnit4::class)
 class StabilityStressDeviceTest {
+    @get:Rule val hang = HangDumpRule()
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val report = StringBuilder()
@@ -65,16 +66,23 @@ class StabilityStressDeviceTest {
         listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO", "android.permission.POST_NOTIFICATIONS")
             .forEach { runCatching { ui.grantRuntimePermission(ctx.packageName, it) } }
         // A real extension so the video home has posters, rows and paging to stress.
+        // Each step is logged and the whole setup is bounded: a slow extension repo must not use up
+        // the class time limit before the stress itself starts (run 43622442191).
+        log("setup: extensions")
         runCatching {
             runBlocking {
-                ExtensionManager.start(ctx); ExtensionManager.ensureLoaded(ctx)
-                if (ExtensionManager.provider("Internet Archive") == null) {
-                    val remote = ExtensionSources.all(ctx, force = true).items.first { it.internalName == "InternetArchiveProvider" }
-                    ExtensionManager.install(ctx, remote)
+                kotlinx.coroutines.withTimeout(180_000) {
+                    ExtensionManager.start(ctx); ExtensionManager.ensureLoaded(ctx); log("setup: extensions loaded")
+                    if (ExtensionManager.provider("Internet Archive") == null) {
+                        val remote = ExtensionSources.all(ctx, force = true).items.first { it.internalName == "InternetArchiveProvider" }
+                        log("setup: installing ${remote.name}")
+                        ExtensionManager.install(ctx, remote, dev.asfakul.yumeiro.online.ExtensionReview.Mode.AUTO) // unattended: no review dialog to tap
+                    }
+                    OnlineRepository.clearCaches()
                 }
-                OnlineRepository.clearCaches()
             }
-        }.onFailure { log("extension setup failed (network?): $it") }
+        }.onFailure { log("extension setup failed (network?): $it"); HangDumpRule.dump("stress setup failed: $it") }
+        log("setup: done")
         val am = ctx.getSystemService(ActivityManager::class.java)
         val mi = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         log("device ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT} totalMem=${mi.totalMem / MB}M memoryClass=${am.memoryClass}M lowRam=${am.isLowRamDevice} lowEnd=${DeviceClass.lowEnd}")

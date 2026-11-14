@@ -7,6 +7,10 @@ package dev.asfakul.yumeiro.scrobble
 
 import dev.asfakul.yumeiro.text.RegexCache
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_SCROBBLERULES_HOT_1 = Regex("""(?i)\s*VEVO$""")
+private val RX_SCROBBLERULES_HOT_2 = Regex("""(?i)\s*official$""")
+
 /** One listen, in the shape Last.fm (and any later scrobbler, e.g. ListenBrainz) needs. */
 data class ScrobblePlay(val artist: String, val track: String, val album: String, val durationSec: Int, val startedAtSec: Long)
 
@@ -26,7 +30,7 @@ object TrackNames {
     fun isUnknown(s: String?): Boolean = s == null || s.trim().lowercase() in unknown
 
     fun artist(raw: String): String = raw.trim()
-        .removeSuffix(" - Topic").replace(Regex("""(?i)\s*VEVO$"""), "").replace(Regex("""(?i)\s*official$"""), "").trim()
+        .removeSuffix(" - Topic").replace(RX_SCROBBLERULES_HOT_1, "").replace(RX_SCROBBLERULES_HOT_2, "").trim()
 
     /** Title without video noise. "Artist - Song" titles from video uploads keep only the song when [artist] matches. */
     fun title(raw: String, artist: String = ""): String {

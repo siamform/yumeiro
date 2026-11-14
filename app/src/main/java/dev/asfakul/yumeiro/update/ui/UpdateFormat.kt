@@ -10,6 +10,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_UPDATEFORMAT_HOT_1 = Regex("""^#+\s*Yumeiro v""")
+
 internal sealed interface NoteLine {
     data class Heading(val text: String) : NoteLine
     data class Bullet(val text: String) : NoteLine
@@ -28,7 +31,7 @@ internal fun parseNotes(markdown: String): List<NoteLine> =
         .filter {
             it.isNotEmpty() && !it.startsWith("---") && !it.startsWith("**Full Changelog") &&
                 !it.startsWith("**Install") && !it.startsWith("**SHA-256") &&
-                !Regex("""^#+\s*Yumeiro v""").containsMatchIn(it)
+                !RX_UPDATEFORMAT_HOT_1.containsMatchIn(it)
         }
         .map { raw ->
             val clean = { s: String -> s.replace(LINK, "$1").replace("**", "").replace("`", "").trim() }

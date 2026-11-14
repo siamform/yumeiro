@@ -2339,9 +2339,17 @@ internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, heigh
         if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kEffect(prefs.gpuTier.value))
     }
     runCatching {
+        // R15 (device run 43622442191: second level switch → picture froze, then ERROR_CODE_TIMEOUT on
+        // both emulators). Media3 builds the effect graph only when the video renderer is enabled, so
+        // the first time effects are attached the video track is re-selected to enable it again. Once
+        // the graph exists, setVideoEffects re-registers the stream live; re-selecting the track on top
+        // of a live graph stalled the playback thread until the surface detach timed out.
+        val graphLive = dev.asfakul.yumeiro.stream.StreamMediaFactory.usedEffects(player)
         dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(player, fx)
-        val p = player.trackSelectionParameters
-        player.trackSelectionParameters = p.buildUpon().setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true).build()
-        player.trackSelectionParameters = p
+        if (!graphLive && fx.isNotEmpty()) {
+            val p = player.trackSelectionParameters
+            player.trackSelectionParameters = p.buildUpon().setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true).build()
+            player.trackSelectionParameters = p
+        }
     }
 }

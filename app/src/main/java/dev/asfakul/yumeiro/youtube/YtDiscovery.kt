@@ -9,6 +9,10 @@ import android.content.Context
 import java.text.Normalizer
 import java.util.Locale
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_YTDISCOVERY_HOT_1 = Regex("\\p{M}+")
+private val RX_YTDISCOVERY_HOT_2 = Regex("[^\\p{L}\\p{N}]+")
+
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_YTDISCOVERY_1 = Regex("\\s+")
 
@@ -111,7 +115,7 @@ object YtDiscovery {
 
     /** Lower-case, accents removed, punctuation collapsed: "J-Pop" == "jpop" == "J Pop". */
     fun fold(s: String): String = Normalizer.normalize(s, Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "").lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), "")
+        .replace(RX_YTDISCOVERY_HOT_1, "").lowercase(Locale.ROOT).replace(RX_YTDISCOVERY_HOT_2, "")
 
     /** Cleans a typed topic; null when empty or too long to be a topic. */
     fun cleanTopic(raw: String): String? = raw.trim().replace(RX_YTDISCOVERY_1, " ").takeIf { it.length in 2..60 }

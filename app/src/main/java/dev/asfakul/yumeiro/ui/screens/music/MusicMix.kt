@@ -61,6 +61,9 @@ import dev.asfakul.yumeiro.youtube.YouTubePlayback
 import dev.asfakul.yumeiro.youtube.YtHistory
 import dev.asfakul.yumeiro.youtube.YtItem
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_MUSICMIX_HOT_1 = Regex("\\p{Mn}+")
+
 /**
  * Music → Mix: your device library and YouTube Music woven into one endless listening list.
  *
@@ -261,7 +264,7 @@ internal fun mixDeviceMatches(tracks: List<AudioTrack>, query: String): List<Aud
 }
 
 private fun fold(s: String): String =
-    java.text.Normalizer.normalize(s.lowercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").trim()
+    java.text.Normalizer.normalize(s.lowercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD).replace(RX_MUSICMIX_HOT_1, "").trim()
 
 private sealed interface MixEntry {
     val key: String

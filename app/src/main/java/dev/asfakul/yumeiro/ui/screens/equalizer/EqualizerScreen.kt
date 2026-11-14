@@ -255,7 +255,7 @@ fun EqualizerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(vertical = 4.dp)
                     ) {
-                        items(state.presets) { preset ->
+                        items(state.presets, key = { it }) { preset ->
                             val isSelected = state.currentPreset == preset
                             Surface(
                                 modifier = Modifier

@@ -37,6 +37,10 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.supervisorScope
 import java.util.concurrent.ConcurrentHashMap
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_ONLINEREPOSITORY_HOT_1 = Regex("<br\\s*/?>", RegexOption.IGNORE_CASE)
+private val RX_ONLINEREPOSITORY_HOT_2 = Regex("<[^>]+>")
+
 // region UI models (app-owned; screens never touch extension objects directly)
 
 enum class OnlineKind { MOVIE, SERIES, ANIME, LIVE, OTHER }
@@ -516,7 +520,7 @@ object OnlineRepository {
         TvType.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }?.let { typeLabel(it) } ?: name
 
     private fun cleanHtml(s: String): String =
-        s.replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n").replace(Regex("<[^>]+>"), "")
+        s.replace(RX_ONLINEREPOSITORY_HOT_1, "\n").replace(RX_ONLINEREPOSITORY_HOT_2, "")
             .replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").replace("&nbsp;", " ").trim()
 
     // endregion

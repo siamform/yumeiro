@@ -24,6 +24,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_UPDATEMANAGER_HOT_1 = Regex("[^A-Za-z0-9._-]")
+
 /**
  * Process-wide coordinator for checking, downloading and installing updates from GitHub Releases.
  *
@@ -444,7 +447,7 @@ class UpdateManager private constructor(context: Context) {
         app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.let { File(it, "updates") }?.apply { mkdirs() }
 
     private fun safeFileName(release: ReleaseInfo): String =
-        release.asset.name.replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "update.apk" }
+        release.asset.name.replace(RX_UPDATEMANAGER_HOT_1, "_").ifBlank { "update.apk" }
 
     private data class Snapshot(
         val status: Int, val reason: Int, val downloaded: Long, val total: Long, val localUri: String?,

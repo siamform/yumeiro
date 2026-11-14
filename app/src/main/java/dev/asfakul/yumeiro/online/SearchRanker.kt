@@ -7,6 +7,10 @@ package dev.asfakul.yumeiro.online
 
 import java.text.Normalizer
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_SEARCHRANKER_HOT_1 = Regex("\\p{Mn}+")
+private val RX_SEARCHRANKER_HOT_2 = Regex("[^\\p{L}\\p{N}]+")
+
 /**
  * Merges search results from many Hues into one list ordered by how well each title matches the
  * query, not by which extension answered first. Ordering is stable: results that score the same
@@ -18,9 +22,9 @@ object SearchRanker {
 
     fun normalize(s: String): String =
         Normalizer.normalize(s, Normalizer.Form.NFD)
-            .replace(Regex("\\p{Mn}+"), "")
+            .replace(RX_SEARCHRANKER_HOT_1, "")
             .lowercase()
-            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+            .replace(RX_SEARCHRANKER_HOT_2, " ")
             .trim()
 
     private fun tokens(s: String) = normalize(s).split(' ').filter { it.isNotEmpty() }

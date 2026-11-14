@@ -15,6 +15,9 @@ import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_SMARTDNS_HOT_1 = Regex("""\d{1,3}(\.\d{1,3}){3}""")
+
 /** Which resolver answered the last lookup of a host (shown in Video details → Stream health). */
 enum class DnsSource { SYSTEM, ALTERNATIVE }
 
@@ -203,7 +206,7 @@ object SmartDns : Dns {
             .apply { initCause(cause) }
 
     internal fun isIpLiteral(host: String): Boolean =
-        host.matches(Regex("""\d{1,3}(\.\d{1,3}){3}""")) || (host.contains(':') && host.all { it.isLetterOrDigit() || it == ':' || it == '.' || it == '[' || it == ']' || it == '%' })
+        host.matches(RX_SMARTDNS_HOT_1) || (host.contains(':') && host.all { it.isLetterOrDigit() || it == ':' || it == '.' || it == '[' || it == ']' || it == '%' })
 
     /** Resolves [host] with [config] right now, for the Settings "Test" button. */
     fun test(host: String, config: DnsConfig): Result<Pair<List<InetAddress>, Long>> = runCatching {

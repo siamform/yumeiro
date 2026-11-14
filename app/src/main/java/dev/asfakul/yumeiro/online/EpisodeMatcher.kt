@@ -5,6 +5,11 @@
  */
 package dev.asfakul.yumeiro.online
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_EPISODEMATCHER_HOT_1 = Regex("""\((sub|dub|subbed|dubbed|eng(lish)?|raw)\)|\[(sub|dub)]""")
+private val RX_EPISODEMATCHER_HOT_2 = Regex("""^\s*(ep(isode)?\.?\s*\d+\s*[-:·.]?\s*)""")
+private val RX_EPISODEMATCHER_HOT_3 = Regex("""[^\p{L}\p{N}]+""")
+
 /**
  * Finds the same episode in another version (Sub ↔ Dub) of a title. Never guesses by list
  * position: dub lists are often shorter or start later, so "same index" is a different episode.
@@ -34,7 +39,7 @@ object EpisodeMatcher {
 
     /** "Episode 5 - The Return (Dub)" and "the return" compare equal. */
     internal fun normalize(name: String?): String = name.orEmpty().lowercase()
-        .replace(Regex("""\((sub|dub|subbed|dubbed|eng(lish)?|raw)\)|\[(sub|dub)]"""), " ")
-        .replace(Regex("""^\s*(ep(isode)?\.?\s*\d+\s*[-:·.]?\s*)"""), " ")
-        .replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()
+        .replace(RX_EPISODEMATCHER_HOT_1, " ")
+        .replace(RX_EPISODEMATCHER_HOT_2, " ")
+        .replace(RX_EPISODEMATCHER_HOT_3, " ").trim()
 }

@@ -69,6 +69,10 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_STREAMWATCHPANEL_HOT_1 = Regex("""[\[(].*?[\])]""")
+private val RX_STREAMWATCHPANEL_HOT_2 = Regex("""[^\p{L}\p{N}]+""")
+
 /** Channel list helpers (pure, unit tested). */
 object StreamWatch {
     /** Channels of the open playlist with the current one's group first. */
@@ -87,9 +91,9 @@ object StreamWatch {
 
     /** Channel name without quality / backup tags, so "Sony HD" and "Sony (Backup)" match. */
     fun nameKey(title: String): String = title.lowercase()
-        .replace(Regex("""[\[(].*?[\])]"""), " ")
+        .replace(RX_STREAMWATCHPANEL_HOT_1, " ")
         .replace(QUALITY, " ")
-        .replace(Regex("""[^\p{L}\p{N}]+"""), " ")
+        .replace(RX_STREAMWATCHPANEL_HOT_2, " ")
         .trim()
 
     /** Other links of the same channel in the playlist (the "servers" of a channel), current included. */

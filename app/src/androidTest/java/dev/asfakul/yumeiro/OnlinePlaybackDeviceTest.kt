@@ -43,6 +43,7 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 @org.junit.FixMethodOrder(org.junit.runners.MethodSorters.NAME_ASCENDING)
 class OnlinePlaybackDeviceTest {
+    @get:Rule val hang = HangDumpRule()
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -86,7 +87,7 @@ class OnlinePlaybackDeviceTest {
         ExtensionManager.start(ctx); ExtensionManager.ensureLoaded(ctx)
         if (ExtensionManager.provider("Internet Archive") == null) {
             val remote = ExtensionSources.all(ctx, force = true).items.first { it.internalName == "InternetArchiveProvider" }
-            ExtensionManager.install(ctx, remote)
+            ExtensionManager.install(ctx, remote, dev.asfakul.yumeiro.online.ExtensionReview.Mode.AUTO) // unattended: no review dialog to tap
         }
         OnlineRepository.clearCaches()
         assertNotNull("extension loaded", ExtensionManager.provider("Internet Archive"))

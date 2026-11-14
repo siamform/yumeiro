@@ -29,7 +29,7 @@ class ExtensionCompatDeviceTest {
         val failures = mutableListOf<String>()
         var loaded = 0
         for ((name, url) in EXTENSIONS) {
-            val r = runCatching { ExtensionManager.installFromUrl(ctx, url) }
+            val r = runCatching { ExtensionManager.installFromUrl(ctx, url, dev.asfakul.yumeiro.online.ExtensionReview.Mode.AUTO) }
             r.onSuccess { loaded++; Log.i("MTDeviceTest", "$name loaded: ${APIHolder.allProviders.map { it.name }.takeLast(5)}") }
             r.onFailure { t ->
                 // A host that is down is not a compatibility problem; anything else is.

@@ -14,6 +14,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_ANIMEIDS_HOT_1 = Regex("""\s*[(\[][^)\]]*(dub|sub|uncensored|\d{3,4}p)[^)\]]*[)\]]""", RegexOption.IGNORE_CASE)
+private val RX_ANIMEIDS_HOT_2 = Regex("""\s+(dub|dubbed|sub|subbed)$""", RegexOption.IGNORE_CASE)
+
 /**
  * MyAnimeList / AniList ids for an anime title: from the extension when it provides them,
  * otherwise found once through AniList's public search by title and year.
@@ -45,8 +49,8 @@ object AnimeIds {
 
     /** Strips "(Dub)", "Season 2 [1080p]" style suffixes extensions add. */
     internal fun cleanTitle(name: String): String = name
-        .replace(Regex("""\s*[(\[][^)\]]*(dub|sub|uncensored|\d{3,4}p)[^)\]]*[)\]]""", RegexOption.IGNORE_CASE), "")
-        .replace(Regex("""\s+(dub|dubbed|sub|subbed)$""", RegexOption.IGNORE_CASE), "")
+        .replace(RX_ANIMEIDS_HOT_1, "")
+        .replace(RX_ANIMEIDS_HOT_2, "")
         .trim()
 
     private fun search(client: OkHttpClient, title: String, year: Int?): Ids? {

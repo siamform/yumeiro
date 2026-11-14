@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.net.URI
 import java.net.URLEncoder
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_LINKHOSTS_HOT_1 = Regex("https?://download\\d*\\.mediafire\\.com/[^\"'\\s<>]+")
+
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_LINKHOSTS_1 = Regex("/(?:file/)?d/([A-Za-z0-9_-]{10,})")
 private val RX_LINKHOSTS_2 = Regex("[?&]id=([A-Za-z0-9_-]{10,})")
@@ -120,7 +123,7 @@ object LinkHosts {
 
     /** The download button address of a MediaFire file page, or null. */
     fun mediaFireDownload(html: String): String? =
-        Regex("https?://download\\d*\\.mediafire\\.com/[^\"'\\s<>]+").find(html)?.value
+        RX_LINKHOSTS_HOT_1.find(html)?.value
 
     fun classify(url: String): Route? {
         val u = url.trim()

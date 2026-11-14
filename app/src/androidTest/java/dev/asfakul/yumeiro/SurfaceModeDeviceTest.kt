@@ -32,6 +32,7 @@ import java.io.File
  */
 @RunWith(AndroidJUnit4::class)
 class SurfaceModeDeviceTest {
+    @get:Rule val hang = HangDumpRule()
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -73,7 +74,7 @@ class SurfaceModeDeviceTest {
         val playing = PlaybackDiagnostics.state.value
         Log.i("YuSurfaceTest", "after View downloads: $playing")
 
-        play("https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", "Surface B")
+        play("https://storage.googleapis.com/exoplayer-test-media-1/mp4/frame-counter-one-hour.mp4", "Surface B")
         rule.waitUntil(10_000) { !has("video_floating_player") }
         shot("3_new_video_full")
         assertTrue("a new video expands the floating player", !has("video_floating_player"))

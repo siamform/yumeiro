@@ -32,6 +32,7 @@ import java.io.File
  */
 @RunWith(AndroidJUnit4::class)
 class PlaybackSessionDeviceTest {
+    @get:Rule val hang = HangDumpRule()
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val log = StringBuilder()
@@ -58,9 +59,9 @@ class PlaybackSessionDeviceTest {
         rule.waitUntil(30_000) { has("nav_tab_videos") || has("nav_tab_home") }
         val c0 = PlaybackSession.created; val r0 = PlaybackSession.reused
         note("start")
-        play("https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", "Session A"); note("A playing")
-        play("https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", "Session B"); note("B playing")
-        play("https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4", "Session C"); note("C playing")
+        play("https://storage.googleapis.com/exoplayer-test-media-1/mp4/frame-counter-one-hour.mp4", "Session A"); note("A playing")
+        play("https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4", "Session B"); note("B playing")
+        play("https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4", "Session C"); note("C playing")
         assertEquals("one player built for three videos", 1, PlaybackSession.created - c0)
         assertEquals("the next two reused it", 2, PlaybackSession.reused - r0)
         assertEquals(1, PlaybackSession.alive)
@@ -71,7 +72,7 @@ class PlaybackSessionDeviceTest {
         note("closed")
         assertEquals("kept during the grace", 1, PlaybackSession.alive)
         val res0 = PlaybackSession.resumedCount
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4", title = "Session C"), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4", title = "Session C"), remember = false) }
         rule.waitUntil(15_000) { PlaybackSession.resumedCount > res0 }
         var playing = false
         rule.waitUntil(20_000) { rule.runOnUiThread { playing = PlaybackSession.isPlaying() }; playing }

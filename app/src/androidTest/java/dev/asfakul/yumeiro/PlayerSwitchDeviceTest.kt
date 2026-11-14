@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerSwitchDeviceTest {
+    @get:Rule val hang = HangDumpRule()
     @get:Rule val scenario = ActivityScenarioRule(MainActivity::class.java)
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val inst get() = InstrumentationRegistry.getInstrumentation()
@@ -91,7 +92,7 @@ class PlayerSwitchDeviceTest {
         }
         p.setVideoSurfaceView(sv)
         p.addListener(object : Player.Listener {
-            override fun onPlayerError(e: PlaybackException) { error.set(e); log("player error ${e.errorCodeName}: ${e.message}") }
+            override fun onPlayerError(e: PlaybackException) { error.set(e); log("player error ${e.errorCodeName}: ${e.message}\n" + android.util.Log.getStackTraceString(e).lineSequence().take(40).joinToString("\n")) }
         })
         p.also { player = it }
     }

@@ -1031,7 +1031,7 @@ fun ManageHiddenFoldersDialog(
                             .height(200.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(hiddenFolderPaths.toList()) { path ->
+                        items(hiddenFolderPaths.toList(), key = { it }) { path ->
                             val folderName = folders.firstOrNull { it.path == path || it.name == path }?.name
                                 ?: path.trim('/').split('/').lastOrNull() ?: path
 
@@ -1467,7 +1467,7 @@ fun AddToPlaylistDialog(
                         }
                     }
 
-                    items(playlists) { playlist ->
+                    items(playlists, key = { it.id }) { playlist ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()

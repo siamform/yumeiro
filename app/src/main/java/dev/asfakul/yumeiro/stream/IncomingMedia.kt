@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_INCOMINGMEDIA_HOT_1 = Regex("""(https?|rtsps?)://\S+""")
+
 /** Media handed to the app by other apps ("Open with" / "Share"), consumed by the UI once. */
 object IncomingMedia {
     private val _pending = MutableStateFlow<VideoItem?>(null)
@@ -76,7 +79,7 @@ object IncomingMedia {
     }
 
     private fun extractUrl(text: String): String? =
-        Regex("""(https?|rtsps?)://\S+""").find(text)?.value?.trimEnd(')', ']', '"', '\'', '.', ',')
+        RX_INCOMINGMEDIA_HOT_1.find(text)?.value?.trimEnd(')', ']', '"', '\'', '.', ',')
 
     private fun displayName(context: Context, uri: Uri): String? = runCatching {
         context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {

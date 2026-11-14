@@ -17,6 +17,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.Locale
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_TRACKDETAILSREPOSITORY_HOT_1 = Regex("[^A-Za-z0-9_.-]")
+
 /** Technical + tag metadata for the Now Playing "Info" panel. All fields optional. */
 data class TrackDetails(
     val albumArtist: String? = null,
@@ -44,7 +47,7 @@ object TrackDetailsRepository {
     private const val MAX_LRC_BYTES = 1L * 1024 * 1024
 
     private fun importedFile(context: Context, trackId: String): File =
-        File(File(context.filesDir, "lyrics"), trackId.replace(Regex("[^A-Za-z0-9_.-]"), "_") + ".lrc")
+        File(File(context.filesDir, "lyrics"), trackId.replace(RX_TRACKDETAILSREPOSITORY_HOT_1, "_") + ".lrc")
 
     /**
      * Lyrics for a track, best source first: imported, sidecar .lrc, embedded tags, then (when

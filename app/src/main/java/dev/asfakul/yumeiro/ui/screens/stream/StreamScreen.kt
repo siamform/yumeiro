@@ -119,6 +119,9 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
 
+// Precompiled once (R15 audit): these ran a regex compile on every call.
+private val RX_STREAMSCREEN_HOT_1 = Regex("[^A-Za-z0-9 ._-]")
+
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_STREAMSCREEN_1 = Regex("^(https?|rtsps?)://.+", RegexOption.IGNORE_CASE)
 private val RX_STREAMSCREEN_2 = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://\\S+")
@@ -707,7 +710,7 @@ private const val TEMP_EXPORT = "__opened__"
 private const val LIVE_PAGE = 48
 
 internal fun fileNameFor(name: String?): String =
-    (name ?: "playlist").replace(Regex("[^A-Za-z0-9 ._-]"), "").trim().replace(' ', '_').ifBlank { "playlist" }.take(60) + ".m3u"
+    (name ?: "playlist").replace(RX_STREAMSCREEN_HOT_1, "").trim().replace(' ', '_').ifBlank { "playlist" }.take(60) + ".m3u"
 
 @Composable
 internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
