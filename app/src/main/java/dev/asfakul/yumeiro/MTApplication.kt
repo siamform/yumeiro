@@ -19,6 +19,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         if (dev.asfakul.yumeiro.backup.Restart.isRestartProcess(this)) return
         // Round 12: a staged restore / reset is applied before anything reads a setting or file.
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
+        // Round 2: crash reports are written to the phone (Settings → Crash reports) before anything else can fail.
+        runCatching { dev.asfakul.yumeiro.diagnostics.CrashLog.install(this) }
         dev.asfakul.yumeiro.cache.DataCache.init(this)
         DeviceClass.init(this)
         // Must come first: a crashing extension must never take the whole app down.

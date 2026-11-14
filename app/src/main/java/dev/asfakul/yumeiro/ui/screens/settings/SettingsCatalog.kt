@@ -73,6 +73,8 @@ object SettingsCatalog {
             listOf("onboarding", "tour", "explore", "welcome", "start", "checklist", "getting started"), route = "setup"),
         GUIDE(Group.ABOUT, "User guide", "How every part of Yumeiro works",
             listOf("help", "how to", "tutorial", "faq", "manual"), route = "guide"),
+        CRASHES(Group.ABOUT, "Crash reports", "Saved on this phone. Read, copy or share one with the developer",
+            listOf("crash", "log", "logs", "bug", "error", "freeze", "anr", "report", "diagnostics")),
         ABOUT(Group.ABOUT, "About & developer", "Version, source code, the developer and support",
             listOf("github", "license", "credits", "donate", "support", "social", "contact")),
     }

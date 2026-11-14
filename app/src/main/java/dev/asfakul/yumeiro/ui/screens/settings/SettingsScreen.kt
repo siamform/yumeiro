@@ -6,6 +6,7 @@
 package dev.asfakul.yumeiro.ui.screens.settings
 
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.filled.BugReport
 import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -191,6 +192,7 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.UPDATES -> CategoryLook(Icons.Default.SystemUpdate, BrandAmber)
     Category.SETUP -> CategoryLook(Icons.Filled.Explore, BrandGold)
     Category.GUIDE -> CategoryLook(Icons.AutoMirrored.Filled.MenuBook, BrandGold)
+    Category.CRASHES -> CategoryLook(Icons.Default.BugReport, BrandCoral)
     Category.ABOUT -> CategoryLook(androidx.compose.material.icons.Icons.Outlined.AutoAwesome, BrandCoral)
 }
 
@@ -200,7 +202,7 @@ internal fun Category.kana(): String = when (this) {
     Category.ONLINE -> "網"; Category.DOWNLOADS -> "保存"; Category.LIBRARY -> "蔵"; Category.SOURCES -> "源"
     Category.SOURCE_STATUS -> "診"; Category.TRACKING -> "記録"; Category.YOUTUBE -> "動画"; Category.TOGETHER -> "共"
     Category.NOTIFICATIONS -> "通知"; Category.BACKGROUND -> "電池"; Category.NETWORK -> "接続"; Category.PRIVACY -> "鍵"
-    Category.BACKUP -> "控"; Category.UPDATES -> "新"; Category.SETUP -> "始"; Category.GUIDE -> "案内"; Category.ABOUT -> "夢色"
+    Category.BACKUP -> "控"; Category.UPDATES -> "新"; Category.SETUP -> "始"; Category.GUIDE -> "案内"; Category.CRASHES -> "記録"; Category.ABOUT -> "夢色"
 }
 
 /** Live status shown as a chip on a category row (null = no chip). */
@@ -428,6 +430,7 @@ private fun CategoryPage(
                     item("data") { GroupLabel("Clear data"); PrivacyDataCard(onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory) }
                 }
                 Category.UPDATES -> item("c") { UpdateSettingsCard() }
+                Category.CRASHES -> item("c") { CrashReportsCard() }
                 Category.ABOUT -> {
                     item("dev") { DeveloperCard() }
                     item("social") { GroupLabel("Community"); SocialMediaCard() }
