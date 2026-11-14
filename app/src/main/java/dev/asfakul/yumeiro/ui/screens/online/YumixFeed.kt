@@ -89,6 +89,24 @@ internal object YumixFeed {
     fun <T> blockShuffle(items: List<T>, seed: Long, block: Int = 30, key: (T) -> String): List<T> =
         items.chunked(block).flatMap { chunk -> chunk.sortedBy { mix(key(it).hashCode().toLong() xor seed) } }
 
+    /**
+     * R15: endless feeds are append-only. [candidates] is the full merged feed as it is now; only
+     * entries not shown before (and not in [skip]) are returned, block-shuffled among themselves.
+     * Entries already on screen never move, vanish or get replaced when a page arrives late, a
+     * shorter row gets its next page, or a section above grows. [seen] is updated.
+     */
+    fun <T> appendNew(candidates: List<T>, seen: MutableSet<String>, skip: Set<String>, seed: Long, shuffle: Boolean = true, key: (T) -> String): List<T> {
+        val fresh = ArrayList<T>()
+        val local = HashSet<String>()
+        for (c in candidates) {
+            val k = key(c)
+            if (k in seen || k in skip || !local.add(k)) continue
+            fresh += c
+        }
+        seen.addAll(local)
+        return if (shuffle) blockShuffle(fresh, seed, key = key) else fresh
+    }
+
     private fun mix(x: Long): Long {
         var z = x + -0x61c8864680b583ebL
         z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L

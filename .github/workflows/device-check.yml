@@ -34,8 +34,8 @@ jobs:
             profile: pixel_3a
             ram: 2048M
             heap: 192M
-          - name: api37
-            api: 37.0
+          - name: api36
+            api: 36
             target: google_apis
             profile: pixel_6
             ram: 4096M

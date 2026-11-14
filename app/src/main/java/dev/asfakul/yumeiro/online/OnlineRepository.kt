@@ -214,6 +214,9 @@ object OnlineRepository {
         val diskKey = diskKey(api, "home")
         if (!force) dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)?.takeIf { it.isNotEmpty() }?.let { rows ->
             homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
+            // R15: a saved page is shown at once, but it may be hours old. The caller refreshes it
+            // in the background (stale-while-revalidate) instead of leaving the old copy up.
+            if ((dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L) > CACHE_MS) diskServed.add(api.name)
             return@withContext rows
         }
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
@@ -247,6 +250,11 @@ object OnlineRepository {
         }
         rows
     }
+
+    private val diskServed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** True once after [home] answered [api] from an old saved copy (the caller should refresh it). */
+    fun takeStaleHome(api: String): Boolean = diskServed.remove(api)
 
     /** Disk cache key: the provider and its current domain (a domain change starts fresh). */
     private fun diskKey(api: MainAPI, what: String, extra: String = ""): String =

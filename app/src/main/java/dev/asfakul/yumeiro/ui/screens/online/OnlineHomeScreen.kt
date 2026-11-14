@@ -93,6 +93,54 @@ private sealed interface ProviderHome {
 }
 
 /**
+ * R15: the Yumix home lives as long as the app process, not as long as the pager page. The main
+ * pager disposes pages it isn't showing (beyondViewportPageCount = 0), which threw away every
+ * loaded home and every "More to explore" page: coming back reloaded the feed from the copy saved
+ * on the phone (up to 6 h old) and the scroll ended where those saved pages ended. Fetches also
+ * run here, so leaving the tab no longer cancels them half-way (rows stuck "loading").
+ */
+private object YumixMemory {
+    val homes = androidx.compose.runtime.mutableStateMapOf<String, ProviderHome>()
+    val inflight = HashMap<String, kotlinx.coroutines.Deferred<Unit>>()
+    val explore = androidx.compose.runtime.mutableStateListOf<HueRowFeed>()
+    /** What "More to explore" shows; append-only (see YumixFeed.appendNew). */
+    val exploreShown = androidx.compose.runtime.mutableStateListOf<Pair<OnlineItem, Boolean>>()
+    val exploreSeen = HashSet<String>()
+    val seed = System.nanoTime()
+    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
+    fun resetExplore() { explore.clear(); exploreShown.clear(); exploreSeen.clear() }
+
+    /** Adds rows that aren't in the explore feed yet; drops rows of extensions that are gone. */
+    fun syncExplore(ready: List<Pair<String, List<OnlineRow>>>) {
+        val have = explore.mapTo(HashSet()) { it.row.api + "|" + it.row.title + "|" + it.row.pageData }
+        ready.forEach { (_, rows) ->
+            rows.filter { it.items.isNotEmpty() }.forEach { r ->
+                if (have.add(r.api + "|" + r.title + "|" + r.pageData)) explore += HueRowFeed(r, r.items, 1, r.hasNext && r.pageData != null)
+            }
+        }
+        explore.removeAll { f -> ready.none { it.first == f.row.api } }
+    }
+}
+
+/**
+ * R15: merges a background refresh into rows already on screen: existing rows keep their order
+ * and items (new titles are appended), new rows go at the end. Nothing the user is looking at
+ * is replaced.
+ */
+internal fun mergeRows(old: List<OnlineRow>, fresh: List<OnlineRow>): List<OnlineRow> {
+    val byKey = fresh.associateBy { it.title + "|" + it.pageData }
+    val seenRows = HashSet<String>()
+    val merged = old.map { o ->
+        val k = o.title + "|" + o.pageData
+        seenRows += k
+        val n = byKey[k] ?: return@map o
+        val keys = o.items.mapTo(HashSet()) { it.key }
+        o.copy(items = o.items + n.items.filter { keys.add(it.key) }, hasNext = o.hasNext || n.hasNext)
+    }
+    return merged + fresh.filter { seenRows.add(it.title + "|" + it.pageData) }
+}
+
+/**
  * Videos → Online: popular / latest rows from every enabled extension, a global search entry and
  * access to the Extensions manager and market.
  */
@@ -123,8 +171,8 @@ fun OnlineHomeScreen(
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var showFilter by rememberSaveable { mutableStateOf(false) }
     // One seed per visit: "More to explore" is shuffled, but stays put while you scroll.
-    val shuffleSeed = rememberSaveable { System.nanoTime() }
-    val homes = remember { mutableStateMapOf<String, ProviderHome>() }
+    val shuffleSeed = YumixMemory.seed
+    val homes = YumixMemory.homes
     var refreshing by remember { mutableStateOf(false) }
     var feedLimit by rememberSaveable { mutableStateOf(24) }
     // Staged loading: at most 3 extensions fetch their home at once (each one already fans out
@@ -137,17 +185,25 @@ fun OnlineHomeScreen(
     // cancelled and fetched again, so rows popped in, vanished and came back ("abnormal" loading).
     // Fetches now run in the screen's scope and survive those restarts; a name is only fetched
     // again when forced (pull to refresh, Retry) or after it failed.
-    val inflight = remember { HashMap<String, kotlinx.coroutines.Deferred<Unit>>() }
+    val inflight = YumixMemory.inflight
     suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean) {
         val name = api.name
         if (!force && homes[name] is ProviderHome.Ready) return
         inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { running.await(); return } else running.cancel() }
-        val job = scope.async {
+        val job = YumixMemory.scope.async {
             if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
             val result = gate.withPermit {
                 runCatching { OnlineRepository.home(api, force) }
             }
-            homes[name] = result.fold({ ProviderHome.Ready(it) }, { ProviderHome.Failed(OnlineErrors.friendly(it, "Couldn't load")) })
+            val prev = homes[name] as? ProviderHome.Ready
+            // A failed refresh keeps what is on screen instead of replacing it with an error.
+            homes[name] = result.fold({ ProviderHome.Ready(it) }, { prev ?: ProviderHome.Failed(OnlineErrors.friendly(it, "Couldn't load")) })
+            // R15: an old saved copy was shown; fetch the live page now and merge it in.
+            if (!force && result.isSuccess && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
+                val fresh = gate.withPermit { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
+                val cur = homes[name] as? ProviderHome.Ready
+                if (!fresh.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, fresh))
+            }
         }
         inflight[name] = job
         runCatching { job.await() }
@@ -160,7 +216,8 @@ fun OnlineHomeScreen(
     }
     val providerNames = remember(providers) { providers.map { it.name }.toSet() }
     LaunchedEffect(providerNames) {
-        homes.keys.retainAll(providerNames)
+        // The extension engine starts with no providers; don't wipe the kept home before it's ready.
+        if (engine.ready) homes.keys.retainAll(providerNames)
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)
@@ -234,7 +291,12 @@ fun OnlineHomeScreen(
             )
             else -> PullToRefreshBox(
                 isRefreshing = refreshing,
-                onRefresh = { scope.launch { refreshing = true; loadAll(true); refreshing = false } },
+                onRefresh = { scope.launch {
+                    refreshing = true; loadAll(true); refreshing = false
+                    // Pull to refresh is the one place the feed starts over (the user asked for it).
+                    YumixMemory.resetExplore()
+                    YumixMemory.syncExplore(providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } })
+                } },
                 modifier = Modifier.fillMaxSize(),
             ) {
                 val ready = providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } }
@@ -266,20 +328,24 @@ fun OnlineHomeScreen(
                     val groups = remember(ready, groupLimit) { mixGroups(ready, groupLimit) }
                     // Endless "More to explore": every row of every extension, round-robin, then the
                     // next pages of those rows as you scroll (like a streaming app's bottomless home).
-                    val explore = remember { androidx.compose.runtime.mutableStateListOf<HueRowFeed>() }
-                    LaunchedEffect(ready) {
-                        val have = explore.mapTo(HashSet()) { it.row.api + "|" + it.row.title + "|" + it.row.pageData }
-                        ready.forEach { (_, rows) ->
-                            rows.filter { it.items.isNotEmpty() }.forEach { r ->
-                                if (have.add(r.api + "|" + r.title + "|" + r.pageData)) explore += HueRowFeed(r, r.items, 1, r.hasNext && r.pageData != null)
-                            }
-                        }
-                        explore.removeAll { f -> ready.none { it.first == f.row.api } }
-                    }
+                    val explore = YumixMemory.explore
+                    LaunchedEffect(ready) { YumixMemory.syncExplore(ready) }
                     val shownAbove = remember(banner, picks, groups) {
                         HashSet<String>().apply { banner.first.forEach { add(it.key) }; picks.forEach { add(it.key) }; groups.forEach { g -> g.rows.forEach { r -> r.items.forEach { add(it.key) } } } }
                     }
-                    val exploreItems by remember(shownAbove) { derivedStateOf { YumixFeed.blockShuffle(hueFeed(explore.toList(), null).filter { it.first.key !in shownAbove }, shuffleSeed) { it.first.key } } }
+                    // R15: append-only. The old derived list re-merged and re-shuffled everything on each
+                    // page, so cards already on screen moved, and cards vanished when a section above grew.
+                    val exploreItems = YumixMemory.exploreShown
+                    val latestShownAbove = androidx.compose.runtime.rememberUpdatedState(shownAbove)
+                    LaunchedEffect(Unit) {
+                        androidx.compose.runtime.snapshotFlow { explore.toList() }.collect { snap ->
+                            val skip = latestShownAbove.value
+                            val tail = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                                YumixFeed.appendNew(hueFeed(snap, null), YumixMemory.exploreSeen, skip, shuffleSeed) { it.first.key }
+                            }
+                            if (tail.isNotEmpty()) exploreItems.addAll(tail)
+                        }
+                    }
                     var exploreLimit by rememberSaveable { mutableStateOf(30) }
                     val exploreBusy by remember { derivedStateOf { explore.any { it.loading } } }
                     val exploreMore by remember { derivedStateOf { explore.any { it.hasNext } } }
@@ -293,14 +359,14 @@ fun OnlineHomeScreen(
                         if (targets.isEmpty()) return
                         targets.forEach { explore[it] = explore[it].copy(loading = true) }
                         targets.forEach { i ->
-                            scope.launch {
+                            YumixMemory.scope.launch {
                                 val f = explore.getOrNull(i) ?: return@launch
                                 val api = providers.firstOrNull { it.name == f.row.api }
                                 val res = if (api == null) null else runCatching { OnlineRepository.page(api, f.row.pageName.orEmpty(), f.row.pageData.orEmpty(), f.page + 1) }.getOrNull()
-                                val cur = explore.getOrNull(i)?.takeIf { it.row == f.row } ?: return@launch
-                                val known = cur.items.mapTo(HashSet()) { it.key }
-                                val fresh = res?.items.orEmpty().filter { known.add(it.key) }
-                                explore[i] = cur.copy(items = cur.items + fresh, page = cur.page + 1, hasNext = res?.hasNext == true && fresh.isNotEmpty(), loading = false)
+                                if (res == null) kotlinx.coroutines.delay(HueRowFeed.retryDelayMs(f.fails + 1))
+                                // Index can move when rows are added/removed: find the row again.
+                                val j = explore.indexOfFirst { it.row == f.row }.takeIf { it >= 0 } ?: return@launch
+                                explore[j] = explore[j].afterPage(res)
                             }
                         }
                     }

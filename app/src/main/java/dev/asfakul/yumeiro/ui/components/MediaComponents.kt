@@ -116,7 +116,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.util.Locale
 
 fun formatDuration(ms: Long): String {
-    if (ms <= 0) return "--:--"
+    if (ms <= 0) return "00:00"
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60

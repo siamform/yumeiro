@@ -912,7 +912,7 @@ private fun SeekBar(durationMs: Long, positionMs: () -> Long, onSeek: (Long) -> 
                 }
             }
             Text(if (elapsedSec <= 0L) "00:00" else formatDuration(elapsedSec * 1000L), style = MaterialTheme.typography.labelMedium, color = TextSecondary)
-            Text(if (known != null) formatDuration(known) else "--:--", style = MaterialTheme.typography.labelMedium, color = TextTertiary, textAlign = TextAlign.End)
+            Text(if (known != null) formatDuration(known) else "00:00", style = MaterialTheme.typography.labelMedium, color = TextTertiary, textAlign = TextAlign.End)
         }
     }
 }

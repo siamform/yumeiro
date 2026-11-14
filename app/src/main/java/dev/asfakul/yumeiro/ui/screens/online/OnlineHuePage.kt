@@ -48,7 +48,24 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 /** One playlist (row) of a Hue with its own paging cursor. */
-internal data class HueRowFeed(val row: OnlineRow, val items: List<OnlineItem>, val page: Int, val hasNext: Boolean, val loading: Boolean = false)
+internal data class HueRowFeed(val row: OnlineRow, val items: List<OnlineItem>, val page: Int, val hasNext: Boolean, val loading: Boolean = false, val fails: Int = 0) {
+    /**
+     * R15: the next page came back. A failed or timed-out page used to set hasNext = false, so one
+     * slow answer ended the endless feed for good ("it suddenly stops"). It now keeps the row open
+     * and retries (up to [MAX_PAGE_FAILS] times in a row); an empty page ends the row as before.
+     */
+    fun afterPage(res: dev.asfakul.yumeiro.online.OnlinePage?): HueRowFeed {
+        if (res == null) return copy(loading = false, fails = fails + 1, hasNext = fails + 1 < MAX_PAGE_FAILS)
+        val known = items.mapTo(HashSet()) { it.key }
+        val fresh = res.items.filter { known.add(it.key) }
+        return copy(items = items + fresh, page = page + 1, hasNext = res.hasNext && fresh.isNotEmpty(), loading = false, fails = 0)
+    }
+    companion object {
+        const val MAX_PAGE_FAILS = 3
+        /** Wait before a failed row may be asked again (2 s, 4 s, …). */
+        fun retryDelayMs(fails: Int): Long = (2_000L * fails).coerceAtMost(8_000L)
+    }
+}
 
 /**
  * Round-robin merge of a Hue's playlists into one YouTube-style feed (row0[0], row1[0], row0[1]…),
@@ -99,13 +116,33 @@ internal fun HuePage(
     openInfo: (OnlineItem) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val feeds = remember(name, rows) {
+    // R15: keyed by the channel only. A refreshed copy of [rows] (background refresh of a saved
+    // page) used to rebuild this list, throwing away every page loaded while scrolling; new rows
+    // are now merged in and loaded pages stay.
+    val feeds = remember(name) {
         mutableStateListOf<HueRowFeed>().apply {
             rows.orEmpty().filter { it.items.isNotEmpty() }.forEach { add(HueRowFeed(it, it.items, 1, it.hasNext && it.pageData != null)) }
         }
     }
+    LaunchedEffect(rows) {
+        val have = feeds.mapTo(HashSet()) { it.row.title + "|" + it.row.pageData }
+        rows.orEmpty().filter { it.items.isNotEmpty() && have.add(it.title + "|" + it.pageData) }
+            .forEach { feeds += HueRowFeed(it, it.items, 1, it.hasNext && it.pageData != null) }
+    }
     var only by remember(name) { mutableStateOf<Int?>(null) }
-    val fullFeed by remember(feeds, only) { derivedStateOf { hueFeed(feeds.toList(), only) } }
+    // R15: the "all playlists" feed only ever appends (see YumixFeed.appendNew), so cards on screen
+    // never shift when a shorter playlist gets its next page.
+    val allSeen = remember(name) { HashSet<String>() }
+    val allFeed = remember(name) { mutableStateListOf<Pair<OnlineItem, Boolean>>() }
+    LaunchedEffect(name) {
+        androidx.compose.runtime.snapshotFlow { feeds.toList() }.collect { snap ->
+            val tail = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                YumixFeed.appendNew(hueFeed(snap, null), allSeen, emptySet(), 0L, shuffle = false) { it.first.key }
+            }
+            if (tail.isNotEmpty()) allFeed.addAll(tail)
+        }
+    }
+    val fullFeed by remember(feeds, only) { derivedStateOf { if (only == null) allFeed.toList() else hueFeed(feeds.toList(), only) } }
     // Round 13: search inside this extension's section (it can hold more than 1000 titles).
     var query by androidx.compose.runtime.saveable.rememberSaveable(name) { mutableStateOf("") }
     val searched by androidx.compose.runtime.produceState(fullFeed, fullFeed, query) {
@@ -131,9 +168,10 @@ internal fun HuePage(
                 }
             }.awaitAll().forEach { (i, res) ->
                 val f = feeds.getOrNull(i) ?: return@forEach
-                val known = f.items.mapTo(HashSet()) { it.key }
-                val fresh = res?.items.orEmpty().filter { known.add(it.key) }
-                feeds[i] = f.copy(items = f.items + fresh, page = f.page + 1, hasNext = res?.hasNext == true && fresh.isNotEmpty(), loading = false)
+                if (res == null) {
+                    // Keep "loading" for a moment so the scroll trigger doesn't hammer a failing row.
+                    launch { kotlinx.coroutines.delay(HueRowFeed.retryDelayMs(f.fails + 1)); feeds.getOrNull(i)?.takeIf { it.row == f.row }?.let { feeds[i] = it.afterPage(null) } }
+                } else feeds[i] = f.afterPage(res)
             }
         }
     }
