@@ -264,16 +264,18 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
     val context = LocalContext.current
     val split = dev.asfakul.yumeiro.ui.screens.watch.AudioSplit
     val audioPref by dev.asfakul.yumeiro.online.AudioLanguages.preferred.collectAsState()
-    val audioOptions = remember(state.links, state.version) { audioOptionsFor(state.links, state.version) }
-    val allGroups = remember(state.links, state.version, audioPref) {
-        split.groups(state.links.map { it.name + " " + it.source }, state.version, audioPref).let { g -> if (g.size == 1) listOf(g[0].copy(kind = null)) else g }
+    // Round 13: never render every source at once. The first 10 (plus the playing one) are
+    // shown; "Load more" adds 10 each time. Indices still point at state.links.
+    val visibleLinks = remember(state.links, state.shownLinks) { state.links.subList(0, state.shownLinks) }
+    val audioOptions = remember(visibleLinks, state.version) { audioOptionsFor(visibleLinks, state.version) }
+    val allGroups = remember(visibleLinks, state.version, audioPref) {
+        split.groups(visibleLinks.map { it.name + " " + it.source }, state.version, audioPref).let { g -> if (g.size == 1) listOf(g[0].copy(kind = null)) else g }
     }
     val activeAudio = audioPref?.takeIf { sel -> audioOptions.any { it.key == sel } }
     val groups = allGroups.filter { activeAudio == null || allGroups.size == 1 || it.key == activeAudio }
     val folded = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver(save = { it.toList() }, restore = { androidx.compose.runtime.mutableStateListOf<String>().apply { addAll(it) } })) { androidx.compose.runtime.mutableStateListOf<String>() }
     // Round 12: only the group that's playing starts open; long groups show a page at a time.
     val defaultOpen = (groups.firstOrNull { state.linkIndex in it.indices } ?: groups.firstOrNull())?.key?.ifBlank { "all" }
-    val pages = remember(state.links.size, state.version) { androidx.compose.runtime.mutableStateMapOf<String, Int>() }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (audioOptions.size > 1) item(key = "audio_filter") {
             dev.asfakul.yumeiro.ui.screens.watch.AudioFilterRow(audioOptions, audioPref, { k -> pickAudio(context, state, k, selectAudio) }, onDark = ink.luminance() > 0.5f)
@@ -296,7 +298,7 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
                 Icon(if (isFolded) Icons.Default.ExpandMore else Icons.Default.ExpandLess, null, tint = ink.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
             }
         }
-        val shown = dev.asfakul.yumeiro.ui.screens.watch.visibleServerCount(idx.size, idx.indexOf(state.linkIndex), pages[gk] ?: 1)
+        val shown = idx.size
         if (!isFolded) items(idx.take(shown), key = { i -> state.links[i].url + "#" + i }) { i ->
             val l = state.links[i]
             val current = i == state.linkIndex
@@ -316,18 +318,9 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
                 if (current) Icon(Icons.Default.CheckCircle, "Playing", tint = SpotifyGreen, modifier = Modifier.size(18.dp))
             }
         }
-        val more = idx.size - shown
-        if (!isFolded && more > 0) item(key = "more_$gk") {
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, ink.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
-                    .clickable { pages[gk] = (pages[gk] ?: 1) + 1 }.padding(10.dp).testTag("online_player_source_more"),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Default.ExpandMore, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Show ${minOf(more, dev.asfakul.yumeiro.ui.screens.watch.SERVER_PAGE)} more" + if (more > dev.asfakul.yumeiro.ui.screens.watch.SERVER_PAGE) " of $more" else "", color = SpotifyGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            }
         }
+        if (state.hiddenLinks > 0) item(key = "load_more") {
+            dev.asfakul.yumeiro.ui.screens.watch.LoadMoreSources(state.hiddenLinks, SpotifyGreen, ink, { OnlineSession.loadMore() })
         }
         if (state.subtitles.isNotEmpty()) item { Text("${state.subtitles.size} subtitle track${if (state.subtitles.size == 1) "" else "s"} available in Captions", color = ink.copy(alpha = 0.5f), fontSize = 11.sp, modifier = Modifier.padding(6.dp)) }
     }
@@ -558,8 +551,9 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
             // of sources stay tidy. Indices still point at state.links, so switching is unchanged.
             val split = dev.asfakul.yumeiro.ui.screens.watch.AudioSplit
             val audioPref by dev.asfakul.yumeiro.online.AudioLanguages.preferred.collectAsState()
-            val audioOptions = remember(state.links, state.version) { audioOptionsFor(state.links, state.version) }
-            val rows = versions.flatMap { v ->
+            val visibleLinks = remember(state.links, state.shownLinks) { state.links.subList(0, state.shownLinks) }
+            val audioOptions = remember(visibleLinks, state.version) { audioOptionsFor(visibleLinks, state.version) }
+            val rows = remember(visibleLinks, state.linkIndex, state.version, state.episode, state.linksDone, versions, audioPref) { versions.flatMap { v ->
                 val isCurrent = v == state.version || versions.size == 1
                 if (isCurrent) {
                     if (state.links.isEmpty()) return@flatMap listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(
@@ -569,7 +563,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                     ))
                     // Round 9: grouped per audio language ("Sub · original audio", "Dub · English",
                     // "Dub · Hindi"…), so dubs in different languages no longer pile into one row.
-                    val groups = split.groups(state.links.map { l -> l.name + " " + l.source }, v, audioPref, onlyVersion = versions.size == 1)
+                    val groups = split.groups(visibleLinks.map { l -> l.name + " " + l.source }, v, audioPref, onlyVersion = versions.size == 1)
                     groups.map { g ->
                         dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(
                             g.label,
@@ -585,11 +579,11 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                         )
                     }
                 } else {
-                    val has = remember(state.episode, v) { OnlineSession.hasEpisodeIn(v) }
+                    val has = OnlineSession.hasEpisodeIn(v)
                     listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServerRow(v, iconFor(v),
                         listOf(dev.asfakul.yumeiro.ui.screens.watch.WatchServer(if (has) "Switch to $v" else "Not for this episode", false, "online_watch_version") { OnlineSession.switchVersion(context, v) })))
                 }
-            }
+            } }
             val ep = state.episode
             dev.asfakul.yumeiro.ui.screens.watch.WatchServerBox(
                 watching = if (ep != null) "Episode ${ep.episode ?: state.index + 1}" + (ep.name?.takeIf { it.isNotBlank() && !it.equals("Episode ${ep.episode}", true) }?.let { " · $it" } ?: "") else d.name,
@@ -597,6 +591,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 rows = rows,
                 audioOptions = audioOptions, audioSelected = audioPref,
                 onAudioSelect = { k -> pickAudio(context, state, k) { key -> player?.selectAudio?.invoke(key) == true } },
+                moreSources = state.hiddenLinks, onLoadMore = { OnlineSession.loadMore() },
             )
         }
         item(key = "plot") {

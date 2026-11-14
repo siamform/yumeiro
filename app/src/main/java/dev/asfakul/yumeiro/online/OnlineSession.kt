@@ -195,7 +195,7 @@ object OnlineSession {
                 val t = System.currentTimeMillis()
                 if (!done && t - lastPublish < PUBLISH_GAP_MS) { pendingPublish = true; return }
                 lastPublish = t; pendingPublish = false
-                val sorted = OnlineRepository.sortLinks(links.values.toList(), AudioLanguages.preferred.value ?: defaultAudioKey(), _state.value?.version.orEmpty())
+                val sorted = OnlineRepository.sortLinks(links.values.toList(), AudioLanguages.preferred.value ?: defaultAudioKey(), _state.value?.version.orEmpty(), dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height)
                 val subList = subs.values.toList()
                 _state.update { cur ->
                     if (cur == null || cur.data != data) return@update cur
