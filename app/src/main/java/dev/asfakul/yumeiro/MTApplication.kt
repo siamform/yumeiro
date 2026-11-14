@@ -20,6 +20,7 @@ class MTApplication : Application(), ImageLoaderFactory {
         // Round 12: a staged restore / reset is applied before anything reads a setting or file.
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
         dev.asfakul.yumeiro.cache.DataCache.init(this)
+        DeviceClass.init(this)
         // Must come first: a crashing extension must never take the whole app down.
         dev.asfakul.yumeiro.online.ExtensionGuard.install()
         dev.asfakul.yumeiro.security.Privacy.load(this)
@@ -58,8 +59,9 @@ class MTApplication : Application(), ImageLoaderFactory {
         .memoryCache { MemoryCache.Builder(this).maxSizePercent(Edition.imageMemoryShare).build() }
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("image_cache")).maxSizeBytes(dev.asfakul.yumeiro.cache.ImageCacheSize.bytes(this)).build() }
         // TV: no crossfade (cheap TV GPUs drop frames while a rail scrolls) and 16-bit posters.
-        .crossfade(if (Edition.isTv) 0 else 150)
-        .allowRgb565(Edition.isTv)
+        // Round 13: the same on low-end phones (smooth scrolling over pretty fades).
+        .crossfade(if (Edition.isTv || DeviceClass.lowEnd) 0 else 150)
+        .allowRgb565(Edition.isTv || DeviceClass.lowEnd)
         .respectCacheHeaders(false)
         .build()
 }
