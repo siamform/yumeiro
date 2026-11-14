@@ -34,7 +34,8 @@ class YumeiroDramaLiveTest {
         val out = File("build/drama-live").apply { mkdirs() }
         val report = StringBuilder()
         var played = 0
-        for (page in provider.mainPage.take(6)) {
+        var shown = 0
+        for (page in provider.mainPage) {
             val home = runCatching { provider.getMainPage(1, MainPageRequest(page.name, page.data, false)) }
                 .onFailure { report.append("shelf ${page.name}: FAIL ${it.message}\n") }.getOrNull() ?: continue
             val items = home.items.flatMap { it.list }.take(2)
@@ -51,6 +52,7 @@ class YumeiroDramaLiveTest {
                     val done = events.filterIsInstance<LinkEvent.Done>().last()
                     report.append("  ${item.name} [${if (id == item.url) "new id" else "1.8.0 id"}]: ${detail.episodes.values.sumOf { it.size }} eps, " +
                         "${links.size} links, done=${done.ok} ${done.error.orEmpty()}\n")
+                    shown++
                     if (links.isNotEmpty()) {
                         played++
                         File(out, "links.tsv").appendText("${item.name}\t${links.first().quality}\t${links.first().referer.orEmpty()}\t${links.first().url}\n")
@@ -60,7 +62,9 @@ class YumeiroDramaLiveTest {
         }
         File(out, "report.txt").writeText(report.toString())
         println(report)
-        assertTrue("no drama played\n$report", played >= 4)
+        // Every title the feed shows must play (shelves of studios that are down are hidden).
+        assertTrue("nothing shown\n$report", shown >= 8)
+        assertEquals("titles shown vs played\n$report", shown, played)
         assertEquals(true, YumeiroDramaProvider.parseId("https://yumeiro.click/drama/drama:onshort|https://onshort.net/x/").first == "onshort")
     }
 }

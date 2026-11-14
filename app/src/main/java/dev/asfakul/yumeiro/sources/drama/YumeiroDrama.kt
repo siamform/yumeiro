@@ -96,13 +96,18 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
         val c = catalog(cid)
         val platform = c.platforms.first { it.slug == slug }
         val shows = c.shelf(platform, page)
+        // Round 2: a studio whose episodes can't be played right now gets no shelf, so the feed
+        // never offers a title that fails on tap.
+        if (health.check(c, platform, shows) == DramaHealth.State.DOWN) return newHomePageResponse(request.name, emptyList(), false)
         return newHomePageResponse(request.name, shows.map { it.toResult(c) }, shows.size >= 12)
     }
+
+    private val health = DramaHealth()
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         if (page > 1 || query.isBlank()) return newSearchResponseList(emptyList(), false)
         val results = coroutineScope {
-            catalogs.map { c -> async { withTimeoutOrNull(20_000) { runCatching { c.search(query).map { it.toResult(c) } }.getOrNull() }.orEmpty() } }.awaitAll()
+            catalogs.map { c -> async { withTimeoutOrNull(20_000) { runCatching { c.search(query).filter { !health.isDown(c, it.platform) }.map { it.toResult(c) } }.getOrNull() }.orEmpty() } }.awaitAll()
         }.flatten().distinctBy { it.url }
         return newSearchResponseList(results, false)
     }
@@ -131,11 +136,11 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
         val n = parts.last().toIntOrNull() ?: return false
         val seriesUrl = parts.subList(1, parts.size - 1).joinToString("|")
         val s = c.series(seriesUrl)
-        val streams = c.streams(s, n)
+        val (streams, via) = streamsOrMirror(c, s, n)
         val audio = s.language?.let { languageLabel(it) }?.let { "$it audio" } ?: "Original audio"
         streams.sources.entries.sortedByDescending { it.key.toIntOrNull() ?: 0 }.forEach { (q, u) ->
             val type = if (u.contains(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-            val label = listOfNotNull(c.label, s.platform, q.takeIf { it.isNotBlank() }?.let { "${it}p" }, audio).joinToString(" · ")
+            val label = listOfNotNull(c.label, via ?: s.platform, q.takeIf { it.isNotBlank() }?.let { "${it}p" }, audio).joinToString(" · ")
             callback(newExtractorLink(name, label, u, type) {
                 referer = streams.referer.orEmpty()
                 quality = q.toIntOrNull() ?: 0
@@ -145,6 +150,30 @@ class YumeiroDramaProvider(private val catalogs: List<DramaCatalog>) : MainAPI()
             subtitleCallback(SubtitleFile(sub.label ?: sub.language?.let { languageLabel(it) } ?: "Subtitles", sub.url))
         }
         return streams.sources.isNotEmpty()
+    }
+
+    /**
+     * Round 2: the series' own streams, or the same drama from another studio on the same catalog
+     * (ONShort lists many titles on two platforms) when this copy can't be served. Returns the
+     * streams and, for a mirror, the platform it came from.
+     */
+    private suspend fun streamsOrMirror(c: DramaCatalog, s: DramaSeries, n: Int): Pair<DramaStreams, String?> {
+        val first = runCatching { c.streams(s, n) }
+        first.getOrNull()?.takeIf { it.sources.isNotEmpty() }?.let { return it to null }
+        val key = DramaHealth.titleKey(s.title)
+        val mirrors = runCatching { withTimeoutOrNull(20_000) { c.search(s.title) } }.getOrNull().orEmpty()
+            .filter { it.url != s.url && DramaHealth.titleKey(it.title) == key && (it.episodes ?: n) >= n && !health.isDown(c, it.platform) }
+            .take(4)
+        for (m in mirrors) {
+            val r = runCatching { withTimeoutOrNull(25_000) { c.streams(c.series(m.url), n) } }.getOrNull()
+            if (r != null && r.sources.isNotEmpty()) return r to m.platform
+        }
+        s.platform?.let { health.markDown(c, it) }
+        val why = first.exceptionOrNull()?.message
+        throw java.io.IOException(
+            "${s.platform ?: c.label} isn't serving this episode right now (the studio's server refused it" +
+                (why?.let { ": $it" } ?: "") + "). No other copy of this drama was found. Try another title.",
+        )
     }
 
     private fun DramaShow.toResult(c: DramaCatalog): SearchResponse =
