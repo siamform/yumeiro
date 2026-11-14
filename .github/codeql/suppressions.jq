@@ -38,6 +38,10 @@
 #  6. websettings-allow-content-access on WebViews whose settings are set false where they are created
 #     (page.settings.allowFileAccess/allowContentAccess = false, plus SafeWebView.harden). The query treats
 #     later reads of a WebView held in a variable / Compose state as new, unconfigured WebViews.
+#  7. java/unsafe-cert-trust in network/DnsMessage.kt (DNS-over-TLS): the socket comes from the system
+#     SSLSocketFactory (system CAs, no custom TrustManager), sets endpointIdentificationAlgorithm = "HTTPS" via
+#     setSSLParameters before the handshake and then checks the name with the system HostnameVerifier. The
+#     query's barrier doesn't follow Kotlin property setters through to the later socket reads.
 def suppressed:
   (.ruleId // .rule.id) as $r
   | (.locations[0].physicalLocation.artifactLocation.uri // "") as $u
@@ -57,5 +61,7 @@ def suppressed:
     or (($r == "java/android/websettings-allow-content-access")
       and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(ui/screens/stream/PageStreamFinderDialog|ui/screens/settings/YouTubeAccountScreen|online/web/HeadlessCapture)\\.kt$")))
     or ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
-      and ($u == "app/src/main/java/dev/asfakul/yumeiro/online/download/HlsDownloader.kt"));
+      and ($u == "app/src/main/java/dev/asfakul/yumeiro/online/download/HlsDownloader.kt"))
+    or (($r == "java/unsafe-cert-trust")
+      and ($u == "app/src/main/java/dev/asfakul/yumeiro/network/DnsMessage.kt"));
 .runs |= map(.results |= map(select(suppressed | not)))

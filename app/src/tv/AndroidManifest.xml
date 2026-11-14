@@ -5,7 +5,9 @@
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- No Android cloud backup: Yumeiro's own backup (Settings, Backup, storage & reset) covers it. -->
     <application
+        android:allowBackup="false"
         android:banner="@drawable/tv_banner"
         tools:ignore="MissingTvBanner">
         <activity

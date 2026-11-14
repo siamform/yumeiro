@@ -61,10 +61,9 @@ result elsewhere still fails the gate.
 | `java/android/websettings-javascript-enabled`, `java/android/webview-addjavascriptinterface` | `online/web/HeadlessCapture.kt`, `online/web/BrowserCheck.kt` | Off-screen versions of the stream finder and the site check: they load a site's own JavaScript player / check page. HeadlessCapture's `MTFinder` bridge is the same two string-only methods as `PageStreamFinderDialog`; BrowserCheck has no bridge. File and content access off, `SafeWebView.harden`, ads filtered. Added 2026-11-14 (PR #30). |
 | `java/android/websettings-allow-content-access` | `ui/screens/stream/PageStreamFinderDialog.kt`, `ui/screens/settings/YouTubeAccountScreen.kt`, `online/web/HeadlessCapture.kt` | False positive: every WebView there gets `allowFileAccess`/`allowContentAccess = false` on the line after it is created (plus `SafeWebView.harden`). The query treats later reads of the WebView from a variable or Compose state as new WebViews. Added 2026-11-14 (PR #30). |
 | `java/weak-cryptographic-algorithm` | `online/download/HlsDownloader.kt` | HLS `#EXT-X-KEY METHOD=AES-128` is AES-128-CBC with PKCS7 padding by the HLS spec (RFC 8216 §5.2); the site encrypted the segments that way, so decrypting needs it. Protects nothing of ours. Added 2026-11-14 (PR #30). |
+| `java/unsafe-cert-trust` | `network/DnsMessage.kt` | DNS-over-TLS socket from the system `SSLSocketFactory` (system CAs, no custom TrustManager). It sets `endpointIdentificationAlgorithm = "HTTPS"` through `setSSLParameters` before the handshake and then checks the resolver name with the system `HostnameVerifier`. The query's barrier doesn't follow the Kotlin property setter to later reads of the socket. Added 2026-11-14 (PR #30). |
 
-Fixed instead of suppressed (PR #30, 2026-11-14): `java/unsafe-cert-trust` in `network/DnsMessage.kt` (DNS-over-TLS
-socket now sets endpoint identification explicitly and checks the hostname with the system verifier after the
-handshake), `java/local-temp-file-or-directory-information-disclosure` in `online/ExtensionManager.kt` (the manifest
+Fixed instead of suppressed (PR #30, 2026-11-14): `java/local-temp-file-or-directory-information-disclosure` in `online/ExtensionManager.kt` (the manifest
 is read from memory, no temp file) and `java/android/backup-enabled` (`allowBackup="false"`: Yumeiro's own Backup v2
 in Settings covers backups, and Android 12+ device-to-device transfer still follows `data_extraction_rules.xml`).
 
