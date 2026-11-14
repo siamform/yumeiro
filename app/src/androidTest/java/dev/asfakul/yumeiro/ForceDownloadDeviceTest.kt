@@ -85,7 +85,10 @@ class ForceDownloadDeviceTest {
         assertTrue(CrashExport.export(ctx, f))
         val found = findExported("yumeiro-" + f.name)
         assertTrue("exported file in Downloads/${CrashExport.FOLDER}", found != null)
-        assertEquals(f.length(), found!!.second)
+        assertEquals("size Downloads reports", f.length(), found!!.second)
+        // And the bytes really are there (what a file manager or share sheet reads).
+        val actual = ctx.contentResolver.openFileDescriptor(found.first, "r")!!.use { it.statSize }
+        assertEquals("bytes in the exported file", f.length(), actual)
         // A report left behind by a process that died before the copy: exported on the next start.
         val pending = CrashLog.write(dir, "Freeze", "Main thread", null, body = "pending report\n" + body, at = System.currentTimeMillis() + 1)
         CrashExport.exportPending(ctx)

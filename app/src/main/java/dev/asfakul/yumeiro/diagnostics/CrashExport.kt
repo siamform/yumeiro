@@ -35,9 +35,23 @@ object CrashExport {
                     put(MediaStore.Downloads.DISPLAY_NAME, "yumeiro-" + report.name)
                     put(MediaStore.Downloads.MIME_TYPE, "text/plain")
                     put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/" + FOLDER)
+                    // R15 (device run 43629395323): without the pending step MediaStore never
+                    // rescanned the entry, so Downloads listed the report as an empty 0-byte file.
+                    put(MediaStore.Downloads.IS_PENDING, 1)
                 }
-                val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return@runCatching false
-                context.contentResolver.openOutputStream(uri)?.use { out -> report.inputStream().use { it.copyTo(out) } } ?: return@runCatching false
+                val cr = context.contentResolver
+                val uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return@runCatching false
+                val written = runCatching {
+                    cr.openOutputStream(uri, "w")?.use { out -> report.inputStream().use { it.copyTo(out) } } ?: -1L
+                }.getOrDefault(-1L)
+                if (written < 0L) {
+                    runCatching { cr.delete(uri, null, null) } // never leave an empty entry behind
+                    return@runCatching false
+                }
+                cr.update(uri, ContentValues().apply {
+                    put(MediaStore.Downloads.IS_PENDING, 0)
+                    put(MediaStore.Downloads.SIZE, written)
+                }, null, null)
                 true
             } else {
                 val dir = File(context.getExternalFilesDir(null) ?: return@runCatching false, "Crash reports").apply { mkdirs() }

@@ -130,7 +130,11 @@ class OnlinePlaybackDeviceTest {
         installArchive()
         rule.waitUntil(30_000) { rule.onAllNodesWithTag("nav_tab_videos", true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag("nav_tab_videos", true).performClick()
-        rule.waitUntil(15_000) { rule.onAllNodesWithTag("video_source_online", true).fetchSemanticsNodes().isNotEmpty() }
+        // The source choice (Yumix · YouTube · Device · Live TV) sits in the menu under the page title.
+        fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
+        rule.waitUntil(20_000) { has("video_source_online") || has("video_source_switch") }
+        if (!has("video_source_online")) rule.onNodeWithTag("video_source_switch", true).performClick()
+        rule.waitUntil(15_000) { has("video_source_online") }
         rule.onNodeWithTag("video_source_online", true).performClick()
         // The home opens with the banner (hero) and shelves.
         rule.waitUntil(60_000) {

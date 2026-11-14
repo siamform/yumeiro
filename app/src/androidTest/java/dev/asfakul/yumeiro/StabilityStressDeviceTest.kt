@@ -134,6 +134,11 @@ class StabilityStressDeviceTest {
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).close()
     }
 
+    private fun shellOut(cmd: String): String =
+        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).let { pfd ->
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
+        }
+
     private fun idle(ms: Long) {
         val until = SystemClock.uptimeMillis() + ms
         runCatching { rule.waitUntil(ms + 2_000) { SystemClock.uptimeMillis() >= until } }
@@ -150,7 +155,21 @@ class StabilityStressDeviceTest {
     private fun tap(tag: String): Boolean = runCatching {
         rule.waitUntil(20_000) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag(tag, true).performClick(); true
-    }.getOrElse { log("no node $tag: ${it.javaClass.simpleName}: ${it.message?.take(300)}"); false }
+    }.getOrElse { log("no node $tag: ${it.javaClass.simpleName}: ${it.message?.take(120)} · on screen: ${onScreen()}"); false }
+
+    /** What is actually shown when a node is missing: window focus, test tags and visible text. */
+    private fun onScreen(): String = runCatching {
+        val focus = shellOut("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
+        val nodes = rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes()
+        val tags = LinkedHashSet<String>(); val texts = LinkedHashSet<String>()
+        fun walk(n: androidx.compose.ui.semantics.SemanticsNode) {
+            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null }?.let { tags += it }
+            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.firstOrNull()?.text?.take(24)?.let { if (texts.size < 12) texts += it }
+            n.children.forEach { walk(it) }
+        }
+        nodes.forEach { walk(it) }
+        "$focus · roots=${nodes.size} · tags=${tags.take(30)} · text=$texts"
+    }.getOrElse { "(could not read: ${it.javaClass.simpleName})" }
 
     @Test fun pagerFocusAndScrollStress() {
         val dm = ctx.resources.displayMetrics
