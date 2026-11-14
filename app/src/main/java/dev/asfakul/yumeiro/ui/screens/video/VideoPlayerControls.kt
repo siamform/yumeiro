@@ -499,7 +499,7 @@ fun VideoPlayerBottomBar(
     compact: Boolean = false,
     /** Live stream: a LIVE badge instead of a length. */
     isLive: Boolean = false,
-    /** Still opening / buffering: the length shows a soft placeholder instead of "--:--". */
+    /** Still opening / buffering (the length shows 00:00 until it is known). */
     isLoading: Boolean = false,
 ) {
     if (compact) {
@@ -633,39 +633,27 @@ fun LockedFloatingUnlockButton(
 }
 
 /**
- * What the time label shows while the length isn't known: a LIVE badge for live streams, a soft
- * pulsing pill while the stream opens, and nothing at all for a file that never reports a length
- * (the old "--:--" read as broken).
+ * What the time label shows while the length isn't known: a LIVE badge for live streams, and
+ * otherwise "00:00" (master prompt, phase 2: show 00:00 instead of "--:--" when a video starts).
+ * The old "--:--" read as broken; the later pulsing pill was an endless animation that kept the
+ * frame clock busy for as long as a stream had no length.
  */
 @Composable
-private fun DurationPending(isLive: Boolean, isLoading: Boolean) {
-    when {
-        isLive -> Text(
-            "LIVE",
-            color = Color.White,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp,
-            modifier = Modifier
-                .background(Color(0xFFE5484D), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                .padding(horizontal = 7.dp, vertical = 2.dp)
-                .testTag("video_live_badge"),
-        )
-        isLoading -> {
-            val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "durPending")
-            val a by t.animateFloat(
-                0.18f, 0.42f,
-                androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(800), androidx.compose.animation.core.RepeatMode.Reverse),
-                label = "durPendingAlpha",
-            )
-            Box(
-                Modifier
-                    .size(width = 64.dp, height = 10.dp)
-                    .background(Color.White.copy(alpha = a), androidx.compose.foundation.shape.RoundedCornerShape(5.dp))
-                    .semantics { contentDescription = "Loading length" }
-                    .testTag("video_duration_pending"),
-            )
-        }
-        else -> Unit
-    }
+private fun DurationPending(isLive: Boolean, @Suppress("UNUSED_PARAMETER") isLoading: Boolean) {
+    if (isLive) Text(
+        "LIVE",
+        color = Color.White,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.sp,
+        modifier = Modifier
+            .background(Color(0xFFE5484D), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+            .testTag("video_live_badge"),
+    ) else Text(
+        formatDuration(0L),
+        color = TextSecondary,
+        fontSize = 11.sp,
+        modifier = Modifier.testTag("video_duration_pending"),
+    )
 }
