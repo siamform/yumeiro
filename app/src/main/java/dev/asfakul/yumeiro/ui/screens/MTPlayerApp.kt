@@ -131,6 +131,21 @@ fun MTPlayerApp(
     val pageItemsNow by androidx.compose.runtime.rememberUpdatedState(pageItems)
     val tabPager = rememberPagerState { bottomNavItems.size }
     val tabScope = rememberCoroutineScope()
+    // R15 (run 43650046635): the tab pager must never rest between two pages. With nothing
+    // dragging or animating it, an offset left over (a fling cut short by a focus move) is settled
+    // to the nearest page, so the next focus move cannot start a tug-of-war with it.
+    LaunchedEffect(tabPager) {
+        androidx.compose.runtime.snapshotFlow {
+            tabPager.isScrollInProgress to (kotlin.math.abs(tabPager.currentPageOffsetFraction) > 0.001f)
+        }.collect { (moving, between) ->
+            if (!moving && between) {
+                kotlinx.coroutines.delay(200)
+                if (!tabPager.isScrollInProgress && kotlin.math.abs(tabPager.currentPageOffsetFraction) > 0.001f) {
+                    runCatching { tabPager.animateScrollToPage(tabPager.currentPage) }
+                }
+            }
+        }
+    }
     // Fade-through state for far tab jumps (see navigateTop).
     val tabFade = remember { androidx.compose.animation.core.Animatable(1f) }
     val tabShift = remember { androidx.compose.animation.core.Animatable(0f) }
@@ -912,6 +927,14 @@ fun MTPlayerApp(
                                 userScrollEnabled = tabSwipeEnabled,
                                 key = { pageItems[it].route },
                                 beyondViewportPageCount = 0,
+                                // R15: no page nested-scroll connection. The default one takes every
+                                // UserInput pre-scroll from the page while the pager sits between pages,
+                                // and a focused card's bring-into-view is UserInput: the card scrolled
+                                // the pager, the pager settled back, forever (1,717 state applies in 3 s,
+                                // DefaultPagerNestedScrollConnection.onPreScroll on main, run 43650046635).
+                                // Rows and carousels keep their own drags; the pager still follows the
+                                // finger through its own scrollable.
+                                pageNestedScrollConnection = TabPagerNoNestedScroll,
                                 modifier = Modifier.fillMaxSize().padding(tabPad.value).consumeWindowInsets(tabPad.value)
                                     .graphicsLayer { alpha = tabFade.value; translationX = tabShift.value * 28.dp.toPx() }
                                     .testTag("tab_pager"),
@@ -1606,3 +1629,6 @@ private fun android.content.Context.findActivityOrNull(): android.app.Activity? 
     while (c is android.content.ContextWrapper) { if (c is android.app.Activity) return c; c = c.baseContext }
     return null
 }
+
+/** The tab pager takes no nested scroll from its pages (see the HorizontalPager in [MTPlayerApp]). */
+private val TabPagerNoNestedScroll = object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {}
