@@ -573,12 +573,22 @@ fun MTPlayerApp(
                             val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
                             val onlineHistory = remember(onlineHistoryAll, adultOn, adultPrivate) { dev.asfakul.yumeiro.online.OnlineHistory.forFeed(onlineHistoryAll, adultOn, adultPrivate) }
                             val ytHistoryItems by dev.asfakul.yumeiro.youtube.YtHistory.items.collectAsState()
-                            val homeResumeVideo = remember(recentlyWatchedVideos, continueWatchingVideos, onlineHistory, ytHistoryItems) {
+                            val ytAt by dev.asfakul.yumeiro.player.LastPlayed.ytAt.collectAsState()
+                            val homeResumeVideo = remember(recentlyWatchedVideos, continueWatchingVideos, onlineHistory, ytHistoryItems, ytAt) {
                                 val device = (continueWatchingVideos + recentlyWatchedVideos).maxByOrNull { it.lastWatchedTimestamp }
                                     ?.takeIf { it.lastWatchedTimestamp > 0 }
                                 val online = onlineHistory.firstOrNull()
                                 val yt = ytHistoryItems.firstOrNull { !it.music }
+                                // Round 13: whichever was really watched last wins (YouTube included),
+                                // as in 1.5 where only device and online videos existed.
+                                val deviceAt = device?.lastWatchedTimestamp ?: 0L
+                                val onlineAt = online?.updatedAt ?: 0L
+                                val ytLast = yt?.let { ytAt[it.id] } ?: 0L
                                 when {
+                                    yt != null && ytLast > 0 && ytLast > deviceAt && ytLast > onlineAt -> dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
+                                        title = yt.title, subtitle = "YouTube · ${yt.channel}", thumbnail = yt.thumbnail,
+                                        onClick = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, yt) },
+                                    )
                                     device != null && (online == null || device.lastWatchedTimestamp >= online.updatedAt) ->
                                         dev.asfakul.yumeiro.ui.screens.home.ResumeVideo(
                                             title = device.title, subtitle = "On device · ${device.folderName}",
@@ -665,6 +675,10 @@ fun MTPlayerApp(
                                 onTogglePlayPause = viewModel::togglePlayPause,
                                 onOpenNowPlaying = viewModel::openNowPlaying,
                                 resumeVideo = homeResumeVideo,
+                                onResumeTrack = { t, at ->
+                                    val q = recentlyPlayed.let { r -> if (r.any { it.id == t.id }) r else listOf(t) }
+                                    viewModel.playTrack(t, q, at)
+                                },
                                 onPlayYouTube = { item, list ->
                                     if (item.music) {
                                         dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)

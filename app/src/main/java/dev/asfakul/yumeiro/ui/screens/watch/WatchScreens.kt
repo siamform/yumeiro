@@ -227,9 +227,30 @@ fun BoxScope.WatchScreenError(message: String, onRetry: () -> Unit, onClose: () 
 
 /** What is opening — the watch page skeleton is shaped after the page that will appear. */
 enum class WatchKind {
-    MOVIE, SERIES, GENERIC;
+    MOVIE, SERIES, GENERIC,
+    /** Round 13: a direct video (a file or stream link): only the player is coming. */
+    DIRECT,
+    /** Round 13: a title that opens its own page (poster, info, episodes) before playback. */
+    PAGE;
 
     companion object {
+        private val MEDIA_URL = Regex("""\.(m3u8|mpd|mp4|mkv|webm|mov|avi|ts|flv)(\?|#|$)""", RegexOption.IGNORE_CASE)
+
+        /**
+         * Round 13: the skeleton for a tap, from the link itself, the content type and what this
+         * source did the last time ([opensPage] = the same source and type opened a title page).
+         */
+        fun forOpening(type: String?, url: String, opensPage: Boolean?): WatchKind {
+            val t = type?.lowercase().orEmpty()
+            if (MEDIA_URL.containsMatchIn(url) || "live" in t || t == "direct" || t == "others") return DIRECT
+            val k = of(type)
+            return when {
+                opensPage == true && k != SERIES -> PAGE
+                opensPage == false && k == GENERIC -> DIRECT
+                else -> k
+            }
+        }
+
         /** From an extension's content type ("Movie", "AnimeMovie", "TvSeries", "Anime", "OVA"…). */
         fun of(type: String?): WatchKind {
             val t = type?.lowercase()?.replace(" ", "")?.replace("_", "") ?: return GENERIC
@@ -251,6 +272,28 @@ enum class WatchKind {
 fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
     when (kind) {
         WatchKind.GENERIC -> WatchDetailsSkeleton(modifier = modifier)
+        WatchKind.DIRECT -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_direct"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(4) { SkeletonBlock(width = 40.dp, height = 40.dp, shape = CircleShape) }
+            }
+            SkeletonBlock(width = 180.dp, height = 12.dp)
+            SkeletonBlock(width = 120.dp, height = 12.dp)
+        }
+        WatchKind.PAGE -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_page"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                SkeletonBlock(width = 104.dp, height = 152.dp, shape = RoundedCornerShape(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SkeletonBlock(width = 170.dp, height = 18.dp)
+                    SkeletonBlock(width = 120.dp, height = 12.dp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(3) { SkeletonBlock(width = 48.dp, height = 20.dp, shape = RoundedCornerShape(6.dp)) } }
+                    Spacer(Modifier.height(6.dp))
+                    SkeletonBlock(width = 132.dp, height = 40.dp, shape = CircleShape)
+                }
+            }
+            repeat(3) { SkeletonBlock(width = null, height = 12.dp) }
+            Spacer(Modifier.height(4.dp))
+            repeat(3) { WatchRowSkeleton() }
+        }
         WatchKind.MOVIE -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_movie"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 repeat(3) { SkeletonBlock(width = 56.dp, height = 22.dp, shape = RoundedCornerShape(6.dp)) }

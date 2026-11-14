@@ -377,7 +377,9 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
     val s by OnlineSession.state.collectAsState()
     val opening by OnlineSession.opening.collectAsState()
     opening?.let { item ->
-        val kind = remember(item.type) { dev.asfakul.yumeiro.ui.screens.watch.WatchKind.of(item.type) }
+        val ctx = LocalContext.current
+        // Round 13: the skeleton follows what's coming (direct video, film, series, or a title page).
+        val kind = remember(item.key, item.type) { dev.asfakul.yumeiro.ui.screens.watch.WatchKind.forOpening(item.type, item.url, dev.asfakul.yumeiro.online.OpeningKinds.opensPage(ctx, item)) }
         // Details still loading: the watch page appears right away with skeletons.
         dev.asfakul.yumeiro.ui.screens.watch.WatchScaffold(
             backdrop = item.posterUrl, backdropHeaders = item.posterHeaders,
@@ -386,6 +388,8 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
                 when (kind) {
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.MOVIE -> WatchScreenStatus("Opening the film…", onCancel = { OnlineSession.cancelOpening() }, overline = "映画 · MOVIE")
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.SERIES -> WatchScreenStatus("Loading episodes…", onCancel = { OnlineSession.cancelOpening() }, overline = "連続 · SERIES")
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchKind.DIRECT -> WatchScreenStatus("Starting the video…", onCancel = { OnlineSession.cancelOpening() }, overline = "再生 · PLAY")
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchKind.PAGE -> WatchScreenStatus("Opening the title page…", onCancel = { OnlineSession.cancelOpening() }, overline = "作品 · TITLE")
                     else -> WatchScreenStatus("Opening…", onCancel = { OnlineSession.cancelOpening() })
                 }
             },

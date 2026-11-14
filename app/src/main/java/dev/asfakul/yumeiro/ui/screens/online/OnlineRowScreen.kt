@@ -95,9 +95,29 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
     }
     val nearEnd by remember { derivedStateOf { val last = grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0; last >= grid.layoutInfo.totalItemsCount - 9 } }
     LaunchedEffect(nearEnd, loading, hasNext, error) { if (nearEnd && !loading && hasNext && error == null && page > 0) request++ }
+    // Round 13: search inside this section (it can hold more than 1000 titles). While a search is
+    // typed, pages keep loading one at a time so titles further down are found as well.
+    var query by androidx.compose.runtime.saveable.rememberSaveable(api, pageData) { mutableStateOf("") }
+    val shown by androidx.compose.runtime.produceState<List<OnlineItem>>(items.toList(), items.size, query) {
+        val snapshot = items.toList()
+        value = if (query.isBlank()) snapshot else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { filterByTitle(snapshot, query) { it.name } }
+    }
+    LaunchedEffect(query, loading, hasNext, error, items.size) {
+        if (query.isNotBlank() && !loading && hasNext && error == null && page > 0 && items.size < SECTION_SEARCH_CAP) { kotlinx.coroutines.delay(250); request++ }
+    }
 
     Column(Modifier.fillMaxSize().testTag("online_row_screen")) {
         SubPageHeader(title = title, subtitle = api, onBack = onBack)
+        if (items.isNotEmpty()) {
+            dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                query = query, onQuery = { query = it.take(80) }, hint = "Search ${items.size}${if (hasNext) "+" else ""} titles in $title",
+                tag = "online_row_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+            if (query.isNotBlank()) Text(
+                "${shown.size} match${if (shown.size == 1) "" else "es"} in ${items.size} loaded" + if (loading) " · looking further…" else "",
+                color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp).testTag("online_row_search_count"),
+            )
+        }
         when {
             missing -> StateMessage(Icons.Default.Extension, "Source not available", "The extension that provides “$api” isn't installed or is turned off.",
                 primary = "Manage extensions" to onOpenExtensions, secondary = "Go back" to onBack, testTag = "online_row_missing")
@@ -111,7 +131,7 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize().testTag("online_row_grid"),
             ) {
-                items(items, key = { it.url }) { item ->
+                items(if (query.isBlank()) items else shown, key = { it.url }) { item ->
                     PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, modifier = Modifier.fillMaxWidth())
                 }
                 item(span = { GridItemSpan(maxLineSpan) }, key = "footer") {

@@ -33,8 +33,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The built-in short-drama source. Off until the user turns it on (Extension market → Drama,
- * or Yumix → Sources); then it shows up everywhere a video source does: Yumix, search,
+ * The built-in short-drama source. Round 13: on by default (the user can turn it off in
+ * Extension market → Drama, or Yumix → Sources); it shows up everywhere a video source does: Yumix, search,
  * details, the player, downloads, history and bookmarks.
  */
 object YumeiroDrama {
@@ -42,14 +42,14 @@ object YumeiroDrama {
     private const val PREFS = "yumeiro_drama"
     private const val KEY_ON = "enabled"
 
-    private val _enabled = MutableStateFlow(false)
+    private val _enabled = MutableStateFlow(true)
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
 
     /** Catalog adapters, in priority order. */
     internal val catalogs: List<DramaCatalog> by lazy { listOf(OnShortCatalog()) }
 
     fun start(context: Context) {
-        val on = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ON, false)
+        val on = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ON, true)
         _enabled.value = on
         publish(on)
     }

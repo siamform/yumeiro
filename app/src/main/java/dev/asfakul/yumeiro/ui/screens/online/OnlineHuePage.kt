@@ -105,7 +105,13 @@ internal fun HuePage(
         }
     }
     var only by remember(name) { mutableStateOf<Int?>(null) }
-    val feed by remember(feeds, only) { derivedStateOf { hueFeed(feeds.toList(), only) } }
+    val fullFeed by remember(feeds, only) { derivedStateOf { hueFeed(feeds.toList(), only) } }
+    // Round 13: search inside this extension's section (it can hold more than 1000 titles).
+    var query by androidx.compose.runtime.saveable.rememberSaveable(name) { mutableStateOf("") }
+    val searched by androidx.compose.runtime.produceState(fullFeed, fullFeed, query) {
+        value = if (query.isBlank()) fullFeed else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { filterByTitle(fullFeed, query) { it.first.name } }
+    }
+    val feed = if (query.isBlank()) fullFeed else searched
     val pagingBusy by remember(feeds) { derivedStateOf { feeds.any { it.loading } } }
     val canLoadMore by remember(feeds, only) { derivedStateOf { (if (only != null) listOfNotNull(feeds.getOrNull(only!!)) else feeds).any { it.hasNext } } }
 
@@ -140,10 +146,29 @@ internal fun HuePage(
         }
     }
     LaunchedEffect(nearEnd, feed.size, only, pagingBusy) { if (nearEnd && !pagingBusy && canLoadMore) loadMore() }
+    // While searching, keep fetching pages (one at a time) so titles further down are found too.
+    LaunchedEffect(query, pagingBusy, fullFeed.size) {
+        if (query.isNotBlank() && !pagingBusy && canLoadMore && fullFeed.size < SECTION_SEARCH_CAP) { kotlinx.coroutines.delay(250); loadMore() }
+    }
 
     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
         item("channels") { strip() }
-        item("channel_header") { ChannelHeader(name, feeds.size, feed.size, onSearch) }
+        item("channel_header") { ChannelHeader(name, feeds.size, fullFeed.size, onSearch) }
+        if (feeds.isNotEmpty()) item("section_search") {
+            dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                query = query, onQuery = { query = it.take(80) }, hint = "Search ${fullFeed.size}${if (canLoadMore) "+" else ""} titles on $name",
+                tag = "hue_section_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        if (query.isNotBlank()) item("section_search_state") {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${feed.size} match${if (feed.size == 1) "" else "es"} in ${fullFeed.size} loaded" + if (pagingBusy) " · looking further…" else "",
+                    color = TextTertiary, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag("hue_section_search_count"),
+                )
+                androidx.compose.material3.TextButton(onClick = onSearch) { Text("Search $name", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
+            }
+        }
         when {
             api != null && !runCatching { api.hasMainPage }.getOrDefault(false) -> item("nomain") { HueNotice("$name is search-only — use search to find titles") }
             rows == null && loading -> item("load") { PosterGridSkeleton(3) }

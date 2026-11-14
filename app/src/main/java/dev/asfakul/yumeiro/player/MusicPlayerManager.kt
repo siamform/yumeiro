@@ -289,7 +289,7 @@ class MusicPlayerManager(
             .build()
     }
 
-    fun playTrack(track: AudioTrack, queue: List<AudioTrack> = listOf(track)) {
+    fun playTrack(track: AudioTrack, queue: List<AudioTrack> = listOf(track), startMs: Long = 0L) {
         connectSession()
         currentQueue = if (queue.isNotEmpty()) queue else listOf(track)
         val startIndex = currentQueue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
@@ -301,14 +301,14 @@ class MusicPlayerManager(
                 currentTrack = track,
                 queue = currentQueue,
                 currentQueueIndex = startIndex,
-                currentPositionMs = 0L,
+                currentPositionMs = startMs,
                 durationMs = track.durationMs,
                 errorMessage = null
             )
         }
 
         try {
-            player.setMediaItems(mediaItems, startIndex, 0L)
+            player.setMediaItems(mediaItems, startIndex, startMs.coerceAtLeast(0L))
             player.prepare()
             player.play()
             onTrackChanged?.invoke(track.id)

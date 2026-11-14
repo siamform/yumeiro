@@ -143,6 +143,21 @@ internal fun filterExtensionNames(names: List<String>, query: String): List<Stri
     return hits.sortedBy { n -> if (foldName(n).startsWith(first)) 0 else 1 }
 }
 
+/**
+ * Round 13: search inside a section ("Show videos from" an extension, or a row's "See all"),
+ * which can hold more than 1000 titles. Same matching as the extension search. Pure.
+ */
+internal fun <T> filterByTitle(items: List<T>, query: String, title: (T) -> String): List<T> {
+    val words = foldName(query).split(Regex("[\\s._-]+")).filter { it.isNotBlank() }
+    if (words.isEmpty()) return items
+    val first = words.first()
+    return items.filter { val f = foldName(title(it)); words.all { w -> w in f } }
+        .sortedBy { if (foldName(title(it)).startsWith(first)) 0 else 1 }
+}
+
+/** Most titles a section search keeps loading pages for before it asks the user to search the source. */
+internal const val SECTION_SEARCH_CAP = 2000
+
 @Composable
 private fun FilterRow(name: String?, title: String, sub: String, sel: Boolean, loading: Boolean = false, failed: Boolean = false, onClick: () -> Unit) {
     val p = LocalMtPalette.current

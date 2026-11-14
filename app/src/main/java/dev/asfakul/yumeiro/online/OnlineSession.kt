@@ -110,8 +110,11 @@ object OnlineSession {
             val detail = provider?.let { p -> runCatching { OnlineRepository.load(p, item.url) }.onFailure { Log.w(TAG, "open ${item.name}", it) }.getOrNull() }
             if (_opening.value != item) return@launch
             _opening.value = null
+            val direct = detail != null && detail.episodes.values.all { it.isEmpty() } && detail.playData != null && detail.unsupportedReason == null
+            // Round 13: remembered so the next tap on this source shows the right skeleton.
+            if (detail != null) OpeningKinds.learn(app, item, opensPage = !direct)
             when {
-                detail != null && detail.episodes.values.all { it.isEmpty() } && detail.playData != null && detail.unsupportedReason == null -> play(app, detail)
+                direct -> play(app, detail!!)
                 else -> onShowTitle(item) // episodes to choose, or the title page explains the problem
             }
         }
