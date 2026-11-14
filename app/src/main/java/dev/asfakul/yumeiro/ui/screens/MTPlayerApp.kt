@@ -202,12 +202,6 @@ fun MTPlayerApp(
         com.lagradost.cloudstream3.utils.AppContextUtils.opener = { url, api, _ -> navigateSub(Screen.OnlineTitle.route(api, url)) }
         onDispose { com.lagradost.cloudstream3.utils.AppContextUtils.opener = null }
     }
-    // "View" after starting a download, the download notification, Home and Library open the Downloads page.
-    LaunchedEffect(navigateSub) {
-        dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.requests.collect {
-            if (it != 0L) { navigateSub(Screen.Downloads.route); dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.consumed() }
-        }
-    }
     // "Resume" on the home-screen widget.
     LaunchedEffect(openOnline) {
         dev.asfakul.yumeiro.widget.TitleNav.pending.collect { item ->
@@ -245,6 +239,18 @@ fun MTPlayerApp(
     val selectedVideoFolder by viewModel.selectedVideoFolder.collectAsStateWithLifecycle()
     val activePlayingVideo by viewModel.activePlayingVideo.collectAsStateWithLifecycle()
     var videoMinimized by rememberSaveable { mutableStateOf(false) }
+    // "View downloads" after starting a download, the download notification, Home and Library open
+    // the Downloads page. R15: a playing video moves to the floating player first (it used to stay
+    // full screen on top, so Downloads opened hidden behind it).
+    val latestPlaying = androidx.compose.runtime.rememberUpdatedState(activePlayingVideo)
+    LaunchedEffect(navigateSub) {
+        dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.requests.collect {
+            if (it != 0L) {
+                if (latestPlaying.value != null) videoMinimized = true
+                navigateSub(Screen.Downloads.route); dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.consumed()
+            }
+        }
+    }
     val videoForDetails by viewModel.videoForDetails.collectAsStateWithLifecycle()
     val showManageHiddenFoldersDialog by viewModel.showManageHiddenFoldersDialog.collectAsStateWithLifecycle()
 
@@ -1283,8 +1289,18 @@ fun MTPlayerApp(
         }
 
         activePlayingVideo?.let { video ->
-            // A newly opened video always starts expanded.
-            LaunchedEffect(video.id) { videoMinimized = false }
+            // R15: a new video from any source opens full screen, also out of the floating player
+            // and out of system picture-in-picture. A failover / quality switch of the same title
+            // (new link id, same title) keeps the window where it is.
+            val shownKey = rememberSaveable { mutableStateOf<String?>(null) }
+            val hostActivity = LocalContext.current.findActivityOrNull()
+            LaunchedEffect(video.id) {
+                if (dev.asfakul.yumeiro.player.PlayerSurfaceRules.isNewVideo(shownKey.value, video.id)) {
+                    videoMinimized = false
+                    hostActivity?.let { dev.asfakul.yumeiro.player.PlayerSurfaceRules.expandFromPip(it) }
+                }
+                shownKey.value = video.id
+            }
             ForceDarkTheme {
                 val videoQueue by viewModel.videoQueue.collectAsStateWithLifecycle()
                 val nextVideo = remember(video.id, videoQueue) { viewModel.nextVideoInQueue() }
@@ -1582,3 +1598,11 @@ private fun isSubRoute(route: String?): Boolean =
     route != null && route !in TabRoutes
 
 private val TabRoutes = setOf(Screen.Home.route, Screen.Music.route, Screen.Videos.route, Screen.Stream.route, Screen.Library.route)
+
+
+/** The activity behind a Compose context (contexts can be wrapped). */
+private fun android.content.Context.findActivityOrNull(): android.app.Activity? {
+    var c: android.content.Context? = this
+    while (c is android.content.ContextWrapper) { if (c is android.app.Activity) return c; c = c.baseContext }
+    return null
+}

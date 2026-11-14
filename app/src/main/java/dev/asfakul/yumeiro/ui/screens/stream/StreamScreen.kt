@@ -325,7 +325,7 @@ fun StreamScreen(
                         isHls = fmt == StreamFormat.HLS, isDash = false, headers = headers,
                     )
                     val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", u, null, req.logoUrl, emptyMap(), link)
-                    if (err != null) error = err else dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Downloading \"$title\"")
+                    if (err != null) error = err else dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"$title\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
                 }
                 is Resolution.NeedsBrowser -> pageFinder = r
                 is Resolution.Handoff -> { handoff = r; error = r.reason }

@@ -119,7 +119,7 @@ object DownloadPrompt {
         val err = r.start(keep)
         if (err != null) { AppMessages.error(context, err); return }
         val mode = if (keep) "Permanent" else "Offline"
-        AppMessages.show(context, "Downloading ${r.what} · $mode · see Downloads", AppMessages.Kind.SUCCESS, "View") { DownloadsNav.open() }
+        AppMessages.show(context, "Downloading ${r.what} · $mode", AppMessages.Kind.SUCCESS, "View downloads") { DownloadsNav.open() }
     }
 
     fun sizeText(b: Long): String = when {

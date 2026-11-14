@@ -425,6 +425,7 @@ private fun VideoPlayerModalContent(
     }
     var retryJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var stableJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var qualitySwitchJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val exoPlayer = remember(video.id) {
         StreamMediaFactory.createPlayer(context, video.uri).apply {
@@ -1494,6 +1495,12 @@ private fun VideoPlayerModalContent(
     }
     // An error while floating opens the full player so the suggestions are readable.
     LaunchedEffect(playerError, minimized) { if (minimized && playerError != null) onExpand() }
+    // R15: the app can move the video to the floating player by itself ("View downloads"). Leave
+    // full screen / landscape / screen lock first, or the floating window would keep the rotated,
+    // bar-less screen of the full-screen player.
+    LaunchedEffect(minimized) {
+        if (minimized) { isFullscreen = false; isScreenLocked = false; isControlsVisible = false }
+    }
 
     val isLandscapeNow = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -2054,9 +2061,16 @@ private fun VideoPlayerModalContent(
                         return@QualityDialog
                     }
                     showToast("Quality: ${alt.label}")
-                    coroutineScope.launch {
-                        val r = runCatching { alt.open(context, pos) }.getOrNull()
-                        if (r != null) startResolved(r, pos)
+                    // R15: one switch at a time (a second tap cancels the first), the old picture
+                    // keeps playing while the new stream is built off the main thread, the new one
+                    // starts where playback is *now*, and a failed switch says so.
+                    qualitySwitchJob?.cancel()
+                    qualitySwitchJob = coroutineScope.launch {
+                        val r = runCatching { alt.open(context, pos) }
+                            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+                            .getOrNull()
+                        if (r != null) startResolved(r, exoPlayer.currentPosition.takeIf { it > 0L } ?: pos)
+                        else showToast("Couldn't switch to ${alt.label} — still playing the current quality")
                     }
                 },
                 onDismiss = { showQualityDialog = false },
