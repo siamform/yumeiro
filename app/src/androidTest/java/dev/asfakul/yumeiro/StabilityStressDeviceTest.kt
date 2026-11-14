@@ -198,7 +198,10 @@ class StabilityStressDeviceTest {
     private var recoveries = 0
 
     /** Which snapshot states keep changing (an endless recomposition is a state written every frame). */
-    private fun changingStates(ms: Long): String {
+    private fun changingStates(ms: Long): String = stateChanges(ms).second
+
+    /** Snapshot applies in [ms] (≈ frames with a state change) and the states that changed most. */
+    private fun stateChanges(ms: Long): Pair<Int, String> {
         val hits = ConcurrentHashMap<String, AtomicInteger>()
         var applies = 0
         val handle = androidx.compose.runtime.snapshots.Snapshot.registerApplyObserver { changed, _ ->
@@ -211,7 +214,7 @@ class StabilityStressDeviceTest {
         }
         SystemClock.sleep(ms)
         handle.dispose()
-        return "applies=$applies · " + hits.entries.sortedByDescending { it.value.get() }.take(12).joinToString(" | ") { "${it.value.get()}× ${it.key}" }
+        return applies to ("applies=$applies · " + hits.entries.sortedByDescending { it.value.get() }.take(12).joinToString(" | ") { "${it.value.get()}× ${it.key}" })
     }
 
     private fun focusLine(): String = runCatching {
@@ -230,6 +233,43 @@ class StabilityStressDeviceTest {
         nodes.forEach { walk(it) }
         "roots=${nodes.size} · tags=${tags.take(30)} · text=$texts"
     }.getOrElse { "(could not read: ${it.javaClass.simpleName})" }
+
+    /**
+     * D-pad focus must settle. Runs 43641330758 and 43643387375 ended in an endless recomposition
+     * right after the D-pad traversal (ComposeNotIdle, 99–100 % janky frames, samples in
+     * PagerBringIntoViewSpec / FocusableNode / LazyLayoutBeyondBounds). That is what a TV or
+     * keyboard user would hit. Move focus into Home and Yumix, stop, and require the state changes
+     * to die down (an idle screen has ~0 snapshot applies; the hero auto-advance adds a short burst
+     * every 6.5 s).
+     */
+    @Test fun dpadFocusSettles() {
+        val spins = ArrayList<String>()
+        for (where in listOf("home", "yumix")) {
+            backToTabs("focus $where")
+            if (where == "home") assertTrue(tap("nav_tab_home"))
+            else {
+                assertTrue(tap("nav_tab_videos")); idle(800)
+                if (tap("video_source_switch")) idle(600)
+                tap("video_source_online")
+            }
+            idle(5_000)
+            log("focus[$where] before keys: ${changingStates(2_000)}")
+            for (pattern in listOf(listOf(20, 20, 20, 22, 22, 22), listOf(22, 22, 22, 22, 20, 21), listOf(20, 20, 22, 19, 22, 22))) {
+                for (k in pattern) { shell("input keyevent $k"); SystemClock.sleep(150) }
+                SystemClock.sleep(1_500)
+                val windows = List(3) { stateChanges(2_000) }
+                val counts = windows.map { it.first }
+                log("focus[$where] after ${pattern.joinToString(",")}: applies per 2 s $counts · ${windows.last().second.take(900)}")
+                if (counts.min() > 40) {
+                    spins += "$where after keys $pattern: $counts · ${windows.last().second.take(600)}"
+                    log("focus[$where] SPIN: main ${Looper.getMainLooper().thread.stackTrace.take(16).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }}")
+                    break
+                }
+            }
+            shell("input keyevent 4"); idle(800)
+        }
+        assertTrue("screen never settled after D-pad focus:\n" + spins.joinToString("\n"), spins.isEmpty())
+    }
 
     @Test fun pagerFocusAndScrollStress() {
         val dm = ctx.resources.displayMetrics
