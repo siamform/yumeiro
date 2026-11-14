@@ -331,6 +331,8 @@ dependencies {
   implementation(libs.media3.exoplayer.dash)
   implementation(libs.media3.exoplayer.smoothstreaming)
   implementation(libs.media3.exoplayer.rtsp)
+  // Round 13: GPU video effects (Anime4K-style line and detail enhancement).
+  implementation(libs.media3.effect)
   // OkHttp data source: one HTTP stack for probing, playlists and playback, with DNS fallback / DoH.
   implementation(libs.media3.datasource.okhttp)
   // FFmpeg audio fallback: AC-3 / E-AC-3 / DTS / TrueHD / Opus / Vorbis tracks the phone can't decode played silent.

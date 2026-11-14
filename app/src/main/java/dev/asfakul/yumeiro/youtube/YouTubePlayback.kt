@@ -42,7 +42,7 @@ object YouTubePlayback {
     }
 
     /** Resolves [item] and opens it in the full video player. */
-    fun playVideo(context: Context, item: YtItem, maxHeight: Int = 1080) {
+    fun playVideo(context: Context, item: YtItem, maxHeight: Int = YouTubeStreams.defaultHeight()) {
         pending?.cancel()
         refreshes.remove(item.id)
         // The watch page opens instantly (skeleton + details) while the stream resolves.

@@ -1030,26 +1030,36 @@ private fun StreamHealthSection(h: dev.asfakul.yumeiro.player.PlaybackHealth, dn
 }
 
 /** One selectable video quality. `null` height = Auto (adaptive). */
-data class QualityOption(val label: String, val groupIndex: Int, val trackIndex: Int, val height: Int, val bitrate: Int)
+data class QualityOption(
+    val label: String, val groupIndex: Int, val trackIndex: Int, val height: Int, val bitrate: Int,
+    /** Round 13: a quality the engine built (another stream / source), not a track of this one. */
+    val alt: dev.asfakul.yumeiro.player.QualityEngine.Alt? = null,
+    val note: String? = null,
+)
 
 @Composable
 fun QualityDialog(
     options: List<QualityOption>,
     selected: QualityOption?,
-    autoLabel: String,
+    autoLabel: String?,
     onSelect: (QualityOption?) -> Unit,
     onDismiss: () -> Unit,
+    footer: String? = null,
 ) {
     TsukiDialog(
         onDismissRequest = onDismiss,
         title = { Text("Quality", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {
             LazyColumn {
-                item {
+                if (autoLabel != null) item {
                     QualityRow(autoLabel, "Adapts to your connection", selected == null) { onSelect(null); onDismiss() }
                 }
                 itemsIndexed(options) { _, o ->
-                    QualityRow(o.label, if (o.bitrate > 0) "${o.bitrate / 1000} kbps" else null, selected == o) { onSelect(o); onDismiss() }
+                    val sub = o.note ?: if (o.bitrate > 0) "${o.bitrate / 1000} kbps" else null
+                    QualityRow(o.label, sub, selected == o || (selected == null && autoLabel == null && o.alt?.current == true)) { onSelect(o); onDismiss() }
+                }
+                if (footer != null) item {
+                    Text(footer, style = MaterialTheme.typography.bodySmall, color = TextSecondary, modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp))
                 }
             }
         },

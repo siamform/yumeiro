@@ -484,7 +484,11 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
     var season by remember(state.version, state.index) { mutableStateOf(state.episode?.season) }
     val shown = remember(state.episodes, season, seasons) { state.episodes.withIndex().filter { seasons.size <= 1 || it.value.season == season } }
     val historyVersion by OnlineHistory.version.collectAsState()
-    val hasThumbs = remember(state.episodes) { state.episodes.count { it.posterUrl != null } > state.episodes.size / 2 }
+    // Round 13: catalogue thumbnails fill in for extensions that send none.
+    LaunchedEffect(d.api, d.url) { dev.asfakul.yumeiro.online.EpisodeStills.ensure(context, d) }
+    val stillsMap by dev.asfakul.yumeiro.online.EpisodeStills.stills.collectAsState()
+    val stills = stillsMap[dev.asfakul.yumeiro.online.EpisodeStills.keyOf(d)]
+    val hasThumbs = remember(state.episodes, stills) { state.episodes.count { dev.asfakul.yumeiro.online.EpisodeStills.imageFor(d, it, stills) != null } > state.episodes.size / 2 }
     val listState = rememberLazyListState()
 
     val autoSkip by dev.asfakul.yumeiro.online.OnlineSettings.autoSkip.collectAsState()
@@ -634,7 +638,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 ) {
                     if (hasThumbs) {
                         Box(Modifier.width(128.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f))) {
-                            PosterImage(e.posterUrl ?: d.posterUrl, d.posterHeaders, Modifier.fillMaxSize())
+                            EpisodeThumb(d, e, stills, Modifier.fillMaxSize())
                             if (current) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PlayArrow, "Now playing", tint = Color.White) }
                             if (p != null && p.fraction > 0.01f) LinearProgressIndicator(progress = { p.fraction }, color = SpotifyGreen, trackColor = Color.Black.copy(alpha = 0.4f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp))
                         }

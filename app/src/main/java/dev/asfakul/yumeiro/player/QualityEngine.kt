@@ -1,0 +1,70 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro.player
+
+import android.content.Context
+import dev.asfakul.yumeiro.stream.StreamRequest
+
+/**
+ * Round 13: a quality selector for every video, including YouTube.
+ *
+ * Streams with an adaptive ladder (most HLS / DASH) list their own renditions as player tracks.
+ * For everything else this engine builds the list itself:
+ *  - YouTube: every resolution YouTube offers for the video (144p up to 4K), each opened as its
+ *    own stream at the same position;
+ *  - extension sources: the other sources of the same episode, grouped by resolution, so picking
+ *    "720p" moves to the best 720p source;
+ *  - anything with a single fixed stream: the one quality it really has, labelled honestly.
+ */
+object QualityEngine {
+    /** One choice. [open] returns a new request to play, or null when it switched by itself. */
+    class Alt(val label: String, val height: Int, val note: String? = null, val current: Boolean = false, val open: suspend (Context, Long) -> StreamRequest?)
+
+    /** Alternatives for [request] (off the main thread). Empty = nothing beyond the stream's own tracks. */
+    suspend fun alternatives(context: Context, request: StreamRequest, currentHeight: Int): List<Alt> {
+        youTubeId(request)?.let { id -> return youTube(context, id, currentHeight) }
+        return online(currentHeight)
+    }
+
+    internal fun youTubeId(r: StreamRequest): String? =
+        if (r.group == "YouTube") (r.pageUrl ?: r.url).let { dev.asfakul.yumeiro.youtube.YouTube.idFrom(it) } else null
+
+    private suspend fun youTube(context: Context, id: String, currentHeight: Int): List<Alt> {
+        val info = runCatching { dev.asfakul.yumeiro.youtube.YouTube.info(context, id, false) }.getOrNull() ?: return emptyList()
+        val heights = (info.videoOnlyStreams.filter { it.isUrl }.map { it.height } + info.videoStreams.filter { it.isUrl }.map { it.height })
+        return ladder(heights).map { h ->
+            Alt(label(h), h, current = h == currentHeight) { c, _ -> dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(c, id, maxHeight = h) }
+        }
+    }
+
+    private fun online(currentHeight: Int): List<Alt> {
+        val s = dev.asfakul.yumeiro.online.OnlineSession.state.value ?: return emptyList()
+        if (s.phase != dev.asfakul.yumeiro.online.OnlineSession.Phase.PLAYING) return emptyList()
+        val byHeight = s.links.withIndex()
+            .filter { (_, l) -> !l.audioOnly && l.quality in 144..4320 && l.url !in s.failed }
+            .groupBy { it.value.quality }
+        if (byHeight.size < 2) return emptyList()
+        val playing = s.link?.quality
+        return byHeight.keys.sortedDescending().map { h ->
+            val first = byHeight.getValue(h).first()
+            Alt(label(h), h, note = first.value.name.ifBlank { first.value.source }, current = h == playing || (playing == null && h == currentHeight)) { c, pos ->
+                val cur = dev.asfakul.yumeiro.online.OnlineSession.state.value
+                val i = cur?.links?.indexOfFirst { it.url == first.value.url } ?: -1
+                if (i >= 0) dev.asfakul.yumeiro.online.OnlineSession.switchSource(c, i, pos)
+                null
+            }
+        }
+    }
+
+    /** Distinct, sensible heights, highest first. Pure → unit-tested. */
+    internal fun ladder(heights: List<Int>): List<Int> =
+        heights.filter { it in 100..4320 }.map { snap(it) }.distinct().sortedDescending()
+
+    /** 1072 → 1080, 718 → 720 (YouTube's odd crops). */
+    internal fun snap(h: Int): Int = listOf(144, 240, 360, 480, 720, 1080, 1440, 2160, 4320).minByOrNull { kotlin.math.abs(it - h) }?.takeIf { kotlin.math.abs(it - h) <= 24 } ?: h
+
+    fun label(h: Int): String = when (h) { 2160 -> "2160p (4K)"; 4320 -> "4320p (8K)"; 1440 -> "1440p (2K)"; else -> "${h}p" }
+}
