@@ -61,7 +61,7 @@ internal fun CrashReportsCard() {
             }
             SettingsActionRow("Delete all", "Remove the saved reports from this phone", "crash_clear", danger = true) { CrashLog.clear(context); version++ }
         }
-        Text("Reports stay on this phone until you share them. They hold the app version, phone model, Android version and the error, and leave out links with keys, tokens and e-mail addresses.",
+        Text("Reports stay on this phone until you share them. A copy of each one is also saved as a file in Download/Yumeiro/Crash reports, ready to attach. They hold the app version, phone model, Android version and the error, and leave out links with keys, tokens and e-mail addresses.",
             color = TextTertiary, fontSize = 11.5.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
     }
     open?.let { r ->

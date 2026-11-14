@@ -37,6 +37,9 @@ import kotlinx.serialization.json.jsonObject
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_STREMIOPROVIDER_1 = Regex("""(2160|1440|1080|720|576|480|360)[pP]""")
+
 /**
  * One Stremio catalog add-on as a [MainAPI]. Item URLs are `<type>/<id>`; episode data is
  * `<type>/<videoId>`. Streams and subtitles are gathered from every installed add-on that
@@ -136,7 +139,7 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
                     val linkType = if (url.contains(".m3u8", true)) ExtractorLinkType.M3U8 else if (url.contains(".mpd", true)) ExtractorLinkType.DASH else ExtractorLinkType.VIDEO
                     callback(newExtractorLink(a.name, label.take(160), url, linkType) {
                         this.headers = headers
-                        quality = Regex("""(2160|1440|1080|720|576|480|360)[pP]""").find(label)?.groupValues?.get(1)?.toIntOrNull()
+                        quality = RX_STREMIOPROVIDER_1.find(label)?.groupValues?.get(1)?.toIntOrNull()
                             ?: if (label.contains("4k", true)) 2160 else 0
                     })
                     (s["subtitles"] as? JsonArray)?.forEach { sub -> sub.jsonObject.let { o -> o.str("url")?.let { u -> subtitleCallback(SubtitleFile(o.str("lang") ?: "Unknown", u)) } } }

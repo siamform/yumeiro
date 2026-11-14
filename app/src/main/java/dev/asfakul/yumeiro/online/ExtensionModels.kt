@@ -8,6 +8,11 @@ package dev.asfakul.yumeiro.online
 import org.json.JSONArray
 import org.json.JSONObject
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_EXTENSIONMODELS_1 = Regex("[0-9a-f]{64}")
+private val RX_EXTENSIONMODELS_2 = Regex("^(cloudstreamrepo://|https://cs\\.repo/\\??)")
+private val RX_EXTENSIONMODELS_3 = Regex("^https?://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?(?:/(?:tree|blob)/([^/]+)(/.*)?)?$")
+
 /**
  * Data model of CloudStream-compatible extensions.
  *
@@ -206,7 +211,7 @@ object ExtensionFormats {
             language = o.optStringOrNull("language"),
             iconUrl = o.optStringOrNull("iconUrl")?.let { resolve(listUrl, it) },
             fileSize = if (o.has("fileSize") && !o.isNull("fileSize")) o.optLong("fileSize") else null,
-            sha256 = o.optStringOrNull("fileHash")?.removePrefix("sha256-")?.lowercase()?.takeIf { it.matches(Regex("[0-9a-f]{64}")) },
+            sha256 = o.optStringOrNull("fileHash")?.removePrefix("sha256-")?.lowercase()?.takeIf { it.matches(RX_EXTENSIONMODELS_1) },
             repoUrl = repo.url,
             repoName = repo.name,
         )
@@ -232,10 +237,10 @@ object ExtensionFormats {
 fun normalizeRepoUrl(input: String): String {
     var s = input.trim().removeSuffix("/")
     // CloudStream's add-repo links: cloudstreamrepo://<url> and https://cs.repo/?<url>
-    Regex("^(cloudstreamrepo://|https://cs\\.repo/\\??)").find(s)?.let { m ->
+    RX_EXTENSIONMODELS_2.find(s)?.let { m ->
         s = s.removePrefix(m.value).let { if (it.startsWith("http://") || it.startsWith("https://")) it else "https://$it" }
     }
-    val gh = Regex("^https?://github\\.com/([^/]+)/([^/]+?)(?:\\.git)?(?:/(?:tree|blob)/([^/]+)(/.*)?)?$").find(s)
+    val gh = RX_EXTENSIONMODELS_3.find(s)
     if (gh != null) {
         val (owner, repo, branch, path) = gh.destructured
         val p = path.trim('/')

@@ -5,12 +5,17 @@
  */
 package dev.asfakul.yumeiro.online.subtitles
 
+import dev.asfakul.yumeiro.text.RegexCache
+
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction
 import java.util.zip.ZipInputStream
+
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_SUBTITLEARCHIVE_1 = Regex("""(19|20)\d\d""")
 
 /**
  * Subtitle sites hand out ZIP archives (one file, or a whole season). This picks the right
@@ -67,14 +72,14 @@ object SubtitleArchive {
         val s = season
         val patterns = buildList {
             if (s != null) {
-                add(Regex("""s0*${s}[ ._-]*e0*${episode}(?!\d)"""))
-                add(Regex("""(?<!\d)0*${s}x0*${episode}(?!\d)"""))
+                add(RegexCache.get("""s0*${s}[ ._-]*e0*${episode}(?!\d)"""))
+                add(RegexCache.get("""(?<!\d)0*${s}x0*${episode}(?!\d)"""))
             }
         }
         if (patterns.any { it.containsMatchIn(n) }) return 3
-        if (Regex("""(?:e|ep|episode|第)[ ._-]*0*${episode}(?!\d)""").containsMatchIn(n)) return 2
+        if (RegexCache.get("""(?:e|ep|episode|第)[ ._-]*0*${episode}(?!\d)""").containsMatchIn(n)) return 2
         // Anime style "Show - 07 [1080p].ass": the number standing alone.
-        if (Regex("""(?<![\dx])0*${episode}(?![\dp])""").containsMatchIn(n.replace(Regex("""(19|20)\d\d"""), " "))) return 1
+        if (RegexCache.get("""(?<![\dx])0*${episode}(?![\dp])""").containsMatchIn(n.replace(RX_SUBTITLEARCHIVE_1, " "))) return 1
         return -1
     }
 

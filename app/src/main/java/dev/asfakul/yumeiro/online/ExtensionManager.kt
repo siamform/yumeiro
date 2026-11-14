@@ -34,6 +34,9 @@ import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_EXTENSIONMANAGER_1 = Regex("[^A-Za-z0-9_.\\-]")
+
 /**
  * Installs, loads, updates and removes CloudStream-compatible extensions.
  *
@@ -278,7 +281,7 @@ object ExtensionManager {
     private suspend fun installManual(context: Context, bytes: ByteArray, source: String, displayName: String?, review: ExtensionReview.Mode): InstalledExtension {
         val manifest = readManifest(bytes) ?: throw ExtensionException("This isn't a CloudStream extension (.cs3)")
         val internal = (displayName?.substringBeforeLast('.')?.takeIf { it.isNotBlank() } ?: manifest.name ?: "Extension")
-            .replace(Regex("[^A-Za-z0-9_.\\-]"), "_").take(80)
+            .replace(RX_EXTENSIONMANAGER_1, "_").take(80)
         val name = manifest.name ?: internal
         val repoUrl = "manual:$internal"
         val isUpdate = _state.value.installed.any { it.key == RemoteExtension.keyOf(repoUrl, internal) }
@@ -356,7 +359,7 @@ object ExtensionManager {
     private fun installBytes(context: Context, ext: InstalledExtension, bytes: ByteArray, previous: InstalledExtension?): InstalledExtension {
         if (bytes.size < 64) throw ExtensionException("The download is empty")
         if (readManifest(bytes) == null) throw ExtensionException("${ext.name} is not a valid extension file")
-        val safe = ext.internalName.replace(Regex("[^A-Za-z0-9_.\\-]"), "_")
+        val safe = ext.internalName.replace(RX_EXTENSIONMANAGER_1, "_")
         val file = File(pluginDir(context), "$safe-${ext.sha256.take(12)}.cs3")
         if (!file.exists()) {
             val tmp = File(file.parentFile, file.name + ".part")

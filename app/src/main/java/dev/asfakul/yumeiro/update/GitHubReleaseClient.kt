@@ -14,6 +14,9 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_GITHUBRELEASECLIENT_1 = Regex("\\s+")
+
 /**
  * Talks to the GitHub Releases REST API.
  *
@@ -204,7 +207,7 @@ internal class GitHubReleaseClient(
         fun reconcileChecksum(digest: String?, sums: String?, assetName: String): String? {
             val fromDigest = digest?.trim()?.lowercase()?.takeIf { SHA256_HEX.matches(it) }
             val fromSums = sums?.lineSequence()
-                ?.map { it.trim().split(Regex("\\s+"), limit = 2) }
+                ?.map { it.trim().split(RX_GITHUBRELEASECLIENT_1, limit = 2) }
                 ?.firstOrNull { it.size == 2 && it[1].removePrefix("*") == assetName }
                 ?.get(0)?.lowercase()?.takeIf { SHA256_HEX.matches(it) }
             if (fromDigest != null && fromSums != null && fromDigest != fromSums) {

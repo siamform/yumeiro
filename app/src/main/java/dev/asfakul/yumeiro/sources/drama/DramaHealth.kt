@@ -19,6 +19,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_DRAMAHEALTH_1 = Regex("""answered HTTP (4\d\d|5\d\d)""")
+private val RX_DRAMAHEALTH_2 = Regex("""\((4\d\d|5\d\d)\)""")
+
 /**
  * Round 2: which drama studios can really play right now.
  *
@@ -116,19 +120,22 @@ class DramaHealth(
         /** The server answered and said no (HTTP 4xx / 5xx, or no stream in a valid answer). */
         fun refused(e: Throwable): Boolean {
             val m = e.message.orEmpty()
-            return Regex("""answered HTTP (4\d\d|5\d\d)""").containsMatchIn(m) || m.startsWith("No stream for episode") || m.contains("has no player") ||
-                Regex("""\((4\d\d|5\d\d)\)""").containsMatchIn(m)
+            return RX_DRAMAHEALTH_1.containsMatchIn(m) || m.startsWith("No stream for episode") || m.contains("has no player") ||
+                RX_DRAMAHEALTH_2.containsMatchIn(m)
         }
 
         fun localNetwork(e: Throwable): Boolean = generateSequence(e) { it.cause }.any {
             it is java.net.UnknownHostException || it is java.net.ConnectException || it is java.net.NoRouteToHostException
         }
 
+        // R15: precompiled (titleKey runs for every drama row).
+        private val DUB_SUFFIX = Regex("""\((dubbed|dub|sub|subbed|english|en)\)""", RegexOption.IGNORE_CASE)
+
         fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
 
         /** "The Lightbringer’s Return" and "The Lightbringer's Return (Dubbed)" → same key. */
         fun titleKey(title: String): String = Normalizer.normalize(title, Normalizer.Form.NFKD)
-            .replace(Regex("""\((dubbed|dub|sub|subbed|english|en)\)""", RegexOption.IGNORE_CASE), "")
+            .replace(DUB_SUFFIX, "")
             .lowercase().filter { it.isLetterOrDigit() }
     }
 }

@@ -30,6 +30,14 @@ object NetworkClient {
         client?.let { return it }
         return synchronized(this) {
             client ?: OkHttpClient.Builder()
+                // R15: one dispatcher for the whole app (images, extensions, YouTube, playback) with a
+                // hard cap. OkHttp's default (64 in flight, a thread each) let a fast home-feed scroll
+                // plus extension loads start dozens of "OkHttp …" threads on 2–3 GB phones.
+                .dispatcher(okhttp3.Dispatcher().apply {
+                    maxRequests = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 16 else 32
+                    maxRequestsPerHost = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 4 else 6
+                })
+                .connectionPool(okhttp3.ConnectionPool(if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 6 else 10, 2, TimeUnit.MINUTES))
                 .dns(SmartDns)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)

@@ -20,6 +20,12 @@ import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.util.zip.GZIPInputStream
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_ONLINESUBTITLES_1 = Regex("[._]+")
+private val RX_ONLINESUBTITLES_2 = Regex("""(?i)\b(480p|576p|720p|1080p|2160p|4k|uhd|hdr|x264|x265|h264|h265|hevc|web[- ]?dl|webrip|bluray|brrip|dvdrip|hdtv|aac|ac3|dts|yify|yts|rarbg|proper|repack|extended)\b.*""")
+private val RX_ONLINESUBTITLES_3 = Regex("""[\[\(].*?[\]\)]""")
+private val RX_ONLINESUBTITLES_4 = Regex("\\s+")
+
 data class SubtitleLanguage(val code3: String, val name: String)
 
 val SUBTITLE_LANGUAGES = listOf(
@@ -156,10 +162,10 @@ fun mimeFor(extension: String): String = when (extension.lowercase()) {
 /** Removes release noise so "Movie.Name.2010.1080p.BluRay.x264" searches as "movie name 2010". */
 fun cleanQuery(raw: String): String {
     var s = raw.substringBeforeLast('.', raw).takeIf { raw.contains('.') && raw.substringAfterLast('.').length <= 4 } ?: raw
-    s = s.replace(Regex("[._]+"), " ")
-    s = s.replace(Regex("""(?i)\b(480p|576p|720p|1080p|2160p|4k|uhd|hdr|x264|x265|h264|h265|hevc|web[- ]?dl|webrip|bluray|brrip|dvdrip|hdtv|aac|ac3|dts|yify|yts|rarbg|proper|repack|extended)\b.*"""), "")
-    s = s.replace(Regex("""[\[\(].*?[\]\)]"""), " ")
-    return s.replace(Regex("\\s+"), " ").trim()
+    s = s.replace(RX_ONLINESUBTITLES_1, " ")
+    s = s.replace(RX_ONLINESUBTITLES_2, "")
+    s = s.replace(RX_ONLINESUBTITLES_3, " ")
+    return s.replace(RX_ONLINESUBTITLES_4, " ").trim()
 }
 
 private fun InputStream.readLimited(max: Int): ByteArray {

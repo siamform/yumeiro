@@ -35,6 +35,9 @@ import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_ANIYOMIPROVIDER_1 = Regex("""(\d{3,4})[pP]""")
+
 /**
  * Presents one Aniyomi anime source as a CloudStream [MainAPI], so the whole online stack
  * (Home rows, search, details, player, downloads, bookmarks, new-episode checks) uses it as-is.
@@ -151,6 +154,6 @@ class AniyomiProvider(val source: AnimeCatalogueSource, displayName: String) : M
     private suspend fun <T> io(block: suspend () -> T): T = withContext(Dispatchers.IO) { block() }
 
     companion object {
-        fun qualityOf(title: String): Int = Regex("""(\d{3,4})[pP]""").find(title)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        fun qualityOf(title: String): Int = RX_ANIYOMIPROVIDER_1.find(title)?.groupValues?.get(1)?.toIntOrNull() ?: 0
     }
 }

@@ -119,6 +119,10 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_STREAMSCREEN_1 = Regex("^(https?|rtsps?)://.+", RegexOption.IGNORE_CASE)
+private val RX_STREAMSCREEN_2 = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://\\S+")
+
 /** Network stream player: URL / M3U8 / MPD / Smooth / RTSP / TS, IPTV playlists, headers & DRM. */
 @Composable
 fun StreamScreen(
@@ -269,7 +273,7 @@ fun StreamScreen(
     fun play() {
         val u = url.trim()
         error = null
-        if (!Regex("^(https?|rtsps?)://.+", RegexOption.IGNORE_CASE).matches(u) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
+        if (!RX_STREAMSCREEN_1.matches(u) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
             error = "Enter a valid http(s)://, rtsp:// or magnet: link"
             return
         }
@@ -506,7 +510,7 @@ fun StreamScreen(
                             TextButton(
                                 onClick = {
                                     val u = url.trim()
-                                    if (!Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://\\S+").matches(u)) error = "Enter a valid stream URL"
+                                    if (!RX_STREAMSCREEN_2.matches(u)) error = "Enter a valid stream URL"
                                     else addTarget = currentRequest().copy(title = guessTitle(u))
                                 },
                                 modifier = Modifier.testTag("stream_save"),

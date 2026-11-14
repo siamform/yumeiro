@@ -75,8 +75,36 @@ object Kana {
 
     /** The accent for a page title, or null when nothing fits (no accent beats a wrong one). */
     fun forTitle(title: String): String? {
+        if (title.isEmpty()) return null
+        synchronized(cache) { cache[title]?.let { return it.ifEmpty { null } } }
         val t = title.lowercase(Locale.ROOT)
-        return words.firstOrNull { (k, _) -> Regex("(^|[^a-z])" + Regex.escape(k) + "($|[^a-z])").containsMatchIn(t) }?.second
+        val hit = words.firstOrNull { (k, _) -> containsWord(t, k) }?.second
+        synchronized(cache) { cache[title] = hit.orEmpty() }
+        return hit
+    }
+
+    /**
+     * R15 ANR root cause: this used to compile one Regex per vocabulary word (~60) on every call,
+     * and it is called from composition for every home section and page title, including pager
+     * prefetch. On a 2022 Xiaomi (Android 13) that blocked the main thread for 8 s during focus
+     * changes. Now a plain word-boundary scan (same semantics: the key must not touch an a–z letter)
+     * plus a small LRU of results.
+     */
+    internal fun containsWord(text: String, key: String): Boolean {
+        var from = 0
+        while (true) {
+            val i = text.indexOf(key, from)
+            if (i < 0) return false
+            val before = if (i == 0) ' ' else text[i - 1]
+            val end = i + key.length
+            val after = if (end >= text.length) ' ' else text[end]
+            if (before !in 'a'..'z' && after !in 'a'..'z') return true
+            from = i + 1
+        }
+    }
+
+    private val cache = object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 256
     }
 
     /** "設定 · SETTINGS"-style overline, or the English text alone when accents are off. */

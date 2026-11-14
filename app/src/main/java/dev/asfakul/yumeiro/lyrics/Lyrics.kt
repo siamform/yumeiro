@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.lyrics
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_LYRICS_1 = Regex("""<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>""")
+
 /** One lyric line. [timeMs] is null for unsynced (plain) lyrics. */
 data class LyricLine(val timeMs: Long?, val text: String)
 
@@ -54,7 +57,7 @@ object LrcParser {
                 sawTimeTag = true
                 val body = line.substring(tags.last().range.last + 1).trim()
                     // strip enhanced-LRC word timings <mm:ss.xx>
-                    .replace(Regex("""<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>"""), "").trim()
+                    .replace(RX_LYRICS_1, "").trim()
                 for (t in tags) {
                     val min = t.groupValues[1].toLongOrNull() ?: 0L
                     val sec = t.groupValues[2].toLongOrNull() ?: 0L

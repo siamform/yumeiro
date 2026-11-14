@@ -23,6 +23,9 @@ import okhttp3.Request
 import java.net.URL
 import java.util.UUID
 
+// R15: precompiled once (was compiled per playlist parse).
+private val EPG_URL_RX = Regex("""(?:url-tvg|x-tvg-url)="([^"]+)"""")
+
 /**
  * A saved stream playlist. Remote playlists ([url] != null) are downloaded and cached on the device;
  * local playlists ([url] == null) are created by the user. Channels of both are stored as M3U files
@@ -545,7 +548,7 @@ object PlaylistStore {
             groups = groups.take(12),
             drmChannels = channels.count { it.drmScheme != DrmScheme.NONE },
             headerChannels = channels.count { it.userAgent != null || it.referer != null || it.origin != null || it.cookie != null || it.headers.isNotEmpty() },
-            epgUrl = Regex("""(?:url-tvg|x-tvg-url)="([^"]+)"""").find(head.firstOrNull().orEmpty())?.groupValues?.get(1),
+            epgUrl = EPG_URL_RX.find(head.firstOrNull().orEmpty())?.groupValues?.get(1),
             lastUpdatedNote = head.firstOrNull { it.contains("updated", true) && it.startsWith("#") }?.removePrefix("#")?.trim(),
         )
     }

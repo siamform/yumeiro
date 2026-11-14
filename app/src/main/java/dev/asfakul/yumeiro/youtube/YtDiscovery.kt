@@ -9,6 +9,9 @@ import android.content.Context
 import java.text.Normalizer
 import java.util.Locale
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_YTDISCOVERY_1 = Regex("\\s+")
+
 /**
  * Where one YouTube / YouTube Music shelf gets its items. Unlike the old fixed [YtShelf] list, feeds
  * are planned per person from what they play, search and pin ([YtDiscovery.plan]).
@@ -111,7 +114,7 @@ object YtDiscovery {
         .replace(Regex("\\p{M}+"), "").lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), "")
 
     /** Cleans a typed topic; null when empty or too long to be a topic. */
-    fun cleanTopic(raw: String): String? = raw.trim().replace(Regex("\\s+"), " ").takeIf { it.length in 2..60 }
+    fun cleanTopic(raw: String): String? = raw.trim().replace(RX_YTDISCOVERY_1, " ").takeIf { it.length in 2..60 }
 
     /** Adds [topic] to the front (moving it if it already exists), capped at [max]. */
     fun withTopic(topics: List<String>, topic: String, max: Int = 12): List<String> {

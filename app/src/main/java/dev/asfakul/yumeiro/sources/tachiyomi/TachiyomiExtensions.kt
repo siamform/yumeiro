@@ -38,6 +38,11 @@ import okhttp3.Request
 import java.io.File
 import java.security.MessageDigest
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_TACHIYOMIEXTENSIONS_1 = Regex("""[?&]url=([^&]+)""")
+private val RX_TACHIYOMIEXTENSIONS_2 = Regex("""^https?://github\.com/([^/]+)/([^/]+)/(?:raw|blob)/(.+)$""")
+private val RX_TACHIYOMIEXTENSIONS_3 = Regex("""^https?://github\.com/([^/]+)/([^/]+)(?:/tree/([^/]+))?/?$""")
+
 /**
  * Installs and loads Aniyomi (anime) and Mihon / Tachiyomi (manga) extension APKs without
  * installing them into Android: the APK is kept read-only in app storage and its classes are
@@ -176,7 +181,7 @@ object TachiyomiExtensions {
     fun normalizeRepo(raw: String): String {
         var u = raw.trim().removeSuffix("/")
         if (u.startsWith("tachiyomi://") || u.startsWith("aniyomi://") || u.startsWith("mihon://")) {
-            u = Regex("""[?&]url=([^&]+)""").find(u)?.groupValues?.get(1)
+            u = RX_TACHIYOMIEXTENSIONS_1.find(u)?.groupValues?.get(1)
                 ?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: u
             u = u.trim().removeSuffix("/")
         }
@@ -185,12 +190,12 @@ object TachiyomiExtensions {
             u = u.removeSuffix(file)
         }
         // github.com/<owner>/<repo>/(raw|blob)/<branch>[/path] -> raw.githubusercontent.com/<owner>/<repo>/<branch>[/path]
-        Regex("""^https?://github\.com/([^/]+)/([^/]+)/(?:raw|blob)/(.+)$""").find(u)?.let { m ->
+        RX_TACHIYOMIEXTENSIONS_2.find(u)?.let { m ->
             val (owner, repo, rest) = m.destructured
             u = "https://raw.githubusercontent.com/$owner/$repo/$rest"
         }
         // github.com/<owner>/<repo>[/tree/<branch>] -> raw.githubusercontent.com/<owner>/<repo>/<branch>
-        Regex("""^https?://github\.com/([^/]+)/([^/]+)(?:/tree/([^/]+))?/?$""").find(u)?.let { m ->
+        RX_TACHIYOMIEXTENSIONS_3.find(u)?.let { m ->
             val (owner, repo, branch) = m.destructured
             u = "https://raw.githubusercontent.com/$owner/$repo/${branch.ifBlank { "repo" }}"
         }

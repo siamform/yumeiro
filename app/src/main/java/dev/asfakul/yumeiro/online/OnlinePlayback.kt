@@ -14,6 +14,9 @@ import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.stream.StreamSubtitle
 import java.util.Locale
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_ONLINEPLAYBACK_1 = Regex("^[a-z]{2,3}([-_][a-z]{2,4})?$")
+
 /** Hands a resolved online link to the app's player (same path as Stream / shared links). */
 object OnlinePlayback {
     fun request(title: String, link: OnlineLink, subtitles: List<OnlineSubtitle>, poster: String? = null): StreamRequest {
@@ -74,7 +77,7 @@ object OnlinePlayback {
     fun languageTag(label: String): String? {
         val l = label.trim().lowercase(Locale.ROOT)
         if (l.isEmpty()) return null
-        if (Regex("^[a-z]{2,3}([-_][a-z]{2,4})?$").matches(l)) return l.replace('_', '-')
+        if (RX_ONLINEPLAYBACK_1.matches(l)) return l.replace('_', '-')
         val word = l.substringBefore(' ').substringBefore('(').substringBefore('-').trim()
         return Locale.getAvailableLocales().firstOrNull { loc ->
             val name = loc.getDisplayLanguage(Locale.ENGLISH).lowercase(Locale.ROOT)

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.scrobble
 
+import dev.asfakul.yumeiro.text.RegexCache
+
 /** One listen, in the shape Last.fm (and any later scrobbler, e.g. ListenBrainz) needs. */
 data class ScrobblePlay(val artist: String, val track: String, val album: String, val durationSec: Int, val startedAtSec: Long)
 
@@ -31,7 +33,7 @@ object TrackNames {
         var t = raw.replace(noise, "").replace(pipeTail, "").trim()
         val a = artist(artist)
         if (a.isNotBlank()) {
-            val dash = Regex("""^\s*${Regex.escape(a)}\s*[-–—]\s*""", RegexOption.IGNORE_CASE)
+            val dash = RegexCache.get("""^\s*${Regex.escape(a)}\s*[-–—]\s*""", RegexOption.IGNORE_CASE)
             t = t.replace(dash, "")
         }
         return t.trim().ifBlank { raw.trim() }

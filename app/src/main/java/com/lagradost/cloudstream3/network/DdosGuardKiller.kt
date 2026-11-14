@@ -7,6 +7,9 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_DDOSGUARDKILLER_1 = Regex("'(.*?)'")
+
 /**
  * CloudStream-compatible DDoS-Guard helper: fetches the site's check cookies; falls back to a
  * WebView visit ([BrowserCheck]) when that is not enough.
@@ -29,7 +32,7 @@ class DdosGuardKiller(private val alwaysBypass: Boolean) : Interceptor {
     private fun bypass(chain: Interceptor.Chain, request: Request): Response? = runCatching {
         val host = request.url.host
         val cookies = savedCookiesMap[host] ?: runBlocking {
-            ddosBypassPath = ddosBypassPath ?: Regex("'(.*?)'").find(app.get("https://check.ddos-guard.net/check.js").text)?.groupValues?.get(1)
+            ddosBypassPath = ddosBypassPath ?: RX_DDOSGUARDKILLER_1.find(app.get("https://check.ddos-guard.net/check.js").text)?.groupValues?.get(1)
             app.get(request.url.scheme + "://" + host + (ddosBypassPath ?: ""), headers = mapOf(BrowserCheck.SKIP_HEADER to "1")).cookies
         }.also { savedCookiesMap[host] = it }
         val withCookies = request.newBuilder().headers(getHeaders(request.headers.associate { it.first to it.second }, cookies + requestCookies(request))).build()

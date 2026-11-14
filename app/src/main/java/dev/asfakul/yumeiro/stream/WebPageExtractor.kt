@@ -7,6 +7,9 @@ package dev.asfakul.yumeiro.stream
 
 import java.net.URI
 
+// R15: precompiled once (was compiled per page).
+private val JSONLD_URL_RX = Regex(""""(?:contentUrl|embedUrl)"\s*:\s*"([^"]+)"""")
+
 /** A media source that a web page publishes for its own player. */
 data class PageCandidate(val url: String, val hint: Sniff?, val origin: String) {
     /** Lower = better. Adaptive manifests first, then progressive video, then audio, then iframes. */
@@ -84,7 +87,7 @@ object WebPageExtractor {
                 else -> add(src, "tag")
             }
         }
-        Regex(""""(?:contentUrl|embedUrl)"\s*:\s*"([^"]+)"""").findAll(html).forEach { add(it.groupValues[1], if (it.value.contains("embed", true)) "iframe" else "jsonld") }
+        JSONLD_URL_RX.findAll(html).forEach { add(it.groupValues[1], if (it.value.contains("embed", true)) "iframe" else "jsonld") }
         PLAYER_KEY.findAll(html).forEach { add(it.groupValues[1], "script") }
         MANIFEST_URL.findAll(html).forEach { add(it.groupValues[1], "script") }
 

@@ -73,12 +73,37 @@ object YouTubeStreams {
         )
     }
 
-    /** Best video-only stream up to [maxHeight]; AVC (MP4) preferred for hardware decoding. */
-    fun pickVideo(info: StreamInfo, maxHeight: Int): VideoStream? {
-        val candidates = info.videoOnlyStreams.filter { it.isUrl && it.height in 1..maxHeight }
-        return candidates.maxWithOrNull(
-            compareBy<VideoStream>({ it.height }, { it.format == MediaFormat.MPEG_4 }, { it.fps })
-        )
+    /**
+     * Best video-only stream up to [maxHeight] that this device can decode.
+     *
+     * R15: this used to take the tallest stream and only then prefer MP4, so 1440p / 2160p (VP9 or
+     * AV1 only) and AV1-in-MP4 were picked on phones without a hardware decoder for them; the
+     * software fallback stalled the playback thread and the player failed with "(timeout)". Now
+     * streams that need a decoder the device lacks at that size are skipped, hardware decoding is
+     * preferred at every height, then AVC > VP9 > HEVC > AV1, then frame rate.
+     */
+    fun pickVideo(info: StreamInfo, maxHeight: Int): VideoStream? =
+        pickVideo(info.videoOnlyStreams.filter { it.isUrl && it.height in 1..maxHeight }) { s ->
+            val mime = dev.asfakul.yumeiro.player.VideoCodecSupport.mimeFor(s.codec)
+            mime to dev.asfakul.yumeiro.player.VideoCodecSupport.level(mime, s.width, s.height, s.fps)
+        }
+
+    /** Pure core of [pickVideo] ([probe] = MIME + decoder level of a stream) → unit-tested. */
+    internal fun <T : VideoStream> pickVideo(candidates: List<T>, probe: (T) -> Pair<String?, dev.asfakul.yumeiro.player.VideoCodecSupport.Level>): T? {
+        if (candidates.isEmpty()) return null
+        val probed = candidates.map { it to probe(it) }
+        val playable = probed.filter { it.second.second != dev.asfakul.yumeiro.player.VideoCodecSupport.Level.NONE }.ifEmpty { probed }
+        // The tallest height that has a hardware-decodable stream; software only when nothing at
+        // any height decodes in hardware (then the tallest the software decoder accepts).
+        val hw = playable.filter { it.second.second == dev.asfakul.yumeiro.player.VideoCodecSupport.Level.HARDWARE }
+        val pool = hw.ifEmpty { playable }
+        return pool.maxWithOrNull(
+            compareBy<Pair<T, Pair<String?, dev.asfakul.yumeiro.player.VideoCodecSupport.Level>>>(
+                { it.first.height },
+                { dev.asfakul.yumeiro.player.VideoCodecSupport.rank(it.second.second, it.second.first) },
+                { it.first.fps },
+            )
+        )?.first
     }
 
     /** Round 13: Settings → Quality and audio → Default quality (Auto = up to 1080p). */
@@ -90,11 +115,15 @@ object YouTubeStreams {
      * skip the split DASH streams (range requests are what YouTube refuses most) and use HLS or the
      * muxed progressive stream instead.
      */
-    suspend fun videoRequest(context: Context, id: String, maxHeight: Int = defaultHeight(), force: Boolean = false, safe: Boolean = false): StreamRequest {
-        if (force) YouTube.invalidate(id)
-        val info = YouTube.info(context, id, force)
-        return buildVideoRequest(context, id, info, maxHeight, safe)
-    }
+    suspend fun videoRequest(context: Context, id: String, maxHeight: Int = defaultHeight(), force: Boolean = false, safe: Boolean = false): StreamRequest =
+        // R15: always off the main thread. Building the request writes manifest files and, for
+        // OTF streams, downloads the first segment (YoutubeOtfDashManifestCreator); the quality
+        // switcher called this from a main-thread coroutine, freezing the UI for 5–10 s.
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (force) YouTube.invalidate(id)
+            val info = YouTube.info(context, id, force)
+            buildVideoRequest(context, id, info, maxHeight, safe)
+        }
 
     private fun buildVideoRequest(context: Context, id: String, info: StreamInfo, maxHeight: Int, safe: Boolean = false): StreamRequest {
         val title = info.name.orEmpty()

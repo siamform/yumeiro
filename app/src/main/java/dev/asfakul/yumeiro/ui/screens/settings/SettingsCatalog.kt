@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_SETTINGSCATALOG_1 = Regex("\\s+")
+
 /**
  * The shape of Settings: a short home page of groups, each holding a few categories. A category
  * either opens its own page inside Settings ([route] == null) or jumps to an existing screen
@@ -87,7 +90,7 @@ object SettingsCatalog {
      * matches first: title hits rank above summary hits, which rank above keyword-only hits.
      */
     fun search(query: String): List<Category> {
-        val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotBlank() }
+        val words = query.trim().lowercase().split(RX_SETTINGSCATALOG_1).filter { it.isNotBlank() }
         if (words.isEmpty()) return emptyList()
         return Category.entries.mapNotNull { c ->
             val title = c.title.lowercase()

@@ -30,6 +30,12 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_JSBRIDGE_1 = Regex("""/@([\w:-]+)$""")
+private val RX_JSBRIDGE_2 = Regex("""(\d+)\s*(sec|min|hour|day|week|month|year)""", RegexOption.IGNORE_CASE)
+private val RX_JSBRIDGE_3 = Regex("""\b\w+\b""")
+private val RX_JSBRIDGE_4 = Regex("""eval\(function\(p,a,c,k,e,[rd]\).*?\.split\('\|'\).*?\)\)""", RegexOption.DOT_MATCHES_ALL)
+
 /**
  * Native side of the Mangayomi JavaScript API: every `sendMessage(channel, argsJson)` from a
  * source lands in [handle]. Element handles live for the lifetime of one bridge (one source).
@@ -170,7 +176,7 @@ class JsBridge(
 
     /** XPath with `/text()` and `/@attr` endings, which return strings like Mangayomi. */
     private fun xpath(root: Element, path: String): List<String> {
-        val attr = Regex("""/@([\w:-]+)$""").find(path)?.groupValues?.get(1)
+        val attr = RX_JSBRIDGE_1.find(path)?.groupValues?.get(1)
         val text = path.endsWith("/text()")
         val base = path.removeSuffix("/text()").let { if (attr != null) it.substringBeforeLast("/@") else it }
         val nodes = runCatching { root.selectXpath(base) }.getOrDefault(org.jsoup.select.Elements())
@@ -192,7 +198,7 @@ class JsBridge(
     }
 
     private fun relative(v: String): Long? {
-        val m = Regex("""(\d+)\s*(sec|min|hour|day|week|month|year)""", RegexOption.IGNORE_CASE).find(v) ?: return when {
+        val m = RX_JSBRIDGE_2.find(v) ?: return when {
             v.contains("today", true) -> System.currentTimeMillis()
             v.contains("yesterday", true) -> System.currentTimeMillis() - 86_400_000L
             else -> null
@@ -244,13 +250,13 @@ object JsUnpacker {
         val count = m.groupValues[3].toInt()
         val words = m.groupValues[4].split("|")
         if (words.size != count) return src
-        return Regex("""\b\w+\b""").replace(payload) { w ->
+        return RX_JSBRIDGE_3.replace(payload) { w ->
             val idx = decode(w.value, radix)
             if (idx != null && idx < words.size && words[idx].isNotEmpty()) words[idx] else w.value
         }
     }
 
-    fun unpackAll(src: String): String = Regex("""eval\(function\(p,a,c,k,e,[rd]\).*?\.split\('\|'\).*?\)\)""", RegexOption.DOT_MATCHES_ALL)
+    fun unpackAll(src: String): String = RX_JSBRIDGE_4
         .findAll(src).joinToString("\n") { unpack(it.value) }.ifBlank { src }
 
     private fun decode(word: String, radix: Int): Int? {

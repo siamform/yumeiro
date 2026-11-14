@@ -19,6 +19,9 @@ import org.json.JSONObject
 import java.io.File
 import java.time.Instant
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_PLAYLISTMARKET_1 = Regex("[A-Za-z0-9_.-]{1,80}")
+
 /**
  * Playlist Market: a catalog of IPTV playlists collected from GitHub by the
  * `Playlist market` workflow (.github/workflows/playlist-market.yml). Each list is repaired and
@@ -86,7 +89,7 @@ object PlaylistMarket {
         val arr = root.optJSONArray("playlists") ?: JSONArray()
         val entries = (0 until arr.length()).mapNotNull { i ->
             val o = arr.optJSONObject(i) ?: return@mapNotNull null
-            val id = o.optString("id").trim().takeIf { it.matches(Regex("[A-Za-z0-9_.-]{1,80}")) } ?: return@mapNotNull null
+            val id = o.optString("id").trim().takeIf { it.matches(RX_PLAYLISTMARKET_1) } ?: return@mapNotNull null
             // Market playlists are always served from the bot-only market branch over HTTPS.
             val url = o.optString("url").trim().takeIf { entryUrlAllowed(it) } ?: return@mapNotNull null
             Entry(

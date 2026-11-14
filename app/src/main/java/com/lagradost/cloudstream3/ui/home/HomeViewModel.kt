@@ -7,6 +7,10 @@ import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import dev.asfakul.yumeiro.online.OnlineHistory
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_HOMEVIEWMODEL_1 = Regex("""(?i)\bE(?:p(?:isode)?)?\s*(\d+)""")
+private val RX_HOMEVIEWMODEL_2 = Regex("""(?i)\bS(?:eason)?\s*(\d+)""")
+
 class HomeViewModel : ViewModel() {
     companion object {
         /**
@@ -26,8 +30,8 @@ class HomeViewModel : ViewModel() {
                     watchPos = DataStoreHelper.PosDur(e.positionMs, e.durationMs),
                     id = (e.episodeData ?: e.url).hashCode(),
                     parentId = parentId,
-                    episode = e.episodeLabel?.let { Regex("""(?i)\bE(?:p(?:isode)?)?\s*(\d+)""").find(it)?.groupValues?.get(1)?.toIntOrNull() },
-                    season = e.episodeLabel?.let { Regex("""(?i)\bS(?:eason)?\s*(\d+)""").find(it)?.groupValues?.get(1)?.toIntOrNull() },
+                    episode = e.episodeLabel?.let { RX_HOMEVIEWMODEL_1.find(it)?.groupValues?.get(1)?.toIntOrNull() },
+                    season = e.episodeLabel?.let { RX_HOMEVIEWMODEL_2.find(it)?.groupValues?.get(1)?.toIntOrNull() },
                     isFromDownload = false,
                     posterHeaders = e.posterHeaders.ifEmpty { null },
                 )

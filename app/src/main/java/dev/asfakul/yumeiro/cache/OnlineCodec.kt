@@ -25,7 +25,7 @@ object OnlineCodec {
         .put("h", JSONObject(i.posterHeaders)).put("t", i.type).put("q", i.quality).put("s", i.score).put("d", JSONArray(i.dub.toList()))
 
     fun item(o: JSONObject): OnlineItem = OnlineItem(o.getString("n"), o.getString("u"), o.getString("a"), o.str("p"), map(o.optJSONObject("h")),
-        o.str("t"), o.str("q"), o.dbl("s"), strings(o.optJSONArray("d")).toSet())
+        o.str("t"), o.str("q"), o.dbl("s"), strings(o.optJSONArray("d")).toSet()).also { it.tags }
 
     fun items(list: List<OnlineItem>): String = JSONArray(list.map(::item)).toString()
     fun items(text: String): List<OnlineItem>? = runCatching { JSONArray(text).let { a -> (0 until a.length()).map { item(a.getJSONObject(it)) } } }.getOrNull()

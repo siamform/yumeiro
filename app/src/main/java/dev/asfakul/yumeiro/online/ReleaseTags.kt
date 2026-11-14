@@ -98,6 +98,20 @@ object ReleaseTags {
      * [dub] is the anime dub / sub status from the extension ("Dubbed", "Subbed").
      */
     fun parse(title: String, quality: String? = null, type: String? = null, dub: Set<String> = emptySet()): List<Tag> {
+        // R15: ~30 pattern scans per title; the same titles come back on every feed refresh,
+        // cache restore and data-class copy, so the result is kept in a small LRU.
+        val key = title + '\u0001' + quality + '\u0001' + type + '\u0001' + (if (dub.isEmpty()) "" else dub.sorted().joinToString(","))
+        synchronized(parsed) { parsed[key]?.let { return it } }
+        val result = parseUncached(title, quality, type, dub)
+        synchronized(parsed) { parsed[key] = result }
+        return result
+    }
+
+    private val parsed = object : LinkedHashMap<String, List<Tag>>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Tag>>?) = size > 1024
+    }
+
+    private fun parseUncached(title: String, quality: String?, type: String?, dub: Set<String>): List<Tag> {
         val out = ArrayList<Tag>(5)
         val t = title.replace('_', ' ')
         // Type: the extension knows best; fall back to obvious series markers in the name.

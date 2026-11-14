@@ -1206,7 +1206,7 @@ private fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
 /** Kept public for other callers: a plain section header with an optional "See all". */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, onSeeAll: (() -> Unit)? = null) {
-    YuSection(dev.asfakul.yumeiro.ui.components.Kana.forTitle(title), title, title, modifier, action = if (onSeeAll != null) "See all" else null, onAction = onSeeAll)
+    YuSection(androidx.compose.runtime.remember(title) { dev.asfakul.yumeiro.ui.components.Kana.forTitle(title) }, title, title, modifier, action = if (onSeeAll != null) "See all" else null, onAction = onSeeAll)
 }
 
 /** Kept for callers/tests that referenced the old Home helpers. */

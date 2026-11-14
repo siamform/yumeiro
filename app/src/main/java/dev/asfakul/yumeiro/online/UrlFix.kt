@@ -8,6 +8,10 @@ package dev.asfakul.yumeiro.online
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_URLFIX_1 = Regex("^(https?):/*(?=[^/])", RegexOption.IGNORE_CASE)
+private val RX_URLFIX_2 = Regex("^[a-z0-9-]+(\\.[a-z0-9-]+)+(:\\d+)?(/.*)?$", RegexOption.IGNORE_CASE)
+
 /**
  * Repairs the URLs extensions hand to the HTTP client. Sites often return protocol-relative
  * (`//cdn.host/x`), relative (`/embed/1`), JSON-escaped (`https:\/\/…`) or padded links; extensions
@@ -23,7 +27,7 @@ object UrlFix {
         val lower = u.lowercase()
         if (lower.startsWith("http://") || lower.startsWith("https://")) return u
         // "https:/host" / "https:host" typos.
-        Regex("^(https?):/*(?=[^/])", RegexOption.IGNORE_CASE).find(u)?.let { m ->
+        RX_URLFIX_1.find(u)?.let { m ->
             return m.groupValues[1].lowercase() + "://" + u.substring(m.range.last + 1)
         }
         if (u.startsWith("//")) return "https:$u"
@@ -33,7 +37,7 @@ object UrlFix {
             if (resolved != null && resolved.startsWith("http", ignoreCase = true)) return resolved
         }
         // Bare host ("cdn.example.com/x.m3u8").
-        if (Regex("^[a-z0-9-]+(\\.[a-z0-9-]+)+(:\\d+)?(/.*)?$", RegexOption.IGNORE_CASE).matches(u)) return "https://$u"
+        if (RX_URLFIX_2.matches(u)) return "https://$u"
         return raw
     }
 

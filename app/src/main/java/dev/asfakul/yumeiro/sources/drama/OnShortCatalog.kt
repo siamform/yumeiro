@@ -21,6 +21,11 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_ONSHORTCATALOG_1 = Regex("""/onshort-([a-z0-9_-]+)/v1/""")
+private val RX_ONSHORTCATALOG_2 = Regex("""/platform/([a-z0-9_-]+)/""")
+private val RX_ONSHORTCATALOG_3 = Regex("""(\d+)\s+listed episodes""")
+
 /**
  * Adapter for ONShort (onshort.net), a public web index of short dramas from many studios.
  *
@@ -201,10 +206,10 @@ object OnShortParser {
         val episodes = doc.select("button.episode-button[data-episode], [data-episode-list] [data-episode]")
             .mapNotNull { it.attr("data-episode").toIntOrNull() }.maxOrNull()
         val runtime = d("runtime")
-        val platformSlug = Regex("""/onshort-([a-z0-9_-]+)/v1/""").find(runtime)?.groupValues?.get(1)
-            ?: doc.selectFirst("a[href*=/platform/]")?.attr("href")?.let { Regex("""/platform/([a-z0-9_-]+)/""").find(it)?.groupValues?.get(1) }
+        val platformSlug = RX_ONSHORTCATALOG_1.find(runtime)?.groupValues?.get(1)
+            ?: doc.selectFirst("a[href*=/platform/]")?.attr("href")?.let { RX_ONSHORTCATALOG_2.find(it)?.groupValues?.get(1) }
         val meta = { p: String -> doc.selectFirst("meta[property=$p]")?.attr("content")?.trim()?.ifBlank { null } }
-        val totalFromMeta = meta("og:description")?.let { Regex("""(\d+)\s+listed episodes""").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+        val totalFromMeta = meta("og:description")?.let { RX_ONSHORTCATALOG_3.find(it)?.groupValues?.get(1)?.toIntOrNull() }
         return DramaSeries(
             title = d("title").ifBlank { doc.selectFirst("h1")?.text().orEmpty() }.ifBlank { meta("og:title").orEmpty() },
             url = url,

@@ -70,6 +70,9 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_ONLINEHOMEHERO_1 = Regex("(?i)\\bE(?:p(?:isode)?)?\\.?\\s*(\\d+)")
+
 /**
  * "Spotlight": the featured titles at the top of Yumix as a compact, endless card carousel. Each
  * card is a cinematic strip (blurred-dark backdrop, crisp poster on the right, kana overline,
@@ -235,7 +238,7 @@ private fun ResumeSlide(e: OnlineHistory.Entry, modifier: Modifier, offset: Floa
 
 /** "S1 · E5" / "Episode 5" → "E5"; anything else stays as it is (kept short for the button). */
 internal fun shortEpisode(label: String): String {
-    Regex("(?i)\\bE(?:p(?:isode)?)?\\.?\\s*(\\d+)").find(label)?.let { return "E" + it.groupValues[1] }
+    RX_ONLINEHOMEHERO_1.find(label)?.let { return "E" + it.groupValues[1] }
     return label.take(14)
 }
 private const val HERO_LAPS = 2000

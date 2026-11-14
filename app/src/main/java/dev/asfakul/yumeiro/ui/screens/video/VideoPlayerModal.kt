@@ -511,9 +511,10 @@ private fun VideoPlayerModalContent(
     fun startResolved(request: StreamRequest, positionMs: Long) {
         StreamRepository.register(video.uri, request)
         resolving = false
-        StreamMediaFactory.setMedia(exoPlayer, video.uri, externalSubs, video.title)
+        // R15: the start position goes in with the media (one load at the right place) instead
+        // of prepare-then-seek, which loaded the start of the new stream first and then threw it away.
+        StreamMediaFactory.setMedia(exoPlayer, video.uri, externalSubs, video.title, startPositionMs = if (positionMs > 0L && !exoPlayer.isCurrentMediaItemLive) positionMs else C.TIME_UNSET)
         exoPlayer.prepare()
-        if (positionMs > 0L && !exoPlayer.isCurrentMediaItemLive) exoPlayer.seekTo(positionMs)
         // First start follows Auto Play; recoveries keep playing.
         exoPlayer.playWhenReady = if (startedOnce) true else autoPlayStart
         startedOnce = true

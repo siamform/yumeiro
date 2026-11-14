@@ -24,6 +24,9 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_TREEPROVIDER_1 = Regex("""(\d+)|(\D+)""")
+
 /** A browsable tree of folders and media files (WebDAV, SMB, DLNA). */
 interface MediaTree {
     val server: HomeServers.Server
@@ -47,7 +50,7 @@ interface MediaTree {
 
         /** Natural sort so "Episode 2" comes before "Episode 10". */
         val natural: Comparator<String> = Comparator { a, b ->
-            val re = Regex("""(\d+)|(\D+)""")
+            val re = RX_TREEPROVIDER_1
             val pa = re.findAll(a.lowercase()).map { it.value }.toList()
             val pb = re.findAll(b.lowercase()).map { it.value }.toList()
             for (i in 0 until minOf(pa.size, pb.size)) {

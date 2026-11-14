@@ -16,6 +16,9 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
 import java.util.Base64
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_VIDSRCEXTRACTOR_1 = Regex("src:\\s*'(.*)',")
+
 class VidSrcExtractor2 : VidSrcExtractor() {
     override val mainUrl = "https://vidsrc.me"
 }
@@ -40,7 +43,7 @@ open class VidSrcExtractor : ExtractorApi() {
                     val rcpLink = "$apiUrl/rcp/$datahash"
                     val rcpRes = app.get(rcpLink, referer = apiUrl).text
                     val srcrcpLink =
-                            Regex("src:\\s*'(.*)',").find(rcpRes)?.destructured?.component1()
+                            RX_VIDSRCEXTRACTOR_1.find(rcpRes)?.destructured?.component1()
                                     ?: return@mapNotNull null
                     "https:$srcrcpLink"
                 }

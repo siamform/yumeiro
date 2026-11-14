@@ -84,7 +84,11 @@ object QualityEngine {
         // Same list as the download sheet (one source of truth), plus anything playable it skips.
         val extra = info.videoOnlyStreams.filter { it.isUrl }.map { it.height } + info.videoStreams.filter { it.isUrl }.map { it.height }
         return youTubeLadder(dev.asfakul.yumeiro.online.download.YtDownloads.options(info), extra).map { h ->
-            Alt(label(h), h, current = h == currentHeight) { c, _ -> dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(c, id, maxHeight = h) }
+            // R15: the full download list stays (one source of truth), but a height this device can't
+            // decode in hardware says what it will really play instead of stalling into a timeout.
+            val plays = runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.pickVideo(info, h)?.height }.getOrNull()?.let { snap(it) }
+            val note = if (plays != null && plays < h) "Plays as ${label(plays)} here: this device has no hardware decoder for ${label(h)}" else null
+            Alt(label(h), h, note = note, current = h == currentHeight) { c, _ -> dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(c, id, maxHeight = h) }
         }
     }
 

@@ -30,6 +30,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_MEDIAREPOSITORY_1 = Regex("^[0-9A-F]{4}-[0-9A-F]{4}$")
+
 interface MediaRepository {
     val storageStats: Flow<StorageStats>
     val audioTracks: Flow<List<AudioTrack>>
@@ -825,7 +828,7 @@ internal fun displayFolderName(name: String?, path: String = ""): String {
     return when {
         n.isEmpty() || n.equals("<unknown>", true) || n.equals("unknown", true) -> "Internal storage"
         n == "0" && (path.contains("/emulated/") || parent == "emulated") -> "Internal storage"
-        Regex("^[0-9A-F]{4}-[0-9A-F]{4}$").matches(n) -> "SD card"
+        RX_MEDIAREPOSITORY_1.matches(n) -> "SD card"
         else -> n
     }
 }

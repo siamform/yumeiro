@@ -90,6 +90,10 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_MUSICSCREEN_1 = Regex("^/storage/emulated/\\d+/?")
+private val RX_MUSICSCREEN_2 = Regex("^/storage/([0-9A-F]{4}-[0-9A-F]{4})/?")
+
 @Composable
 fun MusicScreen(
     tracks: List<AudioTrack>,
@@ -757,6 +761,6 @@ internal fun shortFolderPath(path: String): String? {
     // MediaStore sometimes reports "<unknown>" for a segment; drop those rather than show them.
     val p = path.trim().split('/').filterNot { it.equals("<unknown>", true) }.joinToString("/").trimEnd('/')
     if (p.isBlank()) return null
-    val short = p.replace(Regex("^/storage/emulated/\\d+/?"), "").replace(Regex("^/storage/([0-9A-F]{4}-[0-9A-F]{4})/?"), "SD card/")
+    val short = p.replace(RX_MUSICSCREEN_1, "").replace(RX_MUSICSCREEN_2, "SD card/")
     return short.trimEnd('/').ifBlank { null }
 }

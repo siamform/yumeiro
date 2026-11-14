@@ -11,6 +11,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_SUBDL_1 = Regex("""[<>{}\[\]'"`´’;\\/]""")
+private val RX_SUBDL_2 = Regex("\\s+")
+
 /**
  * SubDL (subdl.com) — free subtitle API. Needs the user's own free API key (subdl.com → sign in →
  * API key in the account panel); free keys allow about 2,000 searches a day. Docs: subdl.com/api-doc.
@@ -25,7 +29,7 @@ object SubDL {
     fun available(): Boolean = OnlineSettings.subdlKey.value.isNotBlank()
 
     /** SubDL refuses titles with these characters; each becomes a space (keeps "Grey s Anatomy" searchable). */
-    internal fun sanitizeTitle(title: String): String = title.replace(Regex("""[<>{}\[\]'"`´’;\\/]"""), " ").replace(Regex("\\s+"), " ").trim()
+    internal fun sanitizeTitle(title: String): String = title.replace(RX_SUBDL_1, " ").replace(RX_SUBDL_2, " ").trim()
 
     fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String): List<SubtitleHit> {
         val key = OnlineSettings.subdlKey.value.ifBlank { throw IllegalStateException("Add a free SubDL API key in Settings → Online videos") }

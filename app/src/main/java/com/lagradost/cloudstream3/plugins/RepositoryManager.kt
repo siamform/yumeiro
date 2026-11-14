@@ -8,6 +8,9 @@ import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.ExtensionSources
 import dev.asfakul.yumeiro.online.RemoteExtension
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_REPOSITORYMANAGER_1 = Regex("^https?://github\\.com/([^/]+)/([^/]+)/blob/(.+)$")
+
 data class Repository(
     @JsonProperty("iconUrl") val iconUrl: String?,
     @JsonProperty("name") val name: String,
@@ -54,7 +57,7 @@ object RepositoryManager {
 
     fun convertRawGitUrl(url: String): String {
         if (url.contains("raw.githubusercontent.com")) return url
-        val m = Regex("^https?://github\\.com/([^/]+)/([^/]+)/blob/(.+)$").find(url) ?: return url
+        val m = RX_REPOSITORYMANAGER_1.find(url) ?: return url
         val (user, repo, rest) = m.destructured
         return "https://raw.githubusercontent.com/$user/$repo/$rest"
     }

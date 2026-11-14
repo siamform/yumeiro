@@ -13,6 +13,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_YMPARSER_1 = Regex("=w\\d+-h\\d+[^&?]*$")
+
 /**
  * Reads YouTube Music web responses (browse, search, continuations) into [YmPage]s.
  *
@@ -308,7 +311,7 @@ object YmParser {
             ?: o["thumbnails"].arr ?: return null
         val url = list.lastOrNull()?.obj?.get("url").str ?: return null
         val abs = if (url.startsWith("//")) "https:$url" else url
-        return if ("googleusercontent.com" in abs || "ggpht.com" in abs) abs.replace(Regex("=w\\d+-h\\d+[^&?]*$"), "=w544-h544-l90-rj") else abs
+        return if ("googleusercontent.com" in abs || "ggpht.com" in abs) abs.replace(RX_YMPARSER_1, "=w544-h544-l90-rj") else abs
     }
 
     private fun runs(el: JsonElement?): List<Pair<String, JsonElement?>> =

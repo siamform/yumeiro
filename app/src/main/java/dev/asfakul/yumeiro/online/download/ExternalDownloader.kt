@@ -12,6 +12,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Browser
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_EXTERNALDOWNLOADER_1 = Regex("""[\\/:*?"<>|\r\n]+""")
+private val RX_EXTERNALDOWNLOADER_2 = Regex("\\s+")
+
 /**
  * Hands a video link to a download-manager app the user already has (1DM, ADM, …) instead of the
  * built-in downloader. Uses each app's public "open this URL" intent — 1DM documents extras for
@@ -76,7 +80,7 @@ object ExternalDownloader {
     /** Clean file name: "Show S1 E3.mp4" (no path characters). */
     fun fileName(title: String, episode: String?, isHls: Boolean): String {
         val base = listOfNotNull(title.takeIf { it.isNotBlank() }, episode?.takeIf { it.isNotBlank() }).joinToString(" ")
-            .replace(Regex("""[\\/:*?"<>|\r\n]+"""), " ").replace(Regex("\\s+"), " ").trim().take(100).ifBlank { "video" }
+            .replace(RX_EXTERNALDOWNLOADER_1, " ").replace(RX_EXTERNALDOWNLOADER_2, " ").trim().take(100).ifBlank { "video" }
         return "$base.mp4"
     }
 

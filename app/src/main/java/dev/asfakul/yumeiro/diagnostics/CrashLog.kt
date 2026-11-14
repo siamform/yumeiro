@@ -33,6 +33,9 @@ object CrashLog {
     private const val KEEP = 25
     private const val PREFS = "yumeiro_crashlog"
     @Volatile private var dir: File? = null
+    @Volatile private var appContext: Context? = null
+    /** R15: released first when the app runs out of Java heap, so the report itself can still be written. */
+    @Volatile private var reserve: ByteArray? = null
 
     data class Report(val file: File, val time: Long, val kind: String, val headline: String)
 
@@ -40,12 +43,24 @@ object CrashLog {
     fun install(context: Context) {
         val d = File(context.filesDir, DIR).apply { mkdirs() }
         dir = d
+        appContext = context.applicationContext
+        reserve = ByteArray(512 * 1024)
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
-            runCatching { write(d, "Crash", "Thread: ${thread.name}", error) }
+            reserve = null
+            val oom = generateSequence(error) { it.cause }.any { it is OutOfMemoryError }
+            runCatching {
+                val f = write(d, if (oom) "Out of memory" else "Crash", "Thread: ${thread.name}", error,
+                    body = "\n\n--- Last memory / thread samples ---\n" + runCatching { MemoryWatch.currentTrail() }.getOrDefault(""))
+                // R15 (Phase 5): the report is copied to Downloads right away; the user doesn't have to open Settings.
+                appContext?.let { CrashExport.export(it, f) }
+            }
             previous?.uncaughtException(thread, error)
         }
-        Thread({ runCatching { importExitReasons(context) } }, "yu-crashlog").apply { priority = Thread.MIN_PRIORITY }.start()
+        Thread({
+            runCatching { importExitReasons(context) }
+            runCatching { CrashExport.exportPending(context) }
+        }, "yu-crashlog").apply { priority = Thread.MIN_PRIORITY }.start()
     }
 
     /** A problem that was caught (an extension crash the app survived), kept for the developer too. */
@@ -89,9 +104,33 @@ object CrashLog {
 
     /** Removes query strings (keys, tokens, signed links) and e-mail addresses. Pure → unit-tested. */
     internal fun scrub(s: String): String = s
-        .replace(Regex("""(https?://[^\s?#"']+)\?[^\s"']*"""), "$1?…")
-        .replace(Regex("""[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"""), "<email>")
-        .replace(Regex("""(?i)(token|key|secret|password|auth)=([^\s&]+)"""), "$1=…")
+        .replace(SCRUB_QUERY, "$1?…")
+        .replace(SCRUB_EMAIL, "<email>")
+        .replace(SCRUB_SECRET, "$1=…")
+    private val SCRUB_QUERY = Regex("""(https?://[^\s?#"']+)\?[^\s"']*""")
+    private val SCRUB_EMAIL = Regex("""[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}""")
+    private val SCRUB_SECRET = Regex("""(?i)(token|key|secret|password|auth)=([^\s&]+)""")
+
+    /**
+     * Pure. Which exit records are problems worth a report. A low-memory kill while the app was
+     * cached or in the background is Android reclaiming memory, not a crash: it is still recorded
+     * (it shows how often it happens) but labelled so it isn't mistaken for one.
+     */
+    internal fun exitKind(reason: Int, importance: Int): String? = when (reason) {
+        ApplicationExitInfo.REASON_ANR -> "Freeze"
+        ApplicationExitInfo.REASON_CRASH_NATIVE -> "Native crash"
+        ApplicationExitInfo.REASON_LOW_MEMORY ->
+            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE) "Out of memory" else "Closed to free memory"
+        else -> null
+    }
+
+    internal fun importanceName(i: Int): String = when {
+        i <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND -> "foreground (on screen)"
+        i <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE -> "foreground service (playing / downloading)"
+        i <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE -> "visible"
+        i <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_SERVICE -> "background service"
+        else -> "background / cached"
+    }
 
     private fun stamp(t: Long) = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).apply { timeZone = TimeZone.getDefault() }.format(Date(t))
 
@@ -103,16 +142,17 @@ object CrashLog {
         val seen = prefs.getLong("last_exit", 0L)
         var newest = seen
         val d = dir ?: return
+        val trail = MemoryWatch.previousTrail(context)
         am.getHistoricalProcessExitReasons(context.packageName, 0, 10).filter { it.timestamp > seen }.forEach { e ->
             newest = maxOf(newest, e.timestamp)
-            val kind = when (e.reason) {
-                ApplicationExitInfo.REASON_ANR -> "Freeze"
-                ApplicationExitInfo.REASON_CRASH_NATIVE -> "Native crash"
-                ApplicationExitInfo.REASON_LOW_MEMORY -> "Out of memory"
-                else -> return@forEach // Kotlin crashes are written by the handler; normal exits are not problems
-            }
+            val kind = exitKind(e.reason, e.importance) ?: return@forEach // Kotlin crashes are written by the handler; normal exits are not problems
             val trace = runCatching { e.traceInputStream?.bufferedReader()?.use { it.readText().take(120_000) } }.getOrNull()
-            write(d, kind, "process ${e.processName} · ${e.description.orEmpty()}", null, (e.description ?: kind) + "\n\n" + (trace ?: "Android kept no trace for this one."), e.timestamp)
+            // R15: how big the process was and whether the user was looking at it — a background
+            // kill to free memory is normal Android behaviour, a foreground one is our bug.
+            val facts = "Importance at exit: ${importanceName(e.importance)} · PSS ${e.pss / 1024} MB · RSS ${e.rss / 1024} MB · status ${e.status}"
+            val body = (e.description ?: kind) + "\n" + facts + "\n\n" + (trace ?: "Android kept no trace for this one.") +
+                (if (trail != null && e.reason == ApplicationExitInfo.REASON_LOW_MEMORY) "\n\n--- Last memory / thread samples before the kill ---\n$trail" else "")
+            write(d, kind, "process ${e.processName} · ${e.description.orEmpty()}", null, body, e.timestamp)
         }
         if (newest > seen) prefs.edit().putLong("last_exit", newest).apply()
     }

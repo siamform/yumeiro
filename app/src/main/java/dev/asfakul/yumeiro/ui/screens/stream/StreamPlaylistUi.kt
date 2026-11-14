@@ -86,6 +86,10 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_STREAMPLAYLISTUI_1 = Regex("^https?://\\S+", RegexOption.IGNORE_CASE)
+private val RX_STREAMPLAYLISTUI_2 = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://\\S+")
+
 @Composable
 internal fun streamFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = SpotifyGreen, unfocusedBorderColor = DarkOutline,
@@ -104,7 +108,7 @@ internal fun relativeTime(ms: Long, now: Long = System.currentTimeMillis()): Str
     }
 }
 
-private fun isHttpUrl(s: String) = Regex("^https?://\\S+", RegexOption.IGNORE_CASE).matches(s.trim())
+private fun isHttpUrl(s: String) = RX_STREAMPLAYLISTUI_1.matches(s.trim())
 
 /** One saved playlist: tap to open, switch to enable/disable, menu for refresh / edit / export / delete. */
 @Composable
@@ -390,7 +394,7 @@ internal fun ChannelEditDialog(item: StreamRequest, onDismiss: () -> Unit, onSav
         },
         confirmButton = {
             TextButton(onClick = {
-                if (!Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://\\S+").matches(url.trim())) { error = "Enter a valid stream URL"; return@TextButton }
+                if (!RX_STREAMPLAYLISTUI_2.matches(url.trim())) { error = "Enter a valid stream URL"; return@TextButton }
                 onSave(item.copy(title = title.trim(), url = url.trim(), group = group.trim().ifBlank { null }, logoUrl = logo.trim().ifBlank { null }))
             }) { Text("Save", color = SpotifyGreen) }
         },

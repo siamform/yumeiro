@@ -34,33 +34,59 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.online.AccessLadder.attach(this) }
         // YouTube / YouTube Music (no login): NewPipe init + fresh-link refresher for 403/expiry.
         runCatching { dev.asfakul.yumeiro.youtube.YouTubePlayback.install(this) }
-        // Background work for online videos: new-episode checks and unfinished downloads.
-        runCatching { dev.asfakul.yumeiro.online.NewEpisodesWorker.schedule(this) }
-        // Feed (new extensions / playlists / news) and occasional suggestions (each switchable in Settings).
-        runCatching { dev.asfakul.yumeiro.notify.DiscoveryWorker.schedule(this) }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
-        // Instant notices (FCM): set up Firebase from BuildConfig and sync registration/topics in the background.
-        runCatching { dev.asfakul.yumeiro.notify.FcmPush.start(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
         runCatching { dev.asfakul.yumeiro.player.VideoPrefs.init(this) }
         runCatching { dev.asfakul.yumeiro.stream.TorrentSettings.init(this) }
-        runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.resumeQueued(this) }
-        runCatching {
-            dev.asfakul.yumeiro.online.download.OnlineDownloads.cleanup(this)
-            dev.asfakul.yumeiro.online.download.OnlineDownloads.scheduleCleanup(this)
-        }
-        runCatching { dev.asfakul.yumeiro.backup.AutoBackupWorker.schedule(this) }
-        // Time limits for saved pages and website cookies, off the main thread.
-        Thread({ runCatching { dev.asfakul.yumeiro.cache.DataCache.runJanitor(this) } }, "yu-janitor").apply { priority = Thread.MIN_PRIORITY }.start()
+        // R15: memory / thread breadcrumbs for crash reports, StrictMode in debug builds.
+        runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.install(this) }
+        runCatching { dev.asfakul.yumeiro.diagnostics.DevStrictMode.install() }
+        // R15: everything below touches disk, Firebase or WorkManager and used to run on the main
+        // thread before the first frame. None of it is needed to draw the first screen.
+        Thread({
+            val app = this
+            // Precompile the big pattern tables (release tags, audio languages, source facts, Yumix
+            // feed rules) here so the first list that shows a card never compiles them on the main thread.
+            runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
+            // Background work for online videos: new-episode checks and unfinished downloads.
+            runCatching { dev.asfakul.yumeiro.online.NewEpisodesWorker.schedule(app) }
+            // Feed (new extensions / playlists / news) and occasional suggestions (each switchable in Settings).
+            runCatching { dev.asfakul.yumeiro.notify.DiscoveryWorker.schedule(app) }
+            // Instant notices (FCM): set up Firebase from BuildConfig and sync registration/topics in the background.
+            runCatching { dev.asfakul.yumeiro.notify.FcmPush.start(app) }
+            runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.resumeQueued(app) }
+            runCatching {
+                dev.asfakul.yumeiro.online.download.OnlineDownloads.cleanup(app)
+                dev.asfakul.yumeiro.online.download.OnlineDownloads.scheduleCleanup(app)
+            }
+            runCatching { dev.asfakul.yumeiro.backup.AutoBackupWorker.schedule(app) }
+            // Time limits for saved pages and website cookies.
+            runCatching { dev.asfakul.yumeiro.cache.DataCache.runJanitor(app) }
+        }, "yu-startup").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, level) }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) }
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        // R15: posters share the app's HTTP client (same DNS, pool and request cap) instead of Coil
+        // building its own; at most a few bitmaps decode at once (each decode is a memory spike).
+        .okHttpClient { dev.asfakul.yumeiro.network.NetworkClient.get(this) }
+        .fetcherDispatcher(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(if (DeviceClass.lowEnd) 4 else 8))
+        .decoderDispatcher(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(if (DeviceClass.lowEnd) 2 else 3))
         .components {
             add(VideoThumbnailFetcher.Keyer())
             add(VideoThumbnailFetcher.Factory(this@MTApplication))
         }
-        .memoryCache { MemoryCache.Builder(this).maxSizePercent(Edition.imageMemoryShare).build() }
+        .memoryCache { MemoryCache.Builder(this).maxSizePercent(if (DeviceClass.lowEnd && !Edition.isTv) 0.15 else Edition.imageMemoryShare).build() }
         .diskCache { DiskCache.Builder().directory(cacheDir.resolve("image_cache")).maxSizeBytes(dev.asfakul.yumeiro.cache.ImageCacheSize.bytes(this)).build() }
         // TV: no crossfade (cheap TV GPUs drop frames while a rail scrolls) and 16-bit posters.
         // Round 13: the same on low-end phones (smooth scrolling over pretty fades).

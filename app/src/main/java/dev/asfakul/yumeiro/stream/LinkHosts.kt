@@ -12,6 +12,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.net.URI
 import java.net.URLEncoder
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_LINKHOSTS_1 = Regex("/(?:file/)?d/([A-Za-z0-9_-]{10,})")
+private val RX_LINKHOSTS_2 = Regex("[?&]id=([A-Za-z0-9_-]{10,})")
+private val RX_LINKHOSTS_3 = Regex("([?&])(dl|raw)=[01]")
+private val RX_LINKHOSTS_4 = Regex("/(?:u|api/file)/([A-Za-z0-9]{4,})")
+private val RX_LINKHOSTS_5 = Regex("/:[a-z]:/")
+private val RX_LINKHOSTS_6 = Regex("[?&]download=1")
+
 /**
  * Cloud-drive and file-host links people paste into Live TV / "Play a link".
  *
@@ -63,8 +71,8 @@ object LinkHosts {
     fun googleDriveId(url: String): String? {
         val host = hostOf(url) ?: return null
         if (!under(host, "drive.google.com") && !under(host, "docs.google.com") && !under(host, "drive.usercontent.google.com")) return null
-        Regex("/(?:file/)?d/([A-Za-z0-9_-]{10,})").find(url)?.let { return it.groupValues[1] }
-        Regex("[?&]id=([A-Za-z0-9_-]{10,})").find(url)?.let { return it.groupValues[1] }
+        RX_LINKHOSTS_1.find(url)?.let { return it.groupValues[1] }
+        RX_LINKHOSTS_2.find(url)?.let { return it.groupValues[1] }
         return null
     }
 
@@ -76,7 +84,7 @@ object LinkHosts {
         val host = hostOf(url) ?: return null
         if (!under(host, "dropbox.com")) return null
         if (!url.contains("/s/") && !url.contains("/scl/")) return null
-        val clean = url.replace(Regex("([?&])(dl|raw)=[01]"), "$1").replace("?&", "?").trimEnd('?', '&')
+        val clean = url.replace(RX_LINKHOSTS_3, "$1").replace("?&", "?").trimEnd('?', '&')
         return clean + (if ('?' in clean) "&" else "?") + "raw=1"
     }
 
@@ -84,7 +92,7 @@ object LinkHosts {
     fun pixeldrainDirect(url: String): String? {
         val host = hostOf(url) ?: return null
         if (listOf("pixeldrain.com", "pixeldrain.net", "pixeldra.in").none { under(host, it) }) return null
-        val id = Regex("/(?:u|api/file)/([A-Za-z0-9]{4,})").find(url)?.groupValues?.get(1) ?: return null
+        val id = RX_LINKHOSTS_4.find(url)?.groupValues?.get(1) ?: return null
         return "https://pixeldrain.com/api/file/$id"
     }
 
@@ -101,8 +109,8 @@ object LinkHosts {
             val b64 = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(u.toByteArray(Charsets.UTF_8))
             return "https://api.onedrive.com/v1.0/shares/u!$b64/root/content"
         }
-        if (host.endsWith(".sharepoint.com") && Regex("/:[a-z]:/").containsMatchIn(u)) {
-            if (Regex("[?&]download=1").containsMatchIn(u)) return u
+        if (host.endsWith(".sharepoint.com") && RX_LINKHOSTS_5.containsMatchIn(u)) {
+            if (RX_LINKHOSTS_6.containsMatchIn(u)) return u
             return u + (if ('?' in u) "&" else "?") + "download=1"
         }
         return null

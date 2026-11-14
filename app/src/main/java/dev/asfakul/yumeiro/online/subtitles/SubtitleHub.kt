@@ -19,6 +19,9 @@ import okhttp3.Response
 import java.io.File
 import java.io.InputStream
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_SUBTITLEHUB_1 = Regex("[^A-Za-z0-9_-]")
+
 internal object SubtitleNet {
     fun readCapped(input: InputStream, max: Long): ByteArray = input.use { s ->
         val out = java.io.ByteArrayOutputStream()
@@ -118,7 +121,7 @@ object SubtitleHub {
         val entry = SubtitleArchive.pick(bytes, season, episode)
             ?: throw IllegalStateException("No text subtitle in this download (try another one)")
         val dir = File(context.cacheDir, "subtitles").apply { mkdirs() }
-        val safeId = hit.id.replace(Regex("[^A-Za-z0-9_-]"), "_").takeLast(60)
+        val safeId = hit.id.replace(RX_SUBTITLEHUB_1, "_").takeLast(60)
         val file = File(dir, "${hit.provider.lowercase()}_${safeId}_${episode ?: 0}.${entry.extension}")
         file.writeText(entry.text, Charsets.UTF_8)
         file

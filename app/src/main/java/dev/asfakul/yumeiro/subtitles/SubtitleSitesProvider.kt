@@ -15,6 +15,10 @@ import dev.asfakul.yumeiro.online.subtitles.SubtitleHub
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_SUBTITLESITESPROVIDER_1 = Regex("""(?i)\bs(\d{1,2})[ ._-]*e(\d{1,4})\b""")
+private val RX_SUBTITLESITESPROVIDER_2 = Regex("""(?i)\b(\d{1,2})x(\d{1,3})\b""")
+
 /**
  * SubDL / SubSource for the local video player (searches by the file's cleaned title; "S01E02"
  * in the name narrows it to the episode). Only active when the user saved a free key for the site.
@@ -51,7 +55,7 @@ class SubtitleSitesProvider(private val context: Context, private val site: Stri
     companion object {
         /** "Show Name S02E05" → ("Show Name", 2, 5); no marker → (query, null, null). */
         fun splitEpisode(query: String): Triple<String, Int?, Int?> {
-            val m = Regex("""(?i)\bs(\d{1,2})[ ._-]*e(\d{1,4})\b""").find(query) ?: Regex("""(?i)\b(\d{1,2})x(\d{1,3})\b""").find(query)
+            val m = RX_SUBTITLESITESPROVIDER_1.find(query) ?: RX_SUBTITLESITESPROVIDER_2.find(query)
                 ?: return Triple(query.trim(), null, null)
             return Triple(query.substring(0, m.range.first).trim().ifBlank { query.trim() }, m.groupValues[1].toInt(), m.groupValues[2].toInt())
         }

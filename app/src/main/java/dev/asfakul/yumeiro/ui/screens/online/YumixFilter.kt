@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_YUMIXFILTER_1 = Regex("[\\s._-]+")
+
 internal sealed interface SourceStatus {
     data object Loading : SourceStatus
     data object Failed : SourceStatus
@@ -136,7 +139,7 @@ private fun foldName(s: String): String =
  * with the query come first, then the rest in their original order. Blank query = all names.
  */
 internal fun filterExtensionNames(names: List<String>, query: String): List<String> {
-    val words = foldName(query).split(Regex("[\\s._-]+")).filter { it.isNotBlank() }
+    val words = foldName(query).split(RX_YUMIXFILTER_1).filter { it.isNotBlank() }
     if (words.isEmpty()) return names
     val hits = names.filter { n -> val f = foldName(n); words.all { it in f } }
     val first = words.first()
@@ -148,7 +151,7 @@ internal fun filterExtensionNames(names: List<String>, query: String): List<Stri
  * which can hold more than 1000 titles. Same matching as the extension search. Pure.
  */
 internal fun <T> filterByTitle(items: List<T>, query: String, title: (T) -> String): List<T> {
-    val words = foldName(query).split(Regex("[\\s._-]+")).filter { it.isNotBlank() }
+    val words = foldName(query).split(RX_YUMIXFILTER_1).filter { it.isNotBlank() }
     if (words.isEmpty()) return items
     val first = words.first()
     return items.filter { val f = foldName(title(it)); words.all { w -> w in f } }

@@ -17,6 +17,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_YOUTUBEPLAYBACK_1 = Regex("=w\\d+-h\\d+.*$")
+
 /** Starts YouTube videos in the video player and maps YouTube Music songs to music-player tracks. */
 object YouTubePlayback {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -38,7 +41,9 @@ object YouTubePlayback {
                 return YouTubeStreams.videoRequest(context, id, force = true, safe = n > 1)
             }
         })
-        YouTube.init(app)
+        // R15: NewPipe setup (account cookies, localization, HTTP client) off the main thread; every
+        // YouTube call also runs init() itself, so an early tap is still safe.
+        Thread({ runCatching { YouTube.init(app) } }, "yu-yt-init").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
     }
 
     /** Resolves [item] and opens it in the full video player. */
@@ -84,7 +89,7 @@ object YouTubePlayback {
     /** Square, high-res cover when YouTube offers one (lh3 / music thumbnails resize via the URL). */
     private fun squareArt(item: YtItem): String? {
         val t = item.thumbnail ?: return null
-        return if ("googleusercontent.com" in t || "ggpht.com" in t) t.replace(Regex("=w\\d+-h\\d+.*$"), "=w544-h544-l90-rj") else t
+        return if ("googleusercontent.com" in t || "ggpht.com" in t) t.replace(RX_YOUTUBEPLAYBACK_1, "=w544-h544-l90-rj") else t
     }
 
     fun isYouTubeTrack(track: AudioTrack?): Boolean = track?.uri?.startsWith(YouTubeAudioDataSource.SCHEME + "://") == true

@@ -149,11 +149,13 @@ data class OnlineLink(
     /** File extension of the link's path, lowercase ("mp4", "mp3", "m3u8"…). */
     val container: String? get() = url.substringBefore('?').substringBefore('#').substringAfterLast('/').substringAfterLast('.', "").lowercase().takeIf { it.length in 2..5 }
     /** Plain audio files (no picture). Never preferred over a video. */
-    val audioOnly: Boolean get() = !isHls && !isDash && (container in AUDIO_EXT || Regex("""\((mp3|m4a|aac|flac|ogg|opus|wav|vbr mp3)\)""", RegexOption.IGNORE_CASE).containsMatchIn(name))
+    val audioOnly: Boolean get() = !isHls && !isDash && (container in AUDIO_EXT || AUDIO_NAME_RX.containsMatchIn(name))
     /** Comparable quality: "unknown" ranks like a typical 720p source. */
     internal val rank: Int get() = when { quality in 1..4320 && quality != 400 -> quality; else -> 720 }
 }
 
+// R15: was compiled on every `audioOnly` read (sorting, filters and list items called it per link).
+private val AUDIO_NAME_RX = Regex("""\((mp3|m4a|aac|flac|ogg|opus|wav|vbr mp3)\)""", RegexOption.IGNORE_CASE)
 private val AUDIO_EXT = setOf("mp3", "m4a", "aac", "flac", "oga", "opus", "wav", "wma", "ogg")
 
 data class OnlineSubtitle(val language: String, val url: String, val headers: Map<String, String>)
@@ -468,7 +470,7 @@ object OnlineRepository {
             quality = quality?.name, score = runCatching { score?.toDouble(10) }.getOrNull(),
             dub = (this as? com.lagradost.cloudstream3.AnimeSearchResponse)?.dubStatus.orEmpty()
                 .filter { it != DubStatus.None }.mapTo(HashSet()) { it.name },
-        )
+        ).also { it.tags } // R15: poster tags are computed here (extension thread), never while a card composes.
     }
 
     private fun com.lagradost.cloudstream3.Episode.toEpisode() = OnlineEpisode(

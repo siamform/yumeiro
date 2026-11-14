@@ -8,6 +8,9 @@ package dev.asfakul.yumeiro.online
 import java.io.ByteArrayInputStream
 import java.util.zip.ZipInputStream
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_EXTENSIONSCANNER_1 = Regex("^classes\\d*\\.dex$")
+
 /**
  * Safety check that runs between "download" and "install" for every extension (market, repository,
  * file, link and updates). It never runs the code: it opens the `.cs3` (a zip with `classes.dex` and
@@ -179,7 +182,7 @@ object ExtensionScanner {
                     val name = e.name
                     val lower = name.lowercase()
                     when {
-                        Regex("^classes\\d*\\.dex$").matches(name) -> {
+                        RX_EXTENSIONSCANNER_1.matches(name) -> {
                             val d = zip.readBytes()
                             if (d.size <= MAX_DEX) dexes += d
                         }

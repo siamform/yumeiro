@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources
 
+import dev.asfakul.yumeiro.text.RegexCache
+
 import android.content.Context
 import android.net.Uri
 import dev.asfakul.yumeiro.network.NetworkClient
@@ -21,6 +23,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipInputStream
+
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_UNIVERSALADD_1 = Regex("""^https?://github\.com/([^/]+)/([^/?#]+?)(?:\.git)?(?:/(?:tree|blob)/([^/]+)(/.*)?)?/?$""")
 
 /**
  * "Add anything": one field (or one file) for every extension format Yumeiro runs. The user never
@@ -68,7 +73,7 @@ object UniversalAdd {
     fun hint(raw: String): Hint {
         val s = raw.trim().trim('"', '\'', '<', '>')
         fun query(u: String, vararg keys: String): String? = keys.firstNotNullOfOrNull { k ->
-            Regex("""[?&]$k=([^&]+)""").find(u)?.groupValues?.get(1)?.let { java.net.URLDecoder.decode(it, "UTF-8") }
+            RegexCache.get("""[?&]$k=([^&]+)""").find(u)?.groupValues?.get(1)?.let { java.net.URLDecoder.decode(it, "UTF-8") }
         }
         val lower = s.lowercase()
         return when {
@@ -101,7 +106,7 @@ object UniversalAdd {
     fun candidates(url: String): List<String> {
         val clean = url.trim().removeSuffix("/")
         val out = LinkedHashSet<String>()
-        val gh = Regex("""^https?://github\.com/([^/]+)/([^/?#]+?)(?:\.git)?(?:/(?:tree|blob)/([^/]+)(/.*)?)?/?$""").find(clean)
+        val gh = RX_UNIVERSALADD_1.find(clean)
         if (gh != null) {
             val (o, r, branch, path) = gh.destructured
             val p = path.trim('/')

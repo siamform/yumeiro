@@ -11,6 +11,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_SUBSOURCE_1 = Regex("""(?i)\b(sdh|hi|cc)\b""")
+
 /**
  * SubSource (subsource.net) — free subtitle API v1. Needs the user's own free API key from their
  * SubSource profile page; limits are about 60 requests a minute. Sent in the X-API-Key header.
@@ -92,7 +95,7 @@ object SubSource {
                 provider = NAME, id = id.toString(), language = SubtitleLanguages.normalize(language),
                 release = releases.firstOrNull() ?: commentary.ifBlank { "SubSource subtitle" },
                 downloads = s.optInt("downloads", 0),
-                hearingImpaired = s.optBoolean("hearingImpaired") || Regex("""(?i)\b(sdh|hi|cc)\b""").containsMatchIn(commentary) && !commentary.contains("non", ignoreCase = true),
+                hearingImpaired = s.optBoolean("hearingImpaired") || RX_SUBSOURCE_1.containsMatchIn(commentary) && !commentary.contains("non", ignoreCase = true),
                 uploader = uploader,
             )
         }.distinctBy { it.id }

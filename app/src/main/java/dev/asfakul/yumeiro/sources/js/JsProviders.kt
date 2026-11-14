@@ -45,6 +45,9 @@ import kotlinx.serialization.json.contentOrNull
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.Request
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_JSPROVIDERS_1 = Regex("""(\d{3,4})p""")
+
 private fun q(s: String) = JsonPrimitive(s).toString()
 
 /** Shared parsing of Mangayomi result shapes. */
@@ -117,7 +120,7 @@ class JsVideoProvider(private val entry: JsSources.Entry, displayName: String) :
             callback(newExtractorLink(name, label.ifBlank { name }, url, if (url.contains(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO) {
                 this.headers = headers
                 referer = headers["Referer"] ?: headers["referer"] ?: ""
-                quality = Regex("""(\d{3,4})p""").find(label)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                quality = RX_JSPROVIDERS_1.find(label)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             })
             v.arr("subtitles").mapNotNull { it as? JsonObject }.forEach { s -> s.s("file")?.let { subtitleCallback(SubtitleFile(s.s("label") ?: "Subtitle", it)) } }
         }

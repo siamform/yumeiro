@@ -25,6 +25,9 @@ import java.io.File
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_EXTENSIONMARKET_1 = Regex("[A-Za-z0-9_.\\-]{1,120}")
+
 /**
  * Extension Market: extensions from the repositories listed in `.github/extensions/sources.json`,
  * validated by the `Extension market` workflow (manifest, class name, size, sha256) and mirrored to
@@ -73,7 +76,7 @@ object ExtensionMarket {
         val exts = root.optJSONArray("extensions")?.let { a ->
             (0 until a.length()).mapNotNull { i ->
                 val o = a.optJSONObject(i) ?: return@mapNotNull null
-                val internal = o.optString("internalName").trim().takeIf { it.matches(Regex("[A-Za-z0-9_.\\-]{1,120}")) } ?: return@mapNotNull null
+                val internal = o.optString("internalName").trim().takeIf { it.matches(RX_EXTENSIONMARKET_1) } ?: return@mapNotNull null
                 val url = o.optString("url").trim().takeIf { it.startsWith("https://") } ?: return@mapNotNull null
                 val repoUrl = o.optString("repoUrl").ifBlank { return@mapNotNull null }
                 RemoteExtension(

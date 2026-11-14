@@ -17,6 +17,14 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.coroutines.coroutineContext
 
+// Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
+private val RX_HLSDOWNLOADER_1 = Regex("""#EXT-X-KEY:.*METHOD=(SAMPLE-AES|SAMPLE-AES-CTR)""")
+private val RX_HLSDOWNLOADER_2 = Regex("""(?<![A-Z-])BANDWIDTH=(\d+)""")
+private val RX_HLSDOWNLOADER_3 = Regex("""#EXT-X-MEDIA-SEQUENCE:(\d+)""")
+private val RX_HLSDOWNLOADER_4 = Regex("""METHOD=([A-Z0-9-]+)""")
+private val RX_HLS_URI = Regex("""URI="([^"]+)"""")
+private val RX_HLSDOWNLOADER_5 = Regex("""IV=0[xX]([0-9a-fA-F]+)""")
+
 /**
  * Saves an HLS stream into a single file: picks the best variant, then appends the init section
  * (fMP4) and every segment in order. Clear AES-128 segments are decrypted with the key the
@@ -34,7 +42,7 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
             playlistUrl = bestVariant(text, url) ?: throw IOException("No playable variant in the playlist")
             text = fetchText(playlistUrl)
         }
-        if (Regex("""#EXT-X-KEY:.*METHOD=(SAMPLE-AES|SAMPLE-AES-CTR)""").containsMatchIn(text)) throw IOException("This stream is DRM-protected and can't be saved")
+        if (RX_HLSDOWNLOADER_1.containsMatchIn(text)) throw IOException("This stream is DRM-protected and can't be saved")
         if ("#EXT-X-ENDLIST" !in text) throw IOException("Live streams can't be downloaded")
         val segments = parseMedia(text, playlistUrl)
         if (segments.isEmpty()) throw IOException("The playlist has no segments")
@@ -99,7 +107,7 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
             for (i in lines.indices) {
                 val l = lines[i].trim()
                 if (!l.startsWith("#EXT-X-STREAM-INF")) continue
-                val bw = Regex("""(?<![A-Z-])BANDWIDTH=(\d+)""").find(l)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                val bw = RX_HLSDOWNLOADER_2.find(l)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
                 val uri = lines.drop(i + 1).firstOrNull { it.isNotBlank() && !it.startsWith("#") }?.trim() ?: continue
                 if (best == null || bw > best.first) best = bw to resolve(base, uri)
             }
@@ -109,18 +117,18 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         fun parseMedia(text: String, base: String): List<Segment> {
             val out = ArrayList<Segment>()
             var key: String? = null; var iv: ByteArray? = null; var init: String? = null
-            var seq = Regex("""#EXT-X-MEDIA-SEQUENCE:(\d+)""").find(text)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+            var seq = RX_HLSDOWNLOADER_3.find(text)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
             for (raw in text.lines()) {
                 val l = raw.trim()
                 when {
                     l.startsWith("#EXT-X-KEY") -> {
-                        val method = Regex("""METHOD=([A-Z0-9-]+)""").find(l)?.groupValues?.get(1)
+                        val method = RX_HLSDOWNLOADER_4.find(l)?.groupValues?.get(1)
                         if (method == null || method == "NONE") { key = null; iv = null } else {
-                            key = Regex("""URI="([^"]+)"""").find(l)?.groupValues?.get(1)?.let { resolve(base, it) }
-                            iv = Regex("""IV=0[xX]([0-9a-fA-F]+)""").find(l)?.groupValues?.get(1)?.let(::hex)
+                            key = RX_HLS_URI.find(l)?.groupValues?.get(1)?.let { resolve(base, it) }
+                            iv = RX_HLSDOWNLOADER_5.find(l)?.groupValues?.get(1)?.let(::hex)
                         }
                     }
-                    l.startsWith("#EXT-X-MAP") -> init = Regex("""URI="([^"]+)"""").find(l)?.groupValues?.get(1)?.let { resolve(base, it) }
+                    l.startsWith("#EXT-X-MAP") -> init = RX_HLS_URI.find(l)?.groupValues?.get(1)?.let { resolve(base, it) }
                     l.isNotEmpty() && !l.startsWith("#") -> { out += Segment(resolve(base, l), key, iv, seq, init); seq++ }
                 }
             }
