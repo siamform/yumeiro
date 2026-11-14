@@ -434,7 +434,7 @@ object OnlineRepository {
         // Round 13: the audio key is worked out once per link, not inside the comparator (which
         // ran the language regexes thousands of times per re-sort).
         val unique = links.distinctBy { it.url }
-        val audioMiss = if (preferAudio == null) null else unique.associate { it.url to (AudioLanguages.filterKey(AudioLanguages.classify(it.name + " " + it.source, version)) != preferAudio) }
+        val audioMiss = if (preferAudio == null) null else unique.associate { l -> l.url to AudioLanguages.filterKey(AudioLanguages.classify(l.name + " " + l.source, version)).let { k -> k.isNotEmpty() && k != preferAudio } }
         return unique.sortedWith(
             compareBy<OnlineLink> { it.audioOnly }
                 // Round 9: the user's remembered audio language plays first when a source has it.

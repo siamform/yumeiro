@@ -38,6 +38,7 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.notify.FcmPush.start(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
+        runCatching { dev.asfakul.yumeiro.player.VideoPrefs.init(this) }
         runCatching { dev.asfakul.yumeiro.stream.TorrentSettings.init(this) }
         runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.resumeQueued(this) }
         runCatching {

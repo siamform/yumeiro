@@ -160,7 +160,7 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
 @Composable
 private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, onPlay: (version: String, index: Int) -> Unit) {
     val versions = d.versions
-    var version by rememberSaveable(d.url) { mutableStateOf(versions.firstOrNull().orEmpty()) }
+    var version by rememberSaveable(d.url) { mutableStateOf(dev.asfakul.yumeiro.online.OnlineSession.defaultVersion(versions)) }
     if (version !in versions && versions.isNotEmpty()) version = versions.first()
     val seasons = remember(d, version) { d.seasons(version) }
     var seasonIndex by rememberSaveable(d.url, version) { mutableIntStateOf(0) }

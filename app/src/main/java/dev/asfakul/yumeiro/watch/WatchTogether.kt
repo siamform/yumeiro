@@ -242,7 +242,7 @@ object WatchTogether {
                 _status.value = _status.value.copy(message = "Couldn't open ${remote.title}"); return applied
             }
             val target = remote.positionAt(System.currentTimeMillis() + offset)
-            withContext(Dispatchers.Main) { OnlineSession.play(context, detail, remote.version.ifBlank { detail.versions.firstOrNull().orEmpty() }, remote.index, target) }
+            withContext(Dispatchers.Main) { OnlineSession.play(context, detail, remote.version.ifBlank { OnlineSession.defaultVersion(detail.versions) }, remote.index, target) }
             return remote
         }
         val p = player ?: return remote

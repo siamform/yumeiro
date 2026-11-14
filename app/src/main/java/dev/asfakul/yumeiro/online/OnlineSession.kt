@@ -117,6 +117,19 @@ object OnlineSession {
         }
     }
 
+    /**
+     * Round 13: the version that plays when the user didn't pick one, from Settings → Audio →
+     * Quality and audio → Default audio (Sub unless the user chose Dub).
+     */
+    fun defaultVersion(versions: List<String>): String {
+        val dub = dev.asfakul.yumeiro.player.VideoPrefs.audio.value == dev.asfakul.yumeiro.player.VideoPrefs.AudioDefault.DUB
+        val want = if (dub) "dub" else "sub"
+        return versions.firstOrNull { it.contains(want, ignoreCase = true) } ?: versions.firstOrNull().orEmpty()
+    }
+
+    private fun defaultAudioKey(): String =
+        if (dev.asfakul.yumeiro.player.VideoPrefs.audio.value == dev.asfakul.yumeiro.player.VideoPrefs.AudioDefault.DUB) AudioLanguages.DUB_OTHER else AudioLanguages.ORIG
+
     fun cancelOpening() { _opening.value = null; job?.cancel() }
 
     fun titleFor(d: OnlineDetail, e: OnlineEpisode?): String = buildString {
@@ -140,7 +153,7 @@ object OnlineSession {
      * Resolves and plays [episodeIndex] of [version] (or the movie when there are no episodes).
      * [resumeMs] null → resume from watch history.
      */
-    fun play(context: Context, detail: OnlineDetail, version: String = detail.versions.firstOrNull().orEmpty(), episodeIndex: Int = -1, resumeMs: Long? = null) {
+    fun play(context: Context, detail: OnlineDetail, version: String = defaultVersion(detail.versions), episodeIndex: Int = -1, resumeMs: Long? = null) {
         val app = context.applicationContext
         OnlineHistory.ensureLoaded(app)
         val episodes = episodesOf(detail, version)
@@ -182,7 +195,7 @@ object OnlineSession {
                 val t = System.currentTimeMillis()
                 if (!done && t - lastPublish < PUBLISH_GAP_MS) { pendingPublish = true; return }
                 lastPublish = t; pendingPublish = false
-                val sorted = OnlineRepository.sortLinks(links.values.toList(), AudioLanguages.preferred.value, _state.value?.version.orEmpty())
+                val sorted = OnlineRepository.sortLinks(links.values.toList(), AudioLanguages.preferred.value ?: defaultAudioKey(), _state.value?.version.orEmpty())
                 val subList = subs.values.toList()
                 _state.update { cur ->
                     if (cur == null || cur.data != data) return@update cur
