@@ -66,7 +66,7 @@ All notable changes to Yumeiro.
 - Restore no longer breaks the running app: it is applied on a clean restart, and a backup that fails twice is dropped instead of looping.
 - Extensions missing after a restore are downloaded again.
 - Long source, audio and subtitle lists no longer freeze the watch page.
-- Phone and TV settings no longer leak into each other (TV-only layout options are gone from the phone app and the other way round).
+- Yumeiro TV no longer shows the phone/TV layout chooser or the extra Settings card on its home.
 
 ### Tests
 - 640+ JVM / Robolectric tests, 0 failures. New: Backup v2 round trip, staged restore, resets, prune and saved pages (run on Android 7, 10, 14 and 16), both app editions, updater edition picking, source facts, language track groups, codec details and the music rows.
