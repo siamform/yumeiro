@@ -152,17 +152,18 @@ object PlaylistMarket {
     }
 
     internal fun friendlyError(e: Throwable): String {
+        // R16 (G10): only the market-specific cases stay here. The rest goes through the app's shared
+        // mapper, which follows the cause chain and tells "offline" from "blocked on this network";
+        // before, any other message (SSL text, URLs, stack-like text) was shown to the user raw.
         val m = e.message.orEmpty()
+        val root = generateSequence(e) { it.cause }.take(8).last()
         return when {
-            e is java.net.UnknownHostException -> "No internet connection"
-            e is java.net.SocketTimeoutException || e is java.io.InterruptedIOException -> "The server took too long to answer"
             m.startsWith("HTTP 404") -> "The market is being prepared. Try again in a few minutes"
-            m.startsWith("HTTP") -> "Server error ($m)"
-            e is org.json.JSONException -> "The market catalog is damaged"
-            m.isNotBlank() -> m
-            else -> "Could not load the market"
+            root is org.json.JSONException -> "The market catalog is damaged"
+            else -> dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Could not load the market")
         }
     }
+
 
 
     /** Installed market playlists whose catalog copy changed since they were downloaded. */

@@ -137,8 +137,19 @@ object BackgroundClock {
 class NotifyAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val c = context.applicationContext
-        when (intent.action) {
-            NotifyPacer.ACTION_NEXT -> NotifyPacer.deliverNext(c)
+        val action = intent.action
+        // R16 (G10): onReceive runs on the main thread; the pacing queue (prefs), WorkManager and the
+        // notification post were all done there (StrictMode in stress 43697447466 named this chain).
+        // goAsync() keeps the broadcast alive (about 10 s) while a short background thread does it.
+        val pending = goAsync()
+        Thread({
+            try { handle(c, action) } finally { runCatching { pending.finish() } }
+        }, "yu-notify-alarm").start()
+    }
+
+    private fun handle(c: Context, action: String?) {
+        when (action) {
+            NotifyPacer.ACTION_NEXT -> runCatching { NotifyPacer.deliverNext(c) }
             NotifyPacer.ACTION_CLOCK -> runCatching { BackgroundWork.wake(c) }
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 runCatching { BackgroundWork.apply(c, androidx.work.ExistingPeriodicWorkPolicy.KEEP) }

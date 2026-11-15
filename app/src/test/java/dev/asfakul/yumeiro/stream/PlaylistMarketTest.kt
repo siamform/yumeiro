@@ -145,7 +145,13 @@ class PlaylistMarketTest {
     }
 
     @Test fun friendlyErrorsAreReadable() {
-        assertEquals("No internet connection", PlaylistMarket.friendlyError(java.net.UnknownHostException("x")))
+        // R16 (G10): "No internet connection" when offline, "can't be reached" when online (blocked or
+        // DNS trouble); also when the UnknownHostException is only a cause. Never the raw text.
+        val dns = setOf("No internet connection", "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off")
+        assertTrue(PlaylistMarket.friendlyError(java.net.UnknownHostException("x")) in dns)
+        assertTrue(PlaylistMarket.friendlyError(java.io.IOException("wrapped", java.net.UnknownHostException("x"))) in dns)
+        assertEquals("Secure connection failed", PlaylistMarket.friendlyError(javax.net.ssl.SSLHandshakeException("Chain validation failed for https://x")))
+        assertEquals("The market catalog is damaged", PlaylistMarket.friendlyError(RuntimeException("x", org.json.JSONException("bad"))))
         assertTrue(PlaylistMarket.friendlyError(IllegalStateException("HTTP 404")).contains("being prepared"))
         assertEquals("Could not load the market", PlaylistMarket.friendlyError(RuntimeException()))
     }
