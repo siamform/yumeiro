@@ -15,6 +15,8 @@ import android.content.Context
 object PrefsWarmup {
     /** Files read while the first screen is drawn. */
     val FIRST_FRAME = listOf(
+        "yumeiro_tv_mode",        // TvMode, read in MainActivity.onCreate (R16 stall, run 43671209244)
+        "play_counts",            // PlayCounts (Home "Most played")
         "mt_appearance",          // ThemeSettings
         "mt_player_video_prefs",  // OfflineMediaRepository: favourites, hidden folders
         "mt_player_music_prefs",  // OfflineMediaRepository: favourites, playlists, history

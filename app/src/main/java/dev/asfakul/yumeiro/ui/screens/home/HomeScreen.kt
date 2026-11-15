@@ -308,7 +308,8 @@ fun HomeScreen(
     val arrivals = remember(channels) { newArrivals(channels) }
 
     // ---- Most played: songs + videos (device, Yumix, YouTube) ---------------------------------
-    remember { PlayCounts.ensureLoaded(context); true }
+    // R16: parsing the play-count file blocked the first Home composition (device stall, run 43671209244).
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PlayCounts.ensureLoaded(context) } }
     val videoPlays by PlayCounts.entries.collectAsState()
     val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate) {
         val byId = recentVideos.associateBy { it.id }

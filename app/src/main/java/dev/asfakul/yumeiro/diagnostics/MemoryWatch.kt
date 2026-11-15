@@ -220,7 +220,9 @@ object MainThreadWatchdog {
     internal fun appFrames(trace: Array<StackTraceElement>, max: Int = 8): String =
         trace.asSequence()
             .filter { it.className.startsWith("dev.asfakul.yumeiro.") && !it.className.startsWith("dev.asfakul.yumeiro.diagnostics.") }
-            .filter { !it.className.endsWith("ExtensionGuard") || it.methodName != "install\$lambda\$1" }
+            // The guarded main looper (ExtensionGuard.install) sits under every main-thread frame;
+            // its D8 lambda class name ends in "$$ExternalSyntheticLambdaN", so match the prefix.
+            .filter { !it.className.substringBefore("$$").endsWith("ExtensionGuard") }
             .map { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber }
             .distinct().take(max).joinToString(" < ").ifEmpty { "(framework only)" }
 }

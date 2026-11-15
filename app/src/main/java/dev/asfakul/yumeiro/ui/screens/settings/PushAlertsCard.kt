@@ -54,10 +54,14 @@ import kotlinx.coroutines.launch
 fun PushAlertsCard() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    remember(context) { PushWake.init(context); 0 }
     val st by PushWake.state.collectAsState()
     val background by NotifySettings.flow(NotifySettings.Key.BACKGROUND).collectAsState()
-    var distributors by remember { mutableStateOf(PushWake.distributors(context)) }
+    var distributors by remember { mutableStateOf<List<String>>(emptyList()) }
+    // R16: init opens UnifiedPush's SQLite database and the package list is a binder call; both
+    // ran on the main thread while Settings composed (device stall, run 43671209244).
+    androidx.compose.runtime.LaunchedEffect(context) {
+        distributors = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PushWake.init(context); PushWake.distributors(context) }
+    }
     var pick by remember { mutableStateOf(false) }
     var install by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
