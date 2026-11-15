@@ -98,25 +98,11 @@ class LocalPlayerDeviceTest {
 
     @After fun tearDown() {
         runCatching { rule.runOnUiThread { PlaybackSession.releaseNow() } }
-        clip?.let { u -> runCatching { ctx.contentResolver.delete(u, null, null) } }
+        clip?.let { u -> TestClip.remove(ctx, u, NAME) }
     }
 
-    /** Copies the test clip into Movies/YumeiroTest (replacing an old copy) and returns its MediaStore uri. */
-    private fun putClip(): Uri {
-        val cr = ctx.contentResolver
-        val coll = if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-        runCatching { cr.delete(coll, "${MediaStore.Video.Media.DISPLAY_NAME}=?", arrayOf(NAME)) }
-        val v = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, NAME)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            if (Build.VERSION.SDK_INT >= 29) { put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/YumeiroTest"); put(MediaStore.Video.Media.IS_PENDING, 1) }
-        }
-        val uri = checkNotNull(cr.insert(coll, v)) { "MediaStore insert failed" }
-        cr.openOutputStream(uri)!!.use { out -> inst.context.assets.open(NAME).use { it.copyTo(out) } }
-        if (Build.VERSION.SDK_INT >= 29) cr.update(uri, ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
-        log("clip at $uri")
-        return uri
-    }
+    /** Copies the test clip into Movies/YumeiroTest (replacing an old copy); see [TestClip]. */
+    private fun putClip(): Uri = TestClip.put(ctx, NAME).also { log("clip at $it") }
 
     /** Videos → Device → (rescan) → the clip. */
     private fun openClipFromDevice() {
@@ -291,6 +277,10 @@ class LocalPlayerDeviceTest {
             } else log("P19 SAVER_NOT_ENABLED: the system did not turn battery saver on; saver half not judged")
             FirstRun.shell("cmd power set-mode 0")
             wait("COOL after battery saver", 10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.COOL }
+            // Thermal status is an API 29 platform feature (PowerManager.currentThermalStatus);
+            // HeatGuard reads it only there. minSdk run 43768670627 (api28): "cmd thermalservice"
+            // does not exist, so the thermal half does not apply below 29.
+            if (android.os.Build.VERSION.SDK_INT < 29) { log("P19 THERMAL_NA: API ${android.os.Build.VERSION.SDK_INT} has no thermal status; thermal half not applicable"); return }
             val out = FirstRun.shell("cmd thermalservice override-status 3")
             log("thermal override: ${out.take(120)}")
             val hot = runCatching { rule.waitUntil(10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.HOT }; true }.getOrDefault(false)

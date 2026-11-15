@@ -68,6 +68,11 @@ class HomeNavigationDeviceTest {
     @Before fun setUp() {
         val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
         runCatching { ui.grantRuntimePermission(ctx.packageName, "android.permission.POST_NOTIFICATIONS") }
+        // minSdk run 43768670627 (api28) h1_h4: the reliability guide opens by itself 8 s after
+        // start and came up just as Back was pressed on Library, so Back never reached the tabs.
+        // These tests are about navigation; the guide's own pacing is unit-tested
+        // (ReliabilityGuideTest). Count it as just shown so it stays away (paced a week apart).
+        runCatching { dev.asfakul.yumeiro.notify.ReliabilityGuide.markPrompted(ctx) }
         FirstRun.toTabs(rule)
     }
 

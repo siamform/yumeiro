@@ -174,24 +174,11 @@ class AccessibilityDeviceTest {
             finish("player", listOfNotNull(check("player")))
         } finally {
             runCatching { rule.runOnUiThread { dev.asfakul.yumeiro.player.PlaybackSession.releaseNow() } }
-            runCatching { ctx.contentResolver.delete(uri, null, null) }
+            TestClip.remove(ctx, uri, CLIP)
         }
     }
 
-    private fun putClip(ctx: android.content.Context): android.net.Uri {
-        val cr = ctx.contentResolver
-        val coll = if (android.os.Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-        runCatching { cr.delete(coll, "${MediaStore.Video.Media.DISPLAY_NAME}=?", arrayOf(CLIP)) }
-        val v = android.content.ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, CLIP)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            if (android.os.Build.VERSION.SDK_INT >= 29) { put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/YumeiroTest"); put(MediaStore.Video.Media.IS_PENDING, 1) }
-        }
-        val uri = checkNotNull(cr.insert(coll, v)) { "MediaStore insert failed" }
-        cr.openOutputStream(uri)!!.use { out -> inst.context.assets.open(CLIP).use { it.copyTo(out) } }
-        if (android.os.Build.VERSION.SDK_INT >= 29) cr.update(uri, android.content.ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
-        return uri
-    }
+    private fun putClip(ctx: android.content.Context): android.net.Uri = TestClip.put(ctx, CLIP)
 
     companion object { private const val CLIP = LocalPlayerDeviceTest.NAME }
 }
