@@ -63,7 +63,7 @@ object YouTubePlayback {
                 .onFailure { e ->
                     if (e is kotlinx.coroutines.CancellationException) return@onFailure
                     YtWatch.onFailed(item.id, e.message ?: e.javaClass.simpleName)
-                    AppMessages.error(context, "YouTube couldn't play this video: ${e.message ?: e.javaClass.simpleName}", "Retry") {
+                    AppMessages.error(context, "YouTube couldn't play this video: ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(e)}", "Retry") {
                         playVideo(context, item, maxHeight)
                     }
                 }

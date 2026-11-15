@@ -161,7 +161,7 @@ class UpdateManager private constructor(context: Context) {
             } catch (t: Throwable) {
                 // Silent on automatic checks: never bother the user with a popup for a failed check.
                 _state.value = if (userInitiated) {
-                    UpdateState.Failed(t.message ?: "Update check failed.")
+                    UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "Update check failed."))
                 } else UpdateState.Idle
             }
         }
@@ -245,7 +245,7 @@ class UpdateManager private constructor(context: Context) {
                 pollDownload(id, release)
             } catch (t: Throwable) {
                 prefs.clearDownload()
-                _state.value = UpdateState.Failed(t.message ?: "Couldn't start the download.", release)
+                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "Couldn't start the download."), release)
             }
         }
     }
@@ -369,7 +369,7 @@ class UpdateManager private constructor(context: Context) {
                 ApkInstaller.install(app, file)
                 UpdateNotifier.cancel(app)
             } catch (t: Throwable) {
-                _state.value = UpdateState.Failed(t.message ?: "Installation failed.", s.release)
+                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "Installation failed."), s.release)
             }
         }
     }
