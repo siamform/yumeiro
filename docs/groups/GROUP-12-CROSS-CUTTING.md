@@ -86,6 +86,9 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X2-1 | medium | `MainActivity.kt:50` → `Theme.kt:68` | prefs read in first composition; most of the 5.4 s stall is the emulator's render thread | cold start api33-lowram | measure (ADR-012) | open |
 | X2-2 | medium | `SetupGuide.kt` `rememberSetupStatus` | uncached binder permission checks in composition | cold start api33-lowram (2,018 ms YuStall) | off main + warm-up (208ba48) | emulator (43763558754) |
 | X2-3 | medium | `cloudstream3/MainActivity.kt` | per-Context prefs path map; warm-up used the app context | StrictMode in player (43763558754) | route to app context (15a29ca) | unit; emulator pending |
+| X6-2 | low (diagnostics) | `diagnostics/DevStrictMode.kt` crumb | first `dev.asfakul` frame = guarded looper on framework-only stacks | 43763558754 crumbs `ExtensionGuard.kt:83` | `MainThreadWatchdog.appFrames` (99a4e68) | unit |
+| X15-1 | low (perf/battery) | `ui/feed/LiveFeed.kt` reset | old request not cancelled | switch chips fast | cancel Job (d626e28) | unit |
+| X16-1 | medium (test gap) | `server/src/index.ts` | handlers untested | — | handlers.test.ts, 11 tests (23ab446) | CI 43765850022 |
 | X5-2 | medium | `NotifyPacer.kt` deliverNext | every tick delivered | ticks from boot/updates | gap check (9b46045) | emulator |
 | X6-1 | medium | `CrashReportsCard.kt` | Delete all with no confirm, over-promised text | tap | confirm + wording (2e5f9d6) | emulator |
 | X7-1 | high | `network_security_config.xml` | cleartext app-wide; HTTPS-only list incomplete | config read | domains added (149ef42) | unit |
@@ -113,6 +116,9 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X8-2 | `A11yLabelTest` (2), `AccessibilityDeviceTest` | api36 flagged Continue cards | recheck 43763558754 |
 | X8-3 | `ExtensionFragmentFactoryTest` (3) | default factory throws on the saved state (the crash) | restores with no fragment (unit) |
 | X2-3 | `ActivityPrefsRouteTest` | "did not reach the application context: []" | pass (unit) |
+| X6-2 | `StrictCrumbTest` (2) | framework-only stack blamed `ExtensionGuard.kt:83` | pass (unit) |
+| X15-1 | `LivePagedTest.resetCancelsTheLoadInFlight` | "old request is still running after reset" | pass (unit) |
+| X16-1 | `server/test/handlers.test.ts` (11) | n/a (gap); guards removed → 3 fail | 31/31 (CI) |
 | X11-1, X11-3 | `SmartDnsResilienceTest` (4) | 3 fail | pass (unit) |
 | X11-4, X11-5 | `DnsWireClientTest` (4) | 3 fail | pass (unit) |
 | X12-1, X12-2 | `DataCacheBoundsTest` (3) | 3 fail (48000000 chars held; fresh .tmp deleted; 400000-char page kept) | pass (unit) |
@@ -121,6 +127,16 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 
 ADR-012 (start-up measured on the R8 preview build, accepted) and ADR-013 (no long-lived secrets in
 the APK, **proposed, owner decision**) are in `docs/SYSTEM-DESIGN.md` §10.
+
+### Swallowed catches reviewed (X1, error handling)
+
+| Place | What is swallowed | Fallback | Verdict |
+|---|---|---|---|
+| `EqualizerManager.kt` releaseNow (eq, bass, virtualizer) | `AudioEffect.release()` after the audio server died | each released separately, field still cleared | correct, no change |
+| `MediaRepository.kt` loadVideoPositions / loadVideoLastWatched | `prefs.all` read | empty map; types checked with `when` | correct, no change |
+| `VideoPlayerModal.kt` subtitle picker | `takePersistableUriPermission` refused by the provider | subtitle still loads for this session | correct, no change |
+| `UpdateManager.kt` onUserActionRequired | `startActivity(confirm)` refused | falls through to the "update ready" notification | correct, no change |
+| `DevStrictMode` breadcrumb | — | named the looper for framework-only stacks | fixed X6-2 (99a4e68) |
 
 ## 9. Verification
 

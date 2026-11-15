@@ -180,8 +180,8 @@ verified on a device, evidence linked), `not covered` (reason given).
 | X12 | Caching: data cache, image cache, online codec | cache/* | audited; X12-1, X12-2 fixed (unit), CI pending | |
 | X13 | (R16) Android 7–16 compatibility (minSdk 24), OS version guards | OsCompat, MTApplication | open | |
 | X14 | (R16) Design system and shared components | ui/components/YumeKit, Motion, Pills, Artwork, YuEditorial, Kana, YumixLogo | open | |
-| X15 | (R16) Shared live-feed component (append-only cards) | ui/feed/LiveFeed, FeedCard, OnlineHuePage | open | |
-| X16 | (R16) Cloud Worker (alerts, FCM fan-out, market index) and its abuse guards | server/src/index.ts, fcm.ts, logic.ts | open | |
+| X15 | (R16) Shared live-feed component (append-only cards) | ui/feed/LiveFeed, FeedCard, OnlineHuePage | audited; X15-1 fixed (unit) | |
+| X16 | (R16) Cloud Worker (alerts, FCM fan-out, market index) and its abuse guards | server/src/index.ts, fcm.ts, logic.ts | audited; handler tests added (CI 43765850022), no defect | |
 
 ## New groups (not in the prompt's list)
 | ID | Item | Code | Status | Covered by |
