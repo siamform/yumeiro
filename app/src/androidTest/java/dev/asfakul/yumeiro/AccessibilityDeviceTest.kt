@@ -99,7 +99,19 @@ class AccessibilityDeviceTest {
             Thread.sleep(1_500)
             check("settings_$cat")?.let { errors += it }
             FirstRun.shell("input keyevent 4")
-            waitFor("settings home after $cat", 15_000) { has("settings_cat_appearance") }
+            // 43765039266 api33-lowram: once, Back from Downloads never reached Settings home (it
+            // passed on the same phone in 43763558754). Record what was on screen, then try once more
+            // so the other categories are still checked; a second Back is still counted as an error.
+            val home = runCatching { rule.waitUntil(15_000) { has("settings_cat_appearance") }; true }.getOrDefault(false)
+            if (!home) {
+                FirstRun.shot("a11y_back_stuck_$cat")
+                val ime = FirstRun.shell("dumpsys input_method").lines().filter { "mInputShown" in it || "mShowRequested" in it }.joinToString(" ").trim()
+                val focus = FirstRun.shell("dumpsys window").lines().filter { "mCurrentFocus" in it || "mFocusedApp" in it }.joinToString(" ").trim()
+                log("A11Y settings_$cat BACK_STUCK ime=[$ime] focus=[$focus] · ${FirstRun.onScreen(rule)}")
+                errors += "settings_$cat: Back needed twice"
+                FirstRun.shell("input keyevent 4")
+                waitFor("settings home after $cat (second Back)", 15_000) { has("settings_cat_appearance") }
+            }
         }
         finish("settings", errors)
     }
