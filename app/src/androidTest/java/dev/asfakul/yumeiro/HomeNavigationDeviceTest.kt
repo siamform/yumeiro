@@ -10,6 +10,10 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.ui.screens.TabPagerProbe
@@ -102,9 +106,14 @@ class HomeNavigationDeviceTest {
         waitTag("topbar_search_action")
         tap("topbar_search_action")
         waitTag("topbar_search_input")
-        FirstRun.shell("input text yumei")
+        // Compose text input, not `adb input text`: run 43688049790 (api36 run 2) lost the shell
+        // keystrokes when they arrived before the field had focus.
+        rule.onNodeWithTag("topbar_search_input", true).performTextInput("yumei")
         // Ranked off the main thread after a 120 ms pause in typing (MTPlayerApp produceState).
-        waitTag("topbar_suggestions", 10_000)
+        val ok = runCatching { rule.waitUntil(10_000) { has("topbar_suggestions") }; true }.getOrDefault(false)
+        val typed = runCatching { rule.onNodeWithTag("topbar_search_input", true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.EditableText)?.text }.getOrNull()
+        log("h10: field text='$typed' suggestions=$ok")
+        assertTrue("no 'topbar_suggestions' for field text '$typed' · ${FirstRun.onScreen(rule)}", ok)
         tap("search_close_button")
         waitGone("topbar_search_input")
     }
