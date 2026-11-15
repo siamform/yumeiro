@@ -83,6 +83,10 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
   extension retry (97bb255), Cast start (b5d2d5a), PiP refusal message (5bfa07c). Device runs are
   listed in `docs/evidence/round3/device-runs.md`.
 
+- R16 group status: G1–G4 complete (agent work; owner tests pending). G5 Library and G6 Music:
+  fixes in, `LibraryDeviceTest` 43738288853 pass on both emulators; full suite at next milestone.
+  G7 in progress.
+
 ## Still open (not claimed)
 
 - YouTube playback and quality switching on a device on a home network (CI IPs are bot-checked).

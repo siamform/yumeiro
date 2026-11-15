@@ -56,7 +56,7 @@ Known, not fixed (low risk, documented):
 | Kind | Run / command | Result |
 |---|---|---|
 | unit (local) | `:app:testMobileDebugUnitTest :app:compileMobileDebugAndroidTestKotlin` at 535d763 | 153 classes, 889 tests, 0 failures, 11 skipped (live-network tests) |
-| CI device | Group 5 fixes run in the next full suite (see R15-STATUS / device-runs.md) | DEVICE_PENDING |
+| CI device | 43738288853 `LibraryDeviceTest` on a119186 | pass on api33-lowram (+36.8 s) and api36 (+36.6 s); other Group 5 fixes unit only, full suite at next milestone |
 
 Kinds of evidence: a–e are unit-tested. g–i are compile- and unit-suite checked only. f is
 checked on the emulators by `LibraryDeviceTest#a`: the test plays the shared player with no

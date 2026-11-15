@@ -12,6 +12,12 @@ Each result is labelled as one of:
 - CI: a green workflow run
 - hardware: a real phone or TV. Nothing in this group is hardware-verified yet.
 
+## Status
+
+Complete for agent-handleable work (2026-11-15). Milestone 43733844682 plus rerun 43738288853
+pass on api33-lowram and api36 (the api33 Drama failure in 43733844682 was onshort.net timeouts,
+which passed on rerun). Nothing here is hardware-verified; owner tests OMT-1, OMT-4, OMT-5, OMT-9.
+
 ## Tested
 
 | Inventory | What | How | Result |
@@ -148,7 +154,7 @@ Every path that writes rows during a scroll was checked:
 | CI device | 43724760853 full suite on 8769ef8 | fail: Drama (DramaBox CDN NXDOMAIN, bug n + test q), HomeNav h2 (test p), Yumix (test o: 0 cards on screen, 26/26 held, message shown) | same three |
 | CI device | 43732060154 Drama + Yumix + HomeNav on 3c29282 | HomeNav 11/11; Drama pass; Yumix fail: 2 unknown drama cards, drama section still Loading at hold time (test, fixed in bc68326) | HomeNav 11/11; Yumix 2/2 (276 held, 0 lost, 0 unknown); Drama played but in 55 s against a 10 s budget (52 s inside one drama streams call, no gate wait; the onshort shelf call held its slot > 76 s). Classed as upstream slowness, not confirmed; slow-answer log added in bc68326 |
 | CI device | 43733844682 G4 milestone full suite on bc68326 (16 classes) | 15/16 classes pass, incl. Yumix 2/2, HomeNav 11/11, Extensions 7/7, LocalPlayer 5/5, Stress 3/3. Drama fail (and its retry): all 4 titles "server took too long"; the new slow-answer log shows every onshort.net call in that window timing out at 20 s (SocketTimeout, one ConnectException / UnknownHost). Environment / upstream, not app | all 16 classes pass |
-| CI device | 43738288853 Drama + LibraryDeviceTest on a119186 (rerun of the api33 Drama failure, plus the new Group 5/6 test) | see GROUP-5-LIBRARY.md | see GROUP-5-LIBRARY.md |
+| CI device | 43738288853 Drama + LibraryDeviceTest on a119186 (rerun of the api33 Drama failure, plus the new Group 5/6 test) | api33-lowram: Drama pass | api36: Drama pass |
 
 Cancelled runs in this group: none.
 

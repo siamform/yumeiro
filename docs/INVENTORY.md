@@ -75,7 +75,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen, OnlineComponents, OnlineGetStarted, ExtensionBanner | done (offline refresh: see GROUP-4) | `YumixRefreshTest`, `YumixGoneTest`, `YumixFeedTest`; `FeedPositionDeviceTest#yumix` 43715245923; `YumixDeviceTest#offlineRefreshKeepsTheFeed`; milestone 43733844682 Yumix 2/2 on both (api33-lowram, api36) |
 | Y2 | Yumix search | OnlineSearchScreen, online/SearchRanker | unit only | `YumixFilterSearchTest`, `SearchRankerTest`, `SearchSuggestTest`; code read |
 | Y3 | Extension bar hide/show on scroll | ui/components/HideOnScroll | code read, no bug | owner feel test OMT-9 |
-| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | done | `YumeiroDramaTest`, `PinnedExtensionsTest`; every Yumix device run opens on drama; YX-11 dead video host → studio hidden, mirror used (`DramaHealthTest`); Drama device 43732060154 api33, 43733844682 api36 pass; onshort.net timeouts are upstream |
+| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | done | `YumeiroDramaTest`, `PinnedExtensionsTest`; every Yumix device run opens on drama; YX-11 dead video host → studio hidden, mirror used (`DramaHealthTest`); Drama device 43732060154 api33, 43733844682 api36, 43738288853 both pass; onshort.net timeouts are upstream |
 | Y5 | "Show videos from" filter | YumixFilter | done | `YumixFilterSearchTest`; `PinnedExtensionsDeviceTest` 43705847970 |
 | Y6 | Hero carousel, picks, row pages | OnlineHomeHero, OnlineHomePicks, OnlineRowScreen | done | `YumixDeviceTest#seeAllKeepsPagingWhileSearching` 43716649966, 43717950021 |
 | Y7 | Detail page (versions, episodes, stills, bookmarks) | OnlineDetailScreen, EpisodeStills, OnlineBookmarks | unit only + code read | `OnlineExtrasTest`, `EpisodeCarouselTest`; detail opened in `DramaPlaybackDeviceTest` |
@@ -90,7 +90,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | L4 | History (online, YouTube) | OnlineHistory, youtube/YtHistory | done (unit only) | LB-1, LB-5 |
 | L5 | Downloads view inside library | VideoLibraryScreen | done (unit only) | LB-1, LB-7 |
 | L6 | Liked songs, playlists | MediaRepository | done (unit only) | LB-3 `LibraryRound2Test#oneBadPlaylistKeepsTheOthers` |
-| L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | done (device run pending) | LB-6; `LibraryDeviceTest#a` 43738288853 |
+| L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | done | LB-6; `LibraryDeviceTest#a` 43738288853 pass on api33-lowram and api36 |
 | L8 | Reading library (manga) | ReadingLibrary route, MangaLibrary | done (unit only) | LB-1, LB-2 |
 | L9 | Only real data, no placeholder or fake items | all of the above | code read, no bug | no sample items; demo playlists removed unless filled (`LibraryRound2Test`) |
 | L10 | (R16) Device videos tab: folders, sorting, thumbnails | ui/screens/video/VideoScreen, ui/image/VideoThumbnailFetcher, data/model/MediaModels | done (unit only) | LB-7 sort remembered, sorted off main; thumbnails already on IO |

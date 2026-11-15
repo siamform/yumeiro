@@ -111,4 +111,4 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43724760853 | 8769ef8 | full suite | fail: Drama, HomeNav h2, Yumix | same | Drama: DramaBox CDN NXDOMAIN (app n + test q); h2 test p; Yumix test o |
 | 43732060154 | 3c29282 | Drama + Yumix + HomeNav | Drama pass; HomeNav 11/11; Yumix fail | Drama slow (55 s); HomeNav 11/11; Yumix 2/2 | api33 Yumix: section still loading at hold time (test, fixed bc68326) |
 | 43733844682 | bc68326 | G4 milestone full suite | 15/16 classes; Drama fail | 16/16 classes | api33 Drama: every onshort.net call timed out at 20 s in that window (upstream) |
-| 43738288853 | a119186 | Drama + LibraryDeviceTest | pending | pending | rerun of api33 Drama; first run of the Group 5/6 device test |
+| 43738288853 | a119186 | Drama + LibraryDeviceTest | 2/2 pass (listening +36.8 s) | 2/2 pass (listening +36.6 s) | rerun of api33 Drama; first run of the Group 5/6 device test |
