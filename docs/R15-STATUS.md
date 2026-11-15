@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 21:15 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-16 20:21 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** `notes/owner-orders-2.md` (agent workspace) as summarised in the ledger:
   L0 run 43744809503 + Step 2 open items (done) → **L1 Group 12 (current)** → L2 Groups 5–10 →
@@ -15,7 +15,7 @@
 - **Outage:** sandbox stopped answering 2026-11-16 ~19:05–19:45 UTC while a local `:app:lintTvDebug`
   ran (its Gradle daemon was killed, lint result lost). No commit was lost; the three unpushed
   edits survived and were pushed first. Lesson: TV lint moves to CI.
-- **Since the outage (20:00–21:10 UTC):** CI lint for the TV app (f0df775) found a real crash: Cast
+- **Since the outage (19:45–20:21 UTC):** CI lint for the TV app (f0df775) found a real crash: Cast
   subtitles used an API 33 method (fixed ff00d11, X10-2) plus API 28 calls on TV (6651bc9); lint noise
   fixed (7486997, c7772ce, 72394dc). CrashUiDeviceTest verified on both (X6-1). Pacer gap bug found by
   the closed-app test on api33 (fixed 9b46045, X5-2). Yumix pills 48 dp (b0fbea9). TV emulator job
