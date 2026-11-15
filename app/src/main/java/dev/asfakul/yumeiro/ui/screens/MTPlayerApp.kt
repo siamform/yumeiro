@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens
 
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -521,6 +523,8 @@ fun MTPlayerApp(
                 }
     }
     val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+    // Focus target of the TV rail's selected tab (pages send D-pad Left here).
+    val railFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val onBarNavigate: (String) -> Unit = { route ->
         val shortcut = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.of(route.removePrefix(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX))
         when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
@@ -947,12 +951,32 @@ fun MTPlayerApp(
                                 modifier = Modifier.fillMaxSize().padding(tabPad.value).consumeWindowInsets(tabPad.value)
                                     .graphicsLayer { alpha = tabFade.value; translationX = tabShift.value * 28.dp.toPx() }
                                     .testTag("tab_pager"),
-                            ) { page -> tabPage(page) }
+                            ) { page ->
+                                // R16 (G1 H5, run 43694972929): on TV, D-pad Left at a page's edge let the
+                                // pager lay out the previous page and move focus into it (the tab changed
+                                // instead of the rail opening). Pages are focus groups: Left out goes to
+                                // the rail's selected tab, Right out stays on the page.
+                                if (tvLayout) Box(
+                                    Modifier.fillMaxSize()
+                                        .focusProperties {
+                                            onExit = {
+                                                when (requestedFocusDirection) {
+                                                    androidx.compose.ui.focus.FocusDirection.Left -> { cancelFocusChange(); runCatching { railFocus.requestFocus() } }
+                                                    androidx.compose.ui.focus.FocusDirection.Right -> cancelFocusChange()
+                                                    else -> Unit
+                                                }
+                                            }
+                                        }
+                                        .focusGroup(),
+                                    propagateMinConstraints = true,
+                                ) { tabPage(page) } else tabPage(page)
+                            }
                             val railPad = if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
                             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }) { tabBottomBar() }
                             if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvNavRail(
                                 currentRoute = tabRoute,
+                                selectedFocus = railFocus,
                                 items = barItems,
                                 onNavigate = onBarNavigate,
                                 onSettings = { navigateSub(Screen.Settings.route) },

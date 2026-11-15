@@ -48,6 +48,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -79,9 +83,12 @@ fun TvNavRail(
     onNavigate: (String) -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedFocus: FocusRequester = remember { FocusRequester() },
 ) {
     val palette = LocalMtPalette.current
     var focusedInside by remember { mutableStateOf(false) }
+    val shown = railItems(items)
+    val selectedIndex = shown.indexOfFirst { it.route == currentRoute }
     val width by animateDpAsState(if (focusedInside) TvRailOpenWidth else TvRailWidth, tween(180), label = "railWidth")
     Box(
         modifier
@@ -96,6 +103,11 @@ fun TvNavRail(
                 else Modifier.background(Brush.horizontalGradient(listOf(palette.navBar, palette.navBar.copy(alpha = 0.90f), palette.navBar.copy(alpha = 0f)))),
             )
             .onFocusChanged { focusedInside = it.hasFocus }
+            // R16 (G1 H5, run 43694972929): D-pad Left from the Music page entered the rail on its
+            // first item (Home), so centre jumped to Home by mistake. Focus that enters the rail
+            // goes to the selected tab, as on Android TV and Google TV.
+            .focusProperties { onEnter = { if (selectedIndex >= 0) runCatching { selectedFocus.requestFocus() } } }
+            .focusGroup()
             .testTag("tv_nav_rail"),
     ) {
         Column(
@@ -115,13 +127,14 @@ fun TvNavRail(
             }
             Spacer(Modifier.height(12.dp))
             // Settings lives once, at the bottom of the rail; a pinned Settings shortcut would repeat it.
-            railItems(items).forEach { item ->
+            shown.forEachIndexed { i, item ->
                 RailItem(
                     label = item.label,
                     selected = currentRoute == item.route,
                     expanded = focusedInside,
                     icon = { sel -> if (sel) item.selectedIcon else item.unselectedIcon },
                     tag = "tv_${item.testTag}",
+                    focusRequester = if (i == selectedIndex) selectedFocus else null,
                 ) { if (currentRoute != item.route) onNavigate(item.route) }
             }
             Spacer(Modifier.weight(1f))
@@ -148,6 +161,7 @@ private fun RailItem(
     expanded: Boolean,
     icon: (Boolean) -> androidx.compose.ui.graphics.vector.ImageVector,
     tag: String,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     val palette = LocalMtPalette.current
@@ -173,6 +187,7 @@ private fun RailItem(
         Modifier
             .fillMaxWidth()
             .height(52.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clip(shape)
             .background(bg, shape)
             // The rail draws its own focus (filled accent pill), so no extra ring here.

@@ -121,6 +121,9 @@ class HomeNavigationDeviceTest {
             }
             log("tv rail: after LEFT focused=${focusedTags()} onRail=$onRail")
             assertTrue("D-pad LEFT never reached the rail; focus ${focusedTags()}", onRail)
+            // Entering the rail lands on the selected tab (Music), not on its first item.
+            assertTrue("rail entered on ${focusedTags()}, not on the selected tab", "tv_nav_tab_music" in focusedTags())
+            assertEquals("D-pad Left must open the rail, not change the tab", 1, TabPagerProbe.page)
             FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600); rule.waitForIdle()
             log("tv rail: after DOWN focused=${focusedTags()}")
             FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER")
