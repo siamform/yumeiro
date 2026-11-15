@@ -81,3 +81,13 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43693532355 | e9c281c | HomeNav + BackNav × 2 | Back 2/2, Home 0/2 (h5 only) | Back 2/2, Home 0/2 (h5 only) | h5: rail entered on Home (app bug) |
 | 43694972929 | ec6ebd8 | HomeNavigation × 2 | 0/2 (h5 only) | 0/2 (h5 only) | h7b SEND passes; h5 focus `tv_nav_tab_home`, once `home_setup_card` |
 | 43696246671 | a53effb | HomeNavigation × 2 | 2/2 | 2/2 | rail Left → selected tab, Down → Videos, centre → page 2 |
+| 43697438813 | 3342106 | full suite | fail (h2, FeedPosition precondition) | fail (h2) | h2 fresh-data case (test); stress 0 compose spins |
+| 43697447466 | 3342106 | stress 2 × 10 | 10/10 | 9/10 | ST-17 bring-into-view spin once |
+| 43697545350 | 3342106 | HomeNavigation h13b | pass | pass | |
+| 43701056608 | 5b1263e | full suite | pass | pass | every class |
+| 43701058752 | 5b1263e | Extensions + Pinned | fail | fail | Back in selection left the screen (app, fixed bfde23d); e8 back (test) |
+| 43702633505 | bfde23d | Extensions + Pinned | fail | fail | raw "Unable to resolve host" (app, fixed 9be5afb); e6 long-press on chips (test) |
+| 43704211410 | 9be5afb | Extensions + Pinned | 6/6, 1/1 | 6/6, 1/1 | |
+| 43705847970 | 97bb255 | Extensions + Pinned | 7/7, 1/1 | 7/7, 1/1 | e9 starters |
+| 43706162128 | 2744a23 | LocalPlayer | cancelled | cancelled | superseded by 43707028426 (workflow concurrency) |
+| 43707028426 | 4c885fe | LocalPlayer | 1/5 | 1/5 | e Cast ready in 192 / 138 ms (app fix b5d2d5a); a–d test errors (off-screen controls, clip end, floating timing, saver while charging) |
