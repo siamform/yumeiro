@@ -130,6 +130,7 @@ fun MTPlayerApp(
     val barItems = remember(navConfig) { dev.asfakul.yumeiro.ui.navigation.NavPrefs.barItems(navConfig) }
     val pageItemsNow by androidx.compose.runtime.rememberUpdatedState(pageItems)
     val tabPager = rememberPagerState { bottomNavItems.size }
+    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.currentPage }.collect { TabPagerProbe.page = it } }
     val tabScope = rememberCoroutineScope()
     // R15 (run 43650046635): the tab pager must never rest between two pages. With nothing
     // dragging or animating it, an offset left over (a fling cut short by a focus move) is settled
@@ -1559,23 +1560,27 @@ fun MTPlayerApp(
             (isNowPlayingExpanded && playbackState.currentTrack != null) ||
             actionTrack != null || showAddToPlaylistDialog || trackForDetailsDialog != null ||
             videoForDetails != null || showManageHiddenFoldersDialog || appPage != null || setupOpen
-        var lastBackPressAt by remember { mutableLongStateOf(0L) }
+        // R16 (G1 H6, predictive back): the first back on Home arms exit and shows a hint; for the
+        // next two seconds our handler is off, so the second back goes to the system, which plays
+        // its back-to-home animation and keeps the app warm in recents (no finish()).
+        var exitArmed by remember { mutableStateOf(false) }
+        LaunchedEffect(exitArmed) {
+            if (exitArmed) { kotlinx.coroutines.delay(EXIT_WINDOW_MS); exitArmed = false }
+        }
         // Back on another tab returns to Home first (like Instagram), then double back exits.
         BackHandler(enabled = navRoute == Screen.Home.route && tabPager.currentPage != 0 && !overlayOpen) {
             tabScope.launch { tabPager.animateScrollToPage(0) }
         }
-        BackHandler(enabled = currentRoute == Screen.Home.route && !overlayOpen) {
-            val now = SystemClock.elapsedRealtime()
-            if (lastBackPressAt != 0L && now - lastBackPressAt <= EXIT_WINDOW_MS) {
-                context.findActivity()?.finish()
-            } else {
-                lastBackPressAt = now
-                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
-            }
+        BackHandler(enabled = currentRoute == Screen.Home.route && !overlayOpen && !exitArmed) {
+            exitArmed = true
+            dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
         }
     }
     }
 }
+
+/** Current tab page for device tests (BackNavigationDeviceTest); written by the shell. */
+object TabPagerProbe { @Volatile var page: Int = 0 }
 
 private const val NAV_ANIM_MS = 340
 private const val NAV_POP_MS = 280
