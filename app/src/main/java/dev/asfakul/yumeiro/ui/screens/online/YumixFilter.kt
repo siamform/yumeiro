@@ -253,7 +253,8 @@ internal fun ActiveFilterBar(name: String, onChange: () -> Unit, onClear: () -> 
 /**
  * Round 11c: compact category chips at the top of Yumix, under the header (like YouTube's chip
  * bar). "All" shows the normal feed; any other chip switches the page to that category's titles.
- * Chips are small (32 dp tall, 13 sp) but each keeps a 44 dp touch target.
+ * Chips are small (32 dp tall, 13 sp) but each keeps a 48 dp touch target (G12 X8: 44 dp measured
+ * 46 dp in the accessibility check, run 43754318750 api36).
  */
 @Composable
 internal fun CategoryBar(cats: List<Pair<YumixFeed.Category, List<OnlineItem>>>, picked: String?, onPick: (String?) -> Unit) {
@@ -276,7 +277,7 @@ private fun CategoryChip(label: String, sel: Boolean, tag: String, onClick: () -
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (sel) p.textPrimary else p.textPrimary.copy(alpha = 0.08f), label = "cat_bg")
     Box(
-        Modifier.heightIn(min = 44.dp).selectable(selected = sel, role = Role.Tab, onClick = onClick).testTag(tag),
+        Modifier.heightIn(min = 48.dp).selectable(selected = sel, role = Role.Tab, onClick = onClick).testTag(tag),
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(10.dp)).background(bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
