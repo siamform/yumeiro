@@ -150,3 +150,15 @@ These are real emulators running the real debug APK; the tests are not simulated
 ## CI 43754316254 — first TV lint on f0df775
 
 - Build, unit tests, gitleaks: success. Lint mobile 117 errors, TV 121: NewApi readNBytes (Cast subtitles, API 33), NewApi API 28 calls in ReliabilityGuide (TV), RememberReturnType ×2, TV manifest ×2, 113 UnsafeOptInUsage (fixed ff00d11, 6651bc9, 7486997, c7772ce, 72394dc).
+
+## 43757544993 — ClosedAppAlert, Accessibility on b0fbea9 (both phones)
+
+- ClosedAppAlertDeviceTest PASS on both: api33-lowram posted 123,113 ms after queueing (pid 4109 → 6877), api36 123,013 ms (pid 3458 → 4791). The api33 early delivery (30.8 s) is gone: X5-2 verified.
+- AccessibilityDeviceTest A11Y_RESULT PASS on both (X8-1 verified).
+- StrictMode: DiskReadViolation in `ThemeSettings.init` (getSharedPreferences) inside the first composition; the whole message took ~5.9 s on api33-lowram and ~4.0 s on api36 (debug build). Logged as startup finding X2-1.
+
+## 43757547383 — first TV run (tv-api24, android-tv x86) on b0fbea9
+
+- The TV app installed and launched on API 24 with no crash.
+- HomeNavigation 11/11, BackNavigation 1/1, StabilityStress 3/3 failed, all from one test-helper cause: the API 24 storage permission dialog (packageinstaller GrantPermissionsActivity) stayed on top. FirstRun granted only Android 13+ permissions and matched only API 29+ dumpsys wording. Fixed in FirstRun.kt; rerun 43759794246.
+
