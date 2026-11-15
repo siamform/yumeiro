@@ -42,6 +42,8 @@ import dev.asfakul.yumeiro.stream.StreamMediaFactory
 @OptIn(UnstableApi::class)
 object PlaybackSession {
     const val GRACE_MS = 3_000L
+    /** Stop first, release this much later (ST-7: release() then has little left to wait for). */
+    const val STOP_TO_RELEASE_MS = 1_000L
 
     class Lease internal constructor(val key: String, val player: ExoPlayer, val resumed: Boolean) {
         private val listeners = ArrayList<Player.Listener>()
@@ -99,7 +101,34 @@ object PlaybackSession {
     private var network = false
     private var defaults: TrackSelectionParameters? = null
     internal val main by lazy { Handler(Looper.getMainLooper()) }
-    private val releaseLater = Runnable { releaseNow() }
+    private val releaseLater = Runnable { releaseInTwoSteps() }
+
+    /** Time the last [ExoPlayer.release] call held the main thread (diagnostics, ST-7 device runs). */
+    @Volatile var lastReleaseMs = -1L; private set
+
+    /**
+     * ST-7: [ExoPlayer.release] runs on the main thread (the player's looper) and waits for the
+     * playback thread to free the decoders, which held main for hundreds of ms in stall traces.
+     * After the grace, the player is first stopped, which frees the decoders on the playback thread
+     * without blocking main; release() follows [STOP_TO_RELEASE_MS] later and has little left to do.
+     */
+    @MainThread
+    private fun releaseInTwoSteps() {
+        val cur = current ?: return
+        current = null
+        cur.revoke()
+        currentUri = null
+        val p = cur.player
+        runCatching { p.stop() }
+        main.postDelayed({ timedRelease(p) }, STOP_TO_RELEASE_MS)
+    }
+
+    private fun timedRelease(p: ExoPlayer) {
+        val t0 = android.os.SystemClock.uptimeMillis()
+        runCatching { p.release() }
+        lastReleaseMs = android.os.SystemClock.uptimeMillis() - t0
+        android.util.Log.i("YuSession", "player release held main ${lastReleaseMs} ms")
+    }
 
     /** Key (video uri) the player is serving now: its headers and DRM are looked up with it. */
     @Volatile var currentUri: String? = null
@@ -165,7 +194,7 @@ object PlaybackSession {
         val cur = current ?: return
         current = null
         cur.revoke()
-        runCatching { cur.player.release() }
+        timedRelease(cur.player)
         currentUri = null
     }
 

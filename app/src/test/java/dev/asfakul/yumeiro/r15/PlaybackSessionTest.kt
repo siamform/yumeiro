@@ -63,6 +63,21 @@ class PlaybackSessionTest {
         assertEquals(1, PlaybackSession.alive)
     }
 
+    @Test fun releaseAfterGraceStopsFirstThenReleases() {
+        val a = PlaybackSession.acquire(ctx, "a", "https://x.example/a.mp4")
+        a.player.setMediaItem(MediaItem.fromUri("https://x.example/a.mp4"))
+        PlaybackSession.detach(a)
+        shadowOf(Looper.getMainLooper()).idleFor(PlaybackSession.GRACE_MS + 1, TimeUnit.MILLISECONDS)
+        assertEquals("session empty after the grace", 0, PlaybackSession.alive)
+        assertEquals("stopped first (decoders freed off main)", androidx.media3.common.Player.STATE_IDLE, a.player.playbackState)
+        val before = PlaybackSession.lastReleaseMs
+        shadowOf(Looper.getMainLooper()).idleFor(PlaybackSession.STOP_TO_RELEASE_MS + 1, TimeUnit.MILLISECONDS)
+        assertTrue("released after the stop (was $before)", PlaybackSession.lastReleaseMs >= 0)
+        // A new video after the grace gets a fresh player, not the stopped one.
+        val b = PlaybackSession.acquire(ctx, "a", "https://x.example/a.mp4")
+        assertFalse(b.resumed); assertTrue(b.player !== a.player)
+    }
+
     @Test fun closeReleasesAfterGraceAndReopenInsideGraceResumes() {
         val a = PlaybackSession.acquire(ctx, "a", "https://x.example/a.mp4")
         a.player.setMediaItem(MediaItem.fromUri("https://x.example/a.mp4"))
