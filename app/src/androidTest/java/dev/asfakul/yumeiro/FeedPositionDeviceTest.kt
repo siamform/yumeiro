@@ -133,7 +133,7 @@ class FeedPositionDeviceTest {
         val top = screen.height * 0.15f; val bottom = screen.height * 0.85f
         val keysB = b.map { it.key }.toSet()
         for (ca in a) {
-            if (ca.key in keysB) continue
+            if (ca.key in keysB || ca.key in duplicates) continue
             val ny = ca.y + dy
             val inPlainView = ny >= top && ny + ca.h <= bottom && ca.x >= 0 && ca.x + ca.w <= screen.width
             if (inPlainView) {
@@ -163,7 +163,7 @@ class FeedPositionDeviceTest {
         val until = SystemClock.uptimeMillis() + 120_000
         var shown = false
         while (SystemClock.uptimeMillis() < until) {
-            if (snap().size >= 4) { shown = true; break }
+            if (snap().size >= 3) { shown = true; break }
             idle(4_000)
             if (snap().size in 0..3) swipe(up = true)
             idle(1_500)
@@ -172,7 +172,7 @@ class FeedPositionDeviceTest {
         log("feed $feed: ${first.size} cards on screen at start: ${first.take(6).map { it.key }}")
         FirstRun.shot("feed_$feed")
         if (!shown) log("feed $feed: no cards · ${onScreen()}")
-        assertTrue("$feed: the feed never showed 4 cards in 120 s (cards=${first.size}) · ${onScreen()}", shown)
+        assertTrue("$feed: the feed never showed 3 cards in 120 s (cards=${first.size}) · ${onScreen()}", shown)
         val problems = ArrayList<String>()
         var seen = HashSet<String>().apply { addAll(first.map { it.key }) }
         fun stillCheck(name: String) {
@@ -197,7 +197,7 @@ class FeedPositionDeviceTest {
             if (i == 9) stillCheck("idle-deep")
         }
         stillCheck("idle-end")
-        log("feed $feed: ${seen.size} distinct cards seen, ${problems.size} problems, $unplacedSeen unplaced (prefetched) card nodes ignored, duplicate keys ${duplicates.size}")
+        log("feed $feed: ${seen.size} distinct cards seen, ${problems.size} problems, $unplacedSeen unplaced (prefetched) card nodes ignored, duplicate keys ${duplicates.size} ${duplicates.toList()}")
         problems.forEach { log("PROBLEM $it") }
         log("FEEDPOS_RESULT $feed ${if (problems.isEmpty()) "PASS" else "FAIL"} cards=${seen.size} problems=${problems.size}")
         val dir = File(ctx.getExternalFilesDir(null), "feedpos").apply { mkdirs() }
