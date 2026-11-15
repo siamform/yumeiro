@@ -1,21 +1,17 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-15 21:20 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-15 21:25 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Verified since 20:21 UTC:** X5-1, X5-2, X8-1 on both phones (43757544993); X10-1..4 on CI
-  (43757542521: lint 0 errors on phone and TV, lint now blocking, 5078a6f); APK secret scan clean (X7-2).
-- **Fixed, unit-proved:** X1-3 JsBridge extractor bounded (565d39b); X1-4 cancelled tracker sign-in
-  no longer toasts an error (b0a62eb).
-- **Found:** X2-1 slow first composition (StrictMode); X7-3 tokens/client secrets in BuildConfig (owner
-  decision); Home Continue cards unnamed for TalkBack (fixed 5e685a5).
-- **Current step:** Level 1, Group 12: X8-2 (a11y on Settings/search/player/large font), X9-1 (TV run),
-  X2 startup benchmark (:benchmark module 257d48c).
-- **Running:** device 43762090588 (AccessibilityDeviceTest, both phones, 84e151c); TV 43762847904
+- **Since 21:20 UTC:** X1 structure and ADR-012/013 in SYSTEM-DESIGN (68a7b3a). 43762090588: search and
+  Settings a11y clean on both phones; large font found a real crash, X8-3 (extension fragment restore,
+  fixed 7cb8c2e, unit). X2-2 permission binder calls moved off main (208ba48, unit, fails before).
+- **Current step:** Level 1, Group 12: X8-2/X8-3 device recheck, X9-1 (TV), X2 startup benchmark.
+- **Running:** device 43763558754 (AccessibilityDeviceTest, both phones, 208ba48); TV 43762847904
   (tv-api24 after the pm grant fix); CI 43762845168 (build incl. :benchmark, unit, blocking lint).
 - **Next three actions:** (1) read the three runs and fix; (2) dispatch macrobenchmark.yml startup,
   then profile, commit `baseline-prof.txt`, rerun startup for before/after; (3) write
