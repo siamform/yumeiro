@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro
 
+import androidx.test.platform.app.InstrumentationRegistry
 import android.util.Log
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -73,6 +74,18 @@ class BackNavigationDeviceTest {
         Thread.sleep(2_500) // Let any exit window from earlier presses lapse.
         // TV 43772037996: this Back closed one of our dialogs instead of reaching Home; record it.
         log("before the first Home back: ${FirstRun.onScreen(rule).take(700)}")
+        // TV 43774198053: one Compose root and no wait, yet the Back went to a window of ours that
+        // was removed on the key ("input event receiver has already been disposed"). Name it.
+        runCatching {
+            val pkg = InstrumentationRegistry.getInstrumentation().targetContext.packageName
+            val win = FirstRun.shell("dumpsys window windows").lines()
+            win.withIndex().filter { (_, l) -> "Window #" in l && pkg in l }.forEach { (i, l) ->
+                val attrs = win.drop(i + 1).take(14).filter { "ty=" in it || "mViewVisibility" in it || "mHasSurface" in it || "title=" in it }
+                log("window: ${l.trim()} · ${attrs.joinToString(" | ") { it.trim().take(160) }}")
+            }
+            FirstRun.shell("dumpsys input").lines().filter { "FocusedWindow" in it || "FocusedApplication" in it }.forEach { log("input: ${it.trim().take(200)}") }
+            FirstRun.shot("back_before_first_home_back")
+        }
         back()
         Thread.sleep(400)
         // The compose test clock only recomposes when the test syncs (Thread.sleep does not), so
