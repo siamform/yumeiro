@@ -14,6 +14,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
@@ -465,7 +467,9 @@ private fun Carousel(shelf: YmShelf, onOpen: (YmBrowse) -> Unit, onSong: (YmItem
 
 @Composable
 private fun YmCover(title: String, subtitle: String, art: String?, size: Dp, round: Boolean, onClick: () -> Unit) {
-    Column(Modifier.width(size).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("ytmusic_cover").feedCard("ytmusic", art ?: title), horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
+    // G12 X8: the label sits on the clickable node, so TalkBack names a card even when its title
+    // is scrolled off screen (the accessibility check found such cards unlabeled).
+    Column(Modifier.width(size).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).a11yLabel(title, subtitle).testTag("ytmusic_cover").feedCard("ytmusic", art ?: title), horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
         Box(Modifier.size(size).clip(if (round) CircleShape else RoundedCornerShape(12.dp))) {
             PosterImage(art, emptyMap(), Modifier.fillMaxSize(), if (round) Icons.Default.Person else Icons.Default.Album)
         }
@@ -477,7 +481,7 @@ private fun YmCover(title: String, subtitle: String, art: String?, size: Dp, rou
 
 @Composable
 private fun YmVideoCover(song: YmItem.Song, onClick: () -> Unit) {
-    Column(Modifier.width(236.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("ytmusic_video").feedCard("ytmusic", song.videoId)) {
+    Column(Modifier.width(236.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).a11yLabel(song.title, song.artistLine).testTag("ytmusic_video").feedCard("ytmusic", song.videoId)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp))) {
             PosterImage(song.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
         }
@@ -563,6 +567,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
                 onLongClick = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); download() },
                 onClick = { onSong(item) },
             )
+            .a11yLabel(item.title, item.artistLine)
             .padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -729,4 +734,7 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
     }
 }
 
-
+/** Spoken name for a card: "title, subtitle". Set on the clickable node itself (G12 X8). */
+private fun Modifier.a11yLabel(title: String, subtitle: String?): Modifier = semantics {
+    contentDescription = listOfNotNull(title.takeIf { it.isNotBlank() }, subtitle?.takeIf { it.isNotBlank() }).joinToString(", ")
+}
