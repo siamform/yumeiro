@@ -25,5 +25,17 @@
         <domain includeSubdomains="true">last.fm</domain>
         <domain includeSubdomains="true">lrclib.net</domain>
         <domain includeSubdomains="true">yumeiro.click</domain>
+        <!-- Account sign-in and token hosts: a token must never travel over plain HTTP. -->
+        <domain includeSubdomains="true">trakt.tv</domain>
+        <domain includeSubdomains="true">anilist.co</domain>
+        <domain includeSubdomains="true">myanimelist.net</domain>
+        <domain includeSubdomains="true">kitsu.app</domain>
+        <domain includeSubdomains="true">plex.tv</domain>
+        <domain includeSubdomains="true">accounts.google.com</domain>
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">onedrive.com</domain>
+        <domain includeSubdomains="true">aniskip.com</domain>
+        <domain includeSubdomains="true">ani.zip</domain>
+        <domain includeSubdomains="true">tvmaze.com</domain>
     </domain-config>
 </network-security-config>
