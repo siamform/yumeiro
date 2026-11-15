@@ -1434,19 +1434,21 @@ private fun VideoPlayerModalContent(
         }
     }
     BackHandler(enabled = !minimized) {
-        if (keyDriven && isControlsVisible && !isScreenLocked && !isEnded && playerError == null && !hideChrome) {
-            // Remote Back first closes the controls (as on every TV player), the next Back leaves.
-            isControlsVisible = false
-        } else if (isFullscreen && !isScreenLocked) {
-            isFullscreen = false
-        } else if (isScreenLocked) {
-            isLockedUnlockPillVisible = true
-            coroutineScope.launch {
-                delay(3000L)
-                isLockedUnlockPillVisible = false
+        // R17: one Back leaves on touch screens; a remote steps (controls → fullscreen → leave).
+        when (PlayerBackRule.step(
+            keyDriven = keyDriven, controlsVisible = isControlsVisible, locked = isScreenLocked, ended = isEnded,
+            error = playerError != null, chromeHidden = hideChrome, fullscreen = isFullscreen, onWatchPage = watchPage != null,
+        )) {
+            PlayerBackRule.Step.HIDE_CONTROLS -> isControlsVisible = false
+            PlayerBackRule.Step.EXIT_FULLSCREEN -> isFullscreen = false
+            PlayerBackRule.Step.SHOW_UNLOCK -> {
+                isLockedUnlockPillVisible = true
+                coroutineScope.launch {
+                    delay(3000L)
+                    isLockedUnlockPillVisible = false
+                }
             }
-        } else {
-            leavePlayer()
+            PlayerBackRule.Step.LEAVE -> leavePlayer()
         }
     }
     pageFinder?.let { pf ->

@@ -352,5 +352,20 @@ class LocalPlayerDeviceTest {
         log("LOCAL_F_RESULT PASS")
     }
 
+    /** R17 PL-18: on a phone one Back leaves full screen and the player together (floating window). */
+    @Test fun g_oneBackLeavesFullscreenOnPhone() {
+        openClipFromDevice()
+        loopClip()
+        control("video_fullscreen_btn")
+        pause(1_500)
+        FirstRun.shot("pl18_fullscreen")
+        // A touch Back (gesture or nav bar), not a key event: the app treats key Back as a remote.
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        wait("floating player after one Back", 8_000) { has("floating_close") }
+        log("PL18 one Back → floating player")
+        tap("floating_close")
+        log("LOCAL_G_RESULT PASS")
+    }
+
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
 }
