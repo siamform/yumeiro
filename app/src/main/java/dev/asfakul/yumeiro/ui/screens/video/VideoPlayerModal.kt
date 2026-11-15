@@ -1883,7 +1883,9 @@ private fun VideoPlayerModalContent(
                         isControlsVisible = false
                         val w = activeVideoFormat?.width?.takeIf { it > 0 } ?: video.width
                         val h = activeVideoFormat?.height?.takeIf { it > 0 } ?: video.height
-                        activity?.let { PipController.enter(it, w, h, isPlaying) }
+                        // A refused request used to do nothing at all; say so instead.
+                        val ok = activity?.let { PipController.enter(it, w, h, isPlaying) } == true
+                        if (!ok) dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "Picture-in-picture isn't available right now")
                     },
                     onInfoClick = { showVideoInfoDialog = true },
                     // Round 13: every video has a quality button (tracks, engine-built or the one it has).

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.media3.common.C
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -68,6 +69,8 @@ class LocalPlayerDeviceTest {
         repeat(5) {
             if (!has(tag)) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
             if (runCatching { rule.waitUntil(3_000) { has(tag) }; true }.getOrDefault(false)) {
+                // The top control row scrolls sideways; a person scrolls it to reach later buttons.
+                runCatching { rule.onAllNodesWithTag(tag, true)[0].performScrollTo() }
                 rule.onAllNodesWithTag(tag, true)[0].performClick(); return
             }
         }
@@ -129,8 +132,12 @@ class LocalPlayerDeviceTest {
         log("playing: ${PlaybackDiagnostics.state.value}")
     }
 
+    /** The clip is 12 s; steps that take longer loop it so it never reaches the end screen. */
+    private fun loopClip() = rule.runOnUiThread { PlaybackSession.playerForTest?.repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE }
+
     @Test fun a_deviceClipPlaysWithTracksSubtitlesSpeedAndControls() {
         openClipFromDevice()
+        loopClip()
         wait("player root") { has("video_player_root") }
         val s0 = PlaybackDiagnostics.state.value
         assertEquals("decoder size", 320 to 240, s0.width to s0.height)
@@ -202,8 +209,9 @@ class LocalPlayerDeviceTest {
         pause(1_500)
         val left = onPlayer { it.currentPosition } ?: 0
         log("left at ${left}ms")
-        back() // full screen → floating
-        if (has("video_floating_player")) { wait("floating close") { has("floating_close") }; tap("floating_close") } else back()
+        back() // full screen → floating (PL-9)
+        wait("floating player after back", 10_000) { has("floating_close") }
+        tap("floating_close")
         wait("player closed", 15_000) { !has("video_player_root") && !has("video_floating_player") }
         // Past the session's release grace, so this is a fresh player.
         pause(PlaybackSession.GRACE_MS + 1_500)
@@ -223,6 +231,7 @@ class LocalPlayerDeviceTest {
         val pm = ctx.packageManager
         org.junit.Assume.assumeTrue("no PiP on this device", pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE))
         openClipFromDevice()
+        loopClip()
         control("video_pip_btn")
         wait("picture-in-picture", 10_000) { var pip = false; rule.runOnUiThread { pip = rule.activity.isInPictureInPictureMode }; pip }
         assertTrue("still playing in PiP", onPlayer { it.playWhenReady } == true)
@@ -243,7 +252,11 @@ class LocalPlayerDeviceTest {
     @Test fun d_heatGuardFollowsBatterySaverAndThermalStatus() {
         val g = dev.asfakul.yumeiro.player.HeatGuard
         try {
+            // Battery saver cannot turn on while the emulator reports it is charging.
+            FirstRun.shell("dumpsys battery unplug")
             FirstRun.shell("cmd power set-mode 1")
+            val pm = ctx.getSystemService(android.os.PowerManager::class.java)
+            log("P19 isPowerSaveMode=${pm.isPowerSaveMode}")
             wait("WARM on battery saver", 10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.WARM }
             log("P19 saver → ${g.level.value}")
             FirstRun.shell("cmd power set-mode 0")
@@ -254,7 +267,7 @@ class LocalPlayerDeviceTest {
             log("P19 thermal 3 → ${g.level.value} (reached HOT: $hot)")
             assertTrue("HOT on severe thermal status", hot)
         } finally {
-            FirstRun.shell("cmd power set-mode 0"); FirstRun.shell("cmd thermalservice reset")
+            FirstRun.shell("cmd power set-mode 0"); FirstRun.shell("cmd thermalservice reset"); FirstRun.shell("dumpsys battery reset")
         }
         wait("COOL after reset", 10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.COOL }
         log("LOCAL_D_RESULT PASS")
