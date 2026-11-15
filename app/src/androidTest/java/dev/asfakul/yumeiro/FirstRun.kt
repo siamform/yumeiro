@@ -58,7 +58,7 @@ object FirstRun {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
         val ui = dev.asfakul.yumeiro.ui.screens.extras.SetupGuide
         return !guide && !tour && !ui.open.value && !ui.shouldAutoShow(ctx) && !has(rule, "splash_screen_root") &&
-            has(rule, "nav_tab_home") && !permissionDialogOnTop()
+            (has(rule, "nav_tab_home") || has(rule, "tv_nav_tab_home")) && !permissionDialogOnTop()
     }
 
     private fun has(rule: AndroidComposeTestRule<*, *>, tag: String) =
@@ -154,7 +154,12 @@ object FirstRun {
     }
 
     /** Taps the first node with [tag] that is actually on screen (several screens can share a tag). */
-    fun tapVisible(rule: AndroidComposeTestRule<*, *>, tag: String, timeoutMs: Long = 30_000) {
+    /** G12 X9-1: Yumeiro TV shows a side rail (`tv_nav_tab_*`) instead of the bottom bar (`nav_tab_*`). */
+    fun navTag(rule: AndroidComposeTestRule<*, *>, tag: String): String =
+        if (tag.startsWith("nav_tab_") && !has(rule, tag) && has(rule, "tv_nav_rail")) "tv_$tag" else tag
+
+    fun tapVisible(rule: AndroidComposeTestRule<*, *>, tagIn: String, timeoutMs: Long = 30_000) {
+        val tag = navTag(rule, tagIn)
         fun visible(): Int {
             val root = rule.onAllNodes(isRoot(), true).fetchSemanticsNodes().maxByOrNull { it.size.height } ?: return -1
             return rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().indexOfFirst { n ->
