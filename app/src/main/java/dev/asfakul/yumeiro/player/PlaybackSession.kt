@@ -173,6 +173,9 @@ object PlaybackSession {
     @MainThread
     fun isPlaying(): Boolean = current?.player?.isPlaying == true
 
+    /** Device tests read the live player (main thread only). */
+    internal val playerForTest: ExoPlayer? get() = current?.player
+
     /** Memory pressure: drop a closed player now instead of waiting for the grace. */
     @MainThread
     fun releaseIfDetached() { if (current?.detached == true) releaseNow() }
