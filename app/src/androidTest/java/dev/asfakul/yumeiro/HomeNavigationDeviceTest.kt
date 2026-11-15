@@ -194,6 +194,16 @@ class HomeNavigationDeviceTest {
         waitGone("topbar_search_input")
     }
 
+    @Test fun h13b_supportPageOpensAndBackCloses() {
+        // Opened from the support reminder card and the Inbox; same AppPages host as the inbox.
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.SUPPORT)
+        }
+        waitTag("support_screen")
+        back(); waitGone("support_screen")
+        waitTag("home_screen_root")
+    }
+
     @Test fun h12_continueWidgetIsOffered() {
         val providers = AppWidgetManager.getInstance(ctx).installedProviders.filter { it.provider.packageName == ctx.packageName }
         log("widgets: ${providers.map { it.provider.className }}")

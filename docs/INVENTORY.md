@@ -16,19 +16,19 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G1 Home and navigation
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| H1 | Home feed (sections, moods, online rows) | ui/screens/home/HomeScreen, HomeSections, HomeMoods, HomeOnline | open | |
-| H2 | "Jump back in" / continue row | HomeSections, player/LastPlayed, data/PlayCounts | open | |
-| H3 | Home shortcuts and nav-bar shortcuts (up to two) | ui/navigation/NavPrefs, ui/components/MTBottomBar | open | |
-| H4 | Bottom navigation + tab pager + swipe between tabs | MTPlayerApp, ui/components/TabSwipe, PageSwap | open | |
-| H5 | TV navigation rail and D-pad focus | ui/tv/TvMode, TvNavRail | open | |
-| H6 | Back behaviour (button, predictive gesture, nested pages, player) | MTPlayerApp, SubNav | open | |
-| H7 | Deep links and incoming intents (VIEW, SEND, browsable links, shared media) | MainActivity, stream/IncomingMedia | open | |
-| H8 | State restoration after process death | MainViewModel, ScrollMemory, NavPrefs | open | |
-| H9 | Splash, first-run welcome, explore tour, onboarding gate | ui/screens/splash, extras/SetupGuide, ExploreTour, online/OnboardingGate | open | |
-| H10 | Top bar, global search entry, search suggestions | ui/components/MTTopBar, YuSearch, SearchSuggest, TabSearch | open | |
-| H11 | Mini player bar | ui/components/MiniPlayerBar | open | |
-| H12 | Home-screen widget "Continue" | widget/ContinueWidget | open | |
-| H13 | App pages (inbox, support, permission center, reliability guide, reminders) | ui/screens/extras/* | open | |
+| H1 | Home feed (sections, moods, online rows) | ui/screens/home/HomeScreen, HomeSections, HomeMoods, HomeOnline | done | `FeedPositionDeviceTest` 43683520404 / 43687398312; G1 report |
+| H2 | "Jump back in" / continue row | HomeSections, player/LastPlayed, data/PlayCounts | done | `h2` 43693532355, 43696246671; G1 report |
+| H3 | Home shortcuts and nav-bar shortcuts (up to two) | ui/navigation/NavPrefs, ui/components/MTBottomBar | done | `h3` 43693532355, 43696246671 |
+| H4 | Bottom navigation + tab pager + swipe between tabs | MTPlayerApp, ui/components/TabSwipe, PageSwap | done | `h1_h4`, `BackNavigationDeviceTest` 43690918679, 43696246671 |
+| H5 | TV navigation rail and D-pad focus | ui/tv/TvMode, TvNavRail | done | `h5` 43696246671 (rail focus fix a53effb); real TV in script T |
+| H6 | Back behaviour (button, predictive gesture, nested pages, player) | MTPlayerApp, SubNav | done | `BackNavigationDeviceTest` 43690918679 6/6, 43693532355 4/4; gesture on hardware in script P |
+| H7 | Deep links and incoming intents (VIEW, SEND, browsable links, shared media) | MainActivity, stream/IncomingMedia | done | `h7` VIEW, `h7b` SEND text 43694972929, 43696246671. SEND of video files is not supported (enhancement) |
+| H8 | State restoration after process death | MainViewModel, ScrollMemory, NavPrefs | audited | `h8` recreate only; process death not tested on device (instrumentation dies with the process) |
+| H9 | Splash, first-run welcome, explore tour, onboarding gate | ui/screens/splash, extras/SetupGuide, ExploreTour, online/OnboardingGate | done | `FirstRun.toTabs` on every device run (welcome + tour gate) |
+| H10 | Top bar, global search entry, search suggestions | ui/components/MTTopBar, YuSearch, SearchSuggest, TabSearch | done | `h10` 43689481257 6/6, 43696246671 |
+| H11 | Mini player bar | ui/components/MiniPlayerBar | open | Moved to G6 Music (needs a playing track) |
+| H12 | Home-screen widget "Continue" | widget/ContinueWidget | audited | `h12` provider present; placing on a launcher is manual (script P) |
+| H13 | App pages (inbox, support, permission center, reliability guide, reminders) | ui/screens/extras/* | done | `h13` inbox, all HomeNavigation runs |
 
 ## G2 Extensions and market
 | ID | Item | Code | Status | Covered by |
