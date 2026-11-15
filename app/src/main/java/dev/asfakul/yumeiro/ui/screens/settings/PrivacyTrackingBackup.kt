@@ -59,6 +59,7 @@ import dev.asfakul.yumeiro.backup.Backup
 import dev.asfakul.yumeiro.network.NetworkClient
 import dev.asfakul.yumeiro.online.OnlineErrors
 import dev.asfakul.yumeiro.online.OnlineSettings
+import dev.asfakul.yumeiro.online.runCancellable
 import dev.asfakul.yumeiro.online.anime.AniList
 import dev.asfakul.yumeiro.online.anime.MyAnimeList
 import dev.asfakul.yumeiro.security.Privacy
@@ -188,9 +189,9 @@ fun TrackingScreen(onBack: () -> Unit) {
                     onSetUp = { traktKeys = true },
                     onSignIn = {
                         scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { Trakt.deviceCode(NetworkClient.get(context)) } }
+                            runCancellable { withContext(Dispatchers.IO) { Trakt.deviceCode(NetworkClient.get(context)) } }
                                 .onSuccess { c -> traktCode = c; open(c.verificationUrl)
-                                    runCatching { Trakt.awaitToken(context, NetworkClient.get(context), c) }
+                                    runCancellable { Trakt.awaitToken(context, NetworkClient.get(context), c) }
                                         .onSuccess { AppMessages.success(context, "Signed in to Trakt as $it") }
                                         .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
                                     traktCode = null; refresh++ }
@@ -206,9 +207,9 @@ fun TrackingScreen(onBack: () -> Unit) {
                     onSetUp = { simklKeys = true },
                     onSignIn = {
                         scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { Simkl.deviceCode(NetworkClient.get(context)) } }
+                            runCancellable { withContext(Dispatchers.IO) { Simkl.deviceCode(NetworkClient.get(context)) } }
                                 .onSuccess { c -> simklCode = c; open(c.verificationUrl)
-                                    runCatching { Simkl.awaitToken(context, NetworkClient.get(context), c) }
+                                    runCancellable { Simkl.awaitToken(context, NetworkClient.get(context), c) }
                                         .onSuccess { AppMessages.success(context, "Signed in to Simkl as $it") }
                                         .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
                                     simklCode = null; refresh++ }
@@ -226,9 +227,9 @@ fun TrackingScreen(onBack: () -> Unit) {
                     onSignIn = {
                         lastfmJob?.cancel()
                         lastfmJob = scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { LastFm.requestToken(NetworkClient.get(context)) } }
+                            runCancellable { withContext(Dispatchers.IO) { LastFm.requestToken(NetworkClient.get(context)) } }
                                 .onSuccess { (token, url) -> lastfmUrl = url; open(url)
-                                    runCatching { withContext(Dispatchers.IO) { LastFm.awaitSession(context, NetworkClient.get(context), token) } }
+                                    runCancellable { withContext(Dispatchers.IO) { LastFm.awaitSession(context, NetworkClient.get(context), token) } }
                                         .onSuccess { AppMessages.success(context, "Scrobbling to Last.fm as $it"); Scrobbler.flush(context) }
                                         .onFailure { if (it !is kotlinx.coroutines.CancellationException) AppMessages.error(context, OnlineErrors.friendly(it)) }
                                     lastfmUrl = null; refresh++ }
