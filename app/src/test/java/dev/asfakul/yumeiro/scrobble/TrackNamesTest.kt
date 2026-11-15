@@ -26,4 +26,15 @@ class TrackNamesTest {
     @Test fun unknowns() {
         assertTrue(TrackNames.isUnknown("<unknown>")); assertTrue(TrackNames.isUnknown(" ")); assertTrue(TrackNames.isUnknown(null))
     }
+
+    @Test fun artistPrefixWithoutRegex() {
+        // R16: same results as the old regex ^\s*artist\s*[-–—]\s* (ignore case).
+        assertEquals("Hello", TrackNames.stripArtistPrefix("  adele – Hello", "Adele"))
+        assertEquals("Hello", TrackNames.stripArtistPrefix("ADELE—Hello", "Adele"))
+        assertEquals("Hello", TrackNames.stripArtistPrefix("A.B. - Hello", "A.B."))
+        assertEquals("Adeles - Hello", TrackNames.stripArtistPrefix("Adeles - Hello", "Adele"))
+        assertEquals("Adele Hello", TrackNames.stripArtistPrefix("Adele Hello", "Adele"))
+        assertEquals("Hello - Adele", TrackNames.stripArtistPrefix("Hello - Adele", "Adele"))
+        assertEquals("", TrackNames.stripArtistPrefix("Adele -", "Adele"))
+    }
 }

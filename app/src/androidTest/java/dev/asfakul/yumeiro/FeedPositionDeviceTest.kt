@@ -87,6 +87,8 @@ class FeedPositionDeviceTest {
 
     /** Cards that intersect the screen (pager pages beside the current one sit wholly outside it). */
     /** Keys shown more than once in the composed feed (the same title in two shelves). */
+    /** Swipe steps where no card was on screen both before and after (offset unknown). */
+    private val lostTrack = java.util.Collections.synchronizedList(ArrayList<String>())
     private val duplicates = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
     @Volatile private var unplacedSeen = 0
     /** Every slot each title was seen in (a title in more than one shelf is reported, not failed). */
@@ -124,6 +126,10 @@ class FeedPositionDeviceTest {
         val ua = a.groupBy { it.key }.filterValues { it.size == 1 }.mapValues { it.value[0] }
         val ub = b.groupBy { it.key }.filterValues { it.size == 1 }.mapValues { it.value[0] }
         val common = ua.keys intersect ub.keys
+        // R16: no card in both snapshots means the page offset is unknown (the swipe travelled more
+        // than a screen). Judging "vanished in plain view" with an assumed offset of 0 reported every
+        // old card as replaced (run 43680730905, api33 Home). Such steps are counted, not judged.
+        if (common.isEmpty() && swipeUp != null && a.isNotEmpty() && b.isNotEmpty()) { lostTrack += step; return problems }
         val dys = common.map { (ub[it]!!.y - ua[it]!!.y) }
         // The motion of the page: the most common offset (to the pixel).
         val dy = dys.groupingBy { Math.round(it) }.eachCount().maxByOrNull { it.value }?.key?.toFloat() ?: 0f
@@ -162,7 +168,16 @@ class FeedPositionDeviceTest {
         val a = (screen.height * 0.70f).toInt(); val b = (screen.height * 0.40f).toInt()
         val (y1, y2) = if (up) a to b else b to a
         FirstRun.dismissPrompts(rule)
-        FirstRun.shell("input swipe $x $y1 $x $y2 450")
+        // R16: a drag that stops before the finger lifts. `input swipe` lifts while still moving, so on
+        // the slow api33 emulator (frames of 360 ms to 1.3 s) the system read it as a fling and the
+        // page travelled about three screens (run 43680730905). A held end gives zero lift-off speed.
+        val steps = 8
+        FirstRun.shell("input motionevent DOWN $x $y1")
+        for (k in 1..steps) FirstRun.shell("input motionevent MOVE $x ${y1 + (y2 - y1) * k / steps}")
+        SystemClock.sleep(300)
+        FirstRun.shell("input motionevent MOVE $x $y2")
+        SystemClock.sleep(150)
+        FirstRun.shell("input motionevent UP $x $y2")
     }
 
     private fun run(feed: String, open: () -> Unit) {
@@ -213,11 +228,14 @@ class FeedPositionDeviceTest {
         stillCheck("idle-end")
         log("feed $feed: ${seen.size} distinct cards seen, ${problems.size} problems, $unplacedSeen unplaced (prefetched) card nodes ignored, duplicate keys ${duplicates.size} ${duplicates.toList()}")
         titleSlots.filterValues { it.size > 1 }.forEach { (t, sl) -> log("feed $feed: same title in ${sl.size} slots (allowed): $t in $sl") }
+        val lost = lostTrack.filter { it.startsWith("$feed/") }
+        if (lost.isNotEmpty()) log("feed $feed: ${lost.size} swipes moved more than a screen (no shared card, not judged): $lost")
         problems.forEach { log("PROBLEM $it") }
         log("FEEDPOS_RESULT $feed ${if (problems.isEmpty()) "PASS" else "FAIL"} cards=${seen.size} problems=${problems.size}")
         val dir = File(ctx.getExternalFilesDir(null), "feedpos").apply { mkdirs() }
         File(dir, "$feed.txt").writeText(report.toString())
         assertTrue("$feed: ${problems.size} position problems: ${problems.take(5)}", problems.isEmpty())
+        assertTrue("$feed: ${lost.size} swipes could not be followed (more than 2): $lost", lost.size <= 2)
         assertTrue("$feed: only $moved of ${steps.size} swipes scrolled the feed (the test did not exercise it)", moved >= steps.size * 3 / 4)
         assertTrue("$feed: scrolling showed no new cards (seen ${seen.size})", seen.size > first.size)
     }

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.scrobble
 
-import dev.asfakul.yumeiro.text.RegexCache
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_SCROBBLERULES_HOT_1 = Regex("""(?i)\s*VEVO$""")
@@ -36,11 +35,25 @@ object TrackNames {
     fun title(raw: String, artist: String = ""): String {
         var t = raw.replace(noise, "").replace(pipeTail, "").trim()
         val a = artist(artist)
-        if (a.isNotBlank()) {
-            val dash = RegexCache.get("""^\s*${Regex.escape(a)}\s*[-–—]\s*""", RegexOption.IGNORE_CASE)
-            t = t.replace(dash, "")
-        }
+        if (a.isNotBlank()) t = stripArtistPrefix(t, a)
         return t.trim().ifBlank { raw.trim() }
+    }
+
+    /**
+     * "Adele - Hello" → "Hello" when [artist] is "Adele" (any case, -, – or —). R16: plain string
+     * matching. The old per-artist regex was compiled on the main thread, because the scrobbler
+     * calls this from a main-thread flow about every 300 ms (stress run 43680725238).
+     */
+    internal fun stripArtistPrefix(title: String, artist: String): String {
+        var i = 0
+        while (i < title.length && title[i].isWhitespace()) i++
+        if (!title.regionMatches(i, artist, 0, artist.length, ignoreCase = true)) return title
+        var j = i + artist.length
+        while (j < title.length && title[j].isWhitespace()) j++
+        if (j >= title.length || title[j] !in "-–—") return title
+        j++
+        while (j < title.length && title[j].isWhitespace()) j++
+        return title.substring(j)
     }
 }
 
