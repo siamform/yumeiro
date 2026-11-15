@@ -71,6 +71,46 @@ class HomeNavigationDeviceTest {
         waitTag("home_screen_root")
     }
 
+    @Test fun h2_continueVideoCardOpensVideosWhenEmpty() {
+        // Fresh data: nothing watched, so the card says "Open videos" and goes to the Videos tab.
+        waitTag("home_continue_video")
+        tap("home_continue_video_play")
+        waitPage(2, 15_000)
+        log("continue video (empty) → page ${TabPagerProbe.page}")
+        back(); waitPage(0)
+    }
+
+    @Test fun h3_navBarShortcutOpensItsPage() {
+        val inst = InstrumentationRegistry.getInstrumentation()
+        try {
+            inst.runOnMainSync { dev.asfakul.yumeiro.ui.navigation.NavPrefs.setShortcut(ctx, dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX, true) }
+            waitTag("nav_shortcut_inbox", 15_000)
+            tap("nav_shortcut_inbox")
+            waitTag("inbox_screen")
+            back(); waitGone("inbox_screen")
+        } finally {
+            inst.runOnMainSync { dev.asfakul.yumeiro.ui.navigation.NavPrefs.setShortcut(ctx, dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX, false) }
+        }
+    }
+
+    @Test fun h5_tvLayoutShowsTheRailAndDpadMovesTabs() {
+        val inst = InstrumentationRegistry.getInstrumentation()
+        try {
+            inst.runOnMainSync { dev.asfakul.yumeiro.ui.tv.TvMode.set(ctx, dev.asfakul.yumeiro.ui.tv.TvMode.Pref.TV) }
+            waitTag("tv_nav_rail", 15_000)
+            waitTag("tv_nav_tab_music")
+            // D-pad: tap gives the rail item focus on a touch emulator, then centre selects.
+            tap("tv_nav_tab_music"); waitPage(1, 15_000)
+            FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600)
+            FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER")
+            val moved = runCatching { rule.waitUntil(10_000) { TabPagerProbe.page != 1 }; true }.getOrDefault(false)
+            log("tv rail: dpad down + centre from page 1 → page ${TabPagerProbe.page} moved=$moved")
+            assertTrue("D-pad down + centre on the rail did not change tab (page ${TabPagerProbe.page}) · ${FirstRun.onScreen(rule)}", moved)
+        } finally {
+            inst.runOnMainSync { dev.asfakul.yumeiro.ui.tv.TvMode.set(ctx, dev.asfakul.yumeiro.ui.tv.TvMode.Pref.AUTO) }
+        }
+    }
+
     @Test fun h7_viewIntentForAWebVideoOpensThePlayer() {
         val url = "https://archive.org/download/f20110625mad/f20110625mad.mp4"
         val out = FirstRun.shell("am start -W -a android.intent.action.VIEW -d $url -t video/mp4 -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
