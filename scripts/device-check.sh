@@ -11,7 +11,9 @@ adb shell settings put global hide_error_dialogs 1 || true
 FILTER="${TEST_FILTER:-dev.asfakul.yumeiro.StabilityStressDeviceTest,dev.asfakul.yumeiro.PlayerSwitchDeviceTest,dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.SurfaceModeDeviceTest,dev.asfakul.yumeiro.ForceDownloadDeviceTest,dev.asfakul.yumeiro.PlaybackSessionDeviceTest,dev.asfakul.yumeiro.DramaPlaybackDeviceTest,dev.asfakul.yumeiro.FeedPositionDeviceTest,dev.asfakul.yumeiro.QualityListDeviceTest,dev.asfakul.yumeiro.PinnedExtensionsDeviceTest,dev.asfakul.yumeiro.HomeNavigationDeviceTest,dev.asfakul.yumeiro.BackNavigationDeviceTest,dev.asfakul.yumeiro.ExtensionsDeviceTest,dev.asfakul.yumeiro.LocalPlayerDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest,dev.asfakul.yumeiro.YumixDeviceTest,dev.asfakul.yumeiro.LibraryDeviceTest,dev.asfakul.yumeiro.DownloadResumeDeviceTest,dev.asfakul.yumeiro.BackupDeviceTest,dev.asfakul.yumeiro.AniSkipDeviceTest,dev.asfakul.yumeiro.AccessibilityDeviceTest,dev.asfakul.yumeiro.HeatGuardDeviceTest,dev.asfakul.yumeiro.ClosedAppAlertDeviceTest,dev.asfakul.yumeiro.CrashUiDeviceTest}" 
 case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac
 R=6; H=false
-./gradlew --no-daemon installMobileDebug installMobileDebugAndroidTest
+# FLAVOR=Tv installs Yumeiro TV (minSdk 24) on the Android TV emulator; default is the phone app.
+FLAVOR="${FLAVOR:-Mobile}"
+./gradlew --no-daemon install${FLAVOR}Debug install${FLAVOR}DebugAndroidTest
 # R15: one class at a time with its own time limit, so one hung test (run 43612391254
 # spent 70 min in one) can't hide every other result; results go into the job log.
 REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
