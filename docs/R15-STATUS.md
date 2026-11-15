@@ -6,12 +6,14 @@
   Groups 1–4: complete (agent work), re-checked 2026-11-16 (spot-checks in `DONE-LEDGER.md`, "Fourth
   handover re-check"). Groups 5, 6, 7 have partial work and reports, and Groups 8–10 have some fixes
   (DL-2..5, BK-1, ER-1/2, NT-1). They are **paused, not done**, and resume after Group 12.
-- **Current step:** Step 2 open items, then Group 12.
-- **Running:** full suite on `22f7c30`, run 43744809503 (both emulators). Result goes into
-  `docs/evidence/round3/device-runs.md` and the ledger.
-- **Next three actions:** (1) read 43744809503 and record it; (2) Step 2: Group 3 design items
-  (video sleep timer, portrait "More" button, one-press Back on phones, SRT → WebVTT for Cast);
-  (3) Group 12 audit (`docs/groups/GROUP-12-CROSS-CUTTING.md`).
+- **Current step:** Step 2 open items. Group 3 design items written: PL-16 More menu and PL-17 video
+  sleep timer (3ce721d), PL-18 one Back on phones (c832bc2), PL-13 refused-PiP device test (fd1a2f5),
+  PL-19 SRT → WebVTT for Cast (23390e6). All unit only until `LocalPlayerDeviceTest` f–i pass.
+- **Running:** full suite on `22f7c30`, run 43744809503; `LocalPlayerDeviceTest` on the new tip (ID in
+  `docs/evidence/round3/device-runs.md` once read).
+- **Next three actions:** (1) read both runs, record them, fix any failure; show the owner the
+  before/after top bar (`pl16_*` screenshots); (2) AniSkip offline device test (PL-14), then ST-7
+  re-check and ST-17; (3) Group 12 audit (`docs/groups/GROUP-12-CROSS-CUTTING.md`).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
