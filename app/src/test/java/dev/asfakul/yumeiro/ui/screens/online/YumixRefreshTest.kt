@@ -27,12 +27,22 @@ class YumixRefreshTest {
         assertEquals(live, YumixFeed.homeAfterFetch(live, null))
     }
 
-    @Test fun refreshWithFewerRowsKeepsTheMissingOnesAfterTheFreshOnes() {
-        val fresh = listOf(row("A", "Popular", 6, 100), row("A", "Latest", 4, 200))
+    @Test fun refreshWithFewerRowsKeepsEveryRowInItsPlace() {
+        val fresh = listOf(row("A", "Latest", 4, 200), row("A", "New row", 3, 300))
         val out = YumixFeed.homeAfterFetch(live, fresh)!!
-        assertEquals(listOf("Popular", "Latest", "Movies"), out.map { it.title })
-        assertEquals(fresh[0], out[0]) // the fresh copy wins for rows it brought back
+        assertEquals(listOf("Popular", "Latest", "Movies", "New row"), out.map { it.title })
+        assertEquals(live[0], out[0]) // not brought back: kept as it was
+        assertEquals(fresh[0], out[1]) // the fresh copy wins for rows it brought back
         assertEquals(live[2], out[2])
+    }
+
+    @Test fun aRefreshThatBringsOnlyWhatIsShownIsNotNew() {
+        // Offline the drama catalog answers from its shelf cache: the same titles come back.
+        assertFalse(YumixFeed.broughtNew(live, live))
+        assertFalse(YumixFeed.broughtNew(live, listOf(row("A", "Popular", 3))))
+        assertFalse(YumixFeed.broughtNew(live, null))
+        assertTrue(YumixFeed.broughtNew(live, listOf(row("A", "Popular", 6)))) // item 5 is new
+        assertTrue(YumixFeed.broughtNew(null, live))
     }
 
     @Test fun firstLoadWithNothingIsReportedNotHidden() {

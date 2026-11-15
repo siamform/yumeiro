@@ -568,6 +568,8 @@ object ExtensionManager {
 
     private fun unloadInternal(key: String) {
         val plugin = synchronized(plugins) { plugins.remove(key) } ?: return
+        // R16 G4: one line per unload, with the caller, so a section that leaves Yumix can be traced.
+        Log.i(TAG, "Unloaded $key (${plugin.filename?.substringAfterLast('/')}) from ${Throwable().stackTrace.drop(1).take(4).joinToString(" < ") { it.methodName + ":" + it.lineNumber }}")
         runCatching { plugin.beforeUnload() }
         plugin.filename?.let { removeRegistrations(it) }
     }

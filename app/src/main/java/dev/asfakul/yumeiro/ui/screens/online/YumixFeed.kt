@@ -112,7 +112,7 @@ internal object YumixFeed {
      * fetch threw. A fetch that throws or comes back with no rows (offline: every row failed, so
      * the repository answers an empty list instead of an error) keeps [prev]. Before, an empty answer
      * replaced the section with nothing. A refresh with fewer rows (one row timed out) keeps the
-     * rows it didn't bring back after the fresh ones. Returns null when there's nothing to show,
+     * rows it didn't bring back in their places. Returns null when there's nothing to show,
      * which the screen reports as an error with Retry.
      */
     fun homeAfterFetch(prev: List<OnlineRow>?, fresh: List<OnlineRow>?): List<OnlineRow>? {
@@ -120,8 +120,13 @@ internal object YumixFeed {
         val new = fresh.orEmpty().filter { it.items.isNotEmpty() }
         if (new.isEmpty()) return old.takeIf { it.isNotEmpty() }
         if (old.isEmpty()) return new
-        val have = new.mapTo(HashSet()) { it.title + "|" + it.pageData }
-        return new + old.filter { have.add(it.title + "|" + it.pageData) }
+        // R16 G4: rows stay where they were. A fresh row replaces its old copy in place and rows
+        // only the refresh brought go last; before, every missing old row jumped below the fresh
+        // ones, so a partial refresh moved the shelves on screen.
+        val byKey = new.associateBy { it.title + "|" + it.pageData }
+        val placed = HashSet<String>()
+        val kept = old.map { o -> val k = o.title + "|" + o.pageData; placed += k; byKey[k] ?: o }
+        return kept + new.filter { placed.add(it.title + "|" + it.pageData) }
     }
 
     /**
@@ -129,6 +134,17 @@ internal object YumixFeed {
      * start. It used to compare against every ready extension: one extension with no rows (no
      * section) kept the endless feed from ever appearing.
      */
+    /**
+     * R16 G4: true when [fresh] brings at least one title that [prev] did not have. Offline, the
+     * drama catalog answers a refresh from its own shelf cache (stale-while-revalidate), so a
+     * "successful" refresh can bring back exactly what is on screen. Counting that as an answer
+     * reset "More to explore" (cards on screen moved) and hid the "Couldn't refresh" message.
+     */
+    fun broughtNew(prev: List<OnlineRow>?, fresh: List<OnlineRow>?): Boolean {
+        val have = prev.orEmpty().flatMapTo(HashSet()) { r -> r.items.map { it.key } }
+        return fresh.orEmpty().any { r -> r.items.any { it.key !in have } }
+    }
+
     fun sectionsDone(groupCount: Int, ready: List<Pair<String, List<OnlineRow>>>): Boolean {
         val withRows = ready.count { (_, rows) -> rows.any { it.items.isNotEmpty() } }
         return withRows > 0 && groupCount >= withRows

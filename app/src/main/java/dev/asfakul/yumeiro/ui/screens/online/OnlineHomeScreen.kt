@@ -204,7 +204,7 @@ fun OnlineHomeScreen(
     // Fetches now run in the screen's scope and survive those restarts; a name is only fetched
     // again when forced (pull to refresh, Retry) or after it failed.
     val inflight = YumixMemory.inflight
-    /** Loads one extension's home; true when rows came back from it (not only kept ones). */
+    /** Loads one extension's home; true when it brought titles that were not on screen yet. */
     suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean): Boolean {
         val name = api.name
         if (!force && homes[name] is ProviderHome.Ready) return false
@@ -230,13 +230,13 @@ fun OnlineHomeScreen(
                 val cur = homes[name] as? ProviderHome.Ready
                 if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
             }
-            !fresh.isNullOrEmpty()
+            YumixFeed.broughtNew(prev, fresh)
         }
         inflight[name] = job
         return runCatching { job.await() }.getOrDefault(false)
     }
 
-    /** Returns how many extensions answered with rows. */
+    /** Returns how many extensions answered with titles that were not shown yet. */
     suspend fun loadAll(force: Boolean): Int = supervisorScope {
         // The selected channel (if any) goes first so its page fills before the rest of the mix.
         val ordered = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.sortedBy { if (it.name == selected) 0 else 1 }
@@ -345,7 +345,12 @@ fun OnlineHomeScreen(
                     if (answered > 0) {
                         YumixMemory.resetExplore()
                         YumixMemory.syncExplore(providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } })
-                    } else dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Couldn't refresh. Showing what was already loaded.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+                    } else dev.asfakul.yumeiro.ui.components.AppMessages.show(
+                        context,
+                        if (dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) "Nothing new yet. Showing what was already loaded."
+                        else "Couldn't refresh: you're offline. Showing what was already loaded.",
+                        dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO,
+                    )
                 } },
                 modifier = Modifier.fillMaxSize(),
             ) {

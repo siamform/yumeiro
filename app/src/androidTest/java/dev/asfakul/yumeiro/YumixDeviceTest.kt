@@ -100,7 +100,7 @@ class YumixDeviceTest {
             val n = cards().size; val all = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes().size
             val lists = rule.onAllNodesWithTag("online_home_list", true).fetchSemanticsNodes().size
             val eng = ExtensionManager.state.value
-            log("wait +${SystemClock.uptimeMillis() - t0} ms: yumix cards $n, all cards $all, online_home_list nodes $lists · engine ready=${eng.ready} gen=${eng.generation} providers=${ExtensionManager.providers().map { it.name }} · ${dev.asfakul.yumeiro.ui.screens.online.yumixDebugSummary()}")
+            log("wait +${SystemClock.uptimeMillis() - t0} ms: yumix cards $n, all cards $all, online_home_list nodes $lists · engine ready=${eng.ready} gen=${eng.generation} providers=${ExtensionManager.providers().map { it.name }} installed=${eng.installed.map { it.name + (if (it.enabled) "" else "(off)") }} · ${dev.asfakul.yumeiro.ui.screens.online.yumixDebugSummary()}")
             if (n < 3) log("  screen: ${FirstRun.onScreen(rule).take(900)}")
             stable = if (n >= 3) stable + 1 else 0
             if (stable < 2) idle(3_000)
@@ -117,8 +117,9 @@ class YumixDeviceTest {
         // Offline the extensions fail fast (no DNS). Give every one of them time to answer, and
         // catch the "Couldn't refresh" message: it proves the refresh ran and every answer failed.
         var message: String? = null
-        val end = SystemClock.uptimeMillis() + 45_000
-        while (SystemClock.uptimeMillis() < end) {
+        // Up to 120 s: offline, drama calls can still queue for a feed slot before failing.
+        val end = SystemClock.uptimeMillis() + 120_000
+        while (SystemClock.uptimeMillis() < end && message == null) {
             dev.asfakul.yumeiro.ui.components.AppMessages.current.value?.text?.takeIf { "refresh" in it }?.let { message = it }
             idle(500)
         }
