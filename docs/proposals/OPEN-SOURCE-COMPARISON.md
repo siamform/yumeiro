@@ -596,3 +596,27 @@ Approve next (bigger, plan first):
 
 Later or only if users ask: Shikimori and MDL, collections, on-device subtitle translation, FCast, the small
 polish table, a light novel reader. Not now: AI dub, Telegram, proxy-based lossless music, extra extension engines.
+
+## R16 re-check (15 November 2026)
+
+Re-read release by release on 15 Nov 2026, 05:40 UTC. Nothing here is built; it is a proposal.
+
+| Source | What changed since 14 Nov | Link |
+|---|---|---|
+| cs-repos | No commits since 1 Nov 2026; `repos-db.json` unchanged | [commits](https://github.com/recloudstream/cs-repos/commits/master) |
+| CloudStream | No release after v4.9.1 (9 Nov) and the 9 Nov pre-release, both already above | [releases](https://github.com/recloudstream/cloudstream/releases) |
+| Hikari releases | No tagged release after v0.12.51 (5 Nov); `clone-model` (8 Nov) already above | [releases](https://github.com/codegeasse1/hikari/releases) |
+| Hikari commits 14–15 Nov | 0.12.101 "Butter pass": bundled baseline profile, 250 ms start-up budget, async language load, bigger Coil cache, off-main reads in `MainActivity`, fastest refresh rate, predictive back opt-in, home marquee paused when hidden ([d91fcb4](https://github.com/codegeasse1/hikari/commit/d91fcb4), [59be331](https://github.com/codegeasse1/hikari/commit/59be331), [e0c2c1d](https://github.com/codegeasse1/hikari/commit/e0c2c1d)). 0.12.102 "Butter art pass": TMDB art cross-fades in, rows warm the art cache while scrolling ([791c33c](https://github.com/codegeasse1/hikari/commit/791c33c), [8bada6e](https://github.com/codegeasse1/hikari/commit/8bada6e)). 0.12.103: host-side NewPipe downloader for extractor plugins ([02315e3](https://github.com/codegeasse1/hikari/commit/02315e3)). Music fixes (JioSaavn, Qobuz badge) | [commits](https://github.com/codegeasse1/hikari/commits/main) |
+
+What this means for Yumeiro (checked in the code on `r15-stability`):
+
+| Hikari change | Yumeiro today | Proposal | Effort | Risk |
+|---|---|---|---|---|
+| Bundled baseline profile | `androidx.profileinstaller` 1.4.1 is a dependency, but the app ships **no** `baseline-prof.txt` of its own (only the profiles inside AndroidX libraries) | **P1.** Add a `:baselineprofile` module (Macrobenchmark + `BaselineProfileRule`) covering cold start → Home → Yumix scroll → player open, generated on the CI emulators and committed. Measure with the existing `YuStart` lines before and after on api33-lowram | S-M | Low (build-time only) |
+| Predictive back opt-in | `MainActivity` sets `android:enableOnBackInvokedCallback="false"` since the first commit, with no recorded reason | Audit in G1 H6 first: check every `BackHandler` and the player's back path on api36, then decide. Turning it on without that audit could break nested back | S | Medium |
+| Off-main reads in `MainActivity` | R15/R16 already moved prefs warm-up (`PrefsWarmup`), regex tables, FCM, workers and the source-menu icons to `yu-startup` | Nothing new; keep measuring with the stress campaign (ST-6, ST-7) | — | — |
+| Marquee paused when hidden | Yumeiro has no auto-moving rows; the hero carousel should stop when not visible | Check in G4 Y6 that the hero timer stops on `ON_STOP` | S | Low |
+| Art cross-fade, warm art cache while scrolling | Coil with `ImageCacheSize`; no prefetch of next rows' posters | P3. Prefetch posters for the next 1–2 rows on idle, only on unmetered networks and not on low-RAM devices | S | Low |
+| Host-side NewPipe downloader for plugins | Yumeiro already sets up NewPipe at app start (`YouTubePlayback.install` → `NewPipe.init(NewPipeDownloader(...))`), before extensions load | Nothing to add. Confirm in G2 that a CloudStream extension that calls the YouTube extractor works | — | — |
+
+No change to the approval list above, except one new P1 entry: **baseline profile** (S-M, low risk), to place after item 4.
