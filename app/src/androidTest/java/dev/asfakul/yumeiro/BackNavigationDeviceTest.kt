@@ -50,6 +50,11 @@ class BackNavigationDeviceTest {
         rule.waitForIdle(); Thread.sleep(800)
         log("after swipe page=${page()} moved=$moved")
         if (page() > 0) {
+            rule.mainClock.advanceTimeByFrame()
+            var tabHandler = false
+            rule.activityRule.scenario.onActivity { tabHandler = it.onBackPressedDispatcher.hasEnabledCallbacks() }
+            log("on page 1: hasEnabledCallbacks=$tabHandler")
+            assertTrue("no back callback on tab page 1", tabHandler)
             back()
             rule.waitUntil(8_000) { page() == 0 }
             assertEquals(Lifecycle.State.RESUMED, state())

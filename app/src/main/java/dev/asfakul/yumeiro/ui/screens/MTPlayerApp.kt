@@ -1573,13 +1573,18 @@ fun MTPlayerApp(
             if (exitArmed) { kotlinx.coroutines.delay(EXIT_WINDOW_MS); exitArmed = false }
         }
         // Back on another tab returns to Home first (like Instagram), then double back exits.
-        BackHandler(enabled = navRoute == Screen.Home.route && tabPager.currentPage != 0 && !overlayOpen) {
-            tabScope.launch { tabPager.animateScrollToPage(0) }
-        }
-        BackHandler(enabled = currentRoute == Screen.Home.route && !overlayOpen && !exitArmed) {
-            exitArmed = true
-            android.util.Log.i("YuBack", "home back: exit armed for ${EXIT_WINDOW_MS} ms")
-            dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
+        // One handler, decided inside onBack: two handlers that flip as the page changes made the
+        // system re-register callbacks mid-swipe and cancel a back pressed then (api36,
+        // WindowOnBackDispatcher sendCancelIfRunning, run 43689402737). It turns off only while
+        // exit is armed on Home, so the second back reaches the system.
+        BackHandler(enabled = navRoute == Screen.Home.route && !overlayOpen && !(exitArmed && tabPager.currentPage == 0)) {
+            if (tabPager.currentPage != 0) {
+                tabScope.launch { tabPager.animateScrollToPage(0) }
+            } else {
+                exitArmed = true
+                android.util.Log.i("YuBack", "home back: exit armed for ${EXIT_WINDOW_MS} ms")
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
+            }
         }
     }
     }
