@@ -78,20 +78,23 @@ object OnlineErrors {
     }
 
     fun friendly(e: Throwable, fallback: String = "Something went wrong"): String {
-        val root = generateSequence(e) { it.cause }.last()
+        val chain = generateSequence(e) { it.cause }.take(8).toList()
+        val root = chain.last()
         val m = (e.message ?: root.message).orEmpty()
         return when {
             e is ExtensionManager.ExtensionException -> m
             dev.asfakul.yumeiro.youtube.YtAccount.accountCanHelp(e) -> dev.asfakul.yumeiro.youtube.YtAccount.blockedHint()
-            root is java.net.UnknownHostException ->
+            // Any link, not only the root: Android's UnknownHostException carries a GaiException as its
+            // cause, so a root-only check showed the raw "Unable to resolve host" text (device run 43702633505).
+            chain.any { it is java.net.UnknownHostException } ->
                 if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
                 else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"
-            root is java.net.ConnectException || root is java.net.NoRouteToHostException ||
-                (root is java.net.SocketException && root.message.orEmpty().contains("reset", true)) ->
+            chain.any { it is java.net.ConnectException || it is java.net.NoRouteToHostException ||
+                (it is java.net.SocketException && it.message.orEmpty().contains("reset", true)) } ->
                 "Your network refused the connection. The site may be blocked here — try a VPN"
-            root is java.net.SocketTimeoutException || root is java.io.InterruptedIOException ||
+            chain.any { it is java.net.SocketTimeoutException || it is java.io.InterruptedIOException } ||
                 e is kotlinx.coroutines.TimeoutCancellationException -> "The server took too long to answer"
-            root is javax.net.ssl.SSLException -> "Secure connection failed"
+            chain.any { it is javax.net.ssl.SSLException } -> "Secure connection failed"
             m.startsWith("HTTP 404") || m.contains("HTTP 404") -> "Not found (404)"
             m.startsWith("HTTP") -> "Server error ($m)"
             root is org.json.JSONException -> "The server sent unreadable data"

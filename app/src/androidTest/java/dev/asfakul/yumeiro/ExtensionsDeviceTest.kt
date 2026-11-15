@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.percentOffset
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -178,7 +179,8 @@ class ExtensionsDeviceTest {
         back(); waitGone("extensions_selection_bar"); assertTrue(has("extensions_screen"))
 
         // E6: long-press selects one; bulk remove asks first, then removes only that one.
-        rule.onNodeWithTag("extension_$second", true).performTouchInput { longClick() }
+        // Press the title row: the card's centre is its chip row (Auto-update, Check for update), whose chips take the press.
+        rule.onNodeWithTag("extension_$second", true).performTouchInput { longClick(percentOffset(0.4f, 0.12f)) }
         waitTag("extensions_selection_bar")
         waitFor("1 selected by long-press") { text("extensions_selected_count").startsWith("1 selected") }
         tap("extensions_bulk_remove"); waitTag("extensions_bulk_confirm_remove")
