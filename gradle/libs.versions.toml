@@ -34,7 +34,11 @@ cloudstreamLibrary = "4.8.0"
 nicehttp = "0.4.18"
 # YouTube / YouTube Music / SoundCloud without login (same extractor NewPipe, ArchiveTune and AuraMusic use).
 newpipeExtractor = "v0.26.5"
-jackson = "2.19.4" # 2.20+ uses MethodHandle.invokeExact (needs minSdk 26); keep <= 2.19 while minSdk is 24
+jackson = "2.19.4" # phone (minSdk 28). 2.20+ uses MethodHandle.invokeExact; keep <= 2.19
+# TV (minSdk 24): 2.14+ needs Android 8 (SDK 26). 2.15+ makes ObjectMapper fail to load on 7.x
+# (ExceptionUtil -> java.lang.BootstrapMethodError, databind#4653; seen on the TV api24 emulator,
+# run 43765162241). 2.13 is the last line upstream supports on SDK 24, and CloudStream 4.8.0 asks for 2.13.1.
+jacksonTv = "2.13.5"
 castFramework = "23.0.0"
 # Push (FCM only — no Analytics, Auth or Firestore). BoM 35.2.0 → firebase-messaging 26.0.2.
 firebaseBom = "35.2.0"

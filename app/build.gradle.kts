@@ -399,3 +399,14 @@ configurations.configureEach {
       .using(module("com.github.TeamNewPipe:NewPipeExtractor:${libs.versions.newpipeExtractor.get()}"))
   }
 }
+
+// G12 X13-1: the TV build (minSdk 24) gets Jackson 2.13.x; see libs.versions.toml (jacksonTv).
+// Only tv* classpaths: the phone (minSdk 28) keeps the newer line. JacksonTvCompatTest guards it.
+configurations.matching { it.name.startsWith("tv") && it.name.endsWith("Classpath") }.configureEach {
+  resolutionStrategy.eachDependency {
+    if (requested.group.startsWith("com.fasterxml.jackson")) {
+      useVersion(libs.versions.jacksonTv.get())
+      because("Jackson 2.14+ needs Android 8; the TV build runs on Android 7 (databind#4653)")
+    }
+  }
+}
