@@ -26,6 +26,9 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         CommonActivity.setActivityInstance(this)
+        // Must be set before super.onCreate restores saved fragments: extension dialogs live in the
+        // extension's class loader, not the app's (G12 X8-3, crash in device run 43762090588).
+        supportFragmentManager.fragmentFactory = dev.asfakul.yumeiro.online.ExtensionFragmentFactory
         super.onCreate(savedInstanceState)
     }
 

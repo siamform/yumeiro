@@ -94,6 +94,10 @@ object ExtensionManager {
 
     /** Plugins currently loaded, by installed key. */
     private val plugins = HashMap<String, BasePlugin>()
+
+    /** Class loaders of the extensions loaded in this process (for restoring their fragments, G12 X8-3). */
+    fun pluginClassLoaders(): List<ClassLoader> =
+        synchronized(plugins) { plugins.values.mapNotNull { it.javaClass.classLoader } }.distinct()
     private var removedDefaults = mutableSetOf<String>()
     @Volatile private var started = false
 
