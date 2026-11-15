@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.ui.screens
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -525,6 +526,17 @@ fun MTPlayerApp(
     val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
     // Focus target of the TV rail's selected tab (pages send D-pad Left here).
     val railFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    // X9-4: the page that holds focus (-1: none). See TvPageFocus.
+    val focusedTabPage = remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    if (tvLayout) LaunchedEffect(tabPager) {
+        androidx.compose.runtime.snapshotFlow { Triple(tabPager.settledPage, focusedTabPage.intValue, tabPager.isScrollInProgress) }
+            .collect { (settled, focused, scrolling) ->
+                if (dev.asfakul.yumeiro.ui.tv.TvPageFocus.isStranded(settled, focused, scrolling)) {
+                    android.util.Log.i("YuTvFocus", "focus left on page $focused after the tab changed to $settled → rail")
+                    runCatching { railFocus.requestFocus() }
+                }
+            }
+    }
     val onBarNavigate: (String) -> Unit = { route ->
         val shortcut = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.of(route.removePrefix(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX))
         when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
@@ -967,7 +979,11 @@ fun MTPlayerApp(
                                                 }
                                             }
                                         }
-                                        .focusGroup(),
+                                        .focusGroup()
+                                        .onFocusChanged { st ->
+                                            if (st.hasFocus) focusedTabPage.intValue = page
+                                            else if (focusedTabPage.intValue == page) focusedTabPage.intValue = -1
+                                        },
                                     propagateMinConstraints = true,
                                 ) { tabPage(page) } else tabPage(page)
                             }

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro
 
+import androidx.compose.ui.test.performScrollToKey
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.util.Log
@@ -85,6 +86,12 @@ class HomeNavigationDeviceTest {
         // Nothing watched: the card says "Open videos" and goes to the Videos tab. In the full
         // suite earlier classes leave a watched video (43697438813), and then the same button is
         // "Resume" and opens the player. Both are right; check the one that applies.
+        // TV (43768054941, 540 dp tall): the Continue row is below the setup card and Spaces, so
+        // the lazy list has not composed it yet. Scroll to it, as a user does.
+        closeGuide()
+        if (!has("home_continue_video")) runCatching {
+            rule.onNodeWithTag("home_list", true).performScrollToKey("continue_row"); rule.waitForIdle()
+        }
         waitTag("home_continue_video")
         val resume = rule.onAllNodesWithTag("home_continue_video_play", true).fetchSemanticsNodes()
             .any { n -> n.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }.orEmpty().contains("Resume") }
@@ -154,6 +161,7 @@ class HomeNavigationDeviceTest {
                 FirstRun.shell("input keyevent KEYCODE_DPAD_LEFT"); Thread.sleep(500); rule.waitForIdle()
                 if (focusedTags().any { it.startsWith("tv_nav_") }) { onRail = true; break }
             }
+            // X9-4: before the fix focus stayed on the pinned off-screen Home card and LEFT went nowhere.
             log("tv rail: after LEFT focused=${focusedTags()} onRail=$onRail")
             assertTrue("D-pad LEFT never reached the rail; focus ${focusedTags()}", onRail)
             // Entering the rail lands on the selected tab (Music), not on its first item.
