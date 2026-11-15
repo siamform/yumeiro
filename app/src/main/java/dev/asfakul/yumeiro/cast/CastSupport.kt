@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.cast
 
+import dev.asfakul.yumeiro.network.readAtMost
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
@@ -171,11 +172,11 @@ object CastSupport {
                     if (!r.isSuccessful) return null
                     val body = r.body ?: return null
                     if (body.contentLength() > CastSubtitleServer.MAX_BYTES) return null
-                    body.byteStream().use { it.readNBytes(CastSubtitleServer.MAX_BYTES + 1) }
+                    body.byteStream().use { it.readAtMost(CastSubtitleServer.MAX_BYTES + 1) }
                 }
             }
             "file", null -> java.io.File(uri.path ?: sub.url).takeIf { it.length() in 1..CastSubtitleServer.MAX_BYTES.toLong() }?.readBytes() ?: return null
-            "content" -> ctx.contentResolver.openInputStream(uri)?.use { it.readNBytes(CastSubtitleServer.MAX_BYTES + 1) } ?: return null
+            "content" -> ctx.contentResolver.openInputStream(uri)?.use { it.readAtMost(CastSubtitleServer.MAX_BYTES + 1) } ?: return null
             else -> return null
         }
         if (bytes.size > CastSubtitleServer.MAX_BYTES) return null

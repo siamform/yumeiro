@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.update
 
+import dev.asfakul.yumeiro.network.readAtMost
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.security.TrustedSources
 import kotlinx.coroutines.Dispatchers
@@ -101,7 +102,7 @@ internal class GitHubReleaseClient(
             val code = conn.responseCode
             if (!TrustedSources.isGitHubDownloadHost(conn.url.toString())) throw UpdateCheckException("Checksum file redirected off GitHub.")
             if (code != 200) throw HttpStatusException(code)
-            val bytes = conn.inputStream.use { readBounded(it, MAX_SUMS_BYTES + 1) }
+            val bytes = conn.inputStream.use { it.readAtMost(MAX_SUMS_BYTES + 1) }
             if (bytes.size > MAX_SUMS_BYTES) throw UpdateCheckException("Checksum file too large.")
             return bytes.decodeToString()
         } finally {
@@ -157,18 +158,6 @@ internal class GitHubReleaseClient(
         }
     }
 
-    /** Reads at most [limit] bytes (API 28-safe replacement for InputStream.readNBytes). */
-    private fun readBounded(input: java.io.InputStream, limit: Int): ByteArray {
-        val out = java.io.ByteArrayOutputStream()
-        val buf = ByteArray(8192)
-        while (out.size() < limit) {
-            val n = input.read(buf, 0, minOf(buf.size, limit - out.size()))
-            if (n < 0) break
-            out.write(buf, 0, n)
-        }
-        return out.toByteArray()
-    }
-
     data class ResolvedDownload(val url: String, val needsAuthHeader: Boolean)
 
     private class HttpStatusException(val code: Int) : IOException("HTTP $code")
@@ -185,7 +174,7 @@ internal class GitHubReleaseClient(
         try {
             val code = conn.responseCode
             if (code != 200) throw HttpStatusException(code)
-            val bytes = conn.inputStream.use { readBounded(it, MAX_API_BYTES + 1) }
+            val bytes = conn.inputStream.use { it.readAtMost(MAX_API_BYTES + 1) }
             if (bytes.size > MAX_API_BYTES) throw UpdateCheckException("GitHub response too large.")
             return bytes.decodeToString()
         } finally {
