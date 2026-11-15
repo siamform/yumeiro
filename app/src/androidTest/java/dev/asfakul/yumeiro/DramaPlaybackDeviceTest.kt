@@ -68,9 +68,12 @@ class DramaPlaybackDeviceTest {
         // An episode plays: try the first titles in feed order, as a user tapping down the shelf.
         val tried = ArrayList<String>()
         for (item in items.take(4)) {
+            val loadAt = android.os.SystemClock.elapsedRealtime()
             val detail = runCatching { runBlocking { OnlineRepository.load(api, item.url) } }
                 .onFailure { tried += "${item.name}: load ${it.javaClass.simpleName} ${it.message?.take(80)}" }.getOrNull() ?: continue
+            val loadMs = android.os.SystemClock.elapsedRealtime() - loadAt
             PlaybackDiagnostics.reset("")
+            val playAt = android.os.SystemClock.elapsedRealtime()
             rule.runOnUiThread { OnlineSession.play(ctx, detail) }
             val ok = runCatching {
                 rule.waitUntil(120_000) {
@@ -78,6 +81,8 @@ class DramaPlaybackDeviceTest {
                     d.firstFrame || OnlineSession.state.value?.phase == OnlineSession.Phase.FAILED
                 }
             }.isSuccess && PlaybackDiagnostics.state.value.firstFrame
+            val playMs = android.os.SystemClock.elapsedRealtime() - playAt
+            Log.i("MTDeviceTest", "drama timing: ${item.name}: detail load ${loadMs}ms, play to first frame ${playMs}ms (ok=$ok)")
             val st = OnlineSession.state.value
             tried += "${item.name}: firstFrame=$ok phase=${st?.phase} links=${st?.links?.size} msg=${st?.message?.take(80)} uri=${PlaybackDiagnostics.state.value.uri.take(80)}"
             Log.i("MTDeviceTest", "drama try: ${tried.last()}")

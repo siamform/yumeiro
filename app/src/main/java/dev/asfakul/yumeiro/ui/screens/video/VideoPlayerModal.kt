@@ -1101,6 +1101,7 @@ private fun VideoPlayerModalContent(
         dev.asfakul.yumeiro.player.PlaybackDiagnostics.reset(video.uri, video.sizeBytes)
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
+                dev.asfakul.yumeiro.player.StartTimeline.mark("first frame")
                 dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { it.copy(firstFrame = true) }
             }
 

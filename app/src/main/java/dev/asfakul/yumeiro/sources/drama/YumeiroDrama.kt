@@ -167,7 +167,9 @@ class YumeiroDramaProvider(
         val n = parts.last().toIntOrNull() ?: return false
         val seriesUrl = parts.subList(1, parts.size - 1).joinToString("|")
         val s = c.series(seriesUrl)
+        dev.asfakul.yumeiro.player.StartTimeline.mark("drama series page")
         val (streams, via) = streamsOrMirror(c, s, n)
+        dev.asfakul.yumeiro.player.StartTimeline.mark("drama streams", via ?: "own")
         val audio = s.language?.let { languageLabel(it) }?.let { "$it audio" } ?: "Original audio"
         streams.sources.entries.sortedByDescending { DramaStreams.qualityOf(it.key) }.forEach { (q, u) ->
             val type = if (u.contains(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO

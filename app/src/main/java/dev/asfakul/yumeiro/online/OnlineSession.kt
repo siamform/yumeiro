@@ -168,6 +168,7 @@ object OnlineSession {
             return
         }
         _state.value = s
+        dev.asfakul.yumeiro.player.StartTimeline.begin("${detail.api}: ${detail.name}")
         dev.asfakul.yumeiro.data.PlayCounts.record(
             app, dev.asfakul.yumeiro.data.PlayCounts.Kind.ONLINE, "${detail.api}|${detail.url}", detail.name, detail.api,
             detail.posterUrl, detail.posterHeaders, api = detail.api, url = detail.url,
@@ -186,6 +187,7 @@ object OnlineSession {
                 _state.update { it?.copy(phase = Phase.FAILED, message = "The extension “${start.api}” isn't installed or is turned off.") }
                 return@launch
             }
+            dev.asfakul.yumeiro.player.StartTimeline.mark("provider")
             var started = false
             var firstAt = 0L
             val links = LinkedHashMap<String, OnlineLink>()
@@ -233,7 +235,7 @@ object OnlineSession {
                 }.collect { ev ->
                     when (ev) {
                         is LinkEvent.Link -> {
-                            if (links.isEmpty()) firstAt = System.currentTimeMillis()
+                            if (links.isEmpty()) { firstAt = System.currentTimeMillis(); dev.asfakul.yumeiro.player.StartTimeline.mark("first link", ev.link.name) }
                             links.putIfAbsent(ev.link.url, ev.link)
                             if (started) publish(false) else startIfReady(false)
                         }
@@ -264,6 +266,7 @@ object OnlineSession {
         val id = videoIdFor(s.api, data) + ":" + link.url.hashCode().toUInt().toString(16)
         val resume = resumeMs ?: OnlineHistory.progressOf(s.api, data)?.takeIf { !it.finished }?.positionMs ?: 0L
         _state.update { cur -> (cur ?: s).copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null, visible = maxOf(s.visible, linkIndex + 1)) }
+        dev.asfakul.yumeiro.player.StartTimeline.mark("player start", link.qualityLabel)
         Log.i(TAG, "play ${s.title} via ${link.name} (${link.qualityLabel}, ${link.formatLabel}) ${link.url.take(120)}")
         val provider = ExtensionManager.provider(s.api)
         OnlinePlayback.registerInterceptors(provider, link)

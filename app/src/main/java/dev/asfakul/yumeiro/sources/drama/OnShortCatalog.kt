@@ -440,7 +440,9 @@ class OnShortGate(
         val attempts = if (tries > 0) tries else attempts
         for (attempt in 0 until attempts) {
             waiting.incrementAndGet()
+            val asked = now()
             val r = try { permits.withPermit {
+                (now() - asked).takeIf { it > 1_000 }?.let { runCatching { android.util.Log.i("YuGate", "waited ${it}ms for a slot: ${url.take(90)}") } }
                 spacing.withLock {
                     val wait = maxOf(coolUntil - now(), lastStart + minGapMs - now())
                     if (wait > 0) kotlinx.coroutines.delay(wait)
