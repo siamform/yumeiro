@@ -78,6 +78,19 @@ object NetworkSettings {
         prefs?.edit()?.putStringSet(BYPASS_KEY, HashSet(hosts))?.apply()
     }
 
+    @Volatile private var app: Context? = null
+
+    /**
+     * G12 X11-2: called first thing in Application.onCreate (no disk access). Requests made before
+     * any screen called [init] used the default DNS settings and an empty bypass list; now the first
+     * DNS lookup loads the user's settings on the OkHttp thread that needs them ([ensureLoaded]).
+     */
+    fun attach(context: Context) { app = context.applicationContext ?: context }
+
+    /** Loads the settings if [attach] was called and nothing loaded them yet. Disk read: off main. */
+    fun ensureLoaded() { if (!loaded) app?.let { init(it) } }
+
+    @Synchronized
     fun init(context: Context) {
         if (loaded) return
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -106,6 +119,7 @@ object NetworkSettings {
 
     /** For tests. */
     internal fun setForTests(config: DnsConfig) { _dns.value = config; loaded = true; SmartDns.clearCache() }
+    internal fun resetForTests() { loaded = false; app = null; prefs = null; _dns.value = DnsConfig(); SmartDns.clearCache() }
 
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =
         runCatching { enumValueOf<T>(name ?: return default) }.getOrDefault(default)

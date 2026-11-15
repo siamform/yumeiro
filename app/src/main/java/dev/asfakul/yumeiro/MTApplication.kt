@@ -19,6 +19,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         if (dev.asfakul.yumeiro.backup.Restart.isRestartProcess(this)) return
         // Round 12: a staged restore / reset is applied before anything reads a setting or file.
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
+        // G12 X11-2: the first network request loads the user's DNS settings (not the defaults).
+        dev.asfakul.yumeiro.network.NetworkSettings.attach(this)
         // R15: load the settings files the first screen reads, off the main thread.
         dev.asfakul.yumeiro.startup.PrefsWarmup.start(this)
         // Round 2: crash reports are written to the phone (Settings → Crash reports) before anything else can fail.

@@ -52,6 +52,7 @@ object PrefsWarmup {
         "discovery_state",
         "reliability_guide",      // ReliabilityGuide
         "reminders",              // Reminders
+        "mt_network",             // NetworkSettings (G12 X11-2; Settings and the first request read it)
     )
 
     fun start(context: Context) {
@@ -72,6 +73,7 @@ object PrefsWarmup {
             runCatching { dev.asfakul.yumeiro.ui.theme.BackdropSettings.init(app) }
             runCatching { dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(app) }
             runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(app) }
+            runCatching { dev.asfakul.yumeiro.network.NetworkSettings.init(app) }
             // G12 X2-2: Home's setup checklist asks for the media and notification permission;
             // the first binder call in a process is uncached, so make it here, not in composition.
             runCatching { dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.readSetupPerms(app) }
