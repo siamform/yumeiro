@@ -1,0 +1,74 @@
+name: Macrobenchmark
+
+# G12 X2: cold start of the R8 preview build on the two CI phone emulators, and baseline profile
+# generation. Manual only. Emulator numbers compare before/after on the same image; they are not
+# real-phone startup times.
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "startup = StartupBenchmark, profile = BaselineProfileGenerator (api36 only)"
+        type: choice
+        options: [startup, profile]
+        default: startup
+
+concurrency:
+  group: macrobenchmark-${{ github.ref }}-${{ inputs.what }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ${{ fromJSON(inputs.what == 'profile' && '[{"name":"api36","api":36,"profile":"pixel_6","ram":"4096M","heap":"512M"}]' || '[{"name":"api33-lowram","api":33,"profile":"pixel_3a","ram":"2048M","heap":"192M"},{"name":"api36","api":36,"profile":"pixel_6","ram":"4096M","heap":"512M"}]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with: { distribution: temurin, java-version: "21.0.13" }
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Build the preview app and the benchmark
+        run: ./gradlew --no-daemon :app:assembleMobilePreview :benchmark:assemblePreview
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          CLASS: ${{ inputs.what == 'profile' && 'dev.asfakul.yumeiro.benchmark.BaselineProfileGenerator' || 'dev.asfakul.yumeiro.benchmark.StartupBenchmark' }}
+        with:
+          api-level: ${{ matrix.device.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.device.profile }}
+          ram-size: ${{ matrix.device.ram }}
+          heap-size: ${{ matrix.device.heap }}
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./gradlew --no-daemon :benchmark:connectedPreviewAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=$CLASS -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+      - name: Startup numbers to the job summary
+        if: always()
+        run: |
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import glob, json
+          files = glob.glob("benchmark/build/outputs/connected_android_test_additional_output/**/*benchmarkData.json", recursive=True)
+          if not files: print("### No benchmark JSON found")
+          for f in files:
+              for b in json.load(open(f)).get("benchmarks", []):
+                  for k, m in b.get("metrics", {}).items():
+                      print(f"- **{b.get('name')}** {k}: median {m.get('median'):.0f} ms, min {m.get('minimum'):.0f}, max {m.get('maximum'):.0f}")
+          PY
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macrobenchmark-${{ inputs.what }}-${{ matrix.device.name }}
+          path: |
+            benchmark/build/outputs/connected_android_test_additional_output/
+            benchmark/build/reports/androidTests/

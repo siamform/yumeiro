@@ -35,3 +35,5 @@ dependencyResolutionManagement {
 rootProject.name = "Yumeiro"
 
 include(":app")
+// G12 X2: cold-start Macrobenchmark + baseline profile generator for the R8 preview build.
+include(":benchmark")
