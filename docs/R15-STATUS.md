@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 19:50 UTC, fourth handover)
+## Resume here (updated 2026-11-16 21:15 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** `notes/owner-orders-2.md` (agent workspace) as summarised in the ledger:
   L0 run 43744809503 + Step 2 open items (done) → **L1 Group 12 (current)** → L2 Groups 5–10 →
@@ -15,11 +15,18 @@
 - **Outage:** sandbox stopped answering 2026-11-16 ~19:05–19:45 UTC while a local `:app:lintTvDebug`
   ran (its Gradle daemon was killed, lint result lost). No commit was lost; the three unpushed
   edits survived and were pushed first. Lesson: TV lint moves to CI.
-- **Running:** none.
-- **Next three actions:** (1) add `lintTvDebug` to `ci.yml` and read it on CI, fix NewApi below
-  API 24; (2) one device run: CrashUiDeviceTest, ClosedAppAlertDeviceTest, AccessibilityDeviceTest,
-  then ledger X5-1, X6-1, X8-1; (3) optional Android TV emulator job, rest of Group 12, report
-  `docs/groups/GROUP-12-CROSS-CUTTING.md`.
+- **Since the outage (20:00–21:10 UTC):** CI lint for the TV app (f0df775) found a real crash: Cast
+  subtitles used an API 33 method (fixed ff00d11, X10-2) plus API 28 calls on TV (6651bc9); lint noise
+  fixed (7486997, c7772ce, 72394dc). CrashUiDeviceTest verified on both (X6-1). Pacer gap bug found by
+  the closed-app test on api33 (fixed 9b46045, X5-2). Yumix pills 48 dp (b0fbea9). TV emulator job
+  added (590fb6b, X9-1).
+- **Current step:** Level 1, Group 12, X5/X8/X9/X10 verification.
+- **Running:** CI 43757542521 (lint recheck + unit suite), device 43757544993 (ClosedAppAlert,
+  Accessibility, both phones), TV 43757547383 (tv-api24: HomeNavigation, BackNavigation, StabilityStress).
+- **Next three actions:** (1) read the three runs, fix failures, update X5/X8/X9/X10; make lint blocking
+  once clean; (2) X8-2 wider accessibility coverage; (3) rest of Group 12 (architecture X1, startup and
+  baseline profile, memory profile, ST-7/ST-17, security MASVS, build & release) and its report
+  `docs/groups/GROUP-12-CROSS-CUTTING.md` in the Part 3 format.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

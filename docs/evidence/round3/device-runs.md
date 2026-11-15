@@ -130,3 +130,23 @@ These are real emulators running the real debug APK; the tests are not simulated
 - api36 (Pixel 6) and api33-lowram (Pixel 3a): LocalPlayerDeviceTest OK (9 tests), AniSkipDeviceTest OK, PlaybackSessionDeviceTest OK.
 - LocalPlayer d: battery saver → WARM and thermal 3 → HOT on both.
 - ST-7, `YuSession player release held main`: api36 1, 69, 48, 23, 75, 36 ms; api33-lowram 301, 100, 103, 45 ms.
+
+## 43749337517 — Extensions, Accessibility on fbbe7b9 (both emulators)
+
+- ExtensionsDeviceTest OK on both (EXT-T1 not reproduced).
+- AccessibilityDeviceTest: api33-lowram PASS; api36 FAIL: TouchTargetSize 46 dp on the top-bar search and bell, SpeakableTextPresent on 7 Music cards with titles off screen (fixed 3019605, a898010).
+
+## 43749978183 — HeatGuard, ClosedAppAlert on a5fa49b (both emulators)
+
+- HeatGuardDeviceTest PASS on both (HEAT_THERMAL_RESULT).
+- ClosedAppAlertDeviceTest: api36 PASS (posted 122,960 ms after queueing, app killed, deep IDLE, new pid). api33-lowram: alert delivered (76 s) but the test asserted an empty queue while the app had queued its own alert (test error, fixed 8dd11e0).
+
+## 43754318750 — CrashUi, ClosedAppAlert, Accessibility on f0df775 (both emulators)
+
+- CrashUiDeviceTest PASS on both: real crash on thread yu-crash-test, report read, shared (system Chooser on top), Keep, Delete → empty.
+- ClosedAppAlertDeviceTest: api36 PASS (122,979 ms, pid 4903 → 5508). api33-lowram FAIL: posted 30.8 s after queueing; the app was started by a pacer alarm 29 s in. App bug: deliverNext ignored the gap (fixed 9b46045, X5-2).
+- AccessibilityDeviceTest: api33-lowram PASS; api36: top bar and Music clean now; Videos: Yumix category pills 46 dp tall (fixed b0fbea9).
+
+## CI 43754316254 — first TV lint on f0df775
+
+- Build, unit tests, gitleaks: success. Lint mobile 117 errors, TV 121: NewApi readNBytes (Cast subtitles, API 33), NewApi API 28 calls in ReliabilityGuide (TV), RememberReturnType ×2, TV manifest ×2, 113 UnsafeOptInUsage (fixed ff00d11, 6651bc9, 7486997, c7772ce, 72394dc).
