@@ -124,3 +124,9 @@ These are real emulators running the real debug APK; the tests are not simulated
 - api36 (Pixel 6): all 20 classes PASS.
 - api33-lowram (Pixel 3a, 2 GB): 19 classes PASS; `ExtensionsDeviceTest` FAIL, 1 test: `e11` printed `E11_RESULT PASS`, then the cleanup Back (`input keyevent 4`) at 18:41:26 removed window 195fe20, a second window that opened over Source status at 18:41:14 while five drama feeds were timing out. Source status stayed on screen, so `waitGone("source_health_run")` failed after 10 s. Logged as EXT-T1 (open).
 - YouTube and onshort.net checks were skipped as unreachable from the CI network (assumption, not pass).
+
+## 43748560619 — LocalPlayer, AniSkip, PlaybackSession on 01e0719 (both emulators)
+
+- api36 (Pixel 6) and api33-lowram (Pixel 3a): LocalPlayerDeviceTest OK (9 tests), AniSkipDeviceTest OK, PlaybackSessionDeviceTest OK.
+- LocalPlayer d: battery saver → WARM and thermal 3 → HOT on both.
+- ST-7, `YuSession player release held main`: api36 1, 69, 48, 23, 75, 36 ms; api33-lowram 301, 100, 103, 45 ms.
