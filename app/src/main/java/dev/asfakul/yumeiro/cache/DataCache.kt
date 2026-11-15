@@ -25,9 +25,31 @@ object DataCache {
     private const val TAG = "YuCache"
     private const val DIR = "data_cache"
     @Volatile private var root: File? = null
-    private val memory = object : LinkedHashMap<String, Pair<Long, String>>(64, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, String>>?) = size > 48
+    /**
+     * In-memory copies, least recently used first. G12 X12-1: bounded by total size as well as by
+     * count. Before, 48 entries of up to 4 MB text each had no total limit (UTF-16: up to ~380 MB),
+     * on phones with a 192 MB heap. Pages bigger than a quarter of the budget are read from disk.
+     */
+    private val memory = LinkedHashMap<String, Pair<Long, String>>(64, 0.75f, true)
+    private var memoryChars = 0L
+    private const val MAX_MEMORY_ENTRIES = 48
+    /** Test hook; otherwise read each time, because DataCache.init runs before DeviceClass.init. */
+    internal var memoryBudgetOverride: Long? = null
+    private val memoryBudgetChars: Long get() = memoryBudgetOverride ?: if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 2_000_000L else 6_000_000L
+
+    /** Call with the [memory] lock held. */
+    private fun remember(mk: String, at: Long, v: String) {
+        memory.remove(mk)?.let { memoryChars -= it.second.length }
+        if (v.length > memoryBudgetChars / 4) return
+        memory[mk] = at to v
+        memoryChars += v.length
+        val it = memory.entries.iterator()
+        while ((memoryChars > memoryBudgetChars || memory.size > MAX_MEMORY_ENTRIES) && it.hasNext()) {
+            val e = it.next(); it.remove(); memoryChars -= e.value.second.length
+        }
     }
+
+    internal fun memoryCharsForTests(): Long = synchronized(memory) { memoryChars }
     private val locks = ConcurrentHashMap<String, Any>()
 
     /** User settings (in Settings → Backup, storage & reset). */
@@ -88,7 +110,7 @@ object DataCache {
             val nl = text.indexOf('\n')
             if (nl < 0 || text.substring(0, nl) != key.take(512)) return null
             val v = text.substring(nl + 1)
-            synchronized(memory) { memory[mk] = at to v }
+            synchronized(memory) { remember(mk, at, v) }
             v
         }.getOrNull()
     }
@@ -99,7 +121,7 @@ object DataCache {
     fun write(ns: String, key: String, value: String) {
         if (!Settings.enabled || value.length > 4 * 1024 * 1024) return
         val f = fileFor(ns, key) ?: return
-        synchronized(memory) { memory["$ns|$key"] = System.currentTimeMillis() to value }
+        synchronized(memory) { remember("$ns|$key", System.currentTimeMillis(), value) }
         val lock = locks.getOrPut(f.path) { Any() }
         runCatching {
             synchronized(lock) {
@@ -112,11 +134,11 @@ object DataCache {
     }
 
     fun remove(ns: String, key: String) {
-        synchronized(memory) { memory.remove("$ns|$key") }
+        synchronized(memory) { memory.remove("$ns|$key")?.let { memoryChars -= it.second.length } }
         fileFor(ns, key)?.delete()
     }
 
-    fun clearMemory() = synchronized(memory) { memory.clear() }
+    fun clearMemory() = synchronized(memory) { memory.clear(); memoryChars = 0 }
 
     fun clearAll() { clearMemory(); root?.deleteRecursively(); root?.mkdirs() }
 
@@ -130,7 +152,8 @@ object DataCache {
         val r = root ?: return 0
         val files = r.walkTopDown().filter { it.isFile }.toMutableList()
         var freed = 0L
-        files.removeAll { f -> (now - f.lastModified() > keepMs || f.name.endsWith(".tmp")).also { old -> if (old) { freed += f.length(); f.delete() } } }
+        // G12 X12-2: a fresh .tmp is a write in progress (deleting it lost that page); only stale ones go.
+        files.removeAll { f -> (now - f.lastModified() > keepMs || (f.name.endsWith(".tmp") && now - f.lastModified() > 60_000L)).also { old -> if (old) { freed += f.length(); f.delete() } } }
         var total = files.sumOf { it.length() }
         if (total > maxBytes) {
             for (f in files.sortedBy { it.lastModified() }) {
