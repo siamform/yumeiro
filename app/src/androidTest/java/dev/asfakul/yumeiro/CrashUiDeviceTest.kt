@@ -39,8 +39,10 @@ class CrashUiDeviceTest {
         if (!ok) FirstRun.shot("crashui_$what".replace(' ', '_'))
         assertTrue("$what · ${FirstRun.onScreen(rule)}", ok)
     }
+    // X13-4: `topResumedActivity` exists from API 29; API 28 names it `mResumedActivity`
+    // (run 43771214803: ChooserActivity was displayed, yet the API 28 lookup came back empty).
     private fun topActivity() = FirstRun.shell("dumpsys activity activities").lineSequence()
-        .firstOrNull { "topResumedActivity" in it }.orEmpty().trim()
+        .firstOrNull { "topResumedActivity" in it || "mResumedActivity" in it }.orEmpty().trim()
 
     @Test fun a_crashForReal() {
         assumeTrue("phase a runs only from device-check.sh", InstrumentationRegistry.getArguments().getString("crash") == "1")
