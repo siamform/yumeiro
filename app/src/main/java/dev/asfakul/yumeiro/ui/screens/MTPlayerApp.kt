@@ -1578,6 +1578,7 @@ fun MTPlayerApp(
         }
         BackHandler(enabled = currentRoute == Screen.Home.route && !overlayOpen && !exitArmed) {
             exitArmed = true
+            android.util.Log.i("YuBack", "home back: exit armed for ${EXIT_WINDOW_MS} ms")
             dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
         }
     }

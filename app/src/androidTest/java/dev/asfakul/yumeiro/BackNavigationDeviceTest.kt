@@ -60,6 +60,9 @@ class BackNavigationDeviceTest {
         back()
         Thread.sleep(800)
         assertEquals("first back on Home must keep the app open", Lifecycle.State.RESUMED, state())
+        var enabled = false
+        rule.activityRule.scenario.onActivity { enabled = it.onBackPressedDispatcher.hasEnabledCallbacks() }
+        log("after first Home back: dispatcher hasEnabledCallbacks=$enabled")
         back()
         val left = (0 until 40).any { Thread.sleep(100); state() != Lifecycle.State.RESUMED }
         log("after second back state=${state()}")
