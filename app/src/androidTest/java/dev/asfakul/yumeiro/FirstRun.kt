@@ -113,6 +113,12 @@ object FirstRun {
     /** Gets to the tab bar; throws with what is on screen if it never shows. */
     fun toTabs(rule: AndroidComposeTestRule<*, *>, timeoutMs: Long = 60_000) {
         grant()
+        // The "Keep notifications on time" guide opens by itself 8 s after start (ReminderHost)
+        // and raced the tests' Back presses: api28 43768670627 h1_h4 (it opened as Back was
+        // pressed) and TV 43769985665 BackNavigation (Back right after closing it never reached
+        // the app). Device tests are about other flows; the guide's pacing is unit-tested
+        // (ReliabilityGuideTest). Count it as just shown, so it stays away (paced a week apart).
+        runCatching { dev.asfakul.yumeiro.notify.ReliabilityGuide.markPrompted(InstrumentationRegistry.getInstrumentation().targetContext) }
         val end = SystemClock.uptimeMillis() + timeoutMs
         var lastSkip = 0L
         while (SystemClock.uptimeMillis() < end) {
