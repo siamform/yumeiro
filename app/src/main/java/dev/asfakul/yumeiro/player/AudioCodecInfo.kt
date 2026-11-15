@@ -12,6 +12,7 @@ import java.util.Locale
  * and decoder), for the Now Playing codec line and Song info. Works for songs on the device and
  * online songs alike. Unknown values are null and simply not shown.
  */
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // G12 X10-4: Media3 unstable API, pinned version
 data class AudioCodecInfo(
     val mime: String? = null,
     val codecs: String? = null,

@@ -15,6 +15,7 @@ import java.util.Locale
  * send them, so they are read from what the player actually decoded; whatever the stream itself
  * doesn't carry is listed in [Facts.missing] so the watch page can say so instead of staying blank.
  */
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // G12 X10-4: Media3 unstable API, pinned version
 object PlaybackFacts {
     data class Facts(
         val resolution: String? = null,

@@ -241,6 +241,7 @@ class Segmented(
 }
 
 /** DASH: best video + best audio from the MPD, saved track by track, then joined. */
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // G12 X10-4: Media3 unstable API, pinned version
 class DashGrab(private val client: OkHttpClient, private val headers: Map<String, String>) {
     /** One track to save: init segment (may be null) + media segments, or one whole file. */
     data class Track(val kind: Int, val mime: String?, val height: Int, val bitrate: Int, val init: Part?, val parts: List<Part>)

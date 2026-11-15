@@ -50,6 +50,7 @@ data class SubtitleStyle(
     }
 }
 
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // G12 X10-4: Media3 unstable API, pinned version
 object SubtitleStyleSettings {
     private const val PREFS = "mt_subtitle_style"
     private val _style = MutableStateFlow(SubtitleStyle())
