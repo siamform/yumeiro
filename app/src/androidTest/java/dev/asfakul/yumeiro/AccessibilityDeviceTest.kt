@@ -49,6 +49,14 @@ class AccessibilityDeviceTest {
 
     /** Runs the ATF checks on what is on screen now; returns a short error summary or null. */
     private fun check(screen: String): String? {
+        // A passing app message (e.g. "Ready to watch: … installed") floats over the bottom of the
+        // page and cuts the touch area of whatever is under it; ATF then reports full-size chips
+        // as 38 dp (43763558754, settings_downloads, cut exactly at the banner's top edge).
+        // Check the page itself, not the transient overlay.
+        dev.asfakul.yumeiro.ui.components.AppMessages.current.value?.let { m ->
+            log("A11Y $screen dismissed app message first: ${m.text.take(60)}")
+            inst.runOnMainSync { dev.asfakul.yumeiro.ui.components.AppMessages.dismiss(m.id) }
+        }
         rule.waitForIdle()
         rule.enableAccessibilityChecks(validator)
         val e = runCatching { rule.onAllNodes(isRoot(), true)[0].tryPerformAccessibilityChecks() }.exceptionOrNull()
