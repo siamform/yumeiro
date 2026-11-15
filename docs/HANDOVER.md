@@ -1035,3 +1035,24 @@ Brief: player stability first (audit vs 1.5.0), then sources, settings, performa
 - **Build**: one universal APK per edition (`ndk.abiFilters` all four, no `splits`). Phone minSdk 28, TV flavor minSdk 24. `release.yml` checks each APK contains all four `lib/` folders.
 - **Tests**: `app/src/test/.../round13/` (Round13LogicTest, Round13JsonTest), `UpdaterLogicTest.round13_single_universal_files_are_picked_on_every_processor`.
 - **Open**: FCM_SERVICE_ACCOUNT Worker secret (docs/PUSH-FCM.md); on-device check of the ANR and audio fixes; phones on Android 7/8 cannot install 1.8.0 (their 1.7.0 updater will offer it and Android will refuse it).
+
+## 31. R15 stability and system design (branch `r15-stability`)
+
+Status of every master-prompt item, with evidence: `docs/R15-STATUS.md`. Root causes found on
+device: `docs/STABILITY-R15.md`. Design: `docs/SYSTEM-DESIGN.md` (ADR-001 to ADR-011). Device
+runs: `docs/evidence/round3/device-runs.md`.
+
+- **Device check.** `gh workflow run device-check.yml --ref r15-stability` runs every
+  instrumented class on a low-RAM API 33 emulator and an API 36 emulator, one class at a time
+  with a 900 s limit. `-f test=dev.asfakul.yumeiro.<Class>` runs one class; the filter needs the
+  full class name. A full run takes about 25 minutes. Read the evidence from the job log (`YuStress`,
+  `YuStall`, `MTDeviceTest` lines); artifact download is unreliable.
+- **Unit tests.** `./gradlew :app:testMobileDebugUnitTest --tests "dev.asfakul.yumeiro.r15.*"`.
+- **Guards that fail the build.** `RegexGuardTest`: no regex inside a function, and every class
+  that holds a pattern is warmed off main in `RegexWarmup.CLASSES`. When you add a file-level
+  `Regex`, add its JVM class name there.
+- **UI rule.** Anything that moves by itself (carousels, tickers) pauses under focus, touch,
+  reduced motion and `HeatGuard`. `dpadFocusSettles` checks that frames stop after D-pad moves.
+- **Test hooks.** `OnlineSession.addLinkForTest` (VisibleForTesting) lets a device test add a
+  dead source.
+- **Open.** See "Still open" in `docs/R15-STATUS.md`.

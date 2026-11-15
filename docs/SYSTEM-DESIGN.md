@@ -96,7 +96,8 @@ talks to the network. State holders outlive any single composable.
 | Work | Where it runs | Guard |
 |---|---|---|
 | Drawing, input, focus, small state updates | Main | `MainThreadWatchdog` logs `YuStall` (debug); stress test fails on a stall ≥ 4 s |
-| Regex compilation | Never at run time on main; patterns are file-level constants or `RegexCache` | `RegexGuardTest` (build fails on a regex built inside a function); stress test samples main for `Pattern.compile` |
+| Regex compilation | Never at run time on main; patterns are file-level constants or `RegexCache`. A file-level constant compiles in the class's static initialiser on whichever thread touches the class first, so `RegexWarmup` initialises all 91 holder classes on `yu-startup` | `RegexGuardTest` (no regex built inside a function; every holder class is in the warm-up list); stress test samples main for `Pattern.compile` |
+| Focus and motion | Auto-advancing carousels (Home banner, Yumix hero) pause while focus is inside, on touch, with reduced motion and under `HeatGuard`, so a pager never moves a focused card away from bring-into-view. The tab pager takes no nested scroll from its pages: Compose's default page connection consumes `UserInput` pre-scroll while between pages, and bring-into-view is `UserInput`. An idle tab pager is always settled on a page | `dpadFocusSettles`, `swipeThenDpadSettles` (frames per 2 s must fall to 0); the stress test fails on any "Compose never idle" |
 | Parsing (HTML, JSON, manifests), feed merging, sorting | `Dispatchers.Default` | code review + StrictMode |
 | Network and disk | `Dispatchers.IO` through `NetworkClient` (16/32 requests, 4/6 per host) | StrictMode disk/network on main (debug) |
 | Extension calls | `ExtensionGuard.dispatcher` with timeouts | crash guard, per-call timeout |
@@ -157,11 +158,11 @@ Rules for every endless feed:
 
 Tests: `LiveFeedTest` (append-only, retry, merge), `LivePagedTest`, `YumixFeedTest`.
 
-## 7. Playback **[player ownership done; recovery state machine still in the modal]**
+## 7. Playback **[done: player ownership and recovery state machines; verified on device]**
 
-### Today
+### Before R15
 
-The `ExoPlayer` is created inside `VideoPlayerModal` (`remember(video.id)`), so the player's life is tied
+The `ExoPlayer` was created inside `VideoPlayerModal` (`remember(video.id)`), so the player's life is tied
 to one composable. Resolving, quality switching, failover timers and PiP handling also live in that
 2,300-line composable. Consequences: a new video recreates the player; work that should survive a
 navigation (download → downloads page with the video still playing) depends on the composable staying

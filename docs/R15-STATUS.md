@@ -1,0 +1,71 @@
+# R15 status: every item in the master prompt, with its evidence
+
+Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
+API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
+in `docs/evidence/round3/device-runs.md`. "Unit" means a JVM or Robolectric test only. Items
+marked **not device-verified** are not claimed as fixed on a phone.
+
+Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below was re-checked.
+
+## Phase 1: OOM and ANR
+
+| Item | Status | Evidence |
+|---|---|---|
+| No regex compile on main | Fixed | `RegexGuardTest` (none inside functions; all 91 holder classes warmed on `yu-startup`). Device: `StabilityStressDeviceTest` samples main 42,000–44,500 times per run and fails on app-origin `Pattern.compile`. Clean since run 43645273428. The only left-over is the library cost of `androidx.navigation` `NavDeepLink` route patterns |
+| No expensive work in pager prefetch | Fixed | `Kana.forTitle` has no regex and is LRU-cached and remembered; item tags are computed once. Device: pager and fling stress |
+| No OOM under stress on low-RAM Android 13 | Fixed | Device: api33-lowram (192 MB heap) passes stress, playback, switching and downloads with no OutOfMemory or FATAL in logcat |
+| No ANR on focus or pager | Fixed | Device: max main stall 461–1,542 ms across runs; the failure threshold is 4 s. The endless recomposition after focus moves came from the tab pager taking a focused card's bring-into-view as nested scroll (`docs/STABILITY-R15.md`). Fixed in MTPlayerApp. The stress test now fails on any "Compose never idle" and has passed with 0 spins since 43653623319. `dpadFocusSettles` and `swipeThenDpadSettles`: 0 frames per 2 s after D-pad moves |
+
+## Phase 2: player
+
+| Item | Status | Evidence |
+|---|---|---|
+| Quality switch uses the downloader's working stream data | Fixed in code | `YouTubeStreams.videoRequest` on IO, codec-aware `pickVideo` (`YouTubePickVideoTest`). Device `c_youTubeQualityListOpensEveryHeight` **skips on CI**: Google answers "Sign in to confirm you're not a bot" for data-centre IPs. **Not device-verified for YouTube** |
+| Same full quality list as the downloader (Video, YouTube, Yumix) | Fixed in code | `QualityParityTest` (unit). Device: DASH rendition ladder switching (`b_everyDashRenditionHasPictureAndSound`) |
+| Engine-generated levels for single-source streams | Fixed | Device `a_engineLevelsSwitchWithoutTimeout` |
+| No audio with multiple sources | Fixed | Device `d_everyAudioRenditionIsAudible` (AAC, AC3), `e_separateAudioIsMerged`, `StarvationSafeLoadControl` |
+| A manual pick of a dead source rotates again | Fixed | `RecoveryStateTest` (unit). Device `d_manualPickOfADeadSourceRotatesAgain`, run 43652020450, both devices: the dead pick was tried, then playback rotated to the working MP4, and the dead link was marked failed |
+| Drama banner plays; dramas appear in the feed | Fixed in code | `DramaResilienceTest` (16, unit). Live network check b21 24/24 (`docs/evidence/round3/drama-live-b21.txt`); the b14 run was invalid (onshort.net outage). **Not device-verified** in the emulator matrix |
+| 00:00 instead of "--:--" | Fixed (this round; before, the row showed a pulsing pill or nothing) | `DurationLabelTest` (Robolectric). Device `c_uiFlowPlays`, run 43652020450: labels while opening were `[00:00, 1:31:44]` on both devices |
+
+## Phase 3: live scroll never replaced by stale data
+
+| Item | Status | Evidence |
+|---|---|---|
+| Home, YouTube, online music, Yumix and Live TV feeds | Fixed in code | `LivePagedTest` (append-only, generation guard, a failed page keeps the cursor). Device: fling stress on each feed with no stall or recovery. There is no device assertion that rows are never replaced; the guard is the store design in ADR-008 |
+
+## Phase 4: downloads and the floating player
+
+| Item | Status | Evidence |
+|---|---|---|
+| "View downloads" moves the player to PiP and opens Downloads; a new video expands it | Fixed | Device `SurfaceModeDeviceTest`, `PlayerSurfaceRulesTest` |
+
+## Phase 5: extensions, forced downloads, crash logs
+
+| Item | Status | Evidence |
+|---|---|---|
+| Pin favourite extensions in "show videos from" | Fixed | `PinnedExtensionsTest` (unit) |
+| Forced downloading (IDM-style) for sources that block downloads | Fixed | Device `ForceDownloadDeviceTest`: DASH into one MP4 (3,944,838 bytes, video/avc and audio/mp4a); segmented DASH (36,632,975 bytes, 634 s) |
+| Crash log exported as a file automatically | Fixed | Device `crashReportIsExportedAsAFileRightAway`: 192,627 bytes (api33) and 192,638 bytes (api36) |
+
+## Phase 6: proposal
+
+`docs/proposals/OPEN-SOURCE-COMPARISON.md` (cs-repos and hikari). Nothing implemented, as asked.
+
+## Phase 7: audit, plan and design
+
+- System design with diagrams: `docs/SYSTEM-DESIGN.md`. Architecture, threading, memory, feeds,
+  the playback state machine, failure modes and ADR-001 to ADR-011.
+- Root causes found on device: `docs/STABILITY-R15.md`.
+- Roadmap: `docs/ROADMAP.md` §R15.
+- Skills used: ui-ux-pro-max (carousel rule `auto-rotation-controls` and the time-label states),
+  kotlin-agent-skills, rea (reverse-engineering the spin and the crash-export size), and
+  architecture-designer from jeffallan/claude-skills for the system design.
+
+## Still open (not claimed)
+
+- YouTube playback and quality switching on a device on a home network (CI IPs are bot-checked).
+- Drama playback inside the emulator matrix.
+- A real Xiaomi with Android 13 and a TV device; the emulators cover API 33 low-RAM and API 36.
+- Security: rotate the Firebase service-account key and the Cloudflare API token, since both were
+  shared in chat.

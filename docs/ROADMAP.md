@@ -3,6 +3,27 @@
 Goal: the one Android app that plays everything (local, YouTube, YouTube Music, IPTV, any extension format),
 organised better than any single-source app. Ordered by impact for launch.
 
+## R15. Stability and system design (branch `r15-stability`)
+
+Done, with device evidence in `docs/R15-STATUS.md` and `docs/evidence/round3/device-runs.md`:
+no regex on main, bounded memory on 192 MB heaps, one player per process, recovery state
+machines, live feeds as process stores, forced downloads, automatic crash export, pinned
+extensions, carousels that pause under focus, and 00:00 time labels.
+
+Next, in order:
+
+1. **YouTube on a real network.** Run `PlayerSwitchDeviceTest.c_youTubeQualityListOpensEveryHeight`
+   on a phone on a home connection (CI IPs get "Sign in to confirm you're not a bot").
+2. **Drama in the device matrix.** Add an OnShort playback device test that skips cleanly when
+   the host is down.
+3. **Real hardware pass.** A Xiaomi on Android 13 (the original ANR report), a Samsung, and a
+   TV box, using the same `scripts/device-check.sh`.
+4. **Stale-row assertion on device.** Extend the stress test to record the first visible card
+   IDs per feed before and after a fling, and fail if shown cards change order.
+5. **Navigation route patterns.** `NavDeepLink` compiles 14 small patterns on main when the graph
+   is built. Measure them, and move to type-safe routes without deep-link patterns if it shows up.
+6. **Key rotation.** Rotate the Firebase service-account key and the Cloudflare token.
+
 ## 0. Before promoting (must do)
 
 | Area | Item |
