@@ -70,10 +70,18 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
   9.7 s and 34.0 s. Cause: taps waited behind health probes in one FIFO gate; fixed with lanes.
 - Quality list on device: `QUALITY_RESULT PASS heights=[1080,720,480,288,184]` (43668984393, both).
 - Pinned extensions on device: `PIN_RESULT PASS`, order kept after recreate (43671202859, both).
-- Main-thread pauses: **not yet a small fraction.** 40-run campaign 43671209244: max per run
-  395–1,391 ms. 50e734d moves three app-owned waits off main; device run pending.
-- Feed position (Home, Yumix): still failing; most likely a test error (duplicate titles). Run
-  43676915487 with slot keys pending.
+- Main-thread pauses: **not yet a small fraction (ST-7 open).** 40-run campaign 43671209244: max
+  per run 395–1,391 ms. Later campaigns after 50e734d, dfe9234, d6ff111, 9bbd223, a5b8f60, 18dda67:
+  steady-state app stalls ≥700 ms per run 0.2–0.5 (api33-lowram) and 0.1–0.4 (api36); the latest
+  repeat 43705867413 (97bb255, 20/20 pass) gives 0.4 / 0.4 steady, 0.8 / 0.3 cold. No measurable
+  drop; next is a baseline profile.
+- Feed position (Home, Yumix): fixed and verified on device (FEED-1): 43683520404 and 43687398312;
+  the earlier failures were a test error (duplicate titles).
+- Group audits (Step 3): `docs/audit/G1-HOME-NAV.md`, `G2-EXTENSIONS.md`, `G3-PLAYER.md`. App bugs
+  fixed and verified on device in R16 include stepped Back after a swipe (89f7553), TV rail focus
+  (a53effb), Back in extension selection (bfde23d), readable network errors (9be5afb), starter
+  extension retry (97bb255), Cast start (b5d2d5a), PiP refusal message (5bfa07c). Device runs are
+  listed in `docs/evidence/round3/device-runs.md`.
 
 ## Still open (not claimed)
 

@@ -207,6 +207,10 @@ class LocalPlayerDeviceTest {
         rule.runOnUiThread { PlaybackSession.playerForTest?.seekTo(7_000) }
         wait("past 7 s", 10_000) { (onPlayer { it.currentPosition } ?: 0) >= 7_000 }
         pause(1_500)
+        // Pause before closing: the clip is 12 s and a close past 95 % counts as finished (the
+        // resume point is cleared, MediaRepository.updateVideoProgress), which api36 reached in
+        // 43709093938 while walking to the floating window's Close button.
+        rule.runOnUiThread { PlaybackSession.playerForTest?.playWhenReady = false }
         val left = onPlayer { it.currentPosition } ?: 0
         log("left at ${left}ms")
         // Back is stepped by design (VideoPlayerModal BackHandler): a key Back first hides the

@@ -33,41 +33,41 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G2 Extensions and market
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| E1 | Extension market browse and search | online/ExtensionMarket, ui/screens/online/ExtensionMarketScreen | open | |
-| E2 | Install (with review / scanner / guard) | ExtensionManager, ExtensionReview, ExtensionScanner, ExtensionGuard | open | |
-| E3 | Update (auto and manual), repair missing files after restore | ExtensionManager.repairMissing | open | |
-| E4 | Remove, enable/disable, per-extension settings | ExtensionsScreen | open | |
-| E5 | Pin favourites | online/PinnedExtensions | open | |
-| E6 | Select all / individual selection, bulk actions | ExtensionsScreen | open | |
-| E7 | Extension search | ExtensionsScreen | open | |
-| E8 | Broken extension handling (crash, bad JSON, timeouts) | ExtensionGuard, OnlineErrors, SafeRequests | open | |
-| E9 | Starter extensions after onboarding | online/StarterExtensions | open | |
-| E10 | Repositories / Universal add (CloudStream, Aniyomi, Mihon, Stremio, JS) | sources/UniversalAdd, SourceMarket, ui/screens/sources/* | open | |
-| E11 | Sources hub and source health screen | ui/screens/sources/SourcesHubScreen, SourceHealthScreen | open | |
-| E12 | Provider overrides, adult-content filter | online/ProviderOverrides, AdultContent | open | |
+| E1 | Extension market browse and search | online/ExtensionMarket, ui/screens/online/ExtensionMarketScreen | done | `ExtensionsDeviceTest` 43704211410, 43705847970; G2 report |
+| E2 | Install (with review / scanner / guard) | ExtensionManager, ExtensionReview, ExtensionScanner, ExtensionGuard | done | 43704211410, 43705847970; G2 report |
+| E3 | Update (auto and manual), repair missing files after restore | ExtensionManager.repairMissing | done | 43704211410, 43705847970; G2 report |
+| E4 | Remove, enable/disable, per-extension settings | ExtensionsScreen | done | 43704211410, 43705847970 |
+| E5 | Pin favourites | online/PinnedExtensions | done | `PinnedExtensionsDeviceTest` 43671202859, 43705847970 |
+| E6 | Select all / individual selection, bulk actions | ExtensionsScreen | done | bulk selection 5b1263e, Back fix bfde23d; 43704211410, 43705847970 |
+| E7 | Extension search | ExtensionsScreen | done | 43704211410, 43705847970 |
+| E8 | Broken extension handling (crash, bad JSON, timeouts) | ExtensionGuard, OnlineErrors, SafeRequests | done | cause-chain errors 9be5afb; 43704211410 |
+| E9 | Starter extensions after onboarding | online/StarterExtensions | done | retry fix 97bb255; `e9` 43705847970 |
+| E10 | Repositories / Universal add (CloudStream, Aniyomi, Mihon, Stremio, JS) | sources/UniversalAdd, SourceMarket, ui/screens/sources/* | audited | link path on device (E8); Aniyomi, Mihon, Stremio, JS unit only (G2 report) |
+| E11 | Sources hub and source health screen | ui/screens/sources/SourcesHubScreen, SourceHealthScreen | done | `e11` 43704211410, 43705847970 |
+| E12 | Provider overrides, adult-content filter | online/ProviderOverrides, AdultContent | audited | override on device (`e12`); adult search filter code only (needs a fake NSFW provider) |
 
 ## G3 Player
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| P1 | Local video playback | ui/screens/video/VideoPlayerModal, VideoPlayerDialogs, OnlineSubtitleDialog, ui/screens/online/OnlinePlayerUi, ui/screens/player/SleepTimerSheet, service/VideoPlaybackService | open | |
-| P2 | Online (movies, series, anime) playback session | online/OnlineSession, OnlinePlayback | open | |
-| P3 | YouTube playback | youtube/YouTubePlayback, YouTubeStreams, NewPipeDownloader | open | |
-| P4 | Drama playback | sources/drama/* | open | |
-| P5 | Quality list and switching (parity with downloader, generated levels) | player/QualityEngine, TrackGroups | open | |
-| P6 | Audio tracks and languages | online/AudioLanguages, player/TrackPicks | open | |
-| P7 | Subtitles (embedded, online search, style) | subtitles/*, online/subtitles/*, SubtitleStyleDialog | open | |
-| P8 | Speed, zoom, gestures, volume/brightness | VideoPlayerGestures, VideoZoom, VolumeAccumulator | open | |
-| P9 | Source rotation, dead manual pick, "Load more" sources | OnlineSession failover, SourceSelector | open | |
-| P10 | PiP, fullscreen, orientation | player/PipController, PlayerSurfaceRules | open | |
-| P11 | Resume position | OnlineHistory, LastPlayed | open | |
-| P12 | Info overlay, HUD, controls, time labels | PlayerInfoOverlay, VideoPlayerHUD, VideoPlayerControls | open | |
-| P13 | Player settings | PlayerSettings, ui/screens/settings | open | |
-| P14 | Recovery (black frame, stall, starvation, decoder fallback) | BlackFrameWatchdog, PlaybackHealthMonitor, RecoveryRouter, StreamRecovery, StarvationSafeLoadControl | open | |
-| P15 | Anime extras: AniSkip intro skip, AniList | online/anime/* | open | |
-| P16 | Anime4K shader effect | player/Anime4kEffect | open | |
-| P17 | Casting (Google Cast) | cast/CastSupport | open | |
-| P18 | Sleep timer, screen wake | player/SleepTimer, ScreenWake | open | |
-| P19 | Heat guard | player/HeatGuard | open | |
+| P1 | Local video playback | ui/screens/video/VideoPlayerModal, VideoPlayerDialogs, OnlineSubtitleDialog, ui/screens/online/OnlinePlayerUi, ui/screens/player/SleepTimerSheet, service/VideoPlaybackService | done | `LocalPlayerDeviceTest` 43708220122; G3 report |
+| P2 | Online (movies, series, anime) playback session | online/OnlineSession, OnlinePlayback | done | `OnlinePlaybackDeviceTest`, `HeaderStreamDeviceTest`; G3 report |
+| P3 | YouTube playback | youtube/YouTubePlayback, YouTubeStreams, NewPipeDownloader | done | `PlayerSwitchDeviceTest c_` 43701056608; real phone script Y |
+| P4 | Drama playback | sources/drama/* | done | `DramaPlaybackDeviceTest` 43701056608 |
+| P5 | Quality list and switching (parity with downloader, generated levels) | player/QualityEngine, TrackGroups | done | `QualityListDeviceTest`, `PlayerSwitchDeviceTest` 43701056608 |
+| P6 | Audio tracks and languages | online/AudioLanguages, player/TrackPicks | done | `LocalPlayerDeviceTest a` 43708220122 |
+| P7 | Subtitles (embedded, online search, style) | subtitles/*, online/subtitles/*, SubtitleStyleDialog | done | `LocalPlayerDeviceTest a` 43708220122 (embedded); online search in G11 |
+| P8 | Speed, zoom, gestures, volume/brightness | VideoPlayerGestures, VideoZoom, VolumeAccumulator | audited | speed on device 43708220122; gestures unit only |
+| P9 | Source rotation, dead manual pick, "Load more" sources | OnlineSession failover, SourceSelector | done | `OnlinePlaybackDeviceTest d_` 43701056608 |
+| P10 | PiP, fullscreen, orientation | player/PipController, PlayerSurfaceRules | done | PiP and lock `LocalPlayerDeviceTest a,c` 43708220122; floating `SurfaceModeDeviceTest` |
+| P11 | Resume position | OnlineHistory, LastPlayed | audited | `LocalPlayerDeviceTest b` (G3 report Verification) |
+| P12 | Info overlay, HUD, controls, time labels | PlayerInfoOverlay, VideoPlayerHUD, VideoPlayerControls | done | `LocalPlayerDeviceTest a` 43708220122 |
+| P13 | Player settings | PlayerSettings, ui/screens/settings | audited | unit only; settings screen in G9 |
+| P14 | Recovery (black frame, stall, starvation, decoder fallback) | BlackFrameWatchdog, PlaybackHealthMonitor, RecoveryRouter, StreamRecovery, StarvationSafeLoadControl | audited | unit only (needs fault injection) |
+| P15 | Anime extras: AniSkip intro skip, AniList | online/anime/* | audited | unit only; cache fix in G3 |
+| P16 | Anime4K shader effect | player/Anime4kEffect | audited | unit only |
+| P17 | Casting (Google Cast) | cast/CastSupport | audited | Cast start on device (`e`, fix b5d2d5a); casting needs a real Chromecast (script P/T) |
+| P18 | Sleep timer, screen wake | player/SleepTimer, ScreenWake | done | screen wake `LocalPlayerDeviceTest a`; sleep timer is music-only → G6 |
+| P19 | Heat guard | player/HeatGuard | done | `LocalPlayerDeviceTest d` 43708220122 |
 
 ## G4 Yumix
 | ID | Item | Code | Status | Covered by |
