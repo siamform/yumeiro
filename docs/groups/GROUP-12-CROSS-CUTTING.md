@@ -103,10 +103,11 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X11-5 | medium (security) | DnsWireClient UDP | reply sender not checked (spoofing) | packet from another port | source check (98f2dbf) | unit |
 | X12-1 | medium (memory) | `cache/DataCache.kt` remember | LRU capped by count only | 16 large pages = 48M chars | char budget, big pages disk-only (c63bc66) | unit |
 | X12-2 | medium (data) | `DataCache.purge` | deleted in-flight `.tmp` | purge during write | only `.tmp` older than 60 s (c63bc66) | unit |
-| X13-1 | **high** | `gradle/libs.versions.toml` jackson, `app/build.gradle.kts` | TV (minSdk 24) shipped Jackson 2.19.4; since 2.15 `ObjectMapper` init calls `ExceptionUtil.isFatal` → `BootstrapMethodError` (SDK 26) → NoClassDefFoundError; every CloudStream source dead on Android 7 | TV api24 emulator, 43765162241 (`home Yumeiro Drama/ReelShort … MainAPIKt`) | tv* classpaths → Jackson 2.13.5 (2226756), phone keeps 2.19.4 | unit; TV emulator pending |
-| X9-2 | medium (test) | `androidTest/FirstRun.kt` shell | keys injected while the previous test's activity window still held input focus; taps reach Compose directly, keys do not | 43765039266 api33-lowram Settings, 43765162241 TV Inbox ("input event receiver has already been disposed") | wait for our window focus before `input keyevent` (1a577e5) | emulator pending |
-| X9-3 | low (test) | `HomeNavigationDeviceTest`, `StabilityStressDeviceTest` | looked for phone bar tags on TV (`nav_tab_*`, `nav_shortcut_*`) | 43765162241 | `FirstRun.navTag` / `hasNav` (1a577e5) | emulator pending |
-| X9-4 | open | `ui/tv/TvNavRail.kt` (h5) | a rail tap left the pager on page 0, no app log | 43765162241 h5 | evidence capture added (screenshot, selected/focus); root cause after rerun | open |
+| X13-1 | **high** | `gradle/libs.versions.toml` jackson, `app/build.gradle.kts` | TV (minSdk 24) shipped Jackson 2.19.4; since 2.15 `ObjectMapper` init calls `ExceptionUtil.isFatal` → `BootstrapMethodError` (SDK 26) → NoClassDefFoundError; every CloudStream source dead on Android 7 | TV api24 emulator, 43765162241 (`home Yumeiro Drama/ReelShort … MainAPIKt`) | tv* classpaths → Jackson 2.13.5 (2226756), phone keeps 2.19.4 | unit; CI 43768099126; TV emulator 43768054941 (no NoClassDefFoundError, Drama home loads) |
+| X9-2 | medium (test) | `androidTest/FirstRun.kt` shell | keys injected while the previous test's activity window still held input focus; taps reach Compose directly, keys do not | 43765039266 api33-lowram Settings, 43765162241 TV Inbox ("input event receiver has already been disposed") | wait for our window focus before `input keyevent` (1a577e5, eb1775c) | emulator (phones 43767144680, TV 43768054941) |
+| X9-3 | low (test) | `HomeNavigationDeviceTest`, `StabilityStressDeviceTest` | looked for phone bar tags on TV (`nav_tab_*`, `nav_shortcut_*`) | 43765162241 | `FirstRun.navTag` / `hasNav` (1a577e5) | emulator (TV 43768054941) |
+| X9-4 | medium (TV) | `ui/screens/MTPlayerApp.kt` tab pager | after a tab change that does not move focus (touch tap on the rail, Continue video card → Videos, deep link), focus stays on the old page's item: the pager composes only the shown page but the lazy list pins the focused item, so focus sits off screen with nothing to its left and D-pad Left does nothing | TV 43768054941 h5 (focus `[home_setup_card]` after 4 × Left on Music) | page focus tracking + `TvPageFocus.isStranded` → rail's selected tab (0931a3f) | unit; TV emulator 43769985665 pending |
+| X13-2 | medium (test) | `androidTest` LocalPlayer, Accessibility, HomeNavigation | API 28: MediaStore insert without a path → invented `/sdcard/video/<millis>`; no thermal service below 29; guide timer raced Back | minSdk 43768670627 | `TestClip` (scanner below 29), thermal n/a below 29, guide marked shown (77d8d44) | emulator 43771214803 pending |
 | X10-1..4 | medium | `ci.yml`, several | TV never linted; NewApi calls; opt-in noise | lint | f0df775, ff00d11, 7486997, c7772ce, 72394dc | CI |
 | ST-17 | low (1 in 40 runs) | Compose `ContentInViewNode` | bring-into-view never settles once | stress api36 43697447466 | focus-chain logging (3342106) | open |
 
@@ -125,6 +126,7 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X16-1 | `server/test/handlers.test.ts` (11) | n/a (gap); guards removed → 3 fail | 31/31 (CI) |
 | X11-1, X11-3 | `SmartDnsResilienceTest` (4) | 3 fail | pass (unit) |
 | X11-4, X11-5 | `DnsWireClientTest` (4) | 3 fail | pass (unit) |
+| X9-4 | `TvPageFocusTest` (4) + device h5 | h5: "D-pad LEFT never reached the rail; focus [home_setup_card]" (43768054941) | 4/4 (unit); device rerun 43769985665 |
 | X13-1 | `JacksonTvCompatTest` (2, testTv; in CI) | 2 fail: "jackson-databind 2.19.4 needs Android 8", `ExceptionUtil.class` references `BootstrapMethodError` | pass (unit) |
 | X12-1, X12-2 | `DataCacheBoundsTest` (3) | 3 fail (48000000 chars held; fresh .tmp deleted; 400000-char page kept) | pass (unit) |
 
@@ -152,6 +154,10 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
 - Owner tests: real-phone start-up time (after ADR-012 numbers exist), widget look (OMT-8), TV
   remote feel (OMT series). Credentials: rotate the Cloudflare token and Firebase service account
   before any public release; decide on ADR-013.
+- Proposal (X10 battery): `HeatGuard` only knows thermal status on API 29+. On Android 9 (phone
+  minSdk 28) and the TV app's Android 7–9 boxes it falls back to battery saver alone. A fallback
+  on the battery temperature from `ACTION_BATTERY_CHANGED` (`EXTRA_TEMPERATURE`, e.g. WARM at
+  41 °C, HOT at 45 °C) would cover them. Not built: it needs an ADR and real-hardware numbers.
 - Research: AOSP `ContentInViewNode` already cancels requests that can never be satisfied (code as
   of June 2025), so ST-17 is a different case; the logged focus chain is needed.
 - CI usage (this group): CI 43754316254, 43757542521, 43762845168; device 43757544993, 43760044391,
@@ -159,8 +165,8 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
 
 ## Open work (Group 12 is not done until all are closed)
 
-1. X8-2: AccessibilityDeviceTest rerun 43767144680 (X9-2 key focus). X9-1..4 + X13-1: TV run
-   43768054941 (online rows must load on api24; h5 root cause). X2-3 device proof (StrictMode).
+1. X9-4: TV rerun 43769985665 (h5, h2). X13-2: minSdk rerun 43771214803 (api28). (X8-2, X2-3,
+   X9-2, X9-3, X13-1 done.)
 2. X2: Macrobenchmark startup (before), baseline profile, startup (after); heap profile on api33-lowram.
 3. ST-13/14/15: StrictMode device proof; ST-17 root cause.
 4. X7: MASVS write-up.
