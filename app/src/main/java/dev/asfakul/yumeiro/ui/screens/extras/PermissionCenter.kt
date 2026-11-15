@@ -31,6 +31,24 @@ object PermissionCenter {
 
     fun notificationsAllowed(c: Context): Boolean = AppNotifier.systemAllowed(c)
 
+    /** Media and notification permission, as the setup checklist shows them. */
+    data class SetupPerms(val media: Boolean, val notifications: Boolean)
+
+    /**
+     * G12 X2-2: both checks are binder calls to the system (`checkPermission`,
+     * `areNotificationsEnabled`) and the first one in a process is uncached. Read in Home's
+     * composition they stalled the main thread for 2 s on the low-RAM emulator (43757544993).
+     * They run off main through [readSetupPerms]; the last answer is kept for the first frame.
+     */
+    @Volatile var lastSetupPerms: SetupPerms? = null
+        private set
+
+    /** Test hook: what [readSetupPerms] asks. */
+    @Volatile internal var setupPermsReader: (Context) -> SetupPerms = { c -> SetupPerms(mediaAllowed(c), notificationsAllowed(c)) }
+
+    /** Blocking (binder); call off the main thread. */
+    fun readSetupPerms(c: Context): SetupPerms = setupPermsReader(c.applicationContext ?: c).also { lastSetupPerms = it }
+
     fun installAllowed(c: Context): Boolean = dev.asfakul.yumeiro.OsCompat.canInstallPackages(c)
 
     fun batteryUnrestricted(c: Context): Boolean =

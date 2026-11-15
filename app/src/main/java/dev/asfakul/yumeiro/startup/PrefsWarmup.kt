@@ -72,6 +72,9 @@ object PrefsWarmup {
             runCatching { dev.asfakul.yumeiro.ui.theme.BackdropSettings.init(app) }
             runCatching { dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(app) }
             runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(app) }
+            // G12 X2-2: Home's setup checklist asks for the media and notification permission;
+            // the first binder call in a process is uncached, so make it here, not in composition.
+            runCatching { dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.readSetupPerms(app) }
             // Loading the FFmpeg native libraries reads the APK; do it here, not when the first player is built.
             runCatching { dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegAvailable }
         }, "yu-prefs").apply { priority = Thread.NORM_PRIORITY }.start()

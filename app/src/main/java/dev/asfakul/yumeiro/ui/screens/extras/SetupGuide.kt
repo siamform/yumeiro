@@ -175,9 +175,17 @@ fun rememberSetupStatus(): SetupStatus {
     val hub by dev.asfakul.yumeiro.sources.SourceHub.state.collectAsState()
     val dns by dev.asfakul.yumeiro.network.NetworkSettings.dns.collectAsState()
     // Permission state has no flow; re-read whenever the visited set changes or the guide opens.
+    // The checks are binder calls, so they run off the main thread (G12 X2-2); until the first
+    // answer the last known one (warmed at start-up by PrefsWarmup) is shown.
     val open by SetupGuide.open.collectAsState()
-    val media = remember(visited, open) { PermissionCenter.mediaAllowed(context) }
-    val notifications = remember(visited, open) { PermissionCenter.notificationsAllowed(context) }
+    val perms by androidx.compose.runtime.produceState(
+        initialValue = PermissionCenter.lastSetupPerms ?: PermissionCenter.SetupPerms(media = false, notifications = false),
+        visited, open,
+    ) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { PermissionCenter.readSetupPerms(context) }
+    }
+    val media = perms.media
+    val notifications = perms.notifications
     return remember(visited, ext.installed, hub.generation, dns, media, notifications) {
         val done = buildSet {
             if (media) add(SetupStep.MEDIA)
