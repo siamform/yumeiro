@@ -202,7 +202,7 @@ object UniversalAdd {
                 return@runCatching addAs(context, kind, url, body)
             }
             throw IllegalStateException(
-                if (lastError != null && candidates(h.url).size == 1) "Couldn't open that link (${lastError?.message})"
+                if (lastError != null && candidates(h.url).size == 1) "Couldn't open that link: " + dev.asfakul.yumeiro.online.OnlineErrors.friendly(lastError!!, "it didn't answer")
                 else "Yumeiro couldn't find an extension, repository, add-on or server at that link",
             )
         }

@@ -35,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +79,10 @@ fun SourceHealthScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
-    val apis = remember { ExtensionManager.providers().sortedBy { it.name.lowercase() } }
+    // Keyed on the engine: opened before the extensions finished loading, this used to stay
+    // "No sources installed yet" for the whole visit.
+    val engine by ExtensionManager.state.collectAsState()
+    val apis = remember(engine.generation, engine.ready) { if (engine.ready) ExtensionManager.providers().sortedBy { it.name.lowercase() } else emptyList() }
     val results = remember { mutableStateMapOf<String, Health>() }
     var running by remember { mutableStateOf(false) }
     var done by remember { mutableStateOf(0) }
@@ -85,7 +90,8 @@ fun SourceHealthScreen(onBack: () -> Unit) {
     suspend fun check(api: MainAPI): Health {
         val t0 = System.currentTimeMillis()
         return runCatching {
-            withTimeout(25_000) {
+            // Extension code does blocking network calls; never on the main thread.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { withTimeout(25_000) {
                 if (api.hasMainPage) {
                     val rows = OnlineRepository.home(api, force = true)
                     val n = rows.sumOf { it.items.size }
@@ -94,8 +100,11 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                     val r = api.search("the", 1)?.items.orEmpty()
                     if (r.isNotEmpty()) Health(true, System.currentTimeMillis() - t0, "${r.size} search results") else Health(false, System.currentTimeMillis() - t0, "Search returned nothing")
                 }
-            }
-        }.getOrElse { Health(false, System.currentTimeMillis() - t0, OnlineErrors.friendly(it)) }
+            } }
+        }.getOrElse {
+            if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
+            Health(false, System.currentTimeMillis() - t0, OnlineErrors.friendly(it))
+        }
     }
 
     fun runAll() = scope.launch {
@@ -120,13 +129,13 @@ fun SourceHealthScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        SubPageHeader(title = "Source status", onBack = onBack, subtitle = if (results.isEmpty()) (when (apis.size) { 0 -> "No sources installed yet"; 1 -> "1 source installed"; else -> "${apis.size} sources installed" }) else "${results.count { it.value.ok }} of ${results.size} working") {
+        SubPageHeader(title = "Source status", onBack = onBack, subtitle = if (results.isEmpty()) (when (apis.size) { 0 -> if (engine.ready) "No sources installed yet" else "Loading sources…"; 1 -> "1 source installed"; else -> "${apis.size} sources installed" }) else "${results.count { it.value.ok }} of ${results.size} working") {
             if (results.isNotEmpty()) IconButton(onClick = ::share) { Icon(Icons.Default.Share, "Share report", tint = TextSecondary) }
         }
         if (running) LinearProgressIndicator(progress = { if (apis.isEmpty()) 0f else done / apis.size.toFloat() }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("source_health"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("run") {
-                Button(onClick = { runAll() }, enabled = !running && apis.isNotEmpty(), shape = RoundedCornerShape(20.dp),
+                Button(onClick = { runAll() }, enabled = !running && apis.isNotEmpty(), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("source_health_run"),
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) {
                     Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text(if (results.isEmpty()) "Check all sources" else "Check again")
                 }
@@ -136,7 +145,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                     Text("See the public status of every market repository", color = SpotifyGreen, fontSize = 13.sp)
                 }
             }
-            if (apis.isEmpty()) item("empty") {
+            if (apis.isEmpty() && engine.ready) item("empty") {
                 dev.asfakul.yumeiro.ui.components.StateMessage(
                     icon = Icons.Default.Extension,
                     title = "Nothing to check yet",

@@ -121,7 +121,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     var confirmBulkRemove by remember { mutableStateOf(false) }
     var bulkBusy by remember { mutableStateOf(false) }
     fun endSelection() { selecting = false; selected = emptySet() }
-    androidx.activity.compose.BackHandler(enabled = selecting) { endSelection() }
+    // Back while selecting ends selection. Routed through the header's own BackHandler: a separate
+    // handler declared here lost to it (composed later, so it wins) and Back left the screen (device run 43701058752).
     LaunchedEffect(engine.installed) { selected = dev.asfakul.yumeiro.online.ExtensionBulk.prune(selected, engine.installed.map { it.key }) }
 
     suspend fun check(force: Boolean) {
@@ -214,7 +215,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     val shownKeys = remember(shown) { shown.map { it.key } }
     Column(Modifier.fillMaxSize().testTag("extensions_screen")) {
         SubPageHeader(
-            title = "Extensions", onBack = onBack,
+            title = "Extensions", onBack = { if (selecting) endSelection() else onBack() },
             subtitle = if (engine.ready) "${engine.installed.size} installed · ${engine.enabledCount} active" else "Loading…",
         ) {
             if (engine.installed.size > 1) {
@@ -621,7 +622,7 @@ internal fun InputDialog(
                 onConfirm(text.trim()) { err -> busy = false; error = err }
             }, modifier = Modifier.testTag("input_dialog_confirm")) { Text(confirm) }
         },
-        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss, modifier = Modifier.testTag("input_dialog_cancel")) { Text("Cancel") } },
     )
 }
 

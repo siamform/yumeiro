@@ -96,7 +96,13 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     val keyboard = LocalSoftwareKeyboardController.current
     val engine by ExtensionManager.state.collectAsState()
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
-    val providers = remember(engine.generation, engine.ready) { if (engine.ready) ExtensionManager.providers() else emptyList() }
+    // 18+ off: adult-only extensions that are still installed (18+ was on earlier) are not searched,
+    // and NSFW-typed items from mixed sources are dropped. With 18+ on (private or not) search finds them.
+    val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
+    val providers = remember(engine.generation, engine.ready, adultOn) {
+        if (!engine.ready) emptyList()
+        else ExtensionManager.providers().filter { adultOn || !dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }
+    }
 
     var text by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf("") }
@@ -132,7 +138,8 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         providers.forEach { results[it.name] = ProviderResult.Searching }
         SearchHistory.add(context, submitted); history.clear(); history.addAll(SearchHistory.load(context))
         OnlineRepository.search(submitted, providers).collect { u ->
-            results[u.api] = if (u.error != null) ProviderResult.Failed(u.error) else ProviderResult.Done(u.items)
+            results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
+                else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
         }
         OnlineSearchMemory.key = key
         OnlineSearchMemory.results = results.toMap()

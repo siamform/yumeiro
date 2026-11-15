@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -198,7 +199,8 @@ class ExtensionsDeviceTest {
         log("E8 error text: $err")
         assertTrue("the error must be readable", err.isNotBlank())
         assertFalse("no stack trace in the message", err.contains("Exception") || err.contains("at dev."))
-        back(); waitGone("input_dialog_field")
+        // The first Back only hides the keyboard (standard Android); Cancel closes the dialog.
+        tap("input_dialog_cancel"); waitGone("input_dialog_field")
         assertTrue(has("extensions_screen"))
         log("E8_RESULT PASS")
     }
@@ -216,6 +218,36 @@ class ExtensionsDeviceTest {
             assertTrue("file is back", ExtensionManager.pluginFile(ctx, checkNotNull(installed(IA))).exists())
             log("E3_RESULT PASS")
         }
+    }
+
+    /** E11: Source status loads the installed sources (even when opened right after start) and checks them off the main thread. */
+    @Test fun e11_sourceStatusChecksInstalledSources() {
+        inst.runOnMainSync { NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.HEALTH, true) }
+        try {
+            waitTag("nav_shortcut_health", 15_000); tap("nav_shortcut_health")
+            waitTag("source_health_run")
+            waitFor("the installed source is listed") { rule.onAllNodesWithText("Not checked", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            assertFalse("no false empty state", has("source_status_empty"))
+            tap("source_health_run")
+            waitFor("the check finished", 90_000) { rule.onAllNodesWithText(" working", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            log("E11_RESULT PASS")
+            back(); waitGone("source_health_run")
+        } finally { inst.runOnMainSync { NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.HEALTH, false) } }
+    }
+
+    /** E12: a website-address override is normalised, applied at once, kept, and cleared back to the shipped address. */
+    @Test fun e12_websiteAddressOverride() {
+        val api = checkNotNull(ExtensionManager.providers().firstOrNull()) { "no provider loaded" }
+        val shipped = api.mainUrl
+        try {
+            dev.asfakul.yumeiro.online.ProviderOverrides.setMainUrl(api, " mirror.yumeiro-test.invalid/ ")
+            assertEquals("https://mirror.yumeiro-test.invalid", api.mainUrl)
+            assertEquals("https://mirror.yumeiro-test.invalid", dev.asfakul.yumeiro.online.ProviderOverrides.mainUrl(api.name))
+            assertEquals(shipped, dev.asfakul.yumeiro.online.ProviderOverrides.defaultUrl(api))
+        } finally { dev.asfakul.yumeiro.online.ProviderOverrides.setMainUrl(api, null) }
+        assertEquals(shipped, api.mainUrl)
+        assertEquals(null, dev.asfakul.yumeiro.online.ProviderOverrides.mainUrl(api.name))
+        log("E12_RESULT PASS")
     }
 
     companion object { const val IA = "InternetArchiveProvider" }

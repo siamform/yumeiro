@@ -16,7 +16,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  */
 object ProviderOverrides {
     private var prefs: SharedPreferences? = null
-    private val defaults = HashMap<String, String>()
+    // Written from the extension loader (IO) and the Extensions screen (main).
+    private val defaults = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     fun init(context: Context) {
         if (prefs == null) prefs = context.applicationContext.getSharedPreferences("provider_overrides", Context.MODE_PRIVATE)
