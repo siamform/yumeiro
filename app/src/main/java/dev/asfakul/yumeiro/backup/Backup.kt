@@ -144,6 +144,7 @@ object Backup {
     suspend fun export(context: Context, out: OutputStream, sections: Set<Section> = Section.entries.toSet(), kind: String = "manual"): Summary = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         val now = System.currentTimeMillis()
+        dev.asfakul.yumeiro.online.OnlineHistory.flush() // R16: history is written in the background now
         val files = collect(app, sections)
         val prefs = prefsSnapshot(app, sections)
         var count = 0

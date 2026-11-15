@@ -1193,8 +1193,12 @@ fun MTPlayerApp(
                 dev.asfakul.yumeiro.ui.components.SourceMenu(
                     visible = menuOpen,
                     heading = if (musicMenu) "Listen from" else "Watch from",
-                    options = if (musicMenu) dev.asfakul.yumeiro.ui.screens.music.musicSourceOptions(stats.audioCount, isOnline)
-                    else dev.asfakul.yumeiro.ui.screens.online.videoSourceOptions(sourceExtCount, stats.videoCount, isOnline),
+                    // R16 (ST-7): rebuilt only when its inputs change. It ran in every recomposition of the
+                    // shell, menu hidden or not, and the first call built the menu icons on main (run 43671209244).
+                    options = remember(musicMenu, stats.audioCount, stats.videoCount, sourceExtCount, isOnline) {
+                        if (musicMenu) dev.asfakul.yumeiro.ui.screens.music.musicSourceOptions(stats.audioCount, isOnline)
+                        else dev.asfakul.yumeiro.ui.screens.online.videoSourceOptions(sourceExtCount, stats.videoCount, isOnline)
+                    },
                     selectedKey = if (musicMenu) musicMode.key else videoSource.tag,
                     onSelect = { key ->
                         if (musicMenu) { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(key).key; musicModePicked = true }

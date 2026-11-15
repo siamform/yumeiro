@@ -51,6 +51,12 @@ class MTApplication : Application(), ImageLoaderFactory {
             // Precompile the big pattern tables (release tags, audio languages, source facts, Yumix
             // feed rules) here so the first list that shows a card never compiles them on the main thread.
             runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
+            // R16 (ST-7): build the source-menu icons (Material vectors, the Yumix logo) here, not in
+            // the first composition on main. Icon getters cache what they build; a race only builds twice.
+            runCatching {
+                dev.asfakul.yumeiro.ui.screens.online.videoSourceOptions(0, 0, true)
+                dev.asfakul.yumeiro.ui.screens.music.musicSourceOptions(0, true)
+            }
             // Background work for online videos: new-episode checks and unfinished downloads.
             runCatching { dev.asfakul.yumeiro.online.NewEpisodesWorker.schedule(app) }
             // Feed (new extensions / playlists / news) and occasional suggestions (each switchable in Settings).

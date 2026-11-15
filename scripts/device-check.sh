@@ -4,6 +4,10 @@
 set -u
 adb logcat -c || true
 (adb logcat -v time > logcat.txt &) ; sleep 1
+# R16: other processes' crash/ANR dialogs (run 43676915487: "System UI isn't responding" on api33)
+# sit above the app and swallow test input. Hide them; every ANR is still in logcat ("ANR in")
+# and /data/anr, which the evidence step below collects.
+adb shell settings put global hide_error_dialogs 1 || true
 FILTER="${TEST_FILTER:-dev.asfakul.yumeiro.StabilityStressDeviceTest,dev.asfakul.yumeiro.PlayerSwitchDeviceTest,dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.SurfaceModeDeviceTest,dev.asfakul.yumeiro.ForceDownloadDeviceTest,dev.asfakul.yumeiro.PlaybackSessionDeviceTest,dev.asfakul.yumeiro.DramaPlaybackDeviceTest,dev.asfakul.yumeiro.FeedPositionDeviceTest,dev.asfakul.yumeiro.QualityListDeviceTest,dev.asfakul.yumeiro.PinnedExtensionsDeviceTest}" 
 case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac
 R=6; H=false

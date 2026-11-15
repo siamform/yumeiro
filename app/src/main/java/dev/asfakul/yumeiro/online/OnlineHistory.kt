@@ -143,12 +143,29 @@ object OnlineHistory {
         dev.asfakul.yumeiro.widget.ContinueWidget.refresh(context)
     }
 
+    // R16 (ST-7): the history was turned into JSON and written to disk on the caller's thread.
+    // The player calls [record] on main every few seconds and again while it closes, so with up to
+    // 120 titles and 3,000 progress marks that write ran inside the player's dispose (run 43671209244).
+    // The caller now only copies the lists; one background thread builds and writes the file, and a
+    // newer copy replaces one that has not been written yet.
+    private val pending = java.util.concurrent.atomic.AtomicReference<Pair<List<Entry>, Map<String, Progress>>?>(null)
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-history").apply { isDaemon = true } }
+
     private fun save() {
         val f = file ?: return
+        val snap = _entries.value to synchronized(this) { LinkedHashMap(progress) }
+        if (pending.getAndSet(snap) != null) return // a write is already queued; it will take this copy
+        writer.execute { pending.getAndSet(null)?.let { write(f, it.first, it.second) } }
+    }
+
+    /** Blocks until queued writes are on disk (backup, tests). */
+    fun flush() { runCatching { writer.submit {}.get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+
+    private fun write(f: File, entries: List<Entry>, marks: Map<String, Progress>) {
         val o = JSONObject()
             .put("version", 1)
-            .put("titles", JSONArray().apply { _entries.value.forEach { put(entryJson(it)) } })
-            .put("progress", JSONObject().apply { synchronized(this@OnlineHistory) { progress.forEach { (k, p) -> put(k, JSONArray().put(p.positionMs).put(p.durationMs).put(p.at)) } } })
+            .put("titles", JSONArray().apply { entries.forEach { put(entryJson(it)) } })
+            .put("progress", JSONObject().apply { marks.forEach { (k, p) -> put(k, JSONArray().put(p.positionMs).put(p.durationMs).put(p.at)) } })
         runCatching {
             val tmp = File(f.parentFile, f.name + ".tmp")
             tmp.writeText(o.toString())
@@ -174,5 +191,5 @@ object OnlineHistory {
         )
     }
 
-    internal fun resetForTests() { loaded = false; file = null; _entries.value = emptyList(); synchronized(this) { progress.clear() } }
+    internal fun resetForTests() { flush(); loaded = false; file = null; _entries.value = emptyList(); synchronized(this) { progress.clear() } }
 }

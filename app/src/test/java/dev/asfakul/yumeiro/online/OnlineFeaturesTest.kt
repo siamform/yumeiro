@@ -26,8 +26,8 @@ class OnlineFeaturesTest {
     private val context get() = ApplicationProvider.getApplicationContext<Application>()
 
     @Before fun setUp() {
+        OnlineHistory.resetForTests() // flushes a queued background write first
         java.io.File(context.filesDir, "online_history.json").delete()
-        OnlineHistory.resetForTests()
     }
 
     private val indexV2 = """
@@ -110,6 +110,18 @@ class OnlineFeaturesTest {
         // Unnumbered episodes keep the source order.
         val u = series(mapOf("" to listOf(ep("b", null, null), ep("a", null, null))))
         assertEquals(listOf("b", "a"), OnlineSession.episodesOf(u, "").map { it.data })
+    }
+
+    @Test fun historyWritesInBackgroundAndKeepsTheNewestCopy() {
+        // R16 (ST-7): record() no longer writes the file on the caller's thread.
+        val d = series(mapOf("Sub" to listOf(ep("e1", 1, 1))))
+        for (i in 1..50) OnlineHistory.record(context, d, "Sub", d.episodes["Sub"]!![0], i * 10_000L, 1_400_000)
+        OnlineHistory.flush()
+        val saved = org.json.JSONObject(java.io.File(context.filesDir, "online_history.json").readText())
+        val titles = saved.getJSONArray("titles")
+        assertEquals(1, titles.length())
+        assertEquals(500_000L, titles.getJSONObject(0).getLong("position"))
+        assertEquals(500_000L, saved.getJSONObject("progress").getJSONArray(saved.getJSONObject("progress").keys().next()).getLong(0))
     }
 
     @Test fun historyRecordsProgressAndContinueWatching() {

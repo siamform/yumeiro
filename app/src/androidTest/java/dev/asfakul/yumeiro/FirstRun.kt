@@ -97,11 +97,31 @@ object FirstRun {
      * on time" guide, the follow card) cover the screen; a user closes them, so do the tests.
      */
     fun dismissPrompts(rule: AndroidComposeTestRule<*, *>) {
+        dismissSystemAnrDialog()
         for (t in listOf("guide_close", "reminder_follow_later")) if (has(rule, t)) {
             Log.i("MTDeviceTest", "closing the app prompt '$t'")
             runCatching { rule.onAllNodesWithTag(t, true)[0].performClick(); rule.waitForIdle() }
             SystemClock.sleep(400)
         }
+    }
+
+    /**
+     * Another process's "isn't responding" dialog (run 43676915487, api33: "System UI isn't
+     * responding") sits above the app and takes every swipe, so a feed test saw 0 of 16 swipes
+     * scroll. device-check.sh turns these dialogs off (`hide_error_dialogs`); this is the fallback
+     * when one still shows. Back on that dialog means "Wait". Our own ANR is never dismissed: it
+     * is logged and fails the test through the stall checks and the ANR list.
+     * Returns the window title it closed, or null.
+     */
+    fun dismissSystemAnrDialog(): String? {
+        val focus = shell("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it } ?: return null
+        if ("Application Not Responding" !in focus) return null
+        val ours = InstrumentationRegistry.getInstrumentation().targetContext.packageName
+        if (ours in focus) return null
+        Log.w("MTDeviceTest", "closing a system ANR dialog that covered the app: ${focus.trim()}")
+        shell("input keyevent 4")
+        SystemClock.sleep(600)
+        return focus.trim()
     }
 
     /** Scrolls any list on screen until a node with [tag] is composed (cards below the fold). */
