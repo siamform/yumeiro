@@ -16,11 +16,17 @@ FLAVOR="${FLAVOR:-Mobile}"
 ./gradlew --no-daemon install${FLAVOR}Debug install${FLAVOR}DebugAndroidTest
 # R15: one class at a time with its own time limit, so one hung test (run 43612391254
 # spent 70 min in one) can't hide every other result; results go into the job log.
+SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r'); case "$SDK" in ''|*[!0-9]*) SDK=99;; esac
 REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
 for N in $(seq 1 "$REPEAT"); do
 for C in $(echo "$FILTER" | tr ',' ' '); do
   # R16: repeats start from cleared app data, like a fresh install.
   [ "$N" -gt 1 ] && adb shell pm clear dev.asfakul.yumeiro.debug > /dev/null 2>&1
+  # G12 X9: Android 7–8 (TV app) asks for storage at start, before a test can grant it, and
+  # UiAutomation.grantRuntimePermission only exists from API 28 (run 43759794246). Grant it first.
+  if [ "$SDK" -lt 28 ]; then
+    for PERM in READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE; do adb shell pm grant dev.asfakul.yumeiro.debug android.permission.$PERM > /dev/null 2>&1; done
+  fi
   echo "::group::$C (run $N/$REPEAT)"
   L0=$(wc -l < logcat.txt)
   if [ "$C" = "dev.asfakul.yumeiro.ClosedAppAlertDeviceTest" ]; then

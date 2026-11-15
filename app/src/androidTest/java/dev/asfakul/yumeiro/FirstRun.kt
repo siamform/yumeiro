@@ -31,7 +31,12 @@ object FirstRun {
 
     fun grant() {
         val inst = InstrumentationRegistry.getInstrumentation()
-        PERMISSIONS.forEach { runCatching { inst.uiAutomation.grantRuntimePermission(inst.targetContext.packageName, it) } }
+        val pkg = inst.targetContext.packageName
+        // UiAutomation.grantRuntimePermission is API 28+; older Android (the TV app) uses pm grant.
+        PERMISSIONS.forEach {
+            if (android.os.Build.VERSION.SDK_INT >= 28) runCatching { inst.uiAutomation.grantRuntimePermission(pkg, it) }
+            else runCatching { shell("pm grant $pkg $it") }
+        }
     }
 
     /** Runs a shell command and waits for it to finish (closing the pipe early can kill it). */
