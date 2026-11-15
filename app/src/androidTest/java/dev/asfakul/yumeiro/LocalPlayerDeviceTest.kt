@@ -69,7 +69,9 @@ class LocalPlayerDeviceTest {
      */
     private fun control(tag: String) {
         repeat(5) {
-            if (!has(tag) && !has("${tag}_menu")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
+            // Only when no control is showing: the centre of the player is the play/pause button,
+            // so tapping it while the controls are up pauses the video (43747147539 a and c).
+            if (!has(tag) && !has("${tag}_menu") && !has("video_more_btn")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
             if (runCatching { rule.waitUntil(3_000) { has(tag) || has("video_more_btn") }; true }.getOrDefault(false)) {
                 if (has(tag)) { rule.onAllNodesWithTag(tag, true)[0].performClick(); return }
                 if (!has("${tag}_menu")) runCatching { rule.onAllNodesWithTag("video_more_btn", true)[0].performClick() }
@@ -333,7 +335,7 @@ class LocalPlayerDeviceTest {
         FirstRun.shot("pl17_sleep_sheet")
         rule.onAllNodesWithTag("sleep_5", true)[0].performClick()
         wait("sleep dot on the More button", 10_000) {
-            if (!has("video_sleep_dot")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
+            if (!has("video_sleep_dot") && !has("video_more_btn")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
             has("video_sleep_dot")
         }
         val st = dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.value

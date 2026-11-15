@@ -112,3 +112,9 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43732060154 | 3c29282 | Drama + Yumix + HomeNav | Drama pass; HomeNav 11/11; Yumix fail | Drama slow (55 s); HomeNav 11/11; Yumix 2/2 | api33 Yumix: section still loading at hold time (test, fixed bc68326) |
 | 43733844682 | bc68326 | G4 milestone full suite | 15/16 classes; Drama fail | 16/16 classes | api33 Drama: every onshort.net call timed out at 20 s in that window (upstream) |
 | 43738288853 | a119186 | Drama + LibraryDeviceTest | 2/2 pass (listening +36.8 s) | 2/2 pass (listening +36.6 s) | rerun of api33 Drama; first run of the Group 5/6 device test |
+
+## 2026-11-16 (fourth handover): Group 3 design items
+
+| Run | Commit | Filter | api33-lowram | api36 | Notes |
+|---|---|---|---|---|---|
+| 43747147539 | 236910c | LocalPlayerDeviceTest (9 tests) | 7/9 | 7/9 | New f (More menu, sleep sheet, 1-min timer paused after 60.1 s, volume 1.0), g (one Back → floating), h (refused-PiP message), i (SRT served as WebVTT from 10.0.2.15 with CORS) pass on both. a and c failed on both: the test helper tapped the player centre (Pause) when the button was in the More menu (PiP actions showed "Play"). Test fixed after this run. Screenshots `pl16_*`, `pl17_*`, `pl18_*` in the artifacts |
