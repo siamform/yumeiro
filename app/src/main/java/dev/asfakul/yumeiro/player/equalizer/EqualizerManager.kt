@@ -97,12 +97,26 @@ class EqualizerManager private constructor(context: Context) {
         )
     }
 
-    @Synchronized
+    /**
+     * R16 (ST-7): every call on the audio-effect objects runs here, in order. Creating Equalizer,
+     * BassBoost and Virtualizer binds to the audio server and took 7.2 s of the main thread on the
+     * api36 emulator (stress run 43680725238), because the player's listener calls this on main.
+     * Only this thread touches [equalizer], [bassBoost] and [virtualizer].
+     */
+    private val fx = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-audio-fx").apply { isDaemon = true } }
+
+    private fun onFx(block: () -> Unit) { runCatching { fx.execute { runCatching(block).onFailure { Log.w(TAG, "audio effects", it) } } } }
+
     fun attachAudioSession(audioSessionId: Int) {
-        if (audioSessionId <= 0 || audioSessionId == currentAudioSessionId) return
+        if (audioSessionId <= 0) return
+        onFx { attachNow(audioSessionId) }
+    }
+
+    private fun attachNow(audioSessionId: Int) {
+        if (audioSessionId == currentAudioSessionId) return
         currentAudioSessionId = audioSessionId
 
-        releaseAudioEffects()
+        releaseNow()
 
         try {
             // 1. Equalizer Setup
@@ -188,12 +202,14 @@ class EqualizerManager private constructor(context: Context) {
         prefs.edit().putBoolean(KEY_ENABLED, enabled).apply()
         _equalizerState.update { it.copy(isEnabled = enabled) }
 
-        try {
-            equalizer?.enabled = enabled
-            bassBoost?.enabled = enabled && (_equalizerState.value.bassBoostStrength > 0)
-            virtualizer?.enabled = enabled && (_equalizerState.value.virtualizerStrength > 0)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to toggle equalizer effects enabled: ${e.message}")
+        onFx {
+            try {
+                equalizer?.enabled = enabled
+                bassBoost?.enabled = enabled && (_equalizerState.value.bassBoostStrength > 0)
+                virtualizer?.enabled = enabled && (_equalizerState.value.virtualizerStrength > 0)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to toggle equalizer effects enabled: ${e.message}")
+            }
         }
     }
 
@@ -205,11 +221,7 @@ class EqualizerManager private constructor(context: Context) {
             val clamped = levelMb.coerceIn(band.minLevelMb, band.maxLevelMb)
             currentBands[index] = band.copy(levelMb = clamped)
 
-            try {
-                equalizer?.setBandLevel(bandIndex, clamped)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to set band level $bandIndex: ${e.message}")
-            }
+            onFx { equalizer?.setBandLevel(bandIndex, clamped) }
 
             prefs.edit().putInt("$KEY_BAND_PREFIX$bandIndex", clamped.toInt()).apply()
             prefs.edit().putString(KEY_PRESET, "Custom").apply()
@@ -238,11 +250,7 @@ class EqualizerManager private constructor(context: Context) {
             val clamped = targetGain.coerceIn(band.minLevelMb, band.maxLevelMb)
             currentBands[i] = band.copy(levelMb = clamped)
 
-            try {
-                equalizer?.setBandLevel(band.bandIndex, clamped)
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not set band level for preset: ${e.message}")
-            }
+            onFx { equalizer?.setBandLevel(band.bandIndex, clamped) }
             prefs.edit().putInt("$KEY_BAND_PREFIX${band.bandIndex}", clamped.toInt()).apply()
         }
 
@@ -261,15 +269,14 @@ class EqualizerManager private constructor(context: Context) {
         prefs.edit().putInt(KEY_BASS_BOOST, clamped).apply()
         _equalizerState.update { it.copy(bassBoostStrength = clamped) }
 
-        try {
+        val on = _equalizerState.value.isEnabled && clamped > 0
+        onFx {
             bassBoost?.let { bb ->
                 if (bb.strengthSupported) {
                     bb.setStrength(clamped.toShort())
-                    bb.enabled = _equalizerState.value.isEnabled && clamped > 0
+                    bb.enabled = on
                 }
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not set bass boost strength: ${e.message}")
         }
     }
 
@@ -278,15 +285,14 @@ class EqualizerManager private constructor(context: Context) {
         prefs.edit().putInt(KEY_VIRTUALIZER, clamped).apply()
         _equalizerState.update { it.copy(virtualizerStrength = clamped) }
 
-        try {
+        val on = _equalizerState.value.isEnabled && clamped > 0
+        onFx {
             virtualizer?.let { virt ->
                 if (virt.strengthSupported) {
                     virt.setStrength(clamped.toShort())
-                    virt.enabled = _equalizerState.value.isEnabled && clamped > 0
+                    virt.enabled = on
                 }
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not set virtualizer strength: ${e.message}")
         }
     }
 
@@ -296,8 +302,9 @@ class EqualizerManager private constructor(context: Context) {
         setVirtualizerStrength(0)
     }
 
-    @Synchronized
-    fun releaseAudioEffects() {
+    fun releaseAudioEffects() = onFx { releaseNow(); currentAudioSessionId = 0 }
+
+    private fun releaseNow() {
         try {
             equalizer?.release()
         } catch (e: Exception) {}

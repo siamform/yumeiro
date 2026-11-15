@@ -325,7 +325,8 @@ fun HomeScreen(
     val ytHistory by YtHistory.items.collectAsState()
     var ytRelated by remember { mutableStateOf<List<YtItem>>(emptyList()) }
     LaunchedEffect(ytHistory.firstOrNull { !it.music }?.id) {
-        YtHistory.load(context)
+        // R16 (ST-7): first load reads prefs and decodes JSON; it ran on main (stress run 43680725238).
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { YtHistory.load(context) }
         val last = YtHistory.items.value.firstOrNull { !it.music } ?: return@LaunchedEffect
         ytRelated = runCatching { YouTube.related(context, last.id, music = false).filterNot { it.live }.distinctBy { it.id } }.getOrDefault(emptyList()).take(12)
     }

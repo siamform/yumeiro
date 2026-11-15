@@ -83,15 +83,18 @@ object BrowserCheck {
         // main thread during app start (with the first screen still composing, the system raised
         // "isn't responding"). The agent only changes when WebView updates, so it is kept on disk
         // per WebView version and WebView is started for it only once the app is idle.
+        // R16 (ST-7): the idle warm-up still started WebView on the main thread (1.2 s and 2.5 s in
+        // stress run 43680725238, every fresh install). Our own WebViews set their user agent to
+        // [userAgent] (BrowserCheckHost, the solver below), so clearance cookies match any agent we
+        // pick. Without a saved copy, the agent is now built from the installed WebView's version.
         Thread({
             val cached = runCatching { cachedAgent(app) }.getOrNull()
-            if (cached != null) remember(cached) else main.postDelayed({
-                Looper.myQueue().addIdleHandler { runCatching { userAgent() }; false }
-            }, WARM_UP_DELAY_MS)
+            remember(cached ?: estimatedAgent(android.os.Build.VERSION.RELEASE ?: "14", runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) WebView.getCurrentWebViewPackage()?.versionName else null
+            }.getOrNull()))
         }, "yu-browser-ua").start()
     }
 
-    private const val WARM_UP_DELAY_MS = 8_000L
     private const val UA_PREFS = "browser_check"
 
     /** Identifies the installed WebView build: a different build has a different user agent. */
