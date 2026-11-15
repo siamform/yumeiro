@@ -73,6 +73,7 @@ class QualityListDeviceTest {
                 if (runCatching { rule.waitUntil(5_000) { has("quality_Auto") }; true }.getOrDefault(false)) return
             }
         }
+        FirstRun.shot("quality_dialog_missing")
         throw AssertionError("the Quality dialog never opened · ${FirstRun.onScreen(rule)}")
     }
 
@@ -91,7 +92,7 @@ class QualityListDeviceTest {
         }
     }
 
-    private fun back() { InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent 4").close() }
+    private fun back() { FirstRun.shell("input keyevent 4") }
 
     private fun shortSide() = PlaybackDiagnostics.state.value.let { minOf(it.width, it.height) }
 
@@ -117,6 +118,8 @@ class QualityListDeviceTest {
         assertTrue("test stream has no ladder: $heights", heights.size >= 3)
         rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = "Quality ladder"), remember = false) }
         wait(90_000, "first frame") { PlaybackDiagnostics.state.value.firstFrame }
+        FirstRun.shot("quality_playing")
+        log("playing: ${PlaybackDiagnostics.state.value} · ${FirstRun.onScreen(rule)}")
         // Let the adaptive player settle so the track list is complete.
         val settle = System.currentTimeMillis() + 3_000
         rule.waitUntil(6_000) { System.currentTimeMillis() > settle }

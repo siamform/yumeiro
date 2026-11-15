@@ -78,25 +78,9 @@ class FeedPositionDeviceTest {
         runCatching { rule.waitUntil(ms + 5_000) { SystemClock.uptimeMillis() >= until } }
     }
 
-    private fun tap(tag: String) {
-        val found = runCatching { rule.waitUntil(30_000) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
-        if (!found) { val s = onScreen(); log("no node $tag · $s"); throw AssertionError("no '$tag' on screen after 30 s · $s") }
-        rule.onAllNodesWithTag(tag, true)[0].performClick() // the title switch and the inline pills can share a tag
-        idle(600)
-    }
+    private fun tap(tag: String) { FirstRun.tapVisible(rule, tag); idle(600) }
 
-    /** Test tags and first texts on screen, for a failure message that says where the app was. */
-    private fun onScreen(): String = runCatching {
-        val roots = rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes()
-        val tags = LinkedHashSet<String>(); val texts = LinkedHashSet<String>()
-        fun walk(n: androidx.compose.ui.semantics.SemanticsNode) {
-            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null }?.let { tags += it }
-            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.firstOrNull()?.text?.take(30)?.let { if (texts.size < 15) texts += it }
-            n.children.forEach { walk(it) }
-        }
-        roots.forEach { walk(it) }
-        "roots=${roots.size} · tags=${tags.take(40)} · text=$texts"
-    }.getOrElse { "(could not read: ${it.javaClass.simpleName})" }
+    private fun onScreen(): String = FirstRun.onScreen(rule)
 
     private val screen by lazy { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().maxByOrNull { it.size.height }!!.size }
 
@@ -151,7 +135,7 @@ class FeedPositionDeviceTest {
         val x = screen.width / 2
         val a = (screen.height * 0.70f).toInt(); val b = (screen.height * 0.40f).toInt()
         val (y1, y2) = if (up) a to b else b to a
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input swipe $x $y1 $x $y2 450").close()
+        FirstRun.shell("input swipe $x $y1 $x $y2 450")
     }
 
     private fun run(feed: String, open: () -> Unit) {
@@ -168,7 +152,7 @@ class FeedPositionDeviceTest {
         }
         val first = snap()
         log("feed $feed: ${first.size} cards on screen at start: ${first.take(6).map { it.key }}")
-        shot("feed_$feed")
+        FirstRun.shot("feed_$feed")
         if (!shown) log("feed $feed: no cards · ${onScreen()}")
         assertTrue("$feed: the feed never showed 4 cards in 120 s (cards=${first.size}) · ${onScreen()}", shown)
         val problems = ArrayList<String>()
@@ -205,18 +189,27 @@ class FeedPositionDeviceTest {
         assertTrue("$feed: scrolling showed no new cards (seen ${seen.size})", seen.size > first.size)
     }
 
-    /** Screenshot for the artifacts (files/shots), so the look can be checked too. */
-    private fun shot(name: String) = runCatching {
-        val bmp = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return@runCatching
-        val dir = File(ctx.getExternalFilesDir(null), "shots").apply { mkdirs() }
-        File(dir, "$name.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-    }
-
-    private fun videos(source: String) { tap("nav_tab_videos"); tap("video_source_switch"); tap("video_source_$source") }
+    // Each feed is opened through Home's own shortcut cards, as a user does.
+    private fun fromHome(card: String) { tap("nav_tab_home"); tap(card) }
 
     @Test fun home() = run("home") { tap("nav_tab_home") }
-    @Test fun yumix() = run("yumix") { videos("online") }
-    @Test fun youtube() = run("youtube") { videos("youtube") }
-    @Test fun liveTv() = run("live") { videos("live") }
-    @Test fun onlineMusic() = run("music") { tap("nav_tab_music"); tap("music_source_switch"); tap("music_source_online") }
+    @Test fun yumix() = run("yumix") { fromHome("quick_card_hues") }
+    @Test fun youtube() = run("youtube") { fromHome("quick_card_youtube") }
+    @Test fun liveTv() = run("live") { fromHome("quick_card_live") }
+    @Test fun onlineMusic() = run("music") { fromHome("quick_card_ytmusic") }
+
+    /** The "Watch from" menu behind the Videos title (run 43665792255: it never showed its options). */
+    @Test fun videoSourceMenuSwitchesSource() {
+        tap("nav_tab_videos"); idle(1_500)
+        val switches = rule.onAllNodesWithTag("video_source_switch", true).fetchSemanticsNodes().map { it.boundsInRoot }
+        log("video_source_switch nodes: $switches")
+        tap("video_source_switch")
+        val open = runCatching { rule.waitUntil(8_000) { rule.onAllNodesWithTag("video_source_menu", true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
+        FirstRun.shot("video_source_menu")
+        log("menu open=$open · ${onScreen()}")
+        assertTrue("tapping the Videos title did not open the \"Watch from\" menu · ${onScreen()}", open)
+        tap("video_source_youtube")
+        val yt = runCatching { rule.waitUntil(60_000) { snap().any { it.key.startsWith("youtube|") } }; true }.getOrDefault(false)
+        assertTrue("picking YouTube in the menu did not show YouTube videos · ${onScreen()}", yt)
+    }
 }

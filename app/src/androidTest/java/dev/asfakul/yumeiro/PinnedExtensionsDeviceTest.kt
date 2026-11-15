@@ -67,8 +67,8 @@ class PinnedExtensionsDeviceTest {
         val ok = runCatching { rule.waitUntil(ms) { !has(tag) }; true }.getOrDefault(false)
         assertTrue("'$tag' still shown after ${ms}ms", ok)
     }
-    private fun tap(tag: String) { waitTag(tag); rule.onAllNodesWithTag(tag, true)[0].performClick(); rule.waitForIdle() }
-    private fun back() { InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent 4").close() }
+    private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
+    private fun back() { FirstRun.shell("input keyevent 4") }
 
     /** Extension rows in the filter sheet, top to bottom (without "All"). */
     private fun sheetOrder(): List<String> = rule.onAllNodes(SemanticsMatcher("filter row") { n ->
@@ -78,8 +78,7 @@ class PinnedExtensionsDeviceTest {
     }, true).fetchSemanticsNodes().sortedBy { it.positionInRoot.y }.map { it.config[SemanticsProperties.TestTag].removePrefix("online_filter_") }
 
     private fun openYumix() {
-        tap("nav_tab_videos")
-        tap("video_source_switch"); tap("video_source_online")
+        tap("nav_tab_home"); tap("quick_card_hues") // Home's Yumix shortcut
         waitTag("online_filter", 120_000) // shown once two or more sources are on
     }
 
