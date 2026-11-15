@@ -65,9 +65,12 @@ class DramaPlaybackDeviceTest {
         val items = rows.flatMap { it.items }
         Log.i("MTDeviceTest", "drama rows: ${rows.map { "${it.title}=${it.items.size}" }}")
         assertTrue("no dramas in the feed: ${rows.map { it.title }}", items.isNotEmpty())
-        // An episode plays: try the first titles in feed order, as a user tapping down the shelf.
+        // An episode plays: the first title of each studio row first, then the next ones. Run
+        // 43724760853 tried only DramaBox titles (the first row) while DramaBox's video host was
+        // gone from DNS; one studio's outage is not "dramas don't play".
+        val order = (0 until (rows.maxOfOrNull { it.items.size } ?: 0)).flatMap { i -> rows.mapNotNull { it.items.getOrNull(i) } }.distinctBy { it.url }
         val tried = ArrayList<String>()
-        for (item in items.take(4)) {
+        for (item in order.take(4)) {
             val loadAt = android.os.SystemClock.elapsedRealtime()
             val detail = runCatching { runBlocking { OnlineRepository.load(api, item.url) } }
                 .onFailure { tried += "${item.name}: load ${it.javaClass.simpleName} ${it.message?.take(80)}" }.getOrNull() ?: continue

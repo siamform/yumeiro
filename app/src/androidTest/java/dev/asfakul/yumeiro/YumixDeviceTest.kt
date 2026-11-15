@@ -126,7 +126,16 @@ class YumixDeviceTest {
             idle(500)
         }
         log("refresh message: $message")
+        // Going offline adds the offline notice, and earlier tests in the suite leave a Continue
+        // watching row, so the Yumix rows can sit below the screen (run 43724760853: 0 cards
+        // composed while all 26 titles were held). Scroll down until the rows are on screen.
+        var swipes = 0
+        while (cards().isEmpty() && swipes < 4) {
+            runCatching { rule.onAllNodesWithTag("online_home_list", true).onFirst().performTouchInput { swipeUp(startY = bottom - 40f, endY = top + height * 0.4f) } }
+            swipes++; idle(1_500)
+        }
         val after = cards()
+        if (swipes > 0) log("scrolled $swipes times to bring the Yumix rows on screen")
         val heldAfter = dev.asfakul.yumeiro.ui.screens.online.yumixItemKeys()
         val lost = held - heldAfter
         // Card keys are "feed|item key". Offline nothing new can arrive, so every card on screen

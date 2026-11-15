@@ -78,6 +78,22 @@ class DramaHealthTest {
         assertTrue(r.items.all { it.list.isEmpty() })
     }
 
+    @Test fun studioWhoseVideoHostIsGoneIsDown() {
+        // R16 (G4): ONShort answers, but the studio's CDN host has no DNS record (DramaBox on
+        // 2026-11-15, run 43724760853). Used to count as "phone offline" and keep the shelf.
+        val p = YumeiroDramaProvider(listOf(Fake(emptySet())), DramaHealth(reach = { throw DramaHealth.StreamHostMissing("cdn.example") }))
+        val r = runBlocking { p.getMainPage(1, MainPageRequest("Good", "onshort|good", false)) }
+        assertTrue(r.items.all { it.list.isEmpty() })
+        assertTrue(!DramaHealth.localNetwork(DramaHealth.StreamHostMissing("cdn.example")))
+    }
+
+    @Test fun phoneOfflineDuringProbeKeepsTheShelf() {
+        // A real local failure (UnknownHostException from our own DNS) stays inconclusive.
+        val p = YumeiroDramaProvider(listOf(Fake(emptySet())), DramaHealth(reach = { throw java.net.UnknownHostException("no network") }))
+        val r = runBlocking { p.getMainPage(1, MainPageRequest("Good", "onshort|good", false)) }
+        assertEquals(1, r.items.first().list.size)
+    }
+
     @Test fun titleKeyIgnoresQuotesAndDubTags() {
         assertEquals(DramaHealth.titleKey("The Lightbringer’s Return"), DramaHealth.titleKey("The Lightbringer's Return (Dubbed)"))
         assertTrue(!DramaHealth.refused(IOException("Episode 1 answered HTTP 503"))) // R15: busy host, retried, never hides a studio

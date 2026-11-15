@@ -90,7 +90,17 @@ class HomeNavigationDeviceTest {
             .any { n -> n.config.getOrElseNullable(SemanticsProperties.ContentDescription) { null }.orEmpty().contains("Resume") }
         log("continue video card: resume=$resume")
         tap("home_continue_video_play")
+        // Resume of an online title opens its detail page ("Continue S1E1"), by design
+        // (MTPlayerApp: openOnline); device and YouTube videos open the player. Run 43724760853:
+        // the drama test watched last, so the card held a drama.
         if (resume) {
+            val until = android.os.SystemClock.uptimeMillis() + 30_000
+            while (android.os.SystemClock.uptimeMillis() < until && !has("video_player_root") && !has("online_detail_screen")) Thread.sleep(300)
+        }
+        if (resume && has("online_detail_screen")) {
+            log("continue video (online title) → its detail page")
+            back(); waitGone("online_detail_screen", 15_000)
+        } else if (resume) {
             waitTag("video_player_root", 30_000)
             log("continue video (watched) → player")
             // Same exit as h7: back (twice at most: the first may only hide the controls) leaves

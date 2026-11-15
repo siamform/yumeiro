@@ -153,7 +153,11 @@ class DramaHealth(
             val errors = results.mapNotNull { it.exceptionOrNull() }
             val busy = errors.any { busy(it) || it is ProbeBudget }
             val hung = results.isNotEmpty() && results.all { r -> r.exceptionOrNull()?.let { it !is ProbeBudget && hung(it) } == true }
-            if (state == State.DOWN && !refusedHard && !(hung && !busy && !local)) state = State.UNKNOWN
+            // R16 (G4): ONShort answered the episode, but the studio's video host is gone from DNS
+            // (DramaBox's hwztakavideo.dramaboxdb.com, NXDOMAIN on 1.1.1.1 and 8.8.8.8, run
+            // 43724760853). That is the studio, not our network: hidden, rechecked in 5 minutes.
+            val hostGone = errors.any { it is StreamHostMissing }
+            if (state == State.DOWN && !refusedHard && !hostGone && !(hung && !busy && !local)) state = State.UNKNOWN
             val at = when {
                 state == State.UNKNOWN -> now() - ttlMs + 60_000L
                 // Every sample hung while the shelf itself answered: hidden, rechecked in 5 minutes.
@@ -170,6 +174,13 @@ class DramaHealth(
     /** The series page answered, episode 1 didn't within the whole probe budget. */
     class EpisodeHung : java.io.InterruptedIOException("episode never answered")
 
+    /**
+     * The episode answer named a video host that DNS doesn't know, while the catalog host (same
+     * network, moments earlier) answered. Deliberately not an [java.net.UnknownHostException]:
+     * [localNetwork] must not read it as "the phone is offline".
+     */
+    class StreamHostMissing(host: String) : IOException("The video server $host no longer exists")
+
     /** The probe's own time budget ran out (not an answer from the studio). */
     class ProbeBudget : java.io.IOException("health probe budget used up")
 
@@ -182,7 +193,12 @@ class DramaHealth(
                 .header("Range", "bytes=0-2047")
                 .apply { st.referer?.let { header("Referer", it) } }
                 .build()
-            NetworkClient.get().newCall(req).execute().use { r ->
+            val call = try { NetworkClient.get().newCall(req).execute() } catch (e: java.net.UnknownHostException) {
+                // Only while the phone is online: offline it stays a local failure.
+                if (runCatching { dev.asfakul.yumeiro.network.Connectivity.online.value }.getOrDefault(true)) throw StreamHostMissing(req.url.host)
+                throw e
+            }
+            call.use { r ->
                 if (!r.isSuccessful) throw IOException("Stream answered HTTP ${r.code}")
                 val head = r.body.source().let { src -> src.request(64); src.buffer.snapshot().utf8().take(64) }
                 !head.trimStart().startsWith("<")
