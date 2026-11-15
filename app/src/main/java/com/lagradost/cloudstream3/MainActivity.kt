@@ -1,5 +1,6 @@
 package com.lagradost.cloudstream3
 
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,20 @@ open class MainActivity : AppCompatActivity() {
         // extension's class loader, not the app's (G12 X8-3, crash in device run 43762090588).
         supportFragmentManager.fragmentFactory = dev.asfakul.yumeiro.online.ExtensionFragmentFactory
         super.onCreate(savedInstanceState)
+    }
+
+    /**
+     * G12 X2-3: every Context keeps its own name-to-file map for preferences, so the first
+     * `getSharedPreferences(name)` on this Activity checked the disk on the main thread even when
+     * [dev.asfakul.yumeiro.startup.PrefsWarmup] had already loaded the file through the application
+     * context (StrictMode DiskReadViolation in `SubtitleStyleSettings.init`, device run 43763558754).
+     * Code in composition gets this Activity from `LocalContext`, so hand every lookup to the
+     * application context, which shares the warmed cache. Same files, same instances.
+     */
+    override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
+        val app = if (baseContext != null) applicationContext else null
+        return if (app != null && app !== this) app.getSharedPreferences(name, mode)
+        else super.getSharedPreferences(name, mode)
     }
 
     override fun onResume() {
