@@ -367,5 +367,26 @@ class LocalPlayerDeviceTest {
         log("LOCAL_G_RESULT PASS")
     }
 
+    /** G3: when the system refuses picture-in-picture the user is told (app op forced to ignore). */
+    @Test fun h_refusedPipSaysSo() {
+        val pm = ctx.packageManager
+        org.junit.Assume.assumeTrue("no PiP on this device", pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE))
+        FirstRun.shell("appops set ${ctx.packageName} PICTURE_IN_PICTURE ignore")
+        try {
+            openClipFromDevice()
+            loopClip()
+            control("video_pip_btn")
+            wait("refused-PiP message", 8_000) {
+                dev.asfakul.yumeiro.ui.components.AppMessages.current.value?.text?.contains("Picture-in-picture isn't available") == true ||
+                    hasText("Picture-in-picture isn't available")
+            }
+            var pip = true; rule.runOnUiThread { pip = rule.activity.isInPictureInPictureMode }
+            assertTrue("not in PiP", !pip)
+            log("LOCAL_H_RESULT PASS")
+        } finally {
+            FirstRun.shell("appops set ${ctx.packageName} PICTURE_IN_PICTURE allow")
+        }
+    }
+
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
 }
