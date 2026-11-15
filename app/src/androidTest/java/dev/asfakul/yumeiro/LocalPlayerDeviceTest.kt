@@ -260,5 +260,20 @@ class LocalPlayerDeviceTest {
         log("LOCAL_D_RESULT PASS")
     }
 
+    /** P17: the Cast module loads without blocking (google_apis emulators have Play Services). Casting to a TV is script P/T. */
+    @Test fun e_castModuleLoadsWithoutBlocking() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val t0 = android.os.SystemClock.uptimeMillis()
+        var ready: kotlinx.coroutines.flow.StateFlow<Boolean>? = null
+        // Called on the main thread, as the Cast button does.
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { ready = dev.asfakul.yumeiro.cast.CastSupport.ready(ctx) }
+        val callMs = android.os.SystemClock.uptimeMillis() - t0
+        log("P17 ready() returned in $callMs ms, value=${ready!!.value}")
+        wait("Cast module loaded", 30_000) { ready!!.value }
+        log("P17 cast ready after ${android.os.SystemClock.uptimeMillis() - t0} ms")
+        assertTrue("ready() must not block (was $callMs ms)", callMs < 500)
+        log("LOCAL_E_RESULT PASS")
+    }
+
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
 }
