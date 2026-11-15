@@ -179,3 +179,21 @@ These are real emulators running the real debug APK; the tests are not simulated
 - FirstRun now detects the API 24 dialog, but Back does not close it and the grant call is API 28+;
   all 15 tests blocked at "tab bar never showed". Fixed in test infra 6fa9ce6 (pm grant before each class).
 
+
+## 43763558754 — AccessibilityDeviceTest, both phones, 208ba48 (2026-11-15)
+
+- api33-lowram: 5/5 pass (tabs, Settings, search, large font 1.3, video player).
+- api36: 4/5. `largeFontPassesAccessibilityChecks` passes on both: X8-3 (extension fragment restore crash) verified.
+- api36 `settings_downloads`: four 38 dp touch targets. Screenshot `a11y_settings_downloads.png`: the Episode quality
+  chips are full size; the floating "Ready to watch: … installed" app message covers their lower edge (reported
+  bounds end at y=2104 px = the banner's top). Test now clears app messages first (399ccdb).
+- No PermissionCenter binder stall on either phone: X2-2 verified.
+- StrictMode (api33-lowram): DiskReadViolation `ContextImpl.getDataDir` ← `SubtitleStyleSettings.init` ←
+  `VideoPlayerModalContent` → X2-3 (15a29ca). The 1.0–1.5 s XML-parse stalls are inside the ATF library's own
+  string bundle (`AndroidXMLResourceBundle`), test-only.
+- StrictMode breadcrumbs named `ExtensionGuard.kt:83` (the outer `Looper.loop()` frame), not the real caller.
+
+## 43762847904 — TV tv-api24 after the pm grant fix (6fa9ce6)
+
+- Storage dialog gone; the app reaches Home with the TV side rail. All tests failed in `FirstRun.toTabs`, which waited
+  for the phone tag `nav_tab_home`. Test infra fixed 1a80183; rerun 43765162241.

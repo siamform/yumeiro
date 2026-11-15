@@ -1,21 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-15 21:25 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-15 21:43 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Since 21:20 UTC:** X1 structure and ADR-012/013 in SYSTEM-DESIGN (68a7b3a). 43762090588: search and
-  Settings a11y clean on both phones; large font found a real crash, X8-3 (extension fragment restore,
-  fixed 7cb8c2e, unit). X2-2 permission binder calls moved off main (208ba48, unit, fails before).
-- **Current step:** Level 1, Group 12: X8-2/X8-3 device recheck, X9-1 (TV), X2 startup benchmark.
-- **Running:** device 43763558754 (AccessibilityDeviceTest, both phones, 208ba48); TV 43762847904
-  (tv-api24 after the pm grant fix); CI 43762845168 (build incl. :benchmark, unit, blocking lint).
-- **Next three actions:** (1) read the three runs and fix; (2) dispatch macrobenchmark.yml startup,
-  then profile, commit `baseline-prof.txt`, rerun startup for before/after; (3) write
-  `docs/groups/GROUP-12-CROSS-CUTTING.md` (Part 3 format) and continue memory/ST-7/ST-17/RTL/release.
+- **Since 21:25 UTC:** X11-1..5 network (a299f60, f7e490c, 98f2dbf) and X12-1/2 cache (c63bc66), unit,
+  fail before. 43763558754: X8-3 and X2-2 verified on both phones; new X2-3 (Activity prefs lookups on
+  main, 15a29ca, unit); a11y Downloads chips were cut by a floating app message (test fix 399ccdb). TV
+  43762847904 reaches Home; helper waited for the phone tab tag (1a80183).
+- **Current step:** Level 1, Group 12: device rechecks; then X2 startup benchmark.
+- **Running:** device 43765039266 (AccessibilityDeviceTest, both phones, 399ccdb: X8-2 recheck, X2-3
+  StrictMode); TV 43765162241 (tv-api24, 1a80183); CI 43762845168 (older tip 257d48c).
+- **Next three actions:** (1) when CI 43762845168 ends, dispatch CI on the tip (network/cache/prefs need
+  full unit + lint); (2) read the two device runs and fix; (3) macrobenchmark startup → profile → commit
+  `baseline-prof.txt` → startup again; then StrictMode crumb attribution (skip `ExtensionGuard` frame).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

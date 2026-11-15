@@ -32,8 +32,8 @@ this file.
 | X8 | Accessibility | all UI, `AccessibilityDeviceTest` | X8-1 verified; X8-2, X8-3 device recheck running |
 | X9 | TV and low-end | `ui/tv`, `DeviceClass` | X9-1 in progress (tv-api24 run) |
 | X10 | Build, CI, release, signing | `.github/workflows`, Gradle | X10-1..4 CI verified; R8/ABI/signing review not done |
-| X11 | Network stack (smart DNS, DoH, bypass) | `network/*` | not started |
-| X12 | Caching (data, image, codec) | `cache/*` | not started |
+| X11 | Network stack (smart DNS, DoH, bypass) | `network/*` | audited: X11-1..5 fixed (a299f60, f7e490c, 98f2dbf) |
+| X12 | Caching (data, image, codec) | `cache/*` | audited: X12-1, X12-2 fixed (c63bc66) |
 | X13 | Android 7–16 compatibility | `OsCompat`, `MTApplication` | partly (lint NewApi X10-2, tv-api24 run); not complete |
 | X14 | Design system and shared components | `ui/components/*` | not started (A11yLabel added in X8-2) |
 | X15 | Shared live-feed component | `ui/feed/*` | not started |
@@ -84,14 +84,22 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X1-3 | high | `sources/js/JsBridge.kt` extractor | `runBlocking` with no limit; plain list across threads | extractor that never calls back | `withTimeoutOrNull(30 s)`, synchronized list (565d39b) | unit |
 | X1-4 | medium | `PrivacyTrackingBackup.kt` (6 sign-in calls) | `runCatching` catches the job's own cancellation | leave Settings mid-poll | `runCancellable` (b0a62eb) | unit |
 | X2-1 | medium | `MainActivity.kt:50` → `Theme.kt:68` | prefs read in first composition; most of the 5.4 s stall is the emulator's render thread | cold start api33-lowram | measure (ADR-012) | open |
-| X2-2 | medium | `SetupGuide.kt` `rememberSetupStatus` | uncached binder permission checks in composition | cold start api33-lowram (2,018 ms YuStall) | off main + warm-up (208ba48) | unit; emulator pending |
+| X2-2 | medium | `SetupGuide.kt` `rememberSetupStatus` | uncached binder permission checks in composition | cold start api33-lowram (2,018 ms YuStall) | off main + warm-up (208ba48) | emulator (43763558754) |
+| X2-3 | medium | `cloudstream3/MainActivity.kt` | per-Context prefs path map; warm-up used the app context | StrictMode in player (43763558754) | route to app context (15a29ca) | unit; emulator pending |
 | X5-2 | medium | `NotifyPacer.kt` deliverNext | every tick delivered | ticks from boot/updates | gap check (9b46045) | emulator |
 | X6-1 | medium | `CrashReportsCard.kt` | Delete all with no confirm, over-promised text | tap | confirm + wording (2e5f9d6) | emulator |
 | X7-1 | high | `network_security_config.xml` | cleartext app-wide; HTTPS-only list incomplete | config read | domains added (149ef42) | unit |
 | X7-3 | medium | `app/build.gradle.kts:51-59,122-146`, `UpdateConfig.kt:22` | secrets compiled into the APK | unzip APK | ADR-013 (proposed) | owner decision |
 | X8-1 | medium | `MTTopBar.kt`, `YtMusicBrowse.kt` | small gap, unnamed cards | a11y check | 3019605, a898010 | emulator |
 | X8-2 | medium | `HomeScreen.kt` ContinueCard | clickable without a label | a11y check on search (api36) | `a11yLabel` (5e685a5) | emulator recheck |
-| X8-3 | **critical** | `cloudstream3/MainActivity.kt` onCreate | extension fragments restored with the app class loader | font scale change after an extension dialog (43762090588, both phones) | `ExtensionFragmentFactory` (7cb8c2e) | unit; emulator pending |
+| X8-3 | **critical** | `cloudstream3/MainActivity.kt` onCreate | extension fragments restored with the app class loader | font scale change after an extension dialog (43762090588, both phones) | `ExtensionFragmentFactory` (7cb8c2e) | emulator (43763558754, both phones) |
+| X11-1 | medium | `network/SmartDns.kt` resolver loop | dead resolver retried on every lookup | resolver unreachable | 2-min skip, cleared on network change (a299f60) | unit |
+| X11-2 | medium | `NetworkSettings` / `MTApplication` | first requests ran before settings loaded | request at cold start | `attach()` + `ensureLoaded()` (f7e490c) | unit |
+| X11-3 | high | `SmartDns.kt` error mapping | OkHttp wraps network failure in UnknownHostException, read as NXDOMAIN | Cloudflare blocked | `unreachableOrAnswer` (a299f60) | unit |
+| X11-4 | medium | `network/DnsMessage.kt` DnsWireClient | socket not closed on failed connect/TLS | TLS failure | close in finally (98f2dbf) | unit |
+| X11-5 | medium (security) | DnsWireClient UDP | reply sender not checked (spoofing) | packet from another port | source check (98f2dbf) | unit |
+| X12-1 | medium (memory) | `cache/DataCache.kt` remember | LRU capped by count only | 16 large pages = 48M chars | char budget, big pages disk-only (c63bc66) | unit |
+| X12-2 | medium (data) | `DataCache.purge` | deleted in-flight `.tmp` | purge during write | only `.tmp` older than 60 s (c63bc66) | unit |
 | X10-1..4 | medium | `ci.yml`, several | TV never linted; NewApi calls; opt-in noise | lint | f0df775, ff00d11, 7486997, c7772ce, 72394dc | CI |
 | ST-17 | low (1 in 40 runs) | Compose `ContentInViewNode` | bring-into-view never settles once | stress api36 43697447466 | focus-chain logging (3342106) | open |
 
@@ -104,6 +112,10 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X2-2 | `SetupPermsOffMainTest` | "a permission check ran on the main thread: [true]" | pass (unit) |
 | X8-2 | `A11yLabelTest` (2), `AccessibilityDeviceTest` | api36 flagged Continue cards | recheck 43763558754 |
 | X8-3 | `ExtensionFragmentFactoryTest` (3) | default factory throws on the saved state (the crash) | restores with no fragment (unit) |
+| X2-3 | `ActivityPrefsRouteTest` | "did not reach the application context: []" | pass (unit) |
+| X11-1, X11-3 | `SmartDnsResilienceTest` (4) | 3 fail | pass (unit) |
+| X11-4, X11-5 | `DnsWireClientTest` (4) | 3 fail | pass (unit) |
+| X12-1, X12-2 | `DataCacheBoundsTest` (3) | 3 fail (48000000 chars held; fresh .tmp deleted; 400000-char page kept) | pass (unit) |
 
 ## 8. Decision records
 

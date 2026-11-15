@@ -176,8 +176,8 @@ verified on a device, evidence linked), `not covered` (reason given).
 | X8 | Accessibility (TalkBack, contrast, touch targets, font scale) | all UI | open | |
 | X9 | TV and low-end behaviour | ui/tv, DeviceClass | open | |
 | X10 | Build, CI, release, signing | .github/workflows, gradle | open | |
-| X11 | Network stack: smart DNS, DoH, auto-bypass, settings | network/* | open | |
-| X12 | Caching: data cache, image cache, online codec | cache/* | open | |
+| X11 | Network stack: smart DNS, DoH, auto-bypass, settings | network/* | audited; X11-1..5 fixed (unit), CI pending | |
+| X12 | Caching: data cache, image cache, online codec | cache/* | audited; X12-1, X12-2 fixed (unit), CI pending | |
 | X13 | (R16) Android 7–16 compatibility (minSdk 24), OS version guards | OsCompat, MTApplication | open | |
 | X14 | (R16) Design system and shared components | ui/components/YumeKit, Motion, Pills, Artwork, YuEditorial, Kana, YumixLogo | open | |
 | X15 | (R16) Shared live-feed component (append-only cards) | ui/feed/LiveFeed, FeedCard, OnlineHuePage | open | |
