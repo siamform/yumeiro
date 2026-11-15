@@ -381,6 +381,8 @@ object ExtensionManager {
         }
         if (previous != null && previous.fileName != file.name) deleteFile(File(pluginDir(context), previous.fileName))
         removedDefaults.remove(installed.key)
+        // The user added Internet Archive themselves: the 1.8.0 clean-up must not take it away.
+        if (previous == null && installed.key == DEFAULT_KEY) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
         _state.update { s ->
             s.copy(
                 installed = s.installed.filterNot { it.key == installed.key } + installed,
@@ -666,15 +668,28 @@ object ExtensionManager {
         pluginDir(context).listFiles()?.forEach { f -> if (f.name !in keep) deleteFile(f) }
     }
 
+    /**
+     * R16 G4: whether the one-time removal of 1.8.0's automatic Internet Archive install is still
+     * due, decided once from the saved state before anything new can be installed. It used to be
+     * decided at the first [sync], so on a new install (or before the first sync after an update)
+     * an Internet Archive the user had just added was uninstalled without a word. Found by
+     * `YumixDeviceTest` (runs 43716649966 … 43721853978: the row appeared, then "Unloaded" from
+     * [uninstall] called by [sync]).
+     */
+    internal fun legacyDefaultMigrationDue(done: Set<String>, installedKeys: List<String>): Boolean =
+        LEGACY_DEFAULT_MIGRATION !in done && DEFAULT_KEY in installedKeys
+
     private fun readState(context: Context) {
         val f = stateFile(context)
         val o = runCatching { if (f.exists()) JSONObject(f.readText()) else null }.getOrNull()
-        if (o == null) { _state.update { it.copy(installed = emptyList(), repos = emptyList()) }; return }
+        // R16 G4: a new install has nothing to migrate (see [legacyDefaultMigrationDue]).
+        if (o == null) { removedDefaults.add(LEGACY_DEFAULT_MIGRATION); _state.update { it.copy(installed = emptyList(), repos = emptyList()) }; return }
         val installed = o.optJSONArray("installed")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(InstalledExtension::fromJson) } }.orEmpty()
         val repos = o.optJSONArray("repos")?.let { a ->
             (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { r -> r.optString("url").ifBlank { null }?.let { RepoRef(it, r.optString("name").ifBlank { it }, r.optLong("addedAt")) } } }
         }.orEmpty()
         removedDefaults = o.optJSONArray("removedDefaults").strings().toMutableSet()
+        if (!legacyDefaultMigrationDue(removedDefaults, installed.map { it.key })) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
         _state.update { it.copy(installed = installed.distinctBy { e -> e.key }, repos = repos, lastSync = o.optLong("lastSync")) }
     }
 
