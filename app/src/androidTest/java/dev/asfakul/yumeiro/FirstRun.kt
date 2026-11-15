@@ -13,6 +13,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.platform.app.InstrumentationRegistry
 
 /**
@@ -40,7 +41,8 @@ object FirstRun {
     private fun settled(rule: AndroidComposeTestRule<*, *>, guide: Boolean, tour: Boolean): Boolean {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
         val ui = dev.asfakul.yumeiro.ui.screens.extras.SetupGuide
-        return !guide && !tour && !ui.open.value && !ui.shouldAutoShow(ctx) && has(rule, "nav_tab_home") && !permissionDialogOnTop()
+        return !guide && !tour && !ui.open.value && !ui.shouldAutoShow(ctx) && !has(rule, "splash_screen_root") &&
+            has(rule, "nav_tab_home") && !permissionDialogOnTop()
     }
 
     private fun has(rule: AndroidComposeTestRule<*, *>, tag: String) =
@@ -90,6 +92,28 @@ object FirstRun {
         java.io.File(dir, "$name.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, it) }
     }
 
+    /**
+     * One-time prompts the app opens by itself a few seconds after launch (the "Keep notifications
+     * on time" guide, the follow card) cover the screen; a user closes them, so do the tests.
+     */
+    fun dismissPrompts(rule: AndroidComposeTestRule<*, *>) {
+        for (t in listOf("guide_close", "reminder_follow_later")) if (has(rule, t)) {
+            Log.i("MTDeviceTest", "closing the app prompt '$t'")
+            runCatching { rule.onAllNodesWithTag(t, true)[0].performClick(); rule.waitForIdle() }
+            SystemClock.sleep(400)
+        }
+    }
+
+    /** Scrolls any list on screen until a node with [tag] is composed (cards below the fold). */
+    private fun scrollTo(rule: AndroidComposeTestRule<*, *>, tag: String) {
+        val lists = runCatching { rule.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction(), true).fetchSemanticsNodes().size }.getOrDefault(0)
+        for (i in 0 until lists) runCatching {
+            rule.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction(), true)[i]
+                .performScrollToNode(androidx.compose.ui.test.hasTestTag(tag))
+        }
+        rule.waitForIdle()
+    }
+
     /** Taps the first node with [tag] that is actually on screen (several screens can share a tag). */
     fun tapVisible(rule: AndroidComposeTestRule<*, *>, tag: String, timeoutMs: Long = 30_000) {
         fun visible(): Int {
@@ -99,7 +123,12 @@ object FirstRun {
                 b.width > 1f && b.height > 1f && b.left >= -1f && b.top >= -1f && b.right <= root.size.width + 1f && b.bottom <= root.size.height + 1f
             }
         }
-        val ok = runCatching { rule.waitUntil(timeoutMs) { runCatching { visible() >= 0 }.getOrDefault(false) }; true }.getOrDefault(false)
+        dismissPrompts(rule)
+        var ok = runCatching { rule.waitUntil(minOf(timeoutMs, 8_000)) { runCatching { visible() >= 0 }.getOrDefault(false) }; true }.getOrDefault(false)
+        if (!ok) {
+            dismissPrompts(rule); scrollTo(rule, tag)
+            ok = runCatching { rule.waitUntil(timeoutMs) { runCatching { visible() >= 0 }.getOrDefault(false) }; true }.getOrDefault(false)
+        }
         if (!ok) { shot("missing_$tag"); throw AssertionError("no visible '$tag' after ${timeoutMs}ms · ${onScreen(rule)}") }
         rule.onAllNodesWithTag(tag, true)[visible()].performClick()
         rule.waitForIdle()

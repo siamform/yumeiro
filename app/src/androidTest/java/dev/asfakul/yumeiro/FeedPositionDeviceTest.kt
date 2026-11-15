@@ -85,13 +85,22 @@ class FeedPositionDeviceTest {
     private val screen by lazy { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().maxByOrNull { it.size.height }!!.size }
 
     /** Cards that intersect the screen (pager pages beside the current one sit wholly outside it). */
-    private fun snap(): List<Card> = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
-        .mapNotNull { n ->
-            val k = n.config.getOrElseNullable(FeedCardKey) { null } ?: return@mapNotNull null
-            val p = n.positionInRoot
-            Card(k, p.x, p.y, n.size.width, n.size.height)
-        }
-        .filter { it.x + it.w > 0 && it.x < screen.width && it.y + it.h > 0 && it.y < screen.height && it.w > 0 && it.h > 0 }
+    /** Keys shown more than once in the composed feed (the same title in two shelves). */
+    private val duplicates = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+
+    private fun snap(): List<Card> {
+        val all = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
+            .mapNotNull { n ->
+                val k = n.config.getOrElseNullable(FeedCardKey) { null } ?: return@mapNotNull null
+                val p = n.positionInRoot
+                Card(k, p.x, p.y, n.size.width, n.size.height)
+            }
+        // Two copies of one key can't be told apart from one card that jumped: leave them out of
+        // the position checks (they are reported on their own as duplicates).
+        all.groupBy { it.key }.filterValues { it.size > 1 }.keys.let { duplicates += it }
+        return all.filter { it.key !in duplicates }
+            .filter { it.x + it.w > 0 && it.x < screen.width && it.y + it.h > 0 && it.y < screen.height && it.w > 0 && it.h > 0 }
+    }
 
     /** Compares two snapshots; returns the problems found (empty = the step is clean). */
     private fun compare(step: String, a: List<Card>, b: List<Card>, still: Boolean, swipeUp: Boolean?): List<String> {
@@ -109,7 +118,8 @@ class FeedPositionDeviceTest {
             val ca = ua[k]!!; val cb = ub[k]!!
             val ddy = (cb.y - ca.y) - dy
             val ddx = cb.x - ca.x
-            if (abs(ddy) > 4f) problems += "$step: card $k moved ${cb.y - ca.y}px while the page moved ${dy}px (insert/remove above it)"
+            if (abs(ddy) > 4f) problems += "$step: card $k moved ${cb.y - ca.y}px while the page moved ${dy}px (insert/remove above it)" +
+                " · y ${ca.y.toInt()}→${cb.y.toInt()} x ${ca.x.toInt()} ${ca.w}x${ca.h} · all moves ${common.associateWith { (ub[it]!!.y - ua[it]!!.y).toInt() }}"
             // Horizontal rows only move sideways when the user swipes them; this test swipes vertically.
             if (abs(ddx) > 4f) problems += "$step: card $k slid sideways ${ddx}px"
         }
@@ -135,6 +145,7 @@ class FeedPositionDeviceTest {
         val x = screen.width / 2
         val a = (screen.height * 0.70f).toInt(); val b = (screen.height * 0.40f).toInt()
         val (y1, y2) = if (up) a to b else b to a
+        FirstRun.dismissPrompts(rule)
         FirstRun.shell("input swipe $x $y1 $x $y2 450")
     }
 
@@ -195,7 +206,16 @@ class FeedPositionDeviceTest {
     @Test fun home() = run("home") { tap("nav_tab_home") }
     @Test fun yumix() = run("yumix") { fromHome("quick_card_hues") }
     @Test fun youtube() = run("youtube") { fromHome("quick_card_youtube") }
-    @Test fun liveTv() = run("live") { fromHome("quick_card_live") }
+    /** Live TV's hub shows one shelf per playlist; a playlist's own grid is the long scrolling feed. */
+    @Test fun liveTv() = run("live") {
+        fromHome("quick_card_live")
+        val strip = SemanticsMatcher("playlist chip") { n ->
+            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null }?.let { it.startsWith("live_strip_") && it != "live_strip_all" } == true
+        }
+        rule.waitUntil(120_000) { rule.onAllNodes(strip, true).fetchSemanticsNodes().isNotEmpty() }
+        log("live playlist chip: ${rule.onAllNodes(strip, true).fetchSemanticsNodes().first().config[androidx.compose.ui.semantics.SemanticsProperties.TestTag]}")
+        rule.onAllNodes(strip, true)[0].performClick(); idle(1_000)
+    }
     @Test fun onlineMusic() = run("music") { fromHome("quick_card_ytmusic") }
 
     /** The "Watch from" menu behind the Videos title (run 43665792255: it never showed its options). */

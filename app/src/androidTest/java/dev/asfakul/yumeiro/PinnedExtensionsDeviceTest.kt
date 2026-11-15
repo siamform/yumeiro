@@ -74,7 +74,7 @@ class PinnedExtensionsDeviceTest {
     private fun sheetOrder(): List<String> = rule.onAllNodes(SemanticsMatcher("filter row") { n ->
         val t = n.config.getOrElseNullable(SemanticsProperties.TestTag) { null } ?: return@SemanticsMatcher false
         t.startsWith("online_filter_") && !t.startsWith("online_filter_pin_") &&
-            t !in setOf("online_filter_all", "online_filter_sheet", "online_filter_clear", "online_filter_empty", "online_filter_search_clear", "online_filter_active", "online_filter_active_clear")
+            t !in setOf("online_filter_all", "online_filter_sheet", "online_filter_clear", "online_filter_empty", "online_filter_search", "online_filter_search_clear", "online_filter_active", "online_filter_active_clear")
     }, true).fetchSemanticsNodes().sortedBy { it.positionInRoot.y }.map { it.config[SemanticsProperties.TestTag].removePrefix("online_filter_") }
 
     private fun openYumix() {
