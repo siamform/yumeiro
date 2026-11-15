@@ -58,7 +58,10 @@ robolectric = "4.18"
 [libraries]
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
-desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.5" }
+# X13-3: the _nio flavour backs java.nio.charset users such as URLDecoder.decode(String, Charset)
+# (API 33). NewPipeExtractor requires it below minSdk 33 (its README); plain desugar_jdk_libs
+# crashed YouTube on Android 9 (minSdk run 43771214803, NoSuchMethodError in Utils.decodeUrlUtf8).
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version = "2.1.5" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileInstaller" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
