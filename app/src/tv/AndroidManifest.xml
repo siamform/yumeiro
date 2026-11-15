@@ -4,6 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- Stated here too (main has it): TV boxes have no touchscreen; Play filters on it (G12 X10-3). -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <!-- No Android cloud backup: Yumeiro's own backup (Settings, Backup, storage & reset) covers it. -->
     <application
@@ -12,6 +14,7 @@
         tools:ignore="MissingTvBanner">
         <activity
             android:name=".MainActivity"
+            android:exported="true"
             android:supportsPictureInPicture="false"
             android:screenOrientation="landscape"
             tools:replace="android:supportsPictureInPicture">
