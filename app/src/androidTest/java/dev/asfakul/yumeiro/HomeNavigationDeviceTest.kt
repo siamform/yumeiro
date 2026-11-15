@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
 /**
  * R16 Step 3, group 1 (Home and navigation) on an emulator, through the real UI:
  * H1 Home shows its list, H4 every bottom tab opens its page and back returns Home,
- * H7 a VIEW intent for a web video opens the player, H8 the open tab survives the activity
+ * H10 the top-bar search suggests a recent search, H7 a VIEW intent for a web video opens the player, H8 the open tab survives the activity
  * being recreated, H13 the inbox opens from the top bar and back closes it, H12 the
  * "Continue" widget is offered to the launcher.
  */
@@ -95,6 +95,18 @@ class HomeNavigationDeviceTest {
         waitTag("inbox_screen")
         back(); waitGone("inbox_screen")
         assertEquals(0, TabPagerProbe.page)
+    }
+
+    @Test fun h10_topBarSearchSuggestsARecentSearch() {
+        dev.asfakul.yumeiro.ui.components.RecentSearches.add(ctx, "library", "yumeiro nightfall")
+        waitTag("topbar_search_action")
+        tap("topbar_search_action")
+        waitTag("topbar_search_input")
+        FirstRun.shell("input text yumei")
+        // Ranked off the main thread after a 120 ms pause in typing (MTPlayerApp produceState).
+        waitTag("topbar_suggestions", 10_000)
+        tap("search_close_button")
+        waitGone("topbar_search_input")
     }
 
     @Test fun h12_continueWidgetIsOffered() {

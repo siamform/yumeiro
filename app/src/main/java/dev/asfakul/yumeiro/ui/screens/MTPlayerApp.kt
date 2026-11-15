@@ -411,8 +411,13 @@ fun MTPlayerApp(
 
     // Typeahead for the top-bar search: recent searches plus matching songs, artists, albums and videos.
     var recentTick by remember { mutableStateOf(0) }
-    val topBarSuggestions = remember(searchQuery, filteredTracks, albums, artists, filteredVideos, recentTick) {
-        if (searchQuery.isBlank()) emptyList() else {
+    // R16 (G1 H10): ranked on a background thread after a short pause in typing. It folds up to
+    // 600 titles (Unicode normalise + two regex passes each) and reads the recent-search prefs,
+    // which ran in composition on the main thread on every keystroke (StrictMode, run 43683520404).
+    val topBarSuggestions by androidx.compose.runtime.produceState(emptyList<dev.asfakul.yumeiro.ui.components.Suggestion>(), searchQuery, filteredTracks, albums, artists, filteredVideos, recentTick) {
+        if (searchQuery.isBlank()) { value = emptyList(); return@produceState }
+        kotlinx.coroutines.delay(120)
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             val c = buildList {
                 addAll(dev.asfakul.yumeiro.ui.components.RecentSearches.asSuggestions(context, "library"))
                 filteredTracks.take(200).forEach { add(dev.asfakul.yumeiro.ui.components.Suggestion(it.title, SuggestionKind.SONG, it.artist.takeIf { a -> a.isNotBlank() && !a.startsWith("<") })) }
