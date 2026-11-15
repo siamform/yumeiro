@@ -171,10 +171,11 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
     fun updateAll() {
         val list = safe.filter { it.key in updates }
         scope.launch {
-            var ok = 0
-            list.forEach { r -> runCatching { ExtensionManager.install(context, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY) }.onSuccess { ok++ } }
+            // R16 Group 2: failures were counted silently ("Updated 3 of 5", always a success toast).
+            val o = dev.asfakul.yumeiro.online.ExtensionBulk.runEach(list, { it.name }) { r -> ExtensionManager.install(context, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY) }
             OnlineRepository.clearCaches()
-            AppMessages.success(context, "Updated $ok of ${list.size}")
+            val msg = dev.asfakul.yumeiro.online.ExtensionBulk.summary("Updated", o)
+            if (o.failed.isEmpty()) AppMessages.success(context, msg) else AppMessages.error(context, msg)
         }
     }
 

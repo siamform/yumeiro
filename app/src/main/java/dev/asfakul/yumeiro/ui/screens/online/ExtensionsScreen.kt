@@ -11,6 +11,10 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -111,6 +115,14 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     var searchOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var status by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
     var showFilters by remember { mutableStateOf(false) }
+    // R16 Group 2: select all / individual selection and bulk actions.
+    var selecting by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var confirmBulkRemove by remember { mutableStateOf(false) }
+    var bulkBusy by remember { mutableStateOf(false) }
+    fun endSelection() { selecting = false; selected = emptySet() }
+    androidx.activity.compose.BackHandler(enabled = selecting) { endSelection() }
+    LaunchedEffect(engine.installed) { selected = dev.asfakul.yumeiro.online.ExtensionBulk.prune(selected, engine.installed.map { it.key }) }
 
     suspend fun check(force: Boolean) {
         checking = true
@@ -126,6 +138,38 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         runCatching { if (ext.manual) ExtensionManager.applyUpdate(context, ext, remote) else ExtensionManager.install(context, remote, mode) }
             .onSuccess { AppMessages.success(context, "${it.name} updated to v${it.version}"); afterChange() }
             .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { update(ext, remote) } }
+    }
+    /** One at a time, one summary message (R16 Group 2: was one parallel job and one toast per extension). */
+    suspend fun bulkUpdate(list: List<Pair<InstalledExtension, RemoteExtension>>) {
+        if (list.isEmpty()) return
+        bulkBusy = true
+        val o = dev.asfakul.yumeiro.online.ExtensionBulk.runEach(list, { it.first.name }) { (e, r) ->
+            if (e.manual) ExtensionManager.applyUpdate(context, e, r) else ExtensionManager.install(context, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY)
+        }
+        bulkBusy = false
+        afterChange()
+        val msg = dev.asfakul.yumeiro.online.ExtensionBulk.summary("Updated", o)
+        if (o.failed.isEmpty()) AppMessages.success(context, msg) else AppMessages.error(context, msg)
+    }
+    suspend fun bulkSet(keys: Set<String>, on: Boolean) {
+        val list = engine.installed.filter { it.key in keys && it.enabled != on }
+        bulkBusy = true
+        val o = dev.asfakul.yumeiro.online.ExtensionBulk.runEach(list, { it.name }) { ExtensionManager.setEnabled(context, it.key, on) }
+        bulkBusy = false
+        afterChange()
+        val broken = if (on) list.filter { ExtensionManager.state.value.info(it.key).error != null }.map { it.name } else emptyList()
+        val msg = dev.asfakul.yumeiro.online.ExtensionBulk.summary(if (on) "Turned on" else "Turned off", o.copy(ok = o.ok - broken.size, failed = o.failed + broken))
+        if (o.failed.isEmpty() && broken.isEmpty()) AppMessages.success(context, if (list.isEmpty()) "Already ${if (on) "on" else "off"}" else msg) else AppMessages.error(context, msg)
+        endSelection()
+    }
+    suspend fun bulkRemove(keys: Set<String>) {
+        val list = engine.installed.filter { it.key in keys }
+        bulkBusy = true
+        val o = dev.asfakul.yumeiro.online.ExtensionBulk.runEach(list, { it.name }) { ExtensionManager.uninstall(context, it.key) }
+        bulkBusy = false
+        afterChange()
+        AppMessages.show(context, dev.asfakul.yumeiro.online.ExtensionBulk.summary("Removed", o))
+        endSelection()
     }
     var checkingKey by remember { mutableStateOf<String?>(null) }
     /** Fresh check against the extension's own repository (or its download link). */
@@ -153,6 +197,21 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         }
     }
 
+    // Rows on screen (after search and filter); "Select all" acts on these.
+    val shown = remember(engine.installed, engine.runtime, query, status, updates) {
+        engine.installed.sortedBy { it.name.lowercase() }.filter { ext ->
+                val q = query.trim()
+                (q.isEmpty() || ext.name.contains(q, true) || ext.internalName.contains(q, true) || ext.repoName.orEmpty().contains(q, true)) &&
+                    when (status) {
+                        "on" -> ext.enabled
+                        "off" -> !ext.enabled
+                        "problems" -> engine.info(ext.key).error != null
+                        "updates" -> updates.any { it.first.key == ext.key }
+                        else -> true
+                    }
+            }
+    }
+    val shownKeys = remember(shown) { shown.map { it.key } }
     Column(Modifier.fillMaxSize().testTag("extensions_screen")) {
         SubPageHeader(
             title = "Extensions", onBack = onBack,
@@ -161,6 +220,9 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             if (engine.installed.size > 1) {
                 dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "extensions_search_toggle", "Search installed extensions")
                 dev.asfakul.yumeiro.ui.components.FilterIconButton(if (status != "all") 1 else 0, { showFilters = true }, "extensions_filter")
+            }
+            if (engine.installed.isNotEmpty()) IconButton(onClick = { if (selecting) endSelection() else selecting = true }, modifier = Modifier.testTag("extensions_select")) {
+                Icon(Icons.Default.Checklist, if (selecting) "Stop selecting" else "Select extensions", tint = if (selecting) SpotifyGreen else TextPrimary)
             }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, "More sources", tint = TextPrimary) }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, "Market", tint = TextPrimary) }
@@ -179,7 +241,19 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             }
         }
         dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search installed extensions", "extensions_search")
-        if (working) androidx.compose.material3.LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
+        if (selecting) SelectionBar(
+            count = selected.size,
+            allShownSelected = shownKeys.isNotEmpty() && selected.containsAll(shownKeys),
+            canUpdate = updates.any { it.first.key in selected },
+            busy = bulkBusy,
+            onSelectAll = { selected = dev.asfakul.yumeiro.online.ExtensionBulk.toggleAll(selected, shownKeys) },
+            onOn = { scope.launch { bulkSet(selected, true) } },
+            onOff = { scope.launch { bulkSet(selected, false) } },
+            onUpdate = { val keys = selected; scope.launch { bulkUpdate(updates.filter { it.first.key in keys }); endSelection() } },
+            onRemove = { confirmBulkRemove = true },
+            onCancel = { endSelection() },
+        )
+        if (working || bulkBusy) androidx.compose.material3.LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
 
         if (!engine.ready) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { repeat(4) { SkeletonRow(trailing = true) } }
@@ -193,7 +267,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                             Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            Button(onClick = { updates.forEach { (e, r) -> update(e, r, dev.asfakul.yumeiro.online.ExtensionReview.Mode.IF_RISKY) } }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
+                            Button(onClick = { scope.launch { bulkUpdate(updates) } }, enabled = !bulkBusy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
                                 Text("Update all")
                             }
                         }
@@ -216,17 +290,6 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     StateMessage(Icons.Default.Extension, "No extensions installed", "Extensions add online sources: home rows, search, details and streams.",
                         primary = "Browse market" to onOpenMarket, secondary = "Add a repository" to { showRepoDialog = true }, testTag = "extensions_empty")
                 }
-                val shown = engine.installed.sortedBy { it.name.lowercase() }.filter { ext ->
-                    val q = query.trim()
-                    (q.isEmpty() || ext.name.contains(q, true) || ext.internalName.contains(q, true) || ext.repoName.orEmpty().contains(q, true)) &&
-                        when (status) {
-                            "on" -> ext.enabled
-                            "off" -> !ext.enabled
-                            "problems" -> engine.info(ext.key).error != null
-                            "updates" -> updates.any { it.first.key == ext.key }
-                            else -> true
-                        }
-                }
                 if (engine.installed.isNotEmpty() && shown.isEmpty()) item("no_match") {
                     StateMessage(Icons.Default.Extension, "No extension matches", if (query.isNotBlank()) "Nothing installed matches \"${query.trim()}\"." else "No extension is in this state.",
                         primary = "Clear filters" to { query = ""; status = "all"; searchOpen = false }, testTag = "extensions_no_match")
@@ -242,6 +305,9 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                         onAuto = { on -> scope.launch { ExtensionManager.setAutoUpdate(context, ext.key, on) } },
                         onUpdate = { upd?.let { update(ext, it) } },
                         onDelete = { confirmDelete = ext },
+                        selecting = selecting, isSelected = ext.key in selected,
+                        onSelect = { selected = dev.asfakul.yumeiro.online.ExtensionBulk.toggle(selected, ext.key) },
+                        onLongPress = { if (!selecting) { selecting = true; selected = setOf(ext.key) } },
                     )
                 }
                 item("repos_header") {
@@ -327,6 +393,17 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
         )
     }
+    if (confirmBulkRemove) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
+        onDismissRequest = { confirmBulkRemove = false },
+        title = { Text("Remove ${selected.size} extension${if (selected.size == 1) "" else "s"}?") },
+        text = { Text("Their sources disappear from Online. You can install them again from the market.") },
+        confirmButton = {
+            TextButton(onClick = { confirmBulkRemove = false; val keys = selected; scope.launch { bulkRemove(keys) } },
+                modifier = Modifier.testTag("extensions_bulk_confirm_remove")) { Text("Remove", color = ErrorColor) }
+        },
+        dismissButton = { TextButton(onClick = { confirmBulkRemove = false }) { Text("Cancel") } },
+    )
     confirmRepo?.let { repo ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
@@ -344,6 +421,7 @@ private fun InstalledCard(
     ext: InstalledExtension, info: ExtensionManager.LoadInfo, busy: Boolean, update: RemoteExtension?,
     onToggle: (Boolean) -> Unit, onAuto: (Boolean) -> Unit, onUpdate: () -> Unit, onDelete: () -> Unit,
     onCheckUpdate: () -> Unit = {},
+    selecting: Boolean = false, isSelected: Boolean = false, onSelect: () -> Unit = {}, onLongPress: () -> Unit = {},
 ) {
     var menu by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
@@ -394,9 +472,19 @@ private fun InstalledCard(
                 AppMessages.success(context, if (text.isBlank()) "${api.name} uses its default address" else "${api.name} now uses ${api.mainUrl}") }
         }
     }
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extension_${ext.internalName}")) {
+    Surface(
+        shape = RoundedCornerShape(20.dp), color = if (isSelected) SpotifyGreen.copy(alpha = 0.16f) else GlassFill,
+        modifier = Modifier.fillMaxWidth().testTag("extension_${ext.internalName}")
+            .semantics { if (selecting) selected = isSelected }
+            .combinedClickable(onClick = { if (selecting) onSelect() }, onLongClick = onLongPress, onLongClickLabel = "Select"),
+    ) {
         Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (selecting) androidx.compose.material3.Checkbox(
+                    checked = isSelected, onCheckedChange = { onSelect() },
+                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = SpotifyGreen, checkmarkColor = OnAccent),
+                    modifier = Modifier.testTag("extension_select_${ext.internalName}"),
+                )
                 ExtensionIcon(ext.iconUrl)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -404,15 +492,15 @@ private fun InstalledCard(
                     Text("v${ext.version} · ${ext.repoName}", color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
-                else Switch(
+                else if (!selecting) Switch(
                     checked = ext.enabled, onCheckedChange = onToggle,
                     colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                     modifier = Modifier.testTag("extension_toggle_${ext.internalName}"),
                 )
-                if (plugin?.openSettings != null && ext.enabled) IconButton(onClick = { openSettings() }, modifier = Modifier.testTag("extension_settings_${ext.internalName}")) {
+                if (!selecting && plugin?.openSettings != null && ext.enabled) IconButton(onClick = { openSettings() }, modifier = Modifier.testTag("extension_settings_${ext.internalName}")) {
                     Icon(Icons.Default.Settings, "Settings", tint = TextSecondary)
                 }
-                IconButton(onClick = { menu = true }) {
+                if (!selecting) IconButton(onClick = { menu = true }) {
                     Icon(Icons.Default.MoreVert, "More", tint = TextSecondary)
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         if (plugin?.openSettings != null && ext.enabled) DropdownMenuItem(text = { Text("Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; openSettings() })
@@ -474,6 +562,36 @@ private fun InstalledCard(
     }
 }
 
+/** Bar shown while selecting: count, select all (of what is shown) and the bulk actions. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun SelectionBar(
+    count: Int, allShownSelected: Boolean, canUpdate: Boolean, busy: Boolean,
+    onSelectAll: () -> Unit, onOn: () -> Unit, onOff: () -> Unit, onUpdate: () -> Unit, onRemove: () -> Unit, onCancel: () -> Unit,
+) {
+    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("extensions_selection_bar")) {
+        Column(Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Checkbox(
+                    checked = allShownSelected, onCheckedChange = { onSelectAll() }, enabled = !busy,
+                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = SpotifyGreen, checkmarkColor = OnAccent),
+                    modifier = Modifier.testTag("extensions_select_all"),
+                )
+                Text(if (count == 0) "Select all" else "$count selected", color = TextPrimary, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f).testTag("extensions_selected_count"))
+                TextButton(onClick = onCancel, modifier = Modifier.testTag("extensions_bulk_cancel")) { Text("Done", color = TextSecondary) }
+            }
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 6.dp, bottom = 2.dp)) {
+                val on = count > 0 && !busy
+                TextButton(onClick = onOn, enabled = on, modifier = Modifier.testTag("extensions_bulk_on")) { Text("Turn on", color = if (on) SpotifyGreen else TextTertiary) }
+                TextButton(onClick = onOff, enabled = on, modifier = Modifier.testTag("extensions_bulk_off")) { Text("Turn off", color = if (on) TextPrimary else TextTertiary) }
+                if (canUpdate) TextButton(onClick = onUpdate, enabled = on, modifier = Modifier.testTag("extensions_bulk_update")) { Text("Update", color = if (on) WarnColor else TextTertiary) }
+                TextButton(onClick = onRemove, enabled = on, modifier = Modifier.testTag("extensions_bulk_remove")) { Text("Remove", color = if (on) ErrorColor else TextTertiary) }
+            }
+        }
+    }
+}
+
 /** Text input dialog that stays open and shows the error until the action succeeds. */
 @Composable
 internal fun InputDialog(
@@ -493,7 +611,7 @@ internal fun InputDialog(
                     placeholder = { Text(hint, fontSize = 12.sp) }, singleLine = true, isError = error != null, enabled = !busy,
                     modifier = Modifier.fillMaxWidth().testTag("input_dialog_field"),
                 )
-                error?.let { Text(it, color = ErrorColor, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+                error?.let { Text(it, color = ErrorColor, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp).testTag("input_dialog_error")) }
                 if (busy) androidx.compose.material3.LinearProgressIndicator(color = SpotifyGreen, modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
             }
         },
