@@ -14,6 +14,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -83,12 +84,17 @@ class LivePaged<T, P : Any>(
     private var emptyPages = 0
     private var gen = 0
     private val seen = HashSet<String>()
+    /** The page load in flight; [reset] cancels it (G12 X15-1). */
+    private var job: Job? = null
 
     val canLoadMore: Boolean get() = !loading && !ended && error == null
 
     /** Starts over (new query, new chip plan); answers still in flight are dropped. */
     fun reset(newFetch: (suspend (P?) -> Pair<List<T>, P?>)? = null) {
         gen++
+        // G12 X15-1: the old answer was already dropped, but its request kept running (and kept
+        // its connection slot); switching chips quickly stacked requests. Cancel it.
+        job?.cancel(); job = null
         if (newFetch != null) fetch = newFetch
         items.clear(); seen.clear(); next = null
         loading = false; ended = false; error = null; started = false; fails = 0; emptyPages = 0
@@ -100,7 +106,7 @@ class LivePaged<T, P : Any>(
         val g = gen
         val cursor = next
         loading = true
-        scope.launch {
+        job = scope.launch {
             val r = try { Result.success(fetch(cursor)) } catch (e: CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) }
             if (g != gen) return@launch
             r.onSuccess { (page, nxt) ->

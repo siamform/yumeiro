@@ -45,6 +45,24 @@ class LivePagedTest {
         assertFalse(f.loading)
     }
 
+    /** G12 X15-1: a reset cancels the request in flight instead of letting it run on. */
+    @Test fun resetCancelsTheLoadInFlight() = runTest(StandardTestDispatcher()) {
+        var cancelled = false
+        var call = 0
+        val f = LivePaged<String, Int>({ it }, { _ ->
+            call++
+            if (call == 1) try { kotlinx.coroutines.awaitCancellation() } finally { cancelled = true }
+            listOf("new") to 2
+        }, this)
+        f.more(); advanceUntilIdle()
+        assertTrue(f.loading)
+        f.reset(); advanceUntilIdle()
+        assertTrue("the old request is still running after reset", cancelled)
+        f.more(); advanceUntilIdle()
+        assertEquals(listOf("new"), f.items.toList())
+        assertFalse(f.loading)
+    }
+
     @Test fun aFailedPageKeepsTheCursorAndRetries() = runTest(StandardTestDispatcher()) {
         val asked = ArrayList<Int?>()
         var failNext = false
