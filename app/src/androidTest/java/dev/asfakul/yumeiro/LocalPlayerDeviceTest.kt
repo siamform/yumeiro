@@ -209,7 +209,14 @@ class LocalPlayerDeviceTest {
         pause(1_500)
         val left = onPlayer { it.currentPosition } ?: 0
         log("left at ${left}ms")
-        back() // full screen → floating (PL-9)
+        // Back is stepped by design (VideoPlayerModal BackHandler): a key Back first hides the
+        // controls (remote behaviour), then leaves full screen, then moves to the floating window.
+        var presses = 0
+        while (presses < 3 && !has("floating_close")) {
+            back(); presses++
+            runCatching { rule.waitUntil(4_000) { has("floating_close") } }
+            log("back $presses → floating=${has("floating_close")}")
+        }
         wait("floating player after back", 10_000) { has("floating_close") }
         tap("floating_close")
         wait("player closed", 15_000) { !has("video_player_root") && !has("video_floating_player") }
