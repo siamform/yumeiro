@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro
 
 import android.util.Log
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -26,7 +27,15 @@ class BackNavigationDeviceTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
     private fun log(s: String) = Log.i("YuBackTest", s)
-    private fun back() { FirstRun.shell("input keyevent 4") }
+    private fun back() {
+        // The "Keep notifications on time" guide opens by itself 8 s after start (ReminderHost).
+        if (rule.onAllNodesWithTag("reliability_guide", true).fetchSemanticsNodes().isNotEmpty()) {
+            log("closing the reliability guide first")
+            runCatching { FirstRun.tapVisible(rule, "guide_close") }
+            runCatching { rule.waitUntil(5_000) { rule.onAllNodesWithTag("reliability_guide", true).fetchSemanticsNodes().isEmpty() } }
+        }
+        FirstRun.shell("input keyevent 4")
+    }
     private fun state(): Lifecycle.State {
         var s = Lifecycle.State.INITIALIZED
         runCatching { rule.activityRule.scenario.onActivity { s = it.lifecycle.currentState } }

@@ -53,7 +53,16 @@ class HomeNavigationDeviceTest {
         assertTrue("tab page ${TabPagerProbe.page}, wanted $p · ${FirstRun.onScreen(rule)}", ok)
     }
     private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
-    private fun back() { FirstRun.shell("input keyevent 4") }
+    private fun back() { closeGuide(); FirstRun.shell("input keyevent 4") }
+    /** The "Keep notifications on time" guide opens by itself 8 s after start (ReminderHost);
+     *  a back would close it instead of acting on the page under test. */
+    private fun closeGuide() {
+        if (has("reliability_guide")) { log("closing the reliability guide first"); runCatching { tap("guide_close") }; waitGone("reliability_guide", 5_000) }
+    }
+    private fun focusedTags(): List<String> = runCatching {
+        rule.onAllNodes(androidx.compose.ui.test.isFocused(), true).fetchSemanticsNodes()
+            .mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
+    }.getOrDefault(emptyList())
 
     @Before fun setUp() {
         val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
@@ -106,7 +115,12 @@ class HomeNavigationDeviceTest {
             // through semantics, as a remote's first key press would.
             rule.onNodeWithTag("tv_nav_tab_music", true).requestFocus()
             rule.waitForIdle()
+            // The first key in touch mode may only leave touch mode, so press down twice
+            // (Videos or Library both count) and log where focus is.
             FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600)
+            FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600)
+            rule.waitForIdle()
+            log("tv rail: focused=${focusedTags()}")
             FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER")
             val moved = runCatching { rule.waitUntil(10_000) { TabPagerProbe.page != 1 }; true }.getOrDefault(false)
             log("tv rail: dpad down + centre from page 1 → page ${TabPagerProbe.page} moved=$moved")
