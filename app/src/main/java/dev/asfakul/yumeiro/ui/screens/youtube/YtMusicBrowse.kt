@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.ui.components.a11yLabel
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.ui.zIndex
 import androidx.activity.compose.BackHandler
@@ -734,7 +735,3 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
     }
 }
 
-/** Spoken name for a card: "title, subtitle". Set on the clickable node itself (G12 X8). */
-private fun Modifier.a11yLabel(title: String, subtitle: String?): Modifier = semantics {
-    contentDescription = listOfNotNull(title.takeIf { it.isNotBlank() }, subtitle?.takeIf { it.isNotBlank() }).joinToString(", ")
-}

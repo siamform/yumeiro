@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import dev.asfakul.yumeiro.ui.components.a11yLabel
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.animation.togetherWith
@@ -844,7 +845,7 @@ private fun ContinueCard(
     val accent = p.accent
     Column(
         modifier.clip(shape).background(tileFill()).border(1.dp, p.textPrimary.copy(alpha = 0.06f), shape)
-            .clickable(onClick = onClick).testTag(tag).padding(10.dp),
+            .clickable(onClick = onClick).a11yLabel(eyebrow, title, subtitle).testTag(tag).padding(10.dp),
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1.25f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.05f))) {
             art()
