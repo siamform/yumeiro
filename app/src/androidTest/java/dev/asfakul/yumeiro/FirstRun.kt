@@ -40,10 +40,53 @@ object FirstRun {
     }
 
     /** Runs a shell command and waits for it to finish (closing the pipe early can kill it). */
-    fun shell(cmd: String): String =
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).let { pfd ->
+    fun shell(cmd: String): String {
+        if (cmd.startsWith("input keyevent")) awaitKeyFocus(cmd)
+        return InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).let { pfd ->
             android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
         }
+    }
+
+    /**
+     * A key goes to the window that has input focus, not to Compose. Runs 43765039266 (api33-lowram,
+     * Settings) and 43765162241 (TV api24, Inbox): a Back sent just after a new test activity
+     * started went to the previous test's activity window, still focused while it was being torn
+     * down ("input event receiver has already been disposed"), and the page under test never saw
+     * it. Wait until our resumed activity has window focus (the old one can already report
+     * DESTROYED while its window still holds focus, so lifecycle alone is not enough); a dialog of
+     * ours on top is fine, it should get the key. At most 10 s, then send anyway and say so.
+     */
+    internal fun awaitKeyFocus(cmd: String) {
+        val inst = InstrumentationRegistry.getInstrumentation()
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return
+        val start = SystemClock.uptimeMillis()
+        var ready = false
+        val pkg = inst.targetContext.packageName
+        while (SystemClock.uptimeMillis() - start < 10_000) {
+            inst.runOnMainSync {
+                val reg = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                ready = reg.getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).any { it.hasWindowFocus() }
+            }
+            // Our own dialog or popup on top: its window is named by the package alone, no "/Activity".
+            if (!ready) ready = focusedWindow().let { isOwnNonActivityWindow(it, pkg) }
+            if (ready) break
+            Thread.sleep(150)
+        }
+        val waited = SystemClock.uptimeMillis() - start
+        if (waited >= 100 || !ready) Log.i("YuKeyFocus", "'$cmd' waited ${waited}ms for window focus · ready=$ready · ${if (ready) "" else focusedWindow()}")
+    }
+
+    private fun focusedWindow(): String = runCatching {
+        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("dumpsys window windows").let { pfd ->
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
+        }.lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
+    }.getOrDefault("")
+
+    /** `mCurrentFocus=Window{1a2b u0 dev.app}` (a dialog of ours) → true; `…dev.app/dev.app.MainActivity}` → false. */
+    internal fun isOwnNonActivityWindow(line: String, pkg: String): Boolean {
+        val name = line.substringAfter("mCurrentFocus=", "").substringAfterLast(' ').trimEnd('}')
+        return name == pkg
+    }
 
     /** API 29+ names the top activity `topResumedActivity` (permissioncontroller); API 24–28 says
      *  `mResumedActivity` and the dialog lives in packageinstaller's GrantPermissionsActivity. */
@@ -153,10 +196,15 @@ object FirstRun {
         rule.waitForIdle()
     }
 
-    /** Taps the first node with [tag] that is actually on screen (several screens can share a tag). */
-    /** G12 X9-1: Yumeiro TV shows a side rail (`tv_nav_tab_*`) instead of the bottom bar (`nav_tab_*`). */
+    /** G12 X9-1: Yumeiro TV shows a side rail (`tv_nav_tab_*`, `tv_nav_shortcut_*`) instead of the
+     *  bottom bar (`nav_tab_*`, `nav_shortcut_*`). */
     fun navTag(rule: AndroidComposeTestRule<*, *>, tag: String): String =
-        if (tag.startsWith("nav_tab_") && !has(rule, tag) && has(rule, "tv_nav_rail")) "tv_$tag" else tag
+        if ((tag.startsWith("nav_tab_") || tag.startsWith("nav_shortcut_")) && !has(rule, tag) && has(rule, "tv_nav_rail")) "tv_$tag" else tag
+
+    /** True if the bar item [tag] (or its TV rail twin) is on screen. */
+    fun hasNav(rule: AndroidComposeTestRule<*, *>, tag: String): Boolean = has(rule, navTag(rule, tag))
+
+    /** Taps the first node with [tag] that is actually on screen (several screens can share a tag). */
 
     fun tapVisible(rule: AndroidComposeTestRule<*, *>, tagIn: String, timeoutMs: Long = 30_000) {
         val tag = navTag(rule, tagIn)

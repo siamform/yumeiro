@@ -39,7 +39,7 @@ class HomeNavigationDeviceTest {
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     private fun log(s: String) = Log.i("YuHomeNavTest", s)
-    private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
+    private fun has(tag: String) = rule.onAllNodesWithTag(FirstRun.navTag(rule, tag), true).fetchSemanticsNodes().isNotEmpty()
     private fun waitTag(tag: String, ms: Long = 30_000) {
         val ok = runCatching { rule.waitUntil(ms) { has(tag) }; true }.getOrDefault(false)
         assertTrue("no '$tag' after ${ms}ms · ${FirstRun.onScreen(rule)}", ok)
@@ -136,7 +136,16 @@ class HomeNavigationDeviceTest {
             waitTag("tv_nav_rail", 15_000)
             waitTag("tv_nav_tab_music")
             // D-pad: tap gives the rail item focus on a touch emulator, then centre selects.
-            tap("tv_nav_tab_music"); waitPage(1, 15_000)
+            tap("tv_nav_tab_music")
+            // 43765162241 (TV api24): the tap left the pager on page 0 and the app logged nothing.
+            // Keep the failure, but record what the rail and the pager looked like.
+            if (runCatching { rule.waitUntil(15_000) { TabPagerProbe.page == 1 }; true }.getOrDefault(false).not()) {
+                FirstRun.shot("h5_rail_tap_no_page")
+                val sel = rule.onAllNodesWithTag("tv_nav_tab_music", true).fetchSemanticsNodes()
+                    .map { it.config.getOrElseNullable(SemanticsProperties.Selected) { null } }
+                log("h5: tap on tv_nav_tab_music left page ${TabPagerProbe.page} · music selected=$sel focused=${focusedTags()}")
+            }
+            waitPage(1, 1_000)
             // After a tab change the TV layout puts focus into the page (43693532355: focus on
             // ytmusic_chip_explore), so do what a remote user does: LEFT to the rail (the first key
             // may only leave touch mode, so up to four), then DOWN to the next tab, then centre.

@@ -160,13 +160,14 @@ class StabilityStressDeviceTest {
         if (tag.startsWith("nav_tab_")) { backToTabs("retry $tag"); tapOnce(tag, 12_000) } else false
     }
 
-    private fun tapOnce(tag: String, ms: Long): Boolean = runCatching {
-        rule.waitUntil(ms) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }
+    private fun tapOnce(tagIn: String, ms: Long): Boolean = runCatching {
+        rule.waitUntil(ms) { FirstRun.hasNav(rule, tagIn) }
+        val tag = FirstRun.navTag(rule, tagIn)
         rule.onNodeWithTag(tag, true).performClick(); true
-    }.getOrElse { log("no node $tag: ${it.javaClass.simpleName}: ${it.message?.take(120)} · on screen: ${onScreen()}"); false }
+    }.getOrElse { log("no node $tagIn: ${it.javaClass.simpleName}: ${it.message?.take(120)} · on screen: ${onScreen()}"); false }
 
     private fun hasNode(tag: String, ms: Long): Boolean = runCatching {
-        rule.waitUntil(ms) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }; true
+        rule.waitUntil(ms) { FirstRun.hasNav(rule, tag) }; true
     }.getOrDefault(false)
 
     /**
