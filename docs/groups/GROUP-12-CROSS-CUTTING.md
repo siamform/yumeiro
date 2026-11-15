@@ -1,0 +1,136 @@
+# Group 12 audit: cross-cutting systems (Level 1)
+
+Branch `r15-stability`. Method: master operating document, Part 3 (feature map, files read,
+action-reaction, advantages/disadvantages, bug hunt, root causes, regression tests, ADRs,
+verification, owner tests / research / proposals / CI usage).
+
+Each result is labelled as one of:
+- **unit**: JVM or Robolectric test
+- **emulator**: an instrumented test on the CI emulators. **api33-lowram** is Android 13 on a
+  Pixel 3a profile (2 GB RAM, 192 MB heap). **api36** is Android 16 on a Pixel 6 profile.
+  **tv-api24** is Android 7 TV (the TV flavour's minSdk).
+- **CI**: a green workflow step (build, lint, scan)
+- **real hardware**: a phone or TV in the owner's hands (`docs/OWNER-MANUAL-TESTS.md`)
+
+## Status
+
+**In progress.** It is not complete; the gate is every finding fixed and verified, or in OMT with
+attempts. Open items are listed under "Open work". Last update: see the commit that last touched
+this file.
+
+## 1. Feature map (inventory G12)
+
+| ID | System | Main code | Audit state |
+|---|---|---|---|
+| X1 | Architecture and layering | whole app, `docs/SYSTEM-DESIGN.md` §2 | measured (§2 "Code structure"); findings X1-3, X1-4 fixed |
+| X2 | Start-up, memory / OOM, low-RAM class | `MTApplication`, `startup/PrefsWarmup`, `diagnostics/MemoryWatch`, `DeviceClass` | X2-1 open (measure), X2-2 fixed; benchmark module built; heap profile not done |
+| X3 | Main-thread stalls / ANR, StrictMode | `diagnostics/DevStrictMode`, `MainThreadWatchdog` (YuStall), `RegexWarmup` | ST-13/14/15 unit only; ST-16 emulator; ST-17 open |
+| X4 | Battery and heat | `player/HeatGuard`, `notify/NotifyPacer` | X4-1 emulator verified |
+| X5 | Notifications while closed | `notify/*`, `PushWakeService`, alarms, workers | X5-1, X5-2 emulator verified |
+| X6 | Crash logs and export | `diagnostics/CrashLog`, `CrashExport`, `CrashReportsCard` | X6-1 emulator verified |
+| X7 | Security | `security/*`, `IntegrityGuard`, `network_security_config.xml`, BuildConfig | X7-1 unit, X7-2 CI, X7-3 owner decision (ADR-013) |
+| X8 | Accessibility | all UI, `AccessibilityDeviceTest` | X8-1 verified; X8-2, X8-3 device recheck running |
+| X9 | TV and low-end | `ui/tv`, `DeviceClass` | X9-1 in progress (tv-api24 run) |
+| X10 | Build, CI, release, signing | `.github/workflows`, Gradle | X10-1..4 CI verified; R8/ABI/signing review not done |
+| X11 | Network stack (smart DNS, DoH, bypass) | `network/*` | not started |
+| X12 | Caching (data, image, codec) | `cache/*` | not started |
+| X13 | Android 7–16 compatibility | `OsCompat`, `MTApplication` | partly (lint NewApi X10-2, tv-api24 run); not complete |
+| X14 | Design system and shared components | `ui/components/*` | not started (A11yLabel added in X8-2) |
+| X15 | Shared live-feed component | `ui/feed/*` | not started |
+| X16 | Cloud Worker and its abuse guards | `server/src/*` | not started |
+
+Items owner-tests deferred to Group 12 (`OWNER-MANUAL-TESTS.md`, "Not owner tests"): widget data
+updates, decoder fault recovery on device (fault-injection hook), Anime4K output on emulator GL,
+upgrade from a 1.8.0 install. None done yet; listed under "Open work".
+
+## 2. Files read
+
+| Area | Files (lines) |
+|---|---|
+| X1 coroutines and blocking | every `CoroutineScope(`, `runBlocking`, `GlobalScope`, `while (true)`, `.commit()` site (grep over 380 files, 79,725 lines); `sources/js/JsBridge.kt`; `online/SuspendCatching.kt`; `ui/screens/settings/PrivacyTrackingBackup.kt` |
+| X2 start-up | `MTApplication.kt`, `MainActivity.kt`, `startup/PrefsWarmup.kt`, `ui/theme/Theme.kt`, `ui/screens/extras/SetupGuide.kt`, `PermissionCenter.kt`; YuStall/StrictMode logcat of 43757544993 |
+| X7 | `app/build.gradle.kts` (BuildConfig fields), `update/UpdateConfig.kt`, `res/xml/network_security_config.xml`; unzipped debug APKs from 43757542521 |
+| X8 | `AccessibilityDeviceTest.kt`, `ui/components/A11yLabel.kt`, `HomeScreen.kt` ContinueCard, `YtMusicBrowse.kt`, `MTTopBar.kt`; `cloudstream3/MainActivity.kt`, `online/ExtensionManager.kt` (loading) |
+| X9 | `scripts/device-check.sh`, `FirstRun.kt`, `.github/workflows/device-check.yml` |
+| X10 | `.github/workflows/ci.yml`, `macrobenchmark.yml`, `benchmark/build.gradle.kts` |
+
+## 3. Action → reaction (checked so far)
+
+| Action | Expected | Seen | Label |
+|---|---|---|---|
+| Change font size / rotate / dark mode after an extension showed a dialog | app recreates, the dialog is gone or kept | **crash at start** (X8-3) → fixed: dialog dropped, app opens | unit; emulator recheck 43763558754 |
+| Open the app on a low-RAM phone | first frame without app work on main | 2 s binder stall in Home setup card (X2-2) → fixed | unit; emulator recheck 43763558754 |
+| Leave Settings while a tracker sign-in polls | silent cancel | error toast (X1-4) → fixed | unit |
+| JS source extractor never calls back | play fails after a bound | thread blocked forever (X1-3) → 30 s bound | unit |
+| Kill app, phone in Doze, alert due | alert posted, paced | posted 123 s after queueing on both phones | emulator |
+| Heat level changes | interval, parallel calls, GPU work change | matches the table | emulator |
+| Crash reports → Delete all | confirm, exact wording | fixed (X6-1) | emulator |
+| TalkBack on tabs, Settings, search, player, 130 % font | no unnamed/small targets | clean except Continue cards (fixed) | emulator |
+| Install on Android 7 TV | starts, no crash | starts; tests blocked by storage dialog (fixed by pm grant, rerun) | emulator (tv-api24) |
+
+## 4. Advantages and disadvantages
+
+| Design | Advantage | Disadvantage | Better design |
+|---|---|---|---|
+| 275 `object` singletons, no DI | cheap start-up, simple calls, survives page disposal (ADR-001/006) | hidden dependencies, tests reach into globals | constructor-injected interfaces at network/prefs/clock seams (proposal) |
+| Warm prefs on `yu-prefs` thread | most files ready before first draw | a race: main may still get there first (X2-1) | measure with Macrobenchmark first (ADR-012) |
+| Extensions use the app's activity for their UI | CloudStream-compatible dialogs work | their fragments outlive their class loader on recreate (X8-3) | factory with loader lookup and drop (done) |
+| Secrets in BuildConfig | works offline | extractable from the APK (X7-3) | ADR-013 option (b) |
+
+## 5. Findings register
+
+| ID | Severity | File:line | Root cause | Repro | Fix | State |
+|---|---|---|---|---|---|---|
+| X1-3 | high | `sources/js/JsBridge.kt` extractor | `runBlocking` with no limit; plain list across threads | extractor that never calls back | `withTimeoutOrNull(30 s)`, synchronized list (565d39b) | unit |
+| X1-4 | medium | `PrivacyTrackingBackup.kt` (6 sign-in calls) | `runCatching` catches the job's own cancellation | leave Settings mid-poll | `runCancellable` (b0a62eb) | unit |
+| X2-1 | medium | `MainActivity.kt:50` → `Theme.kt:68` | prefs read in first composition; most of the 5.4 s stall is the emulator's render thread | cold start api33-lowram | measure (ADR-012) | open |
+| X2-2 | medium | `SetupGuide.kt` `rememberSetupStatus` | uncached binder permission checks in composition | cold start api33-lowram (2,018 ms YuStall) | off main + warm-up (208ba48) | unit; emulator pending |
+| X5-2 | medium | `NotifyPacer.kt` deliverNext | every tick delivered | ticks from boot/updates | gap check (9b46045) | emulator |
+| X6-1 | medium | `CrashReportsCard.kt` | Delete all with no confirm, over-promised text | tap | confirm + wording (2e5f9d6) | emulator |
+| X7-1 | high | `network_security_config.xml` | cleartext app-wide; HTTPS-only list incomplete | config read | domains added (149ef42) | unit |
+| X7-3 | medium | `app/build.gradle.kts:51-59,122-146`, `UpdateConfig.kt:22` | secrets compiled into the APK | unzip APK | ADR-013 (proposed) | owner decision |
+| X8-1 | medium | `MTTopBar.kt`, `YtMusicBrowse.kt` | small gap, unnamed cards | a11y check | 3019605, a898010 | emulator |
+| X8-2 | medium | `HomeScreen.kt` ContinueCard | clickable without a label | a11y check on search (api36) | `a11yLabel` (5e685a5) | emulator recheck |
+| X8-3 | **critical** | `cloudstream3/MainActivity.kt` onCreate | extension fragments restored with the app class loader | font scale change after an extension dialog (43762090588, both phones) | `ExtensionFragmentFactory` (7cb8c2e) | unit; emulator pending |
+| X10-1..4 | medium | `ci.yml`, several | TV never linted; NewApi calls; opt-in noise | lint | f0df775, ff00d11, 7486997, c7772ce, 72394dc | CI |
+| ST-17 | low (1 in 40 runs) | Compose `ContentInViewNode` | bring-into-view never settles once | stress api36 43697447466 | focus-chain logging (3342106) | open |
+
+## 6–7. Regression tests (fail before, pass after)
+
+| Finding | Test | Before | After |
+|---|---|---|---|
+| X1-3 | `JsBridgeExtractorGuardTest` (2) | hangs/fails | pass (unit) |
+| X1-4 | `SuspendCatchingTest` (5) | fails | pass (unit) |
+| X2-2 | `SetupPermsOffMainTest` | "a permission check ran on the main thread: [true]" | pass (unit) |
+| X8-2 | `A11yLabelTest` (2), `AccessibilityDeviceTest` | api36 flagged Continue cards | recheck 43763558754 |
+| X8-3 | `ExtensionFragmentFactoryTest` (3) | default factory throws on the saved state (the crash) | restores with no fragment (unit) |
+
+## 8. Decision records
+
+ADR-012 (start-up measured on the R8 preview build, accepted) and ADR-013 (no long-lived secrets in
+the APK, **proposed, owner decision**) are in `docs/SYSTEM-DESIGN.md` §10.
+
+## 9. Verification
+
+See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs per item.
+
+## 10. Owner-only tests, research, proposals, CI usage
+
+- Owner tests: real-phone start-up time (after ADR-012 numbers exist), widget look (OMT-8), TV
+  remote feel (OMT series). Credentials: rotate the Cloudflare token and Firebase service account
+  before any public release; decide on ADR-013.
+- Research: AOSP `ContentInViewNode` already cancels requests that can never be satisfied (code as
+  of June 2025), so ST-17 is a different case; the logged focus chain is needed.
+- CI usage (this group): CI 43754316254, 43757542521, 43762845168; device 43757544993, 43760044391,
+  43762090588, 43763558754; TV 43757547383, 43759794246, 43762847904.
+
+## Open work (Group 12 is not done until all are closed)
+
+1. X8-2/X8-3/X2-2 emulator recheck (43763558754); X9-1 TV rerun (43762847904).
+2. X2: Macrobenchmark startup (before), baseline profile, startup (after); heap profile on api33-lowram.
+3. ST-13/14/15: StrictMode device proof; ST-17 root cause.
+4. X7: MASVS write-up.
+5. X10: R8, ABI split and signing review; upgrade test from the v1.8.0 release on an emulator.
+6. X11–X16: full audit (network, caching, compatibility, design system, live feed, Worker).
+7. Deferred-to-G12 items: widget data updates, decoder fault injection, Anime4K on emulator GL.
+8. RTL layout check.
