@@ -216,7 +216,7 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-15 | ST-6 | Moved to verified on device for b0e596d and 50e734d: full suites 43680668799 and 43683535994 pass; TvMode and PlayCounts gone from the stall list (43683528288) |
 | 2026-11-15 | FEED-1 | Moved from unverified to verified on device: 43683520404 api33 3/3, api36 2/3 with the miss proven to be a cold-boot ANR, not a stale row |
 | 2026-11-15 | ST-7 | Stays open. New campaigns show no measurable drop in steady-state stalls; the claim of progress is withdrawn until the baseline profile campaign |
-| 2026-11-15 | H6 | My own change 4098177 was reported to work in local reasoning but fails on device 2/2; failure traced to the test clock. Stays unverified until 43689402737 passes |
+| 2026-11-15 | H6 | 4098177 failed on device 2/2 (43687458863, 43688381102); kept unverified until the cause was found |
 
 | 2026-11-15 | H6 | Moved to verified on device after 89f7553 (43690918679 6/6). The earlier failures were the Compose test clock, then a real mid-swipe cancel that 89f7553 fixed |
 | 2026-11-15 | ST-6 | a5b8f60 stays unit only for its own effect: stress 43687396407 20/20 PASS, steady app stalls api33 0.4/run, api36 0.1/run (was 0.5 and 0.3): small, within run-to-run noise |

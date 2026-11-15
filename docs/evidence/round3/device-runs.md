@@ -60,3 +60,24 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43656137755 | 61bf92b | drama + stress | drama FAIL, stress 3/3 | drama FAIL, stress 3/3 | Test waited on sources held by the first-run gate; test bug, fixed in 0cb815a |
 | 43657727593 | 0cb815a | drama | 1/1 | 1/1 | 4 rows x 18 dramas; episode first frame 1080x1920 |
 | 43657729675 | 0cb815a | full, 7 classes | 18/18 | 18/18 | never idle 0, ComposeNotIdle 0, FATAL/ANR/OOM 0, max stall 477 ms / 542 ms; dead pick rotated; labels [00:00, 1:31:44]; YouTube test skipped (CI IP bot-checked) |
+
+## R16 Group 1 and ST-7 runs (2026-11-15)
+
+| Run | Commit | Scope | API 33 | API 36 | Notes |
+|---|---|---|---|---|---|
+| 43683535994 | 10bbd6e | full | pass | pass | |
+| 43683528288 | 10bbd6e | stress 2 × 5 | 10/10 | 10/10 | FATAL 0; steady app stalls ≥700 ms 0.5 / 0.3 per run |
+| 43683520404 | 10bbd6e | FeedPosition × 3 | 3/3 | 2/3 | api36 miss = ANR "No response to onStartJob" in an 8.2 s main stall 1 min after boot |
+| 43685183725, 43686104737 | 6df7c1f | HomeNavigation | 5/5 | 5/5 | h7 singleTop onNewIntent |
+| 43687396407 | a5b8f60 | stress 2 × 5 | 10/10 | 10/10 | FATAL 0; steady app stalls 0.4 / 0.1 per run; cold 0.5 / 0.6; 9 of 15 app stalls "framework only" |
+| 43687398312 | a5b8f60 | FeedPosition × 3 | 3/3 | 3/3 | |
+| 43687458863, 43688381102 | 4098177, ac6e412 | BackNavigation | fail | fail | Test clock: Thread.sleep does not recompose |
+| 43688049790 | 77fc8ca | HomeNavigation × 2 | 2/2 | 1/2 | h10 lost adb keystrokes (test) |
+| 43689402737 | 3479bf8 | BackNavigation × 2 | 2/2 | 0/2 | Back after swipe cancelled (sendCancelIfRunning): app, fixed in 89f7553 |
+| 43689481257 | 2c109ac | HomeNavigation × 3 | 3/3 | 3/3 | h10 field text 'yumei', suggestions shown |
+| 43690918679 | 89f7553 | BackNavigation × 3 | 3/3 | 3/3 | first back arms, no callback left enabled, second back → STARTED |
+| 43691032951 | ec035ac | HomeNavigation × 2 | 0/2 | 1/2 | new h2 (api33), h5 (D-pad in touch mode) |
+| 43692234004 | 14c5998 | HomeNav + BackNav × 2 | Back 2/2, Home 0/2 | Back 1/2, Home 0/2 | reliability sheet took a back (test); h5 focus |
+| 43693532355 | e9c281c | HomeNav + BackNav × 2 | Back 2/2, Home 0/2 (h5 only) | Back 2/2, Home 0/2 (h5 only) | h5: rail entered on Home (app bug) |
+| 43694972929 | ec6ebd8 | HomeNavigation × 2 | 0/2 (h5 only) | 0/2 (h5 only) | h7b SEND passes; h5 focus `tv_nav_tab_home`, once `home_setup_card` |
+| 43696246671 | a53effb | HomeNavigation × 2 | 2/2 | 2/2 | rail Left → selected tab, Down → Videos, centre → page 2 |
