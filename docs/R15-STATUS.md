@@ -1,21 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-15 22:20 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-15 23:20 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Since 21:43 UTC:** X8-2 and X2-3 done on both phones (43767144680). Root cause of the lost Back
-  presses in device tests: keys went to the previous test's window (X9-2, 1a577e5/eb1775c). **New
-  product bug X13-1 (high):** online sources dead on the TV app on Android 7 (Jackson ≥ 2.15 needs SDK
-  26); TV now on Jackson 2.13.5 (2226756), guard test in CI (b0be1a2, c01bd5c), unit fail-before shown.
-- **Current step:** Level 1, Group 12: TV and minSdk device runs; then X2 startup benchmark.
-- **Running:** TV 43768054941 (2226756), minSdk phone 43768670627 (eb1775c), CI 43768099126 (c01bd5c).
-- **Next three actions:** (1) read TV 43768054941: online rows must load on api24 (no
-  `NoClassDefFoundError`), X9-3 tags, X9-4 h5 evidence; fix what remains; (2) read minSdk 43768670627
-  and CI 43768099126 (X15-1, X13-1 rows); (3) macrobenchmark startup → profile → commit
+- **Since 22:20 UTC:** X13-1 proven on the TV emulator (43768054941: Drama home loads on Android 7);
+  X15-1 CI 43768099126. New TV product fix X9-4 (remote dead after a tab change that left focus on an
+  off-screen page; 0931a3f) proven: HomeNavigation 11/11 on TV (43769985665, 43772037996). API 28
+  test setup fixed (X13-2, 77d8d44). Guide race (X9-5) and dialog-vs-stale-window (X9-6) in tests.
+- **Current step:** Level 1, Group 12: TV BackNavigation (X9-6) and API 28 rerun; then X2 benchmark.
+- **Running:** minSdk api28 43771214803 (77d8d44), TV BackNavigation 43774198053 (0eb1635).
+- **Next three actions:** (1) read 43774198053: name the dialog in "before the first Home back"; if
+  it is a product popup on TV start, judge it as a product issue; (2) read 43771214803 (LocalPlayer,
+  Accessibility, HomeNavigation on API 28; X13-2); (3) macrobenchmark startup → profile → commit
   `baseline-prof.txt` → startup again (X2-1).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM

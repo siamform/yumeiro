@@ -224,3 +224,18 @@ These are real emulators running the real debug APK; the tests are not simulated
 
 - TV 43768054941 (2226756: Jackson 2.13.5 + key focus + rail tags), minSdk phone 43768670627 (eb1775c: HomeNavigation,
   BackNavigation, LocalPlayer, Accessibility on API 28), CI 43768099126 (c01bd5c).
+
+## 43768054941 / 43769985665 / 43772037996 — TV tv-api24 (2226756 / 0931a3f / b5854c3)
+
+- 43768054941: X13-1 proven (0 `NoClassDefFoundError`/`BootstrapMethodError`; Drama home loads). HomeNavigation
+  9/11: h2 (Continue row not composed on 540 dp: test) and h5 (focus stranded on off-screen `home_setup_card`: X9-4).
+  BackNavigation and StabilityStress pass.
+- 43769985665 (X9-4 fix): HomeNavigation 11/11, StabilityStress 3/3; `YuTvFocus` moved stranded focus to the rail.
+  BackNavigation failed: reliability guide raced Back (X9-5).
+- 43772037996 (X9-5): HomeNavigation 11/11, StabilityStress 3/3; BackNavigation failed: Back waited 10 s on a dialog
+  of ours and closed it (X9-6).
+
+## 43768670627 — minSdk api28 pixel_3a (eb1775c)
+
+- BackNavigation pass; HomeNavigation 10/11 (h1_h4: guide race); LocalPlayer 2/9 and Accessibility 4/5: the clip
+  was inserted without a path and listed as "1794781938560" (X13-2); heat guard thermal half absent below API 29.
