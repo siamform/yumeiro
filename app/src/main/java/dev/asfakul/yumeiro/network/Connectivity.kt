@@ -52,7 +52,7 @@ object Connectivity {
         _online.value = isOnline(app)
         runCatching {
             cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) { _online.value = true }
+                override fun onAvailable(network: Network) { _online.value = true; SmartDns.onNetworkChanged() }
                 override fun onLost(network: Network) { _online.value = isOnline(app) }
                 override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
                     _online.value = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)

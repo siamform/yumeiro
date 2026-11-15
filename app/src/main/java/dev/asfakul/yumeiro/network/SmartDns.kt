@@ -45,12 +45,24 @@ object SmartDns : Dns {
     @Volatile internal var now: () -> Long = System::currentTimeMillis
     @Volatile internal var online: () -> Boolean = { Connectivity.online.value }
 
-    fun clearCache() { cache.clear(); systemFailures.clear(); lastSource.clear(); bypass.clear(); preferred = 0 }
+    fun clearCache() { cache.clear(); systemFailures.clear(); lastSource.clear(); bypass.clear(); preferred = 0; resolverDownUntil.clear() }
+
+    /**
+     * G12 X11-1: a resolver that could not be reached (timeout, refused, TLS) is skipped for
+     * [RESOLVER_DOWN_MS]. Before, on a network that blocks DNS-over-HTTPS every lookup of a bypassed
+     * host waited for all three providers' timeouts again before falling back to system DNS.
+     */
+    private const val RESOLVER_DOWN_MS = 2 * 60_000L
+    private val resolverDownUntil = ConcurrentHashMap<DnsProvider, Long>()
+
+    /** A new network: resolvers that were unreachable may work now. */
+    fun onNetworkChanged() { resolverDownUntil.clear() }
 
     fun lastSourceFor(host: String): DnsSource? = lastSource[host.lowercase()]
 
     override fun lookup(hostname: String): List<InetAddress> {
         val host = hostname.lowercase()
+        NetworkSettings.ensureLoaded()
         val config = NetworkSettings.dns.value
         if (isIpLiteral(host)) return systemLookup(host)
         if (!config.usesAlternative) return if (config.auto && !isLocalName(host)) autoLookup(host) else systemLookup(host)
@@ -163,13 +175,34 @@ object SmartDns : Dns {
 
     private fun alternativeLookup(host: String, config: DnsConfig): List<InetAddress> {
         cache[host]?.let { (addresses, expiresAt) -> if (now() < expiresAt) { lastSource[host] = DnsSource.ALTERNATIVE; return addresses } }
+        resolverDownUntil[config.provider]?.let { until ->
+            if (now() < until) throw IOException("${config.provider.label} was unreachable a moment ago")
+        }
+        try {
+            return fetchAlternative(host, config).also { resolverDownUntil.remove(config.provider) }
+        } catch (e: UnknownHostException) {
+            throw e // a real answer (NXDOMAIN or no addresses): the resolver works
+        } catch (e: IOException) {
+            resolverDownUntil[config.provider] = now() + RESOLVER_DOWN_MS
+            throw e
+        }
+    }
+
+    private fun fetchAlternative(host: String, config: DnsConfig): List<InetAddress> {
         val override = alternativeOverride
         val addresses: List<InetAddress>
         var ttl = 120L
         if (override != null) {
             addresses = override(host, config)
         } else when (config.transport) {
-            DnsTransport.DOH -> addresses = doh(config.provider).lookup(host)
+            DnsTransport.DOH -> addresses = try {
+                doh(config.provider).lookup(host)
+            } catch (e: UnknownHostException) {
+                // G12 X11-3: OkHttp's DnsOverHttps reports a failed request (timeout, refused, TLS) as
+                // UnknownHostException with the network error as its cause. Only a cause-less one is a
+                // real answer (NXDOMAIN, no records); the other means this resolver is unreachable.
+                throw unreachableOrAnswer(e)
+            }
             DnsTransport.DOT, DnsTransport.PLAIN -> {
                 var last: IOException? = null
                 var found: DnsMessage.Answer? = null
@@ -187,7 +220,18 @@ object SmartDns : Dns {
         return addresses
     }
 
-    private fun doh(provider: DnsProvider): Dns = dohClients.getOrPut(provider) {
+    /** Resolver could not be reached (not an answer about the name). */
+    class ResolverUnreachable(message: String, cause: Throwable) : IOException(message, cause)
+
+    internal fun unreachableOrAnswer(e: UnknownHostException): IOException {
+        val cause = e.cause
+        return if (cause is IOException && cause !is UnknownHostException) ResolverUnreachable(e.message ?: "resolver unreachable", cause) else e
+    }
+
+    /** Test hook: replaces the real DNS-over-HTTPS clients. */
+    @Volatile internal var dohFactory: ((DnsProvider) -> Dns)? = null
+
+    private fun doh(provider: DnsProvider): Dns = dohFactory?.invoke(provider) ?: dohClients.getOrPut(provider) {
         // Separate client: its own lookups must never recurse into SmartDns; bootstrap IPs avoid DNS entirely.
         val bootstrapClient = OkHttpClient.Builder()
             .connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS)
@@ -213,6 +257,7 @@ object SmartDns : Dns {
         val start = now()
         val result = if (!config.usesAlternative) system.lookup(host) else {
             cache.remove(host.lowercase())
+            resolverDownUntil.remove(config.provider) // the button must really try
             alternativeLookup(host.lowercase(), config)
         }
         result to (now() - start)
