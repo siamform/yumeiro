@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 20:21 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-15 20:35 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** `notes/owner-orders-2.md` (agent workspace) as summarised in the ledger:
   L0 run 43744809503 + Step 2 open items (done) → **L1 Group 12 (current)** → L2 Groups 5–10 →
@@ -12,7 +12,7 @@
   for token hosts (149ef42, X7-1); crash-report UI confirm + device test written (2e5f9d6, X6-1);
   a11y fixes for 46 dp top-bar targets and unnamed Music cards (3019605, a898010, X8-1); closed-app
   alert test assert fixed (8dd11e0, X5-1).
-- **Outage:** sandbox stopped answering 2026-11-16 ~19:05–19:45 UTC while a local `:app:lintTvDebug`
+- **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (2026-11-16 Dhaka time) while a local `:app:lintTvDebug`
   ran (its Gradle daemon was killed, lint result lost). No commit was lost; the three unpushed
   edits survived and were pushed first. Lesson: TV lint moves to CI.
 - **Since the outage (19:45–20:21 UTC):** CI lint for the TV app (f0df775) found a real crash: Cast
@@ -20,7 +20,9 @@
   fixed (7486997, c7772ce, 72394dc). CrashUiDeviceTest verified on both (X6-1). Pacer gap bug found by
   the closed-app test on api33 (fixed 9b46045, X5-2). Yumix pills 48 dp (b0fbea9). TV emulator job
   added (590fb6b, X9-1).
-- **Current step:** Level 1, Group 12, X5/X8/X9/X10 verification.
+- **20:21–20:35 UTC:** X1 architecture read-through: JsBridge extractor bounded (565d39b, X1-3);
+  cancelled tracker sign-in no longer toasts an error (b0a62eb, X1-4).
+- **Current step:** Level 1, Group 12, X5/X8/X9/X10 verification and X1 audit.
 - **Running:** CI 43757542521 (lint recheck + unit suite), device 43757544993 (ClosedAppAlert,
   Accessibility, both phones), TV 43757547383 (tv-api24: HomeNavigation, BackNavigation, StabilityStress).
 - **Next three actions:** (1) read the three runs, fix failures, update X5/X8/X9/X10; make lint blocking
