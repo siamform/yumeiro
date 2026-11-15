@@ -27,6 +27,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-8 | Launcher widget on a real home screen (H12) | Pending |
 | OMT-9 | Usability feedback | Pending |
 | OMT-10 | Last.fm scrobbles with your own account, including after leaving the app with Back (MU-1) | Pending |
+| OMT-11 | Manga reading and Live TV channels on your phone and TV, with your own sources and playlists (MG-1, LT-1..3) | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -162,6 +163,22 @@ Blocked (you couldn't run it; say why).
 - **Expected result:** both songs appear (allow up to a minute). Turn on airplane mode, play a third
   song the same way, turn airplane mode off and reopen the app: the third song appears too.
 - **Evidence to send:** a screenshot of Recent tracks, and the app version (Settings → About).
+- **Status:** Pending
+
+---
+
+### OMT-11 — Manga reading and Live TV with your own sources
+
+- **Why the agent can't do it:** the manga sources and IPTV playlists you use are your choice; many
+  channels are region-locked, so a CI emulator in a US data centre can't open them. The agent covers
+  the code with unit tests (`StreamPlaylistTest`, `PlaylistMarketTest`, `HlsAdFilterTest`) and a code read.
+- **Hardware / environment:** your phone and Android TV, home Wi-Fi, one installed manga source, one IPTV playlist you use.
+- **Instructions:** Manga: search a title, open it, open a chapter, read 10 pages, tap Retry on the title
+  page while it loads, go back and forward between chapters. Live TV: add or open your playlist, play 3
+  channels, close the app from recents, reopen Live TV.
+- **Expected result:** no "failed" message after Retry (only real network errors); reading position kept;
+  your playlist and channels still listed after reopening; channels start in under 10 s on Wi-Fi.
+- **Evidence to send:** a short screen recording or screenshots, the app version, and the playlist size (number of channels).
 - **Status:** Pending
 
 ---

@@ -111,11 +111,11 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G7 Manga and live TV
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| T1 | Manga search, filter, source selection | ui/screens/manga/MangaScreens, sources/manga | open | |
-| T2 | Manga title page and reader | MangaTitle, MangaReader routes | open | |
+| T1 | Manga search, filter, source selection | ui/screens/manga/MangaScreens, sources/manga | code read; MG-1 fixed (unit/compile) | `TachiyomiIndexTest`, `SourceMarketTest`; no manga source on CI |
+| T2 | Manga title page and reader | MangaTitle, MangaReader routes | code read; MG-1 fixed (compile) | owner reading test OMT-11 |
 | T3 | Live TV hub, playlists, playlist market | ui/screens/stream/*, stream/PlaylistMarket, PlaylistStore | open | |
-| T4 | M3U parsing, stream resolving, sniffing, page stream finder | stream/M3uParser, StreamResolver, StreamSniffer, PageStreamFinderDialog | open | |
-| T5 | HLS ad filter for streams | stream/HlsAdFilter, AdFilterDataSource | open | |
+| T4 | M3U parsing, stream resolving, sniffing, page stream finder | stream/M3uParser, StreamResolver, StreamSniffer, PageStreamFinderDialog | LT-3 fixed (unit); code read | `StreamPlaylistTest`, `StreamDetectionTest`, `RequestHeadersTest` |
+| T5 | HLS ad filter for streams | stream/HlsAdFilter, AdFilterDataSource | unit only, no bug found | `HlsAdFilterTest` |
 
 ## G8 Downloads
 | ID | Item | Code | Status | Covered by |

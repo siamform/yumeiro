@@ -47,6 +47,8 @@ class StreamPlaylistTest {
             "https://c.example/d.mpd\n" +
             "javascript://nope\n"
         val list = M3uParser.parse(text)
+        // R16 (G7): the saved-file path reads line by line (bufferedReader().useLines); same result.
+        assertEquals(list, java.io.StringReader(text).buffered().useLines { M3uParser.parseLines(it) })
         assertEquals(listOf("[BD] CNN, Live", "TLC", "Piped", "Headers"), list.map { it.title })
         assertEquals("https://x/f_png,w_300/a.png", list[0].logoUrl)
         assertEquals("BD", list[0].group)

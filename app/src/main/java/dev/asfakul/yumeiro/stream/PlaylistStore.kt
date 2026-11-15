@@ -301,7 +301,7 @@ object PlaylistStore {
             }
         }
         if (!file.exists()) return@withContext emptyList()
-        M3uParser.parse(file.readText())
+        file.bufferedReader().useLines { M3uParser.parseLines(it) }
     }
 
     /** Downloads a remote playlist (mirror first, then the original source) and caches it. */
@@ -338,7 +338,7 @@ object PlaylistStore {
             val p = get(id) ?: error("Playlist not found")
             require(p.isLocal) { "Only your own playlists can be edited channel by channel" }
             val file = channelsFile(context, id)
-            val current = if (file.exists()) M3uParser.parse(file.readText()) else emptyList()
+            val current = if (file.exists()) file.bufferedReader().useLines { M3uParser.parseLines(it) } else emptyList()
             val next = f(current)
             writeAtomic(file, M3uWriter.write(next, p.name))
             replace(id) { it.copy(channelCount = next.size, lastUpdated = System.currentTimeMillis()) }

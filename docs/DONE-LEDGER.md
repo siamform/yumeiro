@@ -155,6 +155,10 @@ Report: `docs/groups/GROUP-4-YUMIX.md`. Device runs are on api33-lowram and api3
 | MU-2 Scrobble queue keeps good entries | G6 M7 | ee9e246 (`Scrobbler.decodeQueue`) | One bad entry emptied the queue of unsent listens | `ScrobbleQueueTest` | — | unit only | |
 | MU-3 LRCLIB no-lyrics marks expire | G6 M4 | d183e65 (`LrcLib.pruneMisses`) | One prefs key per song without lyrics, forever | `LrcLibMissesTest` | — | unit only | |
 | MU-4 Playing queue survives the screen | G6 M5 | a119186 (`MusicPlayerManager.processQueue`, `restoreExistingState`, `trackFrom`) | Queue lived on the screen-scoped manager: reopening while music played showed no now-playing bar and "Play next" replaced the queue | `QueueSurvivesScreenTest` | — | unit only | |
+| LT-1 Saved playlists survive a bad file | G7 T3 | 4cee17d (`PlaylistStore`) | Index read and write went straight over the file; a kill mid-write or one bad byte lost every saved playlist. Now SafeJsonFile (temp + rename, .bad kept) | `StreamPlaylistTest#aBrokenIndexIsNotOverwrittenWithDefaults` | — | unit only | |
+| LT-2 Playlist page shows a store error with Retry | G7 T3 | 4cee17d (`PlaylistDetailScreen`) | A failed store load left an empty page with no message | compile + code read | — | unit only (compile) | UI look: none on device |
+| LT-3 Large playlists parsed line by line | G7 T4 | (this commit) `M3uParser.parseLines`, `PlaylistStore.channels/refresh` | A saved playlist (cap 40 MB) was read into one String before parsing: heap spike on a 192 MB-heap phone | `StreamPlaylistTest` (both paths give the same channels) | — | unit only | Memory gain not measured on device |
+| MG-1 Manga detail/reader: Retry no longer shows a false error; library read off main | G7 T1/T2 | 4cee17d, (this commit) (`MangaScreens`) | runCatching caught the cancelled old load and showed it as an error; MangaLibrary file read on main at first open | compile + code read | — | unit only (compile) | No manga source on CI |
 
 ### R15/R16: player
 

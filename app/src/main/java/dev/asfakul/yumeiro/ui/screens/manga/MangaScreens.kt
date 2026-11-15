@@ -132,7 +132,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
     val context = LocalContext.current
     val hub by SourceHub.state.collectAsState()
     val adult by OnlineSettings.adult.collectAsState()
-    LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext); MangaLibrary.load(context) }
+    // R16 (G7): the library file is read off the main thread (it was read on main at first open).
+    LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.load(context) } }
     val providers = remember(hub.generation, adult) { SourceHub.mangaProviders().filter { adult || !it.nsfw }.sortedBy { it.name.lowercase() } }
     val prefs = remember { context.getSharedPreferences("manga_home", 0) }
     var selectedId by rememberSaveable { mutableStateOf(prefs.getString("source", null)) }

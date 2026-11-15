@@ -39,7 +39,13 @@ object M3uParser {
         return body to ""
     }
 
-    fun parse(text: String, baseHeaders: StreamRequest? = null): List<StreamRequest> {
+    fun parse(text: String, baseHeaders: StreamRequest? = null): List<StreamRequest> = parseLines(text.lineSequence(), baseHeaders)
+
+    /**
+     * R16 (G7): same as [parse] but reads lines one by one, so a large saved playlist (up to 40 MB)
+     * is never held as one String next to its parsed channels on a low-RAM phone.
+     */
+    fun parseLines(lines: Sequence<String>, baseHeaders: StreamRequest? = null): List<StreamRequest> {
         val out = mutableListOf<StreamRequest>()
         var title = ""; var logo: String? = null; var group: String? = null
         var ua: String? = null; var referer: String? = null; var origin: String? = null
@@ -62,7 +68,7 @@ object M3uParser {
             }
         }
 
-        for (raw in text.lineSequence()) {
+        for (raw in lines) {
             val line = raw.trim().trimStart('\uFEFF').trim()
             try {
                 when {
