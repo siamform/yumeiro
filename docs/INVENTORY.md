@@ -72,14 +72,14 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G4 Yumix
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen, OnlineComponents, OnlineGetStarted, ExtensionBanner | open | |
-| Y2 | Yumix search | OnlineSearchScreen, online/SearchRanker | open | |
-| Y3 | Extension bar hide/show on scroll | ui/components/HideOnScroll | open | |
-| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | open | |
-| Y5 | "Show videos from" filter | YumixFilter | open | |
-| Y6 | Hero carousel, picks, row pages | OnlineHomeHero, OnlineHomePicks, OnlineRowScreen | open | |
-| Y7 | Detail page (versions, episodes, stills, bookmarks) | OnlineDetailScreen, EpisodeStills, OnlineBookmarks | open | |
-| Y8 | (R16) YouTube in Videos: feed, search, channel pages, Shorts, live, discovery | ui/screens/youtube/YouTubeScreens, YtChannelPage, youtube/YtDiscovery, YtWatch | open | |
+| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen, OnlineComponents, OnlineGetStarted, ExtensionBanner | done (offline refresh: see GROUP-4) | `YumixRefreshTest`, `YumixGoneTest`, `YumixFeedTest`; `FeedPositionDeviceTest#yumix` 43715245923; `YumixDeviceTest#offlineRefreshKeepsTheFeed` |
+| Y2 | Yumix search | OnlineSearchScreen, online/SearchRanker | unit only | `YumixFilterSearchTest`, `SearchRankerTest`, `SearchSuggestTest`; code read |
+| Y3 | Extension bar hide/show on scroll | ui/components/HideOnScroll | code read, no bug | owner feel test OMT-9 |
+| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | done | `YumeiroDramaTest`, `PinnedExtensionsTest`; every Yumix device run opens on drama |
+| Y5 | "Show videos from" filter | YumixFilter | done | `YumixFilterSearchTest`; `PinnedExtensionsDeviceTest` 43705847970 |
+| Y6 | Hero carousel, picks, row pages | OnlineHomeHero, OnlineHomePicks, OnlineRowScreen | done | `YumixDeviceTest#seeAllKeepsPagingWhileSearching` 43716649966, 43717950021 |
+| Y7 | Detail page (versions, episodes, stills, bookmarks) | OnlineDetailScreen, EpisodeStills, OnlineBookmarks | unit only + code read | `OnlineExtrasTest`, `EpisodeCarouselTest`; detail opened in `DramaPlaybackDeviceTest` |
+| Y8 | (R16) YouTube in Videos: feed, search, channel pages, Shorts, live, discovery | ui/screens/youtube/YouTubeScreens, YtChannelPage, youtube/YtDiscovery, YtWatch | unit only | `YtDiscoveryTest`, `YtHomeOrderTest`, `YouTubePickVideoTest`; feed signed in: OMT-1 |
 
 ## G5 Library and personal lists
 | ID | Item | Code | Status | Covered by |

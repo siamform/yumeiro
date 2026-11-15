@@ -101,6 +101,11 @@ private sealed interface ProviderHome {
  * on the phone (up to 6 h old) and the scroll ended where those saved pages ended. Fetches also
  * run here, so leaving the tab no longer cancels them half-way (rows stuck "loading").
  */
+/** One line about every extension's section state, for logs and device tests. */
+internal fun yumixDebugSummary(): String = YumixMemory.homes.entries.joinToString(", ") { (k, v) ->
+    k + "=" + when (v) { is ProviderHome.Ready -> "Ready(${v.rows.size} rows, ${v.rows.sumOf { it.items.size }} items)"; is ProviderHome.Failed -> "Failed"; ProviderHome.Loading -> "Loading" }
+}.ifEmpty { "(no sections)" } + " · explore ${YumixMemory.exploreShown.size}"
+
 private object YumixMemory {
     val homes = androidx.compose.runtime.mutableStateMapOf<String, ProviderHome>()
     val inflight = HashMap<String, kotlinx.coroutines.Deferred<Boolean>>()
@@ -240,7 +245,11 @@ fun OnlineHomeScreen(
     val providerNames = remember(providers) { providers.map { it.name }.toSet() }
     LaunchedEffect(providerNames) {
         // The extension engine starts with no providers; don't wipe the kept home before it's ready.
-        if (engine.ready) homes.keys.retainAll(providerNames)
+        if (engine.ready) {
+            val dropped = homes.keys.filter { it !in providerNames }
+            if (dropped.isNotEmpty()) android.util.Log.i("YuYumix", "sections dropped (extension gone): $dropped")
+            homes.keys.retainAll(providerNames)
+        }
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)

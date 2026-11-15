@@ -99,7 +99,9 @@ class YumixDeviceTest {
         while (SystemClock.uptimeMillis() < until && stable < 2) {
             val n = cards().size; val all = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes().size
             val lists = rule.onAllNodesWithTag("online_home_list", true).fetchSemanticsNodes().size
-            log("wait +${SystemClock.uptimeMillis() - t0} ms: yumix cards $n, all cards $all, online_home_list nodes $lists")
+            val eng = ExtensionManager.state.value
+            log("wait +${SystemClock.uptimeMillis() - t0} ms: yumix cards $n, all cards $all, online_home_list nodes $lists · engine ready=${eng.ready} gen=${eng.generation} providers=${ExtensionManager.providers().map { it.name }} · ${dev.asfakul.yumeiro.ui.screens.online.yumixDebugSummary()}")
+            if (n < 3) log("  screen: ${FirstRun.onScreen(rule).take(900)}")
             stable = if (n >= 3) stable + 1 else 0
             if (stable < 2) idle(3_000)
         }
