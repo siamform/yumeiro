@@ -122,7 +122,7 @@ fun LibraryScreen(
     onOpenDownloads: () -> Unit = {},
     onOpenTogether: () -> Unit = {},
 ) {
-    var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
+    var selectedPlaylistId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) } // kept across rotation
     var showCreateDialog by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
 

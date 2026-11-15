@@ -130,6 +130,9 @@ class RevampLogicTest {
         assertTrue(back[0].music); assertTrue(back[1].live)
         assertTrue(YtHistory.decode(null).isEmpty())
         assertTrue(YtHistory.decode("not json").isEmpty())
+        // R16 (G5): one bad entry no longer empties the whole history.
+        val mixed = "[" + YtHistory.encode(items).removePrefix("[").removeSuffix("]") + ",{\"t\":\"no id\"},5]"
+        assertEquals(listOf("abc", "live1"), YtHistory.decode(mixed).map { it.id })
     }
 
     @Test fun ytFormatting() {

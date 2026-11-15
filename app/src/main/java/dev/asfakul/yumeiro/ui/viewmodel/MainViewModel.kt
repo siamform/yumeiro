@@ -256,8 +256,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runCatching { dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(application) }
             runCatching { dev.asfakul.yumeiro.youtube.YtHistory.load(application) }
         }
-        // Real music listening time for Library (only while audio is actually playing).
-        dev.asfakul.yumeiro.player.ListeningTime.track(application, viewModelScope, playerManager.playbackState.map { it.isPlaying })
+        // Real music listening time for Library: counted by the shared player (PlaybackService),
+        // so it keeps counting after this screen is gone. Only the saved total is loaded here.
+        dev.asfakul.yumeiro.player.ListeningTime.load(application)
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             playerManager.playbackState
                 .map { st -> Triple(st.currentTrack, st.isPlaying, st.currentPositionMs / 5000) }

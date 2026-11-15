@@ -44,6 +44,14 @@ class LibraryRound2Test {
         assertTrue(ids.toString(), "p1" in ids && "chill_vibes" in ids) // user's own, and a demo they filled
     }
 
+    @Test fun oneBadPlaylistKeepsTheOthers() = runBlocking {
+        // R16 (G5): a bad entry used to reset every playlist to the defaults.
+        val raw = """[{"id":"p1","name":"Mine","trackIds":["1","2"]},{"name":"no id"},7,{"id":"p2","name":"Road","trackIds":[]}]"""
+        ctx.getSharedPreferences("mt_player_music_prefs", Context.MODE_PRIVATE).edit().clear().putString("playlists_json", raw).commit()
+        val got = OfflineMediaRepository(ctx).playlists.first()
+        assertTrue(got.map { it.id }.toString(), got.any { it.id == "p1" && it.trackIds == listOf("1", "2") } && got.any { it.id == "p2" })
+    }
+
     @Test fun listenedLabelAndAccumulator() {
         assertEquals("0m", listenedLabel(0)); assertEquals("42m", listenedLabel(42 * 60_000L)); assertEquals("3h 05m", listenedLabel(185 * 60_000L))
         assertEquals(1_000L, ListeningTime.add(0, 1_000)); assertEquals(60_000L, ListeningTime.add(0, 3_600_000)); assertEquals(5L, ListeningTime.add(5, -10))

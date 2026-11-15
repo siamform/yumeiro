@@ -103,8 +103,11 @@ fun VideoLibraryContent(
     header: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    // R16 (G5): the three file reads ran on the main thread when the tab opened.
     LaunchedEffect(Unit) {
-        OnlineBookmarks.ensureLoaded(context); OnlineDownloads.ensureLoaded(context); OnlineHistory.ensureLoaded(context)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            OnlineBookmarks.ensureLoaded(context); OnlineDownloads.ensureLoaded(context); OnlineHistory.ensureLoaded(context)
+        }
     }
     val bookmarks by OnlineBookmarks.items.collectAsState()
     val downloads by OnlineDownloads.items.collectAsState()

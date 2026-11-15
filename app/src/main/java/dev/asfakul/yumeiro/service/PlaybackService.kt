@@ -60,6 +60,13 @@ class PlaybackService : MediaSessionService() {
                     }
                 })
 
+                val app = context.applicationContext
+                player.addListener(object : androidx.media3.common.Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        dev.asfakul.yumeiro.player.ListeningTime.playerIsPlaying(app, isPlaying)
+                    }
+                })
+
                 sharedPlayer = player
                 return player
             }

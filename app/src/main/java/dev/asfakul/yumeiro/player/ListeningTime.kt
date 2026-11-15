@@ -8,6 +8,8 @@ package dev.asfakul.yumeiro.player
 import android.content.Context
 import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +41,23 @@ object ListeningTime {
     }
 
     /** Pure accumulator → unit-tested. Returns the new total after [deltaMs] of real playback. */
+    private val playingNow = MutableStateFlow(false)
+    @Volatile private var started = false
+
+    /**
+     * R16 (G5): fed by the process-wide player itself. The clock used to run on the screen's
+     * ViewModel, so music kept playing after Back-exit but stopped being counted.
+     */
+    fun playerIsPlaying(context: Context, on: Boolean) {
+        if (!started) synchronized(this) {
+            if (!started) {
+                started = true
+                track(context.applicationContext, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate), playingNow)
+            }
+        }
+        playingNow.value = on
+    }
+
     internal fun add(total: Long, deltaMs: Long): Long = total + deltaMs.coerceIn(0L, 60_000L)
 
     fun track(context: Context, scope: CoroutineScope, playing: Flow<Boolean>, clock: () -> Long = SystemClock::elapsedRealtime) {

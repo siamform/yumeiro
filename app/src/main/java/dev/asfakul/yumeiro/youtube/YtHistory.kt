@@ -55,8 +55,11 @@ object YtHistory {
     internal fun decode(raw: String?): List<YtItem> {
         if (raw.isNullOrBlank()) return emptyList()
         val a = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
-        return List(a.length()) { i ->
-            val o = a.getJSONObject(i)
+        // R16 (G5): one bad entry used to throw here, load() then showed an empty list and the
+        // next add() saved that empty list over the whole history. Skip only the bad entry.
+        return (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            if (o.optString("id").isBlank()) return@mapNotNull null
             YtItem(
                 id = o.getString("id"), url = o.optString("url"), title = o.optString("t"), channel = o.optString("c"),
                 thumbnail = o.optString("th").ifBlank { null }, durationSec = o.optLong("d"), music = o.optBoolean("m"), live = o.optBoolean("l"),

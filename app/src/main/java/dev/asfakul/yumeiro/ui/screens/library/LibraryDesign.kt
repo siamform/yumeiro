@@ -316,7 +316,7 @@ internal fun VideoLibraryHero(historyCount: Int, savedCount: Int, downloadCount:
 @Composable
 fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpenSources: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { MangaLibrary.load(context) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.load(context) } }
     val entries by MangaLibrary.entries.collectAsState()
     val reading = remember(entries) { entries.filter { it.lastChapterUrl != null }.sortedByDescending { it.updatedAt } }
     val saved = remember(entries) { entries.filter { it.saved }.sortedBy { it.title.lowercase() } }
