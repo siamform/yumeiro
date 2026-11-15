@@ -58,11 +58,16 @@ class BackNavigationDeviceTest {
         assertEquals("must be on Home before the exit check", 0, page())
         Thread.sleep(2_500) // Let any exit window from earlier presses lapse.
         back()
-        Thread.sleep(800)
+        Thread.sleep(400)
+        // The compose test clock only recomposes when the test syncs (Thread.sleep does not), so
+        // advance one frame: the Home handler turns itself off. A full waitForIdle could also run
+        // the 2 s re-arm delay, so only one frame.
+        rule.mainClock.advanceTimeByFrame()
         assertEquals("first back on Home must keep the app open", Lifecycle.State.RESUMED, state())
-        var enabled = false
+        var enabled = true
         rule.activityRule.scenario.onActivity { enabled = it.onBackPressedDispatcher.hasEnabledCallbacks() }
         log("after first Home back: dispatcher hasEnabledCallbacks=$enabled")
+        assertTrue("after the first Home back no back callback may stay enabled, or the system never gets the second back", !enabled)
         back()
         val left = (0 until 40).any { Thread.sleep(100); state() != Lifecycle.State.RESUMED }
         log("after second back state=${state()}")
