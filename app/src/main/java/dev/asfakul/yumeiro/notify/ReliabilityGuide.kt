@@ -129,10 +129,13 @@ object ReliabilityGuide {
     }
 
     fun backgroundRestricted(c: Context): Boolean =
-        runCatching { (c.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isBackgroundRestricted }.getOrDefault(false)
+        // API 28+; the TV app runs from API 24, where the restriction does not exist (G12 X10-2).
+        if (android.os.Build.VERSION.SDK_INT < 28) false
+        else runCatching { (c.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isBackgroundRestricted }.getOrDefault(false)
 
     fun standbyBucket(c: Context): Int =
-        runCatching { (c.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager).appStandbyBucket }.getOrDefault(10)
+        if (android.os.Build.VERSION.SDK_INT < 28) 10 // STANDBY_BUCKET_ACTIVE: no buckets before API 28
+        else runCatching { (c.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager).appStandbyBucket }.getOrDefault(10)
 
     fun status(c: Context): Status {
         NotifySettings.init(c)
