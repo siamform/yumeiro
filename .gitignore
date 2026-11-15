@@ -52,3 +52,8 @@ captures/
 # Python bytecode (workflow scripts)
 __pycache__/
 *.pyc
+
+# Local credentials (never commit)
+secrets/
+*service-account*.json
+*firebase-admin*.json
