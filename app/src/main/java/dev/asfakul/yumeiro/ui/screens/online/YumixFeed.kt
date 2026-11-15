@@ -134,6 +134,10 @@ internal object YumixFeed {
         return withRows > 0 && groupCount >= withRows
     }
 
+    /** Keys of [shown] titles whose extension is no longer in [liveApis] (turned off or hidden). */
+    fun goneFrom(shown: List<OnlineItem>, liveApis: Set<String>): Set<String> =
+        shown.filter { it.api !in liveApis }.mapTo(HashSet()) { it.key }
+
     private fun mix(x: Long): Long {
         var z = x + -0x61c8864680b583ebL
         z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L

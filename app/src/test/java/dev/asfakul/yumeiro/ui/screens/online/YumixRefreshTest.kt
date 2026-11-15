@@ -52,3 +52,11 @@ class YumixRefreshTest {
         assertFalse(YumixFeed.sectionsDone(0, listOf("B" to emptyList())))
     }
 }
+
+class YumixGoneTest {
+    @Test fun titlesOfAnExtensionThatIsOffAreDropped() {
+        val a = OnlineItem("A 1", "u/A/1", "A", null); val b = OnlineItem("B 1", "u/B/1", "Adult", null)
+        assertEquals(setOf(b.key), YumixFeed.goneFrom(listOf(a, b), setOf("A")))
+        assertTrue(YumixFeed.goneFrom(listOf(a), setOf("A")).isEmpty())
+    }
+}

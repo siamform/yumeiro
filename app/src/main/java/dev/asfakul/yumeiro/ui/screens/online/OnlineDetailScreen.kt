@@ -58,6 +58,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.isActive
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -123,8 +124,19 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
         val provider = ExtensionManager.provider(api)
         if (provider == null) { state = DetailState.MissingSource(api); return@LaunchedEffect }
         if (state !is DetailState.Ready) state = DetailState.Loading
-        state = runCatching { OnlineRepository.load(provider, url, force = attempt > 0) }.fold(
-            { DetailState.Ready(it) }, { DetailState.Failed(OnlineErrors.friendly(it, "Couldn't open this title")) },
+        val result = runCatching { OnlineRepository.load(provider, url, force = attempt > 0) }
+        // R16 G4 (Y7): a load cancelled by a restart of this effect (an extension finished loading,
+        // so engine.generation changed) used to show "Couldn't open this title" for a moment.
+        // A failed refresh (pull down while offline) used to replace the page with that error;
+        // it now keeps the page and says so.
+        if (!isActive) { refreshing = false; return@LaunchedEffect }
+        val shown = state as? DetailState.Ready
+        state = result.fold(
+            { DetailState.Ready(it) },
+            { e ->
+                if (shown != null) { dev.asfakul.yumeiro.ui.components.AppMessages.show(context, OnlineErrors.friendly(e, "Couldn't refresh"), dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO); shown }
+                else DetailState.Failed(OnlineErrors.friendly(e, "Couldn't open this title"))
+            },
         )
         (state as? DetailState.Ready)?.let { r ->
             dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(context)

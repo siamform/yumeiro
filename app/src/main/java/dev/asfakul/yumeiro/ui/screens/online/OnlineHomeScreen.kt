@@ -127,6 +127,11 @@ private object YumixMemory {
             }
         }
         explore.removeAll { f -> ready.none { it.first == f.row.api } }
+        // R16 G4: titles already shown from an extension that is now off (or an 18+ one that is
+        // now hidden) used to stay in "More to explore" until pull to refresh. The user turned it
+        // off, so they go now; they may come back if it is turned on again.
+        val gone = YumixFeed.goneFrom(exploreShown.map { it.first }, ready.mapTo(HashSet()) { it.first })
+        if (gone.isNotEmpty()) { exploreShown.removeAll { it.first.key in gone }; exploreSeen.removeAll(gone) }
     }
 }
 
@@ -331,7 +336,7 @@ fun OnlineHomeScreen(
                     if (answered > 0) {
                         YumixMemory.resetExplore()
                         YumixMemory.syncExplore(providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } })
-                    } else android.widget.Toast.makeText(context, "Couldn't refresh. Showing what was already loaded.", android.widget.Toast.LENGTH_SHORT).show()
+                    } else dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Couldn't refresh. Showing what was already loaded.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
                 } },
                 modifier = Modifier.fillMaxSize(),
             ) {
