@@ -110,8 +110,9 @@ internal fun HeroCarousel(
     var held by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var focused by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val reduced = androidx.compose.runtime.remember { dev.asfakul.yumeiro.ui.components.isReducedMotion(context) }
-    LaunchedEffect(n, held, focused, reduced) {
-        if (n < 2 || held || focused || reduced) return@LaunchedEffect
+    val started = dev.asfakul.yumeiro.ui.components.rememberIsStarted()
+    LaunchedEffect(n, held, focused, reduced, started) {
+        if (n < 2 || !started || held || focused || reduced) return@LaunchedEffect
         while (true) {
             delay(6_500)
             if (!pager.isScrollInProgress && dev.asfakul.yumeiro.player.HeatGuard.allowDecorativeMotion()) pager.animateScrollToPage(pager.currentPage + 1, animationSpec = androidx.compose.animation.core.tween(650, easing = androidx.compose.animation.core.FastOutSlowInEasing))

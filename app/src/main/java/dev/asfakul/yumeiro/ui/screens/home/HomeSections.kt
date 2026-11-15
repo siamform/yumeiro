@@ -208,8 +208,9 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
     // Also paused while D-pad / keyboard focus is inside (WAI carousel rule; see HeroCarousel).
     var focused by remember { mutableStateOf(false) }
     val auto = remember { android.os.Build.FINGERPRINT != "robolectric" }
-    LaunchedEffect(n, held, focused, reduced) {
-        if (!auto || reduced || held || focused || n < 2) return@LaunchedEffect
+    val started = dev.asfakul.yumeiro.ui.components.rememberIsStarted()
+    LaunchedEffect(n, held, focused, reduced, started) {
+        if (!auto || !started || reduced || held || focused || n < 2) return@LaunchedEffect
         while (true) {
             delay(6_000)
             if (!pager.isScrollInProgress && dev.asfakul.yumeiro.player.HeatGuard.allowDecorativeMotion()) pager.animateScrollToPage((pager.currentPage + 1).coerceAtMost(virtual - 1))
