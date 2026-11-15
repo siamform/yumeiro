@@ -71,7 +71,7 @@ fun Modifier.dreamScenePreview(p: MtPalette, intensity: Float = 1f, scene: Boole
 @Composable
 fun BackdropSettingsSection() {
     val context = LocalContext.current
-    remember(context) { BackdropSettings.init(context) }
+    BackdropSettings.init(context) // idempotent: returns at once after the first load
     val p = LocalMtPalette.current
     val style by BackdropSettings.style.collectAsState()
     val stored by BackdropSettings.intensity.collectAsState()

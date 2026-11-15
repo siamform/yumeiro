@@ -52,7 +52,7 @@ fun Modifier.pageBackground(): Modifier = composed {
     val ambientState = LocalAmbientColor.current
     val view = LocalView.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    remember(context) { BackdropSettings.init(context) }
+    BackdropSettings.init(context) // idempotent: returns at once after the first load
     val intensity by BackdropSettings.intensity.collectAsState()
     val photo by rememberBackdropPhoto()
     val offsetY = remember { mutableFloatStateOf(0f) }
