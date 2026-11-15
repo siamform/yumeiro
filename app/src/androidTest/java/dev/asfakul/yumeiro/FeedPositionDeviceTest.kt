@@ -87,9 +87,16 @@ class FeedPositionDeviceTest {
     /** Cards that intersect the screen (pager pages beside the current one sit wholly outside it). */
     /** Keys shown more than once in the composed feed (the same title in two shelves). */
     private val duplicates = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    @Volatile private var unplacedSeen = 0
 
     private fun snap(): List<Card> {
-        val all = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
+        val nodes = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
+        // A lazy list composes the next items ahead of time (prefetch) and keeps a few for reuse;
+        // those are not placed, nothing is drawn for them, and their reported position is stale.
+        // Only cards that are placed (with every parent placed) are on the user's screen.
+        val placed = nodes.filter { n -> generateSequence(n) { it.parent }.all { it.layoutInfo.isPlaced } }
+        unplacedSeen += nodes.size - placed.size
+        val all = placed
             .mapNotNull { n ->
                 val k = n.config.getOrElseNullable(FeedCardKey) { null } ?: return@mapNotNull null
                 val p = n.positionInRoot
@@ -190,7 +197,7 @@ class FeedPositionDeviceTest {
             if (i == 9) stillCheck("idle-deep")
         }
         stillCheck("idle-end")
-        log("feed $feed: ${seen.size} distinct cards seen, ${problems.size} problems")
+        log("feed $feed: ${seen.size} distinct cards seen, ${problems.size} problems, $unplacedSeen unplaced (prefetched) card nodes ignored, duplicate keys ${duplicates.size}")
         problems.forEach { log("PROBLEM $it") }
         log("FEEDPOS_RESULT $feed ${if (problems.isEmpty()) "PASS" else "FAIL"} cards=${seen.size} problems=${problems.size}")
         val dir = File(ctx.getExternalFilesDir(null), "feedpos").apply { mkdirs() }
