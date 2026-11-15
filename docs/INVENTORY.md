@@ -59,7 +59,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | P8 | Speed, zoom, gestures, volume/brightness | VideoPlayerGestures, VideoZoom, VolumeAccumulator | audited | speed on device 43708220122; gestures unit only |
 | P9 | Source rotation, dead manual pick, "Load more" sources | OnlineSession failover, SourceSelector | done | `OnlinePlaybackDeviceTest d_` 43701056608 |
 | P10 | PiP, fullscreen, orientation | player/PipController, PlayerSurfaceRules | done | PiP and lock `LocalPlayerDeviceTest a,c` 43708220122; floating `SurfaceModeDeviceTest` |
-| P11 | Resume position | OnlineHistory, LastPlayed | audited | `LocalPlayerDeviceTest b` (G3 report Verification) |
+| P11 | Resume position | OnlineHistory, LastPlayed | done | `LocalPlayerDeviceTest b` 43712469920 ×2 both |
 | P12 | Info overlay, HUD, controls, time labels | PlayerInfoOverlay, VideoPlayerHUD, VideoPlayerControls | done | `LocalPlayerDeviceTest a` 43708220122 |
 | P13 | Player settings | PlayerSettings, ui/screens/settings | audited | unit only; settings screen in G9 |
 | P14 | Recovery (black frame, stall, starvation, decoder fallback) | BlackFrameWatchdog, PlaybackHealthMonitor, RecoveryRouter, StreamRecovery, StarvationSafeLoadControl | audited | unit only (needs fault injection) |

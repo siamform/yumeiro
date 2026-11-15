@@ -116,6 +116,16 @@ File lists are shortened to the main files; the full list is in `COMMIT-FILES.md
 | E9 Starter extensions retry | G2 E9 | 97bb255 (`StarterExtensions.kt`, `StarterExtensionsTest`, `e9`) | A partial first run was marked done and never retried. Installs only missing picks, up to 3 launches, rethrows cancellation | Unit 3/3; device 43705847970 7/7 | both | verified on device | |
 | E12 Provider override defaults thread-safe | G2 E12 | bfde23d (`ProviderOverrides.kt`) | Plain map written from several threads. `ConcurrentHashMap` | Device `e12` 43704211410 | both | verified on device | |
 
+### R16: Group 3 (Player)
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| PL-11 Cast starts without blocking | G3 P17 | b5d2d5a (`cast/CastSupport.kt`, `OnlinePlayerUi.kt`), 4c885fe (`LocalPlayerDeviceTest e`) | `.result` read on an unfinished `getSharedInstance` Task threw, and the catch turned Cast off for the process. Task completes into a `StateFlow` the Cast buttons watch | `e`: `ready()` 34–132 ms, ready after 90–327 ms, 43707028426, 43708220122, 43709093938 | api33-lowram, api36 | verified on device | Casting to a TV needs a real Chromecast (script P/T) |
+| PL-12 Cast sends only subtitles the TV can show | G3 P17 | b5d2d5a (`CastSupport.castableSubtitles`, `CastSubtitlesTest`) | SRT sent as `application/x-subrip`; receivers show TTML/WebVTT/CEA-608 only. SRT tracks dropped | `CastSubtitlesTest` 1/1 | — | unit only | SRT → WebVTT conversion proposed |
+| PL-13 PiP refusal is reported | G3 P10 | 5bfa07c (`VideoPlayerModal.kt`) | `PipController.enter` result ignored: a refused PiP did nothing. Error message | PiP itself `c` 43708220122, 43709093938; the refusal path is not forced on device | both | unverified | Refusal path is code only: it cannot be forced on the emulators |
+| PL-14 AniSkip failures are not cached | G3 P15 | e1714fe (`online/anime/AniSkip.kt`, `AniSkipCacheTest`) | A timeout cached "no segments" for the process. Only success or 404 cached | `AniSkipCacheTest` 2/2 | — | unit only | Live API |
+| PL-15 Local player through the UI | G3 P1, P6–P8, P10–P12, P18, P19 | 2744a23, b5d2d5a, 5bfa07c, 3dc3914 (`LocalPlayerDeviceTest`, test clip asset) | New device test: device clip, audio and subtitle tracks, speed, play/pause, screen wake, lock, PiP, resume, heat guard | 43709093938: api33 5/5, api36 4/5 (b: test timing, fixed in 9877afb); 43712469920 ×2: 5/5 on both | api33-lowram, api36 | verified on device | Video sleep timer does not exist (proposed) |
+
 ### R15/R16: player
 
 | Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |

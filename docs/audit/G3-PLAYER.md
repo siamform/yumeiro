@@ -20,7 +20,7 @@ real phones or TVs. Casting to a real TV, real heat and real low-RAM phones are 
 | P8 | Speed, zoom, gestures, volume | `LocalPlayerDeviceTest a`: speed 1.5× and back to 1.0× read from `playbackParameters`; `VideoZoomTest` 4, `VolumeAccumulatorTest` 5 | 43708220122 pass; swipe gestures for volume and brightness are unit only |
 | P9 | Source rotation, dead manual pick | `OnlinePlaybackDeviceTest d_`, `RecoveryStateTest` 5 | 43701056608 pass |
 | P10 | PiP, floating window, lock | `LocalPlayerDeviceTest c` (PiP button → `isInPictureInPictureMode`, still playing), `a` (lock hides the controls, unlock returns them), `SurfaceModeDeviceTest` (View downloads → floating, new video → full screen) | 43708220122 c pass on both; 43701056608 SurfaceMode pass |
-| P11 | Resume position | `LocalPlayerDeviceTest b`: seek to 7 s, close through the floating window, wait past the session grace, reopen; must resume near the left position or show the resume pill | see Verification |
+| P11 | Resume position | `LocalPlayerDeviceTest b`: seek to 7 s, pause, close through the floating window, wait past the session grace, reopen; must resume near the left position or show the resume pill | 43712469920 ×2 pass on both |
 | P12 | Controls, HUD, time labels | `LocalPlayerDeviceTest a` (play/pause through the button, read from `playWhenReady`); `DurationLabelTest` 3 | 43708220122 pass |
 | P13 | Player settings | Unit: `ScreenWakeTest` 6, `SubtitleStyleSettingsTest` 4; control order and hidden controls through `VideoPrefs` (read in the code) | unit only |
 | P14 | Recovery (black frame, stall, starvation) | `BlackFrameWatchdogTest` 5, `PlaybackRecoveryTest` 6, `RecoveryStateTest` 5, `StarvationLoadControlTest` 3 | unit only; a real decoder fault cannot be forced on the emulators |
@@ -70,8 +70,9 @@ real phones or TVs. Casting to a real TV, real heat and real low-RAM phones are 
 | 4c885fe | `LocalPlayerDeviceTest e` (Cast loads without blocking) | 43707028426, 43708220122 both emulators |
 | 5bfa07c | PiP button shows "Picture-in-picture isn't available right now" when refused; test fixes | 43708220122: a, c, d, e pass on both |
 | 3dc3914 | Test: Back pressed until the floating window shows, each step logged | see Verification |
-| (this group) | `AniSkip.segments` caches only a success or a 404; `AniSkipCacheTest` 2 | unit 2/2 |
-| (this group) | `scripts/device-check.sh` default suite adds `HeaderStreamDeviceTest` | see Verification |
+| e1714fe | `AniSkip.segments` caches only a success or a 404; `AniSkipCacheTest` 2 | unit 2/2 |
+| 72aa1e3 | `scripts/device-check.sh` default suite adds `HeaderStreamDeviceTest` | 43709093938: 1/1 on both |
+| 9877afb | Test: `b` pauses before closing (the 12 s clip passed the 95 % finished mark on api36) | see Verification |
 
 ## Verification
 
@@ -79,7 +80,15 @@ real phones or TVs. Casting to a real TV, real heat and real low-RAM phones are 
   2/2 and `OnlineExtrasTest` 11/11 after the AniSkip fix.
 - 43707028426 (4c885fe): LocalPlayer 1/5 on both (e passes, a–d test errors listed above).
 - 43708220122 (5bfa07c): LocalPlayer 4/5 on both; b failed at the stepped Back (problem 6).
-- Full device suite on 3dc3914: 43709093938 (result below).
+- **Full device suite on 3dc3914: 43709093938.** Every class passed on api33-lowram, including
+  LocalPlayer 5/5 (b resumed at 10,657 ms with the resume pill) and HeaderStream 1/1. On api36 every
+  class passed except LocalPlayer b: reopened at 799 ms with no pill. Cause: the 12 s clip kept
+  playing in the floating window until Close was tapped, past 95 % of its length, so the app
+  counted it as finished and cleared the resume point (`MediaRepository.updateVideoProgress`).
+  That is the intended rule, so this is a test timing error; 9877afb pauses before closing.
+- **LocalPlayer repeat ×2 on 9877afb: 43712469920: 5/5 twice on api33-lowram and on api36.** Resume:
+  left 7,149 / 7,838 ms → reopened 7,767 / 8,167 ms (api33), left 8,284 / 8,343 ms → reopened
+  8,444 / 8,472 ms (api36), resume pill shown each time.
 
 ## Research
 
@@ -126,7 +135,7 @@ real phones or TVs. Casting to a real TV, real heat and real low-RAM phones are 
 | ID | Status | Reason / next step |
 |---|---|---|
 | P1 | verified on device | 43708220122 |
-| P2 | verified on device | 43701056608; HeaderStream in 43709093938 |
+| P2 | verified on device | 43701056608; HeaderStream 43709093938 |
 | P3 | verified on device (emulator) | 43701056608; real phone: script Y |
 | P4 | verified on device | 43701056608 |
 | P5 | verified on device | 43701056608 |
@@ -135,7 +144,7 @@ real phones or TVs. Casting to a real TV, real heat and real low-RAM phones are 
 | P8 | speed verified on device; gestures unit only | swipe volume/brightness need a gesture test |
 | P9 | verified on device | 43701056608 |
 | P10 | verified on device | PiP and lock 43708220122; floating 43701056608 |
-| P11 | see Verification | `b` in 43709093938 |
+| P11 | verified on device | 43709093938 (api33), 43712469920 (both, ×2) |
 | P12 | verified on device | 43708220122 |
 | P13 | unit only | settings screen is audited in Group 9 |
 | P14 | unit only | needs a fault-injection hook |

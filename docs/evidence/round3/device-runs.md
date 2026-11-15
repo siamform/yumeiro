@@ -91,3 +91,7 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43705847970 | 97bb255 | Extensions + Pinned | 7/7, 1/1 | 7/7, 1/1 | e9 starters |
 | 43706162128 | 2744a23 | LocalPlayer | cancelled | cancelled | superseded by 43707028426 (workflow concurrency) |
 | 43707028426 | 4c885fe | LocalPlayer | 1/5 | 1/5 | e Cast ready in 192 / 138 ms (app fix b5d2d5a); a–d test errors (off-screen controls, clip end, floating timing, saver while charging) |
+| 43705867413 | 97bb255 | stress 2 × 5 | 10/10 | 10/10 | ST-7 steady 0.4 / 0.4, cold 0.8 / 0.3; ST-17 0 spins |
+| 43708220122 | 5bfa07c | LocalPlayer | 4/5 | 4/5 | b: stepped Back (test); a, c, d, e pass |
+| 43709093938 | 3dc3914 | full suite (adds LocalPlayer, HeaderStream) | every class | every class except LocalPlayer b | b: 12 s clip passed 95 % before Close (test timing) |
+| 43712469920 | 9877afb | LocalPlayer × 2 | 5/5, 5/5 | 5/5, 5/5 | resume within 0.2–0.6 s, pill shown |
