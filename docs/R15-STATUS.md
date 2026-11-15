@@ -62,6 +62,19 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
   kotlin-agent-skills, rea (reverse-engineering the spin and the crash-export size), and
   architecture-designer from jeffallan/claude-skills for the system design.
 
+## R16 updates (2026-11-15)
+
+- Done ledger: `docs/DONE-LEDGER.md` (every commit on every branch, re-checked claims, status per item).
+- Drama start, play to first frame, 5 runs per device (run 43676961108, db40142, 10/10 pass):
+  median 3.8 s api33-lowram (2.8–7.1 s) and 3.5 s api36 (3.2–4.7 s). Before (43661715830):
+  9.7 s and 34.0 s. Cause: taps waited behind health probes in one FIFO gate; fixed with lanes.
+- Quality list on device: `QUALITY_RESULT PASS heights=[1080,720,480,288,184]` (43668984393, both).
+- Pinned extensions on device: `PIN_RESULT PASS`, order kept after recreate (43671202859, both).
+- Main-thread pauses: **not yet a small fraction.** 40-run campaign 43671209244: max per run
+  395–1,391 ms. 50e734d moves three app-owned waits off main; device run pending.
+- Feed position (Home, Yumix): still failing; most likely a test error (duplicate titles). Run
+  43676915487 with slot keys pending.
+
 ## Still open (not claimed)
 
 - YouTube playback and quality switching on a device on a home network (CI IPs are bot-checked).
