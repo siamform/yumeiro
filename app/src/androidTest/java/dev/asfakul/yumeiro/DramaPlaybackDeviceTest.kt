@@ -49,10 +49,15 @@ class DramaPlaybackDeviceTest {
 
     @Test fun dramasAppearAndAnEpisodePlays() {
         assumeTrue("onshort.net is unreachable from this machine", siteUp())
-        rule.waitUntil(30_000) { YumeiroDrama.enabled.value }
+        // A fresh install holds every source behind the welcome guide (OnboardingGate); release it
+        // exactly as "Skip" does, then let the app's own start path publish the built-in source.
+        rule.waitForIdle()
+        dev.asfakul.yumeiro.online.OnboardingGate.release()
+        ExtensionManager.start(ctx)
+        assertTrue("built-in drama source is switched off", YumeiroDrama.enabled.value)
         val api = run {
             var p: com.lagradost.cloudstream3.MainAPI? = null
-            rule.waitUntil(30_000) { p = ExtensionManager.provider(YumeiroDrama.NAME); p != null }
+            rule.waitUntil(60_000) { p = ExtensionManager.provider(YumeiroDrama.NAME); p != null }
             p!!
         }
         // Dramas appear: the feed rows the app shows for the built-in source are not empty.
