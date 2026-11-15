@@ -22,7 +22,12 @@ import androidx.test.platform.app.InstrumentationRegistry
  * tap "Skip", and wait for the tab bar with nothing on top of it.
  */
 object FirstRun {
-    private val PERMISSIONS = listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO", "android.permission.POST_NOTIFICATIONS")
+    // Android 13+ media and notifications, plus the storage pair the app asks for on Android 7–12
+    // (run 43757547383, TV API 24: only the 13+ names were granted and the storage dialog stayed up).
+    private val PERMISSIONS = listOf(
+        "android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO", "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE",
+    )
 
     fun grant() {
         val inst = InstrumentationRegistry.getInstrumentation()
@@ -35,8 +40,14 @@ object FirstRun {
             android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
         }
 
+    /** API 29+ names the top activity `topResumedActivity` (permissioncontroller); API 24–28 says
+     *  `mResumedActivity` and the dialog lives in packageinstaller's GrantPermissionsActivity. */
+    internal fun isPermissionDialogLine(line: String): Boolean =
+        ("topResumedActivity" in line || "mResumedActivity" in line) &&
+            ("permissioncontroller" in line || "GrantPermissionsActivity" in line)
+
     private fun permissionDialogOnTop(): Boolean =
-        shell("dumpsys activity activities").lineSequence().any { "topResumedActivity" in it && "permissioncontroller" in it }
+        shell("dumpsys activity activities").lineSequence().any(::isPermissionDialogLine)
 
     private fun settled(rule: AndroidComposeTestRule<*, *>, guide: Boolean, tour: Boolean): Boolean {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
