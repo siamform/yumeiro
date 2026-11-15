@@ -77,7 +77,7 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
   drop; next is a baseline profile.
 - Feed position (Home, Yumix): fixed and verified on device (FEED-1): 43683520404 and 43687398312;
   the earlier failures were a test error (duplicate titles).
-- Group audits (Step 3): `docs/audit/G1-HOME-NAV.md`, `G2-EXTENSIONS.md`, `G3-PLAYER.md`. App bugs
+- Group audits (Step 3): `docs/groups/GROUP-1-HOME-NAV.md`, `GROUP-2-EXTENSIONS.md`, `GROUP-3-PLAYER.md`, `GROUP-4-YUMIX.md`. App bugs
   fixed and verified on device in R16 include stepped Back after a swipe (89f7553), TV rail focus
   (a53effb), Back in extension selection (bfde23d), readable network errors (9be5afb), starter
   extension retry (97bb255), Cast start (b5d2d5a), PiP refusal message (5bfa07c). Device runs are
