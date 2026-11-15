@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -1189,7 +1190,7 @@ private fun SquareCard(
 private fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     val width = if (square) 120.dp else 200.dp
-    Column(Modifier.width(width).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("home_feed_yt_${item.id}").padding(bottom = 10.dp)) {
+    Column(Modifier.width(width).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("home_feed_yt_${item.id}").feedCard("home", item.id).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
             TrackArtwork(artUri = null, key = item.id, size = 400.dp, cornerRadius = 0.dp, icon = if (square) Icons.Default.MusicNote else Icons.Default.SmartDisplay, modifier = Modifier.fillMaxSize())
             AsyncImage(model = item.thumbnail, contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())

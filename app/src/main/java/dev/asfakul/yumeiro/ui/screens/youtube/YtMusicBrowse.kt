@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.ui.zIndex
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -464,7 +465,7 @@ private fun Carousel(shelf: YmShelf, onOpen: (YmBrowse) -> Unit, onSong: (YmItem
 
 @Composable
 private fun YmCover(title: String, subtitle: String, art: String?, size: Dp, round: Boolean, onClick: () -> Unit) {
-    Column(Modifier.width(size).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("ytmusic_cover"), horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
+    Column(Modifier.width(size).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("ytmusic_cover").feedCard("ytmusic", art ?: title), horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
         Box(Modifier.size(size).clip(if (round) CircleShape else RoundedCornerShape(12.dp))) {
             PosterImage(art, emptyMap(), Modifier.fillMaxSize(), if (round) Icons.Default.Person else Icons.Default.Album)
         }
@@ -476,7 +477,7 @@ private fun YmCover(title: String, subtitle: String, art: String?, size: Dp, rou
 
 @Composable
 private fun YmVideoCover(song: YmItem.Song, onClick: () -> Unit) {
-    Column(Modifier.width(236.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("ytmusic_video")) {
+    Column(Modifier.width(236.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("ytmusic_video").feedCard("ytmusic", song.videoId)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp))) {
             PosterImage(song.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
         }
@@ -555,7 +556,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
     val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     val download = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) }
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+        Modifier.fillMaxWidth().feedCard("ytmusic", item.videoId).clip(RoundedCornerShape(12.dp))
             .background(if (isCurrent) accent.copy(alpha = 0.10f) else Color.Transparent)
             .combinedClickable(
                 onClickLabel = "Play", onLongClickLabel = "Download song",

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -129,7 +130,7 @@ private fun TagChip(tag: dev.asfakul.yumeiro.online.ReleaseTags.Tag, compact: Bo
 @Composable
 internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.dp, horizontal: Boolean = false, showSource: Boolean = false, modifier: Modifier? = null, progress: Float? = null) {
     val w = if (horizontal) width * 1.6f else width
-    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster").padding(bottom = 10.dp)) {
+    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))

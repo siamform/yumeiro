@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
 import dev.asfakul.yumeiro.youtube.YtAccount
@@ -732,7 +733,7 @@ private fun YtShelfRow(
 @Composable
 internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = true, onChannel: ((YtItem) -> Unit)? = null, onClick: () -> Unit) {
     val radius = if (wide) 18.dp else 14.dp
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).then(if (wide) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier).testTag("youtube_card")) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).then(if (wide) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier).testTag("youtube_card").feedCard("youtube", item.id)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(radius)).background(GlassFill)) {
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
             val badge = when { item.live -> "LIVE"; item.durationSec > 0 -> formatYtDuration(item.durationSec); else -> null }

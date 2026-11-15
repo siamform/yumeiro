@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -140,7 +141,7 @@ private fun LiveAvatarItem(name: String, id: String?, selected: Boolean, loading
 internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier.clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = "Play ${ch.displayTitle}", onClick = onClick)
-            .padding(bottom = 6.dp).testTag("live_channel"),
+            .padding(bottom = 6.dp).testTag("live_channel").feedCard("live", ch.url),
     ) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(RoundedCornerShape(16.dp)).background(GlassFill)
