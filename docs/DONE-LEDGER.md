@@ -144,6 +144,11 @@ Report: `docs/groups/GROUP-4-YUMIX.md`. Device runs are on api33-lowram and api3
 | YX-10 Partial refresh keeps rows in place | G4 Y1 | 6267099 (`YumixFeed.homeAfterFetch`) | Missing old rows moved below the fresh ones | `YumixRefreshTest#refreshWithFewerRowsKeepsEveryRowInItsPlace` | — | unit only | |
 | YX-T Yumix device tests | G4 | 9e10315 … bc68326 (`YumixDeviceTest`, `HomeNavigationDeviceTest`, `DramaPlaybackDeviceTest`, `scripts/device-check.sh`) | New class in the default suite; counts only Yumix-list cards; checks held titles, not composed cards; scrolls rows into view; leaves out sections still loading at hold time (bc68326); h2 accepts the online detail page for an online Resume (by design) | 43732060154 api36 2/2; milestone 43733844682 Yumix 2/2 and HomeNav 11/11 on both | api33-lowram, api36 | verified on device | |
 | YX-11 Studio whose video host is gone is hidden | G4 Y4 | 3c29282 (`DramaHealth.kt` `StreamHostMissing`), bc68326 (`OnShortCatalog.kt` slow-answer log) | DramaBox moved its CDN to `hwztakavideoto.dramaboxdb.com`; the old host gave NXDOMAIN and every episode failed. An UnknownHost while the phone is online now marks the studio down for 5 min, so the mirror search runs | `DramaHealthTest` +2; device Drama 43732060154 api33 pass, 43733844682 api36 pass | api33-lowram, api36 | verified on device | onshort.net itself can time out (43733844682 api33): upstream, not fixed by this |
+
+### R16: Group 5 (Library) and Group 6 (Music)
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
 | LB-1 Personal lists survive a crash while saving | G5 L3/L4/L5/L8 | 53420b2 (`data/SafeJsonFile.kt`, `OnlineBookmarks`, `OnlineHistory`, `OnlineDownloads`, `notify/Inbox`, `MangaLibrary`, `backup/Backup.kt`) | Unreadable file → empty list marked loaded → next save overwrote the only copy; write fallback could leave only `.tmp`. Now read falls back to `.tmp`, keeps a `.bad` copy, write is temp + fsync + rename | `SafeJsonFileTest` 7 | — | unit only | Real power loss: not reproducible on CI |
 | LB-2 Manga library saves off the main thread | G5 L8 | 53420b2 (`MangaLibrary.kt`) | `writeText` on every page turn on main. Coalesced background writer, flushed before backup | `SafeJsonFileTest`, `BackupV2Test` 56/56 | — | unit only | |
 | LB-3 One bad playlist no longer resets all playlists | G5 L6 | 53420b2 (`MediaRepository.loadPlaylists`) | Whole-array `runCatching` fell back to defaults; next save made it permanent. Per-entry skip | `LibraryRound2Test#oneBadPlaylistKeepsTheOthers` | — | unit only | |
@@ -155,10 +160,28 @@ Report: `docs/groups/GROUP-4-YUMIX.md`. Device runs are on api33-lowram and api3
 | MU-2 Scrobble queue keeps good entries | G6 M7 | ee9e246 (`Scrobbler.decodeQueue`) | One bad entry emptied the queue of unsent listens | `ScrobbleQueueTest` | — | unit only | |
 | MU-3 LRCLIB no-lyrics marks expire | G6 M4 | d183e65 (`LrcLib.pruneMisses`) | One prefs key per song without lyrics, forever | `LrcLibMissesTest` | — | unit only | |
 | MU-4 Playing queue survives the screen | G6 M5 | a119186 (`MusicPlayerManager.processQueue`, `restoreExistingState`, `trackFrom`) | Queue lived on the screen-scoped manager: reopening while music played showed no now-playing bar and "Play next" replaced the queue | `QueueSurvivesScreenTest` | — | unit only | |
+
+### R16: Group 7 (Manga and Live TV)
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
 | LT-1 Saved playlists survive a bad file | G7 T3 | 4cee17d (`PlaylistStore`) | Index read and write went straight over the file; a kill mid-write or one bad byte lost every saved playlist. Now SafeJsonFile (temp + rename, .bad kept) | `StreamPlaylistTest#aBrokenIndexIsNotOverwrittenWithDefaults` | — | unit only | |
 | LT-2 Playlist page shows a store error with Retry | G7 T3 | 4cee17d (`PlaylistDetailScreen`) | A failed store load left an empty page with no message | compile + code read | — | unit only (compile) | UI look: none on device |
 | LT-3 Large playlists parsed line by line | G7 T4 | c9a4929 `M3uParser.parseLines`, `PlaylistStore.channels/refresh` | A saved playlist (cap 40 MB) was read into one String before parsing: heap spike on a 192 MB-heap phone | `StreamPlaylistTest` (both paths give the same channels) | — | unit only | Memory gain not measured on device |
 | MG-1 Manga detail/reader: Retry no longer shows a false error; library read off main | G7 T1/T2 | 4cee17d, c9a4929 (`MangaScreens`) | runCatching caught the cancelled old load and showed it as an error; MangaLibrary file read on main at first open | compile + code read | — | unit only (compile) | No manga source on CI |
+
+### R16: Groups 8–10 (Downloads, Settings, Errors), started before Group 12
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| DL-2 A system stop no longer leaves a download paused | G8 D4 | d9cdd73 (`DownloadWorker.kt`) | A stop by the system (network lost, quota) set PAUSED, so the WorkManager rerun quit and the item was stuck until tapped. Only a running item goes back to QUEUED; user pause/delete keep their state | `DownloadResumeTest`; device `DownloadResumeDeviceTest` 43742375420 (DL_A, DL_B PASS) | api33-lowram, api36 | verified on device | Real network drop on a phone: owner script P |
+| DL-3 HLS resume cuts back to the saved point | G8 D4 | d9cdd73 (`HlsDownloader.kt`, `ForceGrab.kt`) | The side file was written every 5 segments, so after a pause up to 4 segments were appended twice (repeated video). Side file stores `segments:bytes`; the file is cut back to the recorded length | `DownloadResumeTest`; device 43742375420 | api33-lowram, api36 | verified on device | |
+| DL-4 Range answers checked on resume | G8 D4 | d9cdd73 (`DownloadWorker.kt`) | A 416 or a range at another offset was trusted. Append only when the range starts at the `.part` end; 416 is complete only when the server size matches | `DownloadResumeTest` | — | unit only | |
+| DL-5 A late progress tick keeps the user's pause | G8 D4 | 22f7c30 (`OnlineDownloads.progress`) | Found by 43741091128 (both emulators failed): the last segment's tick turned PAUSED back to RUNNING | `DownloadResumeTest`; device 43742375420 pass on both | api33-lowram, api36 | verified on device | |
+| BK-1 Backup round trip, secrets never exported | G9 S25 | fda0870 (`BackupDeviceTest`) | Test only: settings survive export → wipe → import; tokens are not in the file | Device 43742375420 `BK_A entries=2 leaked=false applied=true` on both | api33-lowram, api36 | verified on device | Test only, no app change |
+| ER-1 Playlist market errors are readable | G10 A1 | eb91756 (`PlaylistMarket.friendlyError`, `PlaylistMarketTest`) | Raw SSL text or URLs were shown. Market cases kept, the rest through `OnlineErrors.friendly` (cause chain) | `PlaylistMarketTest` | — | unit only | |
+| NT-1 Notification alarm work off the main thread | G10, G12 X5 | eb91756 (`NotifyPacer.kt` `NotifyAlarmReceiver`) | StrictMode (43697447466) named prefs, WorkManager and the notification post in `onReceive` on main. `goAsync()` + a short `yu-notify-alarm` thread | Compile + unit suite | — | unit only | Next stress StrictMode list must not name `NotifyPacer` |
+| ER-2 YouTube play and update failures readable | G10 A1 | f81357f (`YouTubePlayback.kt`, `UpdateManager.kt`) | Raw exception text in the toast and update dialog. Shared mapper | Compile | — | unit only (compile) | |
 
 ### R15/R16: player
 
@@ -287,3 +310,4 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-15 | LB-6 | unit only → verified on device: 43738288853 LibraryDeviceTest pass on api33-lowram and api36 |
 | 2026-11-15 | MU-1 | unit only → verified on device (watch state only): 43738288853 part b pass on both; Last.fm send stays OMT-10 |
 | 2026-11-15 | Y4 / YX-11 | api33-lowram Drama now passes too: 43738288853 DramaPlaybackDeviceTest pass on both (43733844682 api33 failure was onshort.net timeouts) |
+| 2026-11-16 | ledger layout | Group 5–7 rows had been written inside the Group 4 table; moved to their own sections (no status changed). Rows DL-2..5, BK-1, ER-1, ER-2, NT-1 added for commits d9cdd73, fda0870, eb91756, f81357f, 22f7c30, which had no row |

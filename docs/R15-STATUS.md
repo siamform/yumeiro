@@ -1,5 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
+## Resume here (updated 2026-11-16, fourth handover)
+
+- **Order (owner, fourth handover):** Group 4 → **Group 12** → Groups 5–11 → extra groups.
+  Groups 1–4: complete (agent work), re-checked 2026-11-16 (spot-checks in `DONE-LEDGER.md`, "Fourth
+  handover re-check"). Groups 5, 6, 7 have partial work and reports, and Groups 8–10 have some fixes
+  (DL-2..5, BK-1, ER-1/2, NT-1). They are **paused, not done**, and resume after Group 12.
+- **Current step:** Step 2 open items, then Group 12.
+- **Running:** full suite on `22f7c30`, run 43744809503 (both emulators). Result goes into
+  `docs/evidence/round3/device-runs.md` and the ledger.
+- **Next three actions:** (1) read 43744809503 and record it; (2) Step 2: Group 3 design items
+  (video sleep timer, portrait "More" button, one-press Back on phones, SRT → WebVTT for Cast);
+  (3) Group 12 audit (`docs/groups/GROUP-12-CROSS-CUTTING.md`).
+
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
 in `docs/evidence/round3/device-runs.md`. "Unit" means a JVM or Robolectric test only. Items
