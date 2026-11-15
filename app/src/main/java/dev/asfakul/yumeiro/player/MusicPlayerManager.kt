@@ -49,7 +49,14 @@ class MusicPlayerManager(
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
-    private var currentQueue: List<AudioTrack> = emptyList()
+    /**
+     * R16 (G6): kept for the whole process like the player itself. It lived on this screen-scoped
+     * manager, so after Back-exit and reopening while music played the queue was empty: no
+     * now-playing bar, and "Play next" replaced the playing queue.
+     */
+    private var currentQueue: List<AudioTrack>
+        get() = processQueue
+        set(v) { processQueue = v }
 
     /**
      * A MediaController bound to [PlaybackService]. Binding keeps the media session alive and
@@ -227,8 +234,18 @@ class MusicPlayerManager(
             else -> PlayerRepeatMode.OFF
         }
 
+        val count = player.mediaItemCount
+        if (count > 0) {
+            val items = (0 until count).map { player.getMediaItemAt(it) }
+            if (currentQueue.map { it.id } != items.map { it.mediaId }) currentQueue = items.map(::trackFrom)
+        } else currentQueue = emptyList()
+        val index = player.currentMediaItemIndex.takeIf { count > 0 && it in currentQueue.indices } ?: -1
+
         _playbackState.update {
             it.copy(
+                currentTrack = currentQueue.getOrNull(index),
+                queue = currentQueue,
+                currentQueueIndex = index,
                 isPlaying = isPlaying,
                 durationMs = duration,
                 currentPositionMs = position,
@@ -269,6 +286,16 @@ class MusicPlayerManager(
                 bufferedPositionMs = buf
             )
         }
+    }
+
+    /** Rebuilds a queue entry from the player when the process-wide queue does not match it. */
+    internal fun trackFrom(item: MediaItem): AudioTrack {
+        val m = item.mediaMetadata
+        return AudioTrack(
+            id = item.mediaId, title = m.title?.toString().orEmpty(), artist = m.artist?.toString().orEmpty(),
+            album = m.albumTitle?.toString().orEmpty(), durationMs = 0L, uri = item.localConfiguration?.uri?.toString().orEmpty(),
+            albumArtUri = m.artworkUri?.toString(),
+        )
     }
 
     private fun createMediaItem(track: AudioTrack): MediaItem {
@@ -449,6 +476,7 @@ class MusicPlayerManager(
     }
 
     private companion object {
+        @Volatile var processQueue: List<AudioTrack> = emptyList()
         const val TAG = "MusicPlayerManager"
     }
 }
