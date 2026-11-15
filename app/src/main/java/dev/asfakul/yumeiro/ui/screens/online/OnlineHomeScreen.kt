@@ -344,7 +344,12 @@ fun OnlineHomeScreen(
             else -> PullToRefreshBox(
                 isRefreshing = refreshing,
                 onRefresh = { scope.launch {
-                    refreshing = true; val answered = loadAll(true); refreshing = false
+                    refreshing = true
+                    // X9-8: logged so a device run can tell "pull never fired" from "refresh slow".
+                    val t0 = android.os.SystemClock.uptimeMillis()
+                    android.util.Log.i("YuYumix", "pull to refresh: start (${providers.size} extensions)")
+                    val answered = loadAll(true); refreshing = false
+                    android.util.Log.i("YuYumix", "pull to refresh: done in ${android.os.SystemClock.uptimeMillis() - t0} ms, $answered answered")
                     // Pull to refresh is the one place the feed starts over (the user asked for it).
                     // R16 G4: only when something actually came back. Offline, the refresh used to
                     // empty every section and "More to explore" and leave nothing to scroll.
