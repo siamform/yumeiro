@@ -95,4 +95,18 @@ class GateLaneTest {
         (1..2).map { launch { g.call("n$it") { peak.accumulateAndGet(running.incrementAndGet(), ::maxOf); delay(200); running.decrementAndGet(); 200 to "" } } }.forEach { it.join() }
         assertEquals(2, peak.get())
     }
+
+    /** R16 G4 (device logs): feed loads waited up to 20 s while a probe held one of two feed slots. */
+    @Test fun feedLoadsDontWaitForARunningProbe() = runBlocking(Dispatchers.Default) {
+        val g = gate()
+        val probe = launch(GateLane(true)) { g.call("probe") { delay(1_500); 200 to "" } }
+        delay(100)
+        val running = AtomicInteger(); val peak = AtomicInteger()
+        val t0 = System.currentTimeMillis()
+        val waits = (1..2).map { i -> async { g.call("shelf$i") { val w = (System.currentTimeMillis() - t0).toInt(); peak.accumulateAndGet(running.incrementAndGet(), ::maxOf); delay(300); running.decrementAndGet(); w to "" }.first } }.map { it.await() }
+        assertTrue("feed waited ${waits}ms behind a probe", waits.all { it < 300 })
+        assertEquals("both feed slots used next to the probe", 2, peak.get())
+        // The user's extra slot is still free too.
+        probe.join()
+    }
 }

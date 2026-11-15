@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -76,22 +77,35 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
     LaunchedEffect(api, pageData) {
         if (items.isEmpty()) OnlineRepository.cachedRow(api, pageData)?.let { items.addAll(it); page = 1 }
     }
+    // R16 G4 (Y6): the page fetch used to run inside this LaunchedEffect, keyed on [request]. A
+    // second request (scroll trigger and the section search firing together) restarted the effect
+    // and cancelled the fetch in flight; runCatching caught the cancellation and showed a false
+    // "Couldn't load more", which also stopped paging. The fetch now runs in the screen's scope as
+    // one job; a new request while it runs is ignored instead of cancelling it.
+    val pageScope = androidx.compose.runtime.rememberCoroutineScope()
+    val pageJob = remember(api, pageData) { arrayOfNulls<kotlinx.coroutines.Job>(1) }
     LaunchedEffect(api, pageData, request, engine.ready) {
-        if (!engine.ready || loading || !hasNext) return@LaunchedEffect
+        if (!engine.ready || !hasNext || pageJob[0]?.isActive == true) return@LaunchedEffect
         val provider = ExtensionManager.provider(api)
         if (provider == null) { missing = true; return@LaunchedEffect }
         loading = true; error = null
-        runCatching { OnlineRepository.page(provider, pageName, pageData, page + 1) }
-            .onSuccess { r ->
+        pageJob[0] = pageScope.launch {
+            try {
+                val r = OnlineRepository.page(provider, pageName, pageData, page + 1)
                 val known = items.map { it.url }.toHashSet()
                 val fresh = r.items.filter { known.add(it.url) }
                 items.addAll(fresh)
                 page++
                 // Stop when the source has no next page or keeps sending the same titles.
                 hasNext = r.hasNext && fresh.isNotEmpty()
-            }
-            .onFailure { error = OnlineErrors.friendly(it, "Couldn't load more") }
-        loading = false
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                error = OnlineErrors.friendly(e, "Couldn't load more")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                error = OnlineErrors.friendly(e, "Couldn't load more")
+            } finally { loading = false }
+        }
     }
     val nearEnd by remember { derivedStateOf { val last = grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0; last >= grid.layoutInfo.totalItemsCount - 9 } }
     LaunchedEffect(nearEnd, loading, hasNext, error) { if (nearEnd && !loading && hasNext && error == null && page > 0) request++ }

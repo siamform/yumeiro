@@ -508,8 +508,12 @@ class OnShortGate(
 
     /** Whether a call of [priority] may start now. Caller holds [lock]. */
     private fun fits(priority: Int, others: List<Waiter>): Boolean = when (priority) {
-        GateLane.INTERACTIVE -> running < maxConcurrent + 1
-        GateLane.FEED -> running < maxConcurrent && others.none { it.priority == GateLane.INTERACTIVE }
+        // R16 G4: a running probe doesn't count against user or feed slots. Device logs showed
+        // feed loads waiting up to 20 s while a probe (with its retries) held one of the two feed
+        // slots, so the drama shelves filled slowly. A probe only starts on an idle host, so at
+        // most one probe runs next to the normal limits.
+        GateLane.INTERACTIVE -> running - backgroundRunning < maxConcurrent + 1
+        GateLane.FEED -> running - backgroundRunning < maxConcurrent && others.none { it.priority == GateLane.INTERACTIVE }
         // Only on an idle host, one at a time: a feed or user call that arrives next finds a slot.
         else -> running == 0 && backgroundRunning == 0 && others.none { it.priority < GateLane.BACKGROUND }
     }

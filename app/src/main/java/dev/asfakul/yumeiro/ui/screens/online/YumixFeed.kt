@@ -107,6 +107,33 @@ internal object YumixFeed {
         return if (shuffle) blockShuffle(fresh, seed, key = key) else fresh
     }
 
+    /**
+     * R16 G4: the rows an extension's section shows after a home fetch. [fresh] is null when the
+     * fetch threw. A fetch that throws or comes back with no rows (offline: every row failed, so
+     * the repository answers an empty list instead of an error) keeps [prev]. Before, an empty answer
+     * replaced the section with nothing. A refresh with fewer rows (one row timed out) keeps the
+     * rows it didn't bring back after the fresh ones. Returns null when there's nothing to show,
+     * which the screen reports as an error with Retry.
+     */
+    fun homeAfterFetch(prev: List<OnlineRow>?, fresh: List<OnlineRow>?): List<OnlineRow>? {
+        val old = prev.orEmpty().filter { it.items.isNotEmpty() }
+        val new = fresh.orEmpty().filter { it.items.isNotEmpty() }
+        if (new.isEmpty()) return old.takeIf { it.isNotEmpty() }
+        if (old.isEmpty()) return new
+        val have = new.mapTo(HashSet()) { it.title + "|" + it.pageData }
+        return new + old.filter { have.add(it.title + "|" + it.pageData) }
+    }
+
+    /**
+     * R16 G4: every extension that has rows has its section on screen, so "More to explore" may
+     * start. It used to compare against every ready extension: one extension with no rows (no
+     * section) kept the endless feed from ever appearing.
+     */
+    fun sectionsDone(groupCount: Int, ready: List<Pair<String, List<OnlineRow>>>): Boolean {
+        val withRows = ready.count { (_, rows) -> rows.any { it.items.isNotEmpty() } }
+        return withRows > 0 && groupCount >= withRows
+    }
+
     private fun mix(x: Long): Long {
         var z = x + -0x61c8864680b583ebL
         z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L

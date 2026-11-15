@@ -81,6 +81,8 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
@@ -101,14 +103,20 @@ private sealed interface ProviderHome {
  */
 private object YumixMemory {
     val homes = androidx.compose.runtime.mutableStateMapOf<String, ProviderHome>()
-    val inflight = HashMap<String, kotlinx.coroutines.Deferred<Unit>>()
+    val inflight = HashMap<String, kotlinx.coroutines.Deferred<Boolean>>()
     val explore = androidx.compose.runtime.mutableStateListOf<HueRowFeed>()
     /** What "More to explore" shows; append-only (see YumixFeed.appendNew). */
     val exploreShown = androidx.compose.runtime.mutableStateListOf<Pair<OnlineItem, Boolean>>()
     val exploreSeen = HashSet<String>()
     val seed = System.nanoTime()
+    /**
+     * R16 G4: bumped when pull to refresh starts the feed over. A page that was in flight then
+     * belongs to the old feed and is dropped instead of landing on a row of the new one (its page
+     * number would be wrong, so a page would be skipped and the next one repeated).
+     */
+    @Volatile var generation = 0
     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
-    fun resetExplore() { explore.clear(); exploreShown.clear(); exploreSeen.clear() }
+    fun resetExplore() { generation++; explore.clear(); exploreShown.clear(); exploreSeen.clear() }
 
     /** Adds rows that aren't in the explore feed yet; drops rows of extensions that are gone. */
     fun syncExplore(ready: List<Pair<String, List<OnlineRow>>>) {
@@ -186,33 +194,43 @@ fun OnlineHomeScreen(
     // Fetches now run in the screen's scope and survive those restarts; a name is only fetched
     // again when forced (pull to refresh, Retry) or after it failed.
     val inflight = YumixMemory.inflight
-    suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean) {
+    /** Loads one extension's home; true when rows came back from it (not only kept ones). */
+    suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean): Boolean {
         val name = api.name
-        if (!force && homes[name] is ProviderHome.Ready) return
-        inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { running.await(); return } else running.cancel() }
+        if (!force && homes[name] is ProviderHome.Ready) return false
+        inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { return runCatching { running.await() }.getOrDefault(false) } else running.cancel() }
         val job = YumixMemory.scope.async {
             if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
             val result = gate.withPermit {
                 runCatching { OnlineRepository.home(api, force) }
             }
-            val prev = homes[name] as? ProviderHome.Ready
-            // A failed refresh keeps what is on screen instead of replacing it with an error.
-            homes[name] = result.fold({ ProviderHome.Ready(it) }, { prev ?: ProviderHome.Failed(OnlineErrors.friendly(it, "Couldn't load")) })
+            // R16 G4: a fetch cancelled by a newer one (Retry, pull to refresh) used to fall
+            // through here with the CancellationException as its "error" and briefly put
+            // "Couldn't load" over the newer fetch's loading state. The newer fetch owns the section.
+            if (!isActive) return@async false
+            val prev = (homes[name] as? ProviderHome.Ready)?.rows
+            val fresh = result.getOrNull()
+            // A failed or empty answer keeps what is on screen (see YumixFeed.homeAfterFetch).
+            val rows = YumixFeed.homeAfterFetch(prev, fresh)
+            homes[name] = if (rows != null) ProviderHome.Ready(rows)
+                else ProviderHome.Failed(result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension")
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
-            if (!force && result.isSuccess && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
-                val fresh = gate.withPermit { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
+            if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
+                val live = gate.withPermit { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
                 val cur = homes[name] as? ProviderHome.Ready
-                if (!fresh.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, fresh))
+                if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
             }
+            !fresh.isNullOrEmpty()
         }
         inflight[name] = job
-        runCatching { job.await() }
+        return runCatching { job.await() }.getOrDefault(false)
     }
 
-    suspend fun loadAll(force: Boolean) = supervisorScope {
+    /** Returns how many extensions answered with rows. */
+    suspend fun loadAll(force: Boolean): Int = supervisorScope {
         // The selected channel (if any) goes first so its page fills before the rest of the mix.
         val ordered = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.sortedBy { if (it.name == selected) 0 else 1 }
-        ordered.map { api -> launch { runCatching { loadOne(api, force) } } }.joinAll()
+        ordered.map { api -> async { runCatching { loadOne(api, force) }.getOrDefault(false) } }.awaitAll().count { it }
     }
     val providerNames = remember(providers) { providers.map { it.name }.toSet() }
     LaunchedEffect(providerNames) {
@@ -306,10 +324,14 @@ fun OnlineHomeScreen(
             else -> PullToRefreshBox(
                 isRefreshing = refreshing,
                 onRefresh = { scope.launch {
-                    refreshing = true; loadAll(true); refreshing = false
+                    refreshing = true; val answered = loadAll(true); refreshing = false
                     // Pull to refresh is the one place the feed starts over (the user asked for it).
-                    YumixMemory.resetExplore()
-                    YumixMemory.syncExplore(providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } })
+                    // R16 G4: only when something actually came back. Offline, the refresh used to
+                    // empty every section and "More to explore" and leave nothing to scroll.
+                    if (answered > 0) {
+                        YumixMemory.resetExplore()
+                        YumixMemory.syncExplore(providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } })
+                    } else android.widget.Toast.makeText(context, "Couldn't refresh. Showing what was already loaded.", android.widget.Toast.LENGTH_SHORT).show()
                 } },
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -367,17 +389,20 @@ fun OnlineHomeScreen(
                     // (loadingNames.isEmpty()). One slow or hung extension therefore stopped "All" at
                     // a loading skeleton forever. Explore now starts as soon as the sections for the
                     // extensions that did answer are shown; late extensions join the grid when ready.
-                    val groupsDone = groups.size >= ready.size && ready.isNotEmpty()
+                    val groupsDone = YumixFeed.sectionsDone(groups.size, ready)
                     fun pageExplore() {
                         val targets = explore.indices.filter { explore[it].hasNext && !explore[it].loading }.sortedBy { explore[it].items.size }.take(3)
                         if (targets.isEmpty()) return
                         targets.forEach { explore[it] = explore[it].copy(loading = true) }
+                        val gen = YumixMemory.generation
                         targets.forEach { i ->
                             YumixMemory.scope.launch {
                                 val f = explore.getOrNull(i) ?: return@launch
                                 val api = providers.firstOrNull { it.name == f.row.api }
                                 val res = if (api == null) null else runCatching { OnlineRepository.page(api, f.row.pageName.orEmpty(), f.row.pageData.orEmpty(), f.page + 1) }.getOrNull()
                                 if (res == null) kotlinx.coroutines.delay(HueRowFeed.retryDelayMs(f.fails + 1))
+                                // A refresh started the feed over while this page loaded: drop it.
+                                if (gen != YumixMemory.generation) return@launch
                                 // Index can move when rows are added/removed: find the row again.
                                 val j = explore.indexOfFirst { it.row == f.row }.takeIf { it >= 0 } ?: return@launch
                                 explore[j] = explore[j].afterPage(res)
@@ -388,7 +413,7 @@ fun OnlineHomeScreen(
                     LaunchedEffect(nearEnd, groups.size, ready.size, exploreItems.size, exploreBusy) {
                         if (!nearEnd) return@LaunchedEffect
                         when {
-                            groups.size < ready.size -> groupLimit += 3
+                            !groupsDone && groupLimit < ready.size -> groupLimit += 3
                             exploreLimit < exploreItems.size -> exploreLimit += 30
                             !exploreBusy && exploreMore -> pageExplore()
                         }
