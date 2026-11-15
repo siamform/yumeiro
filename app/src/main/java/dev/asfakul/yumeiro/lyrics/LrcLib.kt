@@ -69,6 +69,21 @@ object LrcLib {
         )
     }
 
+    /**
+     * R16 (G6): "no lyrics" marks were never removed, so the prefs file (read whole into memory)
+     * grew by one key for every song without lyrics, forever. Expired marks are dropped once the
+     * file holds more than [PRUNE_AT] of them. Runs on the caller's (IO) thread.
+     */
+    internal fun pruneMisses(now: Long = System.currentTimeMillis()) {
+        val p = prefs ?: return
+        val misses = p.all.filterKeys { it.startsWith("miss:") }
+        if (misses.size <= PRUNE_AT) return
+        val expired = misses.filter { (_, v) -> now - ((v as? Long) ?: 0L) >= MISS_TTL_MS }.keys
+        if (expired.isEmpty()) return
+        p.edit().apply { expired.forEach { remove(it) } }.apply()
+    }
+    private const val PRUNE_AT = 300
+
     internal fun cacheKey(artist: String, title: String, durationSec: Int) =
         "${artist.lowercase()}|${title.lowercase()}|$durationSec".hashCode().toUInt().toString(16)
 
@@ -104,6 +119,7 @@ object LrcLib {
         if (f.isFile) return f.readText().ifBlank { null }
         val missAt = prefs?.getLong("miss:$key", 0L) ?: 0L
         if (missAt > 0 && System.currentTimeMillis() - missAt < MISS_TTL_MS) return null
+        pruneMisses()
 
         var hit: Hit? = null
         if (dur > 0) {
