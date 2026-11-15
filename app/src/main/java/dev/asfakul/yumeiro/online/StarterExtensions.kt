@@ -37,13 +37,28 @@ object StarterExtensions {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (p.getBoolean(KEY_DONE, false)) return emptyList()
         ExtensionManager.ensureLoaded(context)
-        if (ExtensionManager.state.value.installed.isNotEmpty()) { p.edit().putBoolean(KEY_DONE, true).apply(); return emptyList() }
+        val tries = p.getInt(KEY_TRIES, 0)
+        // A user who already has extensions needs no starters, unless an earlier starter run was only partly done.
+        if (tries == 0 && ExtensionManager.state.value.installed.isNotEmpty()) { p.edit().putBoolean(KEY_DONE, true).apply(); return emptyList() }
         // No catalogue (offline): try again next launch.
-        val catalog = runCatching { ExtensionMarket.load(context) }.getOrNull() ?: return emptyList()
+        val catalog = try { ExtensionMarket.load(context) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { null } ?: return emptyList()
         val picks = pick(catalog.extensions)
-        val names = picks.mapNotNull { r -> runCatching { ExtensionManager.install(context, r, ExtensionReview.Mode.AUTO); r.name }.getOrNull() }
-        // Done once something installed, or the catalogue simply has nothing suitable. Failed downloads retry next launch.
-        if (names.isNotEmpty() || (catalog.extensions.isNotEmpty() && picks.isEmpty())) p.edit().putBoolean(KEY_DONE, true).apply()
+        val have = ExtensionManager.state.value.installed.map { it.internalName }.toSet()
+        val names = picks.filter { it.internalName !in have }.mapNotNull { r ->
+            try { ExtensionManager.install(context, r, ExtensionReview.Mode.AUTO); r.name }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Throwable) { null }
+        }
+        val now = ExtensionManager.state.value.installed.map { it.internalName }.toSet()
+        val complete = picks.all { it.internalName in now }
+        // Done when every pick is in, the catalogue has nothing suitable, or after MAX_TRIES launches
+        // (a starter that keeps failing must not cost a download on every start). Before, one success
+        // ended it and the failed picks were never tried again.
+        val done = complete || (catalog.extensions.isNotEmpty() && picks.isEmpty()) || tries + 1 >= MAX_TRIES
+        p.edit().putInt(KEY_TRIES, tries + 1).putBoolean(KEY_DONE, done).apply()
         return names
     }
+
+    internal const val MAX_TRIES = 3
+    private const val KEY_TRIES = "tries_v1"
 }
