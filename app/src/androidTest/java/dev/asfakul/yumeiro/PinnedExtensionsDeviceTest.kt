@@ -16,7 +16,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.ExtensionSources
-import dev.asfakul.yumeiro.online.OnboardingGate
 import dev.asfakul.yumeiro.online.PinnedExtensions
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -45,8 +44,7 @@ class PinnedExtensionsDeviceTest {
     @Before fun setUp() {
         val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
         runCatching { ui.grantRuntimePermission(ctx.packageName, "android.permission.POST_NOTIFICATIONS") }
-        rule.waitForIdle()
-        OnboardingGate.release()
+        FirstRun.toTabs(rule)
         runBlocking {
             kotlinx.coroutines.withTimeout(180_000) {
                 ExtensionManager.start(ctx); ExtensionManager.ensureLoaded(ctx)
@@ -63,7 +61,7 @@ class PinnedExtensionsDeviceTest {
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
     private fun waitTag(tag: String, ms: Long = 30_000) {
         val ok = runCatching { rule.waitUntil(ms) { has(tag) }; true }.getOrDefault(false)
-        assertTrue("no '$tag' after ${ms}ms", ok)
+        assertTrue("no '$tag' after ${ms}ms · ${FirstRun.onScreen(rule)}", ok)
     }
     private fun waitGone(tag: String, ms: Long = 10_000) {
         val ok = runCatching { rule.waitUntil(ms) { !has(tag) }; true }.getOrDefault(false)

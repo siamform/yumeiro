@@ -16,7 +16,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.ExtensionSources
-import dev.asfakul.yumeiro.online.OnboardingGate
 import dev.asfakul.yumeiro.ui.feed.FeedCardKey
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -60,8 +59,7 @@ class FeedPositionDeviceTest {
         val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
         listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO", "android.permission.POST_NOTIFICATIONS")
             .forEach { runCatching { ui.grantRuntimePermission(ctx.packageName, it) } }
-        rule.waitForIdle()
-        OnboardingGate.release() // exactly what "Skip" on the welcome guide does
+        FirstRun.toTabs(rule) // taps "Skip" on the welcome guide, as a user does
         runCatching {
             runBlocking {
                 kotlinx.coroutines.withTimeout(180_000) {

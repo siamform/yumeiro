@@ -13,7 +13,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import dev.asfakul.yumeiro.online.OnboardingGate
 import dev.asfakul.yumeiro.player.PlaybackDiagnostics
 import dev.asfakul.yumeiro.stream.IncomingMedia
 import dev.asfakul.yumeiro.stream.StreamRequest
@@ -46,8 +45,7 @@ class QualityListDeviceTest {
     @Before fun setUp() {
         val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
         runCatching { ui.grantRuntimePermission(ctx.packageName, "android.permission.POST_NOTIFICATIONS") }
-        rule.waitForIdle()
-        OnboardingGate.release()
+        FirstRun.toTabs(rule)
         PlaybackDiagnostics.reset("")
     }
 
@@ -61,7 +59,7 @@ class QualityListDeviceTest {
 
     private fun wait(ms: Long, what: String, cond: () -> Boolean) {
         val ok = runCatching { rule.waitUntil(ms) { cond() }; true }.getOrDefault(false)
-        assertTrue("timed out after ${ms}ms waiting for $what · playback=${PlaybackDiagnostics.state.value}", ok)
+        assertTrue("timed out after ${ms}ms waiting for $what · playback=${PlaybackDiagnostics.state.value} · ${FirstRun.onScreen(rule)}", ok)
     }
 
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
@@ -75,7 +73,7 @@ class QualityListDeviceTest {
                 if (runCatching { rule.waitUntil(5_000) { has("quality_Auto") }; true }.getOrDefault(false)) return
             }
         }
-        throw AssertionError("the Quality dialog never opened")
+        throw AssertionError("the Quality dialog never opened · ${FirstRun.onScreen(rule)}")
     }
 
     /** The dialog's rows, top to bottom: (label, selected). */
