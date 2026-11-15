@@ -41,6 +41,15 @@ class DownloadResumeTest {
         assertEquals(Status.PAUSED, OnlineDownloads.get("user")?.status) // the user's pause stays
         assertEquals(Status.DONE, OnlineDownloads.get("done")?.status)
     }
+
+    @Test fun aLateProgressTickKeepsTheUsersPause() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        OnlineDownloads.setItemsForTest(ctx, listOf(item("p", Status.PAUSED), item("q", Status.QUEUED)))
+        OnlineDownloads.progress("p", 10, 100); OnlineDownloads.stopped("p")
+        OnlineDownloads.progress("q", 10, 100)
+        assertEquals(Status.PAUSED, OnlineDownloads.get("p")?.status) // device run 43741091128 showed QUEUED
+        assertEquals(Status.RUNNING, OnlineDownloads.get("q")?.status)
+    }
 }
 
 class HlsResumeTest {

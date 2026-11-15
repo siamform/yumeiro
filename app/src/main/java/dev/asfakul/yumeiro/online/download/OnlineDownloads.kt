@@ -306,7 +306,11 @@ object OnlineDownloads {
         _items.value.filter { it.status == Status.QUEUED }.forEach { start(context, it.id) }
     }
 
-    internal fun progress(id: String, bytes: Long, total: Long) = set(id, persist = false) { it.copy(status = Status.RUNNING, bytes = bytes, total = total) }
+    // R16 (G8): a progress tick that lands after the user paused keeps PAUSED (device run 43741091128:
+    // the last segment's tick turned PAUSED back into RUNNING, so the stop then showed it as queued).
+    internal fun progress(id: String, bytes: Long, total: Long) = set(id, persist = false) {
+        it.copy(status = if (it.status == Status.PAUSED) Status.PAUSED else Status.RUNNING, bytes = bytes, total = total)
+    }
     internal fun finished(id: String, bytes: Long) = set(id) { it.copy(status = Status.DONE, bytes = bytes, total = bytes, error = null, finishedAt = System.currentTimeMillis()) }
     internal fun resolved(id: String, change: (Item) -> Item) = set(id, change = change)
     internal fun failed(id: String, message: String) = set(id) { it.copy(status = Status.FAILED, error = message) }

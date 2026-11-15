@@ -8,7 +8,6 @@ import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Status
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -78,9 +77,17 @@ class DownloadResumeDeviceTest {
 
     private fun link(url: String, hls: Boolean) = OnlineLink("Test", "test", url, null, 720, hls, false, emptyMap())
 
-    private suspend fun waitFor(id: String, ms: Long, ok: (OnlineDownloads.Item) -> Boolean): OnlineDownloads.Item = withTimeout(ms) {
-        while (true) { OnlineDownloads.get(id)?.takeIf(ok)?.let { return@withTimeout it }; delay(200) }
-        @Suppress("UNREACHABLE_CODE") error("unreachable")
+    private suspend fun waitFor(id: String, ms: Long, what: String, ok: (OnlineDownloads.Item) -> Boolean): OnlineDownloads.Item {
+        val until = System.currentTimeMillis() + ms
+        var lastLog = 0L
+        while (true) {
+            val it = OnlineDownloads.get(id)
+            if (it != null && ok(it)) return it
+            val now = System.currentTimeMillis()
+            if (now - lastLog > 5000) { lastLog = now; Log.i("YuDownloadTest", "waiting for $what: status=${it?.status} bytes=${it?.bytes} error=${it?.error} items=${OnlineDownloads.items.value.size}") }
+            if (now > until) throw AssertionError("timed out waiting for $what: status=${it?.status} bytes=${it?.bytes} error=${it?.error} found=${it != null}")
+            delay(200)
+        }
     }
 
     @Test fun a_pausedHlsDownloadResumesWithoutRepeatedSegments() = runBlocking<Unit> {
@@ -90,14 +97,14 @@ class DownloadResumeDeviceTest {
         assertEquals(null, err)
         val id = OnlineDownloads.items.value.first { it.title == title }.id
         // Wait until segments 0–7 are written (segment 8 is held), then pause like the user does.
-        waitFor(id, 60_000) { it.status == Status.RUNNING && it.bytes >= 8L * 4096 }
+        waitFor(id, 60_000, "a running") { it.status == Status.RUNNING && it.bytes >= 8L * 4096 }
         OnlineDownloads.pause(ctx, id)
         hold?.countDown()
         delay(1500)
         assertEquals(Status.PAUSED, OnlineDownloads.get(id)?.status)
         blockAt = -1
         OnlineDownloads.start(ctx, id)
-        val done = waitFor(id, 90_000) { it.status == Status.DONE || it.status == Status.FAILED }
+        val done = waitFor(id, 90_000, "a done") { it.status == Status.DONE || it.status == Status.FAILED }
         val file = OnlineDownloads.fileOf(ctx, done)
         val expected = (0 until segCount).fold(ByteArray(0)) { acc, i -> acc + seg(i) }
         val line = "DL_A status=${done.status} size=${file.length()} expected=${expected.size} error=${done.error}"
@@ -116,13 +123,13 @@ class DownloadResumeDeviceTest {
         blobDown = true
         OnlineDownloads.enqueue(ctx, title, "yu-test", "t-blob-$title", "E1", null, emptyMap(), link(url, false))
         val probeId = OnlineDownloads.items.value.first { it.title == title }.id
-        val failed = waitFor(probeId, 60_000) { it.status == Status.FAILED }
+        val failed = waitFor(probeId, 60_000, "b failed") { it.status == Status.FAILED }
         val out = OnlineDownloads.fileOf(ctx, failed)
         out.delete()
         File(out.parentFile, out.name + ".part").writeBytes(blob)
         blobDown = false
         OnlineDownloads.start(ctx, probeId)
-        val done = waitFor(probeId, 60_000) { it.status == Status.DONE || it.status == Status.FAILED }
+        val done = waitFor(probeId, 60_000, "b done") { it.status == Status.DONE || it.status == Status.FAILED }
         val line = "DL_B status=${done.status} size=${OnlineDownloads.fileOf(ctx, done).length()} expected=${blob.size} error=${done.error}"
         Log.i("YuDownloadTest", line)
         assertEquals(line, Status.DONE, done.status)
