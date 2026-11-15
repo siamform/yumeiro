@@ -111,16 +111,18 @@ class HomeNavigationDeviceTest {
             waitTag("tv_nav_tab_music")
             // D-pad: tap gives the rail item focus on a touch emulator, then centre selects.
             tap("tv_nav_tab_music"); waitPage(1, 15_000)
-            // A tap leaves the emulator in touch mode (no key focus), so give the rail item focus
-            // through semantics, as a remote's first key press would.
-            rule.onNodeWithTag("tv_nav_tab_music", true).requestFocus()
-            rule.waitForIdle()
-            // The first key in touch mode may only leave touch mode, so press down twice
-            // (Videos or Library both count) and log where focus is.
-            FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600)
-            FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600)
-            rule.waitForIdle()
-            log("tv rail: focused=${focusedTags()}")
+            // After a tab change the TV layout puts focus into the page (43693532355: focus on
+            // ytmusic_chip_explore), so do what a remote user does: LEFT to the rail (the first key
+            // may only leave touch mode, so up to four), then DOWN to the next tab, then centre.
+            var onRail = false
+            for (i in 0 until 4) {
+                FirstRun.shell("input keyevent KEYCODE_DPAD_LEFT"); Thread.sleep(500); rule.waitForIdle()
+                if (focusedTags().any { it.startsWith("tv_nav_") }) { onRail = true; break }
+            }
+            log("tv rail: after LEFT focused=${focusedTags()} onRail=$onRail")
+            assertTrue("D-pad LEFT never reached the rail; focus ${focusedTags()}", onRail)
+            FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600); rule.waitForIdle()
+            log("tv rail: after DOWN focused=${focusedTags()}")
             FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER")
             val moved = runCatching { rule.waitUntil(10_000) { TabPagerProbe.page != 1 }; true }.getOrDefault(false)
             log("tv rail: dpad down + centre from page 1 → page ${TabPagerProbe.page} moved=$moved")
@@ -140,6 +142,18 @@ class HomeNavigationDeviceTest {
         var presses = 0
         while (presses < 3 && !has("video_floating_player")) { back(); presses++; Thread.sleep(1_200) }
         log("left the full player after $presses back presses; floating=${has("video_floating_player")}")
+        waitTag("video_floating_player", 10_000)
+        tap("floating_close"); waitGone("video_player_root", 15_000)
+    }
+
+    @Test fun h7b_sharedTextWithAVideoLinkOpensThePlayer() {
+        // Share sheet → Yumeiro with text around the link (IncomingMedia.extractUrl).
+        val url = "https://archive.org/download/f20110625mad/f20110625mad.mp4"
+        val out = FirstRun.shell("am start -W -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT 'Watch_this:_$url' -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
+        log("am start SEND: ${out.trim().take(200)}")
+        waitTag("video_player_root", 60_000)
+        var presses = 0
+        while (presses < 3 && !has("video_floating_player")) { back(); presses++; Thread.sleep(1_200) }
         waitTag("video_floating_player", 10_000)
         tap("floating_close"); waitGone("video_player_root", 15_000)
     }
