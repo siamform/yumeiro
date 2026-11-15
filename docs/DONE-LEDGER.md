@@ -1,0 +1,190 @@
+# Done ledger
+
+What is already done in Yumeiro, built from the commits. The commits are the source of truth:
+summaries, status pages and chat reports were only used to find commits, never as evidence.
+
+- Branch of record: `r15-stability` (89 commits, tip at the time of writing `50e734d`).
+- Changed files for every commit: [`docs/evidence/ledger/COMMIT-FILES.md`](evidence/ledger/COMMIT-FILES.md)
+  (generated from `git show --name-status`; images are counted, not listed).
+- Device runs: GitHub Actions `device-check.yml`, two emulators: **api33-lowram** (Android 13,
+  Pixel 3a, 2 GB RAM, 192 MB heap, low-end path) and **api36** (Android 16, Pixel 6, 4 GB).
+  Run IDs link to `https://github.com/siamform/yumeiro/actions/runs/<id>`.
+- Last re-check: 2026-11-15 (this file's first version). Local unit re-run of every test named
+  below: **29 classes, 135 tests, 0 failures, 4 skipped** (the 4 are opt-in live-network tests,
+  `-Dyumeiro.live=true`). Command: `./gradlew testMobileDebugUnitTest --tests 'dev.asfakul.yumeiro.r15.*'
+  --tests '*.round2.*' --tests '*DramaHealthTest' --tests '*YumixShowcaseTest' --tests '*BackgroundWorkTest'
+  --tests '*LiveFeedTest' --tests '*PinnedExtensionsUiTest' --tests '*ExternalDownloaderTest'`.
+
+## Status words
+
+| Status | Meaning |
+|---|---|
+| `verified on device` | An instrumented test passed on both CI emulators, and I read the run's log or report |
+| `unit only` | Only JVM or Robolectric tests prove it |
+| `unverified` | Code exists but no test proves the behaviour (or the test cannot run on CI) |
+| `broken again` | It was reported done and later found broken; the row says what replaced it |
+| `open` | Not done |
+
+Emulators are not real phones. No item is verified on a real low-RAM phone or a real TV yet
+(see `docs/MANUAL-TESTS.md`, scripts P and T).
+
+## Mapping keys
+
+- **Bug list**: the R15 master prompt phases (`R15-P1` OOM/ANR, `R15-P2` player, `R15-P3` live
+  feeds, `R15-P4` downloads/PiP, `R15-P5` extensions/forced downloads/crash logs, `R15-P6`
+  proposal, `R15-P7` audit/design), the R16 handover Step 2 items (`S2-…`), and the v1.8.1 owner
+  orders (`O1`–`O9`, `docs/STATUS-v1.8.1.md`). Older rounds are `R1`–`R14`.
+- **Audit group**: Step 3 groups G1–G12 and item IDs from `docs/INVENTORY.md` (H, E, P, Y, L, M,
+  T, D, S, A, I, X, N).
+
+## Re-check of the reported items (Step 1B, point 1)
+
+Each claim from the handover, checked against the code and a test run.
+
+| Claim | What I checked | Result |
+|---|---|---|
+| Drama playback, 4 rows x 18, 1080x1920 first frame | Run 43657727593 (0cb815a) log; repeat run 43676961108 (db40142), 5 runs per device, log lines `drama plays: Daddy, Save Me 1080x1920` | True. 10/10 runs pass |
+| Drama start time reduced | Same runs, `drama timing` lines | True, but the earlier single samples (2.0 s / 2.6 s) were optimistic. 5-run medians: **3.8 s** api33 (2.8–7.1 s), **3.5 s** api36 (3.2–4.7 s). Before: 9.7 s / 34.0 s |
+| Dead manual source pick rotates again | `OnlineSession.kt:290–295` (manual pick clears its failed mark; pending failover cancelled); `RecoveryStateTest` 5/5 locally; device `d_manualPickOfADeadSourceRotatesAgain` in run 43652020450 and in the 18/18 run 43657729675 | True |
+| 00:00 label instead of `--:--` | `VideoPlayerControls.kt:502, 637`; `DurationLabelTest` 3/3 locally; device labels `[00:00, 1:31:44]` in run 43652020450 | True. Note: the first claim (3e2114e) was wrong; it showed a pulsing pill. Fixed in 2be78be |
+| Forced download (DASH into one MP4) | `ForceGrabTest` 9/9 run, 3 live-network tests skipped; device `ForceDownloadDeviceTest` reports in 43657729675 | True (3,944,838 B, video/avc + audio/mp4a; segmented 36,632,975 B, 634 s) |
+| View downloads moves the player to PiP; a new video expands it | `PlayerSurfaceRulesTest` 3/3; device `SurfaceModeDeviceTest` OK in 43657729675 | True |
+| Crash report exported as a file | `CrashExport.kt:40,52` (IS_PENDING 1 → write → 0); device: 192,627 B / 192,638 B in 43632313418 | True |
+| Full suite 7 classes / 18 tests at 0cb815a | Artifacts of 43657729675: `OK` 1+4+1+1+5+3+3 = 18 on each device | True |
+| Unit 16 classes / 83 tests (r15 package) | Local re-run: the r15 package is now **16 classes / 86 tests** (GateLaneTest grew in c093f81), all pass | True, count updated |
+| Pinned extensions | `YumixFilter.kt:107` pinned first; `PinnedExtensionsTest` 3/3, `PinnedExtensionsUiTest` 1/1; device `PIN_RESULT PASS`, order `[Internet Archive, Yumeiro Drama]` → `[Yumeiro Drama, Internet Archive]`, survives recreate, run 43671202859 both devices | True (`verified on device`) |
+| Quality list parity | `QualityParityTest` 3/3, `QualityRound2Test` 4/4 (+1 live skip); device `QUALITY_RESULT PASS heights=[1080,720,480,288,184]`, dialog rows match the manifest, 184p → 320x184 and 1080p → 1920x1080 decoded, run 43668984393 both devices | True for HLS. YouTube list not proven on device (CI IPs get a bot check) |
+| Feed scrolling never replaced by stale rows | `LivePagedTest` 6/6, `LiveFeedTest` 6/6; device `FeedPositionDeviceTest` | **Partial.** YouTube, live TV, online music and the video source menu pass on both devices (43673890077). Home and Yumix still fail; see row FEED-1 |
+| CI concurrency fix | `device-check.yml` concurrency group includes the test filter (0cb815a); parallel runs 43676915487 and 43676961108 both ran | True |
+| Earlier rounds (OOM/ANR, player, sources, downloads) | See the R15-P1 rows: re-proven on device in R15. Pre-R15 rows are `unit only` unless an R15 device test covers them | Mixed, per row |
+
+## Ledger
+
+Columns: **Item | Area (bug list → audit) | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits**.
+File lists are shortened to the main files; the full list is in `COMMIT-FILES.md` under each hash.
+
+### R15/R16: stability (OOM, ANR, stalls)
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| ST-1 No regex compile on main | R15-P1 → G12 X3 | d13e6b8, 7f528fe, ec8ca95 (`text/RegexWarmup.kt`, `r15/RegexGuardTest.kt`), fd446ac | `Regex(...)` built in hot paths on main (pager prefetch, titles). Patterns moved to holder objects; all 91 holder classes warmed on `yu-startup`; a test fails on a pattern built inside a function | `RegexGuardTest` 2/2; stress runs from 43645273428 on; 40-run campaign 43671209244 40/40 | api33-lowram, api36 | verified on device | Third-party code (extensions) can still compile patterns; that is caught by ExtensionGuard, not prevented |
+| ST-2 No OOM under stress on low RAM | R15-P1 → G12 X2 | d13e6b8, 1192f84 (`OnlineComponents.kt` SoftBackdrop replaces live blur) | Large bitmaps and GPU blur per card. Low-end image sizes, decoded tiny poster instead of blur | 40-run campaign 43671209244: app FATAL/OOM 0 | api33-lowram (192 MB heap), api36 | verified on device | Emulator only; not a real 2 GB phone |
+| ST-3 Tab pager endless recomposition / spin after D-pad focus | R15-P1 → G1 H4/H5, G12 X3 | 82a5996 (test), 27a0e9d (`MTPlayerApp.kt`: `TabPagerNoNestedScroll`, never rest between pages), 2ba28e1 | The pager took a focused card's bring-into-view as nested scroll and never settled | Runs 43653623319, 43671209244 (never-idle 0, ComposeNotIdle 0) | both | verified on device | |
+| ST-4 Foreground-service start crash | R15-P1 → G3 P1, G12 X5 | b0e596d (`service/VideoPlaybackService.kt`) | `ForegroundServiceDidNotStartInTime`: startForeground called late. Now called at once with a placeholder notification | Run 43626650174 failed, 43629395323 onward clean | both | verified on device | |
+| ST-5 Audio-switch deadlock | R15-P1/P2 → G3 P6/P14 | b0e596d (`stream/StarvationSafeLoadControl.kt`, `StreamMediaFactory.kt`) | Load control waited for a buffer that a switched audio track never filled. Starvation-safe control lets playback start | `StarvationLoadControlTest` 3/3; device `d_everyAudioRenditionIsAudible` (AAC, AC3) | both | verified on device | |
+| ST-6 Start-up stalls (prefs, WebView UA) | R15-P1 → G12 X3 | b0e596d (`startup/PrefsWarmup.kt`, `online/web/BrowserCheck.kt`), **50e734d** (new: `yumeiro_tv_mode`, `play_counts` warmed; `PushAlertsCard.kt` and `HomeScreen.kt` loads on IO; `MemoryWatch.kt` frame naming) | SharedPreferences first reads and WebView UA on main. Warm before first frame; UA deferred | `StartupGuardsTest` 5/5; campaign 43671209244 named TvMode.init (1.2 s), PushWake SQLite and PlayCounts wait, which 50e734d moves | b0e596d: both; **50e734d: unit only** | b0e596d verified on device; 50e734d unverified | Device run pending for 50e734d |
+| ST-7 Main-thread pauses "a small fraction" | S2 → G12 X3 | 50e734d (partial) | Campaign 43671209244: test-measured max stall per run 395–1,391 ms (median about 650 ms). Most long watchdog stalls are the emulator's software renderer when the window stops; app-owned ones still open: `VideoPlayerModal` onDispose (1.8 s, ExoPlayer surface release), `OnlineRepository.page` via `pageExplore` (710 ms), `videoSourceOptions` in composition | `docs/evidence/round3/device-runs.md` | both | **open** | Target not met yet; next: release player off the dispose path, move pageExplore and videoSourceOptions to IO |
+| ST-8 Carousels pause while focused, touched or reduced motion | R15-P1 → G1 H1, Y6, X8 | 9a3e375 (`HomeSections.kt`, `OnlineHomeHero.kt`), 48bcfb4 | Auto-advance kept recomposing under focus | Run 43648850998: 0 frames rendered in 2 s windows while idle | both | verified on device | |
+| ST-9 Yumix explore crash (ConcurrentModificationException) | found in R16 → G4 Y1 | c093f81 (`OnlineHomeScreen.kt`) | List mutated while composed; 3 of 40 runs crashed. Snapshot copy before iterate | 40-run campaign at 15d8e33: 40/40, 0 FATAL | both | verified on device | |
+
+### R15/R16: player
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| PL-1 One player per video (PlaybackSession) | R15-P2 → G3 P1/P2, X1 | 5b05512 (ADR-006, `PlaybackSession`), `r15/PlaybackSessionTest.kt` | Several ExoPlayers alive at once. One session, reused, released after a grace period | `PlaybackSessionTest` 5/5; device `created=1 reused=2 resumed=1` (43641330758) | both | verified on device | |
+| PL-2 Engine quality levels for single-rendition streams | R15-P2, O2 → G3 P5 | 4b9c665 (v1.8.1 in 073041d), 5a1c9ec (`VideoPlayerModal.kt`, `StreamWatchPanel.kt`: switch stall) | Switching stalled on the engine path. Fixed | Device `a_engineLevelsSwitchWithoutTimeout` | both | verified on device | |
+| PL-3 Quality list equals the downloader's list | R15-P2, O2, S2 → G3 P5 | 4b9c665, c37efbf, 474f7df (`r15/QualityParityTest.kt`), 2f7e9b2 (`QualityListDeviceTest`) | Player and downloader built lists separately. One source of truth | Unit 3/3 + 4/4; device QUALITY_RESULT PASS (43668984393) | both (HLS) | verified on device (HLS); YouTube unverified | YouTube needs a home network; manual script Y in `MANUAL-TESTS.md` |
+| PL-4 YouTube quality switch uses the downloader's data, codec-aware | R15-P2 → G3 P3/P5 | d13e6b8, 8259ff3 (`YouTubeStreams.videoRequest`, `pickVideo`) | Switch used a different stream request. Same request, IO, codec check | `YouTubePickVideoTest` 5/5 | — | unit only | Device test skips on CI (Google bot check on data-centre IPs) |
+| PL-5 Dead manual pick rotates again | R15-P2 → G3 P9 | d99d623 (`OnlineSession.kt`, `OnlinePlaybackDeviceTest`) | A waiting failover fired after a manual pick; a failed link was never retried. Manual pick wins and gets a fresh chance | `RecoveryStateTest`; device 43652020450, 43657729675 | both | verified on device | |
+| PL-6 00:00 until the length is known | R15-P2 → G3 P12 | 3e2114e (claimed, **broken**), 2be78be (`VideoPlayerControls.kt`, `r15/DurationLabelTest.kt`) | 3e2114e still showed a pulsing pill. 2be78be shows `00:00` | `DurationLabelTest` 3/3; device labels `[00:00, 1:31:44]` | both | verified on device (3e2114e claim was `broken again`, replaced by 2be78be) | |
+| PL-7 Drama banner plays, dramas in the feed | R15-P2, O1 → G3 P4, G4 Y4 | e8c3f3c, ec1dbe4, 5ad3e60, d3f5b3b, bda5a75 (v1.8.1, `sources/drama/*`), 474f7df (`r15/DramaResilienceTest.kt`), 61bf92b, 0cb815a (`DramaPlaybackDeviceTest`) | CloudStream `fixUrl` rewrote drama ids; dead studios shown. Ids kept, health check hides dead studios, cross-studio fallback | `DramaResilienceTest` 16/16, `DramaHealthTest` 4/4; device 43657727593 (4 rows x 18) and 43676961108 (5/5 per device) | both | verified on device | Depends on third-party drama hosts |
+| PL-8 Drama start time | S2 → G3 P4 | b231133, 8a16df5, 0fc4acc, c093f81 (`OnShortCatalog.kt` GateLane priority lanes, `r15/GateLaneTest.kt`) | Taps queued behind health probes in one FIFO gate. Interactive / feed / background lanes; a tap promotes a shared request | Before 34,044 ms api36 / 9,650 ms api33 (43661715830). After, 5 runs (43676961108): median 3.5 s / 3.8 s, worst 4.7 s / 7.1 s | both | verified on device | Network-bound; first cold run on low RAM is about 7 s |
+| PL-9 View downloads → floating player; new video → full screen | R15-P4 → G8 D7, G3 P10 | 8259ff3 (`PlayerSurfaceRules.kt`, `MTPlayerApp.kt`, `DownloadPrompt.kt`), 0afd322 (`SurfaceModeDeviceTest`) | Downloads page opened over a full-screen player | Unit 3/3; device OK in 43657729675 | both | verified on device | |
+| PL-10 Every DASH rendition has picture and sound; separate audio merged | R15-P2 → G3 P5/P6 | b0e596d, 5a1c9ec (`PlayerSwitchDeviceTest`) | | Device `b_`, `d_`, `e_` tests, 43657729675 | both | verified on device | |
+
+### R15/R16: feeds, downloads, extensions, crash logs
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| FEED-1 Live feeds append-only, never stale | R15-P3, S2 → G1 H1, G4 Y1, G6 M3, G7 T3, P3 | 3e2114e (`OnlineHomeScreen.kt`, `OnlineHuePage.kt`, `YumixFeed.kt`, `LiveFeedTest`), 474f7df (`LivePaged`, YouTube/YtMusic screens, `LiveTvHub.kt`); test work da1a3a9, 205a4c8, e1410e7, c1c555d, 15d8e33, 374b3c1, 5016dbc, db40142 (`FeedSlotKey`, `FeedPositionDeviceTest`) | Feeds reloaded and replaced rows. Append-only store, generation guard, failed page keeps the cursor | `LivePagedTest` 6/6, `LiveFeedTest` 6/6. Device 43673890077: YouTube, live TV, online music, source menu pass on both; Home fails on both, Yumix fails on api33 | both (partial) | **unverified** for Home and Yumix | Failing cases look like a test error (the same title in two shelves, matched to the wrong one); db40142 compares slot keys; run 43676915487 pending |
+| DL-1 Forced (IDM-style) downloads | R15-P5 → G8 D2 | 47ba0a0 (`online/download/ForceGrab.kt`, `OnlineDownloads.kt`, `r15/ForceGrabTest.kt`) | Sources that block downloads | Device `ForceDownloadDeviceTest` 43657729675 | both | verified on device | DRM (DASH key id) is refused by design |
+| EX-1 Pinned extensions in "show videos from" | R15-P5, S2 → G2 E5, G4 Y5 | 47ba0a0 (`YumixFilter.kt`, `PinnedExtensions`), 2f7e9b2 (`PinnedExtensionsDeviceTest`) | | Unit 3/3 + 1/1; device PIN_RESULT PASS 43671202859 | both | verified on device | |
+| CR-1 Crash log exported as a file | R15-P5, O7 → G12 X6 | 5a5bd3b (v1.8.1 crash store), 5a1c9ec (`CrashReportsCard.kt`, `shared_files.xml`, `CrashShareTest`), 0575711 (`diagnostics/CrashExport.kt`) | Downloads showed 0 bytes. Publish with IS_PENDING | `CrashLogTest` 3/3, `CrashShareTest` 2/2; device 43632313418 | both | verified on device | |
+
+### R15: tests, CI, docs
+
+| Item | Area | Commits and files | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| CI-1 Device workflow concurrency per test filter | R15-P7 → G12 X10 | 0cb815a (`.github/workflows/device-check.yml`) | A later dispatch cancelled an earlier one | Parallel runs 43676915487 / 43676961108 | CI | verified | |
+| CI-2 Repeat and shard inputs | S2 → X10 | 8971a7b (`device-check.yml`, `scripts/device-check.sh`) | Needed to prove flaky tests | Campaign 43671209244 (5 shards x 2 devices x 4 repeats) | CI | verified | |
+| SEC-1 `secrets/` and service-account files ignored; history scan | handover Rule 2 → X7 | befbd13 (`.gitignore`) | | `git check-ignore`; scan of all branches and history for every shared credential fragment and common key patterns: 0 hits | — | verified | Shared keys must still be rotated before release (owner action) |
+| DOC-1 System design, ADR-001..011 | R15-P7 → X1 | 8259ff3 (`docs/SYSTEM-DESIGN.md`) and later | | File | — | done (document) | |
+| DOC-2 Manual scripts (YouTube, low-RAM phone, TV) | S2 → G3 P3, X9 | 2f7e9b2 (`docs/MANUAL-TESTS.md`) | | File | — | done (document); results `open` until the owner runs them | |
+| DOC-3 Open-source comparison (cs-repos, hikari) | R15-P6 / Step 4 → — | `docs/proposals/OPEN-SOURCE-COMPARISON.md` | Proposal only | File | — | done as a draft; Step 4 needs a release-by-release re-check | |
+
+### v1.8.1 owner orders (squash `073041d`, branch `r14-round2`)
+
+The branch tip is identical to `073041d` in `app/src`, `server` and `.github` (checked with
+`git diff`). Before R15 these were proven only with Robolectric.
+
+| Item | Area | Commits | Cause and fix | Evidence | Verified on | Status | Limits |
+|---|---|---|---|---|---|---|---|
+| O1 Drama plays | O1 → P4 | e8c3f3c, ec1dbe4, 5ad3e60, d3f5b3b, bda5a75 | See PL-7 | PL-7 | both | verified on device (in R15) | |
+| O2 Quality single source of truth | O2 → P5 | 4b9c665, c37efbf | See PL-3 | PL-3 | both | verified on device (HLS) | |
+| O3 Neutral loader unless certain | O3 → G10 A3, Y1 | f9c9ef4 | Wrong skeleton shape flashed | `LoaderRound2Test` 1/1 | — | unit only | |
+| O4 Yumix: no section headers, search always shown | O4 → Y1/Y2 | 9bdec1a | | `YumixShowcaseTest` 4/4 | — | unit only | |
+| O5 History on open; real likes, playlists, play time | O5 → G5 L4/L6/L7/L9 | 898884c | Placeholder data | `LibraryRound2Test` 4/4 | — | unit only | |
+| O6 HeatGuard | O6 → P19, X4 | eec2938 | Phones got hot | `HeatGuardTest` 5/5 | — | unit only | Needs a real phone |
+| O7 Crash logs on the phone | O7 → X6 | 5a5bd3b | | See CR-1 | both | verified on device (export path) | Reading/deleting UI not device-tested |
+| O8 Theme image picker | O8 → G9 S26 | 465688f, 18accbd, e23a126 | Bounds probe refused every picture since PR #27 | `BackdropImportTest` 3/3 | — | unit only | |
+| O9 Notification reliability guide | O9 → X5, H13 | f2cfaa5, 36a556d | Notifications stopped on some makers | `ReliabilityGuideTest` 5/5, `BackgroundWorkTest` 3/3 | — | unit only | Needs Xiaomi/Samsung phones |
+
+### Earlier rounds (merged into `r15-stability` through `main`)
+
+Status is `unit only` unless an R15 device test covers the same path. Details per commit are in
+`COMMIT-FILES.md` and `CHANGELOG.md`.
+
+| Item | Area | Commits | Status | Notes |
+|---|---|---|---|---|
+| Black screen during source failover | R7 → P9/P14 | bcf3dc8 → 1ad118e (PR #8) | verified on device (covered by PL-5 rotation tests) | |
+| Captcha/blocked loop, WebView crashes, tab pager | → A5, N2, H4 | fb718c7, 6dcde57 | unit only | Pager part superseded by ST-3 |
+| Downloads fixes | → G8 D1/D4 | 562c6e3, 0e5cc1a | unit only | |
+| Universal sources, v1.0.5 stability | → E10 | 352dc28, 743f1ca, 43bf18d | unit only | |
+| Settings redesign, YouTube cookie, UnifiedPush | → G9, I10, X5 | 3018a36 | unit only | |
+| Extension links, updater, scanner, FFmpeg audio, subtitles | → E2/E3, P6/P7 | ef54fff, 0d21c50 (AV heuristics, Injekt ProGuard) | unit only | VirusTotal reports in `docs/security/` |
+| SubDL/SubSource, external downloaders, ad shield, CodeQL WebView hardening | → I5, D5, N2, X7 | 8021f45, e3d9bb0, bcf1eaf, e3d90b9 → f7182be | unit only | |
+| Trakt secret-less + client-id chars | → I1 | e7f768b, dbe310d/904608c → 7587b90 | unit only | TRAKT_CLIENT_SECRET not provided |
+| Simkl, Last.fm, LRCLIB, OpenSubtitles key | → I2, I7, I6, I5 | 5c973b9 → 7587b90 | unit only | |
+| Cloud airing alerts (Cloudflare Worker, D1), back-off | → I9, X5 | 0628b6a, 6f8cc1e, 672aa00 → 7587b90 | unit only (server tests) | Server not exercised by device tests |
+| FCM push via Worker | → I8 | ba065a4, 9a7a822, ca56afc | unit only | Dry run accepted by FCM (per ca56afc) |
+| Markets, Mihon lib 1.6 | → E1, T1 | 3b7d1c7, af8349e | unit only | |
+| Redesign R1–R11b (shell, Home, Yumix, Now Playing, dialogs, TV rail, captions) | → G1, G4, G10 | 72fa3da … f73c2eb → ff7cb19 (PR #27) | unit only (Robolectric screenshots) | |
+| Pinch zoom, subtitle style, onboarding gate | → P8, P7, H9 | 236ffac | unit only | |
+| Red-team fixes (tracker sign-in, Open with, backup limits) | → X7, S25 | 3f4b244 | unit only | |
+| TV flavour, Android 7, one universal APK | → X9, X10 | f94611b, 1188650, ebc70b7, ba00c43 | unit only | No real TV run |
+| Backup v2 | → S25 | 93074cb, 79f6d96, 429288f | unit only | |
+| Sources redesign | → E11 | c87aa2d, 265c907 | unit only | |
+| Security hardening | → X7 | ce6e640, 18cd213, b2ae9e6 | unit only | |
+| Music codec | → M5 | 1b29918 | unit only | |
+| Round 13 player (gather off main, rotate stalled sources, silent audio, quality selector) | → P2/P5/P6/P9 | a7a3bc2, 6e678d5, 24df44a, 60cffac, 8636445 → 366a5f6 (PR #31) | partly verified on device through PL-2/PL-5/PL-10 | |
+| Repo move and rename | → X10 | 99278fa, dfd32ab | done | |
+
+## Branches (Step 1B: every branch read)
+
+| Branch | State | Proof |
+|---|---|---|
+| `r15-stability` | Active | 89 commits |
+| `main` | Up to v1.8.1 | Ancestor of `r15-stability` |
+| `fix/playback-flow-and-ux` | Merged (PR #8, 1ad118e) | No diff in `app/src` vs 1ad118e |
+| `feat/subtitles-downloaders-adshield` | Merged (f7182be) | No diff |
+| `feat/lyrics-scrobble-simkl`, `feat/cloud-alerts` | Merged (7587b90) | No diff |
+| `fix/trakt-secretless` | Content merged in 7587b90 (PR #19 title: "Trakt without secret") | The only `tracking/` difference to 7587b90 is `Simkl.kt`, which #19 added |
+| `r11-final` = `redesign-final` = `safety/r11b-2026-11-13` | Merged (PR #27, ff7cb19) | No diff |
+| `wip/r10-safety`, `redesign/v6-polish`, `redesign/v7-dream` | Earlier states of PR #27 | `git merge-base --is-ancestor` of `r11-final`: yes |
+| `r12-features` | Merged (d028db3) | No diff |
+| `r13-player` | Merged (PR #31, 366a5f6) | No diff |
+| `r13-mockups` | Merged into r14-round2 | Ancestor of `r14-round2`: yes |
+| `r14-round2` | Merged (PR #32, 073041d) | No diff |
+| `docs/imagedecoder-wording` | Merged (text in `docs/HANDOVER.md`) | `grep` finds the sentence |
+| `archive/online-rooms` | **Not merged, on purpose** (watch-together rooms parked 2026-11-09) | 688226d message |
+| `dependabot/gradle/…` | **Not merged** (jsoup 1.24.1, guava 33.8, fragment 1.9.1, robolectric 4.17) | Review in G12 X10 |
+| `dependabot/npm_and_yarn/server/…` | **Not merged** (TypeScript 5.9 → 7.0 major) | Review in G11 I9 |
+| `market`, `extensions`, `streams`, `feed` | Data branches written by workflows | Not code |
+
+## Changes to items marked done
+
+| Date | Item | Why it changed |
+|---|---|---|
+| 2026-11-15 | ST-6 | 50e734d adds more start-up moves after the 40-run campaign named three new main-thread waits; the b0e596d fix is unchanged |
+| 2026-11-15 | PL-8 | Numbers replaced by 5-run medians; the earlier single samples were the best runs |
+| 2026-11-15 | FEED-1 | Test only (db40142): slot keys added to feed cards so the test can tell two copies of one title apart; no feed logic changed |
