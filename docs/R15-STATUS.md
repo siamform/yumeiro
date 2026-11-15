@@ -32,7 +32,7 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
 
 | Item | Status | Evidence |
 |---|---|---|
-| Home, YouTube, online music, Yumix and Live TV feeds | Fixed in code | `LivePagedTest` (append-only, generation guard, a failed page keeps the cursor). Device: fling stress on each feed with no stall or recovery. There is no device assertion that rows are never replaced; the guard is the store design in ADR-008 |
+| Home, YouTube, online music, Yumix and Live TV feeds | Fixed in code | `LivePagedTest` (append-only, generation guard, a failed page keeps the cursor). Device: fling stress on each feed with no stall or recovery. Yumix now has device assertions (R16 G4): `FeedPositionDeviceTest#yumix` and `YumixDeviceTest` (offline refresh keeps every held title; See all keeps paging), milestone 43733844682 pass on both. Other feeds: the guard is the store design in ADR-008, no device assertion |
 
 ## Phase 4: downloads and the floating player
 

@@ -95,3 +95,20 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43708220122 | 5bfa07c | LocalPlayer | 4/5 | 4/5 | b: stepped Back (test); a, c, d, e pass |
 | 43709093938 | 3dc3914 | full suite (adds LocalPlayer, HeaderStream) | every class | every class except LocalPlayer b | b: 12 s clip passed 95 % before Close (test timing) |
 | 43712469920 | 9877afb | LocalPlayer × 2 | 5/5, 5/5 | 5/5, 5/5 | resume within 0.2–0.6 s, pill shown |
+
+## R16 Group 4 (Yumix) and Group 5 runs (2026-11-15)
+
+| id | sha | what | api33 | api36 | note |
+|---|---|---|---|---|---|
+| 43714635144 | 6e57d9e | full suite (rerun after the Group 3 timing fix) | every class | every class except LocalPlayer d | d: battery saver precondition (test, fixed 65e50e0) |
+| 43715245923 | 2a79dbe | YumixOffline + FeedPosition#yumix | FeedPos pass; offline skipped | pass, 8/8 kept | skip: 4 cards < old threshold 6 |
+| 43716649966 | 9e10315 | YumixDeviceTest | see all 78 → 694; offline skipped | see all 26 → 468; offline skipped | |
+| 43717950021 | 65e50e0 | YumixDeviceTest + LocalPlayer#d | see all 78 → 592; d pass | see all 26 → 593; d pass | offline skipped on both |
+| 43719277646 | 678903d | Yumix | fail | fail | cards vanished: Internet Archive removed by the legacy migration (app, fixed e2a1114 / 52a8c42) |
+| 43720589678 | — | diagnostic (feed logging) | — | — | diagnostic only |
+| 43721853978 | 6267099 | diagnostic (unload log) | pass | pass | diagnostic only |
+| 43723079397 | 52a8c42 | Extensions + Yumix | 7/7; 2/2 | 7/7; Yumix fail | api36: old "kept" check, the offline notice shrinks the viewport (test) |
+| 43724760853 | 8769ef8 | full suite | fail: Drama, HomeNav h2, Yumix | same | Drama: DramaBox CDN NXDOMAIN (app n + test q); h2 test p; Yumix test o |
+| 43732060154 | 3c29282 | Drama + Yumix + HomeNav | Drama pass; HomeNav 11/11; Yumix fail | Drama slow (55 s); HomeNav 11/11; Yumix 2/2 | api33 Yumix: section still loading at hold time (test, fixed bc68326) |
+| 43733844682 | bc68326 | G4 milestone full suite | 15/16 classes; Drama fail | 16/16 classes | api33 Drama: every onshort.net call timed out at 20 s in that window (upstream) |
+| 43738288853 | a119186 | Drama + LibraryDeviceTest | pending | pending | rerun of api33 Drama; first run of the Group 5/6 device test |

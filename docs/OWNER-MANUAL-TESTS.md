@@ -26,6 +26,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-7 | Predictive back animation on hardware (H6) | Pending |
 | OMT-8 | Launcher widget on a real home screen (H12) | Pending |
 | OMT-9 | Usability feedback | Pending |
+| OMT-10 | Last.fm scrobbles with your own account, including after leaving the app with Back (MU-1) | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -91,14 +92,15 @@ Blocked (you couldn't run it; say why).
 
 ### OMT-5 — Yumix offline on a real phone
 
-- **Why the agent can't do it fully:** the emulator test `YumixOfflineDeviceTest` switches the network
-  off with `svc` and checks that pull to refresh keeps the feed. A real phone also has the
+- **Why the agent can't do it fully:** the emulator test `YumixDeviceTest#offlineRefreshKeepsTheFeed` switches the
+  network off with `svc` and checks that pull to refresh keeps every title and shows the offline message. A real phone also has the
   "connected, no internet" state of a captive Wi-Fi or a weak signal, which the emulator can't produce.
 - **Hardware / environment:** any phone; Airplane mode; ideally also a Wi-Fi without internet (a
   phone hotspot with its mobile data off).
 - **Instructions:** Script P step P10. Then, still offline, pull down to refresh at the top of
   Yumix; open a title and pull down there too.
-- **Expected result:** the cards stay; a short "Couldn't refresh" message; nothing jumps to the top;
+- **Expected result:** the cards stay; a short "Couldn't refresh: you're offline" message (on a Wi-Fi
+  without internet it may say "Nothing new yet"); nothing jumps to the top;
   when the network is back, new cards load without restarting the app.
 - **Evidence to send:** recording with the clock visible, `adb logcat` file.
 - **Status:** Pending
@@ -148,6 +150,22 @@ Blocked (you couldn't run it; say why).
 
 ---
 
+### OMT-10 — Last.fm scrobbling with your own account
+
+- **Why the agent can't do it:** it needs your Last.fm login; the agent must not sign in to your accounts.
+  The agent checks the scrobble rules and the background watch with unit and emulator tests
+  (`ScrobbleTrackerTest`, `ScrobbleQueueTest`, `LibraryDeviceTest`), but not the real Last.fm server.
+- **Hardware / environment:** your phone with internet, a Last.fm account.
+- **Instructions:** Settings → Last.fm → sign in. Play two songs on the phone, each for more than half its
+  length (or 4 minutes). For the second song, press Back until you leave the app and let it keep playing.
+  Then open last.fm in a browser → your profile → Recent tracks.
+- **Expected result:** both songs appear (allow up to a minute). Turn on airplane mode, play a third
+  song the same way, turn airplane mode off and reopen the app: the third song appears too.
+- **Evidence to send:** a screenshot of Recent tracks, and the app version (Settings → About).
+- **Status:** Pending
+
+---
+
 ## Not owner tests (handled by the agent)
 
 Listed here so they are not asked of you again:
@@ -156,6 +174,9 @@ Listed here so they are not asked of you again:
 |---|---|---|
 | Volume and brightness swipe gestures | Unit-tested; a device gesture test on the emulators is planned | G9 / G12 |
 | Decoder fault recovery | Unit-tested; a fault-injection hook in the debug build is proposed so it can run on the emulators | G12 |
+| Listening time and the scrobble watch with no screen open | `LibraryDeviceTest` on both emulators (no activity exists in the test) | G5 / G6 |
 | Anime4K output | Shader compile and frame output can be checked on the emulators' GL | G12 |
 | Player settings on a device | Emulator device tests | G9 |
-| Yumix offline pull to refresh | `YumixOfflineDeviceTest` on both emulators | G4 |
+| Yumix offline pull to refresh | `YumixDeviceTest#offlineRefreshKeepsTheFeed` on both emulators | G4 |
+| Yumix "See all" paging while searching | `YumixDeviceTest#seeAllKeepsPagingWhileSearching` on both emulators | G4 |
+| Internet Archive kept after the 1.8.0 clean-up | `LegacyDefaultMigrationTest` (unit); a real upgrade from a 1.8.0 install would need the 1.8.0 APK on the emulator (planned in G12 release checks) | G4 / G12 |

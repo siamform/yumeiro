@@ -28,7 +28,7 @@ Commits: 53420b2, 1c6b946, 535d763 (branch `r15-stability`).
 | c | One bad playlist entry reset every playlist to the defaults; the next save made it permanent | `loadPlaylists` parsed the whole array in one `runCatching` and fell back to `defaultPlaylists()` | Bad entries are skipped one by one; playlist changes use `update {}` (`data/repository/MediaRepository.kt`) | `LibraryRound2Test#oneBadPlaylistKeepsTheOthers` |
 | d | False "N new episodes" notifications | A short provider answer (e.g. 2 of 12 episodes) lowered the saved count; the next full answer then looked like 10 new episodes | The saved count never goes down; `checked()` returns 0 without writing on a short or equal answer; `NewEpisodesWorker` skips answers with 0 episodes (`online/OnlineBookmarks.kt`, `online/NewEpisodesWorker.kt`) | `OnlineExtrasTest#aShortAnswerNeverLooksLikeNewEpisodes` |
 | e | One bad entry emptied the YouTube history, and the next play saved the empty list | `YtHistory.decode` used `getJSONObject` / `getString` for every entry; one throw failed the whole load | Bad entries are skipped (`youtube/YtHistory.kt`) | `RevampLogicTest#ytHistoryRoundTrips` (extended) |
-| f | Listening time stopped counting after leaving the app with Back while music kept playing | The clock ran on the screen's ViewModel scope; the music runs in `PlaybackService` and outlives it | The shared player reports play/pause to `ListeningTime.playerIsPlaying` (process scope, started once); the ViewModel only loads the saved total (`service/PlaybackService.kt`, `player/ListeningTime.kt`, `ui/viewmodel/MainViewModel.kt`) | `LibraryRound2Test#clockRunsOnlyWhilePlaying` (accumulator unchanged); background counting: OMT-12 |
+| f | Listening time stopped counting after leaving the app with Back while music kept playing | The clock ran on the screen's ViewModel scope; the music runs in `PlaybackService` and outlives it | The shared player reports play/pause to `ListeningTime.playerIsPlaying` (process scope, started once); the ViewModel only loads the saved total (`service/PlaybackService.kt`, `player/ListeningTime.kt`, `ui/viewmodel/MainViewModel.kt`) | `LibraryRound2Test#clockRunsOnlyWhilePlaying`; device `LibraryDeviceTest#a` (no activity in the test) |
 | g | Video and Reading library tabs read three to four files on the main thread when opened | `LaunchedEffect` called the loaders directly | Loads run on `Dispatchers.IO`; all loaders are `@Synchronized` (`VideoLibraryScreen.kt`, `LibraryDesign.kt`) | compile + unit suite |
 | h | Song and video sort order were forgotten on every app start; filtering and sorting the whole library ran on the main thread on every keystroke | Plain in-memory `MutableStateFlow` defaults; `combine` without `flowOn` | Saved in prefs `yu_sort` (added to `PrefsWarmup`); `flowOn(Dispatchers.Default)` (`MainViewModel.kt`, `startup/PrefsWarmup.kt`) | compile + unit suite |
 | i | An open playlist closed on rotation | `remember` instead of `rememberSaveable` (`LibraryScreen.kt`) | `rememberSaveable` | compile |
@@ -58,9 +58,9 @@ Known, not fixed (low risk, documented):
 | unit (local) | `:app:testMobileDebugUnitTest :app:compileMobileDebugAndroidTestKotlin` at 535d763 | 153 classes, 889 tests, 0 failures, 11 skipped (live-network tests) |
 | CI device | Group 5 fixes run in the next full suite (see R15-STATUS / device-runs.md) | DEVICE_PENDING |
 
-Kinds of evidence: a–e are unit-tested. f–i are compile- and unit-suite checked only; f's
-background case needs a real phone (OMT-12) because CI emulators cannot leave music playing after
-the activity is finished in a way the test harness can observe reliably.
+Kinds of evidence: a–e are unit-tested. g–i are compile- and unit-suite checked only. f is
+checked on the emulators by `LibraryDeviceTest#a`: the test plays the shared player with no
+activity, which is the state after Back-exit.
 
 Cancelled runs in this group: none.
 
@@ -85,6 +85,6 @@ Cancelled runs in this group: none.
 
 ## Limits and owner tests
 
-- OMT-12 (new): listening time keeps counting after Back-exit with music playing (real phone).
+- No new owner test: the Back-exit case is covered on the emulators by `LibraryDeviceTest`.
 - Device evidence for Group 5 fixes comes from the next full suite; nothing here is marked
   verified on device yet.

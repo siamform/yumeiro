@@ -72,10 +72,10 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G4 Yumix
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen, OnlineComponents, OnlineGetStarted, ExtensionBanner | done (offline refresh: see GROUP-4) | `YumixRefreshTest`, `YumixGoneTest`, `YumixFeedTest`; `FeedPositionDeviceTest#yumix` 43715245923; `YumixDeviceTest#offlineRefreshKeepsTheFeed` |
+| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen, OnlineComponents, OnlineGetStarted, ExtensionBanner | done (offline refresh: see GROUP-4) | `YumixRefreshTest`, `YumixGoneTest`, `YumixFeedTest`; `FeedPositionDeviceTest#yumix` 43715245923; `YumixDeviceTest#offlineRefreshKeepsTheFeed`; milestone 43733844682 Yumix 2/2 on both (api33-lowram, api36) |
 | Y2 | Yumix search | OnlineSearchScreen, online/SearchRanker | unit only | `YumixFilterSearchTest`, `SearchRankerTest`, `SearchSuggestTest`; code read |
 | Y3 | Extension bar hide/show on scroll | ui/components/HideOnScroll | code read, no bug | owner feel test OMT-9 |
-| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | done | `YumeiroDramaTest`, `PinnedExtensionsTest`; every Yumix device run opens on drama |
+| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | done | `YumeiroDramaTest`, `PinnedExtensionsTest`; every Yumix device run opens on drama; YX-11 dead video host → studio hidden, mirror used (`DramaHealthTest`); Drama device 43732060154 api33, 43733844682 api36 pass; onshort.net timeouts are upstream |
 | Y5 | "Show videos from" filter | YumixFilter | done | `YumixFilterSearchTest`; `PinnedExtensionsDeviceTest` 43705847970 |
 | Y6 | Hero carousel, picks, row pages | OnlineHomeHero, OnlineHomePicks, OnlineRowScreen | done | `YumixDeviceTest#seeAllKeepsPagingWhileSearching` 43716649966, 43717950021 |
 | Y7 | Detail page (versions, episodes, stills, bookmarks) | OnlineDetailScreen, EpisodeStills, OnlineBookmarks | unit only + code read | `OnlineExtrasTest`, `EpisodeCarouselTest`; detail opened in `DramaPlaybackDeviceTest` |
@@ -84,16 +84,16 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G5 Library and personal lists
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| L1 | Library screen, shortcuts | ui/screens/library/* | open | |
-| L2 | Episodes / new-episode tracking | online/NewEpisodesWorker | open | |
-| L3 | My list, favourites, saved | OnlineBookmarks, LibraryScreen | open | |
-| L4 | History (online, YouTube) | OnlineHistory, youtube/YtHistory | open | |
-| L5 | Downloads view inside library | VideoLibraryScreen | open | |
-| L6 | Liked songs, playlists | MediaRepository | open | |
-| L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | open | |
-| L8 | Reading library (manga) | ReadingLibrary route, MangaLibrary | open | |
-| L9 | Only real data, no placeholder or fake items | all of the above | open | |
-| L10 | (R16) Device videos tab: folders, sorting, thumbnails | ui/screens/video/VideoScreen, ui/image/VideoThumbnailFetcher, data/model/MediaModels | open | |
+| L1 | Library screen, shortcuts | ui/screens/library/* | done (G5 fixes, unit only) | LB-7; `GROUP-5-LIBRARY.md` |
+| L2 | Episodes / new-episode tracking | online/NewEpisodesWorker | done (unit only) | LB-4 `OnlineExtrasTest#aShortAnswerNeverLooksLikeNewEpisodes` |
+| L3 | My list, favourites, saved | OnlineBookmarks, LibraryScreen | done (unit only) | LB-1 `SafeJsonFileTest` |
+| L4 | History (online, YouTube) | OnlineHistory, youtube/YtHistory | done (unit only) | LB-1, LB-5 |
+| L5 | Downloads view inside library | VideoLibraryScreen | done (unit only) | LB-1, LB-7 |
+| L6 | Liked songs, playlists | MediaRepository | done (unit only) | LB-3 `LibraryRound2Test#oneBadPlaylistKeepsTheOthers` |
+| L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | done (device run pending) | LB-6; `LibraryDeviceTest#a` 43738288853 |
+| L8 | Reading library (manga) | ReadingLibrary route, MangaLibrary | done (unit only) | LB-1, LB-2 |
+| L9 | Only real data, no placeholder or fake items | all of the above | code read, no bug | no sample items; demo playlists removed unless filled (`LibraryRound2Test`) |
+| L10 | (R16) Device videos tab: folders, sorting, thumbnails | ui/screens/video/VideoScreen, ui/image/VideoThumbnailFetcher, data/model/MediaModels | done (unit only) | LB-7 sort remembered, sorted off main; thumbnails already on IO |
 
 ## G6 Music
 | ID | Item | Code | Status | Covered by |
