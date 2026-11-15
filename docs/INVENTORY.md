@@ -1,10 +1,14 @@
-# Yumeiro feature inventory (Round 4 audit)
+# Yumeiro feature inventory (Round 4 audit, checked against the code in R16)
 
 Built from the code on `r15-stability` (481 Kotlin files under `app/src/main/java`), the
 manifest, the navigation routes (`ui/navigation/Screen.kt`) and the Settings catalog
 (`ui/screens/settings/SettingsCatalog.kt`, 22 categories in 5 groups). Every item has an ID; the
 "Covered by" column is filled as each group's audit is reported, and anything not covered at the
 end is listed in §Not covered with the reason.
+
+R16 check (2026-11-15): every one of the 368 Kotlin files under `app/src/main/java` was matched to
+an item by file or package name. Files with no item became Y8, L10, D8 and X13–X16, or were added to
+the code list of P1 and M2.
 
 Status values: `open` (not audited yet), `audited` (tested, problems listed), `done` (fixed and
 verified on a device, evidence linked), `not covered` (reason given).
@@ -45,9 +49,9 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G3 Player
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| P1 | Local video playback | ui/screens/video/VideoPlayerModal, service/VideoPlaybackService | open | |
+| P1 | Local video playback | ui/screens/video/VideoPlayerModal, VideoPlayerDialogs, OnlineSubtitleDialog, ui/screens/online/OnlinePlayerUi, ui/screens/player/SleepTimerSheet, service/VideoPlaybackService | open | |
 | P2 | Online (movies, series, anime) playback session | online/OnlineSession, OnlinePlayback | open | |
-| P3 | YouTube playback | youtube/YouTubePlayback, YouTubeStreams | open | |
+| P3 | YouTube playback | youtube/YouTubePlayback, YouTubeStreams, NewPipeDownloader | open | |
 | P4 | Drama playback | sources/drama/* | open | |
 | P5 | Quality list and switching (parity with downloader, generated levels) | player/QualityEngine, TrackGroups | open | |
 | P6 | Audio tracks and languages | online/AudioLanguages, player/TrackPicks | open | |
@@ -68,13 +72,14 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G4 Yumix
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen | open | |
+| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen, OnlineComponents, OnlineGetStarted, ExtensionBanner | open | |
 | Y2 | Yumix search | OnlineSearchScreen, online/SearchRanker | open | |
 | Y3 | Extension bar hide/show on scroll | ui/components/HideOnScroll | open | |
 | Y4 | Drama as default, built-in drama card | DramaBuiltinCard | open | |
 | Y5 | "Show videos from" filter | YumixFilter | open | |
 | Y6 | Hero carousel, picks, row pages | OnlineHomeHero, OnlineHomePicks, OnlineRowScreen | open | |
 | Y7 | Detail page (versions, episodes, stills, bookmarks) | OnlineDetailScreen, EpisodeStills, OnlineBookmarks | open | |
+| Y8 | (R16) YouTube in Videos: feed, search, channel pages, Shorts, live, discovery | ui/screens/youtube/YouTubeScreens, YtChannelPage, youtube/YtDiscovery, YtWatch | open | |
 
 ## G5 Library and personal lists
 | ID | Item | Code | Status | Covered by |
@@ -88,12 +93,13 @@ verified on a device, evidence linked), `not covered` (reason given).
 | L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | open | |
 | L8 | Reading library (manga) | ReadingLibrary route, MangaLibrary | open | |
 | L9 | Only real data, no placeholder or fake items | all of the above | open | |
+| L10 | (R16) Device videos tab: folders, sorting, thumbnails | ui/screens/video/VideoScreen, ui/image/VideoThumbnailFetcher, data/model/MediaModels | open | |
 
 ## G6 Music
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | open | |
-| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher | open | |
+| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | open | |
 | M3 | Infinite online feed | youtube/music/YmEndless | open | |
 | M4 | Lyrics (embedded, LRCLIB) | lyrics/* | open | |
 | M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | open | |
@@ -121,6 +127,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | D5 | External downloaders (ADM, IDM) | online/download/ExternalDownloader | open | |
 | D6 | YouTube downloads and options | YtDownloads, YtDownloadOptions | open | |
 | D7 | "View downloads" toast → PiP | DownloadPrompt | open | |
+| D8 | (R16) Downloads screen: list, free space, actions | ui/screens/downloads/DownloadsScreen, online/DownloadSheets | open | |
 
 ## G9 Settings
 | ID | Item | Code | Status | Covered by |
@@ -161,7 +168,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 |---|---|---|---|---|
 | X1 | Architecture and layering | whole app, docs/SYSTEM-DESIGN.md | open | |
 | X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | open | |
-| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, startup/PrefsWarmup | open | |
+| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, RegexCache, startup/PrefsWarmup | open | |
 | X4 | Battery and heat | HeatGuard, NotifyPacer | open | |
 | X5 | Notifications while closed (FCM, UnifiedPush, alarms, workers, boot) | notify/*, PushWakeService, NotifyAlarmReceiver | open | |
 | X6 | Crash logs and export | diagnostics/CrashLog, CrashExport | open | |
@@ -171,6 +178,10 @@ verified on a device, evidence linked), `not covered` (reason given).
 | X10 | Build, CI, release, signing | .github/workflows, gradle | open | |
 | X11 | Network stack: smart DNS, DoH, auto-bypass, settings | network/* | open | |
 | X12 | Caching: data cache, image cache, online codec | cache/* | open | |
+| X13 | (R16) Android 7–16 compatibility (minSdk 24), OS version guards | OsCompat, MTApplication | open | |
+| X14 | (R16) Design system and shared components | ui/components/YumeKit, Motion, Pills, Artwork, YuEditorial, Kana, YumixLogo | open | |
+| X15 | (R16) Shared live-feed component (append-only cards) | ui/feed/LiveFeed, FeedCard, OnlineHuePage | open | |
+| X16 | (R16) Cloud Worker (alerts, FCM fan-out, market index) and its abuse guards | server/src/index.ts, fcm.ts, logic.ts | open | |
 
 ## New groups (not in the prompt's list)
 | ID | Item | Code | Status | Covered by |
