@@ -19,6 +19,8 @@ object AppVisibility : Application.ActivityLifecycleCallbacks {
 
     val isForeground: Boolean get() = started > 0
 
+    private val catchUpThread = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-catch-up").apply { isDaemon = true } }
+
     fun install(app: Application) {
         if (installed) return
         installed = true
@@ -30,7 +32,11 @@ object AppVisibility : Application.ActivityLifecycleCallbacks {
         if (started == 1) {
             UpdateManager.get(activity).onAppForegrounded()
             // Catch up on notifications that a battery manager may have held back.
-            runCatching { dev.asfakul.yumeiro.notify.BackgroundWork.catchUp(activity.applicationContext) }
+            // R16 (ST-7): off the main thread. It decrypts a Keystore secret, asks the package
+            // manager for the UnifiedPush distributor and may start WorkManager; on the stress
+            // emulators that held MainActivity.onStart for 1.1-1.3 s (run 43680725238).
+            val app = activity.applicationContext
+            catchUpThread.execute { runCatching { dev.asfakul.yumeiro.notify.BackgroundWork.catchUp(app) } }
         }
     }
 
