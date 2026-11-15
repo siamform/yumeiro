@@ -34,7 +34,7 @@ this file.
 | X10 | Build, CI, release, signing | `.github/workflows`, Gradle | X10-1..4 CI verified; R8/ABI/signing review not done |
 | X11 | Network stack (smart DNS, DoH, bypass) | `network/*` | audited: X11-1..5 fixed (a299f60, f7e490c, 98f2dbf) |
 | X12 | Caching (data, image, codec) | `cache/*` | audited: X12-1, X12-2 fixed (c63bc66) |
-| X13 | Android 7–16 compatibility | `OsCompat`, `MTApplication` | partly (lint NewApi X10-2, tv-api24 run); not complete |
+| X13 | Android 7–16 compatibility | `OsCompat`, `MTApplication`, dependency SDK floors | X13-1 found (Jackson on Android 7); dependency scan of other libraries for SDK 26+ classes still to do; minSdk phone run pending |
 | X14 | Design system and shared components | `ui/components/*` | not started (A11yLabel added in X8-2) |
 | X15 | Shared live-feed component | `ui/feed/*` | not started |
 | X16 | Cloud Worker and its abuse guards | `server/src/*` | not started |
@@ -103,6 +103,10 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X11-5 | medium (security) | DnsWireClient UDP | reply sender not checked (spoofing) | packet from another port | source check (98f2dbf) | unit |
 | X12-1 | medium (memory) | `cache/DataCache.kt` remember | LRU capped by count only | 16 large pages = 48M chars | char budget, big pages disk-only (c63bc66) | unit |
 | X12-2 | medium (data) | `DataCache.purge` | deleted in-flight `.tmp` | purge during write | only `.tmp` older than 60 s (c63bc66) | unit |
+| X13-1 | **high** | `gradle/libs.versions.toml` jackson, `app/build.gradle.kts` | TV (minSdk 24) shipped Jackson 2.19.4; since 2.15 `ObjectMapper` init calls `ExceptionUtil.isFatal` → `BootstrapMethodError` (SDK 26) → NoClassDefFoundError; every CloudStream source dead on Android 7 | TV api24 emulator, 43765162241 (`home Yumeiro Drama/ReelShort … MainAPIKt`) | tv* classpaths → Jackson 2.13.5 (2226756), phone keeps 2.19.4 | unit; TV emulator pending |
+| X9-2 | medium (test) | `androidTest/FirstRun.kt` shell | keys injected while the previous test's activity window still held input focus; taps reach Compose directly, keys do not | 43765039266 api33-lowram Settings, 43765162241 TV Inbox ("input event receiver has already been disposed") | wait for our window focus before `input keyevent` (1a577e5) | emulator pending |
+| X9-3 | low (test) | `HomeNavigationDeviceTest`, `StabilityStressDeviceTest` | looked for phone bar tags on TV (`nav_tab_*`, `nav_shortcut_*`) | 43765162241 | `FirstRun.navTag` / `hasNav` (1a577e5) | emulator pending |
+| X9-4 | open | `ui/tv/TvNavRail.kt` (h5) | a rail tap left the pager on page 0, no app log | 43765162241 h5 | evidence capture added (screenshot, selected/focus); root cause after rerun | open |
 | X10-1..4 | medium | `ci.yml`, several | TV never linted; NewApi calls; opt-in noise | lint | f0df775, ff00d11, 7486997, c7772ce, 72394dc | CI |
 | ST-17 | low (1 in 40 runs) | Compose `ContentInViewNode` | bring-into-view never settles once | stress api36 43697447466 | focus-chain logging (3342106) | open |
 
@@ -121,6 +125,7 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X16-1 | `server/test/handlers.test.ts` (11) | n/a (gap); guards removed → 3 fail | 31/31 (CI) |
 | X11-1, X11-3 | `SmartDnsResilienceTest` (4) | 3 fail | pass (unit) |
 | X11-4, X11-5 | `DnsWireClientTest` (4) | 3 fail | pass (unit) |
+| X13-1 | `JacksonTvCompatTest` (2, testTv; in CI) | 2 fail: "jackson-databind 2.19.4 needs Android 8", `ExceptionUtil.class` references `BootstrapMethodError` | pass (unit) |
 | X12-1, X12-2 | `DataCacheBoundsTest` (3) | 3 fail (48000000 chars held; fresh .tmp deleted; 400000-char page kept) | pass (unit) |
 
 ## 8. Decision records
@@ -154,7 +159,8 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
 
 ## Open work (Group 12 is not done until all are closed)
 
-1. X8-2/X8-3/X2-2 emulator recheck (43763558754); X9-1 TV rerun (43762847904).
+1. X8-2: AccessibilityDeviceTest rerun 43767144680 (X9-2 key focus). X9-1..4 + X13-1: TV run
+   43768054941 (online rows must load on api24; h5 root cause). X2-3 device proof (StrictMode).
 2. X2: Macrobenchmark startup (before), baseline profile, startup (after); heap profile on api33-lowram.
 3. ST-13/14/15: StrictMode device proof; ST-17 root cause.
 4. X7: MASVS write-up.
