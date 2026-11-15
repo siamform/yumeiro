@@ -149,7 +149,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
             if (state.episodes.size > 1) PlayerChip(Icons.AutoMirrored.Filled.List, state.episode?.let { e -> listOfNotNull(e.season?.let { "S$it" }, e.episode?.let { "E$it" }).joinToString("").ifBlank { "Episodes" } } ?: "Episodes", "online_player_episodes") { panel = Panel.EPISODES }
             if (state.links.isNotEmpty()) PlayerChip(Icons.Default.HighQuality, "Source ${state.linkIndex + 1}/${state.links.size}", "online_player_sources") { panel = Panel.SOURCES }
             PlayerChip(Icons.Default.ClosedCaption, "Subtitles", "online_player_subtitles") { panel = Panel.SUBTITLES }
-            val castOk = remember { dev.asfakul.yumeiro.cast.CastSupport.available(context) }
+            val castOk by androidx.compose.runtime.remember { dev.asfakul.yumeiro.cast.CastSupport.ready(context) }.collectAsState()
             if (castOk && state.link != null) PlayerChip(Icons.Default.Cast, "Cast", "online_player_cast") { castCurrent(context, state, player) }
             if (state.detail.versions.size > 1) {
                 val other = state.detail.versions.firstOrNull { it != state.version }
@@ -532,7 +532,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 if (state.hasNext) dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.SkipNext, "Next episode", "online_watch_next", highlighted = true) { OnlineSession.next(context) }
                 dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.HighQuality, if (state.links.isNotEmpty()) "Source ${state.linkIndex + 1}/${state.links.size}" else "Sources", "online_watch_sources") { sheet = Sheet.SOURCES }
                 dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.ClosedCaption, "Subtitles", "online_watch_subtitles") { sheet = Sheet.SUBTITLES }
-                val castOk = remember { dev.asfakul.yumeiro.cast.CastSupport.available(context) }
+                val castOk by androidx.compose.runtime.remember { dev.asfakul.yumeiro.cast.CastSupport.ready(context) }.collectAsState()
                 if (castOk && state.link != null && player != null) dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.Cast, "Cast", "online_watch_cast") { castCurrent(context, state, player) }
                 if (state.link != null && d.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) {
                     dev.asfakul.yumeiro.ui.screens.watch.WatchAction(Icons.Default.Download, "Download", "online_watch_download") {

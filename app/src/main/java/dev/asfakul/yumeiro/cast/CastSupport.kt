@@ -42,16 +42,39 @@ object CastSupport {
     private const val TAG = "CastSupport"
     @Volatile private var context: CastContext? = null
     @Volatile private var unavailable = false
+    @Volatile private var starting = false
+    private val executor by lazy { Executors.newSingleThreadExecutor() }
+    private val _ready = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    /**
+     * Starts loading the Cast module once, without blocking. `getSharedInstance(context, executor)`
+     * returns a Task that completes on [executor]; reading `.result` right away threw "Task is not
+     * yet complete", which was caught and marked Cast unavailable for the whole process.
+     */
+    fun warm(ctx: Context) {
+        if (context != null || unavailable || starting) return
+        starting = true
+        runCatching {
+            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ctx) != ConnectionResult.SUCCESS) { unavailable = true; starting = false; return }
+            CastContext.getSharedInstance(ctx.applicationContext, executor).addOnCompleteListener { t ->
+                val cc = if (t.isSuccessful) t.result else null
+                if (cc != null) { context = cc; _ready.value = true }
+                else { Log.w(TAG, "cast unavailable", t.exception); unavailable = true }
+                starting = false
+            }
+        }.onFailure { Log.w(TAG, "cast unavailable", it); unavailable = true; starting = false }
+    }
+
+    /** True once the Cast module is loaded; starts loading it. For the Cast button. */
+    fun ready(ctx: Context): kotlinx.coroutines.flow.StateFlow<Boolean> { warm(ctx); return _ready }
 
     fun available(ctx: Context): Boolean = get(ctx) != null
 
+    /** The loaded CastContext, or null while it is still loading (or Cast is unavailable). */
     fun get(ctx: Context): CastContext? {
         context?.let { return it }
-        if (unavailable) return null
-        return runCatching {
-            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ctx) != ConnectionResult.SUCCESS) { unavailable = true; return null }
-            CastContext.getSharedInstance(ctx.applicationContext, Executors.newSingleThreadExecutor()).result
-        }.onFailure { Log.w(TAG, "cast unavailable", it); unavailable = true }.getOrNull()?.also { context = it }
+        warm(ctx)
+        return context
     }
 
     /** Runs [block] once when a cast session starts (or right away if one is running). */
@@ -97,9 +120,11 @@ object CastSupport {
             media.subtitle?.let { putString(MediaMetadata.KEY_SUBTITLE, it) }
             media.posterUrl?.let { addImage(WebImage(Uri.parse(it))) }
         }
-        val tracks = media.subtitles.mapIndexed { i, (label, url) ->
+        // Cast receivers show only TTML, WebVTT and CEA-608/708 (developers.google.com/cast/docs/media);
+        // SRT tracks were sent as application/x-subrip and never appeared. Send the formats it can show.
+        val tracks = castableSubtitles(media.subtitles).mapIndexed { i, (label, url, type) ->
             MediaTrack.Builder((i + 1).toLong(), MediaTrack.TYPE_TEXT).setName(label).setSubtype(MediaTrack.SUBTYPE_SUBTITLES)
-                .setContentId(url).setContentType(if (url.contains(".vtt", true)) "text/vtt" else "application/x-subrip").build()
+                .setContentId(url).setContentType(type).build()
         }
         val info = MediaInfo.Builder(media.url)
             .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
@@ -111,5 +136,15 @@ object CastSupport {
             client.load(MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true).setCurrentTime(media.positionMs).build())
             true
         }.onFailure { Log.w(TAG, "load", it) }.getOrDefault(false)
+    }
+
+    /** Subtitles a Cast receiver can show, with their MIME type (pure; unit-tested). */
+    internal fun castableSubtitles(subs: List<Pair<String, String>>): List<Triple<String, String, String>> = subs.mapNotNull { (label, url) ->
+        val path = url.substringBefore('?').substringBefore('#').lowercase()
+        when {
+            path.endsWith(".vtt") || path.endsWith(".webvtt") -> Triple(label, url, "text/vtt")
+            path.endsWith(".ttml") || path.endsWith(".dfxp") || path.endsWith(".xml") -> Triple(label, url, "application/ttml+xml")
+            else -> null
+        }
     }
 }

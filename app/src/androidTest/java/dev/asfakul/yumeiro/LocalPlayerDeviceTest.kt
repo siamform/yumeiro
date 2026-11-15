@@ -175,12 +175,15 @@ class LocalPlayerDeviceTest {
         rule.onAllNodesWithTag("speed_chip_1.0x", true)[0].performClick()
         wait("speed 1.0", 5_000) { onPlayer { it.playbackParameters.speed } == 1.0f }
 
-        // P12: pause and play.
+        // P12 + P18: pause and play; the screen stays on only while playing.
+        wait("screen kept on while playing", 5_000) { keepOn() }
         control("video_play_pause_btn")
         wait("paused", 5_000) { onPlayer { it.playWhenReady } == false }
+        wait("screen may sleep when paused", 5_000) { !keepOn() }
         control("video_play_pause_btn")
         wait("playing again", 5_000) { onPlayer { it.playWhenReady } == true }
-        log("P12 play/pause")
+        wait("screen kept on again", 5_000) { keepOn() }
+        log("P12 play/pause, P18 screen wake")
 
         // P10: lock hides the controls; unlock brings them back.
         control("video_screen_lock_btn")
@@ -224,6 +227,37 @@ class LocalPlayerDeviceTest {
         wait("picture-in-picture", 10_000) { var pip = false; rule.runOnUiThread { pip = rule.activity.isInPictureInPictureMode }; pip }
         assertTrue("still playing in PiP", onPlayer { it.playWhenReady } == true)
         log("LOCAL_C_RESULT PASS")
+    }
+
+    /** True when any view in the window asks to keep the screen on. */
+    private fun keepOn(): Boolean {
+        var on = false
+        rule.runOnUiThread {
+            fun walk(v: android.view.View) { if (v.keepScreenOn) on = true; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i)) }
+            walk(rule.activity.window.decorView)
+        }
+        return on
+    }
+
+    /** P19: battery saver → WARM, severe thermal status → HOT, both off → COOL (shell-driven, real platform callbacks). */
+    @Test fun d_heatGuardFollowsBatterySaverAndThermalStatus() {
+        val g = dev.asfakul.yumeiro.player.HeatGuard
+        try {
+            FirstRun.shell("cmd power set-mode 1")
+            wait("WARM on battery saver", 10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.WARM }
+            log("P19 saver → ${g.level.value}")
+            FirstRun.shell("cmd power set-mode 0")
+            wait("COOL after battery saver", 10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.COOL }
+            val out = FirstRun.shell("cmd thermalservice override-status 3")
+            log("thermal override: ${out.take(120)}")
+            val hot = runCatching { rule.waitUntil(10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.HOT }; true }.getOrDefault(false)
+            log("P19 thermal 3 → ${g.level.value} (reached HOT: $hot)")
+            assertTrue("HOT on severe thermal status", hot)
+        } finally {
+            FirstRun.shell("cmd power set-mode 0"); FirstRun.shell("cmd thermalservice reset")
+        }
+        wait("COOL after reset", 10_000) { g.level.value == dev.asfakul.yumeiro.player.HeatGuard.Level.COOL }
+        log("LOCAL_D_RESULT PASS")
     }
 
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
