@@ -44,7 +44,10 @@ class BackNavigationDeviceTest {
         rule.waitForIdle()
         // Swipe to the second tab, then back returns to Home (page 0).
         FirstRun.shell("input swipe 900 1200 150 1200 250")
+        // Wait for the pager to settle: a back pressed mid-swipe is cancelled by the system when
+        // the Home handlers change state under it (WindowOnBackDispatcher sendCancelIfRunning).
         val moved = runCatching { rule.waitUntil(5_000) { page() > 0 }; true }.getOrDefault(false)
+        rule.waitForIdle(); Thread.sleep(800)
         log("after swipe page=${page()} moved=$moved")
         if (moved) {
             back()

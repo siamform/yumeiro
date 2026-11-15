@@ -72,7 +72,13 @@ class HomeNavigationDeviceTest {
         val out = FirstRun.shell("am start -W -a android.intent.action.VIEW -d $url -t video/mp4 -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
         log("am start: ${out.trim().take(200)}")
         waitTag("video_player_root", 60_000)
-        back(); waitGone("video_player_root", 15_000)
+        // A key back first hides the controls (TV rule, VideoPlayerModal), the next one leaves
+        // the full player; the default back action keeps the video in the floating window.
+        var presses = 0
+        while (presses < 3 && !has("video_floating_player")) { back(); presses++; Thread.sleep(1_200) }
+        log("left the full player after $presses back presses; floating=${has("video_floating_player")}")
+        waitTag("video_floating_player", 10_000)
+        tap("floating_close"); waitGone("video_player_root", 15_000)
     }
 
     @Test fun h8_openTabSurvivesRecreate() {

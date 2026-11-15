@@ -130,7 +130,7 @@ fun MTPlayerApp(
     val barItems = remember(navConfig) { dev.asfakul.yumeiro.ui.navigation.NavPrefs.barItems(navConfig) }
     val pageItemsNow by androidx.compose.runtime.rememberUpdatedState(pageItems)
     val tabPager = rememberPagerState { bottomNavItems.size }
-    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.currentPage }.collect { TabPagerProbe.page = it } }
+    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.settledPage }.collect { TabPagerProbe.page = it } }
     val tabScope = rememberCoroutineScope()
     // R15 (run 43650046635): the tab pager must never rest between two pages. With nothing
     // dragging or animating it, an offset left over (a fling cut short by a focus move) is settled
