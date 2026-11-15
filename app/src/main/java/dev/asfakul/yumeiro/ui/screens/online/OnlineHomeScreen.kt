@@ -106,6 +106,12 @@ internal fun yumixDebugSummary(): String = YumixMemory.homes.entries.joinToStrin
     k + "=" + when (v) { is ProviderHome.Ready -> "Ready(${v.rows.size} rows, ${v.rows.sumOf { it.items.size }} items)"; is ProviderHome.Failed -> "Failed"; ProviderHome.Loading -> "Loading" }
 }.ifEmpty { "(no sections)" } + " · explore ${YumixMemory.exploreShown.size}"
 
+/** Keys of every title Yumix holds right now (sections and "More to explore"), for device tests. */
+internal fun yumixItemKeys(): Set<String> = HashSet<String>().apply {
+    YumixMemory.homes.values.forEach { h -> (h as? ProviderHome.Ready)?.rows?.forEach { r -> r.items.forEach { add(it.key) } } }
+    YumixMemory.exploreShown.forEach { add(it.first.key) }
+}
+
 private object YumixMemory {
     val homes = androidx.compose.runtime.mutableStateMapOf<String, ProviderHome>()
     val inflight = HashMap<String, kotlinx.coroutines.Deferred<Boolean>>()

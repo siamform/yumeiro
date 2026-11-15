@@ -1,6 +1,6 @@
 # Group 4 audit: Yumix (R16)
 
-Branch `r15-stability`, commits `2a79dbe`, `678903d`, `9e10315`, `65e50e0`. Devices: CI emulators
+Branch `r15-stability`, commits `2a79dbe`, `678903d`, `9e10315`, `65e50e0`, `e2a1114`, `8a38eed`, `6267099`, `52a8c42`. Devices: CI emulators
 only. **api33-lowram** is Android 13 on a Pixel 3a profile (2 GB RAM, 192 MB heap). **api36** is
 Android 16 on a Pixel 6 profile. Both are `google_apis` images. On both, Yumix has one source, the
 built-in short-drama source (`YumeiroDrama`), because CI does not install third-party extensions.
@@ -63,14 +63,39 @@ h. **The detail page lost its content on a failed refresh, and a cancelled load 
 i. **Test: the offline device test measured nothing (43716649966).** Its card count matched Home's
    cards while the tab was switching, so the wait ended at once, and it then measured a Yumix page
    that was still loading (0 cards, assumption skip). Fix (`65e50e0`): count only cards inside
-   `online_home_list`.
+   `online_home_list`, wait for a stable count, and log every step with each section's state.
+   Those logs led to k.
 j. **Test: the HeatGuard device test failed in full suite 43714635144 (api36, Group 3 P19).** The
    system itself still reported `isPowerSaveMode=false` after `cmd power set-mode 1`, so HeatGuard
    was right to stay COOL. Fix (`65e50e0`): retry the precondition up to 3 times. If the system
    won't turn battery saver on, log `SAVER_NOT_ENABLED` and test only the thermal half.
 
+k. **An Internet Archive the user had just added was removed without a word (Y1, extensions).**
+   In 1.8.0 Internet Archive was installed automatically, and a one-time clean-up removes it. That
+   clean-up ran at the first `ExtensionManager.sync`, which is right after the first launch. So on
+   a new install, or before the first sync after an update, an Internet Archive the user had added
+   was uninstalled. Its Yumix section showed and then vanished.
+   Found by `YumixDeviceTest`. In runs 43719277646, 43720589678 and 43721853978 the row appeared
+   (4–7 cards), then dropped to 0. The new unload log reads "Unloaded …InternetArchiveProvider from
+   uninstall" and "sections dropped (extension gone)".
+   Fix (`ExtensionManager.legacyDefaultMigrationDue`): decide once, from the saved state at load. A
+   new install has nothing to migrate. An installed Internet Archive is removed only if it was
+   there before this version. Adding Internet Archive marks the clean-up as done.
+   Test: `LegacyDefaultMigrationTest` 3.
+l. **Offline, a refresh "answered" from the drama catalog's own cache (Y1).** `OnShortCatalog`
+   serves stale shelves when a fetch fails, so offline the drama source brought back exactly what
+   was on screen. The screen counted that as an answer: it reset "More to explore", which moved the
+   cards on screen (run 43719277646, api36: kept 5 of 8), and it never said the refresh failed.
+   Fix (`YumixFeed.broughtNew`): an extension has answered only if it brought a title not already
+   shown. With no answer, the message now says why: "Couldn't refresh: you're offline", or "Nothing
+   new yet" when the network is up.
+m. **A partial refresh moved the shelves (Y1).** `homeAfterFetch` put every row the refresh did
+   not bring back after the fresh rows. Now each fresh row replaces its old copy in place, and only
+   new rows go last. `YumixRefreshTest` covers both (now 5 tests).
+
 Files: `ui/screens/online/OnlineHomeScreen.kt`, `YumixFeed.kt`, `OnlineRowScreen.kt`,
-`OnlineDetailScreen.kt`, `sources/drama/OnShortCatalog.kt`; tests `YumixRefreshTest.kt`,
+`OnlineDetailScreen.kt`, `sources/drama/OnShortCatalog.kt`, `online/ExtensionManager.kt`; tests
+`YumixRefreshTest.kt`, `online/LegacyDefaultMigrationTest.kt`,
 `GateLaneTest.kt`, `androidTest/YumixDeviceTest.kt`, `androidTest/LocalPlayerDeviceTest.kt`;
 `scripts/device-check.sh` (YumixDeviceTest added to the full suite).
 

@@ -110,6 +110,8 @@ class YumixDeviceTest {
         log("online: ${before.size} cards · ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT}")
         if (before.size < 3) { FirstRun.shot("yumix_offline_precondition"); log("screen: ${FirstRun.onScreen(rule).take(1500)}") }
         org.junit.Assume.assumeTrue("Yumix showed only ${before.size} cards online (network?)", before.size >= 3)
+        val held = dev.asfakul.yumeiro.ui.screens.online.yumixItemKeys()
+        log("holding ${held.size} titles before going offline")
 
         FirstRun.shell("svc wifi disable"); FirstRun.shell("svc data disable")
         idle(4_000)
@@ -125,12 +127,18 @@ class YumixDeviceTest {
         }
         log("refresh message: $message")
         val after = cards()
-        val kept = before.count { it in after }
-        log("offline after refresh: ${after.size} cards, kept $kept of ${before.size}")
+        val heldAfter = dev.asfakul.yumeiro.ui.screens.online.yumixItemKeys()
+        val lost = held - heldAfter
+        // Card keys are "feed|item key". Offline nothing new can arrive, so every card on screen
+        // must be a title Yumix already held. Which cards are composed may change: going offline
+        // adds the offline notice above the list (run 43723079397), so fewer cards fit on screen.
+        val strangers = after.map { it.substringAfter('|') }.filter { it !in held }
+        log("offline after refresh: ${after.size} cards on screen, ${heldAfter.size} titles held, lost ${lost.size}, unknown on screen ${strangers.size}")
         FirstRun.shot("yumix_offline_refresh")
-        assertTrue("offline refresh emptied Yumix: ${after.size} cards left of ${before.size} · ${FirstRun.onScreen(rule)}", after.size >= before.size / 2)
         assertTrue("the offline refresh never finished with its message (refresh not run?)", message != null)
-        assertTrue("offline refresh replaced the cards on screen: kept $kept of ${before.size}", kept >= before.size * 3 / 4)
+        assertTrue("offline refresh emptied Yumix · ${FirstRun.onScreen(rule)}", after.isNotEmpty())
+        assertTrue("offline refresh dropped ${lost.size} of ${held.size} titles: ${lost.take(5)}", lost.isEmpty())
+        assertTrue("cards on screen that Yumix did not hold before: ${strangers.take(5)}", strangers.isEmpty())
 
         FirstRun.shell("svc wifi enable"); FirstRun.shell("svc data enable")
         idle(10_000)
