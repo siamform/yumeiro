@@ -156,7 +156,10 @@ object PlaylistStore {
         val d = dir(context)
         if (loadedDir == d) return
         val file = indexFile(context)
-        val saved = runCatching { JSONObject(file.readText()) }.getOrNull()
+        // R16 (G7): an unreadable index used to load the defaults and persist() them at once over
+        // every playlist the user had. Now a leftover .tmp is used, or the bad file is kept as .bad.
+        val read = dev.asfakul.yumeiro.data.SafeJsonFile.read(file) { JSONObject(it) }
+        val saved = read.value
         if (saved == null) {
             _playlists.value = DefaultPlaylists.all
             deletedDefaults = mutableSetOf()
@@ -202,11 +205,7 @@ object PlaylistStore {
         writeAtomic(indexFile(context), json.toString())
     }
 
-    private fun writeAtomic(target: File, text: String) {
-        val tmp = File(target.parentFile, target.name + ".tmp")
-        tmp.writeText(text)
-        if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
-    }
+    private fun writeAtomic(target: File, text: String) = dev.asfakul.yumeiro.data.SafeJsonFile.write(target, text)
 
     private suspend fun <T> edit(context: Context, block: () -> T): T = withContext(Dispatchers.IO) {
         mutex.withLock { ensureLoaded(context); block().also { persist(context) } }

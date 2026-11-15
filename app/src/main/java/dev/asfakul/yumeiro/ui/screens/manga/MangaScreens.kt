@@ -375,11 +375,15 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
     var newestFirst by rememberSaveable { mutableStateOf(true) }
     var attempt by remember { mutableStateOf(0) }
     val library by MangaLibrary.entries.collectAsState()
-    LaunchedEffect(Unit) { MangaLibrary.load(context) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.load(context) } }
     LaunchedEffect(providerId, url, attempt) {
         if (provider == null) { error = "This source isn't installed any more"; return@LaunchedEffect }
         error = null
-        runCatching { details = provider.details(url); chapters = provider.chapters(url) }.onFailure { error = OnlineErrors.friendly(it) }
+        // R16 (G7): runCatching also caught the cancellation of an old load (Retry, or leaving the
+        // page), which then put "Couldn't load" over the new one. Cancellation is rethrown now.
+        try { details = provider.details(url); chapters = provider.chapters(url) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { error = OnlineErrors.friendly(e) }
     }
     val entry = library.firstOrNull { it.providerId == providerId && it.url == url }
     val item = MangaItem(providerId, url, details?.title?.takeIf { it.isNotBlank() } ?: title,
@@ -496,7 +500,9 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
     LaunchedEffect(attempt) {
         if (provider == null) { error = "This source isn't installed any more"; return@LaunchedEffect }
         error = null
-        runCatching { pages = provider.pages(chapterUrl) }.onFailure { error = OnlineErrors.friendly(it) }
+        try { pages = provider.pages(chapterUrl) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { error = OnlineErrors.friendly(e) }
     }
     val start = remember(pages) { MangaLibrary.get(providerId, mangaUrl)?.takeIf { it.lastChapterUrl == chapterUrl }?.lastPage ?: 0 }
     LaunchedEffect(current, pages) {

@@ -156,11 +156,21 @@ fun PlaylistDetailScreen(
         try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.")) }
     }
 
-    LaunchedEffect(Unit) { runCatching { PlaylistStore.init(app) }; storeReady = true }
+    // R16 (G7): a failed start showed "not found" instead of the reason (and no Retry for it).
+    var storeError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        try { PlaylistStore.init(app) } catch (e: CancellationException) { throw e } catch (e: Exception) {
+            storeError = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't open your playlists. Try again.")
+        }
+        storeReady = true
+    }
 
     // Load channels when the page opens (or on Retry). Cached lists appear instantly.
     LaunchedEffect(slug, storeReady, attempt) {
         if (!storeReady) return@LaunchedEffect
+        if (storeError != null && attempt > 0) storeError = try { PlaylistStore.init(app); null }
+            catch (e: CancellationException) { throw e } catch (e: Exception) { dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't open your playlists. Try again.") }
+        storeError?.let { state = LoadState.Failed(it); return@LaunchedEffect }
         if (isOpened) { state = if (repoId == null && repoChannels.isNotEmpty()) LoadState.Ready else LoadState.NotFound; return@LaunchedEffect }
         val p = PlaylistStore.get(slug) ?: run { state = LoadState.NotFound; return@LaunchedEffect }
         if (!p.enabled) { state = LoadState.Ready; return@LaunchedEffect }

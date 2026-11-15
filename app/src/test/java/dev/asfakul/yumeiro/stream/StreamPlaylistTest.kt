@@ -100,6 +100,20 @@ class StreamPlaylistTest {
         assertTrue(PlaylistStore.playlists.value.all { it.enabled })
     }
 
+    @Test fun aBrokenIndexIsNotOverwrittenWithDefaults() = runBlocking {
+        // R16 (G7): an unreadable playlists.json used to be replaced at once by the defaults.
+        val dir = java.io.File(context.filesDir, "streams").apply { mkdirs() }
+        val good = org.json.JSONObject().put("version", 2).put("playlists", org.json.JSONArray()
+            .put(org.json.JSONObject().put("id", "l_mine").put("name", "Mine").put("default", false))).toString()
+        java.io.File(dir, "playlists.json").writeText(good.take(good.length / 2)) // torn write
+        java.io.File(dir, "playlists.json.tmp").writeText(good)                   // the finished copy
+        PlaylistStore.init(context)
+        assertEquals(listOf("l_mine"), PlaylistStore.playlists.value.map { it.id })
+        assertTrue(java.io.File(dir, "playlists.json.bad").exists())
+        java.io.File(dir, "playlists.json.bad").delete()
+        Unit
+    }
+
     @Test fun upgradeRemovesFormerDefaultsButKeepsEditedOnesAndUserLists() = runBlocking {
         val dir = java.io.File(context.filesDir, "streams").apply { mkdirs() }
         val old = org.json.JSONArray()
