@@ -67,6 +67,9 @@ class PlaybackService : MediaSessionService() {
                     }
                 })
 
+                // R16: scrobbling follows the shared player, not the screen (see BackgroundPlaybackWatch).
+                dev.asfakul.yumeiro.player.BackgroundPlaybackWatch.attach(app, player)
+
                 sharedPlayer = player
                 return player
             }

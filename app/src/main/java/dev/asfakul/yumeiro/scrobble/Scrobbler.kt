@@ -77,10 +77,14 @@ object Scrobbler {
     internal fun encode(p: ScrobblePlay) = JSONObject().put("a", p.artist).put("t", p.track).put("al", p.album).put("d", p.durationSec).put("s", p.startedAtSec)
     internal fun decode(o: JSONObject) = ScrobblePlay(o.optString("a"), o.optString("t"), o.optString("al"), o.optInt("d"), o.optLong("s"))
 
-    private fun readQueue(): MutableList<ScrobblePlay> = runCatching {
-        val a = JSONArray(prefs?.getString("queue", "[]") ?: "[]")
-        MutableList(a.length()) { decode(a.getJSONObject(it)) }
-    }.getOrElse { mutableListOf() }
+    // R16 (G6): one bad entry used to empty the queue, and the next enqueue saved that, dropping
+    // every listen waiting to be sent. Bad entries are skipped one by one.
+    private fun readQueue(): MutableList<ScrobblePlay> = decodeQueue(prefs?.getString("queue", "[]"))
+
+    internal fun decodeQueue(raw: String?): MutableList<ScrobblePlay> {
+        val a = runCatching { JSONArray(raw ?: "[]") }.getOrNull() ?: return mutableListOf()
+        return (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let(::decode)?.takeIf { it.artist.isNotBlank() && it.track.isNotBlank() } }.toMutableList()
+    }
 
     private fun writeQueue(q: List<ScrobblePlay>) {
         prefs?.edit()?.putString("queue", JSONArray().apply { q.forEach { put(encode(it)) } }.toString())?.apply()

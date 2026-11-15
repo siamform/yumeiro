@@ -24,6 +24,7 @@ import java.io.File
  * a: listening time is counted by the shared player itself. No activity and no ViewModel exist in
  *    this test, which is the state after Back-exit with music still playing. Before the fix the
  *    clock lived on the ViewModel and nothing was counted here.
+ * b: (same test) the background watch that feeds Last.fm scrobbling sees the song with no screen.
  */
 @RunWith(AndroidJUnit4::class)
 class LibraryDeviceTest {
@@ -53,6 +54,11 @@ class LibraryDeviceTest {
                 if (!playing) Thread.sleep(250)
             }
             assertTrue("player never started", playing)
+            // b: the background watch (scrobbling) sees the same song with no screen open.
+            Thread.sleep(1_500)
+            val w = dev.asfakul.yumeiro.player.BackgroundPlaybackWatch.state.value
+            log("LIB_B watch playing=${w.isPlaying} track=${w.currentTrack?.id} index=${w.currentQueueIndex}")
+            assertTrue("background watch did not see playback", w.isPlaying && w.currentTrack != null && w.currentQueueIndex == 0)
             Thread.sleep(35_000) // one 30 s save tick plus margin
             inst.runOnMainSync { player!!.pause() } // pause adds the rest and saves
             Thread.sleep(1_000)
