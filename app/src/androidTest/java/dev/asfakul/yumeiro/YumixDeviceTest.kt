@@ -91,11 +91,22 @@ class YumixDeviceTest {
     @Test fun offlineRefreshKeepsTheFeed() {
         FirstRun.tapVisible(rule, "nav_tab_home"); idle(600)
         FirstRun.tapVisible(rule, "quick_card_hues"); idle(600)
-        val until = SystemClock.uptimeMillis() + 150_000
-        while (SystemClock.uptimeMillis() < until && cards().size < 3) idle(3_000)
+        // Wait until the count is at least 3 on two checks in a row (runs 43716649966 and
+        // 43717950021 saw cards, then 0 five seconds later; each step is logged to tell why).
+        val t0 = SystemClock.uptimeMillis()
+        val until = t0 + 150_000
+        var stable = 0
+        while (SystemClock.uptimeMillis() < until && stable < 2) {
+            val n = cards().size; val all = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes().size
+            val lists = rule.onAllNodesWithTag("online_home_list", true).fetchSemanticsNodes().size
+            log("wait +${SystemClock.uptimeMillis() - t0} ms: yumix cards $n, all cards $all, online_home_list nodes $lists")
+            stable = if (n >= 3) stable + 1 else 0
+            if (stable < 2) idle(3_000)
+        }
         idle(5_000)
         val before = cards()
         log("online: ${before.size} cards · ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT}")
+        if (before.size < 3) { FirstRun.shot("yumix_offline_precondition"); log("screen: ${FirstRun.onScreen(rule).take(1500)}") }
         org.junit.Assume.assumeTrue("Yumix showed only ${before.size} cards online (network?)", before.size >= 3)
 
         FirstRun.shell("svc wifi disable"); FirstRun.shell("svc data disable")
