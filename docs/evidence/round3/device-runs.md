@@ -162,3 +162,8 @@ These are real emulators running the real debug APK; the tests are not simulated
 - The TV app installed and launched on API 24 with no crash.
 - HomeNavigation 11/11, BackNavigation 1/1, StabilityStress 3/3 failed, all from one test-helper cause: the API 24 storage permission dialog (packageinstaller GrantPermissionsActivity) stayed on top. FirstRun granted only Android 13+ permissions and matched only API 29+ dumpsys wording. Fixed in FirstRun.kt; rerun 43759794246.
 
+## CI 43757542521 — lint recheck on b0fbea9
+
+- Build, full phone unit suite, TV unit subset, gitleaks: success.
+- lintMobileDebug 0 errors (367 warnings), lintTvDebug 0 errors (335 warnings), down from 117 / 121 in 43754316254. Lint made blocking in `ci.yml` (X10-1..4 verified).
+

@@ -49,15 +49,16 @@ jobs:
       - name: Unit tests (TV app, TV-only behaviour)
         run: ./gradlew testTvDebugUnitTest --tests 'dev.asfakul.yumeiro.EditionTest' --tests 'dev.asfakul.yumeiro.update.*'
 
+      # Lint is blocking since CI 43757542521 (0 errors on both apps, X10-4).
       - name: Lint
         run: ./gradlew lintMobileDebug
-        continue-on-error: true
 
       # G12 X10: the TV app has minSdk 24 (phone: 28), so only this pass catches NewApi calls
       # that would crash older Android TV boxes.
       - name: Lint (TV app, minSdk 24)
+        # Runs even when the phone lint failed, so both reports reach the summary.
+        if: success() || failure()
         run: ./gradlew lintTvDebug
-        continue-on-error: true
 
       - name: Lint errors to the job summary
         if: always()
