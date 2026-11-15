@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -68,6 +67,7 @@ internal fun CrashReportsCard() {
         value = withContext(Dispatchers.IO) { CrashLog.list(context) }
     }
     var open by remember { mutableStateOf<CrashLog.Report?>(null) }
+    var confirmClear by remember { mutableStateOf(false) }
     fun share(files: List<java.io.File>, subject: String) {
         val uris = files.mapNotNull { f ->
             runCatching { FileProvider.getUriForFile(context, context.packageName + ".files", f) }.getOrNull()
@@ -91,16 +91,32 @@ internal fun CrashReportsCard() {
             SettingsActionRow("Share all", "Every report, attached as files", "crash_share_all") {
                 share(reports.map { it.file }, "Yumeiro crash reports (${reports.size})")
             }
-            SettingsActionRow("Delete all", "Remove the saved reports from this phone", "crash_clear", danger = true) {
-                scope.launch { withContext(Dispatchers.IO) { CrashLog.clear(context) }; version++ }
-            }
+            // G12 X6: this used to delete at once, and said "from this phone" while the copies in
+            // Download/Yumeiro/Crash reports stay. Now it asks first and says what it removes.
+            SettingsActionRow("Delete all", "Remove them from Yumeiro; copies in Download stay", "crash_clear", danger = true) { confirmClear = true }
         }
         Text("Reports stay on this phone until you share them. A copy of each one is also saved as a file in Download/Yumeiro/Crash reports, ready to attach. They hold the app version, phone model, Android version and the error, and leave out links with keys, tokens and e-mail addresses.",
             color = TextTertiary, fontSize = 11.5.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
     }
+    if (confirmClear) {
+        val n = reports.size
+        dev.asfakul.yumeiro.ui.components.TsukiDialog(
+            tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
+            onDismissRequest = { confirmClear = false },
+            title = { Text(if (n == 1) "Delete this crash report?" else "Delete all $n crash reports?") },
+            text = { Text("They are removed from Yumeiro. Copies already saved in Download/Yumeiro/Crash reports stay; delete those in your Files app. This can't be undone.") },
+            confirmButton = {
+                dev.asfakul.yumeiro.ui.components.DialogConfirmButton("Delete", modifier = Modifier.testTag("crash_clear_confirm"), onClick = {
+                    confirmClear = false
+                    scope.launch { withContext(Dispatchers.IO) { CrashLog.clear(context) }; version++ }
+                })
+            },
+            dismissButton = { TextButton(onClick = { confirmClear = false }, modifier = Modifier.testTag("crash_clear_cancel")) { Text("Keep") } },
+        )
+    }
     open?.let { r ->
         val text by produceState<String?>(null, r) { value = withContext(Dispatchers.IO) { crashPreview(r.file) } }
-        AlertDialog(
+        dev.asfakul.yumeiro.ui.components.TsukiDialog(
             onDismissRequest = { open = null },
             title = { Text(r.kind) },
             text = {
@@ -113,7 +129,7 @@ internal fun CrashReportsCard() {
                 }
             },
             confirmButton = { TextButton(onClick = { share(listOf(r.file), "Yumeiro crash report"); open = null }, modifier = Modifier.testTag("crash_share")) { Text("Share") } },
-            dismissButton = { TextButton(onClick = { open = null }) { Text("Close") } },
+            dismissButton = { TextButton(onClick = { open = null }, modifier = Modifier.testTag("crash_close")) { Text("Close") } },
         )
     }
 }
