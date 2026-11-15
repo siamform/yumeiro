@@ -1,34 +1,25 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-15 20:35 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-15 21:25 UTC, fourth handover; orders: master operating document)
 
-- **Owner orders in force:** `notes/owner-orders-2.md` (agent workspace) as summarised in the ledger:
-  L0 run 43744809503 + Step 2 open items (done) → **L1 Group 12 (current)** → L2 Groups 5–10 →
-  L3 Group 11 → L4 re-verify Groups 1–4 → L5 Step 4, Step 5 → final sweep of everything unfinished.
-  Heavy work (lint, full builds, device tests) runs on CI, one run at a time, at most two device
-  workflows. No PR, no merge without the owner.
-- **Done since last note:** PL-13/14/16/17/18/19 verified on device (43748560619, 43747147539);
-  HeatGuardDeviceTest passes both emulators (43749978183, X4-1); network security config HTTPS-only
-  for token hosts (149ef42, X7-1); crash-report UI confirm + device test written (2e5f9d6, X6-1);
-  a11y fixes for 46 dp top-bar targets and unnamed Music cards (3019605, a898010, X8-1); closed-app
-  alert test assert fixed (8dd11e0, X5-1).
-- **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (2026-11-16 Dhaka time) while a local `:app:lintTvDebug`
-  ran (its Gradle daemon was killed, lint result lost). No commit was lost; the three unpushed
-  edits survived and were pushed first. Lesson: TV lint moves to CI.
-- **Since the outage (19:45–20:21 UTC):** CI lint for the TV app (f0df775) found a real crash: Cast
-  subtitles used an API 33 method (fixed ff00d11, X10-2) plus API 28 calls on TV (6651bc9); lint noise
-  fixed (7486997, c7772ce, 72394dc). CrashUiDeviceTest verified on both (X6-1). Pacer gap bug found by
-  the closed-app test on api33 (fixed 9b46045, X5-2). Yumix pills 48 dp (b0fbea9). TV emulator job
-  added (590fb6b, X9-1).
-- **20:21–20:35 UTC:** X1 architecture read-through: JsBridge extractor bounded (565d39b, X1-3);
-  cancelled tracker sign-in no longer toasts an error (b0a62eb, X1-4).
-- **Current step:** Level 1, Group 12, X5/X8/X9/X10 verification and X1 audit.
-- **Running:** CI 43757542521 (lint recheck + unit suite), device 43757544993 (ClosedAppAlert,
-  Accessibility, both phones), TV 43757547383 (tv-api24: HomeNavigation, BackNavigation, StabilityStress).
-- **Next three actions:** (1) read the three runs, fix failures, update X5/X8/X9/X10; make lint blocking
-  once clean; (2) X8-2 wider accessibility coverage; (3) rest of Group 12 (architecture X1, startup and
-  baseline profile, memory profile, ST-7/ST-17, security MASVS, build & release) and its report
-  `docs/groups/GROUP-12-CROSS-CUTTING.md` in the Part 3 format.
+- **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
+  L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
+  the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
+- **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
+  CI only since then.
+- **Verified since 20:21 UTC:** X5-1, X5-2, X8-1 on both phones (43757544993); X10-1..4 on CI
+  (43757542521: lint 0 errors on phone and TV, lint now blocking, 5078a6f); APK secret scan clean (X7-2).
+- **Fixed, unit-proved:** X1-3 JsBridge extractor bounded (565d39b); X1-4 cancelled tracker sign-in
+  no longer toasts an error (b0a62eb).
+- **Found:** X2-1 slow first composition (StrictMode); X7-3 tokens/client secrets in BuildConfig (owner
+  decision); Home Continue cards unnamed for TalkBack (fixed 5e685a5).
+- **Current step:** Level 1, Group 12: X8-2 (a11y on Settings/search/player/large font), X9-1 (TV run),
+  X2 startup benchmark (:benchmark module 257d48c).
+- **Running:** device 43762090588 (AccessibilityDeviceTest, both phones, 84e151c); TV 43762847904
+  (tv-api24 after the pm grant fix); CI 43762845168 (build incl. :benchmark, unit, blocking lint).
+- **Next three actions:** (1) read the three runs and fix; (2) dispatch macrobenchmark.yml startup,
+  then profile, commit `baseline-prof.txt`, rerun startup for before/after; (3) write
+  `docs/groups/GROUP-12-CROSS-CUTTING.md` (Part 3 format) and continue memory/ST-7/ST-17/RTL/release.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

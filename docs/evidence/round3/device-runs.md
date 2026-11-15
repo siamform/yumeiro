@@ -167,3 +167,15 @@ These are real emulators running the real debug APK; the tests are not simulated
 - Build, full phone unit suite, TV unit subset, gitleaks: success.
 - lintMobileDebug 0 errors (367 warnings), lintTvDebug 0 errors (335 warnings), down from 117 / 121 in 43754316254. Lint made blocking in `ci.yml` (X10-1..4 verified).
 
+## 43760044391 — AccessibilityDeviceTest with the X8-2 screens on 5648a9a (both phones)
+
+- Clean on both: main tabs, video player with controls up, the four tabs at font_scale 1.3.
+- search (api36): SpeakableTextPresentCheck on [42,1926][524,2126] and [556,1926][1038,2126] = the
+  two Home → "Jump back in" cards cut off by the bottom bar (shot a11y_search.png). Fixed 5e685a5.
+- settings / large-font Settings part: test used `nav_shortcut_settings` (only when pinned); fixed 84e151c.
+
+## 43759794246 — TV rerun on cc7dbff
+
+- FirstRun now detects the API 24 dialog, but Back does not close it and the grant call is API 28+;
+  all 15 tests blocked at "tab bar never showed". Fixed in test infra 6fa9ce6 (pm grant before each class).
+
