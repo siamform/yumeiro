@@ -37,15 +37,35 @@ object PrefsWarmup {
         "yu_last_played",         // LastPlayed
         "yumeiro_listening",      // ListeningTime
         "browser_check",          // BrowserCheck cached UA
+        // R16 third StrictMode pass (device run 43683520404, api36), still read on main at start:
+        "yu_nav",                 // NavPrefs
+        "setup_guide",            // SetupGuide.shouldAutoShow
+        "home_layout",            // HomeLayout.load
+        "yt_topics",              // YtTopics.load
+        "search_recent",          // RecentSearches
+        "backup_meta",            // BackupMeta.takeNote
+        "notify_settings",        // NotifySettings
+        "permission_center",      // PermissionCenter
+        "push_wake",              // PushWake
+        "background_work",        // BackgroundHealth
+        "discovery_state",
+        "reliability_guide",      // ReliabilityGuide
+        "reminders",              // Reminders
     )
 
     fun start(context: Context) {
         val app = context.applicationContext
         Thread({
-            for (name in FIRST_FRAME) {
-                // contains() waits for the load, so the file is parsed here and not on the main thread.
-                runCatching { app.getSharedPreferences(name, Context.MODE_PRIVATE).contains("") }
-            }
+            // filesDir is cached by the context after the first call (a stat/mkdir on disk).
+            runCatching { app.filesDir }
+            // getSharedPreferences() starts each file's load on its own thread, so asking for all
+            // of them first loads them side by side; the main thread then finds most ready instead
+            // of waiting for a file far down a one-by-one list (R16: 3rd entry still read on main).
+            val all = FIRST_FRAME.mapNotNull { runCatching { app.getSharedPreferences(it, Context.MODE_PRIVATE) }.getOrNull() }
+            // contains() waits for the load, so any parse cost lands here, not on the main thread.
+            for (p in all) runCatching { p.contains("") }
+            // The inbox JSON file is read when Home draws its bell badge.
+            runCatching { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(app) }
             // Loading the FFmpeg native libraries reads the APK; do it here, not when the first player is built.
             runCatching { dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegAvailable }
         }, "yu-prefs").apply { priority = Thread.NORM_PRIORITY }.start()

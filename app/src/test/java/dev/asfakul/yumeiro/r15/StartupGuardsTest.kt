@@ -55,9 +55,21 @@ class StartupGuardsTest {
     }
 
     @Test fun firstFrameSettingsAreWarmedUp() {
-        for (name in listOf("mt_appearance", "mt_player_music_prefs", "mt_player_video_prefs", "mt_player_eq_prefs", "scrobble")) {
+        // R16: the third StrictMode pass (run 43683520404) added these; each one is named by a
+        // DiskReadViolation on the main thread at start.
+        for (name in listOf("mt_appearance", "mt_player_music_prefs", "mt_player_video_prefs", "mt_player_eq_prefs", "scrobble",
+                "yu_nav", "setup_guide", "home_layout", "yt_topics", "search_recent", "notify_settings", "push_wake", "background_work")) {
             assertTrue(name, name in PrefsWarmup.FIRST_FRAME)
         }
+    }
+
+    @Test fun warmUpLoadsTheInboxOffTheMainThread() {
+        val app = ApplicationProvider.getApplicationContext<android.content.Context>()
+        PrefsWarmup.start(app)
+        val deadline = System.currentTimeMillis() + 5_000
+        val field = dev.asfakul.yumeiro.notify.Inbox::class.java.getDeclaredField("file").apply { isAccessible = true }
+        while (field.get(dev.asfakul.yumeiro.notify.Inbox) == null && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertTrue("inbox not loaded by the warm-up", field.get(dev.asfakul.yumeiro.notify.Inbox) != null)
     }
 
     @Test fun stallSamplesNameOurFrames() {
