@@ -25,7 +25,7 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
 | Engine-generated levels for single-source streams | Fixed | Device `a_engineLevelsSwitchWithoutTimeout` |
 | No audio with multiple sources | Fixed | Device `d_everyAudioRenditionIsAudible` (AAC, AC3), `e_separateAudioIsMerged`, `StarvationSafeLoadControl` |
 | A manual pick of a dead source rotates again | Fixed | `RecoveryStateTest` (unit). Device `d_manualPickOfADeadSourceRotatesAgain`, run 43652020450, both devices: the dead pick was tried, then playback rotated to the working MP4, and the dead link was marked failed |
-| Drama banner plays; dramas appear in the feed | Fixed in code | `DramaResilienceTest` (16, unit). Live network check b21 24/24 (`docs/evidence/round3/drama-live-b21.txt`); the b14 run was invalid (onshort.net outage). **Not device-verified** in the emulator matrix |
+| Drama banner plays; dramas appear in the feed | Fixed in code | `DramaResilienceTest` (16, unit). Live network check b21 24/24 (`docs/evidence/round3/drama-live-b21.txt`); the b14 run was invalid (onshort.net outage). Device: `DramaPlaybackDeviceTest` PASS on API 33 and 36 (runs 43657727593, 43657729675): feed rows DramaBox/ReelShort/NetShort/DramaWave = 18 each; "Daddy, Save Me" reached first frame at 1080x1920. The first device attempt (43656137755) failed only because the test did not release the first-run gate (`OnboardingGate`), which holds every source until the welcome guide is skipped |
 | 00:00 instead of "--:--" | Fixed (this round; before, the row showed a pulsing pill or nothing) | `DurationLabelTest` (Robolectric). Device `c_uiFlowPlays`, run 43652020450: labels while opening were `[00:00, 1:31:44]` on both devices |
 
 ## Phase 3: live scroll never replaced by stale data
@@ -65,7 +65,6 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
 ## Still open (not claimed)
 
 - YouTube playback and quality switching on a device on a home network (CI IPs are bot-checked).
-- Drama playback inside the emulator matrix.
 - A real Xiaomi with Android 13 and a TV device; the emulators cover API 33 low-RAM and API 36.
 - Security: rotate the Firebase service-account key and the Cloudflare API token, since both were
   shared in chat.

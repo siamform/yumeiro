@@ -51,3 +51,12 @@ These are real emulators running the real debug APK; the tests are not simulated
   - A segmented DASH stream saves too: 36,632,975 bytes, 634 s.
   - "View downloads" moves the video to the floating player, and a new video expands it.
   - The crash report is exported as a file right away.
+
+## Runs after the tab-pager fix (R15)
+
+| Run | Commit | Scope | API 33 | API 36 | Notes |
+|---|---|---|---|---|---|
+| 43654905931 | 2ba28e1 | full | cancelled | cancelled | Cancelled by a later dispatch (shared concurrency group); group now includes the test filter (0cb815a) |
+| 43656137755 | 61bf92b | drama + stress | drama FAIL, stress 3/3 | drama FAIL, stress 3/3 | Test waited on sources held by the first-run gate; test bug, fixed in 0cb815a |
+| 43657727593 | 0cb815a | drama | 1/1 | 1/1 | 4 rows x 18 dramas; episode first frame 1080x1920 |
+| 43657729675 | 0cb815a | full, 7 classes | 18/18 | 18/18 | never idle 0, ComposeNotIdle 0, FATAL/ANR/OOM 0, max stall 477 ms / 542 ms; dead pick rotated; labels [00:00, 1:31:44]; YouTube test skipped (CI IP bot-checked) |
