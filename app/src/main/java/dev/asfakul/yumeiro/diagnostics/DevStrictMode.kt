@@ -31,10 +31,20 @@ object DevStrictMode {
             .detectLeakedRegistrationObjects()
             .penaltyLog()
         if (Build.VERSION.SDK_INT >= 28) {
-            thread.penaltyListener(listener) { v -> MemoryWatch.breadcrumb("strict " + (v.javaClass.simpleName) + " " + (v.stackTrace.firstOrNull { it.className.startsWith("dev.asfakul") } ?: "")) }
+            thread.penaltyListener(listener) { v -> MemoryWatch.breadcrumb(crumb(v.javaClass.simpleName, v.stackTrace)) }
             vm.penaltyListener(listener) { v -> MemoryWatch.breadcrumb("strict-vm " + v.javaClass.simpleName) }
         }
         StrictMode.setThreadPolicy(thread.build())
         StrictMode.setVmPolicy(vm.build())
     }
+
+    /**
+     * G12 X6-2: the breadcrumb used the first `dev.asfakul` frame. On the main thread the guarded
+     * looper (`ExtensionGuard.install`) sits under every frame, so a violation raised from framework
+     * code only (view detach, renderer) was blamed on `ExtensionGuard.kt:83` (device run 43763558754),
+     * which sends a reader to the wrong file. Use the stall watchdog's app-frame filter: real callers
+     * are named as before (up to 3 frames), framework-only stacks say so.
+     */
+    internal fun crumb(violation: String, trace: Array<StackTraceElement>): String =
+        "strict $violation " + MainThreadWatchdog.appFrames(trace, 3)
 }
