@@ -802,6 +802,9 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
     }
 }
 
+/** Outlives the screen so a cast that is being prepared still starts if the user navigates away. */
+private val castScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
+
 /** Sends the playing source to a Chromecast / Google TV (picks a device first if needed). */
 private fun castCurrent(context: android.content.Context, state: OnlineSession.State, player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle) {
     val link = state.link ?: return
@@ -809,17 +812,22 @@ private fun castCurrent(context: android.content.Context, state: OnlineSession.S
     if (link.headers.isNotEmpty() || link.referer != null) {
         dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "This source needs special request headers; if the TV can't play it, pick another source and cast again")
     }
-    val start = {
+    // R17: SRT subtitles are converted to WebVTT on the phone first (CastSupport.prepareSubtitles),
+    // off the main thread; the cast starts once that is done.
+    val start: () -> Unit = { castScope.launch {
+        val subs = dev.asfakul.yumeiro.cast.CastSupport.prepareSubtitles(
+            context, state.subtitles.map { dev.asfakul.yumeiro.cast.CastSupport.Sub(it.language, it.url, it.headers) },
+        )
         val ok = dev.asfakul.yumeiro.cast.CastSupport.play(
             context, dev.asfakul.yumeiro.cast.CastSupport.Media(
                 url = link.url, title = state.detail.name, subtitle = state.episode?.let { e -> listOfNotNull(e.season?.let { "S$it" }, e.episode?.let { "E$it" }, e.name).joinToString(" ") },
                 posterUrl = state.detail.posterUrl, isHls = link.isHls, isDash = link.isDash, positionMs = player.positionMs(),
-                subtitles = state.subtitles.map { it.language to it.url },
+                subtitles = subs,
             ),
         )
         if (ok) { player.pause(); dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Casting ${state.detail.name}") }
         else dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "Couldn't start casting")
-    }
+    } }
     if (dev.asfakul.yumeiro.cast.CastSupport.connected(context)) start()
     else { dev.asfakul.yumeiro.cast.CastSupport.whenConnected(context) { activity.runOnUiThread { start() } }; dev.asfakul.yumeiro.cast.CastSupport.pickDevice(activity) }
 }

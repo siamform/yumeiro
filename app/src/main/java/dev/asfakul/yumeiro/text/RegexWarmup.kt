@@ -93,6 +93,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.online.subtitles.SubDLKt",
         "dev.asfakul.yumeiro.online.subtitles.SubSourceKt",
         "dev.asfakul.yumeiro.online.subtitles.SubtitleArchiveKt",
+        "dev.asfakul.yumeiro.cast.SrtToVtt",
         "dev.asfakul.yumeiro.online.subtitles.SubtitleHubKt",
         "dev.asfakul.yumeiro.online.web.AdFilter",
         "dev.asfakul.yumeiro.scrobble.ScrobbleRulesKt",

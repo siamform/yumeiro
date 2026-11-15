@@ -388,5 +388,30 @@ class LocalPlayerDeviceTest {
         }
     }
 
+    /**
+     * R17 PL-19: an SRT is converted on the phone and served to the TV on the local network, with
+     * the CORS header a Cast receiver needs. Fetched here over a real socket at the emulator's
+     * Wi-Fi/Ethernet address (what a TV on the same network would use).
+     */
+    @Test fun i_castSubtitleServerServesConvertedSrt() {
+        val srtFile = java.io.File(ctx.cacheDir, "pl19.srt").apply { writeText("1\r\n00:00:01,000 --> 00:00:02,000\r\nこんにちは\r\n") }
+        val subs = kotlinx.coroutines.runBlocking {
+            dev.asfakul.yumeiro.cast.CastSupport.prepareSubtitles(ctx, listOf(dev.asfakul.yumeiro.cast.CastSupport.Sub("Japanese", android.net.Uri.fromFile(srtFile).toString())))
+        }
+        log("PL19 prepared: $subs, address=${dev.asfakul.yumeiro.cast.CastSubtitleServer.localAddress()}")
+        assertEquals(1, subs.size)
+        val url = java.net.URI(subs[0].second)
+        assertTrue("served from the LAN address: $url", url.scheme == "http" && url.path.endsWith(".vtt") && url.host != "127.0.0.1")
+        val resp = java.net.Socket(url.host, url.port).use { s ->
+            s.getOutputStream().write("GET ${url.path} HTTP/1.1\r\nHost: ${url.host}\r\n\r\n".toByteArray())
+            s.getInputStream().readBytes().toString(Charsets.UTF_8)
+        }
+        log("PL19 response head: ${resp.substringBefore("\r\n\r\n").replace("\r\n", " | ")}")
+        assertTrue(resp, resp.startsWith("HTTP/1.1 200") && resp.contains("Access-Control-Allow-Origin: *") && resp.contains("text/vtt"))
+        assertTrue(resp, resp.contains("WEBVTT") && resp.contains("00:00:01.000 --> 00:00:02.000") && resp.contains("こんにちは"))
+        dev.asfakul.yumeiro.cast.CastSubtitleServer.stop()
+        log("LOCAL_I_RESULT PASS")
+    }
+
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
 }
