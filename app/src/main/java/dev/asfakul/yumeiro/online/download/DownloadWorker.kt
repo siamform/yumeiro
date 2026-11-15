@@ -24,15 +24,11 @@ import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.online.web.BrowserCheck
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import kotlinx.coroutines.currentCoroutineContext
 
 /** Runs one download from [OnlineDownloads] with a progress notification. */
 class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -114,7 +110,10 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) "Saved · Permanent · tap to open Downloads" else "Saved · Offline · tap to open Downloads")
             return Result.success()
         } catch (e: CancellationException) {
-            OnlineDownloads.paused(id)
+            // R16 (G8): a stop by the system (network lost, quota) used to mark the item PAUSED, so the
+            // rerun WorkManager makes when the network is back saw PAUSED and quit: stuck until tapped.
+            // A user pause or delete already set its own state; only a running item goes back to QUEUED.
+            OnlineDownloads.stopped(id)
             throw e
         } catch (e: Throwable) {
             Log.w(LOG, "download ${item.title}", e)
@@ -211,40 +210,6 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         }
     }
 
-    @Suppress("unused") // R15: kept for reference; [forced] / [Segmented] replaced it.
-    private suspend fun direct(client: OkHttpClient, item: OnlineDownloads.Item, part: File, progress: (Long, Long) -> Unit): Long {
-        val have = if (part.exists()) part.length() else 0L
-        val b = Request.Builder().url(item.url)
-        item.headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
-        if (have > 0) b.header("Range", "bytes=$have-")
-        client.newCall(b.build()).execute().use { r ->
-            if (!r.isSuccessful) throw HttpStatus(r.code)
-            val resumed = r.code == 206 && have > 0
-            val body = r.body
-            val length = body.contentLength()
-            val total = if (length > 0) length + (if (resumed) have else 0) else -1
-            var done = if (resumed) have else 0L
-            // Not enough room for the rest of the file: stop before filling the storage to the brim.
-            if (total > 0) {
-                val free = OnlineDownloads.freeBytes(applicationContext)
-                if (free in 0 until (total - done) + DiskFull.MARGIN) throw DiskFull(total - done, free)
-            }
-            FileOutputStream(part, resumed).use { fos ->
-                body.byteStream().use { input ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        val n = input.read(buf); if (n < 0) break
-                        fos.write(buf, 0, n); done += n
-                        progress(done, total)
-                    }
-                }
-            }
-            if (total > 0 && done < total) throw IOException("Connection closed early")
-            return done
-        }
-    }
-
     private fun channel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && notifications.getNotificationChannel(CHANNEL) == null) {
             notifications.createNotificationChannel(NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW))
@@ -328,6 +293,26 @@ internal class DiskFull(needed: Long, free: Long) : java.io.IOException(
                 t = t.cause
             }
             return false
+        }
+    }
+}
+
+/** R16 (G8): what to do with the answer to a `Range: bytes=have-` request. */
+internal object RangeResume {
+    enum class Action { APPEND, RESTART, COMPLETE }
+
+    fun decide(have: Long, code: Int, contentRange: String?): Action {
+        val cr = contentRange?.trim()?.lowercase()?.removePrefix("bytes")?.trim()
+        return when (code) {
+            // "bytes */12345": the server's full size; equal to what we have means the file is complete.
+            416 -> if (cr?.substringAfter('/', "")?.toLongOrNull() == have) Action.COMPLETE else Action.RESTART
+            // "bytes 500-999/1000": append only if it starts where the .part ends.
+            206 -> {
+                if (cr == null) return Action.APPEND
+                val start = cr.substringBefore('-', "").trim().toLongOrNull()
+                if (start == null || start == have) Action.APPEND else Action.RESTART
+            }
+            else -> Action.APPEND
         }
     }
 }

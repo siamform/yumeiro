@@ -32,7 +32,7 @@ process restart → list kept); until then T3/T4 stay unit only.
 | LT-1 | One bad byte or a kill mid-save could lose every saved playlist | index read with plain JSON decode, written straight over the file | read and write through `SafeJsonFile` (temp + rename, bad copy kept as `.bad`) | `stream/PlaylistStore.kt` (4cee17d) | unit `StreamPlaylistTest#aBrokenIndexIsNotOverwrittenWithDefaults` |
 | LT-2 | Playlist page empty with no message when the store failed | error not surfaced | error text + Retry re-runs the load | `ui/screens/stream/PlaylistDetailScreen.kt` (4cee17d) | compile |
 | LT-3 | Opening a large saved playlist (cap 40 MB) built one String of the whole file, then the channel list: big heap spike on a 192 MB-heap phone | `file.readText()` before `M3uParser.parse` | `M3uParser.parseLines(Sequence<String>)`; the store reads with `bufferedReader().useLines` | `stream/M3uParser.kt`, `stream/PlaylistStore.kt` | unit: both paths give equal channels (`StreamPlaylistTest`) |
-| MG-1 | Retry on a manga title or reader page could show a false error; first open read the library file on the main thread | `runCatching` caught the cancellation of the old load; `MangaLibrary.load` in a main-thread effect | rethrow `CancellationException`; load on `Dispatchers.IO` | `ui/screens/manga/MangaScreens.kt` (4cee17d + this commit) | compile |
+| MG-1 | Retry on a manga title or reader page could show a false error; first open read the library file on the main thread | `runCatching` caught the cancellation of the old load; `MangaLibrary.load` in a main-thread effect | rethrow `CancellationException`; load on `Dispatchers.IO` | `ui/screens/manga/MangaScreens.kt` (4cee17d, c9a4929) | compile |
 
 ## Verification
 

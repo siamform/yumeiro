@@ -47,10 +47,16 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         val segments = parseMedia(text, playlistUrl)
         if (segments.isEmpty()) throw IOException("The playlist has no segments")
         val state = File(out.parentFile, out.name + ".idx")
-        var doneCount = if (out.exists() && state.exists()) state.readText().trim().toIntOrNull() ?: 0 else 0
-        if (doneCount == 0) { out.delete() }
+        // R16 (G8): the side file now records "segments:bytes". It is written every 5 segments, so
+        // after a pause the file can hold a few segments more than recorded; they were appended a
+        // second time on resume (repeated video). The file is cut back to the recorded length.
+        val (resumeCount, resumeBytes) = HlsResume.read(if (out.exists() && state.exists()) state.readText() else null, out.length())
+        var doneCount = resumeCount
+        if (doneCount == 0) { out.delete() } else if (out.length() > resumeBytes) {
+            java.io.RandomAccessFile(out, "rw").use { it.setLength(resumeBytes) }
+        }
         val keys = HashMap<String, ByteArray>()
-        var bytes = if (doneCount > 0) out.length() else 0L
+        var bytes = if (doneCount > 0) resumeBytes else 0L
         FileOutputStream(out, doneCount > 0).use { fos ->
             if (doneCount == 0) segments.first().initUrl?.let { init -> val b = fetchBytes(init); fos.write(b); bytes += b.size }
             for (i in doneCount until segments.size) {
@@ -63,7 +69,7 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
                 }
                 fos.write(data); bytes += data.size
                 doneCount = i + 1
-                if (doneCount % 5 == 0 || doneCount == segments.size) { fos.flush(); state.writeText(doneCount.toString()) }
+                if (doneCount % 5 == 0 || doneCount == segments.size) { fos.flush(); state.writeText(HlsResume.write(doneCount, bytes)) }
                 // Estimate the final size from the average segment so far.
                 val estimate = bytes * segments.size / doneCount
                 progress(bytes, if (doneCount == segments.size) bytes else estimate)
@@ -147,5 +153,18 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
             c.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
             return c.doFinal(data)
         }
+    }
+}
+
+/** R16 (G8): resume point of a segmented download, stored as "segments:bytes". */
+internal object HlsResume {
+    fun write(segments: Int, bytes: Long) = "$segments:$bytes"
+
+    /** Segments to skip and the file length they fill. Old or bad state, or a short file, starts over. */
+    fun read(state: String?, fileLength: Long): Pair<Int, Long> {
+        val parts = state?.trim()?.split(':') ?: return 0 to 0L
+        val n = parts.getOrNull(0)?.toIntOrNull(); val b = parts.getOrNull(1)?.toLongOrNull()
+        if (parts.size != 2 || n == null || b == null || n <= 0 || b <= 0 || fileLength < b) return 0 to 0L
+        return n to b
     }
 }

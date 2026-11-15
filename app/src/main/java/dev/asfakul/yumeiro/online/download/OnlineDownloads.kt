@@ -282,8 +282,9 @@ object OnlineDownloads {
     }
 
     fun pause(context: Context, id: String) {
-        WorkManager.getInstance(context.applicationContext).cancelUniqueWork("dl_$id")
+        // R16 (G8): state first, so the cancelled worker sees PAUSED and leaves it.
         set(id) { if (it.active) it.copy(status = Status.PAUSED) else it }
+        WorkManager.getInstance(context.applicationContext).cancelUniqueWork("dl_$id")
     }
 
     fun delete(context: Context, id: String) {
@@ -310,6 +311,8 @@ object OnlineDownloads {
     internal fun resolved(id: String, change: (Item) -> Item) = set(id, change = change)
     internal fun failed(id: String, message: String) = set(id) { it.copy(status = Status.FAILED, error = message) }
     internal fun paused(id: String) = set(id) { if (it.status != Status.DONE) it.copy(status = Status.PAUSED) else it }
+    /** Worker stopped without a user pause (system stop): it will run again, so show it as waiting. */
+    internal fun stopped(id: String) = set(id) { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED) else it }
 
     private fun set(id: String, persist: Boolean = true, change: (Item) -> Item) {
         synchronized(this) { _items.value = _items.value.map { if (it.id == id) change(it) else it } }

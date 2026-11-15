@@ -209,8 +209,15 @@ class Segmented(
         if (have > 0) b.header("Range", "bytes=$have-")
         client.newCall(b.build()).execute().use { r ->
             if (r.code == 401 || r.code == 403) throw Refused(r.code)
-            // 416 for "bytes=<size>-": the file is already complete.
-            if (r.code == 416 && have > 0) { progress(have, have); return have }
+            // 416 for "bytes=<size>-": the file is already complete. R16 (G8): only when the server's
+            // size matches; a changed file (other size) or a range at another offset starts over.
+            if (have > 0 && (r.code == 416 || r.code == 206)) {
+                when (RangeResume.decide(have, r.code, r.header("Content-Range"))) {
+                    RangeResume.Action.COMPLETE -> { progress(have, have); return have }
+                    RangeResume.Action.RESTART -> { r.close(); out.delete(); return single(url, headers, out, progress) }
+                    RangeResume.Action.APPEND -> Unit
+                }
+            }
             if (!r.isSuccessful) throw HttpStatus(r.code)
             val resumed = r.code == 206 && have > 0
             val length = r.body.contentLength()
