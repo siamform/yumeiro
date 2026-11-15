@@ -78,9 +78,14 @@ class YumixDeviceTest {
         runCatching { rule.waitUntil(ms + 5_000) { SystemClock.uptimeMillis() >= until } }
     }
 
-    /** Titles of every feed card composed on the Yumix page right now. */
+    /**
+     * Titles of every feed card composed inside the Yumix list right now. Only cards under
+     * `online_home_list` count: run 43716649966 counted Home's cards while the tab was switching,
+     * stopped waiting at once and then measured a Yumix page that was still loading (0 cards).
+     */
     private fun cards(): Set<String> =
         rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
+            .filter { n -> generateSequence(n.parent) { it.parent }.any { it.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null } == "online_home_list" } }
             .mapNotNull { it.config.getOrElseNullable(FeedCardKey) { null } }.toSet()
 
     @Test fun offlineRefreshKeepsTheFeed() {
