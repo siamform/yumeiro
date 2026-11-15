@@ -163,6 +163,8 @@ fun MTPlayerApp(
     // access cards). Home is always the root of the back stack: going "home" pops back to it
     // instead of restoring a saved state, which previously re-opened the last tab and made the
     // Home tab look dead.
+    // The running tab jump (slide or fade-through), so Back can cancel it instead of racing it.
+    val tabJump = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val navigateTop: (String) -> Unit = remember(navController, tabPager, tabFade, tabShift) {
         { route ->
             runCatching {
@@ -173,7 +175,8 @@ fun MTPlayerApp(
                 }
             }
             val page = pageItemsNow.indexOfFirst { it.route == route }
-            if (page >= 0 && page != tabPager.currentPage) tabScope.launch {
+            if (page >= 0 && page != tabPager.currentPage) tabJump.value?.cancel()
+            if (page >= 0 && page != tabPager.currentPage) tabJump.value = tabScope.launch {
                 // Neighbouring tab: the pager slides. Far tab (Home → Videos / Library, Spaces and
                 // dock shortcuts): this used to be scrollToPage, an instant cut with no motion at all,
                 // which is why Yumix, YouTube, Live TV and Library felt like "click and load" when
@@ -1579,7 +1582,13 @@ fun MTPlayerApp(
         // exit is armed on Home, so the second back reaches the system.
         BackHandler(enabled = navRoute == Screen.Home.route && !overlayOpen && !(exitArmed && tabPager.currentPage == 0)) {
             if (tabPager.currentPage != 0) {
-                tabScope.launch { tabPager.animateScrollToPage(0) }
+                android.util.Log.i("YuBack", "tab back: page ${tabPager.currentPage} → Home")
+                tabJump.value?.cancel()
+                tabJump.value = tabScope.launch {
+                    // A far jump cancelled mid-fade must not leave Home invisible or shifted.
+                    tabFade.snapTo(1f); tabShift.snapTo(0f)
+                    tabPager.animateScrollToPage(0)
+                }
             } else {
                 exitArmed = true
                 android.util.Log.i("YuBack", "home back: exit armed for ${EXIT_WINDOW_MS} ms")

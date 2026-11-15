@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -77,7 +78,7 @@ class HomeNavigationDeviceTest {
         tap("home_continue_video_play")
         waitPage(2, 15_000)
         log("continue video (empty) → page ${TabPagerProbe.page}")
-        back(); waitPage(0)
+        back(); waitPage(0, 15_000)
     }
 
     @Test fun h3_navBarShortcutOpensItsPage() {
@@ -101,6 +102,10 @@ class HomeNavigationDeviceTest {
             waitTag("tv_nav_tab_music")
             // D-pad: tap gives the rail item focus on a touch emulator, then centre selects.
             tap("tv_nav_tab_music"); waitPage(1, 15_000)
+            // A tap leaves the emulator in touch mode (no key focus), so give the rail item focus
+            // through semantics, as a remote's first key press would.
+            rule.onNodeWithTag("tv_nav_tab_music", true).requestFocus()
+            rule.waitForIdle()
             FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(600)
             FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER")
             val moved = runCatching { rule.waitUntil(10_000) { TabPagerProbe.page != 1 }; true }.getOrDefault(false)
