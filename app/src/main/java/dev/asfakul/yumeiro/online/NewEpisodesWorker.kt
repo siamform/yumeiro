@@ -81,6 +81,8 @@ class NewEpisodesWorker(context: Context, params: WorkerParameters) : CoroutineW
                         val api = ExtensionManager.provider(b.api) ?: return@withPermit null
                         val detail = withTimeoutOrNull(30_000) { runCatching { OnlineRepository.load(api, b.url, force = true) }.getOrNull() } ?: return@withPermit null
                         if (detail.kind != OnlineKind.SERIES && detail.episodes.isEmpty()) return@withPermit null
+                        // R16 (G5): an answer with no episodes says nothing about new ones.
+                        if (episodeCount(detail) == 0) return@withPermit null
                         val added = OnlineBookmarks.checked(ctx, b.api, b.url, episodeCount(detail))
                         if (added > 0) b to added else null
                     }

@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -205,15 +206,19 @@ class OfflineMediaRepository(
     private fun loadPlaylists(): List<Playlist> = runCatching {
         val raw = musicPrefs.getString(KEY_PLAYLISTS, null) ?: return defaultPlaylists()
         val array = org.json.JSONArray(raw)
-        val loaded = (0 until array.length()).map { i ->
-            val obj = array.getJSONObject(i)
-            val ids = obj.optJSONArray("trackIds")
-            Playlist(
-                id = obj.getString("id"),
-                name = obj.optString("name", "Playlist"),
-                trackIds = if (ids == null) emptyList() else (0 until ids.length()).map { ids.getString(it) },
-                createdAt = obj.optLong("createdAt", System.currentTimeMillis())
-            )
+        // R16 (G5): one bad entry used to drop to the defaults, and the next save then wrote only
+        // "Favorite Tracks" over every playlist the user made. Bad entries are skipped instead.
+        val loaded = (0 until array.length()).mapNotNull { i ->
+            runCatching {
+                val obj = array.getJSONObject(i)
+                val ids = obj.optJSONArray("trackIds")
+                Playlist(
+                    id = obj.getString("id"),
+                    name = obj.optString("name", "Playlist"),
+                    trackIds = if (ids == null) emptyList() else (0 until ids.length()).mapNotNull { ids.optString(it).ifBlank { null } },
+                    createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                )
+            }.getOrNull()
         }
         // Seeded demo playlists the user never filled are removed (kept if songs were added).
         val cleaned = loaded.filterNot { it.id in SEEDED_DEMO && it.trackIds.isEmpty() }
@@ -593,11 +598,11 @@ class OfflineMediaRepository(
             track.copy(isFavorite = favoriteIds.contains(track.id))
         }
         // Update default favorites playlist
-        _playlists.value = _playlists.value.map { pl ->
+        _playlists.update { cur -> cur.map { pl ->
             if (pl.id == "favorites_default") {
                 pl.copy(trackIds = favoriteIds.toList())
             } else pl
-        }
+        } }
         persistFavorites()
         persistPlaylists()
     }
@@ -608,43 +613,43 @@ class OfflineMediaRepository(
             name = name,
             trackIds = trackIds
         )
-        _playlists.value = _playlists.value + newPlaylist
+        _playlists.update { it + newPlaylist }
         persistPlaylists()
     }
 
     override suspend fun renamePlaylist(playlistId: String, newName: String) {
-        _playlists.value = _playlists.value.map { pl ->
+        _playlists.update { cur -> cur.map { pl ->
             if (pl.id == playlistId) pl.copy(name = newName) else pl
-        }
+        } }
         persistPlaylists()
     }
 
     override suspend fun deletePlaylist(playlistId: String) {
-        _playlists.value = _playlists.value.filter { it.id != playlistId }
+        _playlists.update { cur -> cur.filter { it.id != playlistId } }
         persistPlaylists()
     }
 
     override suspend fun addTracksToPlaylist(playlistId: String, trackIds: List<String>) {
-        _playlists.value = _playlists.value.map { pl ->
+        _playlists.update { cur -> cur.map { pl ->
             if (pl.id == playlistId) {
                 val updatedIds = (pl.trackIds + trackIds).distinct()
                 pl.copy(trackIds = updatedIds)
             } else pl
-        }
+        } }
         persistPlaylists()
     }
 
     override suspend fun removeTrackFromPlaylist(playlistId: String, trackId: String) {
-        _playlists.value = _playlists.value.map { pl ->
+        _playlists.update { cur -> cur.map { pl ->
             if (pl.id == playlistId) {
                 pl.copy(trackIds = pl.trackIds.filter { it != trackId })
             } else pl
-        }
+        } }
         persistPlaylists()
     }
 
     override suspend fun reorderPlaylist(playlistId: String, fromIndex: Int, toIndex: Int) {
-        _playlists.value = _playlists.value.map { pl ->
+        _playlists.update { cur -> cur.map { pl ->
             if (pl.id == playlistId) {
                 val list = pl.trackIds.toMutableList()
                 if (fromIndex in list.indices && toIndex in list.indices) {
@@ -653,7 +658,7 @@ class OfflineMediaRepository(
                 }
                 pl.copy(trackIds = list)
             } else pl
-        }
+        } }
         persistPlaylists()
     }
 

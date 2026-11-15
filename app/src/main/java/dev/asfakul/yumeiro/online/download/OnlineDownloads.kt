@@ -127,7 +127,8 @@ object OnlineDownloads {
         if (loaded) return
         loaded = true
         val f = File(context.applicationContext.filesDir, "online_downloads.json").also { file = it }
-        val a = runCatching { if (f.exists()) JSONObject(f.readText()).optJSONArray("items") else null }.getOrNull() ?: return
+        // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
+        val a = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { JSONObject(it).getJSONArray("items") }.value ?: return
         _items.value = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::from) }
             // A download that was running when the app died continues as queued.
             .map { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED) else it }
@@ -325,11 +326,7 @@ object OnlineDownloads {
         val f = file ?: return
         lastWrite = System.currentTimeMillis()
         val o = JSONObject().put("version", 2).put("items", JSONArray().apply { _items.value.forEach { put(json(it)) } })
-        runCatching {
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(o.toString())
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
-        }.onFailure { Log.w(TAG, "save", it) }
+        runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, o.toString()) }.onFailure { Log.w(TAG, "save", it) }
     }
 
     private val RX_BAD_NAME = Regex("""[\\/:*?"<>|\u0000-\u001f]""")

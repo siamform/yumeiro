@@ -39,13 +39,36 @@ object MangaLibrary {
 
     private fun file(context: Context) = File(context.filesDir, "manga/library.json").also { it.parentFile?.mkdirs() }
 
+    @Synchronized
     fun load(context: Context) {
         if (loaded) return
+        // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
+        _entries.value = dev.asfakul.yumeiro.data.SafeJsonFile.read(file(context)) { json.decodeFromString<List<Entry>>(it) }.value.orEmpty()
         loaded = true
-        _entries.value = runCatching { json.decodeFromString<List<Entry>>(file(context).readText()) }.getOrDefault(emptyList())
     }
 
-    private fun save(context: Context) = runCatching { file(context).writeText(json.encodeToString(_entries.value)) }
+    // R16 (G5): the reader saves on every page turn. This used to encode the whole library and write
+    // it straight over the file on the main thread (a kill mid-write truncated it, and the next start
+    // then lost everything). One background thread now writes the latest copy through a temp file;
+    // a newer copy replaces one not yet written.
+    private val pending = java.util.concurrent.atomic.AtomicReference<Pair<File, List<Entry>>?>(null)
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-manga-library").apply { isDaemon = true } }
+
+    private fun save(context: Context) {
+        if (pending.getAndSet(file(context) to _entries.value) != null) return
+        writer.execute {
+            pending.getAndSet(null)?.let { (f, list) ->
+                runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, json.encodeToString(list)) }
+                    .onFailure { runCatching { android.util.Log.w("MangaLibrary", "save", it) } }
+            }
+        }
+    }
+
+    /** Blocks until queued writes are on disk (backup, tests). */
+    fun flush() { runCatching { writer.submit {}.get(5, java.util.concurrent.TimeUnit.SECONDS) } }
+
+    /** For tests: forget the loaded state, so the next call reads the file again. */
+    @Synchronized internal fun unloadForTests() { flush(); _entries.value = emptyList(); loaded = false }
 
     fun get(providerId: String, url: String): Entry? = _entries.value.firstOrNull { it.providerId == providerId && it.url == url }
 
@@ -84,7 +107,7 @@ object MangaLibrary {
     fun remove(context: Context, key: String) { load(context); _entries.value = _entries.value.filterNot { it.key == key }; save(context) }
 
     /** For backups. */
-    fun export(context: Context): String { load(context); return json.encodeToString(_entries.value) }
+    fun export(context: Context): String { load(context); flush(); return json.encodeToString(_entries.value) }
     fun import(context: Context, text: String) {
         val incoming = json.decodeFromString<List<Entry>>(text)
         load(context)

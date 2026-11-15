@@ -118,6 +118,19 @@ class OnlineExtrasTest {
         OnlineBookmarks.reset()
     }
 
+    @Test fun aShortAnswerNeverLooksLikeNewEpisodes() {
+        // R16 (G5): one partial answer (2 of 12) used to lower the count; the next full answer
+        // then reported 10 "new" episodes and notified.
+        OnlineBookmarks.reset()
+        OnlineBookmarks.toggle(context, OnlineItem("Show", "u", "P", null), episodes = 12)
+        assertEquals(0, OnlineBookmarks.checked(context, "P", "u", 2))
+        assertEquals(0, OnlineBookmarks.checked(context, "P", "u", 12))
+        OnlineBookmarks.seen(context, "P", "u", 3) // detail page opened with a short list
+        assertEquals(12, OnlineBookmarks.items.value.single().episodes)
+        assertEquals(1, OnlineBookmarks.checked(context, "P", "u", 13))
+        OnlineBookmarks.reset()
+    }
+
     @Test fun providerOverrideNormalize() {
         assertEquals("https://example.org", ProviderOverrides.normalize(" example.org/ "))
         assertEquals("http://a.b/x", ProviderOverrides.normalize("http://a.b/x"))

@@ -56,7 +56,8 @@ object OnlineBookmarks {
         if (loaded) return
         loaded = true
         val f = File(context.applicationContext.filesDir, "online_bookmarks.json").also { file = it }
-        val a = runCatching { if (f.exists()) JSONObject(f.readText()).optJSONArray("items") else null }.getOrNull() ?: return
+        // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
+        val a = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { JSONObject(it).getJSONArray("items") }.value ?: return
         _items.value = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::from) }.sortedByDescending { it.addedAt }
     }
 
@@ -94,8 +95,12 @@ object OnlineBookmarks {
     fun seen(context: Context, api: String, url: String, episodes: Int) {
         ensureLoaded(context)
         val b = get(api, url) ?: return
-        if (b.episodes == episodes && b.newEpisodes == 0) return
-        update { list -> list.map { if (it.key == b.key) it.copy(episodes = episodes, newEpisodes = 0) else it } }
+        // R16 (G5): the count never goes down. A source that answers a short list once (one
+        // dub group, a partial page) used to lower it, and the next full answer then looked like
+        // new episodes and posted a false "N new episodes" notification.
+        val n = maxOf(b.episodes, episodes)
+        if (b.episodes == n && b.newEpisodes == 0) return
+        update { list -> list.map { if (it.key == b.key) it.copy(episodes = n, newEpisodes = 0) else it } }
     }
 
     /** Background check result: [episodes] now available. Returns how many are new. */
@@ -103,7 +108,8 @@ object OnlineBookmarks {
         ensureLoaded(context)
         val b = get(api, url) ?: return 0
         val added = if (b.episodes >= 0 && episodes > b.episodes) episodes - b.episodes else 0
-        update { list -> list.map { if (it.key == b.key) it.copy(episodes = episodes, newEpisodes = it.newEpisodes + added) else it } }
+        if (added == 0 && episodes <= b.episodes) return 0 // short or same answer: nothing to store (see [seen])
+        update { list -> list.map { if (it.key == b.key) it.copy(episodes = maxOf(it.episodes, episodes), newEpisodes = it.newEpisodes + added) else it } }
         return added
     }
 
@@ -120,11 +126,7 @@ object OnlineBookmarks {
     private fun write() {
         val f = file ?: return
         val o = JSONObject().put("version", 1).put("items", JSONArray().apply { _items.value.forEach { put(json(it)) } })
-        runCatching {
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(o.toString())
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
-        }.onFailure { Log.w(TAG, "save", it) }
+        runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, o.toString()) }.onFailure { Log.w(TAG, "save", it) }
     }
 
     private fun json(b: Bookmark) = JSONObject()
@@ -146,4 +148,6 @@ object OnlineBookmarks {
 
     /** For tests. */
     internal fun reset() { synchronized(this) { _items.value = emptyList(); loaded = true; file = null } }
+    /** For tests: forget the loaded state, so the next call reads the file again. */
+    internal fun unloadForTests() { synchronized(this) { _items.value = emptyList(); loaded = false; file = null } }
 }

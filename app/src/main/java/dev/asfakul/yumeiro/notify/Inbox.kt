@@ -52,9 +52,8 @@ object Inbox {
     fun ensureLoaded(c: Context) {
         if (file != null) return
         val f = File(c.applicationContext.filesDir, "inbox.json").also { file = it }
-        val list = runCatching {
-            if (!f.exists()) emptyList() else JSONArray(f.readText()).let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::fromJson) } }
-        }.getOrDefault(emptyList())
+        // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
+        val list = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { t -> JSONArray(t).let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::fromJson) } } }.value.orEmpty()
         publish(list.sortedByDescending { it.at })
     }
 
@@ -85,11 +84,7 @@ object Inbox {
     private fun save() {
         val f = file ?: return
         val a = JSONArray().apply { _items.value.forEach { put(toJson(it)) } }
-        runCatching {
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(a.toString())
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
-        }.onFailure { Log.w(TAG, "save", it) }
+        runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, a.toString()) }.onFailure { Log.w(TAG, "save", it) }
     }
 
     private fun toJson(i: Item) = JSONObject().put("id", i.id).put("kind", i.kind.name).put("title", i.title)

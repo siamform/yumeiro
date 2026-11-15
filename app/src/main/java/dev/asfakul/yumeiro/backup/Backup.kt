@@ -78,6 +78,8 @@ object Backup {
         if (name.startsWith("prefs/")) return Section.SETTINGS // format 1
         if (!name.startsWith("files/")) return null
         val rel = name.removePrefix("files/")
+        // R16 (G5): SafeJsonFile's temp files and kept unreadable copies are not user data.
+        if (rel.endsWith(".tmp") || rel.endsWith(".bad")) return null
         if (rel == PHOTO) return Section.APPEARANCE
         if ('/' !in rel) return if (rel.endsWith(".json") && rel !in excludedFiles) Section.LIBRARY else null
         val top = rel.substringBefore('/')
@@ -145,6 +147,7 @@ object Backup {
         val app = context.applicationContext
         val now = System.currentTimeMillis()
         dev.asfakul.yumeiro.online.OnlineHistory.flush() // R16: history is written in the background now
+        dev.asfakul.yumeiro.sources.manga.MangaLibrary.flush() // R16 (G5): so is the reading library
         val files = collect(app, sections)
         val prefs = prefsSnapshot(app, sections)
         var count = 0

@@ -69,7 +69,8 @@ object OnlineHistory {
         if (loaded) return
         loaded = true
         val f = File(context.applicationContext.filesDir, "online_history.json").also { file = it }
-        val o = runCatching { if (f.exists()) JSONObject(f.readText()) else null }.getOrNull() ?: return
+        // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
+        val o = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { JSONObject(it) }.value ?: return
         val list = o.optJSONArray("titles")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::entryFrom) } }.orEmpty()
         _entries.value = list.sortedByDescending { it.updatedAt }
         o.optJSONObject("progress")?.let { p ->
@@ -166,11 +167,7 @@ object OnlineHistory {
             .put("version", 1)
             .put("titles", JSONArray().apply { entries.forEach { put(entryJson(it)) } })
             .put("progress", JSONObject().apply { marks.forEach { (k, p) -> put(k, JSONArray().put(p.positionMs).put(p.durationMs).put(p.at)) } })
-        runCatching {
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            tmp.writeText(o.toString())
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
-        }.onFailure { Log.w(TAG, "save", it) }
+        runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, o.toString()) }.onFailure { Log.w(TAG, "save", it) }
     }
 
     private fun entryJson(e: Entry) = JSONObject()
