@@ -40,6 +40,16 @@ object NotifyPacer {
     /** Pure: may something be shown now, given when the last one was shown? */
     fun canShowNow(nowMs: Long, lastShownMs: Long): Boolean = lastShownMs <= 0 || nowMs - lastShownMs >= GAP_MS || nowMs < lastShownMs
 
+    /** Alarms are inexact and fire on time or late; a few seconds of clock drift are allowed. */
+    const val EARLY_SLACK_MS = 5_000L
+
+    /**
+     * Pure: may an alarm tick show the next queued item? G12 X5-2: ticks also come from boot, app
+     * updates and older alarms (device run 43754318750, api33: a tick 29 s after queueing showed the
+     * item 11 min inside the gap). A tick inside the gap must wait for [nextAt] instead.
+     */
+    fun tickMayShow(nowMs: Long, lastShownMs: Long): Boolean = canShowNow(nowMs + EARLY_SLACK_MS, lastShownMs)
+
     /** Pure: when the next queued item is due. */
     fun nextAt(lastShownMs: Long): Long = lastShownMs + GAP_MS
 
@@ -70,6 +80,13 @@ object NotifyPacer {
         val now = System.currentTimeMillis()
         val queue = read(c).filter { now - it.queuedAt < STALE_MS }
         val first = queue.firstOrNull() ?: run { write(c, emptyList()); return }
+        val last = prefs(c).getLong("last_shown", 0L)
+        if (!tickMayShow(now, last)) {
+            Log.i(TAG, "tick ${(nextAt(last) - now) / 1000} s early; ${queue.size} queued, re-armed")
+            arm(c, nextAt(last))
+            return
+        }
+        Log.i(TAG, "tick: showing 1 of ${queue.size}")
         runCatching { AppNotifier.showNow(c, first.item, first.notificationId) }.onFailure { Log.w(TAG, "show", it) }
         prefs(c).edit().putLong("last_shown", now).apply()
         val rest = queue.drop(1)
@@ -84,6 +101,7 @@ object NotifyPacer {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         // Inexact and Doze-friendly: no exact-alarm permission needed, still fires with the app closed.
         runCatching { am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + delay, pi) }
+            .onSuccess { Log.i(TAG, "armed in ${delay / 1000} s") }
             .onFailure { Log.w(TAG, "arm", it) }
     }
 
