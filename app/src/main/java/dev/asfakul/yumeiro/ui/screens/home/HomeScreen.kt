@@ -590,7 +590,7 @@ fun HomeScreen(
                 }
                 item(key = "new_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_new_arrivals")) {
-                        items(arrivals, key = { "na_" + it.key }) { item -> PosterCard(item, onClick = { onOpenOnlineTitle(item) }, width = 108.dp, showSource = true) }
+                        items(arrivals, key = { "na_" + it.key }) { item -> dev.asfakul.yumeiro.ui.feed.FeedSlot("new_row") { PosterCard(item, onClick = { onOpenOnlineTitle(item) }, width = 108.dp, showSource = true) } }
                     }
                 }
             } else if ("new" !in hidden && channels.isEmpty() && !feed.loading && (allTracks.isNotEmpty() || recentVideos.isNotEmpty())) {
@@ -682,7 +682,7 @@ fun HomeScreen(
                         g.items.chunked(randomColumns).forEachIndexed { i, rowItems ->
                             item(key = "rg_${shuffleSeed}_${g.key}_$i", contentType = "random_row") {
                                 Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    rowItems.forEach { item -> PosterCard(item, onClick = { onOpenOnlineTitle(item) }, modifier = Modifier.weight(1f)) }
+                                    rowItems.forEach { item -> dev.asfakul.yumeiro.ui.feed.FeedSlot("rg_${g.key}_$i") { PosterCard(item, onClick = { onOpenOnlineTitle(item) }, modifier = Modifier.weight(1f)) } }
                                     repeat(randomColumns - rowItems.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
@@ -1094,7 +1094,7 @@ private fun MoodSection(
                     items(videos, key = { "mv_" + it.id }) { yt -> YtCard(yt, square = false) { onPlay(yt, videos) } }
                 }
                 if (picks.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_mood_extensions")) {
-                    items(picks, key = { "mx_" + it.key }) { item -> PosterCard(item, onClick = { onOpenTitle(item) }, width = 96.dp, showSource = true) }
+                    items(picks, key = { "mx_" + it.key }) { item -> dev.asfakul.yumeiro.ui.feed.FeedSlot("mood_row") { PosterCard(item, onClick = { onOpenTitle(item) }, width = 96.dp, showSource = true) } }
                 }
             }
         }

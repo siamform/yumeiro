@@ -444,7 +444,7 @@ fun OnlineHomeScreen(
                             items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
                                 val wide = r.first().second
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("explore_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    r.forEach { (item, _) -> PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) }
+                                    r.forEach { (item, _) -> dev.asfakul.yumeiro.ui.feed.FeedSlot("ex_" + r.first().first.key) { PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) } }
                                     repeat((if (wide) 2 else 3) - r.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }

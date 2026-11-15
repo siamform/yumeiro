@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.ui.feed
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
@@ -19,4 +22,24 @@ import androidx.compose.ui.semantics.semantics
 val FeedCardKey = SemanticsPropertyKey<String>("FeedCardKey")
 private var SemanticsPropertyReceiver.feedCardKey by FeedCardKey
 
-fun Modifier.feedCard(feed: String, key: String): Modifier = semantics { feedCardKey = "$feed|$key" }
+/**
+ * R16: where the card sits — the shelf, grid row or list it belongs to (a LazyColumn item key).
+ * The same title may legitimately appear in two shelves; with the slot the device test can tell
+ * "a second copy further down" from "this card jumped". Empty when the caller sets no slot.
+ */
+val FeedSlotKey = SemanticsPropertyKey<String>("FeedSlotKey")
+private var SemanticsPropertyReceiver.feedSlotKey by FeedSlotKey
+
+/** The slot (shelf / grid row) the cards below are composed in. */
+val LocalFeedSlot: ProvidableCompositionLocal<String> = staticCompositionLocalOf { "" }
+
+@Composable
+fun Modifier.feedCard(feed: String, key: String): Modifier {
+    val slot = LocalFeedSlot.current
+    return semantics { feedCardKey = "$feed|$key"; if (slot.isNotEmpty()) feedSlotKey = slot }
+}
+
+/** Composes [content] with [slot] as the [LocalFeedSlot] of its feed cards. */
+@Composable
+fun FeedSlot(slot: String, content: @Composable () -> Unit) =
+    androidx.compose.runtime.CompositionLocalProvider(LocalFeedSlot provides slot, content = content)

@@ -188,7 +188,7 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
 @Composable
 internal fun PosterRow(items: List<OnlineItem>, onClick: (OnlineItem) -> Unit, horizontal: Boolean = false, showSource: Boolean = false) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.testTag("online_row")) {
-        itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onClick(it) }, horizontal = horizontal, showSource = showSource) }
+        itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> dev.asfakul.yumeiro.ui.feed.FeedSlot("row:${items.firstOrNull()?.key}") { PosterCard(it, onClick = { onClick(it) }, horizontal = horizontal, showSource = showSource) } }
     }
 }
 

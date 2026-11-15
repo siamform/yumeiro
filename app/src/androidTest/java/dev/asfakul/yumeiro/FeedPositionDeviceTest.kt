@@ -17,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.ExtensionSources
 import dev.asfakul.yumeiro.ui.feed.FeedCardKey
+import dev.asfakul.yumeiro.ui.feed.FeedSlotKey
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -88,6 +89,8 @@ class FeedPositionDeviceTest {
     /** Keys shown more than once in the composed feed (the same title in two shelves). */
     private val duplicates = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
     @Volatile private var unplacedSeen = 0
+    /** Every slot each title was seen in (a title in more than one shelf is reported, not failed). */
+    private val titleSlots = java.util.concurrent.ConcurrentHashMap<String, MutableSet<String>>()
 
     private fun snap(): List<Card> {
         val nodes = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
@@ -98,7 +101,13 @@ class FeedPositionDeviceTest {
         unplacedSeen += nodes.size - placed.size
         val all = placed
             .mapNotNull { n ->
-                val k = n.config.getOrElseNullable(FeedCardKey) { null } ?: return@mapNotNull null
+                val title = n.config.getOrElseNullable(FeedCardKey) { null } ?: return@mapNotNull null
+                // R16: a card's identity is the title *in its slot* (shelf / grid row). The same title
+                // in two shelves is two cards; runs 43671202859–43673890077 failed because a second
+                // copy further down looked like the first one jumping 1,800 px.
+                val slot = n.config.getOrElseNullable(FeedSlotKey) { null }.orEmpty()
+                if (slot.isNotEmpty()) titleSlots.getOrPut(title) { LinkedHashSet() }.add(slot)
+                val k = if (slot.isEmpty()) title else "$title@$slot"
                 val p = n.positionInRoot
                 Card(k, p.x, p.y, n.size.width, n.size.height)
             }
@@ -190,6 +199,11 @@ class FeedPositionDeviceTest {
             val now = snap()
             val p = compare("$feed/swipe${i + 1}${if (up) "↑" else "↓"}", prev, now, still = false, swipeUp = up)
             problems += p
+            if (p.isNotEmpty()) {
+                log("feed $feed/swipe${i + 1} before: " + prev.joinToString { "${it.key}@${it.x.toInt()},${it.y.toInt()}" })
+                log("feed $feed/swipe${i + 1} after:  " + now.joinToString { "${it.key}@${it.x.toInt()},${it.y.toInt()}" })
+                FirstRun.shot("feed_${feed}_problem${i + 1}")
+            }
             if (prev.any { c -> now.none { it.key == c.key && abs(it.y - c.y) < 2f } }) moved++
             seen.addAll(now.map { it.key })
             log("feed $feed/swipe${i + 1}: ${now.size} cards, page moved ${now.firstOrNull()?.let { c -> prev.firstOrNull { it.key == c.key }?.let { (c.y - it.y).toInt() } } ?: "?"}px, problems=${p.size}")
@@ -198,6 +212,7 @@ class FeedPositionDeviceTest {
         }
         stillCheck("idle-end")
         log("feed $feed: ${seen.size} distinct cards seen, ${problems.size} problems, $unplacedSeen unplaced (prefetched) card nodes ignored, duplicate keys ${duplicates.size} ${duplicates.toList()}")
+        titleSlots.filterValues { it.size > 1 }.forEach { (t, sl) -> log("feed $feed: same title in ${sl.size} slots (allowed): $t in $sl") }
         problems.forEach { log("PROBLEM $it") }
         log("FEEDPOS_RESULT $feed ${if (problems.isEmpty()) "PASS" else "FAIL"} cards=${seen.size} problems=${problems.size}")
         val dir = File(ctx.getExternalFilesDir(null), "feedpos").apply { mkdirs() }

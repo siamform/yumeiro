@@ -333,8 +333,10 @@ internal fun PosterShelf(title: String, subtitle: String?, items: List<OnlineIte
     if (items.isEmpty()) return
     Column(Modifier.testTag("online_row")) {
         SectionHeader(title, subtitle = subtitle) { if (onSeeAll != null) SeeAllButton(onSeeAll) }
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onClick(it) }, horizontal = horizontal, width = 112.dp) }
+        dev.asfakul.yumeiro.ui.feed.FeedSlot("shelf:$title|${subtitle.orEmpty()}") {
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onClick(it) }, horizontal = horizontal, width = 112.dp) }
+            }
         }
     }
 }

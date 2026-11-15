@@ -225,7 +225,7 @@ internal fun HuePage(
                     val wide = r.first().second
                     val per = if (wide) 2 else 3
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("hue_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        r.forEach { (item, _) -> PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) }
+                        r.forEach { (item, _) -> dev.asfakul.yumeiro.ui.feed.FeedSlot("hg_" + r.first().first.key) { PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) } }
                         repeat(per - r.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
