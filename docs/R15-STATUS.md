@@ -1,19 +1,25 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16, fourth handover)
+## Resume here (updated 2026-11-16 19:50 UTC, fourth handover)
 
-- **Order (owner, fourth handover):** Group 4 → **Group 12** → Groups 5–11 → extra groups.
-  Groups 1–4: complete (agent work), re-checked 2026-11-16 (spot-checks in `DONE-LEDGER.md`, "Fourth
-  handover re-check"). Groups 5, 6, 7 have partial work and reports, and Groups 8–10 have some fixes
-  (DL-2..5, BK-1, ER-1/2, NT-1). They are **paused, not done**, and resume after Group 12.
-- **Current step:** Step 2 open items. Group 3 design items written: PL-16 More menu and PL-17 video
-  sleep timer (3ce721d), PL-18 one Back on phones (c832bc2), PL-13 refused-PiP device test (fd1a2f5),
-  PL-19 SRT → WebVTT for Cast (23390e6). All unit only until `LocalPlayerDeviceTest` f–i pass.
-- **Running:** full suite on `22f7c30`, run 43744809503; `LocalPlayerDeviceTest` on the new tip (ID in
-  `docs/evidence/round3/device-runs.md` once read).
-- **Next three actions:** (1) read both runs, record them, fix any failure; show the owner the
-  before/after top bar (`pl16_*` screenshots); (2) AniSkip offline device test (PL-14), then ST-7
-  re-check and ST-17; (3) Group 12 audit (`docs/groups/GROUP-12-CROSS-CUTTING.md`).
+- **Owner orders in force:** `notes/owner-orders-2.md` (agent workspace) as summarised in the ledger:
+  L0 run 43744809503 + Step 2 open items (done) → **L1 Group 12 (current)** → L2 Groups 5–10 →
+  L3 Group 11 → L4 re-verify Groups 1–4 → L5 Step 4, Step 5 → final sweep of everything unfinished.
+  Heavy work (lint, full builds, device tests) runs on CI, one run at a time, at most two device
+  workflows. No PR, no merge without the owner.
+- **Done since last note:** PL-13/14/16/17/18/19 verified on device (43748560619, 43747147539);
+  HeatGuardDeviceTest passes both emulators (43749978183, X4-1); network security config HTTPS-only
+  for token hosts (149ef42, X7-1); crash-report UI confirm + device test written (2e5f9d6, X6-1);
+  a11y fixes for 46 dp top-bar targets and unnamed Music cards (3019605, a898010, X8-1); closed-app
+  alert test assert fixed (8dd11e0, X5-1).
+- **Outage:** sandbox stopped answering 2026-11-16 ~19:05–19:45 UTC while a local `:app:lintTvDebug`
+  ran (its Gradle daemon was killed, lint result lost). No commit was lost; the three unpushed
+  edits survived and were pushed first. Lesson: TV lint moves to CI.
+- **Running:** none.
+- **Next three actions:** (1) add `lintTvDebug` to `ci.yml` and read it on CI, fix NewApi below
+  API 24; (2) one device run: CrashUiDeviceTest, ClosedAppAlertDeviceTest, AccessibilityDeviceTest,
+  then ledger X5-1, X6-1, X8-1; (3) optional Android TV emulator job, rest of Group 12, report
+  `docs/groups/GROUP-12-CROSS-CUTTING.md`.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
