@@ -197,3 +197,30 @@ These are real emulators running the real debug APK; the tests are not simulated
 
 - Storage dialog gone; the app reaches Home with the TV side rail. All tests failed in `FirstRun.toTabs`, which waited
   for the phone tag `nav_tab_home`. Test infra fixed 1a80183; rerun 43765162241.
+
+## 43765039266 — AccessibilityDeviceTest, both phones (399ccdb)
+
+- api36 5/5 (X8-2 Downloads chips clean once the app message is dismissed). api33-lowram: settings failed, "settings
+  home after downloads never showed". Logcat 21:51:12.64: Back injected; 21:51:12.678 the previous test's
+  MainActivity window `21f0c2` "was disposed without first being removed" — the key went to that stale window (X9-2).
+- YuStall 3.7 s on api33-lowram with `ours=HomeOnlineKt$rememberExtensionFeed$2$1.invokeSuspend:88` (includes GC):
+  open lead under X2.
+
+## 43765162241 — TV tv-api24 (1a80183)
+
+- HomeNavigation 5/11 pass, BackNavigation 1/1 pass, StabilityStress fail. Failures: phone bar tags (`nav_tab_*`,
+  `nav_shortcut_*`) looked up on TV (X9-3); Back on Inbox lost to the previous test's window, 21:51:23.33 "input event
+  receiver has already been disposed" (X9-2); h5 rail tap left page 0 with no app log (X9-4, evidence added).
+- **Product bug X13-1:** every CloudStream source failed on Android 7: `NoClassDefFoundError MainAPIKt` ←
+  `ObjectMapper.<clinit>` ← Jackson `ExceptionUtil.isFatal` → `java.lang.BootstrapMethodError` (21:51:22.300).
+
+## 43767144680 — AccessibilityDeviceTest, both phones (1a577e5)
+
+- **Pass, both phones 5/5** (search, settings incl. Downloads, 130 % font, player, tabs). X8-2 done (emulator).
+- X2-3: player opened, no `SubtitleStyleSettings` StrictMode violation on either phone (done, emulator).
+- api36: one Back meant for the system permission dialog waited 10 s for focus (`YuKeyFocus`); helper narrowed in eb1775c.
+
+## Running at 22:20 UTC
+
+- TV 43768054941 (2226756: Jackson 2.13.5 + key focus + rail tags), minSdk phone 43768670627 (eb1775c: HomeNavigation,
+  BackNavigation, LocalPlayer, Accessibility on API 28), CI 43768099126 (c01bd5c).

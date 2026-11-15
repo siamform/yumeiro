@@ -1,22 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-15 21:43 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-15 22:20 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Since 21:25 UTC:** X11-1..5 network (a299f60, f7e490c, 98f2dbf) and X12-1/2 cache (c63bc66), unit,
-  fail before. 43763558754: X8-3 and X2-2 verified on both phones; new X2-3 (Activity prefs lookups on
-  main, 15a29ca, unit); a11y Downloads chips were cut by a floating app message (test fix 399ccdb). TV
-  43762847904 reaches Home; helper waited for the phone tab tag (1a80183).
-- **Current step:** Level 1, Group 12: device rechecks; then X2 startup benchmark.
-- **Running:** device 43765039266 (AccessibilityDeviceTest, both phones, 399ccdb: X8-2 recheck, X2-3
-  StrictMode); TV 43765162241 (tv-api24, 1a80183); CI 43762845168 (older tip 257d48c).
-- **Next three actions:** (1) when CI 43762845168 ends, dispatch CI on the tip (network/cache/prefs need
-  full unit + lint); (2) read the two device runs and fix; (3) macrobenchmark startup → profile → commit
-  `baseline-prof.txt` → startup again; then StrictMode crumb attribution (skip `ExtensionGuard` frame).
+- **Since 21:43 UTC:** X8-2 and X2-3 done on both phones (43767144680). Root cause of the lost Back
+  presses in device tests: keys went to the previous test's window (X9-2, 1a577e5/eb1775c). **New
+  product bug X13-1 (high):** online sources dead on the TV app on Android 7 (Jackson ≥ 2.15 needs SDK
+  26); TV now on Jackson 2.13.5 (2226756), guard test in CI (b0be1a2, c01bd5c), unit fail-before shown.
+- **Current step:** Level 1, Group 12: TV and minSdk device runs; then X2 startup benchmark.
+- **Running:** TV 43768054941 (2226756), minSdk phone 43768670627 (eb1775c), CI 43768099126 (c01bd5c).
+- **Next three actions:** (1) read TV 43768054941: online rows must load on api24 (no
+  `NoClassDefFoundError`), X9-3 tags, X9-4 h5 evidence; fix what remains; (2) read minSdk 43768670627
+  and CI 43768099126 (X15-1, X13-1 rows); (3) macrobenchmark startup → profile → commit
+  `baseline-prof.txt` → startup again (X2-1).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
