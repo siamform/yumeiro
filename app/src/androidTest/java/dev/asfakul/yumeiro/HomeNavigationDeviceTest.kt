@@ -58,6 +58,7 @@ class HomeNavigationDeviceTest {
     /** The "Keep notifications on time" guide opens by itself 8 s after start (ReminderHost);
      *  a back would close it instead of acting on the page under test. */
     private fun closeGuide() {
+        FirstRun.dismissForeignDialog(rule)
         if (has("reliability_guide")) { log("closing the reliability guide first"); runCatching { tap("guide_close") }; waitGone("reliability_guide", 5_000) }
     }
     private fun focusedTags(): List<String> = runCatching {

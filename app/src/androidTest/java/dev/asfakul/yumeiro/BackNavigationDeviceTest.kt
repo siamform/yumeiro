@@ -29,6 +29,7 @@ class BackNavigationDeviceTest {
 
     private fun log(s: String) = Log.i("YuBackTest", s)
     private fun back() {
+        FirstRun.dismissForeignDialog(rule)
         // The "Keep notifications on time" guide opens by itself 8 s after start (ReminderHost).
         if (rule.onAllNodesWithTag("reliability_guide", true).fetchSemanticsNodes().isNotEmpty()) {
             log("closing the reliability guide first")

@@ -102,6 +102,27 @@ object FirstRun {
 
     internal fun isDialogType(ty: String): Boolean = ty == "2" || ty == "APPLICATION"
 
+    /**
+     * TV 43775191888: a third-party extension (phisher98, "Support Phisher Repo") opens its own
+     * View dialog on MainActivity when it loads. It is not a Compose root, so tests cannot see it,
+     * but it holds input focus and the next Back only closes it. When a dialog window of ours has
+     * focus and Compose shows a single root, close it with Back first. Logged `YuExtDialog`.
+     * Product question (X9-7): whether extensions may open dialogs at all; see the ledger.
+     */
+    fun dismissForeignDialog(rule: AndroidComposeTestRule<*, *>): Boolean {
+        val pkg = InstrumentationRegistry.getInstrumentation().targetContext.packageName
+        repeat(3) {
+            val f = focusedWindow()
+            val composeRoots = runCatching { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().size }.getOrDefault(1)
+            if (!(isStaleOwnActivityWindow(f, pkg) && isDialogType(windowType(f)) && composeRoots <= 1)) return it > 0
+            Log.i("YuExtDialog", "closing a non-Compose dialog that holds focus: $f")
+            shot("ext_dialog_${SystemClock.uptimeMillis()}")
+            InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent 4").close()
+            SystemClock.sleep(1_000)
+        }
+        return true
+    }
+
     /** True when input focus sits on one of our activity windows (`…u0 dev.app/dev.app.MainActivity}`)
      *  while our resumed activity has none: the previous test's window, about to go. Unknown → false. */
     internal fun isStaleOwnActivityWindow(line: String, pkg: String): Boolean {
