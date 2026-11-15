@@ -53,6 +53,30 @@ jobs:
         run: ./gradlew lintMobileDebug
         continue-on-error: true
 
+      # G12 X10: the TV app has minSdk 24 (phone: 28), so only this pass catches NewApi calls
+      # that would crash older Android TV boxes.
+      - name: Lint (TV app, minSdk 24)
+        run: ./gradlew lintTvDebug
+        continue-on-error: true
+
+      - name: Lint errors to the job summary
+        if: always()
+        run: |
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import os, xml.etree.ElementTree as ET
+          for v in ("mobileDebug", "tvDebug"):
+              f = f"app/build/reports/lint-results-{v}.xml"
+              if not os.path.exists(f):
+                  print(f"### LINT {v}: report missing"); continue
+              errs = [i for i in ET.parse(f).getroot().iter("issue") if i.get("severity") in ("Error", "Fatal")]
+              print(f"### LINT {v}: {len(errs)} errors")
+              for i in errs[:80]:
+                  loc = i.find("location")
+                  path = (loc.get("file", "") if loc is not None else "").split("/app/", 1)[-1]
+                  line = loc.get("line", "") if loc is not None else ""
+                  print(f"- {i.get('id')} app/{path}:{line} {i.get('message', '')[:160]}")
+          PY
+
       - name: Version scripts dry-run
         run: |
           git fetch --tags --force --unshallow 2>/dev/null || git fetch --tags --force
