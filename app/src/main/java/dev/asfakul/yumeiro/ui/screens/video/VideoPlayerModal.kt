@@ -516,6 +516,7 @@ private fun VideoPlayerModalContent(
 
     /** Plays [request] (the resolved form of the link the player was opened with). */
     fun startResolved(request: StreamRequest, positionMs: Long) {
+        dev.asfakul.yumeiro.player.StartTimeline.mark("stream resolved", request.url.substringBefore('?').takeLast(40))
         StreamRepository.register(video.uri, request)
         resolving = false
         // R15: the start position goes in with the media (one load at the right place) instead
@@ -1099,6 +1100,7 @@ private fun VideoPlayerModalContent(
     val currentOnProgressUpdate by rememberUpdatedState(onProgressUpdate)
     DisposableEffect(lease) {
         dev.asfakul.yumeiro.player.PlaybackDiagnostics.reset(video.uri, video.sizeBytes)
+        dev.asfakul.yumeiro.player.StartTimeline.mark("player view")
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 dev.asfakul.yumeiro.player.StartTimeline.mark("first frame")
@@ -1110,6 +1112,7 @@ private fun VideoPlayerModalContent(
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) dev.asfakul.yumeiro.player.StartTimeline.mark("player ready")
                 dev.asfakul.yumeiro.player.PlaybackDiagnostics.update {
                     it.copy(state = when (playbackState) { Player.STATE_BUFFERING -> "BUFFERING"; Player.STATE_READY -> "READY"; Player.STATE_ENDED -> "ENDED"; else -> "IDLE" },
                         positionMs = exoPlayer.currentPosition)

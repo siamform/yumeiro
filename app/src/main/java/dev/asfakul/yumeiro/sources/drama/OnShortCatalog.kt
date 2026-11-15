@@ -440,6 +440,8 @@ class OnShortGate(
     private val permits = kotlinx.coroutines.sync.Semaphore(maxConcurrent)
     private val userWaiting = java.util.concurrent.atomic.AtomicInteger()
     private val backgroundHeld = java.util.concurrent.atomic.AtomicInteger()
+    /** Calls on the host right now (for the slow-wait log only). */
+    private val active = java.util.concurrent.ConcurrentHashMap<Any, String>()
     private val spacing = kotlinx.coroutines.sync.Mutex()
     @Volatile private var lastStart = 0L
     @Volatile private var coolUntil = 0L
@@ -459,16 +461,19 @@ class OnShortGate(
             val asked = now()
             val lane = kotlin.coroutines.coroutineContext[GateLane]
             val r = try {
+                val heldAtAsk = active.values.toList()
                 val asBackground = acquire(lane)
+                val ticket = Any()
+                active[ticket] = "${if (asBackground) "bg" else "user"} ${url.substringAfter("://").take(60)}"
                 try {
-                    (now() - asked).takeIf { it > 1_000 }?.let { w -> runCatching { android.util.Log.i("YuGate", "waited ${w}ms for a slot (${if (asBackground) "background" else "user"}): ${url.take(90)}") } }
+                    (now() - asked).takeIf { it > 1_000 }?.let { w -> runCatching { android.util.Log.i("YuGate", "waited ${w}ms for a slot (${if (asBackground) "background" else "user"}): ${url.take(90)} · held by ${heldAtAsk.joinToString { it.take(70) }}") } }
                     spacing.withLock {
                         val wait = maxOf(coolUntil - now(), lastStart + minGapMs - now())
                         if (wait > 0) kotlinx.coroutines.delay(wait)
                         lastStart = now()
                     }
                     runCatching { block() }
-                } finally { if (asBackground) backgroundHeld.decrementAndGet(); permits.release() }
+                } finally { active.remove(ticket); if (asBackground) backgroundHeld.decrementAndGet(); permits.release() }
             } finally { waiting.decrementAndGet() }
             val v = r.getOrNull()
             if (v != null && !transient(v.first)) return v
@@ -495,7 +500,8 @@ class OnShortGate(
     /** Takes a slot; returns true when it was taken as a background call. */
     private suspend fun acquire(lane: GateLane?): Boolean {
         while (lane?.background == true) {
-            if (userWaiting.get() == 0) {
+            // Only on an idle host: a user call that arrives next always finds a free slot.
+            if (userWaiting.get() == 0 && permits.availablePermits == maxConcurrent) {
                 if (backgroundHeld.incrementAndGet() <= 1 && permits.tryAcquire()) return true
                 backgroundHeld.decrementAndGet()
             }
