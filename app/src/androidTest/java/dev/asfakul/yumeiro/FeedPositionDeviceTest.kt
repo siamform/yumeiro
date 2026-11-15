@@ -168,6 +168,7 @@ class FeedPositionDeviceTest {
         }
         val first = snap()
         log("feed $feed: ${first.size} cards on screen at start: ${first.take(6).map { it.key }}")
+        shot("feed_$feed")
         if (!shown) log("feed $feed: no cards · ${onScreen()}")
         assertTrue("$feed: the feed never showed 4 cards in 120 s (cards=${first.size}) · ${onScreen()}", shown)
         val problems = ArrayList<String>()
@@ -202,6 +203,13 @@ class FeedPositionDeviceTest {
         assertTrue("$feed: ${problems.size} position problems: ${problems.take(5)}", problems.isEmpty())
         assertTrue("$feed: only $moved of ${steps.size} swipes scrolled the feed (the test did not exercise it)", moved >= steps.size * 3 / 4)
         assertTrue("$feed: scrolling showed no new cards (seen ${seen.size})", seen.size > first.size)
+    }
+
+    /** Screenshot for the artifacts (files/shots), so the look can be checked too. */
+    private fun shot(name: String) = runCatching {
+        val bmp = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return@runCatching
+        val dir = File(ctx.getExternalFilesDir(null), "shots").apply { mkdirs() }
+        File(dir, "$name.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     private fun videos(source: String) { tap("nav_tab_videos"); tap("video_source_switch"); tap("video_source_$source") }

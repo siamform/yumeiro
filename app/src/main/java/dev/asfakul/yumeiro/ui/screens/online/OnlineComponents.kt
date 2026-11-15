@@ -87,6 +87,30 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
 }
 
 /**
+ * R16: a soft, blurred-looking copy of a poster for card and page backdrops, without a live blur.
+ * `Modifier.blur` re-runs a GPU blur on every frame the card is drawn (every scroll frame in the
+ * Yumix feed), which is what kept the render thread busy on low-end phones and the CI emulator
+ * (main thread waiting in `HardwareRenderer.syncAndDrawFrame` / `setStopped` for 2–4.9 s, run
+ * 43664248997). Decoding the poster at a few dozen pixels and letting the GPU scale it up with
+ * bilinear filtering gives the same soft wash once, at decode time, and costs a tiny bitmap.
+ */
+@Composable
+internal fun SoftBackdrop(url: String?, headers: Map<String, String>, modifier: Modifier = Modifier, landscape: Boolean = false) {
+    val context = LocalContext.current
+    val request = remember(url, headers, landscape) {
+        ImageRequest.Builder(context).data(url?.takeIf { it.isNotBlank() }).apply {
+            headers.forEach { (k, v) -> runCatching { addHeader(k, v) } }
+        }.size(if (landscape) 40 else 24, if (landscape) 24 else 36)
+            .memoryCacheKey("soft:" + url + ":" + landscape)
+            .crossfade(true).build()
+    }
+    coil.compose.AsyncImage(
+        model = request, contentDescription = null, contentScale = ContentScale.Crop,
+        filterQuality = androidx.compose.ui.graphics.FilterQuality.Low, modifier = modifier,
+    )
+}
+
+/**
  * Release tags over a poster: kind (Movie / Series / Anime) and release source top-left, audio
  * (Bengali, Hindi, Dual, Multi, Dub) bottom-left. Small translucent glass chips so the art stays
  * the hero; theatre recordings (CAM / TS) get an amber tint as a quality hint.

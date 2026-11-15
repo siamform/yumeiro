@@ -49,7 +49,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -236,7 +235,7 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
             if (horizontal) {
                 PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             } else {
-                PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize().blur(28.dp).alpha(0.75f))
+                SoftBackdrop(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize().alpha(0.75f))
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.15f), Color.Black.copy(alpha = 0.65f)))))
                 Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(RoundedCornerShape(14.dp))) {

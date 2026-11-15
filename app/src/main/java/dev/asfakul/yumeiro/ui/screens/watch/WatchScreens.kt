@@ -70,7 +70,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -128,7 +127,7 @@ fun WatchScaffold(
         dev.asfakul.yumeiro.ui.theme.AppThemeLayer { PlayerBrandBar(onMinimize = onBack, onClose = onBack, minimizeLabel = "Back") }
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
             if (backdrop != null) {
-                PosterImage(backdrop, backdropHeaders, Modifier.fillMaxSize().blur(18.dp))
+                dev.asfakul.yumeiro.ui.screens.online.SoftBackdrop(backdrop, backdropHeaders, Modifier.fillMaxSize(), landscape = true)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
             } else {
                 Box(Modifier.fillMaxSize().shimmer(RoundedCornerShape(0.dp)))
