@@ -189,6 +189,11 @@ class StabilityStressDeviceTest {
                     log("main sample $i: $st"); SystemClock.sleep(400)
                 }
                 log("busy states: " + changingStates(3_000))
+                // R16: 43697447466 spun in a LazyList bring-into-view (ContentInViewNode) with no
+                // way to tell which list. Accessibility does not wait for Compose to go idle, so it
+                // can name the focused node and its scrollable ancestors; plus a screenshot.
+                log("spin focus: " + focusChain())
+                FirstRun.shot("spin_${where.replace(' ', '_')}")
                 log("gfx: " + shellOut("dumpsys gfxinfo ${ctx.packageName}").lineSequence().filter { "Total frames" in it || "Janky" in it }.joinToString(" | "))
                 shell("input keyevent 4"); idle(1_000); return@repeat
             }
@@ -236,6 +241,22 @@ class StabilityStressDeviceTest {
         shellOut("dumpsys gfxinfo ${ctx.packageName}").lineSequence().first { "Total frames rendered" in it }
             .substringAfter(':').trim().toInt()
     }.getOrDefault(-1)
+
+    /** Focused node (input focus, then accessibility focus) and its ancestors, from accessibility. */
+    private fun focusChain(): String = runCatching {
+        val root = InstrumentationRegistry.getInstrumentation().uiAutomation.rootInActiveWindow ?: return@runCatching "no window"
+        var n = root.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)
+            ?: root.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_ACCESSIBILITY) ?: return@runCatching "nothing focused"
+        val parts = mutableListOf<String>()
+        var depth = 0
+        while (n != null && depth < 14) {
+            val r = android.graphics.Rect().also { n!!.getBoundsInScreen(it) }
+            val label = listOfNotNull(n.viewIdResourceName, n.text?.toString()?.take(30), n.contentDescription?.toString()?.take(30)).joinToString("/")
+            parts += "${n.className?.toString()?.substringAfterLast('.')}${if (n.isScrollable) "[scroll]" else ""}${if (n.isFocused) "[focused]" else ""} $label ${r.toShortString()}"
+            n = n.parent; depth++
+        }
+        parts.joinToString(" < ")
+    }.getOrElse { "focus chain failed: $it" }
 
     private fun focusLine(): String = runCatching {
         shellOut("dumpsys window").lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
