@@ -111,7 +111,11 @@ class YumixDeviceTest {
         if (before.size < 3) { FirstRun.shot("yumix_offline_precondition"); log("screen: ${FirstRun.onScreen(rule).take(1500)}") }
         org.junit.Assume.assumeTrue("Yumix showed only ${before.size} cards online (network?)", before.size >= 3)
         val held = dev.asfakul.yumeiro.ui.screens.online.yumixItemKeys()
-        log("holding ${held.size} titles before going offline")
+        // A section still on its first load may finish while offline (answers already on the way,
+        // or the drama shelf cache): that is a first fill, not a refresh replacing rows. Run
+        // 43732060154 api33: Yumeiro Drama was Loading at this point and filled in afterwards.
+        val loadingAtHold = Regex("""([^,·]+?)=Loading""").findAll(dev.asfakul.yumeiro.ui.screens.online.yumixDebugSummary()).map { it.groupValues[1].trim() }.toSet()
+        log("holding ${held.size} titles before going offline · still on first load: $loadingAtHold")
 
         FirstRun.shell("svc wifi disable"); FirstRun.shell("svc data disable")
         idle(4_000)
@@ -141,7 +145,7 @@ class YumixDeviceTest {
         // Card keys are "feed|item key". Offline nothing new can arrive, so every card on screen
         // must be a title Yumix already held. Which cards are composed may change: going offline
         // adds the offline notice above the list (run 43723079397), so fewer cards fit on screen.
-        val strangers = after.map { it.substringAfter('|') }.filter { it !in held }
+        val strangers = after.map { it.substringAfter('|') }.filter { it !in held && it.substringBefore('|') !in loadingAtHold }
         log("offline after refresh: ${after.size} cards on screen, ${heldAfter.size} titles held, lost ${lost.size}, unknown on screen ${strangers.size}")
         FirstRun.shot("yumix_offline_refresh")
         assertTrue("the offline refresh never finished with its message (refresh not run?)", message != null)

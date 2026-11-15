@@ -481,7 +481,12 @@ class OnShortGate(
                         if (wait > 0) kotlinx.coroutines.delay(wait)
                         lastStart = now()
                     }
-                    runCatching { block() }
+                    val began = now()
+                    runCatching { block() }.also { res ->
+                        // R16 (G4): a slow answer is the site, a long wait above is our queue. Run
+                        // 43732060154 spent 52 s in one episode lookup with no wait logged.
+                        (now() - began).takeIf { it > 5_000 }?.let { d -> runCatching { android.util.Log.i("YuGate", "slow answer ${d}ms (${GateLane.name(got)}, try ${attempt + 1}): ${url.take(90)} → ${res.getOrNull()?.first ?: res.exceptionOrNull()?.javaClass?.simpleName}") } }
+                    }
                 } finally { active.remove(ticket); release(got) }
             } finally { waiting.decrementAndGet() }
             val v = r.getOrNull()
