@@ -118,3 +118,9 @@ These are real emulators running the real debug APK; the tests are not simulated
 | Run | Commit | Filter | api33-lowram | api36 | Notes |
 |---|---|---|---|---|---|
 | 43747147539 | 236910c | LocalPlayerDeviceTest (9 tests) | 7/9 | 7/9 | New f (More menu, sleep sheet, 1-min timer paused after 60.1 s, volume 1.0), g (one Back → floating), h (refused-PiP message), i (SRT served as WebVTT from 10.0.2.15 with CORS) pass on both. a and c failed on both: the test helper tapped the player centre (Pause) when the button was in the More menu (PiP actions showed "Play"). Test fixed after this run. Screenshots `pl16_*`, `pl17_*`, `pl18_*` in the artifacts |
+
+## 43744809503 — full suite on 22f7c30 (both emulators)
+
+- api36 (Pixel 6): all 20 classes PASS.
+- api33-lowram (Pixel 3a, 2 GB): 19 classes PASS; `ExtensionsDeviceTest` FAIL, 1 test: `e11` printed `E11_RESULT PASS`, then the cleanup Back (`input keyevent 4`) at 18:41:26 removed window 195fe20, a second window that opened over Source status at 18:41:14 while five drama feeds were timing out. Source status stayed on screen, so `waitGone("source_health_run")` failed after 10 s. Logged as EXT-T1 (open).
+- YouTube and onshort.net checks were skipped as unreachable from the CI network (assumption, not pass).

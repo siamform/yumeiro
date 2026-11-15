@@ -59,14 +59,14 @@ class ExtensionsDeviceTest {
     }
     private fun waitGone(tag: String, ms: Long = 10_000) {
         val ok = runCatching { rule.waitUntil(ms) { !has(tag) }; true }.getOrDefault(false)
-        assertTrue("'$tag' still shown after ${ms}ms", ok)
+        assertTrue("'$tag' still shown after ${ms}ms · ${FirstRun.onScreen(rule)}", ok)
     }
     private fun waitFor(what: String, ms: Long = 60_000, cond: () -> Boolean) {
         val ok = runCatching { rule.waitUntil(ms) { cond() }; true }.getOrDefault(false)
         assertTrue("$what (after ${ms}ms) · ${FirstRun.onScreen(rule)}", ok)
     }
     private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
-    private fun back() { closeGuide(); FirstRun.shell("input keyevent 4") }
+    private fun back() { closeGuide(); log("back · ${FirstRun.onScreen(rule)}"); FirstRun.shell("input keyevent 4") }
     private fun closeGuide() {
         if (has("reliability_guide")) { log("closing the reliability guide first"); runCatching { tap("guide_close") }; waitGone("reliability_guide", 5_000) }
     }
