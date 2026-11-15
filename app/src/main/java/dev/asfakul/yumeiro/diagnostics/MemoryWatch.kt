@@ -182,20 +182,38 @@ object MainThreadWatchdog {
                     // second: the first sample alone often shows framework code (Compose slot table,
                     // binder) and not which screen or call of ours is slow.
                     var nextSample = SystemClock.uptimeMillis() + 1000
+                    val kinds = ArrayList<String>().apply { add(kindOf(Looper.getMainLooper().thread.stackTrace)) }
+                    var oursSeen = appFrames(Looper.getMainLooper().thread.stackTrace)
                     while (ran.get() == 0L && running) {
                         runCatching { Thread.sleep(100) }
                         if (ran.get() == 0L && SystemClock.uptimeMillis() >= nextSample) {
                             nextSample += 1000
                             val trace = Looper.getMainLooper().thread.stackTrace
+                            kinds += kindOf(trace)
+                            appFrames(trace).takeIf { !it.startsWith("(") }?.let { oursSeen = it }
                             Log.w("YuStall", "still stalled ${SystemClock.uptimeMillis() - posted}ms, ours: " + appFrames(trace) +
                                 " | top: " + trace.take(3).joinToString(" < ") { it.className.substringAfterLast('.') + "." + it.methodName })
                         }
                     }
-                    Log.w("YuStall", "main thread recovered after ${SystemClock.uptimeMillis() - posted}ms")
+                    // R16: what the stall was. "render" = the main thread waited for the render
+                    // thread (GPU work: on CI that is SwiftShader, a CPU GPU); "harness" = the test
+                    // framework; "app" = our own main-thread work (composition, layout, draw
+                    // recording or a call of ours; `ours=` names the app frames seen).
+                    val kind = kinds.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: "app"
+                    Log.w("YuStall", "main thread recovered after ${SystemClock.uptimeMillis() - posted}ms · kind=$kind · samples=${kinds.joinToString(",")} · ours=$oursSeen")
                 }
                 runCatching { Thread.sleep(1000) }
             }
         }, "yu-watchdog").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
+    }
+
+    internal fun kindOf(trace: Array<StackTraceElement>): String {
+        val top = trace.take(6)
+        return when {
+            top.any { it.className.endsWith("HardwareRenderer") || it.className.endsWith("ThreadedRenderer") && it.methodName.startsWith("n") } -> "render"
+            trace.any { it.className.startsWith("androidx.compose.ui.test.") || it.className.startsWith("androidx.test.") } -> "harness"
+            else -> "app"
+        }
     }
 
     /** The first frames that belong to the app (composables included), innermost first. */

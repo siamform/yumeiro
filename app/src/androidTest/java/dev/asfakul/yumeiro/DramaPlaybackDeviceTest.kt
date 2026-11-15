@@ -87,6 +87,8 @@ class DramaPlaybackDeviceTest {
             tried += "${item.name}: firstFrame=$ok phase=${st?.phase} links=${st?.links?.size} msg=${st?.message?.take(80)} uri=${PlaybackDiagnostics.state.value.uri.take(80)}"
             Log.i("MTDeviceTest", "drama try: ${tried.last()}")
             if (ok) {
+                // R16 budget: was 34 s (run 43661715830) when the tap queued behind health probes.
+                assertTrue("drama took ${playMs}ms from Play to the first frame (budget 10 s)", playMs <= 10_000)
                 val d = PlaybackDiagnostics.state.value
                 Log.i("MTDeviceTest", "drama plays: ${detail.name} ${d.width}x${d.height}")
                 return

@@ -12,9 +12,17 @@ on:
         description: "Test class or method filter (empty = stress + player + playback tests)"
         required: false
         default: ""
+      repeat:
+        description: "Runs of each class per job, each from cleared app data (flake hunting)"
+        required: false
+        default: "1"
+      shards:
+        description: "Parallel jobs per device, as a JSON list, e.g. [1,2,3,4,5]"
+        required: false
+        default: "[1]"
 
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}
+  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}
   cancel-in-progress: true
 
 permissions:
@@ -27,19 +35,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: api33-lowram
-            api: 33
-            target: google_apis
-            profile: pixel_3a
-            ram: 2048M
-            heap: 192M
-          - name: api36
-            api: 36
-            target: google_apis
-            profile: pixel_6
-            ram: 4096M
-            heap: 512M
+        shard: ${{ fromJSON(inputs.shards || '[1]') }}
+        device:
+          - { name: api33-lowram, api: 33, target: google_apis, profile: pixel_3a, ram: 2048M, heap: 192M }
+          - { name: api36, api: 36, target: google_apis, profile: pixel_6, ram: 4096M, heap: 512M }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -55,13 +54,14 @@ jobs:
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
           TEST_FILTER: ${{ github.event.inputs.test }}
+          REPEAT: ${{ github.event.inputs.repeat || '1' }}
         with:
-          api-level: ${{ matrix.api }}
-          target: ${{ matrix.target }}
+          api-level: ${{ matrix.device.api }}
+          target: ${{ matrix.device.target }}
           arch: x86_64
-          profile: ${{ matrix.profile }}
-          ram-size: ${{ matrix.ram }}
-          heap-size: ${{ matrix.heap }}
+          profile: ${{ matrix.device.profile }}
+          ram-size: ${{ matrix.device.ram }}
+          heap-size: ${{ matrix.device.heap }}
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash scripts/device-check.sh
@@ -69,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: device-check-${{ matrix.name }}
+          name: device-check-${{ matrix.device.name }}-${{ matrix.shard }}
           path: |
             stress/
             logcat.txt
