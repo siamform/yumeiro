@@ -78,7 +78,8 @@ class DramaHealth(
      *    saved verdict ([saved], persisted by [persist]) is used, else the shelf is shown.
      *  - [prewarm] probes every studio at app start, so the verdicts exist before Yumix opens.
      */
-    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    // R16: every probe call goes through OnShortGate's background lane, behind any user request.
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO + GateLane(background = true))
     private val running = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<State>>()
     /** Verdicts from the last run (key → state, time); used while a new probe is still running. */
     @Volatile var saved: Map<String, Pair<State, Long>> = emptyMap()

@@ -117,15 +117,25 @@ class OnShortCatalog(
     }
 
     /** R15: one fetch per series page at a time (the detail screen, playback and the health probe share it). */
-    private val seriesInFlight = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<DramaSeries>>()
+    private val seriesInFlight = ConcurrentHashMap<String, Pair<kotlinx.coroutines.Deferred<DramaSeries>, GateLane>>()
+    private val streamsInFlight = ConcurrentHashMap<String, Pair<kotlinx.coroutines.Deferred<DramaStreams>, GateLane>>()
+
+    /** One request per key; a user caller promotes a background request it joins (R16). */
+    private suspend fun <T> shared(map: ConcurrentHashMap<String, Pair<kotlinx.coroutines.Deferred<T>, GateLane>>, key: String, work: suspend () -> T): T {
+        val background = kotlin.coroutines.coroutineContext[GateLane]?.background == true
+        val lane = GateLane(background)
+        val fresh = loads.async(lane, start = kotlinx.coroutines.CoroutineStart.LAZY) { work() }
+        val entry = fresh to lane
+        val d = map.putIfAbsent(key, entry)?.also { fresh.cancel() }
+            ?: entry.also { fresh.invokeOnCompletion { _ -> map.remove(key, entry) }; fresh.start() }
+        if (!background) d.second.background = false
+        return d.first.await()
+    }
     private val loads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
 
     override suspend fun series(url: String): DramaSeries {
         seriesCache[url]?.let { (at, s) -> if (clock() - at < SERIES_TTL) return s }
-        val fresh = loads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { fetchSeries(url) }
-        val d = seriesInFlight.putIfAbsent(url, fresh)?.also { fresh.cancel() }
-            ?: fresh.also { it.invokeOnCompletion { _ -> seriesInFlight.remove(url, fresh) }; it.start() }
-        return d.await()
+        return shared(seriesInFlight, url) { fetchSeries(url) }
     }
 
     private suspend fun fetchSeries(url: String): DramaSeries {
@@ -148,7 +158,10 @@ class OnShortCatalog(
         return s
     }
 
-    override suspend fun streams(series: DramaSeries, episode: Int): DramaStreams {
+    override suspend fun streams(series: DramaSeries, episode: Int): DramaStreams =
+        shared(streamsInFlight, "${series.url}|$episode") { fetchStreams(series, episode) }
+
+    private suspend fun fetchStreams(series: DramaSeries, episode: Int): DramaStreams {
         val h = series.hints
         val referer = series.url
         var lastError: Throwable? = null
@@ -423,7 +436,10 @@ class OnShortGate(
     private val backoffMs: (attempt: Int) -> Long = { a -> longArrayOf(1_200L, 3_000L, 6_000L, 9_000L)[a.coerceIn(0, 3)] },
     private val now: () -> Long = System::currentTimeMillis,
 ) {
+    /** R16: user calls take any free slot; background calls (health probes) hold at most one and only while no user call waits. */
     private val permits = kotlinx.coroutines.sync.Semaphore(maxConcurrent)
+    private val userWaiting = java.util.concurrent.atomic.AtomicInteger()
+    private val backgroundHeld = java.util.concurrent.atomic.AtomicInteger()
     private val spacing = kotlinx.coroutines.sync.Mutex()
     @Volatile private var lastStart = 0L
     @Volatile private var coolUntil = 0L
@@ -441,15 +457,19 @@ class OnShortGate(
         for (attempt in 0 until attempts) {
             waiting.incrementAndGet()
             val asked = now()
-            val r = try { permits.withPermit {
-                (now() - asked).takeIf { it > 1_000 }?.let { runCatching { android.util.Log.i("YuGate", "waited ${it}ms for a slot: ${url.take(90)}") } }
-                spacing.withLock {
-                    val wait = maxOf(coolUntil - now(), lastStart + minGapMs - now())
-                    if (wait > 0) kotlinx.coroutines.delay(wait)
-                    lastStart = now()
-                }
-                runCatching { block() }
-            } } finally { waiting.decrementAndGet() }
+            val lane = kotlin.coroutines.coroutineContext[GateLane]
+            val r = try {
+                val asBackground = acquire(lane)
+                try {
+                    (now() - asked).takeIf { it > 1_000 }?.let { w -> runCatching { android.util.Log.i("YuGate", "waited ${w}ms for a slot (${if (asBackground) "background" else "user"}): ${url.take(90)}") } }
+                    spacing.withLock {
+                        val wait = maxOf(coolUntil - now(), lastStart + minGapMs - now())
+                        if (wait > 0) kotlinx.coroutines.delay(wait)
+                        lastStart = now()
+                    }
+                    runCatching { block() }
+                } finally { if (asBackground) backgroundHeld.decrementAndGet(); permits.release() }
+            } finally { waiting.decrementAndGet() }
             val v = r.getOrNull()
             if (v != null && !transient(v.first)) return v
             // Only an answer that says "busy" (429/5xx) marks the host busy. A timeout does not:
@@ -472,6 +492,20 @@ class OnShortGate(
         return last ?: throw (error ?: IOException("No answer from $url"))
     }
 
+    /** Takes a slot; returns true when it was taken as a background call. */
+    private suspend fun acquire(lane: GateLane?): Boolean {
+        while (lane?.background == true) {
+            if (userWaiting.get() == 0) {
+                if (backgroundHeld.incrementAndGet() <= 1 && permits.tryAcquire()) return true
+                backgroundHeld.decrementAndGet()
+            }
+            kotlinx.coroutines.delay(120)
+        }
+        userWaiting.incrementAndGet()
+        try { permits.acquire() } finally { userWaiting.decrementAndGet() }
+        return false
+    }
+
     companion object {
         fun transient(code: Int) = code == 429 || code == 502 || code == 503 || code == 504
         fun retryable(e: Throwable): Boolean = generateSequence(e) { it.cause }.any {
@@ -479,4 +513,14 @@ class OnShortGate(
                 (it is IOException && it.message.orEmpty().contains("unexpected end of stream", true))
         }
     }
+}
+
+/**
+ * R16: which lane an [OnShortGate] call uses. Health probes run with `GateLane(background = true)`;
+ * anything without a lane is a user call. A shared request (a series page both a probe and the
+ * user wait for) is promoted by setting [background] to false, so the user never queues behind
+ * the probe that started it.
+ */
+class GateLane(@Volatile var background: Boolean) : kotlin.coroutines.AbstractCoroutineContextElement(GateLane) {
+    companion object Key : kotlin.coroutines.CoroutineContext.Key<GateLane>
 }

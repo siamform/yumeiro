@@ -24,6 +24,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import dev.asfakul.yumeiro.sources.SourceHub
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -149,6 +150,9 @@ class YumeiroDramaProvider(
             withTimeoutOrNull(SERIES_WAIT_MS) { runCatching { page.await() }.getOrNull() }
                 ?: DramaSeries(card.title, seriesUrl, card.cover, null, card.platform, card.episodes!!, null)
         }
+        // R16: most taps on a drama are followed by Play on episode 1. Its links are fetched now
+        // (user lane, shared with loadLinks), so Play only waits for the stream itself.
+        if (s.episodes > 0) background.launch { runCatching { c.streams(c.series(seriesUrl), 1) } }
         val eps = (1..s.episodes).map { n ->
             // fix = false: CloudStream's default fixUrl() would turn the id into "$mainUrl/drama:..." (Round 2 bug).
             newEpisode("drama:${c.id}|${s.url}|$n", { name = "Episode $n"; episode = n; season = 1 }, false)

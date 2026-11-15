@@ -1,0 +1,189 @@
+# Yumeiro feature inventory (Round 4 audit)
+
+Built from the code on `r15-stability` (481 Kotlin files under `app/src/main/java`), the
+manifest, the navigation routes (`ui/navigation/Screen.kt`) and the Settings catalog
+(`ui/screens/settings/SettingsCatalog.kt`, 22 categories in 5 groups). Every item has an ID; the
+"Covered by" column is filled as each group's audit is reported, and anything not covered at the
+end is listed in §Not covered with the reason.
+
+Status values: `open` (not audited yet), `audited` (tested, problems listed), `done` (fixed and
+verified on a device, evidence linked), `not covered` (reason given).
+
+## G1 Home and navigation
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| H1 | Home feed (sections, moods, online rows) | ui/screens/home/HomeScreen, HomeSections, HomeMoods, HomeOnline | open | |
+| H2 | "Jump back in" / continue row | HomeSections, player/LastPlayed, data/PlayCounts | open | |
+| H3 | Home shortcuts and nav-bar shortcuts (up to two) | ui/navigation/NavPrefs, ui/components/MTBottomBar | open | |
+| H4 | Bottom navigation + tab pager + swipe between tabs | MTPlayerApp, ui/components/TabSwipe, PageSwap | open | |
+| H5 | TV navigation rail and D-pad focus | ui/tv/TvMode, TvNavRail | open | |
+| H6 | Back behaviour (button, predictive gesture, nested pages, player) | MTPlayerApp, SubNav | open | |
+| H7 | Deep links and incoming intents (VIEW, SEND, browsable links, shared media) | MainActivity, stream/IncomingMedia | open | |
+| H8 | State restoration after process death | MainViewModel, ScrollMemory, NavPrefs | open | |
+| H9 | Splash, first-run welcome, explore tour, onboarding gate | ui/screens/splash, extras/SetupGuide, ExploreTour, online/OnboardingGate | open | |
+| H10 | Top bar, global search entry, search suggestions | ui/components/MTTopBar, YuSearch, SearchSuggest, TabSearch | open | |
+| H11 | Mini player bar | ui/components/MiniPlayerBar | open | |
+| H12 | Home-screen widget "Continue" | widget/ContinueWidget | open | |
+| H13 | App pages (inbox, support, permission center, reliability guide, reminders) | ui/screens/extras/* | open | |
+
+## G2 Extensions and market
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| E1 | Extension market browse and search | online/ExtensionMarket, ui/screens/online/ExtensionMarketScreen | open | |
+| E2 | Install (with review / scanner / guard) | ExtensionManager, ExtensionReview, ExtensionScanner, ExtensionGuard | open | |
+| E3 | Update (auto and manual), repair missing files after restore | ExtensionManager.repairMissing | open | |
+| E4 | Remove, enable/disable, per-extension settings | ExtensionsScreen | open | |
+| E5 | Pin favourites | online/PinnedExtensions | open | |
+| E6 | Select all / individual selection, bulk actions | ExtensionsScreen | open | |
+| E7 | Extension search | ExtensionsScreen | open | |
+| E8 | Broken extension handling (crash, bad JSON, timeouts) | ExtensionGuard, OnlineErrors, SafeRequests | open | |
+| E9 | Starter extensions after onboarding | online/StarterExtensions | open | |
+| E10 | Repositories / Universal add (CloudStream, Aniyomi, Mihon, Stremio, JS) | sources/UniversalAdd, SourceMarket, ui/screens/sources/* | open | |
+| E11 | Sources hub and source health screen | ui/screens/sources/SourcesHubScreen, SourceHealthScreen | open | |
+| E12 | Provider overrides, adult-content filter | online/ProviderOverrides, AdultContent | open | |
+
+## G3 Player
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| P1 | Local video playback | ui/screens/video/VideoPlayerModal, service/VideoPlaybackService | open | |
+| P2 | Online (movies, series, anime) playback session | online/OnlineSession, OnlinePlayback | open | |
+| P3 | YouTube playback | youtube/YouTubePlayback, YouTubeStreams | open | |
+| P4 | Drama playback | sources/drama/* | open | |
+| P5 | Quality list and switching (parity with downloader, generated levels) | player/QualityEngine, TrackGroups | open | |
+| P6 | Audio tracks and languages | online/AudioLanguages, player/TrackPicks | open | |
+| P7 | Subtitles (embedded, online search, style) | subtitles/*, online/subtitles/*, SubtitleStyleDialog | open | |
+| P8 | Speed, zoom, gestures, volume/brightness | VideoPlayerGestures, VideoZoom, VolumeAccumulator | open | |
+| P9 | Source rotation, dead manual pick, "Load more" sources | OnlineSession failover, SourceSelector | open | |
+| P10 | PiP, fullscreen, orientation | player/PipController, PlayerSurfaceRules | open | |
+| P11 | Resume position | OnlineHistory, LastPlayed | open | |
+| P12 | Info overlay, HUD, controls, time labels | PlayerInfoOverlay, VideoPlayerHUD, VideoPlayerControls | open | |
+| P13 | Player settings | PlayerSettings, ui/screens/settings | open | |
+| P14 | Recovery (black frame, stall, starvation, decoder fallback) | BlackFrameWatchdog, PlaybackHealthMonitor, RecoveryRouter, StreamRecovery, StarvationSafeLoadControl | open | |
+| P15 | Anime extras: AniSkip intro skip, AniList | online/anime/* | open | |
+| P16 | Anime4K shader effect | player/Anime4kEffect | open | |
+| P17 | Casting (Google Cast) | cast/CastSupport | open | |
+| P18 | Sleep timer, screen wake | player/SleepTimer, ScreenWake | open | |
+| P19 | Heat guard | player/HeatGuard | open | |
+
+## G4 Yumix
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| Y1 | Yumix feed and sections | ui/screens/online/YumixFeed, OnlineFeed, OnlineHomeScreen | open | |
+| Y2 | Yumix search | OnlineSearchScreen, online/SearchRanker | open | |
+| Y3 | Extension bar hide/show on scroll | ui/components/HideOnScroll | open | |
+| Y4 | Drama as default, built-in drama card | DramaBuiltinCard | open | |
+| Y5 | "Show videos from" filter | YumixFilter | open | |
+| Y6 | Hero carousel, picks, row pages | OnlineHomeHero, OnlineHomePicks, OnlineRowScreen | open | |
+| Y7 | Detail page (versions, episodes, stills, bookmarks) | OnlineDetailScreen, EpisodeStills, OnlineBookmarks | open | |
+
+## G5 Library and personal lists
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| L1 | Library screen, shortcuts | ui/screens/library/* | open | |
+| L2 | Episodes / new-episode tracking | online/NewEpisodesWorker | open | |
+| L3 | My list, favourites, saved | OnlineBookmarks, LibraryScreen | open | |
+| L4 | History (online, YouTube) | OnlineHistory, youtube/YtHistory | open | |
+| L5 | Downloads view inside library | VideoLibraryScreen | open | |
+| L6 | Liked songs, playlists | MediaRepository | open | |
+| L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | open | |
+| L8 | Reading library (manga) | ReadingLibrary route, MangaLibrary | open | |
+| L9 | Only real data, no placeholder or fake items | all of the above | open | |
+
+## G6 Music
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | open | |
+| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher | open | |
+| M3 | Infinite online feed | youtube/music/YmEndless | open | |
+| M4 | Lyrics (embedded, LRCLIB) | lyrics/* | open | |
+| M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | open | |
+| M6 | Equalizer | player/equalizer, ui/screens/equalizer | open | |
+| M7 | Last.fm scrobbling | scrobble/* | open | |
+| M8 | Song downloads | online/download/SongDownloads | open | |
+| M9 | Music mix | ui/screens/music/MusicMix | open | |
+
+## G7 Manga and live TV
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| T1 | Manga search, filter, source selection | ui/screens/manga/MangaScreens, sources/manga | open | |
+| T2 | Manga title page and reader | MangaTitle, MangaReader routes | open | |
+| T3 | Live TV hub, playlists, playlist market | ui/screens/stream/*, stream/PlaylistMarket, PlaylistStore | open | |
+| T4 | M3U parsing, stream resolving, sniffing, page stream finder | stream/M3uParser, StreamResolver, StreamSniffer, PageStreamFinderDialog | open | |
+| T5 | HLS ad filter for streams | stream/HlsAdFilter, AdFilterDataSource | open | |
+
+## G8 Downloads
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| D1 | Download manager (queue, worker, groups, naming) | online/download/* | open | |
+| D2 | Forced (IDM-style) downloads, segmented HLS/DASH, mux | ForceGrab, HlsDownloader, MediaMux | open | |
+| D3 | Torrent / magnet | eu/kanade/tachiyomi/torrentutils, OnlineDownloads | open | |
+| D4 | Pause, resume, failure, retry, cleanup worker | DownloadWorker, DownloadCleanupWorker | open | |
+| D5 | External downloaders (ADM, IDM) | online/download/ExternalDownloader | open | |
+| D6 | YouTube downloads and options | YtDownloads, YtDownloadOptions | open | |
+| D7 | "View downloads" toast → PiP | DownloadPrompt | open | |
+
+## G9 Settings
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| S1–S22 | The 22 categories: Look & feel; Navigation bar; Player; Audio quality & sound; Online videos; Downloads; Library & storage; Sources; Source status; Tracking; YouTube account; Watch together; Notifications; Background & battery; Network; Privacy & security; Backup & restore; App updates; Setup guide; User guide; Crash reports; About & developer | ui/screens/settings/* | open | |
+| S23 | Settings search | SettingsCatalog keywords | open | |
+| S24 | Every reset action | backup/ResetCenter | open | |
+| S25 | Backup, restore, auto backup worker, restart | backup/* | open | |
+| S26 | Theme, backdrop custom image (accepted types) | ui/theme/*, BackdropSettings | open | |
+| S27 | Each toggle's real effect (~42 switches) | settings cards | open | |
+
+## G10 Alerts, toasts, dialogs and errors
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| A1 | App messages / toasts | ui/components/AppMessages (MediaComponents) | open | |
+| A2 | Dialogs (Tsuki dialog, update, review, permission) | TsukiDialog, UpdateDialog, ExtensionReviewHost | open | |
+| A3 | Error views with recovery actions | ErrorHelp, StateViews, OfflineNotice | open | |
+| A4 | No network, slow network, VPN, low storage | network/Connectivity, OnlineErrors | open | |
+| A5 | Browser check / Cloudflare challenge host | online/web/BrowserCheck, BrowserCheckHost | open | |
+
+## G11 Integrations
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| I1 | Trakt | tracking/Trakt | open | |
+| I2 | Simkl | tracking/Simkl | open | |
+| I3 | Kitsu, AniList | tracking/Kitsu, online/anime/AniList | open | |
+| I4 | TMDB (metadata) | online/SourceFacts / EpisodeStills | open | |
+| I5 | OpenSubtitles, SubDL, SubSource | online/subtitles/* | open | |
+| I6 | LRCLIB | lyrics/LrcLib | open | |
+| I7 | Last.fm | scrobble/LastFm | open | |
+| I8 | Firebase (FCM push, cloud alerts) | notify/FcmPush, YumeiroMessagingService, CloudAlerts | open | |
+| I9 | Cloudflare (worker / feed endpoints) | notify/AppFeed, update/UpdateConfig | open | |
+| I10 | YouTube account (cookie paste, auth hash) | youtube/YtAccount, YtCookiePaste, YtAuthHash | open | |
+| I11 | GitHub releases (self-update) | update/GitHubReleaseClient | open | |
+
+## G12 Cross-cutting systems
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| X1 | Architecture and layering | whole app, docs/SYSTEM-DESIGN.md | open | |
+| X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | open | |
+| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, startup/PrefsWarmup | open | |
+| X4 | Battery and heat | HeatGuard, NotifyPacer | open | |
+| X5 | Notifications while closed (FCM, UnifiedPush, alarms, workers, boot) | notify/*, PushWakeService, NotifyAlarmReceiver | open | |
+| X6 | Crash logs and export | diagnostics/CrashLog, CrashExport | open | |
+| X7 | Security: secrets in APK, storage encryption, network, integrity | security/*, IntegrityGuard, SecretBox | open | |
+| X8 | Accessibility (TalkBack, contrast, touch targets, font scale) | all UI | open | |
+| X9 | TV and low-end behaviour | ui/tv, DeviceClass | open | |
+| X10 | Build, CI, release, signing | .github/workflows, gradle | open | |
+| X11 | Network stack: smart DNS, DoH, auto-bypass, settings | network/* | open | |
+| X12 | Caching: data cache, image cache, online codec | cache/* | open | |
+
+## New groups (not in the prompt's list)
+| ID | Item | Code | Status | Covered by |
+|---|---|---|---|---|
+| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | open | |
+| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | open | |
+| N3 | Self-update (check, download, install, package replaced) | update/* | open | |
+| N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | open | |
+| N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | open | |
+| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | open | |
+| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | open | |
+| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | open | |
+| N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | open | |
+
+## Not covered
+(Filled at the end of the audit.)
