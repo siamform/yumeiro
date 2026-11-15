@@ -47,7 +47,7 @@ jobs:
         run: ./gradlew testMobileDebugUnitTest
 
       - name: Unit tests (TV app, TV-only behaviour)
-        run: ./gradlew testTvDebugUnitTest --tests 'dev.asfakul.yumeiro.EditionTest' --tests 'dev.asfakul.yumeiro.update.*'
+        run: ./gradlew testTvDebugUnitTest --tests 'dev.asfakul.yumeiro.EditionTest' --tests 'dev.asfakul.yumeiro.update.*' --tests 'dev.asfakul.yumeiro.compat.*'
 
       # Lint is blocking since CI 43757542521 (0 errors on both apps, X10-4).
       - name: Lint
