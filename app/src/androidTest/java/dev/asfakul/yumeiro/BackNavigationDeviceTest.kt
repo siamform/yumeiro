@@ -71,6 +71,8 @@ class BackNavigationDeviceTest {
         }
         assertEquals("must be on Home before the exit check", 0, page())
         Thread.sleep(2_500) // Let any exit window from earlier presses lapse.
+        // TV 43772037996: this Back closed one of our dialogs instead of reaching Home; record it.
+        log("before the first Home back: ${FirstRun.onScreen(rule).take(700)}")
         back()
         Thread.sleep(400)
         // The compose test clock only recomposes when the test syncs (Thread.sleep does not), so

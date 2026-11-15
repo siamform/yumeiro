@@ -70,12 +70,12 @@ object FirstRun {
             }
             // Only an activity window of ours that is not the resumed one is a lost key. Our own dialog,
             // or another app's window (the system permission dialog a Back is meant to close), is fine.
-            if (!ready) ready = !isStaleOwnActivityWindow(focusedWindow(), pkg)
+            if (!ready) { val f = focusedWindow(); ready = !isStaleOwnActivityWindow(f, pkg) || isDialogType(windowType(f)) }
             if (ready) break
             Thread.sleep(150)
         }
         val waited = SystemClock.uptimeMillis() - start
-        if (waited >= 100 || !ready) Log.i("YuKeyFocus", "'$cmd' waited ${waited}ms for window focus · ready=$ready · ${if (ready) "" else focusedWindow()}")
+        if (waited >= 100 || !ready) Log.i("YuKeyFocus", "'$cmd' waited ${waited}ms for window focus · ready=$ready · ${if (ready) "" else focusedWindow().let { "$it type=${windowType(it)}" }}")
     }
 
     private fun focusedWindow(): String = runCatching {
@@ -83,6 +83,24 @@ object FirstRun {
             android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
         }.lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
     }.getOrDefault("")
+
+    /**
+     * TV 43772037996 (api24) BackNavigation: our resumed activity had no window focus and focus sat
+     * on `Window{5eedbd6 u0 dev.asfakul.yumeiro.debug/dev.asfakul.yumeiro.MainActivity}`. A Dialog's
+     * window carries the activity's name too, so that was one of our dialogs, not a stale activity:
+     * the helper waited 10 s, then the Back closed the dialog. The window type tells them apart:
+     * activity windows are `ty=1` / `ty=BASE_APPLICATION`, dialogs `ty=2` / `ty=APPLICATION`.
+     * Returns the `ty=` value of the focused window's block in `dumpsys window windows`, or "".
+     */
+    internal fun windowType(focusLine: String): String = runCatching {
+        val hash = Regex("Window\\{([0-9a-f]+) ").find(focusLine)?.groupValues?.get(1) ?: return@runCatching ""
+        val dump = shell("dumpsys window windows").lines()
+        val start = dump.indexOfFirst { "Window{$hash " in it && it.trimEnd().endsWith(":") }
+        if (start < 0) return@runCatching ""
+        dump.drop(start + 1).take(12).firstNotNullOfOrNull { Regex("\\bty=([A-Z_0-9]+)").find(it)?.groupValues?.get(1) }.orEmpty()
+    }.getOrDefault("")
+
+    internal fun isDialogType(ty: String): Boolean = ty == "2" || ty == "APPLICATION"
 
     /** True when input focus sits on one of our activity windows (`…u0 dev.app/dev.app.MainActivity}`)
      *  while our resumed activity has none: the previous test's window, about to go. Unknown → false. */
