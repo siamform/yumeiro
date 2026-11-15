@@ -48,6 +48,7 @@ object PrefsWarmup {
         "permission_center",      // PermissionCenter
         "push_wake",              // PushWake
         "background_work",        // BackgroundHealth
+        "yu_sort",                // MainViewModel sort orders (R16 G5)
         "discovery_state",
         "reliability_guide",      // ReliabilityGuide
         "reminders",              // Reminders

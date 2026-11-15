@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -120,10 +121,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
-    private val _trackSort = MutableStateFlow(TrackSort.TITLE_ASC)
+    // R16 (G5): the chosen sort orders were forgotten on every app start. Saved in "yu_sort".
+    private val sortPrefs = application.getSharedPreferences("yu_sort", android.content.Context.MODE_PRIVATE)
+
+    private val _trackSort = MutableStateFlow(
+        runCatching { TrackSort.valueOf(sortPrefs.getString("tracks", null)!!) }.getOrDefault(TrackSort.TITLE_ASC)
+    )
     val trackSort = _trackSort.asStateFlow()
 
-    private val _videoSort = MutableStateFlow(VideoSort.DATE_DESC)
+    private val _videoSort = MutableStateFlow(
+        runCatching { VideoSort.valueOf(sortPrefs.getString("videos", null)!!) }.getOrDefault(VideoSort.DATE_DESC)
+    )
     val videoSort = _videoSort.asStateFlow()
 
     private val _activeMusicTab = MutableStateFlow(0) // 0: Tracks, 1: Albums, 2: Artists, 3: Folders, 4: Favorites
@@ -189,7 +197,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             TrackSort.ARTIST -> filtered.sortedBy { it.artist.lowercase() }
             TrackSort.ALBUM -> filtered.sortedBy { it.album.lowercase() }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default) // R16 (G5): filter + sort of the whole library ran on main per keystroke
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredAlbums: StateFlow<List<Album>> = combine(
         rawAlbums,
@@ -243,7 +252,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             VideoSort.DURATION_ASC -> filtered.sortedBy { it.durationMs }
             VideoSort.SIZE_DESC -> filtered.sortedByDescending { it.sizeBytes }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         scanMedia()
@@ -276,6 +286,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSortChange(sort: TrackSort) {
         _trackSort.value = sort
+        sortPrefs.edit().putString("tracks", sort.name).apply()
     }
 
     fun onMusicTabChange(tabIndex: Int) {
@@ -291,6 +302,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onVideoSortChange(sort: VideoSort) {
         _videoSort.value = sort
+        sortPrefs.edit().putString("videos", sort.name).apply()
     }
 
     fun toggleVideoLayout() {
