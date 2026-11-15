@@ -116,6 +116,7 @@ import android.content.ComponentName
 import android.content.IntentFilter
 import android.provider.OpenableColumns
 import androidx.compose.runtime.collectAsState
+import androidx.compose.material.icons.filled.Movie
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -457,6 +458,14 @@ private fun VideoPlayerModalContent(
             playWhenReady = autoPlayStart
           }
         }
+    }
+    // R17 (G3 proposal): video sleep timer, shared with the next episode (VideoSleepTimer).
+    val sleepState by dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.collectAsState()
+    val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, "End of this video")
+    var showSleepSheet by remember { mutableStateOf(false) }
+    DisposableEffect(exoPlayer, video.id) {
+        dev.asfakul.yumeiro.player.VideoSleepTimer.attach(exoPlayer, video.id)
+        onDispose { dev.asfakul.yumeiro.player.VideoSleepTimer.detach(exoPlayer) }
     }
     /**
      * Every user seek goes through here. A source ExoPlayer reports as unseekable (a progressive
@@ -1362,7 +1371,7 @@ private fun VideoPlayerModalContent(
     }
 
     // Auto-hide controls timer (3.5 seconds)
-    val isAnyDialogOpen = showQualityDialog || showSpeedDialog || showAspectRatioDialog || showAudioTrackDialog || showSubtitleDialog || showSubtitleStyleDialog || showVideoInfoDialog || playerError != null
+    val isAnyDialogOpen = showSleepSheet || showQualityDialog || showSpeedDialog || showAspectRatioDialog || showAudioTrackDialog || showSubtitleDialog || showSubtitleStyleDialog || showVideoInfoDialog || playerError != null
     // Remote / keyboard (TV, Fire TV, Bluetooth keyboards): every key press keeps the controls up
     // a little longer, so walking along the buttons never races the auto-hide.
     val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
@@ -1910,6 +1919,8 @@ private fun VideoPlayerModalContent(
                     },
                     modifier = Modifier.align(Alignment.TopCenter),
                     compact = docked,
+                    sleepLabel = sleepLabel,
+                    onSleepTimerClick = { showSleepSheet = true },
                 )
 
                 // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
@@ -2118,6 +2129,20 @@ private fun VideoPlayerModalContent(
         }
 
         // Dialogs & Modals
+        if (showSleepSheet) {
+            val t = dev.asfakul.yumeiro.player.VideoSleepTimer.timer
+            dev.asfakul.yumeiro.ui.screens.player.SleepTimerSheet(
+                state = sleepState,
+                onStart = t::start,
+                onEndOfTrack = t::endOfTrack,
+                onExtend = t::extend,
+                onCancel = t::cancel,
+                onDismiss = { showSleepSheet = false },
+                subject = "Video",
+                endLabel = "End of this video",
+                endIcon = androidx.compose.material.icons.Icons.Default.Movie,
+            )
+        }
         if (showSpeedDialog) {
             PlaybackSpeedDialog(
                 currentSpeed = currentSpeed,

@@ -15,7 +15,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.media3.common.C
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -64,14 +63,21 @@ class LocalPlayerDeviceTest {
         return out
     }
 
-    /** Shows the controls (they hide themselves) and taps [tag]. */
+    /**
+     * Shows the controls (they hide themselves) and taps [tag]. R17 PL-16: buttons that don't fit the
+     * top bar are in the More menu as "<tag>_menu", so a person opens More and picks the item there.
+     */
     private fun control(tag: String) {
         repeat(5) {
-            if (!has(tag)) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
-            if (runCatching { rule.waitUntil(3_000) { has(tag) }; true }.getOrDefault(false)) {
-                // The top control row scrolls sideways; a person scrolls it to reach later buttons.
-                runCatching { rule.onAllNodesWithTag(tag, true)[0].performScrollTo() }
-                rule.onAllNodesWithTag(tag, true)[0].performClick(); return
+            if (!has(tag) && !has("${tag}_menu")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
+            if (runCatching { rule.waitUntil(3_000) { has(tag) || has("video_more_btn") }; true }.getOrDefault(false)) {
+                if (has(tag)) { rule.onAllNodesWithTag(tag, true)[0].performClick(); return }
+                if (!has("${tag}_menu")) runCatching { rule.onAllNodesWithTag("video_more_btn", true)[0].performClick() }
+                if (runCatching { rule.waitUntil(3_000) { has("${tag}_menu") }; true }.getOrDefault(false)) {
+                    log("control $tag is in the More menu")
+                    rule.onAllNodesWithTag("${tag}_menu", true)[0].performClick(); return
+                }
+                if (has("video_more_menu")) back()
             }
         }
         FirstRun.shot("control_missing_$tag")
@@ -308,6 +314,42 @@ class LocalPlayerDeviceTest {
         log("P17 cast ready after ${android.os.SystemClock.uptimeMillis() - t0} ms")
         assertTrue("ready() must not block (was $callMs ms)", callMs < 500)
         log("LOCAL_E_RESULT PASS")
+    }
+
+    /**
+     * R17 PL-16 + PL-17: the top bar fits its width (no sideways scrolling, nothing clipped) and
+     * More holds the sleep timer. A 5-minute timer shows its dot; a 1-minute timer really pauses
+     * the video and gives the volume back.
+     */
+    @Test fun f_moreMenuAndVideoSleepTimer() {
+        openClipFromDevice()
+        loopClip()
+        FirstRun.shot("pl16_top_bar_portrait")
+        control("video_more_btn")
+        wait("More menu", 5_000) { has("video_more_menu") && has("video_sleep_timer_menu") }
+        FirstRun.shot("pl16_more_menu_open")
+        rule.onAllNodesWithTag("video_sleep_timer_menu", true)[0].performClick()
+        wait("sleep timer sheet", 5_000) { has("sleep_timer_sheet") && has("sleep_5") }
+        FirstRun.shot("pl17_sleep_sheet")
+        rule.onAllNodesWithTag("sleep_5", true)[0].performClick()
+        wait("sleep dot on the More button", 10_000) {
+            if (!has("video_sleep_dot")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
+            has("video_sleep_dot")
+        }
+        val st = dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.value
+        assertTrue("countdown running: $st", st is dev.asfakul.yumeiro.player.SleepTimer.State.Countdown)
+        log("PL17 5 min timer: $st")
+        // The real stop: 1 minute (the shortest a person can pick), then pause + full volume.
+        rule.runOnUiThread { dev.asfakul.yumeiro.player.VideoSleepTimer.timer.start(1) }
+        val t0 = System.currentTimeMillis()
+        wait("video paused by the sleep timer", 80_000) { onPlayer { it.playWhenReady } == false }
+        val took = System.currentTimeMillis() - t0
+        val vol = onPlayer { it.volume }
+        log("PL17 paused after ${took}ms, volume=$vol, state=${dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.value}")
+        assertTrue("paused near 60 s (was ${took}ms)", took in 55_000..75_000)
+        assertEquals("volume restored", 1f, vol ?: 0f, 0.01f)
+        assertTrue("timer cleared", dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.value == null)
+        log("LOCAL_F_RESULT PASS")
     }
 
     companion object { const val NAME = "yumeiro_test_clip.mp4" }

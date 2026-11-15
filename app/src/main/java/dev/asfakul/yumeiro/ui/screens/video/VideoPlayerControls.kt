@@ -16,7 +16,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -57,6 +55,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
@@ -105,6 +113,9 @@ fun VideoPlayerTopBar(
     onQualityClick: () -> Unit = {},
     /** Docked watch-page player (small 16:9 box): slimmer bar, no subtitle line. */
     compact: Boolean = false,
+    /** R17: time left on the video sleep timer ("12:30", "End of this video"), or null when off. */
+    sleepLabel: String? = null,
+    onSleepTimerClick: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
@@ -168,19 +179,25 @@ fun VideoPlayerTopBar(
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        // Action icons in horizontal scroll for smaller screens
-        Row(
-            // Share the width with the title so it never collapses in portrait.
-            modifier = Modifier
-                .weight(1.4f, fill = false)
-                .horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            // Round 13: Settings → Quality and audio → Player controls (order and hidden buttons).
-            val order by dev.asfakul.yumeiro.player.VideoPrefs.controls.collectAsState()
-            val hidden by dev.asfakul.yumeiro.player.VideoPrefs.hidden.collectAsState()
-            order.filter { it !in hidden }.forEach { control ->
+        // R17: the buttons that fit, in the user's order, then More (the rest + sleep timer).
+        // Before, this row scrolled sideways with no hint, so on a portrait phone Speed, PiP, Info
+        // and Lock were off-screen (Group 3 proposal). See TopBarFit.
+        val order by dev.asfakul.yumeiro.player.VideoPrefs.controls.collectAsState()
+        val hidden by dev.asfakul.yumeiro.player.VideoPrefs.hidden.collectAsState()
+        val visible = remember(order, hidden, qualityLabel != null, isPipSupported) {
+            order.filter { c ->
+                c !in hidden &&
+                    (c != dev.asfakul.yumeiro.player.VideoPrefs.Control.QUALITY || qualityLabel != null) &&
+                    (c != dev.asfakul.yumeiro.player.VideoPrefs.Control.PIP || isPipSupported)
+            }
+        }
+        BoxWithConstraints(modifier = Modifier.weight(1.4f, fill = false)) {
+            val split = TopBarFit.split(visible, maxWidth.value, qualityLabel)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(TopBarFit.GAP_DP.dp)
+            ) {
+                split.inline.forEach { control ->
                 when (control) {
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.QUALITY -> {
                         // Video quality (adaptive streams with several variants)
@@ -345,7 +362,103 @@ fun VideoPlayerTopBar(
                         }
                     }
                 }
+                }
+                VideoPlayerMoreMenu(
+                    overflow = split.overflow,
+                    qualityLabel = qualityLabel,
+                    currentSpeed = currentSpeed,
+                    captionsOn = captionsOn,
+                    sleepLabel = sleepLabel,
+                    onQualityClick = onQualityClick,
+                    onAudioTrackClick = onAudioTrackClick,
+                    onCaptionsToggle = onCaptionsToggle,
+                    onSubtitleClick = onSubtitleClick,
+                    onSpeedClick = onSpeedClick,
+                    onAspectRatioClick = onAspectRatioClick,
+                    onPipClick = onPipClick,
+                    onInfoClick = onInfoClick,
+                    onLockClick = onLockClick,
+                    onSleepTimerClick = onSleepTimerClick,
+                )
             }
+        }
+    }
+}
+
+/** R17: the More button at the end of the top row and its labelled menu (see [TopBarFit]). */
+@Composable
+private fun VideoPlayerMoreMenu(
+    overflow: List<dev.asfakul.yumeiro.player.VideoPrefs.Control>,
+    qualityLabel: String?,
+    currentSpeed: Float,
+    captionsOn: Boolean,
+    sleepLabel: String?,
+    onQualityClick: () -> Unit,
+    onAudioTrackClick: () -> Unit,
+    onCaptionsToggle: () -> Unit,
+    onSubtitleClick: () -> Unit,
+    onSpeedClick: () -> Unit,
+    onAspectRatioClick: () -> Unit,
+    onPipClick: () -> Unit,
+    onInfoClick: () -> Unit,
+    onLockClick: () -> Unit,
+    onSleepTimerClick: () -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { open = true },
+            modifier = Modifier.minimumInteractiveComponentSize().testTag("video_more_btn")
+        ) {
+            Box {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = if (sleepLabel != null) "More options, sleep timer on" else "More options",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+                // A running sleep timer is visible without opening the menu.
+                if (sleepLabel != null) Box(
+                    Modifier.align(Alignment.TopEnd).size(7.dp).clip(CircleShape).background(SpotifyGreen).testTag("video_sleep_dot")
+                )
+            }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.testTag("video_more_menu")) {
+            @Composable
+            fun item(label: String, tag: String, icon: androidx.compose.ui.graphics.vector.ImageVector, trailing: String? = null, onClick: () -> Unit) {
+                DropdownMenuItem(
+                    text = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    trailingIcon = trailing?.let { t -> { Text(t, color = SpotifyGreen, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) } },
+                    onClick = { open = false; onClick() },
+                    modifier = Modifier.testTag(tag),
+                )
+            }
+            overflow.forEach { c ->
+                when (c) {
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.QUALITY ->
+                        item("Quality", "video_quality_btn_menu", Icons.Default.HighQuality, qualityLabel, onQualityClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.AUDIO ->
+                        item("Audio tracks", "video_audio_track_btn_menu", Icons.Default.Audiotrack, onClick = onAudioTrackClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.SUBTITLES -> {
+                        item(if (captionsOn) "Turn captions off" else "Turn captions on", "video_cc_btn_menu",
+                            if (captionsOn) Icons.Default.ClosedCaptionDisabled else Icons.Default.ClosedCaption, onClick = onCaptionsToggle)
+                        item("Subtitles", "video_subtitle_btn_menu", Icons.Default.Subtitles, onClick = onSubtitleClick)
+                    }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.SPEED ->
+                        item("Speed", "video_speed_btn_menu", Icons.Default.Speed, "${currentSpeed}x", onSpeedClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.ASPECT ->
+                        item("Aspect ratio", "video_aspect_ratio_btn_menu", Icons.Default.AspectRatio, onClick = onAspectRatioClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.PIP ->
+                        item("Picture-in-picture", "video_pip_btn_menu", Icons.Default.PictureInPicture, onClick = onPipClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.INFO ->
+                        item("Video details", "video_info_btn_menu", androidx.compose.material.icons.Icons.Outlined.Movie, onClick = onInfoClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK ->
+                        item("Lock controls", "video_screen_lock_btn_menu", Icons.Default.LockOpen, onClick = onLockClick)
+                }
+            }
+            if (overflow.isNotEmpty()) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+            item("Sleep timer", "video_sleep_timer_menu", Icons.Default.Bedtime, sleepLabel, onSleepTimerClick)
         }
     }
 }

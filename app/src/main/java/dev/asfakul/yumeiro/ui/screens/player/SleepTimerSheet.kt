@@ -47,7 +47,7 @@ import kotlinx.coroutines.delay
 
 /** "12:04" style remaining time for a countdown, or null. */
 @Composable
-fun rememberSleepRemaining(state: SleepTimer.State?): String? {
+fun rememberSleepRemaining(state: SleepTimer.State?, endLabel: String = "End of song"): String? {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(state) {
         while (state is SleepTimer.State.Countdown) { now = System.currentTimeMillis(); delay(1000) }
@@ -57,7 +57,7 @@ fun rememberSleepRemaining(state: SleepTimer.State?): String? {
             val s = ((state.endsAtMs - now).coerceAtLeast(0) / 1000)
             "%d:%02d".format(s / 60, s % 60)
         }
-        is SleepTimer.State.EndOfTrack -> "End of song"
+        is SleepTimer.State.EndOfTrack -> endLabel
         null -> null
     }
 }
@@ -71,9 +71,13 @@ fun SleepTimerSheet(
     onExtend: (Int) -> Unit,
     onCancel: () -> Unit,
     onDismiss: () -> Unit,
+    /** R17: the video player uses the same sheet ("Video", "End of this video"). */
+    subject: String = "Music",
+    endLabel: String = "End of song",
+    endIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.MusicNote,
 ) {
     val p = LocalMtPalette.current
-    val remaining = rememberSleepRemaining(state)
+    val remaining = rememberSleepRemaining(state, endLabel)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("sleep_timer_sheet")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -83,7 +87,7 @@ fun SleepTimerSheet(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                if (remaining != null) "Music pauses in $remaining" else "Music fades out and pauses when the timer ends",
+                if (state is SleepTimer.State.EndOfTrack) "$subject pauses at the end of this one" else if (remaining != null) "$subject pauses in $remaining" else "$subject fades out and pauses when the timer ends",
                 color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag("sleep_timer_status"),
             )
@@ -92,7 +96,7 @@ fun SleepTimerSheet(
                 SleepTimer.PRESETS.forEach { m ->
                     Chip(if (m < 60) "$m min" else if (m % 60 == 0) "${m / 60} h" else "${m / 60} h ${m % 60} min", "sleep_$m") { onStart(m); onDismiss() }
                 }
-                Chip("End of song", "sleep_end_of_track", icon = true) { onEndOfTrack(); onDismiss() }
+                Chip(endLabel, "sleep_end_of_track", icon = endIcon) { onEndOfTrack(); onDismiss() }
             }
             if (state != null) {
                 Spacer(Modifier.height(16.dp))
@@ -106,14 +110,14 @@ fun SleepTimerSheet(
 }
 
 @Composable
-private fun Chip(label: String, tag: String, icon: Boolean = false, danger: Boolean = false, onClick: () -> Unit) {
+private fun Chip(label: String, tag: String, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, danger: Boolean = false, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     Row(
         Modifier.clip(RoundedCornerShape(50)).background(if (danger) Color(0x33FF5A6E) else p.glass)
             .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon) { Icon(Icons.Default.MusicNote, null, tint = p.accent, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)) }
+        if (icon != null) { Icon(icon, null, tint = p.accent, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)) }
         Text(label, color = if (danger) dev.asfakul.yumeiro.ui.theme.DangerTone else p.textPrimary, fontWeight = FontWeight.SemiBold)
     }
 }
