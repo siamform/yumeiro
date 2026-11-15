@@ -102,6 +102,10 @@ internal class DnsWireClient(
     private val transport: DnsTransport,
     private val tlsHost: String?,
     private val timeoutMs: Int = 3_000,
+    /** Test hooks: ports and the TCP socket maker. */
+    private val udpPort: Int = 53,
+    private val streamPort: Int? = null,
+    private val newSocket: () -> Socket = { Socket() },
 ) {
     fun resolve(host: String): DnsMessage.Answer {
         val results = mutableListOf<InetAddress>()
@@ -135,23 +139,44 @@ internal class DnsWireClient(
         }
     }
 
-    private fun udp(q: ByteArray, id: Int, host: String): DnsMessage.Answer = DatagramSocket().use { s ->
-        s.soTimeout = timeoutMs
-        val address = InetAddress.getByName(serverIp) // IP literal: no lookup
-        s.send(DatagramPacket(q, q.size, address, 53))
-        val buf = ByteArray(4096)
-        val p = DatagramPacket(buf, buf.size)
-        s.receive(p)
-        DnsMessage.parse(buf.copyOf(p.length), id, host)
+    private fun udp(q: ByteArray, id: Int, host: String): DnsMessage.Answer {
+        DatagramSocket().use { s ->
+            val address = InetAddress.getByName(serverIp) // IP literal: no lookup
+            s.send(DatagramPacket(q, q.size, address, udpPort))
+            val buf = ByteArray(4096)
+            val deadline = System.currentTimeMillis() + timeoutMs
+            // G12 X11-5: only the resolver we asked may answer. A datagram from anyone else (an
+            // off-path spoofer guessing the 16-bit id) is ignored, not parsed.
+            while (true) {
+                val p = DatagramPacket(buf, buf.size)
+                s.soTimeout = (deadline - System.currentTimeMillis()).coerceAtLeast(1).toInt()
+                s.receive(p) // SocketTimeoutException once the deadline passes
+                if (p.address == address && p.port == udpPort) return DnsMessage.parse(buf.copyOf(p.length), id, host)
+            }
+        }
     }
 
     /** TCP framing (2-byte length prefix), optionally wrapped in TLS with certificate host verification. */
     private fun stream(q: ByteArray, id: Int, host: String, tls: Boolean): DnsMessage.Answer {
-        val port = if (tls) 853 else 53
-        val plain = Socket()
+        val port = streamPort ?: if (tls) 853 else 53
+        val plain = newSocket()
+        // G12 X11-4: a failed connect or TLS handshake left this socket open (fd leak per lookup).
+        val socket: Socket = try { connectStream(plain, port, tls) } catch (e: Throwable) { runCatching { plain.close() }; throw e }
+        socket.use { s ->
+            val out = DataOutputStream(s.getOutputStream())
+            out.writeShort(q.size); out.write(q); out.flush()
+            val input = DataInputStream(s.getInputStream())
+            val len = input.readUnsignedShort()
+            val buf = ByteArray(len)
+            input.readFully(buf)
+            return DnsMessage.parse(buf, id, host)
+        }
+    }
+
+    private fun connectStream(plain: Socket, port: Int, tls: Boolean): Socket {
         plain.connect(InetSocketAddress(InetAddress.getByName(serverIp), port), timeoutMs)
         plain.soTimeout = timeoutMs
-        val socket: Socket = if (tls) {
+        return if (tls) {
             val name = tlsHost ?: throw IOException("Resolver has no TLS name")
             val ssl = (SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(plain, name, port, true) as SSLSocket
             // Hostname checked twice: by the TLS stack (endpoint identification) and explicitly
@@ -166,14 +191,5 @@ internal class DnsWireClient(
             }
             ssl
         } else plain
-        socket.use { s ->
-            val out = DataOutputStream(s.getOutputStream())
-            out.writeShort(q.size); out.write(q); out.flush()
-            val input = DataInputStream(s.getInputStream())
-            val len = input.readUnsignedShort()
-            val buf = ByteArray(len)
-            input.readFully(buf)
-            return DnsMessage.parse(buf, id, host)
-        }
     }
 }
