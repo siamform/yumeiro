@@ -28,14 +28,19 @@ object AniSkip {
         cache[key]?.let { return it }
         val len = if (durationMs > 0) durationMs / 1000 else 0
         val url = "https://api.aniskip.com/v2/skip-times/$malId/$episode?types[]=op&types[]=ed&types[]=mixed-op&types[]=mixed-ed&types[]=recap&episodeLength=$len"
-        val list = runCatching {
+        // Only real answers are cached: a timeout or no network used to cache "no segments" for
+        // the rest of the process, so intro skip stayed off for that episode after one bad moment.
+        val list: List<Segment>? = runCatching {
             client.newCall(Request.Builder().url(url).header("Accept", "application/json").build()).execute().use { r ->
-                // 404 = no data for this episode (normal).
-                if (!r.isSuccessful) emptyList() else parse(r.body.string())
+                when {
+                    r.isSuccessful -> parse(r.body.string())
+                    r.code == 404 -> emptyList() // no data for this episode (normal)
+                    else -> null // server trouble: try again next time
+                }
             }
-        }.getOrDefault(emptyList())
-        cache[key] = list
-        return list
+        }.getOrNull()
+        if (list != null) cache[key] = list
+        return list ?: emptyList()
     }
 
     internal fun parse(text: String): List<Segment> {
