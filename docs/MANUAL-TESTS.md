@@ -1,4 +1,4 @@
-# Manual tests on real hardware (Round 4)
+# Manual tests on real hardware (Round 4, steps added in R16)
 
 The automated device suite runs on GitHub's emulators (API 33 low-RAM Pixel 3a with 2 GB, and
 API 36 Pixel 6). Three things cannot be proven there and need your phone and TV:
@@ -22,7 +22,7 @@ For logs, keep the phone on USB with USB debugging on and run, before each scrip
 
 ```
 adb logcat -c
-adb logcat -v time -s YuStart YuStall YuMemory YuGate AndroidRuntime ActivityManager > yumeiro-<device>-<script>.txt
+adb logcat -v time -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime ActivityManager > yumeiro-<device>-<script>.txt
 ```
 
 Stop it with Ctrl+C at the end of the script. If you have no PC, use the screen recording plus
@@ -64,8 +64,10 @@ codec, Video bitrate, Buffer and Dropped frames on top of the video).
 | Y10 | Rotate to landscape and back; enter PiP (Home button while playing, if PiP is on). | No restart; PiP window keeps playing; tapping it returns to the full player. | Restart, black PiP, or crash. |
 | Y11 | Play a **live** video and a **Short**. | Both play in ≤ 5 s. | Either fails. |
 | Y12 | Repeat Y2–Y6 on **mobile data**. | Same results (may start at a lower Auto height). | Errors that did not happen on Wi-Fi. |
+| Y13 | (R16) Play a video for 2 min, close the player with Back, then reopen the same video. | Continue watching shows it with the right progress; it resumes within ±5 s of where you closed it. | Starts from 0:00 or the progress bar is missing. |
+| Y14 | (R16) Turn on a VPN (any free one), repeat Y1 and Y2. | Same as Y1–Y2, or a clear message that YouTube refused this network, with Retry. | Endless spinner or a blank screen. |
 
-**Send back:** the screen recording (Y1–Y11), the `adb logcat` file, a screenshot of the
+**Send back:** the screen recording (Y1–Y14), the `adb logcat` file, a screenshot of the
 Quality list (Y4) and of the overlay after Y5 and Y6, and the row number of any step that failed.
 
 ---
@@ -83,10 +85,15 @@ Quality list (Y4) and of the overlay after Y5 and Y6, and the row number of any 
 | P7 | Start a download, then open 3 other heavy apps (camera, browser, a game), come back after 5 min. | Download is still running or finished; the notification was shown the whole time. | Download silently stopped or vanished. |
 | P8 | Settings → Crash reports (About group). | Says "No crashes recorded" — or, if a crash happened, Share works. | Share fails or the list is wrong. |
 | P9 | Leave a video playing for 30 min with the screen on. | Phone warm, not hot; no stutter growth; battery drop roughly like YouTube's. | Hot to touch, or the picture stutters more over time. |
+| P10 | (R16) Videos → Yumix, scroll a few rows down, turn on **Airplane mode**, keep scrolling, then turn it off. | A "No internet" notice appears once; cards already shown stay in place (no older cards replace them); after it comes back, new cards load without a restart. | Cards swap under your finger, the list jumps to the top, or nothing loads after the network is back. |
+| P11 | (R16) Fill the phone until less than 500 MB is free (copy a large video), then start a download and play a video. | A clear "not enough space" message for the download; playback still works; no crash. | Crash, silent failure, or a half-written file left in Downloads. |
+| P12 | (R16) Play a video for 2 min, press Back to close the player, swipe Yumeiro away from Recents at once, reopen. | Continue watching keeps the position (±5 s). | Position lost. |
+| P13 | (R16) While a video plays, pull down the notification and use Pause / Play / Next; lock the screen and unlock. | Controls work; playback continues only if Background play is on. | Notification missing, controls do nothing, or a crash. |
 
 **Send back:** the recording, the `adb logcat` file (it includes `YuMemory` heap lines and
 `YuStall` main-thread pauses), and `adb shell dumpsys meminfo dev.asfakul.yumeiro.debug` taken
-right after P4.
+right after P4, and the step numbers that failed. For P10 also note the clock time you switched
+Airplane mode on and off, so it can be matched to the log.
 
 ---
 
@@ -103,6 +110,8 @@ debugging), or with a sideload app. Use only the remote.
 | T4 | In the player, change Quality, Audio and Subtitles with the remote only. | Every menu is reachable and closes with Back. | A menu cannot be reached or closed. |
 | T5 | Play 20 minutes, then press Home and reopen. | Resumes at the right position. | Restarts or crashes. |
 | T6 | Leave the app on Home for 10 minutes. | No crash or "isn't responding". | Either one. |
+| T7 | (R16) Open 2–3 other TV apps (YouTube, Netflix), then return to Yumeiro from Recents. | Comes back to the same screen, or restarts cleanly at Home with Continue watching intact. | Crash, blank screen, or lost progress. |
+| T8 | (R16) Long-press OK on a card, and use the remote's Back/Home during a dialog. | Dialogs and menus get focus at once and close with Back. | Focus stuck behind a dialog. |
 
 **Send back:** a phone video of the TV screen, the `adb logcat` file, and the step numbers that failed.
 
