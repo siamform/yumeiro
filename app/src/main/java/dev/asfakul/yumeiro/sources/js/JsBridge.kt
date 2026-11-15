@@ -9,6 +9,7 @@ import android.content.Context
 import android.util.Log
 import com.lagradost.cloudstream3.utils.loadExtractor
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -218,25 +219,30 @@ class JsBridge(
 
     /** Every Mangayomi `xxxExtractor(url, …)` is answered by CloudStream's extractor collection. */
     private fun extractor(url: String, prefix: String): String {
-        val videos = mutableListOf<JsonObject>()
-        val subs = mutableListOf<JsonObject>()
+        // Extractors call back from several threads; a stuck host must not hang the JS source forever.
+        val videos = java.util.Collections.synchronizedList(mutableListOf<JsonObject>())
+        val subs = java.util.Collections.synchronizedList(mutableListOf<JsonObject>())
         runCatching {
             runBlocking {
-                loadExtractor(url, null, { s -> subs += buildJsonObject { put("file", s.url); put("label", s.lang) } }) { l ->
+                withTimeoutOrNull(EXTRACTOR_TIMEOUT_MS) { loadExtractor(url, null, { s -> subs += buildJsonObject { put("file", s.url); put("label", s.lang) } }) { l ->
                     videos += buildJsonObject {
                         put("url", l.url); put("originalUrl", l.url)
                         put("quality", listOf(prefix, l.name, if (l.quality > 0) "${l.quality}p" else "").filter { it.isNotBlank() }.joinToString(" "))
                         put("headers", JsonObject((l.headers + listOfNotNull(l.referer.takeIf { it.isNotBlank() }?.let { "Referer" to it })).mapValues { JsonPrimitive(it.value) }))
                     }
-                }
+                } }
             }
         }
-        return JsonArray(videos.map { v -> JsonObject(v + ("subtitles" to JsonArray(subs))) }).toString()
+        return JsonArray(videos.toList().map { v -> JsonObject(v + ("subtitles" to JsonArray(subs.toList()))) }).toString()
     }
 
     // endregion
 
-    companion object { private const val TAG = "JsBridge" }
+    companion object {
+        private const val TAG = "JsBridge"
+        /** Upper bound for one `xxxExtractor` call from a JS source. */
+        const val EXTRACTOR_TIMEOUT_MS = 30_000L
+    }
 }
 
 /** Dean Edwards' p,a,c,k,e,d unpacker. */
