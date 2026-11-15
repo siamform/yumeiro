@@ -82,7 +82,7 @@ class AccessibilityDeviceTest {
     @Test fun settingsPassAccessibilityChecks() {
         FirstRun.toTabs(rule)
         val errors = ArrayList<String>()
-        FirstRun.tapVisible(rule, "nav_shortcut_settings")
+        FirstRun.tapVisible(rule, "topbar_settings_action")
         waitFor("settings", 20_000) { has("settings_cat_appearance") }
         check("settings_home")?.let { errors += it }
         for (cat in listOf("appearance", "player", "audio", "online", "downloads", "library", "tracking", "system", "about")) {
@@ -117,7 +117,7 @@ class AccessibilityDeviceTest {
             FirstRun.toTabs(rule)
             log("A11Y font_scale=${inst.targetContext.resources.configuration.fontScale}")
             errors += tabs("font130_")
-            FirstRun.tapVisible(rule, "nav_shortcut_settings")
+            FirstRun.tapVisible(rule, "topbar_settings_action")
             waitFor("settings", 20_000) { has("settings_cat_appearance") }
             check("font130_settings_home")?.let { errors += it }
         } finally {
