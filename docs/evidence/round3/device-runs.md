@@ -239,3 +239,20 @@ These are real emulators running the real debug APK; the tests are not simulated
 
 - BackNavigation pass; HomeNavigation 10/11 (h1_h4: guide race); LocalPlayer 2/9 and Accessibility 4/5: the clip
   was inserted without a path and listed as "1794781938560" (X13-2); heat guard thermal half absent below API 29.
+
+## 43771214803 — minSdk api28 pixel_3a (77d8d44, full suite)
+
+- X13-2 classes pass: HomeNavigation 11/11, BackNavigation, LocalPlayer 9/9 (`P19 THERMAL_NA`), Accessibility 5/5.
+- StabilityStress "Process crashed": `NoSuchMethodError URLDecoder.decode(String, Charset)` in NewPipeExtractor on
+  `ExoPlayer:Playback`, 7 times (X13-3). FeedPosition 3/6 (feed never showed 3 cards), Yumix offline refresh message,
+  CrashUi share sheet (empty top activity on API 28): open.
+
+## TV 43774198053 (0eb1635), 43775191888 (fd19a72), 43775889375 (5344e44)
+
+- 43774198053 BackNavigation only: one Compose root, key went to a dialog window (X9-6).
+- 43775191888: capture names it: `Window{… MainActivity}` ty=2 840×wrap = phisher98 "Support Phisher Repo" (X9-7).
+- 43775889375: HomeNavigation 11/11, BackNavigation pass, StabilityStress 3/3; `YuExtDialog` closed the dialog once.
+
+## 43776085150 — minSdk api28, throwaway branch tmp/x13-3-before (test without fix)
+
+- NewPipeCompatDeviceTest 0/2: `NoSuchMethodError` (fail-before proof for X13-3; branch deleted).
