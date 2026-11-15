@@ -72,6 +72,16 @@ class StartupGuardsTest {
         assertTrue("inbox not loaded by the warm-up", field.get(dev.asfakul.yumeiro.notify.Inbox) != null)
     }
 
+    @Test fun warmUpLoadsBookmarksDownloadsAndBackdropOffTheMainThread() {
+        val app = ApplicationProvider.getApplicationContext<android.content.Context>()
+        PrefsWarmup.start(app)
+        fun loaded(o: Any) = o::class.java.getDeclaredField("loaded").apply { isAccessible = true }.getBoolean(o)
+        val objs = listOf<Any>(dev.asfakul.yumeiro.online.OnlineBookmarks, dev.asfakul.yumeiro.online.download.OnlineDownloads, dev.asfakul.yumeiro.ui.theme.BackdropSettings)
+        val deadline = System.currentTimeMillis() + 5_000
+        while (objs.any { !loaded(it) } && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        for (o in objs) assertTrue("${o::class.simpleName} not loaded by the warm-up", loaded(o))
+    }
+
     @Test fun stallSamplesNameOurFrames() {
         val trace = arrayOf(
             StackTraceElement("androidx.compose.runtime.SlotWriter", "close", "SlotTable.kt", 1),

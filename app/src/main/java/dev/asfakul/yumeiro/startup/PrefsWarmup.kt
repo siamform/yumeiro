@@ -66,6 +66,11 @@ object PrefsWarmup {
             for (p in all) runCatching { p.contains("") }
             // The inbox JSON file is read when Home draws its bell badge.
             runCatching { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(app) }
+            // R16 (stress 43687396407 StrictMode): the page backdrop checks its photo file, Home
+            // reads the bookmarks and downloads JSON files; all three ran on main at first draw.
+            runCatching { dev.asfakul.yumeiro.ui.theme.BackdropSettings.init(app) }
+            runCatching { dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(app) }
+            runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(app) }
             // Loading the FFmpeg native libraries reads the APK; do it here, not when the first player is built.
             runCatching { dev.asfakul.yumeiro.stream.YumeiroRenderersFactory.ffmpegAvailable }
         }, "yu-prefs").apply { priority = Thread.NORM_PRIORITY }.start()

@@ -276,10 +276,10 @@ fun HomeScreen(
         if (onResumeTrack != null && at > 0) onResumeTrack(t, at) else onTrackClick(t, queue)
     }
 
-    remember { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context); true }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context) } }
     val downloadItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
     val activeDownloads = remember(downloadItems) { dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloadItems).active.size }
-    LaunchedEffect(Unit) { OnlineBookmarks.ensureLoaded(context) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { OnlineBookmarks.ensureLoaded(context) } }
     val bookmarks by OnlineBookmarks.items.collectAsState()
     val hub by dev.asfakul.yumeiro.sources.SourceHub.state.collectAsState()
     val mangaCount = remember(hub.generation) { dev.asfakul.yumeiro.sources.SourceHub.mangaProviders().size }
