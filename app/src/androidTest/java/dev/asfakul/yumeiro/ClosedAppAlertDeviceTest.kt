@@ -14,7 +14,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.notify.Inbox
 import dev.asfakul.yumeiro.notify.NotifyPacer
 import dev.asfakul.yumeiro.notify.NotifySettings
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -72,7 +71,11 @@ class ClosedAppAlertDeviceTest {
         // The script proved the process was gone after the kill (`pidof` empty) and logged the pid
         // of the process the alarm started; here: posted by the alarm, not at queue time.
         assertTrue("posted by the alarm about 70 s later, not at once (delay $delay ms)", delay >= 55_000)
-        assertEquals("queue drained", "[]", pacer().getString("queue", "[]"))
+        // Only our item must have left the queue: the process the alarm started also runs the app's
+        // real catch-up checks, which may queue their own alerts (run 43749978183, api33: "31 new
+        // extensions" from the extension feed).
+        val queue = pacer().getString("queue", "[]").orEmpty()
+        assertTrue("our alert left the queue: $queue", !queue.contains(title!!))
         log("CLOSED_RESULT PASS posted ${delay} ms after queueing · pid $oldPid -> ${android.os.Process.myPid()}")
         nm.cancel(found.id)
     }
