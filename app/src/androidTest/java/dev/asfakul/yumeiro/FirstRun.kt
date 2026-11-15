@@ -52,9 +52,10 @@ object FirstRun {
      * Settings) and 43765162241 (TV api24, Inbox): a Back sent just after a new test activity
      * started went to the previous test's activity window, still focused while it was being torn
      * down ("input event receiver has already been disposed"), and the page under test never saw
-     * it. Wait until our resumed activity has window focus (the old one can already report
-     * DESTROYED while its window still holds focus, so lifecycle alone is not enough); a dialog of
-     * ours on top is fine, it should get the key. At most 10 s, then send anyway and say so.
+     * it. Wait while focus sits on one of our activity windows that is not the resumed activity (the
+     * old one can already report DESTROYED while its window still holds focus, so lifecycle alone is
+     * not enough). Our dialogs and other apps' windows (the permission dialog) get the key at once.
+     * At most 10 s, then send anyway and say so.
      */
     internal fun awaitKeyFocus(cmd: String) {
         val inst = InstrumentationRegistry.getInstrumentation()
@@ -67,8 +68,9 @@ object FirstRun {
                 val reg = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
                 ready = reg.getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).any { it.hasWindowFocus() }
             }
-            // Our own dialog or popup on top: its window is named by the package alone, no "/Activity".
-            if (!ready) ready = focusedWindow().let { isOwnNonActivityWindow(it, pkg) }
+            // Only an activity window of ours that is not the resumed one is a lost key. Our own dialog,
+            // or another app's window (the system permission dialog a Back is meant to close), is fine.
+            if (!ready) ready = !isStaleOwnActivityWindow(focusedWindow(), pkg)
             if (ready) break
             Thread.sleep(150)
         }
@@ -77,15 +79,16 @@ object FirstRun {
     }
 
     private fun focusedWindow(): String = runCatching {
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("dumpsys window windows").let { pfd ->
+        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("dumpsys window").let { pfd ->
             android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
         }.lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()
     }.getOrDefault("")
 
-    /** `mCurrentFocus=Window{1a2b u0 dev.app}` (a dialog of ours) → true; `…dev.app/dev.app.MainActivity}` → false. */
-    internal fun isOwnNonActivityWindow(line: String, pkg: String): Boolean {
+    /** True when input focus sits on one of our activity windows (`…u0 dev.app/dev.app.MainActivity}`)
+     *  while our resumed activity has none: the previous test's window, about to go. Unknown → false. */
+    internal fun isStaleOwnActivityWindow(line: String, pkg: String): Boolean {
         val name = line.substringAfter("mCurrentFocus=", "").substringAfterLast(' ').trimEnd('}')
-        return name == pkg
+        return name.startsWith("$pkg/")
     }
 
     /** API 29+ names the top activity `topResumedActivity` (permissioncontroller); API 24–28 says
