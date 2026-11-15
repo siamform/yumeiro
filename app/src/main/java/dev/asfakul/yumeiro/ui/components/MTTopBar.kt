@@ -250,7 +250,9 @@ fun MTTopBar(
                     } else SourceTitle(title, titleStyle, titleExpanded, onTitleClick, titleTag)
                 }
                 // Seal-shaped header actions: separate tiles read faster than one capsule.
-                Row(Modifier.tourTarget("topbar_actions"), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                // G12 X8: 4 dp, not 2: Compose widens each 40 dp tile to a 48 dp touch target only
+                // when the neighbours leave room; at 2 dp the accessibility check measured 46 dp.
+                Row(Modifier.tourTarget("topbar_actions"), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (showSearch) TopAction(
                         icon = Icons.Default.Search,
                         contentDescription = searchDescription,
