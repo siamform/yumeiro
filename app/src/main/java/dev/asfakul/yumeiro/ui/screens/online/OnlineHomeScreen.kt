@@ -393,6 +393,12 @@ fun OnlineHomeScreen(
                             !exploreBusy && exploreMore -> pageExplore()
                         }
                     }
+                    // Read the append-only list once, as an immutable copy (SnapshotStateList.toList()
+                    // returns the record's persistent list). Iterating the live list inside the lazy
+                    // content crashed with ConcurrentModificationException when prefetch ran the
+                    // content in another snapshot while a page was being appended (run 43664241241).
+                    val exploreSnap = exploreItems.toList()
+                    val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                         if (cats.isNotEmpty()) item("categories") {
@@ -431,19 +437,18 @@ fun OnlineHomeScreen(
                                 }
                             }
                         }
-                        if (groupsDone && exploreItems.isNotEmpty()) {
+                        if (groupsDone && exploreSnap.isNotEmpty()) {
                             item("explore_h") {
                                 dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} extensions", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
                             }
-                            val rowsG = hueGridRows(exploreItems.take(exploreLimit))
-                            items(rowsG, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
+                            items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
                                 val wide = r.first().second
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("explore_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     r.forEach { (item, _) -> PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) }
                                     repeat((if (wide) 2 else 3) - r.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
-                            if (exploreBusy || exploreLimit < exploreItems.size) item("explore_more") { PosterGridSkeleton(1) }
+                            if (exploreBusy || exploreLimit < exploreSnap.size) item("explore_more") { PosterGridSkeleton(1) }
                             else if (!exploreMore) item("explore_end") {
                                 Text("You've reached the end. Pull down to refresh.", color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
                             }

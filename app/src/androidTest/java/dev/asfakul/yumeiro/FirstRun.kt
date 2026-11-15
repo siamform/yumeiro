@@ -37,6 +37,12 @@ object FirstRun {
     private fun permissionDialogOnTop(): Boolean =
         shell("dumpsys activity activities").lineSequence().any { "topResumedActivity" in it && "permissioncontroller" in it }
 
+    private fun settled(rule: AndroidComposeTestRule<*, *>, guide: Boolean, tour: Boolean): Boolean {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val ui = dev.asfakul.yumeiro.ui.screens.extras.SetupGuide
+        return !guide && !tour && !ui.open.value && !ui.shouldAutoShow(ctx) && has(rule, "nav_tab_home") && !permissionDialogOnTop()
+    }
+
     private fun has(rule: AndroidComposeTestRule<*, *>, tag: String) =
         runCatching { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
 
@@ -47,7 +53,16 @@ object FirstRun {
         var lastSkip = 0L
         while (SystemClock.uptimeMillis() < end) {
             val guide = has(rule, "setup_guide"); val tour = has(rule, "explore_tour")
-            if (!guide && !tour && has(rule, "nav_tab_home") && !permissionDialogOnTop()) { dev.asfakul.yumeiro.online.OnboardingGate.release(); return }
+            // The welcome guide opens only after the splash (run 43667108811: the helper returned
+            // during the splash and the guide then covered every later tap). Settled means: the
+            // guide was answered (or seen), it is closed, no tour, the tab bar shows, for 1.5 s.
+            if (settled(rule, guide, tour)) {
+                SystemClock.sleep(1_500)
+                if (settled(rule, has(rule, "setup_guide"), has(rule, "explore_tour"))) {
+                    dev.asfakul.yumeiro.online.OnboardingGate.release(); Log.i("MTDeviceTest", "first run: on the tabs"); return
+                }
+                continue
+            }
             if (permissionDialogOnTop()) {
                 // Already granted above; the system dialog can stay up anyway. Back closes it.
                 Log.i("MTDeviceTest", "first run: closing the system permission dialog")

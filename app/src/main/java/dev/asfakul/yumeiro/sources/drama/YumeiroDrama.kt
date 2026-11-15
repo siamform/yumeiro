@@ -141,12 +141,15 @@ class YumeiroDramaProvider(
     private val cards = java.util.concurrent.ConcurrentHashMap<String, DramaShow>()
     private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
-    override suspend fun load(url: String): LoadResponse {
+    /** R17: opening a drama and pressing Play are calls the user waits for (gate's top lane). */
+    override suspend fun load(url: String): LoadResponse = kotlinx.coroutines.withContext(GateLane(GateLane.INTERACTIVE)) { loadNow(url) }
+
+    private suspend fun loadNow(url: String): LoadResponse {
         val (cid, seriesUrl) = parseId(url)
         val c = catalog(cid)
         val card = cards[seriesUrl]?.takeIf { (it.episodes ?: 0) > 0 }
         val s = if (card == null) c.series(seriesUrl) else {
-            val page = background.async { c.series(seriesUrl) }
+            val page = background.async(GateLane(GateLane.INTERACTIVE)) { c.series(seriesUrl) }
             withTimeoutOrNull(SERIES_WAIT_MS) { runCatching { page.await() }.getOrNull() }
                 ?: DramaSeries(card.title, seriesUrl, card.cover, null, card.platform, card.episodes!!, null)
         }
@@ -164,7 +167,10 @@ class YumeiroDramaProvider(
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean =
+        kotlinx.coroutines.withContext(GateLane(GateLane.INTERACTIVE)) { loadLinksNow(data, subtitleCallback, callback) }
+
+    private suspend fun loadLinksNow(data: String, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         val parts = stripId(data).split('|')
         if (parts.size < 3) return false
         val c = catalog(parts[0])

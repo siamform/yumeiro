@@ -83,6 +83,10 @@ class StabilityStressDeviceTest {
             }
         }.onFailure { log("extension setup failed (network?): $it"); HangDumpRule.dump("stress setup failed: $it") }
         log("setup: done")
+        // Past the welcome guide that opens after the splash (run 43667108811 showed it covering the
+        // app; until then this test's taps could land on it instead of the tabs).
+        FirstRun.toTabs(rule)
+        FirstRun.shot("stress_start")
         val am = ctx.getSystemService(ActivityManager::class.java)
         val mi = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         log("device ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT} totalMem=${mi.totalMem / MB}M memoryClass=${am.memoryClass}M lowRam=${am.isLowRamDevice} lowEnd=${DeviceClass.lowEnd}")
@@ -130,9 +134,7 @@ class StabilityStressDeviceTest {
         }, "stress-stall").apply { isDaemon = true }.start()
     }
 
-    private fun shell(cmd: String) {
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).close()
-    }
+    private fun shell(cmd: String) { FirstRun.shell(cmd) }
 
     private fun shellOut(cmd: String): String =
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).let { pfd ->
@@ -152,8 +154,14 @@ class StabilityStressDeviceTest {
         log("mem[$step] javaHeap=${(rt.totalMemory() - rt.freeMemory()) / MB}/${rt.maxMemory() / MB}M native=${Debug.getNativeHeapAllocatedSize() / MB}M pss=${mi.totalPss / 1024}M threads=${Thread.activeCount()} ($threads)")
     }
 
-    private fun tap(tag: String): Boolean = runCatching {
-        rule.waitUntil(20_000) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }
+    private fun tap(tag: String): Boolean = tapOnce(tag, 12_000) || run {
+        // A fling that ended as a tap can open a detail page just after backToTabs looked
+        // (run 43664241241): come back to the tabs once and try again.
+        if (tag.startsWith("nav_tab_")) { backToTabs("retry $tag"); tapOnce(tag, 12_000) } else false
+    }
+
+    private fun tapOnce(tag: String, ms: Long): Boolean = runCatching {
+        rule.waitUntil(ms) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag(tag, true).performClick(); true
     }.getOrElse { log("no node $tag: ${it.javaClass.simpleName}: ${it.message?.take(120)} · on screen: ${onScreen()}"); false }
 
@@ -211,7 +219,10 @@ class StabilityStressDeviceTest {
             applies++
             for (o in changed) {
                 // Runs on main: no regex here (the stress test itself flags regex on main).
-                val d = runCatching { o.toString() }.getOrDefault(o.javaClass.name).take(110) + " #" + System.identityHashCode(o).toString(16)
+                // Never toString() a derived state: that computes it, and doing so while Compose
+                // applies a snapshot inside a layout pass threw "performMeasureAndLayout called
+                // during measure layout" (run 43664241241).
+                val d = (if (o.javaClass.name.contains("Derived")) "DerivedState" else runCatching { o.toString() }.getOrDefault(o.javaClass.name)).take(110) + " #" + System.identityHashCode(o).toString(16)
                 hits.getOrPut(d) { AtomicInteger() }.incrementAndGet()
             }
         }

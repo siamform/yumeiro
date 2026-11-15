@@ -120,15 +120,15 @@ class OnShortCatalog(
     private val seriesInFlight = ConcurrentHashMap<String, Pair<kotlinx.coroutines.Deferred<DramaSeries>, GateLane>>()
     private val streamsInFlight = ConcurrentHashMap<String, Pair<kotlinx.coroutines.Deferred<DramaStreams>, GateLane>>()
 
-    /** One request per key; a user caller promotes a background request it joins (R16). */
+    /** One request per key; a caller in a better lane promotes the shared request it joins (R16/R17). */
     private suspend fun <T> shared(map: ConcurrentHashMap<String, Pair<kotlinx.coroutines.Deferred<T>, GateLane>>, key: String, work: suspend () -> T): T {
-        val background = kotlin.coroutines.coroutineContext[GateLane]?.background == true
-        val lane = GateLane(background)
+        val mine = kotlin.coroutines.coroutineContext[GateLane]?.priority ?: GateLane.FEED
+        val lane = GateLane(mine)
         val fresh = loads.async(lane, start = kotlinx.coroutines.CoroutineStart.LAZY) { work() }
         val entry = fresh to lane
         val d = map.putIfAbsent(key, entry)?.also { fresh.cancel() }
             ?: entry.also { fresh.invokeOnCompletion { _ -> map.remove(key, entry) }; fresh.start() }
-        if (!background) d.second.background = false
+        d.second.promote(mine)
         return d.first.await()
     }
     private val loads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
@@ -421,13 +421,17 @@ object OnShortParser {
 }
 
 /**
- * R15: polite, self-healing access to one flaky host.
- *  - at most [maxConcurrent] calls at once and [minGapMs] between call starts (bursts are what
- *    trigger the site's 502 windows);
+ * R15/R17: polite, self-healing access to one flaky host.
+ *  - at most [maxConcurrent] feed / background calls at once, plus one slot only a call the user
+ *    is waiting on (lane [GateLane.INTERACTIVE]) may take, and [minGapMs] between call starts;
+ *  - waiters are served by lane first (interactive, then feed, then background), then in order;
  *  - HTTP 429 / 502 / 503 / 504, timeouts and dropped connections are retried with backoff
- *    ([backoffMs]) up to [attempts] times; while one call backs off, the others wait too
- *    (shared cool-down), so the app stops hammering a host that is already struggling.
+ *    ([backoffMs]) up to [attempts] times; while one call backs off, feed and background calls
+ *    wait too (shared cool-down). A user's call is not held by that cool-down.
  * Other answers (200, 4xx) are returned as they are.
+ *
+ * R17 (run 43664241241): with two lanes, shelves of ten studios, episode prefetches and the tap
+ * itself were all "user" calls in one first-come queue; a tap on Play waited 216 s for a slot.
  */
 class OnShortGate(
     private val maxConcurrent: Int = 2,
@@ -436,10 +440,14 @@ class OnShortGate(
     private val backoffMs: (attempt: Int) -> Long = { a -> longArrayOf(1_200L, 3_000L, 6_000L, 9_000L)[a.coerceIn(0, 3)] },
     private val now: () -> Long = System::currentTimeMillis,
 ) {
-    /** R16: user calls take any free slot; background calls (health probes) hold at most one and only while no user call waits. */
-    private val permits = kotlinx.coroutines.sync.Semaphore(maxConcurrent)
-    private val userWaiting = java.util.concurrent.atomic.AtomicInteger()
-    private val backgroundHeld = java.util.concurrent.atomic.AtomicInteger()
+    private class Waiter(val lane: GateLane?, val seq: Long, val granted: kotlinx.coroutines.CompletableDeferred<Int>) {
+        val priority: Int get() = lane?.priority ?: GateLane.FEED
+    }
+    private val lock = Any()
+    private val waiters = ArrayList<Waiter>()
+    private var running = 0
+    private var backgroundRunning = 0
+    private var seq = 0L
     /** Calls on the host right now (for the slow-wait log only). */
     private val active = java.util.concurrent.ConcurrentHashMap<Any, String>()
     private val spacing = kotlinx.coroutines.sync.Mutex()
@@ -456,24 +464,25 @@ class OnShortGate(
         var last: Pair<Int, String>? = null
         var error: Throwable? = null
         val attempts = if (tries > 0) tries else attempts
+        val lane = kotlin.coroutines.coroutineContext[GateLane]
         for (attempt in 0 until attempts) {
             waiting.incrementAndGet()
             val asked = now()
-            val lane = kotlin.coroutines.coroutineContext[GateLane]
             val r = try {
                 val heldAtAsk = active.values.toList()
-                val asBackground = acquire(lane)
+                val got = acquire(lane)
                 val ticket = Any()
-                active[ticket] = "${if (asBackground) "bg" else "user"} ${url.substringAfter("://").take(60)}"
+                active[ticket] = "${GateLane.name(got)} ${url.substringAfter("://").take(60)}"
                 try {
-                    (now() - asked).takeIf { it > 1_000 }?.let { w -> runCatching { android.util.Log.i("YuGate", "waited ${w}ms for a slot (${if (asBackground) "background" else "user"}): ${url.take(90)} · held by ${heldAtAsk.joinToString { it.take(70) }}") } }
+                    (now() - asked).takeIf { it > 1_000 }?.let { w -> runCatching { android.util.Log.i("YuGate", "waited ${w}ms for a slot (${GateLane.name(got)}): ${url.take(90)} · held by ${heldAtAsk.joinToString()}") } }
                     spacing.withLock {
-                        val wait = maxOf(coolUntil - now(), lastStart + minGapMs - now())
+                        val cool = if (got == GateLane.INTERACTIVE) 0L else coolUntil - now()
+                        val wait = maxOf(cool, lastStart + minGapMs - now())
                         if (wait > 0) kotlinx.coroutines.delay(wait)
                         lastStart = now()
                     }
                     runCatching { block() }
-                } finally { active.remove(ticket); if (asBackground) backgroundHeld.decrementAndGet(); permits.release() }
+                } finally { active.remove(ticket); release(got) }
             } finally { waiting.decrementAndGet() }
             val v = r.getOrNull()
             if (v != null && !transient(v.first)) return v
@@ -497,19 +506,53 @@ class OnShortGate(
         return last ?: throw (error ?: IOException("No answer from $url"))
     }
 
-    /** Takes a slot; returns true when it was taken as a background call. */
-    private suspend fun acquire(lane: GateLane?): Boolean {
-        while (lane?.background == true) {
-            // Only on an idle host: a user call that arrives next always finds a free slot.
-            if (userWaiting.get() == 0 && permits.availablePermits == maxConcurrent) {
-                if (backgroundHeld.incrementAndGet() <= 1 && permits.tryAcquire()) return true
-                backgroundHeld.decrementAndGet()
-            }
-            kotlinx.coroutines.delay(120)
+    /** Whether a call of [priority] may start now. Caller holds [lock]. */
+    private fun fits(priority: Int, others: List<Waiter>): Boolean = when (priority) {
+        GateLane.INTERACTIVE -> running < maxConcurrent + 1
+        GateLane.FEED -> running < maxConcurrent && others.none { it.priority == GateLane.INTERACTIVE }
+        // Only on an idle host, one at a time: a feed or user call that arrives next finds a slot.
+        else -> running == 0 && backgroundRunning == 0 && others.none { it.priority < GateLane.BACKGROUND }
+    }
+
+    /** Takes a slot; returns the lane priority it was granted under. */
+    private suspend fun acquire(lane: GateLane?): Int {
+        val w: Waiter
+        synchronized(lock) {
+            w = Waiter(lane, seq++, kotlinx.coroutines.CompletableDeferred())
+            if (waiters.none { it.priority <= w.priority } && fits(w.priority, waiters)) { take(w.priority); return w.priority }
+            waiters += w
         }
-        userWaiting.incrementAndGet()
-        try { permits.acquire() } finally { userWaiting.decrementAndGet() }
-        return false
+        try {
+            // The lane can be promoted while waiting (a user joins a prefetch): re-check now and then.
+            while (true) {
+                val got = kotlinx.coroutines.withTimeoutOrNull(250) { w.granted.await() }
+                if (got != null) return got
+                synchronized(lock) { dispatch() }
+            }
+        } catch (e: Throwable) {
+            synchronized(lock) {
+                if (!waiters.remove(w) && w.granted.isCompleted) { val g = w.granted.getCompleted(); release0(g) }
+            }
+            throw e
+        }
+    }
+
+    private fun take(priority: Int) { running++; if (priority == GateLane.BACKGROUND) backgroundRunning++ }
+
+    private fun release0(priority: Int) { running--; if (priority == GateLane.BACKGROUND) backgroundRunning--; dispatch() }
+
+    private fun release(priority: Int) = synchronized(lock) { release0(priority) }
+
+    /** Grants slots to waiters, best lane first. Caller holds [lock]. */
+    private fun dispatch() {
+        while (waiters.isNotEmpty()) {
+            val next = waiters.minWith(compareBy<Waiter>({ it.priority }, { it.seq }))
+            val others = waiters.filter { it !== next }
+            if (!fits(next.priority, others)) return
+            waiters.remove(next)
+            take(next.priority)
+            next.granted.complete(next.priority)
+        }
     }
 
     companion object {
@@ -522,11 +565,21 @@ class OnShortGate(
 }
 
 /**
- * R16: which lane an [OnShortGate] call uses. Health probes run with `GateLane(background = true)`;
- * anything without a lane is a user call. A shared request (a series page both a probe and the
- * user wait for) is promoted by setting [background] to false, so the user never queues behind
- * the probe that started it.
+ * Which lane an [OnShortGate] call uses: [INTERACTIVE] (the user is waiting: opening a drama,
+ * pressing Play), [FEED] (shelves, prefetch; the default when no lane is set) or [BACKGROUND]
+ * (health probes). A shared request is promoted by lowering [priority], so the user never queues
+ * behind the prefetch or probe that started it.
  */
-class GateLane(@Volatile var background: Boolean) : kotlin.coroutines.AbstractCoroutineContextElement(GateLane) {
-    companion object Key : kotlin.coroutines.CoroutineContext.Key<GateLane>
+class GateLane(@Volatile var priority: Int) : kotlin.coroutines.AbstractCoroutineContextElement(GateLane) {
+    constructor(background: Boolean) : this(if (background) BACKGROUND else FEED)
+    val background: Boolean get() = priority == BACKGROUND
+    /** Moves this lane up to [p] (never down). */
+    fun promote(p: Int) { if (p < priority) priority = p }
+
+    companion object Key : kotlin.coroutines.CoroutineContext.Key<GateLane> {
+        const val INTERACTIVE = 0
+        const val FEED = 1
+        const val BACKGROUND = 2
+        fun name(p: Int) = when (p) { INTERACTIVE -> "user"; FEED -> "feed"; else -> "background" }
+    }
 }
