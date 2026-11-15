@@ -11,11 +11,7 @@ import android.util.Log
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeDown
-import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionManager
@@ -85,12 +81,26 @@ class FeedPositionDeviceTest {
     }
 
     private fun tap(tag: String) {
-        rule.waitUntil(30_000) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }
+        val found = runCatching { rule.waitUntil(30_000) { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
+        if (!found) { val s = onScreen(); log("no node $tag · $s"); throw AssertionError("no '$tag' on screen after 30 s · $s") }
         rule.onAllNodesWithTag(tag, true)[0].performClick() // the title switch and the inline pills can share a tag
         idle(600)
     }
 
-    private val screen by lazy { rule.onRoot().fetchSemanticsNode().size }
+    /** Test tags and first texts on screen, for a failure message that says where the app was. */
+    private fun onScreen(): String = runCatching {
+        val roots = rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes()
+        val tags = LinkedHashSet<String>(); val texts = LinkedHashSet<String>()
+        fun walk(n: androidx.compose.ui.semantics.SemanticsNode) {
+            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null }?.let { tags += it }
+            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.firstOrNull()?.text?.take(30)?.let { if (texts.size < 15) texts += it }
+            n.children.forEach { walk(it) }
+        }
+        roots.forEach { walk(it) }
+        "roots=${roots.size} · tags=${tags.take(40)} · text=$texts"
+    }.getOrElse { "(could not read: ${it.javaClass.simpleName})" }
+
+    private val screen by lazy { rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().maxByOrNull { it.size.height }!!.size }
 
     /** Cards that intersect the screen (pager pages beside the current one sit wholly outside it). */
     private fun snap(): List<Card> = rule.onAllNodes(SemanticsMatcher.keyIsDefined(FeedCardKey), true).fetchSemanticsNodes()
@@ -135,20 +145,33 @@ class FeedPositionDeviceTest {
         return problems
     }
 
+    /**
+     * A real finger swipe through the system input pipeline (`input swipe`), in the middle of the
+     * screen. Run 43664577766 showed Compose-injected swipes on the root did not scroll Music.
+     */
     private fun swipe(up: Boolean) {
-        rule.onRoot(useUnmergedTree = true).performTouchInput {
-            if (up) swipeUp(startY = height * 0.72f, endY = height * 0.38f, durationMillis = 450)
-            else swipeDown(startY = height * 0.38f, endY = height * 0.72f, durationMillis = 450)
-        }
+        val x = screen.width / 2
+        val a = (screen.height * 0.70f).toInt(); val b = (screen.height * 0.40f).toInt()
+        val (y1, y2) = if (up) a to b else b to a
+        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input swipe $x $y1 $x $y2 450").close()
     }
 
     private fun run(feed: String, open: () -> Unit) {
         log("feed $feed: device ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT} screen=${screen.width}x${screen.height}")
         open()
-        val shown = runCatching { rule.waitUntil(120_000) { snap().size >= 4 }; true }.getOrDefault(false)
+        // Some feeds start below the fold (Home puts shortcuts first): scroll down until cards show.
+        val until = SystemClock.uptimeMillis() + 120_000
+        var shown = false
+        while (SystemClock.uptimeMillis() < until) {
+            if (snap().size >= 4) { shown = true; break }
+            idle(4_000)
+            if (snap().size in 0..3) swipe(up = true)
+            idle(1_500)
+        }
         val first = snap()
         log("feed $feed: ${first.size} cards on screen at start: ${first.take(6).map { it.key }}")
-        assertTrue("$feed: the feed never showed 4 cards in 120 s (cards=${first.size})", shown)
+        if (!shown) log("feed $feed: no cards · ${onScreen()}")
+        assertTrue("$feed: the feed never showed 4 cards in 120 s (cards=${first.size}) · ${onScreen()}", shown)
         val problems = ArrayList<String>()
         var seen = HashSet<String>().apply { addAll(first.map { it.key }) }
         fun stillCheck(name: String) {
@@ -159,12 +182,14 @@ class FeedPositionDeviceTest {
         idle(2_000)
         stillCheck("idle-start")
         var prev = snap()
+        var moved = 0
         val steps = listOf(true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false)
         steps.forEachIndexed { i, up ->
             swipe(up); idle(1_500)
             val now = snap()
             val p = compare("$feed/swipe${i + 1}${if (up) "↑" else "↓"}", prev, now, still = false, swipeUp = up)
             problems += p
+            if (prev.any { c -> now.none { it.key == c.key && abs(it.y - c.y) < 2f } }) moved++
             seen.addAll(now.map { it.key })
             log("feed $feed/swipe${i + 1}: ${now.size} cards, page moved ${now.firstOrNull()?.let { c -> prev.firstOrNull { it.key == c.key }?.let { (c.y - it.y).toInt() } } ?: "?"}px, problems=${p.size}")
             prev = now
@@ -177,6 +202,7 @@ class FeedPositionDeviceTest {
         val dir = File(ctx.getExternalFilesDir(null), "feedpos").apply { mkdirs() }
         File(dir, "$feed.txt").writeText(report.toString())
         assertTrue("$feed: ${problems.size} position problems: ${problems.take(5)}", problems.isEmpty())
+        assertTrue("$feed: only $moved of ${steps.size} swipes scrolled the feed (the test did not exercise it)", moved >= steps.size * 3 / 4)
         assertTrue("$feed: scrolling showed no new cards (seen ${seen.size})", seen.size > first.size)
     }
 
