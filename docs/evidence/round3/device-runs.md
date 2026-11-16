@@ -415,3 +415,9 @@ These are real emulators running the real debug APK; the tests are not simulated
   CDN does not cap per request, so a before/after on it cannot show the collapse; the before/after
   evidence is the unit burst profile (CI 43851470283 before, CI 43861926740 after).
 - Dispatched device 43863246577: HomeTraceDeviceTest with gpu=swangle_indirect.
+
+## CI 43861926740 — ci.yml on 3c85a72 (unit, 2026-11-16 ~11:58–12:20 UTC) — success
+
+- 1059 tests, 0 failed, 11 skipped. ProgressGateTest 4/4, RebufferWindowTest 6/6, Bug3PieceTest 8/8,
+  Bug4QualityListTest 7/7, DownloadThroughputTest 2/2 (BUG-3 rule met: segmented4 burst 1.67×,
+  low-end 0.09×; table in FEATURE-BUG-3 §4.3).

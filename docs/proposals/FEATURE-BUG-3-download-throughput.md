@@ -106,6 +106,30 @@ Findings:
   A retry continues from the piece position instead of rewinding the 4 MiB chunk and the
   progress. Unit tests `Bug3PieceTest` (4).
 
+### 4.3 Second fix and results (2026-11-16)
+
+- CI 43854742733 (unit, 40ea96e, split only): burst profile still failed — segmented4 4.82×, low-end
+  3.30×. Every connection was busy but past its per-request burst; pieces under 2 MiB cannot be split.
+- Fix 3c85a72 `RequestPace`: each request's speed over its first MiB is its baseline; a later 256 KiB
+  window under a third of it (with ≥ 512 KiB of the piece left) closes the request and asks for the rest
+  in a new one (≤ 32 per piece, not a failure). Steady hosts never trip it.
+- CI 43861926740 (unit, 3c85a72), all 1059 tests pass:
+
+| Engine | Profile | MB/s before → after | last 10 % / mean before → after | Requests |
+|---|---|---|---|---|
+| segmented4 | burst 3 MB then 1.5 MB/s | 17.70 → 78.69 | 4.82 → 1.67 | 8 → 15 |
+| segmented2 (low-end) | burst | 11.95 → 72.29 | 3.30 → 0.09 | 7 → 16 |
+| segmented4 | steady 3 MB/s | 12.00 → 12.01 | 0.99 → 0.99 | 9 → 9 |
+| segmented2 | steady | 6.00 → 6.01 | 0.99 → 0.99 | 7 → 7 |
+| youtube-8mb-chunks | burst | 2.40 → 2.40 | 1.59 → 1.60 | 3 |
+
+- Real host (emulator, device run 43861039865, cdn.kernel.org 134.7 MB, before 3c85a72): 8.13 / 6.22 MB/s
+  (api36 / api33), last/mean 1.02 / 0.83; screen off + forced Doze at 30 %: 8.61 / 5.88 MB/s, 0.88 / 0.60.
+  That CDN does not cap requests, so it shows no collapse before or after.
+- Open: the YouTube engine (8 MiB requests) does not use RequestPace; on the burst model it runs at the
+  cap (2.4 MB/s) without a collapse (1.6×). Not changed: YouTube's own throttling is different and needs a
+  real YouTube measurement, which the CI IP cannot get (bot wall). T5 (Wi-Fi power save) needs a phone.
+
 ## 5. Target (better than both)
 
 - Stable throughput to 100 %: closed ranges sized so each request stays in the host's fast
