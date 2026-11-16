@@ -38,6 +38,24 @@ class DownloadThroughputTest {
          * seconds on a long download, which this floor does not hide.
          */
         const val TAIL_FLOOR_MS = 250L
+        /**
+         * A tail is slow only if the last 10 % is also slower than every earlier 10 % by this factor.
+         * CI 43899660445 (slower runner, 851 ms in all): segmented2 burst-then-cap steps
+         * [9, 4, 270, 7, 4, 117, 160, 5, 4, 271]: the same pace window landed in tenths 3 and 10
+         * (270 vs 271 ms), so the last tenth was no slower than the middle; the fixed floor alone is
+         * machine-speed dependent. A real BUG-3 tail (one connection left at the capped rate) makes
+         * the last tenth far longer than any earlier one, which this still fails.
+         */
+        const val TAIL_OVER_PEAK = 1.5
+
+        /** BUG-3 tail rule on the ten per-10 % times. */
+        fun slowTail(s: List<Long>): Boolean {
+            if (s.size < 2 || s.any { it < 0 }) return false
+            val mean = s.sum() / s.size.toDouble()
+            val last = s.last()
+            val earlierPeak = s.dropLast(1).max()
+            return last / mean.coerceAtLeast(1.0) > TAIL_LIMIT && last > TAIL_FLOOR_MS && last > earlierPeak * TAIL_OVER_PEAK
+        }
         const val SEG = 512 * 1024 // 48 segments cover SIZE exactly (600 KB left 576 KB out: test error in 43851470283)
         private lateinit var server: java.net.ServerSocket
         private val pool = Executors.newCachedThreadPool()
@@ -159,7 +177,7 @@ class DownloadThroughputTest {
         val total = d.at.last()
         println("THROUGHPUT engine=$engine profile=${profile.name} ranges=$ranges totalMs=$total MBps=${"%.2f".format(SIZE / 1048576.0 / (total / 1000.0))} " +
             "requests=$requestsUsed served=$servedBytes servedOverSize=${"%.3f".format(servedBytes / SIZE.toDouble())} per10pctMs=$s tailRatio=${"%.2f".format(d.tailRatio())} lastOverMean=${"%.2f".format(d.lastOverMean())}")
-        if (engine in ruled && d.lastOverMean() > TAIL_LIMIT && s.last() > TAIL_FLOOR_MS) broken += "$engine/${profile.name}: last 10 % took ${"%.2f".format(d.lastOverMean())}× the average 10 % $s"
+        if (engine in ruled && slowTail(s)) broken += "$engine/${profile.name}: last 10 % took ${"%.2f".format(d.lastOverMean())}× the average 10 % $s"
     }
 
     private fun check(f: File) {
@@ -197,6 +215,15 @@ class DownloadThroughputTest {
             assertTrue("single-no-ranges read ${lastServed} bytes for $SIZE (${profile.name})", lastServed <= SIZE + 64 * 1024)
         }
         assertTrue("BUG-3 tail rule (≤ $TAIL_LIMIT×): $broken", broken.isEmpty())
+    }
+
+    /** The rule itself: the BUG-3 shape fails, a pace window repeated in the last tenth does not. */
+    @Test fun tailRuleSeparatesSlowTailFromRepeatedPause() {
+        assertTrue("owner-like slow tail", slowTail(listOf(400, 400, 400, 400, 400, 400, 400, 400, 400, 2000)))
+        assertTrue("short download, tail of seconds", slowTail(listOf(10, 10, 10, 10, 10, 10, 10, 10, 10, 900)))
+        assertTrue("CI 43899660445 segmented2 burst", !slowTail(listOf(9, 4, 270, 7, 4, 117, 160, 5, 4, 271)))
+        assertTrue("CI 43889319143 segmented2 burst", !slowTail(listOf(10, 5, 103, 5, 112, 48, 5, 61, 4, 111)))
+        assertTrue("steady", !slowTail(listOf(398, 401, 401, 398, 396, 401, 398, 401, 401, 396)))
     }
 
     @Test fun steadyPerConnectionCap() {
