@@ -144,11 +144,16 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
     DisposableEffect(Unit) { AppMessages.hosts++; onDispose { AppMessages.hosts-- } }
     val msg by AppMessages.current.collectAsState()
     LaunchedEffect(msg?.id) { msg?.let { delay(it.durationMs); AppMessages.dismiss(it.id) } }
+    // ST-21: never over the in-app floating video window (its close button took no tap under the pill).
+    val floatEdges by FloatingPlayerArea.edges.collectAsState()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val navBarDp = with(density) { androidx.compose.foundation.layout.WindowInsets.navigationBars.getBottom(density).toDp().value.toInt() }
+    val bottom = FloatingPlayerArea.messageBottom(bottomPadding.value.toInt(), navBarDp, floatEdges).dp
     AnimatedVisibility(
         visible = msg != null,
         enter = fadeIn(tween(160)) + slideInVertically(androidx.compose.animation.core.spring(dampingRatio = 0.75f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)) { it / 2 },
         exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { it / 2 },
-        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = bottomPadding),
+        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = bottom),
     ) {
         val m = msg ?: return@AnimatedVisibility
         val (icon, tint) = when (m.kind) {

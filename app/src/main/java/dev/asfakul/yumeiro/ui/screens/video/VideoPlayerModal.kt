@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -197,6 +199,11 @@ fun VideoPlayerModal(
             var drag by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
             val maxDx = with(density) { (maxWidth - miniWidth - 24.dp).toPx() }.coerceAtLeast(0f)
             val maxDy = with(density) { (maxHeight - miniHeight - minimizedBottomInset - 64.dp).toPx() }.coerceAtLeast(0f)
+            // ST-21: no floating window → nothing for the message host to avoid.
+            androidx.compose.runtime.DisposableEffect(floating) {
+                if (!floating) dev.asfakul.yumeiro.ui.components.FloatingPlayerArea.report(null)
+                onDispose { dev.asfakul.yumeiro.ui.components.FloatingPlayerArea.report(null) }
+            }
             val slot = if (floating) {
                 Modifier
                     .align(Alignment.BottomEnd)
@@ -215,17 +222,17 @@ fun VideoPlayerModal(
                             )
                         }
                     }
-                    .then(if (dev.asfakul.yumeiro.BuildConfig.DEBUG) Modifier.pointerInput(Unit) {
-                        // SE-6 diagnosis (debug builds only, observes, never consumes): what reaches the window.
-                        awaitPointerEventScope {
-                            while (true) {
-                                val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                                e.changes.firstOrNull()?.let { c ->
-                                    android.util.Log.i("YuFloat", "ptr ${e.type} at ${c.position} pressed=${c.pressed} consumed=${c.isConsumed}")
-                                }
-                            }
-                        }
-                    } else Modifier)
+                    .onGloballyPositioned { c ->
+                        // ST-21: tell the message host where the window is (dp from the window bottom).
+                        val h = c.findRootCoordinates().size.height.toFloat()
+                        val r = c.boundsInRoot()
+                        dev.asfakul.yumeiro.ui.components.FloatingPlayerArea.report(
+                            dev.asfakul.yumeiro.ui.components.FloatingPlayerArea.Edges(
+                                bottomDp = ((h - r.bottom) / density.density).toInt(),
+                                topDp = ((h - r.top) / density.density).toInt(),
+                            ),
+                        )
+                    }
                     .testTag("video_floating_player")
             } else modifier
             VideoPlayerModalContent(video, onClose, onProgressUpdate, slot, nextVideo, hasPreviousVideo, onNextVideo, onPreviousVideo, overlay, onFatalError, watchPage, floating, onMinimize, onExpand, onGiveUp = onGiveUp)
@@ -2367,10 +2374,7 @@ private fun BoxScope.FloatingPlayerChrome(
         IconButton(onClick = onPlayPause, modifier = Modifier.size(34.dp).testTag("floating_play_pause")) {
             Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pause" else "Play", tint = Color.White)
         }
-        if (dev.asfakul.yumeiro.BuildConfig.DEBUG) androidx.compose.runtime.DisposableEffect(Unit) {
-            android.util.Log.i("YuFloat", "close button composed"); onDispose { android.util.Log.i("YuFloat", "close button disposed") }
-        }
-        IconButton(onClick = { android.util.Log.i("YuFloat", "close tapped"); onClose() }, modifier = Modifier.size(34.dp).testTag("floating_close")) {
+        IconButton(onClick = onClose, modifier = Modifier.size(34.dp).testTag("floating_close")) {
             Icon(Icons.Default.Close, "Close", tint = Color.White)
         }
     }
