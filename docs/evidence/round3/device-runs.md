@@ -730,5 +730,16 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
   keyboard's SEARCH key sends) when Enter is eaten; rerun owed.
 - 43946842943 (same inputs, 3be5e5f) sat "queued" with no jobs for 40 min and stayed queued after cancel: ghost,
   replaced by 43949571344.
-| 43957029647 | tv-api24 | TvBug5ReproDeviceTest a–d | PASS 4/4 (d: path=ime_search, answered=true) | emulator |
-| 43957024165 | api33-lowram + api36 | ChoiceSettingsEffectDeviceTest a–f | a,c,d,e,f PASS; b FAIL (floating close ignored after one tap, both phones) | emulator |
+
+## 43957029647 (tv-api24 = Android TV 7, emulator)
+
+- TvBug5ReproDeviceTest a–d PASS 4/4. d: path=ime_search, answered=true, focus after submit stays in
+  topbar_search_input. TV-4 focus+answer now verified on both TV images.
+
+## 43957024165 (api33-lowram + api36, emulator; head 07c…)
+
+- ChoiceSettingsEffectDeviceTest: a speed (1.5 → 1.5, normal → 1.0), c renderer (surface/texture), d decoder
+  (c2.android.avc.decoder / c2.goldfish.h264.decoder), e default player ASK/Yumeiro, f backup period 3 d / 7 d: PASS
+  on both phones.
+- b quality FAIL on both phones in the close step: one tap on floating_close, the floating window stayed 15 s and the
+  clip played to ENDED (shot cfx_fail_playerclosed). a and c closed with the same helper. Diagnostic run 43959524193.
