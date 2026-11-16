@@ -423,6 +423,23 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
 - **Proposal:** (b), with (c) kept as the fallback the app already supports.
 - **Status:** proposed; needs the owner's decision. Nothing changed in code.
 
+### ADR-014 (proposed): Dialogs that third-party extensions open over the app (G12 X9-7)
+
+- **Context:** CloudStream plugins run inside our process with the activity as context, so they can
+  show their own windows. On the TV emulator (43775191888) the `com.phisher98` repo plugin opened a
+  plain View dialog "Support Phisher Repo" (donation link, "Watch an Ad") over MainActivity while it
+  loaded. It takes D-pad focus; the first Back only closes it. Evidence:
+  `docs/evidence/round3/x9-7-extension-dialog-tv.png`. The same mechanism serves legitimate plugin
+  UI (log-in pages, WebView captcha, settings), so a blanket block would break those.
+- **Options:** (a) keep as is; the tests close it
+  (`FirstRun.dismissForeignDialog`). (b) Block plugin dialogs during home loading only: show them
+  later from a "Messages from extensions" entry in the extension's page. (c) Block every plugin
+  dialog unless the user turns on "Allow extension pop-ups" per extension (default on for
+  extensions that need log-in). (d) Remove or warn about the repo in the market list.
+- **Proposal:** (b) for the start-up case and (c)'s per-extension switch as the user's control,
+  after a design pass (UI/UX skill) and a TV focus test. Not built.
+- **Status:** proposed; needs the owner's decision. Nothing changed in product code.
+
 ## 11. Risks
 
 | Risk | Mitigation |

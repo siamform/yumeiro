@@ -256,3 +256,12 @@ These are real emulators running the real debug APK; the tests are not simulated
 ## 43776085150 — minSdk api28, throwaway branch tmp/x13-3-before (test without fix)
 
 - NewPipeCompatDeviceTest 0/2: `NoSuchMethodError` (fail-before proof for X13-3; branch deleted).
+
+## 43777260888 — minSdk api28 (81ba4d3, X13-3 after)
+
+- 0 `NoSuchMethodError`, no FATAL. StabilityStress 3/3, OnlinePlayback 4/4. NewPipeCompat 1/2 (link test used a
+  playlist URL; fixed d603322). FeedPosition 4/6: every swipe moved 0/16 on API 28 (X13-5).
+
+## 43777524987 — minSdk api28 (b445e2c): CrashUi pass (X13-4); Yumix offline refresh "1 answered" offline (X9-8 cause)
+
+## 43779350057 — minSdk api28 (84ebf2f): Yumix 2/2, offline message shown (X9-8)

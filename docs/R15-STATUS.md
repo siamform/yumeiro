@@ -1,22 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-15 23:55 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-16 00:28 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Since 23:20 UTC:** X13-3 (high): every YouTube play crashed the app below Android 13
-  (NewPipeExtractor needs `desugar_jdk_libs_nio`); fix 81ba4d3, fail-before proven on api28
-  (43776085150). X13-2, X9-6 done; X9-7 named (third-party phisher98 dialog on TV; owner decision).
-- **Current step:** Level 1, Group 12: X13-3 pass-after on API 28.
-- **Running:** minSdk api28 43777260888 (81ba4d3: NewPipeCompat, StabilityStress, FeedPosition,
-  OnlinePlayback).
-- **Next three actions:** (1) read 43777260888; if green mark X13-3 done, then a TV run to confirm
-  YouTube on Android 7; (2) root-cause the other api28 failures from 43771214803 (Yumix offline
-  refresh, CrashUi share sheet); (3) macrobenchmark startup → profile → commit `baseline-prof.txt`
-  → startup again (X2-1).
+- **Since 23:40 UTC:** X13-3 (YouTube crash below Android 13) fixed and proven on api28 (43777260888).
+  X9-8 product fix (offline refresh reset the feed) proven on api28 (43779350057). X13-4 done; X13-5
+  (API 28 swipes) in test. ADR-014 (extension dialogs, X9-7) proposed for the owner.
+- **Current step:** Level 1, Group 12: API 28 and phone confirmation runs.
+- **Running:** api28 43780218270 (NewPipeCompat, FeedPosition), phones 43780466709 (NewPipeCompat,
+  Yumix, OnlinePlayback, StabilityStress, CrashUi).
+- **Next three actions:** (1) read both runs; mark X13-3/X13-5/X9-8 done if green; (2) TV api24 run
+  with NewPipeCompat + StabilityStress (X13-3 on Android 7); (3) macrobenchmark startup → profile →
+  commit `baseline-prof.txt` → startup again (X2-1).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
