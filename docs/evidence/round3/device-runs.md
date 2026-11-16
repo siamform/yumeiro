@@ -714,3 +714,10 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - TvBug5ReproDeviceTest a, b, c, d PASS. d: focusAfterSubmit=topbar_search_input, answered=true.
 
+## 43946324687 (phones, both; emulator; head f3f8914)
+
+- StreamFormatMismatchDeviceTest 5/5 PASS on both: readable error, backPresses=1 left=true closed=true,
+  maxLag 196–1,361 ms. Fail before: 43935805199 (Back ignored). BUG-7 7c verified on device (emulator).
+- UpscaleFreezeDeviceTest 3/3 PASS on both: anime4k_on, upscaled_level, plain_control; position and time
+  label move, frames drawn, More opens on a real tap.
+

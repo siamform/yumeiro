@@ -28,6 +28,12 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-9 | Usability feedback | Pending |
 | OMT-10 | Last.fm scrobbles with your own account, including after leaving the app with Back (MU-1) | Pending |
 | OMT-11 | Manga reading and Live TV channels on your phone and TV, with your own sources and playlists (MG-1, LT-1..3) | Pending |
+| OMT-12 | Cold start on your phone with the baseline profile (G12 X2-1) | See section |
+| OMT-13 | Restrict the Firebase API key (G12 X7-3, ADR-013) | See section |
+| OMT-14 | Download speed with Wi-Fi power saving (BUG-3 T5) | See section |
+| OMT-15 | Each YouTube quality really plays (BUG-4) | Pending |
+| OMT-16 | Your own Play link streams and Yumeiro upscaling on your phone's GPU (BUG-7 7c, 7d) | Pending |
+| OMT-17 | Website and Play link downloads in your phone's gallery (BUG-7 7a, 7b) | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -275,6 +281,48 @@ Blocked (you couldn't run it; say why).
   run 43851896291, emulator): list = download heights [1080…240]. Generic HLS ladder, every height picked
   and applied on both emulators (`QualityListDeviceTest`, run 43861039865). The online YouTube test skips
   on the bot wall.
+- **Status:** Pending
+
+---
+
+### OMT-16 — Your own Play link streams and Yumeiro upscaling (BUG-7 7c, 7d)
+
+- **Feature:** a wrong format in Play link ends in a readable error, and Back closes the player;
+  Anime4K and the "Upscaled by Yumeiro" level keep playing without a freeze.
+- **Why the agent can't do it:** your exact stream links are yours, and the CI emulators draw with a
+  software GPU, so Anime4K shaders don't load the way they do on your phone.
+- **Hardware / environment:** your phone with a preview build, your stream links.
+- **Instructions:** (1) Play link → paste a link that froze before → pick a wrong format (for example
+  HLS for an MP4) → Play. Wait 10 s, then press Back once. (2) Play the link with the right format,
+  turn on Anime4K (Player settings → Upscaling), then pick "Upscaled by Yumeiro" in Quality. Watch 2
+  minutes; tap the screen, open More, press Back.
+- **Expected result:** (1) an error card such as "Unsupported stream format" within a few seconds; one
+  Back closes the player. (2) the time keeps moving, taps answer, More opens, Back leaves.
+- **Pass / fail rule:** fail on any freeze over 5 s, an "app isn't responding" dialog, or Back that does
+  nothing.
+- **What to record:** the link type (not the link if private), the formats picked, phone model, and
+  `adb logcat -s YuStall YuBack AndroidRuntime` if it fails.
+- **Attempts by the agent:** emulator, both phones: 5 mismatch cases end in a readable error, main thread
+  free (maxLag < 1.8 s). Back was ignored on the error card (43935805199) → fixed (PlayerBackRule.leave),
+  one Back closes (43946324687). Upscaling: all 3 cases play on, More opens, Back leaves (43946324687).
+- **Status:** Pending
+
+---
+
+### OMT-17 — Website and Play link downloads in your gallery (BUG-7 7a, 7b)
+
+- **Feature:** the website watch page has a Download button; Play link downloads land in
+  Movies/Yumeiro and show in your gallery app.
+- **Why the agent can't do it:** gallery apps differ by phone maker; the emulator only proves the file is
+  in MediaStore.
+- **Hardware / environment:** your phone, the gallery app you use.
+- **Instructions:** open a site video from Stream → Download. Then Play link → a direct MP4 → Download.
+  Settings → Downloads → "Save YouTube and link downloads to phone" on. Open your gallery.
+- **Expected result:** both videos in the gallery (Movies/Yumeiro album) and in Yumeiro's Offline list.
+- **Pass / fail rule:** fail if a file is missing from either place.
+- **What to record:** phone model, gallery app, screenshots.
+- **Attempts by the agent:** emulator, both phones (43935805199): Download queued and done; file in
+  Movies/Yumeiro, inStore=true, app copy removed, entry kept.
 - **Status:** Pending
 
 ---

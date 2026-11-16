@@ -6,18 +6,17 @@
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Current group / step:** owner bugs inside G12 → BUG-7 7c proof (Back on an error card) and 7d rerun.
+- **Current group / step:** owner bugs inside G12 → BUG-5 tv-api24 run, then G9/G10 close.
 - **Owner bugs:**
   - BUG-5 TV UI (tv-api34 emulator): TV-5, TV-2, TV-4 focus and answer verified (43935810414). Open: TV-4 scope
     (cross-source search, G7 proposal 3, owner call), tv_api=24 run, TV-3 with feed rows.
   - BUG-6 verified on device (emulator, both phones).
-  - BUG-7: 7a, 7b verified on device (emulator, 43935805199). 7c real cause found (Back minimized then the error
-    re-expanded the player) → fixed in code, proof owed. 7d plays on; anime4k_on test timing fixed, rerun owed.
+  - BUG-7: 7a, 7b verified (43935805199), 7c verified (fail 43935805199 → pass 43946324687; Back on an error card
+    minimized and the error re-expanded the player). 7d not reproduced on emulator (3/3 PASS) → OMT-16; gallery OMT-17.
 - **CI:** 43941919340 green at f3f8914 (7c fix + test import). 43938487132 was cancelled by ghost 43927717593
   waking up (ci.yml cancel-in-progress); ghost cancelled, 43939248924 failed on a test compile (fixed f3f8914).
-- **Running:** phones 43946324687 (StreamFormatMismatch, UpscaleFreeze) at f3f8914.
-- **Next three actions:** (1) CI green → phones run StreamFormatMismatch + UpscaleFreeze; (2) record 7c/7d,
-  close BUG-7 if both pass; (3) tv_api=24 TvBug5Repro, then close G9/G10 and start G12.
+- **Running:** tv-api24 43946842943 (TvBug5Repro).
+- **Next three actions:** (1) read tv-api24 43946842943; (2) TV-3 with feed rows; (3) close G9/G10, start G12.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
