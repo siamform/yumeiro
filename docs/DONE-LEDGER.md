@@ -429,6 +429,8 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-16 | ER-11 | still open: 43891331959 failed on two test errors (fixed 37711ec), not on app behaviour |
 | 2026-11-16 | Y6/H1 | test added 2026-11-16 (`HeroCarouselLifecycleDeviceTest`, manual Compose clock); stays unverified until it passes on both |
 | 2026-11-16 | X10-5 | open → verified on device (api33-lowram emulator): upgrade 43891389012 PASS with the fixed harness, logcat 62,948 lines, 0 fatal |
+| 2026-11-16 | CI | 43894661940 (523af6f) cancelled as stale (superseded by dad1a26); 43895194379 failed compiling androidTest (LowStorage duplicate `err`), fixed 48201b6 |
+| 2026-11-16 | BUG-5 | reproduction test added (`TvBug5ReproDeviceTest`, TV-2/3/4/5), not run yet; stays open |
 
 
 Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-7 was already used by the R16 library-tabs row; the commit message says LB-7).

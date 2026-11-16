@@ -1,30 +1,24 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 16:50 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 17:45 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **State found (re-verified):** head was 3ff6bd3, not 27f1c2b. Device 43884803041 (fe643e2) failed in Build APKs
-  on both phones (not only api36): LowStorage/NetworkState tests used the OkHttp 4 MockWebServer API → fixed
-  7929bf9 (ER-16). CI never compiled androidTest → 677cefa adds the compile step. CI 43884797613: 1086 tests /
-  0 failures, lint 0 errors, DL-11a requests=1 / 1.000×, ER-15 compiles. Upgrade 43881788009: data 0 lost, but
-  three harness errors (empty logcat, played detection, impossible "listed" check) → fa3bb3b; X10-5 open.
-  BackgroundSettingsEffectDeviceTest (3ff6bd3) reviewed: every symbol it calls exists; compile owed.
-- **New owner bug:** BUG-5 Yumeiro TV UI (TV-1…TV-5, `docs/proposals/FEATURE-BUG-5-tv-ui.md`), open, not reproduced
-  yet; it is worked in G12 X9 after the G9/G10 batch, starting with a TV emulator reproduction.
-- **Current group:** G10 Errors + G9 verification. Step: CI 43894661940 (523af6f) compiling the fixes and new tests.
-- **Batch 43891331959 read** (docs/evidence/round3/device-runs.md): Dialogs, BackdropImport (SE-4 proven),
-  BackgroundSettingsEffect a–e PASS both. App defects found and fixed: ER-17 offline signal stuck online (api36,
-  8038761 + ConnectivityLostTest), ER-18 long message cut on api33 (f6881aa). Test errors fixed: PermissionFlow
-  (37711ec), LowStorage fill (523af6f).
-- **New tests, unverified:** MoreSettingsEffect, PlayerExtrasSettingsEffect, OnlineSwitchesEffect (G9, 9 switches),
-  HeroCarouselLifecycle (Y6/H1). yt_to_phone and push_alerts still without a test.
-- **Running:** CI 43894661940; upgrade 43891389012 (v1.8.0 → c306e7e).
-- **Next three actions:** (1) CI 43894661940 green → dispatch device rerun on both phones: NetworkState,
-  PermissionFlow, LowStorage, Messages + the four new classes; (2) read upgrade 43891389012 → X10-5;
-  (3) while the device run goes: yt_to_phone test, then G12 open work / BUG-5 TV reproduction plan.
+- **Done since 16:50:** upgrade 43891389012 PASS (X10-5 verified, api33-lowram emulator); yt_to_phone test
+  (dad1a26, MoreSettingsEffect d); BUG-5 reproduction test `TvBug5ReproDeviceTest` + `tv_api` 24|34 input (662ba83).
+- **CI history:** 43894661940 (523af6f) cancelled by the agent as stale (dad1a26 superseded it before it
+  finished); 43895194379 (dad1a26) failed in "Compile device tests": duplicate `val err` in LowStorageDeviceTest,
+  my own 523af6f edit → fixed 48201b6.
+- **Current group:** G10 Errors + G9 verification; BUG-5 reproduction prepared. Step: CI 43897828363 (48201b6).
+- **Running:** CI 43897828363.
+- **Next three actions:** (1) CI 43897828363 green → device rerun on both phones: NetworkState, PermissionFlow,
+  LowStorage, Messages, MoreSettingsEffect, PlayerExtrasSettingsEffect, OnlineSwitchesEffect,
+  HeroCarouselLifecycle; (2) in parallel (second device workflow) `-f tv=true -f tv_api=34
+  -f test=dev.asfakul.yumeiro.TvBug5ReproDeviceTest`, then tv_api=24; (3) read both, update ER-11/14/15/17/18,
+  SE-5, Y6/H1, BUG-5 A.5 note, then fix TV-5 (VideoPlayerModal forces USER_PORTRAIT when sw<600 dp — a 1080p TV
+  is sw 540 dp — and the player opens non-fullscreen) at the root.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
