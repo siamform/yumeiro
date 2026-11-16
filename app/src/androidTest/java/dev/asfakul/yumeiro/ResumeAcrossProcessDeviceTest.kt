@@ -123,5 +123,8 @@ class ResumeAcrossProcessDeviceTest {
         }
     }
 
-    companion object { const val NAME = "yumeiro_test_clip.mp4" // the androidTest asset }
+    companion object {
+        /** The androidTest asset. */
+        const val NAME = "yumeiro_test_clip.mp4"
+    }
 }

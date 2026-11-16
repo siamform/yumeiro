@@ -295,3 +295,8 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43825449454 | d3abed6 | api36, api33-lowram | ExtensionPopups 8/8 + Extensions 7/7 pass both. api33-lowram logcat: DonationManager.recordShown commit() still on main, ST-20 guard not engaged (fixed 41820ee) |
 | 43828509434 | 3caf272 | api36, api33-lowram | ExtensionPopups 8/8 + Extensions 7/7 both; ST-20 guard engaged both (no DonationManager main commit); HomeTrace: 3 Perfetto cold starts each, first frame 2.36–2.43 s lowram / 2.64–2.89 s api36 (shader compile 1.23–1.43 s, VerifyClass 0.42–0.53 s, ExoPlayer build ~95 ms) |
 | 43831097217 | 2f86897 | api36, api33-lowram | HomeTrace after the player-build change: media3 verified in first frame 251–258 → 3; lowram main Running 835–846 → 509/545 ms; api36 noisy (Maps crash loop, GMS start); 2/6 traces missed the app start |
+
+- 43847976226 (device-check, 0ceb971, api33-lowram + api36): FAILURE before any test ran. The
+  main app (with the BUG-1 code) compiled; compileMobileDebugAndroidTestKotlin failed:
+  ResumeAcrossProcessDeviceTest.kt:127 "Missing '}'" (a `//` comment swallowed the closing brace
+  of the companion object). No device result from this run. Fixed in the next commit and rerun.
