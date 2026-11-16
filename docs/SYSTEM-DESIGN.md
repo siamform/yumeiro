@@ -411,6 +411,12 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
 - **Consequences:** emulator numbers compare before/after on one image only; a real-phone number is
   an owner test. No release-manifest or signing change.
 - **Status:** accepted (2026-11-15).
+- **Amendment (2026-11-16, X2-1):** the first generated profile (43787473722) held obfuscated names
+  (`La41;`) because `preview` is minified, so it could not be committed. Profile generation now
+  builds `preview` with `-Pyu.profileGen=true`, which adds `app/proguard-profilegen.pro`
+  (`-dontobfuscate`, `-dontoptimize`); release and normal preview builds are unchanged. Before
+  numbers (43784533563, TTID median of 8): api33-lowram 3145 ms without AOT / 2905 ms with the
+  library profiles; api36 3899 / 2731 ms.
 
 ### ADR-013 (proposed): No long-lived secrets inside the APK (G12 X7-3)
 

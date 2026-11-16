@@ -198,6 +198,10 @@ android {
         buildConfigField("String", "FCM_API_KEY", "\"$key\"")
       }
       buildConfigField("String", "PUSH_CHANNEL", "\"preview\"")
+      // X2-1: baseline profile generation (macrobenchmark.yml what=profile, -Pyu.profileGen=true)
+      // needs real class/method names, or the rules (`La41;`) match nothing in a later build. R8
+      // still shrinks; the release type and normal preview builds are unchanged.
+      if (providers.gradleProperty("yu.profileGen").orNull == "true") proguardFile("proguard-profilegen.pro")
     }
     debug {
       // Debug builds install side-by-side with the release app and never replace it.
