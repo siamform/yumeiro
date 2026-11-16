@@ -1,20 +1,23 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 14:03 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 14:21 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
-- **Current group:** Level 2 — G10 Errors (`docs/groups/GROUP-10-ERRORS.md`), with G9 verification runs out.
-  Step: ER-10..14 written, NetworkStateDeviceTest written; next is dialogs/Back/accessibility and messages on device.
-- **Done since last update:** ER-11 permission flow (ba6fcca), ER-12 Retry (225c4e1), S27 walk reach fix (d4b657f),
-  ER-13 decoder tip (5c2f884), ER-14 full disk (e48fa1d), NetworkStateDeviceTest (1a5c953), CI 43877618176 read
-  (1074/0 fail: SE-1, DL-6 pass), DL-11a probe waste (4749aca), upgrade 43878778019 not accepted + harness (f214c7c).
-- **Running:** CI 43881282527 (head 1a5c953: compiles everything up to NetworkStateDeviceTest; DL-11a test not in it);
-  device 43880703410 (head d4b657f: PermissionFlow, SettingsWalk, BackdropImport, PlayerSettingsEffect,
-  NotifySettingsEffect on api33-lowram + api36); upgrade 43881788009 (v1.8.0 → f214c7c).
-- **Next three actions:** (1) read CI 43881282527 → SE-3, ER-10/14, effect-test compile; (2) read 43880703410 →
-  S27, ER-11, G9 effect rows; (3) dispatch NetworkStateDeviceTest when a device slot frees, then CI for DL-11a.
+- **Current group:** Level 2 — G10 Errors (`docs/groups/GROUP-10-ERRORS.md`), G9 verification closing.
+  Step: all G10 device tests written (NetworkState, PermissionFlow + revoked-while-running, Dialogs, LowStorage,
+  Messages + inventory); waiting for their first device run.
+- **Done since last update:** DialogsDeviceTest (9c0eada), PERM_RUNNING script step (95e5da0), LowStorageDeviceTest
+  (659edd1), gitleaks false positive fixed (9ff349b; CI 43881282527 secret scan), message inventory + MessagesDeviceTest
+  (8f38d57), SE-4 damaged backdrop refused + PermissionFlow start-up dialog handling (fe643e2). Read: CI 43881282527
+  1086 tests / 0 failures (SE-3, ER-13, ER-14 pass); device 43880703410: S27 PASS 31/31, PlayerFx + NotifyFx PASS
+  both phones, BackdropImport showed SE-4, PermissionFlow test error (start-up dialog).
+- **Running:** CI 43884797613 (head fe643e2: DL-11a, ER-15, gitleaks fix, SE-4, compiles nothing in androidTest);
+  device 43884803041 (head fe643e2: PermissionFlow, BackdropImport, NetworkState, Dialogs, LowStorage, Messages on
+  api33-lowram + api36); upgrade 43881788009 (v1.8.0 → f214c7c).
+- **Next three actions:** (1) read 43884803041 → ER-11, SE-4, network rows, dialogs, low storage, messages;
+  (2) read CI 43884797613 → DL-11a, ER-15, secret scan; (3) read upgrade 43881788009 → X10-5.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
