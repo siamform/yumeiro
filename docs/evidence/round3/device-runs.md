@@ -364,3 +364,10 @@ These are real emulators running the real debug APK; the tests are not simulated
   IPv6 ENETUNREACH (the emulator has no IPv6) and IPv4 141.95.207.211:443 timeout after 15 s. Case b:
   ~10 s later the plain probe reached neither host → SKIP. Runner network, not an app result. The test
   now tries five hosts and fails only when the app cannot connect while a plain client can (445156c).
+
+## CI 43854742733 — stuck, replaced by CI 43857949982 (2026-11-16 ~11:35 UTC)
+
+- ci.yml on 40ea96e stayed "queued" from 11:06 with 0 jobs created (GitHub status: Actions operational).
+  `gh run cancel` (also `--force`) answered "Cannot cancel a workflow run that is completed", so it is a
+  stale record. Replaced by CI 43857949982 on the current head (contains 40ea96e plus test-only and docs
+  commits). Not a duplicate: the stuck run will never execute.

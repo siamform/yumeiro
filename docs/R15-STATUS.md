@@ -9,11 +9,11 @@
 - **Read:** device 43851896291 (DecoderFault a/b PASS, c test error fixed 7c0045b; YtChannelUi PASS with
   shots; YtQualityOffline PASS; YtQuality SKIP bot wall). Device 43855202294: runner could not reach the
   throughput host (v6 + v4 timeouts), test hardened 445156c.
-- **Running:** CI 43854742733 (40ea96e, queued since 11:06 with no runner yet); device 43857809658
+- **Running:** CI 43857949982 (head; replaces the stuck 43854742733, which never got a job); device 43857809658
   (445156c: DownloadThroughput, DecoderFault, QualityList every height).
 - **Throwaway branches:** `fail-before/r15-proofs` (408faea) and `tmp/bug3-before` (9d86bbd) — dispatch
   after the runs above; delete afterwards, never merge.
-- **Next three actions:** (1) read CI 43854742733; (2) read device 43857809658 (THROUGHPUT_DEVICE lines,
+- **Next three actions:** (1) read CI 43857949982; (2) read device 43857809658 (THROUGHPUT_DEVICE lines,
   DECODER_FAULT_C, QUALITY_RESULT applied=…); (3) fail-before CI + BUG-3 "before" device run, then
   HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
 
