@@ -173,7 +173,7 @@ object ExtensionPopups {
 
     private fun card(h: Held) {
         dev.asfakul.yumeiro.ui.components.AppMessages.show(
-            appContext, "${h.extName} has a message", actionLabel = "Show", action = { reveal(h.id) },
+            appContext, cardText(h), actionLabel = "Show", action = { reveal(h.id) },
         )
     }
 
@@ -187,10 +187,24 @@ object ExtensionPopups {
     fun reveal(id: Long) {
         val h = _held.value.firstOrNull { it.id == id } ?: return
         _held.value = _held.value.filterNot { it.id == id }
+        dropCard(h)
         ExtensionWindowWatch.reveal(h.view, h.extName)
     }
 
-    fun discard(id: Long) { _held.value = _held.value.filterNot { it.id == id } }
+    fun discard(id: Long) {
+        val h = _held.value.firstOrNull { it.id == id } ?: return
+        _held.value = _held.value.filterNot { it.id == id }
+        dropCard(h)
+    }
+
+    /** Opened or discarded from the Extensions screen: its card must not stay on screen. */
+    private fun dropCard(h: Held) {
+        deferred.entries.removeAll { it.value.id == h.id }
+        val m = dev.asfakul.yumeiro.ui.components.AppMessages.current.value ?: return
+        if (m.text == cardText(h)) dev.asfakul.yumeiro.ui.components.AppMessages.dismiss(m.id)
+    }
+
+    private fun cardText(h: Held) = "${h.extName} has a message"
 
     /** The activity is going away: held windows belong to it and must not outlive it. */
     fun clear() {

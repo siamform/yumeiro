@@ -16,6 +16,7 @@ import dev.asfakul.yumeiro.online.ExtensionPopups
 import dev.asfakul.yumeiro.online.ExtensionGuard
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.performClick
 import dev.asfakul.yumeiro.ui.components.AppMessages
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -113,8 +114,11 @@ class ExtensionPopupsDeviceTest {
         assertTrue(dialog.isShowing)
 
         val id = ExtensionPopups.held.value.single().id
-        ui { ExtensionPopups.reveal(id) }
+        // The user's path: tap "Show" on the card.
+        rule.onAllNodesWithTag("app_message_action", true)[0].performClick()
         settle()
+        assertTrue("held entry kept after Show", ExtensionPopups.held.value.none { it.id == id })
+        assertNull("card stayed after Show", AppMessages.current.value)
         log("p1 revealed roots=${roots()} focus=${focus()}")
         assertEquals("revealed window not added", before + 1, roots())
         assertTrue("revealed dialog not focused: ${focus()}", focusIsDialog())
