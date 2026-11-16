@@ -56,9 +56,18 @@ object ExtensionPopups {
     @Volatile private var appContext: Context? = null
     private val main by lazy { Handler(Looper.getMainLooper()) }
 
+    @Volatile private var appPlayerOnScreen = false
+
     /** Set by the app shell: true while a video (full screen, mini player or PiP) is playing. */
-    @Volatile var playerOnScreen: Boolean = false
-        set(value) { val was = field; field = value; if (was && !value) main.post { flushDeferred() } }
+    var playerOnScreen: Boolean
+        get() = testPlayerOnScreen ?: appPlayerOnScreen
+        set(value) { val was = playerOnScreen; appPlayerOnScreen = value; afterPlayerChange(was) }
+
+    /** Device tests stand in for a playing video without the app shell overwriting it. */
+    @Volatile var testPlayerOnScreen: Boolean? = null
+        set(value) { val was = playerOnScreen; field = value; afterPlayerChange(was) }
+
+    private fun afterPlayerChange(was: Boolean) { if (was && !playerOnScreen) main.post { flushDeferred() } }
 
     /** Device tests mark their fake extension classes as extension code (no dex is loaded for them). */
     @Volatile var testExtensionPrefix: String? = null
@@ -66,10 +75,14 @@ object ExtensionPopups {
     /** Cards waiting for the player to close, per extension key. */
     private val deferred = LinkedHashMap<String, Held>()
 
+    /** Reads the saved mode off the main thread (StrictMode: no disk read in onCreate); Quiet until then. */
     fun init(context: Context) {
-        appContext = context.applicationContext
-        val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("mode", null)
-        _mode.value = Mode.entries.firstOrNull { it.name == saved } ?: Mode.QUIET
+        val app = context.applicationContext
+        appContext = app
+        Thread({
+            val saved = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("mode", null)
+            Mode.entries.firstOrNull { it.name == saved }?.let { _mode.compareAndSet(Mode.QUIET, it) }
+        }, "ext-popups-prefs").apply { isDaemon = true }.start()
     }
 
     fun setMode(context: Context, mode: Mode) {

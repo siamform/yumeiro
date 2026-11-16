@@ -29,8 +29,8 @@ import java.util.concurrent.ConcurrentHashMap
  * shortly after (for a dialog that is built first and shown a moment later). A new dialog-type
  * window that is not Compose (ours) is the extension's:
  *  - functional, or mode Show: it stays, framed with a thin outline and a "From extension" title;
- *  - promotional in Quiet: it is concealed in place (invisible, not focusable, not touchable, no
- *    dim) so Back and the D-pad stay with the app, and announced by one quiet card; "Show"
+ *  - promotional in Quiet: it is concealed in place (window alpha 0, not focusable, not touchable,
+ *    no dim, hidden from screen readers) so Back and the D-pad stay with the app, and announced by one quiet card; "Show"
  *    restores it exactly as the extension built it. Concealing (not removing) keeps the
  *    extension's Dialog consistent: its own dismiss() still works;
  *  - promotional in Block promotional: concealed, not announced.
@@ -113,7 +113,9 @@ object ExtensionWindowWatch {
         }
         val ok = runCatching { windowManager?.updateViewLayout(root, hidden) }.onFailure { Log.w(TAG, "could not conceal: $it") }.isSuccess
         if (!ok) return
-        root.visibility = View.INVISIBLE
+        // The view itself is left alone: Dialog.isShowing() reads the decor's visibility, and the
+        // extension must keep seeing its dialog as open. Screen readers skip it while concealed.
+        root.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         concealed[root] = saved
         root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) = Unit
@@ -125,7 +127,7 @@ object ExtensionWindowWatch {
     internal fun reveal(view: View, extName: String): Boolean {
         val saved = concealed.remove(view) ?: return false
         if (!view.isAttachedToWindow) return false
-        view.visibility = View.VISIBLE
+        view.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
         val ok = runCatching { windowManager?.updateViewLayout(view, saved) }.onFailure { Log.w(TAG, "could not reveal: $it") }.isSuccess
         if (ok) frame(view, saved, extName)
         return ok
@@ -171,7 +173,7 @@ object ExtensionWindowWatch {
         val outline = GradientDrawable().apply {
             setColor(Color.TRANSPARENT)
             setStroke((1.5f * density).toInt().coerceAtLeast(1), Color.argb(150, 136, 120, 255))
-            cornerRadius = 12f * density
+            cornerRadius = cornerOf(view) ?: (4f * density)
         }
         runCatching {
             view.overlay.add(outline)
@@ -188,6 +190,14 @@ object ExtensionWindowWatch {
             view.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> place() }
             if (view.width > 0) place()
         }
+    }
+
+    /** Corner radius of the dialog's own card (its window background), so the outline follows it. */
+    private fun cornerOf(view: View): Float? {
+        var d = view.background
+        var depth = 0
+        while (d is android.graphics.drawable.DrawableWrapper && depth++ < 4) d = d.drawable // InsetDrawable too
+        return (d as? GradientDrawable)?.let { g -> if (Build.VERSION.SDK_INT >= 24) g.cornerRadius.takeIf { it > 0f } else null }
     }
 
     /** (key, name) of the extension whose code is on the current stack; null when none is. */

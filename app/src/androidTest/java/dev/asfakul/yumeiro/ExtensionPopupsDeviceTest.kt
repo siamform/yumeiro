@@ -9,6 +9,7 @@ import android.app.AlertDialog
 import android.util.Log
 import android.view.View
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionPopups
@@ -64,7 +65,7 @@ class ExtensionPopupsDeviceTest {
     @Before fun setUp() {
         FirstRun.toTabs(rule)
         ExtensionPopups.testExtensionPrefix = "org.yumeirotest."
-        ExtensionPopups.playerOnScreen = false
+        ExtensionPopups.testPlayerOnScreen = null
         resetPrefs()
         ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.QUIET)
         ExtensionPopups.held.value.forEach { ExtensionPopups.discard(it.id) }
@@ -74,7 +75,7 @@ class ExtensionPopupsDeviceTest {
     @After fun tearDown() {
         ExtensionPopups.held.value.forEach { ExtensionPopups.discard(it.id) }
         ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.QUIET)
-        ExtensionPopups.playerOnScreen = false
+        ExtensionPopups.testPlayerOnScreen = null
         ExtensionPopups.testExtensionPrefix = null
         resetPrefs()
     }
@@ -89,6 +90,9 @@ class ExtensionPopupsDeviceTest {
         assertFalse("focus moved to a dialog: ${focus()}", focusIsDialog())
         assertEquals(1, ExtensionPopups.held.value.size)
         assertTrue("no quiet card: ${AppMessages.current.value}", AppMessages.current.value?.text?.contains("has a message") == true)
+        val drawn = runCatching { rule.waitUntil(4_000) { rule.onAllNodesWithTag("app_message", true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
+        log("p1 card on screen=$drawn · ${FirstRun.onScreen(rule).take(300)}")
+        assertTrue("quiet card not on screen", drawn)
         FirstRun.shot("adr014_quiet_card")
         // The extension still believes its dialog is open, and closing it must not crash.
         assertTrue(dialog.isShowing)
@@ -165,12 +169,12 @@ class ExtensionPopupsDeviceTest {
 
     /** Never over the player: the card waits until the video closes. */
     @Test fun p6_cardWaitsForThePlayer() {
-        ExtensionPopups.playerOnScreen = true
+        ExtensionPopups.testPlayerOnScreen = true
         val before = roots()
         ui { FakeExtension.donation(rule.activity) }; settle()
         assertEquals(before, roots())
         assertNull("card shown during playback", AppMessages.current.value)
-        ExtensionPopups.playerOnScreen = false
+        ExtensionPopups.testPlayerOnScreen = null
         settle()
         assertTrue("card not shown after playback", AppMessages.current.value?.text?.contains("has a message") == true)
     }
