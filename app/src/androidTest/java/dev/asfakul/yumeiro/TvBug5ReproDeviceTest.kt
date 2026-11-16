@@ -208,14 +208,24 @@ class TvBug5ReproDeviceTest {
         log("TVB_STEP d startedOnPage=$startedOnPage search reachable=$onSearch walk=$walk topbarSearch=${boundsOf("topbar_search_action")} setup=${boundsOf("home_setup_card")} rail=${boundsOf("tv_nav_rail")}")
         if (onSearch) key("DPAD_CENTER", 1_000)
         val opened = has("topbar_search_input") || has("online_search_screen")
+        var inputFocused = false; var typed = ""
         if (opened) {
+            Thread.sleep(600); runCatching { rule.waitForIdle() }
+            inputFocused = "topbar_search_input" in focused()
             FirstRun.shell("input text naruto"); Thread.sleep(800)
+            // Run 43912693329: the box opened with nothing focused; the text went nowhere.
+            typed = runCatching {
+                rule.onAllNodesWithTag("topbar_search_input", true).fetchSemanticsNodes().firstOrNull()
+                    ?.config?.getOrNull(SemanticsProperties.EditableText)?.text.orEmpty()
+            }.getOrDefault("")
+            log("TVB_STEP d inputFocused=$inputFocused typed='$typed'")
             key("ENTER", 8_000)
         }
         FirstRun.shot("tvb_d_search")
         log("TVB_CASE d reachable=$onSearch opened=$opened screen=${FirstRun.onScreen(rule)}")
         assertTrue("TV-4: the search button on Home cannot be reached with the D-pad: $walk", onSearch)
         assertTrue("TV-4: the search box did not open", opened)
+        assertTrue("TV-4: the search box opened without D-pad focus, so typing went nowhere (typed='$typed')", inputFocused && typed.contains("naruto"))
         log("TVB_RESULT PASS d (results judged from the log and tvb_d_search)")
     }
 

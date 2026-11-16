@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -143,6 +144,13 @@ fun MTTopBar(
             .padding(start = 20.dp, end = 14.dp, top = 8.dp, bottom = 6.dp)
     ) {
         if (isSearchExpanded && showSearch) {
+            // BUG-5 TV-4 (tv-api34 run 43912693329): the magnifier that held D-pad focus leaves the
+            // composition when the box opens, so on a TV nothing had focus: typed text went nowhere and
+            // the next key opened the rail ("search yields no results"). On TV the box takes focus
+            // as it opens; phones keep tap-to-type.
+            val inputFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+            val tv = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+            if (tv) androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { inputFocus.requestFocus() } }
             Column(Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TextField(
@@ -155,6 +163,7 @@ fun MTTopBar(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp)
+                        .focusRequester(inputFocus)
                         .testTag("topbar_search_input"),
                     placeholder = {
                         Text("Search songs, videos, artists", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
