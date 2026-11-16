@@ -328,3 +328,11 @@ These are real emulators running the real debug APK; the tests are not simulated
   ~10:30–10:55 UTC; they were all made between 10:24 and 10:28 UTC (real clock, `date -u`).
 
 - Timestamp correction (2026-11-16 10:39 UTC): commit f47c639 says 10:41 UTC in its body; it was made at 10:37 UTC.
+
+## CI 43851470283 — ci.yml on 191dedf (unit, 2026-11-16 10:44–11:03 UTC)
+
+- 1016 tests, 2 failed, 11 skipped. The 2 failures are `DownloadThroughputTest` (both profiles), a test
+  error: the HLS fake's 40 × 600 KiB segments left 576 KiB of the 24 MiB file out. Fixed in 40ea96e.
+- Pass: `ResumePointsTest` 7/7 (BUG-1 incl. D5), `YtChannelLinkTest` 6/6 (BUG-2), `Bug4QualityListTest`
+  5/5 (BUG-4 F1, F5), `LivePagedTest` 8/8 (X15-2).
+- BUG-3 THROUGHPUT numbers: table in `docs/proposals/FEATURE-BUG-3-download-throughput.md` §4.1.
