@@ -376,7 +376,7 @@ fun PageStreamFinderDialog(
                                 addJavascriptInterface(object {
                                     @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
                                     @JavascriptInterface fun onDrm(system: String) {
-                                        val system = system.take(40).filter { it.isLetterOrDigit() || it in ".-_ " }
+                                        val system = dev.asfakul.yumeiro.online.web.pageDrmSystemName(system)
                                         synchronized(capture) { capture.drmSystem = system }
                                         main.post { drmNote = "This page uses DRM ($system). It plays here only if the site's licence server accepts this app; protection is never bypassed." }
                                     }

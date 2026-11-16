@@ -133,7 +133,7 @@ object HeadlessCapture {
             }
             // X7 (MASVS-PLATFORM-2): page script calls this; same bounds as the stream finder.
             @JavascriptInterface fun onDrm(system: String) {
-                val clean = system.take(40).filter { it.isLetterOrDigit() || it in ".-_ " }
+                val clean = pageDrmSystemName(system)
                 synchronized(capture) { capture.drmSystem = clean }
             }
         }, "MTFinder")
@@ -158,3 +158,10 @@ object HeadlessCapture {
         return web
     }
 }
+
+/**
+ * X7-4 (MASVS-PLATFORM-2): the DRM system name a page script reports through `MTFinder.onDrm`
+ * (HeadlessCapture and the stream finder). The page controls the string, so it is cut to 40
+ * characters and kept to letters, digits and `.-_ ` before it is stored or shown.
+ */
+internal fun pageDrmSystemName(raw: String): String = raw.take(40).filter { it.isLetterOrDigit() || it in ".-_ " }
