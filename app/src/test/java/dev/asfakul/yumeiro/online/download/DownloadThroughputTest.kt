@@ -31,6 +31,13 @@ class DownloadThroughputTest {
     companion object {
         const val SIZE = 24 * 1024 * 1024
         const val TAIL_LIMIT = 2.0
+        /**
+         * A last 10 % under this many ms passes whatever the ratio. CI 43871066269: segmented2 on
+         * burst-then-cap took 349 ms in all (35 ms per 10 %); one RequestPace window (256 KiB at
+         * 1.5 MB/s ≈ 170 ms) landing in the last tenth read as 3.07×. BUG-3 was a slow tail of
+         * seconds on a long download, which this floor does not hide.
+         */
+        const val TAIL_FLOOR_MS = 250L
         const val SEG = 512 * 1024 // 48 segments cover SIZE exactly (600 KB left 576 KB out: test error in 43851470283)
         private lateinit var server: java.net.ServerSocket
         private val pool = Executors.newCachedThreadPool()
@@ -150,7 +157,7 @@ class DownloadThroughputTest {
         val total = d.at.last()
         println("THROUGHPUT engine=$engine profile=${profile.name} ranges=$ranges totalMs=$total MBps=${"%.2f".format(SIZE / 1048576.0 / (total / 1000.0))} " +
             "requests=$requestsUsed served=$servedBytes servedOverSize=${"%.3f".format(servedBytes / SIZE.toDouble())} per10pctMs=$s tailRatio=${"%.2f".format(d.tailRatio())} lastOverMean=${"%.2f".format(d.lastOverMean())}")
-        if (engine in ruled && d.lastOverMean() > TAIL_LIMIT) broken += "$engine/${profile.name}: last 10 % took ${"%.2f".format(d.lastOverMean())}× the average 10 % $s"
+        if (engine in ruled && d.lastOverMean() > TAIL_LIMIT && s.last() > TAIL_FLOOR_MS) broken += "$engine/${profile.name}: last 10 % took ${"%.2f".format(d.lastOverMean())}× the average 10 % $s"
     }
 
     private fun check(f: File) {

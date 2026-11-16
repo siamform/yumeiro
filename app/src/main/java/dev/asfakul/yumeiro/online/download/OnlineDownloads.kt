@@ -136,7 +136,11 @@ object OnlineDownloads {
 
     /** Tests / previews only: replaces the in-memory list without touching disk. */
     @androidx.annotation.VisibleForTesting
-    internal fun setItemsForTest(context: Context, list: List<Item>) { ensureLoaded(context); synchronized(this) { _items.value = list } }
+    internal fun setItemsForTest(context: Context, list: List<Item>) {
+        ensureLoaded(context)
+        // Each Robolectric test has its own files dir; the list was loaded once for the first one.
+        synchronized(this) { file = File(context.applicationContext.filesDir, "online_downloads.json"); _items.value = list }
+    }
 
     fun get(id: String): Item? = _items.value.firstOrNull { it.id == id }
 
