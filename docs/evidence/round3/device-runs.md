@@ -265,3 +265,9 @@ These are real emulators running the real debug APK; the tests are not simulated
 ## 43777524987 — minSdk api28 (b445e2c): CrashUi pass (X13-4); Yumix offline refresh "1 answered" offline (X9-8 cause)
 
 ## 43779350057 — minSdk api28 (84ebf2f): Yumix 2/2, offline message shown (X9-8)
+
+## 43780218270 — minSdk api28 (ed3d6b8): NewPipeCompat 2/2; FeedPosition 6/6, every feed 16/16 moves (X13-3, X13-5)
+
+## 43780466709 — api36 + api33-lowram (ed3d6b8): NewPipeCompat, Yumix, OnlinePlayback, StabilityStress, CrashUi all pass
+
+## 43782724021 — TV api24 (07eaa76): NewPipeCompat 2/2, StabilityStress 3/3, HomeNavigation 11/11, 0 NoSuchMethodError

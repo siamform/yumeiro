@@ -111,10 +111,10 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X9-5 | low (test) | `androidTest/FirstRun.kt` toTabs | reliability guide opens 8 s after start and raced Back | api28 43768670627, TV 43769985665 | `toTabs` marks it shown (b5854c3) | emulator (TV 43772037996) |
 | X9-6 | low (test) | `FirstRun.awaitKeyFocus` | waited 10 s on our own dialog windows (they carry the activity name) | TV 43772037996 | window type `ty=` decides (0eb1635) | emulator TV 43775889375 |
 | X9-7 | medium (TV, product) | third-party `com.phisher98` repo plugin | plugin opens its own View dialog "Support Phisher Repo" (donation, "Watch an Ad") over MainActivity on load; takes remote focus, first Back only closes it | TV 43775191888 (`docs/evidence/round3/x9-7-extension-dialog-tv.png`) | tests: `dismissForeignDialog` (5344e44). Product: blocking extension UI would break login/WebView plugins → ADR + owner decision | test part emulator TV 43775889375; product open (owner) |
-| X13-3 | **high** | `gradle/libs.versions.toml` desugar | NewPipeExtractor calls `URLDecoder.decode(String, Charset)` / `URLEncoder.encode(String, Charset)` (API 33); plain `desugar_jdk_libs` does not back them → `NoSuchMethodError` on `ExoPlayer:Playback`, every YouTube play crashed the app below Android 13 (phone minSdk 28, TV 24) | api28 43771214803 (7×, StabilityStress "Process crashed") | `desugar_jdk_libs_nio` 2.1.5, as NewPipeExtractor's README requires (81ba4d3) | fail-before api28 43776085150; after: api28 43777260888 (0 NoSuchMethodError, Stress, OnlinePlayback pass); link test fixed, 43780218270; TV pending |
-| X9-8 | medium (product) | `OnlineHomeScreen` onRefresh | "answered > 0 → start over": offline, a first fill from a saved copy counted as an answer → explore reset, offline message hidden | api28 43777524987 | `YumixFeed.afterRefresh` connectivity first (84ebf2f) | unit; emulator api28 43779350057 |
+| X13-3 | **high** | `gradle/libs.versions.toml` desugar | NewPipeExtractor calls `URLDecoder.decode(String, Charset)` / `URLEncoder.encode(String, Charset)` (API 33); plain `desugar_jdk_libs` does not back them → `NoSuchMethodError` on `ExoPlayer:Playback`, every YouTube play crashed the app below Android 13 (phone minSdk 28, TV 24) | api28 43771214803 (7×, StabilityStress "Process crashed") | `desugar_jdk_libs_nio` 2.1.5, as NewPipeExtractor's README requires (81ba4d3) | fail-before api28 43776085150; after: api28 43777260888 (0 NoSuchMethodError, Stress, OnlinePlayback pass); link test fixed, api28 43780218270 2/2; phones 43780466709; TV api24 43782724021 |
+| X9-8 | medium (product) | `OnlineHomeScreen` onRefresh | "answered > 0 → start over": offline, a first fill from a saved copy counted as an answer → explore reset, offline message hidden | api28 43777524987 | `YumixFeed.afterRefresh` connectivity first (84ebf2f) | unit; emulator api28 43779350057, phones 43780466709 |
 | X13-4 | low (test) | `CrashUiDeviceTest.topActivity` | `topResumedActivity` is API 29+ | api28 43771214803 | also `mResumedActivity` (818358c) | emulator api28 43777524987 |
-| X13-5 | low (test) | `FeedPositionDeviceTest.swipe` | shell `input motionevent` not on API 28; 0/16 swipes | api28 43777260888 | `UiAutomation.injectInputEvent` below 29 (ed3d6b8) | emulator api28 43780218270 pending |
+| X13-5 | low (test) | `FeedPositionDeviceTest.swipe` | shell `input motionevent` has no effect on API 28 (prints nothing); 0/16 swipes | api28 43777260888 | `UiAutomation.injectInputEvent` below 29 (ed3d6b8) | emulator api28 43780218270 (6/6, 16/16 moves) |
 | X10-1..4 | medium | `ci.yml`, several | TV never linted; NewApi calls; opt-in noise | lint | f0df775, ff00d11, 7486997, c7772ce, 72394dc | CI |
 | ST-17 | low (1 in 40 runs) | Compose `ContentInViewNode` | bring-into-view never settles once | stress api36 43697447466 | focus-chain logging (3342106) | open |
 
@@ -180,8 +180,7 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
 
 ## Open work (Group 12 is not done until all are closed)
 
-1. X13-3: link test rerun api28 43780218270, phones 43780466709, TV api24 check. X13-5: FeedPosition
-   on api28 (43780218270). X9-8: phones 43780466709. ADR-014 (X9-7) waits for the owner. X9-7: ADR + owner decision on extension dialogs. (X8-2, X2-3, X9-2…X9-6,
+1. ADR-014 (X9-7 extension dialogs) waits for the owner. (X13-3, X13-4, X13-5, X9-8 done.) X9-7: ADR + owner decision on extension dialogs. (X8-2, X2-3, X9-2…X9-6,
    X13-1, X13-2 done.)
 2. X2: Macrobenchmark startup (before), baseline profile, startup (after); heap profile on api33-lowram.
 3. ST-13/14/15: StrictMode device proof; ST-17 root cause.
