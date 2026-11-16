@@ -235,7 +235,7 @@ private fun YtBrowse(
     var channelName by rememberSaveable { mutableStateOf("") }
     val openChannel: ((YtItem) -> Unit)? = if (music) null else { item ->
         // BUG-2: a card without a channel link used to do nothing at all on tap.
-        if (item.channelUrl == null) android.widget.Toast.makeText(context, "Channel not known yet. Play the video once to learn it.", android.widget.Toast.LENGTH_SHORT).show()
+        if (item.channelUrl == null) dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Channel not known yet. Play the video once to learn it")
         else { channelName = item.channel; channelUrl = item.channelUrl }
     }
     LaunchedEffect(Unit) { YtHistory.load(context) }

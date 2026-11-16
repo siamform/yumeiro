@@ -37,6 +37,7 @@ rows copied into the table below as they are checked.
 | ER-12 | Inbox refresh failure: "Couldn't check for news. Try again later" for every cause. Repository / add-on URL and home-server failures had no Retry (the dialog with the typed URL had closed) | Messages written before the shared mapper; Retry added only to the extension market | Reason from `OnlineErrors.friendly`; "Retry" repeats the call (`InboxScreen` sync, `SourcesHubScreen` addRepoUrl ×2, addUrl, save) | compile (CI) |
 | ER-13 | Player "Unsupported video format" had no next step | Written before the decoder choice existed | Tip to set Video decoder → Software (Settings › Audio quality & sound › Quality and audio); "Try another quality or source" when Software is already on | `PlaybackRecoveryTest` |
 | ER-14 | A full disk outside downloads showed the raw "write failed: ENOSPC (No space left on device)" | Only the download worker knew ENOSPC (DiskFull) | Shared mapper branch on the cause chain: "Not enough storage. Free up some space, then try again" | `ErrorTaxonomyTest` |
+| ER-15 | Pin limit and "Channel not known yet" were raw system Toasts (other look, no kind); pin limit had no next step | Written before AppMessages | `AppMessages` WARNING "…Unpin one first" / INFO; only the host fallback still uses Toast | code scan |
 
 ID note: these rows were first written as ER-1/ER-2, which clash with the older G10 A1 ledger rows; renamed ER-10/ER-11.
 

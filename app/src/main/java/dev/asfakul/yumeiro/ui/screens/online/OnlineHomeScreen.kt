@@ -323,7 +323,7 @@ fun OnlineHomeScreen(
             pins = pins,
             onTogglePin = { n ->
                 if (!dev.asfakul.yumeiro.online.PinnedExtensions.toggle(context, n))
-                    android.widget.Toast.makeText(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions", android.widget.Toast.LENGTH_SHORT).show()
+                    dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions. Unpin one first", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
             },
             status = { n -> when (val h = homes[n]) { is ProviderHome.Ready -> SourceStatus.Ready(h.rows.sumOf { it.items.size }); is ProviderHome.Failed -> SourceStatus.Failed; else -> SourceStatus.Loading } },
             onPick = { selected = it; showFilter = false },
