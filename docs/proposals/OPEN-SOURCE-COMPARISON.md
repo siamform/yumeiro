@@ -628,3 +628,4 @@ No change to the approval list above, except one new P1 entry: **baseline profil
 - BUG-3 download throughput: [FEATURE-BUG-3-download-throughput.md](FEATURE-BUG-3-download-throughput.md) (CloudStream 5d66bbe, Nuvio 04cfe4a).
 - BUG-4 quality list: [FEATURE-BUG-4-quality-selection.md](FEATURE-BUG-4-quality-selection.md) (CloudStream 5d66bbe, Hikari 9694add).
 - BUG-5 TV UI: [FEATURE-BUG-5-tv-ui.md](FEATURE-BUG-5-tv-ui.md) (owner report recorded; note owed after the TV emulator reproduction).
+- BUG-6 music player tap-through: [FEATURE-BUG-6-music-player-tap-through.md](FEATURE-BUG-6-music-player-tap-through.md) (owner report recorded; note owed after reproduction).

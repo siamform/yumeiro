@@ -11,6 +11,8 @@
 - **CI history:** 43894661940 (523af6f) cancelled by the agent as stale (dad1a26 superseded it before it
   finished); 43895194379 (dad1a26) failed in "Compile device tests": duplicate `val err` in LowStorageDeviceTest,
   my own 523af6f edit → fixed 48201b6.
+- **New owner bug:** BUG-6 full-screen music player lets taps through to the screen underneath
+  (`docs/proposals/FEATURE-BUG-6-music-player-tap-through.md`), open, not reproduced; worked after BUG-5 in G12.
 - **Current group:** G10 Errors + G9 verification; BUG-5 reproduction prepared. Step: CI 43897828363 (48201b6).
 - **Running:** CI 43897828363.
 - **Next three actions:** (1) CI 43897828363 green → device rerun on both phones: NetworkState, PermissionFlow,
