@@ -35,6 +35,11 @@ on:
         type: choice
         options: [none, startup, profile]
         default: none
+      hprof:
+        description: "G12 X2: StabilityStress writes a heap dump (stress/end.hprof) at the end"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}
@@ -77,6 +82,7 @@ jobs:
           TEST_FILTER: ${{ github.event.inputs.test || (inputs.tv && 'dev.asfakul.yumeiro.HomeNavigationDeviceTest,dev.asfakul.yumeiro.BackNavigationDeviceTest,dev.asfakul.yumeiro.StabilityStressDeviceTest' || '') }}
           FLAVOR: ${{ matrix.device.flavor }}
           REPEAT: ${{ github.event.inputs.repeat || '1' }}
+          HPROF: ${{ inputs.hprof && 'true' || 'false' }}
         with:
           api-level: ${{ matrix.device.api }}
           target: ${{ matrix.device.target }}

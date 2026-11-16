@@ -97,6 +97,16 @@ class StabilityStressDeviceTest {
         watching = false
         val dir = File(ctx.getExternalFilesDir(null), "stress").apply { mkdirs() }
         File(dir, "report.txt").writeText(synchronized(report) { report.toString() })
+        // X2 heap: `dumpsys meminfo` in device-check.sh runs after the process has gone ("No process
+        // found", 43785978028), so the test writes its own breakdown while it is still alive.
+        runCatching {
+            val m = Debug.MemoryInfo().also { Debug.getMemoryInfo(it) }
+            val rt = Runtime.getRuntime()
+            File(dir, "meminfo-end.txt").writeText(
+                (listOf("java-heap used=${(rt.totalMemory() - rt.freeMemory()) / MB}M max=${rt.maxMemory() / MB}M",
+                    "native-heap allocated=${Debug.getNativeHeapAllocatedSize() / MB}M",
+                    "pss total=${m.totalPss / 1024}M") + m.memoryStats.map { (k, v) -> "$k=${v.toLong() / 1024}M" }).joinToString("\n") + "\n")
+        }
         if (InstrumentationRegistry.getArguments().getString("hprof") == "true") {
             runCatching { Debug.dumpHprofData(File(dir, "end.hprof").path); log("heap dump written") }
         }
