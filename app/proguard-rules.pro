@@ -110,7 +110,8 @@
 -keep class androidx.mediarouter.media.MediaRouteSelector { *; }
 -keep class androidx.mediarouter.media.MediaRouteSelector$Builder { *; }
 -keep class androidx.mediarouter.media.MediaRouter { *; }
--keep class androidx.mediarouter.media.MediaRouter$RouteInfo { *; }-keep class androidx.compose.runtime.internal.ComposableLambda* { *; }
+-keep class androidx.mediarouter.media.MediaRouter$RouteInfo { *; }
+-keep class androidx.compose.runtime.internal.ComposableLambda* { *; }
 -keep class androidx.compose.runtime.Composer* { *; }
 
 # NewPipeExtractor (YouTube / YouTube Music) — JSON parser + JavaScript engine used for deobfuscation.

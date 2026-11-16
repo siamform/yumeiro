@@ -162,7 +162,7 @@ android {
         storePassword = releaseStorePassword
         keyAlias = releaseKeyAlias
         keyPassword = releaseKeyPassword
-        enableV1Signing = true // harmless on API 28+, keeps tooling compatibility
+        enableV1Signing = true // not needed on API 24+ (TV minSdk 24, phone 28); kept for older tooling
         enableV2Signing = true
         enableV3Signing = true // enables future key rotation
       }
