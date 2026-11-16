@@ -138,6 +138,23 @@ object YtDownloads {
     }
 
     /** Copies a finished file into the phone's Music/Yumeiro or Movies/Yumeiro (Android 10+, no permission). */
+    /**
+     * "Save YouTube downloads to phone" (`yt_to_phone`): a finished YouTube download is copied to the
+     * phone's Movies/Yumeiro or Music/Yumeiro and the app copy deleted. Off: the file stays in the app.
+     * Returns the public Uri when published. Moved out of DownloadWorker unchanged (G9 effect test).
+     */
+    internal fun afterDownload(context: Context, item: OnlineDownloads.Item, out: File): Uri? {
+        if (item.kind != OnlineDownloads.Kind.YT_VIDEO && item.kind != OnlineDownloads.Kind.YT_AUDIO) return null
+        if (!DownloadSettings.saveYouTubeToPhone.value) return null
+        val audio = item.kind == OnlineDownloads.Kind.YT_AUDIO
+        val name = out.name.substringBeforeLast('-') + "." + out.extension
+        return publish(context, out, name, mimeOf(item.container ?: out.extension, audio), music = audio)?.also { uri ->
+            // The phone's copy is the one that plays; drop the app copy so space isn't used twice.
+            OnlineDownloads.resolved(item.id) { it.copy(publicUri = uri.toString()) }
+            out.delete()
+        }
+    }
+
     fun publish(context: Context, file: File, displayName: String, mime: String, music: Boolean): Uri? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
         val resolver = context.contentResolver

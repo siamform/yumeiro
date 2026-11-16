@@ -17,10 +17,12 @@ import dev.asfakul.yumeiro.online.OnlineLink
 import dev.asfakul.yumeiro.online.OnlineSettings
 import dev.asfakul.yumeiro.online.download.DownloadSettings
 import dev.asfakul.yumeiro.online.download.OnlineDownloads
+import dev.asfakul.yumeiro.online.download.YtDownloads
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -30,6 +32,9 @@ import org.junit.runner.RunWith
  *  a Back up automatically (`backup_auto`): off cancels the periodic auto-backup work, on schedules it;
  *  b Permanent by default (`setting_keep_default`): a new download without an explicit choice gets
  *    keep = the switch (on and off);
+ *  d Save YouTube downloads to phone (`setting_yt_to_phone`): the step DownloadWorker runs when a
+ *    YouTube download finishes (`YtDownloads.afterDownload`) on a real file: on → a MediaStore entry
+ *    in Movies/Yumeiro with the same bytes and the app copy deleted; off → no entry, the file stays;
  *  c Keep 18+ activity private (`setting_adult_private`): with 18+ on, private hides 18+ from feeds,
  *    not private shows it; with 18+ off it is hidden either way.
  * Every value is put back. Log tag YuMoreFx: MFX_CASE lines, MFX_RESULT PASS per test.
@@ -118,6 +123,43 @@ class MoreSettingsEffectDeviceTest {
         assertEquals(true, seen["adult=false private=true"])
         assertEquals(true, seen["adult=false private=false"])
         log("MFX_RESULT PASS c")
+    }
+
+    @Test fun d_youTubeToPhoneFollowsTheSwitch() {
+        assumeTrue("MediaStore publishing needs Android 10+", android.os.Build.VERSION.SDK_INT >= 29)
+        DownloadSettings.init(ctx)
+        val was = DownloadSettings.saveYouTubeToPhone.value
+        restore += { DownloadSettings.setSaveYouTubeToPhone(ctx, was) }
+        val bytes = ByteArray(256 * 1024) { (it % 251).toByte() }
+        fun finished(case: String): Pair<android.net.Uri?, java.io.File> {
+            val id = "yumorefx$case${System.currentTimeMillis()}"
+            val item = OnlineDownloads.Item(
+                id = id, title = "YuMoreFx yt $case", api = "YouTube", titleUrl = "https://www.youtube.com/watch?v=yumorefx",
+                episodeLabel = null, posterUrl = null, posterHeaders = emptyMap(), url = "", isHls = false, headers = emptyMap(),
+                fileName = "YuMoreFx yt $case-$id.mp4", kind = OnlineDownloads.Kind.YT_VIDEO, container = "mp4",
+            )
+            val out = java.io.File(ctx.cacheDir, item.fileName).apply { writeBytes(bytes) }
+            val uri = YtDownloads.afterDownload(ctx, item, out)
+            uri?.let { u -> restore += { runCatching { ctx.contentResolver.delete(u, null, null) } } }
+            restore += { out.delete() }
+            return uri to out
+        }
+        DownloadSettings.setSaveYouTubeToPhone(ctx, false)
+        val (offUri, offFile) = finished("off")
+        DownloadSettings.setSaveYouTubeToPhone(ctx, true)
+        val (onUri, onFile) = finished("on")
+        val copied = onUri?.let { u -> runCatching { ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } }.getOrNull() }
+        val path = onUri?.let { u ->
+            ctx.contentResolver.query(u, arrayOf(android.provider.MediaStore.MediaColumns.RELATIVE_PATH), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }
+        log("MFX_CASE d yt to phone off: uri=$offUri file=${offFile.exists()} · on: uri=$onUri path=$path same=${copied?.contentEquals(bytes)} appCopy=${onFile.exists()}")
+        assertEquals("off: nothing is published", null, offUri)
+        assertTrue("off: the app copy stays", offFile.exists())
+        assertTrue("on: published to the phone", onUri != null)
+        assertTrue("on: the phone copy has the same bytes", copied?.contentEquals(bytes) == true)
+        assertTrue("on: saved under Movies/Yumeiro (got $path)", path?.trimEnd('/') == "Movies/Yumeiro")
+        assertFalse("on: the app copy is deleted", onFile.exists())
+        log("MFX_RESULT PASS d")
     }
 
     companion object {

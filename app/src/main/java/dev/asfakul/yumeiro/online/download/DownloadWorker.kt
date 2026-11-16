@@ -103,15 +103,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             // G8 (R17): deleted while the last bytes came in: don't leave an untracked file behind.
             if (OnlineDownloads.get(id) == null) { OnlineDownloads.removeFiles(named); OnlineDownloads.removeFiles(out); return Result.success() }
             if (!part.renameTo(out)) { out.delete(); part.copyTo(out, overwrite = true); part.delete() }
-            if ((item.kind == OnlineDownloads.Kind.YT_VIDEO || item.kind == OnlineDownloads.Kind.YT_AUDIO) && DownloadSettings.saveYouTubeToPhone.value) {
-                val audio = item.kind == OnlineDownloads.Kind.YT_AUDIO
-                val name = out.name.substringBeforeLast('-') + "." + out.extension
-                YtDownloads.publish(applicationContext, out, name, YtDownloads.mimeOf(item.container ?: out.extension, audio), music = audio)?.let { uri ->
-                    // The phone's copy is the one that plays; drop the app copy so space isn't used twice.
-                    OnlineDownloads.resolved(id) { it.copy(publicUri = uri.toString()) }
-                    out.delete()
-                }
-            }
+            YtDownloads.afterDownload(applicationContext, item, out)
             OnlineDownloads.finished(id, bytes)
             done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) "Saved · Permanent · tap to open Downloads" else "Saved · Offline · tap to open Downloads")
             return Result.success()
