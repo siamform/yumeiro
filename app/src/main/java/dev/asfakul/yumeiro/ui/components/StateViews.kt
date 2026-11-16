@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -147,7 +149,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
     // ST-21: never over the in-app floating video window (its close button took no tap under the pill).
     val floatEdges by FloatingPlayerArea.edges.collectAsState()
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val navBarDp = with(density) { androidx.compose.foundation.layout.WindowInsets.navigationBars.getBottom(density).toDp().value.toInt() }
+    val navBarDp = (WindowInsets.navigationBars.getBottom(density) / density.density).toInt()
     val bottom = FloatingPlayerArea.messageBottom(bottomPadding.value.toInt(), navBarDp, floatEdges).dp
     AnimatedVisibility(
         visible = msg != null,
