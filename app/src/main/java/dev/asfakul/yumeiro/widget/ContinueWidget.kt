@@ -51,25 +51,41 @@ class ContinueWidget : AppWidgetProvider() {
 
         @Volatile private var lastKey: String? = null
         @Volatile private var lastAt = 0L
+        /** Newest render request; an older render whose poster loaded late must not paint over it. */
+        private val generation = java.util.concurrent.atomic.AtomicLong()
 
-        /** Called on every progress save: re-render only when the title changes or every 2 minutes. */
+        /**
+         * Called on every progress save: re-render when the title or episode changes, or every
+         * 2 minutes. [key] is the title key plus the episode ([OnlineHistory.record]).
+         */
         fun maybeRefresh(context: Context, key: String) {
             val now = System.currentTimeMillis()
             if (key == lastKey && now - lastAt < 120_000) return
+            renderAll(context)
             lastKey = key; lastAt = now
-            refresh(context)
         }
 
-        /** Re-render every placed widget (cheap no-op when none are placed). */
+        /**
+         * Re-render every placed widget (cheap no-op when none are placed). Called when the shown
+         * state changes outside progress saves (removed, cleared, incognito, lock), so the next save
+         * re-renders even for the same title: before, a title played again within 2 minutes of being
+         * removed stayed off the widget.
+         */
         fun refresh(context: Context) {
+            lastKey = null
+            renderAll(context)
+        }
+
+        private fun renderAll(context: Context) {
             val app = context.applicationContext
             val manager = AppWidgetManager.getInstance(app) ?: return
             val ids = runCatching { manager.getAppWidgetIds(ComponentName(app, ContinueWidget::class.java)) }.getOrNull() ?: return
             if (ids.isEmpty()) return
-            scope.launch { render(app, manager, ids) }
+            val gen = generation.incrementAndGet()
+            scope.launch { render(app, manager, ids, gen) }
         }
 
-        private suspend fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        private suspend fun render(context: Context, manager: AppWidgetManager, ids: IntArray, gen: Long = generation.incrementAndGet()) {
             OnlineHistory.ensureLoaded(context)
             val hidden = Privacy.incognito.value || Privacy.lockEnabled.value
             val entry = if (hidden) null else OnlineHistory.forFeed(OnlineHistory.entries.value).firstOrNull()
@@ -101,7 +117,12 @@ class ContinueWidget : AppWidgetProvider() {
                 val bmp = entry.posterUrl?.let { poster(context, it, entry.posterHeaders) }
                 if (bmp != null) views.setImageViewBitmap(R.id.widget_poster, bmp) else views.setImageViewResource(R.id.widget_poster, R.drawable.ic_app_logo)
             }
-            runCatching { manager.updateAppWidget(ids, views) }
+            // A poster can take up to 8 s; a newer request (removal, incognito, next title) may have
+            // rendered meanwhile. Painting this older state would bring it back.
+            synchronized(generation) {
+                if (gen != generation.get()) return
+                runCatching { manager.updateAppWidget(ids, views) }
+            }
         }
 
         private suspend fun poster(context: Context, url: String, headers: Map<String, String>): Bitmap? = withTimeoutOrNull(8_000) {

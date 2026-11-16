@@ -105,7 +105,7 @@ object OnlineHistory {
         _entries.value = (if (finishedMovie) emptyList() else listOf(entry)) + _entries.value.filterNot { it.key == entry.key }.take(MAX_TITLES - 1)
         _version.value++
         save()
-        dev.asfakul.yumeiro.widget.ContinueWidget.maybeRefresh(context, entry.key)
+        dev.asfakul.yumeiro.widget.ContinueWidget.maybeRefresh(context, "${entry.key}|${entry.episodeData}")
     }
 
     fun remove(context: Context, api: String, url: String) {
