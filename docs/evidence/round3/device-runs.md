@@ -291,3 +291,5 @@ These are real emulators running the real debug APK; the tests are not simulated
 | 43810683270 | 1518c9e | tv-api24 | ExtensionPopups 7/7 pass |
 | 43812110468 | 7439ef4 | api36, api33-lowram | ExtensionPopups 7/8 both: p8 "Dismiss added a window 1→2". Test error: baseline taken on Home, before the Extensions screen opened. Fixed in 3f37da8 |
 | 43812114134 | 7439ef4 | api36, api33-lowram | BackNavigation pass both; Extensions pass api33-lowram, api36 e8 crashed: "Already connected" from `WindowSpy.pollWindows` → `getUiAutomation()` on a second thread. Test error, fixed in 3f37da8 |
+| 43823291873 | 3f37da8 | api36, api33-lowram | Extensions 7/7 pass both; ExtensionPopups 7/8 both: p8 real bug, quiet card covered Dismiss (fixed 523d960) |
+| 43825449454 | d3abed6 | api36, api33-lowram | ExtensionPopups 8/8 + Extensions 7/7 pass both. api33-lowram logcat: DonationManager.recordShown commit() still on main, ST-20 guard not engaged (fixed 41820ee) |
