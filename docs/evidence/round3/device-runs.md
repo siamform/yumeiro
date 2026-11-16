@@ -386,3 +386,11 @@ These are real emulators running the real debug APK; the tests are not simulated
     override. Fixed in 10be03d (RebufferWindow, picks/seeks excluded).
 - DownloadThroughputDeviceTest: no measurement again (Hetzner: "unexpected end of stream" to a plain
   client; OVH IPv4 timeouts). kernel.org CDN hosts added in a8b4d27.
+
+## CI 43854742733 — ci.yml on 40ea96e (unit, ran 11:30–11:48 UTC)
+
+- 1022 tests, 1 failed, 11 skipped. Passed: Bug3PieceTest 4/4, Bug4QualityListTest 7/7 (incl. F4 x2),
+  DownloadThroughputTest steadyHost (all engines ≤ 1.0x).
+- Failed: DownloadThroughputTest.burstThenCapPerRequest — segmented4 4.82x [43,11,5,5,4,367,256,6,5,654],
+  segmented2-lowend 3.30x. The 40ea96e split fix alone does not meet the rule. Cause and fix: 3c85a72
+  (RequestPace). Rerun: CI 43861926740 (head; also ProgressGateTest, RebufferWindowTest).
