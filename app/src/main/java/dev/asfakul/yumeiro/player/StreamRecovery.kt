@@ -74,6 +74,8 @@ class PlaybackRecovery(
     /** Whether an alternative DNS resolver is configured (DNS errors then already went through it). */
     private val alternativeDns: () -> Boolean = { false },
     private val dnsLabel: () -> String = { "the alternative DNS" },
+    /** G10 ER-13: whether the Software decoder is already chosen (then the tip is not offered). */
+    private val softwareDecoder: () -> Boolean = { false },
 ) {
     private val attempts = mutableMapOf<String, Int>()
     private var lastRefreshAt = Long.MIN_VALUE / 2
@@ -126,7 +128,8 @@ class PlaybackRecovery(
         )
         return RecoveryAction.Fail(
             "Unsupported video format",
-            "This device's hardware decoders could not play this file, or the media stream is corrupted.\n\n${f.message ?: "Playback error"}",
+            "This device's hardware decoders could not play this file, or the media stream is corrupted. " +
+                (if (softwareDecoder()) "Try another quality or source." else DECODER_TIP) + "\n\n${f.message ?: "Playback error"}",
         )
     }
 
@@ -156,6 +159,8 @@ class PlaybackRecovery(
 
     companion object {
         const val STABLE_RESET_MS = 30_000L
+        /** The setting that helps: Settings › Audio quality & sound › Quality and audio › Video decoder. */
+        const val DECODER_TIP = "Set Video decoder to Software in Settings › Audio quality & sound › Quality and audio, or try another quality or source."
     }
 }
 

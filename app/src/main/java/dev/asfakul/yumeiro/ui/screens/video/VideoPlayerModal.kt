@@ -425,6 +425,7 @@ private fun VideoPlayerModalContent(
         PlaybackRecovery(
             alternativeDns = { NetworkSettings.dns.value.usesAlternative },
             dnsLabel = { NetworkSettings.dns.value.provider.label },
+            softwareDecoder = { dev.asfakul.yumeiro.player.VideoPrefs.decoder.value == dev.asfakul.yumeiro.player.VideoPrefs.Decoder.SOFTWARE },
         )
     }
     var qualitySwitchJob by remember(video.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }

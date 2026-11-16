@@ -69,5 +69,10 @@ class PlaybackRecoveryTest {
         assertTrue(drm.message.contains("doesn't bypass DRM"))
         val dec = r.decide(facts(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED), true, true) as RecoveryAction.Fail
         assertEquals("Unsupported video format", dec.title)
+        // G10 ER-13: the decoder failure names the setting that helps, unless it is already chosen.
+        assertTrue(dec.message, dec.message.contains(PlaybackRecovery.DECODER_TIP))
+        val sw = PlaybackRecovery(now = { clock }, softwareDecoder = { true })
+            .decide(facts(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED), true, true) as RecoveryAction.Fail
+        assertTrue(sw.message, !sw.message.contains("Set Video decoder") && sw.message.contains("Try another quality or source."))
     }
 }
