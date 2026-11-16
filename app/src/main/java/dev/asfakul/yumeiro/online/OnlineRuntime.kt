@@ -96,7 +96,15 @@ object OnlineErrors {
                 e is kotlinx.coroutines.TimeoutCancellationException -> "The server took too long to answer"
             chain.any { it is javax.net.ssl.SSLException } -> "Secure connection failed"
             m.startsWith("HTTP 404") || m.contains("HTTP 404") -> "Not found (404)"
-            m.startsWith("HTTP") -> "Server error ($m)"
+            // R17 G10 (ER-1): 4xx answers are not server errors; say what the server said.
+            m.startsWith("HTTP") -> when (m.substringAfter("HTTP ").take(3).toIntOrNull()) {
+                401 -> "Access denied: the server needs authorization (HTTP 401)"
+                403 -> "Access denied by the server (HTTP 403)"
+                410 -> "Removed from the server (HTTP 410)"
+                429 -> "Too many requests, wait a minute and retry (HTTP 429)"
+                451 -> "Not available in your country (HTTP 451)"
+                else -> "Server error ($m)"
+            }
             root is org.json.JSONException -> "The server sent unreadable data"
             root is NotImplementedError -> "This extension doesn't support that"
             isBadLink(root) || isBadLink(e) -> "The site sent a broken link for this source — try another source"

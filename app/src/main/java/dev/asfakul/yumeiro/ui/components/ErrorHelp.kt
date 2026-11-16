@@ -71,6 +71,17 @@ object ErrorHelp {
                 out += "This content is limited to some countries — pick another source or server"
                 out += "Yumeiro doesn't bypass region locks"
             }
+            // R17 G10 (ER-1): the shared mapper's own texts (OnlineErrors.friendly) must get the matching
+            // tips. "Your network refused the connection" got the 403 header tips, "Secure connection
+            // failed" the offline tips, "The server took too long to answer" only the generic ones.
+            has("refused the connection") -> {
+                out += "The site may be blocked on this network — turn a VPN on or off, or try another network"
+                out += "Retry — Yumeiro also retries automatically"
+            }
+            has("secure connection", "ssl", "certificate verif", "handshake", "tls") && !has("certificate mismatch") -> {
+                out += "Check the phone's date & time are correct"
+                out += "The site's security certificate is broken — try another source"
+            }
             has("401", "403", "access denied", "forbidden", "refused") -> {
                 out += "Refresh the playlist or get a fresh link — tokens in links expire"
                 out += "Add the site's Referer / Origin under Headers & DRM"
@@ -86,7 +97,7 @@ object ErrorHelp {
                 out += "The server is having trouble — retry in a moment"
                 out += "Switch to another server or source"
             }
-            has("timeout", "timed out") -> {
+            has("timeout", "timed out", "took too long") -> {
                 out += "The connection is slow — retry, or switch between Wi-Fi and mobile data"
                 out += "Turn off any VPN or data saver that may block streaming"
             }
@@ -95,7 +106,7 @@ object ErrorHelp {
                 out += "Turn off a VPN / private DNS, or try another network"
                 out += "Retry — Yumeiro also retries automatically"
             }
-            has("ssl", "certificate", "handshake", "tls") -> {
+            has("ssl", "certificate", "handshake", "tls") && !has("certificate mismatch") -> {
                 out += "Check the phone's date & time are correct"
                 out += "The site's security certificate is broken — try another source"
             }
@@ -107,7 +118,7 @@ object ErrorHelp {
                 out += "Your device can't decode this format — try a lower quality or another source"
                 out += "Open it in an external player from the ⋮ menu"
             }
-            has("extension", "plugin", "provider", "hue") -> {
+            has("extension", "plugin", "provider", "hue", "unreadable data") -> {
                 out += "Update the extension in Yumix → Installed"
                 out += "Try another server or another extension"
             }
