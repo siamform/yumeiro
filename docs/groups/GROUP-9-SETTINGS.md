@@ -53,7 +53,8 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 | SE-2, S26 image types | `BackdropImportDeviceTest` | emulator | not run yet |
 | S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | first run 43875418000 was a test error (taps below the fold, home detection); fixed in e7efd6e, rerun 43877623222 running |
 | SE-3, S23 search | `SettingsSearchCoverageTest` | unit | CI run owed |
-| S1–S22 pages, notification settings, Player info overlay, Quality and audio effects | — | — | open |
+| Player info overlay, Resume playback, Anime4K (real effect on the player) | `PlayerSettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |
+| S1–S22 pages, notification settings effects | — | — | open |
 
 ## Preference inventory (generated)
 
