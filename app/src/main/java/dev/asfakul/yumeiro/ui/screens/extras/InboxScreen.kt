@@ -121,12 +121,16 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
             PullToRefreshBox(
                 isRefreshing = refreshing,
                 onRefresh = {
-                    scope.launch {
+                    // G10 ER-12: the reason and a Retry, not a bare "Try again later".
+                    fun sync(): Unit { scope.launch {
                         refreshing = true
                         if (!Connectivity.isOnline(context)) AppMessages.show(context, "You're offline. Showing saved notifications")
-                        else runCatching { AppFeed.sync(context) }.onFailure { AppMessages.error(context, "Couldn't check for news. Try again later") }
+                        else runCatching { AppFeed.sync(context) }.onFailure {
+                            AppMessages.error(context, "Couldn't check for news. " + dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try again later"), "Retry") { sync() }
+                        }
                         refreshing = false
-                    }
+                    } }
+                    sync()
                 },
                 modifier = Modifier.fillMaxSize(),
             ) {

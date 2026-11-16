@@ -209,11 +209,11 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
         loading = false
     }
     LaunchedEffect(kind, repos.size) { if (repos.isNotEmpty()) refresh() }
-    fun addRepoUrl(url: String) = scope.launch {
+    fun addRepoUrl(url: String): kotlinx.coroutines.Job = scope.launch {
         loading = true
         TachiyomiExtensions.addRepo(context, url, kind)
             .onSuccess { AppMessages.success(context, "Repository added · $it extensions"); refresh() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { addRepoUrl(url) } }
         loading = false
     }
 
@@ -333,11 +333,11 @@ private fun StremioTab() {
     val addons by StremioAddons.addons.collectAsState()
     var add by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    fun addUrl(url: String) = scope.launch {
+    fun addUrl(url: String): kotlinx.coroutines.Job = scope.launch {
         busy = true
         StremioAddons.add(context, url)
             .onSuccess { AppMessages.success(context, "${it.name} added"); afterChange() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { addUrl(url) } }
         busy = false
     }
     Column(Modifier.fillMaxSize()) {
@@ -385,11 +385,11 @@ private fun JsTab() {
     var query by remember { mutableStateOf("") }
     suspend fun refresh() { loading = true; available = runCatching { JsSources.available(context) }.getOrDefault(available); loading = false }
     LaunchedEffect(state.repos.size) { if (state.repos.isNotEmpty()) refresh() }
-    fun addRepoUrl(url: String) = scope.launch {
+    fun addRepoUrl(url: String): kotlinx.coroutines.Job = scope.launch {
         loading = true
         JsSources.addRepo(context, url)
             .onSuccess { AppMessages.success(context, "Repository added · $it sources"); refresh() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { addRepoUrl(url) } }
         loading = false
     }
     val installedIds = state.installed.associateBy { it.id }
@@ -545,11 +545,11 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
     var plexCode by remember { mutableStateOf<String?>(null) }
     val needsUser = kind != HomeServers.Kind.PLEX
 
-    fun save(secret: String) = scope.launch {
+    fun save(secret: String): kotlinx.coroutines.Job = scope.launch {
         busy = true
         HomeServers.add(context, kind, name, url, user, secret)
             .onSuccess { AppMessages.success(context, "${it.name} connected"); onSaved() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { save(secret) } }
         busy = false
     }
 
