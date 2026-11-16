@@ -449,8 +449,9 @@ carried over unchanged otherwise.
 - **gitleaks (`generic-api-key`).** `tracking/Kitsu.kt` had the Kitsu OAuth client secret as a string literal. It now
   comes from `BuildConfig.KITSU_CLIENT_ID/SECRET` (Gradle property `kitsuClientId`/`kitsuClientSecret` or env
   `KITSU_CLIENT_ID`/`KITSU_CLIENT_SECRET`, set as repo secrets and passed in `release.yml`), or from a user-entered
-  value in `OnlineSettings.secret("kitsu_client*")`. Builds without it show "Kitsu sign-in is not set up in this
-  build". The branch history never contains the literal.
+  value in `OnlineSettings.secret("kitsu_client*")`. The branch history never contains the literal.
+  Update (ADR-013, 2026-11-16): the build no longer carries any Kitsu credential; login sends no
+  client fields, which Kitsu accepts.
 - **CodeQL (15 alerts, High gate).** Real fixes: `TachiyomiExtensions` trusted set is sealed with `SecretBox`
   (`trusted_v2`, legacy key migrated); app lock binds the prompt to a Keystore key (`security/LockKey`, API 30+,
   `CryptoObject`), so a hooked callback can't unlock. Reviewed suppressions (rule + path, see
@@ -707,7 +708,7 @@ a secret (`Trakt.configured`) and always sent one, so a new app could never sign
 - Device-code sign-in is unchanged (PKCE applies only to the authorization-code flow).
 - Settings dialog and setup guide: secret marked optional; redirect URI `urn:ietf:wg:oauth:2.0:oob` (Trakt may warn,
   it still saves; it's sent on refresh, so it must match the app).
-- Release: only the `TRAKT_CLIENT_ID` repo secret is needed. `TRAKT_CLIENT_SECRET` stays optional in `release.yml`.
+- Release: only the `TRAKT_CLIENT_ID` repo secret is needed. `TRAKT_CLIENT_SECRET` is no longer built into the APK (ADR-013).
 
 Tests: `TraktAuthTest` (secret omitted/sent, refresh body, refresh window). Not tested against a live Trakt account.
 
@@ -740,7 +741,7 @@ Competitor and Sozo study: `docs/INSPIRATION.md` (last section). Next steps: `do
 
 **Build-time keys** (`app/build.gradle.kts`, `release.yml`, `.env.example`; all optional, blank = feature asks for the
 user's own key or hides): `SIMKL_CLIENT_ID`, `LASTFM_API_KEY`, `LASTFM_SHARED_SECRET`, `LRCLIB_APP_ID`,
-`OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` (read token, reserved for the trailer feed). Repo secrets are set.
+`OPENSUBTITLES_API_KEY`, `TMDB_API_KEY` (no longer built in: ADR-013). Repo secrets are set.
 
 **Simkl (`tracking/Simkl.kt`).** The built-in app is an AUTH V2 app: the old `/oauth/pin` flow is rejected, so sign-in
 uses the OAuth 2 device flow (`POST /oauth2/device`, scope `media:read media:write`, poll `/oauth2/token` without a

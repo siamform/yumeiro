@@ -42,7 +42,7 @@ object Trakt {
      * belongs to: a user's own app never borrows the built-in secret.
      */
     fun clientSecret(): String =
-        if (userClientId().isNotBlank()) OnlineSettings.secret("trakt_secret").orEmpty() else BuildConfig.TRAKT_CLIENT_SECRET
+        if (userClientId().isNotBlank()) OnlineSettings.secret("trakt_secret").orEmpty() else "" // ADR-013: no built-in secret
     val configured: Boolean get() = clientId().isNotBlank()
     fun token(): String? = OnlineSettings.secret("trakt_token")
     fun user(): String? = OnlineSettings.secret("trakt_user")

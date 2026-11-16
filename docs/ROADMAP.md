@@ -116,7 +116,7 @@ TV layout, Weblate localisation.
 
 ## 2.5 Serverless versions of Sozo's best ideas (see INSPIRATION.md)
 
-- [ ] Trailer "Shorts" feed from TMDB `/videos` (key is in place: `TMDB_API_KEY`), vertical pager, tap to open the title.
+- [ ] Trailer "Shorts" feed from TMDB `/videos` (TMDB key removed from the build by ADR-013 until this feature is approved and the key is classified), vertical pager, tap to open the title.
 - [ ] Stats, streaks and a yearly recap computed from local watch / listen history (no account, nothing uploaded).
 - [ ] On-device subtitle translation (ML Kit on-device translation is free; check model size and licence first).
 - [ ] ListenBrainz as a second scrobbler (token only, no secret), reusing `ScrobbleTracker` and the offline queue.

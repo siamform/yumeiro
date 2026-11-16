@@ -7,12 +7,14 @@
   table, EXT-T1 reproduction ≥ 20×, ADR-014 build), then ST-18 Perfetto + Home first-draw reduction,
   then the Group 12 list, G5–10, G11, re-audit G1–4, final sweep. Feature phase gated (research only).
   Heavy work on CI, ≤ 2 device workflows, no PR/merge/release.
-- **Done this step:** X13-1 conditions: ADR-015 (14 OSV advisories on 2.13.5, exposure, mitigation,
-  removal conditions, scope Android 7 TV boxes only); `JacksonTvExposureTest` in the CI TV unit step.
-  New proposal X13-6 (phone Jackson 2.19.4 → 2.18.11) needs the owner.
-- **Running:** 43801874469 (PL-16 "before" shot, throwaway branch `tmp/pl16-before`).
-- **Next three actions:** (1) PL-16 before/after images into `docs/evidence/pl16/`, delete the
-  throwaway branch; (2) ADR-013 key classification table; (3) EXT-T1 reproduction on api33-lowram.
+- **Done this step:** X13-1 conditions (ADR-015, `JacksonTvExposureTest`); PL-16 images in
+  `docs/evidence/pl16/` (355d5b7); ADR-013 key table, class-3 keys removed (Trakt/Kitsu secrets,
+  unused TMDB key), release/preview updater-token guard, `ApkSecretsTest`. Owner items: X13-6
+  (phone Jackson → 2.18.11, proposal) and OMT-13 (restrict the Firebase key).
+- **Running:** none (CI on push).
+- **Next three actions:** (1) EXT-T1 reproduction ≥ 20× on api33-lowram with window/tag logging;
+  (2) ADR-014 design + build (extension pop-ups: Show / Quiet / Block promotional, test extension,
+  device tests); (3) ST-18 Perfetto trace of the first Home draw and Home first-draw reduction.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

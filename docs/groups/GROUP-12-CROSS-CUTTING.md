@@ -28,7 +28,7 @@ this file.
 | X4 | Battery and heat | `player/HeatGuard`, `notify/NotifyPacer` | X4-1 emulator verified |
 | X5 | Notifications while closed | `notify/*`, `PushWakeService`, alarms, workers | X5-1, X5-2 emulator verified |
 | X6 | Crash logs and export | `diagnostics/CrashLog`, `CrashExport`, `CrashReportsCard` | X6-1 emulator verified |
-| X7 | Security | `security/*`, `IntegrityGuard`, `network_security_config.xml`, BuildConfig | X7-1 unit, X7-2 CI, X7-3 owner decision (ADR-013) |
+| X7 | Security | `security/*`, `IntegrityGuard`, `network_security_config.xml`, BuildConfig | X7-1 unit, X7-2 CI, X7-3 done (ADR-013), OMT-13 owner |
 | X8 | Accessibility | all UI, `AccessibilityDeviceTest` | X8-1 verified; X8-2, X8-3 device recheck running |
 | X9 | TV and low-end | `ui/tv`, `DeviceClass` | X9-1 in progress (tv-api24 run) |
 | X10 | Build, CI, release, signing | `.github/workflows`, Gradle | X10-1..4 CI verified; R8/ABI/signing review not done |
@@ -75,7 +75,7 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | 275 `object` singletons, no DI | cheap start-up, simple calls, survives page disposal (ADR-001/006) | hidden dependencies, tests reach into globals | constructor-injected interfaces at network/prefs/clock seams (proposal) |
 | Warm prefs on `yu-prefs` thread | most files ready before first draw | a race: main may still get there first (X2-1) | measure with Macrobenchmark first (ADR-012) |
 | Extensions use the app's activity for their UI | CloudStream-compatible dialogs work | their fragments outlive their class loader on recreate (X8-3) | factory with loader lookup and drop (done) |
-| Secrets in BuildConfig | works offline | extractable from the APK (X7-3) | ADR-013 option (b) |
+| Secrets in BuildConfig | works offline | extractable from the APK (X7-3) | ADR-013: only class 1/2 keys remain |
 
 ## 5. Findings register
 
@@ -92,7 +92,7 @@ upgrade from a 1.8.0 install. None done yet; listed under "Open work".
 | X5-2 | medium | `NotifyPacer.kt` deliverNext | every tick delivered | ticks from boot/updates | gap check (9b46045) | emulator |
 | X6-1 | medium | `CrashReportsCard.kt` | Delete all with no confirm, over-promised text | tap | confirm + wording (2e5f9d6) | emulator |
 | X7-1 | high | `network_security_config.xml` | cleartext app-wide; HTTPS-only list incomplete | config read | domains added (149ef42) | unit |
-| X7-3 | medium | `app/build.gradle.kts:51-59,122-146`, `UpdateConfig.kt:22` | secrets compiled into the APK | unzip APK | ADR-013 (proposed) | owner decision |
+| X7-3 | medium | `app/build.gradle.kts`, `UpdateConfig.kt:22`, `Kitsu.kt`, `Trakt.kt` | secrets compiled into the APK | unzip APK | ADR-013 accepted: 20 keys classified; Trakt/Kitsu secrets and unused TMDB key removed, release token guard | unit `ApkSecretsTest` (fail before, pass after), `KitsuLoginTest`; Gradle dry run; live probes; OMT-13 (Firebase key restriction) |
 | X8-1 | medium | `MTTopBar.kt`, `YtMusicBrowse.kt` | small gap, unnamed cards | a11y check | 3019605, a898010 | emulator |
 | X8-2 | medium | `HomeScreen.kt` ContinueCard | clickable without a label | a11y check on search (api36) | `a11yLabel` (5e685a5) | emulator recheck |
 | X8-3 | **critical** | `cloudstream3/MainActivity.kt` onCreate | extension fragments restored with the app class loader | font scale change after an extension dialog (43762090588, both phones) | `ExtensionFragmentFactory` (7cb8c2e) | emulator (43763558754, both phones) |

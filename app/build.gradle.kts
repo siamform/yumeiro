@@ -49,6 +49,11 @@ val updateRepoName = secret("MT_UPDATE_REPO_NAME", "updateRepoName") ?: "yumeiro
 // Optional read-only token so the updater keeps working once the repository becomes private.
 // It is injected at build time only (never committed) and lightly obfuscated in the binary.
 val updaterToken = secret("MT_UPDATER_TOKEN", "updaterToken") ?: ""
+// ADR-013: a GitHub token is a true secret and the release repository is public, so no release or
+// preview APK may carry one. Debug builds of a private fork still can.
+if (updaterToken.isNotBlank() && gradle.startParameter.taskNames.any { it.contains("release", true) || it.contains("preview", true) }) {
+  throw GradleException("MT_UPDATER_TOKEN is set: a GitHub token must never ship in a release or preview APK (ADR-013)")
+}
 val obfuscationKey = (appVersionCode * 31 + 0x5A) and 0xFF
 // SHA-256 of the official release signing certificate. The app compares its own signature
 // against it at runtime (IntegrityGuard) so re-signed / repackaged copies are flagged.
@@ -130,16 +135,13 @@ android {
     buildConfigField("String", "MAL_CLIENT_ID", "\"$malClient\"")
     // Trakt (movies / shows tracking): free API app from trakt.tv/oauth/applications. Optional.
     val traktClient = (providers.gradleProperty("traktClientId").orNull ?: System.getenv("TRAKT_CLIENT_ID") ?: "").let(::buildConfigSafe)
-    val traktSecret = (providers.gradleProperty("traktClientSecret").orNull ?: System.getenv("TRAKT_CLIENT_SECRET") ?: "").let(::buildConfigSafe)
+    // ADR-013: no Trakt client secret in the APK. Trakt: "The Client Secret is deprecated for user
+    // sign-in and should only be used server to server"; device sign-in works with the id alone.
+    // A user's own Trakt app (Settings) may still carry its own secret.
     buildConfigField("String", "TRAKT_CLIENT_ID", "\"$traktClient\"")
-    buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"$traktSecret\"")
-    // Kitsu (anime tracking) OAuth client for the password grant. Optional; never committed.
-    val kitsuClient = (providers.gradleProperty("kitsuClientId").orNull ?: System.getenv("KITSU_CLIENT_ID") ?: "").let(::buildConfigSafe)
-    val kitsuSecret = (providers.gradleProperty("kitsuClientSecret").orNull ?: System.getenv("KITSU_CLIENT_SECRET") ?: "").let(::buildConfigSafe)
-    buildConfigField("String", "KITSU_CLIENT_ID", "\"$kitsuClient\"")
-    buildConfigField("String", "KITSU_CLIENT_SECRET", "\"$kitsuSecret\"")
-    // Free API keys for Simkl (tracking), Last.fm (scrobbling), LRCLIB (lyrics), OpenSubtitles and
-    // TMDB. All optional (features hide or ask for the user's own key when blank); never committed.
+    // ADR-013: Kitsu has no app registration; its password grant works with no client fields, so
+    // the build carries no Kitsu credential (Kitsu.kt).
+    // Free API keys for Simkl (tracking), Last.fm (scrobbling), LRCLIB (lyrics) and OpenSubtitles. All optional (features hide or ask for the user's own key when blank); never committed.
     fun optionalKey(prop: String, env: String) = (providers.gradleProperty(prop).orNull ?: System.getenv(env) ?: "").let(::buildConfigSafe)
     buildConfigField("String", "SIMKL_CLIENT_ID", "\"${optionalKey("simklClientId", "SIMKL_CLIENT_ID")}\"")
     buildConfigField("String", "LASTFM_API_KEY", "\"${optionalKey("lastfmApiKey", "LASTFM_API_KEY")}\"")
@@ -148,7 +150,6 @@ android {
     buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
     // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.
     buildConfigField("String", "CLOUD_HOST", "\"${(providers.gradleProperty("cloudHost").orNull ?: System.getenv("YUMEIRO_CLOUD_HOST") ?: "api.yumeiro.click").let(::buildConfigSafe)}\"")
-    buildConfigField("String", "TMDB_API_KEY", "\"${optionalKey("tmdbApiKey", "TMDB_API_KEY")}\"")
 
     // Push (FCM). Per-build-type app id/key are set in buildTypes below.
     buildConfigField("String", "FCM_PROJECT_ID", "\"$fcmProjectId\"")

@@ -6,7 +6,6 @@
 package dev.asfakul.yumeiro.tracking
 
 import android.content.Context
-import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineSettings
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
@@ -16,18 +15,23 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 /**
- * Kitsu anime tracking via Kitsu's OAuth password grant. The client id/secret are build-time
- * config (see app/build.gradle.kts), never committed.
+ * Kitsu anime tracking via Kitsu's OAuth password grant (no app credential needed; ADR-013).
  */
 object Kitsu {
     private const val BASE = "https://kitsu.app/api/edge/"
     private const val LOGIN = "https://kitsu.app/api/oauth/token"
-    // OAuth client of the Kitsu password grant. Injected at build time (KITSU_CLIENT_ID /
-    // KITSU_CLIENT_SECRET env or Gradle properties) so no credential lives in the source tree;
-    // users can also enter their own in Settings. Login is hidden when neither is set.
-    private fun clientId(): String = OnlineSettings.secret("kitsu_client").orEmpty().ifBlank { BuildConfig.KITSU_CLIENT_ID }
-    private fun clientSecret(): String = OnlineSettings.secret("kitsu_client_secret").orEmpty().ifBlank { BuildConfig.KITSU_CLIENT_SECRET }
-    val configured: Boolean get() = clientId().isNotBlank() && clientSecret().isNotBlank()
+    // ADR-013: Kitsu has no app registration ("client_id and client_secret can be omitted"). The
+    // password grant is sent with no client fields unless the user entered their own pair in
+    // Settings, so the APK carries no Kitsu credential. Probe 2026-11-16: kitsu.app answers
+    // `invalid_grant` (bad user) without client fields, `invalid_client` with empty ones.
+    internal fun userClient(id: String?, secret: String?): Pair<String, String>? =
+        if (!id.isNullOrBlank() && !secret.isNullOrBlank()) id to secret else null
+    private fun userClient(): Pair<String, String>? =
+        userClient(OnlineSettings.secret("kitsu_client"), OnlineSettings.secret("kitsu_client_secret"))
+    val configured: Boolean get() = true
+    internal fun loginBody(email: String, password: String, client: Pair<String, String>?): FormBody =
+        FormBody.Builder().add("grant_type", "password").add("username", email.trim()).add("password", password)
+            .apply { client?.let { (id, secret) -> add("client_id", id).add("client_secret", secret) } }.build()
     private val VND = "application/vnd.api+json".toMediaType()
 
     fun token(): String? = OnlineSettings.secret("kitsu_token")
@@ -38,8 +42,7 @@ object Kitsu {
     /** Signs in with e-mail + password. The password is sent to Kitsu once and never stored. */
     fun login(context: Context, client: OkHttpClient, email: String, password: String): Result<String> = runCatching {
         check(configured) { "Kitsu sign-in is not set up in this build" }
-        val body = FormBody.Builder().add("grant_type", "password").add("username", email.trim()).add("password", password)
-            .add("client_id", clientId()).add("client_secret", clientSecret()).build()
+        val body = loginBody(email, password, userClient())
         val tok = client.newCall(Request.Builder().url(LOGIN).post(body).build()).execute().use { r ->
             if (!r.isSuccessful) error(if (r.code == 400 || r.code == 401) "Wrong e-mail or password" else "Kitsu answered HTTP ${r.code}")
             JSONObject(r.body.string())

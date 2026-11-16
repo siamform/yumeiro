@@ -97,16 +97,12 @@ jobs:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
-          # Optional: Trakt apps created since 2026-10-01 have no secret (PKCE-only); leave the secret unset.
-          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
-          KITSU_CLIENT_ID: ${{ secrets.KITSU_CLIENT_ID }}
-          KITSU_CLIENT_SECRET: ${{ secrets.KITSU_CLIENT_SECRET }}
+          # ADR-013: no Trakt/Kitsu client secret and no TMDB key in the APK.
           SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SHARED_SECRET: ${{ secrets.LASTFM_SHARED_SECRET }}
           LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           # Optional Firebase client config for instant notices (docs/PUSH-FCM.md). Not secret, but kept out of git.
           YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
           YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}

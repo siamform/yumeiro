@@ -420,16 +420,38 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
   After the app profile (fef01c6, run 43790371337): api33-lowram 3924 / 2837 ms, api36 2509 / 1853 ms.
   Emulator run-to-run noise is larger than the gain, so the real-phone check is OMT-12.
 
-### ADR-013 (proposed): No long-lived secrets inside the APK (G12 X7-3)
+### ADR-013: Keys in the APK, by class (G12 X7-3)
 
-- **Context:** `MT_UPDATER_TOKEN` (optional, private release repo) is XOR-obfuscated in BuildConfig;
-  Trakt/Kitsu client secrets and the Last.fm shared secret are plain BuildConfig strings. Any value
-  in an APK can be extracted.
-- **Options:** (a) keep as is and treat them as public, rotate on leak; (b) public release repo so the
-  updater needs no token, and the Worker signs/exchanges OAuth and Last.fm calls; (c) per-user keys
-  only (the user enters their own).
-- **Proposal:** (b), with (c) kept as the fallback the app already supports.
-- **Status:** proposed; needs the owner's decision. Nothing changed in code.
+- **Context:** every BuildConfig value can be read out of an APK. The owner delegated the decision
+  (orders 4): classify every key as (1) public identifier, (2) restricted public (public by nature,
+  limited by the provider's own controls), or (3) true secret, following each provider's rules.
+  Class 3 must not ship in an APK.
+- **Table** (provider rule checked 2026-11-16):
+
+| Key (BuildConfig) | Provider rule | Class | Decision |
+|---|---|---|---|
+| `ANILIST_CLIENT_ID` | AniList implicit grant uses the client id alone ([docs](https://docs.anilist.co/guide/auth/implicit)) | 1 | keep |
+| `MAL_CLIENT_ID` | MAL Authorization Code with PKCE "mainly native apps" ([docs](https://myanimelist.net/apiconfig/references/authorization)); no secret in the build | 1 | keep |
+| `SIMKL_CLIENT_ID` | "Your `client_id` is public and safe to commit" ([Simkl](https://api.simkl.org/authentication)) | 1 | keep |
+| `TRAKT_CLIENT_ID` | id is public; PKCE/device sign-in | 1 | keep |
+| `TRAKT_CLIENT_SECRET` | "The Client Secret is deprecated for user sign-in and should only be used server to server" ([Trakt](https://developer.trakt.tv/docs/authentication-oauth)) | 3 | **removed** from BuildConfig and release.yml; a user's own Trakt app may still carry its own secret (Settings) |
+| `KITSU_CLIENT_ID` / `KITSU_CLIENT_SECRET` | "The client secret **must** be kept confidential", but "Application registration has not yet been implemented … can be omitted" ([Kitsu](https://kitsu.docs.apiary.io/)) | 3 | **removed**; the password grant is sent with no client fields. Live probe 2026-11-16 (kitsu.app and kitsu.io): no client fields → `invalid_grant` (user check reached), empty fields → `invalid_client` |
+| `TMDB_API_KEY` | — | 3 by default | **removed**: shipped but read by no app code (it was reserved for the gated trailer feed; that feature's proposal must classify it again here before it ships) |
+| `LASTFM_API_KEY` | key identifies the app; ToS has no confidentiality rule ([ToS](https://www.last.fm/api/tos)) | 2 | keep |
+| `LASTFM_SHARED_SECRET` | the mobile flow signs `auth.getMobileSession` on the device with the secret ([mobile auth](https://www.last.fm/api/mobileauth)); no confidentiality rule in the ToS | 2 (accepted) | keep: the provider's own mobile flow requires it on the device. A Worker signing service would need the user's password to pass through our server for `getMobileSession`, which is worse for users. Users can enter their own key and secret |
+| `OPENSUBTITLES_API_KEY` | key identifies the consumer app (sent as the `Api-Key` header from the client); the getting-started docs state no confidentiality rule | 2 | keep; users can enter their own |
+| `LRCLIB_APP_ID` | client identification header | 1 | keep |
+| `FCM_APP_ID`, `FCM_PROJECT_ID`, `FCM_SENDER_ID` | "API keys for Firebase services are not secret" ([Firebase checklist](https://firebase.google.com/support/guides/security-checklist?hl=en)) | 1 | keep |
+| `FCM_API_KEY` | not secret, but "Always restrict an app's API key to the set of APIs used by that app" ([Firebase checklist](https://firebase.google.com/support/guides/security-checklist?hl=en)) | 2 | keep; restriction check is OMT-13 (owner's Google Cloud console). Probe of the v1.8.1 key without Android headers: Firebase Installations reached argument validation (no Android-app restriction seen) |
+| `CLOUD_HOST`, `UPDATE_REPO_OWNER`, `UPDATE_REPO_NAME` | public host and public repository | 1 | keep |
+| `UPDATER_TOKEN_BYTES` (`MT_UPDATER_TOKEN`) | GitHub token | 3 | the release repository is public, so the updater needs no token. The build now **fails** for any release or preview task when `MT_UPDATER_TOKEN` is set; CI has no such secret. Debug builds of a private fork can still use one |
+| `UPDATER_TOKEN_KEY`, `INTEGRITY_BYTES` | XOR key and the SHA-256 of the public signing certificate | 1 | keep |
+| Cloudflare token, Firebase service account, D1 ids | server-side only (`server/`, CI secrets) | 3 | never in the APK (unchanged) |
+
+- **Guards:** `ApkSecretsTest` (unit) fails when a removed key returns or a new secret-like BuildConfig
+  field is not in this table; `KitsuLoginTest`; the Gradle release/preview token guard; the APK and
+  git-history secret scan before any release.
+- **Status:** accepted (2026-11-16), implemented (X7-3).
 
 ### ADR-014 (proposed): Dialogs that third-party extensions open over the app (G12 X9-7)
 

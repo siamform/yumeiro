@@ -205,6 +205,36 @@ Blocked (you couldn't run it; say why).
 
 ---
 
+### OMT-13 — Restrict the Firebase API key in your Google Cloud console (G12 X7-3, ADR-013)
+
+- **Feature:** instant notices (FCM). The Firebase API key is in every APK by design (class 2,
+  "restricted public"); Firebase asks that it be restricted.
+- **Why the agent can't do it:** key restrictions live in your Google Cloud console
+  (project 767447175720), which only your account can open. The agent has no credentials for it,
+  and must not have them.
+- **Hardware / environment:** a browser signed in to the Google account that owns the Firebase
+  project.
+- **Instructions:** Google Cloud console → APIs & Services → Credentials → the "Android key" (or
+  auto-created) key used by the app. (1) Application restrictions: Android apps; add
+  `dev.asfakul.yumeiro`, `dev.asfakul.yumeiro.preview`, `dev.asfakul.yumeiro.debug`, each with the
+  SHA-1 of the certificate that signs it (release key; debug key for preview/debug). (2) API
+  restrictions: restrict the key to Firebase Installations API and Firebase Cloud Messaging API
+  (plus any other Firebase API the console lists as in use). Save. Then tell the agent; it will
+  re-run the probe below and the push device tests.
+- **Expected result:** a request with the key and no Android app headers is refused with
+  `API_KEY_ANDROID_APP_BLOCKED`; push registration on the emulator still works.
+- **Pass / fail rule:** pass when the agent's probe is refused and the FCM device test passes on
+  both emulators; fail if either is not true.
+- **What to record:** the date, the packages and SHA-1s you entered, the APIs you allowed.
+- **Attempts by the agent:** 2026-11-16, probe of the key from the public v1.8.1 APK without
+  Android headers: Firebase Installations passed the key check and reached argument validation
+  (HTTP 400 `INVALID_ARGUMENT`), so no Android-app restriction is active; YouTube Data answered
+  `SERVICE_DISABLED` (service off in the project, not a key restriction). The console itself
+  cannot be reached without your account.
+- **Status:** Pending
+
+---
+
 ## Not owner tests (handled by the agent)
 
 Listed here so they are not asked of you again:
