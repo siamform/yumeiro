@@ -30,7 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger
 class DownloadThroughputTest {
     companion object {
         const val SIZE = 24 * 1024 * 1024
-        const val SEG = 600 * 1024
+        const val TAIL_LIMIT = 2.0
+        const val SEG = 512 * 1024 // 48 segments cover SIZE exactly (600 KB left 576 KB out: test error in 43851470283)
         private lateinit var server: java.net.ServerSocket
         private val pool = Executors.newCachedThreadPool()
         private val requests = AtomicInteger()
@@ -133,13 +134,20 @@ class DownloadThroughputTest {
         fun steps(): List<Long> = at.indices.map { i -> if (at[i] < 0) -1 else at[i] - (if (i == 0) 0 else at[i - 1]) }
         /** Average time of the last three tenths over the first three (1.0 = steady). */
         fun tailRatio(): Double { val s = steps(); return s.takeLast(3).average() / s.take(3).average().coerceAtLeast(1.0) }
+        /** BUG-3 rule: the last 10 % over the average 10 % (the owner saw 4–5×; pass ≤ [TAIL_LIMIT]). */
+        fun lastOverMean(): Double = steps().last() / (at.last() / 10.0).coerceAtLeast(1.0)
     }
+
+    /** Engines whose tail the app controls (a host without ranges allows one request only). */
+    private val ruled = setOf("segmented4", "segmented2-lowend", "youtube-8mb-chunks", "hls-sequential")
+    private val broken = ArrayList<String>()
 
     private fun report(engine: String, d: Deciles, requestsUsed: Int) {
         val s = d.steps()
         val total = d.at.last()
         println("THROUGHPUT engine=$engine profile=${profile.name} ranges=$ranges totalMs=$total MBps=${"%.2f".format(SIZE / 1048576.0 / (total / 1000.0))} " +
-            "requests=$requestsUsed per10pctMs=$s tailRatio=${"%.2f".format(d.tailRatio())}")
+            "requests=$requestsUsed per10pctMs=$s tailRatio=${"%.2f".format(d.tailRatio())} lastOverMean=${"%.2f".format(d.lastOverMean())}")
+        if (engine in ruled && d.lastOverMean() > TAIL_LIMIT) broken += "$engine/${profile.name}: last 10 % took ${"%.2f".format(d.lastOverMean())}× the average 10 % $s"
     }
 
     private fun check(f: File) {
@@ -167,6 +175,7 @@ class DownloadThroughputTest {
         ranges = false
         run("single-no-ranges") { f, d -> Segmented(client, 4).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
         ranges = true
+        assertTrue("BUG-3 tail rule (≤ $TAIL_LIMIT×): $broken", broken.isEmpty())
     }
 
     @Test fun steadyPerConnectionCap() {

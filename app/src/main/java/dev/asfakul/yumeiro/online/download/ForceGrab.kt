@@ -101,6 +101,39 @@ object ForceHeaders {
 }
 
 /** Multi-connection, resumable download of one direct file (see [ForceGrab]). */
+/**
+ * BUG-3: a byte range one connection is reading. Another connection may [split] off its second half;
+ * [accept] only writes what is still inside the piece, so bytes past a moved end are dropped (the
+ * other connection writes the same bytes at the same offsets). Pure → unit-tested.
+ */
+internal class Piece(val chunk: Int, start: Long, end: Long) {
+    private var pos = start
+    private var last = end
+    @Synchronized fun position() = pos
+    @Synchronized fun end() = last
+    @Synchronized fun left() = (last - pos + 1).coerceAtLeast(0)
+
+    /** Hands the second half to a new piece when at least 2 × [min] bytes are left; else null. */
+    @Synchronized fun split(min: Long): Piece? {
+        val rem = last - pos + 1
+        if (rem < 2 * min) return null
+        val mid = pos + rem / 2
+        val tail = Piece(chunk, mid, last)
+        last = mid - 1
+        return tail
+    }
+
+    /** [n] bytes were read at the current position: writes the part inside the piece, returns its size. */
+    @Synchronized fun accept(n: Int, write: (Long, Int) -> Unit): Int {
+        val k = minOf(n.toLong(), last - pos + 1).coerceAtLeast(0).toInt()
+        if (k > 0) { write(pos, k); pos += k }
+        return k
+    }
+}
+
+/** BUG-3: an idle connection never takes less than this from another one. */
+internal const val MIN_SPLIT = 1L * 1024 * 1024
+
 class Segmented(
     private val client: OkHttpClient,
     private val connections: Int,
@@ -142,24 +175,40 @@ class Segmented(
         progress(have.get(), total)
         val lock = Mutex()
         val todo = ranges.indices.filter { it !in done }.toMutableList()
+        // BUG-3: when the list ran out, a connection went idle while the others were still on their
+        // last chunk, so the last part ran on fewer connections (and, on a host that is fast only for
+        // the first bytes of a request, on the slow end of every request). An idle connection now
+        // takes the second half of the in-flight piece with the most bytes left (IDM-style), so every
+        // connection works to the end. A chunk counts as done (side file) once all its pieces are in.
+        val running = ArrayList<Piece>()
+        val pieces = HashMap<Int, Int>()
         coroutineScope {
             (0 until connections).map {
                 async {
                     while (true) {
-                        val i = lock.withLock { todo.removeFirstOrNull() } ?: break
-                        val r = ranges[i]
+                        val piece = lock.withLock {
+                            val next = todo.removeFirstOrNull()?.let { i -> Piece(i, ranges[i].first, ranges[i].last).also { pieces[i] = 1 } }
+                                ?: running.maxByOrNull { it.left() }?.split(MIN_SPLIT)?.also { pieces[it.chunk] = (pieces[it.chunk] ?: 0) + 1 }
+                            next?.also { running += it }
+                        } ?: break
                         var tries = 0
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             try {
-                                fetchRange(url, headers, r, out) { n -> progress(have.addAndGet(n), total) }
+                                fetchPiece(url, headers, piece, out) { n -> progress(have.addAndGet(n), total) }
                                 break
                             } catch (e: Refused) { throw e } catch (e: IOException) {
+                                // The bytes already written stay; the retry starts where the piece stopped.
                                 if (++tries >= 4) throw e
                                 delay(800L * tries)
                             }
                         }
-                        lock.withLock { done += i; state.appendText("$i\n") }
+                        lock.withLock {
+                            running -= piece
+                            val left = (pieces[piece.chunk] ?: 1) - 1
+                            pieces[piece.chunk] = left
+                            if (left == 0) { done += piece.chunk; state.appendText("${piece.chunk}\n") }
+                        }
                     }
                 }
             }.awaitAll()
@@ -179,25 +228,29 @@ class Segmented(
         }
     }
 
-    private fun fetchRange(url: String, headers: Map<String, String>, r: LongRange, out: File, read: (Long) -> Unit) {
-        val b = Request.Builder().url(url).header("Range", "bytes=${r.first}-${r.last}")
+    /** Reads [p] from its position to its (possibly shrinking) end; returns when the piece is full. */
+    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, read: (Long) -> Unit) {
+        val from = p.position()
+        val to = p.end()
+        if (from > to) return
+        val b = Request.Builder().url(url).header("Range", "bytes=$from-$to")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
         client.newCall(b.build()).execute().use { resp ->
             if (resp.code == 401 || resp.code == 403) throw Refused(resp.code)
             if (resp.code != 206) throw IOException("HTTP ${resp.code} for a byte range")
-            val want = r.last - r.first + 1
-            var got = 0L
             RandomAccessFile(out, "rw").use { raf ->
-                raf.seek(r.first)
                 resp.body.byteStream().use { input ->
                     val buf = ByteArray(64 * 1024)
-                    while (got < want) {
-                        val n = input.read(buf, 0, minOf(buf.size.toLong(), want - got).toInt()); if (n < 0) break
-                        raf.write(buf, 0, n); got += n; read(n.toLong())
+                    while (true) {
+                        val want = p.end() - p.position() + 1
+                        if (want <= 0) return // full, or another connection took the rest
+                        val n = input.read(buf, 0, minOf(buf.size.toLong(), want).toInt()); if (n < 0) break
+                        val k = p.accept(n) { at, len -> raf.seek(at); raf.write(buf, 0, len) }
+                        if (k > 0) read(k.toLong())
                     }
                 }
             }
-            if (got < want) { read(-got); throw IOException("Connection closed early") }
+            if (p.position() <= p.end()) throw IOException("Connection closed early")
         }
     }
 
