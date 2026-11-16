@@ -174,8 +174,12 @@ object MainThreadWatchdog {
                 main.post { ran.set(SystemClock.uptimeMillis()); synchronized(lock) { lock.notifyAll() } }
                 synchronized(lock) { if (ran.get() == 0L) runCatching { lock.wait(STALL_MS) } }
                 if (ran.get() == 0L) {
-                    val stack = Looper.getMainLooper().thread.stackTrace.take(28).joinToString("\n    at ")
-                    val msg = "main thread stalled > ${STALL_MS}ms\n    at $stack"
+                    val first = Looper.getMainLooper().thread.stackTrace
+                    val stack = first.take(28).joinToString("\n    at ")
+                    // G12 YuStall lead (43767144680 api33-lowram): the 28 printed frames were Compose
+                    // measure while `ours=` named HomeOnline:88 from deeper in the same stack. Print
+                    // our frames of the whole stack and its depth so the two can be tied together.
+                    val msg = "main thread stalled > ${STALL_MS}ms (depth ${first.size}, ours in full stack: ${appFrames(first, 12)})\n    at $stack"
                     Log.w("YuStall", msg)
                     MemoryWatch.breadcrumb("stall " + (Looper.getMainLooper().thread.stackTrace.firstOrNull()?.toString() ?: "?"))
                     // Wait for it to recover before measuring again. A long stall is sampled every
