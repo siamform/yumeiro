@@ -37,7 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.BrightnessMedium
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
@@ -102,7 +102,7 @@ fun UserGuideEntryCard(onOpen: () -> Unit) {
             Text("How Yumeiro works", color = p.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("Illustrated guide to every section, gesture and fix", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         }
-        Icon(Icons.Default.ChevronRight, null, tint = p.textSecondary)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = p.textSecondary)
     }
 }
 

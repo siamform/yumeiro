@@ -11,7 +11,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SmartDisplay
@@ -19,7 +19,7 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.LiveTv
-import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SmartDisplay
@@ -67,7 +67,7 @@ object NavPrefs {
 
     /** A shortcut the user can pin to the bar; tapping it opens that page. */
     enum class Shortcut(val id: String, val label: String, val detail: String, val item: BottomNavItem) {
-        MANGA("manga", "Manga", "Your reading list and manga sources", nav("manga", "Manga", Icons.Filled.MenuBook, Icons.Outlined.MenuBook)),
+        MANGA("manga", "Manga", "Your reading list and manga sources", nav("manga", "Manga", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook)),
         LIVE("live", "Live TV", "Channels and your playlists", nav("live", "Live", Icons.Filled.LiveTv, Icons.Outlined.LiveTv)),
         DOWNLOADS("downloads", "Downloads", "Everything saved for offline", nav("downloads", "Saved", Icons.Filled.Download, Icons.Outlined.Download)),
         EXTENSIONS("extensions", "Extensions", "Install and manage extensions", nav("extensions", "Exts", Icons.Filled.Extension, Icons.Outlined.Extension)),

@@ -44,7 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
@@ -539,7 +539,7 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
                 Text(item.title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (item.subtitle.isNotBlank()) Text(item.subtitle, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextTertiary)
         }
         is YmItem.Mood -> MoodButton(item, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) { onOpen(item.browse) }
     }
@@ -639,7 +639,7 @@ private fun ExploreTiles(onOpen: (YmBrowse) -> Unit) {
                 Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(label, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ChevronRight, null, tint = TextTertiary)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextTertiary)
             }
         }
     }

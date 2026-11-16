@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
@@ -243,7 +243,7 @@ fun PlaylistDetailScreen(
                     IconButton(onClick = { menu = true }, modifier = Modifier.testTag("detail_menu")) { Icon(Icons.Default.MoreVert, "Playlist options", tint = TextSecondary) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {
                         if (isOpened && channels.isNotEmpty()) DropdownMenuItem(
-                            text = { Text("Save as playlist") }, leadingIcon = { Icon(Icons.Default.PlaylistAdd, null) },
+                            text = { Text("Save as playlist") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) },
                             modifier = Modifier.testTag("channels_save"),
                             onClick = {
                                 menu = false

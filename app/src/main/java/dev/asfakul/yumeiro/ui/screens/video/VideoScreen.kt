@@ -38,7 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -294,7 +294,7 @@ fun VideoScreen(
                         .testTag("video_layout_toggle")
                 ) {
                     Icon(
-                        imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
+                        imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
                         contentDescription = "Toggle Grid/List",
                         tint = TextSecondary,
                         modifier = Modifier.size(20.dp)

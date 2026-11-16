@@ -31,8 +31,8 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storefront
@@ -169,7 +169,7 @@ internal fun PlaylistCard(
                     Icon(Icons.Default.MoreVert, "Playlist options", tint = TextSecondary)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {
-                    if (playlist.enabled) DropdownMenuItem(text = { Text("Open") }, leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) }, onClick = { menu = false; onOpen() })
+                    if (playlist.enabled) DropdownMenuItem(text = { Text("Open") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null) }, onClick = { menu = false; onOpen() })
                     if (!playlist.isLocal) DropdownMenuItem(text = { Text("Refresh now") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onRefresh() })
                     DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onEdit() }, modifier = Modifier.testTag("playlist_edit"))
                     DropdownMenuItem(text = { Text("Export as .m3u") }, leadingIcon = { Icon(Icons.Default.FileDownload, null) }, onClick = { menu = false; onExport() })
@@ -204,7 +204,7 @@ internal fun PlaylistsHeader(
     var menu by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
+            Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
@@ -220,7 +220,7 @@ internal fun PlaylistsHeader(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionPill("Add URL", Icons.Default.Add, Modifier.weight(1f).testTag("playlist_add_url"), onAddUrl)
-            ActionPill("New", Icons.Default.PlaylistAdd, Modifier.weight(1f).testTag("playlist_new"), onNew)
+            ActionPill("New", Icons.AutoMirrored.Filled.PlaylistAdd, Modifier.weight(1f).testTag("playlist_new"), onNew)
             ActionPill(if (syncing) "Syncing" else "Sync latest", Icons.Default.CloudSync, Modifier.weight(1.2f).testTag("playlist_sync"), onSync, busy = syncing)
         }
     }
@@ -451,7 +451,7 @@ internal fun OpenedListCard(name: String?, count: Int, onOpen: () -> Unit, onClo
     Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("opened_list")) {
         Row(Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
+                Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {

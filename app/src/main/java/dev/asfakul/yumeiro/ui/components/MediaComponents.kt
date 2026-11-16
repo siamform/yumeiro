@@ -51,8 +51,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Videocam
@@ -1120,7 +1120,7 @@ fun EmptyMediaView(
     val shown = icon ?: when {
         "favorite" in t || "favourite" in t -> Icons.Default.FavoriteBorder
         "folder" in t -> Icons.Default.Folder
-        "playlist" in t -> Icons.Default.QueueMusic
+        "playlist" in t -> Icons.AutoMirrored.Filled.QueueMusic
         "history" in t || "progress" in t -> Icons.Default.History
         "video" in t -> Icons.Default.Movie
         "album" in t -> Icons.Default.Album
@@ -1303,7 +1303,7 @@ fun SongActionBottomSheet(
 
             SheetActionRow(
                 title = "Add to queue",
-                icon = Icons.Default.PlaylistAdd,
+                icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                 onClick = {
                     onAddToQueue()
                     onDismiss()
@@ -1313,7 +1313,7 @@ fun SongActionBottomSheet(
 
             SheetActionRow(
                 title = "Add to playlist…",
-                icon = Icons.Default.QueueMusic,
+                icon = Icons.AutoMirrored.Filled.QueueMusic,
                 onClick = {
                     onDismiss()
                     onAddToPlaylist()
@@ -1481,7 +1481,7 @@ fun AddToPlaylistDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.QueueMusic,
+                                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                                     contentDescription = null,
                                     tint = TextSecondary,
                                     modifier = Modifier.size(20.dp)
@@ -1642,7 +1642,7 @@ fun BatchActionBar(
                 // Add Queue
                 IconButton(onClick = onAddToQueue, modifier = Modifier.size(36.dp)) {
                     Icon(
-                        imageVector = Icons.Default.PlaylistAdd,
+                        imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                         contentDescription = "Queue Selected",
                         tint = TextPrimary,
                         modifier = Modifier.size(20.dp)
@@ -1651,7 +1651,7 @@ fun BatchActionBar(
                 // Add to Playlist
                 IconButton(onClick = onAddToPlaylist, modifier = Modifier.size(36.dp)) {
                     Icon(
-                        imageVector = Icons.Default.QueueMusic,
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                         contentDescription = "Add to playlist",
                         tint = TextPrimary,
                         modifier = Modifier.size(20.dp)

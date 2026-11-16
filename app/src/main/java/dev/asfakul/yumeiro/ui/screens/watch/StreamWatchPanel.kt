@@ -28,7 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -245,7 +245,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                             ?.setPrimaryClip(android.content.ClipData.newPlainText("Stream link", currentUrl))
                         dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Link copied")
                     }
-                    WatchAction(Icons.Default.OpenInNew, "Other player", "stream_watch_external") {
+                    WatchAction(Icons.AutoMirrored.Filled.OpenInNew, "Other player", "stream_watch_external") {
                         val i = Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(currentUrl), "video/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         runCatching { context.startActivity(Intent.createChooser(i, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     }

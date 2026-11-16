@@ -11,7 +11,7 @@ import dev.asfakul.yumeiro.ui.components.AppMessages
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import dev.asfakul.yumeiro.stream.PlaylistStore
@@ -54,7 +54,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stream
 import androidx.compose.material.icons.filled.Storefront
@@ -513,7 +513,7 @@ fun StreamScreen(
                     if (url.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = { loadPlaylist(url.trim(), Uri.parse(url.trim()).host) }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Default.PlaylistPlay, null, tint = SpotifyGreen); Spacer(Modifier.width(6.dp))
+                                Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen); Spacer(Modifier.width(6.dp))
                                 Text("Open as channel list", color = SpotifyGreen, maxLines = 1)
                             }
                             TextButton(
@@ -524,7 +524,7 @@ fun StreamScreen(
                                 },
                                 modifier = Modifier.testTag("stream_save"),
                             ) {
-                                Icon(Icons.Default.PlaylistAdd, null, tint = SpotifyGreen); Spacer(Modifier.width(6.dp))
+                                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = SpotifyGreen); Spacer(Modifier.width(6.dp))
                                 Text("Save", color = SpotifyGreen)
                             }
                         }
@@ -543,7 +543,7 @@ fun StreamScreen(
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
         LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
-        LiveTool("live_tool_new", "New list", "Your own", Icons.Default.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
+        LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
         LiveTool("live_tool_sync", "Sync", if (syncing) "Updating…" else "Update all", Icons.Default.Sync, liveHue("sync")) { sync() },
         LiveTool("live_tool_recent", "Recent", if (history.isEmpty()) "Headers · DRM" else "${history.size} streams", Icons.Default.History, liveHue("recent")) { pane = "link" },
     )
@@ -747,7 +747,7 @@ internal fun StreamRow(
                 Text(subtitle, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (onEdit != null) TextButton(onClick = onEdit) { Text("Edit", color = TextSecondary, fontSize = 12.sp) }
-            if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.Default.PlaylistAdd, "Save to playlist", tint = TextTertiary) }
+            if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Save to playlist", tint = TextTertiary) }
             if (onEditIcon != null) IconButton(onClick = onEditIcon) { Icon(Icons.Default.Edit, "Edit stream", tint = TextTertiary) }
             if (onDelete != null) IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, "Remove", tint = TextTertiary) }
         }

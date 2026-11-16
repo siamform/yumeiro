@@ -49,7 +49,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.filled.ThumbUp
@@ -511,7 +511,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
                     cm?.setPrimaryClip(android.content.ClipData.newPlainText("YouTube link", item.url))
                     dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Link copied")
                 }
-                WatchAction(Icons.Default.OpenInNew, "Open in browser", "yt_watch_open") {
+                WatchAction(Icons.AutoMirrored.Filled.OpenInNew, "Open in browser", "yt_watch_open") {
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
             }

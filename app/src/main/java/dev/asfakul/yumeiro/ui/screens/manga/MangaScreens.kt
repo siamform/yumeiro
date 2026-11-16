@@ -53,7 +53,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.MenuBook as MenuBookMirrored
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
@@ -160,7 +160,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("manga_manage_sources")) { Icon(Icons.Default.Extension, "Manage sources", tint = TextPrimary) }
         }
         if (providers.isEmpty()) {
-            StateMessage(Icons.Default.MenuBook, "No manga sources yet",
+            StateMessage(Icons.AutoMirrored.Filled.MenuBook, "No manga sources yet",
                 "Add a Mihon / Tachiyomi repository or a JavaScript (Mangayomi) repository, then install a source.",
                 primary = "Open sources" to onOpenSources, testTag = "manga_empty")
             return@Column
@@ -348,7 +348,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
             StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { more() }, testTag = "manga_error")
         } }
         if (!loading && error == null && items.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-            StateMessage(Icons.Default.MenuBook, "Nothing in this list", "This source returned no titles here. Try another list, another source, or search.", testTag = "manga_nothing")
+            StateMessage(Icons.AutoMirrored.Filled.MenuBook, "Nothing in this list", "This source returned no titles here. Try another list, another source, or search.", testTag = "manga_nothing")
         }
     }
 }

@@ -37,7 +37,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SurroundSound
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -328,7 +328,7 @@ fun EqualizerScreen(
                     subtitle = if (state.isBassBoostSupported) "More low-end punch" else "Not available on this phone",
                     value = state.bassBoostStrength,
                     maxValue = 1000,
-                    icon = Icons.Default.VolumeUp,
+                    icon = Icons.AutoMirrored.Filled.VolumeUp,
                     isEnabled = state.isEnabled && state.isBassBoostSupported,
                     onValueChange = onBassBoostChange,
                     testTag = "bass_boost_slider"
