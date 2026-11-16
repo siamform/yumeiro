@@ -1,20 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 ~06:45 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 ~09:25 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
   No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK in this sandbox (fifth agent); every compile and unit test goes to CI.
-- **Level 0 done:** HEAD was 7439ef4 (10 commits after 27f1c2b, all read). Runs 43784533563…43812114134
-  recorded in `docs/evidence/round3/device-runs.md`. PL-16 images were already in `docs/evidence/pl16/`
-  (355d5b7). Five claims spot-checked (ledger, Changes table). Two failures were test errors, fixed in
-  3f37da8: p8 window baseline, WindowSpy `getUiAutomation` race.
-- **Running:** device check 43823291873 (ExtensionPopups + Extensions, both phones, 3f37da8);
-  CI 43823330820 (build, unit, lint, 3f37da8).
-- **Next three actions:** (1) read both runs; ADR-014 row → done (emulator) if p1–p8 pass, then the
-  ST-20 guard for slow extension callbacks; (2) EXT-T1 ≥ 20 runs on api33-lowram with WindowSpy;
-  (3) ST-18 Perfetto trace of the first Home draw + Home first-draw reduction.
+- **Level 0 done** (see ledger Changes table). **Current group:** Level 1, Group 12.
+- **Done this step:** ADR-014 phones 8/8 + 7/7 (43825449454). ST-20 reopened: guard moved to
+  `MTApplication.getSharedPreferences` (41820ee). X13-1 exposure test corrected (d14754d; it had never
+  passed on CI). ST-18 Perfetto harness: `HomeTraceDeviceTest` + `scripts/home-trace.pbtxt`, `gpu` input.
+- **Running:** CI 43828505828 (3caf272: unit phone + TV, lint); device check 43828509434 (ExtensionPopups,
+  Extensions, HomeTrace; api36 + api33-lowram).
+- **Next three actions:** (1) read both runs: TV unit green, ExtensionPrefs "belongs to extension code"
+  line and no DonationManager commit hit, HOME_TRACE start/gfx lines + home-N.pftrace analysed with
+  trace_processor; (2) ST-18 Home first-draw reduction from the trace, before/after numbers, and the
+  `gpu=swangle_indirect` comparison run; ADR-014 TV rerun; (3) EXT-T1 ≥ 20 runs on api33-lowram.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
