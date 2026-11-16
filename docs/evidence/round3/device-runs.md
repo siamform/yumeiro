@@ -533,3 +533,10 @@ CI 43876676611 cancelled: started on eb9b4b6, head moved to e7efd6e (ST-1 fix) b
 - Phase b (new process after the kill): `SW_RESULT PASS verified=28` on both phones — the 28 flipped switches
   kept their new value across the process death and were put back.
 - Fix: `flip()` calls `performScrollTo()` on the switch first (works for both parents). Rerun owed.
+
+## CI 43877618176: r15-stability e7efd6e (unit, CI) — success
+
+1074 tests, 0 fail, 11 skipped. `SettingsResetTest` 4/4 (SE-1), `DownloadListSaveRaceTest` 1/1 (DL-6),
+`DownloadThroughputTest` 3/3 with the 250 ms tail floor: burst segmented4 per10pct last 67 ms of 370 ms,
+segmented2-lowend last 110 ms of 461 ms; steady profiles flat (tailRatio 1.00). servedOverSize burst
+segmented4 1.092, segmented2 1.037, single-no-ranges 1.132 (DL-11 data waste still open).
