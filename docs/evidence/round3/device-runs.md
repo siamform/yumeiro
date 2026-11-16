@@ -371,3 +371,6 @@ These are real emulators running the real debug APK; the tests are not simulated
   `gh run cancel` (also `--force`) answered "Cannot cancel a workflow run that is completed", so it is a
   stale record. Replaced by CI 43857949982 on the current head (contains 40ea96e plus test-only and docs
   commits). Not a duplicate: the stuck run will never execute.
+- Correction (11:35 UTC): the "stuck" run 43854742733 got its jobs at ~11:30 and started; through the
+  ci-<ref> concurrency group it cancelled CI 43857949982 (Build cancelled after 3 min, gitleaks passed).
+  43854742733 (40ea96e) is now the CI run of record; ProgressGateTest (24ee21b) goes in the next CI.
