@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 16:00 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 16:50 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -14,17 +14,17 @@
   BackgroundSettingsEffectDeviceTest (3ff6bd3) reviewed: every symbol it calls exists; compile owed.
 - **New owner bug:** BUG-5 Yumeiro TV UI (TV-1…TV-5, `docs/proposals/FEATURE-BUG-5-tv-ui.md`), open, not reproduced
   yet; it is worked in G12 X9 after the G9/G10 batch, starting with a TV emulator reproduction.
-- **Current group:** G10 Errors + G9 verification. Step: device batch running; G9 effect tests written (079dddd):
-  `MoreSettingsEffectDeviceTest` (backup_auto, keep_default, adult_private) and
-  `PlayerExtrasSettingsEffectDeviceTest` (cc_default, bg_play, auto_pip). Unverified until CI compiles them and a
-  device run passes. Still without an effect test: yt_to_phone, skip_intro, auto_skip, lyrics_online, push_alerts.
-- **Spot-check (2026-11-16):** PL-13, PL-18, ST-11, PL-9 confirmed in code + run logs; Y6/H1 downgraded to unverified
-  (no device test). Recorded in the ledger change log.
-- **Running:** device 43891331959 (c306e7e, both phones: NetworkState, PermissionFlow, Dialogs, LowStorage, Messages,
-  BackdropImport, BackgroundSettingsEffect); upgrade 43891389012 (v1.8.0 → c306e7e, fixed harness); CI 43889319143.
-- **Next three actions:** (1) read 43891331959 per class and phone → ER-11, SE-4, network rows, dialogs, low storage,
-  messages, BGFX a–e; failures become findings; (2) read 43891389012 → X10-5; (3) CI on 079dddd, then a device run
-  of the two new G9 classes on both phones; then the five remaining switches (mock servers for lyrics/AniSkip).
+- **Current group:** G10 Errors + G9 verification. Step: CI 43894661940 (523af6f) compiling the fixes and new tests.
+- **Batch 43891331959 read** (docs/evidence/round3/device-runs.md): Dialogs, BackdropImport (SE-4 proven),
+  BackgroundSettingsEffect a–e PASS both. App defects found and fixed: ER-17 offline signal stuck online (api36,
+  8038761 + ConnectivityLostTest), ER-18 long message cut on api33 (f6881aa). Test errors fixed: PermissionFlow
+  (37711ec), LowStorage fill (523af6f).
+- **New tests, unverified:** MoreSettingsEffect, PlayerExtrasSettingsEffect, OnlineSwitchesEffect (G9, 9 switches),
+  HeroCarouselLifecycle (Y6/H1). yt_to_phone and push_alerts still without a test.
+- **Running:** CI 43894661940; upgrade 43891389012 (v1.8.0 → c306e7e).
+- **Next three actions:** (1) CI 43894661940 green → dispatch device rerun on both phones: NetworkState,
+  PermissionFlow, LowStorage, Messages + the four new classes; (2) read upgrade 43891389012 → X10-5;
+  (3) while the device run goes: yt_to_phone test, then G12 open work / BUG-5 TV reproduction plan.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
