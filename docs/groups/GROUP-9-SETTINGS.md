@@ -50,13 +50,15 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 
 | Item | Evidence | Label | Status |
 |---|---|---|---|
-| SE-1 | `SettingsResetTest` | unit | CI run owed (43877618176 running) |
+| SE-1 | `SettingsResetTest` | CI | 4/4 in CI 43877618176 and 43881282527 |
 | SE-2, S26 image types | `BackdropImportDeviceTest` | emulator | run 43880703410 (both phones): JPEG, PNG, WebP, HEIC, AVIF, GIF, BMP, huge (720×540 saved), tiny/strip refused (200 px), text-as-jpg "isn't supported", 64 MB "over 60 MB" all as expected; corrupt.jpg (a.jpg cut at 9000 bytes) was ACCEPTED → SE-4 fixed; rerun owed |
 | S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | PASS run 43880703410: `SW_RESULT PASS verified=31` on api33-lowram and api36 (all 31 switches flipped, app killed, value kept). Earlier 43875418000 / 43877623222 were test errors, fixed |
 | SE-3, S23 search | `SettingsSearchCoverageTest` | CI | 4/4 in CI 43881282527 (1086 tests, 0 failures) |
 | Player info overlay, Resume playback, Anime4K (real effect on the player) | `PlayerSettingsEffectDeviceTest` a/b/c | emulator | PASS run 43880703410: PFX_RESULT PASS a, b, c on api33-lowram and api36 |
 | Notification switches (6 kinds, master, chime): real effect on Android's active notifications | `NotifySettingsEffectDeviceTest` a/b/c | emulator | PASS run 43880703410: NFX_RESULT PASS a, b, c on both phones |
-| S1–S22 pages | — | — | open |
+| S1–S22 switch effects (static map) | `scripts/settings-effects.py` → docs/evidence/round3/settings-effects.md: 41 switch rows; the generator follows `Obj.setX` setters (34); the 7 inline ones were read by hand: notification master/kinds/chime (NotifySettingsEffectDeviceTest), Instant alerts (`FcmPush.start` reads Key.FCM), In-app reminders (`Reminders.due`), Background checks + Wi-Fi only (`BackgroundWork.apply` cancels/schedules, `constraints` UNMETERED), Save loaded pages (`DataCache.read/write` gate), Reliable alerts (UnifiedPush card) | review | done |
+| Effects with no test before: background checks, Wi-Fi only, reminders, page cache, instant alerts | `BackgroundSettingsEffectDeviceTest` a–e | emulator | run owed |
+| S1–S22 remaining effects (choice rows, sliders, other switches without a test in the map) | — | — | open |
 
 ## Preference inventory (generated)
 
