@@ -43,6 +43,11 @@ jobs:
       - name: Assemble debug APKs (phone and TV)
         run: ./gradlew assembleMobileDebug assembleTvDebug
 
+      # Device tests are only built by the slow emulator workflow; compile them here so an
+      # androidTest compile error (device run 43884803041) fails in minutes, not after a queue.
+      - name: Compile device tests (phone app)
+        run: ./gradlew compileMobileDebugAndroidTestKotlin
+
       - name: Unit tests (phone app, all shared code)
         run: ./gradlew testMobileDebugUnitTest
 
