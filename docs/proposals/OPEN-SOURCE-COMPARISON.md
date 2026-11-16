@@ -620,3 +620,7 @@ What this means for Yumeiro (checked in the code on `r15-stability`):
 | Host-side NewPipe downloader for plugins | Yumeiro already sets up NewPipe at app start (`YouTubePlayback.install` → `NewPipe.init(NewPipeDownloader(...))`), before extensions load | Nothing to add. Confirm in G2 that a CloudStream extension that calls the YouTube extractor works | — | — |
 
 No change to the approval list above, except one new P1 entry: **baseline profile** (S-M, low risk), to place after item 4.
+
+## Step A.5 notes (Part 7 bugs)
+
+- BUG-1 watch progress: [FEATURE-BUG-1-watch-progress.md](FEATURE-BUG-1-watch-progress.md) (CloudStream 5d66bbe, NewPipe 1e61c9a).
