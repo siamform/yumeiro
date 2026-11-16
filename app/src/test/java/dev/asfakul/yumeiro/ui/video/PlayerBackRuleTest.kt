@@ -6,6 +6,7 @@
 package dev.asfakul.yumeiro.ui.screens.video
 
 import dev.asfakul.yumeiro.ui.screens.video.PlayerBackRule.Step
+import dev.asfakul.yumeiro.player.PlayerSettings.BackAction as B
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -27,7 +28,6 @@ class PlayerBackRuleTest {
     @Test fun remoteOnEndScreenDoesNotJustHideControls() = assertEquals(Step.EXIT_FULLSCREEN, step(key = true, controls = true, fs = true, ended = true))
 
     // BUG-7 7c: Back on an error card closed nothing (minimize, then auto-expand on error).
-    private val B = dev.asfakul.yumeiro.player.PlayerSettings.BackAction
     @Test fun errorAlwaysCloses() {
         assertEquals(PlayerBackRule.Leave.CLOSE, PlayerBackRule.leave(true, B.MINIMIZE, pipReady = false, canMinimize = true))
         assertEquals(PlayerBackRule.Leave.CLOSE, PlayerBackRule.leave(true, B.PIP, pipReady = true, canMinimize = true))
