@@ -1,18 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 13:2x UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 13:41 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
-- **Current group:** Level 2 — G8 R17 (DL-6..DL-11), G5 R17 (LB-8) waiting for the head CI; G9 inventory next.
-- **Done since last update:** fail-before CI 43867540147: exactly the 10 expected failures. TV 43866791994
-  ADR-014 8/8. Device 43867796913 DownloadKillDeviceTest: resume + delete pass on both phones; api36 read
-  126.2 MB after the kill for 92.8 MB left → DL-11 (data read and thrown away), open.
-- **Running:** CI 43871066269 (r15-stability head: LB-8, DL-6..DL-9 unit, served-bytes report);
-  device 43869944264 (X10-5 upgrade from v1.8.0); device 43871061781 (YtQualityOffline on fail-before, expect FAIL).
-- **Next three actions:** (1) read CI 43871066269, update LB-8/DL-6..9 rows and read `servedOverSize`
-  for DL-11; (2) read the two device runs, delete fail-before branch; (3) DL-11 root cause, then G9 settings inventory.
+- **Current group:** Level 2 — G9 Settings (`docs/groups/GROUP-9-SETTINGS.md`). G8/G5 rows wait for the head CI.
+- **Done since last update:** CI 43871066269 read (LB-8, DL-7, DL-8, DL-9 unit pass; DL-6 fail-before claim
+  withdrawn, it was a test error; DL-11 measured). ST-1 fixed (Reset settings erased playlists/favourites/resume
+  points; restore by section). ST-2 fixed (backdrop min size). SettingsWalk test errors fixed. BackdropImportDeviceTest added.
+  CI 43876676611 cancelled (stale: head moved on).
+- **Running:** CI 43877618176 (head e7efd6e: SettingsResetTest, DL-6 rerun, tail floor); device 43877623222
+  (SettingsWalk rerun); device 43869944264 (X10-5 upgrade from v1.8.0).
+- **Next three actions:** (1) read CI 43877618176 → ST-1, DL-6 rows; (2) read SettingsWalk 43877623222 and the
+  upgrade run → S27, X10-5; (3) dispatch BackdropImportDeviceTest when a device slot is free, then G9 S23/S1–S22 effects.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

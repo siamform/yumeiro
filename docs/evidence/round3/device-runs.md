@@ -509,3 +509,11 @@ Passed: LibraryCrudTest 7/7 (LB-8), DownloadDeleteFilesTest (DL-7), HLS quality 
 (DL-9), ResumePointsTest, Bug4QualityListTest, LivePagedTest.
 Data used (`servedOverSize`): segmented4 steady 1.026, burst 1.126; segmented2 burst 1.122; single-no-ranges
 burst 1.132 (size probe answered with a full 200 body); YouTube and HLS 1.000 → DL-11.
+
+## Device 43875418000: SettingsWalkDeviceTest first run (emulator, both phones) — test error
+
+Phase a failed on both phones on the first page: every switch on Look & feel "did not move" (the tap
+landed below the window; the page is a scrolled column) and close() waited for
+`settings_cat_appearance`, which Settings home's remembered scroll keeps off the list. Phase b skipped
+("phase a left no state"). Not a product result. Fixed in e7efd6e; rerun 43877623222.
+CI 43876676611 cancelled: started on eb9b4b6, head moved to e7efd6e (ST-1 fix) before it finished.
