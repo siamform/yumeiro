@@ -35,6 +35,8 @@ class DownloadThroughputTest {
         private lateinit var server: java.net.ServerSocket
         private val pool = Executors.newCachedThreadPool()
         private val requests = AtomicInteger()
+        /** G8 (R17): body bytes the server wrote (all requests); over SIZE = data read and thrown away. */
+        private val served = java.util.concurrent.atomic.AtomicLong()
         private val data = ByteArray(SIZE) { (it % 251).toByte() }
         @Volatile var profile = Profile("steady", burst = 0, bytesPerSec = 3L * 1024 * 1024)
         @Volatile var ranges = true
@@ -106,7 +108,7 @@ class DownloadThroughputTest {
                 var sent = 0L
                 while (sent < count) {
                     val n = minOf(16 * 1024L, count - sent).toInt()
-                    os.write(data, off + (start + sent).toInt(), n); sent += n
+                    os.write(data, off + (start + sent).toInt(), n); sent += n; served.addAndGet(n.toLong())
                     if (p.cutAfter > 0 && sent >= p.cutAfter && sent < count) { os.flush(); runCatching { sock?.close() }; return } // G8: drop mid-body
                     if (sent > p.burst && p.bytesPerSec > 0) {
                         val due = (sent - p.burst) * 1_000_000_000L / p.bytesPerSec
@@ -143,11 +145,11 @@ class DownloadThroughputTest {
     private val ruled = setOf("segmented4", "segmented2-lowend", "youtube-8mb-chunks", "hls-sequential")
     private val broken = ArrayList<String>()
 
-    private fun report(engine: String, d: Deciles, requestsUsed: Int) {
+    private fun report(engine: String, d: Deciles, requestsUsed: Int, servedBytes: Long) {
         val s = d.steps()
         val total = d.at.last()
         println("THROUGHPUT engine=$engine profile=${profile.name} ranges=$ranges totalMs=$total MBps=${"%.2f".format(SIZE / 1048576.0 / (total / 1000.0))} " +
-            "requests=$requestsUsed per10pctMs=$s tailRatio=${"%.2f".format(d.tailRatio())} lastOverMean=${"%.2f".format(d.lastOverMean())}")
+            "requests=$requestsUsed served=$servedBytes servedOverSize=${"%.3f".format(servedBytes / SIZE.toDouble())} per10pctMs=$s tailRatio=${"%.2f".format(d.tailRatio())} lastOverMean=${"%.2f".format(d.lastOverMean())}")
         if (engine in ruled && d.lastOverMean() > TAIL_LIMIT) broken += "$engine/${profile.name}: last 10 % took ${"%.2f".format(d.lastOverMean())}× the average 10 % $s"
     }
 
@@ -161,8 +163,10 @@ class DownloadThroughputTest {
         val f = File.createTempFile("bug3-$engine", ".bin").also { it.delete() }
         val d = Deciles(SIZE.toLong())
         val r0 = requests.get()
+        val s0 = served.get()
         body(f, d)
-        report(engine, d, requests.get() - r0)
+        Thread.sleep(300) // writes already in the socket when the client closed
+        report(engine, d, requests.get() - r0, served.get() - s0)
         check(f)
         File(f.parentFile, f.name + ".chunks").delete(); File(f.parentFile, f.name + ".idx").delete(); f.delete()
     }
