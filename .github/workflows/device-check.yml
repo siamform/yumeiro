@@ -35,6 +35,11 @@ on:
         type: choice
         options: [none, startup, profile]
         default: none
+      phone:
+        description: "Which phone emulators (EXT-T1: repeat campaigns on api33-lowram only, no wasted api36 jobs)"
+        type: choice
+        options: [both, api33-lowram, api36]
+        default: both
       gpu:
         description: "ST-18: emulator graphics (GitHub runners have no GPU; these are the software paths to compare)"
         type: choice
@@ -47,7 +52,7 @@ on:
         default: false
 
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}
+  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}
   cancel-in-progress: true
 
 permissions:
@@ -69,7 +74,7 @@ jobs:
       matrix:
         shard: ${{ fromJSON(inputs.shards || '[1]') }}
         # G12 X9: tv=true swaps the two phones for one Android TV box at the TV app's minSdk.
-        device: ${{ fromJSON(inputs.tv && '[{"name":"tv-api24","api":24,"target":"android-tv","arch":"x86","profile":"tv_1080p","ram":"2048M","heap":"256M","flavor":"Tv"}]' || inputs.minsdk && '[{"name":"api28","api":28,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"256M","flavor":"Mobile"}]' || '[{"name":"api33-lowram","api":33,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"192M","flavor":"Mobile"},{"name":"api36","api":36,"target":"google_apis","arch":"x86_64","profile":"pixel_6","ram":"4096M","heap":"512M","flavor":"Mobile"}]') }}
+        device: ${{ fromJSON(inputs.tv && '[{"name":"tv-api24","api":24,"target":"android-tv","arch":"x86","profile":"tv_1080p","ram":"2048M","heap":"256M","flavor":"Tv"}]' || inputs.minsdk && '[{"name":"api28","api":28,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"256M","flavor":"Mobile"}]' || inputs.phone == 'api33-lowram' && '[{"name":"api33-lowram","api":33,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"192M","flavor":"Mobile"}]' || inputs.phone == 'api36' && '[{"name":"api36","api":36,"target":"google_apis","arch":"x86_64","profile":"pixel_6","ram":"4096M","heap":"512M","flavor":"Mobile"}]' || '[{"name":"api33-lowram","api":33,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"192M","flavor":"Mobile"},{"name":"api36","api":36,"target":"google_apis","arch":"x86_64","profile":"pixel_6","ram":"4096M","heap":"512M","flavor":"Mobile"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
