@@ -1,19 +1,20 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 13:54 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 14:03 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
-- **Current group:** Level 2 — G9 Settings (verification owed) and G10 Errors (`docs/groups/GROUP-10-ERRORS.md`), step: ER-11 permission flow written, needs compile + emulator.
-- **Done since last update:** SE-3 settings search (4c33722); X10-5 upgrade harness fix (d978853);
-  PlayerSettingsEffect (9dc1340), NotifySettingsEffect (a487498), AutoBackupFingerprint tests; ER-10 error
-  taxonomy (5ca4a03); ER-11 permission denial flow + PermissionFlowDeviceTest (ba6fcca). None of these compiled in CI yet.
-- **Running:** CI 43877618176 (head e7efd6e: SettingsResetTest, DL-6 rerun, tail floor); device 43877623222
-  (SettingsWalk rerun); device 43878778019 (X10-5 upgrade from v1.8.0, fixed harness, head d978853).
-- **Next three actions:** (1) read CI 43877618176 → SE-1/DL-6 rows, then dispatch CI on the head (compiles SE-3,
-  effect tests, ER-10, ER-11); (2) read 43877623222 and 43878778019 → S27, X10-5; (3) device runs: BackdropImport,
-  PlayerSettingsEffect, NotifySettingsEffect, PermissionFlow (api33 + api36).
+- **Current group:** Level 2 — G10 Errors (`docs/groups/GROUP-10-ERRORS.md`), with G9 verification runs out.
+  Step: ER-10..14 written, NetworkStateDeviceTest written; next is dialogs/Back/accessibility and messages on device.
+- **Done since last update:** ER-11 permission flow (ba6fcca), ER-12 Retry (225c4e1), S27 walk reach fix (d4b657f),
+  ER-13 decoder tip (5c2f884), ER-14 full disk (e48fa1d), NetworkStateDeviceTest (1a5c953), CI 43877618176 read
+  (1074/0 fail: SE-1, DL-6 pass), DL-11a probe waste (4749aca), upgrade 43878778019 not accepted + harness (f214c7c).
+- **Running:** CI 43881282527 (head 1a5c953: compiles everything up to NetworkStateDeviceTest; DL-11a test not in it);
+  device 43880703410 (head d4b657f: PermissionFlow, SettingsWalk, BackdropImport, PlayerSettingsEffect,
+  NotifySettingsEffect on api33-lowram + api36); upgrade 43881788009 (v1.8.0 → f214c7c).
+- **Next three actions:** (1) read CI 43881282527 → SE-3, ER-10/14, effect-test compile; (2) read 43880703410 →
+  S27, ER-11, G9 effect rows; (3) dispatch NetworkStateDeviceTest when a device slot frees, then CI for DL-11a.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
