@@ -698,3 +698,19 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - UpscaleFreezeDeviceTest: Anime4K on and the "Upscaled by Yumeiro" level both kept playing (pos +4.0 to +4.6 s),
   maxLag ≤ 846 ms. Shots showed 00:00 and an open Quality list because SystemClock.sleep stops the Compose test
   clock (no recomposition), not an app freeze. Tests rewritten with UiLiveness (pump, gfxinfo frames, real taps).
+
+## 43935805199 (phones, both; emulator)
+
+- StreamWatchDownloadDeviceTest a (7a) PASS on both: watch-page Download button, queued, done, saved.
+  7b PASS on both: publicUri in Movies/Yumeiro, inStore=true, appCopy=false, keep=true.
+- StreamFormatMismatchDeviceTest FAIL on both: all 5 cases end with "Unsupported stream format"
+  (ERROR_CODE_PARSING_MANIFEST_MALFORMED), maxLag < 1.8 s, but 3 Back presses leave the player on screen
+  (left=false, floating=false). Logcat: back callback cancelled and re-registered on each press. Cause: Back
+  minimized, then LaunchedEffect(playerError, minimized) expanded it again. Fixed with PlayerBackRule.leave.
+- UpscaleFreezeDeviceTest: upscaled_level and plain_control PASS on both. anime4k_on failed only on the More-tap
+  check (api36 tapped=false, controls had auto-hidden; api33 tapped=true, no menu yet). Test timing, fixed.
+
+## 43935810414 (tv-api34; emulator)
+
+- TvBug5ReproDeviceTest a, b, c, d PASS. d: focusAfterSubmit=topbar_search_input, answered=true.
+
