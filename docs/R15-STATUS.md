@@ -7,14 +7,15 @@
   table, EXT-T1 reproduction ≥ 20×, ADR-014 build), then ST-18 Perfetto + Home first-draw reduction,
   then the Group 12 list, G5–10, G11, re-audit G1–4, final sweep. Feature phase gated (research only).
   Heavy work on CI, ≤ 2 device workflows, no PR/merge/release.
-- **Done this step:** X13-1 conditions (ADR-015, `JacksonTvExposureTest`); PL-16 images in
-  `docs/evidence/pl16/` (355d5b7); ADR-013 key table, class-3 keys removed (Trakt/Kitsu secrets,
-  unused TMDB key), release/preview updater-token guard, `ApkSecretsTest`. Owner items: X13-6
-  (phone Jackson → 2.18.11, proposal) and OMT-13 (restrict the Firebase key).
-- **Running:** none (CI on push).
-- **Next three actions:** (1) EXT-T1 reproduction ≥ 20× on api33-lowram with window/tag logging;
-  (2) ADR-014 design + build (extension pop-ups: Show / Quiet / Block promotional, test extension,
-  device tests); (3) ST-18 Perfetto trace of the first Home draw and Home first-draw reduction.
+- **Done this step:** X13-1 (ADR-015), PL-16 images, ADR-013 key table (earlier commits).
+  JacksonTvExposureTest made JVM-independent (CI 43803887311 failed it: no overflow on the runner).
+  ADR-014 built (`ExtensionPopups`, `ExtensionWindowWatch`, setting under Extensions, ExtensionGuard
+  BadToken fix); unit tests pass (unit); device test `ExtensionPopupsDeviceTest` written, **not yet
+  run on a device**. WindowSpy (EXT-T1 diagnostics) pushed in 2436bb3.
+- **Running:** device run of `ExtensionPopupsDeviceTest` (phones), then TV, then CI (lint).
+- **Next three actions:** (1) ADR-014 device evidence on both phones and the TV emulator, fix what
+  fails, ledger row; (2) EXT-T1 reproduction ≥ 20× on api33-lowram with WindowSpy; (3) ST-18
+  Perfetto trace of the first Home draw and Home first-draw reduction.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

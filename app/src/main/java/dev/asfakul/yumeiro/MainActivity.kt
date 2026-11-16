@@ -30,8 +30,28 @@ import dev.asfakul.yumeiro.update.UpdateNotifier
  * own dialogs and settings screens from the current activity.
  */
 class MainActivity : com.lagradost.cloudstream3.MainActivity() {
+    /**
+     * ADR-014: when extension code asks for the window manager (it is about to build a dialog or a
+     * pop-up), the window it opens next is checked against the extension pop-up policy. The
+     * manager itself is never wrapped (the framework casts it). The stack is only read while an
+     * extension is loaded.
+     */
+    override fun getSystemService(name: String): Any? {
+        val service = super.getSystemService(name)
+        if (name == WINDOW_SERVICE && service is android.view.WindowManager) {
+            dev.asfakul.yumeiro.online.ExtensionWindowWatch.onWindowServiceRequested(service)
+        }
+        return service
+    }
+
+    override fun onDestroy() {
+        dev.asfakul.yumeiro.online.ExtensionPopups.clear()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        dev.asfakul.yumeiro.online.ExtensionPopups.init(this)
         enableEdgeToEdge()
         StreamRepository.init(this)
         // Messages from extensions use the app's own message bar.

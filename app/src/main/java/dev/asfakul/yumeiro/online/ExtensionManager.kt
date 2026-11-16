@@ -98,6 +98,25 @@ object ExtensionManager {
     /** Class loaders of the extensions loaded in this process (for restoring their fragments, G12 X8-3). */
     fun pluginClassLoaders(): List<ClassLoader> =
         synchronized(plugins) { plugins.values.mapNotNull { it.javaClass.classLoader } }.distinct()
+
+    /** True while at least one extension is loaded (ADR-014: only then can extension code open windows). */
+    fun anyPluginLoaded(): Boolean = synchronized(plugins) { plugins.isNotEmpty() }
+
+    /**
+     * ADR-014: (key, display name) of the loaded extension whose dex defines [className], or null.
+     * The class must come from the plugin's own loader, not a parent (the app), so app classes never match.
+     */
+    fun extensionForClass(className: String): Pair<String, String>? {
+        val loaded = synchronized(plugins) { plugins.toList() }
+        for ((key, plugin) in loaded) {
+            val loader = plugin.javaClass.classLoader ?: continue
+            val cls = runCatching { Class.forName(className, false, loader) }.getOrNull() ?: continue
+            if (cls.classLoader !== loader) continue
+            val name = _state.value.installed.firstOrNull { it.key == key }?.name ?: plugin.javaClass.simpleName
+            return key to name
+        }
+        return null
+    }
     private var removedDefaults = mutableSetOf<String>()
     @Volatile private var started = false
 

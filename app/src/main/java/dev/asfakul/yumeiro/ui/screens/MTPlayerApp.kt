@@ -1524,6 +1524,9 @@ fun MTPlayerApp(
                 dev.asfakul.yumeiro.online.OnboardingGate.release()
             }
         }
+        // ADR-014: promotional windows from extensions wait while a video plays (any size, PiP too).
+        val playerShowing = activePlayingVideo != null || inPip
+        LaunchedEffect(playerShowing) { dev.asfakul.yumeiro.online.ExtensionPopups.playerOnScreen = playerShowing }
         val popupBlocked = showSplash || setupOpen || tourStep != null || activePlayingVideo != null || inPip || updateDialogOpen || appPage != null ||
             (isNowPlayingExpanded && playbackState.currentTrack != null)
         dev.asfakul.yumeiro.ui.screens.extras.NotificationPromptHost(blocked = popupBlocked || !startupPermissionsDone)

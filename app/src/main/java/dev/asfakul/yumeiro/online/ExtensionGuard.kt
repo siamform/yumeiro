@@ -118,7 +118,9 @@ object ExtensionGuard {
         error.stackTrace.any { f ->
             val c = f.className
             c == "android.view.Choreographer" || c.startsWith("android.view.Choreographer$") ||
-                c == "android.view.ViewRootImpl" || c.startsWith("androidx.compose.ui.platform.AndroidUiFrameClock") ||
+                // ViewRootImpl.setView is adding a window, not drawing a frame: an extension dialog
+                // shown after its screen went away fails there with BadTokenException (ADR-014).
+                (c == "android.view.ViewRootImpl" && f.methodName != "setView") || c.startsWith("androidx.compose.ui.platform.AndroidUiFrameClock") ||
                 c.startsWith("androidx.compose.runtime.Recomposer") || c.startsWith("androidx.compose.runtime.ComposerImpl")
         }
 

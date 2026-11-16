@@ -1,0 +1,196 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro
+
+import android.app.AlertDialog
+import android.util.Log
+import android.view.View
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.asfakul.yumeiro.online.ExtensionPopups
+import dev.asfakul.yumeiro.online.ExtensionGuard
+import dev.asfakul.yumeiro.ui.components.AppMessages
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.yumeirotest.fakeext.FakeExtension
+
+/**
+ * ADR-014 on a device: windows opened by extension code (the [FakeExtension] test extension) go
+ * through the guarded window manager. Counts are of the process's real root windows
+ * (WindowManagerGlobal), focus is read from `dumpsys window`, Back is a real key event.
+ */
+@RunWith(AndroidJUnit4::class)
+class ExtensionPopupsDeviceTest {
+    @get:Rule val hang = HangDumpRule()
+    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
+    private val inst get() = InstrumentationRegistry.getInstrumentation()
+    private fun log(s: String) = Log.i("YuPopupTest", s)
+
+    /** Root windows of this process a user can see (concealed extension windows are invisible). */
+    @Suppress("UNCHECKED_CAST")
+    private fun allRoots(): List<View> =
+        if (android.os.Build.VERSION.SDK_INT >= 29) android.view.inspector.WindowInspector.getGlobalWindowViews()
+        else Class.forName("android.view.WindowManagerGlobal").let { cls ->
+            val g = cls.getMethod("getInstance").invoke(null)
+            ArrayList(cls.getDeclaredField("mViews").apply { isAccessible = true }.get(g) as List<View>)
+        }
+
+    private fun roots(): Int = ui {
+        allRoots().count { v ->
+            val lp = v.layoutParams as? android.view.WindowManager.LayoutParams
+            v.isAttachedToWindow && v.visibility == View.VISIBLE && (lp == null || lp.alpha > 0f)
+        }
+    }
+
+    private fun <T> ui(block: () -> T): T { var r: Result<T>? = null; inst.runOnMainSync { r = runCatching(block) }; inst.waitForIdleSync(); return r!!.getOrThrow() }
+    private fun settle() { inst.waitForIdleSync(); Thread.sleep(600); inst.waitForIdleSync() }
+    private fun focus(): String = FirstRun.focusedWindow()
+    private fun focusIsDialog(): Boolean = FirstRun.isDialogType(FirstRun.windowType(focus()))
+    private fun back() { FirstRun.shell("input keyevent 4"); settle() }
+    private fun resetPrefs() = ctx.getSharedPreferences("extension_popups", 0).edit().clear().commit()
+
+    @Before fun setUp() {
+        FirstRun.toTabs(rule)
+        ExtensionPopups.testExtensionPrefix = "org.yumeirotest."
+        ExtensionPopups.playerOnScreen = false
+        resetPrefs()
+        ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.QUIET)
+        ExtensionPopups.held.value.forEach { ExtensionPopups.discard(it.id) }
+        log("setUp roots=${roots()} focus=${focus()}")
+    }
+
+    @After fun tearDown() {
+        ExtensionPopups.held.value.forEach { ExtensionPopups.discard(it.id) }
+        ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.QUIET)
+        ExtensionPopups.playerOnScreen = false
+        ExtensionPopups.testExtensionPrefix = null
+        resetPrefs()
+    }
+
+    /** Quiet (default): a donation prompt opens no window, keeps Back for the app, shows one card; "Show" opens it framed and Back closes only it. */
+    @Test fun p1_quietHoldsDonationAndBackStaysWithTheApp() {
+        val before = roots()
+        val dialog = ui { FakeExtension.donation(rule.activity) }
+        settle()
+        log("p1 after donation roots=${roots()} focus=${focus()} card=${AppMessages.current.value?.text}")
+        assertEquals("a promotional window was added", before, roots())
+        assertFalse("focus moved to a dialog: ${focus()}", focusIsDialog())
+        assertEquals(1, ExtensionPopups.held.value.size)
+        assertTrue("no quiet card: ${AppMessages.current.value}", AppMessages.current.value?.text?.contains("has a message") == true)
+        FirstRun.shot("adr014_quiet_card")
+        // The extension still believes its dialog is open, and closing it must not crash.
+        assertTrue(dialog.isShowing)
+
+        val id = ExtensionPopups.held.value.single().id
+        ui { ExtensionPopups.reveal(id) }
+        settle()
+        log("p1 revealed roots=${roots()} focus=${focus()}")
+        assertEquals("revealed window not added", before + 1, roots())
+        assertTrue("revealed dialog not focused: ${focus()}", focusIsDialog())
+        FirstRun.shot("adr014_revealed_donation")
+        back()
+        log("p1 after Back roots=${roots()} focus=${focus()}")
+        assertFalse("Back did not close the revealed dialog", dialog.isShowing)
+        assertEquals(before, roots())
+        assertFalse("activity finished by Back", rule.activity.isFinishing)
+    }
+
+    /** At most one card per extension per week: the second prompt is dropped without a window or card. */
+    @Test fun p2_secondPromptInAWeekIsDropped() {
+        val before = roots()
+        val first = ui { FakeExtension.donation(rule.activity) }; settle()
+        ui { AppMessages.current.value?.let { AppMessages.dismiss(it.id) } }
+        val second = ui { FakeExtension.donation(rule.activity) }; settle()
+        log("p2 roots=${roots()} held=${ExtensionPopups.held.value.size} card=${AppMessages.current.value?.text}")
+        assertEquals(before, roots())
+        assertEquals("second prompt replaced or added a held message", 1, ExtensionPopups.held.value.size)
+        assertNull("second card shown", AppMessages.current.value)
+        ui { first.dismiss(); second.dismiss() }; settle() // removing windows that were never added: no crash
+        assertEquals(0, ExtensionPopups.held.value.size)
+    }
+
+    /** A login form is functional: shown at once (framed), focused, and Back closes it and nothing else. */
+    @Test fun p3_loginShownAndBackClosesOnlyIt() {
+        val before = roots()
+        val dialog: AlertDialog = ui { FakeExtension.login(rule.activity) }
+        settle()
+        log("p3 login roots=${roots()} focus=${focus()}")
+        assertEquals("login window not shown", before + 1, roots())
+        assertTrue("login not focused: ${focus()}", focusIsDialog())
+        FirstRun.shot("adr014_login_framed")
+        FirstRun.shell("input keyevent 4") // the first Back may only hide the keyboard
+        settle()
+        if (dialog.isShowing) back()
+        log("p3 after Back roots=${roots()} focus=${focus()} showing=${dialog.isShowing}")
+        assertFalse("Back did not close the login dialog", dialog.isShowing)
+        assertEquals(before, roots())
+        assertFalse("Back closed the app screen too", rule.activity.isFinishing)
+        assertTrue("app screen gone after Back: ${FirstRun.onScreen(rule)}", FirstRun.hasNav(rule, "nav_home") || FirstRun.onScreen(rule).isNotBlank())
+    }
+
+    @Test fun p4_showModeShowsEverything() {
+        ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.SHOW)
+        val before = roots()
+        val d = ui { FakeExtension.donation(rule.activity) }; settle()
+        assertEquals(before + 1, roots())
+        assertTrue(focusIsDialog())
+        ui { d.dismiss() }; settle()
+        assertEquals(before, roots())
+    }
+
+    @Test fun p5_blockModeDropsPromotionalKeepsLogin() {
+        ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.BLOCK_PROMOTIONAL)
+        val before = roots()
+        val d = ui { FakeExtension.donation(rule.activity) }; settle()
+        assertEquals(before, roots())
+        assertEquals(0, ExtensionPopups.held.value.size)
+        assertNull(AppMessages.current.value)
+        val l = ui { FakeExtension.login(rule.activity) }; settle()
+        assertEquals("login must still show when promotional is blocked", before + 1, roots())
+        ui { d.dismiss(); l.dismiss() }; settle()
+        assertEquals(before, roots())
+    }
+
+    /** Never over the player: the card waits until the video closes. */
+    @Test fun p6_cardWaitsForThePlayer() {
+        ExtensionPopups.playerOnScreen = true
+        val before = roots()
+        ui { FakeExtension.donation(rule.activity) }; settle()
+        assertEquals(before, roots())
+        assertNull("card shown during playback", AppMessages.current.value)
+        ExtensionPopups.playerOnScreen = false
+        settle()
+        assertTrue("card not shown after playback", AppMessages.current.value?.text?.contains("has a message") == true)
+    }
+
+    /**
+     * Main-thread guard: an extension that shows a window after its screen is gone (BadToken, thrown
+     * inside ViewRootImpl.setView) and an extension callback that throws on the main thread are
+     * swallowed by ExtensionGuard; the app keeps running. Before ADR-014 the first one crashed:
+     * ViewRootImpl on the stack counted as "inside a frame".
+     */
+    @Test fun p7_deadTokenAndThrowingCallbackDoNotCrash() {
+        val before = ExtensionGuard.swallowedCount
+        FakeExtension.postDeadTokenWindow(rule.activity)
+        settle()
+        assertTrue("dead-token window was not swallowed", ExtensionGuard.swallowedCount > before)
+        val mid = ExtensionGuard.swallowedCount
+        FakeExtension.postThrowingCallback()
+        settle()
+        assertTrue("throwing extension callback was not swallowed", ExtensionGuard.swallowedCount > mid)
+        assertFalse(rule.activity.isFinishing)
+        log("p7 swallowed=${ExtensionGuard.swallowedCount} last=${ExtensionGuard.lastSwallowed}")
+    }
+}
