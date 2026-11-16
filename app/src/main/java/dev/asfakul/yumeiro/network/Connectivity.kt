@@ -51,14 +51,22 @@ object Connectivity {
         val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
         _online.value = isOnline(app)
         runCatching {
-            cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) { _online.value = true; SmartDns.onNetworkChanged() }
-                override fun onLost(network: Network) { _online.value = isOnline(app) }
-                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                    _online.value = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                }
-            })
+            cm.registerDefaultNetworkCallback(callback())
             started = true
+        }
+    }
+
+    /**
+     * G10 (device 43891331959, api36): onLost used to re-read `activeNetwork`, which can still return
+     * the network being lost; the default-network callback sends nothing more after it, so the signal
+     * stayed "online" with Wi-Fi and data off (DNS already failing). For the default-network callback
+     * onLost means there is no default network until the next onAvailable, so it is simply offline.
+     */
+    internal fun callback(): ConnectivityManager.NetworkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) { _online.value = true; SmartDns.onNetworkChanged() }
+        override fun onLost(network: Network) { _online.value = false }
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            _online.value = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         }
     }
 }
