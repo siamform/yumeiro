@@ -235,6 +235,50 @@ Blocked (you couldn't run it; say why).
 
 ---
 
+### OMT-14 — Download speed on your phone with Wi-Fi power saving (BUG-3 T5)
+
+- **Feature:** online downloads keep their speed to 100 % with the screen off (BUG-3; fixes 40ea96e
+  split of idle work, 3c85a72 `RequestPace`, 24ee21b progress throttle).
+- **Why the agent can't do it:** the emulators' network is not Wi-Fi; Android's Wi-Fi power save and the
+  phone maker's battery rules (which slow Wi-Fi with the screen off) exist only on a real phone.
+- **Hardware / environment:** your phone on your home Wi-Fi, a preview build from the branch (the agent
+  can attach one on request), battery saver off, charger unplugged.
+- **Instructions:** add a large download (a film or episode of 1 GB or more) from a source that was slow
+  for you before. Watch the percentage once at 10 %, 50 %, 70 % and 90 % with a stopwatch (screen on).
+  Then add a second one, turn the screen off at 30 %, and check the time when it finishes.
+- **Expected result:** no slowdown after 50–70 %: the time from 90 % to 100 % is about the same as
+  from 10 % to 20 %; the screen-off download finishes.
+- **Pass / fail rule:** pass if the last 10 % takes at most 2× the average 10 %; fail otherwise.
+- **What to record:** phone model, Android version, source name, file size, the stopwatch times.
+- **Attempts by the agent:** unit, local server with a per-request cap (CI 43851470283 before: last 10 %
+  4.9×; CI 43861926740 after: 1.67× and 4× faster). Emulator, real host cdn.kernel.org, screen on and
+  screen off with Doze forced (`dumpsys deviceidle force-idle`) at 30 %: last/mean 0.60–1.02, all DONE
+  (device run 43861039865). Wi-Fi power save cannot be produced on an emulator.
+- **Status:** Pending
+
+---
+
+### OMT-15 — Each YouTube quality really plays (BUG-4)
+
+- **Feature:** the player's Quality list for YouTube equals the download sheet, and each height is
+  applied (BUG-4 F1, `QualityEngine.requestForList`).
+- **Why the agent can't do it:** YouTube refuses anonymous playback from GitHub's CI addresses
+  ("Sign in to confirm you're not a bot", device runs 43849088080 and 43851896291).
+- **Hardware / environment:** your phone with a preview build, your normal internet.
+- **Instructions:** open any YouTube video in Yumeiro, open Quality, note the list. Pick every height,
+  one after another, and after each pick open Video details → the resolution line.
+- **Expected result:** the list has the same heights as the download sheet of that video; after each
+  pick the resolution line shows that height and the video keeps playing.
+- **Pass / fail rule:** pass if every height is listed and applied; fail on any missing or wrong height.
+- **What to record:** the video link, the list, the resolution after each pick.
+- **Attempts by the agent:** offline YouTube test without the network (`YtQualityOfflineDeviceTest`,
+  run 43851896291, emulator): list = download heights [1080…240]. Generic HLS ladder, every height picked
+  and applied on both emulators (`QualityListDeviceTest`, run 43861039865). The online YouTube test skips
+  on the bot wall.
+- **Status:** Pending
+
+---
+
 ## Not owner tests (handled by the agent)
 
 Listed here so they are not asked of you again:
@@ -242,7 +286,7 @@ Listed here so they are not asked of you again:
 | Item | How the agent covers it | Group |
 |---|---|---|
 | Volume and brightness swipe gestures | Unit-tested; a device gesture test on the emulators is planned | G9 / G12 |
-| Decoder fault recovery | Unit-tested; a fault-injection hook in the debug build is proposed so it can run on the emulators | G12 |
+| Decoder fault recovery | `DecoderFaultDeviceTest` a/b/c on both emulators with the debug fault hook (run 43857809658) | G12 |
 | Listening time and the scrobble watch with no screen open | `LibraryDeviceTest` on both emulators (no activity exists in the test) | G5 / G6 |
 | Anime4K output | Shader compile and frame output can be checked on the emulators' GL | G12 |
 | Player settings on a device | Emulator device tests | G9 |
