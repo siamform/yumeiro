@@ -730,4 +730,5 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
   keyboard's SEARCH key sends) when Enter is eaten; rerun owed.
 - 43946842943 (same inputs, 3be5e5f) sat "queued" with no jobs for 40 min and stayed queued after cancel: ghost,
   replaced by 43949571344.
-
+| 43957029647 | tv-api24 | TvBug5ReproDeviceTest a–d | PASS 4/4 (d: path=ime_search, answered=true) | emulator |
+| 43957024165 | api33-lowram + api36 | ChoiceSettingsEffectDeviceTest a–f | a,c,d,e,f PASS; b FAIL (floating close ignored after one tap, both phones) | emulator |

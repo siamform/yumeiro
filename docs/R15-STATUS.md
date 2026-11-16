@@ -7,15 +7,18 @@
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
 - **Current group / step:** G9/G10 close-out. G10: every row has evidence except VPN (OMT-18). G9: switches 34/34;
-  choice rows + backdrop slider are SE-6 (tests written, CI 43953320911 then phones owed).
+  SE-6 choice rows: unit 6/6 + backdrop 3/3 (CI 43953320911); device a,c,d,e,f PASS both phones (43957024165);
+  b failed because one tap on the floating close button did not close the player (both phones) → under study.
 - **Owner bugs:**
-  - BUG-5 TV UI: tv-api34 TV-5/TV-2/TV-4 verified (43935810414); tv-api24 TV-5/TV-2/TV-3 PASS (43949571344), TV-4 d
-    test fixed (IME search action), rerun owed. Open: TV-4 cross-source search (G7 proposal 3, owner call).
+  - BUG-5 TV UI: TV-5/TV-2/TV-4 (focus+answer) verified on tv-api34 (43935810414) and tv-api24 (43949571344,
+    43957029647); TV-3 PASS tv-api24. Open: TV-4 cross-source search (G7 proposal 3, owner call).
   - BUG-6 verified on device (emulator, both phones).
   - BUG-7: 7a, 7b, 7c verified on device (emulator); 7d not reproduced on emulator → OMT-16; gallery OMT-17.
-- **CI:** 43953320911 running (c-head after the cookie-test race fix). Ghosts: 43927717593 (CI), 43946842943 (TV).
-- **Next three actions:** (1) CI green → phones ChoiceSettingsEffectDeviceTest + tv-api24 TvBug5Repro;
-  (2) record SE-6, close G9 and G10 in the ledger and GROUP docs (add OMT-18 VPN); (3) start Group 12.
+- **Runs in progress:** device 43959524193 (both phones, ChoiceSettingsEffectDeviceTest a+b with CFX_STEP logs).
+  Scratch branch `scratch/x15-2-fail-before` (LiveFeed fix reverted only, never merge) waits for its CI run.
+- **Next three actions:** (1) read 43959524193 CFX_STEP lines → root cause of the ignored close tap, fix + test;
+  (2) X15-2 fail-before: `gh workflow run ci.yml --ref scratch/x15-2-fail-before`, expect LivePagedTest red;
+  (3) close G9/G10 once SE-6 b passes, then Group 12 (ST-7, ST-17, X2-1, X7-5).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
