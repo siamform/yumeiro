@@ -14,12 +14,14 @@
   BackgroundSettingsEffectDeviceTest (3ff6bd3) reviewed: every symbol it calls exists; compile owed.
 - **New owner bug:** BUG-5 Yumeiro TV UI (TV-1…TV-5, `docs/proposals/FEATURE-BUG-5-tv-ui.md`), open, not reproduced
   yet; it is worked in G12 X9 after the G9/G10 batch, starting with a TV emulator reproduction.
-- **Current group:** G10 Errors + G9 verification. Step: waiting for CI to prove the androidTest compile.
-- **Running:** CI 43889319143 (head fa3bb3b, first run with the androidTest compile step).
-- **Next three actions:** (1) CI 43889319143 green → device batch on both phones, filter
-  NetworkState, PermissionFlow, Dialogs, LowStorage, Messages, BackdropImport, BackgroundSettingsEffect;
-  (2) upgrade-check rerun (v1.8.0 → head) with the fixed harness → X10-5; (3) read both, fix failures under
-  the deep-audit method, close G9/G10 only with device evidence on both phones.
+- **Current group:** G10 Errors + G9 verification. Step: device batch running. CI 43889319143 (fa3bb3b): APKs built
+  and the new androidTest compile step passed (build green, ER-16 compile proved); unit tests were still running.
+- **Running:** device 43891331959 (c306e7e, both phones: NetworkState, PermissionFlow, Dialogs, LowStorage, Messages,
+  BackdropImport, BackgroundSettingsEffect); upgrade 43891389012 (v1.8.0 → c306e7e, fixed harness); CI 43889319143.
+- **Next three actions:** (1) read 43891331959 per class and phone → ER-11, SE-4, network rows, dialogs, low storage,
+  messages, BGFX a–e; failures become findings; (2) read 43891389012 → X10-5; (3) write the G9 effect test for the
+  switches still without one (backup_auto, keep_default, yt_to_phone, adult_private, skip_intro, auto_skip,
+  lyrics_online, push_alerts, bg_play, auto_pip, cc_default; see settings-effects.md) — G9 cannot close without it.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
