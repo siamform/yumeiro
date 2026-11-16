@@ -48,4 +48,44 @@ class Bug3PieceTest {
         covered.zipWithNext().forEach { (a, b) -> assertEquals(a.last + 1, b.first) }
         assertEquals(0L, covered.first().first); assertEquals(10 * mb - 1, covered.last().last)
     }
+
+    // RequestPace: 64 KiB reads at a given speed (bytes per second), from t = 1 s.
+    private fun feed(pace: RequestPace, bytes: Long, bytesPerSec: Long, from: Long): Pair<Boolean, Long> {
+        var t = from; var any = false; var left = bytes
+        while (left > 0) {
+            val n = minOf(64L * 1024, left); left -= n
+            t += n * 1_000_000_000L / bytesPerSec
+            if (pace.slowed(n, t)) any = true
+        }
+        return any to t
+    }
+
+    @Test fun aSteadyRequestNeverAsksForANewOne() {
+        val (slowed, _) = feed(RequestPace(), 20 * mb, 3 * mb, 1_000_000_000L)
+        assertEquals(false, slowed)
+    }
+
+    @Test fun slowStartOnlyLowersTheBaseline() {
+        val pace = RequestPace()
+        val (a, t) = feed(pace, mb, mb / 2, 1_000_000_000L) // first MiB slow (TCP slow start)
+        val (b, _) = feed(pace, 10 * mb, 4 * mb, t)          // then fast
+        assertEquals(false, a || b)
+    }
+
+    /** The burst profile of DownloadThroughputTest (CI 43854742733): 3 MiB fast, then 1.5 MiB/s. */
+    @Test fun aRequestThatDropsToItsCapAsksForANewOne() {
+        val pace = RequestPace()
+        val (a, t) = feed(pace, 3 * mb, 200 * mb, 1_000_000_000L)
+        assertEquals(false, a)
+        val (b, _) = feed(pace, 512 * 1024, 1536 * 1024, t)
+        assertEquals(true, b)
+    }
+
+    @Test fun aShortDipUnderAThirdIsNeededNotJustSlower() {
+        val pace = RequestPace()
+        val (_, t) = feed(pace, 2 * mb, 6 * mb, 1_000_000_000L)
+        val (b, _) = feed(pace, 2 * mb, 3 * mb, t) // half speed: normal variation, keep the request
+        assertEquals(false, b)
+    }
 }
+

@@ -134,6 +134,49 @@ internal class Piece(val chunk: Int, start: Long, end: Long) {
 /** BUG-3: an idle connection never takes less than this from another one. */
 internal const val MIN_SPLIT = 1L * 1024 * 1024
 
+/** BUG-3: a slowed request is only replaced when at least this much of its piece is left. */
+internal const val RESTART_MIN_LEFT = 512L * 1024
+
+/** BUG-3: at most this many fresh requests per piece (a host that is slow for every request). */
+internal const val MAX_RESTARTS = 32
+
+/**
+ * BUG-3: tells when one HTTP request has slowed down for good. Many hosts and CDNs serve the first
+ * megabytes of every request fast and then cap that request (nginx `limit_rate_after`, per-request
+ * shaping); a download that keeps one long request per piece then crawls once every connection is
+ * past its burst, which is the "fast to 50-70 %, then slow" the owner saw (CI 43854742733: 4.8x).
+ * The baseline is the request's own speed over its first [baselineBytes] (from the first byte, so
+ * TCP slow start only lowers it); after that each [window] is compared with it. A window under
+ * 1/[factor] of the baseline says: ask for the rest in a new request. A steady host never trips it.
+ * Pure; `Bug3PieceTest`.
+ */
+internal class RequestPace(
+    private val baselineBytes: Long = 1L * 1024 * 1024,
+    private val window: Long = 256L * 1024,
+    private val factor: Int = 3,
+) {
+    private var t0 = -1L
+    private var seen = 0L
+    private var baseline = -1.0 // bytes per ns
+    private var winBytes = 0L
+    private var winStart = 0L
+
+    /** [n] bytes arrived at [nowNs]; true when the last window ran under the baseline / factor. */
+    fun slowed(n: Long, nowNs: Long): Boolean {
+        if (t0 < 0) { t0 = nowNs; winStart = nowNs }
+        seen += n
+        if (baseline < 0) {
+            if (seen >= baselineBytes) { baseline = seen / maxOf(nowNs - t0, 1_000_000L).toDouble(); winBytes = 0; winStart = nowNs }
+            return false
+        }
+        winBytes += n
+        if (winBytes < window) return false
+        val rate = winBytes / maxOf(nowNs - winStart, 1_000_000L).toDouble()
+        winBytes = 0; winStart = nowNs
+        return rate * factor < baseline
+    }
+}
+
 class Segmented(
     private val client: OkHttpClient,
     private val connections: Int,
@@ -192,10 +235,12 @@ class Segmented(
                             next?.also { running += it }
                         } ?: break
                         var tries = 0
+                        var restarts = 0
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             try {
-                                fetchPiece(url, headers, piece, out) { n -> progress(have.addAndGet(n), total) }
+                                val slowed = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS) { n -> progress(have.addAndGet(n), total) }
+                                if (slowed) { restarts++; continue } // same piece, fresh request
                                 break
                             } catch (e: Refused) { throw e } catch (e: IOException) {
                                 // The bytes already written stay; the retry starts where the piece stopped.
@@ -228,11 +273,16 @@ class Segmented(
         }
     }
 
-    /** Reads [p] from its position to its (possibly shrinking) end; returns when the piece is full. */
-    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, read: (Long) -> Unit) {
+    /**
+     * Reads [p] from its position to its (possibly shrinking) end. Returns false when the piece is
+     * full; true when the request slowed to under a third of its own first-MiB speed with at least
+     * [RESTART_MIN_LEFT] to go (with [pace]), so the caller asks for the rest in a new request.
+     */
+    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, pace: Boolean, read: (Long) -> Unit): Boolean {
         val from = p.position()
         val to = p.end()
-        if (from > to) return
+        if (from > to) return false
+        val meter = RequestPace()
         val b = Request.Builder().url(url).header("Range", "bytes=$from-$to")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
         client.newCall(b.build()).execute().use { resp ->
@@ -243,15 +293,17 @@ class Segmented(
                     val buf = ByteArray(64 * 1024)
                     while (true) {
                         val want = p.end() - p.position() + 1
-                        if (want <= 0) return // full, or another connection took the rest
+                        if (want <= 0) return false // full, or another connection took the rest
                         val n = input.read(buf, 0, minOf(buf.size.toLong(), want).toInt()); if (n < 0) break
                         val k = p.accept(n) { at, len -> raf.seek(at); raf.write(buf, 0, len) }
                         if (k > 0) read(k.toLong())
+                        if (pace && meter.slowed(k.toLong(), System.nanoTime()) && p.left() >= RESTART_MIN_LEFT) return true
                     }
                 }
             }
             if (p.position() <= p.end()) throw IOException("Connection closed early")
         }
+        return false
     }
 
     /** One connection, resumable with Range when the host allows it. */
