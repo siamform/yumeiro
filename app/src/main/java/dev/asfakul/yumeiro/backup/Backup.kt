@@ -47,7 +47,7 @@ object Backup {
     /** What a backup can carry; each can be ticked on or off when making or restoring one. */
     enum class Section(val label: String, val hint: String) {
         SETTINGS("Settings", "Player, appearance, network, notifications and every other switch"),
-        LIBRARY("Library and history", "Continue watching, My List, play counts, manga progress, saved lyrics"),
+        LIBRARY("Library and history", "Continue watching, My List, playlists and favourites, play counts, manga progress, saved lyrics"),
         SOURCES("Sources", "Extension list, repositories, playlists, home servers, Stremio add-ons"),
         EXTENSION_FILES("Extension files", "The extensions themselves, so they work offline right after restoring"),
         APPEARANCE("Background photo", "Your own photo behind the app"),
@@ -61,8 +61,7 @@ object Backup {
     private val excludedPrefPrefixes = listOf("com.google.", "androidx.", "WebView", "org.chromium", "_")
     internal fun prefIncluded(name: String) = name !in excludedPrefs && excludedPrefPrefixes.none { name.startsWith(it) }
 
-    /** Library prefs (history-like) restored with LIBRARY instead of SETTINGS. */
-    private val libraryPrefs = setOf("play_counts", "search_recent", "yt_history", "manga_reader", "reminders")
+    // R17 (G9): which section a preference belongs to is decided per value by [PrefSections].
 
     /** Top-level files that are device-specific. */
     private val excludedFiles = setOf("online_downloads.json")
@@ -128,10 +127,9 @@ object Backup {
     internal fun prefsSnapshot(context: Context, sections: Set<Section>): JSONObject {
         val root = JSONObject()
         prefNames(context).forEach { name ->
-            val lib = name in libraryPrefs
-            if ((lib && Section.LIBRARY !in sections) || (!lib && Section.SETTINGS !in sections)) return@forEach
             val all = runCatching { context.getSharedPreferences(name, Context.MODE_PRIVATE).all }.getOrNull() ?: return@forEach
-            if (all.isNotEmpty()) root.put(name, PrefCodec.encode(all))
+            val chosen = all.filterKeys { k -> PrefSections.sectionOf(name, k) in sections }
+            if (chosen.isNotEmpty()) root.put(name, PrefCodec.encode(chosen))
         }
         return root
     }
@@ -347,8 +345,10 @@ object Backup {
         val out = JSONObject()
         all.keys().forEach { name ->
             if (!prefIncluded(name) || name.contains('/') || name.contains("..")) return@forEach
-            val lib = name in libraryPrefs
-            if ((lib && Section.LIBRARY in sections) || (!lib && Section.SETTINGS in sections)) all.optJSONObject(name)?.let { out.put(name, it) }
+            val src = all.optJSONObject(name) ?: return@forEach
+            val kept = JSONObject()
+            src.keys().forEach { k -> if (PrefSections.sectionOf(name, k) in sections) kept.put(k, src.get(k)) }
+            if (kept.length() > 0) out.put(name, kept)
         }
         return out
     }
@@ -417,9 +417,14 @@ internal object PrefCodec {
         return m
     }
 
-    /** Writes [values] as the whole content of [prefs] (replaces), synchronously. */
-    fun apply(prefs: SharedPreferences, values: Map<String, Any>): Boolean {
-        val ed = prefs.edit().clear()
+    /**
+     * Replaces the values [owned] says belong to what is being restored with [values], synchronously.
+     * Values of other sections in the same file stay (R17 G9: a Settings-only restore must not
+     * replace the playlists kept next to a setting). By default the whole file is replaced.
+     */
+    fun apply(prefs: SharedPreferences, values: Map<String, Any>, owned: (String) -> Boolean = { true }): Boolean {
+        val ed = prefs.edit()
+        prefs.all.keys.filter(owned).forEach { ed.remove(it) }
         values.forEach { (k, v) ->
             @Suppress("UNCHECKED_CAST")
             when (v) {

@@ -95,7 +95,10 @@ object PendingRestore {
             all.keys().forEach { name ->
                 if (!Backup.prefIncluded(name)) return@forEach
                 val ok = runCatching {
-                    PrefCodec.apply(context.getSharedPreferences(name, Context.MODE_PRIVATE), PrefCodec.decode(all.getJSONObject(name)))
+                    // R17 (G9): only the restored sections' values are replaced (a plan from before
+                    // sections existed restores everything it holds).
+                    val owned: (String) -> Boolean = if (plan.sections.isEmpty()) { _ -> true } else { k -> PrefSections.sectionOf(name, k) in plan.sections }
+                    PrefCodec.apply(context.getSharedPreferences(name, Context.MODE_PRIVATE), PrefCodec.decode(all.getJSONObject(name)), owned)
                 }.getOrDefault(false)
                 if (ok) prefs++ else failed++
             }

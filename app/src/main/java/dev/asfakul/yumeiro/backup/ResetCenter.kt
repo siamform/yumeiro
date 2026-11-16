@@ -31,7 +31,6 @@ object ResetCenter {
     fun labelOf(id: String) = Scope.entries.firstOrNull { it.id == id }?.label?.lowercase() ?: id
 
     private val historyFiles = listOf("online_history.json")
-    private val historyPrefs = listOf("play_counts", "search_recent", "yt_history")
     private val sourceDirs = listOf("extensions", "tachiyomi", "js", "stremio", "streams", "servers")
 
     /** Clears caches now; returns the bytes freed. */
@@ -69,9 +68,15 @@ object ResetCenter {
     /** Runs at launch, before anything loads (from [PendingRestore]). */
     internal fun applyNow(context: Context, ids: Set<String>) {
         val files = context.filesDir
+        // R17 (G9 S24): both resets go value by value through [PrefSections]. Before, "Reset
+        // settings" cleared whole files, so playlists, favourites and resume points kept in the
+        // player's files went with the switches, and the history reset left device resume points,
+        // recently played songs, Jump back in and online searches behind.
+        val prefNames = Backup.prefsDir(context).listFiles()?.filter { it.extension == "xml" }?.map { it.nameWithoutExtension }
+            ?.filter { Backup.prefIncluded(it) }.orEmpty()
         if ("history" in ids) {
             historyFiles.forEach { File(files, it).delete() }
-            historyPrefs.forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
+            prefNames.forEach { name -> removeWhere(context, name) { k -> PrefSections.isHistory(name, k) } }
         }
         if ("extensions" in ids) {
             sourceDirs.forEach { d -> File(files, d).walkBottomUp().forEach { it.setWritable(true); it.delete() } }
@@ -79,13 +84,22 @@ object ResetCenter {
             context.getSharedPreferences("provider_overrides", Context.MODE_PRIVATE).edit().clear().commit()
         }
         if ("settings" in ids) {
-            // Library-like and device-bound prefs survive a settings reset.
-            val keep = historyPrefs + listOf("manga_reader", "reminders", "tachiyomi_bridge", "online_secrets", "mt_updater",
-                "fcm_push", "push_wake", "yt_account", "site_logins", BackupMeta.PREFS, "setup_guide", "starter_extensions")
-            Backup.prefsDir(context).listFiles()?.filter { it.extension == "xml" }?.map { it.nameWithoutExtension }
-                ?.filter { it !in keep && Backup.prefIncluded(it) }
-                ?.forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
+            // Library, sources and device-bound files (never in [prefNames]) survive; so do the
+            // first-run guides, which would otherwise run again.
+            val keep = setOf("setup_guide", "starter_extensions")
+            prefNames.filter { it !in keep }.forEach { name ->
+                removeWhere(context, name) { k -> PrefSections.sectionOf(name, k) == Backup.Section.SETTINGS }
+            }
         }
+    }
+
+    private fun removeWhere(context: Context, name: String, test: (String) -> Boolean) {
+        val p = context.getSharedPreferences(name, Context.MODE_PRIVATE)
+        val gone = p.all.keys.filter(test)
+        if (gone.isEmpty()) return
+        val ed = p.edit()
+        gone.forEach { ed.remove(it) }
+        ed.commit()
     }
 
     /** Erases everything, like a fresh install (Android closes the app). */
