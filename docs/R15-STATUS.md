@@ -1,21 +1,20 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 UTC, fourth handover; orders: master document + orders 4)
+## Resume here (updated 2026-11-16 ~06:45 UTC, fifth handover; orders: master handover + operating prompt 5)
 
-- **Owner orders in force:** master operating document (`notes/master-orders-3.md`) and orders 4
-  (`notes/master-orders-4.md`): Part 1 decisions first (PL-16 images, X13-1 conditions, ADR-013 key
-  table, EXT-T1 reproduction ≥ 20×, ADR-014 build), then ST-18 Perfetto + Home first-draw reduction,
-  then the Group 12 list, G5–10, G11, re-audit G1–4, final sweep. Feature phase gated (research only).
-  Heavy work on CI, ≤ 2 device workflows, no PR/merge/release.
-- **Done this step:** X13-1 (ADR-015), PL-16 images, ADR-013 key table (earlier commits).
-  JacksonTvExposureTest made JVM-independent (CI 43803887311 failed it: no overflow on the runner).
-  ADR-014 built (`ExtensionPopups`, `ExtensionWindowWatch`, setting under Extensions, ExtensionGuard
-  BadToken fix); unit tests pass (unit); device test `ExtensionPopupsDeviceTest` written, **not yet
-  run on a device**. WindowSpy (EXT-T1 diagnostics) pushed in 2436bb3.
-- **Running:** device run of `ExtensionPopupsDeviceTest` (phones), then TV, then CI (lint).
-- **Next three actions:** (1) ADR-014 device evidence on both phones and the TV emulator, fix what
-  fails, ledger row; (2) EXT-T1 reproduction ≥ 20× on api33-lowram with WindowSpy; (3) ST-18
-  Perfetto trace of the first Home draw and Home first-draw reduction.
+- **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
+  G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
+  No PR/merge/release without the owner.
+- **Sandbox:** no JDK/Android SDK in this sandbox (fifth agent); every compile and unit test goes to CI.
+- **Level 0 done:** HEAD was 7439ef4 (10 commits after 27f1c2b, all read). Runs 43784533563…43812114134
+  recorded in `docs/evidence/round3/device-runs.md`. PL-16 images were already in `docs/evidence/pl16/`
+  (355d5b7). Five claims spot-checked (ledger, Changes table). Two failures were test errors, fixed in
+  3f37da8: p8 window baseline, WindowSpy `getUiAutomation` race.
+- **Running:** device check 43823291873 (ExtensionPopups + Extensions, both phones, 3f37da8);
+  CI 43823330820 (build, unit, lint, 3f37da8).
+- **Next three actions:** (1) read both runs; ADR-014 row → done (emulator) if p1–p8 pass, then the
+  ST-20 guard for slow extension callbacks; (2) EXT-T1 ≥ 20 runs on api33-lowram with WindowSpy;
+  (3) ST-18 Perfetto trace of the first Home draw + Home first-draw reduction.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

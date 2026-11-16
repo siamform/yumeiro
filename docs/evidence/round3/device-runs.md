@@ -271,3 +271,23 @@ These are real emulators running the real debug APK; the tests are not simulated
 ## 43780466709 — api36 + api33-lowram (ed3d6b8): NewPipeCompat, Yumix, OnlinePlayback, StabilityStress, CrashUi all pass
 
 ## 43782724021 — TV api24 (07eaa76): NewPipeCompat 2/2, StabilityStress 3/3, HomeNavigation 11/11, 0 NoSuchMethodError
+
+## Runs 43784533563 … 43812114134 (recorded 2026-11-16 by the fifth agent, from the run logs)
+
+| Run | Commit | Devices | Result |
+|---|---|---|---|
+| 43784533563 | 166a258 | bench | Macrobenchmark wiring (X2-1); no device classes |
+| 43784768652 | 8bcc494 | api36, api33-lowram | Accessibility 5/5 pass both (ST-18 YuStall naming) |
+| 43785978028 | 145eddb | api36, api33-lowram | StorageMainThread + StabilityStress pass both; ST-19 after = 0 violations |
+| 43787473722 | 70066aa | bench | startup bench (X2-1 before) |
+| 43788916880 | a60980b | bench | baseline-profile generation (X2-1) |
+| 43789071263 | 3225554 | api36, api33-lowram | StabilityStress + OnlinePlayback pass both; heap dumps (X2-3h) |
+| 43790371337 | fef01c6 | bench | startup bench with the profile (X2-1 after) |
+| 43801874469 | 22f2640 | api36, api33-lowram | LocalPlayer#z_pl16Before pass (PL-16 before images) |
+| 43806307608 | 3a33f4c | api36, api33-lowram | ExtensionPopups FAIL both (first ADR-014 build) |
+| 43807629702 | c382674 | api36, api33-lowram | ExtensionPopups FAIL both |
+| 43809135501 | 4d58adb | api36, api33-lowram | ExtensionPopups 7/7 pass both |
+| 43810679345 | 1518c9e | api36, api33-lowram | ExtensionPopups 7/7 pass both |
+| 43810683270 | 1518c9e | tv-api24 | ExtensionPopups 7/7 pass |
+| 43812110468 | 7439ef4 | api36, api33-lowram | ExtensionPopups 7/8 both: p8 "Dismiss added a window 1→2". Test error: baseline taken on Home, before the Extensions screen opened. Fixed in 3f37da8 |
+| 43812114134 | 7439ef4 | api36, api33-lowram | BackNavigation pass both; Extensions pass api33-lowram, api36 e8 crashed: "Already connected" from `WindowSpy.pollWindows` → `getUiAutomation()` on a second thread. Test error, fixed in 3f37da8 |
