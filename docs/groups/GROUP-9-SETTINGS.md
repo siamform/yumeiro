@@ -51,7 +51,7 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 |---|---|---|---|
 | SE-1 | `SettingsResetTest` | unit | CI run owed (43877618176 running) |
 | SE-2, S26 image types | `BackdropImportDeviceTest` | emulator | not run yet |
-| S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | first run 43875418000 was a test error (taps below the fold, home detection); fixed in e7efd6e, rerun 43877623222 running |
+| S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | first run 43875418000 was a test error (taps below the fold, home detection); fixed in e7efd6e; rerun 43877623222: 28/31 switches persisted across the kill on both phones (emulator), 3 not reached (scrolled Columns, test error), fixed; rerun owed |
 | SE-3, S23 search | `SettingsSearchCoverageTest` | unit | CI run owed |
 | Player info overlay, Resume playback, Anime4K (real effect on the player) | `PlayerSettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |
 | Notification switches (6 kinds, master, chime): real effect on Android's active notifications | `NotifySettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |

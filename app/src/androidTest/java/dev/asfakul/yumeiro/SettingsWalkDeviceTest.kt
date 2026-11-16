@@ -14,6 +14,7 @@ import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -146,6 +147,10 @@ class SettingsWalkDeviceTest {
         find(tag) ?: return null
         // Run 43875418000: a click on a switch below the fold landed outside the window and did
         // nothing ("did not move" for every switch). tapVisible scrolls it on screen first.
+        // Run 43877623222: Tracking and Backup are plain scrolling Columns (no list index to
+        // scroll to), so the three switches below their fold never came on screen. performScrollTo
+        // works for both kinds of parent.
+        runCatching { rule.onAllNodesWithTag(tag, true)[0].performScrollTo(); rule.waitForIdle() }
         runCatching { FirstRun.tapVisible(rule, tag, 10_000) }.onFailure { log("SW click $tag failed: ${it.message?.take(160)}") }
         rule.waitForIdle(); pause(800)
         // A dialog the app opened by itself (permission rationale, guide) is closed like a user would.
