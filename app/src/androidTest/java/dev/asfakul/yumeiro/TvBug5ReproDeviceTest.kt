@@ -50,6 +50,21 @@ class TvBug5ReproDeviceTest {
     private fun focused(): List<String> = runCatching {
         rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
     }.getOrDefault(emptyList())
+    /** Focused node as tag, else its text or content description, with its bounds (TV-4 needs the untagged ones). */
+    private fun focusedInfo(): String = runCatching {
+        rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().joinToString("+") { n ->
+            val c = n.config
+            val name = c.getOrNull(SemanticsProperties.TestTag)
+                ?: c.getOrNull(SemanticsProperties.Text)?.joinToString(" ")?.take(24)?.let { "'$it'" }
+                ?: c.getOrNull(SemanticsProperties.ContentDescription)?.joinToString(" ")?.take(24)?.let { "cd'$it'" }
+                ?: "node${n.id}"
+            val b = n.boundsInRoot
+            "$name[${b.left.toInt()},${b.top.toInt()},${b.right.toInt()},${b.bottom.toInt()}]"
+        }.ifEmpty { "-" }
+    }.getOrDefault("?")
+    private fun boundsOf(tag: String): String = runCatching {
+        rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().joinToString { n -> val b = n.boundsInRoot; "[${b.left.toInt()},${b.top.toInt()},${b.right.toInt()},${b.bottom.toInt()}]" }
+    }.getOrDefault("?")
     private fun key(k: String, wait: Long = 450) { FirstRun.shell("input keyevent KEYCODE_$k"); Thread.sleep(wait); runCatching { rule.waitForIdle() } }
     private var clip: Uri? = null
     private var setTv = false
@@ -112,25 +127,33 @@ class TvBug5ReproDeviceTest {
         val portrait = requested == ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT || requested == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         assertTrue("TV-5: the player asked a TV for portrait (${orientationName(requested)}, sw=${sw}dp)", !portrait)
         assertTrue("TV-5: the player opened in the phone layout, not full screen ($geo)", full)
+        assertTrue("TV-5: the TV window is not landscape (config orientation $cfg, $geo)", cfg == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
         log("TVB_RESULT PASS a")
     }
 
-    @Test fun b_tv2_dpadReachesTheFullScreenButton() {
+    /**
+     * TV-2. API 34 before the fix: the button was reachable (Down from the top row), but only in the
+     * phone layout the portrait request forced. After TV-5 the TV player is always full screen and has
+     * no toggle, so the check is that the remote reaches the top row and the bottom row of the controls.
+     */
+    @Test fun b_tv2_dpadReachesTopAndBottomControls() {
         openClip()
         key("DPAD_CENTER", 800) // controls up
         val walk = ArrayList<String>()
-        var reached = false
-        for (dir in listOf("DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT",
-            "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT")) {
-            if (!has("video_fullscreen_btn")) key("DPAD_CENTER", 600)
+        val seen = HashSet<String>()
+        for (dir in listOf("DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN")) {
+            if (!has("video_play_pause_btn")) key("DPAD_CENTER", 600)
             key(dir)
             val f = focused()
-            walk += "$dir→${f.joinToString("+").ifEmpty { "-" }}"
-            if ("video_fullscreen_btn" in f) { reached = true; break }
+            seen += f
+            walk += "$dir→${focusedInfo()}"
         }
         FirstRun.shot("tvb_b_walk")
-        log("TVB_CASE b reached=$reached walk=$walk")
-        assertTrue("TV-2: the D-pad never reached the full-screen button: $walk", reached)
+        val top = seen.any { it == "video_quality_btn" || it == "video_more_btn" }
+        val bottom = seen.any { it == "video_seekbar" || it == "video_fullscreen_btn" }
+        log("TVB_CASE b top=$top bottom=$bottom fullscreenBtn=${has("video_fullscreen_btn")} walk=$walk")
+        assertTrue("TV-2: D-pad Up never reached the top row of the controls: $walk", top)
+        assertTrue("TV-2: D-pad Down never reached the seek bar: $walk", bottom)
         log("TVB_RESULT PASS b")
     }
 
@@ -162,10 +185,10 @@ class TvBug5ReproDeviceTest {
         for (dir in listOf("DPAD_RIGHT", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_LEFT", "DPAD_LEFT")) {
             key(dir)
             val f = focused()
-            walk += "$dir→${f.joinToString("+").ifEmpty { "-" }}"
+            walk += "$dir→${focusedInfo()}"
             if ("topbar_search_action" in f) { onSearch = true; break }
         }
-        log("TVB_STEP d search reachable=$onSearch walk=$walk topbarSearch=${has("topbar_search_action")}")
+        log("TVB_STEP d search reachable=$onSearch walk=$walk topbarSearch=${boundsOf("topbar_search_action")} setup=${boundsOf("home_setup_card")} rail=${boundsOf("tv_nav_rail")}")
         if (onSearch) key("DPAD_CENTER", 1_000)
         val opened = has("topbar_search_input") || has("online_search_screen")
         if (opened) {
