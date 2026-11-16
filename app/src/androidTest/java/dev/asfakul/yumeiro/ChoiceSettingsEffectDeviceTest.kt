@@ -142,7 +142,10 @@ class ChoiceSettingsEffectDeviceTest {
         var taps = 0
         while (taps < 3 && (has("video_player_root") || has("video_floating_player"))) {
             val b = runCatching { rule.onAllNodesWithTag("floating_close", true).fetchSemanticsNodes().map { it.boundsInRoot } }.getOrNull()
+            val tt = System.currentTimeMillis()
+            log("CFX_STEP $case closeTap#${taps + 1} begin +${tt - t0}ms ${st()}")
             tap("floating_close"); taps++
+            log("CFX_STEP $case closeTap#$taps tap() returned after ${System.currentTimeMillis() - tt}ms ${st()}")
             runCatching { rule.waitUntil(5_000) { !has("video_player_root") && !has("video_floating_player") } }
             log("CFX_STEP $case closeTap#$taps bounds=$b +${System.currentTimeMillis() - t0}ms ${st()}")
         }

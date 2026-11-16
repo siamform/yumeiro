@@ -2356,7 +2356,7 @@ private fun BoxScope.FloatingPlayerChrome(
         IconButton(onClick = onPlayPause, modifier = Modifier.size(34.dp).testTag("floating_play_pause")) {
             Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pause" else "Play", tint = Color.White)
         }
-        IconButton(onClick = onClose, modifier = Modifier.size(34.dp).testTag("floating_close")) {
+        IconButton(onClick = { android.util.Log.i("YuFloat", "close tapped"); onClose() }, modifier = Modifier.size(34.dp).testTag("floating_close")) {
             Icon(Icons.Default.Close, "Close", tint = Color.White)
         }
     }
