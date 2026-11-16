@@ -59,7 +59,10 @@ class PushAlertsEffectDeviceTest {
     }.getOrDefault(emptyList())
 
     @Test fun a_newEndpointSchedulesWakeUpsOnNtfy() {
-        PushWake.enable(ctx, PushWake.NTFY_PACKAGE) // not installed: the app records an error or waits, both fine
+        // No enable() here: run 43914724044 (api36) showed the connector answering register() for an
+        // uninstalled distributor with onUnregistered ("There was a distributor, but it isn't
+        // installed anymore"), which clears the endpoint by design. The refill path needs only the
+        // endpoint the distributor would hand over.
         val topic = "upYumeiroCi" + java.util.UUID.randomUUID().toString().replace("-", "").take(14)
         PushWake.onNewEndpoint(ctx, "https://ntfy.sh/$topic?up=1")
         val ok = waitFor(120_000) { PushWake.state.value.let { it.schedule == PushWake.Schedule.YES && it.pending >= 8 } }
