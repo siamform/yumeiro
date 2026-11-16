@@ -241,6 +241,13 @@ object YouTube {
 
     fun invalidate(id: String) { infoCache.remove(id) }
 
+    /**
+     * Test seam (BUG-4): device tests on CI cannot reach YouTube ("confirm you're not a bot" for
+     * data-centre IPs), so they put a built [StreamInfo] in the cache to drive the player UI.
+     */
+    @androidx.annotation.VisibleForTesting
+    fun seedForTests(id: String, info: StreamInfo) { infoCache[id] = Timed(System.currentTimeMillis(), info) }
+
     /** Drops every cached stream (after signing in or out, links made with the old session are stale). */
     fun invalidateAll() { infoCache.clear() }
 
