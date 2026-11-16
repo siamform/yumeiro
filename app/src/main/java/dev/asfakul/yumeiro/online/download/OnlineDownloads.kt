@@ -291,13 +291,25 @@ object OnlineDownloads {
         ensureLoaded(context)
         WorkManager.getInstance(context.applicationContext).cancelUniqueWork("dl_$id")
         get(id)?.let { item ->
-            if (item.fileName.isNotBlank()) runCatching {
-                val f = fileOf(context, item)
-                listOf(f, File(f.parentFile, f.name + ".part"), File(f.parentFile, f.name + ".v"), File(f.parentFile, f.name + ".a")).forEach { it.delete() }
-            }
+            if (item.fileName.isNotBlank()) runCatching { removeFiles(fileOf(context, item)) }
             item.publicUri?.let { u -> runCatching { context.contentResolver.delete(android.net.Uri.parse(u), null, null) } }
         }
         update { list -> list.filterNot { it.id == id } }
+    }
+
+    /**
+     * G8 (R17): deletes [f] and every work file of it. The side files are named after the `.part`
+     * file (`x.mp4.part.v`, `.part.a`, `.part.chunks`, `.part.idx`, `.part.len`, `.part.v.chunks` ...),
+     * but delete used to remove only `x.mp4`, `x.mp4.part`, `x.mp4.v` and `x.mp4.a`, so deleting a
+     * split video/audio or segmented download left its half-done tracks on the phone. Every file
+     * name carries the download's id, so the `x.mp4.` prefix belongs to this download only.
+     */
+    internal fun removeFiles(f: File): Int {
+        val prefix = f.name + "."
+        var n = 0
+        if (f.delete()) n++
+        f.parentFile?.listFiles()?.forEach { if (it.isFile && it.name.startsWith(prefix) && it.delete()) n++ }
+        return n
     }
 
     /** Resumes queued downloads after a restart. */

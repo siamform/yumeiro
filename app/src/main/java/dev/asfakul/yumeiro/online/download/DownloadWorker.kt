@@ -79,6 +79,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
             var out = OnlineDownloads.fileOf(applicationContext, item)
             val part = File(out.parentFile, out.name + ".part")
+            val named = out // side files are named after this one even if [out] becomes .webm
             val onProgress: (Long, Long) -> Unit = { done, total ->
                 val now = System.currentTimeMillis()
                 if (progressGate.pass(now, done, total)) OnlineDownloads.progress(id, done, total)
@@ -99,6 +100,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     }
                 }
             }
+            // G8 (R17): deleted while the last bytes came in: don't leave an untracked file behind.
+            if (OnlineDownloads.get(id) == null) { OnlineDownloads.removeFiles(named); OnlineDownloads.removeFiles(out); return Result.success() }
             if (!part.renameTo(out)) { out.delete(); part.copyTo(out, overwrite = true); part.delete() }
             if ((item.kind == OnlineDownloads.Kind.YT_VIDEO || item.kind == OnlineDownloads.Kind.YT_AUDIO) && DownloadSettings.saveYouTubeToPhone.value) {
                 val audio = item.kind == OnlineDownloads.Kind.YT_AUDIO
@@ -117,6 +120,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             // rerun WorkManager makes when the network is back saw PAUSED and quit: stuck until tapped.
             // A user pause or delete already set its own state; only a running item goes back to QUEUED.
             OnlineDownloads.stopped(id)
+            // G8 (R17): a delete cancels the work, but a connection that was mid-read finishes its
+            // piece and can write a side file after delete removed them; clean up once it stopped.
+            if (OnlineDownloads.get(id) == null && item.fileName.isNotBlank()) runCatching { OnlineDownloads.removeFiles(OnlineDownloads.fileOf(applicationContext, item)) }
             throw e
         } catch (e: Throwable) {
             Log.w(LOG, "download ${item.title}", e)

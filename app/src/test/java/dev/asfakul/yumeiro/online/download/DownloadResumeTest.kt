@@ -79,6 +79,21 @@ class DownloadListSaveRaceTest {
     }
 }
 
+/** G8 (R17): deleting a download removes every work file it made, and nothing of another one. */
+class DownloadDeleteFilesTest {
+    @Test fun deleteRemovesEveryWorkFile() {
+        val dir = java.nio.file.Files.createTempDirectory("dl").toFile()
+        val name = "Show 720p-1a2b3c.mp4"
+        val mine = listOf("", ".part", ".part.v", ".part.a", ".part.chunks", ".part.idx", ".part.len", ".part.v.chunks", ".part.a.chunks", ".v", ".a")
+        mine.forEach { java.io.File(dir, name + it).writeText("x") }
+        val others = listOf("Show 720p-9z9z9z.mp4.part", "Show 720p-1a2b3c.mp4x", "Other-1a2b3c.mkv.part.v")
+        others.forEach { java.io.File(dir, it).writeText("y") }
+        assertEquals(mine.size, OnlineDownloads.removeFiles(java.io.File(dir, name)))
+        assertEquals(others.sorted(), dir.list()!!.sorted())
+        dir.deleteRecursively()
+    }
+}
+
 class HlsResumeTest {
     @Test fun resumeCutsBackToTheRecordedSegments() {
         assertEquals(5 to 5000L, HlsResume.read(HlsResume.write(5, 5000), 7000)) // 2 extra segments are cut
