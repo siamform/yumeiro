@@ -417,6 +417,8 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
   (`-dontobfuscate`, `-dontoptimize`); release and normal preview builds are unchanged. Before
   numbers (43784533563, TTID median of 8): api33-lowram 3145 ms without AOT / 2905 ms with the
   library profiles; api36 3899 / 2731 ms.
+  After the app profile (fef01c6, run 43790371337): api33-lowram 3924 / 2837 ms, api36 2509 / 1853 ms.
+  Emulator run-to-run noise is larger than the gain, so the real-phone check is OMT-12.
 
 ### ADR-013 (proposed): No long-lived secrets inside the APK (G12 X7-3)
 

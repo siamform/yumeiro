@@ -183,6 +183,28 @@ Blocked (you couldn't run it; say why).
 
 ---
 
+### OMT-12 — Cold start on your phone with the baseline profile (G12 X2-1)
+
+- **Feature:** app start-up speed (baseline profile `app/src/main/baseline-prof.txt`, commit fef01c6).
+- **Why the agent can't do it:** CI only has emulators with software graphics; their cold-start numbers
+  swing by more than the profile's effect between runs (api36 "no AOT" was 3899 ms in one run and
+  2509 ms in the next). Only a real phone gives a number that means something for users.
+- **Hardware / environment:** your phone, with a preview build installed from the branch (the agent
+  can attach one on request), Developer options → USB debugging, a computer with `adb`.
+- **Instructions:** close the app from recents. Run 5 times:
+  `adb shell am force-stop dev.asfakul.yumeiro.preview && adb shell am start -W -n dev.asfakul.yumeiro.preview/dev.asfakul.yumeiro.MainActivity`
+  and note the `TotalTime` line each time. Then install the previous preview build (without the
+  profile) and repeat.
+- **Expected result:** the median `TotalTime` with the profile is the same or lower than without it.
+- **Pass / fail rule:** pass if the median with the profile is not more than 5% higher; fail otherwise.
+- **What to record:** phone model, Android version, the 10 `TotalTime` numbers, both build versions.
+- **Attempts by the agent:** macrobenchmark on CI emulators: before 43784533563, profile generated in
+  43788916880, after 43790371337 (ledger X2-1). Numbers recorded, but emulator noise is too large to
+  judge the gain.
+- **Status:** Pending
+
+---
+
 ## Not owner tests (handled by the agent)
 
 Listed here so they are not asked of you again:

@@ -1,22 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 01:44 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-16 02:31 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Since 01:08 UTC:** ST-19 (download storage path/free space read on main in composition) fixed and
-  device-verified (43785978028). ST-20 (phisher98 `DonationManager` commit() on main) classified as
-  third-party → ADR-014. ST-13/14/15 now have emulator evidence (0 app-pid StrictMode violations).
-  ST-18 stalls classified (full first frame on SwiftShader, no single app hot spot). Startup
-  benchmark "before" numbers in ledger X2-1 (43784533563).
-- **Current step:** Level 1, Group 12: X2 start-up (baseline profile).
-- **Running:** 43787473722 (device-check bench=profile).
-- **Next three actions:** (1) download 43787473722, commit the generated profile as
-  `app/src/main/baseline-prof.txt`, run bench=startup again and record after-numbers (X2-1, ST-7);
-  (2) heap profile on api33-lowram; (3) ST-17 root cause, then MASVS / R8 / signing review.
+- **Since 01:08 UTC:** ST-19 fixed + device-verified; ST-20 third-party (ADR-014); ST-13/14/15 emulator
+  evidence; ST-18 classified. X2-1: baseline profile generated with real names and committed
+  (fef01c6), before/after numbers recorded, real-phone check OMT-12. X2-3h heap profile: no real
+  leaks (43789071263). X10-1 R8/ABI/signing review done.
+- **Current step:** Level 1, Group 12: X10 upgrade test from v1.8.0, then X7 MASVS write-up.
+- **Running:** none.
+- **Next three actions:** (1) upgrade test v1.8.0 → branch build on an emulator (install the v1.8.0
+  release APK, add data, install the new build over it, check data and start); (2) X7 MASVS write-up;
+  (3) widget data updates, decoder fault injection, Anime4K on emulator GL, RTL check, then X11–X16.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
