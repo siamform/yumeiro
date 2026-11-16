@@ -12,6 +12,8 @@
   0 failures, lint 0 errors, DL-11a requests=1 / 1.000×, ER-15 compiles. Upgrade 43881788009: data 0 lost, but
   three harness errors (empty logcat, played detection, impossible "listed" check) → fa3bb3b; X10-5 open.
   BackgroundSettingsEffectDeviceTest (3ff6bd3) reviewed: every symbol it calls exists; compile owed.
+- **New owner bug:** BUG-5 Yumeiro TV UI (TV-1…TV-5, `docs/proposals/FEATURE-BUG-5-tv-ui.md`), open, not reproduced
+  yet; it is worked in G12 X9 after the G9/G10 batch, starting with a TV emulator reproduction.
 - **Current group:** G10 Errors + G9 verification. Step: waiting for CI to prove the androidTest compile.
 - **Running:** CI 43889319143 (head fa3bb3b, first run with the androidTest compile step).
 - **Next three actions:** (1) CI 43889319143 green → device batch on both phones, filter
