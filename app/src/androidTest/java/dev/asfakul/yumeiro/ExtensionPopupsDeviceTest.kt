@@ -239,8 +239,13 @@ class ExtensionPopupsDeviceTest {
         assertEquals(1, ExtensionPopups.held.value.size)
         inst.runOnMainSync { dev.asfakul.yumeiro.ui.navigation.NavPrefs.setShortcut(ctx, dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS, true) }
         try {
-            rule.waitUntil(15_000) { rule.onAllNodesWithTag("nav_shortcut_extensions", true).fetchSemanticsNodes().isNotEmpty() }
-            rule.onAllNodesWithTag("nav_shortcut_extensions", true)[0].performClick()
+            // The TV rail tags its items "tv_" + the bar tag (TvNavRail); run 43865392890 waited for
+            // the phone tag on the TV emulator (test error).
+            val tags = listOf("nav_shortcut_extensions", "tv_nav_shortcut_extensions")
+            rule.waitUntil(15_000) { tags.any { rule.onAllNodesWithTag(it, true).fetchSemanticsNodes().isNotEmpty() } }
+            val tag = tags.first { rule.onAllNodesWithTag(it, true).fetchSemanticsNodes().isNotEmpty() }
+            log("p8 shortcut tag=$tag")
+            rule.onAllNodesWithTag(tag, true)[0].performClick()
             rule.waitUntil(15_000) { rule.onAllNodesWithTag("extensions_screen", true).fetchSemanticsNodes().isNotEmpty() }
             rule.waitUntil(60_000) { rule.onAllNodesWithTag("extensions_list", true).fetchSemanticsNodes().isNotEmpty() }
             rule.onAllNodesWithTag("extensions_list", true)[0].performScrollToNode(hasTestTag("extensions_popups"))
