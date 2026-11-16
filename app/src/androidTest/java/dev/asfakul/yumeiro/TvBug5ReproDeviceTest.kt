@@ -208,7 +208,7 @@ class TvBug5ReproDeviceTest {
         log("TVB_STEP d startedOnPage=$startedOnPage search reachable=$onSearch walk=$walk topbarSearch=${boundsOf("topbar_search_action")} setup=${boundsOf("home_setup_card")} rail=${boundsOf("tv_nav_rail")}")
         if (onSearch) key("DPAD_CENTER", 1_000)
         val opened = has("topbar_search_input") || has("online_search_screen")
-        var inputFocused = false; var typed = ""
+        var inputFocused = false; var typed = ""; var focusAfter = emptyList<String>(); var answered = false
         if (opened) {
             Thread.sleep(600); runCatching { rule.waitForIdle() }
             inputFocused = "topbar_search_input" in focused()
@@ -220,13 +220,21 @@ class TvBug5ReproDeviceTest {
             }.getOrDefault("")
             log("TVB_STEP d inputFocused=$inputFocused typed='$typed'")
             key("ENTER", 8_000)
+            // Run 43914880052: after Enter nothing changed on Home (library-only search, empty TV
+            // library) and focus fell to the rail. Now: a visible answer, and focus stays in the box.
+            runCatching { rule.waitForIdle() }
+            focusAfter = focused()
+            answered = has("topbar_search_empty") || has("topbar_suggestions")
+            log("TVB_STEP d focusAfterSubmit=$focusAfter answered=$answered")
         }
         FirstRun.shot("tvb_d_search")
         log("TVB_CASE d reachable=$onSearch opened=$opened screen=${FirstRun.onScreen(rule)}")
         assertTrue("TV-4: the search button on Home cannot be reached with the D-pad: $walk", onSearch)
         assertTrue("TV-4: the search box did not open", opened)
         assertTrue("TV-4: the search box opened without D-pad focus, so typing went nowhere (typed='$typed')", inputFocused && typed.contains("naruto"))
-        log("TVB_RESULT PASS d (results judged from the log and tvb_d_search)")
+        assertTrue("TV-4: after Enter the search gave no visible answer", answered)
+        assertTrue("TV-4: after Enter focus left the search box: $focusAfter", "topbar_search_input" in focusAfter)
+        log("TVB_RESULT PASS d")
     }
 
     companion object { const val NAME = "yumeiro_test_clip.mp4" }

@@ -158,7 +158,9 @@ fun MTTopBar(
                     onValueChange = onSearchQueryChange,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = {
-                        committed = searchQuery; onSubmit(searchQuery); focusManager.clearFocus()
+                        // BUG-5 TV-4 (tv-api34 run 43914880052): clearing focus on a TV sends it to the rail
+                        // (the rail expanded over Home). On TV the box keeps focus; Down leaves it.
+                        committed = searchQuery; onSubmit(searchQuery); if (!tv) focusManager.clearFocus()
                     }),
                     modifier = Modifier
                         .weight(1f)
@@ -209,6 +211,15 @@ fun MTTopBar(
                     onFill = { s -> onSearchQueryChange(s.text) },
                     modifier = Modifier.padding(top = 6.dp),
                     tag = "topbar_suggestions",
+                )
+            }
+            // BUG-5 TV-4: this box searches the songs and videos on the device. After a search with
+            // no match nothing used to change, which read as "search is broken" (an empty TV library).
+            if (searchQuery.isNotBlank() && searchQuery == committed && suggestions.isEmpty()) {
+                Text(
+                    "Nothing on this device matches \"${searchQuery.trim()}\". This box searches your songs and videos; to search online, open Videos or Music and pick YouTube or Yumix.",
+                    style = MaterialTheme.typography.bodySmall, color = TextSecondary,
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp).testTag("topbar_search_empty"),
                 )
             }
             }
