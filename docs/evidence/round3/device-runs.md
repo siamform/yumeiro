@@ -300,3 +300,7 @@ These are real emulators running the real debug APK; the tests are not simulated
   main app (with the BUG-1 code) compiled; compileMobileDebugAndroidTestKotlin failed:
   ResumeAcrossProcessDeviceTest.kt:127 "Missing '}'" (a `//` comment swallowed the closing brace
   of the companion object). No device result from this run. Fixed in the next commit and rerun.
+- 43849088080 (device-check, 3076b25): rerun of 43847976226 plus YtChannelProbeDeviceTest and
+  YtChannelUiDeviceTest (BUG-2). Dispatched 2026-11-16 10:28 UTC. Result: pending.
+- Timestamp correction: the commit bodies d2923fa, 9128b10, 0ccc2f6, 8d48335 and 3076b25 give
+  ~10:30–10:55 UTC; they were all made between 10:24 and 10:28 UTC (real clock, `date -u`).
