@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 ~10:30 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 ~10:40 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
@@ -9,7 +9,7 @@
 - **Current group:** Level 1, Group 12. CI 43840098751 green (widget 5/5). X11–X16 audited (GROUP-12 table).
 - **Done:** CI 43843941876 green (1019 unit, 0 failures; DecoderFaultsTest 4/4, LivePagedTest 8/8).
 - **Running:** device run 43847976226 on 0ceb971: Widget, DecoderFault, Anime4kGl, RtlLayout, ResumeAcrossProcess (BUG-1).
-- **BUG-2:** E1/E3/E4 fix pushed with YtChannelLinkTest (unit, not run yet); E2 search channels and E5 device probe open.
+- **BUG-2:** E1–E4 fix pushed with YtChannelLinkTest (6, unit, not run yet); E5 device probe (channel page loads on v0.26.5) open.
 - **BUG-1:** fix D1–D4 pushed (42f1a1b, ResumePointsTest unit + device test 0ceb971); CI for ResumePointsTest still needed.
 - **Next three actions:** (1) read device run 43847976226 (YuWidgetTest, YuDecoderFault, YuAnime4k, YuRtl, YuResume, rtl shots);
   (2) CI on HEAD for ResumePointsTest + YtChannelLinkTest (compiles BUG-2 too); (3) HomeTrace

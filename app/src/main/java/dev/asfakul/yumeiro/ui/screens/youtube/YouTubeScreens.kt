@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.NorthWest
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
@@ -188,6 +189,8 @@ private class YtBrowseStore {
     var resultsFor by mutableStateOf<String?>(null)
     val results = dev.asfakul.yumeiro.ui.feed.LivePaged<YtItem, Page>({ it.id }, { _ -> emptyList<YtItem>() to null }, describe = ::friendly)
     var related by mutableStateOf<List<String>>(emptyList())
+    /** BUG-2 (E2): channels matching the search, shown above the videos. */
+    var channels by mutableStateOf<List<dev.asfakul.yumeiro.youtube.YtChannelHit>>(emptyList())
 
     companion object {
         val video = YtBrowseStore()
@@ -316,6 +319,11 @@ private fun YtBrowse(
     fun startResults(text: String) {
         store.resultsFor = text
         store.related = emptyList()
+        store.channels = emptyList()
+        if (!music) dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
+            val c = YouTube.searchChannels(app, text)
+            if (store.resultsFor == text) store.channels = c
+        }
         store.results.reset { cur -> YouTube.search(app, text, searchFilter, cur).let { it.items to it.next } }
         store.results.more()
         dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
@@ -377,6 +385,14 @@ private fun YtBrowse(
                 if (relatedSearches.isNotEmpty()) item("res_related") {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("youtube_related_searches")) {
                         itemsIndexed(relatedSearches, key = { i, s -> "rs${i}_$s" }) { _, s -> YtChip(s, false, leading = Icons.Default.Search) { search(s) } }
+                    }
+                }
+                val foundChannels = store.channels
+                if (foundChannels.isNotEmpty()) item("res_channels") {
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("youtube_channel_results")) {
+                        itemsIndexed(foundChannels, key = { _, c -> "ch_" + c.url }) { _, c ->
+                            YtChip(c.name.ifBlank { "Channel" }.take(28), false, leading = Icons.Default.Person) { channelName = c.name; channelUrl = c.url }
+                        }
                     }
                 }
                 if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }

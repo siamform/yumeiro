@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** BUG-2 (E3, E4, E1): channel links survive history, shared channel links are recognised, launch is one-shot. */
+/** BUG-2 (E2, E3, E4, E1): channel links survive history, shared channel links are recognised, launch is one-shot. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class YtChannelLinkTest {
@@ -57,6 +57,15 @@ class YtChannelLinkTest {
         assertFalse(YouTube.isChannelUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
         assertFalse(YouTube.isChannelUrl("https://youtu.be/dQw4w9WgXcQ"))
         assertFalse(YouTube.isChannelUrl("https://example.com/@someone"))
+    }
+
+    @Test fun searchKeepsChannelsAsTheirOwnRow() {
+        val c = org.schabi.newpipe.extractor.channel.ChannelInfoItem(0, ch, "Google for Developers").apply { subscriberCount = 2_000_000 }
+        val hit = YouTube.channelHit(c)
+        assertEquals(YtChannelHit(ch, "Google for Developers", null, 2_000_000), hit)
+        val video = org.schabi.newpipe.extractor.stream.StreamInfoItem(0, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "v", org.schabi.newpipe.extractor.stream.StreamType.VIDEO_STREAM)
+        assertNull(YouTube.channelHit(video))
+        assertEquals("channels", YouTube.CHANNELS_FILTER)
     }
 
     @Test fun launchIsTakenOnce() {

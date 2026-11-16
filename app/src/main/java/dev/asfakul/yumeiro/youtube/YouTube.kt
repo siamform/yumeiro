@@ -15,6 +15,7 @@ import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.extractor.kiosk.KioskInfo
 import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.localization.Localization
@@ -26,6 +27,9 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /** One YouTube / YouTube Music video or song. Plain data → safe to keep in Compose state. */
+/** BUG-2 (E2): a channel found by search. [subscribers] < 0 when unknown. */
+data class YtChannelHit(val url: String, val name: String, val avatar: String?, val subscribers: Long)
+
 data class YtItem(
     val id: String,
     val url: String,
@@ -181,6 +185,27 @@ object YouTube {
             val more = SearchInfo.getMoreItems(service, handler, page)
             YtPage(more.items.mapNotNull { it.toYt(filter.music) }, more.nextPage?.takeIf { Page.isValid(it) })
         }
+    }
+
+    /**
+     * BUG-2 (E2): channels for a search. The video search filter returns videos only and
+     * [toYt] keeps streams only, so a channel could never be found. Errors give an empty row
+     * (the video results are the main answer).
+     */
+    suspend fun searchChannels(context: Context, query: String, limit: Int = 4): List<YtChannelHit> = withContext(Dispatchers.IO) {
+        init(context)
+        runCatching {
+            val handler = service.searchQHFactory.fromQuery(query, listOf(CHANNELS_FILTER), "")
+            SearchInfo.getInfo(service, handler).relatedItems.mapNotNull { channelHit(it) }.distinctBy { it.url }.take(limit)
+        }.onFailure { Log.w(TAG, "channels '$query'", it) }.getOrDefault(emptyList())
+    }
+
+    internal const val CHANNELS_FILTER = "channels"
+
+    internal fun channelHit(item: InfoItem): YtChannelHit? {
+        val c = item as? ChannelInfoItem ?: return null
+        val url = c.url?.takeIf { it.isNotBlank() } ?: return null
+        return YtChannelHit(url, c.name.orEmpty(), bestImage(runCatching { c.thumbnails }.getOrNull()), c.subscriberCount)
     }
 
     suspend fun suggestions(context: Context, query: String): List<String> = withContext(Dispatchers.IO) {
