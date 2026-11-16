@@ -17,6 +17,8 @@ test("endpoint guard rejects SSRF shapes", () => {
     "http://ntfy.sh/x", "https://127.0.0.1/x", "https://[::1]/x", "https://localhost/x",
     "https://box.local/x", "https://intranet/x", "https://a.internal/x", "https://ntfy.sh:8443/x",
     "https://u:p@ntfy.sh/x", "ftp://ntfy.sh/x", "", 42, null, "https://ntfy.sh/" + "a".repeat(1100),
+    // X16-2: trailing root dot, numeric IPv4 shapes the URL parser turns into 127.0.0.1.
+    "https://localhost./x", "https://box.local./x", "https://a.internal../x", "https://0x7f.1/x", "https://2130706433/x",
   ]) assert.equal(validEndpoint(bad), null, String(bad));
 });
 

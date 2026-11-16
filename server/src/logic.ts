@@ -32,7 +32,9 @@ export function validEndpoint(raw: unknown): string | null {
   let u: URL;
   try { u = new URL(raw.trim()); } catch { return null; }
   if (u.protocol !== "https:" || u.port !== "" || u.username || u.password) return null;
-  const host = u.hostname.toLowerCase();
+  // G12 X16-2: "localhost." and "box.local." are the same names with the root dot; strip it
+  // before the private-name check (they passed it before).
+  const host = u.hostname.toLowerCase().replace(/\.+$/, "");
   if (!host.includes(".") || host.startsWith("[") || IPV4.test(host) || PRIVATE_HOST.test(host)) return null;
   u.hash = "";
   return u.toString();
