@@ -9,6 +9,8 @@ import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import dev.asfakul.yumeiro.ui.screens.TabPagerProbe
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
