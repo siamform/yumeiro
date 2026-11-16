@@ -14,7 +14,6 @@ import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -74,10 +73,14 @@ class SettingsWalkDeviceTest {
         Page("backup", listOf("settings_cat_backup"), 1),
     )
 
+    // Run 43875418000: Settings home keeps its scroll, so the first category can be off the
+    // list while home shows; the list's own tag says it is there.
+    private fun atHome() = has("settings_home")
+
     private fun toSettingsHome() {
-        if (has("settings_cat_appearance")) return
+        if (atHome()) return
         FirstRun.tapVisible(rule, "topbar_settings_action")
-        runCatching { rule.waitUntil(20_000) { has("settings_cat_appearance") } }
+        runCatching { rule.waitUntil(20_000) { atHome() } }
             .onFailure { throw AssertionError("Settings home never showed · ${FirstRun.onScreen(rule)}") }
     }
 
@@ -88,7 +91,7 @@ class SettingsWalkDeviceTest {
 
     private fun close(p: Page) {
         repeat(p.backs) { FirstRun.shell("input keyevent 4"); pause(900) }
-        if (!runCatching { rule.waitUntil(10_000) { has("settings_cat_appearance") }; true }.getOrDefault(false)) {
+        if (!runCatching { rule.waitUntil(10_000) { atHome() }; true }.getOrDefault(false)) {
             log("SW back from ${p.name} did not reach Settings home; one more Back · ${FirstRun.onScreen(rule)}")
             FirstRun.shell("input keyevent 4"); pause(900)
             toSettingsHome()
@@ -141,7 +144,9 @@ class SettingsWalkDeviceTest {
     /** Clicks [tag] and returns the state it shows 0.8 s later (null if it went away). */
     private fun flip(tag: String): Boolean? {
         find(tag) ?: return null
-        runCatching { rule.onAllNodesWithTag(tag, true)[0].performClick() }.onFailure { log("SW click $tag failed: ${it.message?.take(80)}") }
+        // Run 43875418000: a click on a switch below the fold landed outside the window and did
+        // nothing ("did not move" for every switch). tapVisible scrolls it on screen first.
+        runCatching { FirstRun.tapVisible(rule, tag, 10_000) }.onFailure { log("SW click $tag failed: ${it.message?.take(160)}") }
         rule.waitForIdle(); pause(800)
         // A dialog the app opened by itself (permission rationale, guide) is closed like a user would.
         FirstRun.dismissPrompts(rule)
