@@ -226,6 +226,10 @@ object YouTube {
 
     fun isYouTubeUrl(url: String): Boolean = idFrom(url) != null
 
+    /** BUG-2 (E4): /@handle, /channel/UC…, /c/…, /user/… links (not videos). */
+    fun isChannelUrl(url: String): Boolean =
+        idFrom(url) == null && runCatching { service.channelLHFactory.acceptUrl(url) }.getOrDefault(false)
+
     // endregion
 
     // region channels

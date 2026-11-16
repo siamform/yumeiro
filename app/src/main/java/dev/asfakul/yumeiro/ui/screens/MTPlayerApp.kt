@@ -342,6 +342,9 @@ fun MTPlayerApp(
     LaunchedEffect(currentRoute) { if (sourceMenuFor != null && sourceMenuFor != currentRoute) sourceMenuFor = null }
     fun openMusic(mode: dev.asfakul.yumeiro.ui.screens.music.MusicMode) { musicModeKey = mode.key; navigateTop(Screen.Music.route) }
     fun openVideos(source: dev.asfakul.yumeiro.ui.screens.online.VideoSource) { videoSourcePicked = true; videoSource = source; navigateTop(Screen.Videos.route) }
+    // BUG-2 (E1, E4): a channel request (watch page, shared link) shows Videos → YouTube, which opens it.
+    val ytChannelRequest by dev.asfakul.yumeiro.youtube.YtChannelLaunch.request.collectAsState()
+    LaunchedEffect(ytChannelRequest) { if (ytChannelRequest != null) openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) }
     // First run: extensions stay asleep until the welcome screen / tour is finished or skipped.
     // Decided before any screen can call ExtensionManager.start.
     val firstRunAtLaunch = remember { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.shouldAutoShow(context).also { dev.asfakul.yumeiro.online.OnboardingGate.begin(it) } }
@@ -1401,7 +1404,11 @@ fun MTPlayerApp(
                         dev.asfakul.yumeiro.ui.screens.online.OnlineWatchPanel(player = handle, onOpenItem = { item -> closePlayer(); openOnline(item) })
                     }
                     isYt -> { _ ->
-                        dev.asfakul.yumeiro.ui.screens.watch.YouTubeWatchPanel(onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) })
+                        dev.asfakul.yumeiro.ui.screens.watch.YouTubeWatchPanel(
+                            onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) },
+                            // BUG-2 (E1): the video keeps playing in the floating window over the channel.
+                            onOpenChannel = { url, name -> videoMinimized = true; dev.asfakul.yumeiro.youtube.YtChannelLaunch.open(url, name) },
+                        )
                     }
                     // Stream tab (IPTV / links): same docked watch page with the playlist's channels.
                     isStream -> { _ ->

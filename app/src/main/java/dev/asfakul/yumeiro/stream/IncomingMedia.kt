@@ -47,7 +47,13 @@ object IncomingMedia {
         }
         uri ?: return false
         if (pointsIntoPrivateStorage(context, uri)) return false
-        when (uri.scheme?.lowercase()) {
+        // BUG-2 (E4): a shared YouTube channel link opens the channel, not the player.
+        val scheme = uri.scheme?.lowercase()
+        if ((scheme == "http" || scheme == "https") && dev.asfakul.yumeiro.youtube.YouTube.isChannelUrl(uri.toString())) {
+            dev.asfakul.yumeiro.youtube.YtChannelLaunch.open(uri.toString(), "")
+            return true
+        }
+        when (scheme) {
             "http", "https", "rtsp", "rtsps", "rtmp" -> open(context, StreamRequest(url = uri.toString()))
             "content", "file" -> _pending.value = VideoItem(
                 id = "external:$uri",

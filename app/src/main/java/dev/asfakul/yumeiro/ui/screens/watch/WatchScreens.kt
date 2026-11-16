@@ -460,7 +460,7 @@ fun WatchSectionLabel(title: String, trailing: String? = null) {
 
 /** YouTube-style details under the docked player: title, channel, actions, description, Up next. */
 @Composable
-fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
+fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, onOpenChannel: ((url: String, name: String) -> Unit)? = null) {
     val st by YtWatch.state.collectAsState()
     val state = st ?: return
     val context = LocalContext.current
@@ -479,7 +479,11 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
             PlaybackFactsRow()
         }
         item(key = "channel") {
-            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            // BUG-2 (E1): the channel row opens the channel (it had no click).
+            val chUrl = info?.channelUrl ?: item.channelUrl
+            val chName = info?.channel ?: item.channel
+            val open = if (chUrl != null && onOpenChannel != null) Modifier.clickable(onClickLabel = "Open channel") { onOpenChannel(chUrl, chName) } else Modifier
+            Row(Modifier.fillMaxWidth().then(open).testTag("yt_watch_channel").padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 val avatar = info?.channelAvatar ?: item.channelAvatar
                 Box(
                     Modifier.size(40.dp).clip(CircleShape).background(Brush.linearGradient(listOf(SpotifyGreen, AccentSecondary))),

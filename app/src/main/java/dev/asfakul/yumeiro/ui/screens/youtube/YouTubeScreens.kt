@@ -230,8 +230,19 @@ private fun YtBrowse(
     // A channel opened from a card replaces the page in place (no new screen, no flash).
     var channelUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var channelName by rememberSaveable { mutableStateOf("") }
-    val openChannel: ((YtItem) -> Unit)? = if (music) null else { item -> channelName = item.channel; channelUrl = item.channelUrl }
+    val openChannel: ((YtItem) -> Unit)? = if (music) null else { item ->
+        // BUG-2: a card without a channel link used to do nothing at all on tap.
+        if (item.channelUrl == null) android.widget.Toast.makeText(context, "Channel not known yet. Play the video once to learn it.", android.widget.Toast.LENGTH_SHORT).show()
+        else { channelName = item.channel; channelUrl = item.channelUrl }
+    }
     LaunchedEffect(Unit) { YtHistory.load(context) }
+    // BUG-2 (E1, E4): a channel opened from the watch page or a shared link.
+    if (!music) {
+        val launch by dev.asfakul.yumeiro.youtube.YtChannelLaunch.request.collectAsState()
+        LaunchedEffect(launch) {
+            dev.asfakul.yumeiro.youtube.YtChannelLaunch.take()?.let { r -> channelName = r.name; channelUrl = r.url }
+        }
+    }
     val history by YtHistory.items.collectAsState()
     // Offline, the page banner already explains what still works; empty skeleton shelves would only look broken.
     val netOnline by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()

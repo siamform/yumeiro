@@ -35,7 +35,22 @@ object YtHistory {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         load(context)
         if (!item.music) dev.asfakul.yumeiro.player.LastPlayed.markYouTube(context, item.id)
-        val next = (listOf(item) + _items.value.filterNot { it.id == item.id }).take(MAX)
+        // BUG-2 (E3): keep the channel link learned earlier when the new copy has none.
+        val old = _items.value.firstOrNull { it.id == item.id }
+        val kept = if (item.channelUrl == null && old?.channelUrl != null) item.copy(channelUrl = old.channelUrl, channelAvatar = item.channelAvatar ?: old.channelAvatar) else item
+        val next = (listOf(kept) + _items.value.filterNot { it.id == item.id }).take(MAX)
+        _items.value = next
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()
+    }
+
+    /** BUG-2 (E3): the watch page learned the channel of [id]; history cards can open it now. */
+    fun learnChannel(context: Context, id: String, channelUrl: String?, avatar: String?) {
+        if (channelUrl.isNullOrBlank()) return
+        load(context)
+        val cur = _items.value
+        val i = cur.indexOfFirst { it.id == id && it.channelUrl == null }
+        if (i < 0) return
+        val next = cur.toMutableList().also { it[i] = it[i].copy(channelUrl = channelUrl, channelAvatar = it[i].channelAvatar ?: avatar) }
         _items.value = next
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()
     }
@@ -48,7 +63,9 @@ object YtHistory {
     internal fun encode(list: List<YtItem>): String = JSONArray().apply {
         list.forEach {
             put(JSONObject().put("id", it.id).put("url", it.url).put("t", it.title).put("c", it.channel)
-                .put("th", it.thumbnail ?: "").put("d", it.durationSec).put("m", it.music).put("l", it.live))
+                .put("th", it.thumbnail ?: "").put("d", it.durationSec).put("m", it.music).put("l", it.live)
+                // BUG-2 (E3): the channel link was dropped, so channel taps on history cards did nothing.
+                .put("cu", it.channelUrl ?: "").put("ca", it.channelAvatar ?: ""))
         }
     }.toString()
 
@@ -63,6 +80,7 @@ object YtHistory {
             YtItem(
                 id = o.getString("id"), url = o.optString("url"), title = o.optString("t"), channel = o.optString("c"),
                 thumbnail = o.optString("th").ifBlank { null }, durationSec = o.optLong("d"), music = o.optBoolean("m"), live = o.optBoolean("l"),
+                channelUrl = o.optString("cu").ifBlank { null }, channelAvatar = o.optString("ca").ifBlank { null },
             )
         }
     }

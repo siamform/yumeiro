@@ -80,6 +80,7 @@ object YtWatch {
                     category = i.category?.takeIf { it.isNotBlank() },
                 )
             }
+            mapped?.let { YtHistory.learnChannel(app, item.id, it.channelUrl, it.channelAvatar) }
             val related = runCatching { YouTube.related(app, item.id, item.music) }.getOrDefault(emptyList()).filter { it.id != item.id }
             _state.value = _state.value?.takeIf { it.item.id == item.id }?.copy(info = mapped, related = related, loading = false)
         }
