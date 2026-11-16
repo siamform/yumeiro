@@ -61,8 +61,16 @@ otherwise engine levels "Scaled/Upscaled by Yumeiro"). Download list = `YtDownlo
   `QualityEngine.online` kept it (it is inside 144..4320) and offered an invented "400p" row that
   switched to an unknown-quality source. Fix: `QualityEngine.onlineHeights` drops 400 like 0/-1.
   Test: `Bug4QualityListTest.unknownQualityIsNotAnInventedHeight`.
-- F4 (open): `qualityOptions` drops tracks the device can't decode (`isTrackSupported`) without
-  saying so; the YouTube list labels these ("Plays as … here"), the HLS ladder does not.
+- F4 (root cause, fixed in 2aaa659): `qualityOptions` dropped tracks the device can't decode
+  (`isTrackSupported`) without saying so; the YouTube list labels these ("Plays as … here"), the
+  HLS/DASH ladder did not. Now listed greyed, not clickable, "Not playable on this device (no HEVC
+  decoder)"; a playable track of the same label wins; another stream of that height (extras)
+  replaces the greyed row. Tests: `Bug4QualityListTest.unsupportedTrackIsListedNotDropped`,
+  `playableTrackWinsTheSameLabel` (unit, pending CI).
+- F1 device proof without YouTube (640e984): `YtQualityOfflineDeviceTest` plays a local clip
+  registered as a YouTube video with a built `StreamInfo` (test seam `YouTube.seedForTests`), and
+  asserts every download-sheet height is listed as a stream. Applying a pick needs live YouTube
+  links (bot wall on CI) → `YtQualityDeviceTest` / owner test.
 
 ## 4. Proof plan
 
