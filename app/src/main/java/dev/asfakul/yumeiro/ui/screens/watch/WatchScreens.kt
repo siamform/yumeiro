@@ -569,7 +569,7 @@ private fun RelatedRow(item: YtItem, onClick: () -> Unit) {
  * player opens; the docked player then reuses [YouTubeWatchPanel].
  */
 @Composable
-fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit) {
+fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit, onOpenChannel: ((url: String, name: String) -> Unit)? = null) {
     val st by YtWatch.state.collectAsState()
     val state = st ?: return
     if (playerOpen) return
@@ -583,7 +583,10 @@ fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit) {
             if (err != null) WatchScreenError("YouTube couldn't play this video: $err", onRetry = { onPlay(state.item) }, onClose = close)
             else WatchScreenStatus(if (state.item.live) "Joining the live stream…" else "Loading video…", onCancel = close)
         },
-    ) { YouTubeWatchPanel(onPlay = onPlay) }
+    ) {
+        // BUG-2 (E6): the channel row works here too (loading or failed page), not only once the player opened.
+        YouTubeWatchPanel(onPlay = onPlay, onOpenChannel = onOpenChannel?.let { open -> { url: String, name: String -> close(); open(url, name) } })
+    }
 }
 
 // endregion

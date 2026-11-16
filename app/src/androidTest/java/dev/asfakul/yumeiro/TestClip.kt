@@ -29,7 +29,8 @@ import java.util.concurrent.TimeUnit
 object TestClip {
     private const val DIR = "Movies/YumeiroTest"
 
-    fun put(ctx: Context, name: String): Uri {
+    /** Copies the androidTest asset [asset] into the media library as [name] (a separate name keeps tests apart). */
+    fun put(ctx: Context, name: String, asset: String = name): Uri {
         val inst = InstrumentationRegistry.getInstrumentation()
         val cr = ctx.contentResolver
         if (Build.VERSION.SDK_INT >= 29) {
@@ -42,13 +43,13 @@ object TestClip {
                 put(MediaStore.Video.Media.IS_PENDING, 1)
             }
             val uri = checkNotNull(cr.insert(coll, v)) { "MediaStore insert failed" }
-            cr.openOutputStream(uri)!!.use { out -> inst.context.assets.open(name).use { it.copyTo(out) } }
+            cr.openOutputStream(uri)!!.use { out -> inst.context.assets.open(asset).use { it.copyTo(out) } }
             cr.update(uri, ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
             return uri
         }
         // The app's own external files folder needs no permission and the shell can read it.
         val staged = File(checkNotNull(ctx.getExternalFilesDir(null)) { "no external files dir" }, name)
-        inst.context.assets.open(name).use { input -> staged.outputStream().use { input.copyTo(it) } }
+        inst.context.assets.open(asset).use { input -> staged.outputStream().use { input.copyTo(it) } }
         val target = "/sdcard/$DIR/$name"
         FirstRun.shell("mkdir -p /sdcard/$DIR")
         FirstRun.shell("cp ${staged.absolutePath} $target")

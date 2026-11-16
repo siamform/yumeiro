@@ -53,7 +53,8 @@ class DecoderFaultDeviceTest {
     @Before fun setUp() {
         listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.POST_NOTIFICATIONS")
             .forEach { runCatching { inst.uiAutomation.grantRuntimePermission(ctx.packageName, it) } }
-        clip = TestClip.put(ctx, NAME)
+        // The fault clip is the shared test clip under its own name (there is no separate asset).
+        clip = TestClip.put(ctx, NAME, asset = "yumeiro_test_clip.mp4")
         // A fresh player per test: the fault mode is read when the player is built.
         rule.runOnUiThread { PlaybackSession.releaseNow() }
         FirstRun.toTabs(rule)

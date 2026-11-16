@@ -1,23 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 10:36 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 10:44 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
   No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK in this sandbox; every compile and unit test goes to CI.
-- **Current group:** Level 1, Group 12. CI 43840098751 green (widget 5/5). X11–X16 audited (GROUP-12 table).
-- **Done:** CI 43843941876 green (1019 unit, 0 failures; DecoderFaultsTest 4/4, LivePagedTest 8/8).
-- **Running:** device run 43849088080 on 3076b25: Widget, DecoderFault, Anime4kGl, RtlLayout, ResumeAcrossProcess (BUG-1), YtChannelProbe + YtChannelUi (BUG-2). 43847976226 failed to compile the androidTest (syntax, fixed in 3076b25); no device result from it.
-- **BUG-2:** E1–E4 fix pushed with YtChannelLinkTest (6, unit, not run yet); E5 device probe (channel page loads on v0.26.5) open.
-- **BUG-4:** A.5 note `docs/proposals/FEATURE-BUG-4-quality-selection.md`. F1 (YouTube file:// manifest → no YouTube list) and F2 (Yumix list keyed on links.size/5) fixed in code with `r15/Bug4QualityListTest` (unit, not run yet). F3/F4 open. Device proof pending.
-- **BUG-1:** fix D1–D4 pushed (42f1a1b, ResumePointsTest unit + device test 0ceb971); CI for ResumePointsTest still needed.
-- **Next three actions:** (1) read device run 43849088080 (YuWidgetTest, YuDecoderFault, YuAnime4k, YuRtl, YuResume, YuChannel, rtl + channel shots);
-  (2) CI on HEAD for ResumePointsTest + YtChannelLinkTest + DownloadThroughputTest + Bug4QualityListTest (compiles BUG-2/3/4 too); (3) HomeTrace
-  swangle comparison, ADR-014 TV rerun, X10 upgrade check, EXT-T1 ≥ 20 runs.
-- **BUG-1 lead (not a finding yet, Step A.5 note first):** `VideoPlayerModal` onDispose saves
-  `lease.positionMs` even when the player never reached the resume seek (0 / TIME_UNSET), and
-  `MediaRepository.updateVideoProgress` deletes `pos_<id>` when position ≤ 0 → a resume point can be wiped.
+- **Current group:** Level 1 (Group 12) + Level 2 BUG-1..4.
+- **Last device run:** 43849088080 (3076b25): Widget 5/5, Anime4kGl, RTL, ResumeAcrossProcess (BUG-1),
+  YtChannelProbe (BUG-2 E5) PASS on both emulators. DecoderFault 0/3 = test error (missing asset, fixed).
+  YtChannelUi "PASS" rejected after looking at the shots (watch page still on top) → E6 fixed, test hardened.
+- **Code waiting for CI (not run yet):** BUG-4 F1/F2/F5 + `Bug4QualityListTest`; BUG-1 D5 + 2 new
+  `ResumePointsTest` cases; BUG-2 E6; BUG-3 `DownloadThroughputTest`; `YtQualityDeviceTest` (device).
+- **Throwaway branch prepared locally (not pushed):** `fail-before/r15-proofs` in worktree /tmp/fb —
+  reverts X15-2, BUG-1 D1–D5 (keeps ResumeRules.kt), BUG-4 F1 to show the tests fail before the fix.
+- **Next three actions:** (1) CI on HEAD (`ci.yml`, r15-stability): all new unit tests, THROUGHPUT lines;
+  (2) device run: DecoderFault, YtChannelUi, YtQuality; (3) CI on fail-before/r15-proofs (after 1), then
+  HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

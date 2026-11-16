@@ -1466,6 +1466,8 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.screens.watch.YouTubeWatchLayer(
                 playerOpen = activePlayingVideo != null,
                 onPlay = { dev.asfakul.yumeiro.youtube.YouTubePlayback.playVideo(context, it) },
+                // BUG-2 (E6): no player yet, so the loading page closes and the channel opens.
+                onOpenChannel = { url, name -> dev.asfakul.yumeiro.youtube.YtChannelLaunch.open(url, name) },
             )
         }
 

@@ -40,6 +40,16 @@ class YtChannelUiDeviceTest {
     private fun waitVisible(tag: String, ms: Long): Boolean =
         runCatching { rule.waitUntil(ms) { visible(tag) > 0 }; true }.getOrDefault(false)
 
+    /**
+     * The channel really on screen: its node exists AND no full watch page (player docked or the
+     * loading / failed page) covers it. Run 43849088080 passed on the node alone while shots 4–5
+     * showed the watch page still on top, so the old check proved nothing.
+     */
+    private fun channelUncovered() = visible("youtube_channel") > 0 && visible("yt_watch_panel") == 0 && visible("yt_watch_loading") == 0
+    private fun waitChannelUncovered(ms: Long): Boolean =
+        runCatching { rule.waitUntil(ms) { channelUncovered() }; true }.getOrDefault(false)
+    private fun state() = "channel=${visible("youtube_channel")} panel=${visible("yt_watch_panel")} loading=${visible("yt_watch_loading")} player=${visible("video_player_root")}"
+
     @Test fun openChannelListScrollPlayAndBack() {
         FirstRun.toTabs(rule)
         val url = "https://www.youtube.com/@GoogleDevelopers"
@@ -66,19 +76,24 @@ class YtChannelUiDeviceTest {
         // E1: the watch page's channel row opens the channel (the video minimises).
         val row = waitVisible("yt_watch_channel", 20_000)
         if (row) rule.onAllNodesWithTag("yt_watch_channel", true)[0].performClick()
-        val viaRow = waitVisible("youtube_channel", 20_000)
+        val viaRow = waitChannelUncovered(20_000)
         FirstRun.shot("channel_4_from_row")
-        log("CHANNEL_UI row=$row channelAgain=$viaRow")
+        log("CHANNEL_UI row=$row channelAgain=$viaRow ${state()}")
         assertTrue("channel row did not bring the channel back", viaRow)
 
         // Back from the video (open it again, then Back) lands on the channel, not Home.
         FirstRun.tapVisible(rule, "youtube_card")
-        waitVisible("yt_watch_panel", 30_000)
-        FirstRun.shell("input keyevent 4"); Thread.sleep(1_500); rule.waitForIdle()
-        if (visible("yt_watch_panel") > 0) { FirstRun.shell("input keyevent 4"); Thread.sleep(1_500); rule.waitForIdle() }
-        val back = waitVisible("youtube_channel", 15_000)
+        val reopened = waitVisible("yt_watch_panel", 30_000)
+        FirstRun.shot("channel_5a_reopened")
+        log("CHANNEL_UI reopened=$reopened ${state()}")
+        var presses = 0
+        while (presses < 2 && !channelUncovered()) {
+            FirstRun.shell("input keyevent 4"); presses++; Thread.sleep(1_500); rule.waitForIdle()
+            log("CHANNEL_UI back#$presses ${state()}")
+        }
+        val back = waitChannelUncovered(15_000)
         FirstRun.shot("channel_5_back")
-        log("CHANNEL_UI_RESULT ${if (back) "PASS" else "FAIL"} back=$back")
+        log("CHANNEL_UI_RESULT ${if (back) "PASS" else "FAIL"} back=$back presses=$presses ${state()}")
         assertTrue("Back did not return to the channel · ${FirstRun.onScreen(rule).take(800)}", back)
     }
 }

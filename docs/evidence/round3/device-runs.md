@@ -301,7 +301,29 @@ These are real emulators running the real debug APK; the tests are not simulated
   ResumeAcrossProcessDeviceTest.kt:127 "Missing '}'" (a `//` comment swallowed the closing brace
   of the companion object). No device result from this run. Fixed in the next commit and rerun.
 - 43849088080 (device-check, 3076b25): rerun of 43847976226 plus YtChannelProbeDeviceTest and
-  YtChannelUiDeviceTest (BUG-2). Dispatched 2026-11-16 10:28 UTC. Result: pending.
+  YtChannelUiDeviceTest (BUG-2). Dispatched 2026-11-16 10:28 UTC. Finished ~10:40 UTC: FAILURE
+  (only DecoderFault failed). Emulator results, both api33-lowram and api36 (repeat-results.txt):
+  - WidgetUpdatesDeviceTest 5/5 PASS (w1–w5 ok).
+  - DecoderFaultDeviceTest 0/3: test error, not an app result. `TestClip.put(ctx, "yumeiro_fault_clip.mp4")`
+    opened an asset that does not exist (only `yumeiro_test_clip.mp4` is in androidTest/assets):
+    FileNotFoundException in setUp. Fixed: `TestClip.put(..., asset =)`; rerun needed.
+  - Anime4kGlDeviceTest PASS: ANIME4K_GL_RESULT PASS {LOW=8, MID=8, HIGH=8} (SwiftShader/ANGLE GL).
+  - RtlLayoutDeviceTest PASS: locale [ar,en_US], layoutDirection=1, tab bar mirrored (Home on the
+    right), Settings back at the right edge. Shots rtl_home/settings/videos/library looked at: mirrored,
+    no clipped text found; Library stat tile shows "Unkn…" (ellipsis, the same in LTR, not RTL-specific).
+  - ResumeAcrossProcessDeviceTest PASS (BUG-1): RESUME_A left=8000 then process killed; RESUME_B
+    reopened at 8593 ms (api33-lowram) / 8215 ms (api36) from Home → Jump back in; RESUME_RESULT PASS.
+    Phase a reports "Process crashed" by design (the test kills the process).
+  - YtChannelProbeDeviceTest PASS (BUG-2 E5): header ok 'Google for Developers', subs 2680000, tabs
+    [videos, shorts, livestreams], 30 items, next page, channel search 4 hits. NewPipeExtractor v0.26.5.
+  - YtChannelUiDeviceTest reported PASS, but the shots do NOT support it: channel_4_from_row and
+    channel_5_back still show the YouTube watch page (video failed: LOGIN_REQUIRED, YouTube blocks
+    anonymous playback from the CI IP) on top of the channel. The check only looked for the
+    `youtube_channel` node, which exists behind the page. Root cause found by reading the code
+    (E6): the loading / failed watch page (`YouTubeWatchLayer`) built `YouTubeWatchPanel` without
+    `onOpenChannel`, so the channel row did nothing until the player opened. Fixed, and the test now
+    requires the channel with no watch page (`yt_watch_panel`, `yt_watch_loading`) on screen and logs
+    the state after each Back. Status of this test: NOT a pass; rerun needed.
 - Timestamp correction: the commit bodies d2923fa, 9128b10, 0ccc2f6, 8d48335 and 3076b25 give
   ~10:30–10:55 UTC; they were all made between 10:24 and 10:28 UTC (real clock, `date -u`).
 
