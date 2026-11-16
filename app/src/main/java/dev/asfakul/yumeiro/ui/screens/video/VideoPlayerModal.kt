@@ -290,7 +290,9 @@ private fun VideoPlayerModalContent(
     var isLockedUnlockPillVisible by remember { mutableStateOf(false) }
     // The player opens in the normal (portrait) layout with system bars visible. Only the
     // fullscreen button switches to landscape + immersive mode.
-    var isFullscreen by rememberSaveable { mutableStateOf(false) }
+    // BUG-5 TV-5: TV layout always plays full screen (PlayerOrientationRule).
+    val tvPlayer = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+    var isFullscreen by rememberSaveable { mutableStateOf(PlayerOrientationRule.pinnedFullscreen(tvPlayer, minimized)) }
     var isInPipMode by remember { mutableStateOf(false) }
     // Floating (minimised) or system PiP: only the picture is shown, no controls or watch page.
     val hideChrome = isInPipMode || minimized
@@ -1056,20 +1058,12 @@ private fun VideoPlayerModalContent(
             if (isFullscreen) {
                 val format = activeVideoFormat
                 val isVerticalVideo = format != null && format.height > format.width && format.width > 0
-                act.requestedOrientation = if (isVerticalVideo) {
-                    ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                } else {
-                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                }
+                act.requestedOrientation = PlayerOrientationRule.request(tvPlayer, fullscreen = true, verticalVideo = isVerticalVideo, tablet = isTablet)
                 insetsController.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                act.requestedOrientation = if (isTablet) {
-                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                } else {
-                    ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                }
+                act.requestedOrientation = PlayerOrientationRule.request(tvPlayer, fullscreen = false, verticalVideo = false, tablet = isTablet)
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
             }
         }
@@ -1457,7 +1451,7 @@ private fun VideoPlayerModalContent(
         // R17: one Back leaves on touch screens; a remote steps (controls → fullscreen → leave).
         when (PlayerBackRule.step(
             keyDriven = keyDriven, controlsVisible = isControlsVisible, locked = isScreenLocked, ended = isEnded,
-            error = playerError != null, chromeHidden = hideChrome, fullscreen = isFullscreen, onWatchPage = watchPage != null,
+            error = playerError != null, chromeHidden = hideChrome, fullscreen = isFullscreen && !tvPlayer, onWatchPage = watchPage != null,
         )) {
             PlayerBackRule.Step.HIDE_CONTROLS -> isControlsVisible = false
             PlayerBackRule.Step.EXIT_FULLSCREEN -> isFullscreen = false
@@ -1555,6 +1549,8 @@ private fun VideoPlayerModalContent(
     // bar-less screen of the full-screen player.
     LaunchedEffect(minimized) {
         if (minimized) { isFullscreen = false; isScreenLocked = false; isControlsVisible = false }
+        // TV: back from the floating window is full screen again (no watch-page layout on a TV).
+        else if (PlayerOrientationRule.pinnedFullscreen(tvPlayer, minimized)) isFullscreen = true
     }
 
     val isLandscapeNow = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
@@ -2001,6 +1997,7 @@ private fun VideoPlayerModalContent(
                     },
                     isFullscreen = isFullscreen,
                     onToggleFullscreen = { isFullscreen = !isFullscreen },
+                    showFullscreenButton = !tvPlayer,
                     onSeekProgressFinish = {
                         val seekPos = dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress,
                             dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))

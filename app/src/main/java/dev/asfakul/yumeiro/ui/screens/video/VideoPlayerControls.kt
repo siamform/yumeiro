@@ -614,6 +614,8 @@ fun VideoPlayerBottomBar(
     isLive: Boolean = false,
     /** Still opening / buffering (the length shows 00:00 until it is known). */
     isLoading: Boolean = false,
+    /** BUG-5 TV-5: TV layout is always full screen, so it has no full-screen toggle. */
+    showFullscreenButton: Boolean = true,
 ) {
     if (compact) {
         val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
@@ -633,7 +635,7 @@ fun VideoPlayerBottomBar(
             )
             if (known != null) Text(formatDuration(durationMs), color = TextSecondary, fontSize = 11.sp)
             else DurationPending(isLive = isLive, isLoading = isLoading)
-            IconButton(onClick = onToggleFullscreen, modifier = Modifier.testTag("video_fullscreen_btn")) {
+            if (showFullscreenButton) IconButton(onClick = onToggleFullscreen, modifier = Modifier.testTag("video_fullscreen_btn")) {
                 Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, if (isFullscreen) "Exit fullscreen" else "Enter fullscreen", tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
@@ -668,7 +670,7 @@ fun VideoPlayerBottomBar(
                     color = TextSecondary,
                     fontSize = 11.sp
                 ) else DurationPending(isLive = isLive, isLoading = isLoading)
-                IconButton(
+                if (showFullscreenButton) IconButton(
                     onClick = onToggleFullscreen,
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
