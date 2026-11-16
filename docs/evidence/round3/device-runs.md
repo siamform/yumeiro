@@ -688,3 +688,13 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - a TV-5, b TV-2, c TV-3, d TV-4 focus: all PASS. d: start quick_card_downloads, Up×3 → magnifier, inputFocused=true,
   typed='naruto'. After Enter Home is unchanged (library-only search, empty library) and focus moves to the rail.
+
+## 43920651380 (phones, both; emulator; head 2507429)
+
+- PushAlertsEffectDeviceTest a/b/c PASS on api33-lowram and api36 (SE-5 16/16).
+- StreamFormatMismatchDeviceTest: all 5 cases on both phones ended in ERROR_CODE_PARSING_MANIFEST_MALFORMED shown as
+  "Unsupported stream format"; maxLag api36 94–697 ms, api33 295–1,548 ms (one FMT_STALL: setRequestedOrientation
+  binder, 1,512 ms). Failed only on closed=false: Back leaves to the floating window by design (test error).
+- UpscaleFreezeDeviceTest: Anime4K on and the "Upscaled by Yumeiro" level both kept playing (pos +4.0 to +4.6 s),
+  maxLag ≤ 846 ms. Shots showed 00:00 and an open Quality list because SystemClock.sleep stops the Compose test
+  clock (no recomposition), not an app freeze. Tests rewritten with UiLiveness (pump, gfxinfo frames, real taps).
