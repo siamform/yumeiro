@@ -453,22 +453,74 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
   git-history secret scan before any release.
 - **Status:** accepted (2026-11-16), implemented (X7-3).
 
-### ADR-014 (proposed): Dialogs that third-party extensions open over the app (G12 X9-7)
+### ADR-014: Windows that third-party extensions open (G12 X9-7)
 
-- **Context:** CloudStream plugins run inside our process with the activity as context, so they can
-  show their own windows. On the TV emulator (43775191888) the `com.phisher98` repo plugin opened a
-  plain View dialog "Support Phisher Repo" (donation link, "Watch an Ad") over MainActivity while it
-  loaded. It takes D-pad focus; the first Back only closes it. Evidence:
-  `docs/evidence/round3/x9-7-extension-dialog-tv.png`. The same mechanism serves legitimate plugin
-  UI (log-in pages, WebView captcha, settings), so a blanket block would break those.
-- **Options:** (a) keep as is; the tests close it
-  (`FirstRun.dismissForeignDialog`). (b) Block plugin dialogs during home loading only: show them
-  later from a "Messages from extensions" entry in the extension's page. (c) Block every plugin
-  dialog unless the user turns on "Allow extension pop-ups" per extension (default on for
-  extensions that need log-in). (d) Remove or warn about the repo in the market list.
-- **Proposal:** (b) for the start-up case and (c)'s per-extension switch as the user's control,
-  after a design pass (UI/UX skill) and a TV focus test. Not built.
-- **Status:** proposed; needs the owner's decision. Nothing changed in product code.
+- **Status:** accepted (owner orders 4: convert, never block; design delegated). Built; evidence in
+  `docs/DONE-LEDGER.md` (X9-7 / ADR-014 row).
+- **Context:** CloudStream plugins run in our process with the activity as context and open their
+  own View windows. phisher98's repo opens "Support Phisher Repo" (donation, "Watch an Ad") while it
+  loads; on TV it takes D-pad focus and the next Back closes it instead of the screen (TV
+  43775191888, `docs/evidence/round3/x9-7-extension-dialog-tv.png`; EXT-T1 on api33-lowram). The
+  same mechanism carries legitimate plugin UI (log-in forms, WebView captcha, settings, server
+  choice), so blocking dialogs would break extensions.
+- **Decision:**
+  1. Two classes. **Functional** = has an input field or a WebView, or mentions log-in / password /
+     captcha / verify / cookies / token / choose / select / settings / confirm, or has no readable
+     text. **Promotional** = none of that, and mentions donate / Ko-fi / Patreon / PayPal / sponsor /
+     "support the developer" / Telegram / Discord / "rate us" / "star the repo" / "watch an ad".
+     Anything unclear is functional: it is shown, never lost (`ExtensionPopups.classify`, unit).
+  2. Functional windows are always shown, in every mode and even over the player (a captcha while
+     links resolve), inside a Yumeiro frame: a thin accent outline round the dialog card and the
+     window title "From extension: <name>" for accessibility.
+  3. Setting **Extensions → Pop-ups from extensions: Show / Quiet / Block promotional**, default
+     **Quiet**. Show = every window as the extension built it (framed). Quiet = a promotional window
+     is concealed in place and announced by one quiet, non-modal card ("<name> has a message ·
+     Show", the app message bar, auto-dismissed), at most once per extension per 7 days, never
+     while a video plays (full screen, mini player or PiP: the card waits until it closes). The
+     message stays listed under the setting with Show / Dismiss. Block promotional = concealed, no
+     card.
+  4. Mechanism (`ExtensionWindowWatch`): MainActivity.getSystemService(WINDOW_SERVICE) reads the
+     stack only while an extension is loaded; when extension code asks (Dialog / AlertDialog /
+     PopupWindow do while they are built), the root windows are checked right after that message —
+     before the next frame, so nothing flashes — and again at 16 ms … 5 s for dialogs built first
+     and shown later. A new dialog-type, non-Compose root is the extension's. Concealing = the
+     window stays attached but invisible, not focusable, not touchable, no dim, so Back and D-pad
+     stay with the app on phone and TV and the extension's own `dismiss()` still works; "Show"
+     restores its exact layout parameters.
+  5. Main-thread guard: an extension window added after its screen is gone throws BadToken inside
+     `ViewRootImpl.setView`; ExtensionGuard now swallows that (it is not a drawn frame) instead of
+     crashing. Extension callbacks that throw on the main thread are swallowed as before; worker
+     threads die quietly as before.
+- **Alternatives rejected:** (a) wrap the WindowManager — the framework casts it to its own class in
+  `Window.setWindowManager`, so every extension Dialog would crash while built (found while
+  building, before any run); (b) remove promotional windows — the extension's later `dismiss()`
+  throws "not attached"; (c) block all plugin dialogs — breaks log-ins and captchas; (d) re-parent
+  the dialog into a Compose container — DecorView must be the window root (insets, Back dispatch),
+  too risky for "no extension may break"; (e) remove the repo from the market — loses its sources.
+- **Consequences / trade-offs:** + Back and focus are predictable; no extension code path changes;
+  nothing is lost (Show from the card or the setting). − The classifier is word-based (English);
+  an unknown promo wording is shown (safe side). − A dialog built and shown more than 5 s apart is
+  not judged (shown as built). − A concealed window keeps its memory until the extension closes it
+  or the screen goes.
+
+```mermaid
+flowchart LR
+  E[Extension code] -->|getSystemService WINDOW| A[MainActivity]
+  A --> W[ExtensionWindowWatch: new non-Compose dialog root?]
+  W --> C{classify}
+  C -->|functional or Show| F[shown, framed]
+  C -->|promotional + Block| H[concealed]
+  C -->|promotional + Quiet| Q[concealed + one card / 7 days, after playback]
+  Q -->|user taps Show| F
+```
+
+- **NFRs:** no work unless an extension is loaded; one stack read per window-manager request; the
+  check walks at most 400 views. **Failure modes:** conceal fails (updateViewLayout throws) → the
+  window simply stays as built. **Security:** no extension code is skipped or rewritten; only window
+  flags of its own window change.
+- **Tests:** `ExtensionPopupsTest` + `ExtensionGuardSetViewTest` (unit); `ExtensionPopupsDeviceTest`
+  p1–p7 with the `FakeExtension` test extension (donation + log-in dialogs, Back, modes, playback,
+  BadToken, throwing callback) on both phone emulators and the TV emulator (emulator).
 
 ### ADR-015: Jackson 2.13.5 on the TV build (G12 X13-1)
 
@@ -495,9 +547,11 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
     bundled code uses `@JsonTypeInfo` or a `PolymorphicTypeValidator`, so the gadget and allowlist
     advisories need an extension that opts in itself. An extension is already arbitrary code in our
     process, so it gains nothing from them.
-  - The realistic risk is denial of service from a hostile site: deep nesting overflows the stack
-    in untyped/bean binding and in `JsonNode.toString` (`readTree` itself is iterative in 2.13). It
-    fails only that call: home, search and detail calls sit in `runCatching` (catches Errors) or the
+  - The realistic risk is denial of service from a hostile site: deep nesting can overflow the
+    stack in untyped/bean binding and in `JsonNode.toString` (`readTree` itself is iterative in
+    2.13). With 200 000 levels on a 512 KB worker stack it overflowed on this machine but not on the
+    CI runner (43803887311; frame sizes differ by JVM), so the test accepts either outcome and checks
+    containment. Either way it fails only that call: home, search and detail calls sit in `runCatching` (catches Errors) or the
     `ExtensionGuard` handlers. No `InetSocketAddress`, `InetAddress` or `Path` fields exist in the
     provider models.
 - **Mitigation:** `JacksonTvExposureTest` (testTv, in the CI TV unit step with

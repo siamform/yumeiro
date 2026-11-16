@@ -34,18 +34,25 @@ class JacksonTvExposureTest {
     @Test fun deepNestingIsContainedByTheCallerGuard() {
         val hostile = "[".repeat(200_000) + "]".repeat(200_000)
         val outcomes = mutableMapOf<String, Throwable?>()
+        var reachedEnd = false
         // Same shape as OnlineRepository.homeBatch: the extension call sits inside runCatching.
         val t = Thread(null, {
             outcomes["tree"] = runCatching { mapper.readTree(hostile) }.exceptionOrNull()
             outcomes["untyped"] = runCatching { mapper.readValue(hostile, Any::class.java) }.exceptionOrNull()
             outcomes["treeToString"] = runCatching { mapper.readTree(hostile).toString() }.exceptionOrNull()
+            reachedEnd = true
         }, "ext-worker", 512L * 1024)
         t.start(); t.join()
         // readTree is iterative in 2.13; untyped binding and JsonNode.toString recurse (CVE-2025-52999 /
-        // CVE-2026-50193 class). Both only fail the one call; the worker thread survives.
+        // CVE-2026-50193 class). Whether they overflow depends on the JVM's frame sizes (they did
+        // locally, not on the CI runner: 43803887311). Either way only the one call fails: the
+        // worker keeps running to the end and no other error escapes.
         assertNull("tree parse: ${outcomes["tree"]}", outcomes["tree"])
-        assertTrue("untyped bind: ${outcomes["untyped"]}", outcomes["untyped"] is StackOverflowError)
-        assertTrue("tree toString: ${outcomes["treeToString"]}", outcomes["treeToString"] is StackOverflowError)
+        for (k in listOf("untyped", "treeToString")) {
+            val e = outcomes[k]
+            assertTrue("$k: $e", e == null || e is StackOverflowError)
+        }
+        assertTrue("the worker did not survive the hostile input", reachedEnd)
         assertFalse(t.isAlive)
     }
 
