@@ -88,3 +88,22 @@ Cancelled runs in this group: none.
 - No new owner test: the Back-exit case is covered on the emulators by `LibraryDeviceTest`.
 - Device evidence for Group 5 fixes comes from the next full suite; nothing here is marked
   verified on device yet.
+
+## R17 additions
+
+Method: a CRUD sweep on an empty profile through the real stores (`MediaRepository`, playlists,
+history), restart simulated by a new store over the same files, and a 10,000-song playlist.
+
+| # | Problem | Root cause | Fix | Test |
+|---|---|---|---|---|
+| LB-8 | Liked songs came back in a random order after a restart; a playlist created from a list with repeats kept the repeats; two quick likes could lose one | Liked IDs were saved as a `StringSet` and "Favorite Tracks" was rebuilt from it (hash order); `createPlaylist` did not remove duplicates; `toggleFavorite` was check-then-act | Saved order kept and new likes appended (`likedInOrder`), `distinct()`, toggle under the set lock (0606e73) | `r17/LibraryCrudTest` |
+
+(The ledger ID was first written as LB-7 in the commit; LB-7 already belonged to the R16 library
+tabs row, so the R17 row is LB-8.)
+
+Checked and kept: history order and cap, backup includes playlists, likes and history.
+Observation, not changed: the Library "Liked" tab lists liked songs in library (scan) order, not in
+the order they were liked.
+
+Verification: unit, CI on the r15-stability head (pending at the time of writing; result goes in
+the ledger row LB-8 and here).
