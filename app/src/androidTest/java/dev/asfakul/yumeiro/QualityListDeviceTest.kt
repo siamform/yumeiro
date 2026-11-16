@@ -94,6 +94,22 @@ class QualityListDeviceTest {
 
     private fun back() { FirstRun.shell("input keyevent 4") }
 
+    /** Back presses that did not close the dialog (run 43857809658: one after the 288p pick). */
+    private var backMisses = 0
+
+    /** Closes the Quality dialog with Back, as a user does; a missed press is shot and logged. */
+    private fun closeDialog(at: String) {
+        rule.waitForIdle()
+        repeat(3) { attempt ->
+            back()
+            if (runCatching { rule.waitUntil(5_000) { !has("quality_Auto") } }.isSuccess) return
+            backMisses++
+            FirstRun.shot("quality_back_missed_${at}_$attempt")
+            log("BACK_MISSED at=$at attempt=$attempt screen=${FirstRun.onScreen(rule)}")
+        }
+        error("Back did not close the Quality dialog at $at")
+    }
+
     private fun shortSide() = PlaybackDiagnostics.state.value.let { minOf(it.width, it.height) }
 
     private fun pick(label: String, height: Int) {
@@ -108,8 +124,7 @@ class QualityListDeviceTest {
         openQualityDialog()
         val r = rows()
         assertEquals("after picking $label the dialog marks the wrong row: $r", listOf(label), r.filter { it.second }.map { it.first })
-        back()
-        rule.waitUntil(5_000) { !has("quality_Auto") }
+        closeDialog(label)
     }
 
     @Test fun qualityListMatchesTheStreamAndEachHeightPlays() {
@@ -134,8 +149,7 @@ class QualityListDeviceTest {
         assertEquals("rows must be highest first: $labels", listed.sortedDescending(), listed)
         assertEquals("rows must be exactly the stream's heights", heights, listed)
         assertTrue("Auto should be selected by default: $r", r.first().second)
-        back()
-        rule.waitUntil(5_000) { !has("quality_Auto") }
+        closeDialog("list")
 
         // BUG-4: every real height, lowest first, each checked on the decoder and in the dialog,
         // then back to Auto.
@@ -145,6 +159,6 @@ class QualityListDeviceTest {
         val after = System.currentTimeMillis() + 4_000
         rule.waitUntil(8_000) { System.currentTimeMillis() > after }
         assertTrue("player error after Auto: ${PlaybackDiagnostics.state.value.error}", PlaybackDiagnostics.state.value.error == null)
-        log("QUALITY_RESULT PASS heights=$heights applied=${heights.reversed()}")
+        log("QUALITY_RESULT PASS heights=$heights applied=${heights.reversed()} backMisses=$backMisses")
     }
 }

@@ -34,6 +34,10 @@ import java.util.concurrent.TimeUnit
 class DownloadThroughputDeviceTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
     private val hosts = listOf(
+        // CDNs first: GitHub's runners reach them reliably (run 43857809658: Hetzner answered the
+        // plain client with "unexpected end of stream", OVH timed out on IPv4).
+        "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.tar.xz",
+        "https://mirrors.edge.kernel.org/pub/linux/kernel/v6.x/linux-6.6.tar.xz",
         "https://ash-speed.hetzner.com/100MB.bin", "https://proof.ovh.net/files/100Mb.dat",
         "https://fsn1-speed.hetzner.com/100MB.bin", "https://nbg1-speed.hetzner.com/100MB.bin", "https://hel1-speed.hetzner.com/100MB.bin",
     )
@@ -113,7 +117,9 @@ class DownloadThroughputDeviceTest {
         val line = "THROUGHPUT_DEVICE case=$case host=${url.substringAfter("//").substringBefore('/')} size=$size status=${item?.status} " +
             "error=${item?.error} totalMs=$total MBps=${"%.2f".format(mbps)} per10pctMs=$steps lastOverMean=${"%.2f".format(ratio)}"
         log(line)
-        if (item?.status == Status.FAILED && item.bytes == 0L) return@runBlocking false
+        // A connection failure before the first 10 % (run 43857809658 had a few bytes from one
+        // connection, then "Failed to connect" on the others): let measure() re-probe the host.
+        if (item?.status == Status.FAILED && at[0] < 0 && item.error.orEmpty().contains("connect", ignoreCase = true)) return@runBlocking false
         assertEquals(line, Status.DONE, item?.status)
         assertEquals(line, size, OnlineDownloads.fileOf(ctx, item!!).length())
         val pass = ratio in 0.0..2.0
