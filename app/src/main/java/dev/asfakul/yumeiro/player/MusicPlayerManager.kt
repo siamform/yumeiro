@@ -44,7 +44,17 @@ class MusicPlayerManager(
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var progressJob: Job? = null
 
-    private val player: ExoPlayer = PlaybackService.getOrCreatePlayer(context)
+    /**
+     * ST-18: the shared ExoPlayer, attached to this manager on first use. Building it (ExoPlayer,
+     * media source and extractor factories, ~150 media3 classes to load and verify) ran inside the
+     * first Home frame because the ViewModel is created during the first composition (Perfetto,
+     * device-check 43828509434). When no player exists yet nothing is playing, so [init] defers the
+     * build to the next main-loop message, after the first frame; any command before that attaches
+     * it synchronously here. Main thread only, like every caller of this class.
+     */
+    private var attached: ExoPlayer? = null
+    private val player: ExoPlayer
+        get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context))
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -189,15 +199,27 @@ class MusicPlayerManager(
         }
     }
 
-    init {
-        player.addListener(playerListener)
-        runCatching { player.addAnalyticsListener(analyticsListener) }
+    private fun attach(p: ExoPlayer): ExoPlayer {
+        attached = p
+        p.addListener(playerListener)
+        runCatching { p.addAnalyticsListener(analyticsListener) }
         refreshCodec()
         // If music is already playing (activity recreated), reconnect to the session now;
         // otherwise connect lazily on first playback.
-        if (player.mediaItemCount > 0) connectSession()
+        if (p.mediaItemCount > 0) connectSession()
         // Restore playback state if player was already playing in background
         restoreExistingState()
+        return p
+    }
+
+    /** True once the shared player is attached (tests). */
+    internal val isAttached: Boolean get() = attached != null
+
+    init {
+        // An existing player (music playing in the background, activity recreated) is attached
+        // now so the now-playing bar is right on the first frame; it costs no player build.
+        if (PlaybackService.sharedPlayer != null) attach(PlaybackService.getOrCreatePlayer(context))
+        else scope.launch { if (attached == null) attach(PlaybackService.getOrCreatePlayer(context)) }
         // Last.fm scrobbling is watched by the shared player (BackgroundPlaybackWatch), so it keeps
         // working after this screen-scoped manager is released. Queued listens are sent now.
         scope.launch(Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.scrobble.Scrobbler.flush(context) } }
@@ -467,8 +489,11 @@ class MusicPlayerManager(
 
     fun release() {
         stopProgressTracker()
-        player.removeListener(playerListener)
-        runCatching { player.removeAnalyticsListener(analyticsListener) }
+        // Not attached yet: nothing to detach, and no reason to build the player now.
+        attached?.let { p ->
+            p.removeListener(playerListener)
+            runCatching { p.removeAnalyticsListener(analyticsListener) }
+        }
         scope.cancel()
         controllerFuture?.let { future -> runCatching { MediaController.releaseFuture(future) } }
         controllerFuture = null

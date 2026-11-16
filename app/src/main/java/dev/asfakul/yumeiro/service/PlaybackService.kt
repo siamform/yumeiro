@@ -29,6 +29,13 @@ class PlaybackService : MediaSessionService() {
         var sharedPlayer: ExoPlayer? = null
             private set
 
+        /** Tests only: drop the process player so a test can start from a cold process. */
+        @androidx.annotation.VisibleForTesting
+        internal fun releaseSharedPlayerForTest() = synchronized(this) {
+            sharedPlayer?.release()
+            sharedPlayer = null
+        }
+
         fun getOrCreatePlayer(context: android.content.Context): ExoPlayer {
             val existing = sharedPlayer
             if (existing != null) return existing
