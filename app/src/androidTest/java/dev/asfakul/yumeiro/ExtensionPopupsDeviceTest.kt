@@ -14,6 +14,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionPopups
 import dev.asfakul.yumeiro.online.ExtensionGuard
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
 import dev.asfakul.yumeiro.ui.components.AppMessages
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -69,6 +71,8 @@ class ExtensionPopupsDeviceTest {
         resetPrefs()
         ExtensionPopups.setMode(ctx, ExtensionPopups.Mode.QUIET)
         ExtensionPopups.held.value.forEach { ExtensionPopups.discard(it.id) }
+        // Tests share one process: a card left by an earlier test must not count for this one.
+        AppMessages.current.value?.let { AppMessages.dismiss(it.id) }
         log("setUp roots=${roots()} focus=${focus()}")
     }
 
@@ -94,6 +98,17 @@ class ExtensionPopupsDeviceTest {
         log("p1 card on screen=$drawn · ${FirstRun.onScreen(rule).take(300)}")
         assertTrue("quiet card not on screen", drawn)
         FirstRun.shot("adr014_quiet_card")
+        // Diagnostics: where the card is, and what Compose itself draws for it (uiAutomation shots
+        // of the first run showed no card although the node existed).
+        runCatching {
+            val n = rule.onAllNodesWithTag("app_message", true).fetchSemanticsNodes().first()
+            log("p1 card bounds=${n.boundsInWindow} root=${rule.activity.window.decorView.width}x${rule.activity.window.decorView.height} alpha=${rule.activity.window.attributes.alpha}")
+            val img = rule.onAllNodesWithTag("app_message", true)[0].captureToImage().asAndroidBitmap()
+            val dir = java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "shots").apply { mkdirs() }
+            java.io.File(dir, "adr014_quiet_card_node.png").outputStream().use { img.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, it) }
+        }.onFailure { log("p1 card capture failed: $it") }
+        Thread.sleep(700); rule.waitForIdle()
+        FirstRun.shot("adr014_quiet_card_late")
         // The extension still believes its dialog is open, and closing it must not crash.
         assertTrue(dialog.isShowing)
 
@@ -170,6 +185,7 @@ class ExtensionPopupsDeviceTest {
     /** Never over the player: the card waits until the video closes. */
     @Test fun p6_cardWaitsForThePlayer() {
         ExtensionPopups.testPlayerOnScreen = true
+        AppMessages.current.value?.let { AppMessages.dismiss(it.id) }
         val before = roots()
         ui { FakeExtension.donation(rule.activity) }; settle()
         assertEquals(before, roots())
