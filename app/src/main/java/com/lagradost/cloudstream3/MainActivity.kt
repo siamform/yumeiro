@@ -43,11 +43,10 @@ open class MainActivity : AppCompatActivity() {
      */
     override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
         val app = if (baseContext != null) applicationContext else null
-        val prefs = if (app != null && app !== this) app.getSharedPreferences(name, mode)
-        else super.getSharedPreferences(name, mode)
-        // ST-20: plugins get this Activity as their Context; a file extension code opens gets a
-        // main-thread-safe commit() (ExtensionPrefs). Yumeiro's own files are returned as they are.
-        return dev.asfakul.yumeiro.online.ExtensionPrefs.wrapIfExtension(name, prefs, MainActivity::class.java.classLoader!!)
+        // ST-20: the application context applies the extension guard (ExtensionPrefs), so a file
+        // extension code opens through this Activity is wrapped there once.
+        if (app != null && app !== this) return app.getSharedPreferences(name, mode)
+        return dev.asfakul.yumeiro.online.ExtensionPrefs.wrapIfExtension(name, super.getSharedPreferences(name, mode), MainActivity::class.java.classLoader!!)
     }
 
     override fun onResume() {

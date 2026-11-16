@@ -71,6 +71,10 @@ class ExtensionPrefsTest {
         )
         assertEquals("com.phisher98.donation.DonationManager", ExtensionPrefs.firstCaller(frames))
         assertNull(ExtensionPrefs.firstCaller(listOf("java.lang.Thread", "androidx.preference.PreferenceManager")))
+        // The Application and Activity routing frames are skipped (43825449454: the lookup ends in MTApplication).
+        assertEquals("com.phisher98.donation.DonationManager", ExtensionPrefs.firstCaller(listOf(
+            "dalvik.system.VMStack", "dev.asfakul.yumeiro.online.ExtensionPrefs", "dev.asfakul.yumeiro.MTApplication",
+            "android.content.ContextWrapper", "com.lagradost.cloudstream3.MainActivity", "com.phisher98.donation.DonationManager")))
     }
 
     @Test fun onlyClassesTheAppCannotLoadAreExtensions() {

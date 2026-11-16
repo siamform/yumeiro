@@ -16,8 +16,9 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Device runs 43767144680 (api36 + api33-lowram) named `com.phisher98.donation.DonationManager
  * .recordShown` as most of the app-process StrictMode hits: `SharedPreferences.Editor.commit()` on
- * the main looper. CloudStream plugins get the Activity as their Context, and the Activity hands
- * every preference lookup to [dev.asfakul.yumeiro]'s application context (X2-3). There, a file that
+ * the main looper. CloudStream plugins get the Activity as their Context and often keep its
+ * application context; the Activity hands every preference lookup to the application context
+ * (X2-3), and `MTApplication.getSharedPreferences` calls this guard. There, a file that
  * is first opened by extension code is wrapped: `commit()` on the main thread becomes `apply()`
  * (same in-memory result at once, the disk write on Android's own writer thread, flushed by the
  * platform before the activity stops). Off the main thread `commit()` is untouched.
@@ -52,7 +53,8 @@ object ExtensionPrefs {
         PLATFORM.none { c.startsWith(it) } &&
             c != "dev.asfakul.yumeiro.online.ExtensionPrefs" && !c.startsWith("dev.asfakul.yumeiro.online.ExtensionPrefs$") &&
             !c.startsWith("com.lagradost.cloudstream3.MainActivity") &&
-            !c.startsWith("dev.asfakul.yumeiro.MainActivity")
+            !c.startsWith("dev.asfakul.yumeiro.MainActivity") &&
+            !c.startsWith("dev.asfakul.yumeiro.MTApplication")
     }
 
     internal fun loadable(className: String, loader: ClassLoader): Boolean =

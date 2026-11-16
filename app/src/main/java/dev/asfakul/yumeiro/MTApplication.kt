@@ -13,6 +13,15 @@ import coil.memory.MemoryCache
 import dev.asfakul.yumeiro.ui.image.VideoThumbnailFetcher
 
 class MTApplication : Application(), ImageLoaderFactory {
+    /**
+     * ST-20: extensions keep the application context (`context.applicationContext`) for their
+     * settings, so the guard sits here, where every lookup ends (the Activity hands its own lookups
+     * here too, X2-3). Device run 43825449454 (api33-lowram): `DonationManager.recordShown` still
+     * committed on main with the guard only on the Activity. Yumeiro's own files come back unwrapped.
+     */
+    override fun getSharedPreferences(name: String?, mode: Int): android.content.SharedPreferences =
+        dev.asfakul.yumeiro.online.ExtensionPrefs.wrapIfExtension(name, super.getSharedPreferences(name, mode), MTApplication::class.java.classLoader!!)
+
     override fun onCreate() {
         super.onCreate()
         // The helper process that restarts the app after a restore does nothing else.
