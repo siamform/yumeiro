@@ -116,7 +116,10 @@ class DecoderFaultDeviceTest {
         DecoderFaults.mode = DecoderFaults.Mode.ALL_VIDEO_FAIL
         openClip()
         wait("decode error card", 45_000) { hasText("can't decode") }
-        FirstRun.shell("input keyevent 4")
+        // The card's own Close, as a user taps it. A shell `input keyevent 4` switches Compose to
+        // keyboard input mode, where Back is stepped like a remote (PlayerBackRule: a fullscreen
+        // player first leaves fullscreen), so one key press left the card on screen (run 43851896291).
+        tap("error_close_btn")
         rule.runOnUiThread { PlaybackSession.releaseNow() }
         DecoderFaults.mode = DecoderFaults.Mode.NONE
         PlaybackDiagnostics.reset("")
