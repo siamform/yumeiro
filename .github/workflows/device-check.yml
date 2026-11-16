@@ -45,6 +45,10 @@ on:
         type: choice
         options: [swiftshader_indirect, swangle_indirect, guest]
         default: swiftshader_indirect
+      upgrade_from:
+        description: "G12 X10: run the upgrade check from this published tag (e.g. v1.8.0) instead; empty = device tests"
+        required: false
+        default: ""
       hprof:
         description: "G12 X2: StabilityStress writes a heap dump (stress/end.hprof) at the end"
         type: boolean
@@ -52,7 +56,7 @@ on:
         default: false
 
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}
+  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}
   cancel-in-progress: true
 
 permissions:
@@ -65,8 +69,15 @@ jobs:
     with:
       what: ${{ inputs.bench }}
 
+  upgrade:
+    if: ${{ inputs.upgrade_from != '' && !(inputs.bench == 'startup' || inputs.bench == 'profile') }}
+    uses: ./.github/workflows/upgrade-check.yml
+    with:
+      from: ${{ inputs.upgrade_from }}
+    secrets: inherit
+
   emulator:
-    if: ${{ !(inputs.bench == 'startup' || inputs.bench == 'profile') }}
+    if: ${{ inputs.upgrade_from == '' && !(inputs.bench == 'startup' || inputs.bench == 'profile') }}
     runs-on: ubuntu-latest
     timeout-minutes: 110
     strategy:

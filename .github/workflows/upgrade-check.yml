@@ -1,0 +1,114 @@
+name: Upgrade check
+
+# G12 X10: install a published release on an emulator, let it create data, install this branch's
+# release build over it (same constant release key) and check that nothing the old version stored
+# is lost (scripts/upgrade-check.sh, scripts/upgrade_compare.py). Manual only: started from
+# Device check (input upgrade_from), like the Macrobenchmark workflow.
+# The release-signed APK built here is a test build: it is never uploaded, attached or published.
+on:
+  workflow_call:
+    inputs:
+      from:
+        description: "Published release tag to upgrade from"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with: { distribution: temurin, java-version: "21.0.13" }
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Download the published release and check its checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FROM: ${{ inputs.from || 'v1.8.0' }}
+        run: |
+          mkdir -p rel
+          gh release download "$FROM" -R "$GITHUB_REPOSITORY" -D rel -p 'release-Yumeiro-*.apk' -p 'SHA256SUMS.txt'
+          (cd rel && sha256sum -c --ignore-missing SHA256SUMS.txt)
+          cp rel/release-Yumeiro-*.apk old.apk
+
+      - name: Restore constant release keystore
+        env:
+          MT_KEYSTORE_BASE64: ${{ secrets.MT_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$MT_KEYSTORE_BASE64" ]; then echo "::error::MT_KEYSTORE_BASE64 secret is missing"; exit 1; fi
+          umask 077
+          printf '%s' "$MT_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "MT_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build this branch's release APK (test build, not published)
+        env:
+          MT_KEYSTORE_PASSWORD: ${{ secrets.MT_KEYSTORE_PASSWORD }}
+          MT_KEY_ALIAS: ${{ secrets.MT_KEY_ALIAS }}
+          MT_KEY_PASSWORD: ${{ secrets.MT_KEY_PASSWORD }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
+        run: ./gradlew --no-daemon --no-configuration-cache --no-build-cache assembleMobileRelease
+
+      - name: Remove keystore from the runner
+        if: always()
+        run: |
+          if [ -n "${MT_KEYSTORE_PATH:-}" ] && [ -f "$MT_KEYSTORE_PATH" ]; then
+            shred -u "$MT_KEYSTORE_PATH" 2>/dev/null || rm -f "$MT_KEYSTORE_PATH"
+          fi
+          echo "MT_KEYSTORE_PATH=" >> "$GITHUB_ENV"
+
+      - name: Same signing certificate on both APKs; versionCode goes up
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          SRC=$(ls app/build/outputs/apk/mobile/release/*.apk | grep -v unsigned | head -1)
+          cp "$SRC" new.apk
+          EXPECTED=$(tr -d '[:space:]' < .github/release-signing-cert.sha256)
+          for A in old.apk new.apk; do
+            D=$("$BT/apksigner" verify --print-certs "$A" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+            echo "UPGRADE cert $A sha256=$D"
+            [ "$D" = "$EXPECTED" ] || { echo "::error::$A is not signed with the release certificate"; exit 1; }
+          done
+          for A in old.apk new.apk; do echo "UPGRADE $A $("$BT/aapt2" dump badging "$A" | head -1)"; done
+
+      - name: Test clip (60 s, made here)
+        run: |
+          sudo apt-get install -y -qq ffmpeg > /dev/null 2>&1 || true
+          ffmpeg -loglevel error -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i sine=frequency=440 -t 60 \
+            -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest upgrade-clip.mp4
+          ls -la upgrade-clip.mp4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Upgrade on emulator (api33, Pixel 3a, google_apis)
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_3a
+          ram-size: 2048M
+          heap-size: 192M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/upgrade-check.sh
+
+      - name: Remove the test APKs before upload
+        if: always()
+        run: rm -f new.apk old.apk
+
+      - name: Upload results (no APKs)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: upgrade-check
+          path: upgrade/
