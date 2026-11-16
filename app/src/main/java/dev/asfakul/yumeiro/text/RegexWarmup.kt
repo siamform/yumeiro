@@ -96,6 +96,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.cast.SrtToVtt",
         "dev.asfakul.yumeiro.online.subtitles.SubtitleHubKt",
         "dev.asfakul.yumeiro.online.web.AdFilter",
+        "dev.asfakul.yumeiro.online.ExtensionPopups", // ADR-014 classifier words (first touch is a window check on main)
         "dev.asfakul.yumeiro.scrobble.ScrobbleRulesKt",
         "dev.asfakul.yumeiro.scrobble.TrackNames",
         "dev.asfakul.yumeiro.sources.UniversalAdd",
