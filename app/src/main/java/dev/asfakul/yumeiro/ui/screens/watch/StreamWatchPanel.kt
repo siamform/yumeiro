@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
@@ -244,6 +245,15 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                         context.getSystemService(android.content.ClipboardManager::class.java)
                             ?.setPrimaryClip(android.content.ClipData.newPlainText("Stream link", currentUrl))
                         dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Link copied")
+                    }
+                    // BUG-7 7a: links and website videos can be saved from the player, as on the Play link page.
+                    if (base != null && dev.asfakul.yumeiro.stream.StreamDownload.canSave(base)) {
+                        WatchAction(Icons.Default.Download, "Download", "stream_watch_download") {
+                            when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, base, base.pageUrl ?: currentUrl)) {
+                                is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, o.message)
+                                is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
+                            }
+                        }
                     }
                     WatchAction(Icons.AutoMirrored.Filled.OpenInNew, "Other player", "stream_watch_external") {
                         val i = Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(currentUrl), "video/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

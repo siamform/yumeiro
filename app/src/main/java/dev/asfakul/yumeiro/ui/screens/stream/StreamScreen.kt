@@ -314,21 +314,9 @@ fun StreamScreen(
             val r = runCatching { StreamResolver.resolve(context, currentRequest(), thorough = true) }.getOrNull()
             loading = false
             when (r) {
-                is Resolution.Playable -> {
-                    val req = r.request
-                    val fmt = req.resolvedFormat()
-                    if (fmt == StreamFormat.DASH || fmt == StreamFormat.SMOOTH || req.drmScheme != dev.asfakul.yumeiro.stream.DrmScheme.NONE) {
-                        error = "This stream can't be saved (DASH or protected). You can still play it."
-                        return@launch
-                    }
-                    val headers = req.requestHeaders() + listOfNotNull(req.userAgent?.let { "User-Agent" to it })
-                    val title = req.title.ifBlank { Uri.parse(req.url).lastPathSegment?.substringBeforeLast('.') ?: PlatformRules.hostOf(u) ?: "Video" }
-                    val link = dev.asfakul.yumeiro.online.OnlineLink(
-                        name = title, source = PlatformRules.hostOf(u) ?: "Link", url = req.url, referer = req.referer, quality = 0,
-                        isHls = fmt == StreamFormat.HLS, isDash = false, headers = headers,
-                    )
-                    val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", u, null, req.logoUrl, emptyMap(), link)
-                    if (err != null) error = err else dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"$title\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
+                is Resolution.Playable -> when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, r.request, u)) {
+                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> error = o.message
+                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
                 }
                 is Resolution.NeedsBrowser -> pageFinder = r
                 is Resolution.Handoff -> { handoff = r; error = r.reason }
