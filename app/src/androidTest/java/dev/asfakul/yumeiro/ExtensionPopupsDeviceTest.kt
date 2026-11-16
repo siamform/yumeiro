@@ -17,6 +17,8 @@ import dev.asfakul.yumeiro.online.ExtensionGuard
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasTestTag
 import dev.asfakul.yumeiro.ui.components.AppMessages
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -191,12 +193,13 @@ class ExtensionPopupsDeviceTest {
         ExtensionPopups.testPlayerOnScreen = true
         AppMessages.current.value?.let { AppMessages.dismiss(it.id) }
         val before = roots()
-        ui { FakeExtension.donation(rule.activity) }; settle()
+        val dialog = ui { FakeExtension.donation(rule.activity) }; settle()
         assertEquals(before, roots())
         assertNull("card shown during playback", AppMessages.current.value)
         ExtensionPopups.testPlayerOnScreen = null
         settle()
         assertTrue("card not shown after playback", AppMessages.current.value?.text?.contains("has a message") == true)
+        ui { runCatching { dialog.dismiss() } }
     }
 
     /**
@@ -216,5 +219,39 @@ class ExtensionPopupsDeviceTest {
         assertTrue("throwing extension callback was not swallowed", ExtensionGuard.swallowedCount > mid)
         assertFalse(rule.activity.isFinishing)
         log("p7 swallowed=${ExtensionGuard.swallowedCount} last=${ExtensionGuard.lastSwallowed}")
+    }
+
+    /**
+     * The Extensions screen setting (look changed: new card). A held message is listed with Show and
+     * Dismiss; the mode chips switch and are saved; Dismiss removes the entry and its card.
+     */
+    @Test fun p8_extensionsScreenListsHeldMessagesAndSwitchesMode() {
+        val before = roots()
+        val dialog = ui { FakeExtension.donation(rule.activity) }; settle()
+        assertEquals(1, ExtensionPopups.held.value.size)
+        inst.runOnMainSync { dev.asfakul.yumeiro.ui.navigation.NavPrefs.setShortcut(ctx, dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS, true) }
+        try {
+            rule.waitUntil(15_000) { rule.onAllNodesWithTag("nav_shortcut_extensions", true).fetchSemanticsNodes().isNotEmpty() }
+            rule.onAllNodesWithTag("nav_shortcut_extensions", true)[0].performClick()
+            rule.waitUntil(15_000) { rule.onAllNodesWithTag("extensions_screen", true).fetchSemanticsNodes().isNotEmpty() }
+            rule.waitUntil(60_000) { rule.onAllNodesWithTag("extensions_list", true).fetchSemanticsNodes().isNotEmpty() }
+            rule.onAllNodesWithTag("extensions_list", true)[0].performScrollToNode(hasTestTag("extensions_popups"))
+            rule.waitForIdle()
+            assertTrue("held row missing", rule.onAllNodesWithTag("extensions_popup_held", true).fetchSemanticsNodes().isNotEmpty())
+            FirstRun.shot("adr014_extensions_setting")
+            rule.onAllNodesWithTag("extensions_popups_block_promotional", true)[0].performClick(); rule.waitForIdle()
+            assertEquals(ExtensionPopups.Mode.BLOCK_PROMOTIONAL, ExtensionPopups.mode.value)
+            rule.onAllNodesWithTag("extensions_popups_quiet", true)[0].performClick(); rule.waitForIdle()
+            assertEquals(ExtensionPopups.Mode.QUIET, ExtensionPopups.mode.value)
+            rule.onAllNodesWithTag("extensions_popup_discard", true)[0].performClick(); rule.waitForIdle()
+            assertTrue("held entry kept after Dismiss", ExtensionPopups.held.value.isEmpty())
+            assertNull("card stayed after Dismiss", AppMessages.current.value)
+            assertEquals("Dismiss added a window", before, roots())
+            ui { runCatching { dialog.dismiss() } }
+            assertFalse(rule.activity.isFinishing)
+            log("p8 ok focus=${focus()}")
+        } finally {
+            inst.runOnMainSync { dev.asfakul.yumeiro.ui.navigation.NavPrefs.setShortcut(ctx, dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS, false) }
+        }
     }
 }
