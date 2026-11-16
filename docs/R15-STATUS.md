@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 15:10 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 16:00 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -14,14 +14,17 @@
   BackgroundSettingsEffectDeviceTest (3ff6bd3) reviewed: every symbol it calls exists; compile owed.
 - **New owner bug:** BUG-5 Yumeiro TV UI (TV-1…TV-5, `docs/proposals/FEATURE-BUG-5-tv-ui.md`), open, not reproduced
   yet; it is worked in G12 X9 after the G9/G10 batch, starting with a TV emulator reproduction.
-- **Current group:** G10 Errors + G9 verification. Step: device batch running. CI 43889319143 (fa3bb3b): APKs built
-  and the new androidTest compile step passed (build green, ER-16 compile proved); unit tests were still running.
+- **Current group:** G10 Errors + G9 verification. Step: device batch running; G9 effect tests written (079dddd):
+  `MoreSettingsEffectDeviceTest` (backup_auto, keep_default, adult_private) and
+  `PlayerExtrasSettingsEffectDeviceTest` (cc_default, bg_play, auto_pip). Unverified until CI compiles them and a
+  device run passes. Still without an effect test: yt_to_phone, skip_intro, auto_skip, lyrics_online, push_alerts.
+- **Spot-check (2026-11-16):** PL-13, PL-18, ST-11, PL-9 confirmed in code + run logs; Y6/H1 downgraded to unverified
+  (no device test). Recorded in the ledger change log.
 - **Running:** device 43891331959 (c306e7e, both phones: NetworkState, PermissionFlow, Dialogs, LowStorage, Messages,
   BackdropImport, BackgroundSettingsEffect); upgrade 43891389012 (v1.8.0 → c306e7e, fixed harness); CI 43889319143.
 - **Next three actions:** (1) read 43891331959 per class and phone → ER-11, SE-4, network rows, dialogs, low storage,
-  messages, BGFX a–e; failures become findings; (2) read 43891389012 → X10-5; (3) write the G9 effect test for the
-  switches still without one (backup_auto, keep_default, yt_to_phone, adult_private, skip_intro, auto_skip,
-  lyrics_online, push_alerts, bg_play, auto_pip, cc_default; see settings-effects.md) — G9 cannot close without it.
+  messages, BGFX a–e; failures become findings; (2) read 43891389012 → X10-5; (3) CI on 079dddd, then a device run
+  of the two new G9 classes on both phones; then the five remaining switches (mock servers for lyrics/AniSkip).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
