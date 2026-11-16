@@ -446,3 +446,11 @@ Emulator (Perfetto, debug APK, 3 cold starts per phone, `scripts/home_trace_repo
 - Shots looked at: `adr014_quiet_card.png` is taken before the card's enter animation (no card yet);
   `adr014_quiet_card_late.png` shows "An extension has a message · Show". On TV the card sits over the
   second tile row, not at the bottom edge (observation, cosmetic; not changed).
+
+## CI 43864957319 — ci.yml on fail-before/r15-proofs 408faea — failure (compile, not a proof)
+
+- `compileMobileDebugUnitTestKotlin` failed: `ResumePointsTest` calls `savedVideoPosition`, which the
+  revert commit removed with the D1 fix. A compile failure proves nothing about behaviour, so this run
+  is not counted as fail-before evidence (my error: the accessor is API, not the fix).
+- Fixed on the branch (accessor kept, its D1 use still reverted) and the DL-6 race, DL-9 drop and LB-7
+  tests added without their fixes. Rerun: CI 43867540147.
