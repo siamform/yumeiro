@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 10:29 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 10:36 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
@@ -10,9 +10,10 @@
 - **Done:** CI 43843941876 green (1019 unit, 0 failures; DecoderFaultsTest 4/4, LivePagedTest 8/8).
 - **Running:** device run 43849088080 on 3076b25: Widget, DecoderFault, Anime4kGl, RtlLayout, ResumeAcrossProcess (BUG-1), YtChannelProbe + YtChannelUi (BUG-2). 43847976226 failed to compile the androidTest (syntax, fixed in 3076b25); no device result from it.
 - **BUG-2:** E1–E4 fix pushed with YtChannelLinkTest (6, unit, not run yet); E5 device probe (channel page loads on v0.26.5) open.
+- **BUG-4:** A.5 note `docs/proposals/FEATURE-BUG-4-quality-selection.md`. F1 (YouTube file:// manifest → no YouTube list) and F2 (Yumix list keyed on links.size/5) fixed in code with `r15/Bug4QualityListTest` (unit, not run yet). F3/F4 open. Device proof pending.
 - **BUG-1:** fix D1–D4 pushed (42f1a1b, ResumePointsTest unit + device test 0ceb971); CI for ResumePointsTest still needed.
 - **Next three actions:** (1) read device run 43849088080 (YuWidgetTest, YuDecoderFault, YuAnime4k, YuRtl, YuResume, YuChannel, rtl + channel shots);
-  (2) CI on HEAD for ResumePointsTest + YtChannelLinkTest (compiles BUG-2 too); (3) HomeTrace
+  (2) CI on HEAD for ResumePointsTest + YtChannelLinkTest + DownloadThroughputTest + Bug4QualityListTest (compiles BUG-2/3/4 too); (3) HomeTrace
   swangle comparison, ADR-014 TV rerun, X10 upgrade check, EXT-T1 ≥ 20 runs.
 - **BUG-1 lead (not a finding yet, Step A.5 note first):** `VideoPlayerModal` onDispose saves
   `lease.positionMs` even when the player never reached the resume seek (0 / TIME_UNSET), and

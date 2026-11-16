@@ -54,6 +54,17 @@ object QualityEngine {
         return engine(currentHeight, engineHeight)
     }
 
+    /**
+     * BUG-4 (F1): the request the quality list is built for. YouTube plays from a local DASH
+     * manifest (`file://…/yt/<id>_<itag>.mpd`), so "is the player URI a network URL" was false and
+     * the list got no request at all: only the playing height + engine levels, while the download
+     * sheet listed every resolution. The request registered for the player URI (it carries the
+     * YouTube page URL) wins; the bare fallback request is only used for real network URIs, so a
+     * local file never borrows a stale online session's sources. Pure → unit-tested.
+     */
+    internal fun requestForList(registered: StreamRequest?, fallback: StreamRequest, networkUri: Boolean): StreamRequest? =
+        registered ?: fallback.takeIf { networkUri }
+
     internal fun youTubeId(r: StreamRequest): String? =
         listOfNotNull(r.pageUrl, r.url).firstNotNullOfOrNull { u ->
             if (r.group == "YouTube" || dev.asfakul.yumeiro.stream.PlatformRules.isYouTube(u)) runCatching { dev.asfakul.yumeiro.youtube.YouTube.idFrom(u) }.getOrNull() else null

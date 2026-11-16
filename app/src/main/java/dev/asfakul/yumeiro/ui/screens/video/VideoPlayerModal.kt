@@ -610,11 +610,17 @@ private fun VideoPlayerModalContent(
 
     // Round 13: when the stream has no quality ladder of its own, ask the engine for one
     // (YouTube resolutions, or other sources of this episode by resolution). Runs off the main thread.
-    val onlineLinkCount = dev.asfakul.yumeiro.online.OnlineSession.state.collectAsState().value?.links?.size ?: 0
+    // BUG-4 (F2): every new source, the PLAYING phase and a source switch rebuild the list. It was
+    // keyed on links.size / 5, so sources 2–4 arriving after the first frame never showed up.
+    val onlineState = dev.asfakul.yumeiro.online.OnlineSession.state.collectAsState().value
+    val onlineLinkCount = onlineState?.links?.size ?: 0
+    val onlinePhase = onlineState?.phase
+    val onlinePlayingUrl = onlineState?.link?.url
     val playingHeight = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } } ?: 0
-    LaunchedEffect(video.id, onlineLinkCount / 5, playingHeight, engineHeight) {
+    LaunchedEffect(video.id, onlineLinkCount, onlinePhase, onlinePlayingUrl, playingHeight, engineHeight) {
         // Round 2: local files too (engine levels), and YouTube / Yumix share the downloader's list.
-        val req = if (isNetworkStream) StreamRepository.requestFor(video.uri) ?: originalRequest else null
+        // BUG-4 (F1): YouTube plays a file:// manifest, so the registered request decides, not the URI scheme.
+        val req = dev.asfakul.yumeiro.player.QualityEngine.requestForList(StreamRepository.requestFor(video.uri), originalRequest, isNetworkStream)
         val alts = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             runCatching { dev.asfakul.yumeiro.player.QualityEngine.alternatives(context, req, playingHeight, engineHeight) }.getOrDefault(emptyList())
         }
