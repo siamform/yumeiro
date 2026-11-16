@@ -1,0 +1,100 @@
+error	online/OnlineSession.kt:362	Every source refused playback (HTTP 403), even from the site's own page. Try another episode or update the extension.	
+warning	online/OnlineSession.kt:411	Example item name isn't available for Example item name yet. Still playing Example item name.	
+success	ui/screens/MTPlayerApp.kt:366	Ready to watch: Example item name installed	
+info	ui/screens/MTPlayerApp.kt:1647	Press back again to exit	
+success	ui/screens/online/DramaBuiltinCard.kt:59	Yumeiro Drama is on — find it in Yumix	
+info	ui/screens/online/DramaBuiltinCard.kt:60	Yumeiro Drama turned off	
+error	ui/screens/online/ExtensionMarketScreen.kt:158	Example item name needs a newer app version	
+error	ui/screens/online/ExtensionMarketScreen.kt:165	Example item name installed but couldn't start: Example item name	
+success	ui/screens/online/ExtensionMarketScreen.kt:166	Example item name installed	
+success	ui/screens/online/ExtensionMarketScreen.kt:322	Added Example item name	
+success	ui/screens/online/ExtensionsScreen.kt:140	Example item name updated to vExample item name	
+success	ui/screens/online/ExtensionsScreen.kt:182	Example item name is up to date (vExample item name)	
+error	ui/screens/online/ExtensionsScreen.kt:184	Example item name: Example item name	
+error	ui/screens/online/ExtensionsScreen.kt:305	Example item name: Example item name	
+success	ui/screens/online/ExtensionsScreen.kt:366	Added Example item name	
+info	ui/screens/online/ExtensionsScreen.kt:391	Example item name removed	
+success	ui/screens/online/ExtensionsScreen.kt:440	Example item name will use your sign-in	
+info	ui/screens/online/ExtensionsScreen.kt:445	Signed out of Example item name's site	
+error	ui/screens/online/ExtensionsScreen.kt:465	Example item name settings couldn't open. Example item name	
+success	ui/screens/online/OnlineGetStarted.kt:123	Installed Example item name extensionExample item name	
+error	ui/screens/online/OnlineGetStarted.kt:124	Installed Example item name of Example item name. Skipped Example item name: Example item nameExample item name	
+error	ui/screens/online/OnlineGetStarted.kt:125	Couldn't add Example item nameExample item name	
+warning	ui/screens/online/OnlineHomeScreen.kt:326	You can pin up to Example item name extensions. Unpin one first	
+info	ui/screens/online/OnlineHomeScreen.kt:359	Nothing new yet. Showing what was already loaded.	
+info	ui/screens/online/OnlineHomeScreen.kt:364	Couldn't refresh: you're offline. Showing what was already loaded.	
+info	ui/screens/online/OnlinePlayerUi.kt:813	This source needs special request headers; if the TV can't play it, pick another source and cast again	
+success	ui/screens/online/OnlinePlayerUi.kt:828	Casting Example item name	
+error	ui/screens/online/OnlinePlayerUi.kt:829	Couldn't start casting	
+info	ui/screens/online/OnlinePlayerUi.kt:856	Audio: Example item name	
+info	ui/screens/online/OnlinePlayerUi.kt:861	This video has no Example item name audio track. Sources with it are listed first.	
+success	ui/screens/online/OnlinePlayerUi.kt:869	Sent to Example item name	
+info	ui/screens/online/OnlinePlayerUi.kt:870	Example item name Using Yumeiro's downloader instead	
+success	ui/screens/sources/SourcesHubScreen.kt:215	Repository added · Example item name extensions	
+success	ui/screens/sources/SourcesHubScreen.kt:284	Example item name installed	
+success	ui/screens/sources/SourcesHubScreen.kt:339	Example item name added	
+success	ui/screens/sources/SourcesHubScreen.kt:391	Repository added · Example item name sources	
+success	ui/screens/sources/SourcesHubScreen.kt:441	Example item name installed	
+success	ui/screens/sources/SourcesHubScreen.kt:524	Example item name added	
+success	ui/screens/sources/SourcesHubScreen.kt:551	Example item name connected	
+error	ui/screens/video/VideoPlayerModal.kt:1919	Picture-in-picture isn't available right now	
+success	ui/screens/downloads/DownloadPrompt.kt:122	Downloading Example item name · Example item name	
+error	ui/screens/downloads/DownloadsScreen.kt:331	The file was removed	
+info	ui/screens/youtube/YouTubeScreens.kt:238	Channel not known yet. Play the video once to learn it	
+success	ui/screens/youtube/YouTubeScreens.kt:346	“Example item name” added to your topics	
+info	ui/screens/youtube/YouTubeScreens.kt:352	“Example item name” removed from your topics	Undo
+error	ui/screens/watch/StreamWatchPanel.kt:166	This channel isn't available — playing Example item name	
+success	ui/screens/watch/StreamWatchPanel.kt:246	Link copied	
+success	ui/screens/watch/WatchScreens.kt:516	Link copied	
+info	ui/screens/extras/InboxScreen.kt:127	You're offline. Showing saved notifications	
+info	ui/screens/extras/PermissionCenter.kt:74	Example item name not allowed. Tap again when you want to allow it	
+error	ui/screens/extras/PermissionCenter.kt:75	Example item name blocked for Yumeiro. Android won't ask again; allow it in Android settings	Open settings
+success	ui/screens/extras/SupportScreen.kt:88	Example item name copied	
+success	ui/screens/stream/PlaylistDetailScreen.kt:201	Example item name updated · Example item name streams	
+success	ui/screens/stream/PlaylistDetailScreen.kt:210	Exported Example item name streams	
+success	ui/screens/stream/PlaylistDetailScreen.kt:253	Saved as Example item name	
+info	ui/screens/stream/PlaylistDetailScreen.kt:369	Removed Example item name	Undo
+info	ui/screens/stream/PlaylistDetailScreen.kt:405	Deleted Example item name	
+success	ui/screens/stream/PlaylistDetailScreen.kt:412	Saved to Example item name	
+success	ui/screens/stream/PlaylistDetailScreen.kt:413	Saved to Example item name	
+success	ui/screens/stream/PlaylistMarketScreen.kt:135	Installed Example item name · Example item name streams	
+error	ui/screens/stream/PlaylistMarketScreen.kt:137	Couldn't install Example item name: Example item name	Retry
+info	ui/screens/stream/PlaylistMarketScreen.kt:150	Everything is up to date	
+success	ui/screens/stream/PlaylistMarketScreen.kt:151	Updated Example item name playlistExample item name	
+error	ui/screens/stream/PlaylistMarketScreen.kt:152	Updated Example item name, failed: Example item name	Retry
+error	ui/screens/stream/PlaylistMarketScreen.kt:286	No browser available	
+success	ui/screens/stream/StreamScreen.kt:152	Updated Example item name	
+success	ui/screens/stream/StreamScreen.kt:201	Example item name updated · Example item name streams	
+info	ui/screens/stream/StreamScreen.kt:331	Downloading "Example item name"	
+success	ui/screens/settings/BackdropSettings.kt:84	Backdrop updated	
+success	ui/screens/settings/BackupCenterScreen.kt:126	Backups will be saved there	
+success	ui/screens/settings/BackupCenterScreen.kt:191	Backup saved · Example item name	
+success	ui/screens/settings/BackupCenterScreen.kt:274	Cache cleared · Example item name freed	
+success	ui/screens/settings/BackupCenterScreen.kt:278	Cookies cleared	
+success	ui/screens/settings/BackupCenterScreen.kt:318	Backup deleted	
+error	ui/screens/settings/BackupCenterScreen.kt:318	Couldn't delete that file	
+error	ui/screens/settings/PrivacyTrackingBackup.kt:112	App lock wasn't turned on	
+error	ui/screens/settings/PrivacyTrackingBackup.kt:154	No browser to sign in with	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:195	Signed in to Trakt as Example item name	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:213	Signed in to Simkl as Example item name	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:233	Scrobbling to Last.fm as Example item name	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:285	Saved. Now tap Sign in	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:312	Signed in to Kitsu as Example item name	
+success	ui/screens/settings/PushAlertsCard.kt:85	Reliable alerts are off	
+success	ui/screens/settings/PushAlertsCard.kt:114	Sent. Watch the last wake-up time	
+success	ui/screens/settings/SettingsControls.kt:145	Test sent. Check your status bar	
+error	ui/screens/settings/SettingsControls.kt:147	Example item name. Example item name	
+error	ui/screens/settings/SettingsControls.kt:304	Couldn't clear. Try again	
+error	ui/screens/settings/SettingsControls.kt:365	Couldn't open Example item name	
+error	ui/screens/settings/SettingsControls.kt:370	Couldn't open the website	
+error	ui/screens/settings/SettingsControls.kt:375	Couldn't open GitHub	
+success	ui/screens/settings/SettingsDesign.kt:189	Copied	
+error	ui/screens/settings/SettingsDesign.kt:262	Couldn't open the browser	
+success	ui/screens/settings/SettingsPersonalize.kt:149	Navigation bar reset	
+success	ui/screens/settings/YouTubeAccountScreen.kt:106	Signed in to YouTube with your cookie	
+success	ui/screens/settings/YouTubeAccountScreen.kt:115	Signed in to YouTube	
+success	ui/screens/settings/YouTubeAccountScreen.kt:194	Signed out of YouTube	
+success	ui/screens/player/NowPlayingScreen.kt:507	Lyrics imported	
+error	ui/screens/player/NowPlayingScreen.kt:508	That file has no readable lyrics	
+error	ui/screens/player/NowPlayingScreen.kt:515	No file picker available	
+error	youtube/YouTubePlayback.kt:66	YouTube couldn't play this video: Example item name	Retry

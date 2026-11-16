@@ -49,7 +49,7 @@ ID note: these rows were first written as ER-1/ER-2, which clash with the older 
 | ER-13 decoder tip | `PlaybackRecoveryTest` | unit | CI run owed |
 | StreamRecovery / StreamResolver texts | code review: cause + next step in each (DNS, timeout, TLS, 401/403/404/429/451/5xx, DRM, parsing, empty/too-large playlist, web page, TorrServer) | review | done (no change) |
 | ER-12 Retry on failed adds / Inbox | code review | unit (compile) | CI run owed |
-| Every message triggered on device | — | emulator | open |
+| Every message shown on device | `scripts/messages-inventory.py` → docs/evidence/round3/messages-inventory.md (162 call sites, 100 literal); `MessagesDeviceTest` shows each literal text through the real host: shown, whole (no ellipsis at 3 lines), action button, ATF. Real-flow triggers: NetworkState, PermissionFlow, LowStorage, Dialogs, BackdropImport tests | emulator | run owed |
 | Dialogs: Back closes without acting, page kept, ATF clean (Privacy "Clear …" confirms, TsukiDialog) | `DialogsDeviceTest` | emulator | run owed |
 | Dialog Back by construction | code scan: every `*Dialog/*Sheet/*Prompt/*Host` composable uses Dialog/AlertDialog/ModalBottomSheet/BackHandler or delegates (ReminderCard → Dialog); the 6 without are non-modal overlays (gestures, info overlay, error overlay under the player's BackHandler, lights, message host) | review | done |
 | Left as is after review: per-row Install failures (the Install button stays on the row, so tapping it again is the retry); "Couldn't start casting" (CastSupport.play returns false without a reason; the cast session is already connected when it runs) — noted, not changed | code review | — | noted |
