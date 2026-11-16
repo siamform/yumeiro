@@ -88,7 +88,11 @@ class LowStorageDeviceTest {
         val before = OnlineDownloads.freeBytes(ctx)
         assumeTrue("free space unknown", before > 0)
         val keep = 16L * 1024 * 1024
-        val out = FirstRun.shell("fallocate -l ${before - keep} $fill; echo rc=$?")
+        // UiAutomation.executeShellCommand runs no shell: "; echo rc=$?" went to fallocate as extra
+        // arguments, so nothing was filled (run 43891331959, both phones, case skipped). Plain command,
+        // then the file size as the proof.
+        val err = FirstRun.shell("fallocate -l ${before - keep} $fill")
+        val out = err + " · " + FirstRun.shell("ls -l $fill")
         val free = OnlineDownloads.freeBytes(ctx)
         log("LOWST_FILL before=${before / 1048576}MB after=${free / 1048576}MB shell='${out.trim()}'")
         assumeTrue("could not fill the disk (fallocate: ${out.trim()})", free in 0..(48L * 1024 * 1024))
