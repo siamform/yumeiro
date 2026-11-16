@@ -611,3 +611,11 @@ Read per class and phone from the job log (REPEAT_RESULT and the class's own *_R
 | BackgroundSettingsEffectDeviceTest | PASS a–e | PASS a–e | e: Firebase status UNAVAILABLE in this build (no google-services.json), the test accepts that |
 
 Rerun owed for the failed classes only, together with the new G9 classes, after CI 43894661940.
+
+## Upgrade 43891389012 (v1.8.0 → c306e7e, api33-lowram, emulator)
+
+`UPGRADE_RESULT PASS compare=0 pre_ok=1 played=1 guide_again=0 resumed=1 pos=46618/46618/54974 fatal=0 logcat=62948`.
+Files 36 → 40 (new ones are profile/oat caches); every pref file has the same key count; JSON stores contained
+byte-for-byte. The test clip's saved position was 46,618 ms before and after the upgrade, and reopening it in the
+new build resumed and reached 54,974 ms (shot-new-player.png shows the clip playing). Logcat 62,948 lines, no
+FATAL EXCEPTION or ANR. First run with the logcat fix, so the first non-blind crash check. X10-5 closed on emulator.
