@@ -25,9 +25,12 @@ class NewPipeCompatDeviceTest {
     }
 
     @Test fun youtubeLinkParsingWorksBelowApi33() {
-        // The path in the crash: a watch URL with a list= query goes through getQueryValue → decodeUrlUtf8.
+        // The path in the crash (StreamInfo.getInfo → stream fromUrl → playlist acceptUrl →
+        // getQueryValue → decodeUrlUtf8): every query parameter of a watch URL is decoded. A URL
+        // with list= is a playlist link and is rightly refused by the stream factory, so a plain
+        // extra parameter is used (fixed after api28 43777260888).
         val id = org.schabi.newpipe.extractor.ServiceList.YouTube.streamLHFactory
-            .fromUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL590L5WQmH8fJ54F369BLDSqIwcs-TCfs").id
+            .fromUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s").id
         assertEquals("dQw4w9WgXcQ", id)
     }
 }
