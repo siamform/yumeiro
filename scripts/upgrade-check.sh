@@ -51,7 +51,7 @@ PY
 settle_first_run() { # answer the welcome guide / tour / permission or update prompts, up to $1 s
   local end=$(( $(date +%s) + $1 ))
   while [ "$(date +%s)" -lt "$end" ]; do
-    tap_text "Skip" "Skip for now" "Not now" "Later" "Maybe later" "Close" "Got it" "Allow" "Done" "No thanks" || true
+    tap_text "Remind me later" "Skip" "Skip for now" "Not now" "Later" "Maybe later" "Close" "Got it" "Allow" "Done" "No thanks" || true
     sleep 3
   done
 }
@@ -75,9 +75,17 @@ adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
 sleep 12; dump old-start
 settle_first_run 45
 dump old-tabs
+# Precondition (run 43869944264 lesson): the old app must be past its update dialog and welcome guide,
+# otherwise "guide again" after the upgrade means nothing. Report a harness error, not a product result.
+PRE_OK=1
+grep -qE 'text="(Skip|Skip for now|Remind me later)"' upgrade/ui-old-tabs.xml 2>/dev/null && PRE_OK=0
+note "old app past update dialog and welcome guide: $PRE_OK"
 # A local clip through the app's own VIEW handler; the player records history and progress.
 adb shell am start -a android.intent.action.VIEW -d file:///sdcard/Movies/upgrade-clip.mp4 -t video/mp4 -p $P > /dev/null 2>&1
 sleep 25; dump old-player
+PLAYED=0; grep -qi 'upgrade-clip\|upgrade clip' upgrade/ui-old-player.xml 2>/dev/null && PLAYED=1
+grep -q 'YuPlayer\|ExoPlayerImpl.*Init' upgrade/logcat.txt 2>/dev/null && PLAYED=1
+note "old app opened the clip: $PLAYED"
 adb shell input keyevent 4; sleep 3; adb shell input keyevent 3; sleep 8
 dump old-home-after
 adb shell am force-stop $P; sleep 2
@@ -105,7 +113,8 @@ python3 scripts/upgrade_compare.py upgrade/before.tar upgrade/after.tar | tee up
 CMP=${PIPESTATUS[0]}
 V=PASS
 [ "$CMP" = 0 ] || V=FAIL
+[ "$PRE_OK" = 1 ] || V=ERROR_PRECONDITION
 [ "$GUIDE_AGAIN" = 0 ] || V=FAIL
 [ "${FATAL:-0}" = 0 ] || V=FAIL
-echo "UPGRADE_RESULT $V compare=$CMP guide_again=$GUIDE_AGAIN clip_seen=$CLIP_SEEN fatal=$FATAL"
+echo "UPGRADE_RESULT $V compare=$CMP pre_ok=$PRE_OK played=$PLAYED guide_again=$GUIDE_AGAIN clip_seen=$CLIP_SEEN fatal=$FATAL"
 [ "$V" = PASS ]

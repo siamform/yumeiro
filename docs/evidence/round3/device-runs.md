@@ -517,3 +517,9 @@ landed below the window; the page is a scrolled column) and close() waited for
 `settings_cat_appearance`, which Settings home's remembered scroll keeps off the list. Phase b skipped
 ("phase a left no state"). Not a product result. Fixed in e7efd6e; rerun 43877623222.
 CI 43876676611 cancelled: started on eb9b4b6, head moved to e7efd6e (ST-1 fix) before it finished.
+
+## Upgrade check 43869944264 (v1.8.0 → HEAD, emulator)
+
+- Data: `upgrade_compare.py` 19 → 21 files, **0 lost values**, 1 changed (`mt_updater.xml last_check`, the update check time). New files: `files/crash/breadcrumbs.log`, `yumeiro_crashlog.xml` (the new build's breadcrumb log, not a crash: FATAL/ANR lines 0).
+- Verdict FAIL = harness error. Screens: old app start showed v1.8.0's "Update available" dialog (v1.8.0 → v1.8.1); the first-run loop's button list lacked "Remind me later", so after 45 s the welcome guide was still up (`ui-old-tabs`, `ui-old-player`), the clip never opened, and the new build correctly showed the still-unanswered guide.
+- Fix: "Remind me later" added; the script now checks the precondition (old app past dialog and guide) and reports `ERROR_PRECONDITION` instead of a product FAIL; it logs whether the old app opened the clip. Rerun dispatched after this commit.
