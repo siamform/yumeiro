@@ -54,7 +54,8 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 | S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | first run 43875418000 was a test error (taps below the fold, home detection); fixed in e7efd6e, rerun 43877623222 running |
 | SE-3, S23 search | `SettingsSearchCoverageTest` | unit | CI run owed |
 | Player info overlay, Resume playback, Anime4K (real effect on the player) | `PlayerSettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |
-| S1–S22 pages, notification settings effects | — | — | open |
+| Notification switches (6 kinds, master, chime): real effect on Android's active notifications | `NotifySettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |
+| S1–S22 pages | — | — | open |
 
 ## Preference inventory (generated)
 
@@ -259,3 +260,7 @@ default)`; one row per read.
 | `yumeiro_tv_mode` | `layout` | String | null | device-only (not in backup, kept by every reset) | `ui/tv/TvMode.kt:40` |
 
 Note: the settings bug IDs were first written ST-1 / ST-2 (commit de40e78, ST-2 commit). They clashed with the older stability rows ST-1 … ST-20, so they are SE-1 / SE-2 from now on.
+
+Observation (not changed, owner product call): a kind switch that is off (e.g. "New episodes")
+drops the item completely, also from the inbox (`AppNotifier.post` returns before `Inbox.add`),
+while "Show notifications" off keeps items in the inbox. The rows' text does not promise either way.
