@@ -31,6 +31,8 @@ import kotlin.coroutines.coroutineContext
 object YtDownloads {
     /** googlevideo throttles one big request; 8 MB ranges keep full speed (NewPipe does the same). */
     private const val CHUNK = 8L * 1024 * 1024
+    /** G8 (R17): connection drops in a row with no bytes before a download gives up. */
+    private const val MAX_DROPS = 4
 
     private fun containerOf(s: Stream): String? = when (s.format) {
         MediaFormat.MPEG_4, MediaFormat.M4A -> if (s.format == MediaFormat.M4A) "m4a" else "mp4"
@@ -87,6 +89,7 @@ object YtDownloads {
         var have = if (file.exists()) file.length() else 0L
         var total = knownLength
         if (total in 1..have) return have
+        var drops = 0
         FileOutputStream(file, true).use { fos ->
             val buf = ByteArray(64 * 1024)
             while (total <= 0 || have < total) {
@@ -95,20 +98,30 @@ object YtDownloads {
                 val b = Request.Builder().url(url).header("Range", "bytes=$have-$end")
                 headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
                 var got = 0L
-                client.newCall(b.build()).execute().use { r ->
-                    if (r.code == 416) return have
-                    if (!r.isSuccessful) throw HttpStatus(r.code)
-                    if (r.code == 200 && have > 0) { fos.channel.truncate(0); have = 0 }
-                    r.header("Content-Range")?.substringAfter('/')?.toLongOrNull()?.let { total = it }
-                    if (r.code == 200) total = r.body.contentLength().takeIf { it > 0 } ?: total
-                    r.body.byteStream().use { input ->
-                        while (true) {
-                            coroutineContext.ensureActive()
-                            val n = input.read(buf); if (n < 0) break
-                            fos.write(buf, 0, n); have += n; got += n
-                            progress(have)
+                try {
+                    client.newCall(b.build()).execute().use { r ->
+                        if (r.code == 416) return have
+                        if (!r.isSuccessful) throw HttpStatus(r.code)
+                        if (r.code == 200 && have > 0) { fos.channel.truncate(0); have = 0 }
+                        r.header("Content-Range")?.substringAfter('/')?.toLongOrNull()?.let { total = it }
+                        if (r.code == 200) total = r.body.contentLength().takeIf { it > 0 } ?: total
+                        r.body.byteStream().use { input ->
+                            while (true) {
+                                coroutineContext.ensureActive()
+                                val n = input.read(buf); if (n < 0) break
+                                fos.write(buf, 0, n); have += n; got += n
+                                progress(have)
+                            }
                         }
                     }
+                    drops = 0
+                } catch (e: HttpStatus) { throw e } catch (e: IOException) {
+                    // G8 (R17): a dropped connection used to fail the whole download (the worker then
+                    // waited for its backoff). The bytes stay; ask again from [have]. Only drops that
+                    // bring nothing count towards the limit, like a download manager.
+                    if (got > 0) drops = 0 else if (++drops >= MAX_DROPS) throw e
+                    kotlinx.coroutines.delay(if (got > 0) 200L else 800L * drops)
+                    continue
                 }
                 if (got == 0L) break
             }

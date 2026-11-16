@@ -65,7 +65,7 @@ class DownloadThroughputTest {
             }
             val out = sock.getOutputStream()
             when {
-                path == "/file" -> serve(out, headers["range"], 0, SIZE)
+                path == "/file" -> serve(out, headers["range"], 0, SIZE, sock)
                 path.endsWith("index.m3u8") -> {
                     val body = buildString {
                         append("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:6\n#EXT-X-MEDIA-SEQUENCE:0\n")
@@ -82,7 +82,7 @@ class DownloadThroughputTest {
             }
         }
 
-        private fun serve(os: java.io.OutputStream, rangeIn: String?, off: Int, len: Int) {
+        private fun serve(os: java.io.OutputStream, rangeIn: String?, off: Int, len: Int, sock: java.net.Socket? = null) {
             requests.incrementAndGet()
             try {
                 val range = rangeIn?.takeIf { ranges }
@@ -107,6 +107,7 @@ class DownloadThroughputTest {
                 while (sent < count) {
                     val n = minOf(16 * 1024L, count - sent).toInt()
                     os.write(data, off + (start + sent).toInt(), n); sent += n
+                    if (p.cutAfter > 0 && sent >= p.cutAfter && sent < count) { os.flush(); runCatching { sock?.close() }; return } // G8: drop mid-body
                     if (sent > p.burst && p.bytesPerSec > 0) {
                         val due = (sent - p.burst) * 1_000_000_000L / p.bytesPerSec
                         val ahead = due - (System.nanoTime() - t0)
@@ -120,7 +121,7 @@ class DownloadThroughputTest {
         }
     }
 
-    data class Profile(val name: String, val burst: Long, val bytesPerSec: Long)
+    data class Profile(val name: String, val burst: Long, val bytesPerSec: Long, val cutAfter: Long = 0)
 
     private val client = OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build()
 
@@ -181,6 +182,19 @@ class DownloadThroughputTest {
     @Test fun steadyPerConnectionCap() {
         profile = Profile("steady-3MBps", burst = 0, bytesPerSec = 3L * 1024 * 1024)
         allEngines()
+    }
+
+    /**
+     * G8 (R17): every connection drops after 700 KB of body. Each engine must still finish in one
+     * call with the exact bytes (it used to fail: 4 drops per 4 MB piece, any drop for YouTube).
+     */
+    @Test fun droppedConnectionsResumeInsideOneRun() {
+        profile = Profile("drop-every-700KB", burst = 0, bytesPerSec = 0, cutAfter = 700L * 1024)
+        ranges = true
+        run("segmented4") { f, d -> Segmented(client, 4).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
+        run("segmented2-lowend") { f, d -> Segmented(client, 2).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
+        run("youtube-8mb-chunks") { f, d -> YtDownloads.fetch(client, "$base/file", emptyMap(), f, SIZE.toLong()) { done -> d.on(done) } }
+        broken.clear() // speed is not the point here; the bytes are (check() in run)
     }
 
     @Test fun burstThenCapPerRequest() {

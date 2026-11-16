@@ -238,12 +238,16 @@ class Segmented(
                         var restarts = 0
                         while (true) {
                             currentCoroutineContext().ensureActive()
+                            val at = piece.position()
                             try {
                                 val slowed = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS) { n -> progress(have.addAndGet(n), total) }
                                 if (slowed) { restarts++; continue } // same piece, fresh request
                                 break
                             } catch (e: Refused) { throw e } catch (e: IOException) {
                                 // The bytes already written stay; the retry starts where the piece stopped.
+                                // G8 (R17): only tries that brought nothing count. Every drop counted, so a
+                                // connection that drops each ~1 MB failed a 4 MB piece and the whole run.
+                                if (piece.position() > at) { tries = 0; delay(200L); continue }
                                 if (++tries >= 4) throw e
                                 delay(800L * tries)
                             }
