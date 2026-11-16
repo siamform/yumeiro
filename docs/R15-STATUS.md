@@ -14,7 +14,7 @@
   - BUG-6 verified on device (emulator, both phones): fail 43912650347 → fix c8ac2ae → pass 43914724044.
   - BUG-7: 7c/7d repro tests (StreamFormatMismatchDeviceTest, UpscaleFreezeDeviceTest) running; 7b, 7a after.
 - **SE-5:** api33 PASS; api36 case a was a test error, fixed 6551e71; rerun in 43920651380.
-- **Ghost run:** device 43908909691 (c41f530) stays "queued" with no jobs; cancel/force-cancel HTTP 409.
+- **Ghost run:** 43908909691 (c41f530) started at 17:39 UTC, blocked the queue; cancelled as stale.
 - **CI:** 43917276245 at 6551e71 green (unit, lint, build, gitleaks).
 - **Running:** phones 43920651380 (StreamFormatMismatch, UpscaleFreeze, PushAlerts at 2507429).
 - **Next three actions:** (1) read 43920651380: FMT_CASE/FMT_STALL/UPS_CASE lines and main-thread stacks;

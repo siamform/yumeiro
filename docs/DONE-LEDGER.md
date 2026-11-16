@@ -453,6 +453,7 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-16 | Y6/H1 | unverified → verified on device (emulator): HeroCarouselDeviceTest PASS on both phones (43914724044) |
 | 2026-11-16 | BUG-5 | TV-2 verified on device (tv-api34, 43912693329 and 43914880052 b). TV-4 focus part verified (43914880052 d: Up×3 → magnifier, field focused, typed "naruto"). TV-4 scope part open: Home search only ranks the local library (suggestion list), so an empty TV library gives nothing; a cross-source search is G7 proposal 3 (owner approval). Submit also clears focus to the rail |
 | 2026-11-16 | SE-5 | api33-lowram a/b/c PASS (43914724044); api36 a FAIL was the test (enable() with no distributor installed → onUnregistered clears state by design); test fixed 6551e71, rerun pending |
+| 2026-11-16 | CI | ghost device run 43908909691 (c41f530) woke at 17:39 UTC, held the phone-both concurrency group and blocked 43920651380; stale head, cancelled (now "cancelled") |
 
 
 Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-7 was already used by the R16 library-tabs row; the commit message says LB-7).
