@@ -178,6 +178,12 @@ fun NowPlayingScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            // BUG-6: Now Playing is drawn over the tab pages in the same window. Compose hit-tests
+            // overlapping siblings top-down and moves on to the next one when the top one has no
+            // pointer input at that point, so a tap on an empty part of this screen (or on plain
+            // text / artwork) reached the Home card underneath. A pointer node on the root makes
+            // every point of the screen a hit; it consumes nothing, so the controls work as before.
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
             .pageBackground()
             // Soft artwork-colored glow at the top (single cached radial draw, no blur).
             .drawBehind {
