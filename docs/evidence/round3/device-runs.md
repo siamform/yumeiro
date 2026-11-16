@@ -374,3 +374,15 @@ These are real emulators running the real debug APK; the tests are not simulated
 - Correction (11:35 UTC): the "stuck" run 43854742733 got its jobs at ~11:30 and started; through the
   ci-<ref> concurrency group it cancelled CI 43857949982 (Build cancelled after 3 min, gitleaks passed).
   43854742733 (40ea96e) is now the CI run of record; ProgressGateTest (24ee21b) goes in the next CI.
+
+## Device run 43857809658 — device-check on 445156c (emulator, both, 2026-11-16 11:36–11:47 UTC)
+
+- DecoderFaultDeviceTest: a, b, c PASS on both emulators (G12-DF complete on emulator).
+- QualityListDeviceTest (now every height): manifest [1080,720,480,288,184].
+  - api33-lowram: 184p (decoder 320x184) and 288p (512x288) applied, frame shots; then Back did not
+    close the dialog in 5 s (cause unknown; a8b4d27 logs misses with shots).
+  - api36: 184p, 288p applied; 480p reached 848x480, then snapped back to Auto and 1280x720. **App bug**:
+    PlaybackHealthMonitor counted the three pick-induced buffers as network rebuffers and cleared the
+    override. Fixed in 10be03d (RebufferWindow, picks/seeks excluded).
+- DownloadThroughputDeviceTest: no measurement again (Hetzner: "unexpected end of stream" to a plain
+  client; OVH IPv4 timeouts). kernel.org CDN hosts added in a8b4d27.
