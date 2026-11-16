@@ -48,6 +48,32 @@ class OnlineExtrasTest {
         assertNull(HlsDownloader.bestVariant("#EXTM3U\n#EXTINF:4,\na.ts", "https://x/y.m3u8"))
     }
 
+    @Test fun hlsVariantFollowsTheDownloadQualitySetting() {
+        // G8 (R17): Settings → Downloads → Quality used to be ignored for HLS (always the top variant).
+        val master = """
+            #EXTM3U
+            #EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360
+            v360.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720
+            v720.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720
+            v720lo.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080
+            v1080.m3u8
+        """.trimIndent()
+        val b = "https://cdn.example/v/master.m3u8"
+        fun pick(h: Int) = HlsDownloader.bestVariant(master, b, h)!!.substringAfterLast('/')
+        for (h in dev.asfakul.yumeiro.online.download.DownloadSettings.QUALITY_CHOICES) println("HLS_PICK max=$h -> ${pick(h)}")
+        assertEquals("v1080.m3u8", pick(0))
+        assertEquals("v1080.m3u8", pick(1080))
+        assertEquals("v720.m3u8", pick(720))   // the higher-bandwidth 720p
+        assertEquals("v360.m3u8", pick(480))
+        assertEquals("v360.m3u8", pick(360))
+        assertEquals("v360.m3u8", pick(240))   // nothing fits: the smallest
+        val noRes = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080\nhi.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000\nx.m3u8"
+        assertEquals("x.m3u8", HlsDownloader.bestVariant(noRes, b, 720)!!.substringAfterLast('/')) // unknown before too-big
+    }
+
     @Test fun hlsMediaPlaylistKeysAndSequence() {
         val media = """
             #EXTM3U

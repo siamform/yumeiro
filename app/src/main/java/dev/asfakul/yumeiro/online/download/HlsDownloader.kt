@@ -22,6 +22,7 @@ private val RX_HLSDOWNLOADER_1 = Regex("""#EXT-X-KEY:.*METHOD=(SAMPLE-AES|SAMPLE
 private val RX_HLSDOWNLOADER_2 = Regex("""(?<![A-Z-])BANDWIDTH=(\d+)""")
 private val RX_HLSDOWNLOADER_3 = Regex("""#EXT-X-MEDIA-SEQUENCE:(\d+)""")
 private val RX_HLSDOWNLOADER_4 = Regex("""METHOD=([A-Z0-9-]+)""")
+private val RX_HLS_RESOLUTION = Regex("""RESOLUTION=\d+x(\d+)""")
 private val RX_HLS_URI = Regex("""URI="([^"]+)"""")
 private val RX_HLSDOWNLOADER_5 = Regex("""IV=0[xX]([0-9a-fA-F]+)""")
 
@@ -31,7 +32,7 @@ private val RX_HLSDOWNLOADER_5 = Regex("""IV=0[xX]([0-9a-fA-F]+)""")
  * playlist points to (the same thing any HLS player does). SAMPLE-AES / DRM is refused.
  * Resumes by skipping segments already written (tracked in a small side file).
  */
-class HlsDownloader(private val client: OkHttpClient, private val headers: Map<String, String>) {
+class HlsDownloader(private val client: OkHttpClient, private val headers: Map<String, String>, private val maxHeight: Int = 0) {
 
     data class Segment(val url: String, val keyUrl: String?, val iv: ByteArray?, val sequence: Long, val initUrl: String?)
 
@@ -39,7 +40,7 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         var playlistUrl = url
         var text = fetchText(url)
         if ("#EXT-X-STREAM-INF" in text) {
-            playlistUrl = bestVariant(text, url) ?: throw IOException("No playable variant in the playlist")
+            playlistUrl = bestVariant(text, url, maxHeight) ?: throw IOException("No playable variant in the playlist")
             text = fetchText(playlistUrl)
         }
         if (RX_HLSDOWNLOADER_1.containsMatchIn(text)) throw IOException("This stream is DRM-protected and can't be saved")
@@ -106,18 +107,28 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         fun resolve(base: String, ref: String): String =
             base.toHttpUrlOrNull()?.resolve(ref.trim())?.toString() ?: ref.trim()
 
-        /** Highest-bandwidth variant (ties → larger resolution). */
-        fun bestVariant(master: String, base: String): String? {
+        /**
+         * Variant to save. [maxHeight] 0 = highest bandwidth. G8 (R17): with a limit (Settings →
+         * Downloads → Quality) the best variant at or under it, then one without a RESOLUTION, then
+         * the smallest above it, like [DownloadNaming.pickLink] and DASH. HLS ignored the setting
+         * and always saved the top variant.
+         */
+        fun bestVariant(master: String, base: String, maxHeight: Int = 0): String? {
             val lines = master.lines()
-            var best: Pair<Long, String>? = null
+            val all = ArrayList<Triple<Long, Int, String>>() // bandwidth, height (0 = unknown), url
             for (i in lines.indices) {
                 val l = lines[i].trim()
                 if (!l.startsWith("#EXT-X-STREAM-INF")) continue
                 val bw = RX_HLSDOWNLOADER_2.find(l)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                val h = RX_HLS_RESOLUTION.find(l)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                 val uri = lines.drop(i + 1).firstOrNull { it.isNotBlank() && !it.startsWith("#") }?.trim() ?: continue
-                if (best == null || bw > best.first) best = bw to resolve(base, uri)
+                all += Triple(bw, h, resolve(base, uri))
             }
-            return best?.second
+            if (all.isEmpty()) return null
+            if (maxHeight <= 0) return all.maxWith(compareBy<Triple<Long, Int, String>> { it.first }.thenBy { it.second }).third
+            return (all.filter { it.second in 1..maxHeight }.maxWithOrNull(compareBy<Triple<Long, Int, String>> { it.second }.thenBy { it.first })
+                ?: all.filter { it.second <= 0 }.maxByOrNull { it.first }
+                ?: all.minWith(compareBy<Triple<Long, Int, String>> { it.second }.thenBy { it.first })).third
         }
 
         fun parseMedia(text: String, base: String): List<Segment> {

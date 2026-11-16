@@ -200,7 +200,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 val v = File(part.parentFile, part.name + ".v"); val a = File(part.parentFile, part.name + ".a")
                 var vb = 0L; var ab = 0L
                 kotlinx.coroutines.coroutineScope {
-                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v) { d, _ -> vb = d; progress(vb + ab, -1) }() }
+                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.quality.value).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v) { d, _ -> vb = d; progress(vb + ab, -1) }() }
                     val aj = this.async { direct(item.audioUrl, item.headers, a) { d, _ -> ab = d; progress(vb + ab, -1) }() }
                     vj.await(); aj.await()
                 }
@@ -208,7 +208,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 v.delete(); a.delete()
                 part.length()
             }
-            item.isHls -> HlsDownloader(client, item.headers).download(item.url, part, progress)
+            item.isHls -> HlsDownloader(client, item.headers, DownloadSettings.quality.value).download(item.url, part, progress)
             dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
