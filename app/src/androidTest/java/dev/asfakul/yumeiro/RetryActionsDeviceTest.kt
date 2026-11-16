@@ -60,7 +60,7 @@ class RetryActionsDeviceTest {
     /** Text of the shown message (merged tree: the pill is clickable, so its texts merge into it). */
     private fun messageText(): String = runCatching {
         compose.onAllNodesWithTag("app_message", false).fetchSemanticsNodes().firstOrNull()
-            ?.config?.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.joinToString(" ") { it.text }
+            ?.config?.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }?.joinToString(" ") { t -> t.text }
     }.getOrNull().orEmpty()
     private fun clearMessage() { AppMessages.current.value?.id?.let(AppMessages::dismiss) }
     private fun wait(what: String, ms: Long = 20_000, cond: () -> Boolean) {
