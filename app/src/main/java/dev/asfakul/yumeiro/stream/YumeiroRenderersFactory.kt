@@ -42,9 +42,11 @@ class YumeiroRenderersFactory(context: Context) : DefaultRenderersFactory(contex
 
     init {
         setEnableDecoderFallback(true)
-        if (mode == dev.asfakul.yumeiro.player.VideoPrefs.Decoder.SOFTWARE) {
-            setMediaCodecSelector(SoftwareFirstSelector)
-        }
+        val selector = if (mode == dev.asfakul.yumeiro.player.VideoPrefs.Decoder.SOFTWARE) SoftwareFirstSelector else MediaCodecSelector.DEFAULT
+        // G12: debug-only decoder fault injection (DecoderFaults); release builds never wrap.
+        val faults = dev.asfakul.yumeiro.BuildConfig.DEBUG && DecoderFaults.mode != DecoderFaults.Mode.NONE
+        if (faults) Log.w(TAG, "decoder fault injection: ${DecoderFaults.mode}")
+        if (faults || selector !== MediaCodecSelector.DEFAULT) setMediaCodecSelector(if (faults) DecoderFaults.wrap(selector) else selector)
     }
 
     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink? {
