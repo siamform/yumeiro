@@ -23,7 +23,7 @@ this file.
 | ID | System | Main code | Audit state |
 |---|---|---|---|
 | X1 | Architecture and layering | whole app, `docs/SYSTEM-DESIGN.md` §2 | measured (§2 "Code structure"); findings X1-3, X1-4 fixed |
-| X2 | Start-up, memory / OOM, low-RAM class | `MTApplication`, `startup/PrefsWarmup`, `diagnostics/MemoryWatch`, `DeviceClass` | X2-1 open (measure), X2-2 fixed; benchmark module built; heap profile not done |
+| X2 | Start-up, memory / OOM, low-RAM class | `MTApplication`, `startup/PrefsWarmup`, `diagnostics/MemoryWatch`, `DeviceClass` | X2-1 profile committed (after-numbers pending), X2-2 fixed; heap profile done (X2-3h, 43789071263: no real leaks) |
 | X3 | Main-thread stalls / ANR, StrictMode | `diagnostics/DevStrictMode`, `MainThreadWatchdog` (YuStall), `RegexWarmup` | ST-13/14/15 unit only; ST-16 emulator; ST-17 open |
 | X4 | Battery and heat | `player/HeatGuard`, `notify/NotifyPacer` | X4-1 emulator verified |
 | X5 | Notifications while closed | `notify/*`, `PushWakeService`, alarms, workers | X5-1, X5-2 emulator verified |
@@ -182,8 +182,8 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
 
 1. ADR-014 (X9-7 extension dialogs) waits for the owner. (X13-3, X13-4, X13-5, X9-8 done.) X9-7: ADR + owner decision on extension dialogs. (X8-2, X2-3, X9-2…X9-6,
    X13-1, X13-2 done.)
-2. X2: Macrobenchmark startup (before), baseline profile, startup (after); heap profile on api33-lowram.
-3. ST-13/14/15: StrictMode device proof; ST-17 root cause.
+2. X2: startup after-numbers with the committed baseline profile (43790371337). (Before numbers, profile and heap profile done.)
+3. ST-17 root cause (ST-13/14/15 emulator proof, ST-18 classified, ST-19 fixed, ST-20 third-party: done).
 4. X7: MASVS write-up.
 5. X10: R8, ABI split and signing review; upgrade test from the v1.8.0 release on an emulator.
 6. X11–X16: full audit (network, caching, compatibility, design system, live feed, Worker).
