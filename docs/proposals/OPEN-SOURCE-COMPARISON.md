@@ -625,3 +625,4 @@ No change to the approval list above, except one new P1 entry: **baseline profil
 
 - BUG-1 watch progress: [FEATURE-BUG-1-watch-progress.md](FEATURE-BUG-1-watch-progress.md) (CloudStream 5d66bbe, NewPipe 1e61c9a).
 - BUG-2 YouTube channels: [FEATURE-BUG-2-youtube-channels.md](FEATURE-BUG-2-youtube-channels.md) (NewPipe 1e61c9a, Hikari 9694add; CloudStream has no YouTube channel browser).
+- BUG-3 download throughput: [FEATURE-BUG-3-download-throughput.md](FEATURE-BUG-3-download-throughput.md) (CloudStream 5d66bbe, Nuvio 04cfe4a).

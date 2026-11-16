@@ -83,7 +83,7 @@ object YtDownloads {
     }
 
     /** Range-chunked, resumable fetch of [url] into [file]. */
-    private suspend fun fetch(client: OkHttpClient, url: String, headers: Map<String, String>, file: File, knownLength: Long, progress: (Long) -> Unit): Long {
+    internal suspend fun fetch(client: OkHttpClient, url: String, headers: Map<String, String>, file: File, knownLength: Long, progress: (Long) -> Unit): Long {
         var have = if (file.exists()) file.length() else 0L
         var total = knownLength
         if (total in 1..have) return have
