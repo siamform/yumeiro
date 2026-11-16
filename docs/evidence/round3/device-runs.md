@@ -676,3 +676,15 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - c TV-3 PASS (Spaces grid, page 0). d: Up from home_setup_card → magnifier; box opened, but the
   screenshot shows an empty box and the rail expanded: the typed text never arrived (fix 18147da).
 
+
+## 43914724044 (phones, both; emulator)
+
+- MusicTapThroughDeviceTest PASS on api33-lowram and api36, leaked=0 (BUG-6 after c8ac2ae; failed in 43912650347).
+- HeroCarouselDeviceTest PASS: api36 12,952 ms, api33-lowram 17,019 ms, heat COOL (Y6/H1).
+- PushAlertsEffectDeviceTest: api33-lowram a/b/c PASS (ntfy schedule accepted, pending=9). api36 a FAIL: logcat
+  "There was a distributor, but it isn't installed anymore" → onUnregistered cleared the endpoint. Test error, fixed 6551e71.
+
+## 43914880052 (tv-api34; emulator)
+
+- a TV-5, b TV-2, c TV-3, d TV-4 focus: all PASS. d: start quick_card_downloads, Up×3 → magnifier, inputFocused=true,
+  typed='naruto'. After Enter Home is unchanged (library-only search, empty library) and focus moves to the rail.
