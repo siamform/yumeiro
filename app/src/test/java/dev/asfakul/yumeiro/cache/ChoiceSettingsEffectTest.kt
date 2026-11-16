@@ -85,7 +85,10 @@ class ChoiceSettingsEffectTest {
 
     /** cookie_days: the cookie clear runs once the chosen days have passed, and never with "Never". */
     @Test fun clearCookiesEveryFollowsTheChoice() {
-        val t0 = 1_000_000_000_000L
+        // CI 43949564709: MTApplication runs the janitor on a background thread at start; with a
+        // fixed old t0 it could stamp the real time in between. With t0 six days before now, that
+        // run sees "6 of 7 days" too and changes nothing, whichever order the two run in.
+        val t0 = System.currentTimeMillis() - 6 * day
         DataCache.Settings.set(cookieDays = 7)
         DataCache.Settings.lastCookieClear = t0
         DataCache.runJanitor(app, now = t0 + 6 * day)

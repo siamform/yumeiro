@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.getOrNull
 import dev.asfakul.yumeiro.ui.screens.TabPagerProbe
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -223,9 +224,19 @@ class TvBug5ReproDeviceTest {
             // Run 43914880052: after Enter nothing changed on Home (library-only search, empty TV
             // library) and focus fell to the rail. Now: a visible answer, and focus stays in the box.
             runCatching { rule.waitForIdle() }
-            focusAfter = focused()
             answered = has("topbar_search_empty") || has("topbar_suggestions")
-            log("TVB_STEP d focusAfterSubmit=$focusAfter answered=$answered")
+            // Run 43949571344 (tv-api24): the Leanback keyboard was open and took the Enter key, so
+            // the app never saw a submit. A user presses the keyboard's SEARCH key there, which is the
+            // IME search action; send that (it is what the real keyboard sends).
+            var path = "enter"
+            if (!answered) {
+                path = "ime_search"
+                runCatching { rule.onAllNodesWithTag("topbar_search_input", true)[0].performImeAction() }
+                runCatching { rule.waitUntil(5_000) { has("topbar_search_empty") || has("topbar_suggestions") } }
+                answered = has("topbar_search_empty") || has("topbar_suggestions")
+            }
+            focusAfter = focused()
+            log("TVB_STEP d path=$path focusAfterSubmit=$focusAfter answered=$answered")
         }
         FirstRun.shot("tvb_d_search")
         log("TVB_CASE d reachable=$onSearch opened=$opened screen=${FirstRun.onScreen(rule)}")
