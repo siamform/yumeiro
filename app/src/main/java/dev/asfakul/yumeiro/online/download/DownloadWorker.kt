@@ -34,6 +34,8 @@ import java.io.IOException
 class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     companion object {
+        /** Fastest the download list is updated with progress (G8/BUG-3). */
+        internal const val PROGRESS_MS = 250L
         const val TAG = "online_download"
         const val KEY_ID = "id"
         private const val CHANNEL = "downloads"
@@ -45,6 +47,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     private val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private var lastNotified = 0L
+    private val progressGate = ProgressGate(PROGRESS_MS)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         OnlineDownloads.ensureLoaded(applicationContext)
@@ -77,8 +80,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             var out = OnlineDownloads.fileOf(applicationContext, item)
             val part = File(out.parentFile, out.name + ".part")
             val onProgress: (Long, Long) -> Unit = { done, total ->
-                OnlineDownloads.progress(id, done, total)
                 val now = System.currentTimeMillis()
+                if (progressGate.pass(now, done, total)) OnlineDownloads.progress(id, done, total)
                 if (now - lastNotified > 900) {
                     lastNotified = now
                     val pct = if (total > 0) ((done * 100) / total).toInt() else 0
@@ -314,5 +317,20 @@ internal object RangeResume {
             }
             else -> Action.APPEND
         }
+    }
+}
+
+/**
+ * G8/BUG-3: engines report every 64 KiB read on every connection (100+ calls a second at 10 MB/s).
+ * Each report copied the whole download list and woke every collector (Downloads screen, badges).
+ * The gate lets one report through per [intervalMs], and always the last one (done == total).
+ * Thread-safe: several connections report at once. `ProgressGateTest`.
+ */
+internal class ProgressGate(private val intervalMs: Long) {
+    private val last = java.util.concurrent.atomic.AtomicLong(Long.MIN_VALUE / 2)
+    fun pass(now: Long, done: Long, total: Long): Boolean {
+        if (total > 0 && done >= total) { last.set(now); return true }
+        val prev = last.get()
+        return now - prev >= intervalMs && last.compareAndSet(prev, now)
     }
 }
