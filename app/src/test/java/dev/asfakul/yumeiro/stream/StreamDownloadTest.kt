@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.online.download.OnlineDownloads.Kind
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,11 +33,10 @@ class PlayLinkPublishTest {
 
     @Test fun onlyNetworkLinksArePlayLinks() {
         val y = dev.asfakul.yumeiro.online.download.YtDownloads
-        val k = dev.asfakul.yumeiro.online.download.OnlineDownloads.Kind
-        assertTrue(y.isPlayLink(item(k.LINK, "Network")))
-        assertFalse(y.isPlayLink(item(k.LINK, "SomeExtension")))
-        assertFalse(y.isPlayLink(item(k.EPISODE, "Network")))
-        assertFalse(y.isPlayLink(item(k.YT_VIDEO, "Network")))
+        assertTrue(y.isPlayLink(item(Kind.LINK, "Network")))
+        assertFalse(y.isPlayLink(item(Kind.LINK, "SomeExtension")))
+        assertFalse(y.isPlayLink(item(Kind.EPISODE, "Network")))
+        assertFalse(y.isPlayLink(item(Kind.YT_VIDEO, "Network")))
     }
 
     @Test fun mimeFollowsTheSavedExtension() {
