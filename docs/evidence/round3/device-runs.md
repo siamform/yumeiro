@@ -421,3 +421,19 @@ These are real emulators running the real debug APK; the tests are not simulated
 - 1059 tests, 0 failed, 11 skipped. ProgressGateTest 4/4, RebufferWindowTest 6/6, Bug3PieceTest 8/8,
   Bug4QualityListTest 7/7, DownloadThroughputTest 2/2 (BUG-3 rule met: segmented4 burst 1.67×,
   low-end 0.09×; table in FEATURE-BUG-3 §4.3).
+
+## Device 43863246577 — HomeTraceDeviceTest, gpu=swangle_indirect (3c85a72-era branch head) — success
+
+Emulator (Perfetto, debug APK, 3 cold starts per phone, `scripts/home_trace_report.py`):
+
+| Phone | bindApplication ms | first frame duration ms | main Running ms | shader_compile ms | VerifyClass(main) ms | media3 classes in frame |
+|---|---|---|---|---|---|---|
+| api33-lowram | 2096 / 1343 / 1391 | 2263 / 2263 / 2360 | 858 / 919 / 1000 | 145 / 132 / 97 | 993 / 1180 / 1187 | 3 / 3 / 3 |
+| api36 | 1640 / 1771 / 1081 | 2198 / 2815 / 1152 | 709 / 1277 / 782 | 156 / 207 / 70 | 572 / 718 / 360 | 3 / 3 / 3 |
+
+- With the ANGLE-on-SwiftShader (swangle) GPU, RenderThread shader compile falls from 1229–1427 ms
+  (default GPU, run 43828509434) to 70–207 ms: the earlier 1.2–1.4 s was the emulator's GPU mode, not app code.
+- The first-frame duration does not fall by the same amount: the frame now waits on the main thread,
+  where debug-build class verification (`VerifyClass`, no AOT) is 360–1187 ms. That cost does not exist in
+  a release build with the baseline profile; the real-phone number is OMT-12.
+- The player build stays out of the first frame (3 media3 classes, ST-18 fix 2f86897 holds).
