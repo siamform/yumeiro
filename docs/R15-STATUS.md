@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 22:25 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 19:35 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -12,13 +12,16 @@
     scope (Home search ranks only the local library; cross-source search is G7 proposal 3, owner call),
     focus after submit goes to the rail, tv_api=24 run, TV-3 with feed rows.
   - BUG-6 verified on device (emulator, both phones): fail 43912650347 → fix c8ac2ae → pass 43914724044.
-  - BUG-7: 7c/7d repro tests (StreamFormatMismatchDeviceTest, UpscaleFreezeDeviceTest) running; 7b, 7a after.
-- **SE-5:** api33 PASS; api36 case a was a test error, fixed 6551e71; rerun in 43920651380.
+  - BUG-7: 7a and 7b fixed in code; 7c/7d not reproduced on emulator (43920651380, test artefacts fixed);
+    orientation binder stall fixed. Device proof running.
+- **SE-5:** verified on device (emulator) 16/16 (43920651380).
 - **Ghost run:** 43908909691 (c41f530) started at 17:39 UTC, blocked the queue; cancelled as stale.
-- **CI:** 43917276245 at 6551e71 green (unit, lint, build, gitleaks).
-- **Running:** phones 43920651380 (StreamFormatMismatch, UpscaleFreeze, PushAlerts at 2507429).
-- **Next three actions:** (1) read 43920651380: FMT_CASE/FMT_STALL/UPS_CASE lines and main-thread stacks;
-  (2) root-cause and fix 7c/7d with fail-before/pass-after; (3) TV tv_api=24 run of TvBug5Repro, then 7b.
+- **CI:** 43932186480 green at the head (unit, lint, both device-test compiles). 43927717593 stuck "queued"
+  with no jobs for 40 min, cancel answered "completed"; re-dispatched as 43932186480.
+- **Running:** phones 43935805199 (StreamFormatMismatch, UpscaleFreeze, StreamWatchDownload), tv-api34
+  43935810414 (TvBug5Repro, TV-4 answer + focus after Enter).
+- **Next three actions:** (1) read both runs: 7a/7b proof, 7c/7d with UiLiveness, TV-4 d; (2) record in the
+  ledger, set BUG-7 parts and TV-4 by evidence; (3) tv_api=24 run, then close G9/G10 and start G12.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
