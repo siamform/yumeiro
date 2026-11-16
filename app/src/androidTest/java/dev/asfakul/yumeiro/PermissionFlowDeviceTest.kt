@@ -65,9 +65,23 @@ class PermissionFlowDeviceTest {
         val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         log("PERM_PRE granted=$granted")
         assertTrue("ERROR_PRECONDITION: the script did not revoke the permission", !granted)
-        // First run was finished in phase a; only the tabs are needed (no grant here).
-        runCatching { rule.waitUntil(60_000) { FirstRun.hasNav(rule, "nav_tab_home") } }
-            .onFailure { throw AssertionError("tabs never showed · ${FirstRun.onScreen(rule)}") }
+        // First run was finished in phase a; only the tabs are needed (no grant here). The app asks
+        // for missing permissions at every start (MTPlayerApp), so with the permission revoked the
+        // system dialog comes up over the tabs first (run 43880703410). Back closes it without a choice.
+        val upTo = SystemClock.uptimeMillis() + 60_000
+        var startupDialog = false
+        while (SystemClock.uptimeMillis() < upTo) {
+            if ("GrantPermissionsActivity" in topActivity()) { startupDialog = true; break }
+            if (runCatching { FirstRun.hasNav(rule, "nav_tab_home") }.getOrDefault(false) && SystemClock.uptimeMillis() > upTo - 50_000) break
+            SystemClock.sleep(500)
+        }
+        if (startupDialog) {
+            FirstRun.shot("perm_startup_dialog")
+            FirstRun.shell("input keyevent 4"); SystemClock.sleep(1_500)
+            log("PERM_CASE startup system dialog shown; Back -> top='${topActivity().takeLast(90)}'")
+        }
+        runCatching { rule.waitUntil(30_000) { FirstRun.hasNav(rule, "nav_tab_home") } }
+            .onFailure { throw AssertionError("tabs never showed · ${FirstRun.onScreen(rule)} · top=${topActivity()}") }
         pause(1_500); FirstRun.dismissPrompts(rule)
         FirstRun.tapVisible(rule, "topbar_settings_action")
         runCatching { rule.waitUntil(20_000) { has("settings_home") } }
@@ -81,7 +95,7 @@ class PermissionFlowDeviceTest {
         val front1 = appInFront()
         log("PERM_CASE deny1 button=$b1 message='${m1?.text}' kind=${m1?.kind} inFront=$front1")
         FirstRun.shot("perm_deny1")
-        assertTrue("deny 1: expected 'not allowed. Tap again…', got '${m1?.text}'", m1 != null && "Tap again" in m1.text)
+        assertTrue("deny 1: expected 'not allowed. Tap again…', got '${m1?.text}' (startupDialog=$startupDialog)", m1 != null && "Tap again" in m1.text)
         assertTrue("deny 1: the app left the front (Android settings opened by itself?)", front1)
         pause(3_500) // let the message go before the next one
 

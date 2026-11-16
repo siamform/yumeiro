@@ -127,6 +127,7 @@ object BackdropSettings {
             when (e) {
                 is java.io.FileNotFoundException, is SecurityException -> "Yumeiro couldn't read that picture. If it's only in the cloud, download it to the phone first."
                 is OutOfMemoryError -> "That picture is too large to open on this phone. Pick a smaller one."
+                is BrokenPicture -> "That picture couldn't be opened: the file is damaged or incomplete. Try another copy."
                 else -> "That picture couldn't be opened (${e.javaClass.simpleName}). Try a JPEG or PNG."
             }
         }
@@ -137,6 +138,9 @@ object BackdropSettings {
         setStyle(context, BackdropStyle.PHOTO)
         null
     }
+
+    /** The file is cut off or damaged (ImageDecoder said so); not retried with BitmapFactory. */
+    internal class BrokenPicture(cause: Throwable) : java.io.IOException("damaged or incomplete picture", cause)
 
     /** Decodes [uri] with its shorter side near [target] px, upright, as a software bitmap. */
     internal fun decodeScaled(context: Context, uri: Uri, target: Int, useDecoder: Boolean = true): android.graphics.Bitmap? {
@@ -152,6 +156,12 @@ object BackdropSettings {
                 }
             }
             viaDecoder.getOrNull()?.let { return it }
+            // R17 (G9 S26, run 43880703410): a cut-off or damaged file is not a "rare format". BitmapFactory
+            // decodes what it can and fills the rest with grey, so falling through saved a broken backdrop.
+            (viaDecoder.exceptionOrNull() as? android.graphics.ImageDecoder.DecodeException)?.let { e ->
+                if (e.error == android.graphics.ImageDecoder.DecodeException.SOURCE_INCOMPLETE ||
+                    e.error == android.graphics.ImageDecoder.DecodeException.SOURCE_MALFORMED_DATA) throw BrokenPicture(e)
+            }
             // ImageDecoder refused (rare formats): fall through to BitmapFactory.
         }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

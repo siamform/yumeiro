@@ -29,6 +29,7 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 | SE-1 | "Reset settings" says "Your library, sources and extensions stay" but erased music playlists, favourite songs and videos, device resume points, recently played, play counts, saved sites, listening time, Jump back in, the unsent Last.fm queue and source prefs. A Library-only restore left playlists and favourites out; a Settings-only restore replaced them. "Clear watch and search history" left device resume points, recently played songs, Jump back in and online searches | Two separate, incomplete lists (Backup `libraryPrefs`, ResetCenter `keep`) at whole-file level, while `mt_player_music_prefs` / `mt_player_video_prefs` hold library data next to settings; restore replaced whole files | One table `backup/PrefSections` gives the section of every value (file + key); export, stage, restore (replaces only the restored sections' keys) and both resets use it (de40e78) | `r17/SettingsResetTest` (4) |
 | SE-2 | A 1000 × 100 picture was accepted as backdrop although the page says at least 200 × 200 px | `importPhoto` refused only when both sides were under 200 | Either side (commit "refuse a backdrop photo under 200 px…") | `BackdropImportDeviceTest` strip case |
 | SE-3 | Typing a setting's own name in Settings search found nothing for 42 of 51 switches and actions | `SettingsCatalog.search` only looked at page title, summary and keywords, and every word must match | Each page lists the names of its switches and actions (`Category.settings`); a test scans the code so a new switch must be added | `r17/SettingsSearchCoverageTest` (4) |
+| SE-4 | A cut-off / damaged JPEG was saved as the backdrop (grey lower half) | ImageDecoder refused it (SOURCE_INCOMPLETE) and `decodeScaled` fell through to BitmapFactory, which decodes partial data silently | DecodeException SOURCE_INCOMPLETE / SOURCE_MALFORMED_DATA → `BrokenPicture` → "That picture couldn't be opened: the file is damaged or incomplete. Try another copy." (no BitmapFactory retry) | `BackdropImportDeviceTest` corrupt.jpg (run 43880703410 showed the bug) |
 
 ## Checked and not a bug (or kept on purpose)
 
@@ -50,11 +51,11 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 | Item | Evidence | Label | Status |
 |---|---|---|---|
 | SE-1 | `SettingsResetTest` | unit | CI run owed (43877618176 running) |
-| SE-2, S26 image types | `BackdropImportDeviceTest` | emulator | not run yet |
-| S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | first run 43875418000 was a test error (taps below the fold, home detection); fixed in e7efd6e; rerun 43877623222: 28/31 switches persisted across the kill on both phones (emulator), 3 not reached (scrolled Columns, test error), fixed; rerun owed |
-| SE-3, S23 search | `SettingsSearchCoverageTest` | unit | CI run owed |
-| Player info overlay, Resume playback, Anime4K (real effect on the player) | `PlayerSettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |
-| Notification switches (6 kinds, master, chime): real effect on Android's active notifications | `NotifySettingsEffectDeviceTest` a/b/c | emulator | written, device run owed |
+| SE-2, S26 image types | `BackdropImportDeviceTest` | emulator | run 43880703410 (both phones): JPEG, PNG, WebP, HEIC, AVIF, GIF, BMP, huge (720×540 saved), tiny/strip refused (200 px), text-as-jpg "isn't supported", 64 MB "over 60 MB" all as expected; corrupt.jpg (a.jpg cut at 9000 bytes) was ACCEPTED → SE-4 fixed; rerun owed |
+| S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | PASS run 43880703410: `SW_RESULT PASS verified=31` on api33-lowram and api36 (all 31 switches flipped, app killed, value kept). Earlier 43875418000 / 43877623222 were test errors, fixed |
+| SE-3, S23 search | `SettingsSearchCoverageTest` | CI | 4/4 in CI 43881282527 (1086 tests, 0 failures) |
+| Player info overlay, Resume playback, Anime4K (real effect on the player) | `PlayerSettingsEffectDeviceTest` a/b/c | emulator | PASS run 43880703410: PFX_RESULT PASS a, b, c on api33-lowram and api36 |
+| Notification switches (6 kinds, master, chime): real effect on Android's active notifications | `NotifySettingsEffectDeviceTest` a/b/c | emulator | PASS run 43880703410: NFX_RESULT PASS a, b, c on both phones |
 | S1–S22 pages | — | — | open |
 
 ## Preference inventory (generated)

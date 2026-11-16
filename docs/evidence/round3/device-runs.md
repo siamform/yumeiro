@@ -552,3 +552,13 @@ notifications on time" guide covered History (clip_seen=0). pre_ok=1 was wrong (
 Harness fixed: "Maybe Later" answered (case), pop-ups answered after the clip starts and before History,
 pre_ok counts the pop-up, and PASS now needs played=1 (else INCOMPLETE_NOT_PLAYED) and the clip listed after
 the upgrade (else FAIL_CLIP_NOT_LISTED). Rerun owed.
+
+## 43880703410 (d4b657f, api33-lowram + api36, emulator)
+
+- SettingsWalkDeviceTest PASS both: `SW_RESULT PASS verified=31` (S27 closed).
+- PlayerSettingsEffectDeviceTest PASS both (PFX a/b/c). NotifySettingsEffectDeviceTest PASS both (NFX a/b/c).
+- BackdropImportDeviceTest FAIL both: every type as expected except corrupt.jpg (a.jpg cut at 9000 bytes) saved
+  as a backdrop → SE-4 (BitmapFactory fallback after ImageDecoder SOURCE_INCOMPLETE). Fixed; rerun owed.
+- PermissionFlowDeviceTest FAIL both, test error: phase b waited for the tabs, but the app's start-up permission
+  request put Android's dialog on top (GrantPermissionsActivity resumed). Test now closes that dialog with Back
+  and logs it; rerun owed.
