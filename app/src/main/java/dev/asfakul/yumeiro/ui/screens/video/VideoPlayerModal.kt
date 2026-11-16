@@ -1060,12 +1060,14 @@ private fun VideoPlayerModalContent(
             if (isFullscreen) {
                 val format = activeVideoFormat
                 val isVerticalVideo = format != null && format.height > format.width && format.width > 0
-                act.requestedOrientation = PlayerOrientationRule.request(tvPlayer, fullscreen = true, verticalVideo = isVerticalVideo, tablet = isTablet)
+                PlayerOrientationRule.request(tvPlayer, fullscreen = true, verticalVideo = isVerticalVideo, tablet = isTablet).let { o -> if (act.requestedOrientation != o) act.requestedOrientation = o }
                 insetsController.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                act.requestedOrientation = PlayerOrientationRule.request(tvPlayer, fullscreen = false, verticalVideo = false, tablet = isTablet)
+                // BUG-7 run 43920651380 (api33-lowram): the same orientation set again is still a binder
+                // call to system_server on the main thread; it took 1.5 s there. Only call on a change.
+                PlayerOrientationRule.request(tvPlayer, fullscreen = false, verticalVideo = false, tablet = isTablet).let { o -> if (act.requestedOrientation != o) act.requestedOrientation = o }
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
             }
         }
