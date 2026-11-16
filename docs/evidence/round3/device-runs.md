@@ -743,3 +743,15 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
   on both phones.
 - b quality FAIL on both phones in the close step: one tap on floating_close, the floating window stayed 15 s and the
   clip played to ENDED (shot cfx_fail_playerclosed). a and c closed with the same helper. Diagnostic run 43959524193.
+
+## 43967676359 (api33-lowram + api36, emulator; head 8f69146, test only, fix not in)
+
+- FloatingMessageDeviceTest FAIL on both phones, as expected (fail-before for ST-21): the message pill
+  (api33 44,1565–1036,1741) lay over the floating window (442,1539–1047,1879) and its close (942,1550–1036,1644).
+
+## 43974089878 (api33-lowram + api36, emulator; head 1cd184a, ST-21 fix)
+
+- FloatingMessageDeviceTest PASS both: message now ends above the window (api33 bottom 1519 < top 1539; api36 1715 < 1734).
+- ChoiceSettingsEffectDeviceTest a–f PASS 6/6 both. b: 480p → maxVideoHeight=480, Auto → 2147483647, closeTap#1 closed
+  the player. 0 FATAL / ANR lines in logcat.
+
