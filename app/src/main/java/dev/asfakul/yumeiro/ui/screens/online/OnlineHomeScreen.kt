@@ -353,15 +353,18 @@ fun OnlineHomeScreen(
                     // Pull to refresh is the one place the feed starts over (the user asked for it).
                     // R16 G4: only when something actually came back. Offline, the refresh used to
                     // empty every section and "More to explore" and leave nothing to scroll.
-                    if (answered > 0) {
-                        YumixMemory.resetExplore()
-                        YumixMemory.syncExplore(providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } })
-                    } else dev.asfakul.yumeiro.ui.components.AppMessages.show(
-                        context,
-                        if (dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) "Nothing new yet. Showing what was already loaded."
-                        else "Couldn't refresh: you're offline. Showing what was already loaded.",
-                        dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO,
-                    )
+                    val readyNow = { providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
+                    when (YumixFeed.afterRefresh(answered, dev.asfakul.yumeiro.network.Connectivity.isOnline(context))) {
+                        YumixFeed.AfterRefresh.START_OVER -> { YumixMemory.resetExplore(); YumixMemory.syncExplore(readyNow()) }
+                        YumixFeed.AfterRefresh.NOTHING_NEW -> dev.asfakul.yumeiro.ui.components.AppMessages.show(
+                            context, "Nothing new yet. Showing what was already loaded.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+                        YumixFeed.AfterRefresh.OFFLINE -> {
+                            // X9-8: a first fill from a saved copy is added, never a start-over.
+                            if (answered > 0) YumixMemory.syncExplore(readyNow())
+                            dev.asfakul.yumeiro.ui.components.AppMessages.show(
+                                context, "Couldn't refresh: you're offline. Showing what was already loaded.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+                        }
+                    }
                 } },
                 modifier = Modifier.fillMaxSize(),
             ) {

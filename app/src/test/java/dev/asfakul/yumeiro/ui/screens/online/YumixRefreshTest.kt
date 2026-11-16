@@ -69,4 +69,13 @@ class YumixGoneTest {
         assertEquals(setOf(b.key), YumixFeed.goneFrom(listOf(a, b), setOf("A")))
         assertTrue(YumixFeed.goneFrom(listOf(a), setOf("A")).isEmpty())
     }
+
+    @Test fun offlineRefreshNeverStartsTheFeedOver() {
+        // X9-8 (api28 43777524987): offline, a section on its first load filled from a saved copy
+        // and counted as an answer; the old rule (answered > 0) reset "More to explore".
+        assertEquals(YumixFeed.AfterRefresh.OFFLINE, YumixFeed.afterRefresh(answered = 1, online = false))
+        assertEquals(YumixFeed.AfterRefresh.OFFLINE, YumixFeed.afterRefresh(answered = 0, online = false))
+        assertEquals(YumixFeed.AfterRefresh.START_OVER, YumixFeed.afterRefresh(answered = 2, online = true))
+        assertEquals(YumixFeed.AfterRefresh.NOTHING_NEW, YumixFeed.afterRefresh(answered = 0, online = true))
+    }
 }

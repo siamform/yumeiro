@@ -145,6 +145,21 @@ internal object YumixFeed {
         return fresh.orEmpty().any { r -> r.items.any { it.key !in have } }
     }
 
+    /** What pull to refresh does once every extension has answered. */
+    enum class AfterRefresh { START_OVER, NOTHING_NEW, OFFLINE }
+
+    /**
+     * X9-8: offline the feed never starts over. A section still on its first load can fill from a
+     * saved copy while offline (api28 43777524987: Yumeiro Drama, "1 answered" in 1.5 s); that
+     * counted as an answer, so "More to explore" was reset and the offline message was hidden.
+     * Offline, new rows are only added (syncExplore) and the offline message is shown.
+     */
+    fun afterRefresh(answered: Int, online: Boolean): AfterRefresh = when {
+        !online -> AfterRefresh.OFFLINE
+        answered > 0 -> AfterRefresh.START_OVER
+        else -> AfterRefresh.NOTHING_NEW
+    }
+
     fun sectionsDone(groupCount: Int, ready: List<Pair<String, List<OnlineRow>>>): Boolean {
         val withRows = ready.count { (_, rows) -> rows.any { it.items.isNotEmpty() } }
         return withRows > 0 && groupCount >= withRows
