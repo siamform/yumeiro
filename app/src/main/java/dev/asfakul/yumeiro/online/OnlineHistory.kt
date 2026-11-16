@@ -170,7 +170,7 @@ object OnlineHistory {
         val gone = _entries.value.filter { isAdult(it) }
         if (gone.isEmpty()) return
         _entries.value = _entries.value.filterNot { isAdult(it) }
-        synchronized(this) { progress.keys.removeAll { k -> AdultContent.isAdultApi(k.substringBefore('|')) } }
+        synchronized(this) { progress.keys.removeAll { k -> AdultContent.isAdultApi(k.substringBefore('|')) }; looseIndex = null }
         _version.value++
         save()
     }
