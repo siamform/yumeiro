@@ -619,3 +619,34 @@ Files 36 → 40 (new ones are profile/oat caches); every pref file has the same 
 byte-for-byte. The test clip's saved position was 46,618 ms before and after the upgrade, and reopening it in the
 new build resumed and reached 54,974 ms (shot-new-player.png shows the clip playing). Logcat 62,948 lines, no
 FATAL EXCEPTION or ANR. First run with the logcat fix, so the first non-blind crash check. X10-5 closed on emulator.
+
+## 43902887573 (1707ced) — never started
+
+"Concurrency group name must be less than 400 characters" (eight test classes in the group name). Fixed 35dc0c6;
+the same batch re-dispatched as 43904330191.
+
+## 43902905156 (1707ced, tv-api34 = Android TV 14 image, tv_1080p, Yumeiro TV flavour, emulator)
+
+`TvBug5ReproDeviceTest` (BUG-5 reproduction, D-pad only): Tests run 4, failures 2.
+
+| Case | Result | Log |
+|---|---|---|
+| a TV-5 player layout | FAIL (reproduced) | `requested=USER_PORTRAIT configOrientation=1 sw=304dp player=608x1080 window=608x1080`; tvb_a_player.png: pillarboxed portrait phone watch page |
+| b TV-2 full-screen button | PASS | Up ×5 stays on `video_quality_btn`; Right ×4; Down → `video_fullscreen_btn` |
+| c TV-3 Home row | PASS | Right ×14 stays on page 0; Downloads (row 2) → Right → `quick_card_ytmusic` (row 1) |
+| d TV-4 search | FAIL (reproduced in part) | Up from `home_setup_card` focuses no tagged node, never `topbar_search_action`; Left → rail |
+
+No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-tv-ui.md.
+
+## 43904330191 (35dc0c6, api33-lowram + api36, emulator)
+
+| Class | api33-lowram | api36 | Notes |
+|---|---|---|---|
+| NetworkStateDeviceTest | PASS a, b, c | PASS a, b, c | ER-17 fix proven (api36 a failed before) |
+| PermissionFlowDeviceTest | PASS | PASS | deny1 INFO in app; deny2 "Open settings" → AppNotificationSettingsActivity (ER-11) |
+| LowStorageDeviceTest | PASS a, b | PASS a, b | fill 4770 → 15 MB / 4450 → 15 MB free; b FAILED "Storage full", app alive, requests=1 (ER-14) |
+| MessagesDeviceTest | PASS (0 of 100) | PASS (0 of 100) | ER-18 fix proven on api33 (failed before) |
+| MoreSettingsEffectDeviceTest | PASS a–d | PASS a–d | backup_auto, keep_default, adult_private, yt_to_phone |
+| PlayerExtrasSettingsEffectDeviceTest | PASS a, b1, b2, c1, c2 | PASS a, b1, b2, c1, c2 | cc_default, bg_play, auto_pip |
+| OnlineSwitchesEffectDeviceTest | PASS a–c | PASS a–c | lyrics_online, skip_intro, auto_skip |
+| HeroCarouselLifecycleDeviceTest | FAIL | FAIL | Test error: slide A after 9 s of mainClock time; delay() is real time in instrumented tests. Real-time test next |

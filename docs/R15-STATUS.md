@@ -1,26 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 17:45 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 18:40 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Done since 16:50:** upgrade 43891389012 PASS (X10-5 verified, api33-lowram emulator); yt_to_phone test
-  (dad1a26, MoreSettingsEffect d); BUG-5 reproduction test `TvBug5ReproDeviceTest` + `tv_api` 24|34 input (662ba83).
-- **CI history:** 43894661940 (523af6f) cancelled by the agent as stale (dad1a26 superseded it before it
-  finished); 43895194379 (dad1a26) failed in "Compile device tests": duplicate `val err` in LowStorageDeviceTest,
-  my own 523af6f edit → fixed 48201b6.
-- **New owner bug:** BUG-6 full-screen music player lets taps through to the screen underneath
-  (`docs/proposals/FEATURE-BUG-6-music-player-tap-through.md`), open, not reproduced; worked after BUG-5 in G12.
-- **Current group:** G10 Errors + G9 verification; BUG-5 reproduction prepared. Step: CI 43897828363 (48201b6).
-- **Running:** CI 43897828363.
-- **Next three actions:** (1) CI 43897828363 green → device rerun on both phones: NetworkState, PermissionFlow,
-  LowStorage, Messages, MoreSettingsEffect, PlayerExtrasSettingsEffect, OnlineSwitchesEffect,
-  HeroCarouselLifecycle; (2) in parallel (second device workflow) `-f tv=true -f tv_api=34
-  -f test=dev.asfakul.yumeiro.TvBug5ReproDeviceTest`, then tv_api=24; (3) read both, update ER-11/14/15/17/18,
-  SE-5, Y6/H1, BUG-5 A.5 note, then fix TV-5 (VideoPlayerModal forces USER_PORTRAIT when sw<600 dp — a 1080p TV
-  is sw 540 dp — and the player opens non-fullscreen) at the root.
+- **Owner bugs:** BUG-5 TV UI (TV-5 + part of TV-4 reproduced on tv-api34 43902905156; TV-5 fixed in code
+  4e5ff31, TV proof owed); BUG-6 full-screen music player tap-through (recorded, not reproduced).
+- **Batch 43904330191 read:** ER-11, ER-14, ER-15, ER-17, ER-18 → verified on device (emulator); SE-5 15 of 16
+  (push_alerts left). Y6/H1 test error (mainClock vs real delay) → real-time test committed.
+- **Current group:** G10 / G9 closing + BUG-5. Step: CI 43905575842 (3725460) running.
+- **Running:** CI 43905575842.
+- **Next three actions:** (1) CI green → device: phones `HeroCarouselLifecycleDeviceTest` only; TV
+  `-f tv=true -f tv_api=34 -f test=dev.asfakul.yumeiro.TvBug5ReproDeviceTest`, then tv_api=24; (2) read TVB_STEP d
+  focus bounds → TV-4 root cause (top bar overlay unreachable by Up; Home search is library-only); TV-3 feed rows
+  need seeded content; (3) close G9/G10 docs once Y6/H1 passes and push_alerts is settled (test or OMT), then
+  BUG-6 reproduction on the phones.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
