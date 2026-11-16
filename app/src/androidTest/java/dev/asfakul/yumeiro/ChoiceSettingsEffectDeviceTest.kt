@@ -128,15 +128,27 @@ class ChoiceSettingsEffectDeviceTest {
     }
 
     /** Back to the floating window, close it, wait past the session grace so the next open is a fresh player. */
-    private fun closePlayer() {
+    private fun closePlayer(case: String) {
+        fun st() = "root=${has("video_player_root")} float=${has("video_floating_player")} close=${has("floating_close")} state=${PlaybackDiagnostics.state.value.state}"
+        val t0 = System.currentTimeMillis()
         var presses = 0
+        log("CFX_STEP $case close start ${st()}")
         while (presses < 3 && !has("floating_close")) {
             back(); presses++
             runCatching { rule.waitUntil(4_000) { has("floating_close") } }
+            log("CFX_STEP $case back#$presses +${System.currentTimeMillis() - t0}ms ${st()}")
         }
         wait("floating player after back", 10_000) { has("floating_close") }
-        tap("floating_close")
-        wait("player closed", 15_000) { !has("video_player_root") && !has("video_floating_player") }
+        var taps = 0
+        while (taps < 3 && (has("video_player_root") || has("video_floating_player"))) {
+            val b = runCatching { rule.onAllNodesWithTag("floating_close", true).fetchSemanticsNodes().map { it.boundsInRoot } }.getOrNull()
+            tap("floating_close"); taps++
+            runCatching { rule.waitUntil(5_000) { !has("video_player_root") && !has("video_floating_player") } }
+            log("CFX_STEP $case closeTap#$taps bounds=$b +${System.currentTimeMillis() - t0}ms ${st()}")
+        }
+        wait("player closed", 5_000) { !has("video_player_root") && !has("video_floating_player") }
+        // A close that needed more than one tap is an app defect, not test noise: fail on it.
+        assertEquals("$case: one tap on the floating close button closes the player", 1, taps)
         pause(PlaybackSession.GRACE_MS + 1_500)
     }
 
@@ -144,7 +156,7 @@ class ChoiceSettingsEffectDeviceTest {
         VideoPrefs.setSpeed(ctx, 1.5f)
         openClip()
         val fast = onPlayer { it.playbackParameters.speed }
-        closePlayer()
+        closePlayer("a")
         VideoPrefs.setSpeed(ctx, 1f)
         openClip()
         val normal = onPlayer { it.playbackParameters.speed }
@@ -158,7 +170,7 @@ class ChoiceSettingsEffectDeviceTest {
         VideoPrefs.setQuality(ctx, VideoPrefs.Quality.Q480)
         openClip()
         val capped = onPlayer { it.trackSelectionParameters.maxVideoHeight }
-        closePlayer()
+        closePlayer("b")
         VideoPrefs.setQuality(ctx, VideoPrefs.Quality.AUTO)
         openClip()
         val auto = onPlayer { it.trackSelectionParameters.maxVideoHeight }
@@ -186,7 +198,7 @@ class ChoiceSettingsEffectDeviceTest {
         VideoPrefs.setRenderer(ctx, VideoPrefs.Renderer.SURFACE)
         openClip()
         val surface = surfaceKind()
-        closePlayer()
+        closePlayer("c")
         VideoPrefs.setRenderer(ctx, VideoPrefs.Renderer.TEXTURE)
         openClip()
         val texture = surfaceKind()
@@ -213,7 +225,7 @@ class ChoiceSettingsEffectDeviceTest {
         FirstRun.shell("logcat -c")
         openClip()
         val sw = videoDecoderAfterOpen()
-        closePlayer()
+        closePlayer("d")
         VideoPrefs.setDecoder(ctx, VideoPrefs.Decoder.HARDWARE)
         FirstRun.shell("logcat -c")
         openClip()
@@ -232,7 +244,7 @@ class ChoiceSettingsEffectDeviceTest {
         val pausedWhileAsking = onPlayer { !it.playWhenReady } == true
         tap("ask_player_yumeiro")
         wait("Yumeiro chosen: plays", 15_000) { onPlayer { it.isPlaying } == true }
-        closePlayer()
+        closePlayer("e")
         VideoPrefs.setDefaultPlayer(ctx, VideoPrefs.DefaultPlayer.YUMEIRO)
         openClip()
         pause(2_000)
