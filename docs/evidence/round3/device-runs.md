@@ -491,3 +491,9 @@ The new tests run against the code without their fixes (accessor kept so it comp
 | `LibraryCrudTest` ×2 (CRUD order across restart, liked order) | LB-8 |
 
 Next on that branch: device `YtQualityOfflineDeviceTest` 43871061781 (expected FAIL), then the branch is deleted.
+
+## Device 43871061781: YtQualityOfflineDeviceTest on `fail-before/r15-proofs` (emulator, both phones)
+
+Expected FAIL, and it failed for the BUG-4 reason on both phones: "player list lacks download heights
+[1080p, 720p, 480p] · rows=[360p, 240p, 144p]". The same test passes on r15-stability (BUG-4 fix).
+The fail-before branch is deleted after this run (no other run uses it).
