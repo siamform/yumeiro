@@ -34,6 +34,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-15 | Each YouTube quality really plays (BUG-4) | Pending |
 | OMT-16 | Your own Play link streams and Yumeiro upscaling on your phone's GPU (BUG-7 7c, 7d) | Pending |
 | OMT-17 | Website and Play link downloads in your phone's gallery (BUG-7 7a, 7b) | Pending |
+| OMT-18 | Yumeiro behind a VPN on your phone (G10 network states) | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -323,6 +324,25 @@ Blocked (you couldn't run it; say why).
 - **What to record:** phone model, gallery app, screenshots.
 - **Attempts by the agent:** emulator, both phones (43935805199): Download queued and done; file in
   Movies/Yumeiro, inStore=true, app copy removed, entry kept.
+- **Status:** Pending
+
+---
+
+### OMT-18 — Yumeiro behind a VPN (G10 network states)
+
+- **Feature:** online pages, playback and downloads keep working with a VPN on, and turning the VPN
+  on or off mid-use shows the network messages without a freeze.
+- **Why the agent can't do it:** the CI emulator cannot start a VPN without a VPN app and Android's
+  consent dialog; `NetworkStateDeviceTest.d` only logs `vpnActive=false` there.
+- **Hardware / environment:** your phone, the VPN app you use.
+- **Instructions:** VPN on → open Home, a YouTube video and an extension source; start a download.
+  Turn the VPN off and on again while the video plays.
+- **Expected result:** pages load, the video keeps playing or recovers with a readable message, the
+  download continues or resumes; no "app isn't responding".
+- **Pass / fail rule:** fail on a freeze over 5 s, a raw error text, or a download that never resumes.
+- **What to record:** VPN app, phone model, what failed, `adb logcat -s YuStall AndroidRuntime`.
+- **Attempts by the agent:** emulator: no network, slow server and refused port PASS on both phones
+  (43904330191); VPN case logs only.
 - **Status:** Pending
 
 ---
