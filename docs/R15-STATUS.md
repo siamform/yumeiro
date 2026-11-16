@@ -14,7 +14,8 @@
   `ResumePointsTest` cases; BUG-2 E6; BUG-3 `DownloadThroughputTest`; `YtQualityDeviceTest` (device).
 - **Throwaway branch prepared locally (not pushed):** `fail-before/r15-proofs` in worktree /tmp/fb —
   reverts X15-2, BUG-1 D1–D5 (keeps ResumeRules.kt), BUG-4 F1 to show the tests fail before the fix.
-- **Next three actions:** (1) CI on HEAD (`ci.yml`, r15-stability): all new unit tests, THROUGHPUT lines;
+- **Running:** CI 43851470283 (ci.yml on 191dedf, dispatched 10:44 UTC).
+- **Next three actions:** (1) read CI 43851470283: all new unit tests, THROUGHPUT lines (app/build/test-results XML);
   (2) device run: DecoderFault, YtChannelUi, YtQuality; (3) CI on fail-before/r15-proofs (after 1), then
   HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
 
