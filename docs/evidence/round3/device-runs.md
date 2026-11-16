@@ -437,3 +437,12 @@ Emulator (Perfetto, debug APK, 3 cold starts per phone, `scripts/home_trace_repo
   where debug-build class verification (`VerifyClass`, no AOT) is 360–1187 ms. That cost does not exist in
   a release build with the baseline profile; the real-phone number is OMT-12.
 - The player build stays out of the first frame (3 media3 classes, ST-18 fix 2f86897 holds).
+
+## Device 43865392890 — ExtensionPopupsDeviceTest on the TV emulator (tv-api24, 1080p) — failure (test error)
+
+- 7/8 pass on TV (p1–p7 incl. Quiet card, Show, Block, login framed, dead-token window swallowed).
+- p8 failed at line 242: it waited for `nav_shortcut_extensions`; the TV rail tags items `tv_` + the bar
+  tag (`TvNavRail.kt`). Test error; fixed in the next commit, rerun dispatched (43866791994).
+- Shots looked at: `adr014_quiet_card.png` is taken before the card's enter animation (no card yet);
+  `adr014_quiet_card_late.png` shows "An extension has a message · Show". On TV the card sits over the
+  second tile row, not at the bottom edge (observation, cosmetic; not changed).
