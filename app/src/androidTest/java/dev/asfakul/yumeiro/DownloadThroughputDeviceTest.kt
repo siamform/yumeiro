@@ -33,7 +33,10 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class DownloadThroughputDeviceTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
-    private val hosts = listOf("https://ash-speed.hetzner.com/100MB.bin", "https://proof.ovh.net/files/100Mb.dat")
+    private val hosts = listOf(
+        "https://ash-speed.hetzner.com/100MB.bin", "https://proof.ovh.net/files/100Mb.dat",
+        "https://fsn1-speed.hetzner.com/100MB.bin", "https://nbg1-speed.hetzner.com/100MB.bin", "https://hel1-speed.hetzner.com/100MB.bin",
+    )
     private val started = ArrayList<String>()
 
     private fun log(s: String) = Log.i("YuDownloadTest", s)
@@ -44,20 +47,37 @@ class DownloadThroughputDeviceTest {
         started.forEach { runCatching { OnlineDownloads.delete(ctx, it) } }
     }
 
-    /** First host that answers a byte range here, with its size. */
-    private fun host(): Pair<String, Long>? {
+    /** Probes [u] with a plain OkHttp client (not the app's): its size when it answers a byte range. */
+    private fun probe(u: String): Long? {
         val c = OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).build()
-        return hosts.firstNotNullOfOrNull { u ->
-            runCatching {
-                c.newCall(Request.Builder().url(u).header("Range", "bytes=0-0").build()).execute().use { r ->
-                    r.header("Content-Range")?.substringAfter('/')?.toLongOrNull()?.takeIf { r.code == 206 }?.let { u to it }
-                }
-            }.getOrNull()
+        val r = runCatching {
+            c.newCall(Request.Builder().url(u).header("Range", "bytes=0-0").build()).execute().use { resp ->
+                resp.header("Content-Range")?.substringAfter('/')?.toLongOrNull()?.takeIf { resp.code == 206 }
+            }
         }
+        log("THROUGHPUT_DEVICE probe $u -> ${r.getOrNull() ?: r.exceptionOrNull()?.toString() ?: "no 206"}")
+        return r.getOrNull()
     }
 
-    private fun measure(case: String, screenOffAt: Int?) = runBlocking<Unit> {
-        val (url, size) = host() ?: run { log("THROUGHPUT_DEVICE_RESULT SKIP no test host reachable"); assumeTrue("no test host", false); return@runBlocking }
+    /**
+     * Tries the hosts in order. A host the plain probe cannot reach is skipped (runner network). If
+     * the app's download fails before any byte while the plain probe still reaches the host, that is
+     * an app failure, not the network (run 43855202294: both the IPv6 and IPv4 address of
+     * proof.ovh.net timed out for the app and, seconds later, for the probe too).
+     */
+    private fun measure(case: String, screenOffAt: Int?) {
+        for (u in hosts) {
+            val size = probe(u) ?: continue
+            if (measureOn(case, screenOffAt, u, size)) return
+            assertTrue("the app could not connect to $u but a plain client can (app network bug)", probe(u) == null)
+            log("THROUGHPUT_DEVICE $case: $u became unreachable for a plain client too; next host")
+        }
+        log("THROUGHPUT_DEVICE_RESULT SKIP case=$case no test host reachable from this runner")
+        assumeTrue("no test host", false)
+    }
+
+    /** False only when the download failed before its first byte (connection). */
+    private fun measureOn(case: String, screenOffAt: Int?, url: String, size: Long): Boolean = runBlocking {
         OnlineDownloads.ensureLoaded(ctx)
         val title = "YuDlTest BUG-3 $case ${System.currentTimeMillis()}"
         val err = OnlineDownloads.enqueue(ctx, title, "yu-test-bug3", "t-bug3-$title", "E1", null, emptyMap(),
@@ -93,11 +113,13 @@ class DownloadThroughputDeviceTest {
         val line = "THROUGHPUT_DEVICE case=$case host=${url.substringAfter("//").substringBefore('/')} size=$size status=${item?.status} " +
             "error=${item?.error} totalMs=$total MBps=${"%.2f".format(mbps)} per10pctMs=$steps lastOverMean=${"%.2f".format(ratio)}"
         log(line)
+        if (item?.status == Status.FAILED && item.bytes == 0L) return@runBlocking false
         assertEquals(line, Status.DONE, item?.status)
         assertEquals(line, size, OnlineDownloads.fileOf(ctx, item!!).length())
         val pass = ratio in 0.0..2.0
         log("THROUGHPUT_DEVICE_RESULT ${if (pass) "PASS" else "FAIL"} case=$case lastOverMean=${"%.2f".format(ratio)}")
         assertTrue("BUG-3 tail rule (≤ 2×): $line", pass)
+        true
     }
 
     @Test fun a_realHostScreenOn() = measure("screen-on", null)
