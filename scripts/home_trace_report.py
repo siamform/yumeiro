@@ -13,8 +13,17 @@ from perfetto.trace_processor import TraceProcessor
 def report(path):
     tp = TraceProcessor(trace=path)
     q = lambda s: list(tp.query(s))
-    b = q("select s.ts, s.dur, tt.utid, t.upid from slice s join thread_track tt on s.track_id=tt.id "
-          "join thread t using(utid) where s.name='bindApplication' order by s.ts")[-1]
+    # The app process is the one that owns our `yu-startup` thread (other apps may cold-start in the
+    # same window, and the process is still named zygote64 when bindApplication begins).
+    app = q("select distinct upid from thread where name='yu-startup' and upid is not null")
+    if not app:
+        return f"{path}: no yu-startup thread (app process not in the trace)"
+    # bindApplication may predate the trace (trace start is late on a loaded emulator); then
+    # activityStart anchors the frame search and bindApplication is reported as n/a.
+    b = (q("select s.ts, s.dur, tt.utid, t.upid from slice s join thread_track tt on s.track_id=tt.id "
+           f"join thread t using(utid) where s.name in ('bindApplication') and t.upid={app[-1].upid} order by s.ts")
+         or q("select s.ts, -1e6 dur, tt.utid, t.upid from slice s join thread_track tt on s.track_id=tt.id "
+              f"join thread t using(utid) where s.name='activityStart' and t.upid={app[-1].upid} order by s.ts"))[-1]
     f = q(f"select s.id, s.ts, s.dur from slice s join thread_track tt on s.track_id=tt.id where tt.utid={b.utid} "
           f"and s.name like 'Choreographer#doFrame%' and s.ts>{b.ts} and exists(select 1 from slice c "
           f"where c.parent_id=s.id and c.name='traversal') order by s.ts limit 1")[0]
@@ -28,7 +37,7 @@ def report(path):
     vc = q(f"select coalesce(sum(s.dur),0)/1e6 ms {top_verify}")[0].ms
     m3 = q(f"select count(*) n {top_verify} and s.name like 'VerifyClass androidx.media3%'")[0].n
     tp.close()
-    return (f"{path}: bindApplication {b.dur/1e6:.0f} ms | first frame @{(f.ts-b.ts)/1e6:.0f} ms, {f.dur/1e6:.0f} ms | "
+    return (f"{path}: bindApplication {(f'{b.dur/1e6:.0f} ms') if b.dur > 0 else 'n/a (before trace; offsets from activityStart)'} | first frame @{(f.ts-b.ts)/1e6:.0f} ms, {f.dur/1e6:.0f} ms | "
             f"main Running {run:.0f} | shader_compile {sc:.0f} | VerifyClass(main) {vc:.0f} | media3 classes verified in frame {m3}")
 
 if __name__ == "__main__":

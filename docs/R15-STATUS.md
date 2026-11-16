@@ -1,20 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 ~10:15 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 ~09:15 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
   No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK in this sandbox (fifth agent); every compile and unit test goes to CI.
-- **Level 0 done** (see ledger Changes table). **Current group:** Level 1, Group 12, step ST-18 after-numbers.
-- **Done this step:** CI 43828505828 all green (X13-1 TV test fixed). Device 43828509434: ADR-014 8/8 + 7/7
-  both phones, ST-20 done (guard engaged, no DonationManager main commit). ST-18 Perfetto proof recorded
-  (`scripts/home_trace_report.py`); hot spot = ExoPlayer built inside the first frame → 2f86897.
-- **Running:** CI 43831093449 (2f86897: unit incl. `PlayerBuiltAfterFirstFrameTest`, lint); device check
-  43831097217 (HomeTrace both phones = after numbers).
-- **Next three actions:** (1) read both runs, `python3 scripts/home_trace_report.py <artifact dir>`, record
-  after numbers in ST-18; (2) `gpu=swangle_indirect` comparison run, then ADR-014 TV rerun; (3) X10 upgrade
-  check from v1.8.0 (`-f upgrade_from=v1.8.0`), then EXT-T1 ≥ 20 runs on api33-lowram.
+- **Level 0 done** (see ledger Changes table). **Current group:** Level 1, Group 12: ST-18 unit rerun +
+  widget data updates.
+- **Done this step:** ST-18 after numbers (43831097217): ExoPlayer build out of the first frame. CI
+  43831093449 hung on the new test (ExoPlayer.release under Robolectric) → de1e218. Widget test
+  `ContinueWidgetUpdatesTest` pushed alone (8f600bc) to show the failure; the fix is in `git stash`
+  (ContinueWidget generation guard + refresh resets the throttle; OnlineHistory key adds the episode).
+- **Running:** CI 43836880510 (8f600bc): expect PlayerBuiltAfterFirstFrameTest pass, ContinueWidgetUpdatesTest
+  cases 2, 3, 5 fail.
+- **Next three actions:** (1) read CI, `git stash pop`, commit the widget fix, CI again; (2) `gpu=swangle_indirect`
+  HomeTrace comparison + ADR-014 TV rerun; (3) X10 upgrade check from v1.8.0, then EXT-T1 ≥ 20 runs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
