@@ -1,0 +1,3 @@
+# False positives (generic-api-key on notification channel ids in a test); replaced by enum refs in a later commit.
+a4874980ffcbd9f7b38513aa3939549c0e01b7f8:app/src/androidTest/java/dev/asfakul/yumeiro/NotifySettingsEffectDeviceTest.kt:generic-api-key:87
+a4874980ffcbd9f7b38513aa3939549c0e01b7f8:app/src/androidTest/java/dev/asfakul/yumeiro/NotifySettingsEffectDeviceTest.kt:generic-api-key:88

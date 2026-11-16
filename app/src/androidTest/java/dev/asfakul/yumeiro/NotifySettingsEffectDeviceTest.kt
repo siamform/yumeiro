@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro
 
+import dev.asfakul.yumeiro.notify.AppNotifier.Channel as Ch
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -81,12 +82,12 @@ class NotifySettingsEffectDeviceTest {
 
     @Test fun a_eachKindSwitchGatesItsNotifications() {
         val cases = listOf(
-            Triple(Inbox.Kind.EPISODE, Key.EPISODES, "yumeiro_episodes_v3"),
-            Triple(Inbox.Kind.EXTENSION, Key.EXTENSIONS, "yumeiro_discover_v3"),
-            Triple(Inbox.Kind.PLAYLIST, Key.PLAYLISTS, "yumeiro_discover_v3"),
-            Triple(Inbox.Kind.NEWS, Key.NEWS, "yumeiro_news_v3"),
-            Triple(Inbox.Kind.NUDGE, Key.NUDGES, "yumeiro_suggestions_v3"),
-            Triple(Inbox.Kind.ALERT, Key.SERVICE, "yumeiro_alerts_v3"),
+            Triple(Inbox.Kind.EPISODE, Key.EPISODES, Ch.EPISODES.id),
+            Triple(Inbox.Kind.EXTENSION, Key.EXTENSIONS, Ch.DISCOVER.id),
+            Triple(Inbox.Kind.PLAYLIST, Key.PLAYLISTS, Ch.DISCOVER.id),
+            Triple(Inbox.Kind.NEWS, Key.NEWS, Ch.NEWS.id),
+            Triple(Inbox.Kind.NUDGE, Key.NUDGES, Ch.NUDGE.id),
+            Triple(Inbox.Kind.ALERT, Key.SERVICE, Ch.ALERTS.id),
         )
         for ((kind, key, channel) in cases) {
             NotifySettings.set(ctx, key, false)
