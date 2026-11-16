@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -107,7 +108,12 @@ class LivePaged<T, P : Any>(
         val cursor = next
         loading = true
         job = scope.launch {
-            val r = try { Result.success(fetch(cursor)) } catch (e: CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) }
+            // G12 X15-2: a withTimeout inside fetch throws TimeoutCancellationException, which is a
+            // CancellationException. Rethrowing it ended this job with loading = true for good: the
+            // spinner stayed and the feed never asked again. Only our own cancellation ends the job.
+            val r = try { Result.success(fetch(cursor)) } catch (e: CancellationException) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive(); Result.failure(e)
+            } catch (e: Throwable) { Result.failure(e) }
             if (g != gen) return@launch
             r.onSuccess { (page, nxt) ->
                 fails = 0

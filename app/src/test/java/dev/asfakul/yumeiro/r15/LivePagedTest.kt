@@ -107,4 +107,19 @@ class LivePagedTest {
         assertEquals(1, a.append(listOf("2", "1", "3")))
         assertEquals(listOf("1", "2", "3"), a.items.toList())
     }
+
+    /** G12 X15-2: a timeout inside the fetch is a failed page, not a feed stuck on "loading". */
+    @Test fun aTimeoutInsideTheFetchIsAFailureNotAStuckSpinner() = runTest(StandardTestDispatcher()) {
+        var call = 0
+        val f = LivePaged<String, Int>({ it }, { _ ->
+            call++
+            if (call == 1) kotlinx.coroutines.withTimeout(100) { kotlinx.coroutines.delay(10_000); listOf("never") to 2 }
+            else listOf("a") to 2
+        }, this, backoffMs = { 50 })
+        f.more(); advanceUntilIdle()
+        assertFalse("the feed is stuck loading after a timeout", f.loading)
+        assertNull(f.error)
+        f.more(); advanceUntilIdle()
+        assertEquals(listOf("a"), f.items.toList())
+    }
 }
