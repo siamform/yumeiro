@@ -1,15 +1,17 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 ~11:00 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 ~10:25 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
   No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK in this sandbox; every compile and unit test goes to CI.
 - **Current group:** Level 1, Group 12. CI 43840098751 green (widget 5/5). X11–X16 audited (GROUP-12 table).
-- **Running:** CI 43843941876 on HEAD (DecoderFaultsTest 4/4, LivePagedTest incl. timeout case, RTL compile).
-- **Next three actions:** (1) read CI 43843941876, ledger G12-DF/X15-2; (2) one device run:
-  `WidgetUpdatesDeviceTest,DecoderFaultDeviceTest,Anime4kGlDeviceTest,RtlLayoutDeviceTest`; (3) HomeTrace
+- **Done:** CI 43843941876 green (1019 unit, 0 failures; DecoderFaultsTest 4/4, LivePagedTest 8/8).
+- **Running:** device run 43847976226 on 0ceb971: Widget, DecoderFault, Anime4kGl, RtlLayout, ResumeAcrossProcess (BUG-1).
+- **BUG-1:** fix D1–D4 pushed (42f1a1b, ResumePointsTest unit + device test 0ceb971); CI for ResumePointsTest still needed.
+- **Next three actions:** (1) read device run 43847976226 (YuWidgetTest, YuDecoderFault, YuAnime4k, YuRtl, YuResume, rtl shots);
+  (2) CI on HEAD for ResumePointsTest; (3) HomeTrace
   swangle comparison, ADR-014 TV rerun, X10 upgrade check, EXT-T1 ≥ 20 runs.
 - **BUG-1 lead (not a finding yet, Step A.5 note first):** `VideoPlayerModal` onDispose saves
   `lease.positionMs` even when the player never reached the resume seek (0 / TIME_UNSET), and
