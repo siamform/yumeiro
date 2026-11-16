@@ -595,3 +595,19 @@ Read from the `upgrade-check` artifact:
 - Fix fa3bb3b: logcat after root (verdict `ERROR_NO_LOGCAT` under 100 lines); played = saved position in
   the old snapshot; new resume check (reopen in the new app; position kept by the upgrade and the reopened
   position past it, else `FAIL_NOT_RESUMED`); clip 60 → 180 s. Rerun owed. X10-5 stays open.
+
+## 43891331959 (c306e7e, api33-lowram + api36, emulator)
+
+Read per class and phone from the job log (REPEAT_RESULT and the class's own *_RESULT lines).
+
+| Class | api33-lowram | api36 | Notes |
+|---|---|---|---|
+| NetworkStateDeviceTest | PASS (NET a, b, c) | FAIL a | api36: `online signal stayed true 20 s after Wi-Fi and data went off` (NET_CASE offline signal=false after 20157 ms, error UnknownHostException). App defect → ER-17, fixed 8038761. b, c PASS; vpn case logged active=false (no VPN on CI) |
+| PermissionFlowDeviceTest | FAIL | FAIL | Test errors: api33 shell `uiautomator dump` crashed (Bad file descriptor) while GrantPermissionsActivity was on top; api36 the Privacy category tap did not open the page. Fixed 37711ec |
+| DialogsDeviceTest | PASS (checked=5) | PASS (checked=5) | |
+| LowStorageDeviceTest | a PASS (requests=1), b skipped | a PASS (requests=1), b skipped | b: fill never ran (`; echo rc=$?` passed to fallocate, no shell). Fixed 523af6f |
+| MessagesDeviceTest | FAIL (1 of 100) | PASS (0 of 100) | api33: PermissionCenter.kt:75 blocked message cut at 3 lines → ER-18, fixed f6881aa |
+| BackdropImportDeviceTest | PASS (problems=0) | PASS (problems=0) | SE-4 proven |
+| BackgroundSettingsEffectDeviceTest | PASS a–e | PASS a–e | e: Firebase status UNAVAILABLE in this build (no google-services.json), the test accepts that |
+
+Rerun owed for the failed classes only, together with the new G9 classes, after CI 43894661940.
