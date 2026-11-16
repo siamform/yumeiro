@@ -497,3 +497,15 @@ Next on that branch: device `YtQualityOfflineDeviceTest` 43871061781 (expected F
 Expected FAIL, and it failed for the BUG-4 reason on both phones: "player list lacks download heights
 [1080p, 720p, 480p] · rows=[360p, 240p, 144p]". The same test passes on r15-stability (BUG-4 fix).
 The fail-before branch is deleted after this run (no other run uses it).
+
+## CI 43871066269: r15-stability head 1059e…(after DL-9) (unit, CI)
+
+1047 tests, 2 fail, both test errors (fixed in the following commit, rerun owed):
+- `DownloadListSaveRaceTest`: FileNotFound — the store kept the files dir of the first Robolectric test.
+  **Correction:** the same error made the fail-before run fail, so that "expected FAIL" for DL-6 was not proof.
+- `DownloadThroughputTest.burstThenCapPerRequest`: segmented2 last 10 % = 107 ms of a 349 ms download (3.07×);
+  a floor of 250 ms is added (fail-before tails were 659–660 ms, still caught).
+Passed: LibraryCrudTest 7/7 (LB-8), DownloadDeleteFilesTest (DL-7), HLS quality (DL-8), dropped connections
+(DL-9), ResumePointsTest, Bug4QualityListTest, LivePagedTest.
+Data used (`servedOverSize`): segmented4 steady 1.026, burst 1.126; segmented2 burst 1.122; single-no-ranges
+burst 1.132 (size probe answered with a full 200 body); YouTube and HLS 1.000 → DL-11.
