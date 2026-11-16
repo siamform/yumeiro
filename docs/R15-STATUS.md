@@ -1,21 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 01:08 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-16 01:44 UTC, fourth handover; orders: master operating document)
 
 - **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
   L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
   the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
 - **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
   CI only since then.
-- **Since 23:40 UTC:** X13-3 (YouTube crashed the app below Android 13; `desugar_jdk_libs_nio`) done on
-  api28, api33-lowram, api36 and TV api24. X9-8 (offline refresh reset the feed) done. X13-4, X13-5
-  (API 28 test gaps) done. ADR-014 (extension dialogs, X9-7) proposed for the owner.
-- **Current step:** Level 1, Group 12: X2 start-up (macrobenchmark).
-- **Running:** none.
-- **Next three actions:** (1) macrobenchmark `what=startup` → `what=profile` → commit
-  `app/src/main/baseline-prof.txt` → startup again (X2-1, ST-7); (2) YuStall lead
-  `HomeOnlineKt$rememberExtensionFeed$2$1:88` (3.7 s, api33-lowram); (3) StrictMode classification
-  ST-13/14/15 (43767144680).
+- **Since 01:08 UTC:** ST-19 (download storage path/free space read on main in composition) fixed and
+  device-verified (43785978028). ST-20 (phisher98 `DonationManager` commit() on main) classified as
+  third-party → ADR-014. ST-13/14/15 now have emulator evidence (0 app-pid StrictMode violations).
+  ST-18 stalls classified (full first frame on SwiftShader, no single app hot spot). Startup
+  benchmark "before" numbers in ledger X2-1 (43784533563).
+- **Current step:** Level 1, Group 12: X2 start-up (baseline profile).
+- **Running:** 43787473722 (device-check bench=profile).
+- **Next three actions:** (1) download 43787473722, commit the generated profile as
+  `app/src/main/baseline-prof.txt`, run bench=startup again and record after-numbers (X2-1, ST-7);
+  (2) heap profile on api33-lowram; (3) ST-17 root cause, then MASVS / R8 / signing review.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
