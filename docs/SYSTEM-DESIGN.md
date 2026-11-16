@@ -548,10 +548,13 @@ flowchart LR
     advisories need an extension that opts in itself. An extension is already arbitrary code in our
     process, so it gains nothing from them.
   - The realistic risk is denial of service from a hostile site: deep nesting can overflow the
-    stack in untyped/bean binding and in `JsonNode.toString` (`readTree` itself is iterative in
-    2.13). With 200 000 levels on a 512 KB worker stack it overflowed on this machine but not on the
-    CI runner (43803887311; frame sizes differ by JVM), so the test accepts either outcome and checks
-    containment. Either way it fails only that call: home, search and detail calls sit in `runCatching` (catches Errors) or the
+    stack in bean binding and in `JsonNode.toString` (`readTree` itself is iterative in 2.13).
+    Untyped binding (`readValue(json, Any::class.java)`) does not overflow: 2.13.5 has a depth guard
+    in `UntypedObjectDeserializer.Vanilla` that throws `JsonParseException` "JSON is too deeply
+    nested" at about 1000 levels (string present in the 2.13.5 jar; seen on CI 43825446008). The
+    earlier text said it overflowed; CI 43803887311 and 43825446008 both failed the test on that
+    assumption (correction 2026-11-16). For `toString` the test accepts overflow or success (frame
+    sizes differ by JVM) and checks containment. Either way it fails only that call: home, search and detail calls sit in `runCatching` (catches Errors) or the
     `ExtensionGuard` handlers. No `InetSocketAddress`, `InetAddress` or `Path` fields exist in the
     provider models.
 - **Mitigation:** `JacksonTvExposureTest` (testTv, in the CI TV unit step with

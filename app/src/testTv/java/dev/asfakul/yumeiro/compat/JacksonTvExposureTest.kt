@@ -43,15 +43,16 @@ class JacksonTvExposureTest {
             reachedEnd = true
         }, "ext-worker", 512L * 1024)
         t.start(); t.join()
-        // readTree is iterative in 2.13; untyped binding and JsonNode.toString recurse (CVE-2025-52999 /
-        // CVE-2026-50193 class). Whether they overflow depends on the JVM's frame sizes (they did
-        // locally, not on the CI runner: 43803887311). Either way only the one call fails: the
-        // worker keeps running to the end and no other error escapes.
+        // readTree is iterative in 2.13. Untyped binding hits the depth guard that 2.13.5 has in
+        // UntypedObjectDeserializer.Vanilla ("JSON is too deeply nested", ~1000 levels; checked in
+        // the 2.13.5 jar and on CI 43825446008), so it fails with a parse error, not a stack overflow.
+        // JsonNode.toString recurses (CVE-2026-50193 class): whether it overflows depends on the
+        // JVM's frame sizes. Either way only the one call fails and the worker runs to the end.
         assertNull("tree parse: ${outcomes["tree"]}", outcomes["tree"])
-        for (k in listOf("untyped", "treeToString")) {
-            val e = outcomes[k]
-            assertTrue("$k: $e", e == null || e is StackOverflowError)
-        }
+        val untyped = outcomes["untyped"]
+        assertTrue("untyped: $untyped", untyped is com.fasterxml.jackson.core.JsonProcessingException || untyped is StackOverflowError)
+        val str = outcomes["treeToString"]
+        assertTrue("treeToString: $str", str == null || str is StackOverflowError)
         assertTrue("the worker did not survive the hostile input", reachedEnd)
         assertFalse(t.isAlive)
     }
