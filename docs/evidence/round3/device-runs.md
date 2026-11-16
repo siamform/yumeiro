@@ -356,3 +356,11 @@ These are real emulators running the real debug APK; the tests are not simulated
 - YtQualityOfflineDeviceTest (BUG-4 F1 without YouTube network): YT_OFFLINE_RESULT PASS on both,
   download sheet heights [1080,720,480,360,240] = player rows [1080p,720p,480p,360p,240p], no engine-only
   rows. Shot `ytqo_dialog.png` looked at: five rows, 240p "Playing now".
+
+## Device run 43855202294 — device-check on 93070ae (emulator, both, 2026-11-16 11:09–11:27 UTC)
+
+- DownloadThroughputDeviceTest: no measurement. Case screen-on: the probe reached proof.ovh.net
+  (ash-speed.hetzner.com did not answer), then the app's download failed before the first byte:
+  IPv6 ENETUNREACH (the emulator has no IPv6) and IPv4 141.95.207.211:443 timeout after 15 s. Case b:
+  ~10 s later the plain probe reached neither host → SKIP. Runner network, not an app result. The test
+  now tries five hosts and fails only when the app cannot connect while a plain client can (445156c).

@@ -1,21 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 11:09 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 11:27 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
 - **Current group:** Level 2 BUG-1..4 (+ Group 12 leftovers).
-- **CI 43851470283 (191dedf) read:** BUG-1/2/4 unit tests pass; 2 failures = DownloadThroughputTest test
-  error (HLS fake), fixed. BUG-3 measured: Segmented end collapse (last 10 % = 4.9× average), fixed 40ea96e.
-- **Running:** CI 43854742733 (40ea96e: BUG-3 fix + rule, Bug3PieceTest, BUG-4 F4 tests);
-  device 43851896291 (640e984: DecoderFault, YtChannelUi, YtQuality, YtQualityOffline);
-  device 43855202294 (93070ae: DownloadThroughputDeviceTest real host, screen on / screen off + Doze).
-- **Throwaway branch:** `fail-before/r15-proofs` (408faea) — dispatch ci.yml on it after CI 43854742733,
-  then a device run of YtQualityOfflineDeviceTest on it; delete afterwards, never merge.
-- **Next three actions:** (1) read CI 43854742733 (THROUGHPUT lastOverMean for every engine);
-  (2) read both device runs + shots; (3) fail-before CI, BUG-3 real-host "before" (temp branch with the
-  old Segmented), then HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
+- **Read:** device 43851896291 (DecoderFault a/b PASS, c test error fixed 7c0045b; YtChannelUi PASS with
+  shots; YtQualityOffline PASS; YtQuality SKIP bot wall). Device 43855202294: runner could not reach the
+  throughput host (v6 + v4 timeouts), test hardened 445156c.
+- **Running:** CI 43854742733 (40ea96e, queued since 11:06 with no runner yet); device 43857809658
+  (445156c: DownloadThroughput, DecoderFault, QualityList every height).
+- **Throwaway branches:** `fail-before/r15-proofs` (408faea) and `tmp/bug3-before` (9d86bbd) — dispatch
+  after the runs above; delete afterwards, never merge.
+- **Next three actions:** (1) read CI 43854742733; (2) read device 43857809658 (THROUGHPUT_DEVICE lines,
+  DECODER_FAULT_C, QUALITY_RESULT applied=…); (3) fail-before CI + BUG-3 "before" device run, then
+  HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
