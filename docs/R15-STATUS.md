@@ -1,27 +1,24 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 20:45 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 22:25 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
+- **Current group / step:** owner bugs inside G12 → BUG-7 reproduction (7c format mismatch, 7d upscaling).
 - **Owner bugs:**
-  - BUG-5 TV UI (tv-api34 emulator): TV-5 and TV-2 verified (43908926085, 43912693329). TV-4: the box opened
-    without focus → fix 18147da, proof run 43914880052 (d asserts focus + typed text). Then: what Home search
-    answers on a TV with no local media (library-only today), tv_api=24 run, TV-3 with feed rows.
-  - BUG-6 reproduced on both phones (43912650347); fix c8ac2ae; after-run 43914724044 must PASS.
-  - BUG-7 player/IPTV (recorded, not reproduced): 7a web-URL download button, 7b Play link downloads not in
-    the gallery, 7c freeze on format mismatch, 7d freeze with upscaling. 7c/7d first after BUG-6.
-- **SE-5:** PushAlertsEffectDeviceTest runs in 43914724044; PASS → SE-5 16/16, distributor
-  binding → OMT.
+  - BUG-5 TV UI (tv-api34 emulator): TV-5, TV-2 and the TV-4 focus part verified (43914880052). Open: TV-4
+    scope (Home search ranks only the local library; cross-source search is G7 proposal 3, owner call),
+    focus after submit goes to the rail, tv_api=24 run, TV-3 with feed rows.
+  - BUG-6 verified on device (emulator, both phones): fail 43912650347 → fix c8ac2ae → pass 43914724044.
+  - BUG-7: 7c/7d repro tests (StreamFormatMismatchDeviceTest, UpscaleFreezeDeviceTest) running; 7b, 7a after.
+- **SE-5:** api33 PASS; api36 case a was a test error, fixed 6551e71; rerun in 43920651380.
 - **Ghost run:** device 43908909691 (c41f530) stays "queued" with no jobs; cancel/force-cancel HTTP 409.
-- **CI owed:** the last CI (43910831195) failed only on the test compile fixed in 8509d1d; run CI after the
-  two device runs (unit tests for c07bc70, c8ac2ae, 18147da).
-- **Running:** phones 43914724044 (MusicTapThrough, HeroCarousel, PushAlerts at c8ac2ae); TV api34 43914880052
-  (TvBug5Repro at 18147da).
-- **Next three actions:** (1) read both runs; record BUG-6 / Y6/H1 / SE-5 / TV-4 results in the ledger;
-  (2) CI on the head; (3) BUG-7 7c and 7d reproduction tests (freeze watchdog + ANR trace), then close G9/G10.
+- **CI:** 43917276245 at 6551e71 green (unit, lint, build, gitleaks).
+- **Running:** phones 43920651380 (StreamFormatMismatch, UpscaleFreeze, PushAlerts at 2507429).
+- **Next three actions:** (1) read 43920651380: FMT_CASE/FMT_STALL/UPS_CASE lines and main-thread stacks;
+  (2) root-cause and fix 7c/7d with fail-before/pass-after; (3) TV tv_api=24 run of TvBug5Repro, then 7b.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
