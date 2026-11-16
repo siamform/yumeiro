@@ -216,6 +216,8 @@ object MainThreadWatchdog {
         return when {
             top.any { it.className.endsWith("HardwareRenderer") || it.className.endsWith("ThreadedRenderer") && it.methodName.startsWith("n") } -> "render"
             trace.any { it.className.startsWith("androidx.compose.ui.test.") || it.className.startsWith("androidx.test.") } -> "harness"
+            // ST-20: a frame from an extension's dex (third-party code posted to our main looper).
+            trace.any { dev.asfakul.yumeiro.online.ExtensionWindowWatch.isExtensionClass(it.className) } -> "extension"
             else -> "app"
         }
     }
