@@ -176,7 +176,7 @@ object MainThreadWatchdog {
                 if (ran.get() == 0L) {
                     val first = Looper.getMainLooper().thread.stackTrace
                     val stack = first.take(28).joinToString("\n    at ")
-                    // G12 YuStall lead (43767144680 api33-lowram): the 28 printed frames were Compose
+                    // G12 YuStall lead (43765039266 api33-lowram): the 28 printed frames were Compose
                     // measure while `ours=` named HomeOnline:88 from deeper in the same stack. Print
                     // our frames of the whole stack and its depth so the two can be tied together.
                     val msg = "main thread stalled > ${STALL_MS}ms (depth ${first.size}, ours in full stack: ${appFrames(first, 12)})\n    at $stack"
