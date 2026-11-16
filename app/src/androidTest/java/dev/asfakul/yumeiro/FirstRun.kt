@@ -78,7 +78,7 @@ object FirstRun {
         if (waited >= 100 || !ready) Log.i("YuKeyFocus", "'$cmd' waited ${waited}ms for window focus · ready=$ready · ${if (ready) "" else focusedWindow().let { "$it type=${windowType(it)}" }}")
     }
 
-    private fun focusedWindow(): String = runCatching {
+    fun focusedWindow(): String = runCatching {
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("dumpsys window").let { pfd ->
             android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes().toString(Charsets.UTF_8) }
         }.lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim().orEmpty()

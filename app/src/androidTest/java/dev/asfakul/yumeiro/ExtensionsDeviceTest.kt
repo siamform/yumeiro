@@ -79,6 +79,7 @@ class ExtensionsDeviceTest {
     private lateinit var second: String
 
     @Before fun setUp() {
+        WindowSpy.start() // EXT-T1: log every window and the code that opened it
         runCatching { inst.uiAutomation.grantRuntimePermission(ctx.packageName, "android.permission.POST_NOTIFICATIONS") }
         FirstRun.toTabs(rule)
         runBlocking {
@@ -108,6 +109,7 @@ class ExtensionsDeviceTest {
     }
 
     @After fun tearDown() {
+        WindowSpy.stop()
         inst.runOnMainSync {
             NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.MARKET, false)
             NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.EXTENSIONS, false)
@@ -233,6 +235,9 @@ class ExtensionsDeviceTest {
             tap("source_health_run")
             waitFor("the check finished", 90_000) { rule.onAllNodesWithText(" working", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             log("E11_RESULT PASS")
+            // EXT-T1: which windows are up when the cleanup Back is sent.
+            log("EXT_T1 before Back: focused=${FirstRun.focusedWindow()} added=${WindowSpy.added.map { "${it.root} type=${it.type} texts=${it.texts.take(3)} foreign=${it.foreign.take(2)}" }}")
+            FirstRun.shot("ext_t1_before_back")
             back(); waitGone("source_health_run")
         } finally { inst.runOnMainSync { NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.HEALTH, false) } }
     }
