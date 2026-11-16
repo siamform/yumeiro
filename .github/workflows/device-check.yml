@@ -35,6 +35,11 @@ on:
         type: choice
         options: [none, startup, profile]
         default: none
+      gpu:
+        description: "ST-18: emulator graphics (GitHub runners have no GPU; these are the software paths to compare)"
+        type: choice
+        options: [swiftshader_indirect, swangle_indirect, guest]
+        default: swiftshader_indirect
       hprof:
         description: "G12 X2: StabilityStress writes a heap dump (stress/end.hprof) at the end"
         type: boolean
@@ -42,7 +47,7 @@ on:
         default: false
 
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}
+  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}
   cancel-in-progress: true
 
 permissions:
@@ -91,7 +96,7 @@ jobs:
           ram-size: ${{ matrix.device.ram }}
           heap-size: ${{ matrix.device.heap }}
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu ${{ inputs.gpu || 'swiftshader_indirect' }} -noaudio -no-boot-anim -camera-back none
           script: bash scripts/device-check.sh
       - name: Upload results
         if: always()

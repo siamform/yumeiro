@@ -29,7 +29,26 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   fi
   echo "::group::$C (run $N/$REPEAT)"
   L0=$(wc -l < logcat.txt)
-  if [ "$C" = "dev.asfakul.yumeiro.ClosedAppAlertDeviceTest" ]; then
+  if [ "$C" = "dev.asfakul.yumeiro.HomeTraceDeviceTest" ]; then
+    # ST-18: prepare (guide answered), then three traced cold starts to Home.
+    P=dev.asfakul.yumeiro.debug
+    timeout 300 adb shell am instrument -w -r -e class "$C#a_prepare" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+    mkdir -p stress/trace
+    for T in 1 2 3; do
+      adb shell am force-stop $P; sleep 3
+      adb shell rm -f /data/misc/perfetto-traces/home-$T.pftrace > /dev/null 2>&1
+      adb shell "perfetto --txt -c - -o /data/misc/perfetto-traces/home-$T.pftrace --background" < scripts/home-trace.pbtxt > stress/trace/perfetto-$T.txt 2>&1 || true
+      sleep 2
+      adb shell dumpsys gfxinfo $P reset > /dev/null 2>&1 || true
+      adb shell am start -W -n $P/dev.asfakul.yumeiro.MainActivity > stress/trace/start-$T.txt 2>&1 || true
+      echo "HOME_TRACE start $T $(grep -E 'TotalTime|WaitTime' stress/trace/start-$T.txt | tr -d '\r' | tr '\n' ' ')"
+      sleep 19
+      adb shell dumpsys gfxinfo $P > stress/trace/gfxinfo-$T.txt 2>&1 || true
+      grep -E "Total frames rendered|Janky frames|50th|90th|95th|99th|Number Slow UI|Number Frame deadline" stress/trace/gfxinfo-$T.txt | head -9 | sed "s/^/HOME_TRACE gfx $T /"
+      adb pull /data/misc/perfetto-traces/home-$T.pftrace stress/trace/ > /dev/null 2>&1 || echo "HOME_TRACE no trace $T: $(cat stress/trace/perfetto-$T.txt | head -3)"
+    done
+    ls -la stress/trace | sed 's/^/HOME_TRACE file /'
+  elif [ "$C" = "dev.asfakul.yumeiro.ClosedAppAlertDeviceTest" ]; then
     # G12 X5: queue (phase a), then Home, kill, deep Doze, wait for the alarm to post it, then check (phase b).
     P=dev.asfakul.yumeiro.debug
     timeout 300 adb shell am instrument -w -r -e class "$C#a_queueAndArm" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
