@@ -47,9 +47,18 @@ class TvBug5ReproDeviceTest {
     private val inst get() = InstrumentationRegistry.getInstrumentation()
     private fun log(s: String) = Log.i("YuTvBug5", s)
     private fun has(tag: String) = runCatching { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+    /**
+     * Tags of the focused node and its ancestors. Run 43908926085: the focusable node inside a tagged
+     * button (TopAction, the player's More) carries no tag itself, so the focus on
+     * topbar_search_action [1708,18,1796,106] read as node1573 [1712,22,1792,102].
+     */
     private fun focused(): List<String> = runCatching {
-        rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
+        rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().flatMap { n ->
+            generateSequence(n) { it.parent }.mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }.toList()
+        }
     }.getOrDefault(emptyList())
+    /** Focus is on the app under the player (tab pages, top bar, rail). */
+    private fun focusBehindPlayer(f: List<String>) = f.any { it == "tab_pager" || it == "tv_nav_rail" || it.startsWith("home_") || it.startsWith("topbar_") }
     /** Focused node as tag, else its text or content description, with its bounds (TV-4 needs the untagged ones). */
     private fun focusedInfo(): String = runCatching {
         rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().joinToString("+") { n ->
@@ -141,17 +150,20 @@ class TvBug5ReproDeviceTest {
         key("DPAD_CENTER", 800) // controls up
         val walk = ArrayList<String>()
         val seen = HashSet<String>()
+        var behind = false
         for (dir in listOf("DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN", "DPAD_DOWN")) {
-            if (!has("video_play_pause_btn")) key("DPAD_CENTER", 600)
+            if (!has("video_play_pause_btn") && !behind) key("DPAD_CENTER", 600)
             key(dir)
             val f = focused()
             seen += f
+            if (focusBehindPlayer(f)) behind = true
             walk += "$dir→${focusedInfo()}"
         }
         FirstRun.shot("tvb_b_walk")
-        val top = seen.any { it == "video_quality_btn" || it == "video_more_btn" }
+        val top = seen.any { it == "video_quality_btn" || it == "video_more_btn" || it == "video_audio_track_btn" }
         val bottom = seen.any { it == "video_seekbar" || it == "video_fullscreen_btn" }
-        log("TVB_CASE b top=$top bottom=$bottom fullscreenBtn=${has("video_fullscreen_btn")} walk=$walk")
+        log("TVB_CASE b top=$top bottom=$bottom behindPlayer=$behind fullscreenBtn=${has("video_fullscreen_btn")} walk=$walk")
+        assertTrue("TV-2: D-pad focus left the open player for the screen behind it: $walk", !behind)
         assertTrue("TV-2: D-pad Up never reached the top row of the controls: $walk", top)
         assertTrue("TV-2: D-pad Down never reached the seek bar: $walk", bottom)
         log("TVB_RESULT PASS b")

@@ -7,6 +7,8 @@
 
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
@@ -1568,6 +1570,13 @@ private fun VideoPlayerModalContent(
     }
     Column(
         modifier = modifier
+            // BUG-5 TV-2 (run 43908926085, tv-api34): the open player sits over the tab pages in the
+            // same window, so D-pad Down from its top row moved focus to home_setup_card behind the
+            // video and the remote seemed dead. The open player is a closed focus group; the
+            // floating window is not (the page under it stays usable).
+            .then(if (!minimized) Modifier
+                .focusProperties { onExit = { cancelFocusChange() } }
+                .focusGroup() else Modifier)
             .fillMaxSize()
             .background(if (docked) appPalette.background else Color.Black)
             .then(if (!isFullscreen && !hideChrome) Modifier.systemBarsPadding() else Modifier)
