@@ -454,3 +454,23 @@ Emulator (Perfetto, debug APK, 3 cold starts per phone, `scripts/home_trace_repo
   is not counted as fail-before evidence (my error: the accessor is API, not the fix).
 - Fixed on the branch (accessor kept, its D1 use still reverted) and the DL-6 race, DL-9 drop and LB-8
   tests added without their fixes. Rerun: CI 43867540147.
+
+## TV 43866791994: ADR-014 rerun after the p8 test fix (emulator, tv-api24)
+
+- `ExtensionPopupsDeviceTest`: OK (8 tests), repeat-results PASS. ADR-014 on TV is now 8/8 on emulator.
+- Shots: `adr014_extensions_setting.png` shows the quiet card ("An extension has a message · Show") at the
+  bottom of Extensions. Observation (cosmetic, not changed): the refresh spinner sits on the "More sources" card text
+  in that shot.
+
+## Device 43867796913: DownloadKillDeviceTest (emulator, api36 + api33-lowram, real host kernel.org)
+
+| Phone | a: kill at 25 % | b: continues in the new process | c: delete at 10 % |
+|---|---|---|---|
+| api33-lowram | killed at 43.1 MB of 134.7 MB, `.part` + `.part.chunks` on disk | PASS: DONE, 134 728 520 B, only the final file; read 110.7 MB after the kill for 91.6 MB left | PASS: files during = `.part`, `.part.chunks`; after = none; not listed |
+| api36 | killed at 43.3 MB | FAIL on the byte rule only: DONE, right size, only the final file, resumed from 41.9 MB (= the done chunks), but read 126.2 MB for 92.8 MB left (rule: < rest + 24 MiB = 117.9 MB) | PASS (same as above) |
+
+- The resume itself works on both (the first progress after the restart is 40 MiB = the 10 done 4 MiB chunks;
+  WorkManager restarted the worker after its backoff, 12:41:19).
+- The extra 19–33 MB is data read and thrown away. Open question (DL-11): RequestPace restarts (up to 32 per piece)
+  and tail splits close a response with bytes in flight. The test rule stays; DownloadThroughputTest now reports
+  the bytes the local server sent per engine to measure it.
