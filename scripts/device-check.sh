@@ -93,6 +93,18 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     timeout 900 adb shell am instrument -w -r -e class "$C#b_everySwitchKeptItsValue" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
     # A failure in phase a (a switch that did not move) must fail the run too.
     if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
+  elif [ "$C" = "dev.asfakul.yumeiro.PermissionFlowDeviceTest" ]; then
+    # G10: phase a gets past first run; the script then takes the notification permission away
+    # and clears "asked before" (revoking kills the app, so it cannot happen inside a test);
+    # phase b, a new process, denies once, denies again, and follows the message to Android settings.
+    P=dev.asfakul.yumeiro.debug
+    timeout 300 adb shell am instrument -w -r -e class "$C#a_seedFirstRun" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    adb shell am force-stop $P; adb shell pm revoke $P android.permission.POST_NOTIFICATIONS 2>&1 | sed 's/^/YuPermScript revoke: /'
+    adb shell pm clear-permission-flags $P android.permission.POST_NOTIFICATIONS user-set user-fixed 2>&1 | sed 's/^/YuPermScript flags: /'
+    echo "YuPermScript after revoke: $(adb shell dumpsys package $P | grep -m1 'POST_NOTIFICATIONS: granted' | tr -d '\r')"
+    timeout 400 adb shell am instrument -w -r -e class "$C#b_deniedOnceThenBlocked" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
+    adb shell pm grant $P android.permission.POST_NOTIFICATIONS || true
+    if grep -q '^OK (' "inst-$C-a.txt"; then cp "inst-$C-b.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.CrashUiDeviceTest" ]; then
     # G12 X6: phase a really crashes the app (its own result is "Process crashed" by design).
     P=dev.asfakul.yumeiro.debug
@@ -105,7 +117,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   grep -E "INSTRUMENTATION_STATUS: (class|test|stack)=|INSTRUMENTATION_STATUS_CODE|INSTRUMENTATION_CODE|OK \(|FAILURES|Tests run" "inst-$C.txt" | cut -c1-400 | tail -150
   if [ $RC -eq 124 ]; then echo "TIMEOUT in $C (last test started above)"; echo "TESTS_FAILED" > failed.txt; adb shell am force-stop dev.asfakul.yumeiro.debug || true; fi
   # Only this class's lines; crash blocks (AndroidRuntime) and foreground-service decisions included.
-  tail -n +$((L0 + 1)) logcat.txt | grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuDownloadTest|YuSettingsWalk|YuBackupTest|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|YuStartup|MTDeviceTest|ANR in|FATAL|OutOfMemory|AndroidRuntime|MediaSessionService|MediaNotification|ForegroundService|startForeground|ActiveServices" | cut -c1-300 | tail -260 || true
+  tail -n +$((L0 + 1)) logcat.txt | grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuDownloadTest|YuSettingsWalk|YuBackupTest|YuBackdropTest|YuPlayerFx|YuNotifyFx|YuPermFlow|YuPermScript|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|YuStartup|MTDeviceTest|ANR in|FATAL|OutOfMemory|AndroidRuntime|MediaSessionService|MediaNotification|ForegroundService|startForeground|ActiveServices" | cut -c1-300 | tail -260 || true
   # Full stack of every failing test (the line filter above keeps only its first line).
   awk '/^INSTRUMENTATION_STATUS: stack=/{p=1} /^INSTRUMENTATION_STATUS: (test|class|current|id|numtests|stream)=|^INSTRUMENTATION_STATUS_CODE/{p=0} p' "inst-$C.txt" | grep -vE "^\s+at (org\.junit|java\.lang\.reflect|jdk\.internal|androidx\.test\.internal)" | head -80
   grep -qE "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2|Process crashed" "inst-$C.txt" && echo "TESTS_FAILED" > failed.txt

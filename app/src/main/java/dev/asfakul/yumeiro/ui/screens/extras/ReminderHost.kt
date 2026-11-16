@@ -274,7 +274,7 @@ fun NotificationPromptHost(blocked: Boolean) {
     val context = LocalContext.current
     var show by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted && !PermissionCenter.notificationsAllowed(context)) PermissionCenter.openNotificationSettings(context)
+        if (!PermissionCenter.notificationsAllowed(context)) PermissionCenter.afterNotificationRequest(context, granted)
     }
     LaunchedEffect(blocked) {
         if (blocked || Build.FINGERPRINT == "robolectric") return@LaunchedEffect

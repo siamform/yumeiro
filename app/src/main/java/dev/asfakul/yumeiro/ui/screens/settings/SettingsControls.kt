@@ -249,11 +249,12 @@ fun PermissionsCard(onMediaGranted: () -> Unit) {
     val install = remember(tick) { PermissionCenter.installAllowed(context) }
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         tick++
-        if (!ok) PermissionCenter.openNotificationSettings(context)
+        PermissionCenter.afterNotificationRequest(context, ok)
     }
     val mediaLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         tick++
-        if (r.values.any { it }) onMediaGranted() else PermissionCenter.openAppSettings(context)
+        if (r.values.any { it }) onMediaGranted()
+        else PermissionCenter.explainDenied(context, PermissionCenter.mediaPermissions().first(), "Music & videos access")
     }
     SettingsCard {
         SettingsActionRow("Notifications", "New episodes, extensions and app updates", "perm_notifications",

@@ -54,6 +54,49 @@ object PermissionCenter {
     fun batteryUnrestricted(c: Context): Boolean =
         c.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(c.packageName) == true
 
+    /**
+     * R17 G10 (ER-2): what to do after Android's permission dialog said no. Denied once (Android
+     * would still ask again): say so and stay. Blocked ("Don't allow" twice, or "Don't ask again"):
+     * Android no longer shows its dialog, so offer the settings page through the message's action.
+     * Before, every "no" threw the user straight into Android settings, even right after they
+     * chose "Don't allow" themselves.
+     */
+    enum class Denial { ONCE, BLOCKED }
+
+    fun denial(c: Context, permission: String): Denial {
+        val a = c.findActivity() ?: return Denial.BLOCKED
+        return if (androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(a, permission)) Denial.ONCE else Denial.BLOCKED
+    }
+
+    /** [what] is the user's word for it, e.g. "Notifications". */
+    fun explainDenied(c: Context, permission: String, what: String, openSettings: () -> Unit = { openAppSettings(c) }) {
+        when (denial(c, permission)) {
+            Denial.ONCE -> dev.asfakul.yumeiro.ui.components.AppMessages.info(c, "$what not allowed. Tap again when you want to allow it")
+            Denial.BLOCKED -> dev.asfakul.yumeiro.ui.components.AppMessages.error(
+                c, "$what blocked for Yumeiro. Android won't ask again; allow it in Android settings", "Open settings", openSettings,
+            )
+        }
+    }
+
+    /**
+     * After the notification permission request: granted but still off (notifications turned off
+     * for the app in Android settings, the request returns "granted" at once) → open that page,
+     * otherwise as [explainDenied]. Before, the row did nothing in the "granted but off" case.
+     */
+    fun afterNotificationRequest(c: Context, granted: Boolean) {
+        when {
+            granted && !notificationsAllowed(c) -> openNotificationSettings(c)
+            !granted && Build.VERSION.SDK_INT >= 33 ->
+                explainDenied(c, Manifest.permission.POST_NOTIFICATIONS, "Notifications") { openNotificationSettings(c) }
+        }
+    }
+
+    private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+        is android.app.Activity -> this
+        is android.content.ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+
     private fun start(c: Context, i: Intent): Boolean = runCatching {
         c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true
     }.getOrDefault(false)

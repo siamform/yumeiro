@@ -66,7 +66,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
     LifecycleResumeEffect(Unit) { tick++; onPauseOrDispose { } }
     val status = remember(tick) { ReliabilityGuide.status(context) }
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (!ok) PermissionCenter.openNotificationSettings(context); tick++
+        PermissionCenter.afterNotificationRequest(context, ok); tick++
     }
     val body: @Composable () -> Unit = {
         Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState()).padding(22.dp)) {
