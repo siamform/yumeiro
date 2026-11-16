@@ -104,6 +104,19 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     echo "YuPermScript after revoke: $(adb shell dumpsys package $P | grep -m1 'POST_NOTIFICATIONS: granted' | tr -d '\r')"
     timeout 400 adb shell am instrument -w -r -e class "$C#b_deniedOnceThenBlocked" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
     adb shell pm grant $P android.permission.POST_NOTIFICATIONS || true
+    # G10 "revoked while running": Android kills the process on revoke; the app must come back
+    # clean (no crash on relaunch) and read the new state. One pass per runtime permission.
+    for PERM in POST_NOTIFICATIONS READ_MEDIA_VIDEO; do
+      WAS=$(adb shell dumpsys package $P | grep -m1 "android.permission.$PERM: granted=true" | wc -l | tr -d ' \r')
+      adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 8
+      B=$(adb shell pidof $P | tr -d '\r'); adb shell pm revoke $P android.permission.$PERM 2>&1 | sed 's/^/YuPermScript revoke: /'; sleep 3
+      A=$(adb shell pidof $P | tr -d '\r'); adb logcat -b crash -c 2>/dev/null || true
+      adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 10
+      R2=$(adb shell pidof $P | tr -d '\r'); FX=$(adb logcat -d -b crash 2>/dev/null | grep -c "$P" | tr -d '\r')
+      echo "YuPermScript PERM_RUNNING perm=$PERM wasGranted=$WAS pidBefore=$B pidAfterRevoke='${A}' relaunchPid='${R2}' crashLines=$FX"
+      [ "$WAS" = "1" ] && adb shell pm grant $P android.permission.$PERM || true
+      adb shell am force-stop $P
+    done
     if grep -q '^OK (' "inst-$C-a.txt"; then cp "inst-$C-b.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.CrashUiDeviceTest" ]; then
     # G12 X6: phase a really crashes the app (its own result is "Process crashed" by design).
