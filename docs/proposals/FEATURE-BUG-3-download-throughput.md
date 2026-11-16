@@ -67,6 +67,45 @@ single connection (host without ranges).
 
 Then a real host where allowed: a public test file, the same per-10 % log, on the CI emulator.
 
+### 4.1 First measurement (unit, JVM local server, CI 43851470283 on 191dedf)
+
+Per 10 % in ms, 24 MiB file. The run failed only on a test error: the HLS fake used 600 KiB
+segments, so 40 segments left 576 KiB out (fixed: 512 KiB × 48). The single-connection case did
+not run because of that failure.
+
+| Engine | Profile | Total ms | MB/s | Per 10 % (ms) | Last 10 % / average 10 % |
+|---|---|---|---|---|---|
+| segmented4 | steady 3 MB/s per request | 2664 | 9.01 | 203 198 200 201 198 203 263 398 401 399 | 1.50 |
+| segmented2 (low-end) | steady | 3992 | 6.01 | 398 … 396 (flat) | 0.99 |
+| YouTube 8 MB ranges | steady | 7988 | 3.00 | 797–802 (flat) | 1.00 |
+| HLS sequential | steady | (test error) | – | 974 778 … 778 | – |
+| segmented4 | burst 3 MB then 1.5 MB/s per request | 1351 | 17.76 | 30 4 3 3 3 379 260 2 2 **665** | **4.92** |
+| segmented2 (low-end) | burst | 2006 | 11.96 | 7 3 420 236 7 124 535 8 2 664 | 3.31 |
+| YouTube 8 MB ranges | burst | 9996 | 2.40 | 6 1204 1615 515 685 1574 1075 124 1613 1585 | 1.59 |
+| HLS sequential | burst | (test error) | – | 13 5 5 9 9 14 7 9 8 | – |
+
+Findings:
+- T3 confirmed and larger than expected: `Segmented` ran out of chunks while the other connections
+  were still on their last chunk. Steady host: the last 30 % ran on half the connections (400 ms
+  vs 200 ms per 10 %). Burst host: every connection ended in the slow part of its request at the
+  same time and no new (fast) request started, so the last 10 % took 4.9× the average 10 %, the
+  owner's "4–5× longer". This is the root cause in the engine that serves direct files ≥ 16 MB.
+- T2 (YouTube 8 MB ranges): saw-tooth but no end collapse (1.59×).
+- T1 (one request, no ranges): not measured yet (rerun).
+- T5 (Wi-Fi power save, screen off) cannot be shown by a JVM test; see 4.2.
+
+### 4.2 Fix and pass rule
+
+- Rule (asserted in `DownloadThroughputTest` from 40ea96e): for every engine the app controls,
+  the last 10 % must take ≤ 2× the average 10 %. A host without ranges is reported only (one
+  request is all such a host allows).
+- Fix (40ea96e): IDM-style split. An idle connection takes the second half of the running piece
+  with the most bytes left (≥ 2 × 1 MiB); the owner stops at the new end (`Piece.accept` drops
+  bytes past it, the other connection writes the same bytes at the same offsets). A chunk is
+  recorded in `.chunks` only when all of its pieces are in, so the side-file format is unchanged.
+  A retry continues from the piece position instead of rewinding the 4 MiB chunk and the
+  progress. Unit tests `Bug3PieceTest` (4).
+
 ## 5. Target (better than both)
 
 - Stable throughput to 100 %: closed ranges sized so each request stays in the host's fast
