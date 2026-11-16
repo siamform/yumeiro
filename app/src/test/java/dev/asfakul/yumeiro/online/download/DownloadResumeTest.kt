@@ -52,6 +52,33 @@ class DownloadResumeTest {
     }
 }
 
+/** G8 (R17): saves from several worker threads at once must not put an older list on disk. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
+class DownloadListSaveRaceTest {
+    private fun item(id: String) = Item(
+        id, "T", "Api", "u", "Ep $id", null, emptyMap(), "", false, emptyMap(), "f$id.mp4", status = Status.RUNNING,
+        kind = OnlineDownloads.Kind.EPISODE,
+    )
+
+    @Test fun parallelFinishesAllReachTheFile() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val f = java.io.File(ctx.filesDir, "online_downloads.json")
+        val ids = (1..8).map { "w$it" }
+        var lost = 0
+        repeat(40) { round ->
+            OnlineDownloads.setItemsForTest(ctx, ids.map(::item))
+            val start = java.util.concurrent.CountDownLatch(1)
+            val threads = ids.map { id -> Thread { start.await(); OnlineDownloads.progress(id, 5, 10); OnlineDownloads.finished(id, 10) } }
+            threads.forEach { it.start() }; start.countDown(); threads.forEach { it.join() }
+            val saved = org.json.JSONObject(f.readText()).getJSONArray("items")
+            val done = (0 until saved.length()).count { saved.getJSONObject(it).optString("status") == "DONE" }
+            if (done != ids.size) { lost++; println("SAVE_RACE round=$round done_on_disk=$done/${ids.size}") }
+        }
+        assertEquals("rounds where the file missed a finished download", 0, lost)
+    }
+}
+
 class HlsResumeTest {
     @Test fun resumeCutsBackToTheRecordedSegments() {
         assertEquals(5 to 5000L, HlsResume.read(HlsResume.write(5, 5000), 7000)) // 2 extra segments are cut

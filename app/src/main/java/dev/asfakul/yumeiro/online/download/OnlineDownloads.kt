@@ -329,11 +329,20 @@ object OnlineDownloads {
     }
 
     private var lastWrite = 0L
+    private val writeLock = Any()
+    /**
+     * G8 (R17): writers are serialized and each takes the list inside the lock. Workers on several
+     * threads used to save at once: one could take its copy, lose the race, and rename an older copy
+     * over a newer one (a finished download read back as running after a restart), and both used
+     * the same `.tmp` file.
+     */
     private fun write() {
         val f = file ?: return
-        lastWrite = System.currentTimeMillis()
-        val o = JSONObject().put("version", 2).put("items", JSONArray().apply { _items.value.forEach { put(json(it)) } })
-        runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, o.toString()) }.onFailure { Log.w(TAG, "save", it) }
+        synchronized(writeLock) {
+            lastWrite = System.currentTimeMillis()
+            val o = JSONObject().put("version", 2).put("items", JSONArray().apply { _items.value.forEach { put(json(it)) } })
+            runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, o.toString()) }.onFailure { Log.w(TAG, "save", it) }
+        }
     }
 
     private val RX_BAD_NAME = Regex("""[\\/:*?"<>|\u0000-\u001f]""")
