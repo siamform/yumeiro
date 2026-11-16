@@ -170,21 +170,34 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
                 .semantics { liveRegion = LiveRegionMode.Polite }
                 .clickable { AppMessages.dismiss(m.id) },
         ) {
-            Row(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(tint.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
-                }
-                Spacer(Modifier.width(10.dp))
-                Text(m.text, color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+            // G10 (device 43891331959, api33-lowram 393 dp): a long message with an action button beside it
+            // ran past three lines and was cut ("…allow it in Android settings"). Long text with an action
+            // now stacks the action under the text (Material snackbar rule for long actions).
+            val stacked = m.actionLabel != null && m.action != null && m.text.length > STACK_ACTION_AFTER
+            val Action: @Composable () -> Unit = {
                 if (m.actionLabel != null && m.action != null) {
                     TextButton(onClick = { AppMessages.dismiss(m.id); runCatching { m.action.invoke() } }, modifier = Modifier.testTag("app_message_action")) {
                         Text(m.actionLabel, color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
-                } else Spacer(Modifier.width(8.dp))
+                }
+            }
+            Column(Modifier.padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = if (stacked) 2.dp else 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(tint.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                        Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(m.text, color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = if (stacked) 5 else 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+                    if (!stacked && m.actionLabel != null && m.action != null) Action() else if (!stacked) Spacer(Modifier.width(8.dp))
+                }
+                if (stacked) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) { Action() }
             }
         }
     }
 }
+
+/** Message length (characters) above which an action button goes under the text instead of beside it. */
+internal const val STACK_ACTION_AFTER = 56
 
 // endregion
 
