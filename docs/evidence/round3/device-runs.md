@@ -304,3 +304,5 @@ These are real emulators running the real debug APK; the tests are not simulated
   YtChannelUiDeviceTest (BUG-2). Dispatched 2026-11-16 10:28 UTC. Result: pending.
 - Timestamp correction: the commit bodies d2923fa, 9128b10, 0ccc2f6, 8d48335 and 3076b25 give
   ~10:30–10:55 UTC; they were all made between 10:24 and 10:28 UTC (real clock, `date -u`).
+
+- Timestamp correction (2026-11-16 10:39 UTC): commit f47c639 says 10:41 UTC in its body; it was made at 10:37 UTC.

@@ -75,13 +75,60 @@ object OnlineHistory {
         _entries.value = list.sortedByDescending { it.updatedAt }
         o.optJSONObject("progress")?.let { p ->
             p.keys().forEach { k -> p.optJSONArray(k)?.let { v -> progress[k] = Progress(v.optLong(0), v.optLong(1), v.optLong(2)) } }
+            looseIndex = null
         }
         _version.value++
     }
 
-    fun progressOf(api: String, data: String): Progress? = synchronized(this) { progress[progressKey(api, data)] }
+    fun progressOf(api: String, data: String): Progress? = synchronized(this) {
+        progress[progressKey(api, data)] ?: run {
+            // BUG-1 (D5): extension data often embeds the site's domain, which rotates. When the exact
+            // string misses, the same api + the data without scheme/host still finds the spot.
+            val loose = hostFree(data)
+            if (loose == data) null else hostIndex().get(progressKey(api, loose))
+        }
+    }
 
-    fun entry(api: String, url: String): Entry? = _entries.value.firstOrNull { it.api == api && it.url == url }
+    /** hostFree(key) → newest progress (rebuilt after a change; guarded by `this`). */
+    private var looseIndex: HashMap<String, Progress>? = null
+    private fun hostIndex(): HashMap<String, Progress> = looseIndex ?: HashMap<String, Progress>(progress.size * 2).also { m ->
+        for ((k, p) in progress) {
+            val lk = hostFree(k)
+            val old = m[lk]
+            if (old == null || p.at >= old.at) m[lk] = p
+        }
+        looseIndex = m
+    }
+
+    fun entry(api: String, url: String): Entry? = _entries.value.let { list ->
+        list.firstOrNull { it.api == api && it.url == url }
+            ?: hostFree(url).takeIf { it != url }?.let { loose -> list.firstOrNull { it.api == api && hostFree(it.url) == loose } }
+    }
+
+    /**
+     * BUG-1 (D5): [s] with every `http(s)://host` (also JSON-escaped `https:\\/\\/host`) removed (path, query and JSON around it kept), so
+     * `https://a.example/ep/1` and `https://b.example/ep/1` match. No regex (main-thread safe). Pure.
+     */
+    internal fun hostFree(s: String): String {
+        if (!s.contains("://") && !s.contains(":\\/\\/")) return s
+        val sb = StringBuilder(s.length)
+        var i = 0
+        while (i < s.length) {
+            val skip = when {
+                s.startsWith("https://", i, ignoreCase = true) -> 8
+                s.startsWith("http://", i, ignoreCase = true) -> 7
+                s.startsWith("https:\\/\\/", i, ignoreCase = true) -> 10 // JSON-escaped
+                s.startsWith("http:\\/\\/", i, ignoreCase = true) -> 9
+                else -> 0
+            }
+            if (skip == 0) { sb.append(s[i]); i++; continue }
+            var j = i + skip
+            while (j < s.length && s[j] !in HOST_END) j++
+            i = j
+        }
+        return sb.toString()
+    }
+    private const val HOST_END = "/\\\"'?# ,}]"
 
     /** Records progress of what's playing. Finished movies leave "Continue watching". */
     fun record(context: Context, detail: OnlineDetail, version: String, episode: OnlineEpisode?, positionMs: Long, durationMs: Long) {
@@ -96,6 +143,7 @@ object OnlineHistory {
             progress.remove(progressKey(detail.api, data))
             progress[progressKey(detail.api, data)] = Progress(positionMs, durationMs, now)
             while (progress.size > MAX_PROGRESS) progress.remove(progress.keys.first())
+            looseIndex = null
         }
         val finishedMovie = episode == null && durationMs > 0 && positionMs >= durationMs * DONE_FRACTION
         val entry = Entry(
@@ -139,7 +187,7 @@ object OnlineHistory {
     fun clear(context: Context) {
         ensureLoaded(context)
         _entries.value = emptyList()
-        synchronized(this) { progress.clear() }
+        synchronized(this) { progress.clear(); looseIndex = null }
         _version.value++
         save()
         dev.asfakul.yumeiro.widget.ContinueWidget.refresh(context)
@@ -189,5 +237,5 @@ object OnlineHistory {
         )
     }
 
-    internal fun resetForTests() { flush(); loaded = false; file = null; _entries.value = emptyList(); synchronized(this) { progress.clear() } }
+    internal fun resetForTests() { flush(); loaded = false; file = null; _entries.value = emptyList(); synchronized(this) { progress.clear(); looseIndex = null } }
 }

@@ -75,6 +75,9 @@ Defects found by reading the code (each still needs a failing test before it cou
   (`episodeData`, `playData`, the title URL). Extensions often embed the site domain, which rotates, or
   per-session tokens in these strings. When the string changes, both the episode pointer and the
   position are lost. CloudStream has the same weakness through URL hash ids.
+  Fix (2026-11-16): `OnlineHistory.hostFree` drops every `http(s)://host` (plain or JSON-escaped)
+  and `progressOf` / `entry` fall back to (api, host-free data) when the exact key misses; a lazily
+  rebuilt index keeps the lookup O(1) in episode lists. Per-session query tokens are NOT covered.
 
 ## 4. Yumeiro's target (better than both)
 

@@ -86,4 +86,28 @@ class ResumePointsTest {
         OnlineHistory.record(ctx, d, "", e, 0, 1_400_000)
         assertEquals(400_000L, OnlineHistory.progressOf("Demo", "ep-1")?.positionMs)
     }
+
+    /** D5, Yumix: the site's domain rotated; the same episode path still finds its position and title. */
+    @Test fun onlineDomainRotationKeepsThePosition() {
+        val d = OnlineDetail(
+            "Demo", "https://old-mirror.example/title/42", "T", OnlineKind.SERIES, "TvSeries", null, null, emptyMap(), null, 2020,
+            emptyList(), null, null, null, null, emptyMap(), emptyMap(), emptyList(),
+        )
+        val json = "{\"url\":\"https:\\/\\/old-mirror.example\\/watch\\/42-3\",\"ep\":3}"
+        OnlineHistory.record(ctx, d, "", OnlineEpisode("https://old-mirror.example/watch/42-1", null, 1, 1, null, null, 24), 300_000, 1_400_000)
+        OnlineHistory.record(ctx, d, "", OnlineEpisode(json, null, 1, 3, null, null, 24), 500_000, 1_400_000)
+        assertEquals(300_000L, OnlineHistory.progressOf("Demo", "https://new-mirror.example/watch/42-1")?.positionMs)
+        assertEquals(500_000L, OnlineHistory.progressOf("Demo", json.replace("old-mirror", "new-mirror"))?.positionMs)
+        assertEquals("https://old-mirror.example/title/42", OnlineHistory.entry("Demo", "https://new-mirror.example/title/42")?.url)
+        // Another extension, another path or a plain id never borrow it.
+        assertNull(OnlineHistory.progressOf("Other", "https://new-mirror.example/watch/42-1"))
+        assertNull(OnlineHistory.progressOf("Demo", "https://new-mirror.example/watch/42-2"))
+        assertNull(OnlineHistory.progressOf("Demo", "ep-1"))
+    }
+
+    @Test fun hostFreeKeepsPathQueryAndJson() {
+        assertEquals("/a/b?x=1", OnlineHistory.hostFree("https://Host.example:8443/a/b?x=1"))
+        assertEquals("{\"u\":\"\\/a\"}", OnlineHistory.hostFree("{\"u\":\"http:\\/\\/h.example\\/a\"}"))
+        assertEquals("ep-1", OnlineHistory.hostFree("ep-1"))
+    }
 }
