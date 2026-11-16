@@ -172,12 +172,41 @@ class FeedPositionDeviceTest {
         // the slow api33 emulator (frames of 360 ms to 1.3 s) the system read it as a fling and the
         // page travelled about three screens (run 43680730905). A held end gives zero lift-off speed.
         val steps = 8
+        if (android.os.Build.VERSION.SDK_INT < 29) { heldDragInjected(x, y1, y2, steps); return }
         FirstRun.shell("input motionevent DOWN $x $y1")
         for (k in 1..steps) FirstRun.shell("input motionevent MOVE $x ${y1 + (y2 - y1) * k / steps}")
         SystemClock.sleep(300)
         FirstRun.shell("input motionevent MOVE $x $y2")
         SystemClock.sleep(150)
         FirstRun.shell("input motionevent UP $x $y2")
+    }
+
+    private var probedMotionevent = false
+
+    /**
+     * X13-5: the same held drag below API 29. api28 43777260888: every swipe moved the feed 0/16
+     * times (live, yumix, music skipped; home and youtube never reached 3 cards), because the shell
+     * `input` tool on API 28 does not take `motionevent`. UiAutomation injects through the same
+     * system input pipeline on every API level.
+     */
+    private fun heldDragInjected(x: Int, y1: Int, y2: Int, steps: Int) {
+        if (!probedMotionevent) {
+            probedMotionevent = true
+            log("API ${android.os.Build.VERSION.SDK_INT}: shell `input motionevent` says: ${FirstRun.shell("input motionevent UP 1 1").trim().take(200).ifEmpty { "(nothing)" }}")
+        }
+        val ua = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+        val down = SystemClock.uptimeMillis()
+        fun send(action: Int, y: Int) {
+            val ev = android.view.MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x.toFloat(), y.toFloat(), 0)
+            ev.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            ua.injectInputEvent(ev, true); ev.recycle()
+        }
+        send(android.view.MotionEvent.ACTION_DOWN, y1)
+        for (k in 1..steps) { SystemClock.sleep(30); send(android.view.MotionEvent.ACTION_MOVE, y1 + (y2 - y1) * k / steps) }
+        SystemClock.sleep(300)
+        send(android.view.MotionEvent.ACTION_MOVE, y2)
+        SystemClock.sleep(150)
+        send(android.view.MotionEvent.ACTION_UP, y2)
     }
 
     private fun run(feed: String, open: () -> Unit) {
