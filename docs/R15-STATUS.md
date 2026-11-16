@@ -1,19 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 13:41 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 13:54 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
-- **Current group:** Level 2 — G9 Settings (`docs/groups/GROUP-9-SETTINGS.md`). G8/G5 rows wait for the head CI.
-- **Done since last update:** CI 43871066269 read (LB-8, DL-7, DL-8, DL-9 unit pass; DL-6 fail-before claim
-  withdrawn, it was a test error; DL-11 measured). SE-1 fixed (Reset settings erased playlists/favourites/resume
-  points; restore by section). SE-2 fixed (backdrop min size). SettingsWalk test errors fixed. BackdropImportDeviceTest added.
-  CI 43876676611 cancelled (stale: head moved on).
+- **Current group:** Level 2 — G9 Settings (verification owed) and G10 Errors (`docs/groups/GROUP-10-ERRORS.md`), step: ER-11 permission flow written, needs compile + emulator.
+- **Done since last update:** SE-3 settings search (4c33722); X10-5 upgrade harness fix (d978853);
+  PlayerSettingsEffect (9dc1340), NotifySettingsEffect (a487498), AutoBackupFingerprint tests; ER-10 error
+  taxonomy (5ca4a03); ER-11 permission denial flow + PermissionFlowDeviceTest (ba6fcca). None of these compiled in CI yet.
 - **Running:** CI 43877618176 (head e7efd6e: SettingsResetTest, DL-6 rerun, tail floor); device 43877623222
-  (SettingsWalk rerun); device 43869944264 (X10-5 upgrade from v1.8.0).
-- **Next three actions:** (1) read CI 43877618176 → SE-1, DL-6 rows; (2) read SettingsWalk 43877623222 and the
-  upgrade run → S27, X10-5; (3) dispatch BackdropImportDeviceTest when a device slot is free, then G9 S23/S1–S22 effects.
+  (SettingsWalk rerun); device 43878778019 (X10-5 upgrade from v1.8.0, fixed harness, head d978853).
+- **Next three actions:** (1) read CI 43877618176 → SE-1/DL-6 rows, then dispatch CI on the head (compiles SE-3,
+  effect tests, ER-10, ER-11); (2) read 43877623222 and 43878778019 → S27, X10-5; (3) device runs: BackdropImport,
+  PlayerSettingsEffect, NotifySettingsEffect, PermissionFlow (api33 + api36).
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
