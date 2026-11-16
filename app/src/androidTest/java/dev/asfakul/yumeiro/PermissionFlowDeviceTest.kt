@@ -86,7 +86,19 @@ class PermissionFlowDeviceTest {
         FirstRun.tapVisible(rule, "topbar_settings_action")
         runCatching { rule.waitUntil(20_000) { has("settings_home") } }
             .onFailure { throw AssertionError("Settings home never showed · ${FirstRun.onScreen(rule)}") }
-        FirstRun.tapVisible(rule, "settings_cat_privacy"); pause(1_200)
+        // Run 43891331959 api36: one tap on the category left Settings home showing (a second start-up
+        // permission dialog took the tap). Retry, closing any system dialog in between.
+        var opened = false
+        for (attempt in 1..4) {
+            if ("GrantPermissionsActivity" in topActivity()) { FirstRun.shell("input keyevent 4"); SystemClock.sleep(1_500) }
+            if (!has("settings_cat_privacy") && has("perm_notifications")) { opened = true; break }
+            runCatching { FirstRun.tapVisible(rule, "settings_cat_privacy", 8_000) }
+            opened = runCatching { rule.waitUntil(6_000) { has("perm_notifications") }; true }.getOrDefault(false)
+            log("PERM_CASE open Privacy attempt=$attempt opened=$opened top='${topActivity().takeLast(90)}'")
+            if (opened) break
+        }
+        assertTrue("Settings › Privacy never opened · ${FirstRun.onScreen(rule)} · top=${topActivity()}", opened)
+        pause(1_200)
 
         // 1: deny once.
         FirstRun.tapVisible(rule, "perm_notifications")
@@ -122,21 +134,32 @@ class PermissionFlowDeviceTest {
         assertTrue("Open settings did not open Android settings (top: $top)", ok)
     }
 
-    /** Waits for the system permission dialog and taps its deny button; returns the id it tapped. */
+    /**
+     * Waits for the system permission dialog and taps its deny button; returns the id it tapped.
+     * Reads the dialog through this instrumentation's own UiAutomation: `uiautomator dump` from the
+     * shell is a second UiAutomation client, and on api33-lowram it died with "Bad file descriptor"
+     * while the dialog was up (run 43891331959), so the dialog was never seen.
+     */
     private fun denySystemDialog(): String {
+        val ua = InstrumentationRegistry.getInstrumentation().uiAutomation
+        runCatching { ua.serviceInfo = ua.serviceInfo.apply { flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS } }
         val end = SystemClock.uptimeMillis() + 15_000
         while (SystemClock.uptimeMillis() < end) {
-            FirstRun.shell("uiautomator dump /sdcard/perm.xml")
-            val xml = FirstRun.shell("cat /sdcard/perm.xml")
-            for (id in DENY_IDS) {
-                val node = NODE.findAll(xml).map { it.value }.firstOrNull { "resource-id=\"$id\"" in it } ?: continue
-                val b = BOUNDS.find(node) ?: continue
-                val (l, t, r, bt) = b.destructured
-                FirstRun.shell("input tap ${(l.toInt() + r.toInt()) / 2} ${(t.toInt() + bt.toInt()) / 2}")
-                SystemClock.sleep(1_000)
-                return id.substringAfter(":id/")
+            val roots = buildList {
+                runCatching { ua.rootInActiveWindow }.getOrNull()?.let { add(it) }
+                runCatching { ua.windows.mapNotNull { it.root } }.getOrNull()?.let { addAll(it) }
             }
-            SystemClock.sleep(700)
+            for (id in DENY_IDS) {
+                val node = roots.firstNotNullOfOrNull { r -> r.findAccessibilityNodeInfosByViewId(id).firstOrNull { it.isVisibleToUser } } ?: continue
+                val clicked = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+                if (!clicked) {
+                    val b = android.graphics.Rect().also { node.getBoundsInScreen(it) }
+                    FirstRun.shell("input tap ${b.centerX()} ${b.centerY()}")
+                }
+                SystemClock.sleep(1_000)
+                return id.substringAfter(":id/") + if (clicked) "" else " (tap)"
+            }
+            SystemClock.sleep(500)
         }
         FirstRun.shot("perm_no_dialog")
         throw AssertionError("the system permission dialog never showed · top=${topActivity()}")
@@ -165,7 +188,5 @@ class PermissionFlowDeviceTest {
             "com.android.permissioncontroller:id/permission_deny_and_dont_ask_again_button",
             "com.android.permissioncontroller:id/permission_deny_button",
         )
-        private val NODE = Regex("<node [^>]*>")
-        private val BOUNDS = Regex("bounds=\"\\[(\\d+),(\\d+)]\\[(\\d+),(\\d+)]\"")
     }
 }
