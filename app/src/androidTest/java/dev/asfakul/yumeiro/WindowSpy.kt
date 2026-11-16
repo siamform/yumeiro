@@ -38,7 +38,13 @@ object WindowSpy {
     fun start() {
         added.clear(); logging = true
         if (!installed) installed = runCatching { swapViewList() }.onFailure { Log.w(TAG, "view list hook unavailable: $it") }.getOrDefault(false)
-        poller = Thread({ pollWindows() }, "window-spy").apply { isDaemon = true; start() }
+        // Instrumentation.getUiAutomation() is not thread-safe: called from the poller thread while
+        // the test thread connects, it threw "Already connected" and killed the run (43812114134,
+        // api36, e8). Take it here, on the test thread, and hand it to the poller.
+        val ua = runCatching { InstrumentationRegistry.getInstrumentation().uiAutomation }
+            .onFailure { Log.w(TAG, "no UiAutomation, window list off: $it") }.getOrNull()
+        poller?.interrupt()
+        poller = ua?.let { Thread({ pollWindows(it) }, "window-spy").apply { isDaemon = true; start() } }
         Log.i(TAG, "start hook=$installed")
     }
 
@@ -100,8 +106,7 @@ object WindowSpy {
     }
 
     /** Second source: the accessibility window list (titles, types, layers, focus) every 500 ms. */
-    private fun pollWindows() {
-        val ua = InstrumentationRegistry.getInstrumentation().uiAutomation
+    private fun pollWindows(ua: android.app.UiAutomation) {
         runCatching { ua.serviceInfo = ua.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS } }
         var last = ""
         while (logging && !Thread.currentThread().isInterrupted) {

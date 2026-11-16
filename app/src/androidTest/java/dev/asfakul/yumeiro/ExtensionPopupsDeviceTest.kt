@@ -60,6 +60,14 @@ class ExtensionPopupsDeviceTest {
         }
     }
 
+    /** Every visible root window by title, type and alpha, so a count mismatch names the window. */
+    private fun rootNames(): String = ui {
+        allRoots().filter { it.isAttachedToWindow && it.visibility == View.VISIBLE }.joinToString { v ->
+            val lp = v.layoutParams as? android.view.WindowManager.LayoutParams
+            "${lp?.title}/t${lp?.type}/a${lp?.alpha}/${v.javaClass.simpleName}"
+        }
+    }
+
     private fun <T> ui(block: () -> T): T { var r: Result<T>? = null; inst.runOnMainSync { r = runCatching(block) }; inst.waitForIdleSync(); return r!!.getOrThrow() }
     private fun settle() { inst.waitForIdleSync(); Thread.sleep(600); inst.waitForIdleSync() }
     private fun focus(): String = FirstRun.focusedWindow()
@@ -243,10 +251,16 @@ class ExtensionPopupsDeviceTest {
             assertEquals(ExtensionPopups.Mode.BLOCK_PROMOTIONAL, ExtensionPopups.mode.value)
             rule.onAllNodesWithTag("extensions_popups_quiet", true)[0].performClick(); rule.waitForIdle()
             assertEquals(ExtensionPopups.Mode.QUIET, ExtensionPopups.mode.value)
+            // Baseline right before Dismiss: the Extensions screen may own windows of its own that
+            // were not there when `before` was taken on Home (run 43812110468 failed on that).
+            val atDismiss = roots(); val namesAtDismiss = rootNames()
+            log("p8 before=$before atDismiss=$atDismiss roots=[$namesAtDismiss]")
             rule.onAllNodesWithTag("extensions_popup_discard", true)[0].performClick(); rule.waitForIdle()
             assertTrue("held entry kept after Dismiss", ExtensionPopups.held.value.isEmpty())
             assertNull("card stayed after Dismiss", AppMessages.current.value)
-            assertEquals("Dismiss added a window", before, roots())
+            val after = roots(); val namesAfter = rootNames()
+            log("p8 afterDismiss=$after roots=[$namesAfter]")
+            assertEquals("Dismiss added a window: before=[$namesAtDismiss] after=[$namesAfter]", atDismiss, after)
             ui { runCatching { dialog.dismiss() } }
             assertFalse(rule.activity.isFinishing)
             log("p8 ok focus=${focus()}")
