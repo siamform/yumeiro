@@ -582,11 +582,8 @@ class OfflineMediaRepository(
     }
 
     override suspend fun toggleFavorite(trackId: String) {
-        if (favoriteIds.contains(trackId)) {
-            favoriteIds.remove(trackId)
-        } else {
-            favoriteIds.add(trackId)
-        }
+        // G5 (R17): check-then-act under the set's lock, so two quick taps cannot both add.
+        synchronized(favoriteIds) { if (!favoriteIds.remove(trackId)) favoriteIds.add(trackId) }
         updateTrackFavoriteState()
     }
 
@@ -600,10 +597,11 @@ class OfflineMediaRepository(
             track.copy(isFavorite = favoriteIds.contains(track.id))
         }
         // Update default favorites playlist
+        // G5 (R17): the liked set is a StringSet, whose order is lost on restart. The saved
+        // "Favorite Tracks" list is the order source: keep its order, append new likes at the end.
+        val liked = synchronized(favoriteIds) { favoriteIds.toList() }
         _playlists.update { cur -> cur.map { pl ->
-            if (pl.id == "favorites_default") {
-                pl.copy(trackIds = favoriteIds.toList())
-            } else pl
+            if (pl.id == "favorites_default") pl.copy(trackIds = likedInOrder(pl.trackIds, liked)) else pl
         } }
         persistFavorites()
         persistPlaylists()
@@ -613,7 +611,7 @@ class OfflineMediaRepository(
         val newPlaylist = Playlist(
             id = "playlist_${System.currentTimeMillis()}",
             name = name,
-            trackIds = trackIds
+            trackIds = trackIds.distinct()
         )
         _playlists.update { it + newPlaylist }
         persistPlaylists()
@@ -844,4 +842,12 @@ internal fun displayFolderName(name: String?, path: String = ""): String {
         RX_MEDIAREPOSITORY_1.matches(n) -> "SD card"
         else -> n
     }
+}
+
+/** G5 (R17): liked songs in the order they were liked: [saved] order first, then new likes. */
+internal fun likedInOrder(saved: List<String>, liked: Collection<String>): List<String> {
+    val set = liked.toHashSet()
+    val kept = saved.filter { it in set }.distinct()
+    val keptSet = kept.toHashSet()
+    return kept + liked.filter { it !in keptSet }.distinct()
 }
