@@ -30,7 +30,7 @@ import org.robolectric.annotation.Config
 class PlayerBuiltAfterFirstFrameTest {
     private val ctx = ApplicationProvider.getApplicationContext<Context>()
 
-    @Before fun coldProcess() = PlaybackService.releaseSharedPlayerForTest()
+    @Before fun coldProcess() = PlaybackService.forgetSharedPlayerForTest()
 
     @Test fun coldStartDefersTheBuild() {
         val m = MusicPlayerManager(ctx)

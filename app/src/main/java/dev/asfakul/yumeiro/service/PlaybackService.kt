@@ -29,12 +29,13 @@ class PlaybackService : MediaSessionService() {
         var sharedPlayer: ExoPlayer? = null
             private set
 
-        /** Tests only: drop the process player so a test can start from a cold process. */
+        /**
+         * Tests only: forget the process player so a test can start from a cold process. Not
+         * released: ExoPlayer.release() waits for its playback thread against SystemClock, which
+         * Robolectric's paused clock never advances (CI 43831093449 hung in the unit tests).
+         */
         @androidx.annotation.VisibleForTesting
-        internal fun releaseSharedPlayerForTest() = synchronized(this) {
-            sharedPlayer?.release()
-            sharedPlayer = null
-        }
+        internal fun forgetSharedPlayerForTest() = synchronized(this) { sharedPlayer = null }
 
         fun getOrCreatePlayer(context: android.content.Context): ExoPlayer {
             val existing = sharedPlayer
