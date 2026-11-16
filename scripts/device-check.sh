@@ -75,6 +75,14 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     sleep 2
     echo "YuResumeScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines"
     timeout 300 adb shell am instrument -w -r -e class "$C#b_reopenFromHomeJumpBackIn" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+  elif [ "$C" = "dev.asfakul.yumeiro.DownloadKillDeviceTest" ]; then
+    # G8: phase a downloads to 25 % and kills its own process ("Process crashed" by design);
+    # phase b, a new process, checks the download finished by itself, then the delete case.
+    P=dev.asfakul.yumeiro.debug
+    timeout 400 adb shell am instrument -w -r -e class "$C#a_startThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    sleep 2
+    echo "YuDlKillScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines"
+    timeout 900 adb shell am instrument -w -r -e class "$C#b_continuesAfterProcessDeath,$C#c_deleteMidDownloadLeavesNoFiles" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
   elif [ "$C" = "dev.asfakul.yumeiro.CrashUiDeviceTest" ]; then
     # G12 X6: phase a really crashes the app (its own result is "Process crashed" by design).
     P=dev.asfakul.yumeiro.debug
