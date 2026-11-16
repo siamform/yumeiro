@@ -1035,6 +1035,11 @@ data class QualityOption(
     /** Round 13: a quality the engine built (another stream / source), not a track of this one. */
     val alt: dev.asfakul.yumeiro.player.QualityEngine.Alt? = null,
     val note: String? = null,
+    /**
+     * BUG-4 (F4): false = the stream has this quality but no decoder on this device takes it. It is
+     * listed (so the list matches what a download would offer) but cannot be picked.
+     */
+    val playable: Boolean = true,
 )
 
 @Composable
@@ -1056,7 +1061,7 @@ fun QualityDialog(
                 }
                 itemsIndexed(options) { _, o ->
                     val sub = o.note ?: if (o.bitrate > 0) "${o.bitrate / 1000} kbps" else null
-                    QualityRow(o.label, sub, selected == o || (selected == null && autoLabel == null && o.alt?.current == true)) { onSelect(o); onDismiss() }
+                    QualityRow(o.label, sub, selected == o || (selected == null && autoLabel == null && o.alt?.current == true), enabled = o.playable) { onSelect(o); onDismiss() }
                 }
                 if (footer != null) item {
                     Text(footer, style = MaterialTheme.typography.bodySmall, color = TextSecondary, modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp))
@@ -1072,13 +1077,13 @@ fun QualityDialog(
 }
 
 @Composable
-private fun QualityRow(label: String, sub: String?, isSelected: Boolean, onClick: () -> Unit) {
+private fun QualityRow(label: String, sub: String?, isSelected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp).testTag("quality_$label"),
+        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp).testTag("quality_$label"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = if (isSelected) SpotifyGreen else TextPrimary, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            Text(label, color = when { isSelected -> SpotifyGreen; enabled -> TextPrimary; else -> TextSecondary }, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
             if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
         if (isSelected) Icon(Icons.Default.Check, contentDescription = "Selected", tint = SpotifyGreen, modifier = Modifier.size(20.dp))
@@ -1091,7 +1096,10 @@ fun qualityOptions(tracks: androidx.media3.common.Tracks): List<QualityOption> {
     tracks.groups.forEachIndexed { gi, g ->
         if (g.type != androidx.media3.common.C.TRACK_TYPE_VIDEO) return@forEachIndexed
         for (ti in 0 until g.length) {
-            if (!g.isTrackSupported(ti)) continue
+            // BUG-4 (F4): a track no decoder here takes used to vanish without a word, so a 4K HEVC
+            // or AV1 rendition the download sheet lists was missing from the player. It is now
+            // listed, greyed, with the reason; it cannot be picked (the player would fail on it).
+            val supported = g.isTrackSupported(ti)
             val f = g.getTrackFormat(ti)
             val hgt = minOf(f.height, f.width).takeIf { f.width > 0 && f.height > 0 } ?: f.height
             val label = when {
@@ -1099,9 +1107,25 @@ fun qualityOptions(tracks: androidx.media3.common.Tracks): List<QualityOption> {
                 f.frameRate >= 49f -> "${hgt}p${f.frameRate.toInt()}"
                 else -> "${hgt}p"
             }
-            all += QualityOption(label, gi, ti, hgt, f.bitrate)
+            val note = if (supported) null else "Not playable on this device (no ${codecLabel(f.sampleMimeType ?: f.codecs)} decoder)"
+            all += QualityOption(label, gi, ti, hgt, f.bitrate, note = note, playable = supported)
         }
     }
-    return all.sortedWith(compareByDescending<QualityOption> { it.height }.thenByDescending { it.bitrate })
+    // A playable track wins over an unplayable one with the same label.
+    return all.sortedWith(compareByDescending<QualityOption> { it.height }.thenByDescending { it.playable }.thenByDescending { it.bitrate })
         .distinctBy { it.label }
+}
+
+/** "video/hevc" → "HEVC"; "video/av01" → "AV1". Pure. */
+internal fun codecLabel(mime: String?): String {
+    val m = mime?.lowercase().orEmpty().substringAfter('/')
+    return when {
+        m.isBlank() -> "matching"
+        m.startsWith("hevc") || m.startsWith("hvc") || m.startsWith("hev") -> "HEVC"
+        m.startsWith("av01") || m == "av1" -> "AV1"
+        m.startsWith("x-vnd.on2.vp9") || m.startsWith("vp9") || m.startsWith("vp09") -> "VP9"
+        m.startsWith("avc") -> "H.264"
+        m.startsWith("dolby-vision") -> "Dolby Vision"
+        else -> m.uppercase()
+    }
 }

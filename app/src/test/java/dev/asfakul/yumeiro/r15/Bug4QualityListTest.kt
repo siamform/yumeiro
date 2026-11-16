@@ -5,14 +5,21 @@
  */
 package dev.asfakul.yumeiro.r15
 
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.TrackGroup
+import androidx.media3.common.Tracks
 import dev.asfakul.yumeiro.player.QualityEngine
 import dev.asfakul.yumeiro.stream.StreamFormat
 import dev.asfakul.yumeiro.stream.StreamMediaFactory
 import dev.asfakul.yumeiro.stream.StreamRequest
+import dev.asfakul.yumeiro.ui.screens.video.qualityOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -68,5 +75,34 @@ class Bug4QualityListTest {
         val by = QualityEngine.onlineHeights(links)
         assertEquals(listOf(1080, 720), by.keys.sortedDescending())
         assertEquals(listOf(1, 5), by.getValue(720).map { it.index })
+    }
+
+    private fun fmt(id: String, mime: String, w: Int, h: Int, br: Int) =
+        Format.Builder().setId(id).setSampleMimeType(mime).setWidth(w).setHeight(h).setAverageBitrate(br).setPeakBitrate(br).build()
+
+    /** F4: a rendition with no decoder on this device is listed (greyed, with the reason), not dropped. */
+    @Test fun unsupportedTrackIsListedNotDropped() {
+        val f = arrayOf(
+            fmt("4k", MimeTypes.VIDEO_H265, 3840, 2160, 16_000_000),
+            fmt("hd", MimeTypes.VIDEO_H264, 1920, 1080, 5_000_000),
+            fmt("sd", MimeTypes.VIDEO_H264, 1280, 720, 2_500_000),
+        )
+        val support = intArrayOf(C.FORMAT_UNSUPPORTED_SUBTYPE, C.FORMAT_HANDLED, C.FORMAT_HANDLED)
+        val tracks = Tracks(listOf(Tracks.Group(TrackGroup(*f), true, support, BooleanArray(3) { it == 1 })))
+        val q = qualityOptions(tracks)
+        assertEquals(listOf("2160p", "1080p", "720p"), q.map { it.label })
+        assertFalse(q[0].playable)
+        assertTrue(q[0].note!!, q[0].note!!.contains("HEVC"))
+        assertTrue(q.drop(1).all { it.playable && it.note == null })
+    }
+
+    /** F4: the same height in a playable and an unplayable codec keeps the playable one. */
+    @Test fun playableTrackWinsTheSameLabel() {
+        val f = arrayOf(fmt("av1", MimeTypes.VIDEO_AV1, 1920, 1080, 3_000_000), fmt("avc", MimeTypes.VIDEO_H264, 1920, 1080, 5_000_000))
+        val support = intArrayOf(C.FORMAT_UNSUPPORTED_SUBTYPE, C.FORMAT_HANDLED)
+        val q = qualityOptions(Tracks(listOf(Tracks.Group(TrackGroup(*f), true, support, BooleanArray(2)))))
+        assertEquals(1, q.size)
+        assertTrue(q[0].playable)
+        assertEquals(1, q[0].trackIndex)
     }
 }

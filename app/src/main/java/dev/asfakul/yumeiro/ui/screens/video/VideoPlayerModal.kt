@@ -2126,14 +2126,16 @@ private fun VideoPlayerModalContent(
         if (showQualityDialog && qualityList.size > 1) {
             // R15: the stream's ladder + the downloader's / other sources' heights it lacks, so the
             // list matches the download sheet (Video, YouTube and Yumix alike).
-            val extras = dev.asfakul.yumeiro.player.QualityEngine.extraHeights(qualityList.map { it.height }, altQualities.mapNotNull { it.alt })
+            val extras = dev.asfakul.yumeiro.player.QualityEngine.extraHeights(qualityList.filter { it.playable }.map { it.height }, altQualities.mapNotNull { it.alt })
                 .map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = a.note ?: "Another stream of this video") }
             QualityDialog(
-                options = (qualityList + extras).sortedByDescending { it.height },
+                // An unplayable track (F4) gives way to another stream of the same height.
+                options = (qualityList.filterNot { q -> !q.playable && extras.any { it.label == q.label } } + extras).sortedByDescending { it.height },
                 selected = selectedQuality,
                 autoLabel = "Auto",
                 onSelect = { option ->
                     option?.alt?.let { alt -> if (!alt.current) switchToAlt(alt, exoPlayer.currentPosition); return@QualityDialog }
+                    if (option != null && !option.playable) return@QualityDialog
                     val builder = exoPlayer.trackSelectionParameters.buildUpon()
                         .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
                         .setMaxVideoBitrate(Int.MAX_VALUE)
