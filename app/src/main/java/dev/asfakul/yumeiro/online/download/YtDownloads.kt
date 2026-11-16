@@ -139,11 +139,12 @@ object YtDownloads {
 
     /** Copies a finished file into the phone's Music/Yumeiro or Movies/Yumeiro (Android 10+, no permission). */
     /**
-     * "Save YouTube downloads to phone" (`yt_to_phone`): a finished YouTube download is copied to the
+     * "Save YouTube and link downloads to phone" (`yt_to_phone`): a finished YouTube download is copied to the
      * phone's Movies/Yumeiro or Music/Yumeiro and the app copy deleted. Off: the file stays in the app.
      * Returns the public Uri when published. Moved out of DownloadWorker unchanged (G9 effect test).
      */
     internal fun afterDownload(context: Context, item: OnlineDownloads.Item, out: File): Uri? {
+        if (isPlayLink(item)) return afterLinkDownload(context, item, out)
         if (item.kind != OnlineDownloads.Kind.YT_VIDEO && item.kind != OnlineDownloads.Kind.YT_AUDIO) return null
         if (!DownloadSettings.saveYouTubeToPhone.value) return null
         val audio = item.kind == OnlineDownloads.Kind.YT_AUDIO
@@ -151,6 +152,33 @@ object YtDownloads {
         return publish(context, out, name, mimeOf(item.container ?: out.extension, audio), music = audio)?.also { uri ->
             // The phone's copy is the one that plays; drop the app copy so space isn't used twice.
             OnlineDownloads.resolved(item.id) { it.copy(publicUri = uri.toString()) }
+            out.delete()
+        }
+    }
+
+    /** BUG-7 7b: a link the user pasted (Live → Play link) or a website video saved from the player. */
+    fun isPlayLink(item: OnlineDownloads.Item) = item.kind == OnlineDownloads.Kind.LINK && item.api == "Network"
+
+    fun linkMime(ext: String) = when (ext.lowercase()) {
+        "ts" -> "video/mp2t"
+        "mkv" -> "video/x-matroska"
+        "webm" -> "video/webm"
+        "mov" -> "video/quicktime"
+        "avi" -> "video/x-msvideo"
+        else -> "video/mp4"
+    }
+
+    /**
+     * BUG-7 7b (owner): Play link downloads stayed in the app's private folder, so the gallery never
+     * saw them. With "Save downloads to phone" on (the YouTube switch, now for links too) the file is
+     * copied to Movies/Yumeiro. The app copy is deleted only after the copy is complete, and the item
+     * becomes Permanent so the auto-delete never removes a file the user now sees in the gallery.
+     */
+    private fun afterLinkDownload(context: Context, item: OnlineDownloads.Item, out: File): Uri? {
+        if (!DownloadSettings.saveYouTubeToPhone.value) return null
+        val name = out.name.substringBeforeLast('-') + "." + out.extension
+        return publish(context, out, name, linkMime(out.extension), music = false)?.also { uri ->
+            OnlineDownloads.resolved(item.id) { it.copy(publicUri = uri.toString(), keep = true) }
             out.delete()
         }
     }

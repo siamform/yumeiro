@@ -24,3 +24,26 @@ class StreamDownloadTest {
         assertFalse(StreamDownload.canSave(StreamRequest(url = "https://example.com/a.mp4", drmScheme = DrmScheme.WIDEVINE)))
     }
 }
+
+/** BUG-7 7b: which finished downloads go to the gallery as Play links, and with which MIME type. */
+class PlayLinkPublishTest {
+    private fun item(kind: dev.asfakul.yumeiro.online.download.OnlineDownloads.Kind, api: String) =
+        dev.asfakul.yumeiro.online.download.OnlineDownloads.Item("id", "t", api, "u", null, null, emptyMap(), "https://x/a.mp4", false, emptyMap(), "t-id.mp4", kind = kind)
+
+    @Test fun onlyNetworkLinksArePlayLinks() {
+        val y = dev.asfakul.yumeiro.online.download.YtDownloads
+        val k = dev.asfakul.yumeiro.online.download.OnlineDownloads.Kind
+        assertTrue(y.isPlayLink(item(k.LINK, "Network")))
+        assertFalse(y.isPlayLink(item(k.LINK, "SomeExtension")))
+        assertFalse(y.isPlayLink(item(k.EPISODE, "Network")))
+        assertFalse(y.isPlayLink(item(k.YT_VIDEO, "Network")))
+    }
+
+    @Test fun mimeFollowsTheSavedExtension() {
+        val y = dev.asfakul.yumeiro.online.download.YtDownloads
+        org.junit.Assert.assertEquals("video/mp2t", y.linkMime("ts"))
+        org.junit.Assert.assertEquals("video/x-matroska", y.linkMime("MKV"))
+        org.junit.Assert.assertEquals("video/mp4", y.linkMime("mp4"))
+        org.junit.Assert.assertEquals("video/mp4", y.linkMime("bin"))
+    }
+}

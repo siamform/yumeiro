@@ -27,7 +27,7 @@ class SettingsSearchCoverageTest {
         put("Player info overlay", setOf(Category.PLAYER, Category.AUDIO))
         put(Category.AUDIO, "Resume playback", "Anime4K enhancement", "Equalizer & sound effects", "Quality and audio")
         put(Category.ONLINE, "Show 18+ content", "Keep 18+ activity private", "Skip intro & outro (anime)", "Skip automatically")
-        put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube downloads to phone", "Show tips on the Downloads page")
+        put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page")
         put(Category.LIBRARY, "Rescan this device")
         put(Category.TRACKING, "Scrobble what I play", "Find lyrics online")
         put(Category.NOTIFICATIONS, "Show notifications", "New episodes", "New extensions", "New stream playlists",

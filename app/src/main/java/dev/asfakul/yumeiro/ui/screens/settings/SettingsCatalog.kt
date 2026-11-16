@@ -57,7 +57,7 @@ object SettingsCatalog {
             settings = listOf("Show 18+ content", "Keep 18+ activity private", "Skip intro & outro (anime)", "Skip automatically")),
         DOWNLOADS(Group.WATCH, "Downloads", "Quality, folders and automatic clean-up",
             listOf("offline", "storage", "quality", "delete", "save", "1dm", "adm", "download manager", "external"),
-            settings = listOf("Ask before each download", "Permanent by default", "Save YouTube downloads to phone", "Show tips on the Downloads page")),
+            settings = listOf("Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page")),
         LIBRARY(Group.WATCH, "Library & storage", "Scan this device for music and videos",
             listOf("scan", "rescan", "media", "files", "folder", "local"),
             settings = listOf("Rescan this device")),

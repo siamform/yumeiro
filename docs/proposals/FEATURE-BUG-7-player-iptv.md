@@ -32,3 +32,21 @@ the root, and proven on both phone emulators with a regression test that fails b
 2. Step A.5 note per item (how other open-source players handle it; ideas only).
 3. Root-cause fixes, each with a regression test that fails before and passes after; phone suite on both
    emulators at the milestone.
+
+## Decisions and fixes (2026-11-16)
+
+- **7a root cause (code):** website videos (`WebSitesScreen` → `IncomingMedia.open`) and pasted links play
+  with a `stream:` id and the `StreamWatchPanel` watch page. It had Share, Copy link and Other player, no
+  download; only the Play link page could save. Fix: `StreamDownload` (shared with `StreamScreen.download`)
+  and a Download action (`stream_watch_download`), shown when the stream can be saved (same DASH / Smooth /
+  DRM rule as before). No behaviour removed.
+- **7b root cause (code):** `YtDownloads.afterDownload` published only YouTube kinds to MediaStore; Play link
+  downloads (`Kind.LINK`, api `Network`) stayed in the app's private folder. Fix: with the existing
+  `yt_to_phone` switch on (default on, label now "Save YouTube and link downloads to phone"), a finished
+  Play link download is copied to Movies/Yumeiro; the app copy is deleted only after the copy completed
+  (`publish` returns null on any failure and then the app copy stays), and the item becomes Permanent so
+  auto-delete never removes a file the user sees in the gallery. Extension episodes are unchanged
+  (offline copies stay private). Existing finished downloads are not touched.
+- **Proof plan:** `StreamWatchDownloadDeviceTest` a (7a button, queue, finish) and the 7b MediaStore check
+  (Movies/Yumeiro, size > 0, no app copy, keep = true) on both phones (API 33 and 36). Unit:
+  `StreamDownloadTest`, `PlayLinkPublishTest`. A real gallery app view is OMT (owner phone).

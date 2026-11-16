@@ -88,5 +88,20 @@ class StreamWatchDownloadDeviceTest {
         assertTrue("7a: the player for a website video shows no Download action", button)
         assertTrue("7a: Download did not queue a download", queued)
         assertTrue("7a: the download did not finish within 60 s: ${item?.status}", done && saved)
+        // 7b: with "Save YouTube and link downloads to phone" on (default), the file is in
+        // Movies/Yumeiro (MediaStore, so the gallery lists it), the app copy is gone and the item is Permanent.
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            val uri = item?.publicUri
+            val inStore = uri != null && runCatching {
+                ctx.contentResolver.query(android.net.Uri.parse(uri), arrayOf(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.provider.MediaStore.MediaColumns.SIZE), null, null, null)?.use { c ->
+                    c.moveToFirst() && c.getString(0).orEmpty().startsWith("Movies/Yumeiro") && c.getLong(1) > 0
+                } == true
+            }.getOrDefault(false)
+            val appCopy = item?.let { OnlineDownloads.fileOf(ctx, it).exists() } == true
+            log("WDL_CASE b publicUri=$uri inStore=$inStore appCopy=$appCopy keep=${item?.keep}")
+            assertTrue("7b: the link download is not in Movies/Yumeiro (gallery): $uri", inStore)
+            assertTrue("7b: the app copy was kept next to the gallery copy", !appCopy)
+            assertTrue("7b: a download now in the gallery must be Permanent (no auto-delete)", item?.keep == true)
+        }
     }
 }

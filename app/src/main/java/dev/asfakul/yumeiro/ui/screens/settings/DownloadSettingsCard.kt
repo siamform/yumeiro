@@ -90,7 +90,7 @@ fun DownloadSettingsCard() {
             (1..3).forEach { n -> FilterChip(selected = n == parallel, onClick = { DownloadSettings.setParallel(context, n) }, label = { Text("$n") }) }
         }
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        SettingsToggleRow("Save YouTube downloads to phone", "Videos go to Movies/Yumeiro and music to Music/Yumeiro, visible in other apps", toPhone,
+        SettingsToggleRow("Save YouTube and link downloads to phone", "Videos go to Movies/Yumeiro and music to Music/Yumeiro, visible in the gallery and other apps", toPhone,
             { DownloadSettings.setSaveYouTubeToPhone(context, it) }, "setting_yt_to_phone")
         SettingsToggleRow("Show tips on the Downloads page", "The short \"How downloads work\" guide", tips,
             { DownloadSettings.setShowTips(context, it) }, "setting_download_tips")
