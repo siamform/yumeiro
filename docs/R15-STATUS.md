@@ -1,23 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 10:47 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 11:09 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
-  G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
-  No PR/merge/release without the owner.
-- **Sandbox:** no JDK/Android SDK in this sandbox; every compile and unit test goes to CI.
-- **Current group:** Level 1 (Group 12) + Level 2 BUG-1..4.
-- **Last device run read:** 43849088080 (3076b25), see device-runs.md.
-- **Code waiting for CI (not run yet):** BUG-4 F1/F2/F5 + `Bug4QualityListTest`; BUG-1 D5 + 2 new
-  `ResumePointsTest` cases, D5 clearAdult reset (de891ac); BUG-2 E6; BUG-3 `DownloadThroughputTest`;
-  YouTube test seam `YouTube.seedForTests` (640e984).
-- **Throwaway branch pushed:** `fail-before/r15-proofs` (fc45f69, worktree /tmp/fb) reverts X15-2,
-  BUG-1 D1–D5 (keeps ResumeRules.kt), BUG-4 F1. Never merged; delete after its CI run.
-- **Running:** CI 43851470283 (ci.yml on 191dedf, 10:44 UTC); device check 43851896291 (640e984):
-  DecoderFault, YtChannelUi, YtQuality (likely SKIP: bot wall), YtQualityOffline (new, BUG-4 F1 without YouTube).
-- **Next three actions:** (1) read CI 43851470283 (unit tests, THROUGHPUT lines in test-results XML);
-  (2) read device 43851896291 + look at shots; (3) CI on fail-before/r15-proofs, then HomeTrace swangle,
-  ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs, BUG-3 root cause from the numbers.
+  G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
+- **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
+- **Current group:** Level 2 BUG-1..4 (+ Group 12 leftovers).
+- **CI 43851470283 (191dedf) read:** BUG-1/2/4 unit tests pass; 2 failures = DownloadThroughputTest test
+  error (HLS fake), fixed. BUG-3 measured: Segmented end collapse (last 10 % = 4.9× average), fixed 40ea96e.
+- **Running:** CI 43854742733 (40ea96e: BUG-3 fix + rule, Bug3PieceTest, BUG-4 F4 tests);
+  device 43851896291 (640e984: DecoderFault, YtChannelUi, YtQuality, YtQualityOffline);
+  device 43855202294 (93070ae: DownloadThroughputDeviceTest real host, screen on / screen off + Doze).
+- **Throwaway branch:** `fail-before/r15-proofs` (408faea) — dispatch ci.yml on it after CI 43854742733,
+  then a device run of YtQualityOfflineDeviceTest on it; delete afterwards, never merge.
+- **Next three actions:** (1) read CI 43854742733 (THROUGHPUT lastOverMean for every engine);
+  (2) read both device runs + shots; (3) fail-before CI, BUG-3 real-host "before" (temp branch with the
+  old Segmented), then HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
