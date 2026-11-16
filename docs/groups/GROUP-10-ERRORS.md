@@ -52,4 +52,8 @@ ID note: these rows were first written as ER-1/ER-2, which clash with the older 
 | Left as is after review: per-row Install failures (the Install button stays on the row, so tapping it again is the retry); "Couldn't start casting" (CastSupport.play returns false without a reason; the cast session is already connected when it runs) — noted, not changed | code review | — | noted |
 | ER-11 permission denied once / blocked / Open settings | `PermissionFlowDeviceTest` | emulator | run owed |
 | Permission revoked while running | Android kills the app process on revoke; what the next start shows is not yet checked | — | open |
-| No / slow network, VPN, low storage | — | emulator | open |
+| No network (Wi-Fi + data off → signal, offline pill, "No internet connection", back on) | `NetworkStateDeviceTest.a` | emulator | run owed |
+| Slow server (25 s > 20 s read timeout → "took too long"; 32 KB/s steady body completes) | `NetworkStateDeviceTest.b` | emulator | run owed |
+| Refused port → "refused the connection" | `NetworkStateDeviceTest.c` | emulator | run owed |
+| VPN | `NetworkStateDeviceTest.d` logs `vpnActive`; an emulator cannot raise a VPN without a VPN app and the consent dialog → owner test after the run | emulator + owner | open |
+| Low storage | ER-14 mapper (unit); downloads DiskFull (G8) | unit | device fill test open |
