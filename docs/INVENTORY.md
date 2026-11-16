@@ -133,10 +133,10 @@ verified on a device, evidence linked), `not covered` (reason given).
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | S1–S22 | The 22 categories: Look & feel; Navigation bar; Player; Audio quality & sound; Online videos; Downloads; Library & storage; Sources; Source status; Tracking; YouTube account; Watch together; Notifications; Background & battery; Network; Privacy & security; Backup & restore; App updates; Setup guide; User guide; Crash reports; About & developer | ui/screens/settings/* | open | |
-| S23 | Settings search | SettingsCatalog keywords | open | |
-| S24 | Every reset action | backup/ResetCenter | code read; ST-1 fixed (unit pending) | `SettingsResetTest`, `BackupV2Test` |
-| S25 | Backup, restore, auto backup worker, restart | backup/* | code read; ST-1 restore by section fixed (unit pending); auto backup worker not re-checked yet | `SettingsResetTest`, `BackupV2Test`, `BackupDeviceTest` (BK-1) |
-| S26 | Theme, backdrop custom image (accepted types) | ui/theme/*, BackdropSettings | ST-2 fixed; device test written, not run | `BackdropImportDeviceTest`, `BackdropImportTest` |
+| S23 | Settings search | SettingsCatalog keywords + per-page setting names | SE-3 fixed (42 of 51 names found nothing); unit pending | `SettingsSearchCoverageTest`, `SettingsCatalogTest` |
+| S24 | Every reset action | backup/ResetCenter | code read; SE-1 fixed (unit pending) | `SettingsResetTest`, `BackupV2Test` |
+| S25 | Backup, restore, auto backup worker, restart | backup/* | code read; SE-1 restore by section fixed (unit pending); auto backup worker not re-checked yet | `SettingsResetTest`, `BackupV2Test`, `BackupDeviceTest` (BK-1) |
+| S26 | Theme, backdrop custom image (accepted types) | ui/theme/*, BackdropSettings | SE-2 fixed; device test written, not run | `BackdropImportDeviceTest`, `BackdropImportTest` |
 | S27 | Each toggle's real effect (~42 switches) | settings cards | 40 switches listed, consumers checked statically; persistence walk on device in progress | `SettingsWalkDeviceTest` |
 
 ## G10 Alerts, toasts, dialogs and errors

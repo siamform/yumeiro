@@ -26,8 +26,9 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 
 | # | Problem | Root cause | Fix | Test |
 |---|---|---|---|---|
-| ST-1 | "Reset settings" says "Your library, sources and extensions stay" but erased music playlists, favourite songs and videos, device resume points, recently played, play counts, saved sites, listening time, Jump back in, the unsent Last.fm queue and source prefs. A Library-only restore left playlists and favourites out; a Settings-only restore replaced them. "Clear watch and search history" left device resume points, recently played songs, Jump back in and online searches | Two separate, incomplete lists (Backup `libraryPrefs`, ResetCenter `keep`) at whole-file level, while `mt_player_music_prefs` / `mt_player_video_prefs` hold library data next to settings; restore replaced whole files | One table `backup/PrefSections` gives the section of every value (file + key); export, stage, restore (replaces only the restored sections' keys) and both resets use it (de40e78) | `r17/SettingsResetTest` (4) |
-| ST-2 | A 1000 × 100 picture was accepted as backdrop although the page says at least 200 × 200 px | `importPhoto` refused only when both sides were under 200 | Either side (commit "refuse a backdrop photo under 200 px…") | `BackdropImportDeviceTest` strip case |
+| SE-1 | "Reset settings" says "Your library, sources and extensions stay" but erased music playlists, favourite songs and videos, device resume points, recently played, play counts, saved sites, listening time, Jump back in, the unsent Last.fm queue and source prefs. A Library-only restore left playlists and favourites out; a Settings-only restore replaced them. "Clear watch and search history" left device resume points, recently played songs, Jump back in and online searches | Two separate, incomplete lists (Backup `libraryPrefs`, ResetCenter `keep`) at whole-file level, while `mt_player_music_prefs` / `mt_player_video_prefs` hold library data next to settings; restore replaced whole files | One table `backup/PrefSections` gives the section of every value (file + key); export, stage, restore (replaces only the restored sections' keys) and both resets use it (de40e78) | `r17/SettingsResetTest` (4) |
+| SE-2 | A 1000 × 100 picture was accepted as backdrop although the page says at least 200 × 200 px | `importPhoto` refused only when both sides were under 200 | Either side (commit "refuse a backdrop photo under 200 px…") | `BackdropImportDeviceTest` strip case |
+| SE-3 | Typing a setting's own name in Settings search found nothing for 42 of 51 switches and actions | `SettingsCatalog.search` only looked at page title, summary and keywords, and every word must match | Each page lists the names of its switches and actions (`Category.settings`); a test scans the code so a new switch must be added | `r17/SettingsSearchCoverageTest` (4) |
 
 ## Checked and not a bug (or kept on purpose)
 
@@ -48,10 +49,11 @@ Actions. Status words as in `docs/DONE-LEDGER.md`.
 
 | Item | Evidence | Label | Status |
 |---|---|---|---|
-| ST-1 | `SettingsResetTest` | unit | CI run owed (43877618176 running) |
-| ST-2, S26 image types | `BackdropImportDeviceTest` | emulator | not run yet |
+| SE-1 | `SettingsResetTest` | unit | CI run owed (43877618176 running) |
+| SE-2, S26 image types | `BackdropImportDeviceTest` | emulator | not run yet |
 | S27 every switch persists across a kill | `SettingsWalkDeviceTest` | emulator | first run 43875418000 was a test error (taps below the fold, home detection); fixed in e7efd6e, rerun 43877623222 running |
-| S23 search, S1–S22 pages, notification settings, Player info overlay, Quality and audio effects | — | — | open |
+| SE-3, S23 search | `SettingsSearchCoverageTest` | unit | CI run owed |
+| S1–S22 pages, notification settings, Player info overlay, Quality and audio effects | — | — | open |
 
 ## Preference inventory (generated)
 
@@ -254,3 +256,5 @@ default)`; one row per read.
 | `yumeiro_drama` | `enabled` | Boolean | true | app state (settings section) | `sources/drama/YumeiroDrama.kt:57` |
 | `yumeiro_listening` | `music_ms` | Long | 0L | library | `player/ListeningTime.kt:40` |
 | `yumeiro_tv_mode` | `layout` | String | null | device-only (not in backup, kept by every reset) | `ui/tv/TvMode.kt:40` |
+
+Note: the settings bug IDs were first written ST-1 / ST-2 (commit de40e78, ST-2 commit). They clashed with the older stability rows ST-1 … ST-20, so they are SE-1 / SE-2 from now on.

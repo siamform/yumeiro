@@ -7,12 +7,12 @@
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
 - **Current group:** Level 2 — G9 Settings (`docs/groups/GROUP-9-SETTINGS.md`). G8/G5 rows wait for the head CI.
 - **Done since last update:** CI 43871066269 read (LB-8, DL-7, DL-8, DL-9 unit pass; DL-6 fail-before claim
-  withdrawn, it was a test error; DL-11 measured). ST-1 fixed (Reset settings erased playlists/favourites/resume
-  points; restore by section). ST-2 fixed (backdrop min size). SettingsWalk test errors fixed. BackdropImportDeviceTest added.
+  withdrawn, it was a test error; DL-11 measured). SE-1 fixed (Reset settings erased playlists/favourites/resume
+  points; restore by section). SE-2 fixed (backdrop min size). SettingsWalk test errors fixed. BackdropImportDeviceTest added.
   CI 43876676611 cancelled (stale: head moved on).
 - **Running:** CI 43877618176 (head e7efd6e: SettingsResetTest, DL-6 rerun, tail floor); device 43877623222
   (SettingsWalk rerun); device 43869944264 (X10-5 upgrade from v1.8.0).
-- **Next three actions:** (1) read CI 43877618176 → ST-1, DL-6 rows; (2) read SettingsWalk 43877623222 and the
+- **Next three actions:** (1) read CI 43877618176 → SE-1, DL-6 rows; (2) read SettingsWalk 43877623222 and the
   upgrade run → S27, X10-5; (3) dispatch BackdropImportDeviceTest when a device slot is free, then G9 S23/S1–S22 effects.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM

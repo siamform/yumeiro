@@ -31,44 +31,64 @@ object SettingsCatalog {
         val keywords: List<String>,
         /** Key for an existing screen (see SettingsScreen's onOpenPage); null = page inside Settings. */
         val route: String? = null,
+        /**
+         * R17 (G9 S23): the names of the switches and actions on the page, so typing a setting's
+         * own name finds its page. Before, 42 of 51 setting names found nothing (every word had to
+         * be in the title, summary or keywords). `SettingsSearchCoverageTest` fails when a switch
+         * is added without its name here.
+         */
+        val settings: List<String> = emptyList(),
     ) {
         APPEARANCE(Group.PERSONAL, "Look & feel", "Theme, time-of-day colours, pure black, artwork glow",
-            listOf("theme", "dark", "light", "amoled", "colour", "color", "ambient", "appearance")),
+            listOf("theme", "dark", "light", "amoled", "colour", "color", "ambient", "appearance"),
+            settings = listOf("Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents", "Backdrop", "Your photo", "Intensity")),
         NAVIGATION(Group.PERSONAL, "Navigation bar", "Choose the tabs and add up to two shortcuts",
-            listOf("bottom bar", "tabs", "taskbar", "nav", "shortcut", "menu", "dock")),
+            listOf("bottom bar", "tabs", "taskbar", "nav", "shortcut", "menu", "dock"),
+            settings = listOf("Reset to default")),
 
         PLAYER(Group.WATCH, "Player", "Background play, picture-in-picture, captions, Back button",
-            listOf("video", "pip", "subtitles", "cc", "floating", "minimize", "background")),
+            listOf("video", "pip", "subtitles", "cc", "floating", "minimize", "background"),
+            settings = listOf("Background play", "Picture-in-picture", "Captions on by default", "Player info overlay")),
         AUDIO(Group.WATCH, "Audio quality & sound", "Hi-Res, lossless or data saver, separately for Wi-Fi and mobile; equalizer",
-            listOf("sound", "eq", "equalizer", "bass", "music", "3d", "virtualizer", "quality", "flac", "lossless", "hi-res", "hires", "dolby", "atmos", "kbps", "bitrate", "data saver", "320")),
+            listOf("sound", "eq", "equalizer", "bass", "music", "3d", "virtualizer", "quality", "flac", "lossless", "hi-res", "hires", "dolby", "atmos", "kbps", "bitrate", "data saver", "320"),
+            settings = listOf("Quality and audio", "Resume playback", "Anime4K enhancement", "Equalizer & sound effects")),
         ONLINE(Group.WATCH, "Online videos", "18+ content, skip intro, subtitle search",
-            listOf("anime", "adult", "nsfw", "aniskip", "opensubtitles", "subdl", "subsource", "subtitles", "language", "intro", "outro")),
+            listOf("anime", "adult", "nsfw", "aniskip", "opensubtitles", "subdl", "subsource", "subtitles", "language", "intro", "outro"),
+            settings = listOf("Show 18+ content", "Keep 18+ activity private", "Skip intro & outro (anime)", "Skip automatically")),
         DOWNLOADS(Group.WATCH, "Downloads", "Quality, folders and automatic clean-up",
-            listOf("offline", "storage", "quality", "delete", "save", "1dm", "adm", "download manager", "external")),
+            listOf("offline", "storage", "quality", "delete", "save", "1dm", "adm", "download manager", "external"),
+            settings = listOf("Ask before each download", "Permanent by default", "Save YouTube downloads to phone", "Show tips on the Downloads page")),
         LIBRARY(Group.WATCH, "Library & storage", "Scan this device for music and videos",
-            listOf("scan", "rescan", "media", "files", "folder", "local")),
+            listOf("scan", "rescan", "media", "files", "folder", "local"),
+            settings = listOf("Rescan this device")),
 
         SOURCES(Group.SOURCES, "Sources", "Aniyomi, Mihon, Stremio, JavaScript and home servers, with how-to guides",
             listOf("extensions", "repo", "repository", "addon", "jellyfin", "plex", "emby", "dlna", "smb", "webdav", "mangayomi"), route = "sources"),
         SOURCE_STATUS(Group.SOURCES, "Source status", "See which installed sources respond right now",
             listOf("health", "broken", "working", "check"), route = "health"),
         TRACKING(Group.SOURCES, "Tracking", "AniList, MyAnimeList, Kitsu and Trakt, with setup guides",
-            listOf("anilist", "mal", "myanimelist", "kitsu", "trakt", "sync", "list", "progress", "account"), route = "tracking"),
+            listOf("anilist", "mal", "myanimelist", "kitsu", "trakt", "sync", "list", "progress", "account"), route = "tracking",
+            settings = listOf("Scrobble what I play", "Find lyrics online", "Last.fm", "LRCLIB")),
         YOUTUBE(Group.SOURCES, "YouTube account", "Optional sign-in for blocked or age-restricted videos",
             listOf("google", "login", "sign in", "bot", "age", "cookies", "cookie", "paste", "token", "youtube music"), route = "youtube"),
         TOGETHER(Group.SOURCES, "Watch together", "Sync playback with people on the same Wi-Fi",
             listOf("party", "sync", "friends", "share"), route = "together"),
 
         NOTIFICATIONS(Group.SYSTEM, "Notifications", "Inbox, alert types, on-time push alerts, chime and reminders",
-            listOf("alerts", "inbox", "sound", "chime", "episodes", "news", "push", "test", "unifiedpush", "ntfy", "reliable", "late")),
+            listOf("alerts", "inbox", "sound", "chime", "episodes", "news", "push", "test", "unifiedpush", "ntfy", "reliable", "late"),
+            settings = listOf("Show notifications", "New episodes", "New extensions", "New stream playlists", "Yumeiro news", "Service alerts", "Suggestions", "Yumeiro chime", "Instant alerts", "In-app reminders", "Send a test notification", "Reliable alerts (UnifiedPush)")),
         BACKGROUND(Group.SYSTEM, "Background & battery", "Background checks, Wi-Fi only, battery optimisation",
-            listOf("battery", "doze", "worker", "auto start", "autostart", "killed", "optimisation", "optimization")),
+            listOf("battery", "doze", "worker", "auto start", "autostart", "killed", "optimisation", "optimization"),
+            settings = listOf("Background checks", "Wi-Fi only")),
         NETWORK(Group.SYSTEM, "Network", "Smart DNS, automatic unblocking and VPN",
-            listOf("dns", "doh", "vpn", "blocked", "proxy", "cloudflare", "internet")),
+            listOf("dns", "doh", "vpn", "blocked", "proxy", "cloudflare", "internet"),
+            settings = listOf("Get around blocked sites automatically", "Only when system DNS fails", "Torrent streaming", "TorrServer")),
         PRIVACY(Group.SYSTEM, "Privacy & security", "App lock, incognito, permissions and clearing history",
-            listOf("lock", "fingerprint", "biometric", "incognito", "history", "clear", "cache", "permissions", "recents")),
+            listOf("lock", "fingerprint", "biometric", "incognito", "history", "clear", "cache", "permissions", "recents"),
+            settings = listOf("Incognito", "Lock Yumeiro", "Hide content in recents", "Clear watch history", "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications", "Clear cache", "All app permissions")),
         BACKUP(Group.SYSTEM, "Backup & restore", "Save everything to a file you control",
-            listOf("export", "import", "restore", "transfer", "phone"), route = "backup"),
+            listOf("export", "import", "restore", "transfer", "phone"), route = "backup",
+            settings = listOf("Back up automatically", "Save loaded pages on the phone", "Reset settings", "Erase everything")),
 
         UPDATES(Group.ABOUT, "App updates", "Check for new versions from GitHub Releases",
             listOf("update", "version", "release", "changelog", "beta")),
@@ -95,7 +115,7 @@ object SettingsCatalog {
         return Category.entries.mapNotNull { c ->
             val title = c.title.lowercase()
             val summary = c.summary.lowercase()
-            val keys = c.keywords.joinToString(" ").lowercase()
+            val keys = (c.keywords + c.settings).joinToString(" ").lowercase()
             var score = 0
             for (w in words) {
                 score += when {
