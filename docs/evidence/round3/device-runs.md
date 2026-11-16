@@ -474,3 +474,20 @@ Emulator (Perfetto, debug APK, 3 cold starts per phone, `scripts/home_trace_repo
 - The extra 19–33 MB is data read and thrown away. Open question (DL-11): RequestPace restarts (up to 32 per piece)
   and tail splits close a response with bytes in flight. The test rule stays; DownloadThroughputTest now reports
   the bytes the local server sent per engine to measure it.
+
+## CI 43867540147: fail-before branch `fail-before/r15-proofs` (unit, CI)
+
+The new tests run against the code without their fixes (accessor kept so it compiles).
+1023 tests, 10 fail — exactly the expected ones, nothing else:
+
+| Test | Fix it proves |
+|---|---|
+| `LivePagedTest.aTimeoutInsideTheFetchIsAFailureNotAStuckSpinner` | X15-2 |
+| `ResumePointsTest` ×3 (unloaded player, domain rotation, online zero) | BUG-1 |
+| `Bug4QualityListTest.youTubeManifestStillGetsItsRequest` | BUG-4 |
+| `DownloadListSaveRaceTest.parallelFinishesAllReachTheFile` | DL-6 |
+| `DownloadThroughputTest.droppedConnectionsResumeInsideOneRun` | DL-9 |
+| `DownloadThroughputTest.burstThenCapPerRequest` | BUG-3 (no RequestPace there) |
+| `LibraryCrudTest` ×2 (CRUD order across restart, liked order) | LB-8 |
+
+Next on that branch: device `YtQualityOfflineDeviceTest` 43871061781 (expected FAIL), then the branch is deleted.
