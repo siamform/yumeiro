@@ -215,6 +215,17 @@ fun VideoPlayerModal(
                             )
                         }
                     }
+                    .then(if (dev.asfakul.yumeiro.BuildConfig.DEBUG) Modifier.pointerInput(Unit) {
+                        // SE-6 diagnosis (debug builds only, observes, never consumes): what reaches the window.
+                        awaitPointerEventScope {
+                            while (true) {
+                                val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                e.changes.firstOrNull()?.let { c ->
+                                    android.util.Log.i("YuFloat", "ptr ${e.type} at ${c.position} pressed=${c.pressed} consumed=${c.isConsumed}")
+                                }
+                            }
+                        }
+                    } else Modifier)
                     .testTag("video_floating_player")
             } else modifier
             VideoPlayerModalContent(video, onClose, onProgressUpdate, slot, nextVideo, hasPreviousVideo, onNextVideo, onPreviousVideo, overlay, onFatalError, watchPage, floating, onMinimize, onExpand, onGiveUp = onGiveUp)
@@ -2355,6 +2366,9 @@ private fun BoxScope.FloatingPlayerChrome(
     Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         IconButton(onClick = onPlayPause, modifier = Modifier.size(34.dp).testTag("floating_play_pause")) {
             Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pause" else "Play", tint = Color.White)
+        }
+        if (dev.asfakul.yumeiro.BuildConfig.DEBUG) androidx.compose.runtime.DisposableEffect(Unit) {
+            android.util.Log.i("YuFloat", "close button composed"); onDispose { android.util.Log.i("YuFloat", "close button disposed") }
         }
         IconButton(onClick = { android.util.Log.i("YuFloat", "close tapped"); onClose() }, modifier = Modifier.size(34.dp).testTag("floating_close")) {
             Icon(Icons.Default.Close, "Close", tint = Color.White)
