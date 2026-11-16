@@ -50,28 +50,31 @@ class HeroCarouselLifecycleDeviceTest {
         assumeTrue("HeatGuard blocks decorative motion on this run (${HeatGuard.level.value})", HeatGuard.allowDecorativeMotion())
         val owner = Owner()
         rule.runOnUiThread { owner.registry.currentState = Lifecycle.State.CREATED }
-        rule.mainClock.autoAdvance = false
+        // Real time, not the test clock: run 43904330191 showed slide A still in view after 9 s of
+        // mainClock time on both phones, because the carousel's delay() runs on the real main
+        // dispatcher in an instrumented test (only frames follow mainClock). Waiting in real time
+        // checks what a user sees.
         rule.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 HeroCarousel(listOf(slide("A"), slide("B"), slide("C")), "hero_lc_test") {}
             }
         }
-        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
         assertTrue("slide A must be the first page", onFirstSlide())
-        rule.mainClock.advanceTimeBy(20_000)
+        Thread.sleep(14_000) // > 2 periods of 6 s
+        rule.waitForIdle()
         val stillWhileStopped = onFirstSlide()
-        Log.i("YuHeroLc", "HERO_LC_CASE created 20 s: on A=$stillWhileStopped")
-        assertTrue("below STARTED the carousel must not advance (20 s, period 6 s)", stillWhileStopped)
+        Log.i("YuHeroLc", "HERO_LC_CASE created 14 s real: on A=$stillWhileStopped")
+        assertTrue("below STARTED the carousel must not advance (14 s, period 6 s)", stillWhileStopped)
 
         rule.runOnUiThread { owner.registry.currentState = Lifecycle.State.RESUMED }
-        rule.mainClock.advanceTimeBy(8_000)
-        rule.mainClock.advanceTimeBy(1_000)
-        val stillWhenStarted = onFirstSlide()
-        Log.i("YuHeroLc", "HERO_LC_CASE resumed 9 s: on A=$stillWhenStarted")
-        assertFalse("once started the carousel must advance within one period", stillWhenStarted)
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        val moved = runCatching { rule.waitUntil(15_000) { !onFirstSlide() }; true }.getOrDefault(false)
+        Log.i("YuHeroLc", "HERO_LC_CASE resumed: moved=$moved after ${android.os.SystemClock.elapsedRealtime() - t0} ms")
+        assertTrue("once started the carousel must advance within one period (15 s)", moved)
 
         rule.runOnUiThread { owner.registry.currentState = Lifecycle.State.CREATED }
-        rule.mainClock.advanceTimeBy(2_000)
+        rule.waitForIdle()
         Log.i("YuHeroLc", "HERO_LC_RESULT PASS")
     }
 }
