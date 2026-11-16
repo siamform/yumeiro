@@ -51,7 +51,7 @@ PY
 settle_first_run() { # answer the welcome guide / tour / permission or update prompts, up to $1 s
   local end=$(( $(date +%s) + $1 ))
   while [ "$(date +%s)" -lt "$end" ]; do
-    tap_text "Remind me later" "Skip" "Skip for now" "Not now" "Later" "Maybe later" "Close" "Got it" "Allow" "Done" "No thanks" || true
+    tap_text "Remind me later" "Skip" "Skip for now" "Not now" "Later" "Maybe later" "Maybe Later" "Close" "Got it" "Allow" "Done" "No thanks" || true
     sleep 3
   done
 }
@@ -78,11 +78,16 @@ dump old-tabs
 # Precondition (run 43869944264 lesson): the old app must be past its update dialog and welcome guide,
 # otherwise "guide again" after the upgrade means nothing. Report a harness error, not a product result.
 PRE_OK=1
-grep -qE 'text="(Skip|Skip for now|Remind me later)"' upgrade/ui-old-tabs.xml 2>/dev/null && PRE_OK=0
+# Run 43878778019: an extension pop-up ("Maybe Later") covered the tabs and still read as ready.
+grep -qE 'text="(Skip|Skip for now|Remind me later|Maybe Later)"' upgrade/ui-old-tabs.xml 2>/dev/null && PRE_OK=0
 note "old app past update dialog and welcome guide: $PRE_OK"
 # A local clip through the app's own VIEW handler; the player records history and progress.
 adb shell am start -a android.intent.action.VIEW -d file:///sdcard/Movies/upgrade-clip.mp4 -t video/mp4 -p $P > /dev/null 2>&1
-sleep 25; dump old-player
+sleep 12
+# Run 43878778019: an extension's support pop-up ("Maybe Later") covered the player in v1.8.0
+# (no Quiet mode then); answer pop-ups as a user would, then look again.
+for i in 1 2 3; do tap_text "Maybe Later" "Maybe later" "Not now" "Close" "Got it" > /dev/null || true; sleep 3; done
+sleep 4; dump old-player
 PLAYED=0; grep -qi 'upgrade-clip\|upgrade clip' upgrade/ui-old-player.xml 2>/dev/null && PLAYED=1
 grep -q 'YuPlayer\|ExoPlayerImpl.*Init' upgrade/logcat.txt 2>/dev/null && PLAYED=1
 note "old app opened the clip: $PLAYED"
@@ -100,6 +105,8 @@ sleep 20; dump new-start
 GUIDE_AGAIN=0; grep -qE 'text="(Skip|Skip for now)"' upgrade/ui-new-start.xml 2>/dev/null && GUIDE_AGAIN=1
 note "welcome guide shown again after upgrade: $GUIDE_AGAIN"
 # History tab or Home "Continue": the clip name must still be listed.
+# Run 43878778019: the new app's "Keep notifications on time" guide covered History; close prompts first.
+for i in 1 2 3; do tap_text "Close" "Maybe Later" "Maybe later" "Not now" "Got it" > /dev/null || true; sleep 3; done
 tap_text "History" > /dev/null || true; sleep 4; dump new-history
 CLIP_SEEN=0; grep -rqi "upgrade-clip\|upgrade clip" upgrade/ui-new-start.xml upgrade/ui-new-history.xml 2>/dev/null && CLIP_SEEN=1
 note "clip still listed after upgrade: $CLIP_SEEN"
@@ -116,5 +123,8 @@ V=PASS
 [ "$PRE_OK" = 1 ] || V=ERROR_PRECONDITION
 [ "$GUIDE_AGAIN" = 0 ] || V=FAIL
 [ "${FATAL:-0}" = 0 ] || V=FAIL
+# Without the clip played in the old app, history/resume parity was not exercised: not a PASS.
+[ "$V" = PASS ] && [ "$PLAYED" = 0 ] && V=INCOMPLETE_NOT_PLAYED
+[ "$V" = PASS ] && [ "$CLIP_SEEN" = 0 ] && V=FAIL_CLIP_NOT_LISTED
 echo "UPGRADE_RESULT $V compare=$CMP pre_ok=$PRE_OK played=$PLAYED guide_again=$GUIDE_AGAIN clip_seen=$CLIP_SEEN fatal=$FATAL"
 [ "$V" = PASS ]

@@ -540,3 +540,15 @@ CI 43876676611 cancelled: started on eb9b4b6, head moved to e7efd6e (ST-1 fix) b
 `DownloadThroughputTest` 3/3 with the 250 ms tail floor: burst segmented4 per10pct last 67 ms of 370 ms,
 segmented2-lowend last 110 ms of 461 ms; steady profiles flat (tailRatio 1.00). servedOverSize burst
 segmented4 1.092, segmented2 1.037, single-no-ranges 1.132 (DL-11 data waste still open).
+
+## Upgrade check 43878778019 (v1.8.0 → d978853, emulator) — reported PASS, not accepted
+
+`UPGRADE_RESULT PASS compare=0 pre_ok=1 played=0 guide_again=0 clip_seen=0 fatal=0`. Data: 36 → 39 files,
+**0 lost values**, 1 changed (`mt_updater last_check`), new files breadcrumbs.log, reliability_guide.xml,
+yumeiro_crashlog.xml; FATAL/ANR 0. But the screens show v1.8.0's extension support pop-up ("Support Phisher
+Repo … Maybe Later") over the tabs and over the clip (v1.8.0 has no Quiet mode), so the clip never played in the
+old app (played=0) and history/resume parity was not exercised; after the upgrade the new app's "Keep
+notifications on time" guide covered History (clip_seen=0). pre_ok=1 was wrong (the pop-up was not checked).
+Harness fixed: "Maybe Later" answered (case), pop-ups answered after the clip starts and before History,
+pre_ok counts the pop-up, and PASS now needs played=1 (else INCOMPLETE_NOT_PLAYED) and the clip listed after
+the upgrade (else FAIL_CLIP_NOT_LISTED). Rerun owed.
