@@ -13,7 +13,9 @@
   - BUG-6 verified on device (emulator, both phones).
   - BUG-7: 7a, 7b verified on device (emulator, 43935805199). 7c real cause found (Back minimized then the error
     re-expanded the player) → fixed in code, proof owed. 7d plays on; anime4k_on test timing fixed, rerun owed.
-- **CI:** 43938487132 running at the 7c fix head. Ghost 43927717593 recorded.
+- **CI:** 43941919340 green at f3f8914 (7c fix + test import). 43938487132 was cancelled by ghost 43927717593
+  waking up (ci.yml cancel-in-progress); ghost cancelled, 43939248924 failed on a test compile (fixed f3f8914).
+- **Running:** phones 43946324687 (StreamFormatMismatch, UpscaleFreeze) at f3f8914.
 - **Next three actions:** (1) CI green → phones run StreamFormatMismatch + UpscaleFreeze; (2) record 7c/7d,
   close BUG-7 if both pass; (3) tv_api=24 TvBug5Repro, then close G9/G10 and start G12.
 

@@ -458,7 +458,7 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-16 | BUG-7 | 43920651380: 7c/7d no freeze on emulator (readable error, main thread free); closed=false was the test (Back leaves to the floating window; sleep stops the Compose clock). api33 1.5 s binder stall in setRequestedOrientation → fixed (only on change). 7a and 7b fixed in code, device proof owed |
 | 2026-11-17 | BUG-7 | 7a and 7b in progress → verified on device (emulator, both phones, 43935805199: watch-page Download queued and done; Play link file in Movies/Yumeiro, app copy removed). 7c: Back ignored on the error card (minimize then auto-expand) → fixed in code, proof owed. 7d anime4k_on More tap: test timing, test fixed |
 | 2026-11-17 | BUG-5 | TV-4 answer verified on device (tv-api34 emulator, 43935810414 d: after Enter focus stays in topbar_search_input and an answer shows). TV-4 scope (cross-source search) stays G7 proposal 3 |
-| 2026-11-17 | CI | ghost run 43927717593 queued with no jobs for 40 min; cancel answered "completed"; re-dispatched as 43932186480 (green) |
+| 2026-11-17 | CI | ghost run 43927717593 queued with no jobs for 40 min; cancel answered "completed"; re-dispatched as 43932186480 (green). At 19:24 UTC it woke and cancelled 43938487132 (same concurrency group); cancelled again as stale |
 
 
 Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-7 was already used by the R16 library-tabs row; the commit message says LB-7).
