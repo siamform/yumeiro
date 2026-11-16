@@ -10,6 +10,11 @@ R16 check (2026-11-15): every one of the 368 Kotlin files under `app/src/main/ja
 an item by file or package name. Files with no item became Y8, L10, D8 and X13–X16, or were added to
 the code list of P1 and M2.
 
+Handover-6 check (2026-11-17, master handover 7.3): 393 Kotlin files under `app/src/main/java`; each
+matched to an item by file name, package or a `pkg/*` entry (the three `update/ui` files are under N3).
+Reverse check: every class, object or function named in a Code column still exists in `app/src/main`
+(only DESIGN/SYSTEM, a doc link, and the YuStall log tag are not code names). No item added or removed.
+
 Status values: `open` (not audited yet), `audited` (tested, problems listed), `done` (fixed and
 verified on a device, evidence linked), `not covered` (reason given).
 
