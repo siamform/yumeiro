@@ -9,6 +9,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
@@ -46,8 +47,7 @@ class PlaybackHealthMonitor(
     enum class LowBandwidthAction { REVERTED_TO_AUTO, CAPPED_BITRATE }
 
     @Volatile var health = PlaybackHealth(); private set
-    private val rebufferTimes = ArrayDeque<Long>()
-    private var lastStepDownAt = 0L
+    private val rebuffers = RebufferWindow()
     private var wasReady = false
 
     fun attach() = player.addAnalyticsListener(this)
@@ -69,7 +69,7 @@ class PlaybackHealthMonitor(
         ).also { health = it }
     }
 
-    fun reset() { health = PlaybackHealth(); rebufferTimes.clear(); wasReady = false }
+    fun reset() { health = PlaybackHealth(); rebuffers.clear(); wasReady = false }
 
     override fun onBandwidthEstimate(eventTime: AnalyticsListener.EventTime, totalLoadTimeMs: Int, totalBytesLoaded: Long, bitrateEstimate: Long) {
         health = health.copy(bandwidthBps = bitrateEstimate)
@@ -106,20 +106,34 @@ class PlaybackHealthMonitor(
         }
     }
 
+    // BUG-4: a quality the user picks, or a seek, makes the player buffer once. Those are not the
+    // network failing; counting them reverted a picked quality to Auto after three picks in a minute
+    // (device run 43857809658: 184p, 288p, then 480p snapped back to Auto and 720p).
+    override fun onTrackSelectionParametersChanged(eventTime: AnalyticsListener.EventTime, trackSelectionParameters: TrackSelectionParameters) {
+        // Also fires for the monitor's own step-down (events may be delivered late); harmless, as
+        // a step-down already blocks the next one for a minute.
+        rebuffers.userChange(now())
+    }
+
+    override fun onPositionDiscontinuity(eventTime: AnalyticsListener.EventTime, oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+        if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) rebuffers.userChange(now())
+    }
+
     private fun onRebuffer() {
         val t = now()
         health = health.copy(rebuffers = health.rebuffers + 1)
-        rebufferTimes.addLast(t)
-        while (rebufferTimes.isNotEmpty() && t - rebufferTimes.first() > 60_000L) rebufferTimes.removeFirst()
-        if (rebufferTimes.size >= 3 && t - lastStepDownAt > 60_000L) stepDown(t)
+        if (rebuffers.rebuffer(t)) stepDown(t)
     }
 
     private fun stepDown(t: Long) {
         val videoTracks = player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }.sumOf { it.length }
         if (videoTracks < 2) return // single-quality stream: nothing to adapt
         val params = player.trackSelectionParameters
-        lastStepDownAt = t
-        rebufferTimes.clear()
+        rebuffers.steppedDown(t)
+        stepDownNow(params)
+    }
+
+    private fun stepDownNow(params: TrackSelectionParameters) {
         if (params.overrides.values.any { it.type == C.TRACK_TYPE_VIDEO }) {
             player.trackSelectionParameters = params.buildUpon().clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
             onLowBandwidth(LowBandwidthAction.REVERTED_TO_AUTO)
@@ -131,5 +145,35 @@ class PlaybackHealthMonitor(
             player.trackSelectionParameters = params.buildUpon().setMaxVideoBitrate(cap).build()
             onLowBandwidth(LowBandwidthAction.CAPPED_BITRATE)
         }
+    }
+}
+
+/**
+ * When the player should step quality down: three rebuffers within a minute, at most once a minute.
+ * A rebuffer within [USER_GRACE_MS] of the user's own change (quality pick, seek) is that change
+ * loading, not the network, and is not counted. Pure; `RebufferWindowTest`.
+ */
+internal class RebufferWindow {
+    private val times = ArrayDeque<Long>()
+    private var lastStepDownAt = Long.MIN_VALUE / 2
+    private var lastUserChangeAt = Long.MIN_VALUE / 2
+
+    fun userChange(t: Long) { lastUserChangeAt = t }
+
+    /** Counts a rebuffer at [t]; true when quality should step down now. */
+    fun rebuffer(t: Long): Boolean {
+        if (t - lastUserChangeAt < USER_GRACE_MS) return false
+        times.addLast(t)
+        while (times.isNotEmpty() && t - times.first() > WINDOW_MS) times.removeFirst()
+        return times.size >= 3 && t - lastStepDownAt > WINDOW_MS
+    }
+
+    fun steppedDown(t: Long) { lastStepDownAt = t; times.clear() }
+
+    fun clear() { times.clear() }
+
+    companion object {
+        const val WINDOW_MS = 60_000L
+        const val USER_GRACE_MS = 8_000L
     }
 }
