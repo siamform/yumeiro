@@ -185,8 +185,8 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
    X13-1, X13-2 done.)
 2. X2: startup after-numbers with the committed baseline profile (43790371337). (Before numbers, profile and heap profile done.)
 3. ST-17 root cause (ST-13/14/15 emulator proof, ST-18 classified, ST-19 fixed, ST-20 third-party: done).
-4. X7: MASVS write-up.
-5. X10: upgrade test from the v1.8.0 release on an emulator. (R8 / ABI / signing review done: X10-1.)
+4. X7: MASVS write-up — written (`docs/security/MASVS.md`, code review; X7-4 fixed). Review with the owner pending.
+5. X10: upgrade test from the v1.8.0 release on an emulator — harness written (`upgrade-check.yml`, `scripts/upgrade-check.sh`), first run pending. (R8 / ABI / signing review done: X10-1.)
 6. X11–X16: full audit (network, caching, compatibility, design system, live feed, Worker).
 7. Deferred-to-G12 items: widget data updates, decoder fault injection, Anime4K on emulator GL.
 8. RTL layout check.

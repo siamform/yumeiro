@@ -131,7 +131,11 @@ object HeadlessCapture {
                 if (AdFilter.isAd(url)) return
                 capture.onRequest(url, "GET", emptyMap())?.let { c -> main.post { deliver(c) } }
             }
-            @JavascriptInterface fun onDrm(system: String) { capture.drmSystem = system }
+            // X7 (MASVS-PLATFORM-2): page script calls this; same bounds as the stream finder.
+            @JavascriptInterface fun onDrm(system: String) {
+                val clean = system.take(40).filter { it.isLetterOrDigit() || it in ".-_ " }
+                synchronized(capture) { capture.drmSystem = clean }
+            }
         }, "MTFinder")
 
         SafeWebView.harden(web)
