@@ -237,6 +237,12 @@ internal class SceneLayer(private val ops: List<DrawScope.(Float) -> Unit>) {
 @Suppress("UNUSED_PARAMETER")
 internal fun buildScene(p: MtPalette, w: Float, windowH: Float, k: Float): SceneLayer = SceneLayer(emptyList())
 
+/** Scrim alpha over the backdrop photo for Settings › Backdrop › Intensity [k] (0.3–1.6): more intensity, less scrim. Pure. */
+internal fun backdropScrim(isDark: Boolean, k: Float): Float = ((if (isDark) 0.60f else 0.66f) - (k - 1f) * 0.18f).coerceIn(0.42f, 0.84f)
+
+/** Glow alpha of the gradient backdrop for intensity [k]. Pure. */
+internal fun backdropGlow(isDark: Boolean, k: Float): Float = (if (isDark) 0.20f else 0.14f) * k.coerceIn(0.5f, 1.3f)
+
 /** Draws the user's photo cover-cropped over the window, then a theme scrim for contrast. */
 internal fun DrawScope.drawBackdropPhoto(img: ImageBitmap, p: MtPalette, top: Float, windowH: Float, k: Float) {
     val w = size.width
@@ -248,7 +254,6 @@ internal fun DrawScope.drawBackdropPhoto(img: ImageBitmap, p: MtPalette, top: Fl
     // Stronger scrim at lower intensity; text tiers keep AA contrast at every setting.
     // Round 13: lighter scrim so the photo is really seen across the app; cards and text sit on
     // glass surfaces that keep their own contrast.
-    val base = if (p.isDark) 0.60f else 0.66f
-    val scrim = (base - (k - 1f) * 0.18f).coerceIn(0.42f, 0.84f)
+    val scrim = backdropScrim(p.isDark, k)
     drawRect(Brush.verticalGradient(0f to p.bgTop.copy(alpha = scrim - 0.08f), 0.45f to p.bgMid.copy(alpha = scrim), 1f to p.bgBottom.copy(alpha = scrim + 0.04f), startY = -top, endY = windowH - top))
 }

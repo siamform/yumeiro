@@ -45,18 +45,18 @@ ID note: these rows were first written as ER-1/ER-2, which clash with the older 
 
 | Item | Test | Label | Status |
 |---|---|---|---|
-| ER-10 mapper ↔ tips | `ErrorTaxonomyTest` | unit | CI run owed |
-| ER-13 decoder tip | `PlaybackRecoveryTest` | unit | CI run owed |
+| ER-10 mapper ↔ tips | `ErrorTaxonomyTest` | unit | 4/4 CI 43941919340 |
+| ER-13 decoder tip | `PlaybackRecoveryTest` | unit | 6/6 CI 43941919340 |
 | StreamRecovery / StreamResolver texts | code review: cause + next step in each (DNS, timeout, TLS, 401/403/404/429/451/5xx, DRM, parsing, empty/too-large playlist, web page, TorrServer) | review | done (no change) |
-| ER-12 Retry on failed adds / Inbox | code review | unit (compile) | CI run owed |
-| Every message shown on device | `scripts/messages-inventory.py` → docs/evidence/round3/messages-inventory.md (162 call sites, 100 literal); `MessagesDeviceTest` shows each literal text through the real host: shown, whole (no ellipsis at 3 lines), action button, ATF. Real-flow triggers: NetworkState, PermissionFlow, LowStorage, Dialogs, BackdropImport tests | emulator | run owed |
-| Dialogs: Back closes without acting, page kept, ATF clean (Privacy "Clear …" confirms, TsukiDialog) | `DialogsDeviceTest` | emulator | run owed |
+| ER-12 Retry on failed adds / Inbox | code review | unit (compile) | compiled CI 43941919340; not device-tested |
+| Every message shown on device | `scripts/messages-inventory.py` → docs/evidence/round3/messages-inventory.md (162 call sites, 100 literal); `MessagesDeviceTest` shows each literal text through the real host: shown, whole (no ellipsis at 3 lines), action button, ATF. Real-flow triggers: NetworkState, PermissionFlow, LowStorage, Dialogs, BackdropImport tests | emulator | PASS 100/100 both phones, 43904330191 (api33 failed 1 in 43891331959 → ER-18 fixed) |
+| Dialogs: Back closes without acting, page kept, ATF clean (Privacy "Clear …" confirms, TsukiDialog) | `DialogsDeviceTest` | emulator | PASS checked=5 both phones, 43891331959 |
 | Dialog Back by construction | code scan: every `*Dialog/*Sheet/*Prompt/*Host` composable uses Dialog/AlertDialog/ModalBottomSheet/BackHandler or delegates (ReminderCard → Dialog); the 6 without are non-modal overlays (gestures, info overlay, error overlay under the player's BackHandler, lights, message host) | review | done |
 | Left as is after review: per-row Install failures (the Install button stays on the row, so tapping it again is the retry); "Couldn't start casting" (CastSupport.play returns false without a reason; the cast session is already connected when it runs) — noted, not changed | code review | — | noted |
-| ER-11 permission denied once / blocked / Open settings | `PermissionFlowDeviceTest` | emulator | run owed |
-| Permission revoked while running | Code: every check is live (`AppNotifier.systemAllowed` = checkSelfPermission + areNotificationsEnabled; Settings cards re-read on `LifecycleResumeEffect`; UpdateNotifier catches SecurityException mid-post). Device: script step `PERM_RUNNING` (in the PermissionFlowDeviceTest branch) launches, revokes POST_NOTIFICATIONS / READ_MEDIA_VIDEO, checks the process was killed, relaunches and counts crash-buffer lines | emulator | run owed |
-| No network (Wi-Fi + data off → signal, offline pill, "No internet connection", back on) | `NetworkStateDeviceTest.a` | emulator | run owed |
-| Slow server (25 s > 20 s read timeout → "took too long"; 32 KB/s steady body completes) | `NetworkStateDeviceTest.b` | emulator | run owed |
-| Refused port → "refused the connection" | `NetworkStateDeviceTest.c` | emulator | run owed |
-| VPN | `NetworkStateDeviceTest.d` logs `vpnActive`; an emulator cannot raise a VPN without a VPN app and the consent dialog → owner test after the run | emulator + owner | open |
-| Low storage | ER-14 mapper (unit); downloads DiskFull (G8); device: `LowStorageDeviceTest` a) size > free → up-front "Storage full — needs about … MB free", no retry; b) chunked body, disk filled by `fallocate` to ~16 MB → ENOSPC shown as "Storage full", app alive | unit + emulator | unit done; emulator run owed |
+| ER-11 permission denied once / blocked / Open settings | `PermissionFlowDeviceTest` | emulator | PASS both phones, 43904330191 |
+| Permission revoked while running | Code: every check is live (`AppNotifier.systemAllowed` = checkSelfPermission + areNotificationsEnabled; Settings cards re-read on `LifecycleResumeEffect`; UpdateNotifier catches SecurityException mid-post). Device: script step `PERM_RUNNING` (in the PermissionFlowDeviceTest branch) launches, revokes POST_NOTIFICATIONS / READ_MEDIA_VIDEO, checks the process was killed, relaunches and counts crash-buffer lines | emulator | PASS both phones, 43904330191: POST_NOTIFICATIONS and READ_MEDIA_VIDEO revoked → process killed, relaunch clean, crashLines=0 |
+| No network (Wi-Fi + data off → signal, offline pill, "No internet connection", back on) | `NetworkStateDeviceTest.a` | emulator | PASS both phones, 43904330191 (api36 failed in 43891331959 → ER-17 fixed) |
+| Slow server (25 s > 20 s read timeout → "took too long"; 32 KB/s steady body completes) | `NetworkStateDeviceTest.b` | emulator | PASS both phones, 43891331959 and 43904330191 |
+| Refused port → "refused the connection" | `NetworkStateDeviceTest.c` | emulator | PASS both phones, 43891331959 and 43904330191 |
+| VPN | `NetworkStateDeviceTest.d` logs `vpnActive`; an emulator cannot raise a VPN without a VPN app and the consent dialog → owner test after the run | emulator + owner | emulator logs vpnActive=false (no VPN on CI); real VPN → OMT-18 |
+| Low storage | ER-14 mapper (unit); downloads DiskFull (G8); device: `LowStorageDeviceTest` a) size > free → up-front "Storage full — needs about … MB free", no retry; b) chunked body, disk filled by `fallocate` to ~16 MB → ENOSPC shown as "Storage full", app alive | unit + emulator | PASS a, b both phones, 43904330191 (b skipped in 43891331959, test fixed 523af6f) |
