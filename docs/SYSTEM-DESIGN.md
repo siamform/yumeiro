@@ -448,6 +448,49 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
   after a design pass (UI/UX skill) and a TV focus test. Not built.
 - **Status:** proposed; needs the owner's decision. Nothing changed in product code.
 
+### ADR-015: Jackson 2.13.5 on the TV build (G12 X13-1)
+
+- **Scope:** Android 7 TV boxes only (TV flavour, minSdk 24). The phone flavour keeps 2.19.4.
+- **Context:** Jackson 2.14+ needs Android 8 (jackson-databind#4653); on Android 7 every CloudStream
+  source failed with `NoClassDefFoundError` (run 43765162241). The TV classpaths resolve 2.13.5, the
+  last release of the 2.13 line, which gets no more fixes. Approved by the owner with conditions
+  (orders 4, X13-1).
+- **Known advisories affecting 2.13.5** (OSV.dev query, 2026-11-16): jackson-core 3
+  (CVE-2025-52999 deep nesting → StackOverflowError, fixed 2.15.0; CVE-2026-89425 error-token
+  length; CVE-2026-68494 async-parser number length), jackson-databind 11 (CVE-2026-50193 deep
+  `JsonNode.toString`; CVE-2026-54512 / -54513 / -83557 polymorphic-validator bypasses;
+  CVE-2026-54514 / -77310 InetSocketAddress/InetAddress DNS on deserialisation; CVE-2026-19032
+  `Path` deserialisation; CVE-2026-91776 / -91777 type-id retention and forward-reference cost;
+  CVE-2026-54515 / -59889 ignore/view bypasses).
+- **Exposure (checked in code):**
+  - Who parses with Jackson: extension code and the bundled CloudStream extractors / sync
+    providers, through the shared `com.lagradost.cloudstream3.mapper` (site JSON, untrusted). Our
+    own repo, market and settings parsing uses `org.json`, not Jackson; `DataStore` reads only our
+    own preferences.
+  - The shared mapper is `JsonMapper.builder().addModule(kotlinModule())
+    .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)` (bytecode of CloudStream library 4.8.0
+    `MainAPIKt.<clinit>`). It has no default typing, and neither the library, the app nor our
+    bundled code uses `@JsonTypeInfo` or a `PolymorphicTypeValidator`, so the gadget and allowlist
+    advisories need an extension that opts in itself. An extension is already arbitrary code in our
+    process, so it gains nothing from them.
+  - The realistic risk is denial of service from a hostile site: deep nesting overflows the stack
+    in untyped/bean binding and in `JsonNode.toString` (`readTree` itself is iterative in 2.13). It
+    fails only that call: home, search and detail calls sit in `runCatching` (catches Errors) or the
+    `ExtensionGuard` handlers. No `InetSocketAddress`, `InetAddress` or `Path` fields exist in the
+    provider models.
+- **Mitigation:** `JacksonTvExposureTest` (testTv, in the CI TV unit step with
+  `JacksonTvCompatTest`) fails if the shared mapper gains default typing, if deep nesting stops
+  being contained by the caller pattern, or if normal JSON stops parsing. CI also fails if the TV
+  classpath leaves the SDK-24 line.
+- **Removal conditions:** remove the `tv*` resolution rule in `app/build.gradle.kts` and the
+  `jacksonTv` version when either (a) the TV minSdk becomes 26 or higher, or (b) a Jackson release
+  that runs on SDK 24 contains these fixes.
+- **Related finding (phone, not changed):** OSV lists 16 advisories for the phone's 2.19.4 (the
+  2.19 line is no longer patched). 2.18.11 has none and stays below the 2.20 `invokeExact` limit.
+  Moving the phone to 2.18.11 conflicts with the owner's condition 3 (phone keeps its current
+  version), so it is proposed (X13-6) and needs the owner's decision.
+- **Status:** accepted (2026-11-16) with the owner's five conditions.
+
 ## 11. Risks
 
 | Risk | Mitigation |

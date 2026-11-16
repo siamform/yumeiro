@@ -1,21 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 02:31 UTC, fourth handover; orders: master operating document)
+## Resume here (updated 2026-11-16 UTC, fourth handover; orders: master document + orders 4)
 
-- **Owner orders in force:** master operating document (agent notes `notes/master-orders-3.md`):
-  L0 (done) → **L1 Group 12 (current)** → L2 Groups 5–10 → L3 Group 11 → L4 re-audit Groups 1–4 with
-  the full Part 3 method → L5 Step 4, Step 5. Heavy work on CI, ≤ 2 device workflows, no PR/merge.
-- **Outage:** sandbox stopped answering 2026-11-15 ~19:05–19:45 UTC (local `lintTvDebug`). Lint runs on
-  CI only since then.
-- **Since 01:08 UTC:** ST-19 fixed + device-verified; ST-20 third-party (ADR-014); ST-13/14/15 emulator
-  evidence; ST-18 classified. X2-1: baseline profile generated with real names and committed
-  (fef01c6), before/after numbers recorded, real-phone check OMT-12. X2-3h heap profile: no real
-  leaks (43789071263). X10-1 R8/ABI/signing review done.
-- **Current step:** Level 1, Group 12: X10 upgrade test from v1.8.0, then X7 MASVS write-up.
-- **Running:** none.
-- **Next three actions:** (1) upgrade test v1.8.0 → branch build on an emulator (install the v1.8.0
-  release APK, add data, install the new build over it, check data and start); (2) X7 MASVS write-up;
-  (3) widget data updates, decoder fault injection, Anime4K on emulator GL, RTL check, then X11–X16.
+- **Owner orders in force:** master operating document (`notes/master-orders-3.md`) and orders 4
+  (`notes/master-orders-4.md`): Part 1 decisions first (PL-16 images, X13-1 conditions, ADR-013 key
+  table, EXT-T1 reproduction ≥ 20×, ADR-014 build), then ST-18 Perfetto + Home first-draw reduction,
+  then the Group 12 list, G5–10, G11, re-audit G1–4, final sweep. Feature phase gated (research only).
+  Heavy work on CI, ≤ 2 device workflows, no PR/merge/release.
+- **Done this step:** X13-1 conditions: ADR-015 (14 OSV advisories on 2.13.5, exposure, mitigation,
+  removal conditions, scope Android 7 TV boxes only); `JacksonTvExposureTest` in the CI TV unit step.
+  New proposal X13-6 (phone Jackson 2.19.4 → 2.18.11) needs the owner.
+- **Running:** 43801874469 (PL-16 "before" shot, throwaway branch `tmp/pl16-before`).
+- **Next three actions:** (1) PL-16 before/after images into `docs/evidence/pl16/`, delete the
+  throwaway branch; (2) ADR-013 key classification table; (3) EXT-T1 reproduction on api33-lowram.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
