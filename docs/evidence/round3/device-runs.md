@@ -411,3 +411,7 @@ These are real emulators running the real debug APK; the tests are not simulated
   - api33 screen-on 6.22 MB/s, last/mean 0.83; screen-off + Doze 5.88 MB/s, last/mean 0.60, DONE.
   - No end collapse on this CDN (it does not cap per request). The collapse is reproduced only by the
     burst-then-cap profile (unit); RequestPace targets that.
+- Branch `tmp/bug3-before` (old ForceGrab) deleted without a device run: run 43861039865 showed the real
+  CDN does not cap per request, so a before/after on it cannot show the collapse; the before/after
+  evidence is the unit burst profile (CI 43851470283 before, CI 43861926740 after).
+- Dispatched device 43863246577: HomeTraceDeviceTest with gpu=swangle_indirect.

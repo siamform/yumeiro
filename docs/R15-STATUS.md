@@ -9,8 +9,8 @@
 - **Read:** device 43851896291 (DecoderFault a/b PASS, c test error fixed 7c0045b; YtChannelUi PASS with
   shots; YtQualityOffline PASS; YtQuality SKIP bot wall). Device 43855202294: runner could not reach the
   throughput host (v6 + v4 timeouts), test hardened 445156c.
-- **Running:** CI 43861926740 (3c85a72: RequestPace, ProgressGate, RebufferWindow); device 43861039865 (10be03d: QualityList every height, DownloadThroughput CDN hosts).
-- **Throwaway branches:** `fail-before/r15-proofs` (408faea) and `tmp/bug3-before` (9d86bbd) — dispatch
+- **Running:** CI 43861926740 (3c85a72: RequestPace, ProgressGate, RebufferWindow); device 43863246577 (HomeTrace, swangle_indirect).
+- **Throwaway branch:** `fail-before/r15-proofs` (408faea; tmp/bug3-before deleted) — dispatch
   after the runs above; delete afterwards, never merge.
 - **Next three actions:** (1) read CI 43861926740 (THROUGHPUT burst rule, ProgressGateTest,
   RebufferWindowTest, Bug3PieceTest); (2) read device 43861039865 (QUALITY_RESULT applied=… backMisses,
