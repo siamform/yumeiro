@@ -83,22 +83,47 @@ class UpscaleFreezeDeviceTest {
         return pos
     }
 
-    /** Main thread never stalled, playback moved over [ms], and Back still closes the player. */
+    /**
+     * Main thread never stalled, playback moved over [ms], the window kept drawing and the time label
+     * kept moving (test clock pumped, see [UiLiveness.pump]), a real tap on More opens its menu, and
+     * the player can be left and closed.
+     */
     private fun checkAlive(name: String, ms: Long) {
+        val f0 = UiLiveness.framesDrawn(ctx.packageName)
         val p0 = positionMs()
-        SystemClock.sleep(ms)
+        UiLiveness.pump(rule, ms)
         val p1 = positionMs()
+        val f1 = UiLiveness.framesDrawn(ctx.packageName)
         val snap = PlaybackDiagnostics.state.value
+        val dialogOpen = rule.onAllNodes(hasText("Upscaled by Yumeiro", substring = true)).fetchSemanticsNodes().isNotEmpty()
         FirstRun.shot("ups_$name")
-        FirstRun.shell("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
-        if (has("video_player_root")) { FirstRun.shell("input keyevent KEYCODE_BACK"); SystemClock.sleep(600) }
-        val closed = runCatching { rule.waitUntil(10_000) { !has("video_player_root") }; true }.getOrDefault(false)
+        // Real touches: show the controls if hidden (auto-hide is 3.5 s), read the time label twice
+        // 2 s apart, then More must open its menu.
+        if (!has("video_more_btn")) { UiLiveness.tap(rule, "video_player_root"); UiLiveness.pump(rule, 500) }
+        val t0 = UiLiveness.timeLabels(rule); UiLiveness.pump(rule, 2_000); val t1 = UiLiveness.timeLabels(rule)
+        if (!has("video_more_btn")) { UiLiveness.tap(rule, "video_player_root"); UiLiveness.pump(rule, 500) }
+        val tappedMore = UiLiveness.tap(rule, "video_more_btn")
+        val menu = tappedMore && runCatching { rule.waitUntil(3_000) { has("video_more_menu") }; true }.getOrDefault(false)
+        if (menu) { FirstRun.shell("input keyevent KEYCODE_BACK"); UiLiveness.pump(rule, 600) }
+        val (closed, how) = UiLiveness.leaveAndClose(rule)
         val lag = watch.maxLag.get()
-        log("UPS_CASE $name pos=$p0→$p1 state=${snap.state} firstFrame=${snap.firstFrame} ${snap.width}x${snap.height} error=${snap.error?.take(160)} maxLagMs=$lag closed=$closed stall=${watch.firstStall.get()?.take(600)}")
+        log("UPS_CASE $name pos=$p0→$p1 frames=$f0→$f1 time='$t0'→'$t1' dialogOpen=$dialogOpen moreMenu=$menu (tapped=$tappedMore) state=${snap.state} firstFrame=${snap.firstFrame} ${snap.width}x${snap.height} error=${snap.error?.take(160)} maxLagMs=$lag $how stall=${watch.firstStall.get()?.take(600)}")
         assertTrue("7d $name: the main thread stopped for $lag ms (freeze): ${watch.firstStall.get()}", lag < 2_000)
         assertTrue("7d $name: playback did not move ($p0 → $p1, ${snap.state}, error=${snap.error})", p1 > p0 || snap.state == "ENDED")
-        assertTrue("7d $name: Back did not close the player within 10 s", closed)
+        assertTrue("7d $name: the window drew no frame in ${ms} ms ($f0 → $f1)", f0 < 0 || f1 > f0)
+        assertTrue("7d $name: the time label did not move ('$t0' → '$t1')", t0.isNotBlank() && t0 != t1)
+        assertTrue("7d $name: the Quality list stayed open after picking a level", !dialogOpen)
+        assertTrue("7d $name: a real tap on More did not open its menu", menu)
+        assertTrue("7d $name: the app did not answer Back / the close button ($how)", closed)
         log("UPS_RESULT PASS $name")
+    }
+
+    @Test fun a0_plainPlaybackControl() {
+        VideoPrefs.setAnime4k(ctx, false)
+        watch.reset()
+        openClip()
+        assertTrue("first frame", runCatching { rule.waitUntil(45_000) { PlaybackDiagnostics.state.value.firstFrame }; true }.getOrDefault(false))
+        checkAlive("plain_control", 4_000)
     }
 
     @Test fun a_anime4kOnThenOpenVideo() {
@@ -115,8 +140,8 @@ class UpscaleFreezeDeviceTest {
         VideoPrefs.setAnime4k(ctx, false)
         openClip()
         assertTrue("first frame", runCatching { rule.waitUntil(45_000) { PlaybackDiagnostics.state.value.firstFrame }; true }.getOrDefault(false))
-        SystemClock.sleep(800)
-        if (!has("video_quality_btn")) { FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER"); SystemClock.sleep(600) }
+        UiLiveness.pump(rule, 800)
+        if (!has("video_quality_btn")) { FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER"); UiLiveness.pump(rule, 600) }
         if (!has("video_quality_btn")) runCatching { rule.onNodeWithTag("video_player_root", true).performClick() }
         runCatching { rule.waitUntil(5_000) { has("video_quality_btn") } }
         rule.onNodeWithTag("video_quality_btn", true).performClick()

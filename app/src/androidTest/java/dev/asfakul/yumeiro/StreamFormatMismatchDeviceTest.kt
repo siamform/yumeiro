@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro
 
-import android.os.SystemClock
 import android.util.Log
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -84,15 +83,13 @@ class StreamFormatMismatchDeviceTest {
         val snap = PlaybackDiagnostics.state.value
         val playerOpen = has("video_player_root")
         FirstRun.shot("fmt_$name")
-        // The user presses Back to leave; the app must answer.
-        FirstRun.shell("input keyevent KEYCODE_BACK"); SystemClock.sleep(600)
-        if (has("video_player_root")) { FirstRun.shell("input keyevent KEYCODE_BACK"); SystemClock.sleep(600) }
-        val closed = runCatching { rule.waitUntil(10_000) { !has("video_player_root") && has("home_screen_root") }; true }.getOrDefault(false)
+        // The user leaves with Back and closes the floating window with a real tap; the app must answer.
+        val (closed, how) = UiLiveness.leaveAndClose(rule)
         val lag = watch.maxLag.get()
-        log("FMT_CASE $name format=$format path=$path ended=$ended playerOpen=$playerOpen state=${snap.state} firstFrame=${snap.firstFrame} error=${snap.error?.take(160)} maxLagMs=$lag closed=$closed stall=${watch.firstStall.get()?.take(600)}")
+        log("FMT_CASE $name format=$format path=$path ended=$ended playerOpen=$playerOpen state=${snap.state} firstFrame=${snap.firstFrame} error=${snap.error?.take(160)} maxLagMs=$lag $how stall=${watch.firstStall.get()?.take(600)}")
         assertTrue("7c $name: the main thread stopped for $lag ms (freeze): ${watch.firstStall.get()}", lag < 2_000)
         assertTrue("7c $name: the player neither played nor showed an error within 25 s: $snap", ended)
-        assertTrue("7c $name: Back did not close the player and return to Home within 10 s", closed)
+        assertTrue("7c $name: the app did not answer Back / the close button ($how)", closed)
         log("FMT_RESULT PASS $name")
     }
 

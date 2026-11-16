@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.ui.test.onAllNodesWithTag
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
@@ -50,4 +51,60 @@ class MainStallWatch(private val tag: String, private val dumpAfterMs: Long = 1_
     }
 
     fun stop() { on = false }
+}
+
+/**
+ * BUG-7 run 43920651380: the main thread never stalled, yet after an Anime4K level the Quality dialog
+ * stayed open and the time label stayed at 00:00 while the player moved 4–6 s. These probes tell
+ * which layer stopped: frames the app's window really drew (gfxinfo), the time label the user sees
+ * (semantics, needs recomposition), and real touches (input tap at a node's centre).
+ */
+object UiLiveness {
+    private val totalFrames = Regex("Total frames rendered: (\\d+)")
+
+    /** Frames HWUI drew for the app since it started (dumpsys gfxinfo), -1 if unknown. */
+    fun framesDrawn(pkg: String): Long = runCatching {
+        totalFrames.find(FirstRun.shell("dumpsys gfxinfo $pkg"))?.groupValues?.get(1)?.toLong() ?: -1L
+    }.getOrDefault(-1L)
+
+    /** The player's "-mm:ss  /  mm:ss" label and the elapsed label, as the semantics tree has them. */
+    fun timeLabels(rule: androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>): String = runCatching {
+        rule.onAllNodes(androidx.compose.ui.test.hasText(":", substring = true), true).fetchSemanticsNodes()
+            .mapNotNull { n -> n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.joinToString("") { it.text } }
+            .filter { Regex("^-?\\d{1,2}:\\d{2}").containsMatchIn(it) }
+            .joinToString(" | ")
+    }.getOrDefault("?")
+
+    /**
+     * Waits [ms] while the Compose test clock keeps producing frames. Run 43920651380: a plain
+     * SystemClock.sleep on the test thread stops the test clock, so the screen (time label, an open
+     * dialog) looked frozen while the app was fine. Every wait in the BUG-7 tests goes through here.
+     */
+    fun pump(rule: androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>, ms: Long) {
+        runCatching { rule.waitUntil(ms) { false } }
+    }
+
+    /**
+     * Leaves the player as a user does and checks the app answers: Back (up to three presses) must
+     * leave the full player (closed, or the floating window as set in Settings), then a real tap on
+     * the floating window's close button must close it. Returns a short report and success.
+     */
+    fun leaveAndClose(rule: androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>): Pair<Boolean, String> {
+        fun has(t: String) = runCatching { rule.onAllNodesWithTag(t, true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+        fun left() = !has("video_player_root") || has("floating_close")
+        var presses = 0
+        while (!left() && presses < 3) { FirstRun.shell("input keyevent KEYCODE_BACK"); presses++; pump(rule, 900) }
+        val leftOk = left()
+        val floating = has("floating_close")
+        if (floating) { tap(rule, "floating_close"); runCatching { rule.waitUntil(5_000) { !has("video_player_root") } } }
+        val closed = !has("video_player_root")
+        return (leftOk && closed) to "backPresses=$presses left=$leftOk floating=$floating closed=$closed"
+    }
+
+    /** A real touch (input tap) at the centre of the first node tagged [tag]; false if it isn't there. */
+    fun tap(rule: androidx.compose.ui.test.junit4.AndroidComposeTestRule<*, *>, tag: String): Boolean {
+        val b = runCatching { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().firstOrNull()?.boundsInWindow }.getOrNull() ?: return false
+        FirstRun.shell("input tap ${b.center.x.toInt()} ${b.center.y.toInt()}")
+        return true
+    }
 }
