@@ -394,3 +394,20 @@ These are real emulators running the real debug APK; the tests are not simulated
 - Failed: DownloadThroughputTest.burstThenCapPerRequest — segmented4 4.82x [43,11,5,5,4,367,256,6,5,654],
   segmented2-lowend 3.30x. The 40ea96e split fix alone does not meet the rule. Cause and fix: 3c85a72
   (RequestPace). Rerun: CI 43861926740 (head; also ProgressGateTest, RebufferWindowTest).
+
+## Device run 43861039865 — device-check on 10be03d (emulator, both, 2026-11-16 11:52–12:02 UTC) — success
+
+- QualityListDeviceTest (BUG-4, every height): PASS on both, backMisses=0.
+  - api36: 184p→320x184, 288p→512x288, 480p→848x480, 720p→1280x720, 1080p→1920x1080, playback
+    position advancing between picks (13.8 s → 43.0 s); the 480p revert seen in 43857809658 is gone (10be03d).
+  - api33-lowram: the same five decoder sizes, but the position stayed at 9786 ms for 480/720/1080 and the
+    shots show the play button (not playing / buffering): the format was applied, smooth playback at
+    720p/1080p on this 2 GB emulator is NOT shown. Open observation for G3 (low-RAM high-res playback).
+  - Shots quality_applied_{184,288,480,720,1080}p.png looked at (badge and toast match each pick).
+- DownloadThroughputDeviceTest (BUG-3, real host cdn.kernel.org, 134.7 MB, real enqueue → DownloadWorker
+  → Segmented, before RequestPace 3c85a72):
+  - api36 screen-on 8.13 MB/s, per10 % ms [1813,1608,1506,1508,1506,1508,1518,1711,1513,1615], last/mean 1.02.
+  - api36 screen-off + forced Doze (IDLE) at 30 %: 8.61 MB/s, last/mean 0.88, DONE.
+  - api33 screen-on 6.22 MB/s, last/mean 0.83; screen-off + Doze 5.88 MB/s, last/mean 0.60, DONE.
+  - No end collapse on this CDN (it does not cap per request). The collapse is reproduced only by the
+    burst-then-cap profile (unit); RequestPace targets that.
