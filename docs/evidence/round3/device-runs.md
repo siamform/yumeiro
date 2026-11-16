@@ -562,3 +562,36 @@ the upgrade (else FAIL_CLIP_NOT_LISTED). Rerun owed.
 - PermissionFlowDeviceTest FAIL both, test error: phase b waited for the tabs, but the app's start-up permission
   request put Android's dialog on top (GrantPermissionsActivity resumed). Test now closes that dialog with Back
   and logs it; rerun owed.
+
+## 43884803041 (fe643e2, api33-lowram + api36, emulator) — build failure, no test ran
+
+Both jobs failed in "Build APKs" (`assembleMobileDebugAndroidTest`): 82 `Unresolved reference` errors in
+`LowStorageDeviceTest.kt` (62) and `NetworkStateDeviceTest.kt` (20). Cause: both imported the OkHttp 4 package
+`okhttp3.mockwebserver`, but the androidTest dependency is `com.squareup.okhttp3:mockwebserver3:5.5.1`
+(package `mockwebserver3`, `MockResponse.Builder`). Fixed in 7929bf9 (API checked against the published
+5.5.1 sources). Root cause of the late discovery: CI never compiled androidTest; 677cefa adds
+`compileMobileDebugAndroidTestKotlin` to CI. No G10 or G9 result comes from this run.
+
+## CI 43884797613 (fe643e2, CI)
+
+Build, unit tests, lint, secret scan all green. Unit: **1086 tests, 0 failures, 0 errors, 11 skipped**
+(read from the `reports` artifact). Lint: 0 errors on mobileDebug and tvDebug. DL-11a:
+`THROUGHPUT engine=single-no-ranges … requests=1 served=25165824 servedOverSize=1.000` on both profiles
+(before, CI 43877618176: requests=2, 1.132×). ER-15 compiles. gitleaks: pass.
+
+## Upgrade check 43881788009 (v1.8.0 → f214c7c, emulator api33) — INCOMPLETE, harness errors found
+
+`UPGRADE_RESULT INCOMPLETE_NOT_PLAYED compare=0 pre_ok=1 played=0 guide_again=0 clip_seen=0 fatal=0`.
+Read from the `upgrade-check` artifact:
+- Data: 36 → 40 files, **0 lost**, 1 changed (`mt_updater last_check`). The old app saved
+  `pos_external:file:///sdcard/Movies/upgrade-clip.mp4 = 48147`, its `watched_` time and a `play_counts`
+  entry; all three are byte-identical after the upgrade.
+- `played=0` was wrong: `shot-old-player.png` shows the clip playing (test-pattern counter at 35 s); the
+  check looked for the clip name in a UI dump of a player with hidden controls (no text).
+- `fatal=0` was blind: `logcat.txt` had **0 lines** — logcat was started before `adb root`, whose adbd
+  restart killed it. The same was true of every earlier upgrade run's crash check.
+- `clip_seen=0` could never pass: a clip opened from another app is stored under an `external:` id and
+  Home/History list library videos only (same in v1.8.0).
+- Fix fa3bb3b: logcat after root (verdict `ERROR_NO_LOGCAT` under 100 lines); played = saved position in
+  the old snapshot; new resume check (reopen in the new app; position kept by the upgrade and the reopened
+  position past it, else `FAIL_NOT_RESUMED`); clip 60 → 180 s. Rerun owed. X10-5 stays open.

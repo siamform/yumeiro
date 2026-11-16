@@ -1,23 +1,23 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 14:21 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 15:10 UTC, sixth handover; orders: master handover 6)
 
-- **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
-  G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
-- **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
-- **Current group:** Level 2 — G10 Errors (`docs/groups/GROUP-10-ERRORS.md`), G9 verification closing.
-  Step: all G10 device tests written (NetworkState, PermissionFlow + revoked-while-running, Dialogs, LowStorage,
-  Messages + inventory); waiting for their first device run.
-- **Done since last update:** DialogsDeviceTest (9c0eada), PERM_RUNNING script step (95e5da0), LowStorageDeviceTest
-  (659edd1), gitleaks false positive fixed (9ff349b; CI 43881282527 secret scan), message inventory + MessagesDeviceTest
-  (8f38d57), SE-4 damaged backdrop refused + PermissionFlow start-up dialog handling (fe643e2). Read: CI 43881282527
-  1086 tests / 0 failures (SE-3, ER-13, ER-14 pass); device 43880703410: S27 PASS 31/31, PlayerFx + NotifyFx PASS
-  both phones, BackdropImport showed SE-4, PermissionFlow test error (start-up dialog).
-- **Running:** CI 43884797613 (head fe643e2: DL-11a, ER-15, gitleaks fix, SE-4, compiles nothing in androidTest);
-  device 43884803041 (head fe643e2: PermissionFlow, BackdropImport, NetworkState, Dialogs, LowStorage, Messages on
-  api33-lowram + api36); upgrade 43881788009 (v1.8.0 → f214c7c).
-- **Next three actions:** (1) read 43884803041 → ER-11, SE-4, network rows, dialogs, low storage, messages;
-  (2) read CI 43884797613 → DL-11a, ER-15, secret scan; (3) read upgrade 43881788009 → X10-5.
+- **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
+  Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
+- **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
+  `.env` and `secrets/` of the agent's checkout.
+- **State found (re-verified):** head was 3ff6bd3, not 27f1c2b. Device 43884803041 (fe643e2) failed in Build APKs
+  on both phones (not only api36): LowStorage/NetworkState tests used the OkHttp 4 MockWebServer API → fixed
+  7929bf9 (ER-16). CI never compiled androidTest → 677cefa adds the compile step. CI 43884797613: 1086 tests /
+  0 failures, lint 0 errors, DL-11a requests=1 / 1.000×, ER-15 compiles. Upgrade 43881788009: data 0 lost, but
+  three harness errors (empty logcat, played detection, impossible "listed" check) → fa3bb3b; X10-5 open.
+  BackgroundSettingsEffectDeviceTest (3ff6bd3) reviewed: every symbol it calls exists; compile owed.
+- **Current group:** G10 Errors + G9 verification. Step: waiting for CI to prove the androidTest compile.
+- **Running:** CI 43889319143 (head fa3bb3b, first run with the androidTest compile step).
+- **Next three actions:** (1) CI 43889319143 green → device batch on both phones, filter
+  NetworkState, PermissionFlow, Dialogs, LowStorage, Messages, BackdropImport, BackgroundSettingsEffect;
+  (2) upgrade-check rerun (v1.8.0 → head) with the fixed harness → X10-5; (3) read both, fix failures under
+  the deep-audit method, close G9/G10 only with device evidence on both phones.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
