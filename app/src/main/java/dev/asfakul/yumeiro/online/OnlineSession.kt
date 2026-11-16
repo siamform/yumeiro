@@ -91,6 +91,8 @@ object OnlineSession {
     private const val FAILOVER_GAP_MS = 900L
     private const val PUBLISH_GAP_MS = 700L
     private val _state = MutableStateFlow<State?>(null)
+    /** BUG-1 (D4): the session that just closed, for the player's final position save. */
+    @Volatile private var ended: State? = null
     val state: StateFlow<State?> = _state.asStateFlow()
     private var job: Job? = null
 
@@ -421,8 +423,8 @@ object OnlineSession {
 
     /** Progress callback from the player. */
     fun onProgress(context: Context, videoId: String, positionMs: Long, durationMs: Long) {
-        val s = _state.value ?: return
-        if (s.videoId != videoId) return
+        // BUG-1 (D4): Close runs end() before the player's last save; that save still belongs here.
+        val s = _state.value?.takeIf { it.videoId == videoId } ?: ended?.takeIf { it.videoId == videoId } ?: return
         OnlineHistory.record(context.applicationContext, s.detail, s.version, s.episode, positionMs, durationMs)
         dev.asfakul.yumeiro.online.anime.AnimeSync.onProgress(context, s.detail, s.episode, s.index, positionMs, durationMs)
     }
@@ -438,6 +440,7 @@ object OnlineSession {
     /** The player closed, or the user cancelled resolving. */
     fun end() {
         job?.cancel(); job = null; failoverJob?.cancel(); failoverJob = null
+        ended = _state.value?.takeIf { it.videoId != null }
         _state.value = null
     }
 

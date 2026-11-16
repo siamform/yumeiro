@@ -1110,6 +1110,12 @@ private fun VideoPlayerModalContent(
     DisposableEffect(lease) {
         dev.asfakul.yumeiro.player.PlaybackDiagnostics.reset(video.uri, video.sizeBytes)
         dev.asfakul.yumeiro.player.StartTimeline.mark("player view")
+        // BUG-1 (D3): the lease's numbers (frozen once the player moves on); ResumeRules skips a
+        // player that has not loaded.
+        fun saveResumePoint() {
+            if (exoPlayer.currentTimeline.isEmpty) return
+            currentOnProgressUpdate(video.id, lease.positionMs, lease.durationMs)
+        }
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 dev.asfakul.yumeiro.player.StartTimeline.mark("first frame")
@@ -1169,6 +1175,13 @@ private fun VideoPlayerModalContent(
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 wantsPlay = playWhenReady
+                // BUG-1 (D3): save on pause, not only every 5 s while playing.
+                if (!playWhenReady) saveResumePoint()
+            }
+
+            override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                // BUG-1 (D3): a seek is saved at once; "seek, then the process dies" kept the old spot.
+                if (reason == Player.DISCONTINUITY_REASON_SEEK) saveResumePoint()
             }
 
             override fun onTracksChanged(tracks: Tracks) {

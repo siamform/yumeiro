@@ -350,7 +350,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playVideo(video: VideoItem) = playVideo(video, emptyList())
 
-    fun playVideo(video: VideoItem, queue: List<VideoItem>) {
+    fun playVideo(videoIn: VideoItem, queue: List<VideoItem>) {
+        // BUG-1 (D1): YouTube videos and links arrive without a position (IncomingMedia); start them
+        // where they were left. Online titles bring their own position from OnlineHistory.
+        val start = dev.asfakul.yumeiro.data.ResumeRules.startPosition(videoIn.id, videoIn.playbackPositionMs, repository::savedVideoPosition)
+        val video = if (start != videoIn.playbackPositionMs) videoIn.copy(playbackPositionMs = start) else videoIn
         // Pause music playback if active
         if (playbackState.value.isPlaying) {
             playerManager.pause()

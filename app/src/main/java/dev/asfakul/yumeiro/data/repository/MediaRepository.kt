@@ -73,6 +73,8 @@ interface MediaRepository {
     suspend fun unhideAllVideoFolders()
     suspend fun updateVideoProgress(videoId: String, positionMs: Long, durationMs: Long)
     suspend fun clearVideoProgress(videoId: String)
+    /** BUG-1 (D1): the saved resume position of [videoId] (device file, YouTube, link), if any. */
+    fun savedVideoPosition(videoId: String): Long? = null
     /** Forgets every resume position and "last watched" time (Continue / Recently watched). */
     suspend fun clearWatchHistory() {}
     /** Forgets recently played tracks and play counts (Continue listening / Most played). */
@@ -734,14 +736,20 @@ class OfflineMediaRepository(
         )
     }
 
+    override fun savedVideoPosition(videoId: String): Long? = _videoProgress.value[videoId]
+
     override suspend fun updateVideoProgress(videoId: String, positionMs: Long, durationMs: Long) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
+        // BUG-1 (D2): a player that never loaded (position 0, duration unknown) used to delete the
+        // resume point here; ResumeRules skips that write.
+        val write = dev.asfakul.yumeiro.data.ResumeRules.decide(positionMs, durationMs)
+        if (write == dev.asfakul.yumeiro.data.ResumeRules.Write.SKIP) return
         val now = System.currentTimeMillis()
-        val isCompleted = durationMs > 0 && positionMs >= (durationMs * 0.95).toLong()
+        val isCompleted = write == dev.asfakul.yumeiro.data.ResumeRules.Write.CLEAR
 
         val editor = videoPrefs.edit()
         editor.putLong("watched_$videoId", now)
-        if (isCompleted || positionMs <= 0L) {
+        if (isCompleted) {
             editor.remove("pos_$videoId")
         } else {
             editor.putLong("pos_$videoId", positionMs)
@@ -749,7 +757,7 @@ class OfflineMediaRepository(
         editor.apply()
 
         val updatedProgress = _videoProgress.value.toMutableMap()
-        if (isCompleted || positionMs <= 0L) {
+        if (isCompleted) {
             updatedProgress.remove(videoId)
         } else {
             updatedProgress[videoId] = positionMs

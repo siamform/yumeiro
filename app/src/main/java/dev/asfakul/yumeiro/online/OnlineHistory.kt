@@ -87,7 +87,8 @@ object OnlineHistory {
     fun record(context: Context, detail: OnlineDetail, version: String, episode: OnlineEpisode?, positionMs: Long, durationMs: Long) {
         ensureLoaded(context)
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
-        if (positionMs <= 0L && durationMs <= 0L) return
+        // BUG-1 (D2): position 0 is a player that has not loaded or not started; it never replaces a saved spot.
+        if (positionMs <= 0L) return
         if (detail.kind == OnlineKind.LIVE) return
         val now = System.currentTimeMillis()
         val data = episode?.data ?: detail.playData ?: return
