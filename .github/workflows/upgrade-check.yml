@@ -77,10 +77,10 @@ jobs:
           done
           for A in old.apk new.apk; do echo "UPGRADE $A $("$BT/aapt2" dump badging "$A" | head -1)"; done
 
-      - name: Test clip (60 s, made here)
+      - name: Test clip (180 s, made here; long enough to resume mid-way after the upgrade)
         run: |
           sudo apt-get install -y -qq ffmpeg > /dev/null 2>&1 || true
-          ffmpeg -loglevel error -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i sine=frequency=440 -t 60 \
+          ffmpeg -loglevel error -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i sine=frequency=440 -t 180 \
             -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest upgrade-clip.mp4
           ls -la upgrade-clip.mp4
 

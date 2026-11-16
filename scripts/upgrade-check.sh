@@ -5,17 +5,14 @@
 #      played part of the way (history + progress), the app sent home so it saves;
 #   2. snapshot /data/data/<pkg>/{shared_prefs,files} as root (google_apis images allow adb root);
 #   3. install this branch's release APK over it (same release key, higher versionCode);
-#   4. start it, let it settle, snapshot again; compare (scripts/upgrade_compare.py) and check the
-#      screen: no welcome guide again, the clip is still in history, no crash in our process.
+#   4. start it, let it settle, snapshot again; compare (scripts/upgrade_compare.py) and check:
+#      no welcome guide again, the clip's saved position kept and resumed, no crash in our process.
 # Output: upgrade/ (snapshots, ui dumps, screenshots, logcat) and UPGRADE_* lines in the log.
 set -u
 P=dev.asfakul.yumeiro
 OLD=${OLD_APK:-old.apk}
 NEW=${NEW_APK:-new.apk}
 mkdir -p upgrade
-adb logcat -c || true
-adb logcat -v threadtime > upgrade/logcat.txt 2>&1 &
-LOGPID=$!
 
 note() { echo "UPGRADE $*"; }
 dump() { # $1 name → upgrade/ui-$1.xml, prints the visible texts
@@ -55,6 +52,10 @@ settle_first_run() { # answer the welcome guide / tour / permission or update pr
     sleep 3
   done
 }
+pos_of() { # $1 tar -> saved resume position (ms) of the clip in mt_player_video_prefs, empty if none
+  tar xOf "$1" shared_prefs/mt_player_video_prefs.xml 2>/dev/null \
+    | grep -o 'name="pos_external:file:///sdcard/Movies/upgrade-clip.mp4" value="[0-9]*"' | grep -o '[0-9]*"$' | tr -d '"' | head -1
+}
 snapshot() { # $1 name → upgrade/$1.tar of prefs + files (no caches), and a listing
   adb shell "cd /data/data/$P && ls -laR shared_prefs files 2>/dev/null" > "upgrade/$1-ls.txt" 2>&1 || true
   adb exec-out "cd /data/data/$P && tar cf - shared_prefs files 2>/dev/null" > "upgrade/$1.tar" || true
@@ -63,6 +64,11 @@ snapshot() { # $1 name → upgrade/$1.tar of prefs + files (no caches), and a li
 
 adb root > /dev/null 2>&1; sleep 3; adb wait-for-device
 note "root: $(adb shell id -u)"
+# Run 43881788009: logcat started before `adb root` died with the adbd restart (0 lines), so the
+# crash check saw nothing. Start it after root, and refuse a verdict when it stayed empty.
+adb logcat -c || true
+adb logcat -v threadtime > upgrade/logcat.txt 2>&1 &
+LOGPID=$!
 adb shell settings put global package_verifier_enable 0 > /dev/null 2>&1 || true
 
 # ---- 1. the published release creates its data -------------------------------------------------
@@ -88,13 +94,16 @@ sleep 12
 # (no Quiet mode then); answer pop-ups as a user would, then look again.
 for i in 1 2 3; do tap_text "Maybe Later" "Maybe later" "Not now" "Close" "Got it" > /dev/null || true; sleep 3; done
 sleep 4; dump old-player
-PLAYED=0; grep -qi 'upgrade-clip\|upgrade clip' upgrade/ui-old-player.xml 2>/dev/null && PLAYED=1
-grep -q 'YuPlayer\|ExoPlayerImpl.*Init' upgrade/logcat.txt 2>/dev/null && PLAYED=1
-note "old app opened the clip: $PLAYED"
 adb shell input keyevent 4; sleep 3; adb shell input keyevent 3; sleep 8
 dump old-home-after
 adb shell am force-stop $P; sleep 2
 snapshot before
+# Run 43881788009: the player shows no text while playing (controls hidden) and the screenshot
+# showed the clip running, so the UI-text check said "not played" wrongly. The proof is the old
+# app's own record: a saved resume position for the clip.
+POS_BEFORE=$(pos_of upgrade/before.tar); POS_BEFORE=${POS_BEFORE:-0}
+PLAYED=0; [ "$POS_BEFORE" -gt 0 ] && PLAYED=1
+note "old app played the clip: $PLAYED (saved position ${POS_BEFORE} ms)"
 
 # ---- 2. upgrade in place ------------------------------------------------------------------------
 R=$(adb install -r "$NEW" 2>&1 | tail -1); note "install new over old: $R"
@@ -104,27 +113,44 @@ adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
 sleep 20; dump new-start
 GUIDE_AGAIN=0; grep -qE 'text="(Skip|Skip for now)"' upgrade/ui-new-start.xml 2>/dev/null && GUIDE_AGAIN=1
 note "welcome guide shown again after upgrade: $GUIDE_AGAIN"
-# History tab or Home "Continue": the clip name must still be listed.
+# History is captured for the record (screens in the artifact); the verdict uses the saved position.
 # Run 43878778019: the new app's "Keep notifications on time" guide covered History; close prompts first.
 for i in 1 2 3; do tap_text "Close" "Maybe Later" "Maybe later" "Not now" "Got it" > /dev/null || true; sleep 3; done
 tap_text "History" > /dev/null || true; sleep 4; dump new-history
-CLIP_SEEN=0; grep -rqi "upgrade-clip\|upgrade clip" upgrade/ui-new-start.xml upgrade/ui-new-history.xml 2>/dev/null && CLIP_SEEN=1
-note "clip still listed after upgrade: $CLIP_SEEN"
 adb shell input keyevent 3; sleep 6
 adb shell am force-stop $P; sleep 2
 snapshot after
+# A clip opened from another app is kept under an "external:" key; Home and History list library
+# videos only (same in v1.8.0), so a listing check could never pass. The user-visible promise is
+# "it resumes": open the same clip in the new app; it must start from the old position, so the
+# position it saves a few seconds later is past the old one (a restart from 0 would be ~10 s).
+adb shell am start -a android.intent.action.VIEW -d file:///sdcard/Movies/upgrade-clip.mp4 -t video/mp4 -p $P > /dev/null 2>&1
+sleep 10
+for i in 1 2; do tap_text "Close" "Maybe Later" "Maybe later" "Not now" "Got it" > /dev/null || true; sleep 2; done
+dump new-player
+adb shell input keyevent 4; sleep 3; adb shell input keyevent 3; sleep 6
+adb shell am force-stop $P; sleep 2
+snapshot resumed
+POS_AFTER=$(pos_of upgrade/after.tar); POS_AFTER=${POS_AFTER:-0}
+POS_RESUMED=$(pos_of upgrade/resumed.tar); POS_RESUMED=${POS_RESUMED:-0}
+CLIP_SEEN=0; [ "$POS_AFTER" = "$POS_BEFORE" ] && [ "$POS_RESUMED" -gt "$POS_BEFORE" ] && CLIP_SEEN=1
+note "clip position kept and resumed: $CLIP_SEEN (before ${POS_BEFORE} ms, after upgrade ${POS_AFTER} ms, after reopening ${POS_RESUMED} ms)"
 kill $LOGPID 2>/dev/null || true
 FATAL=$(grep -cE "FATAL EXCEPTION|ANR in $P" upgrade/logcat.txt || true)
 note "FATAL/ANR lines in logcat: $FATAL"
+LOGLINES=$(wc -l < upgrade/logcat.txt 2>/dev/null || echo 0)
+note "logcat lines: $LOGLINES"
 python3 scripts/upgrade_compare.py upgrade/before.tar upgrade/after.tar | tee upgrade/compare.txt
 CMP=${PIPESTATUS[0]}
 V=PASS
 [ "$CMP" = 0 ] || V=FAIL
 [ "$PRE_OK" = 1 ] || V=ERROR_PRECONDITION
+# An empty logcat means the crash check was blind: a harness error, never a PASS.
+[ "${LOGLINES:-0}" -ge 100 ] || V=ERROR_NO_LOGCAT
 [ "$GUIDE_AGAIN" = 0 ] || V=FAIL
 [ "${FATAL:-0}" = 0 ] || V=FAIL
 # Without the clip played in the old app, history/resume parity was not exercised: not a PASS.
 [ "$V" = PASS ] && [ "$PLAYED" = 0 ] && V=INCOMPLETE_NOT_PLAYED
-[ "$V" = PASS ] && [ "$CLIP_SEEN" = 0 ] && V=FAIL_CLIP_NOT_LISTED
-echo "UPGRADE_RESULT $V compare=$CMP pre_ok=$PRE_OK played=$PLAYED guide_again=$GUIDE_AGAIN clip_seen=$CLIP_SEEN fatal=$FATAL"
+[ "$V" = PASS ] && [ "$CLIP_SEEN" = 0 ] && V=FAIL_NOT_RESUMED
+echo "UPGRADE_RESULT $V compare=$CMP pre_ok=$PRE_OK played=$PLAYED guide_again=$GUIDE_AGAIN resumed=$CLIP_SEEN pos=${POS_BEFORE}/${POS_AFTER}/${POS_RESUMED} fatal=$FATAL logcat=$LOGLINES"
 [ "$V" = PASS ]
