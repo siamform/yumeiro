@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 19:55 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 20:20 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -15,6 +15,9 @@
   - BUG-6 tap-through: MusicTapThroughDeviceTest 8509d1d running before the fix (43912650347). Root cause
     from the code: the Now Playing root had no pointer node, so Compose hit-testing fell through to the tab
     page. Fix written (pointer node on the root), committed only after the before-run is read.
+  - BUG-7 player/IPTV (recorded 20:20 UTC, not reproduced): 7a no download button for website videos,
+    7b Play link downloads hidden from the gallery, 7c freeze on a format mismatch, 7d freeze with upscaling.
+    7c/7d are freezes: reproduce them right after BUG-6 closes.
 - **Ghost run:** device 43908909691 (c41f530) stays "queued" with no jobs; cancel and force-cancel both fail
   with HTTP 409. It is not running anything. Its tests were moved into 43912650347.
 - **Current group:** G10 / G9 closing + BUG-5 + BUG-6.
