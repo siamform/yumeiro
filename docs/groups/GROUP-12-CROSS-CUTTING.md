@@ -34,14 +34,14 @@ this file.
 | X10 | Build, CI, release, signing | `.github/workflows`, Gradle | X10-1..4 CI verified; R8/ABI/signing review not done |
 | X11 | Network stack (smart DNS, DoH, bypass) | `network/*` | audited: X11-1..5 fixed (a299f60, f7e490c, 98f2dbf) |
 | X12 | Caching (data, image, codec) | `cache/*` | audited: X12-1, X12-2 fixed (c63bc66) |
-| X13 | Android 7–16 compatibility | `OsCompat`, `MTApplication`, dependency SDK floors | X13-1 found (Jackson on Android 7); dependency scan of other libraries for SDK 26+ classes still to do; minSdk phone run pending |
-| X14 | Design system and shared components | `ui/components/*` | not started (A11yLabel added in X8-2) |
-| X15 | Shared live-feed component | `ui/feed/*` | not started |
-| X16 | Cloud Worker and its abuse guards | `server/src/*` | not started |
+| X13 | Android 7–16 compatibility | `OsCompat`, `MTApplication`, dependency SDK floors | X13-1 (TV Jackson, owner decision), X13-2..5 emulator api28 verified, X13-6 proposed; phone (minSdk 28) library API scan still to do |
+| X14 | Design system and shared components | `ui/components/*` | audited (code): components use the palette; hardcoded tone colours ≥ 5.26:1 contrast; ATF via AccessibilityDeviceTest incl. 130 % font; RTL icons fixed (G12-RTL, ec0c7ae), device run pending |
+| X15 | Shared live-feed component | `ui/feed/*` | audited: X15-1 (unit), X15-2 timeout became a stuck spinner, fixed 137f5c6 (CI pending) |
+| X16 | Cloud Worker and its abuse guards | `server/src/*` | audited: X16-1 CI, X16-2 trailing-dot host bypass fixed daa970c (local unit 10/10; server CI pending) |
 
 Items owner-tests deferred to Group 12 (`OWNER-MANUAL-TESTS.md`, "Not owner tests"): widget data
 updates, decoder fault recovery on device (fault-injection hook), Anime4K output on emulator GL,
-upgrade from a 1.8.0 install. None done yet; listed under "Open work".
+upgrade from a 1.8.0 install. Code and tests written (G12-WD, G12-DF, G12-A4K; X10-5 harness); device runs pending, see "Open work".
 
 ## 2. Files read
 
@@ -181,12 +181,12 @@ See `docs/DONE-LEDGER.md` rows X1-3 … X10-4, ST-13 … ST-17 for the run IDs p
 
 ## Open work (Group 12 is not done until all are closed)
 
-1. ADR-014 (X9-7 extension dialogs) waits for the owner. (X13-3, X13-4, X13-5, X9-8 done.) X9-7: ADR + owner decision on extension dialogs. (X8-2, X2-3, X9-2…X9-6,
+1. ADR-014 decided by the owner (Show/Quiet/Block promotional, default Quiet); TV rerun of ExtensionPopupsDeviceTest pending. (X13-3, X13-4, X13-5, X9-8 done.) X9-7: ADR + owner decision on extension dialogs. (X8-2, X2-3, X9-2…X9-6,
    X13-1, X13-2 done.)
 2. X2: startup after-numbers with the committed baseline profile (43790371337). (Before numbers, profile and heap profile done.)
 3. ST-17 root cause (ST-13/14/15 emulator proof, ST-18 classified, ST-19 fixed, ST-20 third-party: done).
 4. X7: MASVS write-up — written (`docs/security/MASVS.md`, code review; X7-4 fixed). Review with the owner pending.
 5. X10: upgrade test from the v1.8.0 release on an emulator — harness written (`upgrade-check.yml`, `scripts/upgrade-check.sh`), first run pending. (R8 / ABI / signing review done: X10-1.)
-6. X11–X16: full audit (network, caching, compatibility, design system, live feed, Worker).
-7. Deferred-to-G12 items: widget data updates, decoder fault injection, Anime4K on emulator GL.
-8. RTL layout check.
+6. X11–X16 audited (see table); left: X13 phone library API scan, X16-2 server CI.
+7. Deferred-to-G12 items: widget data updates (CI 43840098751 unit 5/5), decoder fault injection, Anime4K on emulator GL: one device run pending.
+8. RTL layout check: icons fixed (ec0c7ae), RtlLayoutDeviceTest device run pending.
