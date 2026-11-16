@@ -193,14 +193,19 @@ class TvBug5ReproDeviceTest {
         runCatching { rule.waitUntil(20_000) { has("home_screen_root") } }
         val walk = ArrayList<String>()
         var onSearch = false
-        // A remote user goes Up to the top bar, then Right to the magnifier.
-        for (dir in listOf("DPAD_RIGHT", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_LEFT", "DPAD_LEFT")) {
+        // A remote user is on a Home card, goes Up to the top bar, then Right to the magnifier.
+        // Run 43908926085: the first Right from the rail already landed on the magnifier, so that walk
+        // never tested Up from the page. Start on a card first (Right, Down, Down as in c).
+        key("DPAD_RIGHT"); key("DPAD_DOWN"); key("DPAD_DOWN")
+        walk += "start→${focusedInfo()}"
+        val startedOnPage = focused().any { it.startsWith("home_") || it.startsWith("quick_card_") }
+        for (dir in listOf("DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_UP", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_RIGHT", "DPAD_LEFT")) {
             key(dir)
             val f = focused()
             walk += "$dir→${focusedInfo()}"
             if ("topbar_search_action" in f) { onSearch = true; break }
         }
-        log("TVB_STEP d search reachable=$onSearch walk=$walk topbarSearch=${boundsOf("topbar_search_action")} setup=${boundsOf("home_setup_card")} rail=${boundsOf("tv_nav_rail")}")
+        log("TVB_STEP d startedOnPage=$startedOnPage search reachable=$onSearch walk=$walk topbarSearch=${boundsOf("topbar_search_action")} setup=${boundsOf("home_setup_card")} rail=${boundsOf("tv_nav_rail")}")
         if (onSearch) key("DPAD_CENTER", 1_000)
         val opened = has("topbar_search_input") || has("online_search_screen")
         if (opened) {
