@@ -54,4 +54,19 @@ class Bug4QualityListTest {
         val net = StreamRequest(url = "https://example.com/v.m3u8", title = "v")
         assertSame(net, QualityEngine.requestForList(registered = null, fallback = net, networkUri = true))
     }
+
+    private fun link(q: Int, url: String, hls: Boolean = false) =
+        dev.asfakul.yumeiro.online.OnlineLink("S $q", "src", url, null, q, hls, false, emptyMap())
+
+    /** F5: CloudStream's Qualities.Unknown (400) and Auto/unknown (0, -1) never become a height row. */
+    @Test fun unknownQualityIsNotAnInventedHeight() {
+        val links = listOf(
+            link(1080, "https://a.example/1080.mp4"), link(720, "https://b.example/720.mp4"),
+            link(400, "https://c.example/master.m3u8", hls = true), link(0, "https://d.example/auto.m3u8", hls = true),
+            link(-1, "https://e.example/x.mp4"), link(718, "https://f.example/718.mp4"),
+        )
+        val by = QualityEngine.onlineHeights(links)
+        assertEquals(listOf(1080, 720), by.keys.sortedDescending())
+        assertEquals(listOf(1, 5), by.getValue(720).map { it.index })
+    }
 }

@@ -108,11 +108,7 @@ object QualityEngine {
     private fun online(currentHeight: Int): List<Alt> {
         val s = dev.asfakul.yumeiro.online.OnlineSession.state.value ?: return emptyList()
         if (s.phase != dev.asfakul.yumeiro.online.OnlineSession.Phase.PLAYING) return emptyList()
-        val byHeight = s.links.withIndex()
-            // R15: every height the sources have (the download sheet lists them all); a height whose
-            // only sources failed earlier is still offered and retried when picked.
-            .filter { (_, l) -> !l.audioOnly && l.quality in 144..4320 }
-            .groupBy { snap(it.value.quality) }
+        val byHeight = onlineHeights(s.links)
         if (byHeight.size < 2) return emptyList()
         val playing = s.link?.quality
         return byHeight.keys.sortedDescending().map { h ->
@@ -127,6 +123,20 @@ object QualityEngine {
             }
         }
     }
+
+    /**
+     * Sources grouped by the height they state. R15: every height the sources have (the download
+     * sheet lists them all); a height whose only sources failed earlier is still offered and retried
+     * when picked. BUG-4 (F5): 400 is CloudStream's `Qualities.Unknown` (OnlineLink.qualityLabel shows
+     * it as no quality), but it passed the 144..4320 range and became an invented "400p" row. Pure.
+     */
+    internal fun onlineHeights(links: List<dev.asfakul.yumeiro.online.OnlineLink>): Map<Int, List<IndexedValue<dev.asfakul.yumeiro.online.OnlineLink>>> =
+        links.withIndex()
+            .filter { (_, l) -> !l.audioOnly && l.quality in 144..4320 && l.quality != UNKNOWN_QUALITY }
+            .groupBy { snap(it.value.quality) }
+
+    /** CloudStream `Qualities.Unknown.value`. */
+    private const val UNKNOWN_QUALITY = 400
 
     /**
      * R15: the stream's own track ladder plus every real alternative (downloader heights for

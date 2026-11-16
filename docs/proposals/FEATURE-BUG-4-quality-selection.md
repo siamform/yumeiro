@@ -56,6 +56,11 @@ otherwise engine levels "Scaled/Upscaled by Yumeiro"). Download list = `YtDownlo
   the list (`quality in 144..4320`). Hikari probes the master for variants; candidate fix is to
   read the master's `RESOLUTION` like `HlsDownloader` already does for downloads. Not changed yet:
   needs measurement on a real Yumix source list first.
+- F5 (root cause, Yumix, fixed): CloudStream's `Qualities.Unknown` is 400 (`library/.../utils/ExtractorApi.kt`
+  @ 5d66bbe: `Unknown(400, 4)`). `OnlineLink.qualityLabel` already shows 400 as no quality, but
+  `QualityEngine.online` kept it (it is inside 144..4320) and offered an invented "400p" row that
+  switched to an unknown-quality source. Fix: `QualityEngine.onlineHeights` drops 400 like 0/-1.
+  Test: `Bug4QualityListTest.unknownQualityIsNotAnInventedHeight`.
 - F4 (open): `qualityOptions` drops tracks the device can't decode (`isTrackSupported`) without
   saying so; the YouTube list labels these ("Plays as … here"), the HLS ladder does not.
 
