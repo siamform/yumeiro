@@ -38,6 +38,9 @@ internal fun ExtensionPopupsCard() {
     val context = LocalContext.current
     val mode by ExtensionPopups.mode.collectAsState()
     val held by ExtensionPopups.held.collectAsState()
+    val heldIds = held.map { it.id }
+    // ADR-014: this list replaces the quiet card while it is on screen (the card covered Dismiss).
+    androidx.compose.runtime.LaunchedEffect(heldIds) { if (heldIds.isNotEmpty()) ExtensionPopups.onListShown() }
     Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("extensions_popups")) {
         Column(Modifier.padding(14.dp)) {
             Text("Pop-ups from extensions", color = TextPrimary, fontWeight = FontWeight.SemiBold)

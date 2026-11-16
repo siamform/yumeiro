@@ -246,6 +246,9 @@ class ExtensionPopupsDeviceTest {
             rule.onAllNodesWithTag("extensions_list", true)[0].performScrollToNode(hasTestTag("extensions_popups"))
             rule.waitForIdle()
             assertTrue("held row missing", rule.onAllNodesWithTag("extensions_popup_held", true).fetchSemanticsNodes().isNotEmpty())
+            // The list replaces the quiet card; before the fix the card covered Dismiss and a tap
+            // on Dismiss opened the donation dialog (43823291873, both phones).
+            rule.waitUntil(5_000) { AppMessages.current.value == null }
             FirstRun.shot("adr014_extensions_setting")
             rule.onAllNodesWithTag("extensions_popups_block_promotional", true)[0].performClick(); rule.waitForIdle()
             assertEquals(ExtensionPopups.Mode.BLOCK_PROMOTIONAL, ExtensionPopups.mode.value)

@@ -197,6 +197,14 @@ object ExtensionPopups {
         dropCard(h)
     }
 
+    /**
+     * The Extensions screen is listing every held message with its own Show / Dismiss. The quiet
+     * card would be a duplicate, and it sits over the bottom of that list: run 43823291873 (both
+     * phones) tapped Dismiss and hit the card's Show above it, revealing the donation dialog.
+     * Called by the list while it is composed; a card that arrives while it is shown goes too.
+     */
+    fun onListShown() { _held.value.forEach { dropCard(it) } }
+
     /** Opened or discarded from the Extensions screen: its card must not stay on screen. */
     private fun dropCard(h: Held) {
         deferred.entries.removeAll { it.value.id == h.id }
