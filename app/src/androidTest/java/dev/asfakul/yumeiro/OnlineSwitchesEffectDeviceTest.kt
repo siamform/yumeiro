@@ -17,6 +17,13 @@ import dev.asfakul.yumeiro.online.OnlineEpisode
 import dev.asfakul.yumeiro.online.OnlineKind
 import dev.asfakul.yumeiro.online.OnlineSettings
 import dev.asfakul.yumeiro.online.anime.AnimeSync
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import dev.asfakul.yumeiro.ui.screens.online.SkipButton
+import dev.asfakul.yumeiro.ui.screens.video.PlayerHandle
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
@@ -28,6 +35,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Collections
@@ -39,11 +47,14 @@ import java.util.Collections
  *  a Find lyrics online (`lyrics_online_toggle`): on → one LRCLIB request and ONLINE lyrics;
  *    off → no LRCLIB request, no lyrics;
  *  b Skip intro & outro (`setting_skip_intro`): on → an AniSkip request and the intro segment is
- *    loaded; off → no AniSkip request, no segments.
+ *    loaded; off → no AniSkip request, no segments;
+ *  c Skip automatically (`setting_auto_skip`): the real SkipButton over a fake player at 20 s inside
+ *    the 10–95 s intro: on → seeks to 95 s by itself, no button; off → no seek, the Skip button shows.
  * Every value and the client are put back. Log tag YuOnlineFx: OFX_CASE lines, OFX_RESULT PASS.
  */
 @RunWith(AndroidJUnit4::class)
 class OnlineSwitchesEffectDeviceTest {
+    @get:Rule val compose = createComposeRule()
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
     private fun log(m: String) = Log.i("YuOnlineFx", m)
     private val seen = Collections.synchronizedList(ArrayList<String>())
@@ -67,6 +78,7 @@ class OnlineSwitchesEffectDeviceTest {
 
     private var lyricsWas = true
     private var skipWas = true
+    private var autoWas = false
 
     @Before fun setUp() {
         NetworkClient.get(ctx)
@@ -75,12 +87,14 @@ class OnlineSwitchesEffectDeviceTest {
         LrcLib.init(ctx); OnlineSettings.init(ctx)
         lyricsWas = LrcLib.enabled.value
         skipWas = OnlineSettings.skipIntro.value
+        autoWas = OnlineSettings.autoSkip.value
     }
 
     @After fun tearDown() {
         field.set(NetworkClient, original)
         LrcLib.setEnabled(ctx, lyricsWas)
         OnlineSettings.setSkipIntro(ctx, skipWas)
+        OnlineSettings.setAutoSkip(ctx, autoWas)
     }
 
     private fun lyricsFor(case: String) = runBlocking {
@@ -137,5 +151,29 @@ class OnlineSwitchesEffectDeviceTest {
         assertTrue("switch on: AniSkip is asked", onCalls >= 1)
         assertTrue("switch on: the intro segment 10–95 s is loaded ($on)", on?.any { it.startMs == 10_000L && it.endMs == 95_000L } == true)
         log("OFX_RESULT PASS b")
+    }
+
+    @Test fun c_autoSkipFollowsTheSwitch() {
+        val mal = 800_000 + (run % 90_000).toInt()
+        OnlineSettings.setSkipIntro(ctx, true)
+        assertTrue("intro segment must load first", skipsFor(mal, 3)?.isNotEmpty() == true)
+        val seeks = Collections.synchronizedList(ArrayList<Long>())
+        var pos = 20_000L
+        val handle = PlayerHandle(positionMs = { pos }, durationMs = { 1_440_000L }, seekTo = { seeks += it; pos = it })
+        OnlineSettings.setAutoSkip(ctx, false)
+        // Manual clock: the button polls the position every 400 ms in an endless loop.
+        compose.mainClock.autoAdvance = false
+        compose.setContent { Box(Modifier.fillMaxSize()) { SkipButton(handle) } }
+        compose.mainClock.advanceTimeBy(2_000)
+        val buttonOff = compose.onAllNodesWithTag("online_skip").fetchSemanticsNodes().isNotEmpty()
+        val seeksOff = seeks.toList()
+        OnlineSettings.setAutoSkip(ctx, true)
+        compose.mainClock.advanceTimeBy(2_000)
+        val moved = seeks.isNotEmpty()
+        log("OFX_CASE c auto skip off: button=$buttonOff seeks=$seeksOff · on: seeks=${seeks.toList()} moved=$moved")
+        assertTrue("auto skip off: the Skip button must show", buttonOff)
+        assertTrue("auto skip off: no seek by itself ($seeksOff)", seeksOff.isEmpty())
+        assertTrue("auto skip on: the player is moved past the intro", moved && seeks.first() == 95_000L)
+        log("OFX_RESULT PASS c")
     }
 }

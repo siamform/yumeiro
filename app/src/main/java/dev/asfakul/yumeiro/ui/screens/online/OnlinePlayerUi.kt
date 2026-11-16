@@ -704,7 +704,8 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
 }
 
 @Composable
-private fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle) {
+/** `internal` for OnlineSwitchesEffectDeviceTest (G9 auto_skip effect). */
+internal fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle) {
     val skips by dev.asfakul.yumeiro.online.anime.AnimeSync.skips.collectAsState()
     val auto by dev.asfakul.yumeiro.online.OnlineSettings.autoSkip.collectAsState()
     val segments = skips?.segments.orEmpty()
