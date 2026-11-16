@@ -1,21 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 ~09:15 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 ~09:55 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). BUG-1..4 have ledger rows.
   No PR/merge/release without the owner.
-- **Sandbox:** no JDK/Android SDK in this sandbox (fifth agent); every compile and unit test goes to CI.
-- **Level 0 done** (see ledger Changes table). **Current group:** Level 1, Group 12: ST-18 unit rerun +
-  widget data updates.
-- **Done this step:** ST-18 after numbers (43831097217): ExoPlayer build out of the first frame. CI
-  43831093449 hung on the new test (ExoPlayer.release under Robolectric) → de1e218. Widget test
-  `ContinueWidgetUpdatesTest` pushed alone (8f600bc) to show the failure; the fix is in `git stash`
-  (ContinueWidget generation guard + refresh resets the throttle; OnlineHistory key adds the episode).
-- **Running:** CI 43836880510 (8f600bc): expect PlayerBuiltAfterFirstFrameTest pass, ContinueWidgetUpdatesTest
-  cases 2, 3, 5 fail.
-- **Next three actions:** (1) read CI, `git stash pop`, commit the widget fix, CI again; (2) `gpu=swangle_indirect`
-  HomeTrace comparison + ADR-014 TV rerun; (3) X10 upgrade check from v1.8.0, then EXT-T1 ≥ 20 runs.
+- **Sandbox:** no JDK/Android SDK in this sandbox; every compile and unit test goes to CI.
+- **Current group:** Level 1, Group 12. Code + tests pushed, waiting for evidence: widget data updates
+  (b9cd073, 7569065), decoder faults (24bcc65), Anime4K GL (7787fde), RTL (ec0c7ae), X15-2 (137f5c6),
+  X16-2 (daa970c, local unit done). Ledger rows G12-WD, G12-DF, G12-A4K, G12-RTL, X15-2, X16-2.
+- **Running:** CI 43840098751 (b9cd073): expect ContinueWidgetUpdatesTest 5/5, PageDrmSystemNameTest 3/3,
+  PlayerBuiltAfterFirstFrameTest 4/4. It does not contain 24bcc65..daa970c.
+- **Next three actions:** (1) read CI 43840098751, then CI on HEAD (DecoderFaultsTest, LivePagedTest, RTL
+  compile); (2) one device run on HEAD: `WidgetUpdatesDeviceTest,DecoderFaultDeviceTest,Anime4kGlDeviceTest,
+  RtlLayoutDeviceTest`; (3) HomeTrace swangle comparison, ADR-014 TV rerun, X10 upgrade check, EXT-T1 ≥ 20 runs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
