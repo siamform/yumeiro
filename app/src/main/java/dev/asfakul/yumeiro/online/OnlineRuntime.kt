@@ -86,6 +86,10 @@ object OnlineErrors {
             dev.asfakul.yumeiro.youtube.YtAccount.accountCanHelp(e) -> dev.asfakul.yumeiro.youtube.YtAccount.blockedHint()
             // Any link, not only the root: Android's UnknownHostException carries a GaiException as its
             // cause, so a root-only check showed the raw "Unable to resolve host" text (device run 43702633505).
+            // G10 ER-14: a full disk outside downloads (backup, extension or playlist install) showed
+            // the raw "write failed: ENOSPC (No space left on device)".
+            chain.any { val t = it.message.orEmpty(); "ENOSPC" in t || "No space left" in t } ->
+                "Not enough storage. Free up some space, then try again"
             chain.any { it is java.net.UnknownHostException } ->
                 if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
                 else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"

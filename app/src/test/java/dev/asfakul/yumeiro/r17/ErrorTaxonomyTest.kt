@@ -44,6 +44,10 @@ class ErrorTaxonomyTest {
         Case("451", java.io.IOException("HTTP 451"), "Not available in your country (HTTP 451)", "countries"),
         Case("503", java.io.IOException("HTTP 503"), "Server error (HTTP 503)", "having trouble"),
         Case("json", java.io.IOException("x", org.json.JSONException("bad")), "The server sent unreadable data", "extension"),
+        Case("disk full in cause", java.io.IOException("backup failed", java.io.IOException("write failed: ENOSPC (No space left on device)")),
+            "Not enough storage. Free up some space, then try again", "storage space"),
+        Case("disk full text", java.io.IOException("write failed: ENOSPC (No space left on device)"),
+            "Not enough storage. Free up some space, then try again", "storage space"),
         Case("broken link", IllegalArgumentException("Expected URL scheme 'http' or 'https' but no scheme was found for /x"),
             "The site sent a broken link for this source — try another source", "another source"),
     )
