@@ -60,9 +60,12 @@ on:
         required: false
         default: false
 
+# The test list is not part of the group: a batch of eight classes made the name longer than
+# GitHub's 400-character limit (43902887573 never started). Runs on the same device set queue
+# instead of cancelling each other, so no dispatched batch is dropped.
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}
-  cancel-in-progress: true
+  group: device-check-${{ github.ref }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && format('tv{0}', inputs.tv_api) || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
