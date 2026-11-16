@@ -151,6 +151,8 @@ class DownloadThroughputTest {
     /** Engines whose tail the app controls (a host without ranges allows one request only). */
     private val ruled = setOf("segmented4", "segmented2-lowend", "youtube-8mb-chunks", "hls-sequential")
     private val broken = ArrayList<String>()
+    private var lastRequests = 0
+    private var lastServed = 0L
 
     private fun report(engine: String, d: Deciles, requestsUsed: Int, servedBytes: Long) {
         val s = d.steps()
@@ -173,7 +175,8 @@ class DownloadThroughputTest {
         val s0 = served.get()
         body(f, d)
         Thread.sleep(300) // writes already in the socket when the client closed
-        report(engine, d, requests.get() - r0, served.get() - s0)
+        lastRequests = requests.get() - r0; lastServed = served.get() - s0
+        report(engine, d, lastRequests, lastServed)
         check(f)
         File(f.parentFile, f.name + ".chunks").delete(); File(f.parentFile, f.name + ".idx").delete(); f.delete()
     }
@@ -187,6 +190,12 @@ class DownloadThroughputTest {
         ranges = false
         run("single-no-ranges") { f, d -> Segmented(client, 4).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
         ranges = true
+        // DL-11: the probe's full 200 answer is the download; before, it was closed and asked for
+        // again (CI 43877618176: requests=2, servedOverSize=1.132).
+        if (profile.cutAfter == 0L) {
+            assertEquals("single-no-ranges requests (${profile.name})", 1, lastRequests)
+            assertTrue("single-no-ranges read ${lastServed} bytes for $SIZE (${profile.name})", lastServed <= SIZE + 64 * 1024)
+        }
         assertTrue("BUG-3 tail rule (≤ $TAIL_LIMIT×): $broken", broken.isEmpty())
     }
 

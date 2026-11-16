@@ -206,7 +206,15 @@ class Segmented(
     }
 
     private suspend fun once(url: String, headers: Map<String, String>, out: File, progress: (Long, Long) -> Unit): Long {
-        val probe = probe(url, headers)
+        val answer = probe(url, headers)
+        // DL-11: a host without byte ranges answers the 1-byte probe with the whole file (200). That
+        // body was closed and the file asked for again, so the bytes the host had already sent were
+        // lost (local server: 1.13x the file). The 200 answer is now the download itself.
+        // With part of the file already on disk, single() still asks for the rest with a Range first.
+        answer.whole?.let { r ->
+            if (out.exists() && out.length() > 0) r.close() else return r.use { whole(it, out, progress) }
+        }
+        val probe = answer.total
         if (probe == null || probe < segmentFrom || connections <= 1) return single(url, headers, out, progress)
         val total = probe
         val ranges = ForceGrab.chunks(total, chunk)
@@ -266,15 +274,38 @@ class Segmented(
         return total
     }
 
-    /** Total size when the host serves byte ranges, else null. */
-    private fun probe(url: String, headers: Map<String, String>): Long? {
+    /** [total]: size when the host serves byte ranges. [whole]: the open 200 answer of a host without them. */
+    private class Probe(val total: Long?, val whole: okhttp3.Response?)
+
+    private fun probe(url: String, headers: Map<String, String>): Probe {
         val b = Request.Builder().url(url).header("Range", "bytes=0-0")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
-        client.newCall(b.build()).execute().use { r ->
+        val r = client.newCall(b.build()).execute()
+        if (r.code == 200) return Probe(null, r) // caller closes it
+        r.use {
             if (r.code == 401 || r.code == 403) throw Refused(r.code)
-            if (r.code != 206) return null
-            return ForceGrab.totalFromContentRange(r.header("Content-Range"))
+            if (r.code != 206) return Probe(null, null)
+            return Probe(ForceGrab.totalFromContentRange(r.header("Content-Range")), null)
         }
+    }
+
+    /** Writes a full 200 answer to [out] from the start (a host without ranges can't resume). */
+    private suspend fun whole(r: okhttp3.Response, out: File, progress: (Long, Long) -> Unit): Long {
+        val total = r.body.contentLength().takeIf { it > 0 } ?: -1L
+        if (total > 0) checkSpace(total)
+        var done = 0L
+        FileOutputStream(out, false).use { fos ->
+            r.body.byteStream().use { input ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val n = input.read(buf); if (n < 0) break
+                    fos.write(buf, 0, n); done += n; progress(done, total)
+                }
+            }
+        }
+        if (total > 0 && done < total) throw IOException("Connection closed early")
+        return done
     }
 
     /**
