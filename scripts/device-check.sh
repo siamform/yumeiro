@@ -83,6 +83,16 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     sleep 2
     echo "YuDlKillScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines"
     timeout 900 adb shell am instrument -w -r -e class "$C#b_continuesAfterProcessDeath,$C#c_deleteMidDownloadLeavesNoFiles" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+  elif [ "$C" = "dev.asfakul.yumeiro.SettingsWalkDeviceTest" ]; then
+    # G9: phase a flips every Settings switch and kills its own process ("Process crashed" by
+    # design); phase b, a new process, checks each kept its new value and puts it back.
+    P=dev.asfakul.yumeiro.debug
+    timeout 900 adb shell am instrument -w -r -e class "$C#a_flipEverySwitchThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    sleep 2
+    echo "YuSettingsWalkScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
+    timeout 900 adb shell am instrument -w -r -e class "$C#b_everySwitchKeptItsValue" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
+    # A failure in phase a (a switch that did not move) must fail the run too.
+    if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.CrashUiDeviceTest" ]; then
     # G12 X6: phase a really crashes the app (its own result is "Process crashed" by design).
     P=dev.asfakul.yumeiro.debug
@@ -95,7 +105,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   grep -E "INSTRUMENTATION_STATUS: (class|test|stack)=|INSTRUMENTATION_STATUS_CODE|INSTRUMENTATION_CODE|OK \(|FAILURES|Tests run" "inst-$C.txt" | cut -c1-400 | tail -150
   if [ $RC -eq 124 ]; then echo "TIMEOUT in $C (last test started above)"; echo "TESTS_FAILED" > failed.txt; adb shell am force-stop dev.asfakul.yumeiro.debug || true; fi
   # Only this class's lines; crash blocks (AndroidRuntime) and foreground-service decisions included.
-  tail -n +$((L0 + 1)) logcat.txt | grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuDownloadTest|YuBackupTest|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|YuStartup|MTDeviceTest|ANR in|FATAL|OutOfMemory|AndroidRuntime|MediaSessionService|MediaNotification|ForegroundService|startForeground|ActiveServices" | cut -c1-300 | tail -260 || true
+  tail -n +$((L0 + 1)) logcat.txt | grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuDownloadTest|YuSettingsWalk|YuBackupTest|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|YuStartup|MTDeviceTest|ANR in|FATAL|OutOfMemory|AndroidRuntime|MediaSessionService|MediaNotification|ForegroundService|startForeground|ActiveServices" | cut -c1-300 | tail -260 || true
   # Full stack of every failing test (the line filter above keeps only its first line).
   awk '/^INSTRUMENTATION_STATUS: stack=/{p=1} /^INSTRUMENTATION_STATUS: (test|class|current|id|numtests|stream)=|^INSTRUMENTATION_STATUS_CODE/{p=0} p' "inst-$C.txt" | grep -vE "^\s+at (org\.junit|java\.lang\.reflect|jdk\.internal|androidx\.test\.internal)" | head -80
   grep -qE "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2|Process crashed" "inst-$C.txt" && echo "TESTS_FAILED" > failed.txt
