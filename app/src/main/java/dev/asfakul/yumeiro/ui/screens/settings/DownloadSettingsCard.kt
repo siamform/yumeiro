@@ -46,6 +46,7 @@ fun DownloadSettingsCard() {
     val tips by DownloadSettings.showTips.collectAsState()
     val downloader by DownloadSettings.downloader.collectAsState()
     val installed = remember { dev.asfakul.yumeiro.online.download.ExternalDownloader.installed(context) }
+    val appPath by dev.asfakul.yumeiro.ui.screens.downloads.rememberStoragePath(context, "")
     SettingsCard {
         SettingsToggleRow("Ask before each download", "Shows where it's saved and lets you pick Permanent or Offline", askFirst,
             { DownloadSettings.setAskFirst(context, it) }, "setting_ask_first")
@@ -96,7 +97,7 @@ fun DownloadSettingsCard() {
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
         Text("Where files go", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(
-            "Episodes and movies: ${OnlineDownloads.storagePath(context, "")}/<series folder>, private to Yumeiro and removed if you uninstall. " +
+            "Episodes and movies: ${appPath ?: "app storage"}/<series folder>, private to Yumeiro and removed if you uninstall. " +
                 "YouTube: ${if (toPhone) "Movies/Yumeiro and Music/Yumeiro on your phone" else "the same app folder"}.",
             color = TextTertiary, fontSize = 12.sp,
         )

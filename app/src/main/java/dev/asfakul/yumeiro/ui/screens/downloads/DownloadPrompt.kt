@@ -174,7 +174,8 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
     remember { DownloadSettings.init(context); true }
     val days by DownloadSettings.autoDeleteDays.collectAsState()
     val toPhone by DownloadSettings.saveYouTubeToPhone.collectAsState()
-    val free = remember(req) { OnlineDownloads.freeBytes(context) }
+    val free by rememberFreeBytes(context, req)
+    val phonePath by rememberStoragePath(context, req.folder)
     val yt = req.type == DownloadPrompt.Type.YT_VIDEO || req.type == DownloadPrompt.Type.YT_AUDIO
     val audio = req.type == DownloadPrompt.Type.YT_AUDIO
     Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
@@ -196,7 +197,7 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
         Spacer(Modifier.height(4.dp))
         InfoLine(Icons.Default.Folder, "Downloads → ${req.folder}  (open it from Home or Library → Videos)")
         if (yt && toPhone) InfoLine(Icons.Default.PhoneAndroid, "Phone: ${if (audio) "Music" else "Movies"}/Yumeiro, so your gallery and other players see it too")
-        else InfoLine(Icons.Default.PhoneAndroid, "Phone: ${OnlineDownloads.storagePath(context, req.folder)} (private to Yumeiro)", small = true)
+        else InfoLine(Icons.Default.PhoneAndroid, "Phone: ${phonePath ?: "app storage"} (private to Yumeiro)", small = true)
 
         // Keep as
         Spacer(Modifier.height(12.dp))

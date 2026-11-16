@@ -109,7 +109,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     val open = remember { mutableStateListOf<String>() }
     val used = remember(all) { all.filter { it.status == OnlineDownloads.Status.DONE }.sumOf { it.bytes } }
-    val free = remember(all) { OnlineDownloads.freeBytes(context) }
+    val free by rememberFreeBytes(context, all)
 
     Column(Modifier.fillMaxSize().testTag("downloads_screen")) {
         SubPageHeader(
