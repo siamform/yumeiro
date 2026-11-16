@@ -336,3 +336,23 @@ These are real emulators running the real debug APK; the tests are not simulated
 - Pass: `ResumePointsTest` 7/7 (BUG-1 incl. D5), `YtChannelLinkTest` 6/6 (BUG-2), `Bug4QualityListTest`
   5/5 (BUG-4 F1, F5), `LivePagedTest` 8/8 (X15-2).
 - BUG-3 THROUGHPUT numbers: table in `docs/proposals/FEATURE-BUG-3-download-throughput.md` §4.1.
+
+## Device run 43851896291 — device-check on 640e984 (emulator: api36 + api33-lowram, 2026-11-16 ~11:10–11:20 UTC)
+
+- DecoderFaultDeviceTest (G12-DF): a PASS, b PASS on both emulators (b: ERROR_CODE_DECODER_INIT_FAILED
+  from the injected `yumeiro.fault.decoder`, error card shown, app alive). c FAILED on both: "player
+  closed (after 15000ms)". Shot `decoder_fault_player_closed.png`: the error card still full screen.
+  Cause (test error): `input keyevent 4` is a hardware key, Compose switches to keyboard input mode and
+  `PlayerBackRule` steps Back like a remote (fullscreen → leave fullscreen first, R17 design). Fixed in
+  7c0045b: the test taps the card's own Close (`error_close_btn`). Rerun pending.
+- YtChannelUiDeviceTest (BUG-2 E6): CHANNEL_UI_RESULT PASS on both. Shots looked at (api36 + api33):
+  channel_1_listed (Videos tab of "Google for Developers"), channel_2_scrolled, channel_3_video (watch
+  page; playback blocked by YouTube on the CI IP, LOGIN_REQUIRED), channel_5_back: the channel page
+  is on top with no watch page. The flow open channel → list → scroll → open video → Back to channel is
+  proven on emulator. Remark: the "YouTube couldn't play this video" snackbar stays visible on the
+  channel page after Back (cosmetic, logged for G3).
+- YtQualityDeviceTest: YT_QUALITY_RESULT SKIP (SignInConfirmNotBotException, YouTube bot wall on the CI IP).
+  The repeat runner counts it as pass; it is NOT a pass.
+- YtQualityOfflineDeviceTest (BUG-4 F1 without YouTube network): YT_OFFLINE_RESULT PASS on both,
+  download sheet heights [1080,720,480,360,240] = player rows [1080p,720p,480p,360p,240p], no engine-only
+  rows. Shot `ytqo_dialog.png` looked at: five rows, 240p "Playing now".
