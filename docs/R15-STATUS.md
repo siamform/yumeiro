@@ -10,12 +10,12 @@
   shots; YtQualityOffline PASS; YtQuality SKIP bot wall). Device 43855202294: runner could not reach the
   throughput host (v6 + v4 timeouts), test hardened 445156c.
 - **Running:** CI 43861926740 (3c85a72: RequestPace, ProgressGate, RebufferWindow); device 43861039865 (10be03d: QualityList every height, DownloadThroughput CDN hosts).
-  (445156c: DownloadThroughput, DecoderFault, QualityList every height).
 - **Throwaway branches:** `fail-before/r15-proofs` (408faea) and `tmp/bug3-before` (9d86bbd) — dispatch
   after the runs above; delete afterwards, never merge.
-- **Next three actions:** (1) read CI 43854742733, then one CI on head for ProgressGateTest; (2) read device 43857809658 (THROUGHPUT_DEVICE lines,
-  DECODER_FAULT_C, QUALITY_RESULT applied=…); (3) fail-before CI + BUG-3 "before" device run, then
-  HomeTrace swangle, ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
+- **Next three actions:** (1) read CI 43861926740 (THROUGHPUT burst rule, ProgressGateTest,
+  RebufferWindowTest, Bug3PieceTest); (2) read device 43861039865 (QUALITY_RESULT applied=… backMisses,
+  THROUGHPUT_DEVICE lines); (3) fail-before CI + BUG-3 "before" device run, then HomeTrace swangle,
+  ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
