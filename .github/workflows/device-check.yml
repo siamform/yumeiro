@@ -30,16 +30,28 @@ on:
         type: boolean
         required: false
         default: false
+      bench:
+        description: "G12 X2: run the Macrobenchmark workflow instead (startup or profile); none = device tests"
+        type: choice
+        options: [none, startup, profile]
+        default: none
 
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}
+  group: device-check-${{ github.ref }}-${{ inputs.test || 'full' }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && 'tv' || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  bench:
+    if: ${{ inputs.bench == 'startup' || inputs.bench == 'profile' }}
+    uses: ./.github/workflows/macrobenchmark.yml
+    with:
+      what: ${{ inputs.bench }}
+
   emulator:
+    if: ${{ !(inputs.bench == 'startup' || inputs.bench == 'profile') }}
     runs-on: ubuntu-latest
     timeout-minutes: 110
     strategy:

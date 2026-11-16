@@ -11,9 +11,16 @@ on:
         type: choice
         options: [startup, profile]
         default: startup
+  # The file exists only on r15-stability, and GitHub dispatches only workflows on the default
+  # branch. Device check (which is on the default branch) calls this with bench=startup|profile.
+  workflow_call:
+    inputs:
+      what:
+        type: string
+        required: true
 
 concurrency:
-  group: macrobenchmark-${{ github.ref }}-${{ inputs.what }}
+  group: macrobenchmark-${{ github.ref }}-${{ inputs.what }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
