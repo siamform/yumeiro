@@ -50,6 +50,8 @@ ID note: these rows were first written as ER-1/ER-2, which clash with the older 
 | StreamRecovery / StreamResolver texts | code review: cause + next step in each (DNS, timeout, TLS, 401/403/404/429/451/5xx, DRM, parsing, empty/too-large playlist, web page, TorrServer) | review | done (no change) |
 | ER-12 Retry on failed adds / Inbox | code review | unit (compile) | CI run owed |
 | Every message triggered on device | — | emulator | open |
+| Dialogs: Back closes without acting, page kept, ATF clean (Privacy "Clear …" confirms, TsukiDialog) | `DialogsDeviceTest` | emulator | run owed |
+| Dialog Back by construction | code scan: every `*Dialog/*Sheet/*Prompt/*Host` composable uses Dialog/AlertDialog/ModalBottomSheet/BackHandler or delegates (ReminderCard → Dialog); the 6 without are non-modal overlays (gestures, info overlay, error overlay under the player's BackHandler, lights, message host) | review | done |
 | Left as is after review: per-row Install failures (the Install button stays on the row, so tapping it again is the retry); "Couldn't start casting" (CastSupport.play returns false without a reason; the cast session is already connected when it runs) — noted, not changed | code review | — | noted |
 | ER-11 permission denied once / blocked / Open settings | `PermissionFlowDeviceTest` | emulator | run owed |
 | Permission revoked while running | Android kills the app process on revoke; what the next start shows is not yet checked | — | open |
