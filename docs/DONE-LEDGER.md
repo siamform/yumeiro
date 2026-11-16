@@ -463,6 +463,7 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-17 | BUG-7 | 7c fixed in code → verified on device (emulator, both phones): 43946324687 all 5 cases PASS, backPresses=1 closed=true. 7d: 3/3 PASS on both phones, not reproduced on emulator → OMT-16; gallery → OMT-17 |
 | 2026-11-17 | SE-2, SE-3, ER-10, ER-12, ER-13, ER-16 | status reconciled from evidence already on file: SE-2 open → verified on device (emulator, 43891331959); SE-3, ER-10, ER-13 open → verified unit (CI 43941919340 test XML); ER-12 open → done (review + compile, not device); ER-16 → done. G10 "permission revoked while running" proven on both phones in 43904330191 (PERM_RUNNING ×4, crashLines=0) |
 | 2026-11-17 | SE-6 | new: 13 settings choice rows had no effect test (found reconciling GROUP-9); tests written, run owed |
+| 2026-11-17 | BUG-5 | tv-api24 (43949571344): TV-5, TV-2, TV-3 PASS; TV-4 d answered=false because the Leanback keyboard took Enter → test sends the IME search action, rerun owed. Ghost 43946842943 (queued, no jobs, cancel ignored) replaced |
 
 
 Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-7 was already used by the R16 library-tabs row; the commit message says LB-7).

@@ -721,3 +721,13 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - UpscaleFreezeDeviceTest 3/3 PASS on both: anime4k_on, upscaled_level, plain_control; position and time
   label move, frames drawn, More opens on a real tap.
 
+## 43949571344 (tv-api24 = Android TV 7, emulator; head c92870e)
+
+- TvBug5ReproDeviceTest a TV-5 PASS (1920x1080 full window, no fullscreen button), b TV-2 PASS (top and bottom
+  reached, focus stays in the player), c TV-3 PASS (Home pager stays on page 0, no YouTube Music opened).
+- d TV-4: Up×3 reaches the magnifier, box opens focused, typed 'naruto'; after Enter answered=false. The Leanback
+  keyboard was open and took the Enter key (shot tvb_d_search). Test now sends the IME search action (what the
+  keyboard's SEARCH key sends) when Enter is eaten; rerun owed.
+- 43946842943 (same inputs, 3be5e5f) sat "queued" with no jobs for 40 min and stayed queued after cancel: ghost,
+  replaced by 43949571344.
+

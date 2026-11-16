@@ -6,17 +6,16 @@
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Current group / step:** owner bugs inside G12 → BUG-5 tv-api24 run, then G9/G10 close.
+- **Current group / step:** G9/G10 close-out. G10: every row has evidence except VPN (OMT-18). G9: switches 34/34;
+  choice rows + backdrop slider are SE-6 (tests written, CI 43953320911 then phones owed).
 - **Owner bugs:**
-  - BUG-5 TV UI (tv-api34 emulator): TV-5, TV-2, TV-4 focus and answer verified (43935810414). Open: TV-4 scope
-    (cross-source search, G7 proposal 3, owner call), tv_api=24 run, TV-3 with feed rows.
+  - BUG-5 TV UI: tv-api34 TV-5/TV-2/TV-4 verified (43935810414); tv-api24 TV-5/TV-2/TV-3 PASS (43949571344), TV-4 d
+    test fixed (IME search action), rerun owed. Open: TV-4 cross-source search (G7 proposal 3, owner call).
   - BUG-6 verified on device (emulator, both phones).
-  - BUG-7: 7a, 7b verified (43935805199), 7c verified (fail 43935805199 → pass 43946324687; Back on an error card
-    minimized and the error re-expanded the player). 7d not reproduced on emulator (3/3 PASS) → OMT-16; gallery OMT-17.
-- **CI:** 43941919340 green at f3f8914 (7c fix + test import). 43938487132 was cancelled by ghost 43927717593
-  waking up (ci.yml cancel-in-progress); ghost cancelled, 43939248924 failed on a test compile (fixed f3f8914).
-- **Running:** tv-api24 43946842943 (TvBug5Repro).
-- **Next three actions:** (1) read tv-api24 43946842943; (2) TV-3 with feed rows; (3) close G9/G10, start G12.
+  - BUG-7: 7a, 7b, 7c verified on device (emulator); 7d not reproduced on emulator → OMT-16; gallery OMT-17.
+- **CI:** 43953320911 running (c-head after the cookie-test race fix). Ghosts: 43927717593 (CI), 43946842943 (TV).
+- **Next three actions:** (1) CI green → phones ChoiceSettingsEffectDeviceTest + tv-api24 TvBug5Repro;
+  (2) record SE-6, close G9 and G10 in the ledger and GROUP docs (add OMT-18 VPN); (3) start Group 12.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
