@@ -30,7 +30,7 @@ import kotlin.math.abs
  * A public multi-rendition HLS stream is opened in Yumeiro's own player. The test reads the
  * stream's renditions straight from its master playlist (independently of the app), opens the
  * Quality dialog from the player controls, and checks: "Auto" first, then one row per real
- * height, highest first, no duplicates, nothing invented. It then picks two heights and checks
+ * height, highest first, no duplicates, nothing invented. It then picks every height and checks
  * that the decoder really switches to each, without starting over, and goes back to Auto.
  */
 @RunWith(AndroidJUnit4::class)
@@ -137,15 +137,14 @@ class QualityListDeviceTest {
         back()
         rule.waitUntil(5_000) { !has("quality_Auto") }
 
-        // Lowest real height, then the highest, then back to Auto.
-        val low = heights.last(); val high = heights.first()
-        pick("${low}p", low)
-        pick("${high}p", high)
+        // BUG-4: every real height, lowest first, each checked on the decoder and in the dialog,
+        // then back to Auto.
+        for (h in heights.reversed()) { pick("${h}p", h); FirstRun.shot("quality_applied_${h}p") }
         openQualityDialog()
         rule.onAllNodesWithTag("quality_Auto", true)[0].performClick()
         val after = System.currentTimeMillis() + 4_000
         rule.waitUntil(8_000) { System.currentTimeMillis() > after }
         assertTrue("player error after Auto: ${PlaybackDiagnostics.state.value.error}", PlaybackDiagnostics.state.value.error == null)
-        log("QUALITY_RESULT PASS heights=$heights")
+        log("QUALITY_RESULT PASS heights=$heights applied=${heights.reversed()}")
     }
 }
