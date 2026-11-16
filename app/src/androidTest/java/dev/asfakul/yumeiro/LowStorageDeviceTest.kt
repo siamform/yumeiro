@@ -13,8 +13,8 @@ import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Status
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,7 +41,7 @@ class LowStorageDeviceTest {
     @After fun tearDown() {
         FirstRun.shell("rm -f $fill")
         started.forEach { runCatching { OnlineDownloads.delete(ctx, it) } }
-        servers.forEach { runCatching { it.shutdown() } }
+        servers.forEach { runCatching { it.close() } }
     }
 
     private fun run(case: String, url: String): OnlineDownloads.Item? = runBlocking {
@@ -67,13 +67,13 @@ class LowStorageDeviceTest {
         assumeTrue("free space unknown", free > 0)
         val total = free + 1024L * 1024 * 1024
         val server = MockWebServer().also { servers += it }
-        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
-            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
-                val range = request.getHeader("Range")
+        server.dispatcher = object : mockwebserver3.Dispatcher() {
+            override fun dispatch(request: mockwebserver3.RecordedRequest): MockResponse {
+                val range = request.headers["Range"]
                 // Only the probe and the first bytes: the check must stop it before any real read.
-                return if (range != null) MockResponse().setResponseCode(206)
-                    .setHeader("Content-Range", "bytes 0-0/$total").setHeader("Accept-Ranges", "bytes").setBody("x")
-                else MockResponse().setResponseCode(200).setBody("x")
+                return if (range != null) MockResponse.Builder().code(206)
+                    .setHeader("Content-Range", "bytes 0-0/$total").setHeader("Accept-Ranges", "bytes").body("x").build()
+                else MockResponse.Builder().code(200).body("x").build()
             }
         }
         server.start()
@@ -95,9 +95,9 @@ class LowStorageDeviceTest {
         val server = MockWebServer().also { servers += it }
         // No length, no ranges: nothing to check up front; the write has to hit ENOSPC.
         val body = okio.Buffer().write(ByteArray(40 * 1024 * 1024))
-        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
-            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse =
-                MockResponse().setResponseCode(200).setChunkedBody(body.clone(), 256 * 1024)
+        server.dispatcher = object : mockwebserver3.Dispatcher() {
+            override fun dispatch(request: mockwebserver3.RecordedRequest): MockResponse =
+                MockResponse.Builder().code(200).chunkedBody(body.clone(), 256 * 1024).build()
         }
         server.start()
         val item = run("b-enospc", server.url("/stream.mp4").toString())

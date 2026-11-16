@@ -15,8 +15,8 @@ import dev.asfakul.yumeiro.network.Connectivity
 import dev.asfakul.yumeiro.network.NetworkClient
 import dev.asfakul.yumeiro.online.OnlineErrors
 import okhttp3.Request
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.FixMethodOrder
@@ -88,10 +88,10 @@ class NetworkStateDeviceTest {
         val server = MockWebServer()
         // By path, not a queue: an interceptor retry of /late must not take /slow's answer.
         var lateHits = 0
-        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
-            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse = when (request.path) {
-                "/late" -> { lateHits++; MockResponse().setBody("late").setHeadersDelay(25, TimeUnit.SECONDS) }
-                else -> MockResponse().setBody(okio.Buffer().write(ByteArray(256 * 1024))).throttleBody(32 * 1024, 1, TimeUnit.SECONDS)
+        server.dispatcher = object : mockwebserver3.Dispatcher() {
+            override fun dispatch(request: mockwebserver3.RecordedRequest): MockResponse = when (request.url.encodedPath) {
+                "/late" -> { lateHits++; MockResponse.Builder().body("late").headersDelay(25, TimeUnit.SECONDS).build() }
+                else -> MockResponse.Builder().body(okio.Buffer().write(ByteArray(256 * 1024))).throttleBody(32 * 1024, 1, TimeUnit.SECONDS).build()
             }
         }
         server.start()
@@ -105,7 +105,7 @@ class NetworkStateDeviceTest {
             val slow = call(server.url("/slow").toString())
             log("NET_CASE slow-steady error=${slow?.javaClass?.simpleName} after ${SystemClock.uptimeMillis() - t1}ms")
             assertTrue("a slow but steady body failed: $slow", slow == null)
-        } finally { runCatching { server.shutdown() } }
+        } finally { runCatching { server.close() } }
         log("NET_RESULT b PASS")
     }
 
