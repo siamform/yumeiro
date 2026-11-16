@@ -650,3 +650,15 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 | PlayerExtrasSettingsEffectDeviceTest | PASS a, b1, b2, c1, c2 | PASS a, b1, b2, c1, c2 | cc_default, bg_play, auto_pip |
 | OnlineSwitchesEffectDeviceTest | PASS a–c | PASS a–c | lyrics_online, skip_intro, auto_skip |
 | HeroCarouselLifecycleDeviceTest | FAIL | FAIL | Test error: slide A after 9 s of mainClock time; delay() is real time in instrumented tests. Real-time test next |
+
+## 43908926085 (c41f530, tv-api34, emulator) — TvBug5ReproDeviceTest
+
+- a TV-5 PASS: requested UNSPECIFIED, config landscape, sw 540 dp, player 1920x1080@0,0 = window, no fullscreen
+  button, focus on video_play_pause_btn. TV-5 fix 4e5ff31 proven on this emulator.
+- b FAIL: Up reached video_audio_track_btn and the More button (top row), then Down moved focus to
+  home_setup_card, quick_card_ytmusic … behind the player (screenshot tvb_b_walk: player still shown, no focus
+  ring). Root cause: the player overlay was not a closed focus group. Fix c07bc70.
+- c TV-3 PASS (14 × Right along "Next episodes", page stayed 0).
+- d FAIL (test): Up from the page focused node1573 [1712,22,1792,102], inside topbar_search_action
+  [1708,18,1796,106]; focused() read only the node's own tag. Test fixed to read ancestor tags.
+

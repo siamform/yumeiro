@@ -442,6 +442,8 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-16 | Y6/H1 | still unverified: 43904330191 HeroCarouselLifecycle FAIL both = test error (mainClock does not drive delay()); real-time test fd next |
 | 2026-11-16 | CI | device 43902887573 never started (concurrency group > 400 chars; fixed 35dc0c6); CI 43899660445 failed DownloadThroughputTest tail rule on a slow runner (c6ed3f5); CI 43904139596 cancelled, superseded by 43905575842 |
 | 2026-11-16 | BUG-5 | TV-5 and part of TV-4 reproduced on tv-api34 (43902905156); TV-5 fixed in code 4e5ff31, TV proof owed |
+| 2026-11-16 | BUG-5 | TV-5 verified on device (tv-api34 emulator, 43908926085 a PASS: landscape, 1920x1080 full window, no fullscreen toggle). TV-2: focus left the open player for home_setup_card (same run, b) → fixed in code c07bc70, proof owed. TV-4: Up does reach topbar_search_action (test read only the inner node's tag; test fixed) |
+| 2026-11-16 | CI | device 43908909691 stuck "queued" with no jobs, cancel/force-cancel HTTP 409 (ghost); tests moved to 43912650347. CI 43910831195 and device 43910969949 failed to compile MusicTapThroughDeviceTest (missing click import, 8509d1d) |
 
 
 Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-7 was already used by the R16 library-tabs row; the commit message says LB-7).

@@ -1,22 +1,29 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 18:40 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 19:55 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Owner bugs:** BUG-5 TV UI (TV-5 + part of TV-4 reproduced on tv-api34 43902905156; TV-5 fixed in code
-  4e5ff31, TV proof owed); BUG-6 full-screen music player tap-through (recorded, not reproduced).
-- **Batch 43904330191 read:** ER-11, ER-14, ER-15, ER-17, ER-18 → verified on device (emulator); SE-5 15 of 16
-  (push_alerts left). Y6/H1 test error (mainClock vs real delay) → real-time test committed.
-- **Current group:** G10 / G9 closing + BUG-5. Step: CI 43905575842 (3725460) running.
-- **Running:** CI 43905575842.
-- **Next three actions:** (1) CI green → device: phones `HeroCarouselLifecycleDeviceTest` only; TV
-  `-f tv=true -f tv_api=34 -f test=dev.asfakul.yumeiro.TvBug5ReproDeviceTest`, then tv_api=24; (2) read TVB_STEP d
-  focus bounds → TV-4 root cause (top bar overlay unreachable by Up; Home search is library-only); TV-3 feed rows
-  need seeded content; (3) close G9/G10 docs once Y6/H1 passes and push_alerts is settled (test or OMT), then
-  BUG-6 reproduction on the phones.
+- **Owner bugs:**
+  - BUG-5 TV UI: TV-5 proven fixed on tv-api34 (43908926085 a PASS: landscape, player 1920x1080 full window).
+    TV-2: the same run showed D-pad focus leaving the open player for home_setup_card behind it; fixed in code
+    c07bc70 (player focus group), proof run 43912693329. TV-4: the search button was reached (the focused node
+    sat inside topbar_search_action; the test read only the node's own tag). Test fixed; the run shows what
+    the search box answers. TV-3 c PASS on an empty install; feed rows still need checking.
+  - BUG-6 tap-through: MusicTapThroughDeviceTest 8509d1d running before the fix (43912650347). Root cause
+    from the code: the Now Playing root had no pointer node, so Compose hit-testing fell through to the tab
+    page. Fix written (pointer node on the root), committed only after the before-run is read.
+- **Ghost run:** device 43908909691 (c41f530) stays "queued" with no jobs; cancel and force-cancel both fail
+  with HTTP 409. It is not running anything. Its tests were moved into 43912650347.
+- **Current group:** G10 / G9 closing + BUG-5 + BUG-6.
+- **Running:** device phones 43912650347 (HeroCarousel + MusicTapThrough, 8509d1d); TV api34 43912693329
+  (TvBug5Repro, 8509d1d).
+- **Next three actions:** (1) read 43912650347: Y6/H1 moved=true on both → verified on device; BUG-6 TAP_RESULT
+  FAIL expected → commit the NowPlayingScreen fix, CI, rerun the test (must PASS); (2) read 43912693329: b must
+  show no focus behind the player; d shows what the search answers → decide TV Home search (online on TV);
+  then tv_api=24; (3) push_alerts (SE-5) test or OMT, then close G9/G10 docs.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
