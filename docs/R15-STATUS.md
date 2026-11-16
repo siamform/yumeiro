@@ -1,21 +1,20 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 11:27 UTC, fifth handover; orders: master handover + operating prompt 5)
+## Resume here (updated 2026-11-16 12:25 UTC, fifth handover; orders: master handover + operating prompt 5)
 
 - **Orders in force:** the fifth master handover (Parts 1–10). Level 0 → Level 1 (Group 12) → G5–G10 →
   G11 → re-audit G1–4 → final sweep. Feature phase gated (research only). No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI.
-- **Current group:** Level 2 BUG-1..4 (+ Group 12 leftovers).
-- **Read:** device 43851896291 (DecoderFault a/b PASS, c test error fixed 7c0045b; YtChannelUi PASS with
-  shots; YtQualityOffline PASS; YtQuality SKIP bot wall). Device 43855202294: runner could not reach the
-  throughput host (v6 + v4 timeouts), test hardened 445156c.
-- **Running:** CI 43861926740 (3c85a72: RequestPace, ProgressGate, RebufferWindow); device 43863246577 (HomeTrace, swangle_indirect).
-- **Throwaway branch:** `fail-before/r15-proofs` (408faea; tmp/bug3-before deleted) — dispatch
-  after the runs above; delete afterwards, never merge.
-- **Next three actions:** (1) read CI 43861926740 (THROUGHPUT burst rule, ProgressGateTest,
-  RebufferWindowTest, Bug3PieceTest); (2) read device 43861039865 (QUALITY_RESULT applied=… backMisses,
-  THROUGHPUT_DEVICE lines); (3) fail-before CI + BUG-3 "before" device run, then HomeTrace swangle,
-  ADR-014 TV, X10 upgrade, EXT-T1 ≥ 20 runs.
+- **Current group:** Level 2 — BUG-1..4 leftovers, Group 5 (R17 round) and Group 8 (R17 round) started.
+- **Done since last update:** CI 43861926740 green (BUG-3 rule met). HomeTrace swangle 43863246577 read.
+  OMT-14 / OMT-15 written. New fixes, unit tests not yet run: LB-7 (liked order, playlist dupes,
+  `LibraryCrudTest`), DL-6 (download list save race), DL-7 (delete removes all work files), DL-8 (HLS
+  follows the download quality setting).
+- **Running:** CI 43864957319 (fail-before/r15-proofs, 408faea, expected to FAIL); device 43865392890
+  (ADR-014 TV, ExtensionPopupsDeviceTest).
+- **Next three actions:** (1) read fail-before CI, record expected failures, then ci.yml on r15-stability
+  head for LB-7/DL-6/DL-7/DL-8; (2) read the TV run; then YtQualityOffline on fail-before, X10 upgrade,
+  EXT-T1 ≥ 20 runs; (3) write docs/groups/GROUP-8-DOWNLOADS.md and the G5 R17 section.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
