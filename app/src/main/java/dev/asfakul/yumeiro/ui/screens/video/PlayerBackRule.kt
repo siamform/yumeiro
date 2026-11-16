@@ -36,4 +36,19 @@ internal object PlayerBackRule {
         fullscreen && (keyDriven || onWatchPage) -> Step.EXIT_FULLSCREEN
         else -> Step.LEAVE
     }
+
+    enum class Leave { CLOSE, MINIMIZE, PIP }
+
+    /**
+     * Where leaving the player goes. BUG-7 7c (device run 43935805199, both phones): with an error
+     * card on screen, Back minimized the player and the "error while floating" rule expanded it again
+     * at once, so three Back presses did nothing and the app looked frozen. A player in error has
+     * nothing to keep playing, so leaving closes it.
+     */
+    fun leave(error: Boolean, backAction: dev.asfakul.yumeiro.player.PlayerSettings.BackAction, pipReady: Boolean, canMinimize: Boolean): Leave = when {
+        error -> Leave.CLOSE
+        backAction == dev.asfakul.yumeiro.player.PlayerSettings.BackAction.PIP && pipReady -> Leave.PIP
+        backAction != dev.asfakul.yumeiro.player.PlayerSettings.BackAction.CLOSE && canMinimize -> Leave.MINIMIZE
+        else -> Leave.CLOSE
+    }
 }

@@ -101,9 +101,15 @@ class UpscaleFreezeDeviceTest {
         // 2 s apart, then More must open its menu.
         if (!has("video_more_btn")) { UiLiveness.tap(rule, "video_player_root"); UiLiveness.pump(rule, 500) }
         val t0 = UiLiveness.timeLabels(rule); UiLiveness.pump(rule, 2_000); val t1 = UiLiveness.timeLabels(rule)
-        if (!has("video_more_btn")) { UiLiveness.tap(rule, "video_player_root"); UiLiveness.pump(rule, 500) }
-        val tappedMore = UiLiveness.tap(rule, "video_more_btn")
-        val menu = tappedMore && runCatching { rule.waitUntil(3_000) { has("video_more_menu") }; true }.getOrDefault(false)
+        // Run 43935805199: the controls auto-hid (3.5 s) between the check and the tap, so the tap
+        // landed on a fading button. Show them fresh, wait for More, tap; one retry.
+        var tappedMore = false; var menu = false
+        repeat(2) {
+            if (menu) return@repeat
+            if (!has("video_more_btn")) { UiLiveness.tap(rule, "video_player_root"); runCatching { rule.waitUntil(2_000) { has("video_more_btn") } } }
+            tappedMore = UiLiveness.tap(rule, "video_more_btn")
+            menu = tappedMore && runCatching { rule.waitUntil(3_000) { has("video_more_menu") }; true }.getOrDefault(false)
+        }
         if (menu) { FirstRun.shell("input keyevent KEYCODE_BACK"); UiLiveness.pump(rule, 600) }
         val (closed, how) = UiLiveness.leaveAndClose(rule)
         val lag = watch.maxLag.get()

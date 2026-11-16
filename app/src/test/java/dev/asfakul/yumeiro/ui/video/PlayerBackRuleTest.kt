@@ -25,4 +25,18 @@ class PlayerBackRuleTest {
     @Test fun remoteThenExitsFullscreen() = assertEquals(Step.EXIT_FULLSCREEN, step(key = true, controls = false, fs = true))
     @Test fun remoteThenLeaves() = assertEquals(Step.LEAVE, step(key = true, controls = false, fs = false))
     @Test fun remoteOnEndScreenDoesNotJustHideControls() = assertEquals(Step.EXIT_FULLSCREEN, step(key = true, controls = true, fs = true, ended = true))
+
+    // BUG-7 7c: Back on an error card closed nothing (minimize, then auto-expand on error).
+    private val B = dev.asfakul.yumeiro.player.PlayerSettings.BackAction
+    @Test fun errorAlwaysCloses() {
+        assertEquals(PlayerBackRule.Leave.CLOSE, PlayerBackRule.leave(true, B.MINIMIZE, pipReady = false, canMinimize = true))
+        assertEquals(PlayerBackRule.Leave.CLOSE, PlayerBackRule.leave(true, B.PIP, pipReady = true, canMinimize = true))
+    }
+    @Test fun noErrorKeepsTheSetting() {
+        assertEquals(PlayerBackRule.Leave.MINIMIZE, PlayerBackRule.leave(false, B.MINIMIZE, pipReady = false, canMinimize = true))
+        assertEquals(PlayerBackRule.Leave.PIP, PlayerBackRule.leave(false, B.PIP, pipReady = true, canMinimize = true))
+        assertEquals(PlayerBackRule.Leave.MINIMIZE, PlayerBackRule.leave(false, B.PIP, pipReady = false, canMinimize = true))
+        assertEquals(PlayerBackRule.Leave.CLOSE, PlayerBackRule.leave(false, B.CLOSE, pipReady = true, canMinimize = true))
+        assertEquals(PlayerBackRule.Leave.CLOSE, PlayerBackRule.leave(false, B.MINIMIZE, pipReady = false, canMinimize = false))
+    }
 }

@@ -1442,13 +1442,13 @@ private fun VideoPlayerModalContent(
     val leavePlayer: () -> Unit = {
         val w = activeVideoFormat?.width?.takeIf { it > 0 } ?: video.width
         val h = activeVideoFormat?.height?.takeIf { it > 0 } ?: video.height
-        when {
-            backAction == PlayerSettings.BackAction.PIP && isPipSupported && activity != null && isPlaying -> {
+        when (PlayerBackRule.leave(error = playerError != null, backAction = backAction, pipReady = isPipSupported && activity != null && isPlaying, canMinimize = onMinimize != null)) {
+            PlayerBackRule.Leave.PIP -> {
                 isControlsVisible = false
-                if (!PipController.enter(activity, w, h, true)) { if (onMinimize != null) onMinimize() else onClose() }
+                if (!PipController.enter(activity!!, w, h, true)) { if (onMinimize != null) onMinimize() else onClose() }
             }
-            backAction != PlayerSettings.BackAction.CLOSE && onMinimize != null -> { isControlsVisible = false; onMinimize() }
-            else -> onClose()
+            PlayerBackRule.Leave.MINIMIZE -> { isControlsVisible = false; onMinimize?.invoke() }
+            PlayerBackRule.Leave.CLOSE -> onClose()
         }
     }
     BackHandler(enabled = !minimized) {
