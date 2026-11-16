@@ -662,3 +662,17 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - d FAIL (test): Up from the page focused node1573 [1712,22,1792,102], inside topbar_search_action
   [1708,18,1796,106]; focused() read only the node's own tag. Test fixed to read ancestor tags.
 
+## 43912650347 (8509d1d, api33-lowram + api36, emulator) — MusicTapThrough (before the fix) + HeroCarousel
+
+- BUG-6 reproduced on both: TAP_CASE quick_card_hues → homeStill=false (Manga page opened under Now
+  Playing); quick_card_youtube → page 2 (Stream). home_setup_* taps did not leak. TAP_RESULT FAIL.
+- Y6/H1: CREATED 14 s → still on slide A (both PASS). RESUMED: api36 moved after 14,381 ms (PASS);
+  api33-lowram moved=false after 15,016 ms (FAIL on the 15 s window).
+
+## 43912693329 (8509d1d, tv-api34, emulator) — TvBug5ReproDeviceTest, all 4 PASS
+
+- a TV-5 PASS (landscape, 1920x1080 full window). b TV-2 PASS: Up → video_audio_track_btn, Down →
+  video_play_pause_btn → video_seekbar, focus never behind the player (fix c07bc70).
+- c TV-3 PASS (Spaces grid, page 0). d: Up from home_setup_card → magnifier; box opened, but the
+  screenshot shows an empty box and the rail expanded: the typed text never arrived (fix 18147da).
+

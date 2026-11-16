@@ -1,32 +1,27 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-16 20:20 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-16 20:45 UTC, sixth handover; orders: master handover 6)
 
 - **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
 - **Owner bugs:**
-  - BUG-5 TV UI: TV-5 proven fixed on tv-api34 (43908926085 a PASS: landscape, player 1920x1080 full window).
-    TV-2: the same run showed D-pad focus leaving the open player for home_setup_card behind it; fixed in code
-    c07bc70 (player focus group), proof run 43912693329. TV-4: the search button was reached (the focused node
-    sat inside topbar_search_action; the test read only the node's own tag). Test fixed; the run shows what
-    the search box answers. TV-3 c PASS on an empty install; feed rows still need checking.
-  - BUG-6 tap-through: MusicTapThroughDeviceTest 8509d1d running before the fix (43912650347). Root cause
-    from the code: the Now Playing root had no pointer node, so Compose hit-testing fell through to the tab
-    page. Fix written (pointer node on the root), committed only after the before-run is read.
-  - BUG-7 player/IPTV (recorded 20:20 UTC, not reproduced): 7a no download button for website videos,
-    7b Play link downloads hidden from the gallery, 7c freeze on a format mismatch, 7d freeze with upscaling.
-    7c/7d are freezes: reproduce them right after BUG-6 closes.
-- **Ghost run:** device 43908909691 (c41f530) stays "queued" with no jobs; cancel and force-cancel both fail
-  with HTTP 409. It is not running anything. Its tests were moved into 43912650347.
-- **Current group:** G10 / G9 closing + BUG-5 + BUG-6.
-- **Running:** device phones 43912650347 (HeroCarousel + MusicTapThrough, 8509d1d); TV api34 43912693329
-  (TvBug5Repro, 8509d1d).
-- **Next three actions:** (1) read 43912650347: Y6/H1 moved=true on both → verified on device; BUG-6 TAP_RESULT
-  FAIL expected → commit the NowPlayingScreen fix, CI, rerun the test (must PASS); (2) read 43912693329: b must
-  show no focus behind the player; d shows what the search answers → decide TV Home search (online on TV);
-  then tv_api=24; (3) push_alerts (SE-5) test or OMT, then close G9/G10 docs.
+  - BUG-5 TV UI (tv-api34 emulator): TV-5 and TV-2 verified (43908926085, 43912693329). TV-4: the box opened
+    without focus → fix 18147da, proof run 43914880052 (d asserts focus + typed text). Then: what Home search
+    answers on a TV with no local media (library-only today), tv_api=24 run, TV-3 with feed rows.
+  - BUG-6 reproduced on both phones (43912650347); fix c8ac2ae; after-run 43914724044 must PASS.
+  - BUG-7 player/IPTV (recorded, not reproduced): 7a web-URL download button, 7b Play link downloads not in
+    the gallery, 7c freeze on format mismatch, 7d freeze with upscaling. 7c/7d first after BUG-6.
+- **SE-5:** PushAlertsEffectDeviceTest runs in 43914724044; PASS → SE-5 16/16, distributor
+  binding → OMT.
+- **Ghost run:** device 43908909691 (c41f530) stays "queued" with no jobs; cancel/force-cancel HTTP 409.
+- **CI owed:** the last CI (43910831195) failed only on the test compile fixed in 8509d1d; run CI after the
+  two device runs (unit tests for c07bc70, c8ac2ae, 18147da).
+- **Running:** phones 43914724044 (MusicTapThrough, HeroCarousel, PushAlerts at c8ac2ae); TV api34 43914880052
+  (TvBug5Repro at 18147da).
+- **Next three actions:** (1) read both runs; record BUG-6 / Y6/H1 / SE-5 / TV-4 results in the ledger;
+  (2) CI on the head; (3) BUG-7 7c and 7d reproduction tests (freeze watchdog + ANR trace), then close G9/G10.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are

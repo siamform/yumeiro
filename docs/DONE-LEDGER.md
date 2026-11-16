@@ -435,6 +435,9 @@ Status is `unit only` unless an R15 device test covers the same path. Details pe
 | 2026-11-16 | BUG-5 | reproduction test added (`TvBug5ReproDeviceTest`, TV-2/3/4/5), not run yet; stays open |
 | 2026-11-16 | BUG-6 | new row from the owner's report (music player tap-through); open, not reproduced |
 | 2026-11-16 | BUG-7 | new row from the owner's report (7a web-URL download button, 7b Play link downloads not in gallery, 7c freeze on format mismatch, 7d freeze with upscaling); open, not reproduced |
+| 2026-11-16 | BUG-6 | reproduced on device (emulator, api33-lowram + api36, 43912650347 at 8509d1d): taps on Now Playing over quick_card_hues opened Manga, over quick_card_youtube switched the pager to Stream. Fix c8ac2ae (pointer node on the Now Playing root); after-run 43914724044 |
+| 2026-11-16 | BUG-5 | TV-2 verified on device (tv-api34 emulator, 43912693329 b PASS after c07bc70: focus stays in the player, top and bottom rows reached). TV-4: Up from home_setup_card reaches the magnifier; the box opens without focus so typing goes nowhere → fix 18147da, run 43914880052 |
+| 2026-11-16 | Y6/H1 | 43912650347: paused half PASS both; resumed api36 14.4 s PASS, api33-lowram not within 15 s (page animation follows the test mainClock). Window 30 s with timing logged; rerun 43914724044 |
 | 2026-11-16 | ER-11 | → verified on device (emulator): device run 43904330191 PASS on api33-lowram and api36 |
 | 2026-11-16 | ER-14 | → verified on device (emulator): device run 43904330191 PASS on api33-lowram and api36 |
 | 2026-11-16 | ER-15 | → verified on device (emulator): device run 43904330191 PASS on api33-lowram and api36 |
