@@ -1,6 +1,6 @@
 # NBUG-6 — Per-feature DNS routing with DNS-over-HTTPS (research note, no code)
 
-Status: **Research note — gate not passed, nothing built.** Owner gate: "if it can be built without any side
+Status: **Research note — measured (§2 device, §4 CI unit); gate not passed, nothing built.** Owner gate: "if it can be built without any side
 effect, only then we build it." Must not regress SmartDnsResilienceTest, DnsWireClientTest, DataCacheBoundsTest
 (verified CI 44067269319). Group G12, touches G11. Code read at head 1123e1d.
 
@@ -58,10 +58,24 @@ kept in `dohClients` (at most one per provider, so at most 3 for auto plus the u
 threads (OkHttp dispatcher threads exist only while calls run; pool cleanup runs only with idle connections),
 no wake-ups, no radio. Per-feature routing does not need more engines than providers — features share them.
 
-Not measured yet (needed before any claim): heap of one DoH client after first use, connection count with two
-features on one host, and radio-on time. Plan: a device test (emulator, api33-lowram) that resolves 20 hosts via
-two policies and logs `Debug.getNativeHeapAllocatedSize`, `ConnectionPool.connectionCount()`, and thread count
-before / after. Until then the proof is **not** given.
+Measured (device 44192612391, `Nbug6EngineCostDeviceTest`, emulator api33-lowram, debug build, at 615bdeb; each
+snapshot after `gc()`; 20 public hosts resolved per provider):
+
+| Snapshot | Engines | Native heap KiB | Java heap KiB | Threads (OkHttp) |
+|---|---|---|---|---|
+| before | 0 | 6174 | 3599 | 23 (0) |
+| after Cloudflare (20/20 resolved, 1345 ms) | 1 | 9048 | 5519 | 31 (6) |
+| after Quad9 (20/20, 1679 ms) | 2 | 9331 | 5124 | 36 (12) |
+| after Google (20/20, 1907 ms) | 3 | 9465 | 5316 | 41 (16) |
+| idle 8 s | 3 | 9464 | 5198 | 41 (16) |
+| idle 65 s | 3 | 9324 | 5173 | 27 (5) |
+
+Reading: the first engine costs ~2.8 MiB native + ~1.9 MiB Java, mostly one-time TLS/OkHttp set-up the app
+already pays on its first HTTPS call (the test process had made none). Each further engine ~0.2 MiB native and
++5 to +6 OkHttp threads that live until the 60 s keep-alive ends; at 65 s 5 OkHttp threads remain. Connection
+reuse: one client twice → **1** pooled connection; adding a client that differs only in its `Dns` → **2**
+(confirms §1 side effect (i) on a device). So per-feature engines are not free: more threads for a minute after
+use and a second TLS connection per host for every non-default feature.
 
 ## 3. DoH bootstrap
 
@@ -77,10 +91,12 @@ skipped for 2 min. Not handled: an ISP that blocks all three by IP — then syst
 
 Bound from code (not a measurement): bootstrap client connect 5 s + read 5 s per provider; 3 providers in
 sequence → up to ~30 s worst case for the first lookup of a blocked host on a network that blackholes all DoH;
-then each dead provider is skipped for 2 min, so later lookups fall back at once. Measurement plan: JVM unit
-test on CI with `dohFactory` replaced by resolvers that hang for a fixed time, plus one real run against a
-non-routable bootstrap address (10.255.255.1) to time the actual connect timeout. Result goes here before any
-build decision.
+then each dead provider is skipped for 2 min, so later lookups fall back at once.
+
+Measured (`Nbug6ExhaustionTimingTest`, CI unit): resolvers that each hang 400 ms → first lookup 1201 ms
+(44185781422) / 1202 ms (44188521804) = providers × hang, one try per provider (Cloudflare, Quad9, Google); the
+second lookup 0 ms (dead resolvers skipped). Real `DnsOverHttps` with a non-routable bootstrap (10.255.255.1,
+5 s connect): CI 44192309663 (the earlier attempt was a test fault, OkHttp not initialised under Robolectric).
 
 ## 5. Per-feature DNS policy source
 
@@ -99,6 +115,7 @@ and `resolverDownUntil` (keyed by provider, shared — fine, a dead resolver is 
 
 Not yet "without any side effect": (i) no connection reuse across features with different policies on the same
 host, (ii) the host cache must be split, (iii) WebView, subtitles and app update can't follow per-feature DNS
-without a WebView proxy (app-wide) or moving the two `HttpURLConnection` users to NetworkClient. Cost of engines
-(§2) and exhaustion timing (§4) still need measurement. Cheaper option already shipped: the single-engine
-sequential auto bypass. Proposed next step (owner approval needed): measure §2 and §4; then decide.
+without a WebView proxy (app-wide) or moving the two `HttpURLConnection` users to NetworkClient; (iv) measured
+cost (§2): +5 to +6 threads per extra engine for ~60 s and a second pooled connection per host per non-default
+feature. **Gate decision: not passed — not built.** Cheaper option already shipped: the single-engine
+sequential auto bypass. §2 and §4 are now measured; a build would need the owner to accept (i)–(iv) or a narrower ask (for example one extra policy for drama only).
