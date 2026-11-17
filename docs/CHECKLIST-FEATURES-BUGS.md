@@ -53,7 +53,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 
 | ID | Feature | Status | Evidence |
 |---|---|---|---|
-| F-01 | Language / Sub / Dub badges on search posters | Not started | — |
+| F-01 | Language / Sub / Dub badges on search posters | Proposal written (gated). Code read: badges already ship (ReleaseTags + PosterTags on search, ff7cb19); gaps: detail write-back, JS/Aniyomi, device test | docs/proposals/FEATURE-F-01-language-sub-dub-badges.md |
 | F-02 | Telegram option | Not started (owner call on terms/privacy) | — |
 | F-03 | Terabox / Diskwala links | Not started (owner call on terms) | — |
 | F-04 | WebView site list | Not started | — |
