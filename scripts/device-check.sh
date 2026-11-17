@@ -75,6 +75,15 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     sleep 2
     echo "YuResumeScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines"
     timeout 300 adb shell am instrument -w -r -e class "$C#b_reopenFromHomeJumpBackIn" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+  elif [ "$C" = "dev.asfakul.yumeiro.LibraryPersistDeviceTest" ]; then
+    # G5 (LB-8, LB-3): phase a saves likes and playlists, damages one entry, kills its own process
+    # ("Process crashed" by design); phase b, a new process, checks what came back.
+    P=dev.asfakul.yumeiro.debug
+    timeout 300 adb shell am instrument -w -r -e class "$C#a_saveThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    sleep 2
+    echo "YuLibPersistScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
+    timeout 300 adb shell am instrument -w -r -e class "$C#b_newProcessKeepsOrderAndGoodPlaylists" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
+    if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.DownloadKillDeviceTest" ]; then
     # G8: phase a downloads to 25 % and kills its own process ("Process crashed" by design);
     # phase b, a new process, checks the download finished by itself, then the delete case.
