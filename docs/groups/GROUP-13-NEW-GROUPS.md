@@ -68,5 +68,6 @@ Files read line by line: `update/UpdateManager.kt`, `ApkInstaller.kt`, `GitHubRe
 |---|---|---|---|---|---|
 | N3-1 | Update download did disk and provider work on the main thread: the updates folder was created, listed and emptied on Download; DownloadManager `enqueue` and the progress `query` (every 400 ms for the whole download) and the restore `query` in `MainActivity.onCreate` were provider calls on main | `UpdateManager.scope` is `Dispatchers.Main.immediate` and these calls were made directly in it | folder work, `enqueue`, every `query` and the fallback file/delete moved to `Dispatchers.IO`; restore runs in a coroutine (the auto check follows it, as before) | `UpdateMainThreadDeviceTest` (StrictMode on main; also checks an off-GitHub link is refused and a stale APK is cleared); fail-before `scratch/n3-fail-before` | device run pending. The provider calls are not visible to StrictMode: that part is structural (code), not measured |
 
-Competitor check: Mihon's `AppUpdateDownloadJob` downloads in a WorkManager job off the main thread;
-Seal/NewPipe use their own downloader threads. None run storage or provider work on the UI thread.
+Competitor check (source tree read 2026-11-17): Mihon `main` has only `data/updater/AppUpdateChecker.kt`;
+it checks GitHub and hands the download to the browser, with no in-app downloader to compare. Our design
+(system DownloadManager, required SHA-256, signer and version checks) is kept; only the threading changes.
