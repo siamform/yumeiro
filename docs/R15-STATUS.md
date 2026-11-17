@@ -68,13 +68,18 @@
   a folder (rows below the fold on the small screen; test fault) → fixed e71a041. G2 E10 re-audit: new
   `UniversalAddEcosystemsDeviceTest` (Aniyomi link, Mihon folder, Stremio search+stream, JS list+install, empty link).
 - **Current group / step:** re-audit G1–4 (G2 E10 device test written); G8 DL-12 and G10 ER-20 close-out.
+- **Also done:** ST-22 found while re-auditing G2 E12 (clearing the page cache deleted up to 128 MB on the main
+  thread from the adult switch and ~15 other UI actions) → fixed daab2ab (`DataCache.invalidateAll`), unit test +
+  `AdultSearchFilterDeviceTest`, fail-before branch `scratch/st22-fail-before`. G1 H11 gap (G6 never took it) →
+  `MiniPlayerDeviceTest` cbe2e47. 44056147165 (a5 fail-before) did not compile (old bad import) → fixed on the branch.
 - **Runs in progress:** 44056138637 (head e71a041, api33-lowram: DownloadsScreen, UniversalAddEcosystems,
-  LocalPlayer#j, Yumix#extensionBarHidesOnScrollAndComesBack) and 44056147165 (`scratch/a5-fail-before`,
+  LocalPlayer#j, Yumix#extensionBarHidesOnScrollAndComesBack) and 44057033821 (`scratch/a5-fail-before`,
   BrowserCheckCooldown on old code; expect FAIL ≈60 s).
 - **Next three actions:**
   1. Read both runs (tags DLSCREEN_, YuAddTest ADD_, LOCAL_J_RESULT, Y3_RESULT, CHECK_); close DL-12 / ER-20 if they
      behave as expected; fix any test fault on the smallest run.
-  2. api36: the same new tests + SettingsReset, YtDownloadPipeline, BrowserCheckCooldown (one run); then H8
+  2. api33-lowram: AdultSearchFilter + MiniPlayer on head, and AdultSearchFilter on `scratch/st22-fail-before`;
+     api36: all new tests + SettingsReset, YtDownloadPipeline, BrowserCheckCooldown (one run); then H8
      `-f bench=restore`; then ci.yml once (unit suite).
   3. Finish re-audit G1–4 (E12 adult filter, P16 shader note, H11 coverage in G6), then the final sweep.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.

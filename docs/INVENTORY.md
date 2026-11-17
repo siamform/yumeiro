@@ -31,7 +31,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | H8 | State restoration after process death | MainViewModel, ScrollMemory, NavPrefs | audited | `h8` recreate only; process death not tested on device (instrumentation dies with the process) |
 | H9 | Splash, first-run welcome, explore tour, onboarding gate | ui/screens/splash, extras/SetupGuide, ExploreTour, online/OnboardingGate | done | `FirstRun.toTabs` on every device run (welcome + tour gate) |
 | H10 | Top bar, global search entry, search suggestions | ui/components/MTTopBar, YuSearch, SearchSuggest, TabSearch | done | `h10` 43689481257 6/6, 43696246671 |
-| H11 | Mini player bar | ui/components/MiniPlayerBar | open | Moved to G6 Music (needs a playing track) |
+| H11 | Mini player bar | ui/components/MiniPlayerBar | device test written (cbe2e47), run pending | `MiniPlayerDeviceTest` (re-audit: G6 had never taken it) |
 | H12 | Home-screen widget "Continue" | widget/ContinueWidget | audited | `h12` provider present; placing on a launcher is manual (script P) |
 | H13 | App pages (inbox, support, permission center, reliability guide, reminders) | ui/screens/extras/* | done | `h13` inbox, all HomeNavigation runs |
 

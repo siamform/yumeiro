@@ -42,6 +42,7 @@ song/video sort orders are remembered and sorted off the main thread (LB-7).
 | unit (local) | `--tests '*Scrobble*' '*LrcLib*' '*QueueSurvivesScreenTest'` | pass |
 | unit (local) | full suite at the Group 6 tip | see "Verification" update below |
 | CI device | 43738288853 Drama + LibraryDeviceTest on a119186 | pass on api33-lowram and api36; `LIB_B watch playing=true` after Back-exit (MU-1 watch state). Real Last.fm send: OMT-10 |
+| device (pending) | `MiniPlayerDeviceTest` (cbe2e47): H11 taken over from Group 1 in the 2026-11-17 re-audit (it had never been added here) | run pending |
 
 Cancelled runs in this group: none.
 

@@ -19,7 +19,7 @@ Pixel 6 profile). These are emulators, not real phones. Real-hardware steps are 
 | H8 | State after recreate | `h8_openTabSurvivesRecreate` | all runs pass |
 | H9 | Splash, welcome, tour gate | `FirstRun.toTabs` walks the welcome and tour on every device test with cleared data | every device run (hundreds of launches) |
 | H10 | Top bar search suggestions | `h10_topBarSearchSuggestsARecentSearch` | 43689481257: 6/6; 43693532355: 4/4 |
-| H11 | Mini player bar | needs a playing audio track | moved to Group 6 (Music), where audio playback is set up; not verified here |
+| H11 | Mini player bar | needs a playing audio track | re-audit 2026-11-17: GROUP-6 never took it (gap). `MiniPlayerDeviceTest` (cbe2e47): real 3-track queue; play/pause, Next, swipe left/right, Previous, a11y "Next track", tap opens Now Playing, Close stops and hides. Run pending |
 | H12 | Continue widget | `h12_continueWidgetIsOffered` (provider installed) | all runs pass; placing it on a launcher is manual (script P) |
 | H13 | App pages (inbox) | `h13_inboxOpensFromTheTopBarAndBackCloses` | all runs pass |
 
