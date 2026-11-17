@@ -901,3 +901,7 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - a: torn index + complete .tmp → playlist recovered. b: torn index, no .tmp → .bad holds the torn bytes (309 = 309).
   PASS both. LT-1.
 
+## 44026316670 / 44028308675 (CI unit; head 7eac485 and scratch/l1-fail-before)
+
+- Head: success. Fail-before: 1096 tests, 1 failed (OnlineHomeFailureTest.everyPageFailingPassesTheReasonOn). G7-L1.
+
