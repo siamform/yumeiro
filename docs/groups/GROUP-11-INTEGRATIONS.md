@@ -22,8 +22,8 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | IG-4 | I7 | Listens waiting at Last.fm sign-in were uploaded on the main thread (release: thrown, swallowed, not sent; debug: freeze) | `onSuccess { …; Scrobbler.flush(context) }` runs on the screen scope (main); `flush` posts with blocking OkHttp | `flush` wraps itself in `withContext(Dispatchers.IO)` | `ScrobbleFlushDeviceTest` (emulator) | fix in; runs pending |
 | IG-5 | I4 | Episode thumbnails missing for the rest of the session after backing out mid-lookup or one offline lookup | Title marked tried before the lookup; lookup ran in the screen's LaunchedEffect, result dropped on cancellation; failures kept the mark | Own scope, result always stored, failure clears the mark | `EpisodeStillsDeviceTest` (emulator) | fix in; runs pending |
 | IG-6 | I8, I9 | A show whose AniList lookup failed once (offline, 429, 5xx) never got airing alerts again | `aniListIdForTitle` returns null for failure and for not-found; CloudAlerts cached null as 0 = not anime, no expiry | `aniListIdOrThrow`; failures not cached; old zeros re-checked once | `CloudAlertsLookupDeviceTest` (emulator) | fix in; runs pending |
-| IG-7 | I11 | Subtitle search showed an error and lost the exact hash match when the title search hit HTTP 429 | title-search exception not caught after the hash search | failure only surfaces when nothing was found; 4 MB reply cap | `OnlineSubtitlesFallbackDeviceTest` (emulator) | fix in; runs pending |
-| IG-8 | I1, I2 | After a failed re-sign-in the app said "Signed in to AniList as <old user>" | message chosen from "any token saved" | success only when a new token was saved | `AnimeSignInMessageDeviceTest` (emulator) | fix in; runs pending |
+| IG-7 | I5 | Subtitle search showed an error and lost the exact hash match when the title search hit HTTP 429 | title-search exception not caught after the hash search | failure only surfaces when nothing was found; 4 MB reply cap | `OnlineSubtitlesFallbackDeviceTest` (emulator) | fix in; runs pending |
+| IG-8 | I3 | After a failed re-sign-in the app said "Signed in to AniList as <old user>" | message chosen from "any token saved" | success only when a new token was saved | `AnimeSignInMessageDeviceTest` (emulator) | fix in; runs pending |
 
 ## Code read
 
@@ -53,7 +53,34 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | subtitles/OnlineSubtitles.kt | 204 | yes | IG-7 (raised from an observation: the hash results were lost when the title search failed). Search reply now capped at 4 MB. Legacy rest.opensubtitles.org checked live 2026-11-17: HTTP 200, 108 KB for "inception" |
 | subtitles/SubtitleSitesProvider.kt | 63 | yes | Search only with a saved key; download through SubtitleHub (already read). No finding |
 | cast/CastSubtitleServer.kt | 136 | yes | Private IPv4 only, 128-bit random path, GET/HEAD/OPTIONS for known tracks only, 8 tracks × 2 MB, two workers, 10 s timeout, 8 KB head; stopped when the session ends. No finding |
+| server/src/index.ts | 407 | yes | I9. Device credentials: token stored as SHA-256, constant-time compare; reinstall reclaims by endpoint/FID (private to the phone). Per-IP limit on new rows, per-device limit on check-ins, follow writes at most once per 10 min, admin bearer ≥32 chars, per-IP limited. Wake pushes: `redirect: manual`, no retries. No finding |
+| server/src/logic.ts, fcm.ts | 159, 228 | yes | `validEndpoint`: https only, no port/userinfo/IP literals/private names (trailing dot stripped, X16-2). Topics allow-listed; links https or known actions; `sameSecret` hashes both sides. Covered by server/test (logic, fcm, handlers); not run in the sandbox (Node 20 here, package needs ≥22.12), runs in server.yml. No finding |
 | online/anime/AnimeIds.kt | 70 | yes | Both ids present → no network; lookups cached per title |
+
+## Action–reaction table (unhappy paths)
+
+| Action | Expected | Unhappy path checked | Result |
+|---|---|---|---|
+| Trakt / Simkl device sign-in | code shown, polls until approved | poll on the main thread under the release policy | IG-1 fixed (emulator verified) |
+| Episode finished with several trackers on | each tracker updated once | one tracker throws, or stays down | IG-2: the others still update; a failing one retries ≤3 times |
+| Kitsu / MAL after 30 days | token refreshed silently | expired token, rotated refresh token | IG-3: refresh before expiry, new refresh token kept |
+| Last.fm sign-in, then queued listens sent | listens flushed | flush called on the main thread | IG-4: runs on IO |
+| Episode list with TMDB stills | stills appear | first lookup fails (offline) | IG-5: retried on the next open, no stuck "tried" mark |
+| Follow an airing show (cloud alerts) | server wakes the phone on air | AniList 429/5xx at the moment of lookup | IG-6: not cached as "not anime", retried |
+| Local file: find subtitles | hash match listed first | title search 429 after the hash hit | IG-7: hash match kept |
+| AniList / MAL sign-in while already signed in | new account named | redirect rejected or stale | IG-8: says it failed, old account kept |
+| OAuth link opened by another app | ignored | no sign-in started here / older than 10 min | OAuthGuard drops it (read) |
+| Self-update | verified APK installed | file off the official repo, no checksum, redirect off GitHub, rate limit | all rejected with a message (read) |
+| App feed / FCM notice | inbox item, link opens | non-https link, unknown action, burst on first run | dropped / at most 1 shade notice on first run (read) |
+| YouTube account | used only when YouTube blocks | cookie without SID/SAPISID, CR/LF in paste | rejected / stripped (read) |
+| Cast with an SRT subtitle | TV shows the subtitle | phone not on Wi-Fi, file > 2 MB | no URL returned, no server on a public address (read) |
+
+## Competitor notes
+
+- Trakt/Simkl device flow: same as Kodi's script.trakt and Stremio's Trakt add-on (poll at the server's interval, give up at `expires_in`). Yumeiro follows the documented interval and slow_down.
+- Trackers: Aniyomi/Mihon keep each tracker independent (one failing tracker never blocks the others) and refresh MAL tokens ahead of expiry; IG-2/IG-3 bring Yumeiro to the same behaviour.
+- Subtitles: mpv-based players and Kodi's OpenSubtitles add-on merge hash and title results and show what was found when one source fails; IG-7 matches that.
+- YouTube sign-in: PipePipe and ArchiveTune use the account only on a sign-in wall; Yumeiro's default mode is the same.
 
 ## Verification
 
@@ -63,3 +90,4 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | emulator, IG-1 after | 44049031398 (5a46d98, both phones) | 4/4 PASS, every request on a worker thread |
 | emulator, IG-2…IG-5 after | 44050521996 (14a367f, api33-lowram) | in progress |
 | emulator, IG-2…IG-5 fail-before | 44050574003 (`scratch/ig2-fail-before`, api33-lowram) | in progress |
+| emulator, IG-6…IG-8 | not dispatched yet (one heavy run at a time) | queued |
