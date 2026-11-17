@@ -820,3 +820,19 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - PASS on both: `LIB_TABS violations from the stores: 0 (all: 0)`.
 
+## 44011888158 (MusicQueueDeviceTest, scratch/mu4-fail-before) — void
+
+- Failed on both at the test's own log line (Player accessed on the wrong thread). Test bug, fixed in b4d5033.
+
+## 44013418634 (MusicQueueDeviceTest fail-before, scratch/mu4-fail-before, both phones, emulator)
+
+- FAILED on both: `MUQ reopen track=null index=-1 queue=[] playing=true` (a119186 reverted). MU-4.
+
+## 44014503279 (MusicQueueDeviceTest, both phones, emulator; head 7046dc0)
+
+- PASS on both: reopen track=yuq2 index=1 queue=[yuq1, yuq2, yuq3]; Play next → [yuq1, yuq2, yuq4, yuq3], index 1, playing.
+
+## 44010598355 (CI: build, unit, lint; head 4989344)
+
+- Success. Covers e059aed (LB-2) and the new baseline profile.
+

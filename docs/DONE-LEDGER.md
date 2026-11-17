@@ -235,7 +235,7 @@ Report: `docs/groups/GROUP-4-YUMIX.md`. Device runs are on api33-lowram and api3
 | MU-1 Scrobbling works after Back-exit | G6 M7 | ee9e246 (`player/BackgroundPlaybackWatch.kt`, `PlaybackService`, `MusicPlayerManager`) | Tracker watched the screen-scoped manager, released on Back-exit. Now fed by the shared player | `ScrobbleTrackerTest`; device `LibraryDeviceTest#a` part b (43738288853) | api33-lowram, api36 | verified on device (43738288853: BackgroundPlaybackWatch sees playing=true after Back-exit on both); real scrobble not sent | Real Last.fm account: OMT-10 |
 | MU-2 Scrobble queue keeps good entries | G6 M7 | ee9e246 (`Scrobbler.decodeQueue`) | One bad entry emptied the queue of unsent listens | `ScrobbleQueueTest` | — | unit only | |
 | MU-3 LRCLIB no-lyrics marks expire | G6 M4 | d183e65 (`LrcLib.pruneMisses`) | One prefs key per song without lyrics, forever | `LrcLibMissesTest` | — | unit only | |
-| MU-4 Playing queue survives the screen | G6 M5 | a119186 (`MusicPlayerManager.processQueue`, `restoreExistingState`, `trackFrom`) | Queue lived on the screen-scoped manager: reopening while music played showed no now-playing bar and "Play next" replaced the queue | `QueueSurvivesScreenTest` | — | unit only | |
+| MU-4 Playing queue survives the screen | G6 M5 | a119186 (`MusicPlayerManager.processQueue`, `restoreExistingState`, `trackFrom`) | Queue lived on the screen-scoped manager: reopening while music played showed no now-playing bar and "Play next" replaced the queue | `QueueSurvivesScreenTest`; device `MusicQueueDeviceTest` | fail-before 44013418634 (scratch/mu4-fail-before: reopen track=null queue=[] while playing, both phones) → 44014503279 (7046dc0, PASS both: track yuq2, queue kept, Play next → [1,2,4,3], still playing); 44011888158 void (test read the player off main) | api33-lowram, api36 (emulator) | verified on device (emulator)
 
 ### R16: Group 7 (Manga and Live TV)
 
@@ -493,4 +493,5 @@ Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-
 | 2026-11-17 | LB-7 | rotation part verified on device (emulator), 44005396278 both phones |
 | 2026-11-17 | LB-7 | tabs part unit only → verified on device (emulator): fail-before 44009339786 → pass 44010510836 |
 | 2026-11-17 | X2-2 | profile regenerated (44005414732): 44,252 rules, Library 71 (was 0), Online Home 296 (was 6); committed 4989344 |
+| 2026-11-17 | MU-4 | unit only → verified on device (emulator): fail-before 44013418634 → pass 44014503279 |
 | 2026-11-17 | LB-2 | unit only → verified on device (emulator): re-audit found filesDir + mkdirs on main per page turn; fail-before 44007087901 → fix e059aed → pass 44008161115 |
