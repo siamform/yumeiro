@@ -20,7 +20,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
   ST-17 campaign 44145301927 read (20/20, 0 spins, stays open). Group 13 closed for agent work. 4.4 proposals
   F-01…F-12 written (ADR-017, ADR-018 proposed); gate not passed, nothing built.
   Next: EXT-T1 (≥20 runs on api33-lowram), DL-11 next sample, then the 4.4 gate check.
-- Open runs: none (44162062169 read 2026-11-18).
+- Open runs: CI 44180839496 (unit, 6ec4868), device 44180844505 (DownloadThroughputDeviceTest a+d ×3, both phones, 6ec4868).
 
 ## Findings (eighth cycle)
 
@@ -63,6 +63,9 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44142300486 | bench=startup 743b1c7 | TTID ratio 0.62 api36, 0.71 lowram |
 | 44145301927 | ST-17 StabilityStressDeviceTest ×10 both phones, a7b03a0 | 20/20 PASS, compose spins 0, FATAL 0, ANR 0; ~5–6 distinct main-thread stalls 702–1070 ms (each logged twice) (emulator) |
 | 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram (5f7f333) | 10/10 PASS, 0 ANR, EXT_T1 line every run: only MainActivity focused, no added window → not reproduced; the owner's condition (five failing drama feeds while Source status is open) was not set up, so this does not count toward the ≥ 20 (emulator) |
+
+| 44180839496 | CI unit at 6ec4868 (DL-11 trip logging + paceTripsAreLoggedOncePerRestart) | running |
+| 44180844505 | DownloadThroughputDeviceTest a_realHostScreenOn + d_localUnitCollapseProfile ×3, both phones (6ec4868) | running |
 
 ## Spot-check (session 2)
 

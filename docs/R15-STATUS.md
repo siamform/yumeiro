@@ -1,6 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 1)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 2)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** L0 agent items. DL-11 part 2: option G rejected by reading (note §8.3), cause logging
+  6ec4868 (`trips=[…]` in SEGMENTED_STATS). EXT-T1: e13 test seeds five timing-out studio feeds while Source status is open.
+- **Runs in progress:** CI 44180839496 (unit, 6ec4868); device 44180844505 (DownloadThroughputDeviceTest a + d ×3, both phones).
+- **Next three actions:** (1) read trip logs of 44180844505 → choose J / K / L, fail-before unit test, fix, CI, device a + d;
+  (2) EXT-T1 e13 campaign ≥ 20 on api33-lowram (after the open runs); none reproduce → OWNER-MANUAL-TESTS, Blocked: owner;
+  (3) NBUG-5 note and NBUG-6 research note (six answers).
+
+### Previous resume note (eighth cycle, session 2, step 1)
+
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18 (section 17 first actions, then L0→L5). Repo head
   at session start 063b552 (the prompt said 912093b; 47 newer commits). Report:

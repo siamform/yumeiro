@@ -197,3 +197,30 @@ recover almost nothing. The ~1.3 MB is in the network path when the request clos
 request reading to a boundary while the new one starts after it) can use it. G changes piece ownership in
 `Segmented.once` and needs an ADR-016 amendment, a fail-before unit test on the capped local profile (bytes
 served ÷ file) and the device a + d set; it is the next DL-11 step.
+
+### 8.3 Option G rejected on reading; cause logging first (2026-11-18, session 2)
+
+Read again, line by line: `Segmented.once` / `fetchPiece` / `Piece` at 063b552.
+
+- **G does not remove the waste, it moves it.** A request is `Range: bytes=from-to` with `to` = the piece end
+  (≤ 4 MiB). HTTP/1.1 cannot shorten a range once sent; the server keeps sending up to `to` as fast as the
+  TCP window allows. Whatever boundary the old request reads to before closing, the bytes already sent past
+  that boundary (≈ one TCP window, the measured ~1.3–1.5 MB) are still thrown away. Only a request that reads
+  to its own range end wastes nothing. So G costs a second request per restart and saves ≈ 0.
+- The same applies to an IDM split: the old request stops at the new mid point with a window in flight. Unit
+  evidence: CI 44123412795 `segmented4-own-pauses` had 0 pace restarts and 1 split and still served 1.045×
+  (≈ 1.1 MB lost on loopback for one split); `segmented2-own-pauses`, 0 splits, served 1.000×.
+- Therefore every close before the range end costs about one window, and the budget can only be met by
+  **fewer useless closes**, never by a cleverer close. H as written in §8.2 (judge the new request against the
+  old request's speed before the slow window) misjudges a capped host: there the old pre-slow speed is the
+  burst speed and so is the new request's, so a real BUG-3 escape would read as "no help". H is withdrawn.
+- Candidates that cut closes, each needing data: (J) skip a restart when the other active requests are slow at
+  the same moment **and** at least one of them is young (a link-wide dip; a per-request cap only slows
+  requests past their burst); (K) skip a restart when the bytes left are under the expected window loss
+  (risky for case d: a capped 1 MiB tail at 150 KiB/s is ~7 s); (L) smaller ranges per request so a cap is
+  escaped at a range end (zero waste) instead of by a close (costs one round trip per range).
+- **Step taken:** cause logging only (6ec4868): `trips=[…]` in `SEGMENTED_STATS`, one entry per pace restart:
+  KiB left, KiB read, slow and baseline KiB/s, every other active request (last window ÷ its baseline in %,
+  KiB read), and how the restart was judged. Unit `paceTripsAreLoggedOncePerRestart`. Device run a + d ×3 on
+  both phones gives the trips of the real host; J, K or L is chosen from those numbers, then built with its
+  own fail-before. Status: DL-11 part 2 stays **in progress**.
