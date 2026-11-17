@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 12:10 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 09:58 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -82,14 +82,23 @@
   ER-20 verified (emulator, api33-lowram). **G13 started** (`docs/groups/GROUP-13-NEW-GROUPS.md`): N6 app lock
   N6-1 (no screen lock → locked for good) and N6-3 (Android 9 with no fingerprint → locked for good) fixed 734e9f6
   with `AppLockDeviceTest`; fail-before branch `scratch/n6-fail-before`; N6-2 suspected (API 29, no CI image).
-- **Runs in progress:** 44058588776 (head 3e6b7de, api33-lowram: DownloadsScreen, UniversalAddEcosystems,
-  AdultSearchFilter, MiniPlayer, AppLock) and 44058593326 (`scratch/st22-fail-before`, AdultSearchFilter; expect FAIL
-  with main-thread disk calls from DataCache).
+- **Done since (seventh handover, 7):** N3 self-update N3-1 (folder work, DownloadManager enqueue and queries on the
+  main thread) fixed 13e8136 with `UpdateMainThreadDeviceTest`; fail-before `scratch/n3-fail-before`.
+  **44058588776 (head 3e6b7de) did not build**: androidTest compile errors in AppLockDeviceTest:44 and
+  UniversalAddEcosystemsDeviceTest:115 (my 3e6b7de); no test ran, nothing verified. Fixed 4eb6245; the same fix is on
+  `scratch/n6-fail-before` (6bcc0bb) and `scratch/n3-fail-before` (c722c99). G13 N4/N5 finding **N4-1 / N5-1**: the
+  home-server, Stremio, JS-source and Tachiyomi-repo lists were read as "empty" on any damaged file and written in
+  place, so the next save wiped them; Stremio also deleted every add-on that was offline at start; JS/Tachiyomi
+  changes before the start-up read saved lists without the old entries. Fixed 595305f (SafeJsonFile everywhere,
+  Stremio keeps its link list, changes wait for the saved lists, removes off main). Unit test
+  `SourceStoresSafetyTest` (8 cases); fail-before branch `scratch/n45-fail-before`.
+- **Runs in progress:** 44058593326 (`scratch/st22-fail-before`, AdultSearchFilter, api33-lowram; expect FAIL).
 - **Next three actions:**
-  1. Read both runs (tags DLSCREEN_, YuAddTest ADD_, YuAdultTest E12_, YuMiniTest MINI_, YuLockTest LOCK_).
-  2. N6 fail-before on api33-lowram (`scratch/n6-fail-before`, AppLock) and on api28 (`-f minsdk=true`, head and
-     fail-before); then api36 one run of all new tests; H8 `-f bench=restore`; ci.yml once.
-  3. Continue GROUP-13: N3 self-update, N4 home servers, N2 web sites, then the rest; then the full suite on both phones.
+  1. Read 44058593326. Dispatch head device run (api33-lowram: DownloadsScreen, UniversalAddEcosystems,
+     AdultSearchFilter, MiniPlayer, AppLock, UpdateMainThread) and ci.yml on head (unit, covers SourceStoresSafetyTest,
+     BrowserCheckTest, DataCacheBoundsTest); then ci.yml on `scratch/n45-fail-before` (expect SourceStoresSafetyTest FAIL).
+  2. N6 fail-before (api33-lowram + api28 `-f minsdk=true`), N3 fail-before; api36 one run of all new tests; H8 bench.
+  3. Continue GROUP-13: N2 web sites, N1 Watch Together (local parts), N7 inbox, N8, N9; music M2/M9; full suite.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
