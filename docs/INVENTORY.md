@@ -96,6 +96,8 @@ verified on a device, evidence linked), `not covered` (reason given).
 | L5 | Downloads view inside library | VideoLibraryScreen | done (unit only) | LB-1, LB-7 |
 | L6 | Liked songs, playlists | MediaRepository | done (unit only) | LB-3 `LibraryRound2Test#oneBadPlaylistKeepsTheOthers` |
 | L7 | Play time / listening time | player/ListeningTime, data/PlayCounts | done | LB-6; `LibraryDeviceTest#a` 43738288853 pass on api33-lowram and api36 |
+| L10 | Music history and Home Continue with no screen (swiped from recents) | data/MusicPlayHistory, player/BackgroundPlaybackWatch | done (emulator, both phones) | G5-PC1 227c203, G5-PC2 a96db17; `PlaysCountedWithoutScreenTest`, `ContinueSavedWithoutScreenTest`; `LibraryEmptyProfileDeviceTest` 44200234105 fail → 44201835648 pass |
+| L11 | Empty-profile flow (fresh install → like/add/play → kill → reopen) | all G5 stores | done (emulator, both phones) | G5-EP `LibraryEmptyProfileDeviceTest` 44201835648 |
 | L8 | Reading library (manga) | ReadingLibrary route, MangaLibrary | done (unit only) | LB-1, LB-2 |
 | L9 | Only real data, no placeholder or fake items | all of the above | code read, no bug | no sample items; demo playlists removed unless filled (`LibraryRound2Test`) |
 | L10 | (R16) Device videos tab: folders, sorting, thumbnails | ui/screens/video/VideoScreen, ui/image/VideoThumbnailFetcher, data/model/MediaModels | done (unit only) | LB-7 sort remembered, sorted off main; thumbnails already on IO |
@@ -172,7 +174,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | X1 | Architecture and layering | whole app, docs/SYSTEM-DESIGN.md | audited (GROUP-12): X1-3, X1-4 fixed (unit); PL-1 verified on device; DOC-1 document | ledger X1-3, X1-4, PL-1, DOC-1 |
-| X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | ST-2 verified on device; X2-2, X2-3 done; heap X2-3h (emulator); X2-4 emulator; ST-19, ST-20 emulator; **X2-1 open, ST-18 implemented—unverified (structural pass emulator: cbad735, 77d387a; regression run pending)** | ledger ST-2, X2-1…4, ST-18…20 |
+| X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | ST-2 verified on device; X2-2, X2-3 done; heap X2-3h (emulator); X2-4 emulator; ST-19, ST-20 emulator; **X2-1 open; ST-18 verified (emulator) for the structural change (cbad735, 77d387a; regression phones 44190759388, TV 44200018532 / 44201869204), timing not claimed** | ledger ST-2, X2-1…4, ST-18…20 |
 | X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, RegexCache, startup/PrefsWarmup | ST-1, ST-3, ST-6, ST-16 verified on device; ST-13…15 unit + emulator; ST-22 verified (emulator: 44060561160 → 44062811776, api36 44073375083); **ST-7, ST-17 open** | `StabilityStressDeviceTest`, `StorageMainThreadDeviceTest`; ledger ST-* |
 | X4 | Battery and heat | HeatGuard, NotifyPacer | X4-1 verified on device (emulator); O6 unit only | `HeatGuardDeviceTest`; ledger X4-1, O6 |
 | X5 | Notifications while closed (FCM, UnifiedPush, alarms, workers, boot) | notify/*, PushWakeService, NotifyAlarmReceiver | X5-1, X5-2, ST-4 verified on device (emulator); NT-1, O9 unit only | `ClosedAppAlertDeviceTest`; ledger X5-1, X5-2, NT-1 |

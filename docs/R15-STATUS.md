@@ -1,6 +1,17 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 3)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 4)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** L2 G5 (Library). G5-PC1 (227c203) and G5-PC2 (a96db17) verified on the emulator (both phones);
+  empty-profile device test `LibraryEmptyProfileDeviceTest` passes. ST-18 verified (emulator) for the structural change; TV-H5-T fixed.
+- **Runs in progress:** CI 44203248895 (pass-after unit); device 44203529014 (reopen timing split).
+- **Next three actions:** (1) 44203248895 green → drop "(running)" in CHECKLIST/ledger; (2) read reopen timing → if Library
+  Jump back in waits for the full MediaStore scan, measure it with a large library and write a G5 note before any fix;
+  (3) rest of G5 (playlist 10,000+ items, sort/filter, backup inclusion), then NBUG-5 probe 2, upgrade from v1.8.0, G6.
+
+### Previous resume note (eighth cycle, session 2, step 3)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.

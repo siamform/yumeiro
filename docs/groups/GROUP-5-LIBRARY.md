@@ -107,3 +107,13 @@ the order they were liked.
 
 Verification: unit, CI on the r15-stability head (pending at the time of writing; result goes in
 the ledger row LB-8 and here).
+
+## Eighth cycle (2026-11-18): music history with no screen, empty-profile flow
+
+- G5-PC1 (227c203): songs played after a swipe from recents are counted (Recently played, Most played, counts).
+  The shared player's watch records while no screen listener is attached, so there's one writer at a time.
+- G5-PC2 (a96db17): Home Continue ("Jump back in") is kept current on the same steps with no screen.
+- G5-EP: `LibraryEmptyProfileDeviceTest` (pm clear → like / playlist / play with pause and seek → screen
+  destroyed mid-queue → kill → reopen). Fail-before 44200234105, pass-after 44201835648 (emulator, both phones).
+- Note: docs/proposals/FEATURE-G5-PC1-plays-without-screen.md. Open: Library Jump back in / Most played need the
+  MediaStore scan after every cold start (no cached track list); timing is being measured (44203529014).

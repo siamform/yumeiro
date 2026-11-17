@@ -34,6 +34,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | BUG-2 | follow-through: channel list, scroll, video, back | E1–E6 | 44116513171 CHANNEL_UI_RESULT PASS both phones | verified (emulator) |
 | X2-1 | Profile journey's am kill dropped the process that had run Home (Home rules 684 → 99) | 52155bf restore first, browse after; profile 743b1c7 | 44128769774 → 44133217014 (rules); jank 44138627579 no gain; startup 44142300486 0.62/0.71 | emulator; no gain claimed |
 | BUG-4 | applied track per resolution on TV | — | 44116803828 tv-api34 QUALITY_RESULT PASS 1080…184 | verified (emulator); OMT-15 owner |
+| G5-PC1 | Recently played / counts recorded only by the screen's MusicPlayerManager listener; a swipe from recents clears the ViewModel while PlaybackService plays on | 227c203 shared-player watch records while no screen listens (one writer at a time) | CI 44200206502 + device 44200234105 (ab/pc1-before) → device 44201835648 both phones; CI 44203248895 running | verified (emulator) |
+| G5-PC2 | Home Continue saved only by MainViewModel; same root cause | a96db17 watch saves Continue on the same steps, full track from the process queue | as G5-PC1 (Continue = B → C) | verified (emulator) |
 
 ## Test faults
 
@@ -42,8 +44,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | EXT-T1-C | Campaign 44162062169 ran plain E11, not the owner's reproduction condition | next campaign seeds five failing drama feeds before opening Source status | 44162062169 test code e11 (no feed setup) |
 | EXT-T1-D | e13 counted the ADR-014-held phisher98 donation dialog (hidden, not focusable) as a window over Source status | c6ff72c: WindowSpy.liveUnheld() counts only attached, unheld windows; held ones logged | 44185209665 20/20 fail with focus = MainActivity and Back closing Source status every run; re-run 44189135829 |
 | NBUG6-T2 | realDohWithUnreachableBootstrap: DnsOverHttps needs OkHttp.initialize under Robolectric | c6f06ff | CI 44188521804 error text. Observation (no change): a non-I/O exception from a DoH engine leaves SmartDns.encryptedLookup without trying the next provider; in the app the OkHttp startup initializer runs (manifest keeps InitializationProvider), so no evidence of this in production |
-| TV-H5-T | h5 on TV api34: the Home rail item holds focus from start-up and the test's semantics tap changes the tab without moving it (a remote can't), so Left stayed in the rail on Home | 9582843: test presses Right into the page first when focus starts on the rail | 44192958569 (head), 44195239132 (77d387a^, 5/5) and 44196925739 (3/3, before LEFT focused=[tv_nav_tab_home] touch=false selected=[music]) fail; api24 44196930392 3/3 PASS (onEnter → Music). Not an ST-18 regression |
-
+| TV-H5-T | h5 on TV api34: the Home rail item holds focus from start-up and the test's semantics tap changes the tab without moving it (a remote can't), so Left stayed in the rail on Home | 9582843: test presses Right into the page first when focus starts on the rail | 44192958569 (head), 44195239132 (77d387a^, 5/5) and 44196925739 (3/3, before LEFT focused=[tv_nav_tab_home] touch=false selected=[music]) fail; api24 44196930392 3/3 PASS (onEnter → Music). Not an ST-18 regression. Second step: 9582843 still failed on api34 (44198639260: Right from the rail Home item while Music was selected by the tap → page 0, a state a remote cannot make); 581026d chooses Music with D-pad Down + centre when focus starts on the rail → tv-api34 44200018532 and tv-api24 44201869204 OK 11 |
 ## Runs
 
 | Run | What | Result (label) |
@@ -83,8 +84,14 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44195234882 | A/B: h5 ×5 TV api34 at head | build failed, Maven Central 429 (infrastructure); re-run cancelled, replaced by 44196925739 |
 | 44196925739 | h5 ×3 TV api34 with focus logging (b00a740) | 3/3 FAIL: before any key focus on tv_nav_tab_home, touch=false, selected Music → test fault TV-H5-T |
 | 44196930392 | h5 ×3 TV api24 with focus logging (b00a740) | 3/3 PASS: focus none → LEFT #1 music_source_switch → LEFT #2 tv_nav_tab_music; Down + Centre → page 2 |
-| 44198639260 | HomeNavigation (11) TV api34 after the test fix | running |
-| 44198643189 | HomeNavigation (11) TV api24 after the test fix | running |
+| 44198639260 | HomeNavigation (11) TV api34 after 9582843 | h5 FAIL: Right from the rail Home item (Music selected by the tap) → page 0; test fault, fixed 581026d |
+| 44198643189 | HomeNavigation (11) TV api24 after 9582843 | OK 11 (emulator) |
+| 44200018532 / 44201869204 | HomeNavigation (11) TV api34 / api24 at 581026d / f390272 | OK 11 both; api34 remote path: 1 Down → Music, centre, Right → youtube_song, Left → rail on Music, Down + centre → page 2 (emulator) |
+| 44200206502 | CI on ab/pc1-before (G5 tests, no fix) | 1141 tests, 2 failed = the two target tests (PlaysCountedWithoutScreenTest, ContinueSavedWithoutScreenTest) as expected (CI unit) |
+| 44200234105 | LibraryEmptyProfileDeviceTest api33-lowram on ab/pc1-before | FAIL as expected: C count 0, Recently played [B, A], Continue B; play time 31.9 s, likes and playlist order correct (emulator) |
+| 44201835648 | LibraryEmptyProfileDeviceTest both phones at f390272 | EP_RESULT PASS both: counts 1/1/1, Recently played C,B,A, Continue C, Most played 3; play time 31.6 / 31.5 s (emulator api33-lowram, api36) |
+| 44203248895 | CI at f390272 (pass-after G5-PC1/PC2) | running |
+| 44203529014 | LibraryEmptyProfileDeviceTest both phones, reopen timing split | running |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## L1 G12 order: items verified in earlier cycles
