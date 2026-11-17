@@ -896,3 +896,8 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - Success. RemotePlaylistStreamTest (LT-4); ErrorTaxonomyTest storage cases (LT-2).
 
+## 44026779856 (PlaylistIndexRecoveryDeviceTest, both phones, emulator)
+
+- a: torn index + complete .tmp → playlist recovered. b: torn index, no .tmp → .bad holds the torn bytes (309 = 309).
+  PASS both. LT-1.
+
