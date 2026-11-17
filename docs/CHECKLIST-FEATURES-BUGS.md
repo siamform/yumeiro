@@ -33,7 +33,7 @@ study needed (test-only or our own defect with an obvious cause).
 | NBUG-4b = BUG-7b | IPTV Play Link download hidden from gallery | G8 | — | Verified (emulator, MediaStore row); gallery app view = OMT-17 Blocked: owner | `PlayLinkPublishTest`; 43935805199 |
 | NBUG-4c = BUG-7c | Freeze on stream-format mismatch (DASH vs HLS) | G3 | Media3 samples | Verified (emulator, both phones) | fail-before 43935805199 → pass 43946324687; fix 5d1119e; `StreamFormatMismatchDeviceTest` |
 | NBUG-4d = BUG-7d | Freeze with upscaling on | G3 | — | Cannot reproduce (emulator) → Blocked: owner (OMT-16, real GPU) | `UpscaleFreezeDeviceTest` 3/3 PASS both phones 43946324687 (injected decoder failure recovers) |
-| NBUG-5 | Dub filter shows the Sub count (7 on Dub) and Episode 7 silently plays Episode 1 | G3 (source metadata used by F-01) | to read: CloudStream, Hikari, Aniyomi | Not started | — |
+| NBUG-5 | Dub filter shows the Sub count (7 on Dub) and Episode 7 silently plays Episode 1 | G3 (source metadata used by F-01) | CloudStream v4.9.1, Aniyomi v0.18.2.1 (Hikari: no public repo found) | In progress: code read shows Yumeiro maps the extension's lists one to one; device probe DubCountProbeDeviceTest written (note FEATURE-NBUG-5-dub-count.md) | probe run pending |
 | NBUG-6 | ISP blocking: per-feature DNS routing with DoH, sequential fallback, owner gate "no side effect" | G12 (touches G11) | to read: OkHttp DoH, Mihon/Tachiyomi DoH, Intra, RethinkDNS | Not started (research note with the six answers comes before any code) | — (guards to keep: SmartDnsResilienceTest, DnsWireClientTest, DataCacheBoundsTest, CI 44067269319) |
 
 **Spot-check 2026-11-18 (eighth cycle, this session):** BUG-2 (44116513171 CHANNEL_UI_RESULT PASS ×4), NBUG-2b
