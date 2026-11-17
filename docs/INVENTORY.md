@@ -31,7 +31,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | H8 | State restoration after process death | MainViewModel, ScrollMemory, NavPrefs | audited | `h8` recreate only; process death not tested on device (instrumentation dies with the process) |
 | H9 | Splash, first-run welcome, explore tour, onboarding gate | ui/screens/splash, extras/SetupGuide, ExploreTour, online/OnboardingGate | done | `FirstRun.toTabs` on every device run (welcome + tour gate) |
 | H10 | Top bar, global search entry, search suggestions | ui/components/MTTopBar, YuSearch, SearchSuggest, TabSearch | done | `h10` 43689481257 6/6, 43696246671 |
-| H11 | Mini player bar | ui/components/MiniPlayerBar | device test written (cbe2e47), run pending | `MiniPlayerDeviceTest` (re-audit: G6 had never taken it) |
+| H11 | Mini player bar | ui/components/MiniPlayerBar | verified (emulator, both phones): MiniPlayerDeviceTest 44067244782 (api33-lowram), 44073375083 (api36); MINI-T1 test faults fixed | `MiniPlayerDeviceTest` (re-audit: G6 had never taken it) |
 | H12 | Home-screen widget "Continue" | widget/ContinueWidget | audited | `h12` provider present; placing on a launcher is manual (script P) |
 | H13 | App pages (inbox, support, permission center, reliability guide, reminders) | ui/screens/extras/* | done | `h13` inbox, all HomeNavigation runs |
 
@@ -103,15 +103,15 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G6 Music
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | GROUP-13 2026-11-17: M1-1 (2–3 parallel library scans per cold start) fixed 841b085 | `LibraryScanOnceTest` (unit), `LocalPlayerDeviceTest`, `LibraryPersistDeviceTest` |
-| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | GROUP-13 2026-11-17: audited; M2-1 (account change kept the old account's YouTube Music Home) fixed cf4d650 + f3d1d38 | `YtAccountMusicCacheTest` (unit), `YmParserTest`, `Round13LogicTest` |
+| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | GROUP-13 2026-11-17: M1-1 (2–3 parallel library scans per cold start) fixed 841b085, verified (CI unit: fail-before 44070875412 → 44067269319); LibraryPersist device PASS both phones | `LibraryScanOnceTest` (unit), `LocalPlayerDeviceTest`, `LibraryPersistDeviceTest` |
+| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | GROUP-13 2026-11-17: audited; M2-1 (account change kept the old account's YouTube Music Home) fixed cf4d650 + f3d1d38, verified (CI unit: 44070875412 → 44067269319) | `YtAccountMusicCacheTest` (unit), `YmParserTest`, `Round13LogicTest` |
 | M3 | Infinite online feed | youtube/music/YmEndless | verified on device (FEED-1, append-only feed); `YmEndless` code read, no bug (GROUP-6) | `Round13LogicTest`, `LivePagedTest`, `LiveFeedTest`; ledger FEED-1 |
 | M4 | Lyrics (embedded, LRCLIB) | lyrics/* | MU-3 fixed (unit only); embedded lyrics code read | `LrcLibMissesTest`; ledger MU-3 |
-| M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | MU-4 verified on device (emulator); BUG-6 verified (emulator); mini player H11 device test pending | `QueueSurvivesScreenTest`, `MusicQueueDeviceTest`, `MusicTapThroughDeviceTest`, `MiniPlayerDeviceTest`; ledger MU-4, BUG-6 |
+| M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | MU-4 verified on device (emulator); BUG-6 verified (emulator); mini player H11 verified (emulator, both phones) | `QueueSurvivesScreenTest`, `MusicQueueDeviceTest`, `MusicTapThroughDeviceTest`, `MiniPlayerDeviceTest`; ledger MU-4, BUG-6 |
 | M6 | Equalizer | player/equalizer, ui/screens/equalizer | code read in GROUP-6 and GROUP-13 2026-11-17: no finding (observation: presets cover 5 bands) | settings search coverage only |
 | M7 | Last.fm scrobbling | scrobble/* | MU-1 verified on device (emulator, 43738288853), MU-2 unit only; real Last.fm send OMT-10 (owner) | `ScrobbleTrackerTest`, `ScrobbleQueueTest`, `ScrobbleFlushDeviceTest`, `LibraryDeviceTest`; ledger MU-1, MU-2 |
 | M8 | Song downloads | online/download/SongDownloads | code read in GROUP-6 and GROUP-13 2026-11-17: no finding | `R7LogicTest` (partial) |
-| M9 | Music mix | ui/screens/music/MusicMix | GROUP-13 2026-11-17: audited; M9-1 (search matched on main per keystroke) fixed 0dce4ae | `MusicMixSearchTest` (unit), `R7LogicTest` |
+| M9 | Music mix | ui/screens/music/MusicMix | GROUP-13 2026-11-17: audited; M9-1 (search matched on main per keystroke) fixed 0dce4ae, verified (CI unit: 44070875412 → 44067269319) | `MusicMixSearchTest` (unit), `R7LogicTest` |
 
 ## G7 Manga and live TV
 | ID | Item | Code | Status | Covered by |
@@ -132,7 +132,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | D5 | External downloaders (ADM, IDM) | online/download/ExternalDownloader | device test e12705f: EXTDL_RESULT PASS a–d (emulator api33-lowram 44054360131) | `ExternalDownloaderDeviceTest` |
 | D6 | YouTube downloads and options | YtDownloads, YtDownloadOptions | unit (CI); local pipeline device test (resume, merge, publish) YTDL_RESULT PASS a, b (emulator api33-lowram 44054360131); real YouTube on CI hits the bot wall → OMT-19 | `YtDownloadPipelineDeviceTest`, OMT-19 |
 | D7 | "View downloads" toast → PiP | DownloadPrompt | verified on device (PL-9, 43657729675) | ledger PL-9 |
-| D8 | (R16) Downloads screen: list, free space, actions | ui/screens/downloads/DownloadsScreen, online/DownloadSheets | DL-12 fixed a501d8e (disk work off main); fail-before 44054365230 FAILED as expected (6 calls); after 44054360131 a_open 0 calls, folder walk timed out (test fault, fixed e71a041); 44056138637 pending | `DownloadsScreenDeviceTest` (ledger DL-12) |
+| D8 | (R16) Downloads screen: list, free space, actions | ui/screens/downloads/DownloadsScreen, online/DownloadSheets | DL-12 fixed a501d8e (disk work off main), verified (emulator, both phones): fail-before 44054365230 → 44059862262 (api33-lowram), 44073375083 (api36) | `DownloadsScreenDeviceTest` (ledger DL-12) |
 
 ## G9 Settings
 | ID | Item | Code | Status | Covered by |
@@ -151,7 +151,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | A2 | Dialogs (Tsuki dialog, update, review, permission) | TsukiDialog, UpdateDialog, ExtensionReviewHost | verified on device (emulator): ER-11, ER-19 | `DialogsDeviceTest`, `RetryActionsDeviceTest` (ledger ER-11, ER-19) |
 | A3 | Error views with recovery actions | ErrorHelp, StateViews, OfflineNotice | verified: ER-10, ER-13 (unit, CI); ER-12 Retry (emulator) | `ErrorTaxonomyTest`, `PlaybackRecoveryTest`, `RetryActionsDeviceTest` |
 | A4 | No network, slow network, VPN, low storage | network/Connectivity, OnlineErrors | verified on device (emulator): ER-14, ER-17; VPN → OMT-18 | ledger ER-14, ER-17; OMT-18 |
-| A5 | Browser check / Cloudflare challenge host | online/web/BrowserCheck, BrowserCheckHost | ER-20 fixed 065f455 (failed check remembered 60 s); device after-fix PASS (emulator api33-lowram 44054360131); fail-before 44056147165 + unit CI pending | `BrowserCheckTest`, `BrowserCheckCooldownDeviceTest` (ledger ER-20) |
+| A5 | Browser check / Cloudflare challenge host | online/web/BrowserCheck, BrowserCheckHost | ER-20 fixed 065f455 (failed check remembered 60 s), verified (emulator, both phones): fail-before 44057033821 → 44054360131 (api33-lowram), 44073375083 (api36) | `BrowserCheckTest`, `BrowserCheckCooldownDeviceTest` (ledger ER-20) |
 
 ## G11 Integrations
 | ID | Item | Code | Status | Covered by |
@@ -173,7 +173,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 |---|---|---|---|---|
 | X1 | Architecture and layering | whole app, docs/SYSTEM-DESIGN.md | audited (GROUP-12): X1-3, X1-4 fixed (unit); PL-1 verified on device; DOC-1 document | ledger X1-3, X1-4, PL-1, DOC-1 |
 | X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | ST-2 verified on device; X2-2, X2-3 done; heap X2-3h (emulator); X2-4 emulator; ST-19, ST-20 emulator; **X2-1 open, ST-18 in progress** | ledger ST-2, X2-1…4, ST-18…20 |
-| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, RegexCache, startup/PrefsWarmup | ST-1, ST-3, ST-6, ST-16 verified on device; ST-13…15 unit + emulator; ST-22 fix device run pending; **ST-7, ST-17 open** | `StabilityStressDeviceTest`, `StorageMainThreadDeviceTest`; ledger ST-* |
+| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, RegexCache, startup/PrefsWarmup | ST-1, ST-3, ST-6, ST-16 verified on device; ST-13…15 unit + emulator; ST-22 verified (emulator: 44060561160 → 44062811776, api36 44073375083); **ST-7, ST-17 open** | `StabilityStressDeviceTest`, `StorageMainThreadDeviceTest`; ledger ST-* |
 | X4 | Battery and heat | HeatGuard, NotifyPacer | X4-1 verified on device (emulator); O6 unit only | `HeatGuardDeviceTest`; ledger X4-1, O6 |
 | X5 | Notifications while closed (FCM, UnifiedPush, alarms, workers, boot) | notify/*, PushWakeService, NotifyAlarmReceiver | X5-1, X5-2, ST-4 verified on device (emulator); NT-1, O9 unit only | `ClosedAppAlertDeviceTest`; ledger X5-1, X5-2, NT-1 |
 | X6 | Crash logs and export | diagnostics/CrashLog, CrashExport | X6-1, CR-1, O7 verified on device (emulator); X6-2 done | `CrashUiDeviceTest`; ledger X6-1, X6-2, CR-1 |
@@ -191,14 +191,14 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## New groups (not in the prompt's list)
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | audited (GROUP-13, local parts): N1-1, N1-2 fixed 0040d98, CI pending; two-phone follow = real hardware | `WatchTogetherHostTest` |
-| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | audited (GROUP-13): N2-1 fixed 83d7818, runs pending | `SiteSignOutDeviceTest`, `SiteAccessTest`, `BrowserCheckCooldownDeviceTest` |
-| N3 | Self-update (check, download, install, package replaced) | update/* | audited (GROUP-13): N3-1 fixed, device run pending; verify/install path code read, no finding | `UpdateMainThreadDeviceTest`, `UpdaterLogicTest`, `ReleaseTagsTest`; upgrade X10-5 |
-| N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | audited (GROUP-13): N4-1 fixed 595305f, unit pending (CI) | `SourceStoresSafetyTest` |
-| N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | audited (GROUP-13): N5-1 fixed 595305f, unit pending (CI); JS loop timeout OK by code + library source | `SourceStoresSafetyTest`, `UniversalAddEcosystemsDeviceTest`, `UniversalSourcesLogicTest` |
-| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | audited (GROUP-13): N6-1 verified (emulator api33-lowram), N6-3 + N6-4 verified (emulator api28); N6-2 suspected (API 29, open) | `AppLockDeviceTest` |
-| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | audited (GROUP-13): N7-1 fixed ac13d92, run pending | `InboxMainThreadDeviceTest`, `RemindersTest`, `AppFeedTest` |
-| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | audited (GROUP-13): N8-1 fixed 5be755e, CI pending | `LinksOpenTest` |
+| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | audited (GROUP-13, local parts): N1-1, N1-2 fixed 0040d98, verified (CI unit: 44070875412 → 44062718477); two-phone follow = real hardware | `WatchTogetherHostTest` |
+| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | audited (GROUP-13): N2-1 fixed 83d7818, verified (emulator, both phones: fail-before 44062815556 → 44062811776, 44073375083; CI unit) | `SiteSignOutDeviceTest`, `SiteAccessTest`, `BrowserCheckCooldownDeviceTest` |
+| N3 | Self-update (check, download, install, package replaced) | update/* | audited (GROUP-13): N3-1 fixed 13e8136, verified (emulator, both phones: 44062815556 → 44059862262, 44073375083); verify/install path code read, no finding | `UpdateMainThreadDeviceTest`, `UpdaterLogicTest`, `ReleaseTagsTest`; upgrade X10-5 |
+| N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | audited (GROUP-13): N4-1 fixed 595305f, verified (CI unit: 44070875412 → 44062718477); N4-2 fixed 7c69091, verified (emulator + CI unit) | `SourceStoresSafetyTest` |
+| N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | audited (GROUP-13): N5-1 fixed 595305f, verified (CI unit: 44070875412 → 44062718477); JS loop timeout OK by code + library source | `SourceStoresSafetyTest`, `UniversalAddEcosystemsDeviceTest`, `UniversalSourcesLogicTest` |
+| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | audited (GROUP-13): N6-1 verified (emulator api33-lowram, api36 44073375083), N6-3 + N6-4 verified (emulator api28); N6-2 suspected (API 29, open) | `AppLockDeviceTest` |
+| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | audited (GROUP-13): N7-1 fixed ac13d92, verified (emulator, both phones: 44062815556 → 44062811776, 44073375083) | `InboxMainThreadDeviceTest`, `RemindersTest`, `AppFeedTest` |
+| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | audited (GROUP-13): N8-1 fixed 5be755e, verified (CI unit: 44070875412 → 44062718477) | `LinksOpenTest` |
 | N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | audited (GROUP-13): code read, no finding | build guard (ADR-013) |
 
 ## Not covered
