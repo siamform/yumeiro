@@ -67,18 +67,25 @@ class Nbug6ExhaustionTimingTest {
      * time on the CI runner; a runner that rejects the route at once logs that instead.
      */
     @Test fun realDohWithUnreachableBootstrap() {
+        // A public name: DnsOverHttps refuses names under a non-public suffix such as .example as
+        // "private" before any request (CI 44185781422: 0 ms, rotation stopped). Never resolved here.
+        val host = "nbug6-measure.com"
         blockedNetwork()
         val dead = InetAddress.getByName("10.255.255.1")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
         val perProvider = HashMap<DnsProvider, Long>()
+        val errors = HashMap<DnsProvider, String>()
         SmartDns.dohFactory = { p ->
             val doh = DnsOverHttps.Builder().client(client).url(p.dohUrl!!.toHttpUrl())
                 .bootstrapDnsHosts(listOf(dead)).includeIPv6(true).resolvePrivateAddresses(false).build()
-            Dns { h -> val t = System.nanoTime(); try { doh.lookup(h) } finally { perProvider[p] = (System.nanoTime() - t) / 1_000_000 } }
+            Dns { h ->
+                val t = System.nanoTime()
+                try { doh.lookup(h) } catch (e: Exception) { errors[p] = "${e.javaClass.simpleName}: ${e.message} / cause ${e.cause}"; throw e } finally { perProvider[p] = (System.nanoTime() - t) / 1_000_000 }
+            }
         }
-        val first = timed { SmartDns.lookup("blocked.example") }
-        val second = timed { SmartDns.lookup("blocked.example") }
-        println("NBUG6_EXHAUST real bootstrap=10.255.255.1 connectTimeoutS=5 firstMs=$first secondMs=$second perProviderMs=$perProvider")
+        val first = timed { SmartDns.lookup(host) }
+        val second = timed { SmartDns.lookup(host) }
+        println("NBUG6_EXHAUST real bootstrap=10.255.255.1 connectTimeoutS=5 firstMs=$first secondMs=$second perProviderMs=$perProvider errors=$errors")
         assertEquals("every provider was tried once", SmartDns.AUTO_PROVIDERS.toSet(), perProvider.keys)
         assertTrue("second lookup skips the unreachable resolvers: $second ms", second < 1_000)
         client.dispatcher.executorService.shutdown(); client.connectionPool.evictAll()
