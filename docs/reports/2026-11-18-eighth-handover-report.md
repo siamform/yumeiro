@@ -65,8 +65,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram (5f7f333) | 10/10 PASS, 0 ANR, EXT_T1 line every run: only MainActivity focused, no added window → not reproduced; the owner's condition (five failing drama feeds while Source status is open) was not set up, so this does not count toward the ≥ 20 (emulator) |
 | 44067269319 (re-read) | X11/X12 confirmation from the run's JUnit XML | SmartDnsResilienceTest 4/4, SmartDnsTest 13/13, DnsWireClientTest 4/4, DataCacheBoundsTest 4/4; 0 failures, 0 skips; INVENTORY rows already "verified (CI unit)" — confirmed (CI unit) |
 | 44180839496 | CI unit at 6ec4868 (DL-11 trip logging + paceTripsAreLoggedOncePerRestart) | running |
-| 44180844505 | DownloadThroughputDeviceTest a_realHostScreenOn + d_localUnitCollapseProfile ×3, both phones (6ec4868) | running |
-| 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | running |
+| 44180844505 | DownloadThroughputDeviceTest a_realHostScreenOn + d_localUnitCollapseProfile ×3, both phones (6ec4868) | PASS 12/12. Real host received ÷ file api33 1.056/1.035/1.090 (median 1.056), api36 1.043/1.039/1.030 (median 1.039): all ≤ 1.10 in this sample; case d 3.8–7.0 s, last 10 % ≤ 1.8 s. Trips: J/K/L all rejected by data (note §8.4); no code change (emulator) |
+| 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## Spot-check (session 2)
 

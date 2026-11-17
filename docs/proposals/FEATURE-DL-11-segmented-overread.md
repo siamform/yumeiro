@@ -224,3 +224,30 @@ Read again, line by line: `Segmented.once` / `fetchPiece` / `Piece` at 063b552.
   KiB read), and how the restart was judged. Unit `paceTripsAreLoggedOncePerRestart`. Device run a + d ×3 on
   both phones gives the trips of the real host; J, K or L is chosen from those numbers, then built with its
   own fail-before. Status: DL-11 part 2 stays **in progress**.
+
+### 8.4 Trip data from device 44180844505 (6ec4868, a + d ×3, both phones) and the J / K / L choice
+
+Received ÷ file on the real host (cdn.kernel.org, F = HTTP/1.1 ranges, same download code as 7a85df6):
+
+| Phone | a #1 | a #2 | a #3 | median | restarts | case d total / last 10 % |
+|---|---|---|---|---|---|---|
+| api33-lowram | 1.056 | 1.035 | 1.090 | 1.056 | 3 / 1 / 7 | 3.8 / 3.8 / 5.2 s; last ≤ 1.7 s — PASS 3/3 |
+| api36 | 1.043 | 1.039 | 1.030 | 1.039 | 2 / 1 / 0 | 7.0 / 6.9 / 5.2 s; last ≤ 1.8 s — PASS 3/3 |
+
+All six ≤ 1.10 and both medians ≤ 1.06 in this sample. With 44121429260 (same code): 11 of 12 ≤ 1.10, worst
+1.1004. The per-download limit is therefore met in this sample but **not claimed** for DL-11 as a whole.
+
+The 13 real-host trips (`L` KiB left, `r` slow KiB/s, `p` peers as last window ÷ own baseline %, `j` judged):
+
+- Peers at the trip: 202, 1868, 37, 255, 97, 836, 89 % or no baseline yet (`?`, young request) or none.
+  Only one trip (37 %) looks like a link-wide dip. **J rejected by data:** it would skip at most 1 of 13.
+- Three trips were never judged (`j-`: the piece ended before the new request's first MiB): L 750 / 1008 / 745
+  KiB at r 2086 / 4335 / 1639 KiB/s, i.e. 0.36 / 0.23 / 0.45 s to finish at the slow speed. These are the pure
+  waste (~1.3 MB each). **K rejected as not least-risk:** a bytes rule (L < ~1.3 MB) also skips case d's
+  capped tails (L 760–768 KiB at 150–621 KiB/s, which BUG-3 needs restarted); a time rule (L ÷ r < 0.5 s)
+  overlaps the unit BUG-3 profile `burst3MB-then-1.5MBps` (L 512–768 KiB at 1.5 MiB/s = 0.33–0.5 s, whose
+  slow-tail rule then fails); a rule under 0.33 s skips only one of the three trips.
+- **L rejected:** smaller ranges add one request round trip per range to every download to save ~1 % on an
+  uneven link; no data shows a net gain.
+- Decision: no download code change from this sample. DL-11 part 2 stays **in progress** (reason: one earlier
+  sample 0.04 % over the per-download limit; this sample meets it). The next download change re-runs a + d.
