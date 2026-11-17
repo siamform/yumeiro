@@ -956,3 +956,6 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 - **44041881451** DownloadCleanupDeviceTest (G8 series folders, auto-delete, Permanent vs Offline):
   - Files are in the series folder on both phones; +1 h removes nothing; +2 days removes the Offline one (entry and file) and keeps the Permanent one byte-exact; the empty folder goes after the last delete.
   - lowram PASS. api36 FAIL only on "dl_cleanup scheduled": it was read 9 s after process start, and WorkManager came up 5 s after start on the low-priority yu-startup thread. The test now polls for up to 30 s; rerun 44043535616.
+- **44043535616** (head 491b4e3, repeat 3) BUG-3 case d with the absolute rule + DownloadCleanupDeviceTest. Read 2026-11-17 by the seventh-handover agent:
+  - `d_localUnitCollapseProfile` 6/6 PASS. api36 totalMs 7179 / 6390 / 5237, last 10 % 1206 / 507 / 100 ms; api33-lowram 5170 / 4041 / 3418, last 10 % 1203 / 201 / 1706 ms. Rule: total ≤ 10 s, last 10 % ≤ 3.5 s. Received 1.092–1.293× the file (DL-11 part 2).
+  - `DownloadCleanupDeviceTest` 6/6 PASS (`dl_cleanup` ENQUEUED or RUNNING within the 30 s poll on both phones; empty folder removed).

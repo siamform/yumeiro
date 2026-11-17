@@ -49,9 +49,11 @@ DownloadNaming, MediaMux.
 
 | Kind | Run | Result |
 |---|---|---|
-| unit | CI on the r15-stability head after DL-9 | pending |
-| unit, fail-before | CI 43867540147 (fail-before branch: DL-6 race test and DL-9 drop test without the fixes) | pending |
-| emulator | device 43867796913 `DownloadKillDeviceTest` (kill at 25 %, continue, delete at 10 %) | pending |
+| unit | CI 43871066269 (DL-6..DL-9 tests) | pass |
+| unit, fail-before | CI 43867540147 (fail-before branch: DL-6 race test and DL-9 drop test without the fixes) | fail, as expected |
+| emulator | device 43867796913 `DownloadKillDeviceTest` (kill at 25 %, continue, delete at 10 %) | resume + delete pass both; data-used rule failed on api36 → DL-11; kept-chunks rule pass 44039053465, 44041714032 |
+| emulator | 44043535616 `DownloadCleanupDeviceTest` (series folder, auto-delete timer, Permanent vs Offline, daily schedule), repeat 3 | pass 3/3 both |
+| emulator | 44043535616 `DownloadThroughputDeviceTest#d` (BUG-3 case d, 24 MiB, 3 MiB burst then 150 KiB/s), repeat 3 | pass 6/6: total 3.4–7.2 s, last 10 % 0.1–1.7 s (old code 44037723917: 19.99 s, last 10 % 6.3–6.5 s) |
 | emulator | 43742375420 `DownloadResumeDeviceTest` (R16) | pass both |
 | emulator | 43861039865 `DownloadThroughputDeviceTest` (BUG-3, real host, Doze) | pass both |
 
