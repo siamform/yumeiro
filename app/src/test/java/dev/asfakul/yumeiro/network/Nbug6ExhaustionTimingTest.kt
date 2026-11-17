@@ -70,6 +70,9 @@ class Nbug6ExhaustionTimingTest {
         // A public name: DnsOverHttps refuses names under a non-public suffix such as .example as
         // "private" before any request (CI 44185781422: 0 ms, rotation stopped). Never resolved here.
         val host = "nbug6-measure.com"
+        // In the app the startup initializer does this; under Robolectric DnsOverHttps could not
+        // load the public suffix list ("Platform applicationContext not initialized", CI 44188521804).
+        okhttp3.OkHttp.initialize(org.robolectric.RuntimeEnvironment.getApplication())
         blockedNetwork()
         val dead = InetAddress.getByName("10.255.255.1")
         val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
