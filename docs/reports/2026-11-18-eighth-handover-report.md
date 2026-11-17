@@ -42,6 +42,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | EXT-T1-C | Campaign 44162062169 ran plain E11, not the owner's reproduction condition | next campaign seeds five failing drama feeds before opening Source status | 44162062169 test code e11 (no feed setup) |
 | EXT-T1-D | e13 counted the ADR-014-held phisher98 donation dialog (hidden, not focusable) as a window over Source status | c6ff72c: WindowSpy.liveUnheld() counts only attached, unheld windows; held ones logged | 44185209665 20/20 fail with focus = MainActivity and Back closing Source status every run; re-run 44189135829 |
 | NBUG6-T2 | realDohWithUnreachableBootstrap: DnsOverHttps needs OkHttp.initialize under Robolectric | c6f06ff | CI 44188521804 error text. Observation (no change): a non-I/O exception from a DoH engine leaves SmartDns.encryptedLookup without trying the next provider; in the app the OkHttp startup initializer runs (manifest keeps InitializationProvider), so no evidence of this in production |
+| TV-H5-T | h5 on TV api34: the Home rail item holds focus from start-up and the test's semantics tap changes the tab without moving it (a remote can't), so Left stayed in the rail on Home | 9582843: test presses Right into the page first when focus starts on the rail | 44192958569 (head), 44195239132 (77d387a^, 5/5) and 44196925739 (3/3, before LEFT focused=[tv_nav_tab_home] touch=false selected=[music]) fail; api24 44196930392 3/3 PASS (onEnter → Music). Not an ST-18 regression |
 
 ## Runs
 
@@ -78,6 +79,12 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44192309663 | CI unit at c6f06ff | green: 1160 tests, 0 failures, 11 skipped. Nbug6ExhaustionTimingTest 2/2: model firstMs=1201 secondMs=0; real DoH bootstrap 10.255.255.1 firstMs=15091 (5057/5004/5006 per provider, connect timeout) secondMs=0. AfterFirstFrameTest 3/3, SmartDnsResilience 4/4, DnsWire 4/4, DataCacheBounds 4/4 (CI unit) |
 | 44192612391 | NBUG-6 Nbug6EngineCostDeviceTest + NBUG-5 DubCountProbeDeviceTest api33-lowram (615bdeb) | PASS 2/2. NBUG6_COST: native 6174 → 9048 / 9331 / 9465 KiB for 1 / 2 / 3 engines, threads 23 → 31 / 36 / 41, 27 after 65 s idle; pool 1 connection for one client, 2 with a second Dns → gate not passed (note §2). NBUG5_PROBE 15 titles: Anichi Dub = card counts; KickassAnime Dub longer than Sub with the same numbers (Blue Lock 24 / 59, other langs such as lang=Spanish in Dub) → second probe (emulator api33-lowram) |
 | 44192958569 | TV api34: HomeNavigation, BackNavigation, TvBug5Repro (ded970c) | BackNavigation PASS, TvBug5Repro PASS, HomeNavigation 10/11: h5 "rail entered on [tv_nav_tab_home], not on the selected tab" (page 1 reached). A/B h5 ×5: head 44195234882, 77d387a^ branch ab/st18-before-home 44195239132 |
+| 44195239132 | A/B: h5 ×5 TV api34 at 77d387a^ (branch ab/st18-before-home, deleted after) | 5/5 FAIL, same message → failure predates the Home deferral |
+| 44195234882 | A/B: h5 ×5 TV api34 at head | build failed, Maven Central 429 (infrastructure); re-run cancelled, replaced by 44196925739 |
+| 44196925739 | h5 ×3 TV api34 with focus logging (b00a740) | 3/3 FAIL: before any key focus on tv_nav_tab_home, touch=false, selected Music → test fault TV-H5-T |
+| 44196930392 | h5 ×3 TV api24 with focus logging (b00a740) | 3/3 PASS: focus none → LEFT #1 music_source_switch → LEFT #2 tv_nav_tab_music; Down + Centre → page 2 |
+| 44198639260 | HomeNavigation (11) TV api34 after the test fix | running |
+| 44198643189 | HomeNavigation (11) TV api24 after the test fix | running |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## L1 G12 order: items verified in earlier cycles
