@@ -169,6 +169,15 @@ class HomeNavigationDeviceTest {
                 return "touch=$touch selected=$selected focused=${focusedTags()} page=${TabPagerProbe.page}"
             }
             log("tv rail: before LEFT ${railState()}")
+            // 44196925739 (TV api34): the Home rail item had focus from start-up (not touch mode), and the
+            // semantics tap above changed the tab without moving it, so Left stayed inside the rail on Home.
+            // A remote can't change the tab without moving focus; start from the page, as a remote user
+            // does after choosing Music (Right into the page, then Left back to the rail).
+            if (focusedTags().any { it.startsWith("tv_nav_") }) {
+                FirstRun.shell("input keyevent KEYCODE_DPAD_RIGHT"); Thread.sleep(500); rule.waitForIdle()
+                log("tv rail: focus started on the rail; after RIGHT ${railState()}")
+                assertEquals("D-pad Right into the page must not change the tab", 1, TabPagerProbe.page)
+            }
             for (i in 0 until 4) {
                 FirstRun.shell("input keyevent KEYCODE_DPAD_LEFT"); Thread.sleep(500); rule.waitForIdle()
                 log("tv rail: LEFT #${i + 1} ${railState()}")
