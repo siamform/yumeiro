@@ -40,6 +40,17 @@ object FirstRun {
     }
 
     /** Runs a shell command and waits for it to finish (closing the pipe early can kill it). */
+    /**
+     * LP-T1 (api36 run 44073375083): `input keyevent 66` / `input text` (AppLockDeviceTest) take the
+     * display out of touch mode, and Compose test clicks do not bring it back, so a later class ran
+     * with InputMode.Keyboard and its touch Back was handled as a remote Back. Tests that send keys
+     * restore touch mode; tests of touch-only rules set it first.
+     */
+    fun touchMode() {
+        runCatching { androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().setInTouchMode(true) }
+        runCatching { androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync() }
+    }
+
     fun shell(cmd: String): String {
         if (cmd.startsWith("input keyevent")) awaitKeyFocus(cmd)
         return InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).let { pfd ->

@@ -352,6 +352,10 @@ class LocalPlayerDeviceTest {
         pause(1_500)
         FirstRun.shot("pl18_fullscreen")
         // A touch Back (gesture or nav bar), not a key event: the app treats key Back as a remote.
+        // LP-T1: an earlier class's key events can leave the display out of touch mode.
+        FirstRun.touchMode()
+        var touch = false; rule.runOnUiThread { touch = rule.activity.window.decorView.isInTouchMode }
+        log("PL18 touchMode=$touch")
         rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
         wait("floating player after one Back", 8_000) { has("floating_close") }
         log("PL18 one Back → floating player")

@@ -71,6 +71,7 @@ class AppLockDeviceTest {
         }.commit()
         runCatching { Privacy::class.java.getDeclaredField("loaded").apply { isAccessible = true }.setBoolean(Privacy, false) }
         runCatching { Privacy.load(ctx) }
+        FirstRun.touchMode() // LP-T1: the PIN keys left the display out of touch mode
     }
 
     @Test fun a_lockWithoutScreenLockDoesNotTrapTheUser() {

@@ -1471,10 +1471,12 @@ private fun VideoPlayerModalContent(
     }
     BackHandler(enabled = !minimized) {
         // R17: one Back leaves on touch screens; a remote steps (controls → fullscreen → leave).
-        when (PlayerBackRule.step(
+        val backStep = PlayerBackRule.step(
             keyDriven = keyDriven, controlsVisible = isControlsVisible, locked = isScreenLocked, ended = isEnded,
             error = playerError != null, chromeHidden = hideChrome, fullscreen = isFullscreen && !tvPlayer, onWatchPage = watchPage != null,
-        )) {
+        )
+        if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.i("YuBack", "player back step=$backStep keyDriven=$keyDriven fullscreen=$isFullscreen")
+        when (backStep) {
             PlayerBackRule.Step.HIDE_CONTROLS -> isControlsVisible = false
             PlayerBackRule.Step.EXIT_FULLSCREEN -> isFullscreen = false
             PlayerBackRule.Step.SHOW_UNLOCK -> {
