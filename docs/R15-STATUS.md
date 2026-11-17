@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 13:30 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 10:23 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -109,15 +109,24 @@
   N1 Watch Together read: **N1-1/N1-2** fixed 0040d98. MINI-T1 fixed c09cdc8. CI 44061310566 cancelled (stale).
   Fail-before branches: `scratch/unit-fail-before` (f7783b4, unit: N4/N5, N4-2 history, N2, N8, N1) and
   `scratch/device-fail-before` (N2, N3, N6, N7, N4-2 Stremio; device).
-- **Runs in progress:** CI 44062718477 (head c09cdc8, unit + lint); device 44062811776 (head, api33-lowram:
-  AdultSearchFilter, SiteSignOut, InboxMainThread, UniversalAdd, MiniPlayer); device 44062815556
-  (`scratch/device-fail-before`, api33-lowram: SiteSignOut, InboxMainThread, AppLock, UpdateMainThread, UniversalAdd;
-  expect FAIL in each).
+- **Done since (seventh handover, 11):** 44062811776 (head c09cdc8, api33-lowram, emulator): AdultSearchFilter (fixed
+  helper), SiteSignOut, InboxMainThread, UniversalAddEcosystems PASS → ST-22 verified (fail-before 44060561160), N2-1,
+  N7-1 after-fix PASS, N4-2 after-fix PASS (fail-before 44059862262). MiniPlayer failed again: second test fault
+  (swipe at 60 % of the bar sat on the Previous button) → `mini_player_swipe_area` tag + swipe inside it (aa3489e).
+  Music rows (GROUP-13): **M9-1** Mix search matched device songs on the main thread per keystroke → fixed 0dce4ae +
+  unit `MusicMixSearchTest`; **M2-1** a YouTube account change kept the previous account's YouTube Music Home (API
+  cache + on-screen store) → fixed cf4d650 + f3d1d38 + unit `YtAccountMusicCacheTest`; **M1-1** two or three full
+  library scans in parallel at every cold start → fixed 841b085 + unit `LibraryScanOnceTest`. M6, M8: read, no finding.
+  `scratch/unit-fail-before` now also holds old M9/M2/M1 code (seams only).
+- **Runs in progress:** CI 44062718477 (head c09cdc8; the M-row commits come after it); device 44062815556
+  (`scratch/device-fail-before`, api33-lowram, expect FAIL each); device 44064339793 (head aa3489e, api33-lowram:
+  MiniPlayer, LibraryPersist, LocalPlayer).
 - **Next three actions:**
-  1. Read the three runs. Then CI on `scratch/unit-fail-before` (expect SourceStoresSafetyTest, SiteAccessTest#signOut…,
-     LinksOpenTest, WatchTogetherHostTest, ResumePointsTest#bridgeId… to FAIL).
+  1. Read 44062815556 and 44064339793; CI on head (ci.yml) once 44062718477 ends, then CI on `scratch/unit-fail-before`
+     (expect FAIL: SourceStoresSafety, SiteAccessTest#signOut…, LinksOpen, WatchTogetherHost, ResumePoints#bridgeId…,
+     MusicMixSearch, YtAccountMusicCache, LibraryScanOnce#requestsDuringARunningScanShareIt).
   2. Device: head AppLock on api28 (`-f minsdk=true`) and n6 fail-before on api28; api36 one run with all new tests.
-  3. Music rows M2, M9, M1/M6/M8; then the full suite on both phones; H8 `-f bench=restore`.
+  3. Full suite on both phones (milestone); H8 `-f bench=restore`; then the final report and the gated feature list.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM

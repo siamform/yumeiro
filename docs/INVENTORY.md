@@ -103,15 +103,15 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G6 Music
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | code read in GROUP-6 (no finding recorded); final-sweep gap (2026-11-17): no audit row, device path only via `LocalPlayerDeviceTest`; queued in GROUP-13 | `LocalPlayerDeviceTest` (video side) |
-| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | GROUP-13 2026-11-17: M1-1 (2–3 parallel library scans per cold start) fixed 841b085 | `LibraryScanOnceTest` (unit), `LocalPlayerDeviceTest`, `LibraryPersistDeviceTest` |
+| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | GROUP-13 2026-11-17: audited; M2-1 (account change kept the old account's YouTube Music Home) fixed cf4d650 + f3d1d38 | `YtAccountMusicCacheTest` (unit), `YmParserTest`, `Round13LogicTest` |
 | M3 | Infinite online feed | youtube/music/YmEndless | verified on device (FEED-1, append-only feed); `YmEndless` code read, no bug (GROUP-6) | `Round13LogicTest`, `LivePagedTest`, `LiveFeedTest`; ledger FEED-1 |
 | M4 | Lyrics (embedded, LRCLIB) | lyrics/* | MU-3 fixed (unit only); embedded lyrics code read | `LrcLibMissesTest`; ledger MU-3 |
 | M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | MU-4 verified on device (emulator); BUG-6 verified (emulator); mini player H11 device test pending | `QueueSurvivesScreenTest`, `MusicQueueDeviceTest`, `MusicTapThroughDeviceTest`, `MiniPlayerDeviceTest`; ledger MU-4, BUG-6 |
-| M6 | Equalizer | player/equalizer, ui/screens/equalizer | code read in GROUP-6, no bug (re-attach only on a new session); no device test | settings search coverage only |
+| M6 | Equalizer | player/equalizer, ui/screens/equalizer | code read in GROUP-6 and GROUP-13 2026-11-17: no finding (observation: presets cover 5 bands) | settings search coverage only |
 | M7 | Last.fm scrobbling | scrobble/* | MU-1 verified on device (emulator, 43738288853), MU-2 unit only; real Last.fm send OMT-10 (owner) | `ScrobbleTrackerTest`, `ScrobbleQueueTest`, `ScrobbleFlushDeviceTest`, `LibraryDeviceTest`; ledger MU-1, MU-2 |
-| M8 | Song downloads | online/download/SongDownloads | code read in GROUP-6, no bug (one request at a time, device songs ignored); final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 | `R7LogicTest` (partial) |
-| M9 | Music mix | ui/screens/music/MusicMix | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| M8 | Song downloads | online/download/SongDownloads | code read in GROUP-6 and GROUP-13 2026-11-17: no finding | `R7LogicTest` (partial) |
+| M9 | Music mix | ui/screens/music/MusicMix | GROUP-13 2026-11-17: audited; M9-1 (search matched on main per keystroke) fixed 0dce4ae | `MusicMixSearchTest` (unit), `R7LogicTest` |
 
 ## G7 Manga and live TV
 | ID | Item | Code | Status | Covered by |

@@ -210,3 +210,59 @@ server: covered by unit round trip; owner check optional.
 44059862262 `e_swipe_right` stayed on track 3: the swipe started at 3 % of the bar, in its start padding (outside the
 draggable row) and in the system back edge (logcat: a back reached the app at 10:04:07.503). Swipes moved inside the
 row (c09cdc8). App code unchanged.
+
+Second fault (44062811776, `d_swipe_left` stayed on track 2): the c09cdc8 swipe used fractions of the whole bar, but the
+Previous/Play/Next/Close buttons take the right ~186 dp, so 60 % sat on the Previous button. The draggable row now has
+the tag `mini_player_swipe_area` and the test swipes 0.90 → 0.10 of it (aa3489e). App behaviour unchanged.
+
+## M9 Music Mix
+
+Files read: `ui/screens/music/MusicMix.kt` (device part, online picks, search), `R7LogicTest` (matching rules).
+
+| Action | Expected reaction | Code | Result |
+|---|---|---|---|
+| Open Mix offline | device songs only, online part says it needs internet | `musicSourceOptions`, online block skipped | OK |
+| Online picks | Home quick picks + songs by the user's top artists, failures silent | `runCatching` per call | OK |
+| **Type in Mix search** | smooth typing on a 2 GB phone with thousands of songs | `remember(query, tracks) { mixDeviceMatches(...) }` in composition: NFD + regex over title/artist/album of every song on main, per keystroke | **M9-1** |
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| M9-1 | Mix search dropped frames while typing with a large library | device match ran on the main thread in composition | `LaunchedEffect(query, tracks)` + `Dispatchers.Default`; newer keystroke cancels; blank query does nothing | unit `MusicMixSearchTest` (Robolectric Compose, probe: no call on main; "Sóng 157" found accent-folded) | fixed 0dce4ae, CI pending |
+
+## M2 Online music (YouTube Music) and the automatic online/offline switch
+
+Files read: `youtube/music/YtMusicApi.kt`, `YmEndless.kt`, `youtube/YouTubeAudioDataSource.kt`, `youtube/YtAccount.kt`,
+`ui/screens/youtube/YtMusicBrowse.kt` (Home, endless, search, store), `MusicMode` + the follow loop in `MTPlayerApp.kt`.
+
+| Action | Expected reaction | Code | Result |
+|---|---|---|---|
+| Open Music with / without internet | Online / On device | `MusicMode.defaultFor` | OK (`Round13LogicTest`) |
+| Connection drops while Online | switches to On device; a picked mode sticks otherwise | `MusicMode.follow` | OK |
+| Play an online song, link expired | re-extract once on 401/403/404/410 | `YouTubeAudioDataSource.open` | OK |
+| Home runs out of pages | "Similar to …" shelves, max 80, stops after 6 misses | `YmEndless`, `endlessOpen` | OK |
+| A Home page fails | kept, retried with backoff | `moreHome` onFailure | OK |
+| **Sign out of YouTube (mode Always) / sign in / change mode** | Home becomes the anonymous / new account's Home | YtMusicApi cache (10 min) and visitor id never cleared (`invalidate()` had no caller); `YmStore.home` kept the page for the tab | **M2-1** |
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| M2-1 | After sign-out the previous account's own YouTube Music Home (and opened account pages) stayed for up to 10 min, sent with that account's visitor id | account changes cleared only `YouTube.infoCache` | `YtMusicApi.invalidate()` also clears the visitor id and runs on save/signOut/setMode; `YmStore.homeAccount` + `ymHomeStale` reload Home and clear the page stack on an account change | unit `YtAccountMusicCacheTest` (3 cases) | fixed cf4d650 + f3d1d38, CI pending |
+
+Real account check (personal Home before/after sign-out) needs a person's Google account: optional owner check, not blocking.
+
+## M1 On-device library, M6 Equalizer, M8 Song downloads
+
+M1 files read: `data/repository/MediaRepository.kt` (scan, grouping), `MainViewModel` scan callers, the startup
+permission block in `MTPlayerApp.kt`.
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| M1-1 | Every cold start with media access ran two (three on Android 13+ while the notification prompt answers) full MediaStore scans at once | `MainViewModel.init` → `scanMedia()` and the startup check → `onPermissionResult(true)` → `scanMedia()`; each scan on its own IO coroutine | requests with the same access state join the running scan; a changed state (first grant) runs its own scan after it (Mutex) | unit `LibraryScanOnceTest` (2 cases) | fixed 841b085, CI pending |
+
+M6 (`player/equalizer/EqualizerManager.kt`): every Equalizer/BassBoost/Virtualizer call on the single `yu-audio-fx`
+thread (ST-7), prefs warmed in `PrefsWarmup`, re-attach only on a new session, the process-wide player keeps its
+session. No finding. Observation: presets hold 5 gains; a device reporting more than 5 bands gets 0 on the rest (sound
+quality, not stability; no change without a decision).
+
+M8 (`online/download/SongDownloads.kt`, `YouTubeDownloadSheet`, `OnlineDownloads.enqueueYouTube`): one request at a
+time, device songs return null, the sheet's state is keyed by the song id, the list load is `@Synchronized`, saves
+from main go to the downloads thread (G8 D8). No finding.
