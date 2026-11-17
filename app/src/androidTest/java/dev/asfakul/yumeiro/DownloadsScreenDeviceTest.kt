@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -21,6 +22,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.data.model.VideoItem
+import dev.asfakul.yumeiro.online.download.DownloadSettings
 import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Item
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Status
@@ -54,6 +56,7 @@ class DownloadsScreenDeviceTest {
     private val seen = Collections.synchronizedList(mutableListOf<String>())
     private var old: StrictMode.ThreadPolicy? = null
     private var before: List<Item> = emptyList()
+    private var tipsBefore = true
     private val ours = listOf("dev.asfakul.yumeiro.online.download.", "dev.asfakul.yumeiro.ui.screens.downloads.", "dev.asfakul.yumeiro.data.SafeJsonFile")
 
     private fun ep(id: String, label: String, folder: String, order: Int) = Item(
@@ -65,6 +68,9 @@ class DownloadsScreenDeviceTest {
     @Before fun setUp() {
         assumeTrue("penaltyListener needs API 28", Build.VERSION.SDK_INT >= 28)
         SystemClock.sleep(3000) // let the start-up warm-up finish first
+        // The tips card pushes the folders down; on a small screen the opened rows would sit below
+        // the fold and a lazy grid does not build them. Hide it (restored after) and scroll as a user would.
+        DownloadSettings.init(ctx); tipsBefore = DownloadSettings.showTips.value; DownloadSettings.setShowTips(ctx, false)
         OnlineDownloads.ensureLoaded(ctx)
         before = OnlineDownloads.items.value
         val items = listOf(ep("e1", "Episode 1", "D8 Show", 0), ep("e2", "Episode 2", "D8 Show", 1), ep("o1", "Episode 1", "D8 Other", 0))
@@ -82,11 +88,14 @@ class DownloadsScreenDeviceTest {
 
     @After fun tearDown() {
         inst.runOnMainSync { old?.let { StrictMode.setThreadPolicy(it) } }
+        DownloadSettings.setShowTips(ctx, tipsBefore)
         runCatching { OnlineDownloads.flushForTests() }
         listOf("e1", "e2", "o1").forEach { id -> OnlineDownloads.get(id)?.let { runCatching { OnlineDownloads.fileOf(ctx, it).delete() } } }
         OnlineDownloads.setItemsForTest(ctx, before)
         OnlineDownloads.setKeep(ctx, before.firstOrNull()?.id ?: "-", before.firstOrNull()?.keep ?: false) // saves `before`
     }
+
+    private fun list() = rule.onNodeWithTag("downloads_list")
 
     private fun ourViolations() = synchronized(seen) { seen.filter { st -> ours.any { it in st } } }
 
@@ -106,6 +115,10 @@ class DownloadsScreenDeviceTest {
 
         // Open "D8 Show" and play its first episode.
         rule.onNodeWithText("D8 Show").performClick()
+        rule.waitForIdle()
+        list().performScrollToNode(hasText("Episode 2"))
+        rule.waitForIdle()
+        Log.i(TAG, "DLSCREEN_CASE b_open rows=${rule.onAllNodesWithTag("library_download").fetchSemanticsNodes().size} folders=${rule.onAllNodesWithTag("library_download_folder").fetchSemanticsNodes().size}")
         rule.waitUntil(5_000) { rule.onAllNodesWithTag("library_download").fetchSemanticsNodes().size == 2 }
         rule.onAllNodesWithTag("library_download")[0].performClick()
         rule.waitUntil(5_000) { played != null }
@@ -117,6 +130,7 @@ class DownloadsScreenDeviceTest {
         rule.waitUntil(5_000) { OnlineDownloads.get("e2")?.keep == true }
 
         // Delete the other folder (asks first).
+        list().performScrollToNode(hasText("D8 Other"))
         rule.onNode(hasContentDescription("Delete folder") and hasAnySibling(hasText("D8 Other")), useUnmergedTree = true).performClick()
         rule.onNodeWithText("Delete", substring = false).performClick()
         rule.waitUntil(5_000) { OnlineDownloads.get("o1") == null }
