@@ -803,3 +803,7 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - FAILED on both: 40 main-thread disk reads from MangaLibrary in 20 page turns (ContextImpl.ensurePrivateDirExists
   via filesDir, and File.mkdirs in MangaLibrary.file). LB-2.
 
+## 44008161115 (MangaLibraryMainThreadDeviceTest after fix, both phones, emulator; head e059aed)
+
+- PASS on both: `MANGA_MAIN violations from MangaLibrary: 0 (all: 0)`. LB-2.
+
