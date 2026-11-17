@@ -91,5 +91,5 @@ Checked against source code on 2026-11-17:
 | emulator, IG-1 after | 44049031398 (5a46d98, both phones) | 4/4 PASS, every request on a worker thread |
 | emulator, IG-2…IG-5 after | 44050521996 (14a367f, api33-lowram) | PASS: ANIME_TRK a/b/c (MAL+Kitsu refreshed, Trakt/Simkl still updated, Simkl capped at 3 attempts), SCROBBLE_FLUSH on a worker thread, STILLS a/b (retry after a failed first lookup) |
 | emulator, IG-2…IG-8 after | 44051808801 (f0fa55d, api36) | in progress |
-| emulator, IG-2…IG-5 fail-before | 44050574003 (`scratch/ig2-fail-before`, api33-lowram) | in progress |
+| emulator, IG-2…IG-5 fail-before | 44050574003 (`scratch/ig2-fail-before` 42cc6a8, old code, api33-lowram) | FAIL in every case, as expected: ANIME_TRK a trakt=0 simkl=0, MAL/Kitsu tokens never refreshed (mal-old, kitsu-old); b trakt=0 simkl=0 with Kitsu called on every tick (4); c Simkl tried once and never again (old code swallowed its error and kept the episode key: the update was lost, expected 3 tries); SCROBBLE_FLUSH on main, requests=0, listen left queued; STILLS a stills=null, b no second lookup (episodeCalls=1) |
 | emulator, IG-6…IG-8 | not dispatched yet (one heavy run at a time) | queued |
