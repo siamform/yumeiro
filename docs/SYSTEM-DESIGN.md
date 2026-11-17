@@ -570,6 +570,31 @@ flowchart LR
   version), so it is proposed (X13-6) and needs the owner's decision.
 - **Status:** accepted (2026-11-16) with the owner's five conditions.
 
+### ADR-016: Segmented downloads: request restarts against wasted data (G8 DL-11 part 2)
+
+- **Scope:** `ForceGrab.Segmented` (direct files of 16 MB or more), `RequestPace`.
+- **Context:** BUG-3 (owner, high): many hosts serve each request fast and then cap it. 3c85a72 made a
+  request that falls under a third of its own baseline for one 256 KiB window ask for the rest in a new
+  request. The closed request throws away the bytes already on the way. Measured on the device
+  (emulator, cdn.kernel.org, 134.7 MB, a host that never caps a request), 44036060683 and 44037559115:
+  1 to 29 restarts per download, 1.04 to 1.44× the file received, about 2 MB lost per restart; the
+  download with 29 restarts was also the slowest (3.58 MB/s against 5.9–7.8). Local server, capped
+  profile (CI 44026316670): segmented2 67.6 MB/s, tail 0.14×, 1.28× the file served.
+- **Options measured:**
+  - A. One slow window (current). Fast on capped hosts; wastes data on hosts with an uneven link.
+  - B. Two slow windows in a row (6e40982, reverted in f60d808): CI 44037788044 segmented2 17.8 MB/s,
+    tail 3.23×; segmented4 75.7 → 48.0 MB/s; 1.04× served. Rejected: a speed regression on the
+    owner's case.
+- **Options not yet measured:**
+  - C. A smaller receive buffer on the segmented connections (`SO_RCVBUF`, e.g. 1 MiB), so less is on
+    the way when a request is closed. Risk: caps one connection at buffer / round trip (1 MiB at
+    100 ms = 10 MB/s; 4 connections 40 MB/s).
+  - D. Stop pace restarts for the rest of a download when restarted requests are not faster than the
+    ones they replaced (measured over their first window after the baseline).
+- **Decision:** keep A until C or D is measured on the unit capped profile (no speed loss allowed)
+  and on the real host (bytes received and restarts over at least three downloads per phone).
+- **Status:** proposed (2026-11-17). DL-11 part 2 stays open.
+
 ## 11. Risks
 
 | Risk | Mitigation |

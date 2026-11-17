@@ -515,4 +515,5 @@ Ledger change 2026-11-16: the R17 row for 0606e73 was renamed LB-7 → LB-8 (LB-
 | 2026-11-17 | DL-6 | unit PASS, no valid fail-before | verified (unit) | Fail-before CI 44034902270 failed only DownloadListSaveRaceTest (1/1096): the list file lost finished downloads |
 | 2026-11-17 | DL-4 | device PASS on head | verified (emulator) | Fail-before 44037723917 failed c and d on both phones (wrong bytes saved as DONE) |
 | 2026-11-17 | DL-8 | unit pass | verified (emulator) | DownloadQualityDeviceTest 44036060683 PASS both; fail-before 44037723917 saved 1080p at every setting |
+| 2026-11-17 | DL-11 part 2 | left as measured | open, ADR-016 proposed | Real host: 1–29 pace restarts per 135 MB, 1.04–1.44× received (44036060683, 44037559115). Fix tried (6e40982, two slow windows) slowed the capped unit profile 67.6 → 17.8 MB/s (CI 44037788044) and was reverted (f60d808). DL-10 kill test now checks kept chunks, not bytes (44033132233 had failed on bytes) |
 | 2026-11-17 | LB-2 | unit only → verified on device (emulator): re-audit found filesDir + mkdirs on main per page turn; fail-before 44007087901 → fix e059aed → pass 44008161115 |
