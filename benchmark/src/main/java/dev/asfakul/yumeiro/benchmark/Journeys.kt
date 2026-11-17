@@ -73,7 +73,7 @@ internal object Journeys {
     /** Screenshot + window dump into the additional output dir the workflow uploads (what the journey saw). */
     fun snapshot(device: UiDevice, name: String) = runCatching {
         val dir = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
-            ?.let(::java.io.File) ?: return@runCatching
+            ?.let { java.io.File(it) } ?: return@runCatching
         dir.mkdirs()
         device.takeScreenshot(java.io.File(dir, "journey_$name.png"))
         java.io.File(dir, "journey_$name.xml").outputStream().use { device.dumpWindowHierarchy(it) }
