@@ -206,7 +206,7 @@ object OnlineRepository {
     val previews = ConcurrentHashMap<String, OnlineItem>()
 
     /** Forgets loaded pages (memory and the copy saved on the phone): settings or extensions changed. */
-    fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear(); runCatching { dev.asfakul.yumeiro.cache.DataCache.clearAll() } }
+    fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear(); runCatching { dev.asfakul.yumeiro.cache.DataCache.invalidateAll() } }
 
     /** Items a home row already showed (for an instant "See all"). */
     fun cachedRow(api: String, pageData: String): List<OnlineItem>? =

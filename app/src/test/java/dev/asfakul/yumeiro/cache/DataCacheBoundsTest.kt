@@ -60,4 +60,24 @@ class DataCacheBoundsTest {
         assertTrue("stale .tmp removed", !stale.exists())
         assertTrue(f.exists())
     }
+
+    /**
+     * ST-22: invalidateAll (used by the UI) makes every saved page a miss at once, keeps pages
+     * saved after it, and deletes the old files off the calling thread.
+     */
+    @Test fun invalidateAllDropsOldPagesAtOnceAndKeepsNewOnes() {
+        repeat(20) { DataCache.write("search", "old$it", "nsfw-$it") }
+        val oldFile = DataCache.fileFor("search", "old0")!!
+        assertTrue(oldFile.isFile)
+        Thread.sleep(5)
+        DataCache.invalidateAll()
+        assertEquals("old page served after the clear", null, DataCache.read("search", "old0", maxAgeMs = Long.MAX_VALUE))
+        assertEquals(null, DataCache.ageOf("search", "old1"))
+        Thread.sleep(5)
+        DataCache.write("search", "new", "fresh")
+        DataCache.awaitClearForTests()
+        assertTrue("old file left on disk", !oldFile.exists())
+        DataCache.clearMemory()
+        assertEquals("page saved after the clear was lost", "fresh", DataCache.read("search", "new", maxAgeMs = Long.MAX_VALUE))
+    }
 }

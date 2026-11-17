@@ -78,13 +78,24 @@ object DataCache {
         internal var lastJanitor: Long
             get() = p?.getLong("last_janitor", 0) ?: 0
             set(v) { p?.edit()?.putLong("last_janitor", v)?.apply() }
+        /** G2 E12 / ST-22: pages saved at or before this moment count as gone ([invalidateAll]). */
+        internal var clearedAt: Long
+            get() = p?.getLong("cleared_at", 0) ?: 0
+            set(v) { p?.edit()?.putLong("cleared_at", v)?.apply() }
         internal var lastCookieClear: Long
             get() = p?.getLong("last_cookie_clear", 0) ?: 0
             set(v) { p?.edit()?.putLong("last_cookie_clear", v)?.apply() }
     }
 
+    /** In-memory copy of [Settings.clearedAt] (read on every lookup). */
+    @Volatile private var clearedAt = 0L
+    private val clearer = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "yu-cache-clear").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+    }
+
     fun init(context: Context) {
         Settings.init(context)
+        if (clearedAt == 0L) clearedAt = Settings.clearedAt
         if (root == null) root = File(context.applicationContext.cacheDir, DIR).apply { mkdirs() }
     }
 
@@ -99,12 +110,12 @@ object DataCache {
         if (!Settings.enabled) return null
         val now = System.currentTimeMillis()
         val mk = "$ns|$key"
-        synchronized(memory) { memory[mk] }?.let { (at, v) -> if (now - at in 0..maxAgeMs) return v }
+        synchronized(memory) { memory[mk] }?.let { (at, v) -> if (at > clearedAt && now - at in 0..maxAgeMs) return v }
         val f = fileFor(ns, key) ?: return null
         return runCatching {
             if (!f.isFile) return null
             val at = f.lastModified()
-            if (now - at !in 0..maxAgeMs) return null
+            if (at <= clearedAt || now - at !in 0..maxAgeMs) return null
             val text = f.readText()
             // The key is stored on the first line so a hash collision can never return another page.
             val nl = text.indexOf('\n')
@@ -116,7 +127,7 @@ object DataCache {
     }
 
     /** Age of the saved entry in ms, or null when there is none. */
-    fun ageOf(ns: String, key: String): Long? = fileFor(ns, key)?.takeIf { it.isFile }?.let { System.currentTimeMillis() - it.lastModified() }
+    fun ageOf(ns: String, key: String): Long? = fileFor(ns, key)?.takeIf { it.isFile && it.lastModified() > clearedAt }?.let { System.currentTimeMillis() - it.lastModified() }
 
     fun write(ns: String, key: String, value: String) {
         if (!Settings.enabled || value.length > 4 * 1024 * 1024) return
@@ -140,7 +151,31 @@ object DataCache {
 
     fun clearMemory() = synchronized(memory) { memory.clear(); memoryChars = 0 }
 
+    /** Deletes everything now, on the calling thread. For background callers and tests; the UI uses [invalidateAll]. */
     fun clearAll() { clearMemory(); root?.deleteRecursively(); root?.mkdirs() }
+
+    /**
+     * G2 E12 / ST-22: drops every saved page at once without touching the disk on the calling
+     * thread. UI actions (adult content switch, extension changes, sign-in, restore) called
+     * [clearAll] on the main thread, which deleted up to [Settings.maxBytes] of files there.
+     * Now: a stamp makes every page saved until this moment a miss right away (memory and disk,
+     * kept across restarts), and the files are deleted on a background thread. Pages saved after
+     * the stamp are kept.
+     */
+    fun invalidateAll() {
+        val stamp = System.currentTimeMillis().coerceAtLeast(clearedAt + 1)
+        clearedAt = stamp
+        Settings.clearedAt = stamp // apply(): saved off the calling thread
+        clearMemory()
+        clearer.execute {
+            runCatching {
+                root?.walkBottomUp()?.forEach { f -> if (f.isFile && f.lastModified() <= stamp) f.delete() }
+            }.onFailure { Log.w(TAG, "clear", it) }
+        }
+    }
+
+    /** Test hook: waits until background deletes queued so far are done. */
+    internal fun awaitClearForTests() { clearer.submit {}.get(30, java.util.concurrent.TimeUnit.SECONDS) }
 
     fun bytesUsed(): Long = root?.walkTopDown()?.filter { it.isFile }?.sumOf { it.length() } ?: 0
 
@@ -153,7 +188,8 @@ object DataCache {
         val files = r.walkTopDown().filter { it.isFile }.toMutableList()
         var freed = 0L
         // G12 X12-2: a fresh .tmp is a write in progress (deleting it lost that page); only stale ones go.
-        files.removeAll { f -> (now - f.lastModified() > keepMs || (f.name.endsWith(".tmp") && now - f.lastModified() > 60_000L)).also { old -> if (old) { freed += f.length(); f.delete() } } }
+        val gone = clearedAt
+        files.removeAll { f -> (now - f.lastModified() > keepMs || f.lastModified() <= gone || (f.name.endsWith(".tmp") && now - f.lastModified() > 60_000L)).also { old -> if (old) { freed += f.length(); f.delete() } } }
         var total = files.sumOf { it.length() }
         if (total > maxBytes) {
             for (f in files.sortedBy { it.lastModified() }) {
