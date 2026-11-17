@@ -784,3 +784,22 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - api33-lowram (pid 4576 → 5227) and api36 (3334 → 4070): `LIB_P_B playlists=[Favorite Tracks:3, YuLB repeats:2, YuLB keep:2]`,
   after one more save `[Favorite Tracks, YuLB repeats, YuLB keep 2]`, LIB_P_RESULT PASS, cleanup back to `[Favorite Tracks:0]`.
 
+## 44002112195 (FrameTimingBenchmark, bench=jank, both phones, emulator; head 2e8d810)
+
+- First valid journey: journey_after_scroll.png shows Home; 139–171 frames per iteration.
+- frameDurationCpuMs P50/P90/P99, shipped profile vs no AOT: api36 400/510/952 vs 388/482/831; api33-lowram
+  434/520/800 vs 412/476/702. No profile gain; the emulators draw in software (ST-7, OMT-12 for the phone).
+
+## 44004098352 (LibraryRotationDeviceTest fail-before, scratch/lb7-fail-before, both phones, emulator)
+
+- `remember` instead of `rememberSaveable`: FAILED on both, "open before=true after=false overview=true".
+
+## 44005396278 (LibraryRotationDeviceTest, both phones, emulator; head c9c41d3)
+
+- PASS on both: the open playlist survives recreation (LB-7 rotation part).
+
+## 44007087901 (MangaLibraryMainThreadDeviceTest fail-before, both phones, emulator; head cb3593a)
+
+- FAILED on both: 40 main-thread disk reads from MangaLibrary in 20 page turns (ContextImpl.ensurePrivateDirExists
+  via filesDir, and File.mkdirs in MangaLibrary.file). LB-2.
+

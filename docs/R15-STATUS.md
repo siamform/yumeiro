@@ -22,11 +22,18 @@
   "Skip for now" and the journeys matched "Skip" (screenshots of 43999288738). The shipped baseline profile
   (fef01c6) therefore covers startup and the welcome screen only. Fixes pushed (grantPermissions, passWelcome).
   Frame numbers of 43993294720 / 43996103813 / 43999288738 are void.
-- **Runs in progress:** FrameTimingBenchmark 44002112195 (2e8d810, bench=jank, both phones).
-- **Next three actions:** (1) read 44002112195: journey_after_scroll.png must show Home, frameCount must be
-  well above 14; record ST-7 profile vs no-AOT; (2) regenerate the baseline profile (bench=profile, api36),
-  commit `app/src/main/baseline-prof.txt`, re-measure startup (bench=startup) → X2-2, X2-1; (3) X7-5 review,
-  then G5–G11. X3-TL and X13-6 wait on the owner.
+- **Done since (2):** FrameTimingBenchmark 44002112195 is the first valid frame run (Home on screen, 139–171
+  frames/iteration); no profile gain on the software-rendered emulators (ST-7; the real-phone check stays OMT-12).
+  X7-5 MASVS re-review: no drift. LB-3/LB-8 verified on device across a real process death (44002497794).
+  LB-7 rotation: fail-before 44004098352 → pass 44005396278. LB-2 finding: MangaLibrary ran filesDir+mkdirs on
+  main on every page turn; fail-before 44007087901 (40 violations, both phones), fix e059aed.
+- **Current group / step (2):** G5 Library. LB-2 after-fix device run, then CI unit run for the fix.
+- **Runs in progress:** baseline profile regeneration 44005414732 (c9c41d3, bench=profile, api36);
+  MangaLibraryMainThreadDeviceTest after-fix 44008161115 (e059aed, both phones).
+- **Next three actions:** (1) read 44008161115 → LB-2 verified on device if both pass; CI unit run (SafeJsonFileTest
+  touches MangaLibrary); (2) when 44005414732 ends, commit the new `app/src/main/baseline-prof.txt` (X2-2), then
+  bench=startup and bench=jank re-measure (X2-1, ST-7); (3) G6–G11, then re-audit G1–4. X3-TL, X13-6 and TV-4
+  cross-source search wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
