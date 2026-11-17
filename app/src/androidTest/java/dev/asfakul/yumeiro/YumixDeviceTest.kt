@@ -158,6 +158,15 @@ class YumixDeviceTest {
         log("network back: ${cards().size} cards")
     }
 
+    private fun networkCause(t: Throwable?): Boolean {
+        var c = t
+        while (c != null) {
+            if (c is java.io.IOException || c is kotlinx.coroutines.TimeoutCancellationException) return true
+            c = c.cause
+        }
+        return false
+    }
+
     @Test fun seeAllKeepsPagingWhileSearching() {
         FirstRun.tapVisible(rule, "nav_tab_home"); idle(600)
         FirstRun.tapVisible(rule, "quick_card_hues"); idle(600)
@@ -174,16 +183,27 @@ class YumixDeviceTest {
         fun hasText(t: String) = rule.onAllNodes(androidx.compose.ui.test.hasText(t, substring = true), true).fetchSemanticsNodes().isNotEmpty()
         idle(2_000)
         val first = loaded() ?: 0
-        var errors = 0; var ended = false
+        var errors = 0; var netErrors = 0; var ended = false
+        dev.asfakul.yumeiro.ui.screens.online.OnlineRowDiag.lastError = null
         val stop = SystemClock.uptimeMillis() + 60_000
         while (SystemClock.uptimeMillis() < stop) {
             runCatching { rule.onAllNodesWithTag("online_row_grid", true).onFirst().performTouchInput { swipeUp() } }
             idle(1_000)
-            if (hasText("Couldn't load more") || rule.onAllNodesWithTag("online_row_error", true).fetchSemanticsNodes().isNotEmpty()) errors++
+            if (hasText("Couldn't load more") || rule.onAllNodesWithTag("online_row_error", true).fetchSemanticsNodes().isNotEmpty()) {
+                // YX-T1: a real network failure is shown correctly; retry it and keep paging. Only an
+                // error with any other cause (the old cancelled-fetch race) counts.
+                val cause = dev.asfakul.yumeiro.ui.screens.online.OnlineRowDiag.lastError
+                if (networkCause(cause)) {
+                    netErrors++
+                    log("see all: network error (${cause?.javaClass?.simpleName}: ${cause?.message?.take(80)}) → Retry")
+                    runCatching { rule.onAllNodes(androidx.compose.ui.test.hasText("Retry", substring = true), true).onFirst().performClick() }
+                    idle(1_000)
+                } else { errors++; log("see all: error cause ${cause?.javaClass?.name}: ${cause?.message?.take(120)}") }
+            }
             if (hasText("That's everything")) { ended = true; break }
         }
         val last = loaded() ?: 0
-        log("see all: loaded $first → $last, error checks $errors, ended=$ended · ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT}")
+        log("see all: loaded $first → $last, error checks $errors, network errors $netErrors, ended=$ended · ${android.os.Build.MODEL} API ${android.os.Build.VERSION.SDK_INT}")
         FirstRun.shot("yumix_see_all")
         org.junit.Assume.assumeTrue("this row had a single page ($first titles)", last > first || !ended)
         assertEquals("See all showed a load error while paging ($errors checks) · ${FirstRun.onScreen(rule)}", 0, errors)

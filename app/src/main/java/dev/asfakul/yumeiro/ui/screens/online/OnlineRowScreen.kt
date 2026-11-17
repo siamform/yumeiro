@@ -99,10 +99,12 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
                 // Stop when the source has no next page or keeps sending the same titles.
                 hasNext = r.hasNext && fresh.isNotEmpty()
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                OnlineRowDiag.lastError = e
                 error = OnlineErrors.friendly(e, "Couldn't load more")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
+                OnlineRowDiag.lastError = e
                 error = OnlineErrors.friendly(e, "Couldn't load more")
             } finally { loading = false }
         }
@@ -208,4 +210,13 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
             }
         }
     }
+}
+
+/**
+ * YX-T1 (api36 run 44079680572): the cause of the last "Couldn't load more", so the device test can
+ * tell a real network failure (correctly shown, Retry offered) from the false error it guards
+ * against. One reference, no history; read only by tests.
+ */
+internal object OnlineRowDiag {
+    @Volatile var lastError: Throwable? = null
 }
