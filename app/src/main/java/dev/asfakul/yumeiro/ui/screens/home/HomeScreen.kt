@@ -77,6 +77,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -431,7 +433,7 @@ fun HomeScreen(
                 item(key = "spaces_grid", contentType = "spaces_grid") {
                     Column(Modifier.fillMaxWidth().tourTarget("home_spaces_grid")) {
                         features.chunked(spaceColumns).forEach { row ->
-                            Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).spacesRowFocus().testTag("home_spaces"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
                                 repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
                             }
@@ -457,7 +459,7 @@ fun HomeScreen(
                                 val list = if (gk == "go") moreGo else moreSettings
                                 SpacesGroupLabel(label.first, label.second)
                                 list.chunked(spaceColumns).forEach { row ->
-                                    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).testTag("home_spaces_more_row"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp).spacesRowFocus().testTag("home_spaces_more_row"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         row.forEach { f -> FeatureTile(f, Modifier.weight(1f)) }
                                         repeat(spaceColumns - row.size) { Spacer(Modifier.weight(1f)) }
                                     }
@@ -886,6 +888,16 @@ private fun EmptyArt(icon: ImageVector) {
  * white, its kanji faintly stamped behind, and the name underneath. No card around it, so
  * the grid breathes; a press sinks the seal a little.
  */
+/**
+ * TV-3 (NBUG-2b): a Spaces row that is not full (on TV the second row is Sources, Downloads and empty
+ * space) let D-pad Right jump to the row above (Downloads → YT Music, run 43949571344), so a remote user
+ * moving right and pressing Center opened YouTube Music. Right at the end of a row now stays put, as in
+ * Leanback rows; Left still leaves the row (to the TV rail), Up and Down still change rows.
+ */
+private fun Modifier.spacesRowFocus(): Modifier = this
+    .focusProperties { onExit = { if (requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Right) cancelFocusChange() } }
+    .focusGroup()
+
 @Composable
 private fun FeatureTile(f: Feature, modifier: Modifier) {
     val p = LocalMtPalette.current

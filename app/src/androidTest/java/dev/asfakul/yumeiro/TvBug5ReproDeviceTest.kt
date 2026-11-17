@@ -8,12 +8,14 @@ package dev.asfakul.yumeiro
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.util.Log
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import dev.asfakul.yumeiro.ui.screens.TabPagerProbe
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -246,6 +248,33 @@ class TvBug5ReproDeviceTest {
         assertTrue("TV-4: after Enter the search gave no visible answer", answered)
         assertTrue("TV-4: after Enter focus left the search box: $focusAfter", "topbar_search_input" in focusAfter)
         log("TVB_RESULT PASS d")
+    }
+
+    /**
+     * TV-3 (NBUG-2b) cause: on TV the Spaces grid has 6 columns, so its second row is Sources, Downloads
+     * and empty space. Run 43949571344 showed Right from `quick_card_downloads` landing on
+     * `quick_card_ytmusic` in the row above; a remote user scrolling right then presses Center and
+     * YouTube Music opens. Right at the end of a row must stay in that row.
+     */
+    @Test fun e_tv3_rightAtTheEndOfARowStaysInTheRow() {
+        runCatching { rule.waitUntil(20_000) { has("quick_card_downloads") } }
+        assumeTrue("Spaces grid did not show", has("quick_card_downloads"))
+        try {
+            key("DPAD_RIGHT") // leave touch mode so the tiles can take focus
+            rule.onAllNodesWithTag("quick_card_downloads", true)[0].performSemanticsAction(SemanticsActions.RequestFocus)
+            runCatching { rule.waitUntil(3_000) { "quick_card_downloads" in focused() } }
+            val start = focused()
+            log("TVB_STEP e start=${focusedInfo()} downloads=${boundsOf("quick_card_downloads")} ytmusic=${boundsOf("quick_card_ytmusic")}")
+            assumeTrue("could not focus quick_card_downloads: $start", "quick_card_downloads" in start)
+            val walk = ArrayList<String>()
+            repeat(3) { key("DPAD_RIGHT"); walk += "R${it + 1}→${focusedInfo()}" }
+            val end = focused()
+            FirstRun.shot("tvb_e_row_end")
+            log("TVB_CASE e walk=$walk")
+            assertTrue("TV-3: Right at the end of the Spaces row left the row (YT Music one Center away): $walk",
+                "quick_card_downloads" in end)
+            log("TVB_RESULT PASS e")
+        } finally { FirstRun.touchMode() }
     }
 
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
