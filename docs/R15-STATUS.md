@@ -6,21 +6,21 @@
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Current group / step:** G9/G10 close-out. G10: every row has evidence except VPN (OMT-18). G9: switches 34/34;
-  SE-6 choice rows: unit 6/6 + backdrop 3/3 (CI 43953320911); device a,c,d,e,f PASS both phones (43957024165);
-  b alone PASS (43961702457). b after a failed: an in-app message pill covered the floating window → new finding
-  ST-21. Fail-before 43967676359 FAILED as expected (both phones); fix 6a45cad + 1cd184a, CI 43970532288 green,
-  FloatingPlayerAreaTest 5/5 (unit). After-fix device run owed.
+- **Current group / step:** G9/G10 close-out. G9: switches 34/34, SE-6 choice rows verified on device (emulator,
+  43974089878, a–f both phones); qa_gpu_tier → OMT-16. ST-21 (message over the floating window) verified (emulator):
+  fail-before 43967676359, after 43974089878. X15-2 fail-before proven in CI 43976334697. G10: VPN → OMT-18; ER-12
+  (Retry on failed adds) was compile-only → new `RetryActionsDeviceTest` (JS repo + Stremio add-on vs a local
+  server whose first answer is 404), CI 43980800778 green.
 - **Owner bugs:**
   - BUG-5 TV UI: TV-5/TV-2/TV-4 (focus+answer) verified on tv-api34 (43935810414) and tv-api24 (43949571344,
     43957029647); TV-3 PASS tv-api24. Open: TV-4 cross-source search (G7 proposal 3, owner call).
   - BUG-6 verified on device (emulator, both phones).
   - BUG-7: 7a, 7b, 7c verified on device (emulator); 7d not reproduced on emulator → OMT-16; gallery OMT-17.
-- **Runs in progress:** device 43974089878 (both phones, 1cd184a: FloatingMessageDeviceTest + ChoiceSettingsEffectDeviceTest a–f).
-  Scratch branch `scratch/x15-2-fail-before` (LiveFeed fix reverted only, never merge) waits for its CI run.
-- **Next three actions:** (1) read 43974089878: FMSG_RESULT PASS and CFX b closes on one tap → ST-21 and SE-6 verified (emulator);
-  (2) X15-2 fail-before: `gh workflow run ci.yml --ref scratch/x15-2-fail-before`, expect LivePagedTest red;
-  (3) close G9/G10 in ledger + GROUP docs, then Group 12 (ST-7, ST-17, X2-1, X7-5).
+- **Runs in progress:** device 43984064564 (both phones, 6bf399a: RetryActionsDeviceTest a, b).
+- **Next three actions:** (1) read 43984064564 (RTY_RESULT PASS a/b) → ER-12 verified (emulator), then close G9/G10
+  in ledger + GROUP docs; (2) ST-7: stress campaign after the baseline profile (fef01c6), `-f shards=[1,2,3,4,5]
+  -f repeat=2` on both phones (10 jobs); (3) Group 12 rest: ST-17 (spin log), X2-1, X7-5 review; X3-TL and X13-6
+  wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
