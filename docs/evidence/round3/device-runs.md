@@ -867,3 +867,32 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - TTID median: api36 coldStartBaselineProfile 2116 ms (2018–2325) vs NoCompilation 2957 ms (1997–3929);
   api33-lowram (attempt 2, after a Maven resolution failure) 1756 ms (1659–1888) vs 2465 ms (1943–3570). X2-4.
 
+## 44020227401 / 44020231250 (PlaylistRetryDeviceTest, both phones, emulator; heads fcb4be5 and scratch/lt2-fail-before)
+
+- Case b (download 503 → Retry) PASS on both builds. Case a (store start fails) FAILED on both builds: "Playlist not
+  found" shown instead of the error. The 4cee17d fix never worked (defaults loaded in memory, loadedDir set before
+  the failed write). Fix bd18c0b. LT-2.
+
+## 44021837402 (PlaylistRetryDeviceTest after bd18c0b, both phones, emulator)
+
+- Both cases PASS. Screenshot: raw "/data/user/0/…/playlists.json.tmp: open failed: EACCES" and "Check your connection" shown.
+
+## 44023164202 (PlaylistRetryDeviceTest after 1060ea7, both phones, emulator)
+
+- Both cases PASS with the text checks; screenshot reads "The app couldn't use its storage on this device. Restart the
+  app, then try again. Your saved playlists are not changed." LT-2.
+
+## 44024309052 / 44024330486 (MangaRetryDeviceTest double Retry, both phones, emulator; scratch/mg1-fail-before and head)
+
+- Skipped by assumption on both builds and both phones: Retry gone at frame 0 of the first retry, so no second tap can
+  land. MG-1 Retry race not reachable from the screen.
+
+## 44025493021 / 44025490015 (MangaRetryDeviceTest.libraryLoadIsOffMain, both phones, emulator)
+
+- Fail-before (library loaded on main, as before 4cee17d): 5 MangaLibrary disk reads on main, both phones, FAILED.
+  Head: 0, PASS both. MG-1.
+
+## 44020023897 / 44023167122 (CI: build, unit, lint; heads c318e9a and 1060ea7)
+
+- Success. RemotePlaylistStreamTest (LT-4); ErrorTaxonomyTest storage cases (LT-2).
+
