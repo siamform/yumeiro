@@ -43,6 +43,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-24 | Vega: what do you mean by "Vega"? | Blocked: owner (question) |
 | OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Blocked: owner (decision) |
 | OMT-26 | EXT-T1: Back closes a pop-up instead of Source status | Blocked: owner (phone) |
+| OMT-27 | NBUG-6: per-feature DNS has measured side effects — build anyway, narrow it, or drop | Blocked: owner (decision) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -460,6 +461,17 @@ Blocked (you couldn't run it; say why).
 - **Pass:** Back leaves Source status. **Fail:** Back closes something else first or nothing happens; then
   note which extensions are installed and send a screen recording.
 - **Status:** Blocked: owner (phone).
+
+### OMT-27 — NBUG-6 per-feature DNS: decision
+
+- **Measured:** a feature with its own DNS can't share connections with the others for the same site (2 instead of
+  1 on the emulator), each extra resolver keeps 5–6 threads for about a minute after use, the address cache must
+  be split, and WebView, subtitles and app update don't go through it. Details:
+  docs/proposals/FEATURE-NBUG-6-per-feature-dns.md §2, §4.
+- **Your rule:** build only without side effects, so it is **not built**. The automatic bypass that exists today
+  stays as is.
+- **What to send back:** drop it, or name one narrow case (for example "drama always over DoH") to plan as a gated note.
+- **Status:** Blocked: owner (decision).
 
 ## Not owner tests (handled by the agent)
 

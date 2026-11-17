@@ -10,7 +10,7 @@
   CI 44192309663 (unit).
 - **Next three actions:** (1) done: 44189135829 e13 20/20 PASS → EXT-T1 Cannot reproduce, OMT-26;
   (2) 44190759388 green → ST-18 Verified (emulator) for the structural change, then TV TvBug5ReproDeviceTest;
-  (3) NBUG-6 Nbug6EngineCostDeviceTest + NBUG-5 DubCountProbeDeviceTest on api33-lowram, then upgrade from v1.8.0 at head.
+  (3) done: NBUG-6 measured, gate not passed (OMT-27); NBUG-5 second probe (repeated Dub numbers), then upgrade from v1.8.0 at head.
 
 ### Previous resume note (eighth cycle, session 2, step 2)
 

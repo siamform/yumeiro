@@ -96,7 +96,12 @@ then each dead provider is skipped for 2 min, so later lookups fall back at once
 Measured (`Nbug6ExhaustionTimingTest`, CI unit): resolvers that each hang 400 ms → first lookup 1201 ms
 (44185781422) / 1202 ms (44188521804) = providers × hang, one try per provider (Cloudflare, Quad9, Google); the
 second lookup 0 ms (dead resolvers skipped). Real `DnsOverHttps` with a non-routable bootstrap (10.255.255.1,
-5 s connect): CI 44192309663 (the earlier attempt was a test fault, OkHttp not initialised under Robolectric).
+5 s connect), CI 44192309663: first lookup **15 091 ms** (Cloudflare 5057, Quad9 5004, Google 5006 ms, each
+`SocketTimeoutException: Connect timed out`), second lookup 0 ms. So the real worst case is ~15 s (connect timeout
+× 3; the read timeout is never reached), not the ~30 s code bound, and only once per 2 min. (The earlier attempt
+was a test fault: OkHttp not initialised under Robolectric.) Finding for the owner, not built: on a network that
+blackholes all three resolvers, the first lookup of a blocked host waits ~15 s before the error; racing the
+providers would cut that but costs three engines at once (§2).
 
 ## 5. Per-feature DNS policy source
 
