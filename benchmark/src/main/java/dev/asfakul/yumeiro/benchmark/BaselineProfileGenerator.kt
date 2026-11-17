@@ -25,5 +25,6 @@ class BaselineProfileGenerator {
         pressHome()
         startActivityAndWait()
         Journeys.browseTabs(device)
+        Journeys.restoreOpenTab(device) // X2-1: the H8 restore path (process death, same tab)
     }
 }

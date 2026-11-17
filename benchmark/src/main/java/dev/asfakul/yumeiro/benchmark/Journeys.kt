@@ -68,6 +68,27 @@ internal object Journeys {
         }
     }
 
+    /**
+     * G12 X2-1 (after G1 H8, 44094439021): the path a user takes back into the app after Android killed
+     * it in the background: pick another tab, Home, `am kill` (task and saved state kept), relaunch
+     * from the launcher intent without CLEAR_TASK. The restored tab's classes then join the profile.
+     */
+    fun restoreOpenTab(device: UiDevice) {
+        val w = device.displayWidth; val h = device.displayHeight
+        device.click(w * 5 / 8, h - h / 16) // third tab
+        device.waitForIdle(2_000)
+        device.pressHome()
+        device.wait(Until.gone(By.pkg(TARGET).depth(0)), 5_000)
+        device.waitForIdle(1_000)
+        device.executeShellCommand("am kill $TARGET")
+        repeat(20) { if (device.executeShellCommand("pidof $TARGET").isNotBlank()) Thread.sleep(250) }
+        val ctx = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context
+        ctx.startActivity(ctx.packageManager.getLaunchIntentForPackage(TARGET)!!.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        firstFrameSettles(device)
+        device.findObject(By.scrollable(true))?.let { runCatching { it.scroll(Direction.DOWN, 0.8f) } }
+        device.waitForIdle(1_000)
+    }
+
     /** ST-7 frame timing: past the welcome guide, fling Home up and down, then swipe the tab pager. */
     fun scrollHomeAndSwipeTabs(device: UiDevice) {
         firstFrameSettles(device)
