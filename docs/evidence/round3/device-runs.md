@@ -905,3 +905,19 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - Head: success. Fail-before: 1096 tests, 1 failed (OnlineHomeFailureTest.everyPageFailingPassesTheReasonOn). G7-L1.
 
+
+## Device 44030612565 / 44031868134: DownloadThroughputDeviceTest#c_localBurstThenCapHost (emulator, BUG-3)
+
+Local server in the test process, 40 MiB, every request 1 MiB fast then 1 MiB/s; real WorkManager →
+DownloadWorker → Segmented. Rule: last 10 % ≤ 2× the mean 10 %.
+
+| Build | Phone | Total | MB/s | Last / mean | Requests | Result |
+|---|---|---|---|---|---|---|
+| head 44030612565 | api36 | 9481 ms | 4.22 | 0.74 | 24 | PASS |
+| head 44030612565 | api33-lowram | 6645 ms | 6.02 | 1.08 | 31 | PASS |
+| fail-before 44031868134 (`bug3-fail-before`, ForceGrab from 40ea96e^) | api36 | 14944 ms | 2.68 | 1.21 | 11 | PASS |
+| fail-before 44031868134 | api33-lowram | 15053 ms | 2.66 | 1.27 | 11 | PASS |
+
+Reading: this profile does not reproduce the tail collapse (the old code also meets the rule), so it is not
+fail-before proof of the tail fix. It shows the RequestPace restarts on a device: 1.6–2.3× faster on a
+per-request capped host. Case d (the unit collapse profile) added for the tail.

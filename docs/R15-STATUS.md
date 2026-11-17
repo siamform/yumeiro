@@ -33,13 +33,20 @@
   profile vs no-compile): api36 2116 vs 2957 ms, api33-lowram 1756 vs 2465 ms. LT-3 verified (44015384846).
   LT-4 (remote list held whole in memory): fix 8b747ca; hardened test c318e9a (12 s settle, lower of two
   peaks) fail-before 44018872516 (lowram add 132 MB > 96) → pass 44018869252 (lowram 42/65, api36 32/27 MB).
-- **Current group / step:** Group 7 Live TV. LT-4 waits only on the CI unit run; LT-2 device runs going.
-- **Runs in progress:** CI 44020023897 (c318e9a: RemotePlaylistStreamTest + PlaylistMarketTest);
-  PlaylistRetryDeviceTest after 44020227401 (r15-stability) and fail-before 44020231250
-  (scratch/lt2-fail-before), both phones.
-- **Next three actions:** (1) read CI 44020023897 → LT-4 verified; (2) read the two LT-2 runs (fail-before
-  must FAIL on "not found") → LT-2; (3) bench=jank (ST-7, X2-4), then MG-1 and G7-L1 (what the user sees
-  when QuickIPTV fails), then G8–G11, re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
+- **Done since (4):** LT-4 verified (CI 44020023897). LT-2: the 4cee17d fix never worked (case a failed on head
+  44020227401 and fail-before 44020231250); fixes bd18c0b + 1060ea7 → pass 44021837402, 44023164202, CI
+  44023167122. MG-1 library read off main: fail-before 44025493021 (5 reads) → 44025490015 (0). G7-L1 (QuickIPTV
+  failure shown as a friendly error): CI 44026316670, fail-before CI 44028308675. LT-1 44026779856. G7 done.
+- **Current group / step:** Group 8 Downloads. BUG-3 device proof without the internet
+  (`DownloadThroughputDeviceTest` c/d, local burst-then-cap server): case c head 44030612565 PASS (api36 9.5 s,
+  0.74×; lowram 6.6 s, 1.08×) and fail-before 44031868134 also PASS the tail rule (1.21/1.27×) but took 15 s:
+  c proves the speed gain, not the tail. Case d (the unit collapse profile) added. DL-4 device cases c/d added
+  (`DownloadResumeDeviceTest`), scratch `dl4-fail-before`. DL-10 is rerun after the DL-11a fix.
+- **Runs in progress:** bench=jank 44030433128 (ST-7, X2-4); device 44033132233 (head: throughput d,
+  DownloadResumeDeviceTest, DownloadKillDeviceTest).
+- **Next three actions:** (1) read 44033132233, then run the fail-befores (`bug3-fail-before` case d,
+  `dl4-fail-before` DownloadResumeDeviceTest), two device runs at most; (2) read the jank bench → X2-4/ST-7;
+  (3) DL-6/DL-8 device proof, then G9–G11 leftovers, re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
