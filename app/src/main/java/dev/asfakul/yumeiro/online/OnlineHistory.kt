@@ -238,4 +238,7 @@ object OnlineHistory {
     }
 
     internal fun resetForTests() { flush(); loaded = false; file = null; _entries.value = emptyList(); synchronized(this) { progress.clear(); looseIndex = null } }
+
+    /** For tests: forget the loaded state, so the next call reads the file again. */
+    @Synchronized internal fun unloadForTests() { _entries.value = emptyList(); progress.clear(); looseIndex = null; loaded = false; file = null }
 }

@@ -394,4 +394,7 @@ object OnlineDownloads {
             isDash = o.optBoolean("dash"), audioUrl = str("audio"),
         )
     }
+
+    /** For tests: forget the loaded state, so the next call reads the file again. */
+    @Synchronized internal fun unloadForTests() { _items.value = emptyList(); loaded = false; file = null }
 }
