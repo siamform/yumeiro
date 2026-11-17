@@ -36,6 +36,12 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-17 | Website and Play link downloads in your phone's gallery (BUG-7 7a, 7b) | Pending |
 | OMT-18 | Yumeiro behind a VPN on your phone (G10 network states) | Pending |
 | OMT-19 | A real YouTube download (video + audio) on your home network (G8 D6) | Pending |
+| OMT-20 | BUG-3 download speed per 10 % band on your phone (eighth cycle rule) | Blocked: owner |
+| OMT-21 | BUG-5 / TV-4: choose how TV search should work (G7 proposal 3) | Blocked: owner (decision) |
+| OMT-22 | X3-TL: give the service account the Firebase Test Lab role | Blocked: owner (console) |
+| OMT-23 | X13-6: phone Jackson 2.19.4 → 2.18.11 | Blocked: owner (decision) |
+| OMT-24 | Vega: what do you mean by "Vega"? | Blocked: owner (question) |
+| OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Blocked: owner (decision) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -204,8 +210,8 @@ Blocked (you couldn't run it; say why).
   and note the `TotalTime` line each time. Then install the previous preview build (without the
   profile) and repeat.
 - **Expected result:** the median `TotalTime` with the profile is the same or lower than without it.
-- **Pass / fail rule:** pass if the median with the profile is not more than 5% higher; fail otherwise.
-- **What to record:** phone model, Android version, the 10 `TotalTime` numbers, both build versions.
+- **Pass / fail rule:** pass if the median with the profile is ≤ +5 % of the median without it; fail otherwise.
+- **What to record:** phone model, Android version, all 10 `TotalTime` numbers (5 with, 5 without), both build versions.
 - **Attempts by the agent:** macrobenchmark on CI emulators: before 43784533563, profile generated in
   43788916880, after 43790371337 (ledger X2-1). Numbers recorded, but emulator noise is too large to
   judge the gain.
@@ -366,6 +372,81 @@ Blocked (you couldn't run it; say why).
 - **Status:** Pending
 
 ---
+
+### OMT-20 — BUG-3 download speed per 10 % band on your phone (eighth cycle)
+
+- **Feature:** online downloads keep their speed to 100 % (BUG-3 = NBUG-1). Fixes so far: 40ea96e,
+  3c85a72 `RequestPace`, 24ee21b, and DL-11 (4fa126e: a restart is only kept when it helps).
+- **Why the agent can't do it:** the slowdown at 50–70 % was seen on your phone, host and Wi-Fi. The
+  emulator case d (local host with a per-connection cap) stays green on every download change, but it
+  cannot copy your Wi-Fi, phone maker battery rules or host.
+- **Instructions:** install the latest green debug APK. Add one download of 300–600 MB from a source that
+  was slow before, screen on. Each time the percentage passes 10, 20, … 100 note the stopwatch time.
+  Optional: `adb logcat -s YuDownload` during the run and send the lines with `SEGMENTED_STATS`.
+- **Pass / fail rule (owner order, eighth cycle):** work out the ten band times (10→20 %, …, 90→100 %)
+  and their median. Pass if the last 10 % takes at most 3.5 s. Assumption by the agent: with a large
+  file a 10 % band can take longer than 3.5 s at full speed; in that case the agent also reads the
+  result as "last band ≤ median band + 3.5 s" and says so in the ledger. Fail otherwise.
+- **What to record:** phone, Android version, source, file size, the ten times, the median.
+- **Agent evidence so far:** case d 44043535616 (both emulators); DL-11 CI unit fail-before 44103206509,
+  pass-after 44106540469; device run in the ledger row DL-11.
+- **Status:** Blocked: owner
+
+---
+
+### OMT-21 — BUG-5 / TV-4: how should TV search work? (decision, G7 proposal 3)
+
+- **Now:** the TV search field is reachable and answers (verified 43914880052, 43935810414, 43957029647),
+  but Home search only ranks your local library, so an empty library gives no results (TV-4 scope).
+- **Options:**
+  - A. Keep it local, and show "Nothing in your library yet — search Yumix" with a button. Smallest change.
+  - B. TV search runs the same online Yumix search the phone uses (YouTube and installed sources), with
+    local results first. Medium change, no new screens.
+  - C. G7 proposal 3: one global screen across Yumix, manga and Live TV. Largest change; it is a new feature.
+- **Recommendation:** B now (it is what users expect from a search box and reuses tested code), C later
+  as a gated feature after the eighth-cycle gate.
+- **What to send back:** A, B or C.
+- **Status:** Blocked: owner (decision). Development does not wait for it.
+
+---
+
+### OMT-22 — X3-TL: Firebase Test Lab role (console)
+
+- **Why:** real-device cloud runs would turn some owner tests into agent tests. The service account mints a
+  token, but Test Lab answers 403 (ledger X3-TL, 2026-11-16).
+- **Instructions:** Google Cloud console → IAM → the service account → add role "Firebase Test Lab Admin"
+  (`roles/cloudtestservice.testAdmin`); APIs → enable "Cloud Testing API" and "Cloud Tool Results API".
+- **What to send back:** "done" (no keys in chat). **Status:** Blocked: owner.
+
+---
+
+### OMT-23 — X13-6: phone Jackson version (decision)
+
+- **Why:** OSV lists 16 advisories on 2.19.4 (no patched 2.19); 2.18.11 has none and stays below the 2.20
+  `invokeExact` limit. Your earlier condition 3 keeps the phone version, so the agent did not change it.
+- **Options:** A. move the phone to 2.18.11 (agent runs the full extension suite on both emulators);
+  B. keep 2.19.4. **Recommendation:** A. **Status:** Blocked: owner (decision).
+
+---
+
+### OMT-24 — Vega: what do you mean? (question)
+
+- "Vega" can mean Amazon's Vega OS (the new Fire TV system, not Android) or the Vega app's provider
+  repositories (listed next to Nuvio and Skystream in F-05; hikari v0.10.57 calls them "Vega").
+  These are very different jobs. **What to send back:** which one. No design starts before the answer.
+- **Status:** Blocked: owner (question).
+
+---
+
+### OMT-25 — Telegram, Terabox, Diskwala and manga cloud path (decision)
+
+- **Now:** Terabox and Diskwala links open a hidden WebView that catches the real media request
+  (BEHAVIOR-SPEC "Cloud links"). Telegram and manga translation are not built (F-02, F-03, F-11).
+- **Proposal:** each comes as its own gated feature note (docs/proposals/FEATURE-*.md) with the site terms,
+  what data leaves the phone, and an off-by-default switch. Telegram needs your own API id (user login
+  through TDLib), so it would be "bring your own account"; manga translation would run on-device first.
+- **What to send back:** which of the four to plan, and whether a user login (Telegram) is acceptable.
+- **Status:** Blocked: owner (decision).
 
 ## Not owner tests (handled by the agent)
 

@@ -35,9 +35,12 @@ docs/DONE-LEDGER.md (same IDs); this file is the index.
 | ST-17 | Stress-test spins, cause logging | In progress (recorded per campaign) | 43988958313 (20/20, 0 spins) |
 | BUG-3 emulator side | Keep case d green | In progress (every download change) | 44043535616 |
 | EXT-T1 | Extension timing fault | Not started (≥20 runs on api33-lowram first) | — |
-| PL-16 | Screenshots into docs/evidence/pl16/ | Not started | runs 43747147539, 43748560619 |
-| OMT-1…19, X3-TL, X13-6, OMT-12 | Owner tests | Blocked: owner | docs/OWNER-MANUAL-TESTS.md |
-| Vega | Name collision (Fire TV OS) | Blocked: owner (question) | — |
+| PL-16 | Screenshots into docs/evidence/pl16/ | Done (evidence committed) | runs 43747147539, 43748560619; docs/evidence/pl16/README.md |
+| OMT-1…19, X3-TL (OMT-22), X13-6 (OMT-23), OMT-12 | Owner tests | Blocked: owner | docs/OWNER-MANUAL-TESTS.md |
+| BUG-3 owner rule | Median per 10 % band, last 10 % ≤ 3.5 s | Blocked: owner | OMT-20 |
+| BUG-5 / TV-4 scope | G7 proposal 3, options A/B/C, recommend B | Blocked: owner (decision) | OMT-21 |
+| Telegram / Terabox / Diskwala / manga cloud | Proposal, owner decides | Blocked: owner (decision) | OMT-25 |
+| Vega | Fire TV Vega OS or Vega app providers? | Blocked: owner (question) | OMT-24 |
 
 ## C. Gated features (Part 8): research and proposals only until the gate passes and the owner approves
 
