@@ -87,29 +87,5 @@ class Bug3PieceTest {
         val (b, _) = feed(pace, 2 * mb, 3 * mb, t) // half speed: normal variation, keep the request
         assertEquals(false, b)
     }
-
-    /**
-     * DL-11: one slow window (a dip of the link) must not close a request; on cdn.kernel.org such
-     * dips made up to 7 restarts per 135 MB, each throwing away about 2 MB (device 44036060683).
-     */
-    @Test fun oneSlowWindowAloneKeepsTheRequest() {
-        val pace = RequestPace()
-        val (_, t0) = feed(pace, 2 * mb, 8 * mb, 1_000_000_000L)
-        var t = t0
-        repeat(5) {
-            val (dip, t1) = feed(pace, 256 * 1024, mb / 2, t)  // one 256 KiB window at 1/16 the speed
-            val (back, t2) = feed(pace, mb, 8 * mb, t1)        // then fast again
-            assertEquals("dip $it", false, dip || back)
-            t = t2
-        }
-    }
-
-    @Test fun twoSlowWindowsInARowAskForANewOne() {
-        val pace = RequestPace()
-        val (_, t) = feed(pace, 2 * mb, 8 * mb, 1_000_000_000L)
-        val (first, t1) = feed(pace, 256 * 1024, mb / 2, t)
-        assertEquals(false, first)
-        val (second, _) = feed(pace, 256 * 1024, mb / 2, t1)
-        assertEquals(true, second)
-    }
 }
+

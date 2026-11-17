@@ -141,12 +141,8 @@ internal class Piece(val chunk: Int, start: Long, end: Long) {
 /** BUG-3: an idle connection never takes less than this from another one. */
 internal const val MIN_SPLIT = 1L * 1024 * 1024
 
-/**
- * BUG-3: a slowed request is only replaced when at least this much of its piece is left. DL-11: was
- * 512 KiB; with two slow windows (512 KiB) needed, a 3 MiB burst on a 4 MiB chunk would have left
- * exactly 512 KiB, on the edge.
- */
-internal const val RESTART_MIN_LEFT = 256L * 1024
+/** BUG-3: a slowed request is only replaced when at least this much of its piece is left. */
+internal const val RESTART_MIN_LEFT = 512L * 1024
 
 /** BUG-3: at most this many fresh requests per piece (a host that is slow for every request). */
 internal const val MAX_RESTARTS = 32
@@ -159,19 +155,13 @@ internal const val MAX_RESTARTS = 32
  * The baseline is the request's own speed over its first [baselineBytes] (from the first byte, so
  * TCP slow start only lowers it); after that each [window] is compared with it. A window under
  * 1/[factor] of the baseline says: ask for the rest in a new request. A steady host never trips it.
- * DL-11: it takes [slowWindows] slow windows in a row. One slow window was enough before, and on a
- * host that never caps a request (cdn.kernel.org, device 44036060683) a short dip of the link made
- * 1–7 restarts per 135 MB; each closed request threw away the bytes already on the way (about 2 MB:
- * 1.13× the file received on api33-lowram). A capped request stays slow, so it still trips.
  * Pure; `Bug3PieceTest`.
  */
 internal class RequestPace(
     private val baselineBytes: Long = 1L * 1024 * 1024,
     private val window: Long = 256L * 1024,
     private val factor: Int = 3,
-    private val slowWindows: Int = 2,
 ) {
-    private var slowRun = 0
     private var t0 = -1L
     private var seen = 0L
     private var baseline = -1.0 // bytes per ns
@@ -190,8 +180,7 @@ internal class RequestPace(
         if (winBytes < window) return false
         val rate = winBytes / maxOf(nowNs - winStart, 1_000_000L).toDouble()
         winBytes = 0; winStart = nowNs
-        slowRun = if (rate * factor < baseline) slowRun + 1 else 0
-        return slowRun >= slowWindows
+        return rate * factor < baseline
     }
 }
 
