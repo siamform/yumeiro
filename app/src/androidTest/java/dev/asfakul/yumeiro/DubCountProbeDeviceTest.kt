@@ -74,6 +74,17 @@ class DubCountProbeDeviceTest {
                     "dubDistinctData=${dubData.toSet().size} dubDataInSub=${dubData.count { it in subData }} " +
                     "dubNumbers=${dub.mapNotNull { it.episode }.let { n -> if (n.isEmpty()) "none" else "${n.min()}..${n.max()}" }} " +
                     "dubData0=${dubData.first().take(120)} dubDataLast=${dubData.last().take(120)}")
+                // NBUG-5 second probe (44192612391 showed KickassAnime Dub lists longer than Sub with the
+                // same number range): what each repeated entry looks like, in the order the app shows it.
+                val numbers = dub.mapNotNull { it.episode }
+                if (numbers.size != numbers.toSet().size) {
+                    val shown = runCatching { OnlineRepository.load(api, card.url).let { d -> dev.asfakul.yumeiro.online.OnlineSession.episodesOf(d, "Dub") } }.getOrDefault(emptyList())
+                    log("api=${api.name} title=${raw.name} repeats=${numbers.size - numbers.toSet().size} raw12=" +
+                        dub.take(12).joinToString(" | ") { "s${it.season} e${it.episode} n=${it.name} d=${it.data.substringAfter('?', "").take(30)}" })
+                    log("api=${api.name} title=${raw.name} shown12=" +
+                        shown.take(12).joinToString(" | ") { "s${it.season} e${it.episode} n=${it.name} d=${it.data.substringAfter('?', "").take(30)}" })
+                    log("api=${api.name} title=${raw.name} langs=" + dub.groupingBy { it.data.substringAfter("lang=", "?").substringBefore('&') }.eachCount())
+                }
                 if (dub.size >= 2) {
                     val first = linkUrls(api, dub.first().data)
                     val last = linkUrls(api, dub.last().data)
