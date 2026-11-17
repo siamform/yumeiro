@@ -57,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -87,6 +88,9 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class DownloadFilter(val label: String) { ALL("All"), OFFLINE("Offline"), PERMANENT("Permanent"), ACTIVE("In progress") }
 
@@ -98,7 +102,8 @@ enum class DownloadFilter(val label: String) { ALL("All"), OFFLINE("Offline"), P
 @Composable
 fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrowse: () -> Unit) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { OnlineDownloads.ensureLoaded(context); DownloadSettings.init(context) }
+    // G8 D8 (R17): the list file and the settings were read on the main thread when the page opened.
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { OnlineDownloads.ensureLoaded(context); DownloadSettings.init(context) } }
     val all by OnlineDownloads.items.collectAsState()
     val days by DownloadSettings.autoDeleteDays.collectAsState()
     val quality by DownloadSettings.quality.collectAsState()
@@ -276,10 +281,11 @@ private fun EmptyDownloads(onBrowse: () -> Unit) {
 @Composable
 internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (VideoItem) -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val done = d.status == OnlineDownloads.Status.DONE
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer)
-            .clickable(enabled = done) { play(context, d, onPlayVideo) }.padding(10.dp).testTag("library_download"),
+            .clickable(enabled = done) { scope.launch { play(context, d, onPlayVideo) } }.padding(10.dp).testTag("library_download"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) { PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize()) }
@@ -320,12 +326,15 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
     }
 }
 
-private fun play(context: android.content.Context, d: OnlineDownloads.Item, onPlayVideo: (VideoItem) -> Unit) {
-    val f = if (d.fileName.isNotBlank()) OnlineDownloads.fileOf(context, d) else null
-    val uri = when {
-        f != null && f.exists() -> android.net.Uri.fromFile(f).toString()
-        d.publicUri != null -> d.publicUri
-        else -> null
+/** G8 D8 (R17): finding the file (mkdirs + exists) ran on the main thread on every tap. */
+private suspend fun play(context: android.content.Context, d: OnlineDownloads.Item, onPlayVideo: (VideoItem) -> Unit) {
+    val uri = withContext(Dispatchers.IO) {
+        val f = if (d.fileName.isNotBlank()) OnlineDownloads.fileOf(context, d) else null
+        when {
+            f != null && f.exists() -> android.net.Uri.fromFile(f).toString()
+            d.publicUri != null -> d.publicUri
+            else -> null
+        }
     }
     if (uri != null) onPlayVideo(VideoItem(id = "download:${d.id}", title = listOfNotNull(d.title, d.episodeLabel).joinToString(" · "), durationMs = 0L, uri = uri, resolution = d.quality.orEmpty(), folderName = d.folder.ifBlank { "Downloads" }, sizeBytes = d.bytes))
     else AppMessages.error(context, "The file was removed")

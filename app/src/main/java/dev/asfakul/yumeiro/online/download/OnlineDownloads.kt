@@ -294,11 +294,14 @@ object OnlineDownloads {
     fun delete(context: Context, id: String) {
         ensureLoaded(context)
         WorkManager.getInstance(context.applicationContext).cancelUniqueWork("dl_$id")
-        get(id)?.let { item ->
+        val item = get(id)
+        update { list -> list.filterNot { it.id == id } }
+        // G8 D8 (R17): the files and the MediaStore row (a binder call) were removed on the main
+        // thread when Delete was tapped; a folder of 24 episodes did it 24 times.
+        if (item != null) offMain {
             if (item.fileName.isNotBlank()) runCatching { removeFiles(fileOf(context, item)) }
             item.publicUri?.let { u -> runCatching { context.contentResolver.delete(android.net.Uri.parse(u), null, null) } }
         }
-        update { list -> list.filterNot { it.id == id } }
     }
 
     /**
@@ -352,7 +355,31 @@ object OnlineDownloads {
      * over a newer one (a finished download read back as running after a restart), and both used
      * the same `.tmp` file.
      */
+    /**
+     * G8 D8 (R17): every tap on the Downloads screen (keep, pause, resume, delete) saved the whole
+     * list with an fsync on the main thread, once per item for a folder. From the main thread the
+     * save now goes to one background thread; saves queued while one waits are folded into it
+     * (each save takes the newest list inside [writeLock], so nothing newer is ever overwritten).
+     * Workers and other background callers still save before they return.
+     */
+    private val io = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-downloads-io").apply { isDaemon = true } }
+    private val writeQueued = java.util.concurrent.atomic.AtomicBoolean(false)
+    private fun onMain() = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+    private fun offMain(block: () -> Unit) { if (onMain()) io.execute { runCatching(block).onFailure { Log.w(TAG, "io", it) } } else block() }
+
+    /** Tests: waits until the saves and file removals queued from the main thread are done. */
+    @androidx.annotation.VisibleForTesting
+    internal fun flushForTests() { io.submit {}.get(10, TimeUnit.SECONDS) }
+
     private fun write() {
+        if (onMain()) {
+            if (writeQueued.compareAndSet(false, true)) io.execute { writeQueued.set(false); writeNow() }
+            return
+        }
+        writeNow()
+    }
+
+    private fun writeNow() {
         val f = file ?: return
         synchronized(writeLock) {
             lastWrite = System.currentTimeMillis()
