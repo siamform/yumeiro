@@ -190,3 +190,10 @@ Candidate root-cause fixes (not built; each needs its own fail-before/pass-after
 
 Recommendation: G (removes the waste at its cause, independent of host behaviour). Budget unchanged; DL-11
 part 2 stays **in progress**.
+
+Note on a cheaper variant ("drain the buffer before closing"): rejected on reading the code. Since option E, a
+window trips only when `read()` itself waited, i.e. the socket buffer was already empty; draining it would
+recover almost nothing. The ~1.3 MB is in the network path when the request closes, so only G (keep the old
+request reading to a boundary while the new one starts after it) can use it. G changes piece ownership in
+`Segmented.once` and needs an ADR-016 amendment, a fail-before unit test on the capped local profile (bytes
+served ÷ file) and the device a + d set; it is the next DL-11 step.
