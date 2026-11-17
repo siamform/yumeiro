@@ -60,4 +60,14 @@ class BrowserCheckTest {
         assertEquals("https://www.miruro.to/watch/1", BrowserCheck.challengePage("https://www.miruro.to/watch/1"))
         assertEquals("https://a.example/api/x", BrowserCheck.challengePage("https://a.example/api/x", accept = "text/html,application/xhtml+xml"))
     }
+
+    /** G10 A5 (R17): a host whose silent check just failed is not checked again at once. */
+    @Test fun failedCheckWaitsBeforeTheNextWebView() {
+        val now = 1_000_000L
+        assertEquals(false, BrowserCheckPolicy.recentlyFailed(null, now))
+        assertEquals(true, BrowserCheckPolicy.recentlyFailed(now - 1, now))
+        assertEquals(true, BrowserCheckPolicy.recentlyFailed(now - BrowserCheckPolicy.FAILED_RETRY_MS + 1, now))
+        assertEquals(false, BrowserCheckPolicy.recentlyFailed(now - BrowserCheckPolicy.FAILED_RETRY_MS, now))
+        assertEquals(false, BrowserCheckPolicy.recentlyFailed(now + 5_000, now)) // clock moved back: check again
+    }
 }

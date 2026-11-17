@@ -251,6 +251,15 @@ object BrowserCheck {
             webCookies(url).takeIf { hasClearance(it) && before == null }?.let { c ->
                 return@withLock Clearance(c, userAgent()).also { cleared[host] = it }
             }
+            // G10 A5 (R17): a failed check was recorded in [declined] but never read, so every
+            // later request to the host (and every request queued on [lock]) opened its own
+            // off-screen WebView for up to 20 s: a source page with 10 requests waited minutes and
+            // kept a WebView renderer alive the whole time. Now it fails fast for a short while;
+            // opening the site by hand ([openSite]) clears it.
+            if (BrowserCheckPolicy.recentlyFailed(declined[host], System.currentTimeMillis())) {
+                Log.i(TAG, "$host failed its check moments ago — not opening another WebView yet")
+                return@withLock null
+            }
             Log.i(TAG, "Checking $host in a WebView")
             headless(page)?.let { return@withLock it.also { cleared[host] = it } }
             // Round 13: the interactive captcha page is gone. It only ever showed a blank screen
@@ -479,4 +488,9 @@ object BrowserCheckPolicy {
     const val ASK_COOLDOWN_MS = 3 * 60_000L
 
     fun tooSoon(lastAskedAt: Long?, now: Long): Boolean = lastAskedAt != null && now - lastAskedAt in 0 until ASK_COOLDOWN_MS
+
+    /** After a silent check failed for a host, requests to it fail at once for this long. */
+    const val FAILED_RETRY_MS = 60_000L
+
+    fun recentlyFailed(failedAt: Long?, now: Long): Boolean = failedAt != null && now - failedAt in 0 until FAILED_RETRY_MS
 }
