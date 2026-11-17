@@ -921,3 +921,23 @@ DownloadWorker → Segmented. Rule: last 10 % ≤ 2× the mean 10 %.
 Reading: this profile does not reproduce the tail collapse (the old code also meets the rule), so it is not
 fail-before proof of the tail fix. It shows the RequestPace restarts on a device: 1.6–2.3× faster on a
 per-request capped host. Case d (the unit collapse profile) added for the tail.
+
+## Device 44033132233 / 44034718516 / 44036060683 / 44037723917: G8 downloads (emulator, api36 + api33-lowram)
+
+- DL-4 `DownloadResumeDeviceTest` c (206 from byte 0 to a resume Range) and d (416 with another size):
+  head PASS both phones (44033132233, 44034718516). Fail-before `g8-fail-before` 44037723917: c saved
+  400 000 bytes for a 300 000-byte file, d finished DONE with the old 250 000 bytes (server file 200 000).
+  On that scratch build api36 also timed out on b (QUEUED, 0 bytes, 60 s); b passed on head every time.
+- R16 HLS resume (case a): failed on head 44033132233 (test waited for 8 segments in the list; ProgressGate
+  showed 7 while segment 8 was held). Test fixed; PASS 44034718516.
+- DL-8 `DownloadQualityDeviceTest`: head 44036060683 q720→720p, q480→480p, q360→480p, Best→1080p on both;
+  fail-before 44037723917 → 1080p for every setting.
+- DL-10 `DownloadKillDeviceTest`: 44033132233 api36 read 121.0 MB after the kill for 87.9 MB left (FAIL,
+  rule rest + 24 MiB); 44034718516 PASS both (api36 93.5/87.3 MB with 1 pace restart; lowram 115.0/92.3 MB
+  with 9). Both emulators run 2 connections (DeviceClass.lowEnd: 4 cores or fewer).
+- DL-11 real host (cdn.kernel.org, 134.7 MB, screen on), before 6e40982: 44036060683 lowram 7 restarts
+  rx 1.129×, api36 1 restart 1.053×; repeat 44037559115: lowram 29/1/6 restarts → rx 1.440/1.039/1.130×
+  (3.58/7.82/5.86 MB/s), api36 11/3/1 → 1.163/1.060/1.051× (7.28/10.55/11.23 MB/s).
+- BUG-3 case d old Segmented (44037723917, 24 MiB, 3 MiB burst then 150 KiB/s per request): 19.99 s
+  (1.20 MB/s) on both, last/mean 3.24 and 3.14; the unit slowTail peak rule still passes it (last 6.5 s
+  vs an earlier 5.5 s tenth). Head numbers in 44039053465.
