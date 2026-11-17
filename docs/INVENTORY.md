@@ -127,19 +127,19 @@ verified on a device, evidence linked), `not covered` (reason given).
 |---|---|---|---|---|
 | D1 | Download manager (queue, worker, groups, naming) | online/download/* | verified (emulator): DL-2, DL-5, DL-7, DL-10, series folders + cleanup (44043535616); DL-6 unit (CI) | `DownloadResumeDeviceTest`, `DownloadCleanupDeviceTest`, `DownloadListSaveRaceTest` (ledger DL-2…DL-10) |
 | D2 | Forced (IDM-style) downloads, segmented HLS/DASH, mux | ForceGrab, HlsDownloader, MediaMux | DL-1 verified (device), DL-9 unit (CI), DL-10 verified (emulator); DL-11 part 2 open (2–36 % over-read measured) | ledger DL-1, DL-9, DL-10, DL-11 |
-| D3 | Torrent / magnet | eu/kanade/tachiyomi/torrentutils, OnlineDownloads | device test written (e12705f); first run 44054360131 pending | `TorrentDownloadDeviceTest` |
+| D3 | Torrent / magnet | eu/kanade/tachiyomi/torrentutils, OnlineDownloads | device test e12705f: TORRENT_RESULT PASS a, b (emulator api33-lowram 44054360131) | `TorrentDownloadDeviceTest` |
 | D4 | Pause, resume, failure, retry, cleanup worker | DownloadWorker, DownloadCleanupWorker | verified (emulator): DL-2, DL-3, DL-4, DL-5, cleanup worker (44043535616) | ledger DL-2…DL-5, `DownloadCleanupDeviceTest` |
-| D5 | External downloaders (ADM, IDM) | online/download/ExternalDownloader | device test written (e12705f); first run 44054360131 pending | `ExternalDownloaderDeviceTest` |
-| D6 | YouTube downloads and options | YtDownloads, YtDownloadOptions | unit (CI); local pipeline device test (resume, merge, publish) in 44054360131 pending; real YouTube on CI hits the bot wall → OMT-19 | `YtDownloadPipelineDeviceTest`, OMT-19 |
+| D5 | External downloaders (ADM, IDM) | online/download/ExternalDownloader | device test e12705f: EXTDL_RESULT PASS a–d (emulator api33-lowram 44054360131) | `ExternalDownloaderDeviceTest` |
+| D6 | YouTube downloads and options | YtDownloads, YtDownloadOptions | unit (CI); local pipeline device test (resume, merge, publish) YTDL_RESULT PASS a, b (emulator api33-lowram 44054360131); real YouTube on CI hits the bot wall → OMT-19 | `YtDownloadPipelineDeviceTest`, OMT-19 |
 | D7 | "View downloads" toast → PiP | DownloadPrompt | verified on device (PL-9, 43657729675) | ledger PL-9 |
-| D8 | (R16) Downloads screen: list, free space, actions | ui/screens/downloads/DownloadsScreen, online/DownloadSheets | DL-12 fixed a501d8e (disk work off main); fail-before 44054365230 + after 44054360131 pending | `DownloadsScreenDeviceTest` (ledger DL-12) |
+| D8 | (R16) Downloads screen: list, free space, actions | ui/screens/downloads/DownloadsScreen, online/DownloadSheets | DL-12 fixed a501d8e (disk work off main); fail-before 44054365230 FAILED as expected (6 calls); after 44054360131 a_open 0 calls, folder walk timed out (test fault, fixed e71a041); 44056138637 pending | `DownloadsScreenDeviceTest` (ledger DL-12) |
 
 ## G9 Settings
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | S1–S22 | The 22 categories: Look & feel; Navigation bar; Player; Audio quality & sound; Online videos; Downloads; Library & storage; Sources; Source status; Tracking; YouTube account; Watch together; Notifications; Background & battery; Network; Privacy & security; Backup & restore; App updates; Setup guide; User guide; Crash reports; About & developer | ui/screens/settings/* | open | |
 | S23 | Settings search | SettingsCatalog keywords + per-page setting names | verified (unit, CI): SE-3 | `SettingsSearchCoverageTest`, `SettingsCatalogTest` |
-| S24 | Every reset action | backup/ResetCenter | SE-1 unit PASS (CI 43877618176); device reset walk in 44054360131 pending | `SettingsResetTest`, `SettingsResetDeviceTest` |
+| S24 | Every reset action | backup/ResetCenter | SE-1 unit PASS (CI 43877618176); device reset walk RESET_RESULT PASS a, b (emulator api33-lowram 44054360131) | `SettingsResetTest`, `SettingsResetDeviceTest` |
 | S25 | Backup, restore, auto backup worker, restart | backup/* | BK-1 verified on device; SE-1 restore-by-section unit PASS (CI 43877618176); auto backup period verified on device (SE-6 f) | `SettingsResetTest`, `BackupV2Test`, `BackupDeviceTest`, `ChoiceSettingsEffectDeviceTest` |
 | S26 | Theme, backdrop custom image (accepted types) | ui/theme/*, BackdropSettings | verified on device (emulator): SE-2, SE-4 | `BackdropImportDeviceTest`, `BackdropImportTest` |
 | S27 | Each toggle's real effect (~42 switches) | settings cards | verified: SE-5 switches (emulator), SE-6 choice rows (unit + emulator, 43974089878); qa_gpu_tier → OMT-16 | `SettingsWalkDeviceTest`, `ChoiceSettingsEffectDeviceTest`, `ChoiceSettingsEffectTest` |
@@ -151,19 +151,19 @@ verified on a device, evidence linked), `not covered` (reason given).
 | A2 | Dialogs (Tsuki dialog, update, review, permission) | TsukiDialog, UpdateDialog, ExtensionReviewHost | verified on device (emulator): ER-11, ER-19 | `DialogsDeviceTest`, `RetryActionsDeviceTest` (ledger ER-11, ER-19) |
 | A3 | Error views with recovery actions | ErrorHelp, StateViews, OfflineNotice | verified: ER-10, ER-13 (unit, CI); ER-12 Retry (emulator) | `ErrorTaxonomyTest`, `PlaybackRecoveryTest`, `RetryActionsDeviceTest` |
 | A4 | No network, slow network, VPN, low storage | network/Connectivity, OnlineErrors | verified on device (emulator): ER-14, ER-17; VPN → OMT-18 | ledger ER-14, ER-17; OMT-18 |
-| A5 | Browser check / Cloudflare challenge host | online/web/BrowserCheck, BrowserCheckHost | ER-20 fixed 065f455 (failed check remembered 60 s); unit CI + device 44054360131 + fail-before pending | `BrowserCheckTest`, `BrowserCheckCooldownDeviceTest` (ledger ER-20) |
+| A5 | Browser check / Cloudflare challenge host | online/web/BrowserCheck, BrowserCheckHost | ER-20 fixed 065f455 (failed check remembered 60 s); device after-fix PASS (emulator api33-lowram 44054360131); fail-before 44056147165 + unit CI pending | `BrowserCheckTest`, `BrowserCheckCooldownDeviceTest` (ledger ER-20) |
 
 ## G11 Integrations
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | I1 | Trakt | tracking/Trakt | verified (emulator): IG-1, IG-2 | `TrackerSignInDeviceTest`, `AnimeTrackersDeviceTest` |
 | I2 | Simkl | tracking/Simkl | verified (emulator): IG-1, IG-2 | `TrackerSignInDeviceTest`, `AnimeTrackersDeviceTest` |
-| I3 | Kitsu, AniList | tracking/Kitsu, online/anime/AniList | IG-2, IG-3 verified (emulator); IG-8 api36 PASS, api33-lowram 44054360131 pending | `AnimeTrackersDeviceTest`, `KitsuLoginTest`, `AnimeSignInMessageDeviceTest` |
+| I3 | Kitsu, AniList | tracking/Kitsu, online/anime/AniList | IG-2, IG-3 verified (emulator); IG-8 verified (emulator, both phones: 44051808801, 44054360131) | `AnimeTrackersDeviceTest`, `KitsuLoginTest`, `AnimeSignInMessageDeviceTest` |
 | I4 | TMDB (metadata) | online/SourceFacts / EpisodeStills | verified (emulator): IG-5 | `EpisodeStillsDeviceTest` |
-| I5 | OpenSubtitles, SubDL, SubSource | online/subtitles/* | code read, IG-7: api36 PASS, api33-lowram 44054360131 pending | `OnlineSubtitlesFallbackDeviceTest` |
+| I5 | OpenSubtitles, SubDL, SubSource | online/subtitles/* | code read, IG-7 verified (emulator, both phones: 44051808801, 44054360131) | `OnlineSubtitlesFallbackDeviceTest` |
 | I6 | LRCLIB | lyrics/LrcLib | code read, no finding (on IO, 512 KB cap, miss marks pruned); unit | `LrcLibTest`, `LrcLibMissesTest`, `LyricsParsingTest` |
 | I7 | Last.fm | scrobble/LastFm | verified (emulator): IG-4; real account send → OMT-10 | `ScrobbleFlushDeviceTest` |
-| I8 | Firebase (FCM push, cloud alerts) | notify/FcmPush, YumeiroMessagingService, CloudAlerts | code read; IG-6 api36 PASS, api33-lowram 44054360131 pending; push effect verified (SE-5 push_alerts) | `CloudAlertsLookupDeviceTest`, `FcmDeliveryTest`, `FcmPlanTest`, `PushAlertsEffectDeviceTest` |
+| I8 | Firebase (FCM push, cloud alerts) | notify/FcmPush, YumeiroMessagingService, CloudAlerts | code read; IG-6 verified (emulator, both phones: 44051808801, 44054360131); push effect verified (SE-5 push_alerts) | `CloudAlertsLookupDeviceTest`, `FcmDeliveryTest`, `FcmPlanTest`, `PushAlertsEffectDeviceTest` |
 | I9 | Cloudflare (worker / feed endpoints) | notify/AppFeed, update/UpdateConfig | code read (app + server/), no new finding; server logic 31/31 (CI 43765850022), X16-2 local unit | `AppFeedTest`, server `logic.test.ts` |
 | I10 | YouTube account (cookie paste, auth hash) | youtube/YtAccount, YtCookiePaste, YtAuthHash | code read, no finding; unit | `YtAccountTest`, `YtCookiePasteTest`, `PasteCookieAndPushScreenshotTest` |
 | I11 | GitHub releases (self-update) | update/GitHubReleaseClient | code read, no finding (official repo, SHA-256 required, pinned redirects); unit; upgrade path X10-5 verified (emulator) | `ReleaseTagsTest`, ledger X10-5 |

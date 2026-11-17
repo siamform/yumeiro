@@ -62,20 +62,21 @@
   (`import androidx.compose.ui.test.and` in my new test); fixed ee1808c, so a501d8e…065f455 had an androidTest
   that did not build (main code built). 44053590474 cancelled (same file, would fail the same way).
   DONE-LEDGER layout repaired: 28 rows had shifted cells (ST-21/SE-6 status column showed "—"/old text); no status changed.
-- **Current group / step:** G8 leftovers (DL-12, D6), G11 close-out (IG-6…IG-8 api33-lowram after-fix), G9/G10
-  leftovers (SE-1 device walk, ER-20).
-- **Runs in progress:** 44054360131 (head ee1808c, api33-lowram: DownloadsScreen, YtDownloadPipeline,
-  BrowserCheckCooldown, SettingsReset, CloudAlertsLookup, OnlineSubtitlesFallback, AnimeSignInMessage,
-  ExternalDownloader, TorrentDownload; expect PASS) and 44054365230 (`scratch/d8-fail-before`, DownloadsScreen on
-  old code, api33-lowram; expect FAIL a_open/b_actions with main-thread disk calls).
+- **Done since (seventh handover, 4):** 44054360131 (api33-lowram) 8/9 PASS → IG-6…IG-8 verified (emulator, both
+  phones); SE-1 device reset walk PASS; D3/D5/D6 device tests PASS; ER-20 after-fix PASS. DL-12 fail-before
+  44054365230 FAILED as expected (6 main-thread disk calls); after-fix a_open 0 calls, then the test timed out opening
+  a folder (rows below the fold on the small screen; test fault) → fixed e71a041. G2 E10 re-audit: new
+  `UniversalAddEcosystemsDeviceTest` (Aniyomi link, Mihon folder, Stremio search+stream, JS list+install, empty link).
+- **Current group / step:** re-audit G1–4 (G2 E10 device test written); G8 DL-12 and G10 ER-20 close-out.
+- **Runs in progress:** 44056138637 (head e71a041, api33-lowram: DownloadsScreen, UniversalAddEcosystems,
+  LocalPlayer#j, Yumix#extensionBarHidesOnScrollAndComesBack) and 44056147165 (`scratch/a5-fail-before`,
+  BrowserCheckCooldown on old code; expect FAIL ≈60 s).
 - **Next three actions:**
-  1. Read both runs (logcat tags DLSCREEN_, YTDL_, CHECK_, RESET_, CLOUD_, SUBS_, SIGNIN_, EXTDL, TORRENT_); then
-     `scratch/a5-fail-before` BrowserCheckCooldown on api33-lowram (expect ≈60 s > 5 s) and api36 for
-     DownloadsScreen, YtDownloadPipeline, SettingsReset, BrowserCheckCooldown (one run).
-  2. ci.yml once (unit suite: BrowserCheckTest new case, DL-12 changed OnlineDownloads.write); mark IG-6…8, DL-12,
-     ER-20, SE-1 in DONE-LEDGER, GROUP-8/9/10/11, INVENTORY D1–D8, I1–I11, S23–S27, A1–A5; add OMT-19 (real
-     YouTube download on a home network).
-  3. Re-audit G1–4, then the final sweep (INVENTORY coverage proof, full suite at the milestone).
+  1. Read both runs (tags DLSCREEN_, YuAddTest ADD_, LOCAL_J_RESULT, Y3_RESULT, CHECK_); close DL-12 / ER-20 if they
+     behave as expected; fix any test fault on the smallest run.
+  2. api36: the same new tests + SettingsReset, YtDownloadPipeline, BrowserCheckCooldown (one run); then H8
+     `-f bench=restore`; then ci.yml once (unit suite).
+  3. Finish re-audit G1–4 (E12 adult filter, P16 shader note, H11 coverage in G6), then the final sweep.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM

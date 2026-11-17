@@ -120,6 +120,6 @@ The market and extension downloads are real network calls from the CI runner.
 | E7 | verified on device | 43704211410 |
 | E8 | verified on device | 43704211410 |
 | E9 | verified on device | 43705847970 |
-| E10 | partly verified | the link path is verified on device (E8); Aniyomi, Mihon, Stremio and JS repositories are covered by unit tests only, because a live add needs a stable public test repository for each. Next: pin one repository per ecosystem in a device test |
+| E10 | partly verified (device test pending) | the link path is verified on device (E8). Re-audit 2026-11-17: instead of pinning live public repositories (they move and rate-limit CI), `UniversalAddEcosystemsDeviceTest` (e71a041) serves each real format from a local server to `UniversalAdd.add` on the device: Aniyomi via the `aniyomi://add-repo?url=` link (repo.json + index.min.json), Mihon via a folder link, Stremio manifest (then its search `/catalog/movie/yu/search=…` and `/stream/…` links), Mangayomi JS index (listed, installed), and an empty link (readable failure, nothing saved). First run 44056138637 (api33-lowram) pending. A live public repository remains a real-network check (unchanged) |
 | E11 | verified on device | 43704211410 |
 | E12 | override verified on device; adult search filter unit/code only | an adult extension would have to be installed on CI to test it. Next: a fake NSFW provider in a test build |
