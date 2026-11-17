@@ -35,6 +35,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-16 | Your own Play link streams and Yumeiro upscaling on your phone's GPU (BUG-7 7c, 7d) | Pending |
 | OMT-17 | Website and Play link downloads in your phone's gallery (BUG-7 7a, 7b) | Pending |
 | OMT-18 | Yumeiro behind a VPN on your phone (G10 network states) | Pending |
+| OMT-19 | A real YouTube download (video + audio) on your home network (G8 D6) | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -343,6 +344,25 @@ Blocked (you couldn't run it; say why).
 - **What to record:** VPN app, phone model, what failed, `adb logcat -s YuStall AndroidRuntime`.
 - **Attempts by the agent:** emulator: no network, slow server and refused port PASS on both phones
   (43904330191); VPN case logs only.
+- **Status:** Pending
+
+---
+
+### OMT-19 — A real YouTube download on your home network (G8 D6)
+
+- **Why the agent can't do it:** YouTube answers CI emulators (data-centre IPs) with "Sign in to confirm
+  you're not a bot", so no real stream URL reaches the downloader there. Signing in would need your account.
+- **Hardware / environment:** your phone on your home Wi-Fi; no VPN.
+- **Instructions:** open a YouTube video of 5–15 minutes → Download → pick 720p (video + sound). Start a
+  second download of the same video as audio only. Halfway through the first, turn Wi-Fi off for 20 s, then on.
+- **Expected result:** both finish; the video file is in Movies/Yumeiro and plays with sound in your gallery;
+  the audio file is in Music/Yumeiro; the Wi-Fi drop only pauses, it does not start over or fail.
+- **Pass / fail rule:** fail on a file without sound or picture, a download that restarts from 0 %, a stuck
+  "Merging", or a wrong folder.
+- **What to record:** video link, quality, phone model, Android version, `adb logcat -s YuDownloads AndroidRuntime`.
+- **Attempts by the agent:** CI emulator real YouTube: blocked by the bot wall (same as BUG-4, OMT-15);
+  local pipeline (resume a half file, merge 1 video + 1 audio track, publish to Movies/Music) covered by
+  `YtDownloadPipelineDeviceTest` on the emulator (run 44054360131); YtDownloads/option unit tests (CI).
 - **Status:** Pending
 
 ---
