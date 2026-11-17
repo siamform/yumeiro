@@ -591,9 +591,19 @@ flowchart LR
     100 ms = 10 MB/s; 4 connections 40 MB/s).
   - D. Stop pace restarts for the rest of a download when restarted requests are not faster than the
     ones they replaced (measured over their first window after the baseline).
-- **Decision:** keep A until C or D is measured on the unit capped profile (no speed loss allowed)
-  and on the real host (bytes received and restarts over at least three downloads per phone).
-- **Status:** proposed (2026-11-17). DL-11 part 2 stays open.
+- **Option E (added 2026-11-17, eighth cycle):** time each window by the time spent waiting inside
+  `read()`, keeping the wall clock for the baseline. Our own pauses (disk write, GC, busy low-RAM CPU)
+  are not host time. A capped host still trips, because the read is the thing that waits.
+- **Competitors read:** aria2 9e72735 (`FileEntry::findFasterRequest`: compares with the fastest other
+  connection, 10 s cooldown; never trips when every request is capped), CloudStream 5d66bbe (open-ended
+  ranges closed at chunk end, the same waste on every chunk), Nuvio 04cfe4a (one request). Note:
+  docs/proposals/FEATURE-DL-11-segmented-overread.md.
+- **Decision (2026-11-17):** D + E (commit 4fa126e). C is rejected (it costs speed on flagships at high RTT).
+  `PaceGate`: a restart helped when the new request's first MiB is ≥ 1.5× the slow window. Pace restarts
+  stop for the download after 2 that did not help, if those outnumber the ones that helped.
+- **Budget:** real host received ≤ 1.10× each and median ≤ 1.06× (both phones, three downloads each);
+  BUG-3 case d total ≤ 10 s and last 10 % ≤ 3.5 s; unit capped profile with no more than 10 % speed loss.
+- **Status:** accepted (2026-11-17), pending the evidence above; DL-11 part 2 closes only when it is met.
 
 ## 11. Risks
 
