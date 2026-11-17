@@ -941,3 +941,18 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 - BUG-3 case d old Segmented (44037723917, 24 MiB, 3 MiB burst then 150 KiB/s per request): 19.99 s
   (1.20 MB/s) on both, last/mean 3.24 and 3.14; the unit slowTail peak rule still passes it (last 6.5 s
   vs an earlier 5.5 s tenth). Head numbers in 44039053465.
+
+## 2026-11-17: BUG-3 case d head, DL-10 kept-chunks rule, ADR-016 data, G8 cleanup (emulator)
+
+- **44039053465** (head 0acf8c3, still with the two-window RequestPace 6e40982, reverted in f60d808), repeat 3:
+  - Real host screen-on: lowram 0/1/5 restarts, rx 1.031-1.092×, 15.0-24.5 MB/s; api36 0/0/1 restarts, rx 1.031-1.035×, 9.8-14.2 MB/s.
+  - Case d: 6.6-13.6 s, last/mean 2.37-4.93.
+  - The unit regression (CI 44037788044) stands, so the revert stands. ADR-016 input only.
+- **44041714032** (head 62b3a45, one-window RequestPace), repeat 3:
+  - Real host: lowram 13/7/0 restarts, rx 1.243/1.136/1.031×, 6.1-15.7 MB/s; api36 15/0/0 restarts, rx 1.186/1.031/1.031×, 5.4-17.5 MB/s; last/mean 0.62-0.82.
+  - Case d: lowram 3.4-5.0 s, api36 5.0-5.2 s, last 10 % 1.4-1.6 s, ratio 3.0-4.3. Old Segmented 44037723917 took 19.99 s, with the last 10 % at 6.3/6.5 s.
+  - slowTail failed api36 run 1 at 3.07, so the case d rule changed (see the BUG-3 ledger row).
+  - DownloadKillDeviceTest kept-chunks rule: 6/6 PASS (resumed 12-17 chunks).
+- **44041881451** DownloadCleanupDeviceTest (G8 series folders, auto-delete, Permanent vs Offline):
+  - Files are in the series folder on both phones; +1 h removes nothing; +2 days removes the Offline one (entry and file) and keeps the Permanent one byte-exact; the empty folder goes after the last delete.
+  - lowram PASS. api36 FAIL only on "dl_cleanup scheduled": it was read 9 s after process start, and WorkManager came up 5 s after start on the low-priority yu-startup thread. The test now polls for up to 30 s; rerun 44043535616.

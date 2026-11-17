@@ -37,16 +37,18 @@
   44020227401 and fail-before 44020231250); fixes bd18c0b + 1060ea7 → pass 44021837402, 44023164202, CI
   44023167122. MG-1 library read off main: fail-before 44025493021 (5 reads) → 44025490015 (0). G7-L1 (QuickIPTV
   failure shown as a friendly error): CI 44026316670, fail-before CI 44028308675. LT-1 44026779856. G7 done.
-- **Current group / step:** Group 8 Downloads. BUG-3 device proof without the internet
-  (`DownloadThroughputDeviceTest` c/d, local burst-then-cap server): case c head 44030612565 PASS (api36 9.5 s,
-  0.74×; lowram 6.6 s, 1.08×) and fail-before 44031868134 also PASS the tail rule (1.21/1.27×) but took 15 s:
-  c proves the speed gain, not the tail. Case d (the unit collapse profile) added. DL-4 device cases c/d added
-  (`DownloadResumeDeviceTest`), scratch `dl4-fail-before`. DL-10 is rerun after the DL-11a fix.
-- **Runs in progress:** bench=jank 44030433128 (ST-7, X2-4); device 44033132233 (head: throughput d,
-  DownloadResumeDeviceTest, DownloadKillDeviceTest).
-- **Next three actions:** (1) read 44033132233, then run the fail-befores (`bug3-fail-before` case d,
-  `dl4-fail-before` DownloadResumeDeviceTest), two device runs at most; (2) read the jank bench → X2-4/ST-7;
-  (3) DL-6/DL-8 device proof, then G9–G11 leftovers, re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
+- **Current group / step:** Group 8 Downloads.
+  - DL-4, DL-6, DL-8 and DL-10 verified (emulator/unit).
+  - BUG-3: device case d head 44041714032 took 3.4-5.2 s, against 19.99 s on the old code (44037723917). Case d rule is now absolute (total ≤ 10 s, last 10 % ≤ 3.5 s).
+  - BUG-3 stays open until the owner confirms on a phone; T5 is an owner test.
+  - The two-window RequestPace (6e40982) was reverted in f60d808 after a unit speed loss; ADR-016 is proposed for the leftover DL-11 restart waste.
+  - New `DownloadCleanupDeviceTest` covers the G8 "Downloads fixes" row.
+- **Runs in progress:** device 44043535616 (head: BUG-3 case d with the new rule, DownloadCleanupDeviceTest, repeat 3).
+- **Next three actions:**
+  1. Read 44043535616. If it passes, set the G8 "Downloads fixes" row to verified (emulator) and record BUG-3 case d.
+  2. G9-G11 leftovers, then re-audit G1-4.
+  3. Final sweep: INVENTORY reconciliation, and a full CI at the milestone.
+- **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
