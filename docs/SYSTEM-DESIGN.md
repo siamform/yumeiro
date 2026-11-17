@@ -626,6 +626,22 @@ flowchart LR
   phones; contrast ≥ 4.5:1; APK growth ≤ 300 KB. Note: docs/proposals/FEATURE-F-10-glassmorphism-theme.md.
 - **Status:** proposed (2026-11-18); gated by 4.4 and the owner.
 
+### ADR-018: Vertical shorts player: one player and preloaded sources (F-12, proposed)
+
+- **Scope:** a new `ShortsPlayerScreen`; player creation (`StreamMediaFactory`), the player cache.
+- **Context:** F-12 asks for a dedicated vertical player. Feed libraries read (RN-VideoFeed ee2394f,
+  compose-reels be0373c) keep 7–8 prepared ExoPlayers. Low-RAM phones have few hardware decoders and
+  little heap; Yumeiro already recovers decoder faults with a ladder that assumes one active player.
+- **Options:** A. Pool of prepared players (fastest swipe, most memory, decoder contention).
+  B. One player + Media3 `DefaultPreloadManager` (buffers ahead, one decoder).
+  C. No preload (lightest, slow first frame).
+- **Proposed decision:** B; preload 2 ahead / 1 behind, 1 ahead on low-end; existing cache with a 64 MB
+  share for shorts.
+- **Evidence needed before acceptance:** one decoder in use during 30 rapid swipes; first frame after
+  settle ≤ 600 ms (api36) / ≤ 1200 ms (api33-lowram) on the fixture server; no ANR; player parity tests
+  green. Note: docs/proposals/FEATURE-F-12-vertical-video-player.md.
+- **Status:** proposed (2026-11-18); gated by 4.4 and the owner.
+
 ## 11. Risks
 
 | Risk | Mitigation |

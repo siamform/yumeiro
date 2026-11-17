@@ -64,4 +64,4 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | F-09 | Watch Later + Favorite on posters | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-09-watch-later-favorite-posters.md (CloudStream 2dcc25c WatchType) |
 | F-10 | Glassmorphism theme | Proposal + ADR-017 (proposed) written (gated; opt-in "Kasumi", chrome only, blur API 31+ non-low-end, tint elsewhere) | docs/proposals/FEATURE-F-10-glassmorphism-theme.md (haze 30528aa, PrismalAGSL 0da7d9c, ui-ux-pro-max e59ff37) |
 | F-11 | Manga auto-translation | Proposal written (gated; in-reader, on-device model pack first, cloud text-only with user key: OMT-25 Blocked: owner) | docs/proposals/FEATURE-F-11-manga-translation.md (jedzqer c980b45 AGPL, Kala9527 54867de no licence) |
-| F-12 | Dedicated vertical video player | Not started (ui-ux-pro-max + ADR first) | — |
+| F-12 | Dedicated vertical video player | Proposal + ADR-018 (proposed) written (gated; one player + Media3 preload, not a player pool) | docs/proposals/FEATURE-F-12-vertical-video-player.md (RN-VideoFeed ee2394f, compose-reels be0373c) |
