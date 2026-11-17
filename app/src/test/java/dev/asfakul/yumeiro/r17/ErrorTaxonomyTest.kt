@@ -48,6 +48,10 @@ class ErrorTaxonomyTest {
             "Not enough storage. Free up some space, then try again", "storage space"),
         Case("disk full text", java.io.IOException("write failed: ENOSPC (No space left on device)"),
             "Not enough storage. Free up some space, then try again", "storage space"),
+        Case("file not writable (LT-2)", java.io.FileNotFoundException("/data/user/0/dev.asfakul.yumeiro/files/streams/playlists.json.tmp: open failed: EACCES (Permission denied)"),
+            "The app couldn't use its storage on this device. Restart the app, then try again", "storage space"),
+        Case("read-only storage in cause", java.io.IOException("save failed", java.io.IOException("write failed: EROFS (Read-only file system)")),
+            "The app couldn't use its storage on this device. Restart the app, then try again", "storage space"),
         Case("broken link", IllegalArgumentException("Expected URL scheme 'http' or 'https' but no scheme was found for /x"),
             "The site sent a broken link for this source — try another source", "another source"),
     )

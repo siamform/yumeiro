@@ -109,6 +109,9 @@ class PlaylistRetryDeviceTest {
             FirstRun.shot("plr_a_error")
             assertTrue("LT-2: a failed store start shows 'not found' instead of the reason", !has("playlist_not_found"))
             assertTrue("Retry on screen", hasText("Retry"))
+            assertTrue("LT-2: the store error shows a raw file path", !hasText("/data/") && !hasText("EACCES"))
+            assertTrue("LT-2: the store error blames the connection", !hasText("Check your connection"))
+            assertTrue("LT-2: the store error names storage", hasText("couldn't use its storage"))
             log("PLR a error page shown")
 
             restoreStore()

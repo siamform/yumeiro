@@ -90,6 +90,10 @@ object OnlineErrors {
             // the raw "write failed: ENOSPC (No space left on device)".
             chain.any { val t = it.message.orEmpty(); "ENOSPC" in t || "No space left" in t } ->
                 "Not enough storage. Free up some space, then try again"
+            // G7 LT-2: a file the app can't write (folder not writable, read-only storage) showed the raw
+            // "/data/user/0/…/playlists.json.tmp: open failed: EACCES (Permission denied)".
+            chain.any { val t = it.message.orEmpty(); "EACCES" in t || "EROFS" in t || "EPERM" in t || ("open failed:" in t && "/data/" in t) } ->
+                "The app couldn't use its storage on this device. Restart the app, then try again"
             chain.any { it is java.net.UnknownHostException } ->
                 if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
                 else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"

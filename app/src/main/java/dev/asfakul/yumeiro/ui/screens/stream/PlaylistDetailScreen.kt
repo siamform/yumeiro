@@ -103,7 +103,8 @@ private sealed interface LoadState {
     data object Loading : LoadState
     data object Ready : LoadState
     data object NotFound : LoadState
-    data class Failed(val message: String) : LoadState
+    /** [network]: a download failed (the connection hint applies); false for the store itself. */
+    data class Failed(val message: String, val network: Boolean = true) : LoadState
 }
 
 /**
@@ -170,7 +171,7 @@ fun PlaylistDetailScreen(
         if (!storeReady) return@LaunchedEffect
         if (storeError != null && attempt > 0) storeError = try { PlaylistStore.init(app); null }
             catch (e: CancellationException) { throw e } catch (e: Exception) { dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't open your playlists. Try again.") }
-        storeError?.let { state = LoadState.Failed(it); return@LaunchedEffect }
+        storeError?.let { state = LoadState.Failed(it, network = false); return@LaunchedEffect }
         if (isOpened) { state = if (repoId == null && repoChannels.isNotEmpty()) LoadState.Ready else LoadState.NotFound; return@LaunchedEffect }
         val p = PlaylistStore.get(slug) ?: run { state = LoadState.NotFound; return@LaunchedEffect }
         if (!p.enabled) { state = LoadState.Ready; return@LaunchedEffect }
@@ -298,7 +299,8 @@ fun PlaylistDetailScreen(
                 is LoadState.Failed -> StateMessage(
                     icon = Icons.Default.CloudOff, tint = MaterialTheme.colorScheme.error,
                     title = "Couldn't load ${playlist?.name ?: "this playlist"}",
-                    message = "${s.message}. Check your connection; the mirror and the original source were both tried.",
+                    message = if (s.network) "${s.message}. Check your connection; the mirror and the original source were both tried."
+                        else "${s.message}. Your saved playlists are not changed.",
                     primary = "Retry" to { attempt++ },
                     secondary = "Back" to onBack,
                     testTag = "playlist_error",
