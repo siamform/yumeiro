@@ -123,13 +123,13 @@
   Fail-before 44062815556 FAILED 5/5 as expected → N2-1, N7-1, N6-1, N3-1, N4-2 verified (emulator api33-lowram).
   MiniPlayer PASS 44067244782 (MINI-T1 closed, emulator). AppLock api28: case a PASS, case b found **N6-4** (right PIN,
   app stayed locked; 44069102667) → fixed 3f3fbd8. n6 fail-before 44069107057 FAILED a+b as expected.
-- **Runs in progress:** CI 44070875412 (`scratch/unit-fail-before`, expect FAIL on the listed unit tests); device
-  44071192093 (head 3f3fbd8, api28, AppLockDeviceTest).
+- **Done since (seventh handover, 13):** N6-3 + N6-4 verified (emulator api28, 44071192093 OK 2 tests). Unit fail-before
+  CI 44070875412 FAILED exactly on the expected tests → N4-1/N5-1, N1-1/N1-2, N8-1, N4-2, M9-1, M2-1, M1-1 verified (CI).
+- **Runs in progress:** device 44073375083 (head, api36: the 11 new device tests incl. BrowserCheckCooldown for ER-20).
 - **Next three actions:**
-  1. Read 44071192093 (expect a+b PASS, logcat LOCK_UNLOCK ok=true, no LOCK_RELOCK) and 44070875412 (report XML).
-  2. One api36 run with all new device tests (AdultSearchFilter, SiteSignOut, InboxMainThread, UniversalAddEcosystems,
-     MiniPlayer, AppLock, UpdateMainThread, DownloadsScreen, LibraryPersist, LocalPlayer, BrowserCheckCooldown).
-  3. Full suite on both phones (milestone); H8 `-f bench=restore`; then the final report and the gated feature list.
+  1. Read 44073375083; fix any failure with a root cause (smallest rerun on one phone).
+  2. Full suite on both phones (milestone); then H8 `-f bench=restore`.
+  3. Final coverage check, final report and the gated feature list for the owner.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM

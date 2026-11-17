@@ -37,10 +37,10 @@ Files read line by line: `security/Privacy.kt`, `security/LockKey.kt`, `ui/scree
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N6-1 | With app lock on, removing the phone's PIN/pattern left the app locked for good; only "Clear data" (losing every library, download and setting) got the user back in | `unlock()` always showed the system prompt; with no secure lock screen it fails at once (`onAuthenticationError` or a null cipher), and nothing ever turned the lock off | `Privacy.releaseIfNoScreenLock`: in `onStart` and `unlock`, when `KeyguardManager.isDeviceSecure` is false the lock is turned off (saved), the gate goes and the user is told. Only the keyguard state is used, not a biometric error that can be passing | `AppLockDeviceTest#a` (fail-before branch `scratch/n6-fail-before`); `#b` checks a real PIN still opens and keeps the lock | device run pending |
+| N6-1 | With app lock on, removing the phone's PIN/pattern left the app locked for good; only "Clear data" (losing every library, download and setting) got the user back in | `unlock()` always showed the system prompt; with no secure lock screen it fails at once (`onAuthenticationError` or a null cipher), and nothing ever turned the lock off | `Privacy.releaseIfNoScreenLock`: in `onStart` and `unlock`, when `KeyguardManager.isDeviceSecure` is false the lock is turned off (saved), the gate goes and the user is told. Only the keyguard state is used, not a biometric error that can be passing | `AppLockDeviceTest#a` (fail-before branch `scratch/n6-fail-before`); `#b` checks a real PIN still opens and keeps the lock | verified (emulator api33-lowram): fail-before 44062815556 → 44059862262; api28 44071192093 |
 | N6-2 | Suspected: on Android 10 with "Lock after: every time", the device-credential screen is a separate activity, so `onStop` records a leave and `onStart` can lock again behind our own prompt | `onStop` skips only `pendingCredential` (the confirm-credential path) | not changed: no reproduction; CI has no API 29 profile (TV 24/34, phones 28/33/36). Recorded as an owner/real-phone check, not fixed blind | — | open (suspected) |
-| N6-3 | Android 9: lock turned on with a fingerprint, fingerprints later removed but PIN kept → locked for good. Also: on Android 9 a PIN-only phone could never turn the lock on | Android 9's BiometricPrompt has no device-credential option (Cancel button only); with no fingerprint it fails at once (`BIOMETRIC_ERROR_NO_BIOMETRICS`); `isDeviceSecure` is still true, so N6-1 does not apply | on Android 9 only, "no biometric" errors (HW_UNAVAILABLE, NO_BIOMETRICS, HW_NOT_PRESENT) fall back to the system PIN screen (`confirmCredential`, the same path as Android 7–8) | `AppLockDeviceTest#b` on the api28 emulator (PIN, no fingerprint) | device run pending (fail-before `scratch/n6-fail-before`) |
-| N6-4 | Android 7–9: after the right PIN on the fallback screen the app stayed locked, with no new prompt (found by `AppLockDeviceTest#b`, api28 run 44069102667: PIN accepted at 11:02:13, app resumed, `Privacy.locked` still true) | The PIN screen is a separate activity; returning runs `onStart`, which re-locked when `backgroundAt` was 0 (cold start) or older than lock_after. The result arriving before that `onStart` was undone | 3f3fbd8: no re-lock while our own credential flow is pending or when the app was not left since the last unlock; a good unlock resets `backgroundAt` (Mihon `isAuthenticating` rule) | `AppLockDeviceTest#b` (fail-before 44069102667, api28) | fixed, api28 after-fix run 44071192093 in progress |
+| N6-3 | Android 9: lock turned on with a fingerprint, fingerprints later removed but PIN kept → locked for good. Also: on Android 9 a PIN-only phone could never turn the lock on | Android 9's BiometricPrompt has no device-credential option (Cancel button only); with no fingerprint it fails at once (`BIOMETRIC_ERROR_NO_BIOMETRICS`); `isDeviceSecure` is still true, so N6-1 does not apply | on Android 9 only, "no biometric" errors (HW_UNAVAILABLE, NO_BIOMETRICS, HW_NOT_PRESENT) fall back to the system PIN screen (`confirmCredential`, the same path as Android 7–8) | `AppLockDeviceTest#b` on the api28 emulator (PIN, no fingerprint) | verified (emulator api28): fail-before 44069107057 → 44071192093 |
+| N6-4 | Android 7–9: after the right PIN on the fallback screen the app stayed locked, with no new prompt (found by `AppLockDeviceTest#b`, api28 run 44069102667: PIN accepted at 11:02:13, app resumed, `Privacy.locked` still true) | The PIN screen is a separate activity; returning runs `onStart`, which re-locked when `backgroundAt` was 0 (cold start) or older than lock_after. The result arriving before that `onStart` was undone | 3f3fbd8: no re-lock while our own credential flow is pending or when the app was not left since the last unlock; a good unlock resets `backgroundAt` (Mihon `isAuthenticating` rule) | `AppLockDeviceTest#b` (fail-before 44069102667, api28) | verified (emulator api28): 44069102667 → 44071192093 |
 
 Competitor check: Mihon `SecureActivityDelegate.setAppLock` turns the lock setting off when
 `isAuthenticationSupported()` is false, and keeps an `isAuthenticating` flag so its own prompt is
@@ -67,7 +67,7 @@ Files read line by line: `update/UpdateManager.kt`, `ApkInstaller.kt`, `GitHubRe
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N3-1 | Update download did disk and provider work on the main thread: the updates folder was created, listed and emptied on Download; DownloadManager `enqueue` and the progress `query` (every 400 ms for the whole download) and the restore `query` in `MainActivity.onCreate` were provider calls on main | `UpdateManager.scope` is `Dispatchers.Main.immediate` and these calls were made directly in it | folder work, `enqueue`, every `query` and the fallback file/delete moved to `Dispatchers.IO`; restore runs in a coroutine (the auto check follows it, as before) | `UpdateMainThreadDeviceTest` (StrictMode on main; also checks an off-GitHub link is refused and a stale APK is cleared); fail-before `scratch/n3-fail-before` | device run pending. The provider calls are not visible to StrictMode: that part is structural (code), not measured |
+| N3-1 | Update download did disk and provider work on the main thread: the updates folder was created, listed and emptied on Download; DownloadManager `enqueue` and the progress `query` (every 400 ms for the whole download) and the restore `query` in `MainActivity.onCreate` were provider calls on main | `UpdateManager.scope` is `Dispatchers.Main.immediate` and these calls were made directly in it | folder work, `enqueue`, every `query` and the fallback file/delete moved to `Dispatchers.IO`; restore runs in a coroutine (the auto check follows it, as before) | `UpdateMainThreadDeviceTest` (StrictMode on main; also checks an off-GitHub link is refused and a stale APK is cleared); fail-before `scratch/n3-fail-before` | verified (emulator api33-lowram): fail-before 44062815556 → 44059862262. The provider calls are not visible to StrictMode: that part is structural (code), not measured |
 
 Competitor check (source tree read 2026-11-17): Mihon `main` has only `data/updater/AppUpdateChecker.kt`;
 it checks GitHub and hands the download to the browser, with no in-app downloader to compare. Our design
@@ -96,8 +96,8 @@ Files read line by line: `sources/servers/HomeServers.kt`, `JellyfinProvider.kt`
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N4-1 | A damaged or half-written `servers/servers.json` became "no servers" and the next save deleted every server; add and remove could overwrite each other; remove ran on main | read `runCatching → emptyList`, `writeText` in place, no lock | `SafeJsonFile` read/write (atomic, `.tmp` recovery, damaged copy kept as `.bad`); all changes under one lock; remove on IO | `SourceStoresSafetyTest` (homeServers cases); fail-before `scratch/n45-fail-before` | fixed 595305f, unit pending (CI) |
-| N5-1 | Stremio: every add-on unreachable at start was deleted at the next add/remove; a start-up load overwrote an add made meanwhile. JS: one damaged file emptied both lists; changes before the start-up read dropped old repos/sources. Tachiyomi: add/remove before `reload()` saved only the new list; damaged `repos.json` read as empty | same read/write pattern; Stremio saved the *loaded* list, not the saved one; JS parsed both files in one `runCatching`; changes built on in-memory state | `SafeJsonFile` everywhere; Stremio saves its link list apart from loaded manifests and merges the start-up load; JS reads each file alone and every change waits for the saved lists; Tachiyomi builds on the saved file inside its mutex; removes on IO | `SourceStoresSafetyTest` (6 cases); same fail-before branch | fixed 595305f, unit pending (CI) |
+| N4-1 | A damaged or half-written `servers/servers.json` became "no servers" and the next save deleted every server; add and remove could overwrite each other; remove ran on main | read `runCatching → emptyList`, `writeText` in place, no lock | `SafeJsonFile` read/write (atomic, `.tmp` recovery, damaged copy kept as `.bad`); all changes under one lock; remove on IO | `SourceStoresSafetyTest` (homeServers cases); fail-before `scratch/n45-fail-before` | verified (CI unit): fail-before 44070875412 → 44062718477 |
+| N5-1 | Stremio: every add-on unreachable at start was deleted at the next add/remove; a start-up load overwrote an add made meanwhile. JS: one damaged file emptied both lists; changes before the start-up read dropped old repos/sources. Tachiyomi: add/remove before `reload()` saved only the new list; damaged `repos.json` read as empty | same read/write pattern; Stremio saved the *loaded* list, not the saved one; JS parsed both files in one `runCatching`; changes built on in-memory state | `SafeJsonFile` everywhere; Stremio saves its link list apart from loaded manifests and merges the start-up load; JS reads each file alone and every change waits for the saved lists; Tachiyomi builds on the saved file inside its mutex; removes on IO | `SourceStoresSafetyTest` (6 cases); same fail-before branch | verified (CI unit): fail-before 44070875412 → 44062718477 |
 
 Competitor check (source tree read 2026-11-17): Mihon `main` keeps extension stores in its SQLDelight
 database (`data/.../extension/repository/ExtensionStoreRepositoryImpl.kt`, `tachiyomi.data.Database`), so a
@@ -123,7 +123,7 @@ Files read line by line: `ui/screens/sites/WebSitesScreen.kt`, `online/web/Saved
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N2-1 | "Signed out of …'s site" while `Domain=` and `__Secure-`/`__Host-` sign-in cookies stayed in the in-app browser (suspected from the code read; the device test decides) | a cookie is only replaced by one with the same name, domain and path; the expiry line had no `Domain=` and no `Secure` | `SiteLogins.expiryLines`: host-only + `Domain=` lines, `Secure` on https, for https/http and www | unit `SiteAccessTest#signOutExpiresDomainAndSecureCookies`; device `SiteSignOutDeviceTest`; fail-before `scratch/n2-fail-before` | fixed 83d7818, runs pending |
+| N2-1 | "Signed out of …'s site" while `Domain=` and `__Secure-`/`__Host-` sign-in cookies stayed in the in-app browser (suspected from the code read; the device test decides) | a cookie is only replaced by one with the same name, domain and path; the expiry line had no `Domain=` and no `Secure` | `SiteLogins.expiryLines`: host-only + `Domain=` lines, `Secure` on https, for https/http and www | unit `SiteAccessTest#signOutExpiresDomainAndSecureCookies`; device `SiteSignOutDeviceTest`; fail-before `scratch/n2-fail-before` | verified (emulator api33-lowram 44062815556 → 44062811776; CI unit 44070875412 → 44062718477) |
 
 Limitation kept on record: cookies set on a sub-path cannot be listed by `CookieManager` and are not reached.
 
@@ -141,7 +141,7 @@ Files read line by line: `notify/Inbox.kt`, `AppFeed.kt`, `Reminders.kt`, `ui/sc
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N7-1 | Every inbox tap wrote and fsynced `inbox.json` on the main thread (also on leaving the page); two saves from different threads could write the same `.tmp` at once | `save()` ran on the caller's thread, outside any lock | writes under one lock, always the newest list; main-thread saves on one background writer; worker saves stay synchronous (on disk before the worker ends) | `InboxMainThreadDeviceTest`; fail-before `scratch/n7-fail-before` | fixed ac13d92, run pending |
+| N7-1 | Every inbox tap wrote and fsynced `inbox.json` on the main thread (also on leaving the page); two saves from different threads could write the same `.tmp` at once | `save()` ran on the caller's thread, outside any lock | writes under one lock, always the newest list; main-thread saves on one background writer; worker saves stay synchronous (on disk before the worker ends) | `InboxMainThreadDeviceTest`; fail-before `scratch/n7-fail-before` | verified (emulator api33-lowram): fail-before 44062815556 → 44062811776 |
 
 ## N8 Support and user guide pages
 
@@ -149,7 +149,7 @@ Files read: `ui/screens/extras/SupportScreen.kt`, `AppPages.kt` (`Links`), `sett
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N8-1 | With no browser (common on Android TV), Support links, reminder cards, inbox links and the ntfy install buttons did nothing on tap | `Links.open` returned false and most callers ignored it | `Links.open` tells the user; `tell = false` for the notification tap (falls back to the inbox) | unit `LinksOpenTest` (Robolectric `checkActivities`); fail-before `scratch/unit-fail-before` | fixed 5be755e, CI pending |
+| N8-1 | With no browser (common on Android TV), Support links, reminder cards, inbox links and the ntfy install buttons did nothing on tap | `Links.open` returned false and most callers ignored it | `Links.open` tells the user; `tell = false` for the notification tap (falls back to the inbox) | unit `LinksOpenTest` (Robolectric `checkActivities`); fail-before `scratch/unit-fail-before` | verified (CI unit): fail-before 44070875412 → 44062718477 |
 
 Payment details on the Support page are the owner's content and were not changed.
 
@@ -176,8 +176,8 @@ Files read line by line: `watch/WatchTogether.kt`, `ui/screens/watch/WatchTogeth
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| N1-1 | Wrong room code: the guest card vanished with no message | `leave()` resets `Status`, which held the message | leave, then `AppMessages.error` | unit `WatchTogetherHostTest#wrongRoomCodeTellsTheGuest` | fixed 0040d98, CI pending |
-| N1-2 | Hosting while a video plays in the floating window: guests never saw pause/seek/position | `attach` lived only in `bind()` | `attachIfHosting()` from `bind()` and `host()`, once per player; `leave()` detaches | unit `WatchTogetherHostTest#hostingWithAPlayerAlreadyBoundKeepsPublishing` | fixed 0040d98, CI pending |
+| N1-1 | Wrong room code: the guest card vanished with no message | `leave()` resets `Status`, which held the message | leave, then `AppMessages.error` | unit `WatchTogetherHostTest#wrongRoomCodeTellsTheGuest` | verified (CI unit): fail-before 44070875412 → 44062718477 |
+| N1-2 | Hosting while a video plays in the floating window: guests never saw pause/seek/position | `attach` lived only in `bind()` | `attachIfHosting()` from `bind()` and `host()`, once per player; `leave()` detaches | unit `WatchTogetherHostTest#hostingWithAPlayerAlreadyBoundKeepsPublishing` | verified (CI unit): fail-before 44070875412 → 44062718477 |
 
 Two phones on one Wi-Fi (NSD discovery, real follow) needs real hardware: OMT entry, not blocking.
 
@@ -228,7 +228,7 @@ Files read: `ui/screens/music/MusicMix.kt` (device part, online picks, search), 
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| M9-1 | Mix search dropped frames while typing with a large library | device match ran on the main thread in composition | `LaunchedEffect(query, tracks)` + `Dispatchers.Default`; newer keystroke cancels; blank query does nothing | unit `MusicMixSearchTest` (Robolectric Compose, probe: no call on main; "Sóng 157" found accent-folded) | fixed 0dce4ae, CI pending |
+| M9-1 | Mix search dropped frames while typing with a large library | device match ran on the main thread in composition | `LaunchedEffect(query, tracks)` + `Dispatchers.Default`; newer keystroke cancels; blank query does nothing | unit `MusicMixSearchTest` (Robolectric Compose, probe: no call on main; "Sóng 157" found accent-folded) | verified (CI unit): fail-before 44070875412 → 44067269319 |
 
 ## M2 Online music (YouTube Music) and the automatic online/offline switch
 
@@ -246,7 +246,7 @@ Files read: `youtube/music/YtMusicApi.kt`, `YmEndless.kt`, `youtube/YouTubeAudio
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| M2-1 | After sign-out the previous account's own YouTube Music Home (and opened account pages) stayed for up to 10 min, sent with that account's visitor id | account changes cleared only `YouTube.infoCache` | `YtMusicApi.invalidate()` also clears the visitor id and runs on save/signOut/setMode; `YmStore.homeAccount` + `ymHomeStale` reload Home and clear the page stack on an account change | unit `YtAccountMusicCacheTest` (3 cases) | fixed cf4d650 + f3d1d38, CI pending |
+| M2-1 | After sign-out the previous account's own YouTube Music Home (and opened account pages) stayed for up to 10 min, sent with that account's visitor id | account changes cleared only `YouTube.infoCache` | `YtMusicApi.invalidate()` also clears the visitor id and runs on save/signOut/setMode; `YmStore.homeAccount` + `ymHomeStale` reload Home and clear the page stack on an account change | unit `YtAccountMusicCacheTest` (3 cases) | verified (CI unit): fail-before 44070875412 → 44067269319 |
 
 Real account check (personal Home before/after sign-out) needs a person's Google account: optional owner check, not blocking.
 
@@ -257,7 +257,7 @@ permission block in `MTPlayerApp.kt`.
 
 | ID | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|
-| M1-1 | Every cold start with media access ran two (three on Android 13+ while the notification prompt answers) full MediaStore scans at once | `MainViewModel.init` → `scanMedia()` and the startup check → `onPermissionResult(true)` → `scanMedia()`; each scan on its own IO coroutine | requests with the same access state join the running scan; a changed state (first grant) runs its own scan after it (Mutex) | unit `LibraryScanOnceTest` (2 cases) | fixed 841b085, CI pending |
+| M1-1 | Every cold start with media access ran two (three on Android 13+ while the notification prompt answers) full MediaStore scans at once | `MainViewModel.init` → `scanMedia()` and the startup check → `onPermissionResult(true)` → `scanMedia()`; each scan on its own IO coroutine | requests with the same access state join the running scan; a changed state (first grant) runs its own scan after it (Mutex) | unit `LibraryScanOnceTest` (2 cases) | verified (CI unit): fail-before 44070875412 → 44067269319 |
 
 M6 (`player/equalizer/EqualizerManager.kt`): every Equalizer/BassBoost/Virtualizer call on the single `yu-audio-fx`
 thread (ST-7), prefs warmed in `PrefsWarmup`, re-attach only on a new session, the process-wide player keeps its
