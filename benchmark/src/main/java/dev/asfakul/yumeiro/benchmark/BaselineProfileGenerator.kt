@@ -21,6 +21,7 @@ class BaselineProfileGenerator {
     @get:Rule val rule = BaselineProfileRule()
 
     @Test fun startupAndTabs() = rule.collect(packageName = TARGET, includeInStartupProfile = true) {
+        Journeys.grantPermissions(device)
         pressHome()
         startActivityAndWait()
         Journeys.browseTabs(device)

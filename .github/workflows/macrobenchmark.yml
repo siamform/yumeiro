@@ -59,7 +59,8 @@ jobs:
           profile: ${{ matrix.device.profile }}
           ram-size: ${{ matrix.device.ram }}
           heap-size: ${{ matrix.device.heap }}
-          disable-animations: true
+          # ST-7: frame timing needs real scroll/fling animations; startup and profile keep them off.
+          disable-animations: ${{ inputs.what != 'jank' }}
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./gradlew --no-daemon ${{ inputs.what == 'profile' && '-Pyu.profileGen=true' || '' }} :benchmark:connectedPreviewAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=$CLASS -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
       - name: Startup numbers to the job summary

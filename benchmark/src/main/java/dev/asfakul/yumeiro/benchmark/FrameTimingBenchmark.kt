@@ -35,7 +35,7 @@ class FrameTimingBenchmark {
         compilationMode = mode,
         startupMode = StartupMode.WARM,
         iterations = 5,
-        setupBlock = { pressHome() },
+        setupBlock = { Journeys.grantPermissions(device); pressHome() },
     ) {
         startActivityAndWait()
         Journeys.scrollHomeAndSwipeTabs(device)

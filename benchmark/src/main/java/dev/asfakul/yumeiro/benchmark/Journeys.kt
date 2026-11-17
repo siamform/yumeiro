@@ -12,10 +12,31 @@ import androidx.test.uiautomator.Until
 
 /** User paths shared by the benchmark and the profile generator (no test tags in release builds). */
 internal object Journeys {
-    /** Waits until the app's window has content and the UI is idle. */
+    /**
+     * X2-2 (run 43993294720 traces): on API 33+ the notification permission prompt opened over the
+     * app, and every swipe of the journeys went to GrantPermissionsActivity (138 input events there,
+     * 19 app frames). Grant the runtime permissions the app asks for before measuring; called from
+     * each setup block. Failures are ignored (a permission the API level does not have).
+     */
+    fun grantPermissions(device: UiDevice) {
+        listOf(
+            "android.permission.POST_NOTIFICATIONS", "android.permission.READ_MEDIA_VIDEO",
+            "android.permission.READ_MEDIA_AUDIO", "android.permission.READ_MEDIA_IMAGES",
+            "android.permission.READ_EXTERNAL_STORAGE",
+        ).forEach { runCatching { device.executeShellCommand("pm grant $TARGET $it") } }
+    }
+
+    /** Waits until the app's window has content and the UI is idle; dismisses a leftover permission prompt. */
     fun firstFrameSettles(device: UiDevice) {
         device.wait(Until.hasObject(By.pkg(TARGET).depth(0)), 10_000)
         device.waitForIdle(3_000)
+        repeat(3) {
+            val prompt = device.findObject(By.pkg("com.google.android.permissioncontroller"))
+                ?: device.findObject(By.pkg("com.android.permissioncontroller")) ?: return@repeat
+            (device.findObject(By.textContains("Allow")) ?: device.findObject(By.textContains("Don"))
+                ?: prompt).click()
+            device.waitForIdle(1_000)
+        }
     }
 
     /** Start, past the welcome guide if it shows, then scroll Home and visit the other tabs. */

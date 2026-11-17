@@ -34,7 +34,7 @@ class StartupBenchmark {
         compilationMode = mode,
         startupMode = StartupMode.COLD,
         iterations = 8,
-        setupBlock = { pressHome() },
+        setupBlock = { Journeys.grantPermissions(device); pressHome() },
     ) {
         startActivityAndWait()
         Journeys.firstFrameSettles(device)
