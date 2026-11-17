@@ -8,7 +8,9 @@ package dev.asfakul.yumeiro.tracking
 import android.content.Context
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineSettings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -94,8 +96,14 @@ object Simkl {
     /** True when the token response can write history (an unknown scope is silently downgraded to read-only). */
     internal fun canWrite(tokens: JSONObject): Boolean = tokens.optString("scope").let { it.isBlank() || "media:write" in it }
 
-    /** Polls until the user approves [code]. A declined code just stays pending, so the deadline ends the loop. */
-    suspend fun awaitToken(context: Context, client: OkHttpClient, code: DeviceCode): String {
+    /**
+     * Polls until the user approves [code]. A declined code just stays pending, so the deadline ends the loop.
+     * Main-safe (IG-1): the polls are blocking OkHttp calls and the token is written to the encrypted
+     * settings, so the whole loop runs on [Dispatchers.IO]. The Tracking card starts it from its
+     * screen scope (main thread); before, a release build threw NetworkOnMainThreadException at the
+     * first poll and a debug build froze the screen on every poll.
+     */
+    suspend fun awaitToken(context: Context, client: OkHttpClient, code: DeviceCode): String = withContext(Dispatchers.IO) {
         val until = System.currentTimeMillis() + code.expiresSec * 1000L
         var wait = code.intervalSec.coerceAtLeast(5) * 1000L
         while (System.currentTimeMillis() < until) {
@@ -116,7 +124,7 @@ object Simkl {
                         }
                     }.getOrNull()
                     OnlineSettings.setSecret(context, "simkl_user", name?.ifBlank { null } ?: "Simkl")
-                    return user().orEmpty()
+                    return@withContext user().orEmpty()
                 }
             }
         }

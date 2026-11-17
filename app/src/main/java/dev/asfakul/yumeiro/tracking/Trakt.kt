@@ -8,7 +8,9 @@ package dev.asfakul.yumeiro.tracking
 import android.content.Context
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineSettings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -107,8 +109,14 @@ object Trakt {
             o.optInt("interval", 5), o.optInt("expires_in", 600))
     }
 
-    /** Polls until the user approves [code] on trakt.tv/activate. */
-    suspend fun awaitToken(context: Context, client: OkHttpClient, code: DeviceCode): String {
+    /**
+     * Polls until the user approves [code] on trakt.tv/activate.
+     * Main-safe (IG-1): the polls are blocking OkHttp calls and the token is written to the encrypted
+     * settings, so the whole loop runs on [Dispatchers.IO]. The Tracking card starts it from its
+     * screen scope (main thread); before, a release build threw NetworkOnMainThreadException at the
+     * first poll and a debug build froze the screen on every poll.
+     */
+    suspend fun awaitToken(context: Context, client: OkHttpClient, code: DeviceCode): String = withContext(Dispatchers.IO) {
         val until = System.currentTimeMillis() + code.expiresSec * 1000L
         var wait = code.intervalSec.coerceAtLeast(1) * 1000L
         while (System.currentTimeMillis() < until) {
@@ -124,7 +132,7 @@ object Trakt {
                         client.newCall(req("/users/settings", access).build()).execute().use { r -> JSONObject(r.body.string()).getJSONObject("user").optString("username") }
                     }.getOrNull()
                     OnlineSettings.setSecret(context, "trakt_user", name?.ifBlank { null } ?: "Trakt")
-                    return user().orEmpty()
+                    return@withContext user().orEmpty()
                 }
                 400 -> Unit // still pending
                 429 -> wait += 1000
