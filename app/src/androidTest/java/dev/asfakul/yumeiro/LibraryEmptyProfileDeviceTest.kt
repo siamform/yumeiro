@@ -210,7 +210,7 @@ class LibraryEmptyProfileDeviceTest {
                 check("Library Jump back in order", listOf(c, b, a), shown)
                 val most = kotlinx.coroutines.runBlocking {
                     kotlinx.coroutines.withTimeoutOrNull(15_000) { vm.mostPlayedTracks.first { l -> l.count { it.id in ids } == 3 } }
-                        ?.map { it.id }?.filter { it in ids }.orEmpty()
+                        ?.map { it.id }?.filter { it in ids } ?: vm.mostPlayedTracks.value.map { it.id }.filter { it in ids }
                 }
                 check("Most played songs", ids.toSet(), most.toSet())
                 log("EP_B reopen ${System.currentTimeMillis() - t0} ms: continue=$cont jumpBackIn=$shown mostPlayed=$most")
