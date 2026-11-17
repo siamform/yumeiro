@@ -612,6 +612,20 @@ flowchart LR
   Pass-after 44121429260 (7a85df6): medians 1.057/1.042×; one download 1.1004× (over 1.10 by 0.04 %), so the
   budget is not claimed met; status accepted, evidence nearly met.
 
+### ADR-017: Glass theme tiers (F-10, proposed)
+
+- **Scope:** `ui/theme` (a new opt-in `ThemeMode`), app chrome only (bars, sheets, dialogs, player overlays).
+- **Context:** F-10 asks for a glassmorphism theme. Backdrop blur costs GPU and memory; Yumeiro runs on
+  2 GB phones and TV boxes (phone minSdk 28, TV 24). `RenderEffect` exists from API 31 only.
+- **Options:** A. Blur everywhere (Prismal "Liquid" with AGSL): best look, highest cost, API 33+ only.
+  B. Tiered: blur on API 31+ non-low-end, translucent tint elsewhere, off by kill switch.
+  C. Tint only: cheapest, no real glass.
+- **Proposed decision:** B, chrome only, quality 0.5, no AGSL in step one; tier chosen once per process
+  (`GlassTier`), dropped to tint on trim memory, battery saver and "reduce transparency".
+- **Evidence needed before acceptance:** FrameTimingBenchmark Home P90 within 5 % of Tsuki Night on both
+  phones; contrast ≥ 4.5:1; APK growth ≤ 300 KB. Note: docs/proposals/FEATURE-F-10-glassmorphism-theme.md.
+- **Status:** proposed (2026-11-18); gated by 4.4 and the owner.
+
 ## 11. Risks
 
 | Risk | Mitigation |
