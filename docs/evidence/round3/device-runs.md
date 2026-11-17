@@ -755,3 +755,19 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - ChoiceSettingsEffectDeviceTest a–f PASS 6/6 both. b: 480p → maxVideoHeight=480, Auto → 2147483647, closeTap#1 closed
   the player. 0 FATAL / ANR lines in logcat.
 
+## 43984064564 (api33-lowram + api36, emulator; head 6bf399a)
+
+- RetryActionsDeviceTest a (JS repo) and b (Stremio add-on) PASS both: 404 → "Not found (404)" + Retry → call repeated → added.
+
+## 43985787392 (both phones, emulator; head af4f791)
+
+- a, b, c (Mihon repo) PASS; d (WebDAV form) FAIL both: the reason pill sat behind the open dialog and the
+  keyboard (shot rty_d_error); the real tap at Retry hit the keyboard. New finding ER-19 (fail-before).
+
+## 43987237062 cancelled (superseded by 8011813: same class plus case e)
+
+## 43987451529 (both phones, emulator; head 8011813)
+
+- RetryActionsDeviceTest a–e PASS 5/5 both. d: "Not found (404)" inside the form, button Retry, real tap → connected.
+  e: Kitsu "Wrong e-mail or password" inside the form, no bottom message. 0 FATAL lines.
+

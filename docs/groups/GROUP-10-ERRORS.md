@@ -48,7 +48,8 @@ ID note: these rows were first written as ER-1/ER-2, which clash with the older 
 | ER-10 mapper ↔ tips | `ErrorTaxonomyTest` | unit | 4/4 CI 43941919340 |
 | ER-13 decoder tip | `PlaybackRecoveryTest` | unit | 6/6 CI 43941919340 |
 | StreamRecovery / StreamResolver texts | code review: cause + next step in each (DNS, timeout, TLS, 401/403/404/429/451/5xx, DRM, parsing, empty/too-large playlist, web page, TorrServer) | review | done (no change) |
-| ER-12 Retry on failed adds / Inbox | code review | unit (compile) | compiled CI 43941919340; not device-tested |
+| ER-12 Retry on failed adds / Inbox | `RetryActionsDeviceTest` a–d (local server, real tap on Retry) | emulator | PASS both phones 43987451529 (JS repo, Stremio, Mihon repo, home server); Inbox: same call, fixed feed URL → code review |
+| ER-19 Reason hidden behind an open form (home server, Kitsu) | `RetryActionsDeviceTest` d, e | emulator | fail-before 43985787392; PASS both phones 43987451529 (reason inside the form, Retry) |
 | Every message shown on device | `scripts/messages-inventory.py` → docs/evidence/round3/messages-inventory.md (162 call sites, 100 literal); `MessagesDeviceTest` shows each literal text through the real host: shown, whole (no ellipsis at 3 lines), action button, ATF. Real-flow triggers: NetworkState, PermissionFlow, LowStorage, Dialogs, BackdropImport tests | emulator | PASS 100/100 both phones, 43904330191 (api33 failed 1 in 43891331959 → ER-18 fixed) |
 | Dialogs: Back closes without acting, page kept, ATF clean (Privacy "Clear …" confirms, TsukiDialog) | `DialogsDeviceTest` | emulator | PASS checked=5 both phones, 43891331959 |
 | Dialog Back by construction | code scan: every `*Dialog/*Sheet/*Prompt/*Host` composable uses Dialog/AlertDialog/ModalBottomSheet/BackHandler or delegates (ReminderCard → Dialog); the 6 without are non-modal overlays (gestures, info overlay, error overlay under the player's BackHandler, lights, message host) | review | done |
@@ -60,3 +61,10 @@ ID note: these rows were first written as ER-1/ER-2, which clash with the older 
 | Refused port → "refused the connection" | `NetworkStateDeviceTest.c` | emulator | PASS both phones, 43891331959 and 43904330191 |
 | VPN | `NetworkStateDeviceTest.d` logs `vpnActive`; an emulator cannot raise a VPN without a VPN app and the consent dialog → owner test after the run | emulator + owner | emulator logs vpnActive=false (no VPN on CI); real VPN → OMT-18 |
 | Low storage | ER-14 mapper (unit); downloads DiskFull (G8); device: `LowStorageDeviceTest` a) size > free → up-front "Storage full — needs about … MB free", no retry; b) chunked body, disk filled by `fallocate` to ~16 MB → ENOSPC shown as "Storage full", app alive | unit + emulator | PASS a, b both phones, 43904330191 (b skipped in 43891331959, test fixed 523af6f) |
+
+## Close-out (2026-11-17)
+
+Every row above has device (emulator) or CI evidence except VPN, which needs a real VPN app and its
+consent dialog: owner test OMT-18. New findings in the close-out: ER-19 (fixed, verified) and ST-21
+(message over the floating video window, fixed, verified). Group 10 is closed for agent work.
+

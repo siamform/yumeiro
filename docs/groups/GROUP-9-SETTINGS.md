@@ -269,3 +269,10 @@ Note: the settings bug IDs were first written ST-1 / ST-2 (commit de40e78, ST-2 
 Observation (not changed, owner product call): a kind switch that is off (e.g. "New episodes")
 drops the item completely, also from the inbox (`AppNotifier.post` returns before `Inbox.add`),
 while "Show notifications" off keeps items in the inbox. The rows' text does not promise either way.
+
+## Close-out (2026-11-17)
+
+Switch effects 34/34 and choice rows (SE-6) have tests with device (emulator) or CI evidence;
+`ChoiceSettingsEffectDeviceTest` a–f PASS on both phones (43974089878). qa_gpu_tier needs a real GPU:
+owner test OMT-16. Group 9 is closed for agent work.
+
