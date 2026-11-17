@@ -57,7 +57,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | F-02 | Telegram option | Not started (owner call on terms/privacy) | — |
 | F-03 | Terabox / Diskwala links | Not started (owner call on terms) | — |
 | F-04 | WebView site list | Proposal written (gated; tab exists; adds search, pin, per-site settings, favicon, import/export) | docs/proposals/FEATURE-F-04-webview-site-list.md (Hikari 8aa1652) |
-| F-05 | Nuvio / Skystream / Vega repositories | Not started (Vega question to owner) | — |
+| F-05 | Nuvio / Skystream / Vega repositories | Proposal written (gated; detection first, runtime needs ADR + TMDB key path; Vega: OMT-24 Blocked: owner, not designed) | docs/proposals/FEATURE-F-05-nuvio-skystream-repos.md (Nuvio 511ebd5, SkyStream f5523ae) |
 | F-06 | 200 % volume booster | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-06-volume-booster.md (Next Player 08845f8 LoudnessEnhancer contract) |
 | F-07 | External player support | Proposal written (gated; owner approval needed). Base hand-off exists; gaps: result read-back, headers, subtitles | docs/proposals/FEATURE-F-07-external-player.md (CloudStream 2dcc25c contracts) |
 | F-08 | Upcoming Movies & Series | Proposal written (gated; owner picks data source: AniList / Simkl / TMDB key via server) | docs/proposals/FEATURE-F-08-upcoming-movies-series.md (Hikari 8aa1652) |
