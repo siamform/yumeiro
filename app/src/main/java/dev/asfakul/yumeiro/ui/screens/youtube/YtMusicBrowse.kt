@@ -121,6 +121,8 @@ private object YmStore {
     val home = mutableStateOf(YmState())
     /** Which chip [home] belongs to. */
     var homeFor: String? = null
+    /** G13 M2-1: the YouTube account state [home] was loaded under (see [ymAccountKey]). */
+    var homeAccount: String? = null
     var homeGen = 0
     val chips = mutableStateOf<List<YmChip>>(emptyList())
     val results = mutableStateOf(YmState(loading = false))
@@ -129,6 +131,12 @@ private object YmStore {
     val endlessUsed = mutableStateOf(emptySet<String>())
     val endlessMisses = mutableStateOf(0)
 }
+
+/** G13 M2-1: which account a Home page belongs to: signed in or not, and the account mode. */
+internal fun ymAccountKey(s: dev.asfakul.yumeiro.youtube.YtAccount.State): String = "${s.signedIn}:${s.mode.name}"
+
+/** G13 M2-1: a Home loaded under another account state must be reloaded, never shown again. */
+internal fun ymHomeStale(loadedUnder: String?, now: String): Boolean = loadedUnder != null && loadedUnder != now
 
 private const val CHIP_HOME = "home"
 private const val CHIP_EXPLORE = "explore"
@@ -176,6 +184,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
         val g = ++YmStore.homeGen
         val forChip = chip
         YmStore.homeFor = forChip
+        YmStore.homeAccount = ymAccountKey(dev.asfakul.yumeiro.youtube.YtAccount.state.value)
         endlessUsed = emptySet(); endlessMisses = 0
         // Stale-while-revalidate on a forced refresh: the page on screen stays until the new one is in.
         home = if (force && home.page != null) home.copy(more = false, error = null) else YmState(loading = true)
@@ -246,6 +255,10 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
     // Back on the tab: the same page, no reload. A new chip loads its own page.
     LaunchedEffect(chip) { if (YmStore.homeFor != chip || (home.page == null && !home.loading)) loadHome() }
     LaunchedEffect(netOnline) { if (netOnline && home.error != null) loadHome() }
+    // G13 M2-1: signing in or out (or changing the account mode) never leaves the old account's Home on screen.
+    val account by dev.asfakul.yumeiro.youtube.YtAccount.state.collectAsState()
+    val accountKey = ymAccountKey(account)
+    LaunchedEffect(accountKey) { if (ymHomeStale(YmStore.homeAccount, accountKey)) { stack.clear(); loadHome() } }
 
     fun search(q: String, f: YtMusicApi.Filter = filter) {
         val text = q.trim().takeIf { it.isNotEmpty() } ?: return

@@ -10,7 +10,11 @@ import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.youtube.music.YmPage
 import dev.asfakul.yumeiro.youtube.music.YmShelf
 import dev.asfakul.yumeiro.youtube.music.YtMusicApi
+import dev.asfakul.yumeiro.ui.screens.youtube.ymAccountKey
+import dev.asfakul.yumeiro.ui.screens.youtube.ymHomeStale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,5 +46,17 @@ class YtAccountMusicCacheTest {
         assertEquals(0, YtMusicApi.cachedCount())
         assertNull(YtMusicApi.visitorForTests())
         YtAccount.setMode(ctx, YtAccount.Mode.WHEN_BLOCKED)
+    }
+
+    @Test fun aHomeLoadedUnderAnotherAccountIsReloaded() {
+        val signedIn = ymAccountKey(YtAccount.State(signedIn = true, mode = YtAccount.Mode.ALWAYS))
+        val signedOut = ymAccountKey(YtAccount.State(signedIn = false, mode = YtAccount.Mode.ALWAYS))
+        val blocked = ymAccountKey(YtAccount.State(signedIn = true, mode = YtAccount.Mode.WHEN_BLOCKED))
+        assertTrue(ymHomeStale(signedIn, signedOut))
+        assertTrue(ymHomeStale(signedIn, blocked))
+        assertFalse(ymHomeStale(signedIn, signedIn))
+        assertFalse(ymHomeStale(null, signedOut)) // nothing loaded yet: the normal first load runs
+        // "since" (sign-in time) is not part of the key: re-reading the same account keeps the page.
+        assertEquals(signedIn, ymAccountKey(YtAccount.State(signedIn = true, since = 42L, mode = YtAccount.Mode.ALWAYS)))
     }
 }
