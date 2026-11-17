@@ -771,3 +771,10 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - RetryActionsDeviceTest a–e PASS 5/5 both. d: "Not found (404)" inside the form, button Retry, real tap → connected.
   e: Kitsu "Wrong e-mail or password" inside the form, no bottom message. 0 FATAL lines.
 
+## 43988958313 (stress 2 × 5 per phone, emulator, debug build; head 2e86f58)
+
+- 10/10 jobs, 20/20 runs PASS. FATAL 0. App ANR 0 (api36 had 3 ANRs in com.google.android.gms[.persistent]).
+- Test counter, stalls ≥700 ms: api33-lowram 13 in 10 runs (1.3), api36 19 in 10 (1.9); max per run 1.33 s / 1.52 s.
+  Same counter on 43705867413: 0.7 / 1.0. Bursts during system load; stacks as before (HardwareRenderer).
+- ST-17: 0 spin lines.
+
