@@ -28,6 +28,10 @@ import java.util.concurrent.TimeUnit
  * a) An HLS download paused after segment 8 (resume point saved at 5) resumes into a file with
  *    every segment exactly once (it used to repeat segments 6–8).
  * b) A .part that already holds the whole file finishes (416 with the same size) instead of failing.
+ * c) DL-4: a server that answers the resume Range with a 206 from byte 0 (another offset) must not
+ *    be appended to the .part (that gave a file of .part + whole file); the download starts over.
+ * d) DL-4: a 416 whose size is not the .part size (the file changed on the server) is not "done";
+ *    it used to finish with the old, wrong bytes. The download starts over with the new file.
  */
 @RunWith(AndroidJUnit4::class)
 class DownloadResumeDeviceTest {
@@ -39,6 +43,10 @@ class DownloadResumeDeviceTest {
     @Volatile private var hold: CountDownLatch? = null
     @Volatile private var blockAt = -1
     @Volatile private var blobDown = false
+    private val blob2 = ByteArray(200_000) { (it % 241 + 3).toByte() }
+
+    private fun oneByte(total: Int, b: Byte) = MockResponse.Builder().code(206)
+        .addHeader("Content-Range", "bytes 0-0/$total").body(Buffer().writeByte(b.toInt())).build()
 
     @Before fun setUp() {
         server = MockWebServer()
@@ -64,6 +72,30 @@ class DownloadResumeDeviceTest {
                         if (range != null && range.startsWith("bytes=${blob.size}-"))
                             MockResponse.Builder().code(416).addHeader("Content-Range", "bytes */${blob.size}").build()
                         else MockResponse.Builder().addHeader("Content-Type", "video/mp4").body(Buffer().write(blob)).build()
+                    }
+                    // DL-4 c: every resume Range is answered from byte 0 (a 206 at the wrong offset).
+                    path.endsWith("/shift.mp4") -> {
+                        if (blobDown) return MockResponse.Builder().code(503).build()
+                        val range = request.headers["Range"]
+                        when {
+                            range == "bytes=0-0" -> oneByte(blob.size, blob[0])
+                            range != null -> MockResponse.Builder().code(206).addHeader("Content-Range", "bytes 0-${blob.size - 1}/${blob.size}")
+                                .addHeader("Content-Type", "video/mp4").body(Buffer().write(blob)).build()
+                            else -> MockResponse.Builder().addHeader("Content-Type", "video/mp4").body(Buffer().write(blob)).build()
+                        }
+                    }
+                    // DL-4 d: the file is now blob2 (200 000 bytes); a resume past its end gets 416 with the new size.
+                    path.endsWith("/changed.mp4") -> {
+                        if (blobDown) return MockResponse.Builder().code(503).build()
+                        val range = request.headers["Range"]
+                        val from = range?.removePrefix("bytes=")?.substringBefore('-')?.toIntOrNull()
+                        when {
+                            range == "bytes=0-0" -> oneByte(blob2.size, blob2[0])
+                            from != null && from >= blob2.size -> MockResponse.Builder().code(416).addHeader("Content-Range", "bytes */${blob2.size}").build()
+                            from != null && from > 0 -> MockResponse.Builder().code(206).addHeader("Content-Range", "bytes $from-${blob2.size - 1}/${blob2.size}")
+                                .body(Buffer().write(blob2.copyOfRange(from, blob2.size))).build()
+                            else -> MockResponse.Builder().addHeader("Content-Type", "video/mp4").body(Buffer().write(blob2)).build()
+                        }
                     }
                     else -> MockResponse.Builder().code(404).build()
                 }
@@ -136,5 +168,41 @@ class DownloadResumeDeviceTest {
         assertArrayEquals(line, blob, OnlineDownloads.fileOf(ctx, done).readBytes())
         Log.i("YuDownloadTest", "DL_B_RESULT PASS")
         OnlineDownloads.delete(ctx, probeId)
+    }
+
+    /** Fails a first attempt (503) so the item has its file name, puts [part] in place, then resumes. */
+    private suspend fun resumeWith(tag: String, path: String, part: ByteArray): Pair<OnlineDownloads.Item, ByteArray> {
+        val title = "YuDlTest $tag ${System.currentTimeMillis()}"
+        blobDown = true
+        OnlineDownloads.enqueue(ctx, title, "yu-test", "t-$tag-$title", "E1", null, emptyMap(), link(server.url(path).toString(), false))
+        val id = OnlineDownloads.items.value.first { it.title == title }.id
+        val failed = waitFor(id, 60_000, "$tag failed") { it.status == Status.FAILED }
+        val out = OnlineDownloads.fileOf(ctx, failed)
+        out.delete()
+        File(out.parentFile, out.name + ".part").writeBytes(part)
+        blobDown = false
+        OnlineDownloads.start(ctx, id)
+        val done = waitFor(id, 60_000, "$tag done") { it.status == Status.DONE || it.status == Status.FAILED }
+        val bytes = OnlineDownloads.fileOf(ctx, done).let { if (it.exists()) it.readBytes() else ByteArray(0) }
+        OnlineDownloads.delete(ctx, id)
+        return done to bytes
+    }
+
+    @Test fun c_aRangeAnswerAtAnotherOffsetStartsOver() = runBlocking<Unit> {
+        val (done, bytes) = resumeWith("shift", "/shift.mp4", blob.copyOfRange(0, 100_000))
+        val line = "DL_C status=${done.status} size=${bytes.size} expected=${blob.size} error=${done.error}"
+        Log.i("YuDownloadTest", line)
+        assertEquals(line, Status.DONE, done.status)
+        assertArrayEquals(line, blob, bytes)
+        Log.i("YuDownloadTest", "DL_C_RESULT PASS")
+    }
+
+    @Test fun d_a416WithAnotherSizeStartsOver() = runBlocking<Unit> {
+        val (done, bytes) = resumeWith("changed", "/changed.mp4", blob.copyOfRange(0, 250_000))
+        val line = "DL_D status=${done.status} size=${bytes.size} expected=${blob2.size} error=${done.error}"
+        Log.i("YuDownloadTest", line)
+        assertEquals(line, Status.DONE, done.status)
+        assertArrayEquals(line, blob2, bytes)
+        Log.i("YuDownloadTest", "DL_D_RESULT PASS")
     }
 }
