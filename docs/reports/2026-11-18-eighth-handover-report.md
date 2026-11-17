@@ -40,6 +40,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | ID | Cause | Fix | Evidence |
 |---|---|---|---|
 | EXT-T1-C | Campaign 44162062169 ran plain E11, not the owner's reproduction condition | next campaign seeds five failing drama feeds before opening Source status | 44162062169 test code e11 (no feed setup) |
+| EXT-T1-D | e13 counted the ADR-014-held phisher98 donation dialog (hidden, not focusable) as a window over Source status | c6ff72c: WindowSpy.liveUnheld() counts only attached, unheld windows; held ones logged | 44185209665 20/20 fail with focus = MainActivity and Back closing Source status every run; re-run 44189135829 |
 
 ## Runs
 
@@ -65,10 +66,11 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram (5f7f333) | 10/10 PASS, 0 ANR, EXT_T1 line every run: only MainActivity focused, no added window → not reproduced; the owner's condition (five failing drama feeds while Source status is open) was not set up, so this does not count toward the ≥ 20 (emulator) |
 | 44067269319 (re-read) | X11/X12 confirmation from the run's JUnit XML | SmartDnsResilienceTest 4/4, SmartDnsTest 13/13, DnsWireClientTest 4/4, DataCacheBoundsTest 4/4; 0 failures, 0 skips; INVENTORY rows already "verified (CI unit)" — confirmed (CI unit) |
 | 44180839496 | CI unit at 6ec4868 (DL-11 trip logging + paceTripsAreLoggedOncePerRestart) | green: 1155 tests, 0 failures, 11 skipped; DownloadThroughputTest 7/7 incl. paceTripsAreLoggedOncePerRestart (CI unit) |
-| 44185781422 | CI unit at 0bdbb74 (ST-18 AfterFirstFrameTest, NBUG-6 Nbug6ExhaustionTimingTest) | running |
+| 44185781422 | CI unit at 0bdbb74 (ST-18 AfterFirstFrameTest, NBUG-6 Nbug6ExhaustionTimingTest) | 1 failure = test fault: the Nbug6 real-DoH case used a `.example` host, which DnsOverHttps rejects as private (fixed 4d95c04, re-run 44188521804). AfterFirstFrameTest 2/2, SmartDnsResilienceTest 4/4, DnsWireClientTest 4/4, DataCacheBoundsTest 4/4 (CI unit) |
 | 44180844505 | DownloadThroughputDeviceTest a_realHostScreenOn + d_localUnitCollapseProfile ×3, both phones (6ec4868) | PASS 12/12. Real host received ÷ file api33 1.056/1.035/1.090 (median 1.056), api36 1.043/1.039/1.030 (median 1.039): all ≤ 1.10 in this sample; case d 3.8–7.0 s, last 10 % ≤ 1.8 s. Trips: J/K/L all rejected by data (note §8.4); no code change (emulator) |
-| 44185180596 | ST-18 after: HomeTraceDeviceTest api33-lowram at 46480b6 (cbad735 deferral) | first attempt: build failed, Maven Central 429 (infrastructure); re-run running |
-| 44185209665 | EXT-T1 e13 ×20 api33-lowram (46480b6) | running |
+| 44185180596 | ST-18 after: HomeTraceDeviceTest api33-lowram at 46480b6 (cbad735 deferral) | first attempt: build failed, Maven Central 429 (infrastructure); re-run PASS. Structural: VerifyClass of the deferred hosts in frame 1 = 0 / 0 / 0 ms (moved to frame 3: 216 / 124 / 196 ms). Frame 1 total 4548 / 4386 / 4179 ms, noisier than before (3613 / 1768): no timing gain claimed (emulator api33-lowram, software rendering) |
+| 44185209665 | EXT-T1 e13 ×20 api33-lowram (46480b6) | 20/20 FAIL = test fault. The only added window, every run, was `com.phisher98.donation.DonationDialogFragment` (HDhub4u), concealed by the ADR-014 blocker ("held a promotional window … card shown", flags 0x1800018 not focusable/touchable, absent from the screenshot). Focus was MainActivity and Back closed Source status 20/20, so the original symptom did not reproduce. Assertion counted every added window; fixed c6ff72c (count only attached, unheld windows), re-run 44189135829 |
+| 44189135829 | EXT-T1 e13 ×20 api33-lowram (c6ff72c) | running |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## Spot-check (session 2)
