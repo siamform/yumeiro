@@ -137,7 +137,14 @@ fun MusicMixScreen(
     val searchKey = dev.asfakul.yumeiro.ui.components.TabSearch.MUSIC_MIX
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     val searching = asked == searchKey || query.isNotBlank()
-    val deviceHits = remember(query, tracks) { mixDeviceMatches(tracks, query) }
+    // M9-1: the match folds (Unicode normalise + regex) every song's title, artist and album. It ran in
+    // composition, on the main thread, on every keystroke: a few thousand songs on a low-RAM phone
+    // dropped frames while typing. It now runs on Default; a newer keystroke cancels the older result.
+    var deviceHits by remember { mutableStateOf<List<AudioTrack>>(emptyList()) }
+    LaunchedEffect(query, tracks) {
+        deviceHits = if (query.isBlank()) emptyList()
+        else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { mixDeviceMatches(tracks, query) }
+    }
     var onlineHits by remember { mutableStateOf<List<YtItem>>(emptyList()) }
     var onlineBusy by remember { mutableStateOf(false) }
     LaunchedEffect(query, online) {
@@ -254,7 +261,12 @@ fun MusicMixScreen(
 }
 
 /** Device songs whose title, artist or album contain every word of [query] (case/accents folded). Pure; unit-tested. */
+/** Test seam (M9-1): told, on each device search, whether it ran on the main thread. */
+@androidx.annotation.VisibleForTesting
+internal var mixMatchProbe: ((onMain: Boolean) -> Unit)? = null
+
 internal fun mixDeviceMatches(tracks: List<AudioTrack>, query: String): List<AudioTrack> {
+    mixMatchProbe?.let { it(android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) }
     val words = fold(query).split(' ').filter { it.isNotBlank() }
     if (words.isEmpty()) return emptyList()
     return tracks.asSequence().filter { t ->
