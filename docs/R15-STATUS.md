@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 09:10 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 09:55 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -47,13 +47,22 @@
     title search failed) dc00672; IG-8 (failed AniList/MAL re-sign-in said "Signed in") 0997e45. Tests:
     `CloudAlertsLookupDeviceTest`, `OnlineSubtitlesFallbackDeviceTest`, `AnimeSignInMessageDeviceTest`; their
     fail-before copies are on `scratch/ig2-fail-before`.
-- **Runs in progress:** 44050574003 (`scratch/ig2-fail-before` 42cc6a8, IG-2…IG-5 tests on old code, api33-lowram; expect FAIL
-  in every case); 44051808801 (head f0fa55d, all six G11 tests, api36; expect PASS).
+- **Done since (seventh handover, 2):** IG-2…IG-5 verified (emulator): fail-before 44050574003 → 44050521996
+  (api33-lowram) + 44051808801 (api36, all six G11 tests PASS). IG-6…IG-8 fail-before 44052308373 (api33-lowram):
+  CLOUD cached=0, SUBS fallback lost the hash hit, SIGNIN rejected said "Signed in to AniList as OldUser"; the
+  control cases (accepted, titleOnly) pass on old code as expected. G8: D6 test `YtDownloadPipelineDeviceTest`
+  (abf49da); **DL-12** (Downloads page did disk work on the main thread: list load, every tap's save + fsync,
+  folder delete per episode) fixed a501d8e with `DownloadsScreenDeviceTest`; fail-before branch
+  `scratch/d8-fail-before` (7182011, old code + no-op flushForTests seam). Skills cloned to
+  `/home/user/workspace/agent-skills` (sandbox only; architecture-designer SKILL.md read first).
+- **Current group / step:** G8 leftovers (DL-12, D6) and G11 close-out (IG-6…IG-8 after-fix on api33-lowram).
+- **Runs in progress:** 44053272178 (head a501d8e, api33-lowram: DownloadsScreen, YtDownloadPipeline,
+  CloudAlertsLookup, OnlineSubtitlesFallback, AnimeSignInMessage, ExternalDownloader, TorrentDownload; expect PASS);
+  44053590474 (`scratch/d8-fail-before`, api33-lowram, DownloadsScreen on old code; expect FAIL a_open/b_actions).
 - **Next three actions:**
-  1. Read 44050574003 and 44051808801. Then dispatch the IG-6…IG-8 fail-before (`scratch/ig2-fail-before`, api33-lowram)
-     and head on api33-lowram for the three new tests (never more than two device workflows).
-  2. Mark IG-2…IG-8 verified (emulator) where both sides behave; set INVENTORY I1–I11 statuses with evidence.
-  3. G8 leftovers (INVENTORY D1–D8; D3 torrent, D5 external downloader, D6 YouTube, D8 screen) and the five-item spot-check.
+  1. Read both runs; then DownloadsScreen + YtDownloadPipeline on api36 (one run).
+  2. Mark IG-6…IG-8 and DL-12 in DONE-LEDGER, GROUP-8/11, device-runs.md; set INVENTORY D1–D8 and I1–I11 with evidence.
+  3. G9–G11 leftovers (INVENTORY G9/G10 rows still "open"/"unit pending"), then re-audit G1–4.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
