@@ -141,14 +141,14 @@ real phones or TVs. Casting to a real TV, real heat and real low-RAM phones are 
 | P5 | verified on device | 43701056608 |
 | P6 | verified on device | 43708220122 |
 | P7 | verified on device | 43708220122 (embedded); online search in G11 |
-| P8 | speed verified on device; gestures unit only | swipe volume/brightness need a gesture test |
+| P8 | speed verified on device; swipe gestures: device test `LocalPlayerDeviceTest#j` written in the G1–4 re-audit, run pending | j: real `input swipe` → media volume up/down, window brightness, sideways seek on a paused clip, brightness given back on close |
 | P9 | verified on device | 43701056608 |
 | P10 | verified on device | PiP and lock 43708220122; floating 43701056608 |
 | P11 | verified on device | 43709093938 (api33), 43712469920 (both, ×2) |
 | P12 | verified on device | 43708220122 |
-| P13 | unit only | settings screen is audited in Group 9 |
-| P14 | unit only | needs a fault-injection hook |
-| P15 | unit only | live API |
+| P13 | verified on device (emulator) through G9 | re-audit: the player settings rows have device effect tests in G9: SE-6 (qa_speed, qa_quality, qa_renderer, qa_decoder, qa_player; 43974089878) and SE-5 (cc_default, bg_play, auto_pip; 43904330191, 43920651380). qa_gpu_tier → OMT-16 |
+| P14 | network side verified on device; decoder fault unit only | re-audit: a dead or failing source recovering by rotation is device-verified (P9, PL-5, `OnlinePlaybackDeviceTest d_`, 43701056608). A real decoder fault (black frame watchdog → software decoder) cannot be forced on the emulators: their decoders are software (c2.android/goldfish) and do not fail on a valid stream; a corrupt stream fails in the extractor, not the decoder. Unit: `BlackFrameWatchdogTest`, `PlaybackRecoveryTest`, `RecoveryStateTest`, `StarvationLoadControlTest` |
+| P15 | verified on device (emulator) with a canned AniSkip answer | re-audit: `OnlineSwitchesEffectDeviceTest` b (AniSkip asked only when Skip intro is on; segment loaded) and c (the real SkipButton skips at 20 s inside the intro) PASS both phones 43904330191 / 43920651380 (SE-5); caching of failures `AniSkipCacheTest` (unit). The live api.aniskip.com answer is not used on CI by design |
 | P16 | unit only | shader output not checked |
 | P17 | Cast start verified on device; casting unverified | needs a real Chromecast: script P/T |
 | P18 | screen wake verified on device; sleep timer → G6 | |

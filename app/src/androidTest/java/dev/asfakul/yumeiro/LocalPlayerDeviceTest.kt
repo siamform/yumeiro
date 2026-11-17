@@ -405,5 +405,69 @@ class LocalPlayerDeviceTest {
         log("LOCAL_I_RESULT PASS")
     }
 
+    /** Screen bounds of the player's gesture area (window bounds + the window's place on screen). */
+    private fun playerBox(): android.graphics.RectF {
+        val b = rule.onAllNodesWithTag("video_player_root", true)[0].fetchSemanticsNode().boundsInWindow
+        val at = IntArray(2); rule.runOnUiThread { rule.activity.window.decorView.getLocationOnScreen(at) }
+        return android.graphics.RectF(b.left + at[0], b.top + at[1], b.right + at[0], b.bottom + at[1])
+    }
+    private fun swipe(x1: Float, y1: Float, x2: Float, y2: Float) {
+        FirstRun.shell("input swipe ${x1.toInt()} ${y1.toInt()} ${x2.toInt()} ${y2.toInt()} 600"); pause(1_200)
+    }
+    private fun brightness(): Float { var v = 0f; rule.runOnUiThread { v = rule.activity.window.attributes.screenBrightness }; return v }
+
+    /**
+     * G3 P8 re-audit: the swipe gestures through real touch input (`input swipe`), not only the
+     * VolumeAccumulator unit test. Right half up/down → media volume; left half up → window
+     * brightness; a sideways swipe on a paused clip seeks back; closing the player gives the
+     * window its brightness back.
+     */
+    @Test fun j_swipeGesturesChangeVolumeBrightnessAndPosition() {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val music = android.media.AudioManager.STREAM_MUSIC
+        val max = am.getStreamMaxVolume(music)
+        val oldVol = am.getStreamVolume(music)
+        try {
+            am.setStreamVolume(music, (max / 4).coerceAtLeast(1), 0)
+            val brightBefore = brightness()
+            openClipFromDevice()
+            loopClip()
+            pause(5_000) // let the controls hide so the swipes land on the gesture layer
+            val r = playerBox()
+            log("P8 player box $r, volume ${am.getStreamVolume(music)}/$max, brightness $brightBefore")
+            val v0 = am.getStreamVolume(music)
+            swipe(r.left + r.width() * 0.85f, r.top + r.height() * 0.70f, r.left + r.width() * 0.85f, r.top + r.height() * 0.30f)
+            val v1 = am.getStreamVolume(music)
+            swipe(r.left + r.width() * 0.85f, r.top + r.height() * 0.30f, r.left + r.width() * 0.85f, r.top + r.height() * 0.70f)
+            val v2 = am.getStreamVolume(music)
+            log("P8_VOLUME up $v0 → $v1, down → $v2 (max $max)")
+            assertTrue("volume up by swipe ($v0 → $v1)", v1 > v0)
+            assertTrue("volume down by swipe ($v1 → $v2)", v2 < v1)
+            swipe(r.left + r.width() * 0.15f, r.top + r.height() * 0.70f, r.left + r.width() * 0.15f, r.top + r.height() * 0.30f)
+            val b1 = brightness()
+            log("P8_BRIGHTNESS $brightBefore → $b1")
+            assertTrue("brightness set above the 0.5 start by an up swipe (was $brightBefore, now $b1)", b1 > 0.5f)
+            rule.runOnUiThread { PlaybackSession.playerForTest?.let { it.pause(); it.seekTo(9_000) } }
+            pause(1_500)
+            val p0 = onPlayer { it.currentPosition } ?: -1L
+            swipe(r.left + r.width() * 0.60f, r.top + r.height() * 0.5f, r.left + r.width() * 0.60f - 120f, r.top + r.height() * 0.5f)
+            pause(1_000)
+            val p1 = onPlayer { it.currentPosition } ?: -1L
+            log("P8_SEEK paused at $p0 → $p1 after a 120 px left swipe")
+            assertTrue("sideways swipe seeks back ($p0 → $p1)", p1 in 0 until p0 - 1_500)
+            // A touch Back (as in g): the app treats key Back as a remote.
+            rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+            wait("floating player", 8_000) { has("floating_close") }
+            tap("floating_close")
+            wait("player closed", 10_000) { !has("video_player_root") && !has("floating_close") }
+            val b2 = brightness()
+            log("P8_BRIGHTNESS after close $b2 (before $brightBefore)")
+            assertEquals("window brightness given back on close", brightBefore, b2, 0.001f)
+            log("LOCAL_J_RESULT PASS")
+        } finally {
+            am.setStreamVolume(music, oldVol, 0)
+        }
+    }
+
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
 }
