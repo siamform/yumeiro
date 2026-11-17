@@ -92,6 +92,18 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     echo "YuLibPersistScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
     timeout 300 adb shell am instrument -w -r -e class "$C#b_newProcessKeepsOrderAndGoodPlaylists" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
     if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
+  elif [ "$C" = "dev.asfakul.yumeiro.LibraryEmptyProfileDeviceTest" ]; then
+    # G5 from an empty profile: pm clear, then phase a likes, plays a queue (pause, seek, screen
+    # destroyed mid-queue) and kills its own process ("Process crashed" by design); phase b, a new
+    # process, checks counts, order, play time and Jump back in.
+    P=dev.asfakul.yumeiro.debug
+    adb shell pm clear $P > /dev/null 2>&1
+    for PERM in READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    timeout 400 adb shell am instrument -w -r -e class "$C#a_emptyProfileLikeAddPlayThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    sleep 2
+    echo "YuEmptyProfileScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
+    timeout 300 adb shell am instrument -w -r -e class "$C#b_newProcessShowsHistoryRightAway" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
+    if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.DownloadKillDeviceTest" ]; then
     # G8: phase a downloads to 25 % and kills its own process ("Process crashed" by design);
     # phase b, a new process, checks the download finished by itself, then the delete case.
@@ -147,7 +159,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   grep -E "INSTRUMENTATION_STATUS: (class|test|stack)=|INSTRUMENTATION_STATUS_CODE|INSTRUMENTATION_CODE|OK \(|FAILURES|Tests run" "inst-$C.txt" | cut -c1-400 | tail -150
   if [ $RC -eq 124 ]; then echo "TIMEOUT in $C (last test started above)"; echo "TESTS_FAILED" > failed.txt; adb shell am force-stop dev.asfakul.yumeiro.debug || true; fi
   # Only this class's lines; crash blocks (AndroidRuntime) and foreground-service decisions included.
-  tail -n +$((L0 + 1)) logcat.txt | grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuDownloadTest|YuSettingsWalk|YuBackupTest|YuBackdropTest|YuPlayerFx|YuNotifyFx|YuPermFlow|YuPermScript|YuNetState|YuDialogs|YuLowStorage|YuMessages|YuBgFx|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|YuStartup|MTDeviceTest|ANR in|FATAL|OutOfMemory|AndroidRuntime|MediaSessionService|MediaNotification|ForegroundService|startForeground|ActiveServices" | cut -c1-300 | tail -260 || true
+  tail -n +$((L0 + 1)) logcat.txt | grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuEmptyProfile|YuDownloadTest|YuSettingsWalk|YuBackupTest|YuBackdropTest|YuPlayerFx|YuNotifyFx|YuPermFlow|YuPermScript|YuNetState|YuDialogs|YuLowStorage|YuMessages|YuBgFx|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|YuStartup|MTDeviceTest|ANR in|FATAL|OutOfMemory|AndroidRuntime|MediaSessionService|MediaNotification|ForegroundService|startForeground|ActiveServices" | cut -c1-300 | tail -260 || true
   # Full stack of every failing test (the line filter above keeps only its first line).
   awk '/^INSTRUMENTATION_STATUS: stack=/{p=1} /^INSTRUMENTATION_STATUS: (test|class|current|id|numtests|stream)=|^INSTRUMENTATION_STATUS_CODE/{p=0} p' "inst-$C.txt" | grep -vE "^\s+at (org\.junit|java\.lang\.reflect|jdk\.internal|androidx\.test\.internal)" | head -80
   grep -qE "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2|Process crashed" "inst-$C.txt" && echo "TESTS_FAILED" > failed.txt
@@ -164,6 +176,6 @@ adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/feedpos stress/ ||
 adb shell dumpsys meminfo dev.asfakul.yumeiro.debug > stress/meminfo.txt || true
 adb shell dumpsys activity exit-info dev.asfakul.yumeiro.debug > stress/exit-info.txt || true
 adb shell ls /data/anr > stress/anr-list.txt 2>&1 || true
-grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuDownloadTest|YuBackupTest|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|MTDeviceTest|StrictMode|ANR in|FATAL|OutOfMemory|lowmemorykiller" logcat.txt > stress/logcat-key.txt || true
+grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuEmptyProfile|YuDownloadTest|YuBackupTest|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|MTDeviceTest|StrictMode|ANR in|FATAL|OutOfMemory|lowmemorykiller" logcat.txt > stress/logcat-key.txt || true
 cp inst-*.txt repeat-results.txt stress/ 2>/dev/null || true
 echo "::group::evidence"; tail -n 400 stress/logcat-key.txt; cat stress/exit-info.txt | head -80; cat stress/anr-list.txt; for f in $(find stress -type f -name '*report*.txt' | head -20); do echo "== $f"; head -c 6000 "$f"; done; echo "::endgroup::"
