@@ -60,7 +60,9 @@ class MusicQueueDeviceTest {
             inst.runOnMainSync { second = MusicPlayerManager(ctx) }
             waitFor(5_000) { second!!.playbackState.value.currentTrack != null }
             var st = second!!.playbackState.value
-            log("MUQ reopen track=${st.currentTrack?.id} index=${st.currentQueueIndex} queue=${st.queue.map { it.id }} playing=${PlaybackService.sharedPlayer?.isPlaying}")
+            var stillPlaying = false
+            inst.runOnMainSync { stillPlaying = PlaybackService.sharedPlayer?.isPlaying == true } // the player is main-thread only
+            log("MUQ reopen track=${st.currentTrack?.id} index=${st.currentQueueIndex} queue=${st.queue.map { it.id }} playing=$stillPlaying")
             assertEquals("LB/MU-4: the reopened screen lost the playing song", "yuq2", st.currentTrack?.id)
             assertEquals("MU-4: the reopened screen lost the queue", listOf("yuq1", "yuq2", "yuq3"), st.queue.map { it.id })
             inst.runOnMainSync { second!!.playNext(tracks[3]) }
