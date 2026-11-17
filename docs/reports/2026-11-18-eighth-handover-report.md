@@ -63,9 +63,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44142300486 | bench=startup 743b1c7 | TTID ratio 0.62 api36, 0.71 lowram |
 | 44145301927 | ST-17 StabilityStressDeviceTest ×10 both phones, a7b03a0 | 20/20 PASS, compose spins 0, FATAL 0, ANR 0; ~5–6 distinct main-thread stalls 702–1070 ms (each logged twice) (emulator) |
 | 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram (5f7f333) | 10/10 PASS, 0 ANR, EXT_T1 line every run: only MainActivity focused, no added window → not reproduced; the owner's condition (five failing drama feeds while Source status is open) was not set up, so this does not count toward the ≥ 20 (emulator) |
-
+| 44067269319 (re-read) | X11/X12 confirmation from the run's JUnit XML | SmartDnsResilienceTest 4/4, SmartDnsTest 13/13, DnsWireClientTest 4/4, DataCacheBoundsTest 4/4; 0 failures, 0 skips; INVENTORY rows already "verified (CI unit)" — confirmed (CI unit) |
 | 44180839496 | CI unit at 6ec4868 (DL-11 trip logging + paceTripsAreLoggedOncePerRestart) | running |
 | 44180844505 | DownloadThroughputDeviceTest a_realHostScreenOn + d_localUnitCollapseProfile ×3, both phones (6ec4868) | running |
+| 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | running |
 
 ## Spot-check (session 2)
 
