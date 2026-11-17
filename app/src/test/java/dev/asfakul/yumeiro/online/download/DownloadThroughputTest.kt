@@ -65,6 +65,7 @@ class DownloadThroughputTest {
         private val data = ByteArray(SIZE) { (it % 251).toByte() }
         @Volatile var profile = Profile("steady", burst = 0, bytesPerSec = 3L * 1024 * 1024)
         @Volatile var ranges = true
+        @Volatile var dipEpoch = System.nanoTime()
         val base get() = "http://127.0.0.1:${server.localPort}"
 
         /** A minimal HTTP/1.1 server (one request per connection; android.jar has no HttpServer). */
@@ -135,7 +136,12 @@ class DownloadThroughputTest {
                     val n = minOf(16 * 1024L, count - sent).toInt()
                     os.write(data, off + (start + sent).toInt(), n); sent += n; served.addAndGet(n.toLong())
                     if (p.cutAfter > 0 && sent >= p.cutAfter && sent < count) { os.flush(); runCatching { sock?.close() }; return } // G8: drop mid-body
-                    if (sent > p.burst && p.bytesPerSec > 0) {
+                    if (p.dipCycleMs > 0) {
+                        // DL-11: the whole link dips (every request at once), by the wall clock.
+                        val phase = ((System.nanoTime() - dipEpoch) / 1_000_000L) % p.dipCycleMs
+                        val rate = if (phase >= p.dipCycleMs - p.dipMs) p.dipRate else p.bytesPerSec
+                        TimeUnit.NANOSECONDS.sleep(n * 1_000_000_000L / rate)
+                    } else if (sent > p.burst && p.bytesPerSec > 0) {
                         val due = (sent - p.burst) * 1_000_000_000L / p.bytesPerSec
                         val ahead = due - (System.nanoTime() - t0)
                         if (ahead > 0) TimeUnit.NANOSECONDS.sleep(ahead)
@@ -148,7 +154,8 @@ class DownloadThroughputTest {
         }
     }
 
-    data class Profile(val name: String, val burst: Long, val bytesPerSec: Long, val cutAfter: Long = 0)
+    data class Profile(val name: String, val burst: Long, val bytesPerSec: Long, val cutAfter: Long = 0,
+                       val dipCycleMs: Long = 0, val dipMs: Long = 0, val dipRate: Long = 0)
 
     private val client = OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build()
 
@@ -247,5 +254,50 @@ class DownloadThroughputTest {
     @Test fun burstThenCapPerRequest() {
         profile = Profile("burst3MB-then-1.5MBps", burst = 3L * 1024 * 1024, bytesPerSec = 1536L * 1024)
         allEngines()
+    }
+
+    /** A counter of the last segmented download (ForceGrab.lastStats), -1 when absent. */
+    private fun stat(key: String): Int = Regex("\\b$key=(\\d+)").find(ForceGrab.lastStats)?.groupValues?.get(1)?.toInt() ?: -1
+
+    /**
+     * DL-11 part 2 (ADR-016): the app's own pauses (a slow disk write, a GC, a busy low-RAM CPU) are
+     * not a host that slowed down. RequestPace timed its window by the wall clock, so a 200 ms pause
+     * of ours inside a 256 KiB window read as a request under a third of its baseline; the request was
+     * closed and the bytes already on the way were thrown away (real host: 1–29 restarts per 135 MB,
+     * 1.04–1.44x received, 44036060683 / 44037559115). The host here is steady and never caps.
+     */
+    @Test fun ownPausesAreNotAHostSlowdown() {
+        profile = Profile("steady-12MBps", burst = 0, bytesPerSec = 12L * 1024 * 1024)
+        ranges = true
+        for (c in listOf(2, 4)) {
+            val every = 3L * 512 * 1024
+            var next = every
+            val lock = Any()
+            run("segmented$c-own-pauses") { f, d ->
+                Segmented(client, c).download("$base/file", emptyMap(), f) { done, _ ->
+                    d.on(done)
+                    val pause = synchronized(lock) { if (done >= next) { next += every; true } else false }
+                    if (pause) Thread.sleep(200)
+                }
+            }
+            println("DL11 own-pauses connections=$c ${ForceGrab.lastStats}")
+            assertEquals("DL-11: our own pauses restarted requests (connections=$c): ${ForceGrab.lastStats}", 0, stat("paceRestarts"))
+        }
+        broken.clear() // the pauses make the tenths uneven on purpose; the point is the restarts
+    }
+
+    /**
+     * DL-11 part 2 (ADR-016): when the whole link slows (Wi-Fi, a shared runner), a new request is as
+     * slow as the one it replaced, so every restart only throws away bytes. After restarts that did not
+     * help (new request's first MiB not 1.5x the slow window), pace restarts stop for that download.
+     */
+    @Test fun linkWideDipsStopUselessRestarts() {
+        profile = Profile("link-dips", burst = 0, bytesPerSec = 4L * 1024 * 1024, dipCycleMs = 3500, dipMs = 2500, dipRate = 512L * 1024)
+        ranges = true
+        dipEpoch = System.nanoTime()
+        run("segmented2-link-dips") { f, d -> Segmented(client, 2).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
+        println("DL11 link-dips served=$lastServed ${ForceGrab.lastStats}")
+        broken.clear()
+        assertTrue("DL-11: restarts kept going on a link that dips as a whole: ${ForceGrab.lastStats}", stat("paceRestarts") in 0..3)
     }
 }

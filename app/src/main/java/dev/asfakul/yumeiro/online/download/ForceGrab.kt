@@ -155,7 +155,11 @@ internal const val MAX_RESTARTS = 32
  * The baseline is the request's own speed over its first [baselineBytes] (from the first byte, so
  * TCP slow start only lowers it); after that each [window] is compared with it. A window under
  * 1/[factor] of the baseline says: ask for the rest in a new request. A steady host never trips it.
- * Pure; `Bug3PieceTest`.
+ * DL-11 part 2 (ADR-016): a window is timed by the time spent waiting inside `read()` when the caller
+ * gives it ([slowed] `waitedNs`), not by the wall clock. Our own pauses between reads (disk write, GC,
+ * a busy low-RAM CPU) are not the host slowing down; closing the request for them threw away the
+ * bytes already on the way ([ownPauses] counts the windows that the wall clock alone would have tripped).
+ * Pure; `Bug3PieceTest`, `Dl11PaceTest`.
  */
 internal class RequestPace(
     private val baselineBytes: Long = 1L * 1024 * 1024,
@@ -167,20 +171,73 @@ internal class RequestPace(
     private var baseline = -1.0 // bytes per ns
     private var winBytes = 0L
     private var winStart = 0L
+    private var winWait = 0L
 
-    /** [n] bytes arrived at [nowNs]; true when the last window ran under the baseline / factor. */
-    fun slowed(n: Long, nowNs: Long): Boolean {
+    /** The request's first-[baselineBytes] speed in bytes per ns (wall clock); -1 until known. */
+    val baselineRate: Double get() = baseline
+
+    /** The speed of the last finished window in bytes per ns (the one that tripped, after [slowed] = true). */
+    var lastWindowRate = -1.0
+        private set
+
+    /** Windows the wall clock would have tripped but the time spent waiting on the host did not (DL-11). */
+    var ownPauses = 0
+        private set
+
+    /**
+     * [n] bytes arrived at [nowNs]; [waitedNs] is the time the read that brought them waited for the
+     * host (-1: unknown, use the wall clock as before). True when the last window ran under the
+     * baseline / factor.
+     */
+    fun slowed(n: Long, nowNs: Long, waitedNs: Long = -1L): Boolean {
         if (t0 < 0) { t0 = nowNs; winStart = nowNs }
         seen += n
         if (baseline < 0) {
-            if (seen >= baselineBytes) { baseline = seen / maxOf(nowNs - t0, 1_000_000L).toDouble(); winBytes = 0; winStart = nowNs }
+            if (seen >= baselineBytes) { baseline = seen / maxOf(nowNs - t0, 1_000_000L).toDouble(); winBytes = 0; winWait = 0; winStart = nowNs }
             return false
         }
         winBytes += n
+        if (waitedNs >= 0) winWait += waitedNs
         if (winBytes < window) return false
-        val rate = winBytes / maxOf(nowNs - winStart, 1_000_000L).toDouble()
-        winBytes = 0; winStart = nowNs
-        return rate * factor < baseline
+        val wall = maxOf(nowNs - winStart, 1_000_000L)
+        val span = if (waitedNs >= 0) minOf(maxOf(winWait, 1_000_000L), wall) else wall
+        val rate = winBytes / span.toDouble()
+        val wallSlow = winBytes / wall.toDouble() * factor < baseline
+        winBytes = 0; winWait = 0; winStart = nowNs
+        lastWindowRate = rate
+        val slow = rate * factor < baseline
+        if (wallSlow && !slow) ownPauses++
+        return slow
+    }
+}
+
+/** DL-11 part 2: a fresh request only counts as a help when its first MiB is this much faster than the slow window. */
+internal const val RESTART_GAIN = 1.5
+
+/** DL-11 part 2: pace restarts stop for a download after this many restarts that did not help (and more than helped). */
+internal const val MAX_USELESS_RESTARTS = 2
+
+/**
+ * DL-11 part 2 (ADR-016 option D): one per download. A pace restart helps on a host that caps each
+ * request (the new request starts fast again, BUG-3); on a link that slows as a whole the new request
+ * is as slow as the one it replaced, and every restart only throws away the bytes in flight (~2 MB
+ * each on the real host). Once restarts have not helped [MAX_USELESS_RESTARTS] times, and more often
+ * than they helped, pace restarts stop for the rest of the download. Thread-safe; pure.
+ */
+internal class PaceGate {
+    private val useful = java.util.concurrent.atomic.AtomicInteger()
+    private val useless = java.util.concurrent.atomic.AtomicInteger()
+    @Volatile var open = true
+        private set
+    val helped get() = useful.get()
+    val wasted get() = useless.get()
+
+    /** A restarted request's first-MiB speed [newBaseline] against the window [slowRate] that caused it. */
+    fun judge(newBaseline: Double, slowRate: Double): Boolean {
+        val ok = newBaseline >= slowRate * RESTART_GAIN
+        if (ok) useful.incrementAndGet()
+        else { val u = useless.incrementAndGet(); if (u >= MAX_USELESS_RESTARTS && u > useful.get()) open = false }
+        return ok
     }
 }
 
@@ -244,7 +301,8 @@ class Segmented(
         val splits = java.util.concurrent.atomic.AtomicInteger()
         val restartsAll = java.util.concurrent.atomic.AtomicInteger()
         val retries = java.util.concurrent.atomic.AtomicInteger()
-        requests.set(0); dropped.set(0)
+        val gate = PaceGate()
+        requests.set(0); dropped.set(0); ownPauses.set(0)
         coroutineScope {
             (0 until connections).map {
                 async {
@@ -256,12 +314,14 @@ class Segmented(
                         } ?: break
                         var tries = 0
                         var restarts = 0
+                        var slowRate = -1.0 // the window that made the last restart (DL-11: judged by the next request)
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             val at = piece.position()
+                            val after = slowRate; slowRate = -1.0
                             try {
-                                val slowed = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS) { n -> progress(have.addAndGet(n), total) }
-                                if (slowed) { restarts++; restartsAll.incrementAndGet(); continue } // same piece, fresh request
+                                val slow = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS, after = after, gate = gate) { n -> progress(have.addAndGet(n), total) }
+                                if (slow > 0) { restarts++; restartsAll.incrementAndGet(); slowRate = slow; continue } // same piece, fresh request
                                 break
                             } catch (e: Refused) { throw e } catch (e: IOException) {
                                 // The bytes already written stay; the retry starts where the piece stopped.
@@ -285,12 +345,14 @@ class Segmented(
         }
         state.delete()
         ForceGrab.lastStats = "total=$total connections=$connections chunks=${ranges.size} resumedChunks=$resumedChunks " +
-            "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}"
+            "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}" +
+            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()}"
         return total
     }
 
     private val requests = java.util.concurrent.atomic.AtomicInteger()
     private val dropped = AtomicLong()
+    private val ownPauses = java.util.concurrent.atomic.AtomicInteger()
 
     /** [total]: size when the host serves byte ranges. [whole]: the open 200 answer of a host without them. */
     private class Probe(val total: Long?, val whole: okhttp3.Response?)
@@ -327,15 +389,18 @@ class Segmented(
     }
 
     /**
-     * Reads [p] from its position to its (possibly shrinking) end. Returns false when the piece is
-     * full; true when the request slowed to under a third of its own first-MiB speed with at least
-     * [RESTART_MIN_LEFT] to go (with [pace]), so the caller asks for the rest in a new request.
+     * Reads [p] from its position to its (possibly shrinking) end. Returns -1 when the piece is full;
+     * the slow window's speed (bytes/ns, > 0) when the request slowed to under a third of its own
+     * first-MiB speed with at least [RESTART_MIN_LEFT] to go (with [pace] and an open [gate]), so the
+     * caller asks for the rest in a new request. [after] > 0: this request replaces one that slowed to
+     * that speed; its first MiB tells [gate] whether the restart helped (DL-11 part 2).
      */
-    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, pace: Boolean, read: (Long) -> Unit): Boolean {
+    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, pace: Boolean, after: Double, gate: PaceGate, read: (Long) -> Unit): Double {
         val from = p.position()
         val to = p.end()
-        if (from > to) return false
+        if (from > to) return -1.0
         val meter = RequestPace()
+        var judged = after <= 0
         requests.incrementAndGet()
         val b = Request.Builder().url(url).header("Range", "bytes=$from-$to")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
@@ -345,20 +410,27 @@ class Segmented(
             RandomAccessFile(out, "rw").use { raf ->
                 resp.body.byteStream().use { input ->
                     val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        val want = p.end() - p.position() + 1
-                        if (want <= 0) return false // full, or another connection took the rest
-                        val n = input.read(buf, 0, minOf(buf.size.toLong(), want).toInt()); if (n < 0) break
-                        val k = p.accept(n) { at, len -> raf.seek(at); raf.write(buf, 0, len) }
-                        if (k < n) dropped.addAndGet((n - k).toLong())
-                        if (k > 0) read(k.toLong())
-                        if (pace && meter.slowed(k.toLong(), System.nanoTime()) && p.left() >= RESTART_MIN_LEFT) return true
-                    }
+                    try {
+                        while (true) {
+                            val want = p.end() - p.position() + 1
+                            if (want <= 0) return -1.0 // full, or another connection took the rest
+                            val r0 = System.nanoTime()
+                            val n = input.read(buf, 0, minOf(buf.size.toLong(), want).toInt()); if (n < 0) break
+                            val r1 = System.nanoTime()
+                            val k = p.accept(n) { at, len -> raf.seek(at); raf.write(buf, 0, len) }
+                            if (k < n) dropped.addAndGet((n - k).toLong())
+                            if (k > 0) read(k.toLong())
+                            if (!pace) continue
+                            val slowed = meter.slowed(k.toLong(), r1, r1 - r0)
+                            if (!judged && meter.baselineRate > 0) { judged = true; gate.judge(meter.baselineRate, after) }
+                            if (slowed && gate.open && p.left() >= RESTART_MIN_LEFT) return meter.lastWindowRate
+                        }
+                    } finally { ownPauses.addAndGet(meter.ownPauses) }
                 }
             }
             if (p.position() <= p.end()) throw IOException("Connection closed early")
         }
-        return false
+        return -1.0
     }
 
     /** One connection, resumable with Range when the host allows it. */
