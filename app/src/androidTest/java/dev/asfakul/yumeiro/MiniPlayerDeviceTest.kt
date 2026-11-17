@@ -69,7 +69,9 @@ class MiniPlayerDeviceTest {
     }
 
     private fun swipeBar(fromFrac: Float, toFrac: Float) {
-        rule.onNodeWithTag("mini_player_bar", true).performTouchInput {
+        // Run 44062811776: fractions of the whole bar put 60 % on the Previous button (the buttons take the
+        // right ~186 dp); the swipe now runs inside the draggable artwork + title row only.
+        rule.onNodeWithTag("mini_player_swipe_area", true).performTouchInput {
             swipe(Offset(width * fromFrac, centerY), Offset(width * toFrac, centerY), durationMillis = 300)
         }
         rule.waitForIdle()
@@ -102,9 +104,9 @@ class MiniPlayerDeviceTest {
         // Run 44059862262: a swipe that started at 3 % of the bar began in the bar's start padding (outside the
         // draggable row) and in the system back-gesture edge (a back reached the app), so nothing moved.
         // Both swipes now start and end inside the row, ~40 % of the width (> the 64 dp threshold).
-        swipeBar(0.60f, 0.20f)
+        swipeBar(0.90f, 0.10f)
         waitTrack("mini_t3", "d_swipe_left")
-        swipeBar(0.20f, 0.60f)
+        swipeBar(0.10f, 0.90f)
         waitTrack("mini_t2", "e_swipe_right")
         rule.onNodeWithTag("mini_player_previous_button", true).performClick()
         waitTrack("mini_t1", "f_previous_button")

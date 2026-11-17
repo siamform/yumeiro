@@ -156,6 +156,7 @@ fun MiniPlayerBar(
                     Row(
                         Modifier
                             .weight(1f)
+                            .testTag("mini_player_swipe_area")
                             .offset { androidx.compose.ui.unit.IntOffset(swipe.value.roundToInt(), 0) }
                             .graphicsLayer { alpha = 1f - (abs(swipe.value) / (threshold * 3f)).coerceIn(0f, 0.6f) }
                             .pointerInput(track.id) {
