@@ -77,16 +77,19 @@
   → removed 85c50c8; GROUP-3 P16 rows were stale and are corrected. Final-sweep coverage check (script over
   INVENTORY): 32 rows said "open"; M3/M4/M5/M7, T3, X1–X10, X13, X14 reconciled with the ledger (no status
   invented). **Real gaps:** M2, M9, N1–N9 (no audit, no dedicated test); M1, M6, M8 code read only → GROUP-13.
-- **Runs in progress:** 44056138637 (head e71a041, api33-lowram: DownloadsScreen, UniversalAddEcosystems,
-  LocalPlayer#j, Yumix#extensionBarHidesOnScrollAndComesBack) and 44057033821 (`scratch/a5-fail-before`,
-  BrowserCheckCooldown on old code; expect FAIL ≈60 s).
+- **Done since (seventh handover, 6):** 44056138637: LocalPlayer#j and Y3 PASS (emulator api33-lowram); DownloadsScreen
+  and UniversalAdd hit two test faults (fixed 3e6b7de). ER-20 fail-before 44057033821 FAILED as expected (60.6 s) →
+  ER-20 verified (emulator, api33-lowram). **G13 started** (`docs/groups/GROUP-13-NEW-GROUPS.md`): N6 app lock
+  N6-1 (no screen lock → locked for good) and N6-3 (Android 9 with no fingerprint → locked for good) fixed 734e9f6
+  with `AppLockDeviceTest`; fail-before branch `scratch/n6-fail-before`; N6-2 suspected (API 29, no CI image).
+- **Runs in progress:** 44058588776 (head 3e6b7de, api33-lowram: DownloadsScreen, UniversalAddEcosystems,
+  AdultSearchFilter, MiniPlayer, AppLock) and 44058593326 (`scratch/st22-fail-before`, AdultSearchFilter; expect FAIL
+  with main-thread disk calls from DataCache).
 - **Next three actions:**
-  1. Read both runs (tags DLSCREEN_, YuAddTest ADD_, LOCAL_J_RESULT, Y3_RESULT, CHECK_); close DL-12 / ER-20 if they
-     behave as expected; fix any test fault on the smallest run.
-  2. api33-lowram: AdultSearchFilter + MiniPlayer on head, and AdultSearchFilter on `scratch/st22-fail-before`;
-     then api36 one run of all new tests; H8 `-f bench=restore`; ci.yml once.
-  3. GROUP-13 audit of the gap rows (N6 app lock, N3 self-update, N4 home servers, N2 web sites first: highest
-     user risk), then the full suite on both phones at the milestone.
+  1. Read both runs (tags DLSCREEN_, YuAddTest ADD_, YuAdultTest E12_, YuMiniTest MINI_, YuLockTest LOCK_).
+  2. N6 fail-before on api33-lowram (`scratch/n6-fail-before`, AppLock) and on api28 (`-f minsdk=true`, head and
+     fail-before); then api36 one run of all new tests; H8 `-f bench=restore`; ci.yml once.
+  3. Continue GROUP-13: N3 self-update, N4 home servers, N2 web sites, then the rest; then the full suite on both phones.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
