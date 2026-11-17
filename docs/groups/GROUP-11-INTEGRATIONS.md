@@ -22,6 +22,7 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | IG-4 | I7 | Listens waiting at Last.fm sign-in were uploaded on the main thread (release: thrown, swallowed, not sent; debug: freeze) | `onSuccess { …; Scrobbler.flush(context) }` runs on the screen scope (main); `flush` posts with blocking OkHttp | `flush` wraps itself in `withContext(Dispatchers.IO)` | `ScrobbleFlushDeviceTest` (emulator) | fix in; runs pending |
 | IG-5 | I4 | Episode thumbnails missing for the rest of the session after backing out mid-lookup or one offline lookup | Title marked tried before the lookup; lookup ran in the screen's LaunchedEffect, result dropped on cancellation; failures kept the mark | Own scope, result always stored, failure clears the mark | `EpisodeStillsDeviceTest` (emulator) | fix in; runs pending |
 | IG-6 | I8, I9 | A show whose AniList lookup failed once (offline, 429, 5xx) never got airing alerts again | `aniListIdForTitle` returns null for failure and for not-found; CloudAlerts cached null as 0 = not anime, no expiry | `aniListIdOrThrow`; failures not cached; old zeros re-checked once | `CloudAlertsLookupDeviceTest` (emulator) | fix in; runs pending |
+| IG-7 | I11 | Subtitle search showed an error and lost the exact hash match when the title search hit HTTP 429 | title-search exception not caught after the hash search | failure only surfaces when nothing was found; 4 MB reply cap | `OnlineSubtitlesFallbackDeviceTest` (emulator) | fix in; runs pending |
 
 ## Code read
 
@@ -42,6 +43,15 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | online/EpisodeStills.kt | 103 | yes | IG-5 |
 | notify/FcmPush.kt | 357 | yes | FID registration, topic diff, weekly check-in with back-off, 401/403 clears device creds, data-only messages, links limited to https + known actions, version/expiry gate. No finding |
 | notify/CloudAlerts.kt | 152 | yes | IG-6. Stale-token lead dismissed (server re-issues on endpoint proof) |
+| notify/AppFeed.kt | 102 | yes | Fetched only from the official feed URL through TrustedSources, 512 KB cap, links limited to https or known actions, first run quiet except items from the last 3 days, mutex around sync. No finding |
+| update/UpdateConfig.kt | 38 | yes | The token is only for a private repository; release/preview builds refuse to build with MT_UPDATER_TOKEN set (build.gradle.kts:55, ADR-013). No finding |
+| update/GitHubReleaseClient.kt | 275 | yes | APK must be on the official repository, SHA-256 required (digest and SHA256SUMS must agree), redirects pinned to GitHub hosts, 2 MB/64 KB caps, falls back to the public API. No finding |
+| youtube/YtAccount.kt | 222 | yes | Cookie sealed with Keystore, sent only to youtube.com hosts (never googlevideo/ytimg), CR/LF stripped, retry with the account scoped by a thread-local to one retry (NewPipe extraction is synchronous), verify() off the main thread (YouTubeAccountScreen.kt:300). No finding |
+| youtube/YtCookiePaste.kt | 128 | yes | Pure parser, 200 K char cap, youtube.com cookies only, needs SAPISID+SID. No finding |
+| youtube/YtAuthHash.kt | 21 | yes | SHA-1 SAPISIDHASH is YouTube's fixed format. No finding |
+| subtitles/OnlineSubtitles.kt | 204 | yes | IG-7 (raised from an observation: the hash results were lost when the title search failed). Search reply now capped at 4 MB. Legacy rest.opensubtitles.org checked live 2026-11-17: HTTP 200, 108 KB for "inception" |
+| subtitles/SubtitleSitesProvider.kt | 63 | yes | Search only with a saved key; download through SubtitleHub (already read). No finding |
+| cast/CastSubtitleServer.kt | 136 | yes | Private IPv4 only, 128-bit random path, GET/HEAD/OPTIONS for known tracks only, 8 tracks × 2 MB, two workers, 10 s timeout, 8 KB head; stopped when the session ends. No finding |
 | online/anime/AnimeIds.kt | 70 | yes | Both ids present → no network; lookups cached per title |
 
 ## Verification

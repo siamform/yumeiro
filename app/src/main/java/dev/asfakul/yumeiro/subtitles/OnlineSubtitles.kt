@@ -68,9 +68,12 @@ data class MovieHash(val hash: String, val size: Long)
  * OpenSubtitles.org REST search (no account or API key needed).
  * Matching by file hash is tried first for local files, then by title.
  */
-class OpenSubtitlesProvider : SubtitleProvider {
+class OpenSubtitlesProvider internal constructor(
+    /** Search address; only tests point it elsewhere. */
+    private val base: String,
+) : SubtitleProvider {
+    constructor() : this("https://rest.opensubtitles.org/search")
     override val name = "OpenSubtitles"
-    private val base = "https://rest.opensubtitles.org/search"
     private val ua = "TemporaryUserAgent"
 
     override suspend fun search(query: String, languageCode3: String, hash: MovieHash?): List<OnlineSubtitle> =
@@ -83,7 +86,11 @@ class OpenSubtitlesProvider : SubtitleProvider {
             }
             val q = cleanQuery(query)
             if (q.isNotBlank()) {
-                results += request("$base/query-${Uri.encode(q.lowercase())}/sublanguageid-$languageCode3", false)
+                // IG-7: a failed title search (HTTP 429, timeout) must not throw away files the
+                // hash search already found; it only fails the search when nothing was found.
+                results += runCatching {
+                    request("$base/query-${Uri.encode(q.lowercase())}/sublanguageid-$languageCode3", false)
+                }.getOrElse { e -> if (results.isEmpty()) throw e else emptyList() }
             }
             results.distinctBy { it.id }
                 .sortedWith(compareByDescending<OnlineSubtitle> { it.hashMatch }.thenByDescending { it.downloads })
@@ -99,7 +106,7 @@ class OpenSubtitlesProvider : SubtitleProvider {
         }
         try {
             if (conn.responseCode !in 200..299) error("Subtitle search failed (HTTP ${conn.responseCode})")
-            val arr = JSONArray(conn.inputStream.use { it.readBytes().decodeToString() })
+            val arr = JSONArray(conn.inputStream.use { it.readLimited(4 * 1024 * 1024).decodeToString() })
             return (0 until arr.length()).mapNotNull { i ->
                 val o = arr.getJSONObject(i)
                 val format = o.optString("SubFormat").lowercase()
