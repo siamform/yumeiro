@@ -17,7 +17,7 @@
   - BUG-7: 7a, 7b, 7c verified on device (emulator); 7d not reproduced on emulator → OMT-16; gallery OMT-17.
 - **Done since:** campaign 43988958313 read (20/20, FATAL 0, app ANR 0, ST-17 0 spins; stalls same stacks as
   43705867413, no proven change; ST-7 stays open). G12-DF status reconciled to verified (43857809658).
-  New finding **X2-2**: the macrobenchmark journeys never measured the app. First the notification permission
+  New finding **X2-4** (first recorded as X2-2, an ID already in use): the macrobenchmark journeys never measured the app. First the notification permission
   prompt took the swipes (trace of 43993294720), then the welcome guide stayed up because its button reads
   "Skip for now" and the journeys matched "Skip" (screenshots of 43999288738). The shipped baseline profile
   (fef01c6) therefore covers startup and the welcome screen only. Fixes pushed (grantPermissions, passWelcome).
@@ -33,7 +33,7 @@
   LB-2 verified on device: 44008161115 PASS both (0 violations, was 40).
 - **Next three actions:** (1) read 44009339786 (must FAIL), then run LibraryTabsMainThreadDeviceTest at
   r15-stability head (must PASS) → LB-7 tabs part; (2) when 44005414732 ends, commit the new
-  `app/src/main/baseline-prof.txt` (X2-2), run CI (unit suite also covers e059aed), then bench=startup and
+  `app/src/main/baseline-prof.txt` (X2-4), run CI (unit suite also covers e059aed), then bench=startup and
   bench=jank (X2-1, ST-7); (3) G6–G11, then re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
