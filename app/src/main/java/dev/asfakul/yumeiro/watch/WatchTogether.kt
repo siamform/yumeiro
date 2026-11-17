@@ -122,6 +122,8 @@ object WatchTogether {
         registration = reg
         runCatching { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, reg) }.onFailure { Log.w(TAG, "nsd", it) }
         publishFromPlayer()
+        // N1-2: a video already playing (floating window) was bound before the room existed; follow it now.
+        attachIfHosting()
     }
 
     private fun publishFromPlayer() {
@@ -222,7 +224,12 @@ object WatchTogether {
                 }.onFailure { e ->
                     failures++
                     _status.value = _status.value.copy(connected = false, message = e.message ?: "Can't reach the room")
-                    if (e.message == "Wrong room code") { leave(app); return@launch }
+                    if (e.message == "Wrong room code") {
+                        // N1-1: leave() resets the status, so the guest card (and its message) vanished silently.
+                        leave(app)
+                        dev.asfakul.yumeiro.ui.components.AppMessages.error(app, "Wrong room code. Check the 4-digit code on the host's screen")
+                        return@launch
+                    }
                     if (failures > 30) { _status.value = _status.value.copy(message = "The room closed"); return@launch }
                 }
                 delay(1_000)
@@ -262,9 +269,18 @@ object WatchTogether {
     fun bind(p: Player?) {
         // R15: the player is reused for the next video (PlaybackSession), so the previous listener
         // must go, or every video added one more publisher to the same player.
-        bound?.let { (old, l) -> old.removeListener(l) }; bound = null
+        detach()
         player = p
-        if (p != null && _status.value.role == Role.HOST) {
+        attachIfHosting()
+    }
+
+    private fun detach() { bound?.let { (old, l) -> old.removeListener(l) }; bound = null }
+
+    /** Main thread. Listens to the bound player while this phone hosts (once per player). */
+    private fun attachIfHosting() {
+        val p = player ?: return
+        if (_status.value.role != Role.HOST || bound?.first === p) return
+        run {
             p.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) { if (player === p) publishFromPlayer() }
                 override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) { if (player === p) publishFromPlayer() }
@@ -289,6 +305,7 @@ object WatchTogether {
 
     fun leave(context: Context) {
         guestJob?.cancel(); guestJob = null
+        detach()
         server?.let { runCatching { it.stop() } }; server = null
         registration?.let { r -> runCatching { context.applicationContext.getSystemService(NsdManager::class.java).unregisterService(r) } }
         registration = null
