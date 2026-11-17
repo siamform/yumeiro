@@ -87,7 +87,24 @@ object YtMusicApi {
             })
         }
 
-    fun invalidate() = cache.clear()
+    /**
+     * Forgets every cached page and the visitor id. G13 M2-1: called whenever the YouTube account
+     * changes (sign in, sign out, mode), so a signed-out phone never keeps showing the previous
+     * account's own Home for the rest of the cache time.
+     */
+    fun invalidate() { cache.clear(); visitor = null }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun cachedCount(): Int = cache.size
+
+    @androidx.annotation.VisibleForTesting
+    internal fun putForTests(key: String, page: YmPage, visitorId: String? = null) {
+        cache[key] = Cached(System.currentTimeMillis(), page)
+        if (visitorId != null) visitor = visitorId
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun visitorForTests(): String? = visitor
 
     // ---- transport ---------------------------------------------------------------------------
 

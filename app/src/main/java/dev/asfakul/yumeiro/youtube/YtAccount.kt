@@ -68,6 +68,7 @@ object YtAccount {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong("since", now).apply()
         _state.value = _state.value.copy(signedIn = true, since = now)
         YouTube.invalidateAll()
+        dev.asfakul.yumeiro.youtube.music.YtMusicApi.invalidate()
         return true
     }
 
@@ -97,6 +98,7 @@ object YtAccount {
         init(context)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("mode", mode.name).apply()
         _state.value = _state.value.copy(mode = mode)
+        dev.asfakul.yumeiro.youtube.music.YtMusicApi.invalidate() // G13 M2-1: Home follows the new mode
     }
 
     /** Forgets the account: sealed cookie, the Google/YouTube cookies in the WebView store, cached streams. */
@@ -108,6 +110,7 @@ object YtAccount {
         _state.value = _state.value.copy(signedIn = false, since = 0L)
         runCatching { expireWebCookies(CookieManager.getInstance()) }
         YouTube.invalidateAll()
+        dev.asfakul.yumeiro.youtube.music.YtMusicApi.invalidate()
     }
 
     /** Whether the current thread's YouTube requests should carry the account. */
