@@ -1,10 +1,12 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 seventh handover, 18)
+## Resume here (updated 2026-11-17, eighth cycle, 1)
 
-- **Current group:** final sweep (after G8, G11, G9–G11 leftovers, the G1–4 re-audit). Milestone suite 24/24 on both phones (emulator): api36 44079680572+44091851873, api33-lowram 44079680572+44089151495.
-- **Exact step:** H8 recorded (44094439021: PASS on both phones, emulator). No run in progress. Report: docs/reports/2026-11-17-seventh-handover-report.md.
-- **Next three actions:** (1) optional: add a scroll-position assertion to ProcessDeathRestoreTest (H8 gap); (2) X11/X12 done (CI unit 44067269319); (3) wait for the owner: OMT-1…19, BUG-3 on a phone, approval of the gated Part 8 features.
+- **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
+- **Current group:** 4.1 row 1, DL-11 part 2 (G8, ADR-016). **Exact step:** reading ForceGrab.Segmented / RequestPace, choosing option C or D.
+- **Run in progress:** none. Head at start 2cbb2ae.
+- **Next three actions:** (1) DL-11 p2 note + ADR-016 final + fix + unit test (fail-before) → CI; (2) emulator real-host run, both phones, bytes received vs budget; (3) X2-1 profile extension.
+- Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
 
 ### Previous resume note
 
