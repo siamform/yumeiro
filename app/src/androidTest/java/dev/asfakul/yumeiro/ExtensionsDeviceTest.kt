@@ -242,6 +242,60 @@ class ExtensionsDeviceTest {
         } finally { inst.runOnMainSync { NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.HEALTH, false) } }
     }
 
+    /**
+     * EXT-T1 reproduction (eighth cycle): the original failure (43744809503) had a second window over
+     * Source status while five drama feeds timed out. Here five ONShort studio shelves hang 10 s and
+     * then time out (the other five use the real site), studio health and the shelf cache are
+     * cleared, and the probes run again while Source status is open. Pass: when the cleanup Back is
+     * sent the focused window is MainActivity and no other window of ours was added.
+     */
+    @Test fun e13_sourceStatusWhileFiveDramaFeedsFail() {
+        val field = dev.asfakul.yumeiro.network.NetworkClient::class.java.getDeclaredField("client").apply { isAccessible = true }
+        val original = dev.asfakul.yumeiro.network.NetworkClient.get(ctx)
+        val failing = setOf("dramabox", "reelshort", "netshort", "dramawave", "goodshort")
+        val seeded = java.util.concurrent.atomic.AtomicInteger()
+        field.set(dev.asfakul.yumeiro.network.NetworkClient, original.newBuilder().addInterceptor { chain ->
+            val u = chain.request().url
+            val slug = u.pathSegments.getOrNull(1)
+            if (u.host.endsWith("onshort.net") && u.pathSegments.firstOrNull() == "platform" && slug != null && slug in failing) {
+                seeded.incrementAndGet(); log("EXT_T1 seeded timeout $u")
+                Thread.sleep(10_000); throw java.net.SocketTimeoutException("EXT-T1 seeded timeout")
+            }
+            chain.proceed(chain.request())
+        }.build())
+        inst.runOnMainSync { NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.HEALTH, true) }
+        try {
+            waitTag("nav_shortcut_health", 15_000); tap("nav_shortcut_health")
+            waitTag("source_health_run")
+            // Same state as a cold start: no verdicts, no cached shelves, then the start-up probes.
+            val drama = dev.asfakul.yumeiro.sources.drama.YumeiroDrama
+            fun internal(name: String) = drama.javaClass.methods.first { it.name == name || it.name.startsWith("$name$") }.invoke(drama)
+            val health = internal("getHealth") as dev.asfakul.yumeiro.sources.drama.DramaHealth
+            @Suppress("UNCHECKED_CAST") val catalogs = internal("getCatalogs") as List<dev.asfakul.yumeiro.sources.drama.DramaCatalog>
+            health.saved = emptyMap()
+            (dev.asfakul.yumeiro.sources.drama.DramaHealth::class.java.getDeclaredField("states").apply { isAccessible = true }.get(health) as MutableMap<*, *>).clear()
+            catalogs.forEach { c ->
+                runCatching { (c.javaClass.getDeclaredField("shelfCache").apply { isAccessible = true }.get(c) as MutableMap<*, *>).clear() }
+                health.prewarm(c)
+            }
+            tap("source_health_run")
+            waitFor("the check finished", 90_000) { rule.onAllNodesWithText(" working", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            waitFor("five feeds failed", 60_000) { seeded.get() >= 5 }
+            Thread.sleep(3_000) // let the failures land (the original window came after the timeouts)
+            val focused = FirstRun.focusedWindow()
+            val windows = WindowSpy.added.map { "${it.root} type=${it.type} texts=${it.texts.take(3)} foreign=${it.foreign.take(2)}" }
+            log("EXT_T1 seeded=${seeded.get()} before Back: focused=$focused added=$windows")
+            FirstRun.shot("ext_t1_seeded_before_back")
+            back(); waitGone("source_health_run")
+            assertTrue("focused window is MainActivity: $focused", "MainActivity" in focused)
+            assertTrue("no other window over Source status: $windows", windows.isEmpty())
+            log("E13_RESULT PASS seeded=${seeded.get()}")
+        } finally {
+            field.set(dev.asfakul.yumeiro.network.NetworkClient, original)
+            inst.runOnMainSync { NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.HEALTH, false) }
+        }
+    }
+
     /** E12: a website-address override is normalised, applied at once, kept, and cleared back to the shipped address. */
     @Test fun e12_websiteAddressOverride() {
         val api = checkNotNull(ExtensionManager.providers().firstOrNull()) { "no provider loaded" }
