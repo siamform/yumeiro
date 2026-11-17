@@ -56,45 +56,69 @@ object AnimeSync {
         }
     }
 
-    /** Called with player progress; updates trackers once per episode. */
+    private val attempts = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private const val MAX_ATTEMPTS = 3
+    private val ANIME_TRACKERS = listOf("anilist", "mal", "kitsu")
+
+    /** A tracker that threw gets its key back (tried again on a later progress tick), at most [MAX_ATTEMPTS] times. */
+    private fun failed(key: String, what: String, e: Throwable) {
+        Log.w(TAG, what, e)
+        val n = attempts.merge(key, 1) { a, b -> a + b } ?: 1
+        if (n < MAX_ATTEMPTS) synced.remove(key)
+    }
+
+    /**
+     * Called with player progress; updates each signed-in tracker once per episode.
+     *
+     * IG-2: each tracker has its own once-per-episode key and its own failure handling. Before, AniList,
+     * MAL and Kitsu ran unguarded ahead of Trakt and Simkl inside one runCatching, so a Kitsu 401 (an
+     * expired token) skipped Trakt and Simkl, and the whole episode was retried on every ~5 s progress
+     * tick for the rest of playback.
+     */
     fun onProgress(context: Context, detail: OnlineDetail, episode: OnlineEpisode?, index: Int, positionMs: Long, durationMs: Long) {
         if (durationMs <= 0 || positionMs < durationMs * 0.85) return
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
-        val animeTrackers = AniList.signedIn || MyAnimeList.signedIn || dev.asfakul.yumeiro.tracking.Kitsu.signedIn
-        val trackable = detail.kind != OnlineKind.LIVE && detail.kind != OnlineKind.OTHER
-        val trakt = dev.asfakul.yumeiro.tracking.Trakt.signedIn && trackable
-        val simkl = dev.asfakul.yumeiro.tracking.Simkl.signedIn && trackable
-        if (!animeTrackers && !trakt && !simkl) return
         val isAnime = AnimeIds.isAnime(detail)
-        if (!trakt && !simkl && !isAnime) return
+        val trackable = detail.kind != OnlineKind.LIVE && detail.kind != OnlineKind.OTHER
+        val wanted = buildList {
+            if (isAnime && AniList.signedIn) add("anilist")
+            if (isAnime && MyAnimeList.signedIn) add("mal")
+            if (isAnime && dev.asfakul.yumeiro.tracking.Kitsu.signedIn) add("kitsu")
+            if (trackable && dev.asfakul.yumeiro.tracking.Trakt.signedIn) add("trakt")
+            if (trackable && dev.asfakul.yumeiro.tracking.Simkl.signedIn) add("simkl")
+        }
+        if (wanted.isEmpty()) return
         val num = episodeNumber(episode, index) ?: if (episode == null) 1 else return
         val key = "${detail.api}|${detail.url}|$num"
-        if (!synced.add(key)) return
+        val claimed = wanted.filter { synced.add("$key|$it") }.toSet()
+        if (claimed.isEmpty()) return
         val app = context.applicationContext
         scope.launch {
-            runCatching {
-                val client = NetworkClient.get(app)
-                val ids = if (isAnime && (animeTrackers || simkl)) runCatching { AnimeIds.of(client, detail) }.getOrNull() else null
-                if (isAnime && animeTrackers) {
-                    if (ids != null) {
-                        ids.anilist?.let { if (AniList.signedIn) AniList.watched(client, it, num, ids.episodes) }
-                        ids.mal?.let { if (MyAnimeList.signedIn) MyAnimeList.watched(client, it, num, ids.episodes) }
-                        ids.mal?.let { if (dev.asfakul.yumeiro.tracking.Kitsu.signedIn) dev.asfakul.yumeiro.tracking.Kitsu.watched(client, it, num, ids.episodes) }
-                    }
+            val client = NetworkClient.get(app)
+            fun track(name: String, block: () -> Unit) {
+                if (name in claimed) runCatching(block).onFailure { failed("$key|$name", name, it) }
+            }
+            val needIds = isAnime && (claimed.any { it in ANIME_TRACKERS } || "simkl" in claimed)
+            val idsResult = if (needIds) runCatching { AnimeIds.of(client, detail) } else null
+            val ids = idsResult?.getOrNull()
+            for (name in ANIME_TRACKERS) track(name) {
+                idsResult?.exceptionOrNull()?.let { throw it } // id lookup failed: retry this tracker later
+                val i = ids ?: return@track
+                when (name) {
+                    "anilist" -> i.anilist?.let { AniList.watched(client, it, num, i.episodes) }
+                    "mal" -> i.mal?.let { MyAnimeList.watched(app, client, it, num, i.episodes) }
+                    "kitsu" -> i.mal?.let { dev.asfakul.yumeiro.tracking.Kitsu.watched(app, client, it, num, i.episodes) }
                 }
-                val ep = if (episode != null) num else null
-                // Each tracker is isolated: one failing (offline, revoked token) never skips the others.
-                if (trakt) runCatching { dev.asfakul.yumeiro.tracking.Trakt.watched(app, client, detail.name, detail.year, episode?.season, ep) }
-                    .onFailure { Log.w(TAG, "trakt", it) }
-                if (simkl) {
-                    val match = dev.asfakul.yumeiro.tracking.Simkl.Match(
-                        title = detail.name, year = detail.year, mal = ids?.mal ?: detail.malId, anilist = ids?.anilist ?: detail.aniListId,
-                        imdb = detail.imdbId, tmdb = detail.tmdbId,
-                    )
-                    runCatching { dev.asfakul.yumeiro.tracking.Simkl.watched(app, client, match, episode?.season, ep) }
-                        .onFailure { Log.w(TAG, "simkl", it) }
-                }
-            }.onFailure { Log.w(TAG, "sync", it); synced.remove(key) }
+            }
+            val ep = if (episode != null) num else null
+            track("trakt") { dev.asfakul.yumeiro.tracking.Trakt.watched(app, client, detail.name, detail.year, episode?.season, ep) }
+            track("simkl") {
+                val match = dev.asfakul.yumeiro.tracking.Simkl.Match(
+                    title = detail.name, year = detail.year, mal = ids?.mal ?: detail.malId, anilist = ids?.anilist ?: detail.aniListId,
+                    imdb = detail.imdbId, tmdb = detail.tmdbId,
+                )
+                dev.asfakul.yumeiro.tracking.Simkl.watched(app, client, match, episode?.season, ep)
+            }
         }
     }
 

@@ -50,31 +50,82 @@ object Kitsu {
         val access = tok.getString("access_token")
         val me = get(client, "users?filter[self]=true", access).getJSONArray("data").getJSONObject(0)
         val name = me.optJSONObject("attributes")?.optString("name").orEmpty().ifBlank { "Kitsu" }
-        OnlineSettings.setSecret(context, "kitsu_token", access)
-        OnlineSettings.setSecret(context, "kitsu_refresh", tok.optString("refresh_token"))
+        saveTokens(context, tok)
         OnlineSettings.setSecret(context, "kitsu_uid", me.getString("id"))
         OnlineSettings.setSecret(context, "kitsu_user", name)
         name
     }
 
-    fun signOut(context: Context) = listOf("kitsu_token", "kitsu_refresh", "kitsu_uid", "kitsu_user").forEach { OnlineSettings.setSecret(context, it, null) }
+    fun signOut(context: Context) = listOf("kitsu_token", "kitsu_refresh", "kitsu_expires", "kitsu_uid", "kitsu_user").forEach { OnlineSettings.setSecret(context, it, null) }
+
+    /** A Kitsu answer that is not 2xx; [code] lets a 401 trigger one refresh (IG-3). */
+    class HttpError(val code: Int) : IllegalStateException("Kitsu HTTP $code")
+
+    private const val REFRESH_AHEAD_MS = 24L * 60 * 60 * 1000
+
+    private fun saveTokens(context: Context, o: JSONObject) {
+        OnlineSettings.setSecret(context, "kitsu_token", o.getString("access_token"))
+        o.optString("refresh_token").takeIf { it.isNotBlank() }?.let { OnlineSettings.setSecret(context, "kitsu_refresh", it) }
+        val created = o.optLong("created_at", System.currentTimeMillis() / 1000)
+        val expires = o.optLong("expires_in", 30L * 24 * 60 * 60) // Kitsu's default is 30 days
+        OnlineSettings.setSecret(context, "kitsu_expires", ((created + expires) * 1000).toString())
+    }
+
+    internal fun needsRefresh(expiresAtMs: Long?, nowMs: Long): Boolean = expiresAtMs != null && expiresAtMs - nowMs < REFRESH_AHEAD_MS
+
+    internal fun refreshBody(refreshToken: String, client: Pair<String, String>?): FormBody =
+        FormBody.Builder().add("grant_type", "refresh_token").add("refresh_token", refreshToken)
+            .apply { client?.let { (id, secret) -> add("client_id", id).add("client_secret", secret) } }.build()
+
+    private val refreshLock = Any()
+
+    /**
+     * IG-3: Kitsu access tokens last 30 days. Before, the refresh token was stored and never used, so a
+     * month after sign-in every update failed with 401 while the card still showed the account. The
+     * token is refreshed a day ahead of a known expiry, or once on a 401 ([force]); a refused refresh
+     * signs out (the card then asks to sign in again); a network error keeps the current token.
+     */
+    fun validToken(context: Context, client: OkHttpClient, force: Boolean = false): String? = synchronized(refreshLock) {
+        val current = token() ?: return null
+        val expiresAt = OnlineSettings.secret("kitsu_expires")?.toLongOrNull()
+        if (!force && !needsRefresh(expiresAt, System.currentTimeMillis())) return current
+        val refresh = OnlineSettings.secret("kitsu_refresh")?.takeIf { it.isNotBlank() } ?: return current
+        val (status, text) = runCatching {
+            client.newCall(Request.Builder().url(LOGIN).post(refreshBody(refresh, userClient())).build()).execute().use { it.code to it.body.string() }
+        }.getOrElse { return current }
+        when (status) {
+            200 -> { saveTokens(context, JSONObject(text)); token() }
+            400, 401, 403 -> { signOut(context); null }
+            else -> current
+        }
+    }
 
     private fun get(client: OkHttpClient, path: String, token: String): JSONObject =
         client.newCall(Request.Builder().url(BASE + path).header("Accept", "application/vnd.api+json").header("Authorization", "Bearer $token").build())
-            .execute().use { r -> if (!r.isSuccessful) error("Kitsu HTTP ${r.code}"); JSONObject(r.body.string()) }
+            .execute().use { r -> if (!r.isSuccessful) throw HttpError(r.code); JSONObject(r.body.string()) }
 
     /** Kitsu id for a MyAnimeList anime id, via Kitsu's mappings. */
-    fun kitsuIdForMal(client: OkHttpClient, malId: Int): String? {
-        val t = token() ?: return null
+    private fun kitsuIdForMal(client: OkHttpClient, malId: Int, t: String): String? {
         val o = get(client, "mappings?filter[externalSite]=myanimelist/anime&filter[externalId]=$malId&include=item", t)
         return o.optJSONArray("included")?.optJSONObject(0)?.optString("id")?.takeIf { it.isNotBlank() }
     }
 
-    /** Marks [episode] watched (never lowers progress). */
-    fun watched(client: OkHttpClient, malId: Int, episode: Int, total: Int?): Boolean {
-        val t = token() ?: return false
+    /** Marks [episode] watched (never lowers progress). A 401 refreshes the token once and tries again. */
+    fun watched(context: Context, client: OkHttpClient, malId: Int, episode: Int, total: Int?): Boolean {
+        val t = validToken(context, client) ?: return false
+        return try {
+            watchedWith(client, t, malId, episode, total)
+        } catch (e: HttpError) {
+            if (e.code != 401) throw e
+            val fresh = validToken(context, client, force = true) ?: return false
+            if (fresh == t) return false
+            watchedWith(client, fresh, malId, episode, total)
+        }
+    }
+
+    private fun watchedWith(client: OkHttpClient, t: String, malId: Int, episode: Int, total: Int?): Boolean {
         val uid = userId() ?: return false
-        val animeId = kitsuIdForMal(client, malId) ?: return false
+        val animeId = kitsuIdForMal(client, malId, t) ?: return false
         val existing = get(client, "library-entries?filter[animeId]=$animeId&filter[userId]=$uid", t).optJSONArray("data")?.optJSONObject(0)
         val have = existing?.optJSONObject("attributes")?.optInt("progress") ?: 0
         if (episode <= have) return true

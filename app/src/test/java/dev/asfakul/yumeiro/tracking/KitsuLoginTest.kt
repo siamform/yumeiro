@@ -31,4 +31,22 @@ class KitsuLoginTest {
         assertNull(Kitsu.userClient(null, "s"))
         assertTrue(Kitsu.configured)
     }
+
+    /** IG-3: the refresh grant carries the refresh token, and the user's client pair only when set. */
+    @Test fun refreshBodyCarriesTheRefreshToken() {
+        val b = Kitsu.refreshBody("r1", null)
+        assertEquals(listOf("grant_type", "refresh_token"), b.names())
+        assertEquals("refresh_token", b.value(0)); assertEquals("r1", b.value(1))
+        assertTrue(Kitsu.refreshBody("r1", "id" to "s").names().containsAll(listOf("client_id", "client_secret")))
+    }
+
+    @Test fun refreshesADayAheadOfAKnownExpiryOnly() {
+        val day = 24L * 60 * 60 * 1000
+        assertEquals(false, Kitsu.needsRefresh(null, 0L))
+        assertEquals(false, Kitsu.needsRefresh(10 * day, 0L))
+        assertEquals(true, Kitsu.needsRefresh(day - 1, 0L))
+        assertEquals(true, Kitsu.needsRefresh(-1L, 0L))
+        assertEquals(true, dev.asfakul.yumeiro.online.anime.MyAnimeList.needsRefresh(day - 1, 0L))
+        assertEquals(false, dev.asfakul.yumeiro.online.anime.MyAnimeList.needsRefresh(null, 0L))
+    }
 }

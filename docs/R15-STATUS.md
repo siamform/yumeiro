@@ -1,9 +1,9 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 UTC, sixth handover; orders: master handover 6)
+## Resume here (updated 2026-11-17 UTC, seventh handover; orders: master resume handover 7)
 
-- **Orders in force:** the sixth master handover. Order: build green → G10/G9 device batch → close G9, G10 →
-  Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
+- **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
+  re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
 - **Earlier (Group 12 start):** G9 and G10 closed for agent work 2026-11-17 (G9: qa_gpu_tier → OMT-16;
@@ -37,17 +37,20 @@
   44020227401 and fail-before 44020231250); fixes bd18c0b + 1060ea7 → pass 44021837402, 44023164202, CI
   44023167122. MG-1 library read off main: fail-before 44025493021 (5 reads) → 44025490015 (0). G7-L1 (QuickIPTV
   failure shown as a friendly error): CI 44026316670, fail-before CI 44028308675. LT-1 44026779856. G7 done.
-- **Current group / step:** Group 8 Downloads.
-  - DL-4, DL-6, DL-8 and DL-10 verified (emulator/unit).
-  - BUG-3: device case d head 44041714032 took 3.4-5.2 s, against 19.99 s on the old code (44037723917). Case d rule is now absolute (total ≤ 10 s, last 10 % ≤ 3.5 s).
-  - BUG-3 stays open until the owner confirms on a phone; T5 is an owner test.
-  - The two-window RequestPace (6e40982) was reverted in f60d808 after a unit speed loss; ADR-016 is proposed for the leftover DL-11 restart waste.
-  - New `DownloadCleanupDeviceTest` covers the G8 "Downloads fixes" row.
-- **Runs in progress:** device 44043535616 (head: BUG-3 case d with the new rule, DownloadCleanupDeviceTest, repeat 3).
+- **Seventh handover, done:** 44043535616 read: G8 "Downloads fixes" verified (emulator; YouTube part unit only);
+  BUG-3 case d 6/6 PASS (stays open for the owner's phone). Docs 56f0526.
+- **Current group / step:** Group 11 Integrations (`docs/groups/GROUP-11-INTEGRATIONS.md`), line-by-line read.
+  - IG-1 (Trakt/Simkl sign-in poll on main) fix 5a46d98, `TrackerSignInDeviceTest`.
+  - IG-2 (a failing anime tracker skipped Trakt/Simkl, retried every tick) and IG-3 (Kitsu/MAL never refresh
+    tokens) fixed in the commit after 5a46d98; `AnimeTrackersDeviceTest` a–c; fail-before branch `scratch/ig2-fail-before`.
+  - Still to read: Simkl (rest), Last.fm/Scrobbler, LRCLIB, subtitles, TMDB, FCM/CloudAlerts/AppFeed/UpdateConfig,
+    YouTube account, GitHubReleaseClient. G8 leftovers: INVENTORY D1–D8 status, D3/D5/D6/D8 device evidence.
+- **Runs in progress:** 44049031398 (5a46d98, TrackerSignInDeviceTest, both phones, expect PASS);
+  44049036117 (`scratch/ig1-fail-before`, api33-lowram, expect FAIL with NetworkOnMainThreadException).
 - **Next three actions:**
-  1. Read 44043535616. If it passes, set the G8 "Downloads fixes" row to verified (emulator) and record BUG-3 case d.
-  2. G9-G11 leftovers, then re-audit G1-4.
-  3. Final sweep: INVENTORY reconciliation, and a full CI at the milestone.
+  1. Read the two IG-1 runs; record them; then dispatch `AnimeTrackersDeviceTest` on head and on `scratch/ig2-fail-before`.
+  2. Continue the G11 read (list above), registering every finding.
+  3. G8 leftovers (D3 torrent, D5 external downloader, D6 YouTube, D8 screen) and the five-item spot-check.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
@@ -141,5 +144,3 @@ Earlier "done" reports (STATUS-v1.8.1) were Robolectric-only. Each item below wa
 
 - YouTube playback and quality switching on a device on a home network (CI IPs are bot-checked).
 - A real Xiaomi with Android 13 and a TV device; the emulators cover API 33 low-RAM and API 36.
-- Security: rotate the Firebase service-account key and the Cloudflare API token, since both were
-  shared in chat.
