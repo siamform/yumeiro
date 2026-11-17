@@ -959,3 +959,9 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 - **44043535616** (head 491b4e3, repeat 3) BUG-3 case d with the absolute rule + DownloadCleanupDeviceTest. Read 2026-11-17 by the seventh-handover agent:
   - `d_localUnitCollapseProfile` 6/6 PASS. api36 totalMs 7179 / 6390 / 5237, last 10 % 1206 / 507 / 100 ms; api33-lowram 5170 / 4041 / 3418, last 10 % 1203 / 201 / 1706 ms. Rule: total ≤ 10 s, last 10 % ≤ 3.5 s. Received 1.092–1.293× the file (DL-11 part 2).
   - `DownloadCleanupDeviceTest` 6/6 PASS (`dl_cleanup` ENQUEUED or RUNNING within the 30 s poll on both phones; empty folder removed).
+
+## 2026-11-17: Group 11 integrations (emulator)
+
+- **44049031398** (head 5a46d98, `TrackerSignInDeviceTest`, both phones): 4/4 PASS. Trakt and Simkl sign-in started on the main thread under penaltyDeathOnNetwork finish (`result=ig1-user`, 2 polls) and every request ran on `DefaultDispatcher-worker-*` (no `main:` entry). IG-1 after.
+- **44049036117** (`scratch/ig1-fail-before` ab93f76, old code + the test, api33-lowram): FAIL as expected. Trakt and Simkl: `error=NetworkOnMainThreadException polls=0 threads=[main:main]`. IG-1 fail-before.
+- In progress: **44050521996** (head 14a367f, AnimeTrackers/ScrobbleFlush/EpisodeStills, api33-lowram) and **44050574003** (`scratch/ig2-fail-before`, same tests on old code, api33-lowram).

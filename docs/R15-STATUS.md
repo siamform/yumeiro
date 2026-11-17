@@ -45,11 +45,12 @@
     tokens) fixed in the commit after 5a46d98; `AnimeTrackersDeviceTest` a–c; fail-before branch `scratch/ig2-fail-before`.
   - Still to read: Simkl (rest), Last.fm/Scrobbler, LRCLIB, subtitles, TMDB, FCM/CloudAlerts/AppFeed/UpdateConfig,
     YouTube account, GitHubReleaseClient. G8 leftovers: INVENTORY D1–D8 status, D3/D5/D6/D8 device evidence.
-- **Runs in progress:** 44049031398 (5a46d98, TrackerSignInDeviceTest, both phones, expect PASS);
-  44049036117 (`scratch/ig1-fail-before`, api33-lowram, expect FAIL with NetworkOnMainThreadException).
+- **Runs in progress:** 44050521996 (head 14a367f: AnimeTrackers, ScrobbleFlush, EpisodeStills; api33-lowram; expect PASS);
+  44050574003 (`scratch/ig2-fail-before`, same tests on old code; expect FAIL in every case). IG-1 verified (emulator):
+  44049036117 → 44049031398. IG-4 (Last.fm flush on main) and IG-5 (episode thumbnails lost) fixed in 282ce61 / 14a367f.
 - **Next three actions:**
-  1. Read the two IG-1 runs; record them; then dispatch `AnimeTrackersDeviceTest` on head and on `scratch/ig2-fail-before`.
-  2. Continue the G11 read (list above), registering every finding.
+  1. Read 44050521996 / 44050574003. If both behave, run head on api36; then mark IG-2…IG-5 verified (emulator).
+  2. Continue the G11 read: FcmPush, CloudAlerts, AppFeed, UpdateConfig, YtAccount/YtCookiePaste, GitHubReleaseClient.
   3. G8 leftovers (D3 torrent, D5 external downloader, D6 YouTube, D8 screen) and the five-item spot-check.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
