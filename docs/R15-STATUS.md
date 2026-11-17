@@ -131,13 +131,14 @@
 - **Done since (seventh handover, 15):** milestone 44079680572: api36 23/24 (Yumix → YX-T1, a real network timeout counted
   as the old race; test fixed 02334a4); api33-lowram 14/14 that ran PASS, then the emulator went offline (FS-INFRA-1, the
   last 10 classes never ran).
-- **Void:** 44088190688/44088205006 did not build (02334a4 import), fixed b345cab.
-- **Runs in progress:** 44089151495 (api33-lowram: HeaderStream, Yumix, Library, DownloadResume, Backup, AniSkip,
-  Accessibility, HeatGuard, ClosedAppAlert, CrashUi) and 44089166780 (api36: Yumix).
+- **Done since (seventh handover, 16):** 44089151495 api33-lowram 10/10 PASS → milestone suite 24/24 on api33-lowram
+  (with 44079680572). api36 23/24 + Yumix: 44089166780 seeAll inconclusive (onshort.net timeouts), assumption added d7f2b2a.
+  Void: 44088190688/44088205006 did not build (02334a4 import; fixed b345cab).
+- **Runs in progress:** 44091851873 (api36, Yumix on d7f2b2a).
 - **Next three actions:**
-  1. Read both runs; together with 44079680572 they complete the milestone suite on both phones.
-  2. H8 `-f bench=restore` (one heavy run at a time: after both runs end).
-  3. Final coverage check over INVENTORY, final report and the gated feature list for the owner.
+  1. Read 44091851873; then H8 `-f bench=restore` (one heavy run at a time).
+  2. Final coverage check over INVENTORY.
+  3. Final report, handover prompt and the gated feature list for the owner (Part 8 stays gated).
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
