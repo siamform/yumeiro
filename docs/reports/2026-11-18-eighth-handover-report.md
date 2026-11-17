@@ -80,6 +80,19 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44192958569 | TV api34: HomeNavigation, BackNavigation, TvBug5Repro (ded970c) | BackNavigation PASS, TvBug5Repro PASS, HomeNavigation 10/11: h5 "rail entered on [tv_nav_tab_home], not on the selected tab" (page 1 reached). A/B h5 ×5: head 44195234882, 77d387a^ branch ab/st18-before-home 44195239132 |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
+## L1 G12 order: items verified in earlier cycles
+
+| Item | Ledger evidence | This cycle |
+|---|---|---|
+| Upgrade from v1.8.0 (X10-5) | 43891389012 PASS at c306e7e (emulator api33-lowram) | re-run at head: start-up changed (cbad735, 77d387a) and data code changed since c306e7e |
+| MASVS write-up (X7-5) | 460b840 docs/security/MASVS.md | no redo: document review, no security-relevant code change this cycle (NBUG-6 not built) |
+| Widget updates (G12-WD) | 7569065 WidgetUpdatesDeviceTest | re-run with RTL: widget refresh runs at start-up, which 77d387a touched |
+| Decoder fault tests (G12-DF) | 24bcc65 DecoderFaultDeviceTest | no redo: player code untouched this cycle |
+| Anime4K (G12-A4K) | 7787fde Anime4kGlDeviceTest | no redo: shader/player code untouched |
+| RTL (G12-RTL) | ec0c7ae RtlLayoutDeviceTest | re-run: Home composition timing changed (77d387a) |
+| X11–X16 | INVENTORY rows 186–189; X11/X12 re-read in CI 44067269319 | no redo; SmartDnsResilience 4/4, DnsWire 4/4, DataCacheBounds 4/4 again green in CI 44192309663 |
+| ST-17 | 44145301927 | stays open by order (cause-naming logging per campaign) |
+
 ## Spot-check (session 2)
 
 BUG-2 44116513171, NBUG-2b 44118950490, N6-2 44112738603, BUG-4 TV 44116803828, DL-11 F 44121429260: all
