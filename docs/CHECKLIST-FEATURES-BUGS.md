@@ -59,7 +59,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | F-04 | WebView site list | Not started | — |
 | F-05 | Nuvio / Skystream / Vega repositories | Not started (Vega question to owner) | — |
 | F-06 | 200 % volume booster | Not started | — |
-| F-07 | External player support | Not started | — |
+| F-07 | External player support | Proposal written (gated; owner approval needed). Base hand-off exists; gaps: result read-back, headers, subtitles | docs/proposals/FEATURE-F-07-external-player.md (CloudStream 2dcc25c contracts) |
 | F-08 | Upcoming Movies & Series | Not started | — |
 | F-09 | Watch Later + Favorite on posters | Not started | — |
 | F-10 | Glassmorphism theme | Not started (ui-ux-pro-max + ADR first) | — |
