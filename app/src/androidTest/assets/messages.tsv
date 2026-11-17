@@ -23,28 +23,29 @@ error	ui/screens/online/OnlineGetStarted.kt:125	Couldn't add Example item nameEx
 warning	ui/screens/online/OnlineHomeScreen.kt:326	You can pin up to Example item name extensions. Unpin one first	
 info	ui/screens/online/OnlineHomeScreen.kt:359	Nothing new yet. Showing what was already loaded.	
 info	ui/screens/online/OnlineHomeScreen.kt:364	Couldn't refresh: you're offline. Showing what was already loaded.	
-info	ui/screens/online/OnlinePlayerUi.kt:813	This source needs special request headers; if the TV can't play it, pick another source and cast again	
-success	ui/screens/online/OnlinePlayerUi.kt:828	Casting Example item name	
-error	ui/screens/online/OnlinePlayerUi.kt:829	Couldn't start casting	
-info	ui/screens/online/OnlinePlayerUi.kt:856	Audio: Example item name	
-info	ui/screens/online/OnlinePlayerUi.kt:861	This video has no Example item name audio track. Sources with it are listed first.	
-success	ui/screens/online/OnlinePlayerUi.kt:869	Sent to Example item name	
-info	ui/screens/online/OnlinePlayerUi.kt:870	Example item name Using Yumeiro's downloader instead	
-success	ui/screens/sources/SourcesHubScreen.kt:215	Repository added · Example item name extensions	
-success	ui/screens/sources/SourcesHubScreen.kt:284	Example item name installed	
-success	ui/screens/sources/SourcesHubScreen.kt:339	Example item name added	
-success	ui/screens/sources/SourcesHubScreen.kt:391	Repository added · Example item name sources	
-success	ui/screens/sources/SourcesHubScreen.kt:441	Example item name installed	
-success	ui/screens/sources/SourcesHubScreen.kt:524	Example item name added	
-success	ui/screens/sources/SourcesHubScreen.kt:551	Example item name connected	
-error	ui/screens/video/VideoPlayerModal.kt:1919	Picture-in-picture isn't available right now	
+info	ui/screens/online/OnlinePlayerUi.kt:814	This source needs special request headers; if the TV can't play it, pick another source and cast again	
+success	ui/screens/online/OnlinePlayerUi.kt:829	Casting Example item name	
+error	ui/screens/online/OnlinePlayerUi.kt:830	Couldn't start casting	
+info	ui/screens/online/OnlinePlayerUi.kt:857	Audio: Example item name	
+info	ui/screens/online/OnlinePlayerUi.kt:862	This video has no Example item name audio track. Sources with it are listed first.	
+success	ui/screens/online/OnlinePlayerUi.kt:870	Sent to Example item name	
+info	ui/screens/online/OnlinePlayerUi.kt:871	Example item name Using Yumeiro's downloader instead	
+success	ui/screens/sources/SourcesHubScreen.kt:217	Repository added · Example item name extensions	
+success	ui/screens/sources/SourcesHubScreen.kt:286	Example item name installed	
+success	ui/screens/sources/SourcesHubScreen.kt:341	Example item name added	
+success	ui/screens/sources/SourcesHubScreen.kt:393	Repository added · Example item name sources	
+success	ui/screens/sources/SourcesHubScreen.kt:443	Example item name installed	
+success	ui/screens/sources/SourcesHubScreen.kt:526	Example item name added	
+success	ui/screens/sources/SourcesHubScreen.kt:559	Example item name connected	
+error	ui/screens/video/VideoPlayerModal.kt:1944	Picture-in-picture isn't available right now	
 success	ui/screens/downloads/DownloadPrompt.kt:122	Downloading Example item name · Example item name	
 error	ui/screens/downloads/DownloadsScreen.kt:331	The file was removed	
 info	ui/screens/youtube/YouTubeScreens.kt:238	Channel not known yet. Play the video once to learn it	
 success	ui/screens/youtube/YouTubeScreens.kt:346	“Example item name” added to your topics	
 info	ui/screens/youtube/YouTubeScreens.kt:352	“Example item name” removed from your topics	Undo
-error	ui/screens/watch/StreamWatchPanel.kt:166	This channel isn't available — playing Example item name	
-success	ui/screens/watch/StreamWatchPanel.kt:246	Link copied	
+error	ui/screens/watch/StreamWatchPanel.kt:167	This channel isn't available — playing Example item name	
+success	ui/screens/watch/StreamWatchPanel.kt:247	Link copied	
+info	ui/screens/watch/StreamWatchPanel.kt:254	Downloading "Example item name"	
 success	ui/screens/watch/WatchScreens.kt:516	Link copied	
 info	ui/screens/extras/InboxScreen.kt:127	You're offline. Showing saved notifications	
 info	ui/screens/extras/PermissionCenter.kt:74	Example item name not allowed. Tap again when you want to allow it	
@@ -65,7 +66,7 @@ error	ui/screens/stream/PlaylistMarketScreen.kt:152	Updated Example item name, f
 error	ui/screens/stream/PlaylistMarketScreen.kt:286	No browser available	
 success	ui/screens/stream/StreamScreen.kt:152	Updated Example item name	
 success	ui/screens/stream/StreamScreen.kt:201	Example item name updated · Example item name streams	
-info	ui/screens/stream/StreamScreen.kt:331	Downloading "Example item name"	
+info	ui/screens/stream/StreamScreen.kt:319	Downloading "Example item name"	
 success	ui/screens/settings/BackdropSettings.kt:84	Backdrop updated	
 success	ui/screens/settings/BackupCenterScreen.kt:126	Backups will be saved there	
 success	ui/screens/settings/BackupCenterScreen.kt:191	Backup saved · Example item name	
@@ -94,7 +95,7 @@ success	ui/screens/settings/SettingsPersonalize.kt:149	Navigation bar reset
 success	ui/screens/settings/YouTubeAccountScreen.kt:106	Signed in to YouTube with your cookie	
 success	ui/screens/settings/YouTubeAccountScreen.kt:115	Signed in to YouTube	
 success	ui/screens/settings/YouTubeAccountScreen.kt:194	Signed out of YouTube	
-success	ui/screens/player/NowPlayingScreen.kt:507	Lyrics imported	
-error	ui/screens/player/NowPlayingScreen.kt:508	That file has no readable lyrics	
-error	ui/screens/player/NowPlayingScreen.kt:515	No file picker available	
+success	ui/screens/player/NowPlayingScreen.kt:513	Lyrics imported	
+error	ui/screens/player/NowPlayingScreen.kt:514	That file has no readable lyrics	
+error	ui/screens/player/NowPlayingScreen.kt:521	No file picker available	
 error	youtube/YouTubePlayback.kt:66	YouTube couldn't play this video: Example item name	Retry

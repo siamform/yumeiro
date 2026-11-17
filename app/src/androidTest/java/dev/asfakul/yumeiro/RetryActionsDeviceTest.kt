@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *  a: JavaScript tab → Add → index.json link → error with Retry → Retry → "Repository added · 1 sources".
  *  b: Stremio tab → Add → manifest link → error with Retry → Retry → "<name> added".
  *  c: Mihon tab → Add → index.min.json link → error with Retry → Retry → "Repository added · 1 extensions".
- *  d: Home servers → WebDAV → Connect → error with Retry (the form stays open) → Retry → "WebDAV connected".
+ *  d: Home servers → WebDAV → Connect → reason inside the form, button says Retry (ER-19) → Retry → "WebDAV connected".
  *
  * Retry is tapped with a real screen tap (`input tap` at its on-screen centre), not a Compose
  * injected click, so a Retry drawn under a dialog window would fail here. Inbox pull-to-refresh
@@ -203,7 +203,22 @@ class RetryActionsDeviceTest {
         compose.onNodeWithTag("server_url", true).performTextInput(url)
         compose.waitForIdle()
         compose.onAllNodesWithText("Connect", useUnmergedTree = true)[0].performClick()
-        failThenRetry("d", "WebDAV connected")
+        // ER-19: the form stays open on failure, so the reason and Retry must be inside it (a bottom
+        // message sat behind the dialog and keyboard, run 43985787392).
+        wait("d: reason shown inside the form") { has("server_error") }
+        val err = compose.onAllNodesWithTag("server_error", false).fetchSemanticsNodes().first()
+            .config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }.joinToString(" ") { t -> t.text }
+        log("RTY_CASE d error='$err'")
+        FirstRun.shot("rty_d_error")
+        assertTrue("d: the reason is named ('$err')", err.contains("404") || err.contains("found", true))
+        assertTrue("d: the button says Retry", hasText("Retry"))
+        failing.set(false)
+        screenTap("server_connect")
+        wait("d: Retry repeats the call") { hits.get() > 0 }
+        wait("d: success after Retry") { hasText("WebDAV connected") }
+        wait("d: form closed") { !has("server_url") }
+        log("RTY_CASE d retried hits=${hits.get()}")
+        log("RTY_RESULT PASS d")
         wait("d: server saved") { dev.asfakul.yumeiro.sources.servers.HomeServers.servers.value.any { it.url.trimEnd('/') == url.trimEnd('/') } }
         addedServer = dev.asfakul.yumeiro.sources.servers.HomeServers.servers.value.first { it.url.trimEnd('/') == url.trimEnd('/') }.id
     }

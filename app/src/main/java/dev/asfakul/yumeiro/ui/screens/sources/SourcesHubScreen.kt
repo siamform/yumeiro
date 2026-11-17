@@ -51,6 +51,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -545,11 +547,17 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
     var plexCode by remember { mutableStateOf<String?>(null) }
     val needsUser = kind != HomeServers.Kind.PLEX
 
+    // ER-19 (run 43985787392, both phones): this dialog stays open on failure, so a bottom message sat
+    // behind it and the keyboard: the reason was never seen and its Retry could not be tapped. The
+    // reason now shows inside the form and the confirm button becomes Retry.
+    var error by remember { mutableStateOf<String?>(null) }
+
     fun save(secret: String): kotlinx.coroutines.Job = scope.launch {
         busy = true
+        error = null
         HomeServers.add(context, kind, name, url, user, secret)
             .onSuccess { AppMessages.success(context, "${it.name} connected"); onSaved() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { save(secret) } }
+            .onFailure { error = OnlineErrors.friendly(it) }
         busy = false
     }
 
@@ -570,11 +578,19 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
                     Text(plexCode?.let { "Waiting for you to approve code $it in the browser…" } ?: "Sign in with your Plex account in the browser. Yumeiro only stores the token Plex gives back.",
                         color = TextSecondary, fontSize = 13.sp)
                 }
+                error?.let { e ->
+                    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().testTag("server_error")
+                        .semantics(mergeDescendants = true) { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) {
+                        Icon(Icons.Default.Warning, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.padding(top = 2.dp).size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 13.sp)
+                    }
+                }
                 if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
-            TextButton(enabled = !busy && url.isNotBlank(), onClick = {
+            TextButton(enabled = !busy && url.isNotBlank(), modifier = Modifier.testTag("server_connect"), onClick = {
                 if (kind != HomeServers.Kind.PLEX) save(pass)
                 else scope.launch {
                     busy = true
@@ -584,9 +600,9 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pin.authUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         PlexClient.awaitToken(context, pin)
                     }.onSuccess { token -> busy = false; save(token) }
-                        .onFailure { busy = false; plexCode = null; AppMessages.error(context, OnlineErrors.friendly(it)) }
+                        .onFailure { busy = false; plexCode = null; error = OnlineErrors.friendly(it) }
                 }
-            }) { Text(if (kind == HomeServers.Kind.PLEX) "Sign in with Plex" else "Connect") }
+            }) { Text(if (error != null) "Retry" else if (kind == HomeServers.Kind.PLEX) "Sign in with Plex" else "Connect") }
         },
         dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Cancel") } },
     )
