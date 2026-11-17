@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -93,8 +94,15 @@ object Scrobbler {
 
     private suspend fun enqueue(p: ScrobblePlay) = lock.withLock { writeQueue((readQueue() + p).takeLast(MAX_QUEUE)) }
 
-    /** Sends queued scrobbles. Safe to call any time (app start, network back, after a listen). */
-    suspend fun flush(context: Context) {
+    /**
+     * Sends queued scrobbles. Safe to call any time (app start, network back, after a listen).
+     * Main-safe (IG-4): Settings › Tracking calls it on the main thread right after Last.fm sign-in;
+     * before, the blocking upload ran there (release: NetworkOnMainThreadException, swallowed as
+     * "offline", queue not sent; debug: the screen froze for the upload).
+     */
+    suspend fun flush(context: Context) = withContext(Dispatchers.IO) { flushNow(context) }
+
+    private suspend fun flushNow(context: Context) {
         init(context)
         if (!active()) return
         lock.withLock {
