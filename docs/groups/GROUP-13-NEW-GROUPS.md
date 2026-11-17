@@ -103,3 +103,57 @@ database (`data/.../extension/repository/ExtensionStoreRepositoryImpl.kt`, `tach
 write is a transaction and a failed read never turns into "save an empty list". Yumeiro keeps its JSON files
 and gets the same guarantee from `SafeJsonFile` (no schema move; nothing to migrate). Stremio's own client was
 not checked in source; no claim is made about it.
+
+## N2 Web sites tab
+
+Files read line by line: `ui/screens/sites/WebSitesScreen.kt`, `online/web/SavedSites.kt`, `SiteLogins.kt`,
+`SafeWebView.kt`, `HeadlessCapture.kt`, `AdShield.kt`, `AdFilter.kt`, `BrowserCheck.kt` (re-read for ER-20).
+
+| Action | Expected reaction | Code | Result |
+|---|---|---|---|
+| Add a site ("example.com") | https link saved, readable name | `SavedSites.normalize/defaultName` (unit-tested) | OK |
+| Add the same site again | renamed, not doubled | key = host + path | OK |
+| Saved list storage | atomic | SharedPreferences `apply` (whole value) | OK |
+| Page wants files / content:// | refused | `allowFileAccess/ContentAccess = false`, `SafeWebView.harden` | OK |
+| Page renderer crashes | app survives | `SafeWebViewClient(onGone)` | OK |
+| Headless capture never finds a stream | gives up after 22 s, WebView disposed | `withTimeoutOrNull`, `finally dispose` | OK |
+| Ads requested by the page | blocked, never captured as "the stream" | `AdFilter.isAd` in `shouldInterceptRequest` and `onMedia` | OK |
+| **Sign out of a site** | its sign-in cookies gone | expired only host-only, non-Secure cookies | **N2-1** |
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| N2-1 | "Signed out of …'s site" while `Domain=` and `__Secure-`/`__Host-` sign-in cookies stayed in the in-app browser (suspected from the code read; the device test decides) | a cookie is only replaced by one with the same name, domain and path; the expiry line had no `Domain=` and no `Secure` | `SiteLogins.expiryLines`: host-only + `Domain=` lines, `Secure` on https, for https/http and www | unit `SiteAccessTest#signOutExpiresDomainAndSecureCookies`; device `SiteSignOutDeviceTest`; fail-before `scratch/n2-fail-before` | fixed 83d7818, runs pending |
+
+Limitation kept on record: cookies set on a sub-path cannot be listed by `CookieManager` and are not reached.
+
+## N7 Inbox, app feed, reminders
+
+Files read line by line: `notify/Inbox.kt`, `AppFeed.kt`, `Reminders.kt`, `ui/screens/extras/InboxScreen.kt`,
+`ReminderHost.kt`, `SupportMessage.kt`.
+
+| Action | Expected reaction | Code | Result |
+|---|---|---|---|
+| Notification arrives | one inbox row (same id never twice), kept on disk | `Inbox.add` dedupe, SafeJsonFile | OK |
+| Damaged inbox.json | kept as `.bad`, `.tmp` used | `SafeJsonFile.read` (R16) | OK |
+| Tap a row / mark all read / leave the page / remove / clear | saved, no disk on main | `edit → save` on the caller's thread | **N7-1** |
+| Reminders cadence | at most one per hour, one per day first open, 30 min grace | `Reminders.next` (unit `RemindersTest`) | OK |
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| N7-1 | Every inbox tap wrote and fsynced `inbox.json` on the main thread (also on leaving the page); two saves from different threads could write the same `.tmp` at once | `save()` ran on the caller's thread, outside any lock | writes under one lock, always the newest list; main-thread saves on one background writer; worker saves stay synchronous (on disk before the worker ends) | `InboxMainThreadDeviceTest`; fail-before `scratch/n7-fail-before` | fixed ac13d92, run pending |
+
+## N8 Support and user guide pages
+
+Files read: `ui/screens/extras/SupportScreen.kt`, `AppPages.kt` (`Links`), `settings/UserGuide.kt` (static text).
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| N8-1 | With no browser (common on Android TV), Support links, reminder cards, inbox links and the ntfy install buttons did nothing on tap | `Links.open` returned false and most callers ignored it | `Links.open` tells the user; `tell = false` for the notification tap (falls back to the inbox) | unit `LinksOpenTest` (Robolectric `checkActivities`); fail-before `scratch/unit-fail-before` | fixed 5be755e, CI pending |
+
+Payment details on the Support page are the owner's content and were not changed.
+
+## N9 Edition and integrity
+
+Files read: `Edition.kt`, `security/IntegrityGuard.kt`, `app/build.gradle.kts` (token/integrity fields).
+No finding: the signer digest check is computed once and cached; debug builds are never flagged; a build with
+`MT_UPDATER_TOKEN` set fails (ADR-013), so no GitHub token ships.

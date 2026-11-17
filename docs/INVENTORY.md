@@ -192,14 +192,14 @@ verified on a device, evidence linked), `not covered` (reason given).
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
-| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | audited (GROUP-13): N2-1 fixed 83d7818, runs pending | `SiteSignOutDeviceTest`, `SiteAccessTest`, `BrowserCheckCooldownDeviceTest` |
 | N3 | Self-update (check, download, install, package replaced) | update/* | audited (GROUP-13): N3-1 fixed, device run pending; verify/install path code read, no finding | `UpdateMainThreadDeviceTest`, `UpdaterLogicTest`, `ReleaseTagsTest`; upgrade X10-5 |
 | N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | audited (GROUP-13): N4-1 fixed 595305f, unit pending (CI) | `SourceStoresSafetyTest` |
 | N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | audited (GROUP-13): N5-1 fixed 595305f, unit pending (CI); JS loop timeout OK by code + library source | `SourceStoresSafetyTest`, `UniversalAddEcosystemsDeviceTest`, `UniversalSourcesLogicTest` |
 | N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | audited (GROUP-13): N6-1, N6-3 fixed, device run pending; N6-2 suspected (API 29, open) | `AppLockDeviceTest` |
-| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
-| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
-| N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | audited (GROUP-13): N7-1 fixed ac13d92, run pending | `InboxMainThreadDeviceTest`, `RemindersTest`, `AppFeedTest` |
+| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | audited (GROUP-13): N8-1 fixed 5be755e, CI pending | `LinksOpenTest` |
+| N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | audited (GROUP-13): code read, no finding | build guard (ADR-013) |
 
 ## Not covered
 (Filled at the end of the audit.)
