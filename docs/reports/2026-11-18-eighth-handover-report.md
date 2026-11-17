@@ -41,6 +41,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 |---|---|---|---|
 | EXT-T1-C | Campaign 44162062169 ran plain E11, not the owner's reproduction condition | next campaign seeds five failing drama feeds before opening Source status | 44162062169 test code e11 (no feed setup) |
 | EXT-T1-D | e13 counted the ADR-014-held phisher98 donation dialog (hidden, not focusable) as a window over Source status | c6ff72c: WindowSpy.liveUnheld() counts only attached, unheld windows; held ones logged | 44185209665 20/20 fail with focus = MainActivity and Back closing Source status every run; re-run 44189135829 |
+| NBUG6-T2 | realDohWithUnreachableBootstrap: DnsOverHttps needs OkHttp.initialize under Robolectric | c6f06ff | CI 44188521804 error text. Observation (no change): a non-I/O exception from a DoH engine leaves SmartDns.encryptedLookup without trying the next provider; in the app the OkHttp startup initializer runs (manifest keeps InitializationProvider), so no evidence of this in production |
 
 ## Runs
 
@@ -71,6 +72,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44185180596 | ST-18 after: HomeTraceDeviceTest api33-lowram at 46480b6 (cbad735 deferral) | first attempt: build failed, Maven Central 429 (infrastructure); re-run PASS. Structural: VerifyClass of the deferred hosts in frame 1 = 0 / 0 / 0 ms (moved to frame 3: 216 / 124 / 196 ms). Frame 1 total 4548 / 4386 / 4179 ms, noisier than before (3613 / 1768): no timing gain claimed (emulator api33-lowram, software rendering) |
 | 44185209665 | EXT-T1 e13 ×20 api33-lowram (46480b6) | 20/20 FAIL = test fault. The only added window, every run, was `com.phisher98.donation.DonationDialogFragment` (HDhub4u), concealed by the ADR-014 blocker ("held a promotional window … card shown", flags 0x1800018 not focusable/touchable, absent from the screenshot). Focus was MainActivity and Back closed Source status 20/20, so the original symptom did not reproduce. Assertion counted every added window; fixed c6ff72c (count only attached, unheld windows), re-run 44189135829 |
 | 44189135829 | EXT-T1 e13 ×20 api33-lowram (c6ff72c) | running |
+| 44188152810 | ST-18 step 2: HomeTraceDeviceTest api33-lowram at 77d387a (Home after first frame under cold splash) | PASS. Home VerifyClass slices in frame 1: 5 / 5 / 3 (before ~95 each); 92 now in frame 3. Frame 1 2779 / 1688 / 1868 ms, recompose 920 / 324 / 394 ms, measure 422 / 191 / 206 ms (step 1: 4548 / 4386 / 4179; 749–899; 499–942). Structural pass (emulator api33-lowram); timing not claimed, before-run variance 1768–3613 ms |
+| 44188521804 | CI unit at 4d95c04 | 1137 tests, 1 failure = test fault (Nbug6 real DoH: OkHttp not initialised under Robolectric → PublicSuffixDatabase IllegalStateException; fixed c6f06ff). AfterFirstFrameTest 3/3, PlayerBuiltAfterFirstFrameTest 4/4, SmartDnsResilienceTest 4/4, DnsWireClientTest 4/4, DataCacheBoundsTest 4/4; NBUG6_EXHAUST model firstMs=1202 secondMs=0 (CI unit) |
+| 44190759388 | ST-18 regression: HomeNavigation, BackNavigation, HeroCarouselLifecycle both phones (f79d9b3) | running |
+| 44192309663 | CI unit at c6f06ff | running |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## Spot-check (session 2)

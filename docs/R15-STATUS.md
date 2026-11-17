@@ -1,6 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 2)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 3)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** L1 G12 ST-18 (two deferral commits cbad735, 77d387a; structural pass on api33-lowram);
+  EXT-T1 e13 test fault fixed (c6ff72c); NBUG-6 unit timing test fixed (c6f06ff).
+- **Runs in progress:** device 44189135829 (e13 ×20 api33-lowram), device 44190759388 (Home/Back/HeroCarousel both phones),
+  CI 44192309663 (unit).
+- **Next three actions:** (1) read 44189135829: PASS 20/20 → EXT-T1 to OWNER-MANUAL-TESTS / Blocked: owner, a live window → root cause;
+  (2) 44190759388 green → ST-18 Verified (emulator) for the structural change, then TV TvBug5ReproDeviceTest;
+  (3) NBUG-6 Nbug6EngineCostDeviceTest + NBUG-5 DubCountProbeDeviceTest on api33-lowram, then upgrade from v1.8.0 at head.
+
+### Previous resume note (eighth cycle, session 2, step 2)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
