@@ -7,12 +7,14 @@ package dev.asfakul.yumeiro.online
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
@@ -45,13 +47,25 @@ object EpisodeStills {
         return all.isNotEmpty() && all.count { it.posterUrl == null } * 2 > all.size
     }
 
-    suspend fun ensure(context: Context, d: OnlineDetail) {
+    /** Lookups outlive the screen that asked (see IG-5). */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Starts the lookup for [d] once. IG-5: it used to run in the caller's composition scope after
+     * marking the title as tried, so leaving the screen mid-lookup (the result was dropped on
+     * cancellation) or one offline attempt left the title without thumbnails until the app restarted.
+     * The lookup now runs in its own scope and always stores its result; a failed lookup (network
+     * error) clears the mark so the next visit tries again. "Nothing found" stays marked.
+     */
+    fun ensure(context: Context, d: OnlineDetail) {
         val key = keyOf(d)
         if (!needsLookup(d) || !tried.add(key)) return
-        val found = withContext(Dispatchers.IO) {
-            runCatching { lookup(context, d) }.onFailure { Log.i(TAG, "lookup ${d.name}: ${it.message}") }.getOrNull().orEmpty()
+        val app = context.applicationContext
+        scope.launch {
+            runCatching { lookup(app, d) }
+                .onSuccess { found -> if (found.isNotEmpty()) _stills.update { it + (key to found) } }
+                .onFailure { Log.i(TAG, "lookup ${d.name}: ${it.message}"); tried.remove(key) }
         }
-        if (found.isNotEmpty()) _stills.update { it + (key to found) }
     }
 
     private fun lookup(context: Context, d: OnlineDetail): Map<String, String> {
