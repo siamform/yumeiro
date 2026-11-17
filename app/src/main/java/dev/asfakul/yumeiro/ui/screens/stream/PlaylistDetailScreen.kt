@@ -186,7 +186,9 @@ fun PlaylistDetailScreen(
         }
     }
     // Deleted while open (e.g. from another screen): show not-found instead of stale content.
-    LaunchedEffect(playlist == null, storeReady) { if (storeReady && !isOpened && playlist == null && state != LoadState.Loading) state = LoadState.NotFound }
+    // G7 LT-2: a failed store start loads the defaults in memory, so this playlist is missing from the
+    // list; that is the store error (shown with Retry), not a deletion.
+    LaunchedEffect(playlist == null, storeReady, storeError) { if (storeReady && storeError == null && !isOpened && playlist == null && state != LoadState.Loading) state = LoadState.NotFound }
 
     fun refresh(marketSha: String? = null) {
         val p = playlist ?: return

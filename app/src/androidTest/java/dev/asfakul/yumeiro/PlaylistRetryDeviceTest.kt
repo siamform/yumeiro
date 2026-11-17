@@ -82,10 +82,10 @@ class PlaylistRetryDeviceTest {
     private val index get() = File(streams, "playlists.json")
     private val parked get() = File(ctx.cacheDir, "plr_playlists.json")
 
+    /** Folder writable, index back. No unload: Retry itself must load the store again (LT-2). */
     private fun restoreStore() {
         streams.setWritable(true, true)
         if (parked.exists()) { index.delete(); parked.copyTo(index, overwrite = true); parked.delete() }
-        PlaylistStore.unloadForTests()
     }
 
     @Test fun storeStartFailureShowsRetryAndRetryLoads() {
@@ -103,7 +103,6 @@ class PlaylistRetryDeviceTest {
             val startErr = runCatching { runBlocking { PlaylistStore.init(ctx) } }.exceptionOrNull()
             log("PLR a store start fails=${startErr != null} (${startErr?.javaClass?.simpleName})")
             assertTrue("store start fails with the folder read-only", startErr != null)
-            PlaylistStore.unloadForTests()
 
             compose.setContent { Box(Modifier.fillMaxSize()) { PlaylistDetailScreen(slug = p.id, onBack = {}, onOpenMarket = {}); AppMessageHost() } }
             wait("store error page with Retry") { has("playlist_error") || has("playlist_not_found") }
@@ -117,7 +116,7 @@ class PlaylistRetryDeviceTest {
             wait("channels after Retry") { hasText("YuPlRetry One") && !has("playlist_error") }
             FirstRun.shot("plr_a_ready")
             log("PLR a PASS")
-        } finally { restoreStore() }
+        } finally { restoreStore(); PlaylistStore.unloadForTests() }
         log("PLR_RESULT PASS a")
     }
 

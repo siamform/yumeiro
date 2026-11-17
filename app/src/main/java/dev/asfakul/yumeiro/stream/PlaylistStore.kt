@@ -178,7 +178,11 @@ object PlaylistStore {
         // G7 LT-4: a download cut off by a kill leaves its temp file; ones older than an hour are not in use.
         runCatching { d.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") && System.currentTimeMillis() - f.lastModified() > 3_600_000 }?.forEach { it.delete() } }
         val migrated = saved != null && saved.optInt("version", 1) < STORE_VERSION && migrateDefaults(context)
-        if (saved == null || migrated || saved.optInt("version", 1) < STORE_VERSION) persist(context)
+        // G7 LT-2: loadedDir was set before this write, so a failed write (disk full, folder not
+        // writable) left the store "loaded" and the page's Retry never tried again.
+        if (saved == null || migrated || saved.optInt("version", 1) < STORE_VERSION) {
+            try { persist(context) } catch (e: Exception) { loadedDir = null; throw e }
+        }
     }
 
     /**
