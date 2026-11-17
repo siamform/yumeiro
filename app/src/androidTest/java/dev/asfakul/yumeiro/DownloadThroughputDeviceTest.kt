@@ -29,6 +29,11 @@ import java.util.concurrent.TimeUnit
  * (`THROUGHPUT_DEVICE`). Case b turns the screen off and forces Doze at 30 % (the T5 screen-off
  * question; the emulator has no Wi-Fi power save, so a phone is still needed for that half).
  * Rule (the same as DownloadThroughputTest): the last 10 % takes at most 2× the average 10 %.
+ *
+ * Case c (BUG-3 on the device without the internet): a local server in this process gives every
+ * request a fast first 1 MiB and then caps it at 1 MiB/s (nginx limit_rate_after; the profile that
+ * collapsed the tail in DownloadThroughputTest). The CDN of cases a/b does not cap per request, so
+ * only this case can show the 40ea96e / 3c85a72 fix on a device.
  */
 @RunWith(AndroidJUnit4::class)
 class DownloadThroughputDeviceTest {
@@ -131,4 +136,61 @@ class DownloadThroughputDeviceTest {
     @Test fun a_realHostScreenOn() = measure("screen-on", null)
 
     @Test fun b_realHostScreenOffAndDoze() = measure("screen-off-doze", 30)
+
+    @Test fun c_localBurstThenCapHost() {
+        val size = 40L * 1024 * 1024
+        val burst = 1L * 1024 * 1024
+        val rate = 1L * 1024 * 1024
+        val server = java.net.ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
+        val pool = java.util.concurrent.Executors.newCachedThreadPool()
+        val requests = java.util.concurrent.atomic.AtomicInteger()
+        pool.execute {
+            while (!server.isClosed) {
+                val sock = runCatching { server.accept() }.getOrNull() ?: break
+                pool.execute { runCatching { sock.use { serveCapped(it, size, burst, rate, requests) } } }
+            }
+        }
+        try {
+            val ok = measureOn("local-burst1MiB-cap1MiBps", null, "http://127.0.0.1:${server.localPort}/file.bin", size)
+            log("THROUGHPUT_DEVICE local requests=${requests.get()}")
+            assertTrue("local host failed to connect", ok)
+        } finally { server.close(); pool.shutdownNow() }
+    }
+
+    /** One request per connection; Range supported; body bytes are (offset % 251). */
+    private fun serveCapped(sock: java.net.Socket, len: Long, burst: Long, rate: Long, requests: java.util.concurrent.atomic.AtomicInteger) {
+        val input = sock.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+        input.readLine() ?: return
+        var range: String? = null
+        while (true) { val h = input.readLine() ?: break; if (h.isEmpty()) break; if (h.startsWith("range:", true)) range = h.substringAfter(':').trim() }
+        requests.incrementAndGet()
+        val os = sock.getOutputStream()
+        var start = 0L; var end = len - 1
+        val head = StringBuilder()
+        if (range != null) {
+            val spec = range.removePrefix("bytes=")
+            start = spec.substringBefore('-').toLong()
+            spec.substringAfter('-').takeIf { it.isNotBlank() }?.toLong()?.let { end = minOf(it, len - 1) }
+            if (start >= len) { os.write("HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */$len\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray()); os.flush(); return }
+            head.append("HTTP/1.1 206 Partial Content\r\nContent-Range: bytes $start-$end/$len\r\n")
+        } else head.append("HTTP/1.1 200 OK\r\n")
+        val count = end - start + 1
+        head.append("Accept-Ranges: bytes\r\nContent-Type: application/octet-stream\r\nContent-Length: $count\r\nConnection: close\r\n\r\n")
+        os.write(head.toString().toByteArray())
+        val buf = ByteArray(16 * 1024)
+        val t0 = System.nanoTime()
+        var sent = 0L
+        try {
+            while (sent < count) {
+                val n = minOf(buf.size.toLong(), count - sent).toInt()
+                for (k in 0 until n) buf[k] = ((start + sent + k) % 251).toByte()
+                os.write(buf, 0, n); sent += n
+                if (sent > burst) {
+                    val ahead = (sent - burst) * 1_000_000_000L / rate - (System.nanoTime() - t0)
+                    if (ahead > 0) TimeUnit.NANOSECONDS.sleep(ahead)
+                }
+            }
+            os.flush()
+        } catch (_: java.io.IOException) { /* the client closed early */ }
+    }
 }
