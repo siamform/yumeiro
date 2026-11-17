@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
@@ -81,8 +82,11 @@ class UpdateManager private constructor(context: Context) {
         if (startupDone) return
         startupDone = true
         cleanupStaleApks()
-        if (restoreDownload()) return
-        if (autoCheckAllowedForBuild && prefs.autoCheckEnabled) checkForUpdates(userInitiated = false)
+        // N3-1: restoring asks the system DownloadManager (a provider call) — never on the main thread.
+        scope.launch {
+            if (restoreDownload()) return@launch
+            if (autoCheckAllowedForBuild && prefs.autoCheckEnabled) checkForUpdates(userInitiated = false)
+        }
     }
 
     fun setSeamlessUpdates(enabled: Boolean) {
@@ -216,8 +220,9 @@ class UpdateManager private constructor(context: Context) {
         scope.launch {
             _state.value = UpdateState.Downloading(release, 0, release.asset.sizeBytes, 0, queued = true)
             try {
-                val dir = updatesDir() ?: throw IllegalStateException("Storage is not available.")
-                dir.listFiles()?.forEach { it.delete() }
+                // N3-1: folder listing/deleting and the DownloadManager calls are disk/IPC work: IO thread.
+                val dir = withContext(Dispatchers.IO) { updatesDir()?.also { d -> d.listFiles()?.forEach { it.delete() } } }
+                    ?: throw IllegalStateException("Storage is not available.")
                 val target = File(dir, safeFileName(release))
                 val resolved = client.resolveDownload(release)
                 if (!TrustedSources.isGitHubDownloadHost(resolved.url)) {
@@ -237,7 +242,7 @@ class UpdateManager private constructor(context: Context) {
                     request.addRequestHeader("Authorization", "Bearer ${UpdateConfig.token}")
                     request.addRequestHeader("Accept", "application/octet-stream")
                 }
-                val id = downloadManager.enqueue(request)
+                val id = withContext(Dispatchers.IO) { downloadManager.enqueue(request) }
                 prefs.downloadId = id
                 prefs.downloadRelease = ReleaseCodec.encode(release)
                 prefs.downloadSilent = silent
@@ -266,7 +271,7 @@ class UpdateManager private constructor(context: Context) {
             var lastTime = System.currentTimeMillis()
             var speed = 0L
             while (isActive) {
-                val snap = query(id)
+                val snap = withContext(Dispatchers.IO) { query(id) }
                 if (snap == null) {
                     // Removed externally (e.g. user cancelled from the notification shade).
                     prefs.clearDownload()
@@ -310,7 +315,7 @@ class UpdateManager private constructor(context: Context) {
 
     private suspend fun onDownloadFinished(release: ReleaseInfo, snap: Snapshot) {
         val file = snap.localUri?.let { Uri.parse(it).path }?.let(::File)
-            ?: File(updatesDir(), safeFileName(release))
+            ?: withContext(Dispatchers.IO) { File(updatesDir(), safeFileName(release)) }
         try {
             ApkInstaller.verify(app, file, release.asset.sha256)
             _state.value = UpdateState.ReadyToInstall(release, file.absolutePath)
@@ -324,7 +329,7 @@ class UpdateManager private constructor(context: Context) {
                 UpdateNotifier.notifyReady(app, release.versionName)
             }
         } catch (t: Throwable) {
-            file.delete()
+            withContext(Dispatchers.IO) { file.delete() }
             prefs.clearDownload()
             val msg = t.message ?: "The downloaded update could not be verified."
             if (silentFlow) {
@@ -344,7 +349,7 @@ class UpdateManager private constructor(context: Context) {
         scope.launch {
             try {
                 if (pollJob?.isActive == true) return@launch // in-process poller will handle it
-                val snap = query(id) ?: return@launch
+                val snap = withContext(Dispatchers.IO) { query(id) } ?: return@launch
                 if (snap.status == DownloadManager.STATUS_SUCCESSFUL) onDownloadFinished(release, snap)
             } finally {
                 done()
@@ -385,7 +390,7 @@ class UpdateManager private constructor(context: Context) {
             try { app.startActivity(confirm); return } catch (_: Exception) { }
         }
         val s = _state.value
-        if (s is UpdateState.Installing) restoreDownload()
+        if (s is UpdateState.Installing) scope.launch { restoreDownload() }
         prefs.pendingUpdatedVersion = null
         (s as? UpdateState.Installing)?.release?.let { UpdateNotifier.notifyReady(app, it.versionName) }
     }
@@ -397,7 +402,7 @@ class UpdateManager private constructor(context: Context) {
 
     internal fun onInstallCancelled() {
         val s = _state.value
-        if (s is UpdateState.Installing) restoreDownload()
+        if (s is UpdateState.Installing) scope.launch { restoreDownload() }
     }
 
     internal fun onInstallFailed(message: String) {
@@ -417,13 +422,13 @@ class UpdateManager private constructor(context: Context) {
     // ------------------------------------------------------------------------------ helpers
 
     /** Restores an in-flight or finished download after process restart. Returns true if found. */
-    private fun restoreDownload(): Boolean {
+    private suspend fun restoreDownload(): Boolean {
         val id = prefs.downloadId
         val release = ReleaseCodec.decode(prefs.downloadRelease)
         if (id < 0 || release == null) return false
         silentFlow = false // silent installs removed; a restored download always asks the user
         if (!isNewer(release)) { prefs.clearDownload(); return false }
-        val snap = query(id) ?: run { prefs.clearDownload(); return false }
+        val snap = withContext(Dispatchers.IO) { query(id) } ?: run { prefs.clearDownload(); return false }
         return when (snap.status) {
             DownloadManager.STATUS_SUCCESSFUL -> {
                 scope.launch { onDownloadFinished(release, snap) }

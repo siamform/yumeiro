@@ -45,3 +45,28 @@ Competitor check: Mihon `SecureActivityDelegate.setAppLock` turns the lock setti
 `isAuthenticationSupported()` is false, and keeps an `isAuthenticating` flag so its own prompt is
 never counted as leaving the app (source read 2026-11-17). N6-1 follows the first rule; N6-2 would
 follow the second once reproduced.
+
+## N3 Self-update
+
+Files read line by line: `update/UpdateManager.kt`, `ApkInstaller.kt`, `GitHubReleaseClient.kt` (also I11),
+`UpdatePreferences.kt`, `UpdateReceivers.kt`, `UpdateNotifier.kt`, `AppVisibility.kt`, `UpdateConfig.kt`.
+
+| Action | Expected reaction | Code | Result |
+|---|---|---|---|
+| Auto check at start | silent on failure, popup only for a newer, non-snoozed version | `checkForUpdates(false)` | OK |
+| "Remind me later" | hidden 24 h for that version | `snooze` | OK |
+| Download | system DownloadManager (survives process death, visible notification) | `startDownload` | OK; **N3-1** folder work on main |
+| Link not on GitHub / redirect off GitHub | refused before anything is queued | `TrustedSources.isGitHubDownloadHost`, `signedAssetUrl` | OK (device test checks it) |
+| Download progress | polled every 400 ms | `pollDownload` | **N3-1** provider query on main every 400 ms |
+| App killed during download | restored at next start | `restoreDownload` | OK; **N3-1** provider query on main during `onCreate` |
+| Finished file | SHA-256 required (fail closed), same package, higher version, same signer | `ApkInstaller.verify` (IO) | OK |
+| Install | PackageInstaller session, user confirms (USER_ACTION_REQUIRED) | `ApkInstaller.install` (IO) | OK |
+| Install cancelled / failed | back to "ready", message | `onInstallCancelled`, `onInstallFailed` | OK |
+| Stale APKs | removed at start when no download is active | `cleanupStaleApks` (IO) | OK |
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| N3-1 | Update download did disk and provider work on the main thread: the updates folder was created, listed and emptied on Download; DownloadManager `enqueue` and the progress `query` (every 400 ms for the whole download) and the restore `query` in `MainActivity.onCreate` were provider calls on main | `UpdateManager.scope` is `Dispatchers.Main.immediate` and these calls were made directly in it | folder work, `enqueue`, every `query` and the fallback file/delete moved to `Dispatchers.IO`; restore runs in a coroutine (the auto check follows it, as before) | `UpdateMainThreadDeviceTest` (StrictMode on main; also checks an off-GitHub link is refused and a stale APK is cleared); fail-before `scratch/n3-fail-before` | device run pending. The provider calls are not visible to StrictMode: that part is structural (code), not measured |
+
+Competitor check: Mihon's `AppUpdateDownloadJob` downloads in a WorkManager job off the main thread;
+Seal/NewPipe use their own downloader threads. None run storage or provider work on the UI thread.
