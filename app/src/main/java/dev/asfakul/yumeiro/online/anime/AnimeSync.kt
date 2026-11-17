@@ -128,13 +128,29 @@ object AnimeSync {
         val app = context.applicationContext
         scope.launch {
             val client = NetworkClient.get(app)
+            // IG-8: success means this redirect saved a new token. Checking "signed in" alone said
+            // "Signed in" after a failed re-sign-in, because the old token was still there.
             val msg = when (uri.host) {
-                "anilist-login" -> { AniList.handleRedirect(app, uri, client); if (AniList.signedIn) "Signed in to AniList as ${AniList.user()}" else "AniList sign-in failed" }
-                "mal-login" -> { MyAnimeList.handleRedirect(app, uri, client); if (MyAnimeList.signedIn) "Signed in to MyAnimeList as ${MyAnimeList.user()}" else "MyAnimeList sign-in failed" }
+                "anilist-login" -> {
+                    val before = OnlineSettings.secret("anilist_token")
+                    AniList.handleRedirect(app, uri, client)
+                    signInMessage("AniList", before, OnlineSettings.secret("anilist_token"), AniList.user())
+                }
+                "mal-login" -> {
+                    val before = OnlineSettings.secret("mal_token")
+                    MyAnimeList.handleRedirect(app, uri, client)
+                    signInMessage("MyAnimeList", before, OnlineSettings.secret("mal_token"), MyAnimeList.user())
+                }
                 else -> return@launch
             }
             done(msg)
         }
         return true
     }
+
+    /** The message after an OAuth redirect: success only when a new token was saved. */
+    internal fun signInMessage(service: String, before: String?, after: String?, user: String?): String =
+        if (after != null && after != before) "Signed in to $service as ${user ?: service}"
+        else if (before != null) "$service sign-in failed. You are still signed in as ${user ?: service}"
+        else "$service sign-in failed"
 }
