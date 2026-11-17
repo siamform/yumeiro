@@ -39,11 +39,24 @@ internal object Journeys {
         }
     }
 
+    /**
+     * X2-2 (run 43999288738 screenshots): the welcome button reads "Skip for now"; the old exact
+     * By.text("Skip") never matched, so every journey (frame timing, startup, baseline profile)
+     * stayed on the welcome screen. Match the prefix and wait until the guide is gone.
+     */
+    fun passWelcome(device: UiDevice) {
+        repeat(3) {
+            val skip = device.findObject(By.textStartsWith("Skip")) ?: return
+            skip.click()
+            device.wait(Until.gone(By.textStartsWith("Skip for now")), 5_000)
+            device.waitForIdle(2_000)
+        }
+    }
+
     /** Start, past the welcome guide if it shows, then scroll Home and visit the other tabs. */
     fun browseTabs(device: UiDevice) {
         firstFrameSettles(device)
-        device.findObject(By.text("Skip"))?.click()
-        device.waitForIdle(2_000)
+        passWelcome(device)
         val w = device.displayWidth; val h = device.displayHeight
         repeat(3) { device.swipe(w / 2, h * 3 / 4, w / 2, h / 4, 20); device.waitForIdle(1_000) }
         // The bottom bar: four tabs evenly across the width near the bottom.
@@ -58,8 +71,7 @@ internal object Journeys {
     /** ST-7 frame timing: past the welcome guide, fling Home up and down, then swipe the tab pager. */
     fun scrollHomeAndSwipeTabs(device: UiDevice) {
         firstFrameSettles(device)
-        device.findObject(By.text("Skip"))?.click()
-        device.waitForIdle(2_000)
+        passWelcome(device)
         snapshot(device, "before_scroll")
         val w = device.displayWidth; val h = device.displayHeight
         repeat(4) { device.swipe(w / 2, h * 3 / 4, w / 2, h / 4, 8); device.waitForIdle(500) }
