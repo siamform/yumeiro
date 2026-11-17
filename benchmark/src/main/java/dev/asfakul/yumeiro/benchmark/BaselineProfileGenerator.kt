@@ -24,7 +24,11 @@ class BaselineProfileGenerator {
         Journeys.grantPermissions(device)
         pressHome()
         startActivityAndWait()
-        Journeys.browseTabs(device)
+        // X2-1 (44128769774): restore last killed the process that had run Home and the tabs, and its
+        // unsaved profile went with it (Home rules 684 → 99). Kill first, then browse in the final process.
+        Journeys.firstFrameSettles(device)
+        Journeys.passWelcome(device)
         Journeys.restoreOpenTab(device) // X2-1: the H8 restore path (process death, same tab)
+        Journeys.browseTabs(device)
     }
 }
