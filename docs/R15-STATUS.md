@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 10:23 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 11:40 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -118,14 +118,17 @@
   cache + on-screen store) → fixed cf4d650 + f3d1d38 + unit `YtAccountMusicCacheTest`; **M1-1** two or three full
   library scans in parallel at every cold start → fixed 841b085 + unit `LibraryScanOnceTest`. M6, M8: read, no finding.
   `scratch/unit-fail-before` now also holds old M9/M2/M1 code (seams only).
-- **Runs in progress:** CI 44062718477 (head c09cdc8; the M-row commits come after it); device 44062815556
-  (`scratch/device-fail-before`, api33-lowram, expect FAIL each); device 44064339793 (head aa3489e, api33-lowram:
-  MiniPlayer, LibraryPersist, LocalPlayer).
+- **Done since (seventh handover, 12):** CI 44062718477 and 44067269319 green (unit: WatchTogetherHost, SourceStoresSafety,
+  BridgeIds, LinksOpen, SiteAccess, ResumePoints, MusicMixSearch, YtAccountMusicCache 3/3, LibraryScanOnce 2/2).
+  Fail-before 44062815556 FAILED 5/5 as expected → N2-1, N7-1, N6-1, N3-1, N4-2 verified (emulator api33-lowram).
+  MiniPlayer PASS 44067244782 (MINI-T1 closed, emulator). AppLock api28: case a PASS, case b found **N6-4** (right PIN,
+  app stayed locked; 44069102667) → fixed 3f3fbd8. n6 fail-before 44069107057 FAILED a+b as expected.
+- **Runs in progress:** CI 44070875412 (`scratch/unit-fail-before`, expect FAIL on the listed unit tests); device
+  44071192093 (head 3f3fbd8, api28, AppLockDeviceTest).
 - **Next three actions:**
-  1. Read 44062815556 and 44064339793; CI on head (ci.yml) once 44062718477 ends, then CI on `scratch/unit-fail-before`
-     (expect FAIL: SourceStoresSafety, SiteAccessTest#signOut…, LinksOpen, WatchTogetherHost, ResumePoints#bridgeId…,
-     MusicMixSearch, YtAccountMusicCache, LibraryScanOnce#requestsDuringARunningScanShareIt).
-  2. Device: head AppLock on api28 (`-f minsdk=true`) and n6 fail-before on api28; api36 one run with all new tests.
+  1. Read 44071192093 (expect a+b PASS, logcat LOCK_UNLOCK ok=true, no LOCK_RELOCK) and 44070875412 (report XML).
+  2. One api36 run with all new device tests (AdultSearchFilter, SiteSignOut, InboxMainThread, UniversalAddEcosystems,
+     MiniPlayer, AppLock, UpdateMainThread, DownloadsScreen, LibraryPersist, LocalPlayer, BrowserCheckCooldown).
   3. Full suite on both phones (milestone); H8 `-f bench=restore`; then the final report and the gated feature list.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
