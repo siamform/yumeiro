@@ -86,7 +86,7 @@ class DownloadThroughputDeviceTest {
     }
 
     /** False only when the download failed before its first byte (connection). */
-    private fun measureOn(case: String, screenOffAt: Int?, url: String, size: Long): Boolean = runBlocking {
+    private fun measureOn(case: String, screenOffAt: Int?, url: String, size: Long, unitRule: Boolean = false): Boolean = runBlocking {
         OnlineDownloads.ensureLoaded(ctx)
         val title = "YuDlTest BUG-3 $case ${System.currentTimeMillis()}"
         val err = OnlineDownloads.enqueue(ctx, title, "yu-test-bug3", "t-bug3-$title", "E1", null, emptyMap(),
@@ -131,7 +131,7 @@ class DownloadThroughputDeviceTest {
         if (item?.status == Status.FAILED && at[0] < 0 && item.error.orEmpty().contains("connect", ignoreCase = true)) return@runBlocking false
         assertEquals(line, Status.DONE, item?.status)
         assertEquals(line, size, OnlineDownloads.fileOf(ctx, item!!).length())
-        val pass = ratio in 0.0..2.0
+        val pass = if (unitRule) total > 0 && !slowTail(steps) else ratio in 0.0..2.0
         log("THROUGHPUT_DEVICE_RESULT ${if (pass) "PASS" else "FAIL"} case=$case lastOverMean=${"%.2f".format(ratio)}")
         assertTrue("BUG-3 tail rule (≤ 2×): $line", pass)
         true
@@ -144,10 +144,15 @@ class DownloadThroughputDeviceTest {
     /** Device 44030612565 (head) vs 44031868134 (fail-before): tail ≤ 2× on both, the fix 2.2× faster. */
     @Test fun c_localBurstThenCapHost() = local("local-burst1MiB-cap1MiBps", 40L * 1024 * 1024, 1L * 1024 * 1024, 1L * 1024 * 1024)
 
-    /** The unit profile that showed the collapse (CI 43851470283: 4.9×): 24 MiB, 3 MiB burst, then 1.5 MiB/s. */
-    @Test fun d_localUnitCollapseProfile() = local("local-24MiB-burst3MiB-cap1.5MiBps", 24L * 1024 * 1024, 3L * 1024 * 1024, 1536L * 1024)
+    /**
+     * The unit collapse profile (CI 43851470283: 4.9×) with the cap 10× lower: 24 MiB, every request
+     * 3 MiB fast, then 150 KiB/s. At 1.5 MiB/s on loopback the whole file took 1–4 s and the list's
+     * 250 ms progress steps made the per-10 % times noise (44033132233, 44034766356: steps of 0 ms).
+     * Rule: the unit `slowTail` (ratio > 2, last 10 % over 250 ms and over 1.5× every earlier one).
+     */
+    @Test fun d_localUnitCollapseProfile() = local("local-24MiB-burst3MiB-cap150KiBps", 24L * 1024 * 1024, 3L * 1024 * 1024, 150L * 1024, unitRule = true)
 
-    private fun local(case: String, size: Long, burst: Long, rate: Long) {
+    private fun local(case: String, size: Long, burst: Long, rate: Long, unitRule: Boolean = false) {
         val server = java.net.ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
         val pool = java.util.concurrent.Executors.newCachedThreadPool()
         val requests = java.util.concurrent.atomic.AtomicInteger()
@@ -158,7 +163,7 @@ class DownloadThroughputDeviceTest {
             }
         }
         try {
-            val ok = measureOn(case, null, "http://127.0.0.1:${server.localPort}/file.bin", size)
+            val ok = measureOn(case, null, "http://127.0.0.1:${server.localPort}/file.bin", size, unitRule)
             log("THROUGHPUT_DEVICE local requests=${requests.get()}")
             assertTrue("local host failed to connect", ok)
         } finally { server.close(); pool.shutdownNow() }
@@ -199,5 +204,13 @@ class DownloadThroughputDeviceTest {
             }
             os.flush()
         } catch (_: java.io.IOException) { /* the client closed early */ }
+    }
+
+    /** The same rule as DownloadThroughputTest.slowTail (unit sources are not on the device classpath). */
+    private fun slowTail(s: List<Long>): Boolean {
+        if (s.size < 2 || s.any { it < 0 }) return false
+        val mean = s.sum() / s.size.toDouble()
+        val last = s.last()
+        return last / mean.coerceAtLeast(1.0) > 2.0 && last > 250 && last > s.dropLast(1).max() * 1.5
     }
 }
