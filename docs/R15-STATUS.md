@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 09:55 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 10:40 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -55,14 +55,27 @@
   folder delete per episode) fixed a501d8e with `DownloadsScreenDeviceTest`; fail-before branch
   `scratch/d8-fail-before` (7182011, old code + no-op flushForTests seam). Skills cloned to
   `/home/user/workspace/agent-skills` (sandbox only; architecture-designer SKILL.md read first).
-- **Current group / step:** G8 leftovers (DL-12, D6) and G11 close-out (IG-6…IG-8 after-fix on api33-lowram).
-- **Runs in progress:** 44053272178 (head a501d8e, api33-lowram: DownloadsScreen, YtDownloadPipeline,
-  CloudAlertsLookup, OnlineSubtitlesFallback, AnimeSignInMessage, ExternalDownloader, TorrentDownload; expect PASS);
-  44053590474 (`scratch/d8-fail-before`, api33-lowram, DownloadsScreen on old code; expect FAIL a_open/b_actions).
+- **Done since (seventh handover, 3):** G9 SE-1 device test `SettingsResetDeviceTest` (6e96b90). G10 A5 finding
+  **ER-20** (a failed browser check was never remembered, so every request reopened a hidden WebView) fixed 065f455
+  with unit `BrowserCheckTest#failedCheckWaitsBeforeTheNextWebView` + device `BrowserCheckCooldownDeviceTest`;
+  fail-before branch `scratch/a5-fail-before` (dfb48ef). Device run 44053272178 (a501d8e) did not compile
+  (`import androidx.compose.ui.test.and` in my new test); fixed ee1808c, so a501d8e…065f455 had an androidTest
+  that did not build (main code built). 44053590474 cancelled (same file, would fail the same way).
+  DONE-LEDGER layout repaired: 28 rows had shifted cells (ST-21/SE-6 status column showed "—"/old text); no status changed.
+- **Current group / step:** G8 leftovers (DL-12, D6), G11 close-out (IG-6…IG-8 api33-lowram after-fix), G9/G10
+  leftovers (SE-1 device walk, ER-20).
+- **Runs in progress:** 44054360131 (head ee1808c, api33-lowram: DownloadsScreen, YtDownloadPipeline,
+  BrowserCheckCooldown, SettingsReset, CloudAlertsLookup, OnlineSubtitlesFallback, AnimeSignInMessage,
+  ExternalDownloader, TorrentDownload; expect PASS) and 44054365230 (`scratch/d8-fail-before`, DownloadsScreen on
+  old code, api33-lowram; expect FAIL a_open/b_actions with main-thread disk calls).
 - **Next three actions:**
-  1. Read both runs; then DownloadsScreen + YtDownloadPipeline on api36 (one run).
-  2. Mark IG-6…IG-8 and DL-12 in DONE-LEDGER, GROUP-8/11, device-runs.md; set INVENTORY D1–D8 and I1–I11 with evidence.
-  3. G9–G11 leftovers (INVENTORY G9/G10 rows still "open"/"unit pending"), then re-audit G1–4.
+  1. Read both runs (logcat tags DLSCREEN_, YTDL_, CHECK_, RESET_, CLOUD_, SUBS_, SIGNIN_, EXTDL, TORRENT_); then
+     `scratch/a5-fail-before` BrowserCheckCooldown on api33-lowram (expect ≈60 s > 5 s) and api36 for
+     DownloadsScreen, YtDownloadPipeline, SettingsReset, BrowserCheckCooldown (one run).
+  2. ci.yml once (unit suite: BrowserCheckTest new case, DL-12 changed OnlineDownloads.write); mark IG-6…8, DL-12,
+     ER-20, SE-1 in DONE-LEDGER, GROUP-8/9/10/11, INVENTORY D1–D8, I1–I11, S23–S27, A1–A5; add OMT-19 (real
+     YouTube download on a home network).
+  3. Re-audit G1–4, then the final sweep (INVENTORY coverage proof, full suite at the milestone).
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
