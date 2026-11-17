@@ -1,11 +1,12 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, 5)
+## Resume here (updated 2026-11-18, eighth cycle, 6)
 
 - **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
-- **Current group:** 4.1 tail. Verified (emulator): N6-2, BUG-1, BUG-2, BUG-4 (phones + TV), TV-3. DL-11 p2 option F: medians met, one download 1.1004× (not claimed). X2-1 emulator part done (743b1c7; jank no gain; startup 0.62/0.71). 4.2 done, 4.3 done or Blocked: owner.
-- **Runs in progress:** 44145301927 (ST-17 campaign ×10 both phones, a7b03a0).
-- **Next three actions:** (1) read the ST-17 campaign (spins, FATAL, ANR, stalls) and record it; (2) EXT-T1: ExtensionsDeviceTest repeat 10 on api33-lowram, twice (≥20); (3) 4.4 gate check (Group 13, final sweep) and proposals F-01…F-12 only.
+- **Current group:** 4.1 tail + 4.4 proposals. Verified (emulator): N6-2, BUG-1, BUG-2, BUG-4 (phones + TV), TV-3. DL-11 p2 option F: medians met, one download 1.1004× (not claimed; next sample with the next download change). X2-1 emulator part done (no gain claimed). ST-17 campaign 44145301927: 20/20, 0 spins; stays open. 4.2 done; 4.3 done or Blocked: owner; Group 13 closed for agent work (6bb9dcb).
+- **4.4:** proposals F-01…F-12 all written (docs/proposals/FEATURE-F-*.md; ADR-017 and ADR-018 proposed). Gate **not passed**: DL-11 budget not claimed and EXT-T1 pending. Nothing built.
+- **Runs in progress:** 44162062169 (EXT-T1: ExtensionsDeviceTest repeat 10, api33-lowram).
+- **Next three actions:** (1) read 44162062169 (artifact logcat: E11 cleanup and any failure); (2) second EXT-T1 campaign of 10 for ≥ 20 runs; if none reproduce, OWNER-MANUAL-TESTS entry Blocked: owner; (3) DL-11 next measurement with the next download change (case d every time), then the 4.4 gate check.
 - Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
 
 ### Previous resume note

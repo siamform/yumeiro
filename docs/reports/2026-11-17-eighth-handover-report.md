@@ -7,8 +7,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 - Head at start: 2cbb2ae (docs only after 912093b). No run after 44094439021 at start (checked 2026-11-17).
 - Current group: 4.1. Done for agent scope: N6-2, BUG-1, BUG-2, BUG-4, TV-3. DL-11 p2 nearly met (option F).
   X2-1 emulator part done (profile 743b1c7, jank no gain, startup measured). 4.3 register done or Blocked: owner.
-  Next: ST-17 campaign; EXT-T1 runs (≥20 on api33-lowram); then the 4.4 gate check and proposals.
-- Open runs: 44145301927 (ST-17 campaign, StabilityStressDeviceTest ×10 both phones, head a7b03a0).
+  ST-17 campaign 44145301927 read (20/20, 0 spins, stays open). Group 13 closed for agent work. 4.4 proposals
+  F-01…F-12 written (ADR-017, ADR-018 proposed); gate not passed, nothing built.
+  Next: EXT-T1 (≥20 runs on api33-lowram), DL-11 next sample, then the 4.4 gate check.
+- Open runs: 44162062169 (EXT-T1, ExtensionsDeviceTest ×10, api33-lowram).
 
 ## Findings (eighth cycle)
 
@@ -48,6 +50,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44133217014 | bench=profile 52155bf | 47,941 rules, committed 743b1c7 |
 | 44138627579 | bench=jank 743b1c7 | no gain (software rendering) |
 | 44142300486 | bench=startup 743b1c7 | TTID ratio 0.62 api36, 0.71 lowram |
+| 44145301927 | ST-17 StabilityStressDeviceTest ×10 both phones, a7b03a0 | 20/20 PASS, compose spins 0, FATAL 0, ANR 0; ~5–6 distinct main-thread stalls 702–1070 ms (each logged twice) (emulator) |
+| 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram | in progress |
 
 ## Still open
 
@@ -60,7 +64,8 @@ cold start; NBUG-4d real GPU (OMT-16); Vega meaning; Telegram/Terabox/Diskwala/m
 
 ## Feature phase
 
-Gate not passed. Part 8 not started; proposals only (checklist section C).
+Gate not passed. Part 8 not started. Proposals F-01…F-12 written (checklist section C; ADR-017 glass theme and
+ADR-018 shorts player are proposed, not accepted). Owner decisions listed in each note §7/§8.
 
 ## Handover prompt for the next agent
 

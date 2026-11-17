@@ -201,5 +201,24 @@ verified on a device, evidence linked), `not covered` (reason given).
 | N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | audited (GROUP-13): N8-1 fixed 5be755e, verified (CI unit: 44070875412 → 44062718477) | `LinksOpenTest` |
 | N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | audited (GROUP-13): code read, no finding | build guard (ADR-013) |
 
+## Proposed features (4.4, gated, not built)
+
+Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs the 4.4 gate and the owner.
+
+| ID | Feature | Note | Existing code it would touch |
+|---|---|---|---|
+| F-01 | Language / Sub / Dub badges on search posters | docs/proposals/FEATURE-F-01-language-sub-dub-badges.md | online search results, SourceFacts |
+| F-02 | Telegram option | docs/proposals/FEATURE-F-02-telegram.md | stream/LinkHosts (no Telegram code today) |
+| F-03 | TeraBox / DiskWala links | docs/proposals/FEATURE-F-03-terabox-diskwala.md | stream/LinkHosts (route exists, unit-tested) |
+| F-04 | WebView site list | docs/proposals/FEATURE-F-04-webview-site-list.md | N2 (online/web/SavedSites, ui/screens/sites) |
+| F-05 | Nuvio / SkyStream repositories (Vega: owner question OMT-24) | docs/proposals/FEATURE-F-05-nuvio-skystream-repos.md | sources/UniversalAdd, sources/js |
+| F-06 | 200 % volume booster | docs/proposals/FEATURE-F-06-volume-booster.md | player |
+| F-07 | External player support | docs/proposals/FEATURE-F-07-external-player.md | player |
+| F-08 | Upcoming movies and series | docs/proposals/FEATURE-F-08-upcoming-movies-series.md | online/anime/AniList, notify |
+| F-09 | Watch Later and Favorite on posters | docs/proposals/FEATURE-F-09-watch-later-favorite-posters.md | library lists |
+| F-10 | Glass theme (ADR-017 proposed) | docs/proposals/FEATURE-F-10-glassmorphism-theme.md | ui/theme |
+| F-11 | Manga auto-translation | docs/proposals/FEATURE-F-11-manga-translation.md | ui/screens/manga reader |
+| F-12 | Vertical shorts player (ADR-018 proposed) | docs/proposals/FEATURE-F-12-vertical-video-player.md | youtube Shorts shelf, StreamMediaFactory |
+
 ## Not covered
 (Filled at the end of the audit.)
