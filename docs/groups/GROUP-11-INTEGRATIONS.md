@@ -77,10 +77,11 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 
 ## Competitor notes
 
-- Trakt/Simkl device flow: same as Kodi's script.trakt and Stremio's Trakt add-on (poll at the server's interval, give up at `expires_in`). Yumeiro follows the documented interval and slow_down.
-- Trackers: Aniyomi/Mihon keep each tracker independent (one failing tracker never blocks the others) and refresh MAL tokens ahead of expiry; IG-2/IG-3 bring Yumeiro to the same behaviour.
-- Subtitles: mpv-based players and Kodi's OpenSubtitles add-on merge hash and title results and show what was found when one source fails; IG-7 matches that.
-- YouTube sign-in: PipePipe and ArchiveTune use the account only on a sign-in wall; Yumeiro's default mode is the same.
+Checked against source code on 2026-11-17:
+
+- Mihon updates each tracker in its own `async { runCatching { … } }` and only logs failures, so one tracker never blocks the others ([TrackChapter.kt](https://github.com/mihonapp/mihon/blob/main/app/src/main/java/eu/kanade/domain/track/interactor/TrackChapter.kt)). IG-2 gives Yumeiro the same isolation, plus a capped retry.
+- Mihon refreshes the MAL token once it has expired, before the request, and marks the account expired when the refresh gets a 401 ([MyAnimeListInterceptor.kt](https://github.com/mihonapp/mihon/blob/main/app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/MyAnimeListInterceptor.kt)). Yumeiro (IG-3) refreshes up to a day ahead and keeps the rotated refresh token.
+- YouTube account only on a sign-in wall: the same narrow use PipePipe makes (as stated in YtAccount.kt; not re-checked in PipePipe's code this round).
 
 ## Verification
 
