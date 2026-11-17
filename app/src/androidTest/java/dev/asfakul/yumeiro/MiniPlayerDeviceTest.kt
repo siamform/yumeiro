@@ -99,9 +99,12 @@ class MiniPlayerDeviceTest {
         // Next button, swipe left (next), swipe right (previous), Previous button.
         rule.onNodeWithTag("mini_player_next_button", true).performClick()
         waitTrack("mini_t2", "c_next_button")
-        swipeBar(0.40f, 0.03f)
+        // Run 44059862262: a swipe that started at 3 % of the bar began in the bar's start padding (outside the
+        // draggable row) and in the system back-gesture edge (a back reached the app), so nothing moved.
+        // Both swipes now start and end inside the row, ~40 % of the width (> the 64 dp threshold).
+        swipeBar(0.60f, 0.20f)
         waitTrack("mini_t3", "d_swipe_left")
-        swipeBar(0.03f, 0.40f)
+        swipeBar(0.20f, 0.60f)
         waitTrack("mini_t2", "e_swipe_right")
         rule.onNodeWithTag("mini_player_previous_button", true).performClick()
         waitTrack("mini_t1", "f_previous_button")
