@@ -42,6 +42,12 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  *  a: JavaScript tab → Add → index.json link → error with Retry → Retry → "Repository added · 1 sources".
  *  b: Stremio tab → Add → manifest link → error with Retry → Retry → "<name> added".
+ *  c: Mihon tab → Add → index.min.json link → error with Retry → Retry → "Repository added · 1 extensions".
+ *  d: Home servers → WebDAV → Connect → error with Retry (the form stays open) → Retry → "WebDAV connected".
+ *
+ * Retry is tapped with a real screen tap (`input tap` at its on-screen centre), not a Compose
+ * injected click, so a Retry drawn under a dialog window would fail here. Inbox pull-to-refresh
+ * uses the same AppMessages.error(…, "Retry") call but its feed address is fixed (no local server).
  *
  * Log tag YuRetry: RTY_CASE / RTY_RESULT PASS.
  */
@@ -51,6 +57,10 @@ class RetryActionsDeviceTest {
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private lateinit var server: MockWebServer
     private val hits = AtomicInteger(0)
+    /** True until the error is on screen; the server then answers so Retry can succeed. */
+    private val failing = java.util.concurrent.atomic.AtomicBoolean(true)
+    private var addedMihon: String? = null
+    private var addedServer: String? = null
     private var addedJs: String? = null
     private var addedStremio: String? = null
 
@@ -73,13 +83,14 @@ class RetryActionsDeviceTest {
         server = MockWebServer()
         server.dispatcher = object : mockwebserver3.Dispatcher() {
             override fun dispatch(request: mockwebserver3.RecordedRequest): MockResponse {
-                // The first request of each case fails; later ones answer. Any client-side retry would
-                // count here too, so the test compares hits before and after the Retry tap.
-                val n = hits.incrementAndGet()
-                if (n == 1) return MockResponse.Builder().code(404).body("gone").build()
+                if (failing.get()) return MockResponse.Builder().code(404).body("gone").build()
+                hits.incrementAndGet()
+                val json = { body: String -> MockResponse.Builder().addHeader("Content-Type", "application/json").body(body).build() }
                 return when (request.url.encodedPath) {
-                    "/repo/index.json" -> MockResponse.Builder().addHeader("Content-Type", "application/json").body(JS_INDEX).build()
-                    "/addon/manifest.json" -> MockResponse.Builder().addHeader("Content-Type", "application/json").body(MANIFEST).build()
+                    "/repo/index.json" -> json(JS_INDEX)
+                    "/addon/manifest.json" -> json(MANIFEST)
+                    "/mihon/index.min.json" -> json(MIHON_INDEX)
+                    "/dav/" -> MockResponse.Builder().code(207).addHeader("Content-Type", "application/xml; charset=utf-8").body(DAV_LIST).build()
                     else -> MockResponse.Builder().code(404).build()
                 }
             }
@@ -91,6 +102,8 @@ class RetryActionsDeviceTest {
     @After fun tearDown() {
         addedJs?.let { u -> runCatching { JsSources.removeRepo(ctx, u) } }
         addedStremio?.let { u -> runCatching { StremioAddons.remove(ctx, u) } }
+        addedMihon?.let { u -> runCatching { kotlinx.coroutines.runBlocking { dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.removeRepo(ctx, u) } } }
+        addedServer?.let { id -> runCatching { dev.asfakul.yumeiro.sources.servers.HomeServers.remove(ctx, id) } }
         runCatching { clearMessage() }
         runCatching { server.close() }
     }
@@ -128,15 +141,24 @@ class RetryActionsDeviceTest {
         confirm[confirm.fetchSemanticsNodes().size - 1].performClick()
     }
 
+    /** A real tap on the screen at the node's centre: goes through window order like a finger. */
+    private fun screenTap(tag: String) {
+        val n = compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().first()
+        val x = n.positionOnScreen.x + n.size.width / 2f
+        val y = n.positionOnScreen.y + n.size.height / 2f
+        log("RTY_TAP $tag at ${x.toInt()},${y.toInt()}")
+        FirstRun.shell("input tap ${x.toInt()} ${y.toInt()}")
+    }
+
     private fun failThenRetry(case: String, success: String) {
         wait("$case: error message with Retry") { has("app_message") && has("app_message_action") }
         val err = messageText()
-        val before = hits.get()
-        log("RTY_CASE $case error='$err' hits=$before")
+        log("RTY_CASE $case error='$err'")
         FirstRun.shot("rty_${case}_error")
         assertTrue("$case: the message names the reason, not a bare 'try again' ('$err')", err.contains("404") || err.contains("found", true) || err.contains("answered", true))
-        compose.onNodeWithTag("app_message_action", true).performClick()
-        wait("$case: Retry repeats the call") { hits.get() > before }
+        failing.set(false)
+        screenTap("app_message_action")
+        wait("$case: Retry repeats the call") { hits.get() > 0 }
         wait("$case: success after Retry") { hasText(success) }
         log("RTY_CASE $case retried hits=${hits.get()} success='$success'")
         log("RTY_RESULT PASS $case")
@@ -160,8 +182,36 @@ class RetryActionsDeviceTest {
         addedStremio = url
     }
 
+    @Test fun c_mihonRepoRetry() {
+        val url = server.url("/mihon/index.min.json").toString()
+        show(1)
+        addThroughDialog("hub_tachiyomi_manga", "Your repositories", url)
+        failThenRetry("c", "Repository added · 1 extensions")
+        val base = dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.normalizeRepo(url)
+        wait("c: repo saved") { dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.state.value.repos.any { it.url == base } }
+        addedMihon = base
+    }
+
+    @Test fun d_homeServerRetry() {
+        val url = server.url("/dav/").toString()
+        show(4)
+        wait("hub_servers list") { has("hub_servers") }
+        compose.onNodeWithTag("hub_servers", true).performScrollToNode(hasText("Add a server", substring = true))
+        compose.waitForIdle()
+        compose.onAllNodesWithText("WebDAV", useUnmergedTree = true)[0].performClick()
+        wait("server form") { has("server_url") }
+        compose.onNodeWithTag("server_url", true).performTextInput(url)
+        compose.waitForIdle()
+        compose.onAllNodesWithText("Connect", useUnmergedTree = true)[0].performClick()
+        failThenRetry("d", "WebDAV connected")
+        wait("d: server saved") { dev.asfakul.yumeiro.sources.servers.HomeServers.servers.value.any { it.url.trimEnd('/') == url.trimEnd('/') } }
+        addedServer = dev.asfakul.yumeiro.sources.servers.HomeServers.servers.value.first { it.url.trimEnd('/') == url.trimEnd('/') }.id
+    }
+
     private companion object {
         const val JS_INDEX = """[{"id":"er12","name":"ER12 Source","lang":"en","sourceCodeLanguage":"1","itemType":"0","isManga":"true","sourceCodeUrl":"https://example.invalid/er12.js","baseUrl":"https://example.invalid","version":"0.0.1"}]"""
+        const val MIHON_INDEX = """[{"name":"Tachiyomi: ER12","pkg":"eu.kanade.tachiyomi.extension.en.er12","apk":"tachiyomi-en.er12-v1.4.1.apk","lang":"en","code":1,"version":"1.4.1","nsfw":0}]"""
+        const val DAV_LIST = """<?xml version="1.0" encoding="utf-8"?><d:multistatus xmlns:d="DAV:"><d:response><d:href>/dav/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype><d:displayname>dav</d:displayname></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response><d:response><d:href>/dav/clip.mp4</d:href><d:propstat><d:prop><d:resourcetype/><d:getcontenttype>video/mp4</d:getcontenttype><d:getcontentlength>1000</d:getcontentlength><d:displayname>clip.mp4</d:displayname></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>"""
         const val MANIFEST = """{"id":"test.er12","name":"ER12 Test","version":"1.0.0","types":["movie"],"resources":["stream"],"catalogs":[]}"""
     }
 }
