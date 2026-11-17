@@ -22,6 +22,8 @@ import dev.asfakul.yumeiro.data.model.StorageStats
 import dev.asfakul.yumeiro.data.model.VideoFolder
 import dev.asfakul.yumeiro.data.model.VideoItem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -286,7 +288,44 @@ class OfflineMediaRepository(
         )
     }
 
-    override suspend fun scanDeviceMedia() = withContext(Dispatchers.IO) {
+    /**
+     * G13 M1-1: one MediaStore scan for the same permission state at a time. Every cold start with
+     * media access already granted asked twice at once (MainViewModel.init and the startup
+     * permission check in MTPlayerApp; three times when the notification prompt also answered),
+     * so a low-RAM phone read the whole library two or three times in parallel and held as many
+     * copies of it. A request that arrives while a scan with the same access runs now waits for
+     * that scan; a request after the access changed (first grant) still runs its own, after it.
+     */
+    private val scanScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private val scanOrder = kotlinx.coroutines.sync.Mutex()
+    private val scanLock = Any()
+    private var scanRunning: kotlinx.coroutines.Deferred<Unit>? = null
+    private var scanRunningKey: String? = null
+
+    /** Tests only: called once at the start of every real scan. */
+    @androidx.annotation.VisibleForTesting
+    internal var scanProbe: (() -> Unit)? = null
+
+    private fun mediaAccessKey(): String {
+        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(android.Manifest.permission.READ_MEDIA_AUDIO, android.Manifest.permission.READ_MEDIA_VIDEO)
+        } else listOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        return perms.joinToString(",") { p ->
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, p) == android.content.pm.PackageManager.PERMISSION_GRANTED) "1" else "0"
+        }
+    }
+
+    override suspend fun scanDeviceMedia() {
+        val key = mediaAccessKey()
+        val job = synchronized(scanLock) {
+            scanRunning?.takeIf { it.isActive && scanRunningKey == key }
+                ?: scanScope.async { scanOrder.withLock { scanNow() } }.also { scanRunning = it; scanRunningKey = key }
+        }
+        job.await()
+    }
+
+    private suspend fun scanNow() = withContext(Dispatchers.IO) {
+        scanProbe?.invoke()
         _storageStats.value = _storageStats.value.copy(isScanning = true)
 
         val scannedAudio = mutableListOf<AudioTrack>()
