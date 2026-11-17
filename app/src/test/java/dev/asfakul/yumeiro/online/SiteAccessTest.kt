@@ -19,6 +19,16 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class SiteAccessTest {
+    // N2-1: sign-out must also expire Domain= and Secure-only cookies.
+    @Test fun signOutExpiresDomainAndSecureCookies() {
+        val lines = SiteLogins.expiryLines("https://site.to/", "session", "site.to")
+        assertTrue(lines.any { "Domain=site.to" in it && "Max-Age=0" in it && "Secure" in it })
+        assertTrue(lines.any { "Domain=" !in it && "Secure" in it })
+        val host = SiteLogins.expiryLines("https://site.to/", "__Host-x", "site.to")
+        assertTrue("__Host- cookies may not carry Domain", host.isNotEmpty() && host.none { "Domain=" in it })
+        assertTrue(SiteLogins.expiryLines("http://site.to/", "a", "site.to").none { "Secure" in it })
+    }
+
     @Test fun loginMatchesSubdomains() {
         val hosts = setOf("site.to")
         assertTrue(SiteLogins.matches(hosts, "www.site.to"))

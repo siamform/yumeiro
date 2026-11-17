@@ -52,13 +52,27 @@ object SiteLogins {
         cache.remove(h); save(ctx)
         runCatching {
             val cm = CookieManager.getInstance()
-            for (url in listOf("https://$h/", "https://www.$h/")) {
+            for (url in listOf("https://$h/", "https://www.$h/", "http://$h/", "http://www.$h/")) {
                 cm.getCookie(url).orEmpty().split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() }
-                    .forEach { name -> cm.setCookie(url, "$name=; Max-Age=0; Path=/") }
+                    .forEach { name -> expiryLines(url, name, h).forEach { cm.setCookie(url, it) } }
             }
             cm.flush()
         }
         BrowserCheck.forget(h)
+    }
+
+    /**
+     * N2-1: the lines that expire cookie [name] as seen at [url]. A cookie is only replaced by one
+     * with the same name, domain and path, so a host-only line (the old code) left every
+     * `Domain=` cookie, the usual sign-in cookie, in place. Secure is added on https so
+     * `__Secure-` / `__Host-` and SameSite=None cookies can be replaced too. Cookies set on a
+     * sub-path cannot be listed by CookieManager and are not reached; pure, unit-tested.
+     */
+    internal fun expiryLines(url: String, name: String, host: String): List<String> {
+        val secure = if (url.startsWith("https://")) "; Secure" else ""
+        val base = "$name=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"
+        return if (name.startsWith("__Host-")) listOf(base + secure)
+        else listOf(base + secure, "$base; Domain=$host$secure")
     }
 
     private fun save(ctx: Context?) {
