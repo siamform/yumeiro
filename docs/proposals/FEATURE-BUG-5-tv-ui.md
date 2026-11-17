@@ -22,7 +22,7 @@ and passes after. Real-TV confirmation goes to OMT-4.
 |---|---|---|---|
 | TV-1 | TV UI is unstable with multiple bugs (umbrella: every crash, focus loss or stall found while working TV-2…TV-5 is filed here as TV-1a, TV-1b, …) | X9, G12 | open |
 | TV-2 | D-pad Up from the top of a screen cannot reach the full-screen button | G3 player controls / TV focus (`ui/tv/TvPageFocus.kt`) | open |
-| TV-3 | Home horizontal rows do not scroll properly with the remote; scrolling opens YouTube Music by accident | G1 Home, TV rail (`ui/tv/TvNavRail.kt`), tab pager | open |
+| TV-3 | Home horizontal rows do not scroll properly with the remote; scrolling opens YouTube Music by accident | G1 Home, TV rail (`ui/tv/TvNavRail.kt`), tab pager | verified (emulator tv-api34/24, fix 45a15ea) |
 | TV-4 | Search returns no results on TV | G7 Search | open |
 | TV-5 | Playing media shows the phone player layout instead of a TV layout; landscape does not load | G3 Player, `ui/tv/TvMode.kt` | open |
 
@@ -75,3 +75,15 @@ Test `TvBug5ReproDeviceTest` (D-pad keys only, focused node logged after every k
 | Item | Fix | Unit | Device |
 |---|---|---|---|
 | TV-5 | `PlayerOrientationRule`: TV layout → `SCREEN_ORIENTATION_UNSPECIFIED` always, player pinned full screen unless floating, no full-screen button, Back does not step out of full screen. `VideoPlayerModal` and `VideoPlayerBottomBar` use it. | `PlayerOrientationRuleTest` | pending: TvBug5ReproDeviceTest a/b on tv-api34 and tv-api24 |
+
+## TV-3 result (2026-11-17)
+
+- Cause: the Spaces grid rows on Home had no exit rule for Right at the row end, so the default 2D search picked
+  the nearest card to the right in any row: from `quick_card_downloads` (row 2, last item) it landed on
+  `quick_card_ytmusic` (row 1). One Center then opened YouTube Music.
+- Fix 45a15ea (`HomeScreen.kt` `spacesRowFocus()` on `home_spaces` and `home_spaces_more_row`): Right or Left
+  past the row end stays on the current card; Up/Down unchanged.
+- Fail-before 44116803828 (scratch/tv3-fail-before e011c77 = head without the fix): e FAIL, R1→quick_card_ytmusic.
+  Pass-after 44118950490 (tv-api34) and 44121151867 (tv-api24): R1, R2, R3 stay on quick_card_downloads; a–e OK 5.
+- Not covered: online feed LazyRows with real content (CI seeds none); they use LazyRow's own end handling.
+
