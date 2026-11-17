@@ -80,7 +80,9 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * One place for every source ecosystem besides CloudStream: Aniyomi (anime) and Mihon (manga)
@@ -363,7 +365,7 @@ private fun StremioTab() {
             items(addons, key = { it.manifestUrl }) { a ->
                 val res = a.resources.joinToString(" · ") { it.name }
                 HubCard(a.name, "v${a.version} · ${a.types.joinToString()} · $res", badge = if (a.catalogs.isNotEmpty()) "${a.catalogs.size} catalogs" else null) {
-                    IconButton(onClick = { StremioAddons.remove(context, a.manifestUrl); afterChange() }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { StremioAddons.remove(context, a.manifestUrl) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
                 }
             }
         }
@@ -418,13 +420,13 @@ private fun JsTab() {
             if (state.repos.isEmpty()) note("norepo", "No repositories yet. Pick one from Discover above, or paste a link you trust.")
             items(state.repos, key = { "r$it" }) { r ->
                 HubCard(r.substringAfter("://").substringBefore("/"), r) {
-                    IconButton(onClick = { JsSources.removeRepo(context, r) }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                    IconButton(onClick = { scope.launch(Dispatchers.IO) { JsSources.removeRepo(context, r) } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
                 }
             }
             item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
             items(state.installed, key = { "i" + it.id }) { e ->
                 HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}") {
-                    IconButton(onClick = { JsSources.uninstall(context, e.id); afterChange() }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
+                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { JsSources.uninstall(context, e.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
                 }
             }
             if (state.repos.isNotEmpty()) {
@@ -504,7 +506,7 @@ private fun ServersTab() {
             if (servers.isEmpty()) note("none", "No servers yet.")
             items(servers, key = { it.id }) { s ->
                 HubCard(s.name, s.url, badge = s.kind.label) {
-                    IconButton(onClick = { HomeServers.remove(context, s.id); afterChange() }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { HomeServers.remove(context, s.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
                 }
             }
             note("tls", "Servers with self-signed HTTPS certificates aren't supported yet; use plain HTTP on your home network or a real certificate.")

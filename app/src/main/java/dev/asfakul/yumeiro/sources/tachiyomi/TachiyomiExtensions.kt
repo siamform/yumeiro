@@ -212,7 +212,8 @@ object TachiyomiExtensions {
             require(count > 0) { "That link has no extensions" }
             val repo = Repo(base, kind, index.meta.name.ifBlank { host }, index.meta.fingerprint)
             mutex.withLock {
-                val repos = (_state.value.repos.filterNot { it.url == base } + repo)
+                // N5-1: build on the saved file, not on memory that start-up may not have filled yet.
+                val repos = (readRepos(context).filterNot { it.url == base } + repo)
                 saveRepos(context, repos)
                 _state.update { it.copy(repos = repos) }
             }
@@ -221,7 +222,7 @@ object TachiyomiExtensions {
     }
 
     suspend fun removeRepo(context: Context, url: String) = mutex.withLock {
-        val repos = _state.value.repos.filterNot { it.url == url }
+        val repos = readRepos(context).filterNot { it.url == url }
         saveRepos(context, repos)
         _state.update { it.copy(repos = repos) }
     }
@@ -286,13 +287,15 @@ object TachiyomiExtensions {
             .sortedBy { it.displayName.lowercase() }
     }
 
+    // N5-1: atomic write; a damaged file is kept as .bad and a leftover .tmp is recovered,
+    // instead of being read as an empty list and overwritten by the next save.
     private fun saveRepos(context: Context, repos: List<Repo>) {
-        reposFile(context).writeText(TachiyomiRuntime.json.encodeToString(ListSerializer(Repo.serializer()), repos))
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(reposFile(context), TachiyomiRuntime.json.encodeToString(ListSerializer(Repo.serializer()), repos))
     }
 
-    private fun readRepos(context: Context): List<Repo> = runCatching {
-        TachiyomiRuntime.json.decodeFromString(ListSerializer(Repo.serializer()), reposFile(context).readText())
-    }.getOrDefault(emptyList())
+    private fun readRepos(context: Context): List<Repo> = dev.asfakul.yumeiro.data.SafeJsonFile.read(reposFile(context)) {
+        TachiyomiRuntime.json.decodeFromString(ListSerializer(Repo.serializer()), it)
+    }.value.orEmpty()
 
     // endregion
 

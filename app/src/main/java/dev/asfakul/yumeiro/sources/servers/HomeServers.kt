@@ -68,13 +68,27 @@ object HomeServers {
         return p.getString("device", null) ?: UUID.randomUUID().toString().also { p.edit().putString("device", it).apply() }
     }
 
-    fun start(context: Context) {
-        if (started) return
-        started = true
+    /*
+     * N4-1: servers.json was read with runCatching → empty list and written in place, so a damaged
+     * or half-written file became "no servers" and the next save wiped every server; add and remove
+     * could also overwrite each other. Now reads and writes go through SafeJsonFile (atomic write,
+     * .tmp recovery, damaged copy kept as .bad) and every change runs under one lock.
+     */
+    private val lock = Any()
+
+    fun start(context: Context) = synchronized(lock) {
+        if (started) return@synchronized
         appContext = context.applicationContext
-        _servers.value = runCatching { json.decodeFromString(ListSerializer(Server.serializer()), file(appContext).readText()) }.getOrDefault(emptyList())
+        val saved = dev.asfakul.yumeiro.data.SafeJsonFile.read(file(appContext)) {
+            json.decodeFromString(ListSerializer(Server.serializer()), it)
+        }.value.orEmpty()
+        _servers.value = saved
+        started = true
         publish()
     }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun resetForTests() = synchronized(lock) { started = false; _servers.value = emptyList() }
 
     /** Signs in / probes the server, then saves it. [password] is sealed before it is stored. */
     suspend fun add(context: Context, kind: Kind, name: String, url: String, user: String, password: String): Result<Server> =
@@ -90,14 +104,17 @@ object HomeServers {
                     Kind.DLNA -> Server(kind = kind, name = name, url = base, extra = DlnaTree.controlUrl(context, base))
                 }
                 val saved = probed.copy(name = name.ifBlank { probed.name.ifBlank { kind.label } })
-                _servers.value = _servers.value.filterNot { it.id == saved.id } + saved
-                save(context)
-                publish()
+                synchronized(lock) {
+                    _servers.value = _servers.value.filterNot { it.id == saved.id } + saved
+                    save(context)
+                    publish()
+                }
                 saved
             }
         }
 
-    fun remove(context: Context, id: String) {
+    fun remove(context: Context, id: String) = synchronized(lock) {
+        if (!started) start(context)
         _servers.value = _servers.value.filterNot { it.id == id }
         save(context)
         publish()
@@ -106,7 +123,7 @@ object HomeServers {
     fun seal(plain: String): String = if (plain.isBlank()) "" else SecretBox.seal(plain) ?: error("Secure storage is unavailable on this device")
 
     private fun save(context: Context) {
-        file(context).writeText(json.encodeToString(ListSerializer(Server.serializer()), _servers.value))
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(file(context), json.encodeToString(ListSerializer(Server.serializer()), _servers.value))
     }
 
     private fun publish() {

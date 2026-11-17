@@ -15,6 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -83,14 +84,43 @@ object StremioAddons {
 
     private fun file(context: Context) = File(context.filesDir, "stremio").apply { mkdirs() }.let { File(it, "addons.json") }
 
+    /*
+     * N5-1: the saved add-on list is the list of manifest links in addons.json, kept here apart from
+     * the fetched manifests. Before, start() kept only the manifests that loaded, and every add or
+     * remove saved that shorter list: an add-on whose server (or the phone) was offline at start
+     * was deleted for good, and an add during start-up could be overwritten by the start-up load.
+     * The file is read and written through SafeJsonFile (atomic write, bad copy kept as .bad).
+     */
+    private val lock = Any()
+    @Volatile private var urls: List<String>? = null
+
+    private fun savedUrls(context: Context): List<String> = synchronized(lock) {
+        urls ?: dev.asfakul.yumeiro.data.SafeJsonFile.read(file(context)) { t -> JSONArray(t).let { a -> List(a.length()) { a.getString(it) } } }
+            .value.orEmpty().also { urls = it }
+    }
+
+    private fun changeUrls(context: Context, change: (List<String>) -> List<String>) = synchronized(lock) {
+        val next = change(savedUrls(context)).distinct()
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(file(context), JSONArray(next).toString())
+        urls = next
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun resetForTests() = synchronized(lock) { started = false; urls = null; _addons.value = emptyList() }
+
+    /** Saved manifest links, including add-ons whose manifest could not be loaded this time. */
+    internal fun savedManifestUrls(context: Context): List<String> = savedUrls(context)
+
     fun start(context: Context) {
         if (started) return
         started = true
         appContext = context.applicationContext
         scope.launch {
-            val urls = runCatching { JSONArray(file(appContext).readText()).let { a -> List(a.length()) { a.getString(it) } } }.getOrDefault(emptyList())
-            val loaded = urls.mapNotNull { u -> runCatching { fetchManifest(appContext, u) }.onFailure { Log.w(TAG, u, it) }.getOrNull() }
-            _addons.value = loaded
+            val saved = savedUrls(appContext)
+            val loaded = saved.mapNotNull { u -> runCatching { fetchManifest(appContext, u) }.onFailure { Log.w(TAG, u, it) }.getOrNull() }
+            // Keep add-ons added meanwhile; drop ones removed meanwhile. Unloaded links stay saved.
+            val keep = savedUrls(appContext).toSet()
+            _addons.update { cur -> (loaded + cur).distinctBy { it.manifestUrl }.filter { it.manifestUrl in keep } }
             publish()
         }
     }
@@ -108,21 +138,17 @@ object StremioAddons {
         runCatching {
             if (!started) start(context)
             val addon = fetchManifest(context, normalize(raw))
-            _addons.value = _addons.value.filterNot { it.manifestUrl == addon.manifestUrl } + addon
-            save(context)
+            changeUrls(context) { it - addon.manifestUrl + addon.manifestUrl }
+            _addons.update { cur -> cur.filterNot { it.manifestUrl == addon.manifestUrl } + addon }
             publish()
             addon
         }
     }
 
     fun remove(context: Context, manifestUrl: String) {
-        _addons.value = _addons.value.filterNot { it.manifestUrl == manifestUrl }
-        save(context)
+        changeUrls(context) { it - manifestUrl }
+        _addons.update { cur -> cur.filterNot { it.manifestUrl == manifestUrl } }
         publish()
-    }
-
-    private fun save(context: Context) {
-        file(context).writeText(JSONArray(_addons.value.map { it.manifestUrl }).toString())
     }
 
     private fun publish() {

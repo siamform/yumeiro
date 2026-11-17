@@ -65,16 +65,42 @@ object JsSources {
         started = true
         app = context.applicationContext
         scope.launch {
-            runCatching {
-                val repos = File(dir(app), "repos.json").takeIf { it.isFile }?.readText()?.let { JsJson.json.parseToJsonElement(it) as JsonArray }
-                    ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
-                val installed = File(dir(app), "sources.json").takeIf { it.isFile }?.readText()?.let { JsJson.json.parseToJsonElement(it) as JsonArray }
-                    ?.mapNotNull { (it as? JsonObject)?.let(::Entry) }.orEmpty()
-                _state.value = State(repos, installed)
-                publish()
-            }.onFailure { Log.e(TAG, "start", it) }
+            runCatching { ensureLoaded(app); publish() }.onFailure { Log.e(TAG, "start", it) }
         }
     }
+
+    /*
+     * N5-1: before, both files were parsed inside one runCatching, so one damaged file emptied
+     * both lists and the next save wiped repos and installed sources; and an add or install that ran
+     * before the start-up read finished saved a list without the old entries. Now each file is read
+     * on its own through SafeJsonFile (atomic write, .tmp recovery, damaged copy kept as .bad), and
+     * every change first waits for the saved lists under one lock.
+     */
+    private val lock = Any()
+    @Volatile private var loaded = false
+
+    private fun ensureLoaded(context: Context) = synchronized(lock) {
+        if (loaded) return@synchronized
+        val d = dir(context)
+        val repos = dev.asfakul.yumeiro.data.SafeJsonFile.read(File(d, "repos.json")) { t ->
+            (JsJson.json.parseToJsonElement(t) as JsonArray).mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+        }.value.orEmpty()
+        val installed = dev.asfakul.yumeiro.data.SafeJsonFile.read(File(d, "sources.json")) { t ->
+            (JsJson.json.parseToJsonElement(t) as JsonArray).mapNotNull { (it as? JsonObject)?.let(::Entry) }
+        }.value.orEmpty()
+        // Keep anything a change already put in memory (cannot happen now, but never drop data).
+        _state.value = State((repos + _state.value.repos).distinct(), (installed + _state.value.installed).distinctBy { it.id })
+        loaded = true
+    }
+
+    private fun change(context: Context, f: (State) -> State) = synchronized(lock) {
+        ensureLoaded(context)
+        _state.value = f(_state.value)
+        save(context)
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State() }
 
     fun normalizeRepo(raw: String): String {
         var u = raw.trim()
@@ -89,13 +115,12 @@ object JsSources {
             val url = normalizeRepo(raw)
             val n = fetchIndex(context, url).size
             require(n > 0) { "That link has no JavaScript sources" }
-            _state.value = _state.value.copy(repos = (_state.value.repos - url) + url)
-            save(context)
+            change(context) { it.copy(repos = (it.repos - url) + url) }
             n
         }
     }
 
-    fun removeRepo(context: Context, url: String) { _state.value = _state.value.copy(repos = _state.value.repos - url); save(context) }
+    fun removeRepo(context: Context, url: String) { change(context) { it.copy(repos = it.repos - url) } }
 
     suspend fun fetchIndex(context: Context, url: String): List<Entry> = withContext(Dispatchers.IO) {
         val body = NetworkClient.get(context).newCall(Request.Builder().url(url).build()).execute().use { r ->
@@ -120,8 +145,7 @@ object JsSources {
             require("DefaultExtension" in code) { "This file isn't a Mangayomi JavaScript source" }
             File(dir(context), "${e.id}.js").writeText(code)
             synchronized(engines) { engines.remove(e.id)?.close() }
-            _state.value = _state.value.copy(installed = _state.value.installed.filterNot { it.id == e.id } + e)
-            save(context)
+            change(context) { it.copy(installed = it.installed.filterNot { x -> x.id == e.id } + e) }
             publish()
         }
     }
@@ -129,8 +153,7 @@ object JsSources {
     fun uninstall(context: Context, id: String) {
         File(dir(context), "$id.js").delete()
         synchronized(engines) { engines.remove(id)?.close() }
-        _state.value = _state.value.copy(installed = _state.value.installed.filterNot { it.id == id })
-        save(context)
+        change(context) { it.copy(installed = it.installed.filterNot { x -> x.id == id }) }
         publish()
     }
 
@@ -141,8 +164,8 @@ object JsSources {
     }
 
     private fun save(context: Context) {
-        File(dir(context), "repos.json").writeText(JsonArray(_state.value.repos.map(::JsonPrimitive)).toString())
-        File(dir(context), "sources.json").writeText(JsonArray(_state.value.installed.map { it.raw }).toString())
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(File(dir(context), "repos.json"), JsonArray(_state.value.repos.map(::JsonPrimitive)).toString())
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(File(dir(context), "sources.json"), JsonArray(_state.value.installed.map { it.raw }).toString())
     }
 
     private fun publish() {
