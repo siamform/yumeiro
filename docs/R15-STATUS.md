@@ -127,9 +127,10 @@
   CI 44070875412 FAILED exactly on the expected tests → N4-1/N5-1, N1-1/N1-2, N8-1, N4-2, M9-1, M2-1, M1-1 verified (CI).
 - **Done since (seventh handover, 14):** api36 44073375083: 10/11 new-test classes PASS (ER-20, DL-12, MINI-T1, N2-1, N3-1,
   N6-1, N7-1, ST-22, N4-2 Stremio, LB rows now both phones). LocalPlayer#g (PL-18 one Back) failed once on api36.
-- **Runs in progress:** device 44075789457 (head, api36, LocalPlayer#g ×3: flaky or deterministic).
+- **LP-T1:** 44075789457 g ×3 PASS alone → order-dependent; cause: AppLock keys left the display out of touch mode (test fault). Fix d2f80d3.
+- **Runs in progress:** device 44077732900 (head d2f80d3, api36, AppLock then LocalPlayer; expect 12/12, logcat `PL18 touchMode=true`, `YuBack step=LEAVE`).
 - **Next three actions:**
-  1. Read 44075789457; if g fails, read logcat around the Back and find the root cause (app vs test); fix + rerun on one phone.
+  1. Read 44077732900.
   2. Full suite on both phones (milestone); then H8 `-f bench=restore`.
   3. Final coverage check, final report and the gated feature list for the owner.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
