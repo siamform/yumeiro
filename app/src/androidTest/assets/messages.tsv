@@ -74,13 +74,13 @@ success	ui/screens/settings/BackupCenterScreen.kt:274	Cache cleared · Example i
 success	ui/screens/settings/BackupCenterScreen.kt:278	Cookies cleared	
 success	ui/screens/settings/BackupCenterScreen.kt:318	Backup deleted	
 error	ui/screens/settings/BackupCenterScreen.kt:318	Couldn't delete that file	
-error	ui/screens/settings/PrivacyTrackingBackup.kt:112	App lock wasn't turned on	
-error	ui/screens/settings/PrivacyTrackingBackup.kt:154	No browser to sign in with	
-success	ui/screens/settings/PrivacyTrackingBackup.kt:195	Signed in to Trakt as Example item name	
-success	ui/screens/settings/PrivacyTrackingBackup.kt:213	Signed in to Simkl as Example item name	
-success	ui/screens/settings/PrivacyTrackingBackup.kt:233	Scrobbling to Last.fm as Example item name	
-success	ui/screens/settings/PrivacyTrackingBackup.kt:285	Saved. Now tap Sign in	
-success	ui/screens/settings/PrivacyTrackingBackup.kt:312	Signed in to Kitsu as Example item name	
+error	ui/screens/settings/PrivacyTrackingBackup.kt:114	App lock wasn't turned on	
+error	ui/screens/settings/PrivacyTrackingBackup.kt:156	No browser to sign in with	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:197	Signed in to Trakt as Example item name	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:215	Signed in to Simkl as Example item name	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:235	Scrobbling to Last.fm as Example item name	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:287	Saved. Now tap Sign in	
+success	ui/screens/settings/PrivacyTrackingBackup.kt:321	Signed in to Kitsu as Example item name	
 success	ui/screens/settings/PushAlertsCard.kt:85	Reliable alerts are off	
 success	ui/screens/settings/PushAlertsCard.kt:114	Sent. Watch the last wake-up time	
 success	ui/screens/settings/SettingsControls.kt:145	Test sent. Check your status bar	

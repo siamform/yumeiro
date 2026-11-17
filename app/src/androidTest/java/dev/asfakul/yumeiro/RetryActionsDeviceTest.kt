@@ -223,6 +223,33 @@ class RetryActionsDeviceTest {
         addedServer = dev.asfakul.yumeiro.sources.servers.HomeServers.servers.value.first { it.url.trimEnd('/') == url.trimEnd('/') }.id
     }
 
+    /**
+     * ER-19 second site: the Kitsu sign-in form also stays open on failure. Real kitsu.io with a
+     * made-up account (or no route on CI): either way sign-in fails, and the reason must be inside
+     * the form, not a bottom message behind it.
+     */
+    @Test fun e_kitsuSignInFailureIsShownInTheForm() {
+        compose.setContent { Box(Modifier.fillMaxSize()) { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = {}); AppMessageHost() } }
+        wait("tracking screen") { has("tracking_screen") }
+        wait("Kitsu sign-in button") { has("tracker_kitsu_signin") }
+        compose.onNodeWithTag("tracker_kitsu_signin", true).performClick()
+        wait("Kitsu form") { has("kitsu_email") }
+        compose.onNodeWithTag("kitsu_email", true).performTextInput("yumeiro-er19-test@example.invalid")
+        compose.onNodeWithTag("kitsu_pass", true).performTextInput("not-a-real-password")
+        compose.waitForIdle()
+        val confirm = compose.onAllNodesWithText("Sign in", useUnmergedTree = true)
+        confirm[confirm.fetchSemanticsNodes().size - 1].performClick()
+        wait("e: reason shown inside the form", 45_000) { has("kitsu_error") }
+        val err = compose.onAllNodesWithTag("kitsu_error", false).fetchSemanticsNodes().first()
+            .config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }.joinToString(" ") { t -> t.text }
+        FirstRun.shot("rty_e_error")
+        log("RTY_CASE e error='$err' bottomMessage=${has("app_message")}")
+        assertTrue("e: a reason is named", err.isNotBlank())
+        assertTrue("e: no bottom message hidden behind the form", !has("app_message"))
+        assertTrue("e: the button says Retry", hasText("Retry"))
+        log("RTY_RESULT PASS e")
+    }
+
     private companion object {
         const val JS_INDEX = """[{"id":"er12","name":"ER12 Source","lang":"en","sourceCodeLanguage":"1","itemType":"0","isManga":"true","sourceCodeUrl":"https://example.invalid/er12.js","baseUrl":"https://example.invalid","version":"0.0.1"}]"""
         const val MIHON_INDEX = """[{"name":"Tachiyomi: ER12","pkg":"eu.kanade.tachiyomi.extension.en.er12","apk":"tachiyomi-en.er12-v1.4.1.apk","lang":"en","code":1,"version":"1.4.1","nsfw":0}]"""

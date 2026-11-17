@@ -13,6 +13,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
@@ -292,28 +294,35 @@ fun TrackingScreen(onBack: () -> Unit) {
         var email by remember { mutableStateOf("") }
         var pass by remember { mutableStateOf("") }
         var busy by remember { mutableStateOf(false) }
+        // ER-19: the form stays open on failure; a bottom message would sit behind it and the keyboard.
+        var error by remember { mutableStateOf<String?>(null) }
         TsukiDialog(
             onDismissRequest = { if (!busy) kitsuForm = false },
             title = { Text("Sign in to Kitsu") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(email, { email = it }, singleLine = true, label = { Text("E-mail") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(email, { email = it }, singleLine = true, label = { Text("E-mail") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth().testTag("kitsu_email"))
                     OutlinedTextField(pass, { pass = it }, singleLine = true, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().testTag("kitsu_pass"))
                     Text("Your password goes to Kitsu once; only the token is kept.", color = TextTertiary, fontSize = 12.sp)
+                    error?.let { e ->
+                        Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 13.sp,
+                            modifier = Modifier.fillMaxWidth().testTag("kitsu_error").semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+                    }
                     if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
                 TextButton(enabled = !busy && email.isNotBlank() && pass.isNotBlank(), onClick = {
                     busy = true
+                    error = null
                     scope.launch {
                         withContext(Dispatchers.IO) { Kitsu.login(context, NetworkClient.get(context), email, pass) }
                             .onSuccess { AppMessages.success(context, "Signed in to Kitsu as $it"); kitsuForm = false; refresh++ }
-                            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                            .onFailure { error = OnlineErrors.friendly(it) }
                         busy = false
                     }
-                }) { Text("Sign in") }
+                }) { Text(if (error != null) "Retry" else "Sign in") }
             },
             dismissButton = { TextButton(enabled = !busy, onClick = { kitsuForm = false }) { Text("Cancel") } },
         )
