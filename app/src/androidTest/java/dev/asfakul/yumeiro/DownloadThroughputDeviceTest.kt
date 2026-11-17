@@ -144,6 +144,12 @@ class DownloadThroughputDeviceTest {
 
     @Test fun a_realHostScreenOn() = measure("screen-on", null)
 
+    /** DL-11 H3: the same real-host download with ranges over HTTP/1.1 (one TCP per segment). */
+    @Test fun f_realHostHttp1Experiment() {
+        dev.asfakul.yumeiro.online.download.ForceGrab.rangesOverHttp1 = true
+        try { measure("screen-on-http1", null) } finally { dev.asfakul.yumeiro.online.download.ForceGrab.rangesOverHttp1 = false }
+    }
+
     @Test fun b_realHostScreenOffAndDoze() = measure("screen-off-doze", 30)
 
     /** Device 44030612565 (head) vs 44031868134 (fail-before): tail ≤ 2× on both, the fix 2.2× faster. */

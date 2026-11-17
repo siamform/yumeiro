@@ -70,6 +70,13 @@ object ForceGrab {
      */
     @Volatile var lastStats: String = ""
 
+    /**
+     * DL-11 H3 experiment (device tests only, default off): fetch byte ranges over HTTP/1.1, so each
+     * segment is its own TCP connection instead of a stream on one shared HTTP/2 connection
+     * (44116513171: cdn.kernel.org answered h2 on both phones). Not a user setting.
+     */
+    @Volatile var rangesOverHttp1: Boolean = false
+
     internal fun readDone(f: File): MutableSet<Int> =
         if (!f.exists()) HashSet() else f.readLines().mapNotNullTo(HashSet()) { it.trim().toIntOrNull() }
 }
@@ -251,6 +258,10 @@ class Segmented(
 ) {
     class Refused(val code: Int) : IOException("HTTP $code")
 
+    /** [ForceGrab.rangesOverHttp1]: the same client limited to HTTP/1.1 (DL-11 H3 experiment). */
+    private val http: OkHttpClient =
+        if (ForceGrab.rangesOverHttp1) client.newBuilder().protocols(listOf(okhttp3.Protocol.HTTP_1_1)).build() else client
+
     /**
      * Downloads [url] into [out] (resuming). Returns the bytes written. Uses one connection when
      * the host has no byte ranges or the file is small; escalates headers on 401/403.
@@ -362,7 +373,7 @@ class Segmented(
     private fun probe(url: String, headers: Map<String, String>): Probe {
         val b = Request.Builder().url(url).header("Range", "bytes=0-0")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
-        val r = client.newCall(b.build()).execute()
+        val r = http.newCall(b.build()).execute()
         protocol = r.protocol.toString()
         if (r.code == 200) return Probe(null, r) // caller closes it
         r.use {
@@ -407,7 +418,7 @@ class Segmented(
         requests.incrementAndGet()
         val b = Request.Builder().url(url).header("Range", "bytes=$from-$to")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
-        client.newCall(b.build()).execute().use { resp ->
+        http.newCall(b.build()).execute().use { resp ->
             if (resp.code == 401 || resp.code == 403) throw Refused(resp.code)
             if (resp.code != 206) throw IOException("HTTP ${resp.code} for a byte range")
             RandomAccessFile(out, "rw").use { raf ->
@@ -442,7 +453,7 @@ class Segmented(
         val b = Request.Builder().url(url)
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
         if (have > 0) b.header("Range", "bytes=$have-")
-        client.newCall(b.build()).execute().use { r ->
+        http.newCall(b.build()).execute().use { r ->
             if (r.code == 401 || r.code == 403) throw Refused(r.code)
             // 416 for "bytes=<size>-": the file is already complete. R16 (G8): only when the server's
             // size matches; a changed file (other size) or a range at another offset starts over.
