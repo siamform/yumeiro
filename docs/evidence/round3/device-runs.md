@@ -807,3 +807,16 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - PASS on both: `MANGA_MAIN violations from MangaLibrary: 0 (all: 0)`. LB-2.
 
+## 44005414732 (BaselineProfileGenerator, bench=profile, api36, emulator; head c9c41d3)
+
+- `startupAndTabs-startup-prof.txt`: 44,252 rules, 6,166 app rules; Home 470, Library 71, Online Home 296
+  (shipped fef01c6: 27,827 / 3,499 / 295 / 0 / 6). Committed as app/src/main/baseline-prof.txt in 4989344 (X2-2).
+
+## 44009339786 (LibraryTabsMainThreadDeviceTest fail-before, scratch/lb7tabs-fail-before, both phones, emulator)
+
+- FAILED on both: `LIB_TABS violations from the stores: 10`. LB-7 tabs part.
+
+## 44010510836 (LibraryTabsMainThreadDeviceTest, both phones, emulator; head 17358f9)
+
+- PASS on both: `LIB_TABS violations from the stores: 0 (all: 0)`.
+
