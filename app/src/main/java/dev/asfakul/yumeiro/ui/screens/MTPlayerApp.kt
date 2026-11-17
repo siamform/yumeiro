@@ -1452,7 +1452,10 @@ fun MTPlayerApp(
             }
         }
 
+        // ST-18: the loading layers below show nothing at start; they join from the second frame
+        // (AfterFirstFrame) so the first Home frame doesn't load their code.
         // Online: "Opening…" / "Finding the best source…" before the player opens, or why nothing played.
+        dev.asfakul.yumeiro.ui.components.AfterFirstFrame {
         ForceDarkTheme {
         dev.asfakul.yumeiro.ui.screens.online.OnlineResolveLayer(
             playerOpen = activePlayingVideo != null,
@@ -1469,6 +1472,7 @@ fun MTPlayerApp(
                 // BUG-2 (E6): no player yet, so the loading page closes and the channel opens.
                 onOpenChannel = { url, name -> dev.asfakul.yumeiro.youtube.YtChannelLaunch.open(url, name) },
             )
+        }
         }
 
         // One handler for in-app actions from the inbox and from tapped notifications (deep links).
@@ -1538,18 +1542,23 @@ fun MTPlayerApp(
         LaunchedEffect(playerShowing) { dev.asfakul.yumeiro.online.ExtensionPopups.playerOnScreen = playerShowing }
         val popupBlocked = showSplash || setupOpen || tourStep != null || activePlayingVideo != null || inPip || updateDialogOpen || appPage != null ||
             (isNowPlayingExpanded && playbackState.currentTrack != null)
-        dev.asfakul.yumeiro.ui.screens.extras.NotificationPromptHost(blocked = popupBlocked || !startupPermissionsDone)
-        dev.asfakul.yumeiro.ui.screens.extras.ReminderHost(blocked = popupBlocked || !startupPermissionsDone)
+        // ST-18: prompt hosts that only read app-wide state join from the second frame. The extension
+        // review and download prompt hosts stay in the first frame (they count as attached hosts), and
+        // so do messages (no host = system toast).
+        dev.asfakul.yumeiro.ui.components.AfterFirstFrame {
+            dev.asfakul.yumeiro.ui.screens.extras.NotificationPromptHost(blocked = popupBlocked || !startupPermissionsDone)
+            dev.asfakul.yumeiro.ui.screens.extras.ReminderHost(blocked = popupBlocked || !startupPermissionsDone)
+            dev.asfakul.yumeiro.ui.screens.online.BrowserCheckHost()
+            dev.asfakul.yumeiro.ui.screens.sources.UniversalAddHost()
+        }
 
         // Styled in-app messages (falls back to system toasts when no host is attached).
-        dev.asfakul.yumeiro.ui.screens.online.BrowserCheckHost()
         dev.asfakul.yumeiro.ui.screens.online.ExtensionReviewHost()
-        dev.asfakul.yumeiro.ui.screens.sources.UniversalAddHost()
         dev.asfakul.yumeiro.ui.screens.downloads.DownloadPromptHost()
         AppMessageHost(bottomPadding = if (isSubpage) androidx.compose.ui.unit.Dp(24f) else androidx.compose.ui.unit.Dp(150f))
 
         // In-app updater popup (GitHub Releases). Hidden during splash and fullscreen video.
-        UpdateHost(enabled = !showSplash && activePlayingVideo == null)
+        dev.asfakul.yumeiro.ui.components.AfterFirstFrame { UpdateHost(enabled = !showSplash && activePlayingVideo == null) }
 
         AnimatedVisibility(visible = setupOpen && !showSplash, enter = fadeIn(tween(220)), exit = fadeOut(tween(200))) {
             Box(
