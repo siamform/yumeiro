@@ -61,7 +61,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | F-06 | 200 % volume booster | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-06-volume-booster.md (Next Player 08845f8 LoudnessEnhancer contract) |
 | F-07 | External player support | Proposal written (gated; owner approval needed). Base hand-off exists; gaps: result read-back, headers, subtitles | docs/proposals/FEATURE-F-07-external-player.md (CloudStream 2dcc25c contracts) |
 | F-08 | Upcoming Movies & Series | Not started | — |
-| F-09 | Watch Later + Favorite on posters | Not started | — |
+| F-09 | Watch Later + Favorite on posters | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-09-watch-later-favorite-posters.md (CloudStream 2dcc25c WatchType) |
 | F-10 | Glassmorphism theme | Not started (ui-ux-pro-max + ADR first) | — |
 | F-11 | Manga auto-translation | Not started (cloud path: owner call) | — |
 | F-12 | Dedicated vertical video player | Not started (ui-ux-pro-max + ADR first) | — |
