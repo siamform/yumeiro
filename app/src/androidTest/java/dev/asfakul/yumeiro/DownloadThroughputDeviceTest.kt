@@ -94,6 +94,7 @@ class DownloadThroughputDeviceTest {
         assertEquals(null, err)
         val id = OnlineDownloads.items.value.first { it.title == title }.id
         started += id
+        val rx0 = android.net.TrafficStats.getUidRxBytes(android.os.Process.myUid())
         val at = LongArray(10) { -1 }
         var t0 = 0L
         var off = false
@@ -122,7 +123,9 @@ class DownloadThroughputDeviceTest {
         val line = "THROUGHPUT_DEVICE case=$case host=${url.substringAfter("//").substringBefore('/')} size=$size status=${item?.status} " +
             "error=${item?.error} totalMs=$total MBps=${"%.2f".format(mbps)} per10pctMs=$steps lastOverMean=${"%.2f".format(ratio)}"
         log(line)
-        log("THROUGHPUT_DEVICE case=$case SEGMENTED_STATS ${dev.asfakul.yumeiro.online.download.ForceGrab.lastStats}")
+        // DL-11: bytes the app received for this download (whole uid; the local server's bytes count too).
+        val rx = android.net.TrafficStats.getUidRxBytes(android.os.Process.myUid()).let { if (it >= 0 && rx0 >= 0) it - rx0 else -1 }
+        log("THROUGHPUT_DEVICE case=$case rx=$rx rxOverSize=${if (rx > 0) "%.3f".format(rx / size.toDouble()) else "n/a"} SEGMENTED_STATS ${dev.asfakul.yumeiro.online.download.ForceGrab.lastStats}")
         // A connection failure before the first 10 % (run 43857809658 had a few bytes from one
         // connection, then "Failed to connect" on the others): let measure() re-probe the host.
         if (item?.status == Status.FAILED && at[0] < 0 && item.error.orEmpty().contains("connect", ignoreCase = true)) return@runBlocking false
