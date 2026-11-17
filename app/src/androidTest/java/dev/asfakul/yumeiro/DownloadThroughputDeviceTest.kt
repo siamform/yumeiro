@@ -131,9 +131,14 @@ class DownloadThroughputDeviceTest {
         if (item?.status == Status.FAILED && at[0] < 0 && item.error.orEmpty().contains("connect", ignoreCase = true)) return@runBlocking false
         assertEquals(line, Status.DONE, item?.status)
         assertEquals(line, size, OnlineDownloads.fileOf(ctx, item!!).length())
-        val pass = if (unitRule) total > 0 && !slowTail(steps) else ratio in 0.0..2.0
+        // Case d (unitRule): absolute limits. Old Segmented (fail-before 44037723917): 19.99 s total,
+        // last 10 % 6.3/6.5 s on both phones. The head floor for the last 10 % is one capped piece
+        // under RESTART_MIN_LEFT (512 KiB / 150 KiB/s = 3.4 s); 44041714032 measured 1.4–1.6 s.
+        // The ratio rule is wrong for this case: that fixed floor is about 3× the mean of a 5 s
+        // download (44041714032: ratio 3.0–4.3 while 4–6× faster than before).
+        val pass = if (unitRule) total in 1..10_000L && steps.last() in 0..3_500L else ratio in 0.0..2.0
         log("THROUGHPUT_DEVICE_RESULT ${if (pass) "PASS" else "FAIL"} case=$case lastOverMean=${"%.2f".format(ratio)}")
-        assertTrue("BUG-3 tail rule (≤ 2×): $line", pass)
+        assertTrue(if (unitRule) "BUG-3 case d rule (total ≤ 10 s, last 10 % ≤ 3.5 s): $line" else "BUG-3 tail rule (≤ 2×): $line", pass)
         true
     }
 
@@ -148,7 +153,7 @@ class DownloadThroughputDeviceTest {
      * The unit collapse profile (CI 43851470283: 4.9×) with the cap 10× lower: 24 MiB, every request
      * 3 MiB fast, then 150 KiB/s. At 1.5 MiB/s on loopback the whole file took 1–4 s and the list's
      * 250 ms progress steps made the per-10 % times noise (44033132233, 44034766356: steps of 0 ms).
-     * Rule: the unit `slowTail` (ratio > 2, last 10 % over 250 ms and over 1.5× every earlier one).
+     * Rule: total ≤ 10 s and last 10 % ≤ 3.5 s (see measureOn; the unit `slowTail` rule flaked on device).
      */
     @Test fun d_localUnitCollapseProfile() = local("local-24MiB-burst3MiB-cap150KiBps", 24L * 1024 * 1024, 3L * 1024 * 1024, 150L * 1024, unitRule = true)
 
@@ -204,13 +209,5 @@ class DownloadThroughputDeviceTest {
             }
             os.flush()
         } catch (_: java.io.IOException) { /* the client closed early */ }
-    }
-
-    /** The same rule as DownloadThroughputTest.slowTail (unit sources are not on the device classpath). */
-    private fun slowTail(s: List<Long>): Boolean {
-        if (s.size < 2 || s.any { it < 0 }) return false
-        val mean = s.sum() / s.size.toDouble()
-        val last = s.last()
-        return last / mean.coerceAtLeast(1.0) > 2.0 && last > 250 && last > s.dropLast(1).max() * 1.5
     }
 }

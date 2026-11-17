@@ -98,8 +98,12 @@ class DownloadCleanupDeviceTest {
         assertArrayEquals(line, blob, keepFile.readBytes())
         assertTrue(line, OnlineDownloads.get(offline.id) == null && !offFile.exists())
 
-        // The app start schedules the daily pass.
-        val infos = WorkManager.getInstance(ctx).getWorkInfosForUniqueWork("dl_cleanup").get(10, TimeUnit.SECONDS)
+        // The app start schedules the daily pass, last on the low-priority yu-startup thread
+        // (44041881451 api36: WorkManager up 5 s after process start, nothing scheduled yet 9 s in).
+        val wm = WorkManager.getInstance(ctx)
+        val waitUntil = System.currentTimeMillis() + 30_000
+        var infos = wm.getWorkInfosForUniqueWork("dl_cleanup").get(10, TimeUnit.SECONDS)
+        while (infos.isEmpty() && System.currentTimeMillis() < waitUntil) { delay(500); infos = wm.getWorkInfosForUniqueWork("dl_cleanup").get(10, TimeUnit.SECONDS) }
         Log.i("YuDownloadTest", "CLEANUP work=${infos.map { it.state }}")
         assertTrue("daily cleanup not scheduled: ${infos.map { it.state }}", infos.any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.RUNNING })
 
