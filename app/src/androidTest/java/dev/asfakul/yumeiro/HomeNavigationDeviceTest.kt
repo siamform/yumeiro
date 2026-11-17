@@ -143,8 +143,21 @@ class HomeNavigationDeviceTest {
             inst.runOnMainSync { dev.asfakul.yumeiro.ui.tv.TvMode.set(ctx, dev.asfakul.yumeiro.ui.tv.TvMode.Pref.TV) }
             waitTag("tv_nav_rail", 15_000)
             waitTag("tv_nav_tab_music")
-            // D-pad: tap gives the rail item focus on a touch emulator, then centre selects.
-            tap("tv_nav_tab_music")
+            // 44198639260 (TV api34): focus is on the rail's Home item from start-up (not touch mode).
+            // A semantics tap there selected Music without moving focus, a state a remote can't make
+            // (Right then re-selected Home). With focus on the rail, choose Music the remote way:
+            // Down until Music has focus, then centre. On a touch emulator (api24) the tap stays.
+            if (focusedTags().any { it.startsWith("tv_nav_") }) {
+                var downs = 0
+                while (downs < 6 && "tv_nav_tab_music" !in focusedTags()) {
+                    FirstRun.shell("input keyevent KEYCODE_DPAD_DOWN"); Thread.sleep(500); rule.waitForIdle(); downs++
+                }
+                log("h5: remote path, $downs DOWN, focused=${focusedTags()}")
+                assertTrue("D-pad Down never reached the Music rail item; focus ${focusedTags()}", "tv_nav_tab_music" in focusedTags())
+                FirstRun.shell("input keyevent KEYCODE_DPAD_CENTER"); Thread.sleep(500); rule.waitForIdle()
+            } else {
+                tap("tv_nav_tab_music")
+            }
             // 43765162241 (TV api24): the tap left the pager on page 0 and the app logged nothing.
             // Keep the failure, but record what the rail and the pager looked like.
             if (runCatching { rule.waitUntil(15_000) { TabPagerProbe.page == 1 }; true }.getOrDefault(false).not()) {
@@ -169,10 +182,8 @@ class HomeNavigationDeviceTest {
                 return "touch=$touch selected=$selected focused=${focusedTags()} page=${TabPagerProbe.page}"
             }
             log("tv rail: before LEFT ${railState()}")
-            // 44196925739 (TV api34): the Home rail item had focus from start-up (not touch mode), and the
-            // semantics tap above changed the tab without moving it, so Left stayed inside the rail on Home.
-            // A remote can't change the tab without moving focus; start from the page, as a remote user
-            // does after choosing Music (Right into the page, then Left back to the rail).
+            // If focus is still on the rail after choosing Music, go Right into the page first, as a
+            // remote user does; Left back to the rail is what this test checks (X9-4).
             if (focusedTags().any { it.startsWith("tv_nav_") }) {
                 FirstRun.shell("input keyevent KEYCODE_DPAD_RIGHT"); Thread.sleep(500); rule.waitForIdle()
                 log("tv rail: focus started on the rail; after RIGHT ${railState()}")
