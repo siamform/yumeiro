@@ -120,7 +120,8 @@ class MiniPlayerDeviceTest {
         waitTrack("mini_t2", "g_a11y_next")
 
         // Tap opens Now Playing; closing it brings the bar back with the same track.
-        rule.onNodeWithTag("mini_player_bar", true).performClick()
+        // Run 44064339793: the centre of the whole bar is the Previous button; a person taps the artwork/title.
+        rule.onNodeWithTag("mini_player_swipe_area", true).performClick()
         rule.waitUntil(10_000) { has("now_playing_screen_root") }
         log("MINI_CASE h_open nowPlaying=true current=${current()}")
         rule.runOnUiThread { vm().closeNowPlaying() }
