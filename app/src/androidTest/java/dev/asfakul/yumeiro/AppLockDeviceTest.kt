@@ -41,7 +41,7 @@ class AppLockDeviceTest {
     @get:Rule val compose = createEmptyComposeRule()
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
     private val prefs get() = ctx.getSharedPreferences("privacy", Context.MODE_PRIVATE)
-    private var saved: Map<String, *> = emptyMap()
+    private var saved: Map<String, *> = emptyMap<String, Any?>()
     private var scenario: ActivityScenario<MainActivity>? = null
     private var pinSet = false
     private fun log(s: String) = Log.i("YuLockTest", s)

@@ -112,7 +112,7 @@ class UniversalAddEcosystemsDeviceTest {
             // Same order as the app: search → load (title page) → loadLinks with the page's data.
             val page = runBlocking { api!!.load(hits.first { it.name == "Yu Nightfall" }.url) }
             val data = (page as? com.lagradost.cloudstream3.MovieLoadResponse)?.dataUrl
-            log("ADD_C load: ${page.name} data=$data")
+            log("ADD_C load: ${page?.name} data=$data")
             assertTrue("Stremio title page has no stream data: $page", data != null)
             val found = runBlocking { api!!.loadLinks(data!!, false, {}) { links += it.url } }
             log("ADD_C links found=$found $links")
