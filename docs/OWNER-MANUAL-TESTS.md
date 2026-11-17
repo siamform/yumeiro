@@ -42,6 +42,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-23 | X13-6: phone Jackson 2.19.4 → 2.18.11 | Blocked: owner (decision) |
 | OMT-24 | Vega: what do you mean by "Vega"? | Blocked: owner (question) |
 | OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Blocked: owner (decision) |
+| OMT-26 | EXT-T1: Back closes a pop-up instead of Source status | Blocked: owner (phone) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -447,6 +448,18 @@ Blocked (you couldn't run it; say why).
   through TDLib), so it would be "bring your own account"; manga translation would run on-device first.
 - **What to send back:** which of the four to plan, and whether a user login (Telegram) is acceptable.
 - **Status:** Blocked: owner (decision).
+
+### OMT-26 — EXT-T1: Back closes a pop-up instead of Source status (phone)
+
+- **What the emulators showed:** 10 plain runs (44162062169) and 20 runs with five drama feeds timing out
+  while Source status is open (44189135829, api33-lowram): focus stayed on Yumeiro and Back closed Source
+  status every time. The only extra window was a phisher98 donation dialog that the pop-up blocker keeps
+  hidden (you see the "Show" card instead).
+- **Steps:** install HDhub4u (phisher98) and one CNCVerse extension, open Source status, tap "Check again"
+  while on a slow or blocked network, wait for the result, press Back once.
+- **Pass:** Back leaves Source status. **Fail:** Back closes something else first or nothing happens; then
+  note which extensions are installed and send a screen recording.
+- **Status:** Blocked: owner (phone).
 
 ## Not owner tests (handled by the agent)
 

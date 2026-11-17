@@ -50,7 +50,7 @@ study needed (test-only or our own defect with an obvious cause).
 | ST-17 | Stress-test compose spins, cause-naming logging | G12 | — | In progress (recorded per campaign; stays open by order) | 43988958313, 44145301927 (20/20, 0 spins, FATAL 0, ANR 0) |
 | ST-18 | First Home frame: reduce first-draw work (Perfetto) | G12 L1 | cbad735, 77d387a | Implemented—unverified (structural pass emulator api33-lowram; navigation regression 44190759388 running) | before 44182727961; after step 1 44185180596 (deferred hosts VerifyClass in frame 1 64/15 → 0/0/0 ms); after step 2 44188152810 (Home VerifyClass slices in frame 1 ~95 → 3–5; frame 1 2779/1688/1868 ms, timing not claimed); AfterFirstFrameTest 3/3 CI 44188521804 |
 | ST-7 | Jank on software-rendered emulators | G12 | — | Blocked: owner (OMT-12 real phone) | 44002112195, 44138627579 |
-| EXT-T1 | E11 cleanup Back closed a pop-up instead of Source status (api33-lowram) | G2 / ADR-014 | — (test infra) | In progress: 10 plain runs, 0 reproductions; the owner's condition (five failing drama feeds while Source status is open) now seeded by e13_sourceStatusWhileFiveDramaFeedsFail (five studio shelves hang 10 s then time out, health + shelf cache cleared, probes re-run while Source status is open); live logcat of 44162062169 showed only 1–2 failing feeds per E11 window | first seen 43744809503; 44162062169: ExtensionsDeviceTest ×10 api33-lowram, 10/10 PASS, 0 ANR, EXT_T1 log shows only MainActivity focused, no added window |
+| EXT-T1 | E11 cleanup Back closed a pop-up instead of Source status (api33-lowram) | G2 / ADR-014 | c6ff72c (test only) | Cannot reproduce (emulator api33-lowram, 30 runs) → OMT-26, Blocked: owner (phone) | first seen 43744809503; 44162062169 plain ×10 PASS; 44185209665 e13 ×20 failed = test fault (counted the ADR-014-held phisher98 donation dialog); 44189135829 e13 ×20 PASS (focus MainActivity, live windows none, held 1, seeded timeouts 5–7, 0 app ANR) |
 | PL-16 | Screenshots of 43747147539 / 43748560619 into docs/evidence/pl16/ | G12 | — | Verified (evidence committed) | docs/evidence/pl16/README.md |
 | X3-TL | Firebase Test Lab role for the service account | G12 | — | Blocked: owner (console role, OMT-22) | OMT-22 |
 | X13-6 | Phone Jackson 2.19.4 → 2.18.11 | G12 | — | Blocked: owner (decision, OMT-23) | OMT-23 |
@@ -60,7 +60,7 @@ study needed (test-only or our own defect with an obvious cause).
 
 ## C. Gated features (Part 8): proposals only until the gate passes and the owner approves
 
-Gate state: **not passed** (DL-11 budget not claimed; EXT-T1 open). Nothing below is built.
+Gate state: **not passed** (DL-11 budget not claimed; EXT-T1 cannot reproduce on emulator, owner phone test OMT-26). Nothing below is built.
 
 | ID | Description | Group | Competitor sources | Status | Evidence |
 |---|---|---|---|---|---|

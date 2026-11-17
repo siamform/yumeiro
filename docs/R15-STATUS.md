@@ -6,9 +6,9 @@
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
 - **Current group / step:** L1 G12 ST-18 (two deferral commits cbad735, 77d387a; structural pass on api33-lowram);
   EXT-T1 e13 test fault fixed (c6ff72c); NBUG-6 unit timing test fixed (c6f06ff).
-- **Runs in progress:** device 44189135829 (e13 ×20 api33-lowram), device 44190759388 (Home/Back/HeroCarousel both phones),
+- **Runs in progress:** device 44190759388 (Home/Back/HeroCarousel both phones),
   CI 44192309663 (unit).
-- **Next three actions:** (1) read 44189135829: PASS 20/20 → EXT-T1 to OWNER-MANUAL-TESTS / Blocked: owner, a live window → root cause;
+- **Next three actions:** (1) done: 44189135829 e13 20/20 PASS → EXT-T1 Cannot reproduce, OMT-26;
   (2) 44190759388 green → ST-18 Verified (emulator) for the structural change, then TV TvBug5ReproDeviceTest;
   (3) NBUG-6 Nbug6EngineCostDeviceTest + NBUG-5 DubCountProbeDeviceTest on api33-lowram, then upgrade from v1.8.0 at head.
 

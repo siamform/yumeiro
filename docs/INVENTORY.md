@@ -223,7 +223,7 @@ Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs 
 | NBUG-6 | Per-feature DNS with DoH, sequential fallback (owner gate: no side effect) | docs/proposals/FEATURE-NBUG-6-per-feature-dns.md | network/SmartDns, network/DnsMessage, eu/kanade/tachiyomi/network/DohProviders |
 | NF-1 | Episode watch status (Watched / In progress / Fresh) | — | OnlinePlayerUi episode rows (Watched check exists), BUG-1 resume store |
 | NF-2 | Download storage labels; universal stream download | — | ui/screens/downloads (Offline/Permanent labels exist), online/download/HlsDownloader |
-| NF-3 | Extension pop-up blocker = ADR-014 (built, verified emulator; EXT-T1 open) | ledger ADR-014 row | online/ExtensionPopups, online/ExtensionWindowWatch |
+| NF-3 | Extension pop-up blocker = ADR-014 (built, verified emulator; EXT-T1 cannot reproduce on emulator, OMT-26) | ledger ADR-014 row | online/ExtensionPopups, online/ExtensionWindowWatch |
 
 ## Not covered
 (Filled at the end of the audit.)
