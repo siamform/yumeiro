@@ -199,20 +199,24 @@ class LibraryEmptyProfileDeviceTest {
             // ---- reopen: Jump back in right away ----
             val t0 = System.currentTimeMillis()
             val (sc, vm) = openApp()
+            val tOpen = System.currentTimeMillis() - t0
             try {
                 val cont = runCatching { waitFor("Home Continue", 5_000) { LastPlayed.audio.value?.track?.id == c } }
                     .let { LastPlayed.audio.value?.track?.id }
+                val tCont = System.currentTimeMillis() - t0
                 check("G5-PC2 Home Continue (Jump back in) song", c, cont)
                 val shown = kotlinx.coroutines.runBlocking {
                     kotlinx.coroutines.withTimeoutOrNull(15_000) { vm.recentlyPlayedTracks.first { l -> l.map { it.id }.filter { it in ids } == listOf(c, b, a) } }
                         ?.map { it.id }?.filter { it in ids } ?: vm.recentlyPlayedTracks.value.map { it.id }.filter { it in ids }
                 }
+                val tRecent = System.currentTimeMillis() - t0
                 check("Library Jump back in order", listOf(c, b, a), shown)
                 val most = kotlinx.coroutines.runBlocking {
                     kotlinx.coroutines.withTimeoutOrNull(15_000) { vm.mostPlayedTracks.first { l -> l.count { it.id in ids } == 3 } }
                         ?.map { it.id }?.filter { it in ids } ?: vm.mostPlayedTracks.value.map { it.id }.filter { it in ids }
                 }
                 check("Most played songs", ids.toSet(), most.toSet())
+                log("EP_B timing open=${tOpen} continue=${tCont} libraryJumpBackIn=${tRecent} ms (from launch)")
                 log("EP_B reopen ${System.currentTimeMillis() - t0} ms: continue=$cont jumpBackIn=$shown mostPlayed=$most")
             } finally { sc.close() }
             miss.forEach { log("EP_MISS $it") }
