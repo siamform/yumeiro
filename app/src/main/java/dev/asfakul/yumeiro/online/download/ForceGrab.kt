@@ -63,6 +63,13 @@ object ForceGrab {
     fun totalFromContentRange(v: String?): Long? = v?.substringAfterLast('/')?.trim()?.toLongOrNull()?.takeIf { it > 0 }
 
     /** Finished-chunk side file: one index per line. */
+    /**
+     * DL-11 measurement: counters of the last segmented download in this process (requests, pace
+     * restarts, tail splits, retries after a drop, bytes read past a moved piece end). Read by the
+     * device tests; no URL or header is kept.
+     */
+    @Volatile var lastStats: String = ""
+
     internal fun readDone(f: File): MutableSet<Int> =
         if (!f.exists()) HashSet() else f.readLines().mapNotNullTo(HashSet()) { it.trim().toIntOrNull() }
 }
@@ -233,13 +240,18 @@ class Segmented(
         // connection works to the end. A chunk counts as done (side file) once all its pieces are in.
         val running = ArrayList<Piece>()
         val pieces = HashMap<Int, Int>()
+        val resumedChunks = done.size
+        val splits = java.util.concurrent.atomic.AtomicInteger()
+        val restartsAll = java.util.concurrent.atomic.AtomicInteger()
+        val retries = java.util.concurrent.atomic.AtomicInteger()
+        requests.set(0); dropped.set(0)
         coroutineScope {
             (0 until connections).map {
                 async {
                     while (true) {
                         val piece = lock.withLock {
                             val next = todo.removeFirstOrNull()?.let { i -> Piece(i, ranges[i].first, ranges[i].last).also { pieces[i] = 1 } }
-                                ?: running.maxByOrNull { it.left() }?.split(MIN_SPLIT)?.also { pieces[it.chunk] = (pieces[it.chunk] ?: 0) + 1 }
+                                ?: running.maxByOrNull { it.left() }?.split(MIN_SPLIT)?.also { pieces[it.chunk] = (pieces[it.chunk] ?: 0) + 1; splits.incrementAndGet() }
                             next?.also { running += it }
                         } ?: break
                         var tries = 0
@@ -249,12 +261,13 @@ class Segmented(
                             val at = piece.position()
                             try {
                                 val slowed = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS) { n -> progress(have.addAndGet(n), total) }
-                                if (slowed) { restarts++; continue } // same piece, fresh request
+                                if (slowed) { restarts++; restartsAll.incrementAndGet(); continue } // same piece, fresh request
                                 break
                             } catch (e: Refused) { throw e } catch (e: IOException) {
                                 // The bytes already written stay; the retry starts where the piece stopped.
                                 // G8 (R17): only tries that brought nothing count. Every drop counted, so a
                                 // connection that drops each ~1 MB failed a 4 MB piece and the whole run.
+                                retries.incrementAndGet()
                                 if (piece.position() > at) { tries = 0; delay(200L); continue }
                                 if (++tries >= 4) throw e
                                 delay(800L * tries)
@@ -271,8 +284,13 @@ class Segmented(
             }.awaitAll()
         }
         state.delete()
+        ForceGrab.lastStats = "total=$total connections=$connections chunks=${ranges.size} resumedChunks=$resumedChunks " +
+            "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}"
         return total
     }
+
+    private val requests = java.util.concurrent.atomic.AtomicInteger()
+    private val dropped = AtomicLong()
 
     /** [total]: size when the host serves byte ranges. [whole]: the open 200 answer of a host without them. */
     private class Probe(val total: Long?, val whole: okhttp3.Response?)
@@ -318,6 +336,7 @@ class Segmented(
         val to = p.end()
         if (from > to) return false
         val meter = RequestPace()
+        requests.incrementAndGet()
         val b = Request.Builder().url(url).header("Range", "bytes=$from-$to")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
         client.newCall(b.build()).execute().use { resp ->
@@ -331,6 +350,7 @@ class Segmented(
                         if (want <= 0) return false // full, or another connection took the rest
                         val n = input.read(buf, 0, minOf(buf.size.toLong(), want).toInt()); if (n < 0) break
                         val k = p.accept(n) { at, len -> raf.seek(at); raf.write(buf, 0, len) }
+                        if (k < n) dropped.addAndGet((n - k).toLong())
                         if (k > 0) read(k.toLong())
                         if (pace && meter.slowed(k.toLong(), System.nanoTime()) && p.left() >= RESTART_MIN_LEFT) return true
                     }

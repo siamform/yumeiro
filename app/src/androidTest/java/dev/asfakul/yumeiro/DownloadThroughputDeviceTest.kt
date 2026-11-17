@@ -122,6 +122,7 @@ class DownloadThroughputDeviceTest {
         val line = "THROUGHPUT_DEVICE case=$case host=${url.substringAfter("//").substringBefore('/')} size=$size status=${item?.status} " +
             "error=${item?.error} totalMs=$total MBps=${"%.2f".format(mbps)} per10pctMs=$steps lastOverMean=${"%.2f".format(ratio)}"
         log(line)
+        log("THROUGHPUT_DEVICE case=$case SEGMENTED_STATS ${dev.asfakul.yumeiro.online.download.ForceGrab.lastStats}")
         // A connection failure before the first 10 % (run 43857809658 had a few bytes from one
         // connection, then "Failed to connect" on the others): let measure() re-probe the host.
         if (item?.status == Status.FAILED && at[0] < 0 && item.error.orEmpty().contains("connect", ignoreCase = true)) return@runBlocking false

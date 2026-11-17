@@ -119,6 +119,7 @@ class DownloadKillDeviceTest {
             val files = filesOf(done)
             val line = "DL_KILL_B status=${done.status} error=${done.error} size=${file.length()} expected=$size atKill=$atKill rxAfterKill=$rx files=$files"
             log(line)
+            log("DL_KILL_B SEGMENTED_STATS ${dev.asfakul.yumeiro.online.download.ForceGrab.lastStats}")
             assertEquals(line, Status.DONE, done.status)
             assertEquals(line, size, file.length())
             assertEquals("work files left: $line", listOf(file.name), files)
