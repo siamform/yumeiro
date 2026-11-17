@@ -129,7 +129,7 @@ Device runs listed above; every run id is in `docs/evidence/round3/device-runs.m
 | H11 Mini player | moved to Group 6 | needs a playing track |
 | H12 Continue widget | audited | provider present; launcher placement is manual (script P) |
 | H13 App pages | verified on device (inbox, support) | `h13`, `h13b` 43697545350; permission center → Group 9; reminder cards → unit tests |
-| ST-17 bring-into-view spin | open | problem 9 |
+| ST-17 bring-into-view spin | open | problem 9. Re-audit 2026-11-17: 0 spins in campaign 43988958313 (20/20) and 43705867413 (20) after the first sighting (1 in ~60 runs). Upstream Compose (ContentInViewNode, BringIntoViewSpec, issuetracker) searched: no matching fixed bug. No fix without a reproduction (no symptom fix); the focus-chain log stays in every stress run |
 
 Group 1 is complete. Every item is verified on a device or listed above with its reason.
 The per-item ledger rows are in `docs/DONE-LEDGER.md`.
