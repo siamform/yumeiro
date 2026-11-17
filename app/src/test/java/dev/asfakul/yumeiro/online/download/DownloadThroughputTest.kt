@@ -256,6 +256,27 @@ class DownloadThroughputTest {
         allEngines()
     }
 
+    /**
+     * DL-11 cause logging (note §8.3): every pace restart leaves one `trips` entry (left, read, slow and
+     * baseline speed, the other requests, how the restart was judged) so the next fix is chosen from
+     * device data. Logging only: the burst host must still restart (BUG-3) and the bytes must be exact.
+     */
+    @Test fun paceTripsAreLoggedOncePerRestart() {
+        profile = Profile("burst3MB-then-1.5MBps", burst = 3L * 1024 * 1024, bytesPerSec = 1536L * 1024)
+        ranges = true
+        run("segmented2-trip-log") { f, d -> Segmented(client, 2).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
+        println("DL11 trip-log served=$lastServed ${ForceGrab.lastStats}")
+        broken.clear()
+        val list = Regex("""\btrips=\[([^\]]*)]""").find(ForceGrab.lastStats)?.groupValues?.get(1)
+        assertTrue("trips field missing: ${ForceGrab.lastStats}", list != null)
+        val entries = list!!.split(',').filter { it.isNotEmpty() }
+        val restarts = stat("paceRestarts")
+        assertTrue("the burst host must still restart (BUG-3): ${ForceGrab.lastStats}", restarts > 0)
+        assertEquals("one entry per restart: ${ForceGrab.lastStats}", minOf(restarts, TRIP_LOG_MAX), entries.size)
+        val shape = Regex("""L\d+s\d+r\d+b\d+p[0-9?/|]*(j[HU-])?""")
+        entries.forEach { assertTrue("entry shape: $it", shape.matches(it)) }
+    }
+
     /** A counter of the last segmented download (ForceGrab.lastStats), -1 when absent. */
     private fun stat(key: String): Int = Regex("\\b$key=(\\d+)").find(ForceGrab.lastStats)?.groupValues?.get(1)?.toInt() ?: -1
 

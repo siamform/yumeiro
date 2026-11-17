@@ -182,8 +182,9 @@ internal class RequestPace(
     private val factor: Int = 3,
 ) {
     private var t0 = -1L
-    private var seen = 0L
-    private var baseline = -1.0 // bytes per ns
+    // DL-11 cause logging reads these two from other connections' threads (log only), hence @Volatile.
+    @Volatile private var seen = 0L
+    @Volatile private var baseline = -1.0 // bytes per ns
     private var winBytes = 0L
     private var winStart = 0L
     private var winWait = 0L
@@ -191,8 +192,11 @@ internal class RequestPace(
     /** The request's first-[baselineBytes] speed in bytes per ns (wall clock); -1 until known. */
     val baselineRate: Double get() = baseline
 
+    /** Bytes this request has brought so far (DL-11 cause logging). */
+    val seenBytes: Long get() = seen
+
     /** The speed of the last finished window in bytes per ns (the one that tripped, after [slowed] = true). */
-    var lastWindowRate = -1.0
+    @Volatile var lastWindowRate = -1.0
         private set
 
     /** Windows the wall clock would have tripped but the time spent waiting on the host did not (DL-11). */
@@ -225,6 +229,9 @@ internal class RequestPace(
         return slow
     }
 }
+
+/** DL-11 cause logging: at most this many pace trips are recorded per download. */
+internal const val TRIP_LOG_MAX = 48
 
 /** DL-11 part 2: a fresh request only counts as a help when its first MiB is this much faster than the slow window. */
 internal const val RESTART_GAIN = 1.5
@@ -320,7 +327,7 @@ class Segmented(
         val restartsAll = java.util.concurrent.atomic.AtomicInteger()
         val retries = java.util.concurrent.atomic.AtomicInteger()
         val gate = PaceGate()
-        requests.set(0); dropped.set(0); ownPauses.set(0)
+        requests.set(0); dropped.set(0); ownPauses.set(0); trips.clear(); active.clear()
         coroutineScope {
             (0 until connections).map {
                 async {
@@ -333,13 +340,15 @@ class Segmented(
                         var tries = 0
                         var restarts = 0
                         var slowRate = -1.0 // the window that made the last restart (DL-11: judged by the next request)
+                        var trip: StringBuilder? = null
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             val at = piece.position()
                             val after = slowRate; slowRate = -1.0
+                            val lastTrip = trip; trip = null
                             try {
-                                val slow = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS, after = after, gate = gate) { n -> progress(have.addAndGet(n), total) }
-                                if (slow > 0) { restarts++; restartsAll.incrementAndGet(); slowRate = slow; continue } // same piece, fresh request
+                                val (slow, entry) = fetchPiece(url, headers, piece, out, pace = restarts < MAX_RESTARTS, after = after, gate = gate, trip = lastTrip) { n -> progress(have.addAndGet(n), total) }
+                                if (slow > 0) { restarts++; restartsAll.incrementAndGet(); slowRate = slow; trip = entry; continue } // same piece, fresh request
                                 break
                             } catch (e: Refused) { throw e } catch (e: IOException) {
                                 // The bytes already written stay; the retry starts where the piece stopped.
@@ -364,12 +373,34 @@ class Segmented(
         state.delete()
         ForceGrab.lastStats = "total=$total connections=$connections chunks=${ranges.size} resumedChunks=$resumedChunks " +
             "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}" +
-            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()} protocol=$protocol"
+            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()} protocol=$protocol" +
+            " trips=${synchronized(trips) { trips.joinToString(",", "[", "]") }}"
         return total
     }
 
     private val requests = java.util.concurrent.atomic.AtomicInteger()
     private val dropped = AtomicLong()
+
+    /**
+     * DL-11 cause logging (no behaviour change): one entry per pace trip, at most [TRIP_LOG_MAX].
+     * `L` KiB left in the piece, `s` KiB the request had read, `r` slow window and `b` baseline in
+     * KiB/s, `p` the other active requests as (last window ÷ own baseline in %)/(KiB read), `j` how
+     * the restarted request was judged (H helped, U useless, - not judged: piece ended first).
+     * Read from the device test's SEGMENTED_STATS line to choose the next fix from data (note §8.3).
+     */
+    private val trips = ArrayList<StringBuilder>()
+    private val active = java.util.concurrent.ConcurrentHashMap<Piece, RequestPace>()
+
+    private fun tripEntry(p: Piece, m: RequestPace): StringBuilder? {
+        fun kbps(bytesPerNs: Double) = (bytesPerNs * 1e9 / 1024).toLong()
+        val peers = active.entries.filter { it.key !== p }.joinToString("|") { (_, o) ->
+            val b = o.baselineRate; val w = o.lastWindowRate
+            (if (b > 0 && w > 0) "${(w / b * 100).toLong()}" else "?") + "/${o.seenBytes / 1024}"
+        }
+        val e = StringBuilder("L${p.left() / 1024}s${m.seenBytes / 1024}r${kbps(m.lastWindowRate)}b${kbps(m.baselineRate)}p$peers")
+        synchronized(trips) { if (trips.size >= TRIP_LOG_MAX) return null; trips += e }
+        return e
+    }
     private val ownPauses = java.util.concurrent.atomic.AtomicInteger()
     /** DL-11 cause logging: the wire protocol of the probe (h2 = all ranges share one TCP connection). */
     @Volatile private var protocol = "?"
@@ -416,10 +447,10 @@ class Segmented(
      * caller asks for the rest in a new request. [after] > 0: this request replaces one that slowed to
      * that speed; its first MiB tells [gate] whether the restart helped (DL-11 part 2).
      */
-    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, pace: Boolean, after: Double, gate: PaceGate, read: (Long) -> Unit): Double {
+    private fun fetchPiece(url: String, headers: Map<String, String>, p: Piece, out: File, pace: Boolean, after: Double, gate: PaceGate, trip: StringBuilder? = null, read: (Long) -> Unit): Pair<Double, StringBuilder?> {
         val from = p.position()
         val to = p.end()
-        if (from > to) return -1.0
+        if (from > to) { trip?.append("j-"); return -1.0 to null }
         val meter = RequestPace()
         var judged = after <= 0
         requests.incrementAndGet()
@@ -431,10 +462,11 @@ class Segmented(
             RandomAccessFile(out, "rw").use { raf ->
                 resp.body.byteStream().use { input ->
                     val buf = ByteArray(64 * 1024)
+                    active[p] = meter
                     try {
                         while (true) {
                             val want = p.end() - p.position() + 1
-                            if (want <= 0) return -1.0 // full, or another connection took the rest
+                            if (want <= 0) { if (!judged) trip?.append("j-"); return -1.0 to null } // full, or another connection took the rest
                             val r0 = System.nanoTime()
                             val n = input.read(buf, 0, minOf(buf.size.toLong(), want).toInt()); if (n < 0) break
                             val r1 = System.nanoTime()
@@ -443,15 +475,16 @@ class Segmented(
                             if (k > 0) read(k.toLong())
                             if (!pace) continue
                             val slowed = meter.slowed(k.toLong(), r1, r1 - r0)
-                            if (!judged && meter.baselineRate > 0) { judged = true; gate.judge(meter.baselineRate, after) }
-                            if (slowed && gate.open && p.left() >= RESTART_MIN_LEFT) return meter.lastWindowRate
+                            if (!judged && meter.baselineRate > 0) { judged = true; trip?.append(if (gate.judge(meter.baselineRate, after)) "jH" else "jU") }
+                            if (slowed && gate.open && p.left() >= RESTART_MIN_LEFT) return meter.lastWindowRate to tripEntry(p, meter)
                         }
-                    } finally { ownPauses.addAndGet(meter.ownPauses) }
+                    } finally { active.remove(p); ownPauses.addAndGet(meter.ownPauses) }
                 }
             }
+            if (!judged) trip?.append("j-")
             if (p.position() <= p.end()) throw IOException("Connection closed early")
         }
-        return -1.0
+        return -1.0 to null
     }
 
     /** One connection, resumable with Range when the host allows it. */
