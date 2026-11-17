@@ -158,8 +158,20 @@ class HomeNavigationDeviceTest {
             // ytmusic_chip_explore), so do what a remote user does: LEFT to the rail (the first key
             // may only leave touch mode, so up to four), then DOWN to the next tab, then centre.
             var onRail = false
+            // TV api34 44192958569 / 44195239132: the rail was entered on Home, not Music. Name the key
+            // that did it, the touch mode and which rail tab reads as selected.
+            fun railState(): String {
+                var touch: Boolean? = null
+                rule.runOnUiThread { touch = rule.activity.window.decorView.isInTouchMode }
+                val selected = rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("tv tab") { it.config.getOrElseNullable(SemanticsProperties.TestTag) { null }?.startsWith("tv_nav_tab_") == true }, true).fetchSemanticsNodes()
+                    .filter { it.config.getOrElseNullable(SemanticsProperties.Selected) { null } == true }
+                    .map { it.config.getOrElseNullable(SemanticsProperties.TestTag) { null } }
+                return "touch=$touch selected=$selected focused=${focusedTags()} page=${TabPagerProbe.page}"
+            }
+            log("tv rail: before LEFT ${railState()}")
             for (i in 0 until 4) {
                 FirstRun.shell("input keyevent KEYCODE_DPAD_LEFT"); Thread.sleep(500); rule.waitForIdle()
+                log("tv rail: LEFT #${i + 1} ${railState()}")
                 if (focusedTags().any { it.startsWith("tv_nav_") }) { onRail = true; break }
             }
             // X9-4: before the fix focus stayed on the pinned off-screen Home card and LEFT went nowhere.
