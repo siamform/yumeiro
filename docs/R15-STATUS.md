@@ -1,11 +1,11 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17, eighth cycle, 3)
+## Resume here (updated 2026-11-17, eighth cycle, 4)
 
 - **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
-- **Current group:** 4.1. DL-11 p2: CI pass-after 44106540469; device 44110174701 budget not met (median 1.10–1.11×), H3 (HTTP/2 streams) cause logging `protocol=` added. 4.2 owner file done (OMT-20…25, 10ce53e).
-- **Runs in progress:** 44112738603 (N6-2 api29 head), 44112747705 (N6-2 api29 fail-before, scratch/n6-fail-before 00127dd).
-- **Next three actions:** (1) read the two api29 runs (AppLockDeviceTest, LOCK_UNLOCK/LOCK_RELOCK lines); (2) CI for the `protocol=` logging + X2-1 restore journey, then one device run `DownloadThroughputDeviceTest#a_realHostScreenOn` to read the protocol (H3); (3) X2-1 bench=profile, then bench=jank and bench=startup.
+- **Current group:** 4.1. Verified (emulator) this cycle: N6-2, BUG-1 follow-through, BUG-2 follow-through, BUG-4 (phones + TV), TV-3/NBUG-2b. DL-11 p2: option F (HTTP/1.1 ranges, 7a85df6) medians met, one download 1.1004× so not claimed. 4.2 owner file done (OMT-20…25).
+- **Runs in progress:** 44128769774 (X2-1 bench=profile at 864cb16).
+- **Next three actions:** (1) download the profile artifact, commit app/src/main/baseline-prof.txt, CI; (2) bench=jank then bench=startup, compare with 44013773673 / 44002112195, no gain claimed without numbers; (3) ST-17 campaign (StabilityStressDeviceTest repeat ≤10) and EXT-T1 api33-lowram runs (≥20 in campaigns of ≤10).
 - Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
 
 ### Previous resume note
