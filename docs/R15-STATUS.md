@@ -27,14 +27,19 @@
   X7-5 MASVS re-review: no drift. LB-3/LB-8 verified on device across a real process death (44002497794).
   LB-7 rotation: fail-before 44004098352 → pass 44005396278. LB-2 finding: MangaLibrary ran filesDir+mkdirs on
   main on every page turn; fail-before 44007087901 (40 violations, both phones), fix e059aed.
-- **Current group / step (2):** G5 Library. LB-2 after-fix device run, then CI unit run for the fix.
-- **Runs in progress:** baseline profile regeneration 44005414732 (c9c41d3, bench=profile, api36);
-  LB-7 tabs fail-before 44009339786 (scratch/lb7tabs-fail-before, LibraryTabsMainThreadDeviceTest, both phones).
-  LB-2 verified on device: 44008161115 PASS both (0 violations, was 40).
-- **Next three actions:** (1) read 44009339786 (must FAIL), then run LibraryTabsMainThreadDeviceTest at
-  r15-stability head (must PASS) → LB-7 tabs part; (2) when 44005414732 ends, commit the new
-  `app/src/main/baseline-prof.txt` (X2-4), run CI (unit suite also covers e059aed), then bench=startup and
-  bench=jank (X2-1, ST-7); (3) G6–G11, then re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
+- **Done since (3):** LB-2 verified (44008161115). LB-7 tabs: fail-before 44009339786 → pass 44010510836.
+  MU-4 queue kept while playing: fail-before 44013418634 → pass 44014503279. X2-4 profile regenerated
+  (44005414732, 4989344); CI 44010598355 green. Startup with the new profile 44013773673 (TTID median,
+  profile vs no-compile): api36 2116 vs 2957 ms, api33-lowram 1756 vs 2465 ms. LT-3 verified (44015384846).
+  LT-4 (remote list held whole in memory): fix 8b747ca; hardened test c318e9a (12 s settle, lower of two
+  peaks) fail-before 44018872516 (lowram add 132 MB > 96) → pass 44018869252 (lowram 42/65, api36 32/27 MB).
+- **Current group / step:** Group 7 Live TV. LT-4 waits only on the CI unit run; LT-2 device runs going.
+- **Runs in progress:** CI 44020023897 (c318e9a: RemotePlaylistStreamTest + PlaylistMarketTest);
+  PlaylistRetryDeviceTest after 44020227401 (r15-stability) and fail-before 44020231250
+  (scratch/lt2-fail-before), both phones.
+- **Next three actions:** (1) read CI 44020023897 → LT-4 verified; (2) read the two LT-2 runs (fail-before
+  must FAIL on "not found") → LT-2; (3) bench=jank (ST-7, X2-4), then MG-1 and G7-L1 (what the user sees
+  when QuickIPTV fails), then G8–G11, re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
