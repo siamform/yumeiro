@@ -13,7 +13,7 @@ docs/DONE-LEDGER.md (same IDs); this file is the index.
 | BUG-2 | YouTube channels cannot be opened | — | Verified (emulator, both phones; E1–E6; follow-through done 2026-11-17: open channel, list, scroll, open video, channel row, back) | `YtChannelLinkTest` 6/6 (CI 43851470283, unit); `YtChannelUiDeviceTest` PASS both phones (43851896291; re-run at head 44116513171 CHANNEL_UI_RESULT PASS); NewPipeExtractor public pages only, no login, terms kept |
 | BUG-3 = NBUG-1 | Download speed drops at ~50–70 % | NBUG-1 | Blocked: owner (real phone, ISP). Emulator case d green | Fix 40ea96e, 3c85a72; case d 6/6 PASS (emulator 44043535616: total ≤ 10 s, last 10 % ≤ 3.5 s); OMT entry |
 | BUG-4 | Playback quality list differs from the download list | — | Verified (emulator: applied track asserted per resolution on both phones and tv-api34); real YouTube = OMT-15 Blocked: owner | `Bug4QualityListTest` 7/7, `RebufferWindowTest` 6/6 (CI 43861926740, unit); `QualityListDeviceTest` 184–1080p applied by decoder size (emulator 43861039865 phones; tv-api34 44116803828 on e011c77, quality code identical to head: 1080/720/480/288/184 each applied, back to Auto); real YouTube = OMT-15 (bot wall on CI IPs) |
-| BUG-5 | TV UI unstable (umbrella of NBUG-2a…e) | NBUG-2 | In progress (TV-2/3/4 focus/5 verified; TV-4 cross-source search Blocked: owner, G7 proposal 3) | `TvBug5ReproDeviceTest` tv-api34 43908926085, 43912693329, 43935810414; tv-api24 43949571344, 43957029647 (emulator) |
+| BUG-5 | TV UI unstable (umbrella of NBUG-2a…e) | NBUG-2 | Agent part verified (emulator TV: TV-2, TV-3, TV-4 focus + answer, TV-5); remainder Blocked: owner (TV-4 cross-source search, G7 proposal 3 / OMT-21) | `TvBug5ReproDeviceTest` tv-api34 43908926085, 43912693329, 43935810414; tv-api24 43949571344, 43957029647 (emulator) |
 | NBUG-2a | TV: cannot reach fullscreen from the top row | TV-2 | Verified (emulator, TV) — fail-before 43908926085 b (focus left the player), pass 43912693329, 43914880052 (tv-api34), 43949571344 (tv-api24) | ledger BUG-5 rows 2026-11-16/17 |
 | NBUG-2b | TV: horizontal scroll on Home opens YouTube Music | TV-3 | Verified (emulator tv-api34 + tv-api24): cause = Right at the end of a Spaces grid row left the row and landed on `quick_card_ytmusic` (row above), so Center opened YouTube Music. Fix 45a15ea `spacesRowFocus()`. Filled online feed rows (LazyRow) not reproduced on CI (no seeded content); real TV = owner optional | `TvBug5ReproDeviceTest#e` fail-before 44116803828 (e011c77: R1→quick_card_ytmusic), pass-after 44118950490 tv-api34 and 44121151867 tv-api24 (R1–R3 stay on quick_card_downloads; a–e OK 5) |
 | NBUG-2c | TV: search returns nothing | TV-4 | Focus + answer verified (emulator, TV 43914880052 d, 43935810414 d, 43957029647 d); cross-source scope Blocked: owner (G7 proposal 3) | ledger BUG-5 |
@@ -22,8 +22,15 @@ docs/DONE-LEDGER.md (same IDs); this file is the index.
 | NBUG-3 | Music full screen: taps reach elements underneath | BUG-6 | Verified (emulator, both phones): fail-before 43912650347, pass 43914724044 (leaked=0), fix c8ac2ae | `MusicTapThroughDeviceTest` |
 | NBUG-4a | Web URL playback: no download button | BUG-7a | Verified (emulator, both phones 43935805199) | `StreamWatchDownloadDeviceTest`, `StreamDownloadTest` |
 | NBUG-4b | IPTV Play Link download hidden from gallery | BUG-7b | Verified (emulator, MediaStore, 43935805199); gallery app view = OMT-17 | `PlayLinkPublishTest`, ledger BUG-7 |
-| NBUG-4c | Freeze on stream-format mismatch (DASH vs HLS) | BUG-7c | Verified (emulator, both phones) | `StreamFormatMismatchDeviceTest`, `PlayerBackRuleTest` |
-| NBUG-4d | Freeze with upscaling on | BUG-7d | Not reproduced on emulator (`UpscaleFreezeDeviceTest` PASS); real GPU = OMT-16 | ledger BUG-7 |
+| NBUG-4c | Freeze on stream-format mismatch (DASH vs HLS) | BUG-7c | Verified (emulator, both phones): fail-before 43935805199, pass 43946324687, fix 5d1119e | `StreamFormatMismatchDeviceTest`, `PlayerBackRuleTest` |
+| NBUG-4d | Freeze with upscaling on | BUG-7d | Blocked: owner (OMT-16 real GPU). Not reproduced on emulator: `UpscaleFreezeDeviceTest` 3/3 PASS both phones 43946324687 | ledger BUG-7 |
+
+**4.3 register state (2026-11-17):** every NBUG row is verified (emulator) or Blocked: owner (NBUG-1 real phone,
+NBUG-2c cross-source scope, NBUG-4d real GPU). Spot-check of five verified rows against the runs (eighth cycle):
+NBUG-2a/2d 43908926085 (a PASS code 0, b FAIL as fail-before), NBUG-3 43914724044 (MusicTapThrough PASS both
+phones; the run's red is PushAlertsEffect), NBUG-4a 43935805199 (StreamWatchDownload PASS), NBUG-4c/4d
+43946324687 (StreamFormatMismatch and UpscaleFreeze PASS both phones). All five hold; no status changed except
+NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can show it).
 
 ## B. Remaining agent work (master prompt 4.1) and owner items (4.2)
 
