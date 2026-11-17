@@ -157,3 +157,56 @@ Payment details on the Support page are the owner's content and were not changed
 Files read: `Edition.kt`, `security/IntegrityGuard.kt`, `app/build.gradle.kts` (token/integrity fields).
 No finding: the signer digest check is computed once and cached; debug builds are never flagged; a build with
 `MT_UPDATER_TOKEN` set fails (ADR-013), so no GitHub token ships.
+
+## N1 Watch Together (local parts; online rooms stay parked)
+
+Files read line by line: `watch/WatchTogether.kt`, `ui/screens/watch/WatchTogetherScreen.kt`, the bind site in
+`ui/screens/video/VideoPlayerModal.kt` (DisposableEffect(lease)).
+
+| Action | Expected reaction | Code | Result |
+|---|---|---|---|
+| Host a room | 4-digit code, address, NSD advert | `host()`: NanoHTTPD(0), SecureRandom code, `registerService` in runCatching | OK |
+| Guest with the right code | follows title, episode, play/pause, seek (±2.5 s) | 1 s poll, clock offset from the request midpoint | OK |
+| **Guest with a wrong code** | told, back to the start page | `leave()` reset the status → card and message gone, nothing said | **N1-1** |
+| Room closes | "The room closed" after 30 failed polls | `failures > 30` | OK |
+| **Host while a video is already up (floating window)** | guests follow pause/seek | listener and 3 s tick only attached in `bind()`, which ran before the room existed | **N1-2** |
+| Next video reuses the player (R15) | one listener per player | `bind()` removes the old one | OK |
+| Close the room | server stopped, NSD unregistered, tick stops | `leave()`; tick checks the role | OK |
+
+| ID | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|
+| N1-1 | Wrong room code: the guest card vanished with no message | `leave()` resets `Status`, which held the message | leave, then `AppMessages.error` | unit `WatchTogetherHostTest#wrongRoomCodeTellsTheGuest` | fixed 0040d98, CI pending |
+| N1-2 | Hosting while a video plays in the floating window: guests never saw pause/seek/position | `attach` lived only in `bind()` | `attachIfHosting()` from `bind()` and `host()`, once per player; `leave()` detaches | unit `WatchTogetherHostTest#hostingWithAPlayerAlreadyBoundKeepsPublishing` | fixed 0040d98, CI pending |
+
+Two phones on one Wi-Fi (NSD discovery, real follow) needs real hardware: OMT entry, not blocking.
+
+## N4-2 Bridge ids and CloudStream fixUrl (found by device run 44059862262)
+
+`UniversalAddEcosystemsDeviceTest` failed on head: "Stremio stream not offered: []"; logcat showed the search result url
+`http://localhost:50525/stremio/movie/yu1` and a title page named `/localhost:50525/stremio/movie/yu1`.
+
+Root cause (library source, cloudstream v4.8.0 `MainAPI.kt`): `newMovieSearchResponse`, `newAnimeSearchResponse` and
+`newEpisode` default to `fix = true`; `fixUrl()` turns any id that does not start with "http" into `"$mainUrl/$id"`.
+The built-in drama source had met the same bug (Round 2) and uses `fix = false` + `stripId`; the bridges did not.
+
+| Bridge | Id shape | Broken before | Fix |
+|---|---|---|---|
+| Stremio | `<type>/<id>` | every title from search/home (load split a URL) | `BridgeIds.unfix` in load/loadLinks |
+| Plex | `plex:<key>`, episodes `rk:<key>` | series episodes; any server named "plex" | unfix in load/loadLinks |
+| Jellyfin | `jf:<id>`, episodes `item:<id>` | series episodes | unfix in loadLinks |
+| File servers (SMB, WebDAV, DLNA) | `d:`/`f:` + path; episode = path | every folder/file from home/search; SMB/DLNA episodes | unfix in load; loadLinks unfix except WebDAV (paths are absolute URLs) |
+| Aniyomi | source-relative url | requests are `baseUrl + url` (aniyomi `AnimeHttpSource`) → baseUrl twice | `fix = false` |
+| Mangayomi JS | the script's own link | script got a url it never gave | `fix = false` |
+
+Data safety: Stremio/Plex/Jellyfin/Tree ids keep the shape already saved (history, progress, favourites keyed by them);
+readers accept both. For Aniyomi/JS the new ids are relative: `OnlineHistory.progressOf/entry` find spots saved under the
+old absolute shape through the host-free index (path-like ids only; plain ids never borrow).
+Tests: unit `BridgeIdsTest` (real fixUrl), `ResumePointsTest#bridgeIdWithoutTheOldSitePrefixKeepsThePosition`;
+device `UniversalAddEcosystemsDeviceTest` (fail-before = 44059862262). Plex/Jellyfin/SMB/DLNA end to end needs a real
+server: covered by unit round trip; owner check optional.
+
+## Test fault MINI-T1 (MiniPlayerDeviceTest)
+
+44059862262 `e_swipe_right` stayed on track 3: the swipe started at 3 % of the bar, in its start padding (outside the
+draggable row) and in the system back edge (logcat: a back reached the app at 10:04:07.503). Swipes moved inside the
+row (c09cdc8). App code unchanged.

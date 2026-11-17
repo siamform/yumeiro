@@ -191,7 +191,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## New groups (not in the prompt's list)
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | audited (GROUP-13, local parts): N1-1, N1-2 fixed 0040d98, CI pending; two-phone follow = real hardware | `WatchTogetherHostTest` |
 | N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | audited (GROUP-13): N2-1 fixed 83d7818, runs pending | `SiteSignOutDeviceTest`, `SiteAccessTest`, `BrowserCheckCooldownDeviceTest` |
 | N3 | Self-update (check, download, install, package replaced) | update/* | audited (GROUP-13): N3-1 fixed, device run pending; verify/install path code read, no finding | `UpdateMainThreadDeviceTest`, `UpdaterLogicTest`, `ReleaseTagsTest`; upgrade X10-5 |
 | N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | audited (GROUP-13): N4-1 fixed 595305f, unit pending (CI) | `SourceStoresSafetyTest` |

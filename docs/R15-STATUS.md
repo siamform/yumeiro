@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 12:40 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 13:30 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -103,16 +103,21 @@
   `scratch/n7-fail-before`. **N8-1** fixed 5be755e (links did nothing with no browser, common on TV; now a message)
   + unit `LinksOpenTest`. N9 read: no finding. GROUP-13 N2/N7/N8/N9 sections and INVENTORY rows written.
   One unit fail-before branch `scratch/unit-fail-before` (old N4/N5 stores, old SiteLogins, old Links; seams only).
-- **Runs in progress:** 44059862262 (head dd2a86e, api33-lowram: DownloadsScreen, UniversalAdd, AdultSearchFilter [old
-  helper, its disk count is void], MiniPlayer, AppLock, UpdateMainThread); 44060561160 (`scratch/st22-fail-before`
-  fixed helper, expect FAIL).
+- **Done since (seventh handover, 10):** run 44059862262 read (4 pass, UniversalAdd → **N4-2** app bug, MiniPlayer →
+  MINI-T1 test fault). ST-22 fail-before 44060561160 FAILED as expected (20 main-thread disk calls). **N4-2** fixed
+  7c69091 (CloudStream fixUrl rewrote bridge ids: Stremio, Plex/Jellyfin episodes, file servers, Aniyomi, JS).
+  N1 Watch Together read: **N1-1/N1-2** fixed 0040d98. MINI-T1 fixed c09cdc8. CI 44061310566 cancelled (stale).
+  Fail-before branches: `scratch/unit-fail-before` (f7783b4, unit: N4/N5, N4-2 history, N2, N8, N1) and
+  `scratch/device-fail-before` (N2, N3, N6, N7, N4-2 Stremio; device).
+- **Runs in progress:** CI 44062718477 (head c09cdc8, unit + lint); device 44062811776 (head, api33-lowram:
+  AdultSearchFilter, SiteSignOut, InboxMainThread, UniversalAdd, MiniPlayer); device 44062815556
+  (`scratch/device-fail-before`, api33-lowram: SiteSignOut, InboxMainThread, AppLock, UpdateMainThread, UniversalAdd;
+  expect FAIL in each).
 - **Next three actions:**
-  1. Read both runs (DLSCREEN_, ADD_, E12_, MINI_, LOCK_, UPD_). Then ci.yml on head (unit: SourceStoresSafetyTest,
-     SiteAccessTest, LinksOpenTest, BrowserCheckTest, DataCacheBoundsTest) and on `scratch/unit-fail-before`
-     (expect SourceStoresSafetyTest, SiteAccessTest#signOut…, LinksOpenTest to FAIL).
-  2. Device: head AdultSearchFilter + SiteSignOut + InboxMainThread; fail-before n2, n7, n6 (api33 + api28 minsdk),
-     n3; head AppLock on api28; api36 all new tests.
-  3. Continue GROUP-13: N1 local parts; music M2/M9, M1/M6/M8; then full suite on both phones.
+  1. Read the three runs. Then CI on `scratch/unit-fail-before` (expect SourceStoresSafetyTest, SiteAccessTest#signOut…,
+     LinksOpenTest, WatchTogetherHostTest, ResumePointsTest#bridgeId… to FAIL).
+  2. Device: head AppLock on api28 (`-f minsdk=true`) and n6 fail-before on api28; api36 one run with all new tests.
+  3. Music rows M2, M9, M1/M6/M8; then the full suite on both phones; H8 `-f bench=restore`.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
