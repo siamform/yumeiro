@@ -128,11 +128,12 @@
 - **Done since (seventh handover, 14):** api36 44073375083: 10/11 new-test classes PASS (ER-20, DL-12, MINI-T1, N2-1, N3-1,
   N6-1, N7-1, ST-22, N4-2 Stremio, LB rows now both phones). LocalPlayer#g (PL-18 one Back) failed once on api36.
 - **LP-T1:** 44075789457 g ×3 PASS alone → order-dependent; cause: AppLock keys left the display out of touch mode (test fault). Fix d2f80d3.
-- **Runs in progress:** device 44077732900 (head d2f80d3, api36, AppLock then LocalPlayer; expect 12/12, logcat `PL18 touchMode=true`, `YuBack step=LEAVE`).
+- **Runs in progress:** milestone full suite 44079680572 (head 65bde6d, both phones, default class list). LP-T1 verified
+  (44077732900, api36).
 - **Next three actions:**
-  1. Read 44077732900.
-  2. Full suite on both phones (milestone); then H8 `-f bench=restore`.
-  3. Final coverage check, final report and the gated feature list for the owner.
+  1. Read 44079680572 class by class (compare with 43744809503; EXT-T1 cleanup on api33-lowram is known).
+  2. H8 `-f bench=restore` (one heavy run at a time: only after 44079680572 ends).
+  3. Final coverage check over INVENTORY, final report and the gated feature list for the owner.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
