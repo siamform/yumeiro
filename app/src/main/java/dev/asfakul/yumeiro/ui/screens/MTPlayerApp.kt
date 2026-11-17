@@ -161,6 +161,12 @@ fun MTPlayerApp(
     // Splash is an overlay instead of a navigation destination, so the back stack always
     // starts at Home and can never be left in a broken state after navigation.
     var showSplash by rememberSaveable { mutableStateOf(true) }
+    // ST-18: on a cold start the opaque splash covers Home for at least 900 ms. Home's content then
+    // joins one frame later, so the first frame is the splash and the app shell instead of the whole
+    // Home page (traces 44185180596: frame 1 4.2–4.5 s, most of it the RenderThread's first flush of
+    // everything drawn under the splash). Fixed per composition: a recreate (splash already gone)
+    // composes Home at once, so restored scroll state and focus are unchanged.
+    val homeUnderColdSplash = remember { showSplash }
 
     // One navigation entry point for every top-level destination (bottom bar and the quick
     // access cards). Home is always the root of the back stack: going "home" pops back to it
@@ -671,6 +677,7 @@ fun MTPlayerApp(
                                 }
                             }
                             OpaquePage {
+                            dev.asfakul.yumeiro.ui.components.AfterFirstFrame(enabled = homeUnderColdSplash) {
                             HomeScreen(
                                 stats = stats,
                                 allTracks = filteredTracks,
@@ -752,6 +759,7 @@ fun MTPlayerApp(
                                 },
                                 onOpenRow = { row -> navigateSub(Screen.OnlineRow.route(row.api, row.title, row.pageName.orEmpty(), row.pageData.orEmpty())) },
                             )
+                            }
                             }
                         }
                         Screen.Music.route -> {

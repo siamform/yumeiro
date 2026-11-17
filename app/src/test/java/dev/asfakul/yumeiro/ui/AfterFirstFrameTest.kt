@@ -47,6 +47,14 @@ class AfterFirstFrameTest {
         assertTrue("deferred content never appeared", inner > 0)
     }
 
+    /** Home after a recreate (no cold splash): composed in the first frame, as before. */
+    @Test fun disabledComposesInTheFirstFrame() {
+        var inner = 0
+        rule.mainClock.autoAdvance = false
+        rule.setContent { AfterFirstFrame(enabled = false) { SideEffect { inner++ } } }
+        assertTrue("content must be in the first composition when disabled", inner > 0)
+    }
+
     @Test fun aRequestMadeBeforeIsShownWhenTheHostAppears() {
         val pending = MutableStateFlow<String?>(null)
         rule.mainClock.autoAdvance = false

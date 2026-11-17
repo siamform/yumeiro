@@ -23,9 +23,11 @@ import androidx.compose.runtime.withFrameNanos
  * singletons), so composing them one frame later loses no request: a request made earlier is still
  * pending when they appear. Hosts whose absence changes behaviour (extension review and download
  * prompt count attached hosts; messages fall back to toasts) must not use this.
+ * [enabled] = false composes [content] at once (fixed for the life of the call site).
  */
 @Composable
-fun AfterFirstFrame(content: @Composable () -> Unit) {
+fun AfterFirstFrame(enabled: Boolean = true, content: @Composable () -> Unit) {
+    if (!enabled) { content(); return }
     var ready by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
     if (ready) content()
