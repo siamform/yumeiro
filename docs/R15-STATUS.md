@@ -6,21 +6,22 @@
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Current group / step:** G9/G10 close-out. G9: switches 34/34, SE-6 choice rows verified on device (emulator,
-  43974089878, a–f both phones); qa_gpu_tier → OMT-16. ST-21 (message over the floating window) verified (emulator):
-  fail-before 43967676359, after 43974089878. X15-2 fail-before proven in CI 43976334697. G10: VPN → OMT-18; ER-12
-  (Retry on failed adds) was compile-only → new `RetryActionsDeviceTest` (JS repo + Stremio add-on vs a local
-  server whose first answer is 404), CI 43980800778 green.
+- **Current group / step:** Group 12. G9 and G10 closed for agent work 2026-11-17 (G9: qa_gpu_tier → OMT-16;
+  G10: VPN → OMT-18). Close-out findings fixed and verified on device (emulator): ST-21 (message over the floating
+  window; 43967676359 → 43974089878), ER-19 (form errors behind their dialog: home server, Kitsu; 43985787392 →
+  43987451529); ER-12 Retry verified (43987451529); X15-2 fail-before in CI (43976334697).
 - **Owner bugs:**
   - BUG-5 TV UI: TV-5/TV-2/TV-4 (focus+answer) verified on tv-api34 (43935810414) and tv-api24 (43949571344,
     43957029647); TV-3 PASS tv-api24. Open: TV-4 cross-source search (G7 proposal 3, owner call).
   - BUG-6 verified on device (emulator, both phones).
   - BUG-7: 7a, 7b, 7c verified on device (emulator); 7d not reproduced on emulator → OMT-16; gallery OMT-17.
-- **Runs in progress:** device 43984064564 (both phones, 6bf399a: RetryActionsDeviceTest a, b).
-- **Next three actions:** (1) read 43984064564 (RTY_RESULT PASS a/b) → ER-12 verified (emulator), then close G9/G10
-  in ledger + GROUP docs; (2) ST-7: stress campaign after the baseline profile (fef01c6), `-f shards=[1,2,3,4,5]
-  -f repeat=2` on both phones (10 jobs); (3) Group 12 rest: ST-17 (spin log), X2-1, X7-5 review; X3-TL and X13-6
-  wait on the owner.
+- **Runs in progress:** device campaign 43988958313 (2e86f58, StabilityStressDeviceTest, shards 1–5 × repeat 2,
+  both phones = 10 jobs). Debug build: ART ignores the baseline profile for debuggable apps, so this run is a
+  stability regression check at the current head and ST-17 spin hunting, not the profile's effect on ST-7.
+- **Next three actions:** (1) read 43988958313: pass count, FATAL/ANR, steady/cold stalls ≥700 ms per run vs
+  43705867413 (0.4 / 0.4 steady), any "spin focus:" line (ST-17); (2) ST-7 with the profile needs a non-debuggable
+  build: check macrobenchmark.yml for a frame-timing (jank) benchmark on the benchmark variant; (3) X2-1 / X7-5
+  review, then G5–G11 per the order. X3-TL and X13-6 wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
