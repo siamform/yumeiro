@@ -58,7 +58,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | F-03 | Terabox / Diskwala links | Not started (owner call on terms) | — |
 | F-04 | WebView site list | Not started | — |
 | F-05 | Nuvio / Skystream / Vega repositories | Not started (Vega question to owner) | — |
-| F-06 | 200 % volume booster | Not started | — |
+| F-06 | 200 % volume booster | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-06-volume-booster.md (Next Player 08845f8 LoudnessEnhancer contract) |
 | F-07 | External player support | Proposal written (gated; owner approval needed). Base hand-off exists; gaps: result read-back, headers, subtitles | docs/proposals/FEATURE-F-07-external-player.md (CloudStream 2dcc25c contracts) |
 | F-08 | Upcoming Movies & Series | Not started | — |
 | F-09 | Watch Later + Favorite on posters | Not started | — |
