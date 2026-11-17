@@ -703,18 +703,12 @@ class OfflineMediaRepository(
 
     override suspend fun recordTrackPlayed(trackId: String) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
-        // Update recently played (push to front, max 50)
-        val currentList = _recentlyPlayedIds.value.filter { it != trackId }.toMutableList()
-        currentList.add(0, trackId)
-        if (currentList.size > 50) {
-            _recentlyPlayedIds.value = currentList.take(50)
-        } else {
-            _recentlyPlayedIds.value = currentList
-        }
-
-        // Update play counts
-        val count = (_playCounts.value[trackId] ?: 0) + 1
-        _playCounts.value = _playCounts.value + (trackId to count)
+        // Recently played (front, max 50) and play counts. The same rule records plays made with
+        // no screen listening (G5-PC1, MusicPlayHistory).
+        val (recent, counts) = dev.asfakul.yumeiro.data.MusicPlayHistory.next(_recentlyPlayedIds.value, _playCounts.value, trackId)
+        _recentlyPlayedIds.value = recent
+        _playCounts.value = counts
+        val count = counts[trackId] ?: 0
 
         _audioTracks.value = _audioTracks.value.map { track ->
             if (track.id == trackId) track.copy(playCount = count) else track
@@ -862,8 +856,8 @@ class OfflineMediaRepository(
         const val KEY_FAVORITES = "favorite_track_ids"
         val SEEDED_DEMO = setOf("workout_mix", "chill_vibes")
         const val KEY_PLAYLISTS = "playlists_json"
-        const val KEY_RECENT = "recently_played_ids"
-        const val KEY_PLAY_COUNTS = "play_counts_json"
+        const val KEY_RECENT = dev.asfakul.yumeiro.data.MusicPlayHistory.KEY_RECENT
+        const val KEY_PLAY_COUNTS = dev.asfakul.yumeiro.data.MusicPlayHistory.KEY_PLAY_COUNTS
     }
 
 }

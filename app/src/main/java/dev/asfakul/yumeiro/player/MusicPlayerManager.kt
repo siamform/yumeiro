@@ -53,6 +53,7 @@ class MusicPlayerManager(
      * it synchronously here. Main thread only, like every caller of this class.
      */
     private var attached: ExoPlayer? = null
+    private var recorderReleased = false
     private val player: ExoPlayer
         get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context))
 
@@ -202,6 +203,8 @@ class MusicPlayerManager(
     private fun attach(p: ExoPlayer): ExoPlayer {
         attached = p
         p.addListener(playerListener)
+        // G5-PC1: while this listener records plays, the process-wide watch does not.
+        if (onTrackChanged != null) dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.incrementAndGet()
         runCatching { p.addAnalyticsListener(analyticsListener) }
         refreshCodec()
         // If music is already playing (activity recreated), reconnect to the session now;
@@ -493,6 +496,10 @@ class MusicPlayerManager(
         attached?.let { p ->
             p.removeListener(playerListener)
             runCatching { p.removeAnalyticsListener(analyticsListener) }
+            if (onTrackChanged != null && !recorderReleased) {
+                recorderReleased = true
+                dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.decrementAndGet()
+            }
         }
         scope.cancel()
         controllerFuture?.let { future -> runCatching { MediaController.releaseFuture(future) } }

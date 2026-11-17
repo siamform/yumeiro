@@ -41,6 +41,13 @@ object BackgroundPlaybackWatch {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         var ticker: Job? = null
         player.addListener(object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                // G5-PC1: with no screen listening (swiped from recents), song changes are still
+                // added to Recently played and play counts. A new queue is recorded by playTrack().
+                if (mediaItem != null && reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+                    dev.asfakul.yumeiro.data.MusicPlayHistory.recordWithoutScreen(app, mediaItem.mediaId)
+                }
+            }
             override fun onEvents(p: Player, events: Player.Events) {
                 _state.value = snapshot(p)
                 if (p.isPlaying && ticker?.isActive != true) {
