@@ -123,7 +123,7 @@ Device runs listed above; every run id is in `docs/evidence/round3/device-runs.m
 | H5 TV rail and D-pad | verified on device (emulator D-pad) | `h5` 43696246671 after a53effb; a real TV is script T |
 | H6 Back behaviour | verified on device | BackNavigation 43690918679, 43693532355; the real gesture is script P |
 | H7 Deep links and intents | verified on device | `h7`, `h7b`; SEND of video files is not supported (enhancement 4) |
-| H8 Restore after process death | audited, unverified on device | `h8` covers recreate only; the instrumentation dies with the process. Next attempt: a UiAutomator test driven from the host (`am kill` and relaunch) |
+| H8 Restore after process death | verified on device (emulator, both phones; open tab) | `ProcessDeathRestoreTest` in the self-instrumenting benchmark module: other tab → Home → `am kill` → relaunch → new PID and same tab. 44094439021 (912093b): api36 PASS, api33-lowram PASS; snapshots journey_h8_before_kill/after_restore. Scroll position across process death is not asserted (gap kept open) |
 | H9 Splash, welcome, tour | verified on device | `FirstRun.toTabs` on every run |
 | H10 Top bar, search suggestions | verified on device | `h10` 43689481257, 43696246671 |
 | H11 Mini player | moved to Group 6 | needs a playing track |

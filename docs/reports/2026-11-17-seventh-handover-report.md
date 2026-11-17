@@ -72,7 +72,7 @@ faults (3e6b7de, e71a041).
 | 44089166780 | emulator api36 Yumix | inconclusive: onshort.net timed out on every page |
 | 44091851873 | emulator api36 Yumix | 3/3 PASS (See all 77 → 435 titles, 0 errors) |
 | 44088190688, 44088205006 | — | void: did not build (my missing import) |
-| 44094439021 | H8 bench=restore | see the ledger |
+| 44094439021 | H8 bench=restore | 1/1 PASS api36 (25.3 s) and api33-lowram (30.6 s), emulator; H8 verified for the open tab |
 
 ## Still open (not claimed fixed)
 
@@ -100,9 +100,14 @@ workflows; smallest test on one phone first, full suite on both only at a milest
 goes to CI (no JDK in the sandbox); commit + push after each job with cause/fix/tests/evidence/
 ledger ID and the trailer; update the ledger and Resume here with every push; secrets only in the
 git-ignored .env/secrets/, never printed. Label every result unit / CI / emulator / real hardware.
-Next: read H8 run 44094439021 (bench=restore) and record it; then the gated feature list goes to
+Next: H8 is done (44094439021 PASS on both phones, emulator). The gated feature list goes to
 the owner for approval (Part 8 stays closed until then). Open items are listed in the report's
 "Still open" section; do not mark BUG-1…4 closed, BUG-3 needs the owner's phone.
 Known test hazards: key-sending tests must restore touch mode (FirstRun.touchMode, LP-T1);
 onshort.net often times out from CI runners (tests skip, never pass, when it does).
 ```
+
+## Addendum (after the report was first pushed)
+
+- H8: 44094439021 (912093b) ProcessDeathRestoreTest 1/1 PASS on api36 and api33-lowram (emulator). The open tab survives a real process death (new PID). Scroll position across a process death is not asserted.
+- X11/X12: unit XML read by name in CI 44067269319: SmartDnsResilienceTest 4/4, DnsWireClientTest 4/4, DataCacheBoundsTest 4/4 (CI unit). INVENTORY set to verified (CI unit).
