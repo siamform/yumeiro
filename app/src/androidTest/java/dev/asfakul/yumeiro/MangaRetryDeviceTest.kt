@@ -36,7 +36,12 @@ import java.util.concurrent.atomic.AtomicInteger
  * "Couldn't load" over the details that then loaded. A fake source (published to SourceHub) fails
  * the first load and answers slowly afterwards; the test taps Retry, steps frames until the first
  * retry's load is running while Retry is still on screen, taps again, and checks that the details
- * show with no error.
+ * show with no error. On the CI emulators (44024309052, 44024330486) Retry is gone in the frame the
+ * first retry starts, so no second tap can land: the race is not reachable from the screen and the
+ * case is skipped (assumption). It stays as a guard in case Retry ever lingers.
+ *
+ * libraryLoadIsOffMain (MG-1, 4cee17d): opening the detail page with the library not loaded yet
+ * must not read the library file on the main thread (StrictMode listener; only MangaLibrary stacks).
  *
  * Log tag YuMgRetry: MGR_RESULT PASS.
  */
@@ -44,6 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class MangaRetryDeviceTest {
     @get:Rule val compose = createComposeRule()
     private val calls = AtomicInteger(0)
+    @Volatile private var instant = false
     private val cancelled = AtomicInteger(0)
 
     private fun log(s: String) = Log.i("YuMgRetry", s)
@@ -61,6 +67,7 @@ class MangaRetryDeviceTest {
         override suspend fun latest(page: Int) = MangaListPage(emptyList(), false)
         override suspend fun search(query: String, page: Int) = MangaListPage(emptyList(), false)
         override suspend fun details(url: String): MangaDetails {
+            if (instant) return MangaDetails(id, url, "YuMg Loaded Title", null, author = "YuMg Author")
             val n = calls.incrementAndGet()
             log("MGR details call $n")
             if (n == 1) throw java.io.IOException("HTTP 503")
@@ -101,5 +108,30 @@ class MangaRetryDeviceTest {
         assertTrue("MG-1: the second Retry must cancel the first retry's load (cancelled=${cancelled.get()})", cancelled.get() >= 1)
         assertTrue("MG-1: 'Couldn't load' shown over loaded details", !falseError)
         log("MGR_RESULT PASS")
+    }
+
+    @Test fun libraryLoadIsOffMain() {
+        org.junit.Assume.assumeTrue("penaltyListener needs API 28", android.os.Build.VERSION.SDK_INT >= 28)
+        instant = true
+        SourceHub.publishManga("yu_test_mg1_bridge", listOf(fake))
+        dev.asfakul.yumeiro.sources.manga.MangaLibrary.unloadForTests()
+        val inst = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val seen = java.util.Collections.synchronizedList(mutableListOf<String>())
+        var old: android.os.StrictMode.ThreadPolicy? = null
+        inst.runOnMainSync {
+            old = android.os.StrictMode.getThreadPolicy()
+            android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites()
+                .penaltyListener({ it.run() }) { v: android.os.strictmode.Violation -> seen += Log.getStackTraceString(v) }.build())
+        }
+        try {
+            compose.setContent { Box(Modifier.fillMaxSize()) { MangaDetailScreen(providerId = fake.id, url = "yumg://t/2", title = "YuMg Title", onBack = {}, onRead = { _, _ -> }) } }
+            compose.waitUntil(20_000) { hasText("YuMg Chapter 1") }
+            Thread.sleep(500); compose.waitForIdle()
+        } finally { inst.runOnMainSync { old?.let { android.os.StrictMode.setThreadPolicy(it) } } }
+        val ours = seen.filter { "MangaLibrary" in it }
+        log("MGR library main-thread disk calls: ${ours.size} (all ${seen.size})")
+        ours.take(2).forEach { log("MGR stack: " + it.lines().take(14).joinToString(" < ")) }
+        assertTrue("MG-1: ${ours.size} main-thread disk calls from MangaLibrary on the detail page:\n" + ours.firstOrNull().orEmpty().take(2500), ours.isEmpty())
+        log("MGR_RESULT PASS library")
     }
 }
