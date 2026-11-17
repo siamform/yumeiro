@@ -67,12 +67,24 @@ class AdultSearchFilterDeviceTest {
     private fun onMain(block: () -> Unit): Pair<List<String>, Long> {
         val seen = Collections.synchronizedList(mutableListOf<String>())
         var ms = 0L
+        // On a Looper thread StrictMode reports a violation from a runnable posted after the current
+        // message, and reads the listener then (AOSP StrictMode.handleViolationWithTimingAttempt). So
+        // the policy must stay set until the main queue has run: set, run, wait for idle, restore.
+        // (The first version restored it inside the same message and so could never see a call.)
+        var old: StrictMode.ThreadPolicy? = null
         inst.runOnMainSync {
-            val old = StrictMode.getThreadPolicy()
+            old = StrictMode.getThreadPolicy()
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites()
                 .penaltyListener({ it.run() }) { v: Violation -> seen += Log.getStackTraceString(v) }.build())
-            val t = SystemClock.elapsedRealtime()
-            try { block() } finally { ms = SystemClock.elapsedRealtime() - t; StrictMode.setThreadPolicy(old) }
+        }
+        try {
+            inst.runOnMainSync {
+                val t = SystemClock.elapsedRealtime()
+                try { block() } finally { ms = SystemClock.elapsedRealtime() - t }
+            }
+            inst.waitForIdleSync()
+        } finally {
+            inst.runOnMainSync { old?.let { StrictMode.setThreadPolicy(it) } }
         }
         return synchronized(seen) { seen.filter { "dev.asfakul.yumeiro.cache.DataCache" in it } } to ms
     }
