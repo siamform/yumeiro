@@ -37,7 +37,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | ID | What | Status | Evidence |
 |---|---|---|---|
 | DL-11 part 2 | Segmented over-read 1.04–1.44× | In progress: fix 4fa126e cut worst case to 1.12×, device budget not met (median 1.10–1.11×); H3 HTTP/2 under test | before 44036060683, 44037559115, 44041714032; CI fail-before 44103206509 → pass-after 44106540469; device 44110174701 (emulator) |
-| X2-1 | Baseline profile gain on real hardware | Blocked: owner for real hardware (OMT-12); emulator extension done (restore journey, 743b1c7), startup re-measure running | Startup 44013773673 (emulator): TTID api36 2116 vs 2957 ms, lowram 1756 vs 2465 ms; jank 44138627579 no gain (P50 327.6 vs 321.2 / 317.2 vs 312.5 ms, software rendering) |
+| X2-1 | Baseline profile gain on real hardware | Blocked: owner for real hardware (OMT-12); emulator extension done (restore journey, 743b1c7; startup and jank re-measured) | Startup 44013773673 (emulator): TTID api36 2116 vs 2957 ms, lowram 1756 vs 2465 ms; jank 44138627579 no gain (P50 327.6 vs 321.2 / 317.2 vs 312.5 ms, software rendering); startup 44142300486 TTID api36 1873 vs 3016 ms (0.62), lowram 2325 vs 3261 ms (0.71) |
 | N6-2 | Android 10 credential screen re-lock | Verified (emulator api29) | fail-before 44114305239 (N6-4 guard reverted) → pass-after 44112738603; fix = N6-4 guard 3f3fbd8 |
 | ST-17 | Stress-test spins, cause logging | In progress (recorded per campaign) | 43988958313 (20/20, 0 spins) |
 | BUG-3 emulator side | Keep case d green | In progress (every download change) | 44043535616; 44110174701 (6/6 after DL-11 fix) |
