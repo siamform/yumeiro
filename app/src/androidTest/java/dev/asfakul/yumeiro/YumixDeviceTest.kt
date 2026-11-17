@@ -189,4 +189,31 @@ class YumixDeviceTest {
         assertEquals("See all showed a load error while paging ($errors checks) · ${FirstRun.onScreen(rule)}", 0, errors)
         assertTrue("See all never loaded another page ($first → $last)", last > first)
     }
+    /**
+     * G4 Y3 re-audit: the extension bar slides away while the feed scrolls down and comes back on a
+     * small scroll up (HideOnScroll through the real nested scroll of the Yumix list). Before this
+     * the behaviour had only a code read.
+     */
+    @Test fun extensionBarHidesOnScrollAndComesBack() {
+        FirstRun.tapVisible(rule, "nav_tab_home"); idle(600)
+        FirstRun.tapVisible(rule, "quick_card_hues"); idle(600)
+        val until = SystemClock.uptimeMillis() + 150_000
+        while (SystemClock.uptimeMillis() < until && cards().size < 3) idle(3_000)
+        org.junit.Assume.assumeTrue("Yumix showed only ${cards().size} cards (network?)", cards().size >= 3)
+        fun bar() = rule.onAllNodesWithTag("online_extension_bar", true).fetchSemanticsNodes().isNotEmpty()
+        idle(2_000)
+        assertTrue("bar shown at the top · ${FirstRun.onScreen(rule).take(600)}", bar())
+        val list = { rule.onAllNodesWithTag("online_home_list", true).onFirst() }
+        list().performTouchInput { swipeUp(startY = bottom - 60f, endY = top + height * 0.35f) }
+        val hidden = runCatching { rule.waitUntil(5_000) { !bar() }; true }.getOrDefault(false)
+        log("Y3 after scrolling down: bar hidden=$hidden")
+        FirstRun.shot("y3_bar_hidden")
+        assertTrue("bar still shown after scrolling the feed down", hidden)
+        // A small scroll up (more than the 12 px threshold, far from the top) brings it back.
+        list().performTouchInput { swipeDown(startY = top + height * 0.4f, endY = top + height * 0.5f) }
+        val back = runCatching { rule.waitUntil(5_000) { bar() }; true }.getOrDefault(false)
+        log("Y3 after a small scroll up: bar shown=$back")
+        assertTrue("bar did not come back on a small scroll up", back)
+        log("Y3_RESULT PASS")
+    }
 }
