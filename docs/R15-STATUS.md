@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 09:10 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -39,19 +39,21 @@
   failure shown as a friendly error): CI 44026316670, fail-before CI 44028308675. LT-1 44026779856. G7 done.
 - **Seventh handover, done:** 44043535616 read: G8 "Downloads fixes" verified (emulator; YouTube part unit only);
   BUG-3 case d 6/6 PASS (stays open for the owner's phone). Docs 56f0526.
-- **Current group / step:** Group 11 Integrations (`docs/groups/GROUP-11-INTEGRATIONS.md`), line-by-line read.
-  - IG-1 (Trakt/Simkl sign-in poll on main) fix 5a46d98, `TrackerSignInDeviceTest`.
-  - IG-2 (a failing anime tracker skipped Trakt/Simkl, retried every tick) and IG-3 (Kitsu/MAL never refresh
-    tokens) fixed in the commit after 5a46d98; `AnimeTrackersDeviceTest` a–c; fail-before branch `scratch/ig2-fail-before`.
-  - Still to read: Simkl (rest), Last.fm/Scrobbler, LRCLIB, subtitles, TMDB, FCM/CloudAlerts/AppFeed/UpdateConfig,
-    YouTube account, GitHubReleaseClient. G8 leftovers: INVENTORY D1–D8 status, D3/D5/D6/D8 device evidence.
-- **Runs in progress:** 44050521996 (head 14a367f: AnimeTrackers, ScrobbleFlush, EpisodeStills; api33-lowram; expect PASS);
-  44050574003 (`scratch/ig2-fail-before`, same tests on old code; expect FAIL in every case). IG-1 verified (emulator):
-  44049036117 → 44049031398. IG-4 (Last.fm flush on main) and IG-5 (episode thumbnails lost) fixed in 282ce61 / 14a367f.
+- **Current group / step:** Group 11 Integrations (`docs/groups/GROUP-11-INTEGRATIONS.md`). Line-by-line read done for
+  every G11 file (app + server/); action–reaction table and competitor notes (Mihon, checked in source) filled.
+  - IG-1 verified (emulator): 44049036117 (fail-before) → 44049031398.
+  - IG-2…IG-5 after-fix on api33-lowram: 44050521996 (14a367f) PASS every case (AnimeTrackers a/b/c, ScrobbleFlush, Stills a/b).
+  - IG-6 (CloudAlerts cached a failed AniList lookup as "not anime") 9ecd280; IG-7 (subtitle hash match lost when the
+    title search failed) dc00672; IG-8 (failed AniList/MAL re-sign-in said "Signed in") 0997e45. Tests:
+    `CloudAlertsLookupDeviceTest`, `OnlineSubtitlesFallbackDeviceTest`, `AnimeSignInMessageDeviceTest`; their
+    fail-before copies are on `scratch/ig2-fail-before`.
+- **Runs in progress:** 44050574003 (`scratch/ig2-fail-before` 42cc6a8, IG-2…IG-5 tests on old code, api33-lowram; expect FAIL
+  in every case); 44051808801 (head f0fa55d, all six G11 tests, api36; expect PASS).
 - **Next three actions:**
-  1. Read 44050521996 / 44050574003. If both behave, run head on api36; then mark IG-2…IG-5 verified (emulator).
-  2. Continue the G11 read: FcmPush, CloudAlerts, AppFeed, UpdateConfig, YtAccount/YtCookiePaste, GitHubReleaseClient.
-  3. G8 leftovers (D3 torrent, D5 external downloader, D6 YouTube, D8 screen) and the five-item spot-check.
+  1. Read 44050574003 and 44051808801. Then dispatch the IG-6…IG-8 fail-before (`scratch/ig2-fail-before`, api33-lowram)
+     and head on api33-lowram for the three new tests (never more than two device workflows).
+  2. Mark IG-2…IG-8 verified (emulator) where both sides behave; set INVENTORY I1–I11 statuses with evidence.
+  3. G8 leftovers (INVENTORY D1–D8; D3 torrent, D5 external downloader, D6 YouTube, D8 screen) and the five-item spot-check.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM

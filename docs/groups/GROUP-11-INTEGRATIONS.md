@@ -89,6 +89,7 @@ Checked against source code on 2026-11-17:
 |---|---|---|
 | emulator, IG-1 fail-before | 44049036117 (`scratch/ig1-fail-before`, api33-lowram) | FAIL as expected: NetworkOnMainThreadException at the first poll, on main |
 | emulator, IG-1 after | 44049031398 (5a46d98, both phones) | 4/4 PASS, every request on a worker thread |
-| emulator, IG-2…IG-5 after | 44050521996 (14a367f, api33-lowram) | in progress |
+| emulator, IG-2…IG-5 after | 44050521996 (14a367f, api33-lowram) | PASS: ANIME_TRK a/b/c (MAL+Kitsu refreshed, Trakt/Simkl still updated, Simkl capped at 3 attempts), SCROBBLE_FLUSH on a worker thread, STILLS a/b (retry after a failed first lookup) |
+| emulator, IG-2…IG-8 after | 44051808801 (f0fa55d, api36) | in progress |
 | emulator, IG-2…IG-5 fail-before | 44050574003 (`scratch/ig2-fail-before`, api33-lowram) | in progress |
 | emulator, IG-6…IG-8 | not dispatched yet (one heavy run at a time) | queued |
