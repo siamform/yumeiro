@@ -56,7 +56,7 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | F-01 | Language / Sub / Dub badges on search posters | Proposal written (gated). Code read: badges already ship (ReleaseTags + PosterTags on search, ff7cb19); gaps: detail write-back, JS/Aniyomi, device test | docs/proposals/FEATURE-F-01-language-sub-dub-badges.md |
 | F-02 | Telegram option | Not started (owner call on terms/privacy) | — |
 | F-03 | Terabox / Diskwala links | Not started (owner call on terms) | — |
-| F-04 | WebView site list | Not started | — |
+| F-04 | WebView site list | Proposal written (gated; tab exists; adds search, pin, per-site settings, favicon, import/export) | docs/proposals/FEATURE-F-04-webview-site-list.md (Hikari 8aa1652) |
 | F-05 | Nuvio / Skystream / Vega repositories | Not started (Vega question to owner) | — |
 | F-06 | 200 % volume booster | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-06-volume-booster.md (Next Player 08845f8 LoudnessEnhancer contract) |
 | F-07 | External player support | Proposal written (gated; owner approval needed). Base hand-off exists; gaps: result read-back, headers, subtitles | docs/proposals/FEATURE-F-07-external-player.md (CloudStream 2dcc25c contracts) |
