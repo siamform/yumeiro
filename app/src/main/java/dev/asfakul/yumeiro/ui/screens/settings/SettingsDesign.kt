@@ -259,7 +259,7 @@ private fun GuideStep(n: Int, s: SetupGuide.Step, context: Context) {
             if (s.link != null) {
                 Row(
                     Modifier.clip(RoundedCornerShape(50)).border(1.dp, SpotifyGreen.copy(alpha = 0.5f), RoundedCornerShape(50))
-                        .clickable { if (!Links.open(context, s.link)) AppMessages.error(context, "Couldn't open the browser") }
+                        .clickable { Links.open(context, s.link) }
                         .padding(horizontal = 12.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

@@ -138,7 +138,7 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
             val pages = dev.asfakul.yumeiro.ui.screens.extras.AppPages
             when {
                 link == null || link == "inbox" -> pages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
-                link.startsWith("https://") -> if (!dev.asfakul.yumeiro.ui.screens.extras.Links.open(this, link)) pages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
+                link.startsWith("https://") -> if (!dev.asfakul.yumeiro.ui.screens.extras.Links.open(this, link, tell = false)) pages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
                 else -> pages.runAction(link)
             }
             return

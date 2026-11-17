@@ -30,13 +30,13 @@ info	ui/screens/online/OnlinePlayerUi.kt:857	Audio: Example item name
 info	ui/screens/online/OnlinePlayerUi.kt:862	This video has no Example item name audio track. Sources with it are listed first.	
 success	ui/screens/online/OnlinePlayerUi.kt:870	Sent to Example item name	
 info	ui/screens/online/OnlinePlayerUi.kt:871	Example item name Using Yumeiro's downloader instead	
-success	ui/screens/sources/SourcesHubScreen.kt:217	Repository added · Example item name extensions	
-success	ui/screens/sources/SourcesHubScreen.kt:286	Example item name installed	
-success	ui/screens/sources/SourcesHubScreen.kt:341	Example item name added	
-success	ui/screens/sources/SourcesHubScreen.kt:393	Repository added · Example item name sources	
-success	ui/screens/sources/SourcesHubScreen.kt:443	Example item name installed	
-success	ui/screens/sources/SourcesHubScreen.kt:526	Example item name added	
-success	ui/screens/sources/SourcesHubScreen.kt:559	Example item name connected	
+success	ui/screens/sources/SourcesHubScreen.kt:219	Repository added · Example item name extensions	
+success	ui/screens/sources/SourcesHubScreen.kt:288	Example item name installed	
+success	ui/screens/sources/SourcesHubScreen.kt:343	Example item name added	
+success	ui/screens/sources/SourcesHubScreen.kt:395	Repository added · Example item name sources	
+success	ui/screens/sources/SourcesHubScreen.kt:445	Example item name installed	
+success	ui/screens/sources/SourcesHubScreen.kt:528	Example item name added	
+success	ui/screens/sources/SourcesHubScreen.kt:561	Example item name connected	
 error	ui/screens/video/VideoPlayerModal.kt:1944	Picture-in-picture isn't available right now	
 success	ui/screens/downloads/DownloadPrompt.kt:122	Downloading Example item name · Example item name	
 error	ui/screens/downloads/DownloadsScreen.kt:340	The file was removed	
@@ -47,6 +47,7 @@ error	ui/screens/watch/StreamWatchPanel.kt:167	This channel isn't available — 
 success	ui/screens/watch/StreamWatchPanel.kt:247	Link copied	
 info	ui/screens/watch/StreamWatchPanel.kt:254	Downloading "Example item name"	
 success	ui/screens/watch/WatchScreens.kt:516	Link copied	
+error	ui/screens/extras/AppPages.kt:56	No app on this device can open that link	
 info	ui/screens/extras/InboxScreen.kt:127	You're offline. Showing saved notifications	
 info	ui/screens/extras/PermissionCenter.kt:74	Example item name not allowed. Tap again when you want to allow it	
 error	ui/screens/extras/PermissionCenter.kt:75	Example item name blocked for Yumeiro. Android won't ask again; allow it in Android settings	Open settings
@@ -87,10 +88,8 @@ success	ui/screens/settings/SettingsControls.kt:145	Test sent. Check your status
 error	ui/screens/settings/SettingsControls.kt:147	Example item name. Example item name	
 error	ui/screens/settings/SettingsControls.kt:304	Couldn't clear. Try again	
 error	ui/screens/settings/SettingsControls.kt:365	Couldn't open Example item name	
-error	ui/screens/settings/SettingsControls.kt:370	Couldn't open the website	
 error	ui/screens/settings/SettingsControls.kt:375	Couldn't open GitHub	
 success	ui/screens/settings/SettingsDesign.kt:189	Copied	
-error	ui/screens/settings/SettingsDesign.kt:262	Couldn't open the browser	
 success	ui/screens/settings/SettingsPersonalize.kt:149	Navigation bar reset	
 success	ui/screens/settings/YouTubeAccountScreen.kt:106	Signed in to YouTube with your cookie	
 success	ui/screens/settings/YouTubeAccountScreen.kt:115	Signed in to YouTube	

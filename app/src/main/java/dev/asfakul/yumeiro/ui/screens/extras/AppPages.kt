@@ -43,9 +43,17 @@ object PopupGate {
 }
 
 object Links {
-    /** Opens [url] in the matching app (Facebook, Instagram, …) or the browser. False when nothing could open it. */
-    fun open(context: Context, url: String): Boolean = try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        true
-    } catch (_: ActivityNotFoundException) { false } catch (_: SecurityException) { false }
+    /**
+     * Opens [url] in the matching app (Facebook, Instagram, …) or the browser. False when nothing
+     * could open it; then the user is told, unless [tell] is false (the caller has its own fallback).
+     * N8-1: most callers ignored the false, so on a phone or TV with no browser the tap did nothing.
+     */
+    fun open(context: Context, url: String, tell: Boolean = true): Boolean {
+        val ok = try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (_: ActivityNotFoundException) { false } catch (_: SecurityException) { false }
+        if (!ok && tell) dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "No app on this device can open that link")
+        return ok
+    }
 }

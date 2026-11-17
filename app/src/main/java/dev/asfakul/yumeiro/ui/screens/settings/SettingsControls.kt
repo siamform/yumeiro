@@ -367,7 +367,7 @@ fun SocialMediaCard() {
         }
         SettingsDivider()
         SettingsActionRow("Website", "Downloads, news and guides · yumeiro.click", "social_website") {
-            if (!Links.open(context, Reminders.WEBSITE_URL)) AppMessages.error(context, "Couldn't open the website")
+            Links.open(context, Reminders.WEBSITE_URL)
         }
         SettingsDivider()
         SettingsActionRow("Star on GitHub", "github.com/siamform/yumeiro", "social_github") {
