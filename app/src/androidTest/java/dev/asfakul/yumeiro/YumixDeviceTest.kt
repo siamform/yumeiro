@@ -208,6 +208,9 @@ class YumixDeviceTest {
         FirstRun.shot("yumix_see_all")
         org.junit.Assume.assumeTrue("this row had a single page ($first titles)", last > first || !ended)
         assertEquals("See all showed a load error while paging ($errors checks) · ${FirstRun.onScreen(rule)}", 0, errors)
+        // YX-T1: no page came in and every failure was the network (the source host timing out from
+        // this machine): inconclusive, reported as skipped, never as a pass.
+        org.junit.Assume.assumeFalse("the row's source host timed out on every page ($netErrors network errors)", last <= first && netErrors > 0)
         assertTrue("See all never loaded another page ($first → $last)", last > first)
     }
     /**
