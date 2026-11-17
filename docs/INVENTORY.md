@@ -196,7 +196,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | N3 | Self-update (check, download, install, package replaced) | update/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
 | N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
 | N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
-| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | audited (GROUP-13): N6-1, N6-3 fixed, device run pending; N6-2 suspected (API 29, open) | `AppLockDeviceTest` |
 | N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
 | N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
 | N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |

@@ -39,7 +39,7 @@ success	ui/screens/sources/SourcesHubScreen.kt:526	Example item name added
 success	ui/screens/sources/SourcesHubScreen.kt:559	Example item name connected	
 error	ui/screens/video/VideoPlayerModal.kt:1944	Picture-in-picture isn't available right now	
 success	ui/screens/downloads/DownloadPrompt.kt:122	Downloading Example item name · Example item name	
-error	ui/screens/downloads/DownloadsScreen.kt:331	The file was removed	
+error	ui/screens/downloads/DownloadsScreen.kt:340	The file was removed	
 info	ui/screens/youtube/YouTubeScreens.kt:238	Channel not known yet. Play the video once to learn it	
 success	ui/screens/youtube/YouTubeScreens.kt:346	“Example item name” added to your topics	
 info	ui/screens/youtube/YouTubeScreens.kt:352	“Example item name” removed from your topics	Undo
@@ -51,13 +51,13 @@ info	ui/screens/extras/InboxScreen.kt:127	You're offline. Showing saved notifica
 info	ui/screens/extras/PermissionCenter.kt:74	Example item name not allowed. Tap again when you want to allow it	
 error	ui/screens/extras/PermissionCenter.kt:75	Example item name blocked for Yumeiro. Android won't ask again; allow it in Android settings	Open settings
 success	ui/screens/extras/SupportScreen.kt:88	Example item name copied	
-success	ui/screens/stream/PlaylistDetailScreen.kt:201	Example item name updated · Example item name streams	
-success	ui/screens/stream/PlaylistDetailScreen.kt:210	Exported Example item name streams	
-success	ui/screens/stream/PlaylistDetailScreen.kt:253	Saved as Example item name	
-info	ui/screens/stream/PlaylistDetailScreen.kt:369	Removed Example item name	Undo
-info	ui/screens/stream/PlaylistDetailScreen.kt:405	Deleted Example item name	
-success	ui/screens/stream/PlaylistDetailScreen.kt:412	Saved to Example item name	
-success	ui/screens/stream/PlaylistDetailScreen.kt:413	Saved to Example item name	
+success	ui/screens/stream/PlaylistDetailScreen.kt:204	Example item name updated · Example item name streams	
+success	ui/screens/stream/PlaylistDetailScreen.kt:213	Exported Example item name streams	
+success	ui/screens/stream/PlaylistDetailScreen.kt:256	Saved as Example item name	
+info	ui/screens/stream/PlaylistDetailScreen.kt:373	Removed Example item name	Undo
+info	ui/screens/stream/PlaylistDetailScreen.kt:409	Deleted Example item name	
+success	ui/screens/stream/PlaylistDetailScreen.kt:416	Saved to Example item name	
+success	ui/screens/stream/PlaylistDetailScreen.kt:417	Saved to Example item name	
 success	ui/screens/stream/PlaylistMarketScreen.kt:135	Installed Example item name · Example item name streams	
 error	ui/screens/stream/PlaylistMarketScreen.kt:137	Couldn't install Example item name: Example item name	Retry
 info	ui/screens/stream/PlaylistMarketScreen.kt:150	Everything is up to date	
@@ -99,3 +99,4 @@ success	ui/screens/player/NowPlayingScreen.kt:513	Lyrics imported
 error	ui/screens/player/NowPlayingScreen.kt:514	That file has no readable lyrics	
 error	ui/screens/player/NowPlayingScreen.kt:521	No file picker available	
 error	youtube/YouTubePlayback.kt:66	YouTube couldn't play this video: Example item name	Retry
+info	security/Privacy.kt:124	App lock was turned off because this phone has no screen lock. Set one, then turn it on again in Settings.	

@@ -92,6 +92,7 @@ object Privacy {
 
     fun onStart(activity: Activity) {
         load(activity)
+        if (_lockEnabled.value && releaseIfNoScreenLock(activity)) { applyWindow(activity); return }
         applyWindow(activity)
         if (!_lockEnabled.value) { _locked.value = false; return }
         val away = if (backgroundAt == 0L) Long.MAX_VALUE else SystemClock.elapsedRealtime() - backgroundAt
@@ -100,7 +101,28 @@ object Privacy {
 
     fun unlock(activity: Activity) {
         if (!_locked.value) return
+        if (releaseIfNoScreenLock(activity)) return
         authenticate(activity, "Unlock Yumeiro") { ok -> if (ok) _locked.value = false }
+    }
+
+    /**
+     * N6-1: with the lock on, removing the phone's PIN/pattern/password left no way to pass the
+     * prompt (every attempt fails at once), so the gate stayed up for good and only "Clear data"
+     * (losing everything) got the user back in. With no secure lock screen nothing can be verified
+     * and anyone holding the phone can already open it, so the lock is turned off and the user is
+     * told. Only the keyguard state is used (not a biometric hardware error, which can be passing).
+     * Same rule as Mihon (`SecureActivityDelegate.setAppLock`). Returns true when it released.
+     */
+    internal fun releaseIfNoScreenLock(activity: Activity): Boolean {
+        val secure = activity.getSystemService(android.app.KeyguardManager::class.java)?.isDeviceSecure ?: return false
+        if (secure) return false
+        _lockEnabled.value = false
+        _locked.value = false
+        prefs(activity).edit().putBoolean("lock", false).apply()
+        dev.asfakul.yumeiro.widget.ContinueWidget.refresh(activity)
+        android.util.Log.i("YuPrivacy", "LOCK_RELEASED no secure lock screen")
+        dev.asfakul.yumeiro.ui.components.AppMessages.info(activity, "App lock was turned off because this phone has no screen lock. Set one, then turn it on again in Settings.")
+        return true
     }
 
     private fun applyWindow(activity: Activity) {
@@ -116,17 +138,25 @@ object Privacy {
     /** MainActivity forwards the confirm-credential result here. */
     fun onCredentialResult(ok: Boolean) { pendingCredential?.invoke(ok); pendingCredential = null }
 
+    private val NO_BIOMETRIC_ERRORS = setOf(
+        BiometricPrompt.BIOMETRIC_ERROR_HW_UNAVAILABLE,
+        BiometricPrompt.BIOMETRIC_ERROR_NO_BIOMETRICS,
+        BiometricPrompt.BIOMETRIC_ERROR_HW_NOT_PRESENT,
+    )
+
+    /** The system's own PIN / pattern / password screen (Android 7–9). */
+    private fun confirmCredential(activity: Activity, title: String, done: (Boolean) -> Unit) {
+        val km = activity.getSystemService(android.app.KeyguardManager::class.java)
+        @Suppress("DEPRECATION")
+        val intent = km?.createConfirmDeviceCredentialIntent(title, "Use your screen lock")
+        if (intent == null) { done(false); return }
+        pendingCredential = done
+        @Suppress("DEPRECATION")
+        runCatching { activity.startActivityForResult(intent, REQ_CONFIRM_CREDENTIAL) }.onFailure { pendingCredential = null; done(false) }
+    }
+
     private fun authenticate(activity: Activity, title: String, done: (Boolean) -> Unit) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            val km = activity.getSystemService(android.app.KeyguardManager::class.java)
-            @Suppress("DEPRECATION")
-            val intent = km?.createConfirmDeviceCredentialIntent(title, "Use your screen lock")
-            if (intent == null) { done(false); return }
-            pendingCredential = done
-            @Suppress("DEPRECATION")
-            runCatching { activity.startActivityForResult(intent, REQ_CONFIRM_CREDENTIAL) }.onFailure { pendingCredential = null; done(false) }
-            return
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) { confirmCredential(activity, title, done); return }
         val builder = BiometricPrompt.Builder(activity).setTitle(title).setSubtitle("Use your fingerprint, face or screen lock")
         // API 30+: the unlock is bound to a Keystore key that only works right after a strong
         // biometric or the device PIN, so a hooked callback alone can't open the app.
@@ -148,7 +178,15 @@ object Privacy {
                 // Only unlock if the auth-bound key really works now.
                 done(result?.cryptoObject?.cipher?.let { LockKey.verify(it) } == true)
             }
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) = done(false)
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
+                // N6-3: Android 9's prompt is biometric only. With no fingerprint left (removed
+                // after the lock was turned on) it fails at once while the PIN still works, so use
+                // the system PIN screen instead of leaving the gate up for good.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && errorCode in NO_BIOMETRIC_ERRORS) {
+                    android.util.Log.i("YuPrivacy", "LOCK_FALLBACK credential error=$errorCode")
+                    confirmCredential(activity, title, done)
+                } else done(false)
+            }
         }
         runCatching {
             if (cipher != null) prompt.authenticate(BiometricPrompt.CryptoObject(cipher), CancellationSignal(), activity.mainExecutor, callback)
