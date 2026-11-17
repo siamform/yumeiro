@@ -95,14 +95,26 @@ object Privacy {
         if (_lockEnabled.value && releaseIfNoScreenLock(activity)) { applyWindow(activity); return }
         applyWindow(activity)
         if (!_lockEnabled.value) { _locked.value = false; return }
-        val away = if (backgroundAt == 0L) Long.MAX_VALUE else SystemClock.elapsedRealtime() - backgroundAt
-        if (away >= _lockAfter.value * 1000L) _locked.value = true
+        // N6-4 (api28 run 44069102667): coming back from our own PIN screen (Android 7–9, a separate
+        // activity) is not the user returning. With the result delivered before this onStart, the
+        // old code re-locked right after a good PIN (backgroundAt was 0 on a cold start, or the
+        // older leave), and no new prompt came: the gate stayed up for good. A cold start is
+        // already locked by load(); 0 = "not left since the last unlock".
+        if (pendingCredential != null || backgroundAt == 0L) return
+        val away = SystemClock.elapsedRealtime() - backgroundAt
+        if (away >= _lockAfter.value * 1000L) {
+            android.util.Log.i("YuPrivacy", "LOCK_RELOCK away=${away}ms")
+            _locked.value = true
+        }
     }
 
     fun unlock(activity: Activity) {
         if (!_locked.value) return
         if (releaseIfNoScreenLock(activity)) return
-        authenticate(activity, "Unlock Yumeiro") { ok -> if (ok) _locked.value = false }
+        authenticate(activity, "Unlock Yumeiro") { ok ->
+            android.util.Log.i("YuPrivacy", "LOCK_UNLOCK ok=$ok")
+            if (ok) { backgroundAt = 0L; _locked.value = false }
+        }
     }
 
     /**
