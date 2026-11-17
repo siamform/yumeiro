@@ -846,3 +846,24 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 - Same 16.3 MB list served by a local server. api33-lowram: add 114 MB, refresh 147 MB, read 56 MB; api36: add 105,
   refresh 71, read 41. FAILED both (limit half the heap, 96 MB). LT-4.
 
+## 44017550181 (RemotePlaylistMemoryDeviceTest after fix, both phones, emulator; head 8b747ca)
+
+- api36 add 31 MB, refresh 33 MB PASS. api33-lowram add 105, refresh 131 MB FAILED. The first step ran 4 s after
+  process start, while the app's own start-up work allocates in the same process, so the peak counted it. The
+  fail-before numbers of 44016666847 carry the same noise (its api36 105 MB too, see below). Test hardened c318e9a.
+
+## 44018872516 (RemotePlaylistMemoryDeviceTest hardened, fail-before, both phones, emulator; scratch/lt4-fail-before b414e22)
+
+- Old PlaylistStore/M3uParser (4928d46). 12 s settle, lower of two peaks. api33-lowram add 132/133 MB FAILED
+  (limit 96), refresh 72/66; api36 add 54/56, refresh 61/61 (under the limit there). LT-4.
+
+## 44018869252 (RemotePlaylistMemoryDeviceTest hardened, after fix, both phones, emulator; head c318e9a)
+
+- api33-lowram add 42/76 → 42 MB, refresh 69/65 → 65 MB, read 68; api36 add 34/32 → 32, refresh 31/27 → 27. PASS
+  both. LT-4.
+
+## 44013773673 (bench=startup with the 4989344 profile, both phones, emulator)
+
+- TTID median: api36 coldStartBaselineProfile 2116 ms (2018–2325) vs NoCompilation 2957 ms (1997–3929);
+  api33-lowram (attempt 2, after a Maven resolution failure) 1756 ms (1659–1888) vs 2465 ms (1943–3570). X2-4.
+
