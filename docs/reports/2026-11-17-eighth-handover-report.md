@@ -6,7 +6,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 - Head at start: 2cbb2ae (docs only after 912093b). No run after 44094439021 at start (checked 2026-11-17).
 - Current group: 4.1 row 1, DL-11 part 2 (G8, ADR-016).
-- Open runs: none.
+- Open runs: 44106540469 (CI, DL-11 fix head).
 
 ## Findings (eighth cycle)
 
@@ -22,6 +22,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 | Run | What | Result (label) |
 |---|---|---|
+| 44103206509 | DL-11 p2 fail-before (dl11-fail-before) | ownPauses FAIL as expected (7 restarts, 1.487x); link-dips passed on old code (guard only) (CI unit) |
+| 44106540469 | CI on head 226c9c5 (DL-11 fix 4fa126e) | in progress |
 
 ## Still open
 

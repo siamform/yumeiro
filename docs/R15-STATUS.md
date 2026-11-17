@@ -1,11 +1,11 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17, eighth cycle, 1)
+## Resume here (updated 2026-11-17, eighth cycle, 2)
 
 - **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
-- **Current group:** 4.1 row 1, DL-11 part 2 (G8, ADR-016). **Exact step:** reading ForceGrab.Segmented / RequestPace, choosing option C or D.
-- **Run in progress:** none. Head at start 2cbb2ae.
-- **Next three actions:** (1) DL-11 p2 note + ADR-016 final + fix + unit test (fail-before) → CI; (2) emulator real-host run, both phones, bytes received vs budget; (3) X2-1 profile extension.
+- **Current group:** 4.1 row 1, DL-11 part 2 (G8, ADR-016). **Exact step:** fix 4fa126e (ADR-016 D+E) pushed; fail-before 44103206509 read (ownPauses FAIL as expected); head CI 44106540469 running.
+- **Run in progress:** 44106540469 (CI unit, head 226c9c5). Head at start 2cbb2ae.
+- **Next three actions:** (1) read 44106540469 (Dl11PaceTest, ownPauses 0 restarts, capped MB/s within 10 % of 81.63/68.77); (2) device-check both phones `DownloadThroughputDeviceTest#a_realHostScreenOn,#d_localUnitCollapseProfile` repeat 3, budget ≤1.10x each / median ≤1.06x; (3) N6-2 on the new api29 profile (AppLockDeviceTest#b, head vs pre-3f3fbd8).
 - Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
 
 ### Previous resume note
