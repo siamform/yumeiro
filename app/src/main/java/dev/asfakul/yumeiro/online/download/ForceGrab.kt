@@ -71,11 +71,19 @@ object ForceGrab {
     @Volatile var lastStats: String = ""
 
     /**
-     * DL-11 H3 experiment (device tests only, default off): fetch byte ranges over HTTP/1.1, so each
-     * segment is its own TCP connection instead of a stream on one shared HTTP/2 connection
-     * (44116513171: cdn.kernel.org answered h2 on both phones). Not a user setting.
+     * DL-11 H3 control (device tests only, default off): let byte ranges use HTTP/2 again, so the
+     * old behaviour can still be measured next to the fix. Not a user setting.
      */
-    @Volatile var rangesOverHttp1: Boolean = false
+    @Volatile var rangesAllowHttp2ForTest: Boolean = false
+
+    /**
+     * ADR-016 F: the client for byte-range downloads, limited to HTTP/1.1. On HTTP/2 every segment
+     * is a stream on one TCP connection; a pace restart then cancels a stream whose bytes are
+     * already in flight and the new stream rides the warm connection, so the gate calls it helped
+     * (device 44118957078: h2 1.08–1.15× the file received, HTTP/1.1 1.03–1.07× and faster).
+     */
+    fun rangeClient(base: OkHttpClient): OkHttpClient =
+        if (rangesAllowHttp2ForTest) base else base.newBuilder().protocols(listOf(okhttp3.Protocol.HTTP_1_1)).build()
 
     internal fun readDone(f: File): MutableSet<Int> =
         if (!f.exists()) HashSet() else f.readLines().mapNotNullTo(HashSet()) { it.trim().toIntOrNull() }
@@ -258,9 +266,8 @@ class Segmented(
 ) {
     class Refused(val code: Int) : IOException("HTTP $code")
 
-    /** [ForceGrab.rangesOverHttp1]: the same client limited to HTTP/1.1 (DL-11 H3 experiment). */
-    private val http: OkHttpClient =
-        if (ForceGrab.rangesOverHttp1) client.newBuilder().protocols(listOf(okhttp3.Protocol.HTTP_1_1)).build() else client
+    /** ADR-016 F: one TCP connection per segment (HTTP/1.1), see [ForceGrab.rangeClient]. */
+    private val http: OkHttpClient = ForceGrab.rangeClient(client)
 
     /**
      * Downloads [url] into [out] (resuming). Returns the bytes written. Uses one connection when

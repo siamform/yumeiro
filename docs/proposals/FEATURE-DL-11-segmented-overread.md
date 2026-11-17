@@ -100,3 +100,45 @@ them apart on the device.
   read the protocol, then decide (for example HTTP/1.1 for segmented ranges, measured against case d and MB/s).
 - Status: DL-11 part 2 stays **in progress**; ADR-016 stays accepted with the evidence not yet met.
 
+
+## 8. H3 measured, option F (HTTP/1.1 for byte ranges)
+
+- **Cause read:** 44116513171 logged `protocol=h2` on both phones (the job log cut the api33 field; the logcat
+  artifact has `h2` on both). `Segmented` used the shared download client with no protocol limit, so both
+  segments were streams on one TCP connection.
+- **Experiment (56baf78, test-only switch, same run, same host, interleaved a/f/d, repeat 3), device 44118957078:**
+
+| Phone | Run | h2 (old) received / file | h2 MB/s | h2 restarts | HTTP/1.1 received / file | HTTP/1.1 MB/s | HTTP/1.1 restarts |
+|---|---|---|---|---|---|---|---|
+| api33-lowram | 1 | 1.113 | 11.90 | 6 | 1.040 | 20.86 | 1 |
+| api33-lowram | 2 | 1.154 | 14.96 | 8 | 1.030 | 20.18 | 0 |
+| api33-lowram | 3 | 1.107 | 14.82 | 5 | 1.065 | 12.10 | 3 |
+| api36 | 1 | 1.127 | 7.75 | 7 | 1.038 | 20.20 | 1 |
+| api36 | 2 | 1.080 | 15.18 | 9 | 1.030 | 29.09 | 0 |
+| api36 | 3 | 1.086 | 26.08 | 5 | 1.030 | 29.76 | 0 |
+
+  Medians: h2 1.113 / 1.086 (budget missed); HTTP/1.1 1.040 / 1.030 (each ≤ 1.10, median ≤ 1.06: met). Speed
+  median h2 14.82 / 15.18 MB/s, HTTP/1.1 20.18 / 29.09 MB/s. Case d (local server, already HTTP/1.1) PASS 6/6
+  (4.2–5.2 s). The floor near 1.03× is TLS and header overhead in the uid counter (no restarts in those runs).
+- **Why:** on one shared TCP connection the two streams split one congestion window; a stream that the server
+  schedules later looks slow, the restart cancels bytes already in flight, and the new stream inherits a warm
+  window, so the gate counts it as helped. With one TCP connection per segment a segment is slow only when its
+  own path is slow, which is what the pace rule assumes.
+- **Option F (decision):** `ForceGrab.rangeClient` limits byte-range downloads to HTTP/1.1. Every HTTPS host
+  speaks HTTP/1.1; ALPN simply picks it. Connection pool, dispatcher, DNS and headers are shared with the base
+  client (`newBuilder`), so there is no extra pool or thread on low-RAM phones.
+- **Action–reaction:**
+
+| Action | Reaction |
+|---|---|
+| Direct file ≥ 16 MB on an h2 host | Two TCP connections over HTTP/1.1, one per segment |
+| A segment slows | Pace rule as before (D + E); fewer false trips |
+| Host caps each request (BUG-3) | Restart still opens a new request; case d unchanged |
+| Small file / no ranges | Same path on HTTP/1.1, one connection |
+| Streaming, HLS/DASH, API calls | Unchanged (other clients) |
+
+- **Pros:** budget met on both phones, faster, fewer requests. **Cons:** one more TLS handshake per download
+  (about 1 RTT); a host that only allows one connection per IP would now see two (the old h2 path also opened
+  two requests; the existing 1-connection fallback on refusal still applies).
+- **Tests:** unit `Dl11PaceTest#rangeClientIsHttp1Only` (config, unit only, says so); device
+  `DownloadThroughputDeviceTest` a (default = F), f (h2 control), d (BUG-3). Pass-after run on the fix commit.

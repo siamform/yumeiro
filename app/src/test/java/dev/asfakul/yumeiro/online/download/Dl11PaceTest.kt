@@ -77,4 +77,12 @@ class Dl11PaceTest {
         assertTrue(g.judge(1.5, 1.0))
         assertFalse(g.judge(1.49, 1.0))
     }
+
+    /** ADR-016 F (config, unit only): byte ranges never negotiate HTTP/2; the test control can. */
+    @Test fun rangeClientIsHttp1Only() {
+        val base = okhttp3.OkHttpClient()
+        assertEquals(listOf(okhttp3.Protocol.HTTP_1_1), ForceGrab.rangeClient(base).protocols)
+        ForceGrab.rangesAllowHttp2ForTest = true
+        try { assertTrue(okhttp3.Protocol.HTTP_2 in ForceGrab.rangeClient(base).protocols) } finally { ForceGrab.rangesAllowHttp2ForTest = false }
+    }
 }

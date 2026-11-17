@@ -605,6 +605,10 @@ flowchart LR
   BUG-3 case d total ≤ 10 s and last 10 % ≤ 3.5 s; unit capped profile with no more than 10 % speed loss.
 - **Status:** accepted (2026-11-17), pending the evidence above; DL-11 part 2 closes only when it is met.
   Device 44110174701: worst 1.44× → 1.12×, median 1.10–1.11× (not met). Next: H3 (HTTP/2 streams), see the note §7.
+- **Option F (2026-11-17):** H3 proven (protocol=h2). Byte ranges over HTTP/1.1 (`ForceGrab.rangeClient`),
+  one TCP connection per segment. Device 44118957078 (same run): h2 median 1.113/1.086×, HTTP/1.1 median
+  1.040/1.030× (max 1.065×) and faster (median 20.18/29.09 against 14.82/15.18 MB/s); case d 6/6. Decision: D + E + F.
+  Note §8.
 
 ## 11. Risks
 
