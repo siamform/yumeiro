@@ -6,7 +6,7 @@
   Group 12 → G5–G11 → re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
 - **Sandbox:** no JDK/Android SDK; every compile and unit test goes to CI. Secrets live only in the git-ignored
   `.env` and `secrets/` of the agent's checkout.
-- **Current group / step:** Group 12. G9 and G10 closed for agent work 2026-11-17 (G9: qa_gpu_tier → OMT-16;
+- **Earlier (Group 12 start):** G9 and G10 closed for agent work 2026-11-17 (G9: qa_gpu_tier → OMT-16;
   G10: VPN → OMT-18). Close-out findings fixed and verified on device (emulator): ST-21 (message over the floating
   window; 43967676359 → 43974089878), ER-19 (form errors behind their dialog: home server, Kitsu; 43985787392 →
   43987451529); ER-12 Retry verified (43987451529); X15-2 fail-before in CI (43976334697).
