@@ -36,9 +36,9 @@ on:
         required: false
         default: false
       bench:
-        description: "G12 X2 / ST-7: run the Macrobenchmark workflow instead (startup, jank or profile); none = device tests"
+        description: "G12 X2 / ST-7: run the Macrobenchmark workflow instead (startup, jank, profile, or restore = G1 H8 process death); none = device tests"
         type: choice
-        options: [none, startup, jank, profile]
+        options: [none, startup, jank, profile, restore]
         default: none
       phone:
         description: "Which phone emulators (EXT-T1: repeat campaigns on api33-lowram only, no wasted api36 jobs)"
@@ -72,20 +72,20 @@ permissions:
 
 jobs:
   bench:
-    if: ${{ inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile' }}
+    if: ${{ inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile' || inputs.bench == 'restore' }}
     uses: ./.github/workflows/macrobenchmark.yml
     with:
       what: ${{ inputs.bench }}
 
   upgrade:
-    if: ${{ inputs.upgrade_from != '' && !(inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile') }}
+    if: ${{ inputs.upgrade_from != '' && !(inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile' || inputs.bench == 'restore') }}
     uses: ./.github/workflows/upgrade-check.yml
     with:
       from: ${{ inputs.upgrade_from }}
     secrets: inherit
 
   emulator:
-    if: ${{ inputs.upgrade_from == '' && !(inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile') }}
+    if: ${{ inputs.upgrade_from == '' && !(inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile' || inputs.bench == 'restore') }}
     runs-on: ubuntu-latest
     timeout-minutes: 110
     strategy:
