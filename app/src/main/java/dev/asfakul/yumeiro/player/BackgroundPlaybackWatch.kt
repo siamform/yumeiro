@@ -50,13 +50,34 @@ object BackgroundPlaybackWatch {
             }
             override fun onEvents(p: Player, events: Player.Events) {
                 _state.value = snapshot(p)
+                saveContinue(app, p)
                 if (p.isPlaying && ticker?.isActive != true) {
-                    ticker = scope.launch { while (isActive) { delay(1_000); _state.value = snapshot(p) } }
+                    ticker = scope.launch { while (isActive) { delay(1_000); _state.value = snapshot(p); saveContinue(app, p) } }
                 } else if (!p.isPlaying) { ticker?.cancel(); ticker = null }
             }
         })
         _state.value = snapshot(player)
         dev.asfakul.yumeiro.scrobble.Scrobbler.watch(app, state, scope)
+    }
+
+    private var continueKey: Triple<String, Boolean, Long>? = null
+
+    /**
+     * G5-PC2: Home → Continue ("Jump back in") was saved only by the screen's ViewModel (every 5 s,
+     * on pause and on song change). With no screen listening (swiped from recents) the watch saves it
+     * on the same steps, so a later process death doesn't bring back an older song and position.
+     */
+    private fun saveContinue(context: Context, p: Player) {
+        if (dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.get() > 0) { continueKey = null; return }
+        val item = p.currentMediaItem ?: return
+        if (item.mediaId.isBlank()) return
+        val pos = p.currentPosition.coerceAtLeast(0L)
+        val key = Triple(item.mediaId, p.isPlaying, pos / 5_000)
+        if (key == continueKey) return
+        continueKey = key
+        val track = MusicPlayerManager.queuedTrack(item.mediaId) ?: snapshot(p).currentTrack ?: return
+        val dur = p.duration.takeIf { it > 0 } ?: track.durationMs
+        LastPlayed.saveAudio(context, track, pos, dur)
     }
 
     internal fun snapshot(p: Player): PlaybackState {

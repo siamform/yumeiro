@@ -74,3 +74,16 @@ decision, recorded as an option below).
   - `nothingIsCountedTwiceWhileAScreenListens`: passes before and after.
 - Device: the G5 empty-profile flow test (play → swipe-equivalent finish → next song → reopen →
   Recently played and counts), on the emulator first.
+
+## 8. G5-PC2 (same root cause): Home Continue
+
+`LastPlayed.saveAudio` (Home → Continue, "Jump back in") was called only from `MainViewModel`
+(every 5 s of playback, on pause, on song change). After a swipe, the queue plays on with nothing
+saving Continue. If the process then dies (low-RAM phones, or the system stopping the service
+after the queue ends), Home shows the song from before the swipe at that old position.
+
+Fix: `BackgroundPlaybackWatch.saveContinue` saves on the same steps (song, playing, 5 s bucket)
+while no screen listener is attached. The full track (album art) comes from the process queue
+(`MusicPlayerManager.queuedTrack`), and the player's metadata is the fallback. Test:
+`ContinueSavedWithoutScreenTest` (unit, existing APIs only) and the phase b check in
+`LibraryEmptyProfileDeviceTest`.

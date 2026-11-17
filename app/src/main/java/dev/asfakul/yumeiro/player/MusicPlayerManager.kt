@@ -507,8 +507,11 @@ class MusicPlayerManager(
         // The shared player itself is not released so background playback continues.
     }
 
-    private companion object {
-        @Volatile var processQueue: List<AudioTrack> = emptyList()
-        const val TAG = "MusicPlayerManager"
+    internal companion object {
+        @Volatile private var processQueue: List<AudioTrack> = emptyList()
+        private const val TAG = "MusicPlayerManager"
+
+        /** G5-PC2: the full track (album art, album id) for a queued [id], if it is in the queue. */
+        fun queuedTrack(id: String): AudioTrack? = processQueue.firstOrNull { it.id == id }
     }
 }
