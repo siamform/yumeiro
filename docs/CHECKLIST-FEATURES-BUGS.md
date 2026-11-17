@@ -54,8 +54,8 @@ NBUG-4d wording (Not reproduced → Blocked: owner, reason: only a real GPU can 
 | ID | Feature | Status | Evidence |
 |---|---|---|---|
 | F-01 | Language / Sub / Dub badges on search posters | Proposal written (gated). Code read: badges already ship (ReleaseTags + PosterTags on search, ff7cb19); gaps: detail write-back, JS/Aniyomi, device test | docs/proposals/FEATURE-F-01-language-sub-dub-badges.md |
-| F-02 | Telegram option | Not started (owner call on terms/privacy) | — |
-| F-03 | Terabox / Diskwala links | Not started (owner call on terms) | — |
+| F-02 | Telegram option | Proposal written (gated; recommend link + public channel, no login; TDLib only as module; OMT-25 Blocked: owner) | docs/proposals/FEATURE-F-02-telegram.md (Hikari 8aa1652) |
+| F-03 | Terabox / Diskwala links | Proposal written (gated; link route exists, unit-tested; adds folder list + re-capture on expiry; live check OMT-25 Blocked: owner) | docs/proposals/FEATURE-F-03-terabox-diskwala.md |
 | F-04 | WebView site list | Proposal written (gated; tab exists; adds search, pin, per-site settings, favicon, import/export) | docs/proposals/FEATURE-F-04-webview-site-list.md (Hikari 8aa1652) |
 | F-05 | Nuvio / Skystream / Vega repositories | Proposal written (gated; detection first, runtime needs ADR + TMDB key path; Vega: OMT-24 Blocked: owner, not designed) | docs/proposals/FEATURE-F-05-nuvio-skystream-repos.md (Nuvio 511ebd5, SkyStream f5523ae) |
 | F-06 | 200 % volume booster | Proposal written (gated; owner approval needed) | docs/proposals/FEATURE-F-06-volume-booster.md (Next Player 08845f8 LoudnessEnhancer contract) |
