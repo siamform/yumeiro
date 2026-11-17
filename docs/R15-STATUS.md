@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 09:58 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 10:15 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -92,13 +92,20 @@
   changes before the start-up read saved lists without the old entries. Fixed 595305f (SafeJsonFile everywhere,
   Stremio keeps its link list, changes wait for the saved lists, removes off main). Unit test
   `SourceStoresSafetyTest` (8 cases); fail-before branch `scratch/n45-fail-before`.
-- **Runs in progress:** 44058593326 (`scratch/st22-fail-before`, AdultSearchFilter, api33-lowram; expect FAIL).
+- **Done since (seventh handover, 8):** N4/N5 audit written (GROUP-13). N2 web sites read: finding **N2-1** (site
+  sign-out left Domain=/Secure cookies; suspected from code) fixed 83d7818 + `SiteSignOutDeviceTest`, fail-before
+  `scratch/n2-fail-before`. **ST-22 evidence void:** fail-before 44058593326 PASSED (0 calls on old code) because
+  `AdultSearchFilterDeviceTest` restored StrictMode in the same main message (AOSP StrictMode reads the listener
+  after the message); helper fixed 6b2bca6 on head and the scratch branch. The other six StrictMode tests checked:
+  they restore in a separate message after idle (sound).
+- **Runs in progress:** 44059862262 (head dd2a86e, api33-lowram: DownloadsScreen, UniversalAdd, AdultSearchFilter [old
+  helper, its disk count is void], MiniPlayer, AppLock, UpdateMainThread); 44060561160 (`scratch/st22-fail-before`
+  fixed helper, expect FAIL).
 - **Next three actions:**
-  1. Read 44058593326. Dispatch head device run (api33-lowram: DownloadsScreen, UniversalAddEcosystems,
-     AdultSearchFilter, MiniPlayer, AppLock, UpdateMainThread) and ci.yml on head (unit, covers SourceStoresSafetyTest,
-     BrowserCheckTest, DataCacheBoundsTest); then ci.yml on `scratch/n45-fail-before` (expect SourceStoresSafetyTest FAIL).
-  2. N6 fail-before (api33-lowram + api28 `-f minsdk=true`), N3 fail-before; api36 one run of all new tests; H8 bench.
-  3. Continue GROUP-13: N2 web sites, N1 Watch Together (local parts), N7 inbox, N8, N9; music M2/M9; full suite.
+  1. Read both runs (DLSCREEN_, ADD_, E12_, MINI_, LOCK_, UPD_). Then ci.yml on head (unit: SourceStoresSafetyTest,
+     SiteAccessTest, BrowserCheckTest, DataCacheBoundsTest) and on `scratch/n45-fail-before` (expect FAIL).
+  2. Device: head AdultSearchFilter + SiteSignOut; fail-before n2, n6 (api33 + api28 minsdk), n3; api36 all new tests.
+  3. Continue GROUP-13: N7 inbox, N8, N9, N1 local parts; music M2/M9; then full suite on both phones.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
