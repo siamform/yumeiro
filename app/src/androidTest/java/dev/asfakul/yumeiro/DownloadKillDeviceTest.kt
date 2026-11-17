@@ -123,10 +123,18 @@ class DownloadKillDeviceTest {
             assertEquals(line, Status.DONE, done.status)
             assertEquals(line, size, file.length())
             assertEquals("work files left: $line", listOf(file.name), files)
-            // Restarting from zero reads the whole file again; keeping the done chunks reads at most
-            // the rest plus the chunks that were in flight (4 × 4 MiB) and HTTP overhead.
-            if (rx >= 0) assertTrue("read the file again from the start: $line", rx < size - atKill + 24L * 1024 * 1024)
-            else log("DL_KILL_B TrafficStats unsupported: byte check skipped")
+            // The property: the chunks finished before the kill are kept, not read again. Only the
+            // chunks in flight at the kill (one per connection, at most 4 × 4 MiB) may be lost.
+            // DL-10/DL-11: this used to be a byte count (received < rest + 24 MiB), but the bytes
+            // received also include what each RequestPace restart throws away, which varies from run
+            // to run on a host that never caps (44037559115: 1 to 29 restarts, 1.04-1.44x the file);
+            // 44033132233 failed that count while every finished chunk was kept. rx stays logged.
+            val stats = dev.asfakul.yumeiro.online.download.ForceGrab.lastStats
+            val resumed = Regex("resumedChunks=(\\d+)").find(stats)?.groupValues?.get(1)?.toLong()
+            val chunk = dev.asfakul.yumeiro.online.download.ForceGrab.CHUNK
+            assertTrue("no segmented stats: $stats", resumed != null)
+            assertTrue("read the file again from the start (kept ${resumed!! * chunk} of $atKill): $line", resumed * chunk >= atKill - 4 * chunk)
+            log("DL_KILL_B kept=${resumed * chunk} atKill=$atKill rxOverRest=${if (rx > 0) "%.3f".format(rx / (size - atKill).toDouble()) else "n/a"}")
             log("DL_KILL_RESULT PASS b rxAfterKill=$rx rest=${size - atKill}")
         } finally {
             runCatching { OnlineDownloads.delete(ctx, id) }
