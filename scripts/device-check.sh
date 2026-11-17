@@ -75,6 +75,14 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     sleep 2
     echo "YuResumeScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines"
     timeout 300 adb shell am instrument -w -r -e class "$C#b_reopenFromHomeJumpBackIn" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+  elif [ "$C" = "dev.asfakul.yumeiro.Bug1YumixRestoreDeviceTest" ]; then
+    # BUG-1 follow-through: phase a records Yumix progress and kills its own process ("Process
+    # crashed" by design); phase b, a new process, checks Home Jump back in, Yumix Continue and the banner.
+    P=dev.asfakul.yumeiro.debug
+    timeout 400 adb shell am instrument -w -r -e class "$C#a_recordThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    sleep 2
+    echo "YuBug1YumixScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
+    timeout 400 adb shell am instrument -w -r -e class "$C#b_newProcessShowsItEverywhere" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
   elif [ "$C" = "dev.asfakul.yumeiro.LibraryPersistDeviceTest" ]; then
     # G5 (LB-8, LB-3): phase a saves likes and playlists, damages one entry, kills its own process
     # ("Process crashed" by design); phase b, a new process, checks what came back.
