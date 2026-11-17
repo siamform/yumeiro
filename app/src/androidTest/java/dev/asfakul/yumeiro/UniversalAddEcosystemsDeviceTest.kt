@@ -109,7 +109,12 @@ class UniversalAddEcosystemsDeviceTest {
             log("ADD_C search: ${hits.map { it.name + " → " + it.url }}")
             assertTrue("Stremio search found nothing: $hits", hits.any { it.name == "Yu Nightfall" })
             val links = ArrayList<String>()
-            val found = runBlocking { api!!.loadLinks(hits.first { it.name == "Yu Nightfall" }.url, false, {}) { links += it.url } }
+            // Same order as the app: search → load (title page) → loadLinks with the page's data.
+            val page = runBlocking { api!!.load(hits.first { it.name == "Yu Nightfall" }.url) }
+            val data = (page as? com.lagradost.cloudstream3.MovieLoadResponse)?.dataUrl
+            log("ADD_C load: ${page.name} data=$data")
+            assertTrue("Stremio title page has no stream data: $page", data != null)
+            val found = runBlocking { api!!.loadLinks(data!!, false, {}) { links += it.url } }
             log("ADD_C links found=$found $links")
             assertTrue("Stremio stream not offered: $links", links.any { it.endsWith("/media/yu1.mp4") })
 

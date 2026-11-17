@@ -10,9 +10,10 @@ import android.os.StrictMode
 import android.os.SystemClock
 import android.os.strictmode.Violation
 import android.util.Log
-import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -131,7 +132,8 @@ class DownloadsScreenDeviceTest {
 
         // Delete the other folder (asks first).
         list().performScrollToNode(hasText("D8 Other"))
-        rule.onNode(hasContentDescription("Delete folder") and hasAnySibling(hasText("D8 Other")), useUnmergedTree = true).performClick()
+        // The delete button is a child of the folder row (merged tree), not a sibling of its title.
+        rule.onNode(hasContentDescription("Delete folder") and hasParent(hasTestTag("library_download_folder") and hasText("D8 Other", substring = true))).performClick()
         rule.onNodeWithText("Delete", substring = false).performClick()
         rule.waitUntil(5_000) { OnlineDownloads.get("o1") == null }
         rule.waitForIdle()
