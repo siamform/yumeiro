@@ -21,6 +21,7 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | IG-3 | I3 | Kitsu and MAL stop tracking ~30 days after sign-in while still showing the account | Refresh tokens stored, never used; no expiry stored | `validToken` per tracker (refresh a day ahead / once on 401; refused refresh signs out; MAL rotated refresh token saved) | `AnimeTrackersDeviceTest` a, b (emulator); `KitsuLoginTest` (unit) | fix in; runs pending |
 | IG-4 | I7 | Listens waiting at Last.fm sign-in were uploaded on the main thread (release: thrown, swallowed, not sent; debug: freeze) | `onSuccess { …; Scrobbler.flush(context) }` runs on the screen scope (main); `flush` posts with blocking OkHttp | `flush` wraps itself in `withContext(Dispatchers.IO)` | `ScrobbleFlushDeviceTest` (emulator) | fix in; runs pending |
 | IG-5 | I4 | Episode thumbnails missing for the rest of the session after backing out mid-lookup or one offline lookup | Title marked tried before the lookup; lookup ran in the screen's LaunchedEffect, result dropped on cancellation; failures kept the mark | Own scope, result always stored, failure clears the mark | `EpisodeStillsDeviceTest` (emulator) | fix in; runs pending |
+| IG-6 | I8, I9 | A show whose AniList lookup failed once (offline, 429, 5xx) never got airing alerts again | `aniListIdForTitle` returns null for failure and for not-found; CloudAlerts cached null as 0 = not anime, no expiry | `aniListIdOrThrow`; failures not cached; old zeros re-checked once | `CloudAlertsLookupDeviceTest` (emulator) | fix in; runs pending |
 
 ## Code read
 
@@ -39,6 +40,8 @@ In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Sim
 | online/subtitles/SubDL.kt, SubSource.kt, SubtitleHub.kt, SubtitleArchive.kt | 82, 112, 129, 118 | yes | Key headers scoped to the site on redirects; ZIP capped 12 MB, entry 4 MB, total 24 MB, 400 entries; sites searched in parallel on IO, per-site errors shown. Observation: a hostile ZIP with a huge non-subtitle entry is still inflated while skipped (CPU only, memory capped) |
 | online/SourceFacts.kt | 76 | yes | Pure text parsing, no network; no finding |
 | online/EpisodeStills.kt | 103 | yes | IG-5 |
+| notify/FcmPush.kt | 357 | yes | FID registration, topic diff, weekly check-in with back-off, 401/403 clears device creds, data-only messages, links limited to https + known actions, version/expiry gate. No finding |
+| notify/CloudAlerts.kt | 152 | yes | IG-6. Stale-token lead dismissed (server re-issues on endpoint proof) |
 | online/anime/AnimeIds.kt | 70 | yes | Both ids present → no network; lookups cached per title |
 
 ## Verification

@@ -47,6 +47,20 @@ object AnimeIds {
     fun aniListIdForTitle(client: OkHttpClient, name: String): Int? =
         runCatching { search(client, cleanTitle(name), null)?.anilist }.getOrNull()
 
+    /**
+     * IG-6: AniList id for [name], or null when AniList has no such anime. Unlike
+     * [aniListIdForTitle], a failure (offline, HTTP 429/5xx, unreadable answer) throws, so a caller
+     * that caches the answer never stores a failure as "not anime". Network call.
+     */
+    fun aniListIdOrThrow(client: OkHttpClient, name: String): Int? {
+        val q = "query(\$s:String){Page(perPage:5){media(search:\$s,type:ANIME){id}}}"
+        val body = JSONObject().put("query", q).put("variables", JSONObject().put("s", cleanTitle(name))).toString()
+        val o = client.newCall(Request.Builder().url("https://graphql.anilist.co").post(body.toRequestBody(JSON)).header("Accept", "application/json").build())
+            .execute().use { r -> if (!r.isSuccessful) throw java.io.IOException("AniList HTTP ${r.code}"); JSONObject(r.body.string()) }
+        val media = o.optJSONObject("data")?.optJSONObject("Page")?.optJSONArray("media") ?: throw java.io.IOException("AniList: no data")
+        return media.optJSONObject(0)?.optInt("id")?.takeIf { it > 0 }
+    }
+
     /** Strips "(Dub)", "Season 2 [1080p]" style suffixes extensions add. */
     internal fun cleanTitle(name: String): String = name
         .replace(RX_ANIMEIDS_HOT_1, "")

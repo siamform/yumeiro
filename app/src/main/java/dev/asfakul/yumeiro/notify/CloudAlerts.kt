@@ -54,12 +54,22 @@ object CloudAlerts {
         val client = NetworkClient.get(c)
         OnlineBookmarks.ensureLoaded(c)
         val cache = runCatching { JSONObject(p.getString("ids", null) ?: "{}") }.getOrDefault(JSONObject())
+        // IG-6: older versions stored a failed lookup as 0 too. Look those titles up once more.
+        if (p.getInt("ids_v", 1) < 2) {
+            cache.keys().asSequence().toList().filter { cache.optInt(it) <= 0 }.forEach { cache.remove(it) }
+            p.edit().putInt("ids_v", 2).apply()
+        }
         var lookups = 0
         val ids = ArrayList<Int>()
         for (b in CloudAlertsPlan.watched(OnlineBookmarks.items.value)) {
             if (!cache.has(b.key)) {
                 if (lookups++ >= LOOKUPS_PER_RUN) continue
-                cache.put(b.key, AnimeIds.aniListIdForTitle(client, b.name) ?: 0) // 0 = not anime / not found
+                // IG-6: a failed lookup is not cached (it used to be stored as 0 = "not anime" for good,
+                // so one offline moment or AniList 429 removed the show from airing alerts forever).
+                val found = try { AnimeIds.aniListIdOrThrow(client, b.name) } catch (e: Exception) {
+                    Log.i(TAG, "lookup: ${e.javaClass.simpleName}"); continue
+                }
+                cache.put(b.key, found ?: 0) // 0 = not anime / not found
             }
             cache.optInt(b.key).takeIf { it > 0 }?.let(ids::add)
         }
