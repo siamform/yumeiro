@@ -173,6 +173,8 @@ object PlaylistStore {
             _lastSync.value = saved.optLong("lastSync")
         }
         loadedDir = d
+        // G7 LT-4: a download cut off by a kill leaves its temp file; ones older than an hour are not in use.
+        runCatching { d.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") && System.currentTimeMillis() - f.lastModified() > 3_600_000 }?.forEach { it.delete() } }
         val migrated = saved != null && saved.optInt("version", 1) < STORE_VERSION && migrateDefaults(context)
         if (saved == null || migrated || saved.optInt("version", 1) < STORE_VERSION) persist(context)
     }
@@ -221,17 +223,19 @@ object PlaylistStore {
 
     /** Adds a remote playlist after downloading and validating it. Returns the new playlist. */
     suspend fun addRemote(context: Context, name: String, url: String): StreamPlaylist = withContext(Dispatchers.IO) {
-        val text = fetchText(url)
-        val channels = parseChannels(text)
-        val p = StreamPlaylist(
-            id = "u_" + UUID.randomUUID().toString().take(8), name = name.ifBlank { guessTitle(url) }, url = url,
-            category = "Custom", channelCount = channels.size, lastUpdated = System.currentTimeMillis(),
-        )
-        edit(context) {
-            writeAtomic(channelsFile(context, p.id), text)
-            _playlists.value = _playlists.value + p
-        }
-        p
+        val part = fetchToPart(context, url)
+        try {
+            val count = countChannels(part)
+            val p = StreamPlaylist(
+                id = "u_" + UUID.randomUUID().toString().take(8), name = name.ifBlank { guessTitle(url) }, url = url,
+                category = "Custom", channelCount = count, lastUpdated = System.currentTimeMillis(),
+            )
+            edit(context) {
+                commitPart(part, channelsFile(context, p.id))
+                _playlists.value = _playlists.value + p
+            }
+            p
+        } finally { part.delete() }
     }
 
     /** Creates a playlist stored only on this device, optionally pre-filled with [channels]. */
@@ -312,13 +316,15 @@ object PlaylistStore {
         var lastError: Throwable? = null
         for (u in urls) {
             try {
-                val text = fetchText(u)
-                val count = parseChannels(text).size
-                edit(context) {
-                    writeAtomic(channelsFile(context, id), text)
-                    replace(id) { it.copy(channelCount = count, lastUpdated = System.currentTimeMillis(), lastError = null, marketSha = marketSha ?: it.marketSha) }
-                }
-                return@withContext count
+                val part = fetchToPart(context, u)
+                try {
+                    val count = countChannels(part)
+                    edit(context) {
+                        commitPart(part, channelsFile(context, id))
+                        replace(id) { it.copy(channelCount = count, lastUpdated = System.currentTimeMillis(), lastError = null, marketSha = marketSha ?: it.marketSha) }
+                    }
+                    return@withContext count
+                } finally { part.delete() }
             } catch (e: Exception) {
                 lastError = e
             }
@@ -328,9 +334,22 @@ object PlaylistStore {
         throw IllegalStateException(msg, lastError)
     }
 
-    private fun parseChannels(text: String): List<StreamRequest> {
-        require(!M3uParser.isHlsPlaylist(text)) { "This is a single HLS stream, not a channel list" }
-        return M3uParser.parse(text).also { require(it.isNotEmpty()) { "No channels found in playlist" } }
+    /**
+     * G7 LT-4: validates a downloaded playlist file line by line and returns its channel count. The
+     * body used to be held as bytes and as one String and parsed from that String; a 16 MB list
+     * peaked near the whole 192 MB heap of a low-RAM phone (RemotePlaylistMemoryDeviceTest).
+     */
+    private fun countChannels(file: File): Int {
+        var hls = false
+        val channels = file.bufferedReader().useLines { lines -> M3uParser.parseLines(lines.onEach { if (!hls && M3uParser.isHlsLine(it)) hls = true }) }
+        require(!hls) { "This is a single HLS stream, not a channel list" }
+        require(channels.isNotEmpty()) { "No channels found in playlist" }
+        return channels.size
+    }
+
+    /** Moves a validated download into place (rename replaces the target atomically). */
+    private fun commitPart(part: File, target: File) {
+        if (!part.renameTo(target)) { part.copyTo(target, overwrite = true); part.delete() }
     }
 
     private suspend fun mutateLocal(context: Context, id: String, f: (List<StreamRequest>) -> List<StreamRequest>) = withContext(Dispatchers.IO) {
@@ -440,18 +459,20 @@ object PlaylistStore {
         var lastError: Throwable? = null
         for (u in listOfNotNull(entry.url, entry.source).distinct()) {
             try {
-                val text = fetchText(u)
-                val channels = parseChannels(text)
-                val p = StreamPlaylist(
-                    id = entry.installId, name = entry.name, url = entry.url, fallbackUrl = entry.source,
-                    category = entry.category, description = entry.description, channelCount = channels.size,
-                    lastUpdated = System.currentTimeMillis(), marketId = entry.id, marketSha = entry.sha256, repo = entry.repo,
-                )
-                edit(context) {
-                    writeAtomic(channelsFile(context, p.id), text)
-                    _playlists.value = _playlists.value.filterNot { it.id == p.id } + p
-                }
-                return@withContext p
+                val part = fetchToPart(context, u)
+                try {
+                    val count = countChannels(part)
+                    val p = StreamPlaylist(
+                        id = entry.installId, name = entry.name, url = entry.url, fallbackUrl = entry.source,
+                        category = entry.category, description = entry.description, channelCount = count,
+                        lastUpdated = System.currentTimeMillis(), marketId = entry.id, marketSha = entry.sha256, repo = entry.repo,
+                    )
+                    edit(context) {
+                        commitPart(part, channelsFile(context, p.id))
+                        _playlists.value = _playlists.value.filterNot { it.id == p.id } + p
+                    }
+                    return@withContext p
+                } finally { part.delete() }
             } catch (e: Exception) { lastError = e }
         }
         throw IllegalStateException(lastError?.message ?: "Download failed", lastError)
@@ -492,20 +513,29 @@ object PlaylistStore {
 
     // region Network
 
-    private fun fetchText(url: String, requireM3u: Boolean = true): String {
-        val (_, bytes, _) = download(url)
-        val text = bytes.decodeToString()
-        if (requireM3u) require(!text.trimStart().startsWith("<")) { "The link returned a web page, not a playlist" }
-        return text
+    /**
+     * Downloads [url] into a temp file next to the saved playlists (synced, at most 40 MB) and
+     * rejects a web page. The caller validates it ([countChannels]), moves it into place and
+     * always deletes it. The body is never held in memory as a whole.
+     */
+    private fun fetchToPart(context: Context, url: String): File {
+        val part = File(dir(context), "dl_" + UUID.randomUUID().toString().take(8) + ".part")
+        try {
+            download(url, part)
+            val head = part.inputStream().use { i -> val b = ByteArray(1024); val n = i.read(b); if (n > 0) String(b, 0, n, Charsets.UTF_8) else "" }
+            require(!head.trimStart('\uFEFF', ' ', '\t', '\r', '\n').startsWith("<")) { "The link returned a web page, not a playlist" }
+            return part
+        } catch (t: Throwable) { part.delete(); throw t }
     }
 
-    private data class Download(val finalUrl: String, val bytes: ByteArray, val meta: Triple<Int, String?, List<String>>)
+    private data class Download(val finalUrl: String, val bytes: Long, val meta: Triple<Int, String?, List<String>>)
+    private data class Analyzed(val d: Download, val isHls: Boolean, val channels: List<StreamRequest>, val head: List<String>)
 
     /**
      * GET with manual redirect handling (reports the redirect chain, follows http ⇄ https).
      * Uses the shared client, so the DNS fallback in Settings → Network also applies to playlists.
      */
-    private fun download(start: String): Triple<String, ByteArray, Download> {
+    private fun download(start: String, dest: File): Download {
         var current = start
         val chain = mutableListOf<String>()
         val client = NetworkClient.noRedirects()
@@ -523,11 +553,22 @@ object PlaylistStore {
                     return@repeat
                 }
                 if (code !in 200..299) error("HTTP $code")
-                val source = response.body.source()
-                require(!source.request(MAX_BYTES.toLong() + 1)) { "Playlist too large" }
-                val bytes = source.buffer.readByteArray()
-                val d = Download(current, bytes, Triple(code, response.header("Content-Type"), chain.toList()))
-                return Triple(current, bytes, d)
+                // Streamed to [dest] in 64 KB steps, never more than MAX_BYTES (G7 LT-4).
+                var total = 0L
+                java.io.FileOutputStream(dest).use { out ->
+                    response.body.byteStream().use { input ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            total += n
+                            require(total <= MAX_BYTES) { "Playlist too large" }
+                            out.write(buf, 0, n)
+                        }
+                    }
+                    out.fd.sync()
+                }
+                return Download(current, total, Triple(code, response.header("Content-Type"), chain.toList()))
             }
         }
         error("Too many redirects")
@@ -535,15 +576,18 @@ object PlaylistStore {
 
     /** Follows redirects and reports what [url] returns, without saving anything. */
     suspend fun analyze(url: String): PlaylistAnalysis = withContext(Dispatchers.IO) {
-        val (finalUrl, bytes, d) = download(url.trim())
-        val text = bytes.decodeToString()
-        val isHls = M3uParser.isHlsPlaylist(text)
-        val channels = if (isHls) emptyList() else M3uParser.parse(text)
+        // G7 LT-4: read from a temp file line by line, not from one String of the whole body.
+        val tmp = File.createTempFile("yu_analyze", ".m3u") // java.io.tmpdir is the app cache on Android
+        val (d, isHls, channels, head) = try {
+            val dl = download(url.trim(), tmp)
+            val hls = tmp.bufferedReader().useLines { lines -> lines.any { M3uParser.isHlsLine(it) } }
+            Analyzed(dl, hls, if (hls) emptyList() else tmp.bufferedReader().useLines { M3uParser.parseLines(it) }, tmp.bufferedReader().useLines { it.take(5).toList() })
+        } finally { tmp.delete() }
+        val finalUrl = d.finalUrl
         val groups = channels.groupingBy { it.group ?: "Ungrouped" }.eachCount().toList().sortedByDescending { it.second }
-        val head = text.lineSequence().take(5).toList()
         PlaylistAnalysis(
             requestedUrl = url.trim(), finalUrl = finalUrl, redirects = d.meta.third, status = d.meta.first,
-            contentType = d.meta.second, bytes = bytes.size, isHls = isHls, channels = channels.size,
+            contentType = d.meta.second, bytes = d.bytes.toInt(), isHls = isHls, channels = channels.size,
             groups = groups.take(12),
             drmChannels = channels.count { it.drmScheme != DrmScheme.NONE },
             headerChannels = channels.count { it.userAgent != null || it.referer != null || it.origin != null || it.cookie != null || it.headers.isNotEmpty() },

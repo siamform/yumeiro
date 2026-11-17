@@ -26,6 +26,9 @@ object M3uParser {
     fun isHlsPlaylist(text: String): Boolean =
         text.contains("#EXT-X-STREAM-INF") || text.contains("#EXT-X-TARGETDURATION") || text.contains("#EXT-X-MEDIA-SEQUENCE")
 
+    /** Same test as [isHlsPlaylist] for one line (the tags never span lines); for files read line by line. */
+    fun isHlsLine(line: String): Boolean = isHlsPlaylist(line)
+
     /** Splits an `#EXTINF:` line into (attribute part, title) at the first comma outside quotes. */
     internal fun splitExtInf(line: String): Pair<String, String> {
         val body = line.substringAfter(':', "")
