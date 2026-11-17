@@ -10,6 +10,7 @@ import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -81,11 +82,32 @@ object Inbox {
 
     private fun publish(list: List<Item>) { _items.value = list; _unread.value = list.count { !it.read } }
 
+    /*
+     * N7-1: every tap in the inbox (mark read, mark all read when the page closes, remove, clear)
+     * wrote and fsynced inbox.json on the main thread, and two saves from different threads used
+     * the same .tmp file at once. Now writes are serialised under one lock and always write the
+     * newest list; a save from the main thread runs on one background writer, a save from a
+     * worker (a new notification) stays synchronous so it is on disk before the worker ends.
+     */
+    private val writeLock = Any()
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val writer = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+
     private fun save() {
-        val f = file ?: return
-        val a = JSONArray().apply { _items.value.forEach { put(toJson(it)) } }
-        runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, a.toString()) }.onFailure { Log.w(TAG, "save", it) }
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) writer.launch { writeNow() } else writeNow()
     }
+
+    private fun writeNow() {
+        synchronized(writeLock) {
+            val f = file ?: return
+            val a = JSONArray().apply { _items.value.forEach { put(toJson(it)) } }
+            runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, a.toString()) }.onFailure { Log.w(TAG, "save", it) }
+        }
+    }
+
+    /** For tests: waits until background saves queued so far are on disk. */
+    @androidx.annotation.VisibleForTesting
+    internal fun awaitSavedForTests() { kotlinx.coroutines.runBlocking { writer.launch { }.join() } }
 
     private fun toJson(i: Item) = JSONObject().put("id", i.id).put("kind", i.kind.name).put("title", i.title)
         .put("body", i.body).put("at", i.at).put("read", i.read).put("link", i.link ?: "")
