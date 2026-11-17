@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "startup = StartupBenchmark, profile = BaselineProfileGenerator (api36 only)"
+        description: "startup = StartupBenchmark, jank = FrameTimingBenchmark (ST-7), profile = BaselineProfileGenerator (api36 only)"
         type: choice
-        options: [startup, profile]
+        options: [startup, jank, profile]
         default: startup
   # The file exists only on r15-stability, and GitHub dispatches only workflows on the default
   # branch. Device check (which is on the default branch) calls this with bench=startup|profile.
@@ -51,7 +51,7 @@ jobs:
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
-          CLASS: ${{ inputs.what == 'profile' && 'dev.asfakul.yumeiro.benchmark.BaselineProfileGenerator' || 'dev.asfakul.yumeiro.benchmark.StartupBenchmark' }}
+          CLASS: ${{ inputs.what == 'profile' && 'dev.asfakul.yumeiro.benchmark.BaselineProfileGenerator' || (inputs.what == 'jank' && 'dev.asfakul.yumeiro.benchmark.FrameTimingBenchmark' || 'dev.asfakul.yumeiro.benchmark.StartupBenchmark') }}
         with:
           api-level: ${{ matrix.device.api }}
           target: google_apis
@@ -73,6 +73,9 @@ jobs:
               for b in json.load(open(f)).get("benchmarks", []):
                   for k, m in b.get("metrics", {}).items():
                       print(f"- **{b.get('name')}** {k}: median {m.get('median'):.0f} ms, min {m.get('minimum'):.0f}, max {m.get('maximum'):.0f}")
+                  # ST-7: FrameTimingMetric results are sampled (percentiles, not a median).
+                  for k, m in b.get("sampledMetrics", {}).items():
+                      print(f"- **{b.get('name')}** {k}: P50 {m.get('P50', 0):.1f} ms, P90 {m.get('P90', 0):.1f}, P95 {m.get('P95', 0):.1f}, P99 {m.get('P99', 0):.1f}")
           PY
       - name: Upload results
         if: always()

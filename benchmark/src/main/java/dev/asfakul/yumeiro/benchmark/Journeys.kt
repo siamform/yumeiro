@@ -33,4 +33,17 @@ internal object Journeys {
             device.waitForIdle(1_000)
         }
     }
+
+    /** ST-7 frame timing: past the welcome guide, fling Home up and down, then swipe the tab pager. */
+    fun scrollHomeAndSwipeTabs(device: UiDevice) {
+        firstFrameSettles(device)
+        device.findObject(By.text("Skip"))?.click()
+        device.waitForIdle(2_000)
+        val w = device.displayWidth; val h = device.displayHeight
+        repeat(4) { device.swipe(w / 2, h * 3 / 4, w / 2, h / 4, 8); device.waitForIdle(500) }
+        repeat(4) { device.swipe(w / 2, h / 4, w / 2, h * 3 / 4, 8); device.waitForIdle(500) }
+        // The Home pager sits under the top bar: swipe it sideways a few pages and back.
+        repeat(3) { device.swipe(w * 7 / 8, h / 2, w / 8, h / 2, 10); device.waitForIdle(800) }
+        repeat(3) { device.swipe(w / 8, h / 2, w * 7 / 8, h / 2, 10); device.waitForIdle(800) }
+    }
 }
