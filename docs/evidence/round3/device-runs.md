@@ -836,3 +836,13 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
 
 - Success. Covers e059aed (LB-2) and the new baseline profile.
 
+## 44015384846 (LargePlaylistMemoryDeviceTest, both phones, emulator; head 75b2124)
+
+- 16.3 MB playlist, 52,000 channels on both paths. Heap peak above start, whole-file vs line-by-line (lower of two):
+  api33-lowram 183 vs 42 MB (heap 192 MB), api36 73 vs 29 MB. PASS. LT-3.
+
+## 44016666847 (RemotePlaylistMemoryDeviceTest fail-before, both phones, emulator; head 4928d46)
+
+- Same 16.3 MB list served by a local server. api33-lowram: add 114 MB, refresh 147 MB, read 56 MB; api36: add 105,
+  refresh 71, read 41. FAILED both (limit half the heap, 96 MB). LT-4.
+
