@@ -157,3 +157,36 @@ them apart on the device.
   help (new request ≥ 1.5× faster), which BUG-3 needs on capped hosts.
 - Status: DL-11 part 2 stays **in progress** (big gain proven: worst 1.44× → 1.10×, median 1.13 → 1.04×).
   Next measurement goes with the next download change (case d is re-run with every download change anyway).
+
+### 8.2 Why the last 0.04 % is over: analysis of 44121429260 (2026-11-18, no code change)
+
+Read from the api33-lowram artifact logcat (`YuDownloadTest` lines, `SEGMENTED_STATS`):
+
+| Download | received / file | pace restarts | judged helped | MB/s |
+|---|---|---|---|---|
+| F #1 | 1.100 (148,257,373 B) | 7 | 6 | 12.42 |
+| F #2 | 1.042 | 0 | 0 | 18.36 |
+| F #3 | 1.057 | 3 | 2 | 18.99 |
+
+- With 0 restarts the counter reads 1.031–1.042× (TLS/TCP overhead in `TrafficStats`). Against the 1.031× floor,
+  F #1 lost about 9.4 MB over 7 restarts, **about 1.3 MB per restart**; api36 F #1 (1.064×, 3 restarts) about
+  1.5 MB per restart. That is the socket receive buffer and TCP window in flight when a request is closed.
+- cdn.kernel.org does not cap requests (ADR-016 context), yet 6 of 7 restarts were judged "helped". The
+  `PaceGate.judge` rule (new first MiB ≥ 1.5× the slow window) cannot tell a **short link dip that recovers by
+  itself** from a **host cap that a new request escapes**: in both cases the new request is faster than the
+  slow window. So on an uneven link the gate stays open and each dip costs ~1.3 MB.
+- Also F #1 was the slowest download (12.42 MB/s against 18.4–19.0): the restarts did not make it faster.
+
+Candidate root-cause fixes (not built; each needs its own fail-before/pass-after and the BUG-3 case d check):
+
+- **G. Soft handover:** on a slow window, start the new request at `position + inFlight` (estimate 1–2 MiB) and
+  let the old request keep reading up to that boundary before closing, so the in-flight bytes are used instead
+  of thrown away. Keeps BUG-3's escape from a capped request; waste per restart → near 0. Risk: two requests for
+  one piece for a moment (piece ownership in `Piece.accept` already drops bytes past a moved end).
+- **H. Judge against the old request's own recovery:** compare the new request's first MiB with the speed the
+  old request had over its **last** windows before the slow one, not with the slow window alone; a dip that
+  recovered on its own would not count as help, so the gate closes after two dips. Risk: misjudges a host
+  whose cap arrives gradually.
+
+Recommendation: G (removes the waste at its cause, independent of host behaviour). Budget unchanged; DL-11
+part 2 stays **in progress**.
