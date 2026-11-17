@@ -60,11 +60,22 @@ internal object Journeys {
         firstFrameSettles(device)
         device.findObject(By.text("Skip"))?.click()
         device.waitForIdle(2_000)
+        snapshot(device, "before_scroll")
         val w = device.displayWidth; val h = device.displayHeight
         repeat(4) { device.swipe(w / 2, h * 3 / 4, w / 2, h / 4, 8); device.waitForIdle(500) }
         repeat(4) { device.swipe(w / 2, h / 4, w / 2, h * 3 / 4, 8); device.waitForIdle(500) }
         // The Home pager sits under the top bar: swipe it sideways a few pages and back.
         repeat(3) { device.swipe(w * 7 / 8, h / 2, w / 8, h / 2, 10); device.waitForIdle(800) }
         repeat(3) { device.swipe(w / 8, h / 2, w * 7 / 8, h / 2, 10); device.waitForIdle(800) }
+        snapshot(device, "after_scroll")
+    }
+
+    /** Screenshot + window dump into the additional output dir the workflow uploads (what the journey saw). */
+    fun snapshot(device: UiDevice, name: String) = runCatching {
+        val dir = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            ?.let(::java.io.File) ?: return@runCatching
+        dir.mkdirs()
+        device.takeScreenshot(java.io.File(dir, "journey_$name.png"))
+        java.io.File(dir, "journey_$name.xml").outputStream().use { device.dumpWindowHierarchy(it) }
     }
 }
