@@ -29,4 +29,10 @@ class OnlineErrorsChainTest {
         val e = java.net.ConnectException("Failed to connect").apply { initCause(Exception("ECONNREFUSED")) }
         assertEquals("Your network refused the connection. The site may be blocked here — try a VPN", OnlineErrors.friendly(e))
     }
+
+    // G7-L1: QuickIPTV (com.phisher98) parsing a web page as a playlist.
+    @Test fun notAPlaylistIsFriendly() {
+        val e = IllegalStateException("Header doesn't start with #EXTM3U")
+        assertEquals("The site sent something that isn't a playlist. It may be down or blocked; try again later", OnlineErrors.friendly(e))
+    }
 }

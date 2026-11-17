@@ -233,14 +233,25 @@ object OnlineRepository {
         // MAX_PAGE_BATCHES batches. Before, a provider whose first four rows were empty (Yumeiro
         // Drama with four busy studios) vanished from the feed although it had other rows.
         val rows = mutableListOf<OnlineRow>()
+        val failures = java.util.Collections.synchronizedList(mutableListOf<Throwable>())
+        var asked = 0
         var batch = 0
         while (batch < MAX_PAGE_BATCHES && rows.size < ROWS_PER_PROVIDER) {
             val pages = allPages.drop(batch * ROWS_PER_PROVIDER).take(ROWS_PER_PROVIDER)
             if (pages.isEmpty()) break
-            rows += homeBatch(api, pages)
+            asked += pages.size
+            rows += homeBatch(api, pages, failures)
             batch++
         }
         val result = rows.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
+        // G7-L1: when every page threw (QuickIPTV's sites sending a web page instead of a playlist),
+        // the section said "Nothing came back from this extension" and Source Health "Home page is
+        // empty". The first page error is passed on so both can show the reason.
+        if (result.isEmpty() && asked > 0 && failures.size >= asked) {
+            val first = failures.first()
+            // A timeout is a CancellationException; callers must not mistake it for their own cancellation.
+            throw if (first is kotlinx.coroutines.CancellationException) java.io.InterruptedIOException("Home page timed out").apply { initCause(first) } else first
+        }
         if (result.isNotEmpty()) {
             homeCache[api.name] = Timed(System.currentTimeMillis(), result)
             dev.asfakul.yumeiro.cache.DataCache.write("home", diskKey, dev.asfakul.yumeiro.cache.OnlineCodec.rows(result))
@@ -248,7 +259,7 @@ object OnlineRepository {
         result
     }
 
-    private suspend fun homeBatch(api: MainAPI, pages: List<com.lagradost.cloudstream3.MainPageData>): List<OnlineRow> {
+    private suspend fun homeBatch(api: MainAPI, pages: List<com.lagradost.cloudstream3.MainPageData>, failures: MutableList<Throwable>? = null): List<OnlineRow> {
         // supervisorScope: one broken row (or one extension bug) never cancels the others.
         return supervisorScope {
             pages.map { page ->
@@ -256,7 +267,7 @@ object OnlineRepository {
                     parallel.withPermit {
                         runCatching {
                             withTimeout(HOME_TIMEOUT) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
-                        }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it) }.getOrNull()?.let { page to it }
+                        }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { page to it }
                     }
                 }
             }.mapNotNull { runCatching { it.await() }.getOrNull() }

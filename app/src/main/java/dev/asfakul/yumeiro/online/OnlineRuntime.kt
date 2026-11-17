@@ -94,6 +94,9 @@ object OnlineErrors {
             // "/data/user/0/…/playlists.json.tmp: open failed: EACCES (Permission denied)".
             chain.any { val t = it.message.orEmpty(); "EACCES" in t || "EROFS" in t || "EPERM" in t || ("open failed:" in t && "/data/" in t) } ->
                 "The app couldn't use its storage on this device. Restart the app, then try again"
+            // G7-L1: an IPTV extension whose site answered with a web page or an error text.
+            chain.any { val t = it.message.orEmpty(); "#EXTM3U" in t && ("start" in t || "header" in t.lowercase()) } ->
+                "The site sent something that isn't a playlist. It may be down or blocked; try again later"
             chain.any { it is java.net.UnknownHostException } ->
                 if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
                 else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"
