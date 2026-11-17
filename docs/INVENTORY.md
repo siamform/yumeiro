@@ -103,22 +103,22 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G6 Music
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | open | |
-| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | open | |
-| M3 | Infinite online feed | youtube/music/YmEndless | open | |
-| M4 | Lyrics (embedded, LRCLIB) | lyrics/* | open | |
-| M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | open | |
-| M6 | Equalizer | player/equalizer, ui/screens/equalizer | open | |
-| M7 | Last.fm scrobbling | scrobble/* | open | |
-| M8 | Song downloads | online/download/SongDownloads | open | |
-| M9 | Music mix | ui/screens/music/MusicMix | open | |
+| M1 | On-device library (scan, albums, artists) | data/repository/MediaRepository | code read in GROUP-6 (no finding recorded); final-sweep gap (2026-11-17): no audit row, device path only via `LocalPlayerDeviceTest`; queued in GROUP-13 | `LocalPlayerDeviceTest` (video side) |
+| M2 | Online mode (YouTube Music), automatic online/offline switch | youtube/music/*, ui/screens/music/MusicScreen, ModeSwitcher, ui/screens/youtube/YtMusicBrowse, youtube/YouTubeAudioDataSource | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| M3 | Infinite online feed | youtube/music/YmEndless | verified on device (FEED-1, append-only feed); `YmEndless` code read, no bug (GROUP-6) | `Round13LogicTest`, `LivePagedTest`, `LiveFeedTest`; ledger FEED-1 |
+| M4 | Lyrics (embedded, LRCLIB) | lyrics/* | MU-3 fixed (unit only); embedded lyrics code read | `LrcLibMissesTest`; ledger MU-3 |
+| M5 | Now playing, queue, media session/notification | ui/screens/player/NowPlayingScreen, service/PlaybackService, MusicPlayerManager | MU-4 verified on device (emulator); BUG-6 verified (emulator); mini player H11 device test pending | `QueueSurvivesScreenTest`, `MusicQueueDeviceTest`, `MusicTapThroughDeviceTest`, `MiniPlayerDeviceTest`; ledger MU-4, BUG-6 |
+| M6 | Equalizer | player/equalizer, ui/screens/equalizer | code read in GROUP-6, no bug (re-attach only on a new session); no device test | settings search coverage only |
+| M7 | Last.fm scrobbling | scrobble/* | MU-1 verified on device (emulator, 43738288853), MU-2 unit only; real Last.fm send OMT-10 (owner) | `ScrobbleTrackerTest`, `ScrobbleQueueTest`, `ScrobbleFlushDeviceTest`, `LibraryDeviceTest`; ledger MU-1, MU-2 |
+| M8 | Song downloads | online/download/SongDownloads | code read in GROUP-6, no bug (one request at a time, device songs ignored); final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 | `R7LogicTest` (partial) |
+| M9 | Music mix | ui/screens/music/MusicMix | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
 
 ## G7 Manga and live TV
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | T1 | Manga search, filter, source selection | ui/screens/manga/MangaScreens, sources/manga | code read; MG-1 fixed (unit/compile) | `TachiyomiIndexTest`, `SourceMarketTest`; no manga source on CI |
 | T2 | Manga title page and reader | MangaTitle, MangaReader routes | code read; MG-1 fixed (compile) | owner reading test OMT-11 |
-| T3 | Live TV hub, playlists, playlist market | ui/screens/stream/*, stream/PlaylistMarket, PlaylistStore | open | |
+| T3 | Live TV hub, playlists, playlist market | ui/screens/stream/*, stream/PlaylistMarket, PlaylistStore | LT-1, LT-2 verified on device (emulator); market code read, no bug | `StreamPlaylistTest`, `PlaylistIndexRecoveryDeviceTest`, `PlaylistRetryDeviceTest`; ledger LT-1, LT-2, FEED-1 |
 | T4 | M3U parsing, stream resolving, sniffing, page stream finder | stream/M3uParser, StreamResolver, StreamSniffer, PageStreamFinderDialog | LT-3 fixed (unit); code read | `StreamPlaylistTest`, `StreamDetectionTest`, `RequestHeadersTest` |
 | T5 | HLS ad filter for streams | stream/HlsAdFilter, AdFilterDataSource | unit only, no bug found | `HlsAdFilterTest` |
 
@@ -171,35 +171,35 @@ verified on a device, evidence linked), `not covered` (reason given).
 ## G12 Cross-cutting systems
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| X1 | Architecture and layering | whole app, docs/SYSTEM-DESIGN.md | open | |
-| X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | open | |
-| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, RegexCache, startup/PrefsWarmup | open | |
-| X4 | Battery and heat | HeatGuard, NotifyPacer | open | |
-| X5 | Notifications while closed (FCM, UnifiedPush, alarms, workers, boot) | notify/*, PushWakeService, NotifyAlarmReceiver | open | |
-| X6 | Crash logs and export | diagnostics/CrashLog, CrashExport | open | |
-| X7 | Security: secrets in APK, storage encryption, network, integrity | security/*, IntegrityGuard, SecretBox | open | |
-| X8 | Accessibility (TalkBack, contrast, touch targets, font scale) | all UI | open | |
-| X9 | TV and low-end behaviour | ui/tv, DeviceClass | open | |
-| X10 | Build, CI, release, signing | .github/workflows, gradle | open | |
+| X1 | Architecture and layering | whole app, docs/SYSTEM-DESIGN.md | audited (GROUP-12): X1-3, X1-4 fixed (unit); PL-1 verified on device; DOC-1 document | ledger X1-3, X1-4, PL-1, DOC-1 |
+| X2 | Memory / OOM, low-RAM device class | MemoryWatch, DeviceClass, ImageCacheSize | ST-2 verified on device; X2-2, X2-3 done; heap X2-3h (emulator); X2-4 emulator; ST-19, ST-20 emulator; **X2-1 open, ST-18 in progress** | ledger ST-2, X2-1…4, ST-18…20 |
+| X3 | Main-thread stalls / ANR, StrictMode | diagnostics/DevStrictMode, YuStall watchdog, text/RegexWarmup, RegexCache, startup/PrefsWarmup | ST-1, ST-3, ST-6, ST-16 verified on device; ST-13…15 unit + emulator; ST-22 fix device run pending; **ST-7, ST-17 open** | `StabilityStressDeviceTest`, `StorageMainThreadDeviceTest`; ledger ST-* |
+| X4 | Battery and heat | HeatGuard, NotifyPacer | X4-1 verified on device (emulator); O6 unit only | `HeatGuardDeviceTest`; ledger X4-1, O6 |
+| X5 | Notifications while closed (FCM, UnifiedPush, alarms, workers, boot) | notify/*, PushWakeService, NotifyAlarmReceiver | X5-1, X5-2, ST-4 verified on device (emulator); NT-1, O9 unit only | `ClosedAppAlertDeviceTest`; ledger X5-1, X5-2, NT-1 |
+| X6 | Crash logs and export | diagnostics/CrashLog, CrashExport | X6-1, CR-1, O7 verified on device (emulator); X6-2 done | `CrashUiDeviceTest`; ledger X6-1, X6-2, CR-1 |
+| X7 | Security: secrets in APK, storage encryption, network, integrity | security/*, IntegrityGuard, SecretBox | X7-1, X7-4 unit; X7-2 CI; X7-3 done (OMT-13 owner); X7-5 document; SEC-1 verified | ledger X7-1…5, SEC-1 |
+| X8 | Accessibility (TalkBack, contrast, touch targets, font scale) | all UI | X8-1 verified on device; X8-2 emulator 5/5 both phones; X8-3 done | `AccessibilityDeviceTest`; ledger X8-1…3 |
+| X9 | TV and low-end behaviour | ui/tv, DeviceClass | X9-1 verified (emulator tv-api24); X9-2…6, X9-8 done; X9-7 product part owner (ADR-014 done); **BUG-5 open** | `HomeNavigationDeviceTest`, `TvBug5ReproDeviceTest`; ledger X9-* |
+| X10 | Build, CI, release, signing | .github/workflows, gradle | X10-1…4 verified on CI; X10-5 upgrade verified (emulator); R8/ABI/signing review unit; CI-1, CI-2, DEP-1 verified | ledger X10-*, CI-1, CI-2, DEP-1 |
 | X11 | Network stack: smart DNS, DoH, auto-bypass, settings | network/* | audited; X11-1..5 fixed (unit), CI pending | |
 | X12 | Caching: data cache, image cache, online codec | cache/* | audited; X12-1, X12-2 fixed (unit), CI pending | |
-| X13 | (R16) Android 7–16 compatibility (minSdk 24), OS version guards | OsCompat, MTApplication | open | |
-| X14 | (R16) Design system and shared components | ui/components/YumeKit, Motion, Pills, Artwork, YuEditorial, Kana, YumixLogo | open | |
+| X13 | (R16) Android 7–16 compatibility (minSdk 24), OS version guards | OsCompat, MTApplication | X13-1 done (ADR), X13-2…5 done (emulator api28); X13-6 owner decision | ledger X13-1…6 |
+| X14 | (R16) Design system and shared components | ui/components/YumeKit, Motion, Pills, Artwork, YuEditorial, Kana, YumixLogo | audited (code, GROUP-12): palette use, tone contrast ≥ 5.26:1, ATF incl. 130 % font, RTL (G12-RTL emulator) | `AccessibilityDeviceTest`, `RtlLayoutDeviceTest` |
 | X15 | (R16) Shared live-feed component (append-only cards) | ui/feed/LiveFeed, FeedCard, OnlineHuePage | audited; X15-1 fixed (unit) | |
 | X16 | (R16) Cloud Worker (alerts, FCM fan-out, market index) and its abuse guards | server/src/index.ts, fcm.ts, logic.ts | audited; handler tests added (CI 43765850022), no defect | |
 
 ## New groups (not in the prompt's list)
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
-| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | open | |
-| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | open | |
-| N3 | Self-update (check, download, install, package replaced) | update/* | open | |
-| N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | open | |
-| N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | open | |
-| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | open | |
-| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | open | |
-| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | open | |
-| N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | open | |
+| N1 | Watch Together | watch/WatchTogether, ui/screens/watch/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N2 | Web sites tab, saved sites, site logins, safe WebView, ad shield, headless capture | ui/screens/sites, online/web/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N3 | Self-update (check, download, install, package replaced) | update/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N4 | Home servers: Jellyfin, Plex, SMB, WebDAV, DLNA | sources/servers/* | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N5 | Other ecosystems: Stremio add-ons, JS sources (QuickJS), Aniyomi/Mihon runtime | sources/stremio, sources/js, sources/tachiyomi | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N6 | App lock and privacy (lock key, private mode) | security/LockKey, Privacy, extras/AppLockGate | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
+| N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | final-sweep gap (2026-11-17): no audit row, no dedicated test; queued in GROUP-13 |  |
 
 ## Not covered
 (Filled at the end of the audit.)

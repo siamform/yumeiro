@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 10:40 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 12:10 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -72,6 +72,11 @@
   thread from the adult switch and ~15 other UI actions) → fixed daab2ab (`DataCache.invalidateAll`), unit test +
   `AdultSearchFilterDeviceTest`, fail-before branch `scratch/st22-fail-before`. G1 H11 gap (G6 never took it) →
   `MiniPlayerDeviceTest` cbe2e47. 44056147165 (a5 fail-before) did not compile (old bad import) → fixed on the branch.
+- **Done since (seventh handover, 5):** ST-17 re-audit note (upstream searched, no matching fix; stays open, no
+  symptom fix). P16: `Anime4kShaderDeviceTest` (08991d6) duplicated `Anime4kGlDeviceTest` (G12-A4K, 43849088080)
+  → removed 85c50c8; GROUP-3 P16 rows were stale and are corrected. Final-sweep coverage check (script over
+  INVENTORY): 32 rows said "open"; M3/M4/M5/M7, T3, X1–X10, X13, X14 reconciled with the ledger (no status
+  invented). **Real gaps:** M2, M9, N1–N9 (no audit, no dedicated test); M1, M6, M8 code read only → GROUP-13.
 - **Runs in progress:** 44056138637 (head e71a041, api33-lowram: DownloadsScreen, UniversalAddEcosystems,
   LocalPlayer#j, Yumix#extensionBarHidesOnScrollAndComesBack) and 44057033821 (`scratch/a5-fail-before`,
   BrowserCheckCooldown on old code; expect FAIL ≈60 s).
@@ -79,9 +84,9 @@
   1. Read both runs (tags DLSCREEN_, YuAddTest ADD_, LOCAL_J_RESULT, Y3_RESULT, CHECK_); close DL-12 / ER-20 if they
      behave as expected; fix any test fault on the smallest run.
   2. api33-lowram: AdultSearchFilter + MiniPlayer on head, and AdultSearchFilter on `scratch/st22-fail-before`;
-     api36: all new tests + SettingsReset, YtDownloadPipeline, BrowserCheckCooldown (one run); then H8
-     `-f bench=restore`; then ci.yml once (unit suite).
-  3. Finish re-audit G1–4 (E12 adult filter, P16 shader note, H11 coverage in G6), then the final sweep.
+     then api36 one run of all new tests; H8 `-f bench=restore`; ci.yml once.
+  3. GROUP-13 audit of the gap rows (N6 app lock, N3 self-update, N4 home servers, N2 web sites first: highest
+     user risk), then the full suite on both phones at the milestone.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
