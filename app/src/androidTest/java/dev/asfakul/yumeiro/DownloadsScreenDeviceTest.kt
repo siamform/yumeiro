@@ -10,7 +10,6 @@ import android.os.StrictMode
 import android.os.SystemClock
 import android.os.strictmode.Violation
 import android.util.Log
-import androidx.compose.ui.test.and
 import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
