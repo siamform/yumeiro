@@ -142,6 +142,8 @@ object PlaylistStore {
     val lastSync: StateFlow<Long> = _lastSync.asStateFlow()
     private var deletedDefaults = mutableSetOf<String>()
     @Volatile private var loadedDir: File? = null
+    /** Device tests only: the next call loads the index from disk again. */
+    internal fun unloadForTests() { loadedDir = null }
 
     private fun dir(context: Context) = File(context.filesDir, "streams").apply { mkdirs() }
     private fun indexFile(context: Context) = File(dir(context), "playlists.json")
