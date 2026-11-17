@@ -15,13 +15,18 @@
     43957029647); TV-3 PASS tv-api24. Open: TV-4 cross-source search (G7 proposal 3, owner call).
   - BUG-6 verified on device (emulator, both phones).
   - BUG-7: 7a, 7b, 7c verified on device (emulator); 7d not reproduced on emulator → OMT-16; gallery OMT-17.
-- **Runs in progress:** device campaign 43988958313 (2e86f58, StabilityStressDeviceTest, shards 1–5 × repeat 2,
-  both phones = 10 jobs). Debug build: ART ignores the baseline profile for debuggable apps, so this run is a
-  stability regression check at the current head and ST-17 spin hunting, not the profile's effect on ST-7.
-- **Next three actions:** (1) read 43988958313: pass count, FATAL/ANR, steady/cold stalls ≥700 ms per run vs
-  43705867413 (0.4 / 0.4 steady), any "spin focus:" line (ST-17); (2) ST-7 with the profile needs a non-debuggable
-  build: check macrobenchmark.yml for a frame-timing (jank) benchmark on the benchmark variant; (3) X2-1 / X7-5
-  review, then G5–G11 per the order. X3-TL and X13-6 wait on the owner.
+- **Done since:** campaign 43988958313 read (20/20, FATAL 0, app ANR 0, ST-17 0 spins; stalls same stacks as
+  43705867413, no proven change; ST-7 stays open). G12-DF status reconciled to verified (43857809658).
+  New finding **X2-2**: the macrobenchmark journeys never measured the app. First the notification permission
+  prompt took the swipes (trace of 43993294720), then the welcome guide stayed up because its button reads
+  "Skip for now" and the journeys matched "Skip" (screenshots of 43999288738). The shipped baseline profile
+  (fef01c6) therefore covers startup and the welcome screen only. Fixes pushed (grantPermissions, passWelcome).
+  Frame numbers of 43993294720 / 43996103813 / 43999288738 are void.
+- **Runs in progress:** FrameTimingBenchmark 44002112195 (2e8d810, bench=jank, both phones).
+- **Next three actions:** (1) read 44002112195: journey_after_scroll.png must show Home, frameCount must be
+  well above 14; record ST-7 profile vs no-AOT; (2) regenerate the baseline profile (bench=profile, api36),
+  commit `app/src/main/baseline-prof.txt`, re-measure startup (bench=startup) → X2-2, X2-1; (3) X7-5 review,
+  then G5–G11. X3-TL and X13-6 wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
