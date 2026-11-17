@@ -46,6 +46,12 @@ class AppLockDeviceTest {
     private var pinSet = false
     private fun log(s: String) = Log.i("YuLockTest", s)
     private fun gate() = runCatching { compose.onAllNodesWithTag("app_lock", true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+    /** Plain polling: works while another activity (the system PIN screen) hides the app's Compose tree. */
+    private fun waitFor(ms: Long, ok: () -> Boolean): Boolean {
+        val end = android.os.SystemClock.uptimeMillis() + ms
+        while (android.os.SystemClock.uptimeMillis() < end) { if (ok()) return true; Thread.sleep(100) }
+        return ok()
+    }
     private fun secure() = ctx.getSystemService(KeyguardManager::class.java).isDeviceSecure
 
     @Before fun setUp() {
@@ -89,20 +95,26 @@ class AppLockDeviceTest {
         log("LOCK_CASE b set-pin secure=$pinSet out=${out.trim().take(80)}")
         assumeTrue("could not set a PIN on this emulator", pinSet)
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.waitUntil(10_000) { gate() }
+        // Run 44067357672 (api28): Android 9's fallback PIN screen (N6-3) is its own activity; while it is on
+        // top the app's Compose tree is not visible to the test, so the gate is read from Privacy.locked
+        // (what the gate shows) and "opened" means the lock really let go, not "no gate node found".
+        waitFor(10_000) { Privacy.locked.value || gate() }
+        assertTrue("b: the app opened without asking for the PIN", Privacy.locked.value)
         // The system prompt (BiometricPrompt with device credential) shows a PIN field.
         var opened = false
         for (attempt in 1..3) {
             Thread.sleep(2_500)
             FirstRun.shell("input text $PIN")
             FirstRun.shell("input keyevent 66")
-            opened = runCatching { compose.waitUntil(6_000) { !gate() }; true }.getOrDefault(false)
+            opened = waitFor(6_000) { !Privacy.locked.value }
             log("LOCK_CASE b attempt=$attempt opened=$opened window=${FirstRun.focusedWindow().take(120)}")
             if (opened) break
             // Prompt not up yet or dismissed: ask again the way the user would (Unlock button = Enter).
             FirstRun.shell("input keyevent 66")
         }
         assertTrue("b: the PIN did not open the app", opened)
+        runCatching { compose.waitUntil(5_000) { !gate() } }
+        assertFalse("b: gate still on screen after the PIN", gate())
         assertTrue("b: lock turned off after a good PIN", Privacy.lockEnabled.value)
         assertEquals("b: saved lock setting", true, prefs.getBoolean("lock", false))
         log("LOCK_RESULT b PASS")
