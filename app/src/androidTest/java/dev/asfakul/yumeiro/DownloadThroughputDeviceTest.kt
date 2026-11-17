@@ -137,10 +137,13 @@ class DownloadThroughputDeviceTest {
 
     @Test fun b_realHostScreenOffAndDoze() = measure("screen-off-doze", 30)
 
-    @Test fun c_localBurstThenCapHost() {
-        val size = 40L * 1024 * 1024
-        val burst = 1L * 1024 * 1024
-        val rate = 1L * 1024 * 1024
+    /** Device 44030612565 (head) vs 44031868134 (fail-before): tail ≤ 2× on both, the fix 2.2× faster. */
+    @Test fun c_localBurstThenCapHost() = local("local-burst1MiB-cap1MiBps", 40L * 1024 * 1024, 1L * 1024 * 1024, 1L * 1024 * 1024)
+
+    /** The unit profile that showed the collapse (CI 43851470283: 4.9×): 24 MiB, 3 MiB burst, then 1.5 MiB/s. */
+    @Test fun d_localUnitCollapseProfile() = local("local-24MiB-burst3MiB-cap1.5MiBps", 24L * 1024 * 1024, 3L * 1024 * 1024, 1536L * 1024)
+
+    private fun local(case: String, size: Long, burst: Long, rate: Long) {
         val server = java.net.ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
         val pool = java.util.concurrent.Executors.newCachedThreadPool()
         val requests = java.util.concurrent.atomic.AtomicInteger()
@@ -151,7 +154,7 @@ class DownloadThroughputDeviceTest {
             }
         }
         try {
-            val ok = measureOn("local-burst1MiB-cap1MiBps", null, "http://127.0.0.1:${server.localPort}/file.bin", size)
+            val ok = measureOn(case, null, "http://127.0.0.1:${server.localPort}/file.bin", size)
             log("THROUGHPUT_DEVICE local requests=${requests.get()}")
             assertTrue("local host failed to connect", ok)
         } finally { server.close(); pool.shutdownNow() }
