@@ -219,6 +219,11 @@ Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs 
 | F-10 | Glass theme (ADR-017 proposed) | docs/proposals/FEATURE-F-10-glassmorphism-theme.md | ui/theme |
 | F-11 | Manga auto-translation | docs/proposals/FEATURE-F-11-manga-translation.md | ui/screens/manga reader |
 | F-12 | Vertical shorts player (ADR-018 proposed) | docs/proposals/FEATURE-F-12-vertical-video-player.md | youtube Shorts shelf, StreamMediaFactory |
+| NBUG-5 | Dub filter count and silent episode fallback (bug, not started) | — (note to write) | online/OnlineRepository versions (391, 420), ui/screens/online/OnlinePlayerUi (552) |
+| NBUG-6 | Per-feature DNS with DoH, sequential fallback (owner gate: no side effect) | — (research note first) | network/SmartDns, network/DnsMessage, eu/kanade/tachiyomi/network/DohProviders |
+| NF-1 | Episode watch status (Watched / In progress / Fresh) | — | OnlinePlayerUi episode rows (Watched check exists), BUG-1 resume store |
+| NF-2 | Download storage labels; universal stream download | — | ui/screens/downloads (Offline/Permanent labels exist), online/download/HlsDownloader |
+| NF-3 | Extension pop-up blocker = ADR-014 (built, verified emulator; EXT-T1 open) | ledger ADR-014 row | online/ExtensionPopups, online/ExtensionWindowWatch |
 
 ## Not covered
 (Filled at the end of the audit.)

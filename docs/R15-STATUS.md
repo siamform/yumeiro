@@ -1,13 +1,27 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, 6)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 1)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18 (section 17 first actions, then L0→L5). Repo head
+  at session start 063b552 (the prompt said 912093b; 47 newer commits). Report:
+  docs/reports/2026-11-18-eighth-handover-report.md. Index: docs/CHECKLIST-FEATURES-BUGS.md (batch two added).
+- **Current group / step:** first job done (raw report file, checklist, report). Next: DL-11 part 2 option G
+  (soft handover) per note §8.2 → ADR-016 amendment → fail-before unit test → fix → CI → device a + d.
+- **Verified (emulator) carried over:** N6-2, BUG-1, BUG-2, BUG-4 (phones + TV), TV-3; spot-check 2026-11-18 holds.
+- **Runs in progress:** none. 44162062169 read: EXT-T1 10/10 PASS, condition not seeded (test fault EXT-T1-C).
+- **Next three actions:** (1) DL-11 G: read `Segmented` piece ownership, write ADR-016 amendment, fail-before unit
+  test; (2) EXT-T1 campaign with five failing drama feeds seeded while Source status is open (≥ 20 runs,
+  api33-lowram); (3) NBUG-5 note (code read + competitors) and NBUG-6 research note (six answers).
+
+### Previous resume note (eighth cycle, 6)
+
 
 - **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
 - **Current group:** 4.1 tail + 4.4 proposals. Verified (emulator): N6-2, BUG-1, BUG-2, BUG-4 (phones + TV), TV-3. DL-11 p2 option F: medians met, one download 1.1004× (not claimed; next sample with the next download change). X2-1 emulator part done (no gain claimed). ST-17 campaign 44145301927: 20/20, 0 spins; stays open. 4.2 done; 4.3 done or Blocked: owner; Group 13 closed for agent work (6bb9dcb).
 - **4.4:** proposals F-01…F-12 all written (docs/proposals/FEATURE-F-*.md; ADR-017 and ADR-018 proposed). Gate **not passed**: DL-11 budget not claimed and EXT-T1 pending. Nothing built.
 - **Runs in progress:** 44162062169 (EXT-T1: ExtensionsDeviceTest repeat 10, api33-lowram).
 - **Next three actions:** (1) read 44162062169 (artifact logcat: E11 cleanup and any failure); (2) second EXT-T1 campaign of 10 for ≥ 20 runs; if none reproduce, OWNER-MANUAL-TESTS entry Blocked: owner; (3) DL-11 next measurement with the next download change (case d every time), then the 4.4 gate check.
-- Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
+- Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-18-eighth-handover-report.md.
 
 ### Previous resume note
 

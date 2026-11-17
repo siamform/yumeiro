@@ -4,13 +4,23 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 ## State
 
-- Head at start: 2cbb2ae (docs only after 912093b). No run after 44094439021 at start (checked 2026-11-17).
+- Head at start (session 1, 2026-11-17): 2cbb2ae (docs only after 912093b). No run after 44094439021 then.
+- Head at start (session 2, 2026-11-18): 063b552 — 47 commits after 912093b, all pushed by session 1; the master
+  prompt's "last state 912093b" was out of date (repo wins). Newest run at start: 44162062169 (EXT-T1), done.
+- Session 2 differences from the prompt: checklist and eighth report already existed (checklist lacked batch two:
+  NBUG-5, NBUG-6, NF-1…NF-3 → added; columns restructured to ID/description/group/competitor/status/evidence);
+  report renamed to the required 2026-11-18 name; raw report file docs/NEW-BUGS-FEATURES-2026-11-18.md created.
+- Skills (session 2): cloned to /home/user/workspace/agent-skills (sandbox only). Findings: kotlin-agent-skills holds
+  only tooling/migration skills (Gradle, AGP 9, Java→Kotlin), no coroutine/Compose guide — used for build-side
+  checks only; morluto/rea is a reverse-engineering MCP toolkit, not a general problem-solving method — its
+  "observe, hypothesise, prove" workflow is applied, the tools need Node/Frida and are not run here;
+  architecture-designer SKILL.md read (ADR template used); ui-ux-pro-max present.
 - Current group: 4.1. Done for agent scope: N6-2, BUG-1, BUG-2, BUG-4, TV-3. DL-11 p2 nearly met (option F).
   X2-1 emulator part done (profile 743b1c7, jank no gain, startup measured). 4.3 register done or Blocked: owner.
   ST-17 campaign 44145301927 read (20/20, 0 spins, stays open). Group 13 closed for agent work. 4.4 proposals
   F-01…F-12 written (ADR-017, ADR-018 proposed); gate not passed, nothing built.
   Next: EXT-T1 (≥20 runs on api33-lowram), DL-11 next sample, then the 4.4 gate check.
-- Open runs: 44162062169 (EXT-T1, ExtensionsDeviceTest ×10, api33-lowram).
+- Open runs: none (44162062169 read 2026-11-18).
 
 ## Findings (eighth cycle)
 
@@ -29,6 +39,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 | ID | Cause | Fix | Evidence |
 |---|---|---|---|
+| EXT-T1-C | Campaign 44162062169 ran plain E11, not the owner's reproduction condition | next campaign seeds five failing drama feeds before opening Source status | 44162062169 test code e11 (no feed setup) |
 
 ## Runs
 
@@ -51,7 +62,12 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44138627579 | bench=jank 743b1c7 | no gain (software rendering) |
 | 44142300486 | bench=startup 743b1c7 | TTID ratio 0.62 api36, 0.71 lowram |
 | 44145301927 | ST-17 StabilityStressDeviceTest ×10 both phones, a7b03a0 | 20/20 PASS, compose spins 0, FATAL 0, ANR 0; ~5–6 distinct main-thread stalls 702–1070 ms (each logged twice) (emulator) |
-| 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram | in progress |
+| 44162062169 | EXT-T1 ExtensionsDeviceTest ×10 api33-lowram (5f7f333) | 10/10 PASS, 0 ANR, EXT_T1 line every run: only MainActivity focused, no added window → not reproduced; the owner's condition (five failing drama feeds while Source status is open) was not set up, so this does not count toward the ≥ 20 (emulator) |
+
+## Spot-check (session 2)
+
+BUG-2 44116513171, NBUG-2b 44118950490, N6-2 44112738603, BUG-4 TV 44116803828, DL-11 F 44121429260: all
+hold against the run logs; no status changed.
 
 ## Still open
 
