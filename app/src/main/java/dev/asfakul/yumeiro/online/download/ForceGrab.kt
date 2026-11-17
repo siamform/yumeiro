@@ -346,13 +346,15 @@ class Segmented(
         state.delete()
         ForceGrab.lastStats = "total=$total connections=$connections chunks=${ranges.size} resumedChunks=$resumedChunks " +
             "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}" +
-            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()}"
+            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()} protocol=$protocol"
         return total
     }
 
     private val requests = java.util.concurrent.atomic.AtomicInteger()
     private val dropped = AtomicLong()
     private val ownPauses = java.util.concurrent.atomic.AtomicInteger()
+    /** DL-11 cause logging: the wire protocol of the probe (h2 = all ranges share one TCP connection). */
+    @Volatile private var protocol = "?"
 
     /** [total]: size when the host serves byte ranges. [whole]: the open 200 answer of a host without them. */
     private class Probe(val total: Long?, val whole: okhttp3.Response?)
@@ -361,6 +363,7 @@ class Segmented(
         val b = Request.Builder().url(url).header("Range", "bytes=0-0")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
         val r = client.newCall(b.build()).execute()
+        protocol = r.protocol.toString()
         if (r.code == 200) return Probe(null, r) // caller closes it
         r.use {
             if (r.code == 401 || r.code == 403) throw Refused(r.code)

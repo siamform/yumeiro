@@ -126,7 +126,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | ID | Item | Code | Status | Covered by |
 |---|---|---|---|---|
 | D1 | Download manager (queue, worker, groups, naming) | online/download/* | verified (emulator): DL-2, DL-5, DL-7, DL-10, series folders + cleanup (44043535616); DL-6 unit (CI) | `DownloadResumeDeviceTest`, `DownloadCleanupDeviceTest`, `DownloadListSaveRaceTest` (ledger DL-2…DL-10) |
-| D2 | Forced (IDM-style) downloads, segmented HLS/DASH, mux | ForceGrab, HlsDownloader, MediaMux | DL-1 verified (device), DL-9 unit (CI), DL-10 verified (emulator); DL-11 part 2 open (2–36 % over-read measured) | ledger DL-1, DL-9, DL-10, DL-11 |
+| D2 | Forced (IDM-style) downloads, segmented HLS/DASH, mux | ForceGrab, HlsDownloader, MediaMux | DL-1 verified (device), DL-9 unit (CI), DL-10 verified (emulator); DL-11 part 2 open (fix 4fa126e: 1.03–1.12× on the real host, budget ≤1.06× median not met; 44110174701) | ledger DL-1, DL-9, DL-10, DL-11 |
 | D3 | Torrent / magnet | eu/kanade/tachiyomi/torrentutils, OnlineDownloads | device test e12705f: TORRENT_RESULT PASS a, b (emulator api33-lowram 44054360131) | `TorrentDownloadDeviceTest` |
 | D4 | Pause, resume, failure, retry, cleanup worker | DownloadWorker, DownloadCleanupWorker | verified (emulator): DL-2, DL-3, DL-4, DL-5, cleanup worker (44043535616) | ledger DL-2…DL-5, `DownloadCleanupDeviceTest` |
 | D5 | External downloaders (ADM, IDM) | online/download/ExternalDownloader | device test e12705f: EXTDL_RESULT PASS a–d (emulator api33-lowram 44054360131) | `ExternalDownloaderDeviceTest` |

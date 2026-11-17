@@ -29,11 +29,11 @@ docs/DONE-LEDGER.md (same IDs); this file is the index.
 
 | ID | What | Status | Evidence |
 |---|---|---|---|
-| DL-11 part 2 | Segmented over-read 1.04–1.44× | In progress (eighth cycle, ADR-016) | 44036060683, 44037559115, 44041714032 (emulator, real host); CI 44037788044 (unit, option B rejected) |
+| DL-11 part 2 | Segmented over-read 1.04–1.44× | In progress: fix 4fa126e cut worst case to 1.12×, device budget not met (median 1.10–1.11×); H3 HTTP/2 under test | before 44036060683, 44037559115, 44041714032; CI fail-before 44103206509 → pass-after 44106540469; device 44110174701 (emulator) |
 | X2-1 | Baseline profile gain on real hardware | Blocked: owner for real hardware (OMT-12); emulator extension owed | Startup 44013773673 (emulator): TTID api36 2116 vs 2957 ms, lowram 1756 vs 2465 ms |
 | N6-2 | Android 10 credential screen re-lock | In progress | N6-4 guard 3f3fbd8 verified api28 44071192093 (emulator) |
 | ST-17 | Stress-test spins, cause logging | In progress (recorded per campaign) | 43988958313 (20/20, 0 spins) |
-| BUG-3 emulator side | Keep case d green | In progress (every download change) | 44043535616 |
+| BUG-3 emulator side | Keep case d green | In progress (every download change) | 44043535616; 44110174701 (6/6 after DL-11 fix) |
 | EXT-T1 | Extension timing fault | Not started (≥20 runs on api33-lowram first) | — |
 | PL-16 | Screenshots into docs/evidence/pl16/ | Done (evidence committed) | runs 43747147539, 43748560619; docs/evidence/pl16/README.md |
 | OMT-1…19, X3-TL (OMT-22), X13-6 (OMT-23), OMT-12 | Owner tests | Blocked: owner | docs/OWNER-MANUAL-TESTS.md |

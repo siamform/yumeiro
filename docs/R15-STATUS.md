@@ -1,11 +1,11 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17, eighth cycle, 2)
+## Resume here (updated 2026-11-17, eighth cycle, 3)
 
 - **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
-- **Current group:** 4.1 row 1, DL-11 part 2 (G8, ADR-016). **Exact step:** fix 4fa126e (ADR-016 D+E) pushed; fail-before 44103206509 read (ownPauses FAIL as expected); head CI 44106540469 running.
-- **Run in progress:** 44106540469 (CI unit, head 226c9c5). Head at start 2cbb2ae.
-- **Next three actions:** (1) read 44106540469 (Dl11PaceTest, ownPauses 0 restarts, capped MB/s within 10 % of 81.63/68.77); (2) device-check both phones `DownloadThroughputDeviceTest#a_realHostScreenOn,#d_localUnitCollapseProfile` repeat 3, budget ≤1.10x each / median ≤1.06x; (3) N6-2 on the new api29 profile (AppLockDeviceTest#b, head vs pre-3f3fbd8).
+- **Current group:** 4.1. DL-11 p2: CI pass-after 44106540469; device 44110174701 budget not met (median 1.10–1.11×), H3 (HTTP/2 streams) cause logging `protocol=` added. 4.2 owner file done (OMT-20…25, 10ce53e).
+- **Runs in progress:** 44112738603 (N6-2 api29 head), 44112747705 (N6-2 api29 fail-before, scratch/n6-fail-before 00127dd).
+- **Next three actions:** (1) read the two api29 runs (AppLockDeviceTest, LOCK_UNLOCK/LOCK_RELOCK lines); (2) CI for the `protocol=` logging + X2-1 restore journey, then one device run `DownloadThroughputDeviceTest#a_realHostScreenOn` to read the protocol (H3); (3) X2-1 bench=profile, then bench=jank and bench=startup.
 - Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
 
 ### Previous resume note

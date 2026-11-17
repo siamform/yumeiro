@@ -73,3 +73,30 @@ them apart on the device.
   real host: received ≤ 1.10× in each download, median ≤ 1.06× (1.031× is pure protocol overhead);
   case d keeps total ≤ 10 s and last 10 % ≤ 3.5 s (BUG-3 parity).
 - Data safety: no storage format change. The `.chunks` side file and the resume path are untouched.
+
+## 7. After the fix (4fa126e), measured
+
+- CI unit pass-after 44106540469 (head 226c9c5): `Dl11PaceTest` 6/6; `DownloadThroughputTest` 6/6.
+  `ownPausesAreNotAHostSlowdown`: paceRestarts=0 with ownPauses=10 (segmented2) and 5 (segmented4); served
+  1.000× / 1.046× (fail-before 1.487×). `linkWideDipsStopUselessRestarts`: 2 restarts, paceWasted=2, paceOff=1,
+  1.005×. Capped parity: segmented4 106.67 MB/s, segmented2 73.39 MB/s (old 81.63 / 68.77: no drop).
+- Device 44110174701 (emulator, both phones, a + d, repeat 3), real host cdn.kernel.org:
+
+| Phone | Received / file (3 runs) | Pace restarts | paceHelped / paceWasted / ownPauses | Median |
+|---|---|---|---|---|
+| api33-lowram | 1.117 / 1.112 / 1.051 | 7 / 5 / 1 | 6/0/2 · 4/0/8 · 1/0/6 | 1.112 |
+| api36 | 1.101 / 1.120 / 1.031 | 5 / 6 / 0 | 5/0/3 · 4/1/3 · 0/0/0 | 1.101 |
+
+  Case d (local, per-request cap) passed every run: total 3.6–5.3 s, last 10 % ≤ 1.63 s.
+- **Budget not met** (each ≤ 1.10×, median ≤ 1.06×). Worst case fell from 1.440× to 1.120×; api33 median from
+  1.130× to 1.112×; api36 median did not improve (1.053× before, 1.101× after). E works (ownPauses 0–8 trips
+  no longer restart), but the remaining trips are counted as helped (the new request's first MiB was ≥ 1.5×
+  faster), so D does not stop them.
+- **New hypothesis H3 (to prove, not yet fixed):** the download client does not restrict protocols, so on an
+  HTTP/2 host such as cdn.kernel.org the "connections" are streams on one TCP connection. A restart cancels a
+  stream whose bytes are already in flight (counted in uid rx, thrown away), and a fresh stream on the warm
+  connection always looks faster, so the gate calls it helped. The unit tests use MockWebServer over HTTP/1.1,
+  which cannot show this. Cause logging added: `protocol=` in SEGMENTED_STATS. Next: one device run (a only) to
+  read the protocol, then decide (for example HTTP/1.1 for segmented ranges, measured against case d and MB/s).
+- Status: DL-11 part 2 stays **in progress**; ADR-016 stays accepted with the evidence not yet met.
+

@@ -604,6 +604,7 @@ flowchart LR
 - **Budget:** real host received ≤ 1.10× each and median ≤ 1.06× (both phones, three downloads each);
   BUG-3 case d total ≤ 10 s and last 10 % ≤ 3.5 s; unit capped profile with no more than 10 % speed loss.
 - **Status:** accepted (2026-11-17), pending the evidence above; DL-11 part 2 closes only when it is met.
+  Device 44110174701: worst 1.44× → 1.12×, median 1.10–1.11× (not met). Next: H3 (HTTP/2 streams), see the note §7.
 
 ## 11. Risks
 
