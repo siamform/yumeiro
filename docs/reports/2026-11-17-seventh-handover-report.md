@@ -80,7 +80,7 @@ faults (3e6b7de, e71a041).
 - **BUG-5 / TV-4** cross-source search on TV: owner decision (G7 proposal 3).
 - **ST-7** jank on software-rendered emulators; real-phone check OMT-12. **ST-17** stays open (no upstream fix, no symptom fix).
 - **N6-2** suspected (Android 10 credential screen re-lock): no API 29 CI image; same guard as N6-4 would apply once reproduced.
-- **DL-11** part 2 (2–36 % over-read) measured, ADR-016 proposed; **X2-1** open; X11/X12 rows say "CI pending" in INVENTORY: CI has been green since, but I did not read their XML by name, so they are not upgraded.
+- **DL-11** part 2 (2–36 % over-read) measured, ADR-016 proposed; **X2-1** open. (X11/X12 since verified, CI unit 44067269319; see the addendum.)
 - **Owner tests** (real hardware, accounts, home network): `docs/OWNER-MANUAL-TESTS.md` OMT-1…OMT-19, X3-TL, X13-6.
 
 ## Gated feature phase (needs the owner's approval; nothing started)
