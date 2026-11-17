@@ -778,3 +778,9 @@ No FATAL EXCEPTION, no ANR. Details and fix plan: docs/proposals/FEATURE-BUG-5-t
   Same counter on 43705867413: 0.7 / 1.0. Bursts during system load; stacks as before (HardwareRenderer).
 - ST-17: 0 spin lines.
 
+## 44002497794 (LibraryPersistDeviceTest, both phones, emulator; head 1502b1b)
+
+- Phase a saves through OfflineMediaRepository, adds a broken entry, kills its own process; phase b runs in a new process.
+- api33-lowram (pid 4576 → 5227) and api36 (3334 → 4070): `LIB_P_B playlists=[Favorite Tracks:3, YuLB repeats:2, YuLB keep:2]`,
+  after one more save `[Favorite Tracks, YuLB repeats, YuLB keep 2]`, LIB_P_RESULT PASS, cleanup back to `[Favorite Tracks:0]`.
+
