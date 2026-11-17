@@ -51,14 +51,16 @@ object MangaLibrary {
     // it straight over the file on the main thread (a kill mid-write truncated it, and the next start
     // then lost everything). One background thread now writes the latest copy through a temp file;
     // a newer copy replaces one not yet written.
-    private val pending = java.util.concurrent.atomic.AtomicReference<Pair<File, List<Entry>>?>(null)
+    // G5 LB-2: the file (filesDir + mkdirs) is resolved on the writer thread too; doing it here hit
+    // the disk on main on every page turn (MangaLibraryMainThreadDeviceTest).
+    private val pending = java.util.concurrent.atomic.AtomicReference<Pair<Context, List<Entry>>?>(null)
     private val writer = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-manga-library").apply { isDaemon = true } }
 
     private fun save(context: Context) {
-        if (pending.getAndSet(file(context) to _entries.value) != null) return
+        if (pending.getAndSet((context.applicationContext ?: context) to _entries.value) != null) return
         writer.execute {
-            pending.getAndSet(null)?.let { (f, list) ->
-                runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, json.encodeToString(list)) }
+            pending.getAndSet(null)?.let { (c, list) ->
+                runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(file(c), json.encodeToString(list)) }
                     .onFailure { runCatching { android.util.Log.w("MangaLibrary", "save", it) } }
             }
         }
