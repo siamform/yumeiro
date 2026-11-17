@@ -28,12 +28,13 @@
   LB-7 rotation: fail-before 44004098352 → pass 44005396278. LB-2 finding: MangaLibrary ran filesDir+mkdirs on
   main on every page turn; fail-before 44007087901 (40 violations, both phones), fix e059aed.
 - **Current group / step (2):** G5 Library. LB-2 after-fix device run, then CI unit run for the fix.
-- **Runs in progress:** baseline profile regeneration 44005414732 (c9c41d3, bench=profile, api36); LB-7 tabs fail-before 44009339786 (scratch/lb7tabs-fail-before). LB-2 verified on device: 44008161115 PASS both.
-  MangaLibraryMainThreadDeviceTest after-fix 44008161115 (e059aed, both phones).
-- **Next three actions:** (1) read 44008161115 → LB-2 verified on device if both pass; CI unit run (SafeJsonFileTest
-  touches MangaLibrary); (2) when 44005414732 ends, commit the new `app/src/main/baseline-prof.txt` (X2-2), then
-  bench=startup and bench=jank re-measure (X2-1, ST-7); (3) G6–G11, then re-audit G1–4. X3-TL, X13-6 and TV-4
-  cross-source search wait on the owner.
+- **Runs in progress:** baseline profile regeneration 44005414732 (c9c41d3, bench=profile, api36);
+  LB-7 tabs fail-before 44009339786 (scratch/lb7tabs-fail-before, LibraryTabsMainThreadDeviceTest, both phones).
+  LB-2 verified on device: 44008161115 PASS both (0 violations, was 40).
+- **Next three actions:** (1) read 44009339786 (must FAIL), then run LibraryTabsMainThreadDeviceTest at
+  r15-stability head (must PASS) → LB-7 tabs part; (2) when 44005414732 ends, commit the new
+  `app/src/main/baseline-prof.txt` (X2-2), run CI (unit suite also covers e059aed), then bench=startup and
+  bench=jank (X2-1, ST-7); (3) G6–G11, then re-audit G1–4. X3-TL, X13-6, TV-4 cross-source wait on the owner.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
 API 33 Pixel 3a (2 GB RAM, 192 MB heap, low-end path) and an API 36 Pixel 6. The run IDs are
