@@ -81,7 +81,8 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
     override suspend fun search(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse {
-        val (type, id) = url.split("/", limit = 2)
+        // N4-2: search/home hand back "$mainUrl/<type>/<id>" (CloudStream fixUrl).
+        val (type, id) = dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, url).split("/", limit = 2)
         val meta = metaFor(type, id) ?: JsonObject(mapOf("id" to JsonPrimitive(id), "name" to JsonPrimitive(id)))
         val title = meta.str("name") ?: id
         val videos = (meta["videos"] as? JsonArray).orEmpty().map { it.jsonObject }
@@ -113,7 +114,7 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val (type, id) = data.split("/", limit = 2)
+        val (type, id) = dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, data).split("/", limit = 2)
         val ctx = StremioAddons.context()
         val all = StremioAddons.addons.value
         var found = false

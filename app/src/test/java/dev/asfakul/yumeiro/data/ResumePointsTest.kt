@@ -105,6 +105,22 @@ class ResumePointsTest {
         assertNull(OnlineHistory.progressOf("Demo", "ep-1"))
     }
 
+    /** GROUP-13 N4-2: Aniyomi/JS ids lost CloudStream's "$mainUrl" prefix; the saved spot and title are still found. */
+    @Test fun bridgeIdWithoutTheOldSitePrefixKeepsThePosition() {
+        val d = OnlineDetail(
+            "Js", "https://site.example/anime/7", "T", OnlineKind.SERIES, "Anime", null, null, emptyMap(), null, 2020,
+            emptyList(), null, null, null, null, emptyMap(), emptyMap(), emptyList(),
+        )
+        OnlineHistory.record(ctx, d, "", OnlineEpisode("https://site.example/anime/7/ep-2", null, 1, 2, null, null, 24), 200_000, 1_400_000)
+        assertEquals(200_000L, OnlineHistory.progressOf("Js", "/anime/7/ep-2")?.positionMs)
+        assertEquals(200_000L, OnlineHistory.progressOf("Js", "anime/7/ep-2")?.positionMs)
+        assertEquals("https://site.example/anime/7", OnlineHistory.entry("Js", "/anime/7")?.url)
+        assertEquals("https://site.example/anime/7", OnlineHistory.entry("Js", "anime/7")?.url)
+        assertNull(OnlineHistory.progressOf("Other", "/anime/7/ep-2"))
+        assertNull(OnlineHistory.progressOf("Js", "/anime/7/ep-3"))
+        assertNull(OnlineHistory.progressOf("Js", "ep-2"))
+    }
+
     @Test fun hostFreeKeepsPathQueryAndJson() {
         assertEquals("/a/b?x=1", OnlineHistory.hostFree("https://Host.example:8443/a/b?x=1"))
         assertEquals("{\"u\":\"\\/a\"}", OnlineHistory.hostFree("{\"u\":\"http:\\/\\/h.example\\/a\"}"))

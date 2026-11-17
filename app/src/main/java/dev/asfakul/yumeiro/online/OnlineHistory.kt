@@ -85,7 +85,12 @@ object OnlineHistory {
             // BUG-1 (D5): extension data often embeds the site's domain, which rotates. When the exact
             // string misses, the same api + the data without scheme/host still finds the spot.
             val loose = hostFree(data)
-            if (loose == data) null else hostIndex().get(progressKey(api, loose))
+            // N4-2: Aniyomi and JS ids are now kept as the source gave them ("/anime/1"); spots saved
+            // before under CloudStream's "https://site/anime/1" are found through the same host-free index.
+            // Plain ids ("ep-1", "rk:12") never borrow.
+            if (loose == data && !data.contains('/')) null
+            else hostIndex().get(progressKey(api, loose))
+                ?: if (loose == data && !loose.startsWith("/")) hostIndex().get(progressKey(api, "/$loose")) else null
         }
     }
 
@@ -102,7 +107,9 @@ object OnlineHistory {
 
     fun entry(api: String, url: String): Entry? = _entries.value.let { list ->
         list.firstOrNull { it.api == api && it.url == url }
-            ?: hostFree(url).takeIf { it != url }?.let { loose -> list.firstOrNull { it.api == api && hostFree(it.url) == loose } }
+            ?: hostFree(url).takeIf { it != url || url.contains('/') }?.let { loose ->
+                list.firstOrNull { it.api == api && hostFree(it.url).let { h -> h == loose || (loose == url && h == "/$loose") } }
+            }
     }
 
     /**

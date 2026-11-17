@@ -125,7 +125,8 @@ class PlexProvider(val server: HomeServers.Server, displayName: String) : MainAP
     override suspend fun search(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse {
-        val key = url.substringAfter("plex:")
+        // N4-2: unfix first; a server called "plex" ("http://plex:32400/plex:12") broke substringAfter.
+        val key = dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, url).substringAfter("plex:")
         if (key.startsWith("section/")) {
             val id = key.removePrefix("section/")
             val all = get("/library/sections/$id/all").arr("Metadata")
@@ -153,7 +154,8 @@ class PlexProvider(val server: HomeServers.Server, displayName: String) : MainAP
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val rk = data.removePrefix("rk:").ifBlank { return false }
+        // N4-2: episode data arrives as "$mainUrl/rk:12".
+        val rk = dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, data).removePrefix("rk:").ifBlank { return false }
         val m = get("/library/metadata/$rk").arr("Metadata").firstOrNull() ?: return false
         val part = m.arr("Media").firstOrNull()?.arr("Part")?.firstOrNull()
         part?.s("key")?.let { k -> callback(newExtractorLink(name, "Original", "${server.url}$k?X-Plex-Token=$token", ExtractorLinkType.VIDEO) { quality = 0 }) }

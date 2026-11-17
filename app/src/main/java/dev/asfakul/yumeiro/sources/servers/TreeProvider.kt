@@ -102,8 +102,10 @@ class TreeProvider(val tree: MediaTree, displayName: String) : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> = search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse {
-        val isDir = url.startsWith("d:")
-        val path = url.substring(2)
+        // N4-2: search/home hand back "$mainUrl/d:<path>" (CloudStream fixUrl), so nothing opened.
+        val id = dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, url)
+        val isDir = id.startsWith("d:")
+        val path = id.substring(2)
         val title = path.trimEnd('/').substringAfterLast('/').ifBlank { tree.server.name }.let { java.net.URLDecoder.decode(it, "UTF-8") }
         if (!isDir) return newMovieLoadResponse(title.substringBeforeLast('.'), url, TvType.Movie, path) {}
         val kids = tree.list(path)
@@ -121,6 +123,9 @@ class TreeProvider(val tree: MediaTree, displayName: String) : MainAPI() {
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+        // N4-2: SMB paths and DLNA ids arrive as "$mainUrl/<path>". WebDAV paths are absolute URLs under
+        // mainUrl already (fixUrl left them alone), so they are used as they are.
+        val data = if (tree is WebDavTree) data else dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, data)
         val (url, headers) = tree.stream(data)
         val type = if (url.contains(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
         callback(newExtractorLink(name, "Original", url, type) { this.headers = headers; quality = 0 })

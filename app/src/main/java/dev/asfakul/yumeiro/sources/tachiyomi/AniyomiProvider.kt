@@ -89,13 +89,14 @@ class AniyomiProvider(val source: AnimeCatalogueSource, displayName: String) : M
                 else -> null
             }
             addEpisodes(DubStatus.None, episodes.mapIndexed { i, ep ->
-                newEpisode(ep.url) {
+                // N4-2: fix = false. Aniyomi requests are baseUrl + episode.url; fixUrl() made it baseUrl + baseUrl + path.
+                newEpisode(ep.url, {
                     name = ep.name
                     episode = ep.episode_number.takeIf { it >= 0 }?.toInt() ?: (i + 1)
                     posterUrl = ep.preview_url
                     description = ep.summary
                     date = ep.date_upload.takeIf { it > 0 }
-                }
+                }, false)
             })
         }
     }
@@ -145,7 +146,8 @@ class AniyomiProvider(val source: AnimeCatalogueSource, displayName: String) : M
     }
 
     private fun AnimesPage.toResults(): List<SearchResponse> = animes.map { a ->
-        newAnimeSearchResponse(a.title, a.url, TvType.Anime) {
+        // N4-2: fix = false, the source wants its own relative url back (baseUrl + anime.url).
+        newAnimeSearchResponse(a.title, a.url, TvType.Anime, fix = false) {
             posterUrl = a.thumbnail_url
             posterHeaders = this@AniyomiProvider.posterHeaders
         }

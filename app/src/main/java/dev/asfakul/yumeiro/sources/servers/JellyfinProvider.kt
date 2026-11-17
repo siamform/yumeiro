@@ -151,7 +151,8 @@ class JellyfinProvider(val server: HomeServers.Server, displayName: String) : Ma
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean = with(JellyfinClient) {
-        val id = data.removePrefix("item:")
+        // N4-2: episode data arrives as "$mainUrl/item:<id>".
+        val id = dev.asfakul.yumeiro.sources.BridgeIds.unfix(mainUrl, data).removePrefix("item:")
         if (id.isBlank()) return false
         val o = get("/Users/$uid/Items/$id?Fields=MediaStreams,MediaSources").jsonObject
         val source = o.arr("MediaSources").firstOrNull()

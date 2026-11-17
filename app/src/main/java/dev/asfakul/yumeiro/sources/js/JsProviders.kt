@@ -101,7 +101,8 @@ class JsVideoProvider(private val entry: JsSources.Entry, displayName: String) :
     override suspend fun load(url: String): LoadResponse {
         val d = JsShapes.detail(engine.call("getDetail(${q(url)})"))
         val eps = d.chapters.reversed().mapIndexed { i, c ->
-            newEpisode(c.s("url").orEmpty()) { name = c.s("name"); episode = i + 1; date = c.s("dateUpload")?.toLongOrNull() }
+            // N4-2: fix = false, the script gets back exactly the url it gave.
+            newEpisode(c.s("url").orEmpty(), { name = c.s("name"); episode = i + 1; date = c.s("dateUpload")?.toLongOrNull() }, false)
         }
         val headers = engine.headers(mainUrl)
         return newAnimeLoadResponse(d.name ?: url, url, TvType.Anime) {
@@ -127,7 +128,7 @@ class JsVideoProvider(private val entry: JsSources.Entry, displayName: String) :
         return videos.isNotEmpty()
     }
 
-    private fun JsShapes.Item.toResult() = newAnimeSearchResponse(name, link, TvType.Anime) { posterUrl = image }
+    private fun JsShapes.Item.toResult() = newAnimeSearchResponse(name, link, TvType.Anime, fix = false) { posterUrl = image }
 }
 
 /** A Mangayomi manga JavaScript source as a [MangaProvider]. */
