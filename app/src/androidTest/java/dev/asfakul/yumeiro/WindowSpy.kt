@@ -26,7 +26,10 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 object WindowSpy {
     private const val TAG = "YuWindowSpy"
-    data class Added(val at: Long, val root: String, val title: String, val type: Int, val texts: List<String>, val foreign: List<String>)
+    data class Added(
+        val at: Long, val root: String, val title: String, val type: Int, val texts: List<String>, val foreign: List<String>,
+        val view: java.lang.ref.WeakReference<View> = java.lang.ref.WeakReference<View>(null),
+    )
 
     val added = CopyOnWriteArrayList<Added>()
     @Volatile private var logging = false
@@ -46,6 +49,23 @@ object WindowSpy {
         poller?.interrupt()
         poller = ua?.let { Thread({ pollWindows(it) }, "window-spy").apply { isDaemon = true; start() } }
         Log.i(TAG, "start hook=$installed")
+    }
+
+    /**
+     * EXT-T1: windows that can sit over the screen and take Back: still attached and not concealed
+     * by the ADR-014 pop-up blocker (a held window is hidden and made not focusable, by design).
+     * Call on the test thread; reads the view state on main.
+     */
+    fun liveUnheld(): List<Added> {
+        val out = mutableListOf<Added>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val held = dev.asfakul.yumeiro.online.ExtensionPopups.held.value.map { it.view }
+            added.forEach { a ->
+                val v = a.view.get()
+                if (v != null && v.isAttachedToWindow && held.none { it === v }) out += a
+            }
+        }
+        return out
     }
 
     fun stop() {
@@ -91,7 +111,7 @@ object WindowSpy {
                 val params = paramsField.get(global) as List<WindowManager.LayoutParams>
                 val p = params.getOrNull(views.indexOf(view))
                 val texts = texts(view)
-                added += Added(t, view.javaClass.name, p?.title?.toString().orEmpty(), p?.type ?: -1, texts, foreign)
+                added += Added(t, view.javaClass.name, p?.title?.toString().orEmpty(), p?.type ?: -1, texts, foreign, java.lang.ref.WeakReference(view))
                 Log.i(TAG, "ADDED title=${p?.title} type=${p?.type} flags=0x${Integer.toHexString(p?.flags ?: 0)} texts=${texts.take(10)} attached=${view.isAttachedToWindow}")
             }
         }, 600)

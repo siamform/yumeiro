@@ -283,8 +283,13 @@ class ExtensionsDeviceTest {
             waitFor("five feeds failed", 60_000) { seeded.get() >= 5 }
             Thread.sleep(3_000) // let the failures land (the original window came after the timeouts)
             val focused = FirstRun.focusedWindow()
-            val windows = WindowSpy.added.map { "${it.root} type=${it.type} texts=${it.texts.take(3)} foreign=${it.foreign.take(2)}" }
-            log("EXT_T1 seeded=${seeded.get()} before Back: focused=$focused added=$windows")
+            val windows = WindowSpy.liveUnheld().map { "${it.root} type=${it.type} texts=${it.texts.take(3)} foreign=${it.foreign.take(2)}" }
+            val all = WindowSpy.added.map { "${it.root} type=${it.type} texts=${it.texts.take(3)} foreign=${it.foreign.take(2)}" }
+            val held = dev.asfakul.yumeiro.online.ExtensionPopups.held.value.map { "${it.extName}: ${it.title}" }
+            // 44185209665 (20/20): the only added window was the phisher98 donation dialog that the
+            // ADR-014 blocker conceals (held, not focusable, not visible). The bug is a window that
+            // can take Back, so a held window is logged, not counted.
+            log("EXT_T1 seeded=${seeded.get()} before Back: focused=$focused live=$windows held=$held added=$all")
             FirstRun.shot("ext_t1_seeded_before_back")
             back(); waitGone("source_health_run")
             assertTrue("focused window is MainActivity: $focused", "MainActivity" in focused)
