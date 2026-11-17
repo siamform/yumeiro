@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 10:15 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 12:40 UTC, seventh handover; orders: master resume handover 7)
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
@@ -98,14 +98,21 @@
   `AdultSearchFilterDeviceTest` restored StrictMode in the same main message (AOSP StrictMode reads the listener
   after the message); helper fixed 6b2bca6 on head and the scratch branch. The other six StrictMode tests checked:
   they restore in a separate message after idle (sound).
+- **Done since (seventh handover, 9):** **N7-1** fixed ac13d92 (inbox saves were on the main thread and
+  could run at the same time; now one lock and a background writer) + `InboxMainThreadDeviceTest`, fail-before
+  `scratch/n7-fail-before`. **N8-1** fixed 5be755e (links did nothing with no browser, common on TV; now a message)
+  + unit `LinksOpenTest`. N9 read: no finding. GROUP-13 N2/N7/N8/N9 sections and INVENTORY rows written.
+  One unit fail-before branch `scratch/unit-fail-before` (old N4/N5 stores, old SiteLogins, old Links; seams only).
 - **Runs in progress:** 44059862262 (head dd2a86e, api33-lowram: DownloadsScreen, UniversalAdd, AdultSearchFilter [old
   helper, its disk count is void], MiniPlayer, AppLock, UpdateMainThread); 44060561160 (`scratch/st22-fail-before`
   fixed helper, expect FAIL).
 - **Next three actions:**
   1. Read both runs (DLSCREEN_, ADD_, E12_, MINI_, LOCK_, UPD_). Then ci.yml on head (unit: SourceStoresSafetyTest,
-     SiteAccessTest, BrowserCheckTest, DataCacheBoundsTest) and on `scratch/n45-fail-before` (expect FAIL).
-  2. Device: head AdultSearchFilter + SiteSignOut; fail-before n2, n6 (api33 + api28 minsdk), n3; api36 all new tests.
-  3. Continue GROUP-13: N7 inbox, N8, N9, N1 local parts; music M2/M9; then full suite on both phones.
+     SiteAccessTest, LinksOpenTest, BrowserCheckTest, DataCacheBoundsTest) and on `scratch/unit-fail-before`
+     (expect SourceStoresSafetyTest, SiteAccessTest#signOut…, LinksOpenTest to FAIL).
+  2. Device: head AdultSearchFilter + SiteSignOut + InboxMainThread; fail-before n2, n7, n6 (api33 + api28 minsdk),
+     n3; head AppLock on api28; api36 all new tests.
+  3. Continue GROUP-13: N1 local parts; music M2/M9, M1/M6/M8; then full suite on both phones.
 - **Waiting on the owner:** X3-TL, X13-6 and TV-4 cross-source search.
 
 Branch `r15-stability`. "Device" means an instrumented test on both CI emulators: a low-RAM
