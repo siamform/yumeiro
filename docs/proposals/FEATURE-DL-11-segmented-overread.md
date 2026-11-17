@@ -142,3 +142,18 @@ them apart on the device.
   two requests; the existing 1-connection fallback on refusal still applies).
 - **Tests:** unit `Dl11PaceTest#rangeClientIsHttp1Only` (config, unit only, says so); device
   `DownloadThroughputDeviceTest` a (default = F), f (h2 control), d (BUG-3). Pass-after run on the fix commit.
+
+### 8.1 Pass-after on the fix (7a85df6), device 44121429260 (a = F default, f = h2 control, d; repeat 3)
+
+| Phone | F (HTTP/1.1) received / file | F MB/s | F restarts | h2 control received / file | d |
+|---|---|---|---|---|---|
+| api33-lowram | 1.1004 / 1.042 / 1.057 (median 1.057) | 12.42 / 18.36 / 18.99 | 7 / 0 / 3 | 1.128 / 1.055 / 1.047 | PASS 3/3 (3.2–3.8 s) |
+| api36 | 1.064 / 1.030 / 1.042 (median 1.042) | 14.99 / 20.92 / 27.73 | 3 / 0 / 0 | 1.142 / 1.070 / 1.055 | PASS 3/3 (5.0–5.1 s) |
+
+- Both runs together (12 downloads each way): F median 1.042×, max 1.1004×; h2 median 1.097×, max 1.154×.
+- Budget: medians met on both phones (1.057, 1.042 ≤ 1.06). Per-download limit: 11 of 12 F downloads ≤ 1.10;
+  one api33 download is 1.1004× (148,257,373 of 134,728,520 bytes; 7 restarts, 6 counted helped). This is over
+  the 1.10 limit by 0.04 %, so the budget is **not claimed met**. The remaining waste is restarts the gate saw
+  help (new request ≥ 1.5× faster), which BUG-3 needs on capped hosts.
+- Status: DL-11 part 2 stays **in progress** (big gain proven: worst 1.44× → 1.10×, median 1.13 → 1.04×).
+  Next measurement goes with the next download change (case d is re-run with every download change anyway).

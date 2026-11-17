@@ -609,6 +609,8 @@ flowchart LR
   one TCP connection per segment. Device 44118957078 (same run): h2 median 1.113/1.086×, HTTP/1.1 median
   1.040/1.030× (max 1.065×) and faster (median 20.18/29.09 against 14.82/15.18 MB/s); case d 6/6. Decision: D + E + F.
   Note §8.
+  Pass-after 44121429260 (7a85df6): medians 1.057/1.042×; one download 1.1004× (over 1.10 by 0.04 %), so the
+  budget is not claimed met; status accepted, evidence nearly met.
 
 ## 11. Risks
 
