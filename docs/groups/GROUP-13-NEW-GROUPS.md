@@ -267,3 +267,6 @@ quality, not stability; no change without a decision).
 M8 (`online/download/SongDownloads.kt`, `YouTubeDownloadSheet`, `OnlineDownloads.enqueueYouTube`): one request at a
 time, device songs return null, the sheet's state is keyed by the song id, the list load is `@Synchronized`, saves
 from main go to the downloads thread (G8 D8). No finding.
+
+**N6-2 update 2026-11-17 (eighth cycle):** reproduced on an API 29 emulator. With only the N6-4 guard reverted
+`AppLockDeviceTest` b fails (gate stays after the PIN, 44114305239); head passes 2/2 (44112738603). Verified (emulator).
