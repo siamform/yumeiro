@@ -1,6 +1,12 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17 11:40 UTC, seventh handover; orders: master resume handover 7)
+## Resume here (updated 2026-11-17 seventh handover, 17)
+
+- **Current group:** final sweep (after G8, G11, G9–G11 leftovers, the G1–4 re-audit). Milestone suite 24/24 on both phones (emulator): api36 44079680572+44091851873, api33-lowram 44079680572+44089151495.
+- **Exact step:** reading the H8 restore bench run **44094439021** (head 912093b). Report: docs/reports/2026-11-17-seventh-handover-report.md.
+- **Next three actions:** (1) record the 44094439021 result in INVENTORY H8, GROUP-1 and the ledger; (2) read X11/X12 unit XML by name in a head CI run before upgrading them from "CI pending"; (3) wait for the owner: OMT-1…19, BUG-3 on a phone, approval of the gated Part 8 features.
+
+### Previous resume note
 
 - **Orders in force:** the seventh master resume handover. Order: finish G8 → Group 11 → G9–G11 leftovers →
   re-audit G1–4 → final sweep → gated feature phase. No PR/merge/release without the owner.
