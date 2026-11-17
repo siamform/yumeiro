@@ -41,6 +41,7 @@ class DownloadResumeDeviceTest {
     private fun seg(i: Int) = ByteArray(4096) { (i * 7 + it % 13).toByte() }
     private val blob = ByteArray(300_000) { (it % 251).toByte() }
     @Volatile private var hold: CountDownLatch? = null
+    @Volatile private var reached: CountDownLatch? = null
     @Volatile private var blockAt = -1
     @Volatile private var blobDown = false
     private val blob2 = ByteArray(200_000) { (it % 241 + 3).toByte() }
@@ -63,7 +64,7 @@ class DownloadResumeDeviceTest {
                     ).build()
                     path.contains("/s") && path.endsWith(".ts") -> {
                         val i = path.substringAfterLast("/s").removeSuffix(".ts").toInt()
-                        if (i == blockAt) hold?.await(30, TimeUnit.SECONDS)
+                        if (i == blockAt) { reached?.countDown(); hold?.await(30, TimeUnit.SECONDS) }
                         MockResponse.Builder().body(Buffer().write(seg(i))).build()
                     }
                     path.endsWith("/blob.mp4") -> {
@@ -124,12 +125,15 @@ class DownloadResumeDeviceTest {
 
     @Test fun a_pausedHlsDownloadResumesWithoutRepeatedSegments() = runBlocking<Unit> {
         val title = "YuDlTest HLS ${System.currentTimeMillis()}"
-        hold = CountDownLatch(1); blockAt = 8
+        hold = CountDownLatch(1); reached = CountDownLatch(1); blockAt = 8
         val err = OnlineDownloads.enqueue(ctx, title, "yu-test", "t-hls-$title", "E1", null, emptyMap(), link(server.url("/v.m3u8").toString(), true))
         assertEquals(null, err)
         val id = OnlineDownloads.items.value.first { it.title == title }.id
         // Wait until segments 0–7 are written (segment 8 is held), then pause like the user does.
-        waitFor(id, 60_000, "a running") { it.status == Status.RUNNING && it.bytes >= 8L * 4096 }
+        // The request for segment 8 is the signal: the list only gets a progress tick every 250 ms
+        // (ProgressGate, 24ee21b), so it may still show 7 segments (device 44033132233: 28672 bytes).
+        check(reached!!.await(60, TimeUnit.SECONDS)) { "segment 8 never asked for" }
+        waitFor(id, 10_000, "a running") { it.status == Status.RUNNING }
         OnlineDownloads.pause(ctx, id)
         hold?.countDown()
         delay(1500)
