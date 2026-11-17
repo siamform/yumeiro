@@ -1,11 +1,11 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-17, eighth cycle, 4)
+## Resume here (updated 2026-11-18, eighth cycle, 5)
 
 - **Orders:** eighth-cycle master continuation prompt. Order: 4.1 (DL-11 p2 → X2-1 → N6-2 → ST-17 → BUG-4 → BUG-1 → BUG-2 → BUG-3 emulator) → 4.2 owner file → 4.3 NBUG register → 4.4 proposals only.
-- **Current group:** 4.1. Verified (emulator) this cycle: N6-2, BUG-1 follow-through, BUG-2 follow-through, BUG-4 (phones + TV), TV-3/NBUG-2b. DL-11 p2: option F (HTTP/1.1 ranges, 7a85df6) medians met, one download 1.1004× so not claimed. 4.2 owner file done (OMT-20…25).
-- **Runs in progress:** 44128769774 (X2-1 bench=profile at 864cb16).
-- **Next three actions:** (1) download the profile artifact, commit app/src/main/baseline-prof.txt, CI; (2) bench=jank then bench=startup, compare with 44013773673 / 44002112195, no gain claimed without numbers; (3) ST-17 campaign (StabilityStressDeviceTest repeat ≤10) and EXT-T1 api33-lowram runs (≥20 in campaigns of ≤10).
+- **Current group:** 4.1 tail. Verified (emulator): N6-2, BUG-1, BUG-2, BUG-4 (phones + TV), TV-3. DL-11 p2 option F: medians met, one download 1.1004× (not claimed). X2-1 emulator part done (743b1c7; jank no gain; startup 0.62/0.71). 4.2 done, 4.3 done or Blocked: owner.
+- **Runs in progress:** 44145301927 (ST-17 campaign ×10 both phones, a7b03a0).
+- **Next three actions:** (1) read the ST-17 campaign (spins, FATAL, ANR, stalls) and record it; (2) EXT-T1: ExtensionsDeviceTest repeat 10 on api33-lowram, twice (≥20); (3) 4.4 gate check (Group 13, final sweep) and proposals F-01…F-12 only.
 - Index: docs/CHECKLIST-FEATURES-BUGS.md. Report: docs/reports/2026-11-17-eighth-handover-report.md.
 
 ### Previous resume note

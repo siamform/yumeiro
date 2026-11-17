@@ -6,8 +6,9 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 - Head at start: 2cbb2ae (docs only after 912093b). No run after 44094439021 at start (checked 2026-11-17).
 - Current group: 4.1. Done for agent scope: N6-2, BUG-1, BUG-2, BUG-4, TV-3. DL-11 p2 nearly met (option F).
-  Next: X2-1 profile → jank → startup; ST-17 campaign; EXT-T1 runs; 4.3 register; 4.4 proposals.
-- Open runs: 44128769774 (X2-1 bench=profile, head 864cb16).
+  X2-1 emulator part done (profile 743b1c7, jank no gain, startup measured). 4.3 register done or Blocked: owner.
+  Next: ST-17 campaign; EXT-T1 runs (≥20 on api33-lowram); then the 4.4 gate check and proposals.
+- Open runs: 44145301927 (ST-17 campaign, StabilityStressDeviceTest ×10 both phones, head a7b03a0).
 
 ## Findings (eighth cycle)
 
@@ -19,6 +20,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | TV-3 | Right at a Home Spaces row end jumped to the YouTube Music card | 45a15ea spacesRowFocus() | 44116803828 → 44118950490 (tv-api34), 44121151867 (tv-api24) | verified (emulator) |
 | BUG-1 | follow-through: Jump In, YumeMix banner, Continue Watching after a kill | fixes 42f1a1b, 97c99df | 44116513171 BUG1Y_RESULT PASS both phones; Trakt/Simkl carry no resume | verified (emulator) |
 | BUG-2 | follow-through: channel list, scroll, video, back | E1–E6 | 44116513171 CHANNEL_UI_RESULT PASS both phones | verified (emulator) |
+| X2-1 | Profile journey's am kill dropped the process that had run Home (Home rules 684 → 99) | 52155bf restore first, browse after; profile 743b1c7 | 44128769774 → 44133217014 (rules); jank 44138627579 no gain; startup 44142300486 0.62/0.71 | emulator; no gain claimed |
 | BUG-4 | applied track per resolution on TV | — | 44116803828 tv-api34 QUALITY_RESULT PASS 1080…184 | verified (emulator); OMT-15 owner |
 
 ## Test faults
@@ -42,6 +44,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44118957078 | DL a (h2) vs f (HTTP/1.1) vs d ×3 both phones | h2 1.08–1.15×, HTTP/1.1 1.03–1.07×; d 6/6 (emulator) |
 | 44121429260 | DL a (F) vs f (h2 control) vs d ×3 both phones, 7a85df6 | F medians 1.057/1.042, max 1.1004; d 6/6 (emulator) |
 | 44123412795 | CI caaf148 | green incl. gitleaks (unit) |
+| 44128769774 | bench=profile 864cb16 | profile lost Home rules; not committed (finding X2-1) |
+| 44133217014 | bench=profile 52155bf | 47,941 rules, committed 743b1c7 |
+| 44138627579 | bench=jank 743b1c7 | no gain (software rendering) |
+| 44142300486 | bench=startup 743b1c7 | TTID ratio 0.62 api36, 0.71 lowram |
 
 ## Still open
 
