@@ -177,6 +177,10 @@ video/index.m3u8
         // The window between DownloadWorker's failed() and its Result.failure(): the item says FAILED,
         // the unique work is still RUNNING. A test worker holds that state for 4 s.
         val wm = WorkManager.getInstance(ctx)
+        // The first run must be over in WorkManager too, or KEEP drops the hold worker itself (the G8-8
+        // window: api33-lowram 44302259076 enqueued it 0.2 s before WorkManager recorded FAILURE).
+        val doneUntil = System.currentTimeMillis() + 15_000
+        while (!wm.getWorkInfosForUniqueWork("dl_$id").get().all { it.state.isFinished } && System.currentTimeMillis() < doneUntil) delay(50)
         val hold = OneTimeWorkRequestBuilder<G8HoldWorker>().build()
         wm.enqueueUniqueWork("dl_$id", ExistingWorkPolicy.KEEP, hold).result.get()
         val runUntil = System.currentTimeMillis() + 15_000
