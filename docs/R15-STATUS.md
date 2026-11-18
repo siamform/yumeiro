@@ -1,20 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 15:40 UTC, v1.8.2 cycle, G8 reopened on Android 7 TV + G9 step 9)
+## Resume here (updated 2026-11-18 16:55 UTC, v1.8.2 cycle, G8 reopen regression + G9 TV regression)
 
 - **Orders:** master prompt + owner handover prompt of 2026-11-18 + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2
-  (owner approval) → stability-v2. Full G8 evidence list: the superseded notes below and GROUP-8 (close docs pending).
-- **G8 reopened:** TV batch 2 tv-api24 44314925557 (34d99b8): StorageMainThread, Torrent, YtDownloadPipeline,
-  DownloadThroughput PASS; ExternalDownloader 0 tests (`@SdkSuppress(26)`); ForceDownload 2/3 FAIL = new findings
-  **G8-9** (Android 7 MPEG4Writer rejects B-frames) and **G8-10** (Android 7 MediaExtractor can't open joined DASH
-  fMP4); StreamWatchDownload 7a FAIL on TV = phone-only watch page (VideoPlayerModal.kt:1582) → owner decision, class
-  left out of TV batches. The run hit the 110-min limit → split TV batch 2 (DownloadThroughput alone).
-  Register + ADR-022 30ad033; fixes c239a83 G8-9 (media3-muxer), 2fc2113 G8-10 (media3-inspector), Media3 only
-  below API 28. Branch ab/g8-close deleted. CI 44336335642 (2fc2113) running.
-- **G9 regression:** phones batch 1 44323642049 PASS; batch 2 44328532155 PASS (both phones; 1 skip: Yumix
-  seeAllKeepsPaging on api33, live row had one page). TV batch 1 tv-api24 44335814445, tv-api34 44335820792 running.
-- **Next three actions:** (1) after CI, tv-api24 ForceDownload pass-after, then G8 regression again on 2fc2113
-  (phones A/B, TV 1, TV 2a, TV 2b throughput, both TVs); (2) TV G9 batch 2, then G9 close docs; (3) G8 close docs.
+  (owner approval) → stability-v2. Full G8 evidence: superseded notes below and GROUP-8 (close docs pending).
+- **G8 reopen (G8-9, G8-10, ADR-022):** register 30ad033; fixes c239a83 (media3-muxer), 2fc2113 (media3-inspector),
+  Media3 only below API 28. CI 44336335642: 1194 unit, 0 failed, 11 skipped. Pass-after tv-api24 ForceDownload
+  44339775707 OK (3 tests). Regression on the fix: phones A 44342030478 and B 44346504202 all PASS, no skips
+  (rxOverSize 1.099/1.030). TV T1, T2a, T2b (throughput alone) on both TVs: next.
+- **G9 TV regression:** first try 44335814445/44335820792 = my dispatch fault (no package in class names, nothing
+  ran). tv-api34 batch 1 44339783655: 6 PASS; SettingsWalk, Bug1YumixRestore, Extensions = phone-only navigation in
+  the tests → test fixes c4d08b1 + next commit; reruns 44343884669 (SettingsWalk, Extensions PASS) and 44347442782
+  (Bug1YumixRestore PASS). PinnedExtensions FAIL on TV = real UI issue: the "Show videos from" sheet opens
+  half-height on TV, rows below the first are off-screen (screenshot in 44339783655) → queue row (Yumix/G4,
+  possible cause of NBUG-10). Phones batch 1 44323642049, batch 2 44328532155 PASS.
+- **Next three actions:** (1) TV G8 T1/T2a/T2b + TV G9 tv-api24 batch 1, both TVs batch 2 (≤ 2 at once, one per TV
+  API: same-API runs share a concurrency group); (2) G8 close docs; (3) G9 close docs.
 - **UNVERIFIED-QUEUE.md:** 70 rows (G8/G9 additions pending with the close docs).
 
 ### Previous resume note — superseded (14:40 UTC, G8 step 9 regression + G9 step 5)
