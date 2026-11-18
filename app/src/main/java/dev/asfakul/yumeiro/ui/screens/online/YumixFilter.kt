@@ -40,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -86,8 +87,11 @@ internal fun SourceFilterSheet(
     onTogglePin: ((String) -> Unit)? = null,
 ) {
     val p = LocalMtPalette.current
+    // G9-8 (YF-TV-1): on TV the half-height sheet left every row below the second one off-screen,
+    // and a remote cannot drag a sheet up. TV opens it fully; the list scrolls inside it.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = dev.asfakul.yumeiro.Edition.isTv)
     ModalBottomSheet(
-        onDismissRequest = onDismiss, containerColor = p.surface,
+        onDismissRequest = onDismiss, containerColor = p.surface, sheetState = sheetState,
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
         dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() },
     ) {
