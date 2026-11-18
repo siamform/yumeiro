@@ -6,12 +6,17 @@
   (batch CI by group, docs/DEVELOPMENT.md). Order: G6-QP → G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
 - **G6:** closed. G6-QP Verified (CI unit + emulator, both phones): 44266530216 → 44266534566, CI 44268336205,
   regression 44272600174 (7 classes PASS both phones). Report docs/reports/2026-11-18-v1.8.2-cycle-report.md.
-- **Current group / step:** G8 Downloads, §13a step 4 (fail-before). Doc + ADR-020 bb09ea7; all tests 0d3e53d.
-  Findings G8-1…G8-7 + DL-11 part 2 in docs/groups/GROUP-8-DOWNLOADS.md "v1.8.2 full audit".
-- **Runs in progress:** on temp branch ab/g8-before (= 0d3e53d, old code + tests): CI 44275576843 (unit
-  fail-before), device 44275580304 (DownloadG8DeviceTest, both phones).
-- **Next three actions:** (1) read both runs: every new test red on the old code (a green one goes to the queue
-  with its reason); (2) fix commits, one per finding, in test order; (3) one pass-after CI + device run.
+- **Current group / step:** G8 Downloads, §13a step 6 (pass-after). Doc + ADR-020 bb09ea7; tests 0d3e53d.
+- **Fail-before done (old code + tests, temp branch ab/g8-before = 0d3e53d, now deleted):** CI 44275576843: 1192
+  tests, 8 failures = exactly the 8 new unit tests (G8DownloadsBatchTest ×7, DownloadThroughputTest
+  #aSingleStallIsRiddenOutNotRestarted), 1184 others green. Device 44275580304: G8D_RESULT a/b/c FAIL on api33-lowram
+  and api36. Nothing went to the queue (no test passed on old code).
+- **Fix commits (one per finding, test order):** ab27bc1 G8-1, 34d6560 G8-2, 43c1c11 G8-3, dcfd9c0 G8-4, 3185faf G8-5,
+  b099802 G8-6, e8f450c G8-7, 1b45fc2 DL-11 part 2.
+- **Runs in progress:** see the next commit (pass-after CI + DownloadG8DeviceTest on r15-stability).
+- **Next three actions:** (1) read pass-after CI + device; a red item is isolated and only its commit corrected;
+  (2) DownloadThroughputDeviceTest a + d, repeat=3, both phones (real-host budget); (3) group regression campaign
+  (≤10 classes per run) on the close commit, then the close docs in one push.
 - **UNVERIFIED-QUEUE.md:** 70 rows.
 
 ### Previous resume note — superseded (v1.8.2 cycle, G6-QP close)
