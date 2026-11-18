@@ -129,7 +129,7 @@ class ContinueWidget : AppWidgetProvider() {
             runCatching {
                 val req = ImageRequest.Builder(context).data(url).size(192, 288).allowHardware(false)
                     .apply { headers.forEach { (k, v) -> addHeader(k, v) } }.build()
-                ((ImageLoader(context).execute(req) as? SuccessResult)?.drawable as? BitmapDrawable)?.bitmap
+                ((ImageLoader.Builder(context).okHttpClient { dev.asfakul.yumeiro.ui.image.ImageHttp.client(context) }.build().execute(req) as? SuccessResult)?.drawable as? BitmapDrawable)?.bitmap
             }.getOrNull()
         }
 

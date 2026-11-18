@@ -100,7 +100,8 @@ class MTApplication : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
         // R15: posters share the app's HTTP client (same DNS, pool and request cap) instead of Coil
         // building its own; at most a few bitmaps decode at once (each decode is a memory spike).
-        .okHttpClient { dev.asfakul.yumeiro.network.NetworkClient.get(this) }
+        // NBUG-14 (NB14-2): the same client with a named User-Agent (Wikimedia refuses okhttp's).
+        .okHttpClient { dev.asfakul.yumeiro.ui.image.ImageHttp.client(this) }
         .fetcherDispatcher(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(if (DeviceClass.lowEnd) 4 else 8))
         .decoderDispatcher(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(if (DeviceClass.lowEnd) 2 else 3))
         .components {
