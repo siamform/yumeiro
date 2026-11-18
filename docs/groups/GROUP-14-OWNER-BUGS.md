@@ -133,6 +133,7 @@ source refused playback, even from the site's own page."
 | NB12-1 | A title whose data is a direct media URL never reaches the site-page fallback | `pageFor` took the episode data as "the page" even when it was the refused stream file | High (every "direct file" source with expiring or moved links; the owner's case) | Open |
 | NB12-3 | Even on the title page, Yumeiro cannot find a KVS (kt_player) stream | (a) KVS links end in `.mp4/` (trailing slash), so the page extractor's and the sniffer's extension tests miss them; (b) the links sit in the `flashvars` script object, not in `<video>`; (c) many KVS sites scramble them (`function/0/…`, de-scrambled with the page's `license_code`), which Yumeiro does not support. Live check: headless WebView capture of the real title page found no stream on either phone (diagnostic 44389256785, throwaway branch, deleted) (likely reason, not verified: kt_player requests the file only after a tap on its play button). | High (KVS is a common adult-site engine) | Open |
 | NB12-4 | After "fresh loadLinks" returns the same refused link, the player never retries and the title sits on the error forever (the last resort is never reached) | `playCurrent` builds the same video id for the same link, so `IncomingMedia.open` publishes an equal `VideoItem`; `_pending` is a StateFlow and drops equal values, so no player reload, no second `onFatalError`, no `failover`. Found in fail-before 44394971017 (api36): phase PLAYING with the 403 for 240 s, the page never requested | High (every source whose links do not change on refresh) | Open |
+| NB12-5 | After one episode needed the refresh and the page step, the next episode skips both and stays on the player error | `playEpisode` copies the state and keeps `refreshed` and `captured` from the previous episode (code read while fixing NB12-4) | Medium (series from sources with refused links) | Open |
 | NB12-2 | The extension's link is dead (site moved to `v-acctoken` links) | Third-party extension out of date | — (not ours) | Report to the extension author (owner, OMT) |
 | NB13-1 | Adult hosts need a VPN on the owner's network | Bangladesh blocks adult sites at the gateway (BTRC; DNS tampering, IP blocking or gateway filtering, [OONI 2025](https://ooni.org/post/2025-bangladesh-report/); 22,000+ adult and gambling sites through the CTDR system, [bdnews24](https://bangla.bdnews24.com/tech/article1936753.bdnews)) | — | See below |
 
@@ -166,6 +167,6 @@ unchanged). No new dependency; the KVS code is a port of yt-dlp's (Unlicense, co
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB12-1, NB12-3, NB12-4 | pending (`Nbug12RefusedMediaPageDeviceTest`: local KVS site; the extension's link 403) | pending | emulator (local server), CI unit (`CapturePageTest`, `KvsPlayerTest`) |
+| NB12-1, NB12-3, NB12-4, NB12-5 | pending (`Nbug12RefusedMediaPageDeviceTest`: local KVS site; the extension's link 403) | pending | emulator (local server), CI unit (`CapturePageTest`, `KvsPlayerTest`) |
 | NB12-2 | — | — | OMT-32 (owner retest; tell the extension author) |
 | NB13-1 | owner network only | — | OMT-33 (decision + retest) |

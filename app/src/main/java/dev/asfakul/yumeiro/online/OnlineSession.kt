@@ -439,7 +439,9 @@ object OnlineSession {
     fun playEpisode(context: Context, index: Int) {
         val s = _state.value ?: return
         if (index !in s.episodes.indices) return
-        _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet(), visible = PAGE)
+        _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet(), visible = PAGE,
+            // NBUG-12 NB12-5: each episode gets its own refresh and page step.
+            refreshed = false, captured = false)
         resolve(context.applicationContext, null)
     }
 
