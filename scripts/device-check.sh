@@ -180,6 +180,30 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     timeout 400 adb shell am instrument -w -r -e class "$C#c_audioAllowed" -e phase c $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-c.txt" 2>&1; RC=$?
     adb shell rm -rf /sdcard/Music/YuAccess
     if grep -q '^OK (' "inst-$C-a.txt" && grep -q '^OK (' "inst-$C-b.txt"; then cp "inst-$C-c.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" "inst-$C-c.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
+  elif [ "$C" = "dev.asfakul.yumeiro.RestoreAfterClearDeviceTest" ]; then
+    # G9 (NBUG-7): pm clear; phase a installs CloudStream extensions and a JS source from a local
+    # repo and makes a default backup (no extension files) in files/; the script copies it out, runs
+    # the real "Clear all data" (pm clear) and puts the backup back; phase b stages the restore and
+    # kills its own process ("Process crashed" by design); phase c, a new process, expects every
+    # source back without restarting the app.
+    P=dev.asfakul.yumeiro.debug
+    adb shell pm clear $P > /dev/null 2>&1
+    for PERM in READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    timeout 400 adb shell am instrument -w -r -e class "$C#a_installThenBackUp" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    adb shell am force-stop $P
+    adb exec-out run-as $P cat files/nbug7.zip > nbug7.zip 2>/dev/null
+    echo "YuRestoreClearScript backup copied out: $(wc -c < nbug7.zip) bytes"
+    adb shell pm clear $P 2>&1 | sed 's/^/YuRestoreClearScript pm clear: /'
+    for PERM in READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    adb push nbug7.zip /data/local/tmp/nbug7.zip > /dev/null 2>&1
+    adb shell "run-as $P mkdir -p files; cat /data/local/tmp/nbug7.zip | run-as $P sh -c 'cat > files/nbug7.zip'"
+    echo "YuRestoreClearScript backup put back: $(adb shell run-as $P ls -l files/nbug7.zip 2>&1 | tr -d '\r')"
+    adb shell rm -f /data/local/tmp/nbug7.zip
+    timeout 300 adb shell am instrument -w -r -e class "$C#b_stageRestoreThenDie" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1
+    sleep 2
+    echo "YuRestoreClearScript after phase b: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-b.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt"), in b: $(grep -c 'FAILURES' "inst-$C-b.txt")"
+    timeout 600 adb shell am instrument -w -r -e class "$C#c_everySourceComesBack" -e phase c $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-c.txt" 2>&1; RC=$?
+    if grep -q '^OK (' "inst-$C-a.txt" && ! grep -q 'FAILURES' "inst-$C-b.txt"; then cp "inst-$C-c.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" "inst-$C-c.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.CrashUiDeviceTest" ]; then
     # G12 X6: phase a really crashes the app (its own result is "Process crashed" by design).
     P=dev.asfakul.yumeiro.debug
