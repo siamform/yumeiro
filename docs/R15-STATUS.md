@@ -1,15 +1,15 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, G9 TV regression)
+## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, G9 close)
 
 - **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method:
   research, side effects, ADR, tests, fixes) → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
 - **G8:** regression done except T2b tv-api34; close docs pending (script /tmp/g8close.py).
-- **G9:** G9-8 (YF-TV-1) register 3434e8e, fix 172a9da, CI 44363567063 (1194/0/11). Pass-after tv24 44363587262 PASS;
-  tv34 44368888674 running. Test-only TV fixes: c4d08b1, cb271d3, f0de19a (`FirstRun.clickCard`). tv34 b2:
-  44358110397 7/10 + 44365849314 Choice/Player/PlayerExtras PASS (c1 skip: no PiP on TV). tv24 b1 44359805223 9/10
-  (Pinned = G9-8); tv24 b2 44368883691 running. Then phones rerun of the changed test classes, then close.
-- **Next three actions:** (1) read 44368883691 / 44368888674; (2) G8 T2b tv34 + phones rerun; (3) G8 + G9 close docs.
+- **G9:** G9-8 Verified both TVs (172a9da; 44363587262, 44370948987). G9-9 (backdrop below API 28): register 2ff1393,
+  tests 945462d + 0313cb6 (API 34 BitmapFactory path; first version at sdk 27 was invalid, CI 44371647326), fix
+  b813450; tv24 pass-after 44372785542 PASS. Running: unit fail-before 44376215076 (ab/g99-before), pass-after CI
+  44376277545, phones rerun 44376358282 (10 classes), tv34 44376363738 (Backdrop, Notify, Pinned).
+- **Next three actions:** (1) read the four runs; (2) G8 T2b tv34 + tv24 Pinned; (3) G8 + G9 close docs.
 
 ### Previous resume note — superseded (14:40 UTC, G8 step 9 regression + G9 step 5)
 
