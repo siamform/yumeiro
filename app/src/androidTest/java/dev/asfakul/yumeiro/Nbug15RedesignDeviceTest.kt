@@ -69,7 +69,7 @@ class Nbug15RedesignDeviceTest {
 
     private fun log(s: String) = Log.i("YuNb15R", s)
     private fun has(tag: String) = compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
-    private fun hasText(t: String) = compose.onAllNodesWithText(t, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    private fun shown(t: String) = compose.onAllNodesWithText(t, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
     private fun inside(tag: String, text: String, substring: Boolean = true) =
         compose.onAllNodes(hasText(text, substring = substring) and hasAnyAncestor(hasTestTag(tag)), true).fetchSemanticsNodes().isNotEmpty()
     private fun tagInside(parent: String, tag: String) =
@@ -131,12 +131,12 @@ class Nbug15RedesignDeviceTest {
         click("live_filter_pin_$idB")
         wait("a pinned playlist goes first") { has("live_filter_$idA") && top("live_filter_$idB") < top("live_filter_$idA") }
         click("live_filter_$idA")
-        wait("picking A shows A's channels") { !has("live_filter_sheet") && hasText("YuF$run News 0") }
-        val onlyA = !hasText("YuF$run BNews") && !hasText("YuF$run Other")
+        wait("picking A shows A's channels") { !has("live_filter_sheet") && shown("YuF$run News 0") }
+        val onlyA = !shown("YuF$run BNews") && !shown("YuF$run Other")
         val chip = has("live_pinned_$idB")
         FirstRun.shot("nb15r_a_filtered")
         click("live_pinned_$idB")
-        wait("the pinned chip shows B's channels") { hasText("YuF$run BNews 0") && !hasText("YuF$run Sports 0") }
+        wait("the pinned chip shows B's channels") { shown("YuF$run BNews 0") && !shown("YuF$run Sports 0") }
         // Unpin again so the next test starts clean.
         click("live_filter_button")
         wait("filter sheet again") { has("live_filter_pin_$idB") }
@@ -163,7 +163,7 @@ class Nbug15RedesignDeviceTest {
         list.performScrollToIndex(0); compose.waitForIdle()
         val second = headerState()
         list.performScrollToNode(hasText("YuF$run Other 19")); compose.waitForIdle()
-        val dup = hasText("YuF$run Dup")
+        val dup = shown("YuF$run Dup")
         list.performScrollToIndex(0); compose.waitForIdle()
         val third = headerState()
         log("NB15R_RESULT b newsCount40=$newsCount view=$view names=$names chips=$chips paging=[$first | $second | $third] dup=$dup")
