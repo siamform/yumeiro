@@ -12,6 +12,9 @@ import android.media.MediaMuxer
 import android.os.Build
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.FileDataSource
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.inspector.MediaExtractorCompat
 import androidx.media3.muxer.MediaMuxerCompat
 import java.io.File
 import java.io.IOException
@@ -22,9 +25,10 @@ import java.nio.ByteBuffer
  * and lossless). Samples are interleaved by timestamp.
  *
  * ADR-022: on Android 9+ (all phones, newer TVs) this uses the platform MediaExtractor and
- * MediaMuxer. Below Android 9 (TV builds on Android 7–8.1) MP4 output uses Media3's own MP4
+ * MediaMuxer. Below Android 9 (TV builds on Android 7–8.1) MP4 output uses Media3's own reader and
  * writer instead: the old platform MPEG4Writer rejects B-frame video ("do not support out of order
- * frames", G8-9). WebM output always uses the platform muxer.
+ * frames", G8-9) and the old platform MediaExtractor can't open a joined DASH SegmentTemplate fMP4
+ * track ("Failed to instantiate extractor", G8-10). WebM output always uses the platform muxer.
  */
 @OptIn(markerClass = [UnstableApi::class]) // ADR-022: Media3 compat muxer/extractor, pinned version
 object MediaMux {
@@ -45,6 +49,19 @@ object MediaMux {
 
     private class PlatformReader(path: String) : Reader {
         private val ex = MediaExtractor()
+        init { try { ex.setDataSource(path) } catch (t: Throwable) { ex.release(); throw t } }
+        override val trackCount get() = ex.trackCount
+        override fun format(i: Int): MediaFormat = ex.getTrackFormat(i)
+        override fun select(i: Int) = ex.selectTrack(i)
+        override fun read(buffer: ByteBuffer) = ex.readSampleData(buffer, 0)
+        override val time get() = ex.sampleTime
+        override val isSync get() = ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0
+        override fun advance() { ex.advance() }
+        override fun release() = ex.release()
+    }
+
+    private class Media3Reader(path: String) : Reader {
+        private val ex = MediaExtractorCompat(DefaultExtractorsFactory(), FileDataSource.Factory())
         init { try { ex.setDataSource(path) } catch (t: Throwable) { ex.release(); throw t } }
         override val trackCount get() = ex.trackCount
         override fun format(i: Int): MediaFormat = ex.getTrackFormat(i)
@@ -91,7 +108,7 @@ object MediaMux {
         val sources = ArrayList<Pair<Reader, MediaFormat>>(2)
         try {
             for ((f, prefix) in listOf(video to "video/", audio to "audio/")) {
-                val ex: Reader = PlatformReader(f.absolutePath)
+                val ex: Reader = if (media3) Media3Reader(f.absolutePath) else PlatformReader(f.absolutePath)
                 val track = (0 until ex.trackCount).firstOrNull { ex.format(it).getString(MediaFormat.KEY_MIME)?.startsWith(prefix) == true }
                     ?: run { ex.release(); throw IOException("No ${prefix.trimEnd('/')} track in ${f.name}") }
                 ex.select(track)

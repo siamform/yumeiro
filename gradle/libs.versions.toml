@@ -104,6 +104,7 @@ media3-exoplayer-rtsp = { group = "androidx.media3", name = "media3-exoplayer-rt
 media3-effect = { group = "androidx.media3", name = "media3-effect", version.ref = "media3" }
 # ADR-022: MP4 join on Android 7–8.1 TV (B-frames, fMP4 DASH tracks); MediaMux uses them below API 28 only.
 media3-muxer = { group = "androidx.media3", name = "media3-muxer", version.ref = "media3" }
+media3-inspector = { group = "androidx.media3", name = "media3-inspector", version.ref = "media3" }
 nextlib-media3ext = { group = "io.github.anilbeesetti", name = "nextlib-media3ext", version.ref = "nextlib" }
 media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasource-okhttp", version.ref = "media3" }
 
