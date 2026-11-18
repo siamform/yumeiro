@@ -103,7 +103,7 @@ class Bug1YumixRestoreDeviceTest {
             assertTrue("history lost the title across the process death", e != null && e.positionMs == 240_000L)
             ensureArchive()
 
-            wait("Home tab") { has("nav_tab_home") }
+            wait("Home tab") { FirstRun.hasNav(rule, "nav_tab_home") } // TV: tv_nav_tab_home on the rail
             FirstRun.tapVisible(rule, "nav_tab_home")
             wait("Home → Jump back in shows the Yumix title", 30_000) { has("home_continue_video") && hasText(short) }
             FirstRun.shot("bug1y_home_jump_in")

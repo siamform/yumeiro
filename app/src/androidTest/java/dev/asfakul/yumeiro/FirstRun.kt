@@ -257,8 +257,12 @@ object FirstRun {
 
     /** G12 X9-1: Yumeiro TV shows a side rail (`tv_nav_tab_*`, `tv_nav_shortcut_*`) instead of the
      *  bottom bar (`nav_tab_*`, `nav_shortcut_*`). */
-    fun navTag(rule: AndroidComposeTestRule<*, *>, tag: String): String =
-        if ((tag.startsWith("nav_tab_") || tag.startsWith("nav_shortcut_")) && !has(rule, tag) && has(rule, "tv_nav_rail")) "tv_$tag" else tag
+    fun navTag(rule: AndroidComposeTestRule<*, *>, tag: String): String = when {
+        (tag.startsWith("nav_tab_") || tag.startsWith("nav_shortcut_")) && !has(rule, tag) && has(rule, "tv_nav_rail") -> "tv_$tag"
+        // On TV the top bar has no Settings button; Settings is at the bottom of the rail (MTTopBar.kt).
+        tag == "topbar_settings_action" && !has(rule, tag) && has(rule, "tv_nav_rail") -> "tv_nav_settings"
+        else -> tag
+    }
 
     /** True if the bar item [tag] (or its TV rail twin) is on screen. */
     fun hasNav(rule: AndroidComposeTestRule<*, *>, tag: String): Boolean = has(rule, navTag(rule, tag))

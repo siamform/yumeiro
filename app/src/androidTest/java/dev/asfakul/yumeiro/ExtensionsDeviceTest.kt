@@ -54,7 +54,8 @@ class ExtensionsDeviceTest {
     private fun log(s: String) = Log.i("YuExtTest", s)
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
     private fun waitTag(tag: String, ms: Long = 30_000) {
-        val ok = runCatching { rule.waitUntil(ms) { has(tag) }; true }.getOrDefault(false)
+        // Bar shortcuts are on the side rail on TV (tv_nav_shortcut_*); FirstRun.hasNav maps them.
+        val ok = runCatching { rule.waitUntil(ms) { if (tag.startsWith("nav_")) FirstRun.hasNav(rule, tag) else has(tag) }; true }.getOrDefault(false)
         assertTrue("no '$tag' after ${ms}ms · ${FirstRun.onScreen(rule)}", ok)
     }
     private fun waitGone(tag: String, ms: Long = 10_000) {
