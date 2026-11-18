@@ -109,6 +109,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44219681816 | MusicWifiLock + MusicAudioFocus + MusicNotificationControls at c4abe23, both phones | all OK; WL_RESULT PASS, AF_RESULT PASS (noisy not delivered: protected → OMT-28), NC_RESULT PASS |
 | 44220997354 | G6-PG1 fail-before CI on ab/pg1-before | red as intended: YmDetailPagingTest 2 of 1149, nothing else |
 | 44223304640 | CI at f8564b8 (G6-PG1 fix) | green; YmDetailPagingTest 2/2; SmartDnsResilience, DnsWire, DataCacheBounds 4/4 each |
+| 44225572082 | G6-MO1 fail-before CI on ab/mo1-before | red as intended: MusicModeReconnectTest 1 of 1150 ("On device" after reconnect), nothing else |
+| 44225724090 | YmPagingNetworkDeviceTest both phones at 3816573 | OK both; PG_RESULT PASS page1=100, offline more failed (UnknownHostException), back → retries=1, 5 pages / 499 rows |
 | 44211556974 | LargeLibraryScanDeviceTest both phones | OK both; 5,000 songs; scan 180/111/99 ms api33-lowram, 238/181/162 ms api36; insert 135 s / 128 s; cleanup removed 5,000 |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 

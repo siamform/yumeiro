@@ -234,4 +234,4 @@ Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs 
 | G6-WL | Wi-Fi lock while a music stream plays (PlaybackService.wakeModeFor) | unit MusicWakeModeTest; androidTest MusicWifiLockDeviceTest | 44219681816 PASS both phones |
 | G6-AF | Audio focus: transient / duck / permanent | androidTest MusicAudioFocusDeviceTest | 44219681816 PASS both phones; unplug OMT-28 |
 | G6-NC | Media notification + outside MediaController | androidTest MusicNotificationControlsDeviceTest | 44219681816 PASS both phones |
-| G6-PG1 | Detail page "load more" keeps the continuation (YmState.afterDetailMoreFailed) | unit YmDetailPagingTest | CI 44223304640 |
+| G6-PG1 | Detail page "load more" keeps the continuation (YmState.afterDetailMoreFailed) | unit YmDetailPagingTest; androidTest YmPagingNetworkDeviceTest | CI 44223304640; device 44225724090 PASS both phones |

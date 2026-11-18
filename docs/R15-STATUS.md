@@ -1,6 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 7)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 8)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** L2 G6 Music. ST1, WL, AF, NC verified (emulator, both phones). PG1 verified
+  (CI unit 44223304640 + emulator both phones 44225724090). MO1 fix 7d1486a (fail-before 44225572082). Mocked
+  tests committed: LRCLIB f3879dd, Last.fm queue 3128a1b. G6-SP1 found: no music-access prompt when music
+  access is denied (proposal docs/proposals/FEATURE-G6-SP1-music-access-prompt.md); fail-before test on ab/sp1-before.
+- **Runs in progress:** CI 44227662448 at 7d1486a (MO1 pass-after + LrcLibMockedTest + ScrobbleFlushMockedTest).
+- **Next three actions:** (1) read 44227662448, record MO1/LY/LF; (2) CI fail-before on ab/sp1-before, then the
+  SP1 fix; (3) queue persistence audit, then G7.
+
+### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 7)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
