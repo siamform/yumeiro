@@ -838,6 +838,39 @@ flowchart LR
 - **Status:** accepted (agent decision inside the owner-ordered bug-list scope) for NB12-1 / NB12-3;
   NBUG-13 options await the owner. Verified only after fail-before and pass-after.
 
+### ADR-025: Data branches publish reliably; installed versions come from the file (NBUG-16)
+
+- **Scope:** `.github/workflows/{playlist-market,extension-market,stream-sync}.yml`, `.github/scripts/data-changed.sh`,
+  new `.github/scripts/open-data-branch.sh` and `.github/scripts/tests/data-branch-test.sh` (run in `ci.yml`);
+  `stream/PlaylistStore.refresh`; `online/ExtensionManager` (`install`, `sync`); `online/ExtensionSources.all`;
+  `ui/screens/MTPlayerApp` (when background checks run).
+- **Requirements:** a catalog with new files publishes; an error in the change check fails the job instead of
+  skipping; the previous data is on disk while building; after any install or refresh, the item is not
+  flagged again for what it already has; a newer copy anywhere the app reads wins; background checks run when
+  the app comes to the front, at most every 6 h; a refused automatic update is reported once.
+  Non-functional: no new dependency or permission; no more network than today (same 6 h gates).
+- **Options (workflows):** A. `open-data-branch.sh`: fetch + `git worktree add` + `git -C out sparse-checkout disable`,
+  and `data-changed.sh` with `git add -A --sparse` and three outcomes (changed 0, unchanged 1, error 2 fails the
+  job). B. Drop the sparse checkout (fetches the whole `main` tree in every data job). C. `git add --sparse` only
+  (publishes, but NB16-2 stays). **Decision: A.**
+- **Options (versions):** A. Store the version from the file's manifest when present (CloudStream does the
+  same). B. Compare by sha256 for every origin (community listings carry no reliable hash; would flag on every
+  rebuild). **Decision: A.** Playlists: record the sha256 of the bytes actually downloaded from the market mirror
+  (the catalog's digest is the sha256 of exactly those bytes, `build_market.py`); a download from the original
+  source keeps the old value (it can never equal the mirror digest).
+- **Merge:** community/discovered copies: the higher version wins (metadata stays the market's); curated
+  (mirrored, checked) keeps the market copy.
+- **Timing:** one `BackgroundUpdates` entry point, called on every app start-to-front (`ON_START`) after the
+  welcome guide; extension sync and playlist market check keep their own 6 h gates.
+- **Refused updates:** still never installed silently (G9-5 rule); the user gets one message per sync naming
+  the extension and saying it needs review, and the Update button stays.
+- **Failure modes:** data branch missing → first publish (unchanged); git error → job fails (visible in
+  Actions, was silent); manifest without a version → the listing's version (old behaviour).
+- **Consequences:** the NB16-1/NB16-2 fixes take effect only after `r15-stability` is merged to `main`
+  (scheduled workflows run there); until then the live catalog stays frozen. Owner action at release.
+- **Status:** accepted (agent decision inside the owner-ordered bug list). Verified only after fail-before
+  and pass-after.
+
 ## 11. Risks
 
 | Risk | Mitigation |

@@ -170,3 +170,86 @@ unchanged). No new dependency; the KVS code is a port of yt-dlp's (Unlicense, co
 | NB12-1, NB12-3, NB12-4, NB12-5 | pending (`Nbug12RefusedMediaPageDeviceTest`: local KVS site; the extension's link 403) | pending | emulator (local server), CI unit (`CapturePageTest`, `KvsPlayerTest`) |
 | NB12-2 | — | — | OMT-32 (owner retest; tell the extension author) |
 | NB13-1 | owner network only | — | OMT-33 (decision + retest) |
+
+## NBUG-16: extensions and Live TV playlists never auto-update; after an update they are flagged again
+
+Owner report (2026-11-18): "Extensions and Live TV M3U8 playlists never auto-update. Additionally, even
+after manually updating them, syncing again repeatedly flags and shows them as needing an update again."
+
+### Files and lines read
+
+- Data workflows on `main` (the scheduled copies run from `main` only): `.github/workflows/playlist-market.yml`,
+  `extension-market.yml`, `stream-sync.yml` (checkout, data-branch worktree, change check, publish);
+  `.github/scripts/data-changed.sh` (all); `build_market.py` 420–470 (digest, keep the last good copy);
+  `build_extension_market.py` 470–500 (curated mirror fallback); `sync_streams.py` 85–105.
+- `online/ExtensionManager.kt`: `install` 261–291, `installManual` 317–335, `gate` 337–346, `checkUpdate`
+  365–390, `updatesForTests` 512–521, `sync` 523–545, `readManifest` 649–681.
+- `online/ExtensionMarket.kt` (`parse`, `load`, `ExtensionSources.repoPlugins`, `all` 186–206),
+  `online/ExtensionModels.kt` (`parsePlugins`, `keyOf`), `online/ExtensionReview.kt` (`Mode`, `autoDecision`).
+- `stream/PlaylistStore.kt`: `channels` 300–316, `refresh` 318–342, `installFromMarket` 460–486,
+  `applyMarketUpdates` 495–509, `autoUpdateMarket` 512–516; `stream/PlaylistMarket.kt` (`load`, `updatesFor`).
+- `ui/screens/MTPlayerApp.kt` 380–404 (the only extension `sync` call), `ui/screens/stream/StreamScreen.kt`
+  148–152 (the only `autoUpdateMarket` call), 199 (Refresh), `PlaylistDetailScreen.kt` 152 ("A newer version").
+
+### Evidence (labelled)
+
+- Network probe 2026-11-19: the playlist market index (`market/index.json`) still says generated
+  2026-11-08; the `market` branch head is 2026-11-08T00:55Z. Runs 42939091897 (11-11), 43542171517 (11-14),
+  44015109388 (11-17) all "success", each "No changes since the last publish; skipped". The 11-17 log
+  warns that 3 new playlists are outside the sparse-checkout definition.
+- Local reproduction (sandbox git 2.4x): a sparse clone (`.github` only) + `git worktree add out
+  origin/<data>` gives a sparse worktree; a new file in it makes `git add -A` exit 1 ("paths outside
+  your sparse-checkout definition"), and `data-changed.sh` (`set -e`) then exits 1 = "no changes".
+  `git add -A --sparse` exits 0.
+- Network probe 2026-11-19, extension index generated 2026-11-17 (2836 entries: 2085 discovered,
+  749 community, 2 curated): for the phisher98 repository, market listing / live listing / version in
+  the file's own manifest: Cinefreak 23/24/24, StreamPlay 711/713/713, MovieBoxProvider 41/42/42; about
+  80 such entries in the 40 largest repositories. Curated entries' sha256 match their mirrors.
+
+### Data flow (old code)
+
+Playlists: workflow builds `out/` → change check fails on a new file → publish skipped → catalog frozen
+→ the app's `updatesFor` never sees a new sha → nothing to auto-update. A manual Refresh downloads the
+newest mirror but keeps the old `marketSha` → "A newer version is available" and the market's "N updates"
+stay. Extensions: install stores the listing's version, not the file's → when the market later lists the
+version the user already has, it is flagged and downloaded again; the market copy also hides a newer copy
+in the user's own repository; background sync runs once per activity start (TV: rarely), and refused
+automatic updates are dropped without a word.
+
+### Competitors (reverse engineering, read 2026-11-19)
+
+- CloudStream `PluginManager.kt` ([source](https://raw.githubusercontent.com/recloudstream/cloudstream/master/app/src/main/java/com/lagradost/cloudstream3/plugins/PluginManager.kt)):
+  after download, `loadPlugin` saves `manifest.version` from the file (`setPluginData(data.copy(version = version))`),
+  not the listing's; `isOutdated = online.version > saved.version`; repositories merged with
+  `distinctBy { it.plugin.url }`; updates run in `updateAllOnlinePluginsAndLoadThem` at app start.
+- Tachiyomi/Mihon: the installed version comes from the installed package (`versionCode`), compared
+  with the repo index; the same principle (the installed artefact is the truth).
+
+### Findings register
+
+| ID | Finding | Root cause | Severity | Status |
+|---|---|---|---|---|
+| NB16-1 | The playlist market (and any data branch that gains a new file) never publishes | Sparse checkout (`.github`) + `git worktree add` gives a sparse worktree; `git add -A` exits 1 on a new path outside the cone; `data-changed.sh` (`set -e`) reads that as "no changes" and the job reports success | High (catalog frozen since 2026-11-08: no market playlist can update) | Open |
+| NB16-2 | "Keep the last good copy" never works in the data builds | The same sparse worktree has none of the previous files (`playlists/`, mirrors), so `os.path.exists(prev)` is always false: a source that fails once is dropped from the catalog (`build_market.py` ~462), the curated mirror fallback (`build_extension_market.py` ~489) and `sync_streams.py:97` never fire | High (catalog entries vanish on one bad day) | Open |
+| NB16-3 | A market playlist stays "needs an update" after a manual Refresh | `refresh(id)` without a sha keeps the old `marketSha` although it downloaded the newest mirror | Medium (the owner's "flags again") | Open |
+| NB16-4 | An extension is flagged for an update to the version it already has | `install` stores `remote.version` (the listing); community/discovered entries point at the author's live file, which is often newer than the market's listing | Medium (the owner's "flags again"; extra downloads) | Open |
+| NB16-5 | A newer build in the user's own repository is hidden by the older market copy | `ExtensionSources.all` keeps the first copy per key (market first) | Low–Medium (auto-update waits up to 3 days for the market) | Open |
+| NB16-6 | An automatic update refused by the safety check is dropped silently | `sync` installs with `Mode.AUTO`; `autoDecision` refuses DANGER/unreadable files; `failed` is never shown, so the user does not know why "auto-update" did nothing | Low (the Update button stays) | Open |
+| NB16-7 | Background checks run too rarely | Extension `sync` runs only in `MTPlayerApp`'s first `LaunchedEffect` (once per activity creation; a TV keeps the activity for days); the playlist market check runs only while the Live TV screen is open | Medium (TV: never) | Open |
+
+Not findings: the 6 h market interval and 30 min repository cache (by design, ADR-025 keeps them);
+Tachiyomi has no update flags; curated sha256 match.
+
+### Design (ADR-025)
+
+See docs/SYSTEM-DESIGN.md ADR-025.
+
+### Verification
+
+| Item | Fail-before (old code) | Pass-after | Label |
+|---|---|---|---|
+| NB16-1, NB16-2 | pending (`.github/scripts/tests/data-branch-test.sh`) | pending | local shell + CI |
+| NB16-3 | pending (`PlaylistMarketTest.manualRefreshClearsTheUpdateFlag`) | pending | CI unit (Robolectric) |
+| NB16-4 | pending (`Nbug16ExtensionVersionDeviceTest`) | pending | emulator |
+| NB16-5 | pending (`ExtensionFormatsTest.newerUserRepoCopyWinsOverMarket`) | pending | CI unit (Robolectric) |
+| NB16-6, NB16-7 | no test can drive the old code (no hook for "6 h later" or a refused background update) | pending (unit, new code) | UNVERIFIED-QUEUE |
