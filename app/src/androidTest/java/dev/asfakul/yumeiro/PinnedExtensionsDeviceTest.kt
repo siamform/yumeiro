@@ -93,13 +93,35 @@ class PinnedExtensionsDeviceTest {
      * (44376358282, 7 sources: tapVisible's fallback then scrolled the feed under the sheet, which
      * hides the pinned bar). A user drags the sheet up first; so does the test. TV opens it fully (G9-8).
      */
-    private fun showInSheet(tag: String) {
-        if (onWindow(tag)) return
+    private fun showInSheet(tag: String): Boolean {
+        if (onWindow(tag)) return false
         log("'$tag' below the screen: dragging the sheet up")
         rule.onAllNodesWithTag("online_filter_sheet", true)[0].performTouchInput { swipeUp(startY = top + 80f, endY = top - 800f, durationMillis = 400) } // from the sheet top: its middle can be off-screen
         rule.waitForIdle()
         val ok = runCatching { rule.waitUntil(5_000) { onWindow(tag) }; true }.getOrDefault(false)
         assertTrue("'$tag' still below the screen after dragging the sheet up · ${FirstRun.onScreen(rule)}", ok)
+        return true
+    }
+
+    private fun sheetTop(): Float? = rule.onAllNodesWithTag("online_filter_sheet", true).fetchSemanticsNodes().firstOrNull()?.boundsInRoot?.top
+
+    /**
+     * Back closes the sheet. After a drag to full height, Material 3 first settles an expanded sheet
+     * that has a half-height state back to half height (ModalBottomSheet `settleToDismiss`:
+     * `currentValue == Expanded && hasPartiallyExpandedState` → `partialExpand()`), and the next Back
+     * closes it: diagnostic run 44386683931 logged top 444 → 1176 px after the first Back on api36,
+     * gone after the second, the same on api33. The test checks both steps.
+     */
+    private fun closeSheet(dragged: Boolean) {
+        if (dragged) {
+            val top = sheetTop()
+            back()
+            val settled = runCatching { rule.waitUntil(5_000) { (sheetTop() ?: Float.MAX_VALUE) > (top ?: 0f) + 100f } ; true }.getOrDefault(false)
+            log("back on the expanded sheet: top $top -> ${sheetTop()}")
+            assertTrue("Back on the expanded sheet neither settled it to half height nor closed it (top $top -> ${sheetTop()})", settled)
+        }
+        if (has("online_filter_sheet")) back()
+        waitGone("online_filter_sheet")
     }
 
     private fun openYumix() {
@@ -115,7 +137,7 @@ class PinnedExtensionsDeviceTest {
         assertTrue("need two sources in the sheet: $before", before.size >= 2)
         val target = before.last()
 
-        showInSheet("online_filter_pin_$target")
+        val dragged = showInSheet("online_filter_pin_$target")
         tap("online_filter_pin_$target")
         rule.waitUntil(5_000) { PinnedExtensions.pins.value == listOf(target) }
         val after = sheetOrder()
@@ -123,7 +145,7 @@ class PinnedExtensionsDeviceTest {
         assertEquals("the pinned source must move to the top", target, after.first())
         assertEquals("the other sources keep their order", before - target, after.drop(1))
 
-        back(); waitGone("online_filter_sheet")
+        closeSheet(dragged)
         waitTag("online_pinned_bar"); waitTag("online_pinned_$target")
 
         // The chip narrows the feed to that one source; a second tap goes back to all.
