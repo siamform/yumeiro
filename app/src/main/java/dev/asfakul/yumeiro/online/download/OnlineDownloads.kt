@@ -21,6 +21,8 @@ import dev.asfakul.yumeiro.online.OnlineSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -281,9 +283,24 @@ object OnlineDownloads {
             .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
             .addTag(DownloadWorker.TAG)
             .build()
-        WorkManager.getInstance(context.applicationContext).enqueueUniqueWork("dl_$id", ExistingWorkPolicy.KEEP, request)
+        val app = context.applicationContext
+        val op = WorkManager.getInstance(app).enqueueUniqueWork("dl_$id", ExistingWorkPolicy.KEEP, request)
         set(id) { if (it.status != Status.DONE) it.copy(status = Status.QUEUED, error = null) else it }
+        // G8-8: DownloadWorker marks the item FAILED (and posts its notification) before it returns
+        // Result.failure(), so for that moment dl_<id> is still RUNNING and KEEP drops a Retry tapped then:
+        // the item said "Queued" with no worker until the next launch. Once the old run has finished,
+        // enqueue again if ours was dropped and the item is still waiting.
+        retryWatch.launch {
+            if (runCatching { op.result.get() }.isFailure) return@launch // not enqueued at all: nothing to watch
+            val ours = request.id
+            val infos = WorkManager.getInstance(app).getWorkInfosForUniqueWorkFlow("dl_$id")
+                .first { list -> list.any { it.id == ours } || list.all { it.state.isFinished } }
+            if (infos.none { it.id == ours } && get(id)?.status == Status.QUEUED) start(app, id)
+        }
     }
+
+    /** G8-8: waits for a still-finishing run of a download before its Retry is enqueued again. */
+    private val retryWatch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
     fun pause(context: Context, id: String) {
         // R16 (G8): state first, so the cancelled worker sees PAUSED and leaves it.
