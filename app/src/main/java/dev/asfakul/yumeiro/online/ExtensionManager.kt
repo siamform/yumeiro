@@ -87,6 +87,9 @@ object ExtensionManager {
 
     open class ExtensionException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+    /** A background (AUTO) install the safety check refused: never installed silently (NBUG-16 NB16-6). */
+    class HeldBack(val extension: String, reason: String) : ExtensionException("$extension was held back: the safety check flagged it ($reason)")
+
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(Snapshot())
@@ -345,7 +348,7 @@ object ExtensionManager {
         lastReports[name] = report
         if (!ExtensionReview.decide(mode, name, version, source, isUpdate, report)) {
             if (mode == ExtensionReview.Mode.AUTO || !ExtensionReview.hostAttached) {
-                throw ExtensionException("$name was held back: the safety check flagged it (${report.findings.firstOrNull()?.title ?: report.summary})")
+                throw HeldBack(name, report.findings.firstOrNull()?.title ?: report.summary)
             }
             throw ExtensionReview.Declined(name)
         }
@@ -541,12 +544,17 @@ object ExtensionManager {
         }
         val updated = mutableListOf<String>()
         val failed = mutableListOf<String>()
+        val heldBack = mutableListOf<String>()
         for ((ext, remote) in updatesFrom(available.items)) {
             if (!ext.autoUpdate) continue
-            runCatching { install(context, remote, ExtensionReview.Mode.AUTO) }.onSuccess { updated += it.name }.onFailure { failed += ext.name }
+            runCatching { install(context, remote, ExtensionReview.Mode.AUTO) }.onSuccess { updated += it.name }.onFailure {
+                // NBUG-16 NB16-6: a refused update used to vanish into `failed`, which nothing showed.
+                // Reported once per extension version per app run; the Update button stays.
+                if (it is HeldBack) { if (heldBackTold.add(remote.key + "@" + remote.version)) heldBack += ext.name } else failed += ext.name
+            }
         }
         mutex.withLock { _state.update { it.copy(lastSync = now) }; writeState(context) }
-        SyncResult(installed = installedNow, updated = updated, failed = failed, pending = updatesFrom(available.items).size)
+        SyncResult(installed = installedNow, updated = updated, failed = failed, pending = updatesFrom(available.items).size, heldBack = heldBack)
     }
 
     data class SyncResult(
@@ -555,7 +563,10 @@ object ExtensionManager {
         val failed: List<String> = emptyList(),
         val pending: Int = 0,
         val error: String? = null,
+        /** Automatic updates the safety check refused, newly this run (NB16-6). */
+        val heldBack: List<String> = emptyList(),
     )
+    private val heldBackTold = java.util.Collections.synchronizedSet(HashSet<String>())
 
     // endregion
 
