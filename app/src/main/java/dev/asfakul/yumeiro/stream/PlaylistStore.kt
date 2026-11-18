@@ -325,9 +325,14 @@ object PlaylistStore {
                 val part = fetchToPart(context, u)
                 try {
                     val count = countChannels(part)
+                    // NBUG-16 NB16-3: a plain Refresh of a market playlist downloads the newest mirror
+                    // copy; the catalog digest is the sha256 of exactly those bytes (build_market.py),
+                    // so record it, or the playlist stays "needing an update". A copy from the original
+                    // source is not the mirror copy and keeps the old value.
+                    val got = marketSha ?: if (p.isMarket && u == p.url && !p.userEdited) sha256Of(part) else null
                     edit(context) {
                         commitPart(part, channelsFile(context, id))
-                        replace(id) { it.copy(channelCount = count, lastUpdated = System.currentTimeMillis(), lastError = null, marketSha = marketSha ?: it.marketSha) }
+                        replace(id) { it.copy(channelCount = count, lastUpdated = System.currentTimeMillis(), lastError = null, marketSha = got ?: it.marketSha) }
                     }
                     return@withContext count
                 } finally { part.delete() }
@@ -351,6 +356,12 @@ object PlaylistStore {
         require(!hls) { "This is a single HLS stream, not a channel list" }
         require(channels.isNotEmpty()) { "No channels found in playlist" }
         return channels.size
+    }
+
+    private fun sha256Of(file: File): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input -> val buf = ByteArray(64 * 1024); while (true) { val n = input.read(buf); if (n < 0) break; md.update(buf, 0, n) } }
+        return md.digest().joinToString("") { "%02x".format(it) }
     }
 
     /** Moves a validated download into place (rename replaces the target atomically). */
