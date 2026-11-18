@@ -319,6 +319,18 @@ object OnlineDownloads {
         return n
     }
 
+    /**
+     * G8-3: removes the resume records of a finished download (`x.mp4.part.chunks`, `.part.idx`,
+     * `.part.v.chunks` ...) once `x.mp4.part` was renamed. They stay until then so a rerun of a split
+     * job skips a track that is already complete.
+     */
+    internal fun removeSideFiles(part: File): Int {
+        val prefix = part.name + "."
+        var n = 0
+        part.parentFile?.listFiles()?.forEach { if (it.isFile && it.name.startsWith(prefix) && it.delete()) n++ }
+        return n
+    }
+
     /** Resumes queued downloads after a restart. */
     fun resumeQueued(context: Context) {
         ensureLoaded(context)

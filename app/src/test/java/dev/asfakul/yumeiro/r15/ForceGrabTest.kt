@@ -146,7 +146,8 @@ class ForceGrabTest {
         val n2 = Segmented(client, 1).download(url, emptyMap(), single) { _, _ -> }
         assertEquals(n2, n1); assertEquals(n1, multi.length()); assertEquals(md5(single), md5(multi))
         assertEquals(n1, lastDone.get())
-        assertFalse("side file removed when done", File(multi.path + ".chunks").exists())
+        // G8-3 (ADR-020): the record stays until the worker renames the file (OnlineDownloads.removeSideFiles).
+        assertTrue("resume record kept for the worker", File(multi.path + ".chunks").exists())
         File(dir, "report.txt").writeText("segmented bytes=$n1 md5=${md5(multi)} single md5=${md5(single)}\n")
     }
 

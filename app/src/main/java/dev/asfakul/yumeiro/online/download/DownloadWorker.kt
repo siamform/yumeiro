@@ -103,6 +103,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             // G8 (R17): deleted while the last bytes came in: don't leave an untracked file behind.
             if (OnlineDownloads.get(id) == null) { OnlineDownloads.removeFiles(named); OnlineDownloads.removeFiles(out); return Result.success() }
             if (!part.renameTo(out)) { out.delete(); part.copyTo(out, overwrite = true); part.delete() }
+            OnlineDownloads.removeSideFiles(part) // G8-3: the resume records stay until the file is in place
             YtDownloads.afterDownload(applicationContext, item, out)
             OnlineDownloads.finished(id, bytes)
             done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) "Saved · Permanent · tap to open Downloads" else "Saved · Offline · tap to open Downloads")

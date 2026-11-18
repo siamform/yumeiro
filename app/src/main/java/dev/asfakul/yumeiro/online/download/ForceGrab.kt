@@ -370,7 +370,8 @@ class Segmented(
                 }
             }.awaitAll()
         }
-        state.delete()
+        // G8-3: the record stays until the worker has renamed the finished file (removeSideFiles): a
+        // split job whose other track failed runs again and must find this track complete, not refetch it.
         ForceGrab.lastStats = "total=$total connections=$connections chunks=${ranges.size} resumedChunks=$resumedChunks " +
             "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}" +
             " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()} protocol=$protocol" +
@@ -647,9 +648,9 @@ class DashGrab(private val client: OkHttpClient, private val headers: Map<String
         }
         val written = if (files.size == 2) {
             MediaMux.merge(files[0], files[1], out, plan.webm)
-            files.forEach { it.delete() }; out.length()
+            files.forEach { it.delete(); sideFilesOf(it) }; out.length()
         } else {
-            out.delete(); if (!files[0].renameTo(out)) { files[0].copyTo(out, overwrite = true); files[0].delete() }; out.length()
+            out.delete(); if (!files[0].renameTo(out)) { files[0].copyTo(out, overwrite = true); files[0].delete() }; sideFilesOf(files[0]); out.length()
         }
         progress(written, written)
         Saved(written, plan.webm)
@@ -680,8 +681,12 @@ class DashGrab(private val client: OkHttpClient, private val headers: Map<String
                 progress(bytes)
             }
         }
-        state.delete(); lengths.delete()
+        // G8-3: the record stays (done == all parts) so a rerun after the other track failed skips this one;
+        // download() removes it once the tracks are joined.
     }
+
+    /** Removes the resume records of a track file once its bytes are in the final file. */
+    private fun sideFilesOf(f: File) = f.parentFile?.listFiles()?.forEach { if (it.isFile && it.name.startsWith(f.name + ".")) it.delete() }
 
     private suspend fun fetchRetry(p: Part): ByteArray {
         var last: IOException? = null

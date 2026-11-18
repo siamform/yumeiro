@@ -121,7 +121,8 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
                 progress(bytes, if (doneCount == segments.size) bytes else estimate)
             }
         }
-        state.delete()
+        // G8-3: the record stays (all segments done) so a rerun skips a finished track; the worker removes
+        // it after the rename (OnlineDownloads.removeSideFiles), the joined path right after the join.
         return bytes
     }
 
