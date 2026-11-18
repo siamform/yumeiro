@@ -139,6 +139,7 @@ fun StreamScreen(
     val clipboard = LocalClipboardManager.current
     remember(context) { StreamRepository.init(context); StreamRepository }
     val history by StreamRepository.history.collectAsState()
+    val liveRecent by StreamRepository.liveHistory.collectAsState()
     val channels by StreamRepository.playlist.collectAsState()
     val playlistName by StreamRepository.playlistName.collectAsState()
     val openPlaylistId by StreamRepository.playlistId.collectAsState()
@@ -364,6 +365,16 @@ fun StreamScreen(
         // "Sources for this channel" keep working.
         StreamRepository.setPlaylist(p.name, list, p.id)
         runCatching { IncomingMedia.open(context, ch, recent = IncomingMedia.Recent.LIVE) }
+            .onFailure { toastError("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") }
+    }
+    /**
+     * NB15D-2: a recently played channel plays with its own playlist when that list is still loaded (so
+     * channel up / down keep working), otherwise on its own.
+     */
+    fun playRecent(ch: StreamRequest) {
+        val hit = activePlaylists.firstNotNullOfOrNull { p -> loads[p.id]?.channels?.takeIf { l -> l.any { it.url == ch.url } }?.let { p to it } }
+        if (hit != null) playLive(hit.first, hit.second, hit.second.first { it.url == ch.url })
+        else runCatching { IncomingMedia.open(context, ch, recent = IncomingMedia.Recent.LIVE) }
             .onFailure { toastError("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") }
     }
     val liveNearEnd by remember { androidx.compose.runtime.derivedStateOf { val i = listState.layoutInfo; (i.visibleItemsInfo.lastOrNull()?.index ?: 0) >= i.totalItemsCount - 8 } }
@@ -594,6 +605,9 @@ fun StreamScreen(
                 top = 4.dp,
                 action = "Play link", onAction = { pane = "link" }, actionTag = "live_header_link",
             )
+        }
+        if (liveSel == null && liveRecent.isNotEmpty()) item(key = "live_recent") {
+            LiveRecentRow(liveRecent, onPlay = { playRecent(it) }, onClear = { StreamRepository.clearLive(context) })
         }
         if (activePlaylists.isNotEmpty()) {
             item(key = "live_strip") { LivePlaylistStrip(activePlaylists, loads, liveSel) { liveSel = it } }

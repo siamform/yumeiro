@@ -138,10 +138,10 @@ private fun LiveAvatarItem(name: String, id: String?, selected: Boolean, loading
 
 /** One channel: logo on a glass tile (logos are fitted, never cropped), a live dot and the name. */
 @Composable
-internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: Modifier = Modifier, tag: String = "live_channel") {
     Column(
         modifier.clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = "Play ${ch.displayTitle}", onClick = onClick)
-            .padding(bottom = 6.dp).testTag("live_channel").feedCard("live", ch.url),
+            .padding(bottom = 6.dp).testTag(tag).feedCard("live", ch.url),
     ) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(RoundedCornerShape(16.dp)).background(GlassFill)
@@ -169,6 +169,36 @@ internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: M
         Text(ch.group?.takeIf { it.isNotBlank() } ?: " ", color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 2.dp))
     }
 }
+
+/**
+ * NB15D-2 (ADR-027): "Recently played" row on the Live TV feed — channels played from Live TV lists,
+ * newest first, at most [MAX_RECENT_ROW]. Play Link streams never appear here.
+ */
+@Composable
+internal fun LiveRecentRow(recent: List<StreamRequest>, onPlay: (StreamRequest) -> Unit, onClear: () -> Unit) {
+    val pal = LocalMtPalette.current
+    Column(Modifier.fillMaxWidth().testTag("live_recent_row")) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Recently played", color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1)
+                Text("${recent.size.coerceAtMost(MAX_RECENT_ROW)} channels", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+            }
+            Text(
+                "Clear", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button, onClickLabel = "Clear recently played", onClick = onClear)
+                    .padding(horizontal = 8.dp, vertical = 6.dp).testTag("live_recent_clear"),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 4.dp)) {
+            items(recent.take(MAX_RECENT_ROW), key = { "recent_" + it.url }) { ch ->
+                LiveChannelTile(ch, onClick = { onPlay(ch) }, modifier = Modifier.width(128.dp), tag = "live_recent_channel")
+            }
+        }
+    }
+}
+
+internal const val MAX_RECENT_ROW = 20
 
 @Composable
 private fun LiveTileSkeleton(modifier: Modifier) {
