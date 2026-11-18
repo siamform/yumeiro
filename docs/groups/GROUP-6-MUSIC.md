@@ -70,7 +70,7 @@ Cancelled runs in this group: none.
 | G6-QP | Queue after process death | Blocked: owner (proposal 1) | audit only; screen-recreation case Verified by QueueSurvivesScreenTest |
 | G6-LY | LRCLIB with the server mocked | Verified (CI unit) | f3879dd + 00c4ded; 44232721209 8/8 |
 | G6-SP1 | No music-access prompt when access denied | Verified (CI unit + emulator, both phones) | 44230037374 / 44232723925 → b2eb2bd → 44232721209 / 44234120924 |
-| G6-PG2 | Endless Home: offline scrolls, 80-shelf cap | Verified (CI unit); emulator part in progress | 44235994633 → 2114836 → 44238631828 |
+| G6-PG2 | Endless Home: offline scrolls, 80-shelf cap | Verified (CI unit); emulator end-to-end Blocked: owner (OMT-29, bot wall on CI) | 44235994633 → 2114836 → 44238631828; device 44242208629, 44243818628 skipped |
 
 ## Proposals (not implemented; need owner approval)
 

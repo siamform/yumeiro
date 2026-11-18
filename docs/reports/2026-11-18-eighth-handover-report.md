@@ -114,6 +114,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44227662448 | CI at 7d1486a (MO1 fix + LY/LF mocked tests) | red only in LrcLibMockedTest 3 of 8 (test isolation: LrcLib.prefs kept across Robolectric apps → 00c4ded); 1166 tests; MusicModeReconnectTest 1/1, Round13LogicTest 13/13, ScrobbleFlushMockedTest 8/8, SmartDns/DnsWire/DataCacheBounds 4/4 each |
 | 44235994633 | G6-PG2 fail-before CI (ab/pg2-before) | red as intended: only YmEndlessCapTest (40 not 80) of 1168 (CI unit) |
 | 44238631828 | CI at 2114836 (PG2 fix) | green; 1192 tests, 0 failures, 11 skipped; SmartDns/DnsWire/DataCacheBounds 4/4 each (CI unit) |
+| 44242208629 | MusicEndlessNetworkDeviceTest at 129ae31, both phones | skipped on both (not a pass): never reached the "Similar to" shelves (emulator) |
+| 44243818628 | same + diagnostics, api36 | skipped: Home shows its 2 shelves then blank; log `SignInConfirmNotBotException` on every `YouTube.related` (CI IP bot wall) → OMT-29 (emulator) |
 | 44238006080 | G7-MR1 device fail-before (old code + MangaTallPageDeviceTest), both phones | b red on api33-lowram (blank page); a passed both; b passed api36 (emulator) |
 | 44239024442 | MangaTallPageDeviceTest at fad077a, both phones | OK 2 both (emulator) |
 | 44236250052 | G6-MO1 device fail-before (7d1486a^ + MusicModeNetworkDeviceTest), both phones | red as intended: after reconnect mode stayed On device (emulator) |

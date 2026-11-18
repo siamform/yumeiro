@@ -45,6 +45,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-26 | EXT-T1: Back closes a pop-up instead of Source status | Blocked: owner (phone) |
 | OMT-27 | NBUG-6: per-feature DNS has measured side effects — build anyway, narrow it, or drop | Blocked: owner (decision) |
 | OMT-28 | G6-AF: unplug wired headphones / turn off Bluetooth headphones while music plays | Blocked: owner (hardware) |
+| OMT-29 | G6-PG2: endless Music Home keeps adding "Similar to" shelves, also after the connection drops | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -483,6 +484,21 @@ Blocked (you couldn't run it; say why).
 - **Steps:** play a song with wired or Bluetooth headphones, then unplug them (or switch the Bluetooth headphones off).
 - **Pass:** the music pauses and does not come out of the speaker. **Fail:** it keeps playing on the speaker.
 - **Status:** Blocked: owner (hardware).
+
+### OMT-29 — Endless Music Home on your own connection (G6-PG2)
+
+- **Why you:** the "Similar to …" shelves come from YouTube's watch page, which asks GitHub's CI addresses to
+  sign in ("Sign in to confirm that you're not a bot"). On both emulators every call was refused
+  (device runs 44242208629, 44243818628: Home showed only its own 2 shelves, then nothing). The rules
+  behind the feed (80-shelf cap, offline seeds kept) are unit-tested (`YmEndlessCapTest`, `YmEndlessOfflineTest`,
+  CI 44238631828), and the network drop / return is verified on the emulators (G6-MO1).
+- **Steps:** Music → Online → Home. Scroll to the end until shelves called "Similar to …" appear and keep
+  coming (YouTube's own Home stops after a few pages). Turn Wi-Fi and data off (Music shows On device), wait
+  10 s, turn them on (Online again), go back to Home and keep scrolling.
+- **Pass:** new "Similar to …" shelves keep appearing after the connection comes back.
+  **Fail:** no new shelves, or Home ends with a blank space.
+- **Automated test you can run:** `MusicEndlessNetworkDeviceTest` (log tag `YuEndless`, `EN_RESULT PASS`).
+- **Status:** Pending
 
 ## Not owner tests (handled by the agent)
 

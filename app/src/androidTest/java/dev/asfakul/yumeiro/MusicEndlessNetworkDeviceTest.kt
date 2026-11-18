@@ -30,7 +30,8 @@ import org.junit.runner.RunWith
  * On device, G6-MO1), get it back (Online again), scroll on: new "Similar to" shelves must still
  * come. Since MO1 the offline calls themselves can't be reached from the screen (offline leaves
  * Online), so this is a guard, not a fail-before; the offline/cap rules are unit tests
- * (YmEndlessOfflineTest, YmEndlessCapTest). Log tag YuEndless: EN_… lines, EN_RESULT PASS.
+ * (YmEndlessOfflineTest, YmEndlessCapTest). From CI addresses YouTube refuses the related call
+ * (bot wall), so the test skips there; it is the owner's OMT-29 on a home connection. Log tag YuEndless: EN_… lines, EN_RESULT PASS.
  */
 @RunWith(AndroidJUnit4::class)
 class MusicEndlessNetworkDeviceTest {
@@ -91,7 +92,9 @@ class MusicEndlessNetworkDeviceTest {
         val reached = scrollUntil(240_000) { seen.isNotEmpty() }
         log("EN_REACHED endless=$reached similar=${seen.size} first=${seen.firstOrNull()} texts=${texts().take(10)}")
         if (!reached) FirstRun.shot("en_not_reached")
-        assumeTrue("never reached the endless shelves from the CI network", reached)
+        // On CI every "Similar to" call meets YouTube's bot wall (log YouTube: SignInConfirmNotBotException,
+        // runs 44242208629 / 44243818628), so this can only run on a home connection: OMT-29.
+        assumeTrue("never reached the endless shelves: on CI YouTube's watch page asks to sign in (OMT-29)", reached)
         val before = seen.size
         FirstRun.shot("en_before_drop")
 
