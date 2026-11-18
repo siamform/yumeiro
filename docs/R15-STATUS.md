@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 12:05 UTC, v1.8.2 cycle, G8 step 9: TV regression)
+## Resume here (updated 2026-11-18 13:15 UTC, v1.8.2 cycle, G8 step 8: G8-8 found in regression)
 
 - **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" + owner handover prompt of 2026-11-18
   (new agent) + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
@@ -16,11 +16,21 @@
     DownloadsScreen, ExternalDownloader) and 44289743979 (DownloadG8, ForceDownload, LowStorage, StorageMainThread,
     StreamWatchDownload, TorrentDownload, YtDownloadPipeline) = all 14 download device classes. Case c (per-request
     capped local host, restarts intended, no rx budget) read 1.103 on api33-lowram.
-- **Runs in progress:** TV regression batch 1 (DownloadsScreen, DownloadG8, DownloadResume, DownloadKill,
-  DownloadCleanup, DownloadQuality, LowStorage): 44299923467 (tv-api24), 44299928223 (tv-api34).
-- **Next three actions:** (1) read TV batch 1; (2) TV batch 2 (StorageMainThread, ForceDownload, ExternalDownloader,
-  StreamWatchDownload, TorrentDownload, YtDownloadPipeline, DownloadThroughput) on both TV images; (3) G8 close docs
-  in one push (GROUP-8 verification table + DL-11 p2 cause 2 row, ledger, checklist, inventory D2, device-runs).
+- **TV regression batch 1 read (head 3680464):** tv-api24 44299923467: G8, Resume, Cleanup, Quality PASS; LowStorage a
+  PASS, b SKIPPED (no fallocate on Android 7); DownloadsScreen SKIPPED (API 28 gate); DownloadKill FAIL = test fault
+  (~50 MB/s link finished the file in the fixed 1.5 s before the kill) → test fixes 45d6763, 0a4bd0b.
+  tv-api34 44299928223: DownloadsScreen, G8, Kill, Cleanup, Quality PASS; LowStorage b SKIPPED (32-bit fallocate
+  filled 1.1 GB of 5.2 GB; dd fallback 0a4bd0b); **DownloadResume b FAIL = new finding G8-8** (Retry during the
+  failing worker's last moment dropped by ExistingWorkPolicy.KEEP → item "Queued" forever). Test 22fc1da
+  (DownloadG8DeviceTest#d), fix 8a4cfa0.
+- **Runs in progress:** device 44302259076 on 22fc1da (G8-8 fail-before, both phones; d must be red).
+- **Next three actions:** (1) read 44302259076 (d red on both phones); (2) pass-after: CI on 8a4cfa0 + device
+  DownloadG8DeviceTest (a–d) both phones; (3) rerun the group regression on the close commit: phones (14 classes,
+  2 runs) and TV batches 1 + 2 on tv-api24 and tv-api34; then G8 close docs in one push. Doc gaps to fix in the
+  close push: GROUP-8 verification table (still "pending"), DL-11 p2 cause 2 + G8-8 rows, ledger G8 rows (none
+  yet), checklist BUG-3 / DL-11 p2 rows, queue: 5 G8 code-quality items the GROUP-8 doc says are queued (missing),
+  OMT-G8a referenced but missing in OWNER-MANUAL-TESTS.md, cycle report G8 section, GROUP-1…5/9/10/12 closed item
+  by item before §13a (need §13a re-audit, record in queue).
 - **UNVERIFIED-QUEUE.md:** 70 rows.
 
 ### Previous resume note — superseded (v1.8.2 cycle, G6 closed, G8 batch)
