@@ -152,6 +152,9 @@ object ExtensionManager {
     private val _repair = MutableStateFlow<Pair<Int, Int>?>(null)
     val repair: StateFlow<Pair<Int, Int>?> = _repair.asStateFlow()
 
+    /** G9-5: extensions the user said no to while repairing; not offered again in this process. */
+    private val declinedRepair: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     /** Installed extensions whose file is gone (restored without files, or deleted by the system). */
     fun missingFiles(context: Context): List<InstalledExtension> =
         _state.value.installed.filter { it.fileName.isBlank() || !File(pluginDir(context), it.fileName).isFile }
@@ -162,7 +165,7 @@ object ExtensionManager {
      */
     suspend fun repairMissing(context: Context): Pair<Int, Int> = withContext(Dispatchers.IO) {
         ensureLoaded(context)
-        val missing = missingFiles(context).filter { it.sourceUrl.startsWith("http") }
+        val missing = missingFiles(context).filter { it.sourceUrl.startsWith("http") && it.key !in declinedRepair }
         if (missing.isEmpty()) { dev.asfakul.yumeiro.backup.BackupMeta.clearPendingDownloads(context); return@withContext 0 to 0 }
         // G9-2: offline counts as failed so the retry helper tries again when the network is back.
         if (!dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) return@withContext 0 to missing.size
@@ -172,7 +175,10 @@ object ExtensionManager {
             markBusy(ext.key, true)
             try {
                 val bytes = downloadFirst(listOf(ext.sourceUrl))
-                gate(ExtensionReview.Mode.AUTO, ext.name, ext.version, ext.repoName, true, bytes)
+                // G9-5: AUTO refused a flagged extension the user had accepted before the backup, so
+                // it never came back. Ask again instead (IF_RISKY); without the review host on
+                // screen it is held back and the next try asks. Never installed silently.
+                gate(ExtensionReview.Mode.IF_RISKY, ext.name, ext.version, ext.repoName, true, bytes)
                 mutex.withLock {
                     val current = _state.value.installed.firstOrNull { it.key == ext.key } ?: ext
                     installBytes(context, current.copy(sha256 = sha256(bytes), updatedAt = System.currentTimeMillis()), bytes, current)
@@ -180,7 +186,8 @@ object ExtensionManager {
                 ok++
             } catch (t: Throwable) {
                 if (t is kotlinx.coroutines.CancellationException) throw t
-                Log.w(TAG, "repair ${ext.name}", t); failed++
+                if (t is ExtensionReview.Declined) declinedRepair += ext.key // G9-5: not asked again this process
+                else { Log.w(TAG, "repair ${ext.name}", t); failed++ }
             } finally { markBusy(ext.key, false); _repair.value = (ok + failed) to missing.size }
         }
         _repair.value = null
