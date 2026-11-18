@@ -13,7 +13,7 @@
     { "id": "free_tv", "name": "Free-TV", "category": "Global TV", "description": "Curated free-to-air channels from around the world", "repo": "Free-TV/IPTV", "url": "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8" }
   ],
   "repos": [
-    { "repo": "iptv-org/iptv", "paths": ["streams/"], "category": "Country", "namePrefix": "iptv-org", "max": 340, "countryFiles": true }
+    { "repo": "iptv-org/iptv", "paths": ["streams/"], "category": "Country", "namePrefix": "iptv-org", "max": 340, "countryFiles": true, "fillFromIptvOrg": true }
   ],
   "search": {
     "queries": [

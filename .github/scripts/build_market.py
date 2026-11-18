@@ -201,6 +201,99 @@ def repair(raw):
     return "\n".join(out) + "\n", entries, groups, fixed
 
 
+# ---------------------------------------------------------------------------------------------
+# NBUG-14 (ADR-026): iptv-org's repository files carry `tvg-id` only; iptv-org adds logos and
+# categories when it publishes. The market fills in what is missing from the same API data.
+
+IPTV_API = "https://iptv-org.github.io/api"
+RASTER = {"PNG", "JPEG", "JPG", "WEBP", "GIF"}  # the app has no SVG decoder (NB14-OB1)
+
+
+def meta_from(logos, channels, categories):
+    """{"logo": {(channel, feed or None): url}, "category": {channel: name}} from the API rows.
+
+    Per (channel, feed) the first raster logo that is in use wins; a logo not in use only when
+    there is no other."""
+    best = {}
+    for row in logos or []:
+        url = (row.get("url") or "").strip()
+        if not url or (row.get("format") or "").upper() not in RASTER or not row.get("channel"):
+            continue
+        key = (row["channel"], row.get("feed") or None)
+        in_use = bool(row.get("in_use"))
+        if key not in best or (in_use and not best[key][1]):
+            best[key] = (url, in_use)
+    names = {c.get("id"): c.get("name") for c in categories or [] if c.get("id")}
+    cats = {}
+    for ch in channels or []:
+        ids = ch.get("categories") or []
+        if ch.get("id") and ids:
+            cats[ch["id"]] = names.get(ids[0]) or ids[0].replace("_", " ").title()
+    return {"logo": {k: v[0] for k, v in best.items()}, "category": cats}
+
+
+def iptv_meta():
+    """The API data, or None when it can't be read (lists are then published as before)."""
+    try:
+        logos = json.loads(http(f"{IPTV_API}/logos.json", timeout=90)[2])
+        channels = json.loads(http(f"{IPTV_API}/channels.json", timeout=90)[2])
+        categories = json.loads(http(f"{IPTV_API}/categories.json", timeout=30)[2])
+        meta = meta_from(logos, channels, categories)
+        print(f"iptv-org API: {len(meta['logo'])} logos, {len(meta['category'])} categories")
+        return meta
+    except Exception as e:  # noqa: BLE001
+        print(f"iptv-org API unreadable ({e}); logos and categories not filled in")
+        return None
+
+
+def _attr_value(v):
+    return v.replace('"', "%22").replace("\n", "").strip()
+
+
+def fill_missing(text, meta):
+    """Adds `tvg-logo` / `group-title` to #EXTINF lines that have a known `tvg-id` and lack them.
+
+    Returns (text, number of lines changed). A list's own non-empty values are never replaced."""
+    out, changed = [], 0
+    for line in text.split("\n"):
+        if line.upper().startswith("#EXTINF"):
+            title, cut = _title_of(line)
+            if cut >= 0:
+                head, tail = line[:cut], line[cut:]
+                attrs = dict(ATTR.findall(head))
+                tid = (attrs.get("tvg-id") or "").strip()
+                if tid:
+                    ch, _, feed = tid.partition("@")
+                    add = {}
+                    if not (attrs.get("tvg-logo") or "").strip():
+                        logo = meta["logo"].get((ch, feed or None)) or meta["logo"].get((ch, None))
+                        if logo:
+                            add["tvg-logo"] = _attr_value(logo)
+                    if not (attrs.get("group-title") or "").strip():
+                        cat = meta["category"].get(ch)
+                        if cat:
+                            add["group-title"] = _attr_value(cat)
+                    for k, v in add.items():
+                        if k in attrs:  # present but empty
+                            head = re.sub(rf'(?<![\w-]){re.escape(k)}=""', f'{k}="{v}"', head, count=1)
+                        else:
+                            head = f'{head} {k}="{v}"'
+                    if add:
+                        line, changed = head + tail, changed + 1
+        out.append(line)
+    return "\n".join(out), changed
+
+
+def prepare(c, data, meta):
+    """repair() plus, for candidates marked `fillFromIptvOrg`, the iptv-org logos and categories."""
+    text, entries, groups, fixed = repair(data)
+    if meta and c.get("fillFromIptvOrg"):
+        filled, changed = fill_missing(text, meta)
+        if changed:
+            text, entries, groups, _ = repair(filled.encode("utf-8"))
+    return text, entries, groups, fixed
+
+
 def probe(url):
     """True when a stream URL answers (status < 400) within a few seconds."""
     target, _, pipe = url.partition("|")
@@ -324,6 +417,7 @@ def discover(cfg, limits):
                 "id": slug(r.get("namePrefix", r["repo"]), stem), "name": nm, "category": cat, "country": country,
                 "description": f"{nm} channels from {r['repo']}", "repo": r["repo"], "stars": meta.get("stargazers_count"),
                 "source": f"https://raw.githubusercontent.com/{r['repo']}/{branch}/{path}", "origin": "repo", "size": size,
+                "fillFromIptvOrg": bool(r.get("fillFromIptvOrg")),
             })
 
     s = cfg.get("search") or {}
@@ -396,11 +490,12 @@ def main():
     if only:
         cands = [c for c in cands if c["id"] in only or c.get("origin") in only]
     print(f"{len(cands)} candidates")
+    meta = iptv_meta() if any(c.get("fillFromIptvOrg") for c in cands) else None
 
     def build(c):
         try:
             _, final, data = fetch(c["source"], limits["maxFileBytes"])
-            text, entries, groups, fixed = repair(data)
+            text, entries, groups, fixed = prepare(c, data, meta)
             if len(entries) < limits["minChannels"]:
                 raise ValueError(f"only {len(entries)} streams")
             return c, (text, entries, groups, fixed, final), None
