@@ -259,3 +259,54 @@ See docs/SYSTEM-DESIGN.md ADR-025.
 | NB16-4 | pending (`Nbug16ExtensionVersionDeviceTest`) | pending | emulator |
 | NB16-5 | pending (`ExtensionFormatsTest.newerUserRepoCopyWinsOverMarket`) | pending | CI unit (Robolectric) |
 | NB16-6, NB16-7 | no test can drive the old code (no hook for "6 h later" or a refused background update) | pending (unit, new code) | UNVERIFIED-QUEUE |
+
+## NBUG-14: IPTV channel logos don't show
+
+Owner report 2026-11-18: "Channel logos are not displaying for IPTV channels."
+
+### Files and lines read
+
+- `stream/M3uParser.kt` 53–150: `tvg-logo` → `StreamRequest.logoUrl` (quoted attributes, any case).
+- `stream/StreamModels.kt` 70, 111, 128: the logo survives the channel cache (`logo` key).
+- `ui/screens/stream/LiveTvHub.kt` 139–170 (`LiveChannelTile`), `StreamScreen.kt` 729, `watch/StreamWatchPanel.kt`
+  320: every surface draws `logoUrl` with Coil `AsyncImage`; initials stay behind when it fails.
+- `MTApplication.newImageLoader` 100–118: Coil uses `NetworkClient.get` (no User-Agent set → `okhttp/4.12.0`).
+- `widget/ContinueWidget.kt` 132: its own `ImageLoader(context)` (Coil default client, same User-Agent).
+- `.github/scripts/build_market.py` (all), `.github/market/sources.json`: `iptv-org/iptv` `streams/` per country.
+
+### Evidence (network probe from the sandbox, 2026-11-19)
+
+| Playlist (market copy) | Channels | With `tvg-logo` |
+|---|---|---|
+| IPTV Scraper Zilla | 14 478 | 13 139 |
+| Free-TV | 2 192 | 2 101 |
+| Mrgify BDIX | 338 | 288 |
+| iptv-org Bangladesh / United States / India | 37 / 1 106 / 1 765 | 0 / 0 / 0 |
+
+iptv-org's published `countries/bd.m3u` has 43 logos and `group-title`; its repository `streams/bd.m3u` has
+`tvg-id` only. Logo hosts in the curated lists: 80 samples over the 40 commonest, all 200 with the app's
+User-Agent except `upload.wikimedia.org` (403: "Please set a user-agent and respect our robot policy").
+
+### Findings register
+
+| ID | Finding | Root cause | Severity | Status |
+|---|---|---|---|---|
+| NB14-1 | Every iptv-org country playlist from the market shows no logos (340 of 400 entries) | The market copies the repository's raw `streams/` files, which carry `tvg-id` only; iptv-org adds logos when it publishes | High (most Live TV channels) | Open |
+| NB14-2 | Logos on Wikimedia (and hosts with the same rule) never load | Image requests carry OkHttp's default User-Agent; Wikimedia refuses it (403) | Medium (457 curated logos, 3 117 in iptv-org's data) | Open |
+| NB14-3 | iptv-org country playlists have no categories (every channel "Other") | Same as NB14-1: `group-title` is added only when iptv-org publishes | Medium (needed for NBUG-15 (b) grouping by category) | Open |
+| NB14-OB1 | SVG logos never show | Coil has no SVG decoder in the app (new dependency) | Low (18 curated logos) | Queued |
+
+Not findings: parser and cache keep `tvg-logo`; cleartext logos are allowed (`network_security_config`
+base); `application/octet-stream` logos decode (Coil reads the bytes).
+
+### Design (ADR-026)
+
+See docs/SYSTEM-DESIGN.md ADR-026.
+
+### Verification
+
+| Item | Fail-before (old code) | Pass-after | Label |
+|---|---|---|---|
+| NB14-1, NB14-3 | pending (`.github/scripts/tests/test_build_market_logos.py`) | pending | CI (Python) |
+| NB14-2 | pending (`Nbug14ChannelLogoDeviceTest`: local server answers 403 to library User-Agents) | pending | emulator, TV emulator |
+

@@ -854,7 +854,8 @@ flowchart LR
   job). B. Drop the sparse checkout (fetches the whole `main` tree in every data job). C. `git add --sparse` only
   (publishes, but NB16-2 stays). **Decision: A.**
 - **Options (versions):** A. Store the version from the file's manifest when present (CloudStream does the
-  same). B. Compare by sha256 for every origin (community listings carry no reliable hash; would flag on every
+  same); the stored value is the higher of the manifest's and the listing's version (ec7163c), so a file whose
+  manifest is older than its listing is never flagged for the listing it already matches. B. Compare by sha256 for every origin (community listings carry no reliable hash; would flag on every
   rebuild). **Decision: A.** Playlists: record the sha256 of the bytes actually downloaded from the market mirror
   (the catalog's digest is the sha256 of exactly those bytes, `build_market.py`); a download from the original
   source keeps the old value (it can never equal the mirror digest).
@@ -868,6 +869,36 @@ flowchart LR
   Actions, was silent); manifest without a version → the listing's version (old behaviour).
 - **Consequences:** the NB16-1/NB16-2 fixes take effect only after `r15-stability` is merged to `main`
   (scheduled workflows run there); until then the live catalog stays frozen. Owner action at release.
+- **Status:** accepted (agent decision inside the owner-ordered bug list). Verified only after fail-before
+  and pass-after.
+
+### ADR-026: Channel logos: the market fills in iptv-org logos; images carry a named User-Agent (NBUG-14)
+
+- **Scope:** `.github/scripts/build_market.py` (repair step), new `.github/scripts/tests/test_build_market_logos.py`
+  (run in `ci.yml`); app image loading (`MTApplication.newImageLoader`, `widget/ContinueWidget`) through a new
+  `ui/image/ImageHttp`.
+- **Requirements:** a market channel whose source has a known logo shows it; an image host that refuses
+  library User-Agents (Wikimedia: "Please set a user-agent", 403) serves the app. Non-functional: no new
+  dependency, no new permission, no extra request per channel in the app, the catalog's sha256 rule unchanged.
+- **Evidence:** 340 of the market's 400 entries are iptv-org country files from the repository's `streams/`
+  folder; those files carry only `tvg-id` (0 `tvg-logo`, 0 `group-title` in `bd`, `us`, `in`); iptv-org adds
+  logos and categories only when it publishes (`iptv-org.github.io/iptv/countries/bd.m3u`: 43 logos). The API
+  `logos.json` (35 726 rows, 5.8 MB) and `channels.json` key them by channel id; `tvg-id` is `Channel.cc@Feed`.
+  Wikimedia: 3 117 of the API's logos and 457 of the curated lists' logos are on `upload.wikimedia.org`, which
+  answers 403 to `okhttp/4.12.0` and 200 to `Yumeiro/1.8.2 (https://github.com/siamform/yumeiro)`; 80 samples
+  over the 40 commonest logo hosts: only Wikimedia answers differently (network probe, 2026-11-19).
+- **Options (data):** A. Fill in missing `tvg-logo` (and missing `group-title`) at build time from the iptv-org
+  API by `tvg-id` (feed match first, then the channel's own logo; raster formats only). B. Switch to the
+  published country lists (different channel sets, no `_samsung`/`_pluto` variants; every installed id changes).
+  C. Look logos up in the app (5.8 MB per device, every device, every refresh). **Decision: A.**
+- **Options (app):** A. One image client = the shared client plus a named User-Agent when a request has none
+  (a channel's own headers still win). B. A browser User-Agent (Wikimedia asks for a named one; some hosts
+  answer 429 to browser strings without cookies). **Decision: A.**
+- **Not done here:** SVG logos (18 in the curated lists; would need a new decoder dependency) — raster logos are
+  picked instead where the API has one; queued as NB14-OB1.
+- **Failure modes:** API unreachable at build time → lists published as today (no logos added), build not failed.
+- **Consequences:** every iptv-org file changes once (sha256), so installed copies get one update (NBUG-16
+  auto-update applies it). Like ADR-025, the data part reaches users only after `main` runs the market workflow.
 - **Status:** accepted (agent decision inside the owner-ordered bug list). Verified only after fail-before
   and pass-after.
 
