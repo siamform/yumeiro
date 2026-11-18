@@ -34,6 +34,11 @@ object PlayCounts {
         /** Yumix only: what is needed to reopen the title. */
         val api: String? = null,
         val url: String? = null,
+        /**
+         * NBUG-11 (ADR-023): the title is 18+, decided when the play was counted, as Continue
+         * watching does. Null = not known (saved before the mark existed); [learnAdult] fills it in.
+         */
+        val adult: Boolean? = null,
     ) {
         val key: String get() = "${kind.name}:$id"
     }
@@ -60,15 +65,33 @@ object PlayCounts {
     fun record(
         context: Context, kind: Kind, id: String, title: String, subtitle: String, thumbnail: String?,
         headers: Map<String, String> = emptyMap(), api: String? = null, url: String? = null, now: Long = System.currentTimeMillis(),
+        adult: Boolean? = null,
     ) {
         if (id.isBlank() || dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         ensureLoaded(context)
         synchronized(this) {
             val list = _entries.value
             val old = list.firstOrNull { it.kind == kind && it.id == id }
-            val next = Entry(kind, id, title, subtitle, thumbnail, headers, (old?.count ?: 0) + 1, now, api ?: old?.api, url ?: old?.url)
+            val next = Entry(kind, id, title, subtitle, thumbnail, headers, (old?.count ?: 0) + 1, now, api ?: old?.api, url ?: old?.url, adult ?: old?.adult)
             _entries.value = rank(listOf(next) + list.filterNot { it.kind == kind && it.id == id }).take(MAX)
             save(context)
+        }
+    }
+
+    /**
+     * NBUG-11 (ADR-023): entries saved before the 18+ mark get it once [resolve] can tell (the
+     * extension has loaded, or Continue watching knows the title). Saved only if something changed.
+     * Call off the main thread.
+     */
+    fun learnAdult(context: Context, resolve: (Entry) -> Boolean?) {
+        ensureLoaded(context)
+        synchronized(this) {
+            var changed = false
+            val next = _entries.value.map { e ->
+                if (e.kind != Kind.ONLINE || e.adult != null) e
+                else resolve(e)?.let { a -> changed = true; e.copy(adult = a) } ?: e
+            }
+            if (changed) { _entries.value = next; save(context) }
         }
     }
 
@@ -88,6 +111,7 @@ object PlayCounts {
                 if (e.headers.isNotEmpty()) put("h", JSONObject(e.headers))
                 put("c", e.count); put("at", e.lastAt)
                 e.api?.let { put("api", it) }; e.url?.let { put("url", it) }
+                e.adult?.let { put("ad", it) }
             })
         }
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, a.toString()).apply()
@@ -100,6 +124,7 @@ object PlayCounts {
         Entry(
             kind, o.optString("id"), o.optString("t"), o.optString("s"), o.optString("th").takeIf { it.isNotBlank() }, h,
             o.optInt("c", 1), o.optLong("at"), o.optString("api").takeIf { it.isNotBlank() }, o.optString("url").takeIf { it.isNotBlank() },
+            if (o.has("ad")) o.optBoolean("ad") else null,
         )
     }.filter { it.id.isNotBlank() }
 

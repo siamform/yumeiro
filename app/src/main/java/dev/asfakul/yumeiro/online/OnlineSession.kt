@@ -214,6 +214,7 @@ object OnlineSession {
         dev.asfakul.yumeiro.data.PlayCounts.record(
             app, dev.asfakul.yumeiro.data.PlayCounts.Kind.ONLINE, "${detail.api}|${detail.url}", detail.name, detail.api,
             detail.posterUrl, detail.posterHeaders, api = detail.api, url = detail.url,
+            adult = AdultContent.isAdult(detail.api, detail.type), // NBUG-11 (ADR-023)
         )
         resolve(app, resumeMs)
     }

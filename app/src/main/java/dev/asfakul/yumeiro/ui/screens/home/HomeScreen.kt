@@ -318,11 +318,22 @@ fun HomeScreen(
     // R16: parsing the play-count file blocked the first Home composition (device stall, run 43671209244).
     androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PlayCounts.ensureLoaded(context) } }
     val videoPlays by PlayCounts.entries.collectAsState()
-    val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate) {
+    // NBUG-11 (ADR-023): the 18+ check depends on which extensions are loaded, so Most played is
+    // worked out again when they change (it ran once, before they had loaded, and let 18+ through).
+    val engine by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
+    LaunchedEffect(engine.ready, engine.generation) {
+        if (engine.ready) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val loaded = dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis()
+            PlayCounts.learnAdult(context) { e -> dev.asfakul.yumeiro.online.AdultContent.knownAdult(e.api, e.url, loaded) }
+        }
+    }
+    val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate, engine.ready, engine.generation) {
         val byId = recentVideos.associateBy { it.id }
         val songs = mostPlayed.take(12).map { Played.Song(it) }
+        val hide = !adultOn || adultPrivate
+        val loaded = if (hide && videoPlays.any { it.kind == PlayCounts.Kind.ONLINE }) dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis() else emptyMap()
         val videos = videoPlays.asSequence()
-            .filterNot { it.kind == PlayCounts.Kind.ONLINE && (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.api.orEmpty()) }
+            .filterNot { it.kind == PlayCounts.Kind.ONLINE && hide && dev.asfakul.yumeiro.online.AdultContent.hidePlay(it.adult, it.api, it.url, loaded) }
             .mapNotNull { e -> if (e.kind == PlayCounts.Kind.DEVICE) byId[e.id]?.let { Played.Video(e, it) } else Played.Video(e) }
             .take(12).toList()
         (songs + videos).sortedByDescending { it.count }.take(16)
