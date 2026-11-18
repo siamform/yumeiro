@@ -724,10 +724,16 @@ enum class MusicMode(val key: String) { DEVICE("device"), ONLINE("online"), MIX(
         fun of(key: String?): MusicMode = entries.firstOrNull { it.key == key } ?: DEVICE
         /** Round 13: the mode the Music tab opens in. */
         fun defaultFor(online: Boolean): MusicMode = if (online) ONLINE else DEVICE
-        /** The mode after the connection changes: follow it until the user picks; offline always leaves Online. Pure. */
-        fun follow(current: MusicMode, online: Boolean, picked: Boolean): MusicMode = when {
+        /**
+         * The mode after the connection changes: follow it until the user picks; offline always leaves
+         * Online. G6-MO1: [picked] is the mode the user chose (null = none), not a yes/no flag, so a
+         * user who picked Online gets it back when the connection returns (it used to stay on
+         * On device for good). Pure.
+         */
+        fun follow(current: MusicMode, online: Boolean, picked: MusicMode?): MusicMode = when {
             !online && current == ONLINE -> DEVICE
-            picked -> current
+            picked == ONLINE -> if (online) ONLINE else DEVICE
+            picked != null -> picked
             else -> defaultFor(online)
         }
     }

@@ -118,10 +118,12 @@ class Round13LogicTest {
     @Test fun music_mode_follows_connection() {
         assertEquals(MusicMode.ONLINE, MusicMode.defaultFor(true))
         assertEquals(MusicMode.DEVICE, MusicMode.defaultFor(false))
-        assertEquals(MusicMode.ONLINE, MusicMode.follow(MusicMode.DEVICE, online = true, picked = false))
-        assertEquals(MusicMode.DEVICE, MusicMode.follow(MusicMode.ONLINE, online = false, picked = true))
-        assertEquals(MusicMode.DEVICE, MusicMode.follow(MusicMode.DEVICE, online = true, picked = true))
-        assertEquals(MusicMode.MIX, MusicMode.follow(MusicMode.MIX, online = false, picked = true))
+        assertEquals(MusicMode.ONLINE, MusicMode.follow(MusicMode.DEVICE, online = true, picked = null))
+        assertEquals(MusicMode.DEVICE, MusicMode.follow(MusicMode.ONLINE, online = false, picked = MusicMode.ONLINE))
+        assertEquals(MusicMode.DEVICE, MusicMode.follow(MusicMode.DEVICE, online = true, picked = MusicMode.DEVICE))
+        assertEquals(MusicMode.MIX, MusicMode.follow(MusicMode.MIX, online = false, picked = MusicMode.MIX))
+        // G6-MO1: a picked Online comes back with the connection.
+        assertEquals(MusicMode.ONLINE, MusicMode.follow(MusicMode.DEVICE, online = true, picked = MusicMode.ONLINE))
     }
 
     // ---- endless music feed --------------------------------------------------------------------

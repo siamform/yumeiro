@@ -330,14 +330,16 @@ fun MTPlayerApp(
     // Round 13: Online when there is internet, On device when not, switching by itself as the
     // connection changes. Once the user picks a mode it sticks, except that losing the connection
     // always leaves Online for On device (Online cannot play anything offline).
-    var musicModePicked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    // G6-MO1: the mode the user picked (key), null until they pick one.
+    var musicModePicked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var musicModeKey by androidx.compose.runtime.saveable.rememberSaveable {
         mutableStateOf(dev.asfakul.yumeiro.ui.screens.music.MusicMode.defaultFor(dev.asfakul.yumeiro.network.Connectivity.isOnline(context)).key)
     }
     LaunchedEffect(Unit) {
         dev.asfakul.yumeiro.network.Connectivity.online.collect { online ->
             musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.follow(
-                dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(musicModeKey), online, musicModePicked,
+                dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(musicModeKey), online,
+                musicModePicked?.let { dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(it) },
             ).key
         }
     }
@@ -1261,7 +1263,7 @@ fun MTPlayerApp(
                     },
                     selectedKey = if (musicMenu) musicMode.key else videoSource.tag,
                     onSelect = { key ->
-                        if (musicMenu) { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(key).key; musicModePicked = true }
+                        if (musicMenu) { musicModeKey = dev.asfakul.yumeiro.ui.screens.music.MusicMode.of(key).key; musicModePicked = musicModeKey }
                         else dev.asfakul.yumeiro.ui.screens.online.VideoSource.entries.firstOrNull { it.tag == key }?.let { videoSourcePicked = true; videoSource = it }
                         sourceMenuFor = null
                     },
