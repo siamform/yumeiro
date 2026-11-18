@@ -56,6 +56,18 @@ class Dl11PaceTest {
         assertTrue(p.lastWindowRate > 0 && p.lastWindowRate * 3 < p.baselineRate)
     }
 
+    /**
+     * DL-11 part 2 (G8 pass-after 44280021547, real host 1.127x): the first MiB of a fast link comes out of
+     * the socket buffer in about 2 ms, so the baseline read hundreds of MB/s and the link's own 20 MiB/s
+     * looked like "under a third": the request was closed and its bytes in flight thrown away.
+     */
+    @Test fun aFastLinkAtItsOwnSpeedDoesNotTrip() {
+        val p = RequestPace()
+        val (a, t) = feed(p, mb, 64L * 1024 * s / (500 * mb), s) // the first MiB from the buffer
+        val (b, _) = feed(p, 8 * mb, 64L * 1024 * s / (20 * mb), t) // then the link: 20 MiB/s, every read waits
+        assertFalse("a 20 MiB/s link tripped against a buffer-speed baseline (${p.baselineRate * s / mb} MiB/s)", a || b)
+    }
+
     @Test fun gateStaysOpenWhenRestartsHelp() {
         val g = PaceGate()
         repeat(20) { assertTrue(g.judge(newBaseline = 10.0, slowRate = 1.0)) }
