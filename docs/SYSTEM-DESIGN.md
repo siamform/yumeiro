@@ -818,6 +818,9 @@ flowchart LR
 - **Options:** A. title page + page HTML (OkHttp, referer = site, CloudStream User-Agent) with KVS
   support, then WebView. B. WebView only, simulating a tap on the player (fragile per site, slow,
   needs a visible-like WebView). C. Patch the extension (third party; not ours to ship).
+- **NB12-4:** a play after the refresh gets its own video id (link hash + `r`), so an identical refreshed
+  link is really played again (new extraction session, cookies) and its failure reaches the last resort.
+  `PlayerSurfaceRules` keys on the part before the last `:`, which is unchanged.
 - **Decision:** A. It is how yt-dlp handles KVS (ported from `_kvs_get_real_url`, Unlicense), it needs no
   JavaScript, and B remains as the fallback that already exists.
 - **NBUG-13 (network):** `SmartDns` with "auto" already resolves blocked hosts over DoH on every OkHttp

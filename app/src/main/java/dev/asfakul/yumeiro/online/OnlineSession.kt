@@ -306,7 +306,10 @@ object OnlineSession {
         val s = _state.value ?: return
         val link = s.links.getOrNull(linkIndex) ?: return
         val data = s.data ?: return
-        val id = videoIdFor(s.api, data) + ":" + link.url.hashCode().toUInt().toString(16)
+        // NBUG-12 NB12-4: after the fresh loadLinks the same link must really play again. With the same
+        // id IncomingMedia publishes an equal item, its StateFlow drops it, the player never reloads
+        // and the session sat on the old error forever (the last resort was never reached).
+        val id = videoIdFor(s.api, data) + ":" + link.url.hashCode().toUInt().toString(16) + (if (s.refreshed) "r" else "")
         val resume = resumeMs ?: OnlineHistory.progressOf(s.api, data)?.takeIf { !it.finished }?.positionMs ?: 0L
         _state.update { cur -> (cur ?: s).copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null, visible = maxOf(s.visible, linkIndex + 1)) }
         dev.asfakul.yumeiro.player.StartTimeline.mark("player start", link.qualityLabel)
