@@ -664,20 +664,25 @@ class DashGrab(private val client: OkHttpClient, private val headers: Map<String
         }
         val state = File(f.parentFile, f.name + ".idx")
         val all = listOfNotNull(t.init) + t.parts
-        var done = if (f.exists() && state.exists()) state.readText().trim().toIntOrNull() ?: 0 else 0
-        val lengths = File(f.parentFile, f.name + ".len")
+        // G8-4: one record "parts:bytes" in .idx (HlsResume), written in one step after each part. The count
+        // and the length lived in two files (.idx, .len) written one after the other; a kill between them
+        // resumed with a length that did not match the count and appended a part twice. An old record
+        // (count only) or a short file starts the track over.
+        File(f.parentFile, f.name + ".len").delete()
+        val (resumeParts, resumeBytes) = HlsResume.read(if (f.exists() && state.exists()) state.readText() else null, f.length())
+        var done = resumeParts
         if (done > 0) {
-            // Cut a half-written segment before resuming.
-            lengths.takeIf { it.exists() }?.readText()?.trim()?.toLongOrNull()?.let { RandomAccessFile(f, "rw").use { raf -> raf.setLength(it) } }
+            // Cut a half-written part before resuming.
+            if (f.length() > resumeBytes) RandomAccessFile(f, "rw").use { raf -> raf.setLength(resumeBytes) }
         } else f.delete()
-        var bytes = if (done > 0) f.length() else 0L
+        var bytes = if (done > 0) resumeBytes else 0L
         FileOutputStream(f, done > 0).use { fos ->
             for (i in done until all.size) {
                 currentCoroutineContext().ensureActive()
                 val data = fetchRetry(all[i])
                 fos.write(data); fos.flush(); bytes += data.size
                 done = i + 1
-                lengths.writeText(bytes.toString()); state.writeText(done.toString())
+                state.writeText(HlsResume.write(done, bytes))
                 progress(bytes)
             }
         }
