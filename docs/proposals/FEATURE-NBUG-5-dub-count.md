@@ -1,6 +1,6 @@
 # NBUG-5 — Dub list shows the Sub count, Episode 7 on Dub plays Episode 1
 
-Status: **Implemented — signal D fix (section 5b); verification in section 8**. Owner report 2026-11-18 (docs/NEW-BUGS-FEATURES-2026-11-18.md).
+Status: **Verified (emulator, api33-lowram) — signal D fix (section 5b), evidence in section 8**. Owner report 2026-11-18 (docs/NEW-BUGS-FEATURES-2026-11-18.md).
 Group G3 (source metadata; F-01 uses the same path).
 
 ## 1. Report
@@ -112,6 +112,10 @@ the mapped Dub count equal to the card's count for the probed titles.
 
 ## 8. Verification
 
-- Unit `online/MixedLanguageEpisodesTest` (Robolectric): fail-before CI run on temp branch ab/nb5-before (3 of
-  the 4 tests, the 4th needs the new API) — see report Runs; pass-after CI at the fix commit.
-- Device: `DubCountProbeDeviceTest` re-run logs `shown12` from `episodesOf` → expected run-by-run order.
+- Unit `online/MixedLanguageEpisodesTest` (Robolectric): fail-before CI 44206044268 on temp branch ab/nb5-before
+  (3 of the 4 tests; the 4th needs the new API): 1144 tests, only nextEpisodeStaysInTheSameLanguage and
+  runNamedLikeTheVersionComesFirst failed; the clean-list guard passed. Pass-after: CI 44211141941 green at 957e4b2.
+- Device (emulator api33-lowram) 44209853612: `shown12` (from `episodesOf`) starts with the English run e1..e12
+  "(Dub)" for Frieren, Solo Leveling (raw list starts with Spanish), Solo Leveling S2, Dandadan S2, Kaiju No. 8,
+  Blue Lock; One Piece unchanged.
+- Not verified: the owner's exact title (not named). Real hardware: not run.

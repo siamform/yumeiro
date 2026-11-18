@@ -36,6 +36,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | BUG-4 | applied track per resolution on TV | — | 44116803828 tv-api34 QUALITY_RESULT PASS 1080…184 | verified (emulator); OMT-15 owner |
 | G5-PC1 | Recently played / counts recorded only by the screen's MusicPlayerManager listener; a swipe from recents clears the ViewModel while PlaybackService plays on | 227c203 shared-player watch records while no screen listens (one writer at a time) | CI 44200206502 + device 44200234105 (ab/pc1-before) → device 44201835648 both phones; CI 44203248895 running | verified (emulator) |
 | G5-PC2 | Home Continue saved only by MainViewModel; same root cause | a96db17 watch saves Continue on the same steps, full track from the process queue | as G5-PC1 (Continue = B → C) | verified (emulator) |
+| NBUG-5 (D) | One Dub list mixed language runs; `episodesOf` number sort interleaved them: count inflated, Next Dub 1 → Spanish 1, Sub → Dub could land on Spanish | 546cdbe labelledEpisodes (runs kept together, version-named run first) + caption + count; 957e4b2 pattern moved for RegexWarmup | 44206044268 fail-before → 44211141941 green; device 44209853612 | verified (emulator, api33-lowram) |
+| G5-LL | Library Jump back in waits for the cold scan (no cached track list) | none needed | 44211556974: 5,000 songs, 99–180 ms / 162–238 ms | measured (emulator); no fix |
 
 ## Test faults
 
@@ -94,6 +96,11 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44203529014 | LibraryEmptyProfileDeviceTest both phones, reopen timing split | PASS both; EP_B open=6693 / continue=6693 / library=6695 ms (api33-lowram), 3667 / 3667 / 3668 ms (api36); 3 songs only |
 | 44203720877 | DubCountProbeDeviceTest probe 2 (api33-lowram) | success; signal D found (KickassAnime mixes Dub + Spanish runs in one list; Yumeiro sort interleaved them) |
 | 44206044268 | CI on ab/nb5-before (NBUG-5 fail-before, MixedLanguageEpisodesTest) | red as expected: 1144 tests, 2 failed (nextEpisodeStaysInTheSameLanguage, runNamedLikeTheVersionComesFirst); clean-list guard passed |
+| 44208688578 | DubCountProbeDeviceTest re-run | my input fault: short class name → ClassNotFoundException; re-run with full name |
+| 44208655473 | CI at 546cdbe (NBUG-5 fix) | red: MixedLanguageEpisodesTest passed; RegexGuardTest.everyPatternHolderIsWarmedOffMain failed (new pattern in object OnlineSession) → 957e4b2 |
+| 44209853612 | DubCountProbeDeviceTest api33-lowram at f7da100 | success; shown12 starts with the English Dub run for Frieren, Solo Leveling (raw Spanish first), S2, Dandadan, Kaiju, Blue Lock |
+| 44211141941 | CI at 957e4b2 | green (build, unit, lint, gitleaks) |
+| 44211556974 | LargeLibraryScanDeviceTest both phones | OK both; 5,000 songs; scan 180/111/99 ms api33-lowram, 238/181/162 ms api36; insert 135 s / 128 s; cleanup removed 5,000 |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## L1 G12 order: items verified in earlier cycles

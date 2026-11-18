@@ -116,4 +116,4 @@ the ledger row LB-8 and here).
 - G5-EP: `LibraryEmptyProfileDeviceTest` (pm clear → like / playlist / play with pause and seek → screen
   destroyed mid-queue → kill → reopen). Fail-before 44200234105, pass-after 44201835648 (emulator, both phones).
 - Note: docs/proposals/FEATURE-G5-PC1-plays-without-screen.md. Open: Library Jump back in / Most played need the
-  MediaStore scan after every cold start (no cached track list); timing 44203529014 (emulator): both are ready when launch returns (api33-lowram open 6693 ms, Library +2 ms; api36 3667 ms, +1 ms). Measured with 3 songs only; time with a large library is **open** (`_audioTracks` starts empty and fills only after the scan).
+  MediaStore scan after every cold start (no cached track list); timing 44203529014 (emulator): both are ready when launch returns (api33-lowram open 6693 ms, Library +2 ms; api36 3667 ms, +1 ms). With 5,000 songs (44211556974, LargeLibraryScanDeviceTest) the cold scan takes 99–180 ms on api33-lowram and 162–238 ms on api36, all songs seen → no cached track list needed (emulator; slower phone storage unmeasured).

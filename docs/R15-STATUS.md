@@ -1,6 +1,16 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 5)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 6)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** NBUG-5 signal D verified (emulator api33-lowram; CI 44211141941 green). G5 large-library scan
+  measured (44211556974, no fix needed). G5 complete on the emulator except real hardware.
+- **Runs in progress:** none.
+- **Next three actions:** (1) upgrade test `-f upgrade_from=v1.8.0` at head; (2) RtlLayoutDeviceTest + WidgetUpdatesDeviceTest
+  re-run at head; (3) L2 G6 Music (service lifecycle, focus, headset, notification, sleep timer, queue persistence, …).
+
+### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 5)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
