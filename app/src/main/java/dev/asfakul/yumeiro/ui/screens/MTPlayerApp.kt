@@ -29,6 +29,7 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
@@ -377,6 +378,21 @@ fun MTPlayerApp(
     // First run: extensions stay asleep until the welcome screen / tour is finished or skipped.
     // Decided before any screen can call ExtensionManager.start.
     val firstRunAtLaunch = remember { dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.shouldAutoShow(context).also { dev.asfakul.yumeiro.online.OnboardingGate.begin(it) } }
+    // NBUG-16 NB16-7: extension and market-playlist update checks run each time the app comes to the
+    // front (each keeps its 6 h gate), not only once per activity creation (a TV keeps it for days).
+    suspend fun backgroundUpdates() {
+        val o = dev.asfakul.yumeiro.online.BackgroundUpdates.run(context.applicationContext) ?: return
+        if (o.extensions.installed.isNotEmpty() || o.extensions.updated.isNotEmpty()) dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
+        val lines = dev.asfakul.yumeiro.online.BackgroundUpdates.messages(o)
+        if (lines.isEmpty()) return
+        val text = lines.joinToString(". ")
+        if (o.extensions.heldBack.isEmpty()) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, text)
+        else dev.asfakul.yumeiro.ui.components.AppMessages.info(context, text)
+    }
+    var firstChecksDone by remember { mutableStateOf(false) }
+    var startTick by remember { mutableIntStateOf(0) }
+    androidx.lifecycle.compose.LifecycleStartEffect(Unit) { startTick++; onStopOrDispose { } }
+    LaunchedEffect(startTick) { if (firstChecksDone && Build.FINGERPRINT != "robolectric") backgroundUpdates() }
     // Online extensions: load installed ones, then sync updates in the background (like stream playlists).
     LaunchedEffect(Unit) {
         // Round 12: tell the user what the last restore / reset did (applied before this screen).
@@ -395,12 +411,8 @@ fun MTPlayerApp(
                 dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Ready to watch: ${starters.joinToString()} installed")
             }
         }
-        val result = ExtensionManager.sync(context)
-        val changed = result.installed + result.updated
-        if (changed.isNotEmpty()) dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
-        if (result.updated.isNotEmpty()) {
-            dev.asfakul.yumeiro.ui.components.AppMessages.success(context, if (result.updated.size == 1) "${result.updated[0]} extension updated" else "${result.updated.size} extensions updated")
-        }
+        backgroundUpdates()
+        firstChecksDone = true
     }
 
     LaunchedEffect(Unit) {
