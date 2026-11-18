@@ -25,6 +25,7 @@ private val RX_HLSDOWNLOADER_4 = Regex("""METHOD=([A-Z0-9-]+)""")
 private val RX_HLS_RESOLUTION = Regex("""RESOLUTION=\d+x(\d+)""")
 private val RX_HLS_URI = Regex("""URI="([^"]+)"""")
 private val RX_HLSDOWNLOADER_5 = Regex("""IV=0[xX]([0-9a-fA-F]+)""")
+private val RX_HLS_MAP_BYTERANGE = Regex("""BYTERANGE="(\d+)(?:@(\d+))?"""")
 
 /**
  * Saves an HLS stream into a single file: picks the best variant, then appends the init section
@@ -34,7 +35,14 @@ private val RX_HLSDOWNLOADER_5 = Regex("""IV=0[xX]([0-9a-fA-F]+)""")
  */
 class HlsDownloader(private val client: OkHttpClient, private val headers: Map<String, String>, private val maxHeight: Int = 0) {
 
-    data class Segment(val url: String, val keyUrl: String?, val iv: ByteArray?, val sequence: Long, val initUrl: String?)
+    /**
+     * One media segment. G8-1: [start]/[length] is its `#EXT-X-BYTERANGE` inside [url] (-1 = the whole
+     * resource), [initStart]/[initLength] the `EXT-X-MAP` `BYTERANGE` of [initUrl].
+     */
+    data class Segment(
+        val url: String, val keyUrl: String?, val iv: ByteArray?, val sequence: Long, val initUrl: String?,
+        val start: Long = -1, val length: Long = -1, val initStart: Long = -1, val initLength: Long = -1,
+    )
 
     suspend fun download(url: String, out: File, progress: (Long, Long) -> Unit): Long {
         var playlistUrl = url
@@ -59,11 +67,11 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         val keys = HashMap<String, ByteArray>()
         var bytes = if (doneCount > 0) resumeBytes else 0L
         FileOutputStream(out, doneCount > 0).use { fos ->
-            if (doneCount == 0) segments.first().initUrl?.let { init -> val b = fetchBytes(init); fos.write(b); bytes += b.size }
+            if (doneCount == 0) segments.first().let { f -> f.initUrl?.let { init -> val b = fetchBytes(init, f.initStart, f.initLength); fos.write(b); bytes += b.size } }
             for (i in doneCount until segments.size) {
                 coroutineContext.ensureActive()
                 val seg = segments[i]
-                var data = fetchBytesRetry(seg.url)
+                var data = fetchBytesRetry(seg.url, seg.start, seg.length)
                 if (seg.keyUrl != null) {
                     val key = keys.getOrPut(seg.keyUrl) { fetchBytes(seg.keyUrl) }
                     data = decrypt(data, key, seg.iv ?: ivFor(seg.sequence))
@@ -80,8 +88,9 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         return bytes
     }
 
-    private fun request(url: String): Request {
+    private fun request(url: String, start: Long = -1, length: Long = -1): Request {
         val b = Request.Builder().url(url)
+        if (start >= 0 && length > 0) b.header("Range", "bytes=$start-${start + length - 1}")
         headers.forEach { (k, v) -> runCatching { b.header(k, v) } }
         return b.build()
     }
@@ -90,14 +99,24 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         if (!r.isSuccessful) throw HttpStatus(r.code); r.body.string()
     }
 
-    private fun fetchBytes(url: String): ByteArray = client.newCall(request(url)).execute().use { r ->
-        if (!r.isSuccessful) throw HttpStatus(r.code); r.body.bytes()
+    /**
+     * The resource at [url], or only [length] bytes from [start] (G8-1, a byte-range segment). A host that
+     * ignores the Range header answers 200 with the whole file; the range is cut out of it.
+     */
+    private fun fetchBytes(url: String, start: Long = -1, length: Long = -1): ByteArray = client.newCall(request(url, start, length)).execute().use { r ->
+        if (!r.isSuccessful) throw HttpStatus(r.code)
+        val body = r.body.bytes()
+        when {
+            start < 0 || length <= 0 || r.code == 206 -> body
+            body.size < start + length -> throw IOException("Byte range $start+$length is past the end of ${body.size} bytes")
+            else -> body.copyOfRange(start.toInt(), (start + length).toInt())
+        }
     }
 
-    private fun fetchBytesRetry(url: String): ByteArray {
+    private fun fetchBytesRetry(url: String, start: Long = -1, length: Long = -1): ByteArray {
         var last: IOException? = null
         repeat(4) { attempt ->
-            try { return fetchBytes(url) } catch (e: HttpStatus) { if (e.code in 400..499 && e.code != 429) throw e; last = e } catch (e: IOException) { last = e }
+            try { return fetchBytes(url, start, length) } catch (e: HttpStatus) { if (e.code in 400..499 && e.code != 429) throw e; last = e } catch (e: IOException) { last = e }
             Thread.sleep(500L shl attempt)
         }
         throw last ?: IOException("Segment failed")
@@ -131,9 +150,17 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
                 ?: all.minWith(compareBy<Triple<Long, Int, String>> { it.second }.thenBy { it.first })).third
         }
 
+        /**
+         * Segments of a media playlist. G8-1: `#EXT-X-BYTERANGE:<n>[@<o>]` makes the next segment bytes
+         * o … o+n-1 of its URI; without `@o` it starts where the previous range of the same URI ended
+         * (RFC 8216 §4.3.2.2). `EXT-X-MAP` takes its `BYTERANGE` attribute (offset 0 when absent).
+         */
         fun parseMedia(text: String, base: String): List<Segment> {
             val out = ArrayList<Segment>()
             var key: String? = null; var iv: ByteArray? = null; var init: String? = null
+            var initStart = -1L; var initLength = -1L
+            var range: Pair<Long, Long?>? = null // length, offset
+            val rangeEnd = HashMap<String, Long>()
             var seq = RX_HLSDOWNLOADER_3.find(text)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
             for (raw in text.lines()) {
                 val l = raw.trim()
@@ -145,8 +172,26 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
                             iv = RX_HLSDOWNLOADER_5.find(l)?.groupValues?.get(1)?.let(::hex)
                         }
                     }
-                    l.startsWith("#EXT-X-MAP") -> init = RX_HLS_URI.find(l)?.groupValues?.get(1)?.let { resolve(base, it) }
-                    l.isNotEmpty() && !l.startsWith("#") -> { out += Segment(resolve(base, l), key, iv, seq, init); seq++ }
+                    l.startsWith("#EXT-X-MAP") -> {
+                        init = RX_HLS_URI.find(l)?.groupValues?.get(1)?.let { resolve(base, it) }
+                        val m = RX_HLS_MAP_BYTERANGE.find(l)
+                        initLength = m?.groupValues?.get(1)?.toLongOrNull() ?: -1L
+                        initStart = if (m != null) m.groupValues[2].toLongOrNull() ?: 0L else -1L
+                    }
+                    l.startsWith("#EXT-X-BYTERANGE:") -> {
+                        val spec = l.substringAfter(':').trim()
+                        range = spec.substringBefore('@').toLongOrNull()?.let { n -> n to (if ('@' in spec) spec.substringAfter('@').toLongOrNull() else null) }
+                    }
+                    l.isNotEmpty() && !l.startsWith("#") -> {
+                        val u = resolve(base, l)
+                        val r = range; range = null
+                        out += if (r == null) Segment(u, key, iv, seq, init, initStart = initStart, initLength = initLength) else {
+                            val from = r.second ?: rangeEnd[u] ?: 0L
+                            rangeEnd[u] = from + r.first
+                            Segment(u, key, iv, seq, init, from, r.first, initStart, initLength)
+                        }
+                        seq++
+                    }
                 }
             }
             return out
