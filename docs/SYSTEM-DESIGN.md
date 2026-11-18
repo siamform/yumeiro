@@ -765,6 +765,42 @@ flowchart LR
 - **Status:** accepted (agent decision inside the approved G8 audit scope; new dependency from the same pinned
   Media3 release, reported to the owner); verified only after the tv-api24 pass-after and the G8 regression.
 
+### ADR-023: 18+ mark stored with each play count (NBUG-11, NB11-1, NB11-2)
+
+- **Scope:** `data/PlayCounts` (an optional 18+ mark per entry, kept in the same prefs file, old files
+  still read), `online/OnlineSession` (passes the mark when a play is counted), `online/AdultContent`
+  (one decision for a stored entry), Home "Most played" (`HomeScreen`). No other surface changes.
+- **Requirements:** with 18+ off, or on but private, no 18+ title shows in Home → Most played, at any
+  time after a cold start, for any extension state (loading, loaded, turned off, removed), and for 18+
+  titles of mixed extensions. With 18+ on and public every title shows. Non-functional: no disk or
+  extension work on the main thread while Home composes; old play-count files keep working; no
+  new permission, network or dependency.
+- **Context:** Continue watching already stores `adult` per entry at record time (`OnlineHistory`) and
+  never leaks. Most played asked the live extension list once, at Home's first composition, before the
+  extensions load; unknown counted as "not 18+" (NB11-1). Play counts kept no type, so an NSFW item of
+  a mixed extension could never be told apart (NB11-2).
+- **Options:** A. Store the mark at record time (`isAdult(api, type)`, as Continue watching), and for
+  entries saved before the mark: learn it once the extension is loaded (persisted), or from a
+  Continue-watching entry of the same title; while still unknown, hide it whenever 18+ is hidden (fail
+  closed). Recompute Most played when the extension state changes. B. Only add the extension state to
+  the `remember` keys (fixes the cold-start case, not removed/disabled extensions or mixed extensions).
+  C. Delete 18+ entries when 18+ is turned off (loses data the owner may want back; still leaks
+  entries of unloaded extensions).
+- **Decision:** A. Fail closed matches the setting's promise ("18+ titles are left out"); a title of
+  unknown status from an extension that is not loaded cannot be opened anyway until it loads, and it
+  comes back as soon as the extension loads and the mark is learned.
+- **Failure modes:** an extension never loaded again → its old unmarked entries stay hidden while
+  18+ is hidden (safe side; they still count and show with 18+ on); a wrong `TvType` from an extension
+  → same result as Continue watching (one rule for both).
+- **Security / privacy:** the mark lives only in the existing local prefs file (not in backups beyond
+  what `play_counts` already does); no new data leaves the device.
+- **Consequences:** one optional field (`"ad"`) per entry; older app versions ignore it.
+- **Alternatives rejected:** B (partial), C (data loss and still partial).
+- **References:** docs/groups/GROUP-14-OWNER-BUGS.md NBUG-11; CloudStream's per-provider and per-type
+  NSFW filters ([recloudstream/cloudstream#1149](https://github.com/recloudstream/cloudstream/issues/1149)).
+- **Status:** accepted (agent decision inside the owner-ordered bug-list scope); verified only after the
+  fail-before and pass-after runs.
+
 ## 11. Risks
 
 | Risk | Mitigation |
