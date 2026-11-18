@@ -1,6 +1,6 @@
 # G6-MO1 — Music tab stayed on "On device" after the connection came back, although the user picked Online
 
-Status: Implemented — unverified (fail-before 44225572082 red on target only; pass-after pending)
+Status: Verified (CI unit, Robolectric UI) — fail-before 44225572082 red on target only; fix 7d1486a; pass-after CI 44227662448 (MusicModeReconnectTest 1/1, Round13LogicTest 13/13). Emulator network toggle: next G6 device run.
 Found by code read, 2026-11-18.
 
 ## 1. Code read (head f8564b8)

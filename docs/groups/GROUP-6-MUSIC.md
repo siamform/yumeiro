@@ -65,6 +65,10 @@ Cancelled runs in this group: none.
 | G6-AF | Audio focus behaviour (Media3) | Verified (emulator, both phones); unplug OMT-28 | 44219681816 |
 | G6-NC | Notification + outside controls | Verified (emulator, both phones) | 44219681816 |
 | G6-PG1 | Detail page "load more" failure ended the list | Verified (CI unit + emulator, both phones) | 44220997354 → f8564b8 → 44223304640; device 44225724090 |
+| G6-MO1 | Picked Online lost after a connection drop | Verified (CI unit, Robolectric UI) | 44225572082 → 7d1486a → 44227662448 |
+| G6-LF | Last.fm queue rules with the server mocked | Verified (CI unit) | 3128a1b; 44227662448 8/8 |
+| G6-LY | LRCLIB with the server mocked | In progress | f3879dd; isolation fix 00c4ded |
+| G6-SP1 | No music-access prompt when access denied | In progress | proposal; fail-before 44230037374 |
 
 ## Proposals (not implemented; need owner approval)
 
