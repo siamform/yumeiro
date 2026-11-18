@@ -1,6 +1,29 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, v1.8.2 cycle, G6 closed, G8 batch)
+## Resume here (updated 2026-11-18 12:05 UTC, v1.8.2 cycle, G8 step 9: TV regression)
+
+- **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" + owner handover prompt of 2026-11-18
+  (new agent) + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
+- **G8 results read by the new agent (all at head 3680464 = fix 877413b + docs):**
+  - Fail-before DL-11 p2 baseline: CI 44283506177 (f2a7c73): 1193 tests, 1 failed = exactly
+    `Dl11PaceTest#aFastLinkAtItsOwnSpeedDoesNotTrip` (Dl11PaceTest.kt:68). Proven.
+  - Pass-after CI 44286276997: 1216 tests, 0 failures, 11 skipped (G8DownloadsBatchTest 7/7, Dl11PaceTest 8/8,
+    DownloadThroughputTest 8/8).
+  - Pass-after device 44286280482 (`DownloadThroughputDeviceTest` a + d ×3): all PASS. Case a rxOverSize
+    api33-lowram 1.056/1.050/1.038 (median 1.050), api36 1.030/1.036/1.030 (median 1.030): **budget met**
+    (each ≤ 1.10, median ≤ 1.06). Case d 1.048/1.050/1.043 and 1.059/1.044/1.044.
+  - Phone regression (both phones, all PASS): 44289731618 (Cleanup, Kill, Quality, Resume, Throughput,
+    DownloadsScreen, ExternalDownloader) and 44289743979 (DownloadG8, ForceDownload, LowStorage, StorageMainThread,
+    StreamWatchDownload, TorrentDownload, YtDownloadPipeline) = all 14 download device classes. Case c (per-request
+    capped local host, restarts intended, no rx budget) read 1.103 on api33-lowram.
+- **Runs in progress:** TV regression batch 1 (DownloadsScreen, DownloadG8, DownloadResume, DownloadKill,
+  DownloadCleanup, DownloadQuality, LowStorage): 44299923467 (tv-api24), 44299928223 (tv-api34).
+- **Next three actions:** (1) read TV batch 1; (2) TV batch 2 (StorageMainThread, ForceDownload, ExternalDownloader,
+  StreamWatchDownload, TorrentDownload, YtDownloadPipeline, DownloadThroughput) on both TV images; (3) G8 close docs
+  in one push (GROUP-8 verification table + DL-11 p2 cause 2 row, ledger, checklist, inventory D2, device-runs).
+- **UNVERIFIED-QUEUE.md:** 70 rows.
+
+### Previous resume note — superseded (v1.8.2 cycle, G6 closed, G8 batch)
 
 - **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" (2026-11-18) + owner rule §13a
   (batch CI by group, docs/DEVELOPMENT.md). Order: G6-QP → G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
