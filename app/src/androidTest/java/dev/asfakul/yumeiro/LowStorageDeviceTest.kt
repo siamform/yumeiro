@@ -91,7 +91,11 @@ class LowStorageDeviceTest {
         // UiAutomation.executeShellCommand runs no shell: "; echo rc=$?" went to fallocate as extra
         // arguments, so nothing was filled (run 43891331959, both phones, case skipped). Plain command,
         // then the file size as the proof.
-        val fillOut = FirstRun.shell("fallocate -l ${before - keep} $fill")
+        var fillOut = FirstRun.shell("fallocate -l ${before - keep} $fill")
+        // G8 regression (tv-api24 44299923467): Android 7 has no fallocate, so nothing was filled and the
+        // case was skipped. Fall back to dd (real blocks, 4 MiB writes).
+        if (OnlineDownloads.freeBytes(ctx) > 48L * 1024 * 1024)
+            fillOut += " · dd: " + FirstRun.shell("dd if=/dev/zero of=$fill bs=4194304 count=${(before - keep) / 4194304}")
         val out = fillOut + " · " + FirstRun.shell("ls -l $fill")
         val free = OnlineDownloads.freeBytes(ctx)
         log("LOWST_FILL before=${before / 1048576}MB after=${free / 1048576}MB shell='${out.trim()}'")

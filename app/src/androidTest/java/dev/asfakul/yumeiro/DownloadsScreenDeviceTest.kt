@@ -34,7 +34,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -67,7 +66,8 @@ class DownloadsScreenDeviceTest {
     )
 
     @Before fun setUp() {
-        assumeTrue("penaltyListener needs API 28", Build.VERSION.SDK_INT >= 28)
+        // G8 regression (tv-api24 44299923467): the whole class was skipped below API 28. Only the
+        // StrictMode listener needs 28; the page itself (open, play, keep, delete) runs on every image.
         SystemClock.sleep(3000) // let the start-up warm-up finish first
         // The tips card pushes the folders down; on a small screen the opened rows would sit below
         // the fold and a lazy grid does not build them. Hide it (restored after) and scroll as a user would.
@@ -80,7 +80,7 @@ class DownloadsScreenDeviceTest {
         OnlineDownloads.setItemsForTest(ctx, items)
         OnlineDownloads.setKeep(ctx, "e1", false)
         OnlineDownloads.unloadForTests()
-        inst.runOnMainSync {
+        if (strict) inst.runOnMainSync {
             old = StrictMode.getThreadPolicy()
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites()
                 .penaltyListener({ it.run() }) { v: Violation -> seen += Log.getStackTraceString(v) }.build())
@@ -100,7 +100,10 @@ class DownloadsScreenDeviceTest {
 
     private fun ourViolations() = synchronized(seen) { seen.filter { st -> ours.any { it in st } } }
 
+    private val strict = Build.VERSION.SDK_INT >= 28
+
     private fun report(case: String) {
+        if (!strict) { Log.i(TAG, "DLSCREEN_CASE $case main-thread disk: not measured (API ${Build.VERSION.SDK_INT} < 28)"); return }
         val mine = ourViolations()
         Log.i(TAG, "DLSCREEN_CASE $case main-thread disk calls from downloads code: ${mine.size} (all: ${seen.size})")
         mine.take(3).forEach { Log.i(TAG, "DLSCREEN_CASE $case stack: " + it.lines().take(16).joinToString(" < ")) }
