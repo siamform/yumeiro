@@ -12,6 +12,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.ExtensionManager
@@ -77,6 +79,29 @@ class PinnedExtensionsDeviceTest {
             t !in setOf("online_filter_all", "online_filter_sheet", "online_filter_clear", "online_filter_empty", "online_filter_search", "online_filter_search_clear", "online_filter_active", "online_filter_active_clear")
     }, true).fetchSemanticsNodes().sortedBy { it.positionInRoot.y }.map { it.config[SemanticsProperties.TestTag].removePrefix("online_filter_") }
 
+    /** True if a node with [tag] lies fully inside the window. */
+    private fun onWindow(tag: String): Boolean = runCatching {
+        val root = rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes().maxByOrNull { it.size.height }!!
+        rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().any { n ->
+            val b = n.boundsInRoot
+            b.height > 1f && b.top >= -1f && b.bottom <= root.size.height + 1f
+        }
+    }.getOrDefault(false)
+
+    /**
+     * Phones open the sheet half-height; with many sources the last row sits below the screen
+     * (44376358282, 7 sources: tapVisible's fallback then scrolled the feed under the sheet, which
+     * hides the pinned bar). A user drags the sheet up first; so does the test. TV opens it fully (G9-8).
+     */
+    private fun showInSheet(tag: String) {
+        if (onWindow(tag)) return
+        log("'$tag' below the screen: dragging the sheet up")
+        rule.onAllNodesWithTag("online_filter_sheet", true)[0].performTouchInput { swipeUp(startY = top + 80f, endY = top - 800f, durationMillis = 400) } // from the sheet top: its middle can be off-screen
+        rule.waitForIdle()
+        val ok = runCatching { rule.waitUntil(5_000) { onWindow(tag) }; true }.getOrDefault(false)
+        assertTrue("'$tag' still below the screen after dragging the sheet up · ${FirstRun.onScreen(rule)}", ok)
+    }
+
     private fun openYumix() {
         tap("nav_tab_home"); tap("quick_card_hues") // Home's Yumix shortcut
         waitTag("online_filter", 120_000) // shown once two or more sources are on
@@ -90,6 +115,7 @@ class PinnedExtensionsDeviceTest {
         assertTrue("need two sources in the sheet: $before", before.size >= 2)
         val target = before.last()
 
+        showInSheet("online_filter_pin_$target")
         tap("online_filter_pin_$target")
         rule.waitUntil(5_000) { PinnedExtensions.pins.value == listOf(target) }
         val after = sheetOrder()
