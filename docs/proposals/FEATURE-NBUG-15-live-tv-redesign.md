@@ -64,11 +64,14 @@ because two playlists can share a name). Single choice, like Yumix. TV: the shee
   in two playlists shows once (the first copy wins). No playlist names, no "View", no "+N more".
 - Categories: `group-title`, trimmed, case-insensitive merge, first part of an `A;B` list; empty → "Other".
   Order: most channels first, "Other" last.
-- A wrapping chip row of categories ("All · N", then each category with its count; above 12 chips a
-  "+N more" chip opens the full list) filters the feed.
+- A chip row of categories ("All · N", then each category with its count) filters the feed. It scrolls
+  sideways like Yumix's category bar (nothing is clipped; a wrapping block of 100+ provider groups would push
+  the channels off the first screen).
 - "All": category sections (title + count) with a channel grid under each. Paging is over the whole feed:
-  the first 50 channels, then 50 more each time the list nears its end (the existing near-end trigger,
-  `LIVE_PAGE` 48 → 50). A chosen category shows only its channels, same paging.
+  the first 50 channels, then 50 more each time the list nears its end (`LIVE_PAGE` 48 → 50). "Near the
+  end" is read from the keys of the rows on screen (the footer, or a row in the last two), not from the item
+  count, so a layout from before the list grew cannot page twice. The header carries the state for screen
+  readers ("Showing 50 of 120 channels"), and a footer says the same. A chosen category shows only its channels, same paging.
 - Building the list runs off the main thread (`Dispatchers.Default`), keyed by the playlist load stamps; the
   grid gets an immutable list. Large lists (LargePlaylistMemoryDeviceTest, 20 000 channels) stay under the
   same memory budget because tiles are lazy and the list holds the existing `StreamRequest` objects.
@@ -92,7 +95,9 @@ A new page (`stream/PlaylistsScreen.kt`, opened from Tools → Playlists; Back r
 - Row: avatar, name, source (Market / Link / File / Your list), channel count, last updated, an
   "Update available" badge (market), pin, an on/off switch; tap opens the existing playlist page; the "⋮"
   menu keeps today's card actions (Refresh now, Edit, Export, Delete with confirm).
-- Built from the existing `PlaylistCard` actions and dialogs (no behaviour change), laid out as rows.
+- Built from the existing `PlaylistCard` (same tags, actions and dialogs, no behaviour change), under the
+  existing playlists header (Add URL, New, Sync latest, ⋮ Market / Restore defaults). It is a pane of the
+  Live TV screen (like the Play Link page), so Back returns to Live TV.
 
 ## Side effects and migration
 

@@ -34,8 +34,12 @@ class StreamDialogsTest {
     @Test fun streamScreenNewPlaylistDialogIdles() {
         rule.setContent { MTPlayerTheme { dev.asfakul.yumeiro.ui.screens.stream.StreamScreen() } }
         rule.waitUntil(10_000) { rule.onAllNodesWithTag("stream_screen").fetchSemanticsNodes().isNotEmpty() }
-        // Round 8: Live TV opens on the channel hub; the playlist list sits below the tools.
-        rule.onNodeWithTag("stream_screen").performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_new"))
+        // NBUG-15 (c): playlists are managed on their own page, Tools → Playlists.
+        rule.onNodeWithTag("live_tools_button", true).performClick()
+        rule.waitUntil(10_000) { rule.onAllNodesWithTag("live_tool_playlists", true).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("live_tool_playlists", true).performClick()
+        rule.waitUntil(10_000) { rule.onAllNodesWithTag("playlists_list").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("playlists_list").performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_new"))
         rule.waitUntil(10_000) { rule.onAllNodesWithTag("playlist_new", true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag("playlist_new", true).performClick()
         rule.waitForIdle()
@@ -65,13 +69,14 @@ class StreamDialogsTest {
         }
         rule.setContent { MTPlayerTheme { dev.asfakul.yumeiro.ui.screens.stream.StreamScreen() } }
         rule.waitUntil(10_000) { rule.onAllNodesWithTag("live_channel", true).fetchSemanticsNodes().isNotEmpty() }
-        // Pick the playlist: its channels show as a grid with group chips.
-        rule.onNodeWithTag("live_strip_${p.id}", true).performClick()
+        // NBUG-15 (b): the channels show as a grid under category headings, with category chips.
         rule.waitUntil(10_000) { rule.onAllNodesWithTag("live_grid_row", true).fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithTag("live_groups", true).assertExists()
+        rule.onNodeWithTag("live_categories", true).assertExists()
+        rule.onNodeWithTag("live_cat_h_Sports", true).assertExists()
         // Tools -> Play link opens the link page; back returns to the hub.
-        rule.onNodeWithTag("stream_screen").performScrollToNode(androidx.compose.ui.test.hasTestTag("live_header_link"))
-        rule.onNodeWithTag("live_header_link", true).performClick()
+        rule.onNodeWithTag("live_tools_button", true).performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithTag("live_tool_link", true).fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("live_tool_link", true).performClick()
         rule.waitUntil(5_000) { rule.onAllNodesWithTag("stream_url", true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag("stream_link_back", true).performClick()
         rule.waitUntil(5_000) { rule.onAllNodesWithTag("stream_screen").fetchSemanticsNodes().isNotEmpty() && rule.onAllNodesWithTag("stream_url", true).fetchSemanticsNodes().isEmpty() }

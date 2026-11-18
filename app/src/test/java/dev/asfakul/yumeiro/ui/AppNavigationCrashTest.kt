@@ -226,7 +226,10 @@ class AppNavigationCrashTest {
         awaitHome()
         tap("nav_tab_videos"); tap("video_source_live")
         fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { rule.mainClock.advanceTimeBy(100); cond() }
-        val list = rule.onNodeWithTag("stream_screen")
+        // NBUG-15 (c): playlists are managed on their own page, Tools → Playlists.
+        tap("live_tools_button"); tap("live_tool_playlists")
+        settle { exists("playlists_list") }
+        val list = rule.onNodeWithTag("playlists_list")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_mrgify_bdix"))
         settle { exists("playlist_mrgify_bdix") }
         // Only one default ships; the former defaults live in the market.
@@ -262,17 +265,22 @@ class AppNavigationCrashTest {
         awaitHome()
         tap("nav_tab_videos"); tap("video_source_live")
         fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { rule.mainClock.advanceTimeBy(100); cond() }
-        val list = rule.onNodeWithTag("stream_screen")
+        // NBUG-15 (c): playlists are managed on their own page, Tools → Playlists.
+        tap("live_tools_button"); tap("live_tool_playlists")
+        settle { exists("playlists_list") }
+        val list = rule.onNodeWithTag("playlists_list")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_${p.id}"))
         tap("playlist_${p.id}")
         settle { exists("playlist_detail_screen") && exists("playlist_channels") }
-        org.junit.Assert.assertFalse("channels are not shown on the Stream tab", exists("stream_screen"))
+        org.junit.Assert.assertFalse("channels are not shown on the Stream tab", exists("stream_screen") || exists("playlists_page"))
         org.junit.Assert.assertFalse("bottom bar hidden on the sub page", exists("nav_tab_videos"))
         snap("playlist_detail")
         back()
-        settle { exists("stream_screen") && !exists("playlist_detail_screen") }
-        // Market entry opens the market page.
-        list.performScrollToNode(androidx.compose.ui.test.hasTestTag("market_entry"))
+        settle { exists("playlists_page") && !exists("playlist_detail_screen") }
+        // Back from the Playlists page returns to Live TV; Tools → Market opens the market page.
+        tap("playlists_back")
+        settle { exists("stream_screen") }
+        tap("live_tools_button")
         tap("market_entry")
         settle { exists("market_screen") }
         snap("market")

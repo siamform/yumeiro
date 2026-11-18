@@ -306,9 +306,9 @@ class RedesignTourTest {
 
         // Stream / Live TV
         stop("stream") { home(); tap("nav_tab_videos"); tap("video_source_live"); settle(1_000); snap("40_stream") }
-        stop("market") { tap("market_entry", list = "stream_screen"); waitFor("market_screen"); snap("41_playlist_market"); back() }
+        stop("market") { tap("live_tools_button"); tap("market_entry"); waitFor("market_screen"); snap("41_playlist_market"); back() }
         stop("websites") {
-            tap("stream_websites", list = "stream_screen"); waitFor("websites_screen"); settle(600); snap("42_websites_empty")
+            tap("live_tools_button"); tap("stream_websites"); waitFor("websites_screen"); settle(600); snap("42_websites_empty")
             rule.onNodeWithTag("site_add_field", true).performTextInput("archive.org"); settle(300)
             tap("site_add"); waitFor("site_row"); settle(500); snap("43_websites_saved")
             tap("site_menu"); tap("site_remove"); settle(500)

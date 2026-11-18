@@ -277,15 +277,12 @@ class FeedPositionDeviceTest {
     @Test fun home() = run("home") { tap("nav_tab_home") }
     @Test fun yumix() = run("yumix") { fromHome("quick_card_hues") }
     @Test fun youtube() = run("youtube") { fromHome("quick_card_youtube") }
-    /** Live TV's hub shows one shelf per playlist; a playlist's own grid is the long scrolling feed. */
+    /** NBUG-15 (ADR-028): Live TV's feed is one long grid merged from every playlist, by category. */
     @Test fun liveTv() = run("live") {
         fromHome("quick_card_live")
-        val strip = SemanticsMatcher("playlist chip") { n ->
-            n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null }?.let { it.startsWith("live_strip_") && it != "live_strip_all" } == true
-        }
-        rule.waitUntil(120_000) { rule.onAllNodes(strip, true).fetchSemanticsNodes().isNotEmpty() }
-        log("live playlist chip: ${rule.onAllNodes(strip, true).fetchSemanticsNodes().first().config[androidx.compose.ui.semantics.SemanticsProperties.TestTag]}")
-        rule.onAllNodes(strip, true)[0].performClick(); idle(1_000)
+        rule.waitUntil(120_000) { rule.onAllNodesWithTag("live_channel", true).fetchSemanticsNodes().isNotEmpty() }
+        log("live channels on screen: ${rule.onAllNodesWithTag("live_channel", true).fetchSemanticsNodes().size}")
+        idle(1_000)
     }
     @Test fun onlineMusic() = run("music") { fromHome("quick_card_ytmusic") }
 

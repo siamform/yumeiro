@@ -84,23 +84,31 @@ class Nbug15RecentsDeviceTest {
         runCatching { server.close() }
     }
 
+    // NBUG-15 (ADR-028): playlists are picked in "Show videos from" (header Filter button) and Play link is
+    // in the Tools modal; the strip and the header "Play link" action are gone.
+    private fun pick(rowTag: String) {
+        wait("Filter button") { has("live_filter_button") }
+        compose.onAllNodesWithTag("live_filter_button", true)[0].performClick()
+        wait("filter sheet row $rowTag") { has(rowTag) }
+        compose.onAllNodesWithTag(rowTag, true)[0].performClick()
+        compose.waitForIdle()
+    }
+
     private fun showList() {
-        val strip = "live_strip_$id"
-        wait("playlist in the strip") { has(strip) }
-        compose.onAllNodesWithTag(strip, true)[0].performClick()
+        pick("live_filter_$id")
         wait("channels of the test playlist") { hasText(chOne) }
     }
 
     private fun toAll() {
-        wait("All in the strip") { has("live_strip_all") }
-        compose.onAllNodesWithTag("live_strip_all", true)[0].performClick()
-        compose.waitForIdle()
+        pick("live_filter_all")
         runCatching { compose.onAllNodesWithTag("stream_screen", true)[0].performScrollToIndex(0) }
     }
 
     private fun openLinkPage() {
-        wait("Play link in the header") { has("live_header_link") }
-        compose.onAllNodesWithTag("live_header_link", true)[0].performClick()
+        wait("Tools in the header") { has("live_tools_button") }
+        compose.onAllNodesWithTag("live_tools_button", true)[0].performClick()
+        wait("Play link in Tools") { has("live_tool_link") }
+        compose.onAllNodesWithTag("live_tool_link", true)[0].performClick()
         wait("Play Link page") { has("stream_link_page") }
     }
 

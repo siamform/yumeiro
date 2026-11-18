@@ -15,6 +15,13 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import dev.asfakul.yumeiro.stream.PlaylistStore
+import dev.asfakul.yumeiro.stream.LiveChannelFeed
+import dev.asfakul.yumeiro.stream.PinnedPlaylists
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import dev.asfakul.yumeiro.ui.screens.online.filterByTitle
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Apps
 import dev.asfakul.yumeiro.stream.StreamPlaylist
 import dev.asfakul.yumeiro.stream.guessTitle
 import kotlinx.coroutines.CancellationException
@@ -331,9 +338,16 @@ fun StreamScreen(
     // ---- Round 8: Live TV hub state -------------------------------------------------------------
     var pane by rememberSaveable { mutableStateOf("hub") }
     androidx.activity.compose.BackHandler(enabled = pane != "hub") { pane = "hub" }
+    // NBUG-15 (ADR-028): liveSel = the playlist picked in "Show videos from" (null = all playlists);
+    // liveGroup = the category chip (null = all categories).
     var liveSel by rememberSaveable { mutableStateOf<String?>(null) }
     var liveGroup by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
-    var liveLimit by rememberSaveable(liveSel, liveGroup) { mutableStateOf(LIVE_PAGE) }
+    var liveLimit by rememberSaveable(liveSel, liveGroup) { mutableStateOf(LiveChannelFeed.PAGE) }
+    var filterOpen by rememberSaveable { mutableStateOf(false) }
+    var toolsOpen by rememberSaveable { mutableStateOf(false) }
+    var playlistQuery by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(Unit) { PinnedPlaylists.init(app) }
+    val pinIds by PinnedPlaylists.pins.collectAsState()
     // R15 Phase 3 (ADR-008): the channel lists live for the process (LiveTvMemory), and loads run
     // in FeedScope. They were `remember {}` state: coming back to Live TV reloaded every playlist
     // (the list emptied, then refilled from the cache under the user's finger) and a load cut off
@@ -377,11 +391,43 @@ fun StreamScreen(
         else runCatching { IncomingMedia.open(context, ch, recent = IncomingMedia.Recent.LIVE) }
             .onFailure { toastError("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") }
     }
-    val liveNearEnd by remember { androidx.compose.runtime.derivedStateOf { val i = listState.layoutInfo; (i.visibleItemsInfo.lastOrNull()?.index ?: 0) >= i.totalItemsCount - 8 } }
-    LaunchedEffect(liveNearEnd, liveSel, liveGroup) {
-        val sel = liveSel ?: return@LaunchedEffect
-        val n = loads[sel]?.channels?.let { c -> if (liveGroup == null) c.size else c.count { it.group == liveGroup } } ?: 0
-        if (liveNearEnd && liveLimit < n) liveLimit += LIVE_PAGE
+    // NBUG-15 (ADR-028): one feed merged from every enabled playlist (pinned first), grouped by category,
+    // built off the main thread whenever a playlist's channel list changes (keyed by list identity, so no
+    // deep compare of 20 000 channels on recomposition).
+    val feedIds = liveSel?.let { s -> listOf(s) } ?: PinnedPlaylists.pinnedFirst(activePlaylists.map { it.id }, pinIds)
+    val feedKey = feedIds.joinToString(",") { id -> id + ":" + System.identityHashCode(loads[id]?.channels) }
+    val feed by androidx.compose.runtime.produceState(LiveChannelFeed.Feed.EMPTY, feedKey) {
+        val lists = feedIds.associateWith { loads[it]?.channels.orEmpty() }
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { LiveChannelFeed.build(feedIds, lists) }
+    }
+    val feedLoading = feedIds.count { loads[it]?.loading != false }
+    val feedFailed = feedIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id }?.takeIf { loads[id]?.let { l -> !l.loading && l.error != null && l.channels.isEmpty() } == true } }
+    val feedShown = remember(feed, liveGroup) { LiveChannelFeed.filter(feed, liveGroup) }
+    LaunchedEffect(feed) { if (liveGroup != null && feedLoading == 0 && feed.categories.none { it.name.equals(liveGroup, ignoreCase = true) }) liveGroup = null }
+    // Near the end = the footer or one of the last two shown tile rows is on screen. Read from the item
+    // keys (not the item count), so a layout from before the list grew can never page twice.
+    val liveColumns = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp / 120).coerceIn(3, 7)
+    val liveNearEnd by remember(liveColumns, liveSel, liveGroup) {
+        androidx.compose.runtime.derivedStateOf {
+            val vis = listState.layoutInfo.visibleItemsInfo
+            vis.any { it.key == "live_feed_footer" } ||
+                vis.lastOrNull { (it.key as? String)?.startsWith("live_row_") == true }
+                    ?.let { (it.key as String).substringAfterLast('_').toIntOrNull() }
+                    ?.let { it >= liveLimit - 2 * liveColumns } == true
+        }
+    }
+    LaunchedEffect(liveNearEnd, feedShown.size) {
+        if (liveNearEnd) liveLimit = LiveChannelFeed.nextLimit(liveLimit, feedShown.size)
+    }
+    val feedRows = remember(feed, feedShown, liveLimit, liveColumns, liveGroup) {
+        LiveChannelFeed.rows(feedShown, liveLimit, liveColumns, feed.categories.associate { it.name to it.count }, headers = liveGroup == null)
+    }
+    fun playEntry(e: LiveChannelFeed.Entry) {
+        val p = activePlaylists.firstOrNull { it.id == e.playlistId }
+        val list = loads[e.playlistId]?.channels
+        if (p != null && list != null) playLive(p, list, e.channel)
+        else runCatching { IncomingMedia.open(context, e.channel, recent = IncomingMedia.Recent.LIVE) }
+            .onFailure { toastError("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") }
     }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -534,6 +580,7 @@ fun StreamScreen(
 
     // Round 8: the hub (channels first, tools as shortcuts) and the link player on its own page.
     val tools = listOf(
+        LiveTool("live_tool_playlists", "Playlists", "${playlists.size} lists", Icons.AutoMirrored.Filled.PlaylistPlay, liveHue("playlists")) { pane = "playlists" },
         LiveTool("live_tool_link", "Play link", "URL · magnet", Icons.Default.ContentPaste, liveHue("link")) { advanced = false; pane = "link" },
         LiveTool("live_tool_file", "M3U file", "From storage", Icons.Default.FolderOpen, liveHue("file")) {
             runCatching { filePicker.launch(arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "application/vnd.apple.mpegurl", "text/plain", "*/*")) }
@@ -543,12 +590,70 @@ fun StreamScreen(
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
         LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
         LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
-        LiveTool("live_tool_sync", "Sync", if (syncing) "Updating…" else "Update all", Icons.Default.Sync, liveHue("sync")) { sync() },
-        LiveTool("live_tool_recent", "Recent", if (history.isEmpty()) "Headers · DRM" else "${history.size} streams", Icons.Default.History, liveHue("recent")) { pane = "link" },
+        LiveTool("live_tool_sync", "Update all", if (syncing) "Updating…" else "Every playlist", Icons.Default.Sync, liveHue("sync")) { sync() },
+        LiveTool("live_tool_recent", "Recent links", if (history.isEmpty()) "Headers · DRM" else "${history.size} streams", Icons.Default.History, liveHue("recent")) { pane = "link" },
     )
-    val liveColumns = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp / 120).coerceIn(3, 7)
-    dev.asfakul.yumeiro.ui.components.TabSwap(pane, { if (it == "hub") 0 else 1 }, modifier.fillMaxSize(), label = "live_pane") { pn ->
-    if (pn == "link") {
+    dev.asfakul.yumeiro.ui.components.TabSwap(pane, { when (it) { "hub" -> 0; "playlists" -> 1; else -> 2 } }, modifier.fillMaxSize(), label = "live_pane") { pn ->
+    if (pn == "playlists") {
+        // NBUG-15 (c): playlist management, opened from Tools → Playlists.
+        Column(Modifier.fillMaxSize().testTag("playlists_page")) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { pane = "hub" }, modifier = Modifier.testTag("playlists_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Live TV", tint = TextPrimary) }
+                Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+            }
+            val q = playlistQuery
+            fun match(p: StreamPlaylist) = q.isBlank() || filterByTitle(listOf(p), q) { it.name }.isNotEmpty()
+            val on = activePlaylists.filter(::match)
+            val off = disabledPlaylists.filter(::match)
+            LazyColumn(
+                Modifier.fillMaxSize().testTag("playlists_list"),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                item(key = "playlists_header") {
+                    PlaylistsHeader(
+                        lastSync = lastSync, syncing = syncing, onMarket = onOpenMarket,
+                        onAddUrl = { addingRemote = true }, onNew = { creatingLocal = true }, onSync = ::sync,
+                        onRestore = { launchSafe { val n = PlaylistStore.restoreDefaults(app); toast(if (n > 0) "Restored $n default playlists" else "Default playlists enabled") } },
+                    )
+                }
+                if (playlists.size >= PLAYLIST_SEARCH_FROM) item(key = "playlists_search") {
+                    dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                        query = playlistQuery, onQuery = { playlistQuery = it.take(60) }, hint = "Search playlists",
+                        tag = "playlists_search", modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (channels.isNotEmpty() && openPlaylistId == null) item(key = "opened_list") {
+                    OpenedListCard(name = playlistName, count = channels.size, onOpen = { onOpenPlaylist(OPENED_PLAYLIST_SLUG) }, onClose = { StreamRepository.setPlaylist(null, emptyList()) })
+                }
+                fun cardFor(p: StreamPlaylist): @Composable () -> Unit = {
+                    PlaylistCard(
+                        playlist = p, busy = busyIds[p.id] == true || (syncing && p.isDefault && p.enabled),
+                        onOpen = { openSaved(p) },
+                        onToggle = { v ->
+                            launchSafe { PlaylistStore.setEnabled(app, p.id, v) }
+                            if (!v && openPlaylistId == p.id) StreamRepository.setPlaylist(null, emptyList())
+                        },
+                        onRefresh = { openSaved(p, force = true) },
+                        onEdit = { editing = p },
+                        onExport = { exportPlaylist(p.id, p.name) },
+                        onDelete = { deleting = p },
+                    )
+                }
+                if (on.isNotEmpty()) item(key = "playlists_on_header") { PlaylistsSectionLabel("On · ${on.size}", "playlists_on_header") }
+                items(on, key = { "pl_${it.id}" }) { p -> cardFor(p)() }
+                if (off.isNotEmpty()) item(key = "disabled_header") { PlaylistsSectionLabel("Off · ${off.size}", "playlists_off_header") }
+                items(off, key = { "pl_${it.id}" }) { p -> cardFor(p)() }
+                if (q.isNotBlank() && on.isEmpty() && off.isEmpty()) item(key = "playlists_none") {
+                    Column(Modifier.fillMaxWidth().padding(8.dp).testTag("playlists_no_match")) {
+                        Text("No playlist called \"${q.trim()}\"", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        TextButton(onClick = { playlistQuery = "" }) { Text("Clear search", color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
+                    }
+                }
+                item(key = "bottom_space") { Spacer(Modifier.height(96.dp)) }
+            }
+        }
+    } else if (pn == "link") {
         Column(Modifier.fillMaxSize().testTag("stream_link_page")) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { pane = "hub" }, modifier = Modifier.testTag("stream_link_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Live TV", tint = TextPrimary) }
@@ -599,69 +704,87 @@ fun StreamScreen(
     ) {
         item(key = "live_header") {
             val total = activePlaylists.sumOf { p -> loads[p.id]?.channels?.size ?: p.channelCount }
+            val selName = activePlaylists.firstOrNull { it.id == liveSel }?.name
+            val shownNow = liveLimit.coerceAtMost(feedShown.size)
+            Box(Modifier.semantics { stateDescription = if (shownNow < feedShown.size) "Showing $shownNow of ${feedShown.size} channels" else "All ${feedShown.size} channels" }.testTag("live_header")) {
             dev.asfakul.yumeiro.ui.components.YuSection(
                 "生", "Live TV",
-                if (activePlaylists.isEmpty()) "Channels" else "$total channels",
+                if (activePlaylists.isEmpty()) "Channels" else if (liveSel != null) "${feed.size} channels" else "$total channels",
                 top = 4.dp,
-                action = "Play link", onAction = { pane = "link" }, actionTag = "live_header_link",
+                trailing = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (activePlaylists.isNotEmpty()) LiveHeaderButton(
+                            selName ?: "Filter", Icons.Default.FilterList, "live_filter_button", onClick = { filterOpen = true },
+                            active = selName != null, description = if (selName != null) "Showing $selName. Change filter" else "Show videos from",
+                        )
+                        LiveHeaderButton("Tools", Icons.Default.Apps, "live_tools_button", onClick = { toolsOpen = true }, description = "Tools and playlists")
+                    }
+                },
             )
+            }
         }
+        val pinned = pinIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id } }
+        if (pinned.isNotEmpty()) item(key = "live_pins") { LivePinnedBar(pinned, liveSel) { liveSel = it } }
         if (liveSel == null && liveRecent.isNotEmpty()) item(key = "live_recent") {
             LiveRecentRow(liveRecent, onPlay = { playRecent(it) }, onClear = { StreamRepository.clearLive(context) })
         }
         if (activePlaylists.isNotEmpty()) {
-            item(key = "live_strip") { LivePlaylistStrip(activePlaylists, loads, liveSel) { liveSel = it } }
-            liveHubItems(
-                playlists = activePlaylists, loads = loads, selected = liveSel, group = liveGroup, limit = liveLimit, columns = liveColumns,
-                onSelect = { liveSel = it }, onGroup = { liveGroup = it },
-                onPlay = { p, list, ch -> playLive(p, list, ch) },
-                onOpenFull = { p -> onOpenPlaylist(p.id) },
-                onRetry = { p -> loadLive(p, force = true) },
-            )
+            if (feed.categories.size > 1) item(key = "live_cats") { LiveCategoryBar(feed.categories, feed.size, liveGroup) { liveGroup = it } }
+            if (feedFailed.isNotEmpty()) item(key = "live_failed") {
+                LiveProblem(
+                    if (feedFailed.size == 1) "${feedFailed[0].name} didn't load. ${loads[feedFailed[0].id]?.error.orEmpty()}".trim()
+                    else "${feedFailed.size} playlists didn't load",
+                    onRetry = { feedFailed.forEach { loadLive(it, force = true) } },
+                )
+            }
+            when {
+                feed.size == 0 && feedLoading > 0 -> items(3, key = { "live_skel_$it" }) {
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(liveColumns) { LiveTileSkeleton(Modifier.weight(1f)) } }
+                }
+                feed.size == 0 -> { if (feedFailed.isEmpty()) item(key = "live_empty") { LiveProblem("No channels in these playlists right now", onRetry = { feedIds.forEach { id -> activePlaylists.firstOrNull { it.id == id }?.let { loadLive(it, force = true) } } }) } }
+                else -> {
+                    liveFeedItems(feedRows, liveColumns) { playEntry(it) }
+                    item(key = "live_feed_footer") { LiveFeedFooter(liveLimit.coerceAtMost(feedShown.size), feedShown.size, feedLoading) }
+                }
+            }
         } else item(key = "live_none") {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(GlassFill).padding(18.dp).testTag("live_none")) {
                 Text(if (playlists.isEmpty()) "No playlists yet" else "All playlists are off", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
-                    if (playlists.isEmpty()) "Get channels from the market, add a playlist URL or play a link." else "Turn a playlist on below to see its channels here.",
+                    if (playlists.isEmpty()) "Get channels from the market, add a playlist URL or play a link." else "Turn a playlist on in Tools → Playlists to see its channels here.",
                     color = TextSecondary, fontSize = 12.sp,
                 )
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (playlists.isEmpty()) {
+                        LiveHeaderButton("Market", Icons.Default.Storefront, "live_none_market", onClick = onOpenMarket)
+                        LiveHeaderButton("Add URL", Icons.Default.AddLink, "live_none_add", onClick = { addingRemote = true })
+                    } else LiveHeaderButton("Playlists", Icons.AutoMirrored.Filled.PlaylistPlay, "live_none_playlists", onClick = { pane = "playlists" })
+                }
             }
         }
-        item(key = "live_tools_h") { dev.asfakul.yumeiro.ui.components.YuSection("道具", "Tools", "Links, files & playlists", top = 18.dp) }
-        item(key = "live_tools") { LiveToolsGrid(tools) }
-        item(key = "playlists_header") {
-            PlaylistsHeader(
-                lastSync = lastSync, syncing = syncing, onMarket = onOpenMarket,
-                onAddUrl = { addingRemote = true }, onNew = { creatingLocal = true }, onSync = ::sync,
-                onRestore = { launchSafe { val n = PlaylistStore.restoreDefaults(app); toast(if (n > 0) "Restored $n default playlists" else "Default playlists enabled") } },
-            )
-        }
-        if (channels.isNotEmpty() && openPlaylistId == null) item(key = "opened_list") {
-            OpenedListCard(name = playlistName, count = channels.size, onOpen = { onOpenPlaylist(OPENED_PLAYLIST_SLUG) }, onClose = { StreamRepository.setPlaylist(null, emptyList()) })
-        }
-        fun cardFor(p: StreamPlaylist): @Composable () -> Unit = {
-            PlaylistCard(
-                playlist = p, busy = busyIds[p.id] == true || (syncing && p.isDefault && p.enabled),
-                onOpen = { openSaved(p) },
-                onToggle = { on ->
-                    launchSafe { PlaylistStore.setEnabled(app, p.id, on) }
-                    if (!on && openPlaylistId == p.id) StreamRepository.setPlaylist(null, emptyList())
-                },
-                onRefresh = { openSaved(p, force = true) },
-                onEdit = { editing = p },
-                onExport = { exportPlaylist(p.id, p.name) },
-                onDelete = { deleting = p },
-            )
-        }
-        items(activePlaylists, key = { "pl_${it.id}" }) { p -> cardFor(p)() }
-        if (disabledPlaylists.isNotEmpty()) {
-            item(key = "disabled_header") { Text("Disabled", color = TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp)) }
-            items(disabledPlaylists, key = { "pl_${it.id}" }) { p -> cardFor(p)() }
-        }
-
         item(key = "bottom_space") { Spacer(Modifier.height(96.dp)) }
     }
     }
+
+    if (toolsOpen) LiveToolsSheet(tools) { toolsOpen = false }
+    if (filterOpen) dev.asfakul.yumeiro.ui.screens.online.SourceFilterSheet(
+        names = activePlaylists.map { it.id },
+        selected = liveSel,
+        status = { id ->
+            val l = loads[id]
+            when {
+                l == null || (l.loading && l.channels.isEmpty()) -> dev.asfakul.yumeiro.ui.screens.online.SourceStatus.Loading
+                l.channels.isEmpty() && l.error != null -> dev.asfakul.yumeiro.ui.screens.online.SourceStatus.Failed
+                else -> dev.asfakul.yumeiro.ui.screens.online.SourceStatus.Ready(l.channels.size)
+            }
+        },
+        onPick = { liveSel = it; filterOpen = false },
+        onDismiss = { filterOpen = false },
+        pins = pinIds,
+        onTogglePin = { id -> if (!PinnedPlaylists.toggle(app, id)) toast("You can pin up to ${PinnedPlaylists.MAX} playlists") },
+        texts = dev.asfakul.yumeiro.ui.screens.online.SourceFilterTexts.Playlists,
+        label = { id -> playlists.firstOrNull { it.id == id }?.name ?: id },
+    )
 
     if (addingRemote || creatingLocal) {
         val remote = addingRemote
@@ -709,7 +832,8 @@ fun StreamScreen(
 }
 
 private const val TEMP_EXPORT = "__opened__"
-private const val LIVE_PAGE = 48
+/** The Playlists page shows a search box from this many playlists (NBUG-15 c). */
+private const val PLAYLIST_SEARCH_FROM = 6
 
 internal fun fileNameFor(name: String?): String =
     (name ?: "playlist").replace(RX_STREAMSCREEN_HOT_1, "").trim().replace(' ', '_').ifBlank { "playlist" }.take(60) + ".m3u"
