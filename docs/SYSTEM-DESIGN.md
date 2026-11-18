@@ -734,6 +734,37 @@ flowchart LR
 - **Status:** accepted (agent decision inside the approved G9 audit scope); verified only after the G9
   pass-after and group regression runs.
 
+### ADR-022: Video + audio join on Android 7–8.1 (G8 reopen, G8-9, G8-10)
+
+- **Scope:** `online/download/MediaMux.merge` only (callers unchanged: `YtDownloads`, `DownloadWorker`,
+  `ForceGrab`). New dependencies `androidx.media3:media3-muxer` and `androidx.media3:media3-inspector`, same
+  pinned Media3 version (1.11.1, Apache-2.0, the release train already used for playback).
+- **Requirements:** a split video + audio download (DASH, YouTube, HLS rendition) saves one playable MP4 on
+  every supported device, including the TV build on Android 7 (minSdk 24). Non-functional: no re-encode; no
+  change on phones (minSdk 28) or TVs on Android 9+, where the platform path is verified; low memory (one
+  shared sample buffer, as before); WebM output keeps working where it works today.
+- **Context:** the TV regression on tv-api24 (44314925557) failed two DASH downloads. G8-9: Android 7's
+  `MPEG4Writer` rejects B-frame video (`do not support out of order frames`). G8-10: Android 7's
+  `MediaExtractor` cannot open a joined SegmentTemplate fMP4 track (`Failed to instantiate extractor`).
+- **Options:** A. Below Android 9 (`SDK_INT < 28`, all TV-only API levels), MP4 joins use Media3's
+  `MediaExtractorCompat` (Media3 extractors) and `MediaMuxerCompat` (Media3 `Mp4Muxer`, writes `ctts` for
+  B-frames); the platform pair stays on 28+. B. Media3 on every API level (one path, but it changes the
+  verified phone path for no fix there). C. Hand-written `ctts`/fMP4 handling (large, untested format code).
+  D. Refuse split downloads on Android 7–8.1 with a clear message (feature loss on older TVs).
+- **Decision:** A. The cut-off is API 28 because the phone minSdk is 28 (no phone changes) and API 26/27 have
+  no emulator in CI; they get the same code path as the verified API 24.
+- **Failure modes:** a codec `Mp4Muxer` does not support → the same "Couldn't join video and audio" error as
+  before (no partial file kept); an input neither reader sniffs → the same IOException.
+- **Security:** reads only local work files written by the downloader; no new network or permission.
+- **Consequences:** about 150 KB of AARs before R8 (muxer ~110 KB, inspector ~40 KB). WebM joins on
+  Android 7–8.1 still use the platform muxer (not exercised by the TV tests; queued for stability-v2).
+- **Alternatives rejected:** B (risk on the verified path), C (scope and risk), D (drops a working feature).
+- **References:** androidx/media 1.11.1 `muxer/MediaMuxerCompat.java`, `muxer/Mp4Muxer.java`
+  (`writeSampleData`: samples written immediately when batching is off), `inspector/MediaExtractorCompat.java`;
+  docs/groups/GROUP-8-DOWNLOADS.md findings G8-9, G8-10.
+- **Status:** accepted (agent decision inside the approved G8 audit scope; new dependency from the same pinned
+  Media3 release, reported to the owner); verified only after the tv-api24 pass-after and the G8 regression.
+
 ## 11. Risks
 
 | Risk | Mitigation |

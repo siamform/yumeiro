@@ -143,6 +143,17 @@ Cleanup worker (Offline items) · DownloadsScreen (list, play, keep, delete, fol
 | G8-7 | Split v/a that fits per track but not with the join fetched both tracks, then failed at the join (wrong message, retries) | `DownloadWorker.forced` `space` (≈190) is called per track; the join output is not counted | one shared check: 2 × (both tracks' bytes to fetch) + margin | device `DownloadG8DeviceTest#c_splitTracksCountTheJoinInTheSpaceCheck` |
 | DL-11 p2 | A single stalled read restarted a healthy request; the bytes in flight were thrown away (real host 1.1004× once) | `RequestPace.slowed` (≈211–232) judges a window by total wait, not by its shape | one window of grace when one read holds ≥ 60 % of the window's wait | unit `DownloadThroughputTest#aSingleStallIsRiddenOutNotRestarted`; device budget `DownloadThroughputDeviceTest` a + d |
 
+| G8-9 | Android 7 TV: a DASH stream with B-frame video could not be joined ("Couldn't join video and audio: writeSampleData returned an error") | `MediaMux.merge` (31, at 34d99b8) always uses the platform `MediaMuxer`; Android 7's `MPEG4Writer` rejects out-of-order (B-frame) timestamps (logcat: `do not support out of order frames (timestamp: 80000 < last: 160000 for Video track`) | ADR-022: below Android 9, MP4 joins use Media3 `MediaMuxerCompat` (writes `ctts`) | device `ForceDownloadDeviceTest#dashStreamIsSavedWithVideoAndAudio` on tv-api24 (failed in 44314925557) |
+| G8-10 | Android 7 TV: a DASH SegmentTemplate stream failed with "Failed to instantiate extractor" | `MediaMux.merge` (24–25, at 34d99b8) opens the joined fMP4 track (init + `styp`/`moof` segments) with the platform `MediaExtractor`, which on API 24 cannot sniff it | ADR-022: below Android 9, MP4 joins read with Media3 `MediaExtractorCompat` (`FragmentedMp4Extractor`) | device `ForceDownloadDeviceTest#segmentedDashStreamIsSavedWithVideoAndAudio` on tv-api24 (failed in 44314925557) |
+
+Found by the TV group regression (TV batch 2, tv-api24, run 44314925557, old code 34d99b8). Not a code finding:
+`StreamWatchDownloadDeviceTest` 7a ("the player for a website video shows no Download action") fails on TV
+because the watch page with the Download action is shown only when the player is docked
+(`VideoPlayerModal.kt:1582` `docked = watchPage != null && !isFullscreen && !hideChrome && !isLandscapeNow`),
+and a TV is always landscape. The website-video Download action is a phone feature; adding it to TV is a new
+feature, so it is an owner decision (UNVERIFIED-QUEUE "TV 7a"). The class is left out of TV batches for that
+reason. `ExternalDownloaderDeviceTest` runs 0 tests on tv-api24 by design (`@SdkSuppress(minSdkVersion = 26)`).
+
 Checked and not a finding (this audit): enqueue `isSaved` stat on the main thread (R17 decision kept: one
 `exists` for an already-saved item); DownloadGate waits off the foreground; WorkManager 10-minute limit only
 reschedules a waiting worker; torrent through TorrServer uses Segmented with ranges; MediaStore publish keeps
@@ -150,7 +161,7 @@ reschedules a waiting worker; torrent through TorrServer uses Segmented with ran
 
 ### ADRs
 
-ADR-020 (this audit); ADR-016 (DL-11) amended by the stall grace.
+ADR-020 (this audit); ADR-016 (DL-11) amended by the stall grace; ADR-022 (G8-9, G8-10: the join on Android 7–8.1).
 
 ### Verification (labels: unit = CI; emulator = device-check, both phones)
 
