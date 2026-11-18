@@ -5,11 +5,18 @@
  */
 package dev.asfakul.yumeiro
 
+import android.content.Context
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import dev.asfakul.yumeiro.online.OnlineLink
 import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Status
@@ -25,6 +32,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * G8 group batch (§13a), the findings that need the real worker, MediaMuxer or the phone's disk
@@ -35,6 +43,9 @@ import org.junit.runner.RunWith
  *     video/mp2t);
  *  c) G8-7: a split video + audio download that fits track by track but not with the join must stop
  *     up front with "Storage full" (it downloaded both tracks and failed or retried at the join).
+ *  d) G8-8: Retry tapped while the failed download's worker is still finishing (the item already says
+ *     FAILED, the unique work dl_<id> is still RUNNING) must still download. ExistingWorkPolicy.KEEP
+ *     dropped the new request and the item stayed "Queued" with no worker (tv-api34 44299928223).
  * Real WorkManager → DownloadWorker path, local MockWebServer. Markers: G8D_RESULT <case> PASS|FAIL.
  */
 @RunWith(AndroidJUnit4::class)
@@ -155,4 +166,39 @@ video/index.m3u8
         log("G8D_RESULT c ${if (ok) "PASS" else "FAIL"} free=${free / 1048576}MB each=${each / 1048576}MB requests=${s.requestCount}")
         assertTrue("G8-7: status=${item?.status} error='$err' bytes=${item?.bytes} (each track ${each / 1048576} MB, free ${free / 1048576} MB)", ok)
     }
+
+    @Test fun d_retryWhileTheFailedWorkIsStillRunningStarts() = runBlocking<Unit> {
+        val up = AtomicBoolean(false)
+        val payload = ByteArray(64 * 1024) { (it % 251).toByte() }
+        val s = server { _, _ -> if (up.get()) body(payload) else MockResponse.Builder().code(503).build() }
+        val first = run("d-fail", OnlineLink("Test", "test", s.url("/d.mp4").toString(), null, 720, false, false, emptyMap()))
+        assertTrue("first attempt must fail: ${first?.status} '${first?.error}'", first?.status == Status.FAILED)
+        val id = first!!.id
+        // The window between DownloadWorker's failed() and its Result.failure(): the item says FAILED,
+        // the unique work is still RUNNING. A test worker holds that state for 4 s.
+        val wm = WorkManager.getInstance(ctx)
+        val hold = OneTimeWorkRequestBuilder<G8HoldWorker>().build()
+        wm.enqueueUniqueWork("dl_$id", ExistingWorkPolicy.KEEP, hold).result.get()
+        val runUntil = System.currentTimeMillis() + 15_000
+        while (wm.getWorkInfoById(hold.id).get()?.state != WorkInfo.State.RUNNING && System.currentTimeMillis() < runUntil) delay(50)
+        assertTrue("hold worker never ran", wm.getWorkInfoById(hold.id).get()?.state == WorkInfo.State.RUNNING)
+        up.set(true)
+        OnlineDownloads.start(ctx, id) // the user's Retry
+        val until = System.currentTimeMillis() + 40_000
+        var item = OnlineDownloads.get(id)
+        while (System.currentTimeMillis() < until) {
+            item = OnlineDownloads.get(id)
+            if (item?.status == Status.DONE || item?.status == Status.FAILED) break
+            delay(200)
+        }
+        val file = item?.let { OnlineDownloads.fileOf(ctx, it) }
+        val ok = item?.status == Status.DONE && file?.exists() == true && file!!.readBytes().contentEquals(payload)
+        log("G8D_RESULT d ${if (ok) "PASS" else "FAIL"} status=${item?.status} error='${item?.error}' requests=${s.requestCount}")
+        assertTrue("G8-8: retry during the failing worker's last moment: status=${item?.status} error='${item?.error}'", ok)
+    }
+}
+
+/** G8-8 test helper: occupies the unique work name like a worker that is about to return failure. */
+class G8HoldWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result { delay(4_000); return Result.failure() }
 }
