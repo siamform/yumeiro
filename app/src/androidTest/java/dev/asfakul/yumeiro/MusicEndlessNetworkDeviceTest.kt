@@ -55,10 +55,20 @@ class MusicEndlessNetworkDeviceTest {
             .mapNotNull { n -> n.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text } }
             .filter { it.startsWith("Similar to ") }.forEach { seen += it }
     }
+    /** A few texts on screen, for the log when the endless shelves never show. */
+    private fun texts(): List<String> = runCatching {
+        rule.onAllNodesWithTag("youtube_music_list", true)[0].fetchSemanticsNode().let { root ->
+            fun walk(n: androidx.compose.ui.semantics.SemanticsNode): List<String> =
+                (n.config.getOrNull(SemanticsProperties.Text)?.map { it.text } ?: emptyList()) + n.children.flatMap { walk(it) }
+            walk(root).filter { it.length > 2 }.distinct()
+        }
+    }.getOrDefault(emptyList())
     /** Swipes to the end of the Home list until [ok] or [ms] pass. */
     private fun scrollUntil(ms: Long, ok: () -> Boolean): Boolean {
         val end = SystemClock.uptimeMillis() + ms
+        var round = 0
         while (SystemClock.uptimeMillis() < end) {
+            if (++round % 10 == 0) log("EN_ROUND $round list=${has("youtube_music_list")} similar=${seen.size} texts=${texts().take(6)}")
             if (!has("youtube_music_list")) { SystemClock.sleep(500); continue }
             repeat(3) { runCatching { rule.onAllNodesWithTag("youtube_music_list", true)[0].performTouchInput { swipeUp(durationMillis = 250) } }; collect() }
             rule.waitForIdle(); SystemClock.sleep(1_200); collect()
@@ -79,7 +89,8 @@ class MusicEndlessNetworkDeviceTest {
         assumeTrue("YouTube Music Home did not load from the CI network", home)
 
         val reached = scrollUntil(240_000) { seen.isNotEmpty() }
-        log("EN_REACHED endless=$reached similar=${seen.size} first=${seen.firstOrNull()}")
+        log("EN_REACHED endless=$reached similar=${seen.size} first=${seen.firstOrNull()} texts=${texts().take(10)}")
+        if (!reached) FirstRun.shot("en_not_reached")
         assumeTrue("never reached the endless shelves from the CI network", reached)
         val before = seen.size
         FirstRun.shot("en_before_drop")
