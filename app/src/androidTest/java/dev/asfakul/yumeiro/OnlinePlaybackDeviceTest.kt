@@ -131,14 +131,16 @@ class OnlinePlaybackDeviceTest {
         // A fresh install opens on the welcome guide over the tabs (api33/api36 run 44401023896:
         // SetupGuide.WelcomePage on screen, the source menu never reachable). Get past it as a user does.
         FirstRun.toTabs(rule)
-        rule.waitUntil(30_000) { rule.onAllNodesWithTag("nav_tab_videos", true).fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithTag("nav_tab_videos", true).performClick()
+        // TV shows a side rail (tv_nav_tab_videos) instead of the tab bar (tv-api34 run 44403632079
+        // waited 30 s for nav_tab_videos); FirstRun maps the tag and clicks as the remote's OK would.
+        rule.waitUntil(30_000) { FirstRun.hasNav(rule, "nav_tab_videos") }
+        FirstRun.clickTag(rule, FirstRun.navTag(rule, "nav_tab_videos"))
         // The source choice (Yumix · YouTube · Device · Live TV) sits in the menu under the page title.
         fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
         rule.waitUntil(20_000) { has("video_source_online") || has("video_source_switch") }
-        if (!has("video_source_online")) rule.onNodeWithTag("video_source_switch", true).performClick()
+        if (!has("video_source_online")) FirstRun.clickTag(rule, "video_source_switch")
         rule.waitUntil(15_000) { has("video_source_online") }
-        rule.onNodeWithTag("video_source_online", true).performClick()
+        FirstRun.clickTag(rule, "video_source_online")
         // The home opens with the banner (hero) and shelves.
         rule.waitUntil(60_000) {
             rule.onAllNodesWithTag("online_hero_play", true).fetchSemanticsNodes().isNotEmpty() ||
