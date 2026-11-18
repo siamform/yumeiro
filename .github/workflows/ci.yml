@@ -94,6 +94,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash .github/scripts/tests/data-branch-test.sh
 
+      - name: Market logos and categories (NBUG-14 Python test)
+        if: ${{ !cancelled() }}
+        run: python3 .github/scripts/tests/test_build_market_logos.py
+
       - name: Upload debug APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
