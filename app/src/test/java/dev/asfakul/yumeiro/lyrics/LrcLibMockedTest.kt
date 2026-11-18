@@ -54,6 +54,9 @@ class LrcLibMockedTest {
         LrcLib.find(ctx, client, title, artist, "Album", durMs)
 
     @Before fun clean() {
+        // LrcLib is a process-wide object: drop the prefs it kept from the previous test's
+        // Application, or that test's "no lyrics" mark leaks into this one (CI 44227662448).
+        LrcLib.javaClass.getDeclaredField("prefs").apply { isAccessible = true }.set(LrcLib, null)
         LrcLib.init(ctx)
         ctx.getSharedPreferences("lyrics_online", Context.MODE_PRIVATE).edit().clear().commit()
         File(ctx.cacheDir, "lyrics_online").deleteRecursively()
