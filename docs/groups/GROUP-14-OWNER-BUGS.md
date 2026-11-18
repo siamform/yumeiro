@@ -67,19 +67,21 @@ drops an ONLINE entry only if `AdultContent.isAdultApi(entry.api)` is true right
 
 | ID | Finding | Root cause | Severity | Status |
 |---|---|---|---|---|
-| NB11-1 | 18+ titles in Most played after a cold start, and for an extension that is off or removed | Most played asked the live extension list, once, before it loaded; unknown counted as "not 18+" | High (privacy: shown to anyone who opens Home) | Open |
-| NB11-2 | 18+ titles of a mixed extension in Most played | PlayCounts stores no 18+ mark or type | High | Open |
+| NB11-1 | 18+ titles in Most played after a cold start, and for an extension that is off or removed | Most played asked the live extension list, once, before it loaded; unknown counted as "not 18+" | High (privacy: shown to anyone who opens Home) | Verified (9e12192) |
+| NB11-2 | 18+ titles of a mixed extension in Most played | PlayCounts stores no 18+ mark or type | High | Verified (9e12192) |
 | NB11-OB1 | Observation, other surface: with 18+ on but private, an NSFW-typed title of a mixed extension can still appear in that extension's feed rows (`OnlineRepository.toItem` 508 drops NSFW items only when 18+ is off; the private rule hides whole 18+ extensions) | the private rule is per extension, not per title | Medium (needs the owner's reading of "private") | Queued (UNVERIFIED-QUEUE NB11-OB1); not part of the owner's report, not built |
 
 ### Design (ADR-023)
 
 See docs/SYSTEM-DESIGN.md ADR-023.
 
+**Status: NBUG-11 closed** (NB11-1, NB11-2 Verified; NB11-OB1 queued, not part of the report).
+
 ### Verification
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB11-1, NB11-2 | pending (`Nbug11MostPlayedAdultDeviceTest` case a; case b is the 18+-on control and must pass on both) | pending | emulator, TV emulator |
+| NB11-1, NB11-2 | FAIL both phones [44394951861](https://github.com/siamform/yumeiro/actions/runs/44394951861) (ab/n11-before, deleted): case a showed A and B with 18+ off; case b (control) passed | CI [44392816697](https://github.com/siamform/yumeiro/actions/runs/44392816697) @9e12192 1209 tests 0 failures; phones [44396427898](https://github.com/siamform/yumeiro/actions/runs/44396427898) PASS (Nbug11, HomeNavigation, AdultSearchFilter, OnlineSwitchesEffect; test-only scroll fix fd7ef1b); tv-api34 [44403632079](https://github.com/siamform/yumeiro/actions/runs/44403632079) @2c552a0 Nbug11 + HomeNavigation PASS; tv-api24 [44406478289](https://github.com/siamform/yumeiro/actions/runs/44406478289) @beeda9c PASS | emulator, TV emulator, CI unit |
 
 ## NBUG-12 and NBUG-13: adult streams fail with "Access denied"; they need a VPN
 
@@ -130,10 +132,10 @@ source refused playback, even from the site's own page."
 
 | ID | Finding | Root cause | Severity | Status |
 |---|---|---|---|---|
-| NB12-1 | A title whose data is a direct media URL never reaches the site-page fallback | `pageFor` took the episode data as "the page" even when it was the refused stream file | High (every "direct file" source with expiring or moved links; the owner's case) | Open |
-| NB12-3 | Even on the title page, Yumeiro cannot find a KVS (kt_player) stream | (a) KVS links end in `.mp4/` (trailing slash), so the page extractor's and the sniffer's extension tests miss them; (b) the links sit in the `flashvars` script object, not in `<video>`; (c) many KVS sites scramble them (`function/0/…`, de-scrambled with the page's `license_code`), which Yumeiro does not support. Live check: headless WebView capture of the real title page found no stream on either phone (diagnostic 44389256785, throwaway branch, deleted) (likely reason, not verified: kt_player requests the file only after a tap on its play button). | High (KVS is a common adult-site engine) | Open |
-| NB12-4 | After "fresh loadLinks" returns the same refused link, the player never retries and the title sits on the error forever (the last resort is never reached) | `playCurrent` builds the same video id for the same link, so `IncomingMedia.open` publishes an equal `VideoItem`; `_pending` is a StateFlow and drops equal values, so no player reload, no second `onFatalError`, no `failover`. Found in fail-before 44394971017 (api36): phase PLAYING with the 403 for 240 s, the page never requested | High (every source whose links do not change on refresh) | Open |
-| NB12-5 | After one episode needed the refresh and the page step, the next episode skips both and stays on the player error | `playEpisode` copies the state and keeps `refreshed` and `captured` from the previous episode (code read while fixing NB12-4) | Medium (series from sources with refused links) | Open |
+| NB12-1 | A title whose data is a direct media URL never reaches the site-page fallback | `pageFor` took the episode data as "the page" even when it was the refused stream file | High (every "direct file" source with expiring or moved links; the owner's case) | Verified (8e020b1) |
+| NB12-3 | Even on the title page, Yumeiro cannot find a KVS (kt_player) stream | (a) KVS links end in `.mp4/` (trailing slash), so the page extractor's and the sniffer's extension tests miss them; (b) the links sit in the `flashvars` script object, not in `<video>`; (c) many KVS sites scramble them (`function/0/…`, de-scrambled with the page's `license_code`), which Yumeiro does not support. Live check: headless WebView capture of the real title page found no stream on either phone (diagnostic 44389256785, throwaway branch, deleted) (likely reason, not verified: kt_player requests the file only after a tap on its play button). | High (KVS is a common adult-site engine) | Verified (db723eb, 7e7329e) |
+| NB12-4 | After "fresh loadLinks" returns the same refused link, the player never retries and the title sits on the error forever (the last resort is never reached) | `playCurrent` builds the same video id for the same link, so `IncomingMedia.open` publishes an equal `VideoItem`; `_pending` is a StateFlow and drops equal values, so no player reload, no second `onFatalError`, no `failover`. Found in fail-before 44394971017 (api36): phase PLAYING with the 403 for 240 s, the page never requested | High (every source whose links do not change on refresh) | Verified (0a37f0a) |
+| NB12-5 | After one episode needed the refresh and the page step, the next episode skips both and stays on the player error | `playEpisode` copies the state and keeps `refreshed` and `captured` from the previous episode (code read while fixing NB12-4) | Medium (series from sources with refused links) | Verified for the next episode (b2cb13c); version switch and Retry (3651816) by code read: UNVERIFIED-QUEUE NB12-5b |
 | NB12-2 | The extension's link is dead (site moved to `v-acctoken` links) | Third-party extension out of date | — (not ours) | Report to the extension author (owner, OMT) |
 | NB13-1 | Adult hosts need a VPN on the owner's network | Bangladesh blocks adult sites at the gateway (BTRC; DNS tampering, IP blocking or gateway filtering, [OONI 2025](https://ooni.org/post/2025-bangladesh-report/); 22,000+ adult and gambling sites through the CTDR system, [bdnews24](https://bangla.bdnews24.com/tech/article1936753.bdnews)) | — | See below |
 
@@ -163,11 +165,15 @@ site's referer and the CloudStream User-Agent and let `StreamResolver` find the 
 (NB12-3); (3) only then the headless WebView capture. The id suffix stays `:web` (resume and history
 unchanged). No new dependency; the KVS code is a port of yt-dlp's (Unlicense, compatible with GPL-3).
 
+**Status: NBUG-12 closed** (NB12-1, NB12-3, NB12-4, NB12-5 Verified; NB12-5b queued; NB12-2 third party, OMT-32). **NBUG-13: owner decision** (ADR-024, OMT-33).
+
 ### Verification
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB12-1, NB12-3, NB12-4, NB12-5 | pending (`Nbug12RefusedMediaPageDeviceTest`: local KVS site; the extension's link 403) | pending | emulator (local server), CI unit (`CapturePageTest`, `KvsPlayerTest`) |
+| NB12-1, NB12-3, NB12-4 | case a FAIL both phones [44394971017](https://github.com/siamform/yumeiro/actions/runs/44394971017) (attempt 2; ab/n12-before, deleted): PLAYING with the 403 for 240 s, the title page `/video/1/` never requested. NB12-4 stops the old code before the last resort, so NB12-1 and NB12-3 are not shown failing on their own (their unit tests `CapturePageTest`, `KvsPlayerTest` came with the fixes) | CI [44399173697](https://github.com/siamform/yumeiro/actions/runs/44399173697) @7e7329e 1221 tests 0 failures; phones [44401023896](https://github.com/siamform/yumeiro/actions/runs/44401023896) @7e7329e case a PASS (page requested, tokenised link played, `:web` id, first frame); regression phones [44403595281](https://github.com/siamform/yumeiro/actions/runs/44403595281) @2c552a0: Nbug12, OnlinePlayback, OnlineSubtitlesFallback, OnlineSwitchesEffect, HeaderStream, StreamFormatMismatch PASS; tv-api34 [44403632079](https://github.com/siamform/yumeiro/actions/runs/44403632079) Nbug12 PASS, OnlinePlayback [44406473476](https://github.com/siamform/yumeiro/actions/runs/44406473476) @beeda9c PASS; tv-api24 [44406478289](https://github.com/siamform/yumeiro/actions/runs/44406478289) @beeda9c PASS | emulator (local server), TV emulator, CI unit |
+| NB12-5 | case b FAIL both phones [44398530263](https://github.com/siamform/yumeiro/actions/runs/44398530263) (ab/n12b-before @90b9e52, deleted): episode 2 on the 403, pageLoads 1→1 | case b PASS both phones [44401023896](https://github.com/siamform/yumeiro/actions/runs/44401023896) (pageLoads 1→2), both TVs (runs above) | emulator, TV emulator |
+| Test-only fixes found in the regression | `OnlinePlaybackDeviceTest.c_uiFlowPlays`: the welcome guide covered the tabs (2c552a0, `FirstRun.toTabs`), and TV has a side rail (beeda9c, `FirstRun.navTag/clickTag`) | phones and both TVs PASS (runs above) | emulator, TV emulator |
 | NB12-2 | — | — | OMT-32 (owner retest; tell the extension author) |
 | NB13-1 | owner network only | — | OMT-33 (decision + retest) |
 

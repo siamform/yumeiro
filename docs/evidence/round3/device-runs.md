@@ -991,3 +991,17 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | TV T2a | r15-stability | tv-api24 / tv-api34 | StorageMainThread, ForceDownload, ExternalDownloader, Torrent, YtDownloadPipeline | 44351697156 PASS; StorageMainThread 2 tests skipped (penaltyListener needs API 28); ExternalDownloader 0 tests (@SdkSuppress 26) / 44351704098 PASS, no skips |
 | TV T2b | r15-stability | tv-api24 / tv-api34 | DownloadThroughput | 44353535608 PASS (DownloadThroughput OK 5 tests) / 44380154109 PASS (DownloadThroughput OK 5 tests) |
 
+## 2026-11-19: GROUP-14 NBUG-11, NBUG-12 (emulator + TV emulator)
+
+| Run | Ref | Devices | Classes | Result |
+|---|---|---|---|---|
+| 44394951861 | ab/n11-before (old code + test, deleted) | api33-lowram, api36 | Nbug11MostPlayedAdult | case a FAIL both (fail-before), case b PASS |
+| 44396427898 | r15-stability | api33-lowram, api36 | Nbug11, HomeNavigation, AdultSearchFilter, OnlineSwitchesEffect | all PASS |
+| 44394971017 (attempt 2) | ab/n12-before (deleted) | api33-lowram, api36 | Nbug12RefusedMediaPage | case a FAIL both (fail-before); attempt 1 api33 was a build failure |
+| 44398530263 | ab/n12b-before 90b9e52 (deleted) | api33-lowram, api36 | Nbug12RefusedMediaPage | case b FAIL both (fail-before NB12-5) |
+| 44401023896 | r15-stability 7e7329e | api33-lowram, api36 | Nbug12 + regression | Nbug12 a+b PASS; OnlinePlayback c test drift → 2c552a0 |
+| 44403595281 | r15-stability 2c552a0 | api33-lowram, api36 | Nbug12, OnlinePlayback, OnlineSubtitlesFallback, OnlineSwitchesEffect, HeaderStream, StreamFormatMismatch | all PASS |
+| 44403632079 | r15-stability 2c552a0 | tv-api34 | Nbug11, HomeNavigation, Nbug12, OnlinePlayback | PASS except OnlinePlayback c (TV rail, test-only) → beeda9c |
+| 44406473476 | r15-stability beeda9c | tv-api34 | OnlinePlayback | PASS (4 tests) |
+| 44406478289 | r15-stability beeda9c | tv-api24 | Nbug11, HomeNavigation, Nbug12, OnlinePlayback | all PASS |
+

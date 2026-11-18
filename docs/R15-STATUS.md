@@ -2,20 +2,14 @@
 
 ## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, owner bug list NBUG-11…16)
 
-- **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method:
-  research, side effects, ADR, tests, fixes) → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
-- **G8 closed** (c0ce225). **G9 closed** (this commit): phones 44389079092 PASS with 7 sources (test fix 622af30,
-  Material 3 Back on an expanded sheet), TV runs in GROUP-9.
-- **Now:** owner bug list, docs/groups/GROUP-14-OWNER-BUGS.md (new). Order: NBUG-11 → NBUG-12/13 → NBUG-16 →
-  NBUG-14 → NBUG-15 (d) → NBUG-15 (a)–(c) proposal (owner approval before building).
-- **NBUG-12 lead (network probe 2026-11-18):** Porn4fans' `contentUrl` is refused (403) for everyone; the page's KVS
-  player config has working `?v-acctoken=` links; the last-resort page capture loaded the refused `.mp4` instead of
-  the title page. Live headless capture of the real page also failed (diag 44389256785, throwaway, deleted).
-- **NBUG-11:** register ee4afc2, test dfd9fc4, fix 9e12192. Running: fail-before 44392693373 (dfd9fc4), CI
-  44392816697, pass-after phones 44392821485 (Nbug11 + HomeNavigation, AdultSearchFilter, OnlineSwitchesEffect).
-- **NBUG-12:** register 15280ae, test 86b9c2e (old code pinned on throwaway ab/n12-before), fixes 8e020b1 (NB12-1),
-  db723eb (NB12-3). Next: fail-before on ab/n12-before, then pass-after, TVs, delete the branch.
-- **Next three actions:** (1) read the NBUG-11 runs; (2) NBUG-12 fail-before; (3) TVs for both.
+- **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method)
+  → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
+- **G8, G9 closed.** **GROUP-14** (docs/groups/GROUP-14-OWNER-BUGS.md): NBUG-11 Verified, NBUG-12 Verified in the
+  app (NB12-2 → OMT-32), NBUG-13 owner decision (ADR-024, OMT-33).
+- **Now: NBUG-16** (auto-update + "needs update" again; ADR-025). Register 06cc6c0, tests bf23a1f, fixes 28a4468,
+  e241457, a16a273, ec7163c, 7d91c48, 2b06fb2, dc44432. Running: fail-before CI 44407599670 and phones 44408003339 on
+  throwaway ab/n16-before (bf23a1f). Next: delete the branch, pass-after CI + phones + TVs at HEAD, docs close.
+- **Then:** NBUG-14 (IPTV logos) → NBUG-15 (d) separate recents → NBUG-15 (a)–(c) proposal (owner approval) → G10.
 
 ### Previous resume note — superseded (G9 close)
 
