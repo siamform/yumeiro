@@ -44,7 +44,7 @@ object LastPlayed {
     private val _queue = MutableStateFlow<SavedQueue?>(null)
     val queue: StateFlow<SavedQueue?> = _queue.asStateFlow()
     @Volatile private var queueLoaded = false
-    private val pendingQueue = AtomicReference<Pair<File, SavedQueue?>?>(null)
+    private val pendingQueue = AtomicReference<Pair<Context, SavedQueue?>?>(null)
     private val queueWriter by lazy { Executors.newSingleThreadExecutor { r -> Thread(r, "yu-last-queue").apply { isDaemon = true } } }
 
     data class Audio(val track: AudioTrack, val positionMs: Long, val durationMs: Long, val at: Long) {
@@ -98,13 +98,16 @@ object LastPlayed {
         val q = SavedQueue(window(tracks, current?.id), current?.id, System.currentTimeMillis())
         queueLoaded = true
         _queue.value = q
-        val f = File(context.applicationContext.filesDir, QUEUE_FILE)
-        if (pendingQueue.getAndSet(f to q) == null) queueWriter.execute { flushQueue() }
+        // filesDir is resolved on the writer thread: it can touch the disk (StrictMode
+        // DiskReadViolation on main in device run 44264818204).
+        if (pendingQueue.getAndSet(context.applicationContext to q) == null) queueWriter.execute { flushQueue() }
     }
 
     private fun flushQueue() {
-        val (f, q) = pendingQueue.getAndSet(null) ?: return
-        runCatching { if (q == null) { f.delete(); SafeJsonFile.tmpOf(f).delete() } else SafeJsonFile.write(f, encodeQueue(q)) }
+        val (app, q) = pendingQueue.getAndSet(null) ?: return
+        runCatching {
+            val f = File(app.filesDir, QUEUE_FILE)
+            if (q == null) { f.delete(); SafeJsonFile.tmpOf(f).delete() } else SafeJsonFile.write(f, encodeQueue(q)) }
             .onFailure { runCatching { android.util.Log.w("LastPlayed", "queue write failed: ${it.javaClass.simpleName}") } }
     }
 
@@ -136,8 +139,7 @@ object LastPlayed {
     fun clear(context: Context) {
         _audio.value = null; _ytAt.value = emptyMap(); _queue.value = null
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
-        val f = File(context.applicationContext.filesDir, QUEUE_FILE)
-        if (pendingQueue.getAndSet(f to null) == null) queueWriter.execute { flushQueue() }
+        if (pendingQueue.getAndSet(context.applicationContext to null) == null) queueWriter.execute { flushQueue() }
     }
 
     /** G6-QP: at most [QUEUE_MAX] songs, keeping [QUEUE_BEFORE] before the current one. Pure. */
