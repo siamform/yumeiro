@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 14:55 UTC, v1.8.2 cycle, G8 step 8: G8-8 pass-after running)
+## Resume here (updated 2026-11-18 13:02 UTC, v1.8.2 cycle, G8 step 9: group regression running)
 
 - **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" + owner handover prompt of 2026-11-18
   (new agent) + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
@@ -28,7 +28,10 @@
   while first run RUNNING → d699d96), 44304053909 api36 passed on old code (MTApplication start-up resumeQueued at
   +8 s rescued it → 78caf5e waits until the process is up 20 s). CI 44302429664 on f6e26b0 (fix 8a4cfa0): success;
   only androidTest changed since.
-- **Runs in progress:** device 44307672019 on 78caf5e (DownloadG8DeviceTest a–d, both phones) = pass-after.
+- **G8-8 pass-after:** device 44307672019 (78caf5e): DownloadG8DeviceTest OK (4 tests) on both phones.
+- **Runs in progress:** group regression on 78caf5e code: phones batch A 44309347790 (Cleanup, Kill, Quality, Resume,
+  Throughput, DownloadsScreen, ExternalDownloader), batch B 44309363764 (G8, Force, LowStorage, StorageMainThread,
+  StreamWatch, Torrent, YtDownloadPipeline). TV batches 1 + 2 on tv-api24 / tv-api34 after these.
 - **Next three actions:** (1) read 44307672019; (2) group regression on the close commit: phones 2 runs (14 classes)
   + TV batches 1 + 2 on tv-api24 and tv-api34 (≤2 device workflows at once); (3) G8 close docs in one push. Doc gaps
   to fix in the close push: GROUP-8 verification table (still "pending"), DL-11 p2 cause 2 + G8-8 rows, ledger G8
