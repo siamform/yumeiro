@@ -388,14 +388,19 @@ object OnlineSession {
             resolve(app, positionMs)
             return true
         }
-        // Last resort: play what the site's own page plays (cookies, UA and referer of a real browser).
+        // Last resort: play what the site's own page plays. First the stream its HTML publishes
+        // (NBUG-12: KVS player config, <video>, JSON-LD; one request through the app's DNS), then the
+        // page in a headless WebView (cookies, UA and referer of a real browser).
         val page = pageFor(s)
         if (!s.captured && page != null) {
-            Log.w(TAG, "fresh links failed too → headless capture of $page")
+            Log.w(TAG, "fresh links failed too → source page $page")
             _state.value = s.copy(phase = Phase.RESOLVING, message = "Opening the source page…", failed = failed, captured = true)
             job?.cancel()
             job = scope.launch {
-                val req = HeadlessCapture.capture(app, page, s.title, referer = runCatching { ExtensionManager.provider(s.api)?.mainUrl }.getOrNull())
+                val site = runCatching { ExtensionManager.provider(s.api)?.mainUrl }.getOrNull()
+                val fromHtml = fromPageHtml(app, page, s.title, site)
+                Log.w(TAG, if (fromHtml != null) "source page HTML gave a stream" else "source page HTML gave nothing → headless capture")
+                val req = fromHtml ?: HeadlessCapture.capture(app, page, s.title, referer = site)
                 val cur = _state.value ?: return@launch
                 if (cur.data != s.data) return@launch
                 if (req == null) {
@@ -412,6 +417,17 @@ object OnlineSession {
         _state.value = s.copy(failed = failed)
         return false
     }
+
+    /**
+     * NBUG-12: the stream [page]'s HTML publishes for its own player, checked reachable by
+     * [dev.asfakul.yumeiro.stream.StreamResolver] (it probes each candidate), or null.
+     */
+    private suspend fun fromPageHtml(app: Context, page: String, title: String, site: String?): dev.asfakul.yumeiro.stream.StreamRequest? = runCatching {
+        val referer = site?.takeIf { it.isNotBlank() }?.let { if (it.endsWith("/")) it else "$it/" }
+        val r = dev.asfakul.yumeiro.stream.StreamResolver.resolve(app,
+            dev.asfakul.yumeiro.stream.StreamRequest(url = page, title = title, referer = referer, userAgent = com.lagradost.cloudstream3.USER_AGENT))
+        (r as? dev.asfakul.yumeiro.stream.Resolution.Playable)?.request?.takeIf { it.url != page }
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Log.w(TAG, "source page HTML", it) }.getOrNull()
 
     /** The web page that plays this episode (NBUG-12: never a refused stream file), see [CapturePage]. */
     private fun pageFor(s: State): String? =

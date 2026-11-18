@@ -37,7 +37,7 @@ data class PageAnalysis(
 /**
  * Reads the playback sources a web page exposes in its HTML: `<video>`/`<source>`, Open Graph and
  * Twitter player tags, JSON-LD `contentUrl`/`embedUrl`, common player configs (`file:`, `src:`,
- * `hls:`, `manifest:`) and any quoted .m3u8 / .mpd URL in inline scripts. Pages that build their
+ * `hls:`, `manifest:`), KVS `kt_player` configs ([KvsPlayer]) and any quoted .m3u8 / .mpd URL in inline scripts. Pages that build their
  * player URL at runtime (signed tokens from an API, DRM) won't expose anything here — those are
  * handled by the in-app page browser (which captures what the site's own player requests).
  */
@@ -60,6 +60,12 @@ object WebPageExtractor {
             if (origin != "iframe" && hint == null && origin == "script") return
             if (hint?.kind == MediaKind.WEB_PAGE) return
             out.putIfAbsent(abs, PageCandidate(abs, hint, origin))
+        }
+
+        // NBUG-12: a KVS player's own sources (best quality first) come before anything else on the
+        // page; their `.mp4/` addresses have no visible extension, so the generic rules below drop them.
+        KvsPlayer.sources(html, pageUrl).forEach { k ->
+            if (k.url != pageUrl) out.putIfAbsent(k.url, PageCandidate(k.url, Sniff(MediaKind.VIDEO, "MP4", "kvs"), "kvs"))
         }
 
         var refresh: String? = null
