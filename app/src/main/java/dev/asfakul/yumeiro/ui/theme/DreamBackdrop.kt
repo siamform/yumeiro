@@ -139,6 +139,75 @@ object BackdropSettings {
         null
     }
 
+    /**
+     * G9-9: does a JPEG or PNG stream reach its end? JPEG: an end-of-image marker (FF D9) after the first
+     * start-of-scan (FF DA); inside scan data an FF byte is always followed by 00 or a restart marker, so
+     * FF D9 there is the real end. Thumbnails in EXIF end before the first scan, so they do not count.
+     * PNG: the chunk list reaches IEND. Any other format: true (not checked here).
+     */
+    internal object PictureEnd {
+        fun complete(input: java.io.InputStream): Boolean {
+            val s = java.io.BufferedInputStream(input, 64 * 1024)
+            val a = s.read(); val b = s.read()
+            if (a == 0xFF && b == 0xD8) return jpeg(s)
+            if (a == 0x89 && b == 0x50) return png(s)
+            return true
+        }
+
+        private fun jpeg(s: java.io.InputStream): Boolean {
+            // Walk the marker segments up to the first scan.
+            while (true) {
+                var m = s.read(); if (m < 0) return false
+                if (m != 0xFF) return true // not a marker where one must be: leave it to the decoder
+                do { m = s.read() } while (m == 0xFF)
+                if (m < 0) return false
+                if (m == 0xD9) return false // end before any image data
+                if (m == 0x01 || m in 0xD0..0xD7) continue
+                val hi = s.read(); val lo = s.read(); if (lo < 0) return false
+                val len = (hi shl 8) or lo
+                if (len < 2) return true
+                if (!skip(s, len - 2L)) return false
+                if (m == 0xDA) break
+            }
+            var prev = -1
+            while (true) {
+                val c = s.read(); if (c < 0) return false
+                if (prev == 0xFF && c == 0xD9) return true
+                prev = c
+            }
+        }
+
+        private fun png(s: java.io.InputStream): Boolean {
+            val sig = ByteArray(6); if (!readFully(s, sig)) return false // rest of the 8-byte signature
+            val head = ByteArray(8)
+            while (true) {
+                if (!readFully(s, head)) return false
+                val len = ((head[0].toLong() and 0xFF) shl 24) or ((head[1].toLong() and 0xFF) shl 16) or
+                    ((head[2].toLong() and 0xFF) shl 8) or (head[3].toLong() and 0xFF)
+                val type = String(head, 4, 4, Charsets.ISO_8859_1)
+                if (!skip(s, len + 4)) return false // data + CRC
+                if (type == "IEND") return true
+            }
+        }
+
+        private fun readFully(s: java.io.InputStream, b: ByteArray): Boolean {
+            var n = 0
+            while (n < b.size) { val r = s.read(b, n, b.size - n); if (r < 0) return false; n += r }
+            return true
+        }
+
+        private fun skip(s: java.io.InputStream, count: Long): Boolean {
+            var left = count
+            while (left > 0) {
+                val k = s.skip(left)
+                if (k > 0) { left -= k; continue }
+                if (s.read() < 0) return false
+                left--
+            }
+            return true
+        }
+    }
+
     /** The file is cut off or damaged (ImageDecoder said so); not retried with BitmapFactory. */
     internal class BrokenPicture(cause: Throwable) : java.io.IOException("damaged or incomplete picture", cause)
 
@@ -164,6 +233,9 @@ object BackdropSettings {
             }
             // ImageDecoder refused (rare formats): fall through to BitmapFactory.
         }
+        // G9-9: BitmapFactory (below Android 9, or after ImageDecoder refused) fills the missing part of a
+        // cut-off JPEG or PNG with grey and reports nothing, so check the file reaches its end first.
+        if (cr.openInputStream(uri)?.use { PictureEnd.complete(it) } == false) throw BrokenPicture(java.io.EOFException("no end marker"))
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         // decodeStream returns null with inJustDecodeBounds by design; only a missing stream is an error
         // (the 1.8.0 import treated that null as failure, so every picture was refused).
