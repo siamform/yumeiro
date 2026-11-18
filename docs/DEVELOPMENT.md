@@ -14,6 +14,42 @@ For the current maintainer and whoever picks this up next.
 - Every new Kotlin file starts with the GPL header (see any file in `dev/asfakul/yumeiro`). Vendored Apache-2.0 files
   keep their origin and get a line in `NOTICE`.
 
+## Group batch CI (owner rule §13a, 2026-11-18)
+
+CI is the bottleneck, so CI work is done one group at a time, not one item at a time. This applies from
+G8 onward. G6-QP was already in progress when the rule arrived and finishes as a single item.
+
+Group lifecycle, in strict order:
+
+1. **Read** the code for every item in the group.
+2. **Research** competitors for every item (master prompt §8: at least two implementations per item, exact tag, files).
+3. **Write every regression test for the group in one commit**, one test per finding. Each test must fail on the old code.
+4. **Run fail-before once** for the whole group (one CI run; device findings: one device run).
+   - Every test must fail.
+   - A test that passes on the old code means its finding is not proven. Remove it from the batch and put
+     it in `docs/UNVERIFIED-QUEUE.md` with the reason. Do not fix it.
+5. **Commit the fixes**, one small logical commit per item, in the order the tests were written. No squash.
+6. **Run pass-after once** for the whole group. Every test must pass.
+7. **If one item fails pass-after:**
+   - isolate it and revert or correct only its commit;
+   - run only that failing test, then continue;
+   - do not rerun the whole group, weaken the test, or drop the item without a queue reason.
+8. **Group regression** on the close commit: full inventory regression on both phones, and on both TV images where relevant.
+9. **Update ledger, queue and "Resume here" in one push.** Close the group.
+
+Evidence per item is preserved:
+- The fail-before log names every failing test; the pass-after log names every passing test.
+- Each ledger row cites the group run ID plus the test name. A batch is N findings proven in two runs, not one merged finding.
+
+Size cap and other limits:
+- **Size cap:** more than 30 findings → at most two batches, split by layer (for example G8-a: queue, ranges,
+  resume, cancellation; G8-b: HLS/DASH, torrent, forced downloads, MediaStore, DB).
+- **Never cross groups:** G8 batches are G8-only, G9 batches are G9-only.
+- **The release gate is never batched:** one unbatched full regression on the release commit, both phones
+  and both TV images.
+- **Broken read:** if every test for a layer passes on the old code, the read was wrong. Stop, re-read that
+  layer, rewrite its tests, and rerun that layer only.
+
 ## Local setup
 
 ```bash
