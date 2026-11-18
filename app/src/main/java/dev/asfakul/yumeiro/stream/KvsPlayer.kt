@@ -34,7 +34,8 @@ internal object KvsPlayer {
     fun flashvars(html: String): Map<String, String>? {
         if (!html.contains("kt_player") && !html.contains("flashvars")) return null
         val name = KT_CALL.find(html)?.groupValues?.get(1) ?: "flashvars"
-        val start = Regex("""\b${Regex.escape(name)}\s*=\s*\{""").find(html) ?: return null
+        // The variable name comes from the page, so the pattern is cached, not compiled per call.
+        val start = dev.asfakul.yumeiro.text.RegexCache.get("""\b${Regex.escape(name)}\s*=\s*\{""").find(html) ?: return null
         val from = start.range.last + 1
         val end = closingBrace(html, from)?.takeIf { it - from <= MAX_CONFIG } ?: return null
         val body = html.substring(from, end)

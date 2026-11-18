@@ -116,6 +116,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.AdFilterDataSource",
         "dev.asfakul.yumeiro.stream.HlsAdFilter",
         "dev.asfakul.yumeiro.stream.IncomingMediaKt",
+        "dev.asfakul.yumeiro.stream.KvsPlayer",
         "dev.asfakul.yumeiro.stream.LinkHostsKt",
         "dev.asfakul.yumeiro.stream.M3uParser",
         "dev.asfakul.yumeiro.stream.PlaylistMarketKt",
