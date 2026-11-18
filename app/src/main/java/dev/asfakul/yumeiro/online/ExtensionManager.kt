@@ -133,8 +133,13 @@ object ExtensionManager {
             // First run: nothing wakes up until the welcome screen / explore tour is done or skipped.
             OnboardingGate.awaitOpen()
             runCatching { ensureLoaded(app) }.onFailure { Log.e(TAG, "start", it) }
-            // Round 12: after a restore (or a lost file) download missing extensions again.
-            runCatching { repairMissing(app) }.onFailure { Log.w(TAG, "repair", it) }
+        }
+        // Round 12: after a restore (or a lost file) download missing extensions again.
+        // G9-2: retried with back-off and on reconnect instead of once per process.
+        dev.asfakul.yumeiro.backup.RepairRetry.launch(scope, "cloudstream") {
+            OnboardingGate.awaitOpen()
+            ensureLoaded(app)
+            repairMissing(app).second == 0
         }
         // Other ecosystems load in parallel; they publish into SourceHub as they become ready.
         scope.launch {
@@ -159,6 +164,7 @@ object ExtensionManager {
         ensureLoaded(context)
         val missing = missingFiles(context).filter { it.sourceUrl.startsWith("http") }
         if (missing.isEmpty()) { dev.asfakul.yumeiro.backup.BackupMeta.clearPendingDownloads(context); return@withContext 0 to 0 }
+        // G9-2: offline counts as failed so the retry helper tries again when the network is back.
         if (!dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) return@withContext 0 to missing.size
         var ok = 0; var failed = 0
         _repair.value = 0 to missing.size

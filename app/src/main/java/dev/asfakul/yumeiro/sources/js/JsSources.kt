@@ -66,9 +66,10 @@ object JsSources {
         app = context.applicationContext
         scope.launch {
             runCatching { ensureLoaded(app); publish() }.onFailure { Log.e(TAG, "start", it) }
-            // G9-1: a restore brings the lists back without the code; download it again.
-            runCatching { repairMissing(app) }.onFailure { Log.w(TAG, "repair", it) }
         }
+        // G9-1: a restore brings the lists back without the code; download it again.
+        // G9-2: retried with back-off and on reconnect instead of once per process.
+        dev.asfakul.yumeiro.backup.RepairRetry.launch(scope, "js") { repairMissing(app) }
     }
 
     /** Listed sources whose code file is missing (restored without extension files, or deleted). */
