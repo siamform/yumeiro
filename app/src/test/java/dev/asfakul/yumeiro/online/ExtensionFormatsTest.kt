@@ -178,4 +178,37 @@ class ExtensionFormatsTest {
         catch (e: ExtensionManager.ExtensionException) { assertTrue(e.message!!.isNotBlank()) }
         assertTrue(ExtensionManager.state.value.installed.isEmpty())
     }
+
+    /**
+     * NBUG-16 NB16-5: the same extension (same repository, same internal name) is in the market
+     * (community copy, listed at 23) and in the user's own repository, which already lists 24. The
+     * newer copy must win, or the update waits for the next market rebuild (up to 3 days). Curated
+     * copies (mirrored and checked by the market) keep the market copy.
+     */
+    @Test fun newerUserRepoCopyWinsOverMarket() = runBlocking {
+        ExtensionManager.start(context); ExtensionManager.ensureLoaded(context)
+        val repoUrl = server.url("/repo.json").toString()
+        server.dispatcher = object : mockwebserver3.Dispatcher() {
+            override fun dispatch(request: mockwebserver3.RecordedRequest): MockResponse = when (request.url.encodedPath) {
+                "/repo.json" -> MockResponse.Builder().body("""{"name":"Author repo","pluginLists":["plugins.json"]}""").build()
+                "/plugins.json" -> MockResponse.Builder().body("""[
+                    {"internalName":"A","name":"Alpha","url":"https://author.example/A.cs3","version":24},
+                    {"internalName":"B","name":"Beta","url":"https://author.example/B.cs3","version":6}]""").build()
+                else -> MockResponse.Builder().code(404).build()
+            }
+        }
+        java.io.File(context.filesDir, "extensions").mkdirs()
+        java.io.File(context.filesDir, "extensions/market.json").writeText("""{"version":1,"generated":"2026-11-17T00:00:00Z",
+            "repositories":[{"url":"$repoUrl","name":"Author repo","count":2,"ok":true,"origin":"community"}],
+            "extensions":[
+              {"internalName":"A","name":"Alpha","url":"https://author.example/A.cs3","version":23,"repoUrl":"$repoUrl","origin":"community"},
+              {"internalName":"B","name":"Beta","url":"https://raw.githubusercontent.com/siamform/yumeiro/extensions/B.cs3","version":5,"repoUrl":"$repoUrl","origin":"curated","sha256":"${"b".repeat(64)}"}
+            ]}""")
+        ExtensionManager.addRepository(context, repoUrl)
+        val items = ExtensionSources.all(context).items.filter { it.repoUrl.equals(repoUrl, true) }
+        val a = items.single { it.internalName == "A" }; val b = items.single { it.internalName == "B" }
+        assertEquals("NB16-5: the market's older community copy hid the repository's newer one", 24, a.version)
+        assertEquals("community", a.origin) // market metadata kept
+        assertEquals("curated copies stay the market's mirrored copy", 5, b.version)
+    }
 }

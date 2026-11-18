@@ -165,4 +165,41 @@ class PlaylistMarketTest {
         repeat(3) { PlaylistStore.channels(context, "m_a") }
         assertEquals(before, server.requestCount)
     }
+
+    private fun sha(text: String) = java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
+
+    /**
+     * NBUG-16 NB16-3: the Refresh button (`refresh(id)` without a sha, StreamScreen) downloads the
+     * newest mirror copy; the catalog digest is the sha256 of exactly those bytes (build_market.py),
+     * so afterwards the playlist must not be "needing an update" any more. Old code kept the old
+     * marketSha and the flag ("A newer version is available", market "1 update") stayed.
+     */
+    @Test fun manualRefreshClearsTheUpdateFlag() = runBlocking {
+        PlaylistStore.init(context)
+        val c1 = m3u("A"); val c2 = m3u("A", "B")
+        server.enqueue(MockResponse.Builder().body(c1).build())
+        PlaylistStore.installFromMarket(context, PlaylistMarket.parse(index(entry("a", sha(c1)))).entries.single())
+        val v2 = PlaylistMarket.parse(index(entry("a", sha(c2))))
+        assertEquals(listOf("m_a"), PlaylistMarket.updatesFor(PlaylistStore.playlists.value, v2).map { it.first.id })
+        server.enqueue(MockResponse.Builder().body(c2).build()) // the mirror now has the new copy
+        assertEquals(2, PlaylistStore.refresh(context, "m_a"))
+        assertTrue("NB16-3: still flagged after a manual refresh got the new copy: marketSha=${PlaylistStore.get("m_a")!!.marketSha}",
+            PlaylistMarket.updatesFor(PlaylistStore.playlists.value, v2).isEmpty())
+        // Persisted.
+        PlaylistStore.resetForTests(); PlaylistStore.init(context)
+        assertTrue(PlaylistMarket.updatesFor(PlaylistStore.playlists.value, v2).isEmpty())
+    }
+
+    /** NB16-3 control: a refresh served by the original source (mirror down) is not the market copy; the flag stays. */
+    @Test fun refreshFromTheOriginalSourceKeepsTheFlag() = runBlocking {
+        PlaylistStore.init(context)
+        val c1 = m3u("A"); val c2 = m3u("A", "B")
+        server.enqueue(MockResponse.Builder().body(c1).build())
+        PlaylistStore.installFromMarket(context, PlaylistMarket.parse(index(entry("a", sha(c1)))).entries.single())
+        server.enqueue(MockResponse.Builder().code(503).build())
+        server.enqueue(MockResponse.Builder().body(m3u("A", "B", "C")).build())
+        PlaylistStore.refresh(context, "m_a")
+        assertEquals(sha(c1), PlaylistStore.get("m_a")!!.marketSha)
+        assertEquals(1, PlaylistMarket.updatesFor(PlaylistStore.playlists.value, PlaylistMarket.parse(index(entry("a", sha(c2))))).size)
+    }
 }
