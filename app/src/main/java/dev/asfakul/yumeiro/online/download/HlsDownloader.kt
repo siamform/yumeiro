@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.online.download
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -151,11 +152,16 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         }
     }
 
-    private fun fetchBytesRetry(url: String, start: Long = -1, length: Long = -1): ByteArray {
+    /**
+     * G8-5: the back-off is a coroutine delay, so a pause or delete during it stops at once; it was a
+     * Thread.sleep (0.5 + 1 + 2 + 4 s) that held the worker after the job was cancelled.
+     */
+    private suspend fun fetchBytesRetry(url: String, start: Long = -1, length: Long = -1): ByteArray {
         var last: IOException? = null
-        repeat(4) { attempt ->
+        for (attempt in 0 until 4) {
+            coroutineContext.ensureActive()
             try { return fetchBytes(url, start, length) } catch (e: HttpStatus) { if (e.code in 400..499 && e.code != 429) throw e; last = e } catch (e: IOException) { last = e }
-            Thread.sleep(500L shl attempt)
+            delay(500L shl attempt)
         }
         throw last ?: IOException("Segment failed")
     }
