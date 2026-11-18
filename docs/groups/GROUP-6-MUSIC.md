@@ -67,16 +67,22 @@ Cancelled runs in this group: none.
 | G6-PG1 | Detail page "load more" failure ended the list | Verified (CI unit + emulator, both phones) | 44220997354 → f8564b8 → 44223304640; device 44225724090 |
 | G6-MO1 | Picked Online lost after a connection drop | Verified (CI unit + emulator, both phones) | 44225572082 → 7d1486a → 44227662448; device 44236250052 (red) → 44236207213 (PASS) |
 | G6-LF | Last.fm queue rules with the server mocked | Verified (CI unit) | 3128a1b; 44227662448 8/8 |
-| G6-QP | Queue after process death | Blocked: owner (proposal 1) | audit only; screen-recreation case Verified by QueueSurvivesScreenTest |
+| G6-QP | Queue after process death | Verified (CI unit + emulator, both phones) | ADR-019; 44266530216 (red, old code) → 5b4705d…d272a1f → 44266534566 PASS; CI 44268336205; regression 44272600174 7/7 both phones |
 | G6-LY | LRCLIB with the server mocked | Verified (CI unit) | f3879dd + 00c4ded; 44232721209 8/8 |
 | G6-SP1 | No music-access prompt when access denied | Verified (CI unit + emulator, both phones) | 44230037374 / 44232723925 → b2eb2bd → 44232721209 / 44234120924 |
 | G6-PG2 | Endless Home: offline scrolls, 80-shelf cap | Verified (CI unit); emulator end-to-end Blocked: owner (OMT-29, bot wall on CI) | 44235994633 → 2114836 → 44238631828; device 44242208629, 44243818628 skipped |
 
+## G6 closed (2026-11-18, v1.8.2 cycle)
+
+G6 is closed for agent scope: every row above is Verified, except G6-PG2's emulator end-to-end (Blocked: owner,
+OMT-29, YouTube bot wall on CI IPs) and the owner tests below. Group regression on the close commit: device
+44272600174 (both phones, 7 classes, PASS). Skills used for G6-QP: architecture-designer (ADR-019 before code),
+kotlin-specialist (every Kotlin change).
+
 ## Proposals (not implemented; need owner approval)
 
-1. Save the queue and position to disk so it survives process death (InnerTune-style
-   "persistent queue"). Today, after the system kills the app, Home → Continue restores only the
-   last song (LastPlayed), not the whole queue.
+1. ~~Save the queue to disk so it survives process death~~ — approved (v1.8.2 master prompt), built as G6-QP
+   (ADR-019), verified 2026-11-18.
 2. A "Scrobbles waiting" line in Settings → Last.fm with a "Send now" button (the count already exists).
 
 ## Limits and owner tests

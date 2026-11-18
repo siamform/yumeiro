@@ -1,6 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, v1.8.2 cycle, G6-QP close)
+## Resume here (updated 2026-11-18, v1.8.2 cycle, G6 closed, G8 batch)
+
+- **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" (2026-11-18) + owner rule §13a
+  (batch CI by group, docs/DEVELOPMENT.md). Order: G6-QP → G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
+- **G6:** closed. G6-QP Verified (CI unit + emulator, both phones): 44266530216 → 44266534566, CI 44268336205,
+  regression 44272600174 (7 classes PASS both phones). Report docs/reports/2026-11-18-v1.8.2-cycle-report.md.
+- **Current group / step:** G8 Downloads, §13a steps 1–3 (code read, competitors, one test commit). Findings
+  G8-1…G8-7 + DL-11 part 2 in docs/groups/GROUP-8-DOWNLOADS.md "v1.8.2 full audit".
+- **Runs in progress:** none.
+- **Next three actions:** (1) commit all G8 regression tests in one commit; (2) fail-before: one CI run on a temp
+  branch (old code + tests) and one device run (DownloadG8DeviceTest, both phones); (3) fix commits, one per finding.
+- **UNVERIFIED-QUEUE.md:** 70 rows.
+
+### Previous resume note — superseded (v1.8.2 cycle, G6-QP close)
 
 - **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" (2026-11-18) + owner rule §13a
   (batch CI by group, docs/DEVELOPMENT.md). Order: G6-QP → G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.

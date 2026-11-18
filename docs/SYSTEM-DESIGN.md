@@ -661,7 +661,7 @@ flowchart LR
   lifecycle; not requested).
 - **References:** docs/proposals/FEATURE-G6-QP-queue-persistence.md; InnerTune v0.5.10 `MusicService.kt`;
   Metrolist v14.0.0 `PersistPlayerState.kt`, `MusicService.kt`.
-- **Status:** accepted; verified only when the device pass-after and regression runs are green.
+- **Status:** accepted and verified 2026-11-18: device pass-after 44266534566, regression 44272600174, CI 44268336205.
 
 ## 11. Risks
 

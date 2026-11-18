@@ -1,6 +1,6 @@
 # G6-QP — The music queue did not survive a process death
 
-Status: **In progress** (built; device fail-before run 44251573024 on the old code; pass-after pending).
+Status: **Verified** (CI unit + emulator, both phones), 2026-11-18. See §8.
 Group L2 G6 (Music). Option 1 approved by the owner (master prompt v1.8.2, §5). Owner-approved scope: queue
 persistence only. Shuffle order, repeat mode and playback speed are not restored (unchanged from today).
 
@@ -100,8 +100,11 @@ direct overwrite can leave a truncated file on a kill. A 30 s save interval lose
   window. New API, so pass-after only (pure logic, stated).
 - Device: `QueuePersistenceDeviceTest` (two phases, `scripts/device-check.sh`), APIs that existed before
   G6-QP only, so the same file runs before and after. Fail-before: run 44251573024 on `ab/qp-before`
-  (25b3bc9 + test). Pass-after: pending.
-- Regression: BUG-1, G5-EP, G6-WL, G6-AF, G6-NC device tests on the fix commit.
+  (25b3bc9 + test), final fail-before 44266530216 (1e23834 = old code + final test: queue of 1, 5 expected, both
+  phones). Pass-after: 44266534566 (d272a1f), QP_RESULT PASS both phones, no DiskReadViolation from LastPlayed.
+- CI unit: 44268336205 (1207 tests, 0 failures, 11 skipped).
+- Regression: 44272600174 (6a7d8fb, both phones): QueuePersistence, ResumeAcrossProcess, Bug1YumixRestore,
+  LibraryEmptyProfile, MusicWifiLock, MusicAudioFocus, MusicNotificationControls: PASS 7/7 on each phone.
 
 ## 9. Bug-hunt checklist (files touched)
 
