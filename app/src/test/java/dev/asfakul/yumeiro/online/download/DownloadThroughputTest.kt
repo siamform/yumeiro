@@ -132,10 +132,13 @@ class DownloadThroughputTest {
                 val p = profile
                 val t0 = System.nanoTime()
                 var sent = 0L
+                var stalled = false
                 while (sent < count) {
                     val n = minOf(16 * 1024L, count - sent).toInt()
                     os.write(data, off + (start + sent).toInt(), n); sent += n; served.addAndGet(n.toLong())
                     if (p.cutAfter > 0 && sent >= p.cutAfter && sent < count) { os.flush(); runCatching { sock?.close() }; return } // G8: drop mid-body
+                    // DL-11 part 2: one stall per request (a lost packet waiting for its retransmit), then full speed.
+                    if (p.stallMs > 0 && !stalled && sent >= p.stallAt && sent < count) { os.flush(); stalled = true; Thread.sleep(p.stallMs) }
                     if (p.dipCycleMs > 0) {
                         // DL-11: the whole link dips (every request at once), by the wall clock.
                         val phase = ((System.nanoTime() - dipEpoch) / 1_000_000L) % p.dipCycleMs
@@ -155,7 +158,8 @@ class DownloadThroughputTest {
     }
 
     data class Profile(val name: String, val burst: Long, val bytesPerSec: Long, val cutAfter: Long = 0,
-                       val dipCycleMs: Long = 0, val dipMs: Long = 0, val dipRate: Long = 0)
+                       val dipCycleMs: Long = 0, val dipMs: Long = 0, val dipRate: Long = 0,
+                       val stallAt: Long = 0, val stallMs: Long = 0)
 
     private val client = OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build()
 
@@ -320,5 +324,25 @@ class DownloadThroughputTest {
         println("DL11 link-dips served=$lastServed ${ForceGrab.lastStats}")
         broken.clear()
         assertTrue("DL-11: restarts kept going on a link that dips as a whole: ${ForceGrab.lastStats}", stat("paceRestarts") in 0..3)
+    }
+
+    /**
+     * DL-11 part 2 (G8 batch, ADR-016 amendment): one connection stalls once (a lost packet: the read
+     * waits for the retransmit, then the data comes at full speed) while the host never caps. The
+     * window that holds the stall read as a request under a third of its baseline, so the request was
+     * closed and the bytes on the way were thrown away (real host 44121429260: one download 1.1004x;
+     * 44180844505 trips with peers at 202-1868 % of their baseline). A stall that one read waited out
+     * recovers by itself and must not restart the request. Steady 12 MiB/s, a 600 ms stall 1.5 MiB into
+     * every request.
+     */
+    @Test fun aSingleStallIsRiddenOutNotRestarted() {
+        profile = Profile("stall-once-per-request", burst = 0, bytesPerSec = 12L * 1024 * 1024, stallAt = 1536L * 1024, stallMs = 600)
+        ranges = true
+        for (c in listOf(2, 4)) {
+            run("segmented$c-stalls") { f, d -> Segmented(client, c).download("$base/file", emptyMap(), f) { done, _ -> d.on(done) } }
+            println("DL11 stalls connections=$c served=$lastServed ${ForceGrab.lastStats}")
+            assertEquals("DL-11: a single stall restarted the request (connections=$c): ${ForceGrab.lastStats}", 0, stat("paceRestarts"))
+        }
+        broken.clear() // the stalls make the tenths uneven on purpose; the point is the restarts
     }
 }
