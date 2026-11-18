@@ -107,10 +107,12 @@ class QueuePersistenceTest {
 
     @Test fun longQueueIsSavedAsAWindowAroundTheCurrentSong() {
         val many = (1..3000).map(::t)
-        val w = LastPlayed.window(many, "s2500")
+        val w = LastPlayed.window(many, "s1500")
         assertEquals(LastPlayed.QUEUE_MAX, w.size)
-        assertEquals("s2300", w.first().id)
-        assertTrue(w.any { it.id == "s2500" })
+        assertEquals("200 songs before the current one", "s1300", w.first().id)
+        assertTrue(w.any { it.id == "s1500" })
+        // Near the end the window keeps 1000 songs and moves back (CI 44255824749 caught a wrong expectation here).
+        assertEquals("s2001", LastPlayed.window(many, "s2500").first().id)
         assertEquals("s1", LastPlayed.window(many, "s1").first().id)
         assertEquals("s3000", LastPlayed.window(many, "s3000").last().id)
         assertEquals(five, LastPlayed.window(five, "s2"))
