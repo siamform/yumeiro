@@ -1,15 +1,23 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, G9 close)
+## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, owner bug list NBUG-11…16)
 
 - **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method:
   research, side effects, ADR, tests, fixes) → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
-- **G8:** closed (T2b tv-api34 44380154109 PASS; close commit = this one).
+- **G8 closed** (c0ce225). **G9 closed** (this commit): phones 44389079092 PASS with 7 sources (test fix 622af30,
+  Material 3 Back on an expanded sheet), TV runs in GROUP-9.
+- **Now:** owner bug list, docs/groups/GROUP-14-OWNER-BUGS.md (new). Order: NBUG-11 → NBUG-12/13 → NBUG-16 →
+  NBUG-14 → NBUG-15 (d) → NBUG-15 (a)–(c) proposal (owner approval before building).
+- **NBUG-12 lead (network probe 2026-11-18):** Porn4fans' `contentUrl` is refused (403) for everyone; the page's KVS
+  player config has working `?v-acctoken=` links; the last-resort page capture loaded the refused `.mp4` instead of
+  the title page. Live headless capture of the real page also failed (diag 44389256785, throwaway, deleted).
+- **Next three actions:** (1) NBUG-11 register + test commit; (2) NBUG-11 fail-before on phones; (3) NBUG-11 fix.
+
+### Previous resume note — superseded (G9 close)
+
 - **G9:** G9-8 Verified both TVs (172a9da; 44363587262, 44370948987). G9-9 (backdrop below API 28): register 2ff1393,
-  tests 945462d + 0313cb6 (API 34 BitmapFactory path; first version at sdk 27 was invalid, CI 44371647326), fix
-  b813450; tv24 pass-after 44372785542 PASS. Running: unit fail-before 44376215076 (ab/g99-before), pass-after CI
-  44376277545, phones rerun 44376358282 (10 classes), tv34 44376363738 (Backdrop, Notify, Pinned).
-- **Next three actions:** (1) read the four runs; (2) G8 T2b tv34 + tv24 Pinned; (3) G8 + G9 close docs.
+  tests 945462d + 0313cb6, fix b813450; tv24 pass-after 44372785542 PASS; unit fail-before 44376215076, pass-after
+  CI 44376277545; phones 44376358282; tv34 44376363738.
 
 ### Previous resume note — superseded (14:40 UTC, G8 step 9 regression + G9 step 5)
 

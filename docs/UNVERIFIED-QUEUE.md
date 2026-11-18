@@ -29,6 +29,7 @@ tv-api24), real hardware.
 | G8-CQ-4 | Only the first `EXT-X-MAP` of an HLS playlist is written | G8 | code read | playlists that switch init segments | rare format | stability-v2 deep | Queued |
 | G8-TV7A | Website-video Download action on TV: the watch page (Download) shows only when the player is docked, never on a landscape TV (`VideoPlayerModal.kt:1582`); `StreamWatchDownloadDeviceTest` 7a fails on TV (44314925557) | G8 (TV) | phones PASS (44346504202) | TV has no website-video download | adding it on TV is a new feature | owner decision | Queued |
 | G8-WEBM7 | WebM video + audio join on Android 7–8.1 uses the platform muxer (ADR-022 keeps it) | G8 (TV) | MP4 join verified on tv-api24 (44339775707) | WebM join on API 24–27 | not exercised by the TV tests | stability-v2 deep | Queued |
+| G9-CQ-1 | "Last backup" time can be lost: `Restart.now` exits right after `recordBackup` uses `apply()` | G9 | code read | no deterministic test | cosmetic | stability-v2 deep | Queued |
 
 ## Owner bugs and earlier items
 
@@ -38,11 +39,11 @@ tv-api24), real hardware.
 | BUG-5 / TV-4 | Cross-source search on TV | G7 | focus + answer on TV emulators (NBUG-2c) | scope decision | owner decision (options A/B/C) | user-assisted decision (OMT-21) | Queued |
 | NBUG-4d | Freeze with upscaling on | G3 | injected decoder failure recovers, both phones (43946324687) | real GPU | cannot reproduce on emulator GL | user-assisted (OMT-16) | Queued |
 | NBUG-6 | ISP blocking: per-feature DNS | G12 | side effects measured; guards SmartDnsResilience / DnsWire / DataCacheBounds green | not built | owner gate "no side effect" not passed | user-assisted decision (OMT-27), then stability-v2 | Queued |
-| NBUG-7 | Restore after "Clear all data": extensions listed but not installed/usable; duplicate names across repositories and extension types | G9 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G9 audit, this cycle (backup restore is in G9 scope) | Open |
+| NBUG-7 | Restore after "Clear all data": extensions listed but not installed/usable; duplicate names across repositories and extension types | G9 (touches G2) | CI unit + emulator both phones: G9-1/2/5/7 fail-before 44312331848, 44315631356, 44318262848 → pass-after 44318294335, 44319576018 | Stremio and Aniyomi restore on a real account; the owner's own backup | fixed and verified on emulator; owner's real backup not tried | user-assisted (owner retries the restore) | Verified (emulator) |
 | NBUG-8 | One extension's content loads forever or very slowly | G10 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G10 audit, this cycle (stuck loading states) | Open |
-| NBUG-9 | Fresh install / cleared data: nothing online loads until DNS is set to Cloudflare by hand | G9 (touches G11/G12, NBUG-6) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G9 audit, this cycle (Network default) | Open |
-| NBUG-10 | Yumix "Show videos from" search shows only 2 of the matching installed extensions | G4 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; G4 is closed and only G6-QP is built this cycle | stability-v2 deep (G4 reopen), unless the owner moves it into this cycle | Open |
-| NBUG-11 | Adult toggle off, adult titles still in Home → Most Played | G9 (touches G1) | none (owner report 2026-11-18) | everything | reported during the G9 regression | G9 audit, this cycle (setting effect) | Open |
+| NBUG-9 | Fresh install / cleared data: nothing online loads until DNS is set to Cloudflare by hand | G9 (touches G11/G12, NBUG-6) | probe 44312163084 (both phones): not reproduced (auto bypass loaded 3/3 hosts) | the owner's ISP; H1 (TLS handshake hang on a block-page IP not counted as blocking) | needs the owner's network | user-assisted (OMT-31) | Blocked: owner |
+| NBUG-10 | Yumix "Show videos from" search shows only 2 of the matching installed extensions | G4 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; G4 is closed and only G6-QP is built this cycle | stability-v2 deep (G4 reopen), unless the owner moves it into this cycle | Open (G9-8 fixed the half-height sheet on TV; the phone search case is not reproduced yet) |
+| NBUG-11 | Adult toggle off, adult titles still in Home → Most Played | G9 (touches G1) | none (owner report 2026-11-18) | everything | reported during the G9 regression | owner bug list after G9, this cycle | Open |
 | NBUG-12 | "Access denied" on some feed streams (e.g. PORN4FANS); all three player fallbacks fail | G10 (touches G3, G2) | none (owner report 2026-11-18) | everything | not reproduced yet | G10 audit, this cycle (error states / fallback chain) | Open |
 | NBUG-13 | Adult streams need a VPN instead of working through the app's network setup | G12 (touches G11, NBUG-6) | none (owner report 2026-11-18) | everything | likely ISP blocking; CI network is not blocked | G11/G12 audit; home-network reproduction user-assisted | Open |
 | NBUG-14 | IPTV channel logos missing | G7 | none (owner report 2026-11-18) | everything | G7 is closed | stability-v2 (G7 reopen), unless the owner moves it into this cycle | Open |
@@ -89,6 +90,7 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | OMT-28 | Headphones unplugged pauses music | user-assisted | Blocked: owner (hardware) |
 | OMT-29 | Endless Music Home on a home connection | user-assisted | Pending |
 | OMT-30 | A real HLS site with separate audio: the saved file plays with sound (G8-2) | user-assisted | Pending |
+| OMT-31 | NBUG-9 on the owner's network: fresh install, default DNS | user-assisted | Blocked: owner |
 
 ## Features (all queued, nothing built in this cycle except G6-QP)
 
@@ -121,4 +123,4 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | L4 | §13a re-audit (line by line, findings register, fail-before/pass-after, group regression) of Groups 1–5, 12 and 13 (closed by earlier-cycle tests only) | stability-v2 deep | Queued |
 | L5 | Final sweep | stability-v2 deep | Queued |
 
-Count: 14 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 30 owner tests + 19 features + 2 release-scope = 83 rows.
+Count: 15 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 31 owner tests + 19 features + 2 release-scope = 85 rows.

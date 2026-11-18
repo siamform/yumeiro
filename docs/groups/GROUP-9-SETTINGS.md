@@ -375,12 +375,21 @@ OMT-31 records the owner's network (UNVERIFIED-QUEUE NBUG-9).
 
 ADR-021 (this audit).
 
+**Status: G9 closed** (G9-1, G9-2, G9-5, G9-7 Verified with fail-before and pass-after on both phones; G9-8, the TV
+filter sheet found in the TV regression, Verified on both TVs; G9-9, damaged backdrop pictures accepted below
+Android 9 (found on tv-api24), Verified (CI unit + tv-api24); NBUG-9 not reproduced → OMT-31; group regression PASS
+on both phones and both TVs. Test-only fixes: TV c4d08b1, the Bug1 scroll commit, cb271d3, f0de19a, 178cf8f, 945462d (Notify API<26 guard); phones 11235c1 (drag the half-height filter sheet up when the last row is off-screen) and 622af30 (Back on a dragged-up sheet first settles it to half height, Material 3 by design; diagnostic 44386683931). Two TV runs,
+44335814445 and 44335820792, ran nothing: my dispatch fault, class names without the package).
+
 ### Verification
 
 | Item | Fail-before | Pass-after | Label |
 |---|---|---|---|
-| G9-1 (unit) | CI 44312331848 (ab/g9-before = b51424b): 1194 tests, 1 failed = exactly `G9SettingsBatchTest#g9_1_jsListsTravelWithSources` | pending | unit |
-| G9-1, G9-2, G9-5 (device, pm clear recipe) | 44315631356, both phones: `RAC c G9-2 FAIL · G9-5 FAIL · G9-1 FAIL` (after 240 s both extensions still missing, JS repo/source/code gone) | pending | emulator |
-| G9-7 (device) | 44318262848 (old code + test fix 989b6f1), both phones: one shared file `InternetArchiveProvider-dd70f0e9d706.cs3`, uninstalling b deleted it, a missing, 0 providers. (44315631356: test fault, method returned Int → "should be void") | pending | emulator |
+| G9-1 (unit) | CI 44312331848 (ab/g9-before = b51424b): 1194 tests, 1 failed = exactly `G9SettingsBatchTest#g9_1_jsListsTravelWithSources` | CI 44318294335: 1194 tests, 0 failed, 11 skipped (G9SettingsBatchTest 1/1); again in CI 44336335642 and 44363567063 | unit |
+| G9-1, G9-2, G9-5 (device, pm clear recipe) | 44315631356, both phones: `RAC c G9-2 FAIL · G9-5 FAIL · G9-1 FAIL` (after 240 s both extensions still missing, JS repo/source/code gone) | 44319576018, both phones: `RAC c G9-2 PASS · G9-5 PASS · G9-1 PASS` after ~147 s | emulator |
+| G9-7 (device) | 44318262848 (old code + test fix 989b6f1), both phones: one shared file `InternetArchiveProvider-dd70f0e9d706.cs3`, uninstalling b deleted it, a missing, 0 providers. (44315631356: test fault, method returned Int → "should be void") | 44319576018, both phones: SHARED_FILE PASS (one file per entry, the other copy keeps working) | emulator |
+| G9-8 (TV) | `PinnedExtensionsDeviceTest` on the old code: tv-api34 44339783655, tv-api24 44359805223 (`no visible 'online_filter_pin_Yumeiro Drama'`, screenshot: only two rows above the fold) | fix 172a9da; CI 44363567063: 1194 tests, 0 failed, 11 skipped; tv-api24 44363587262 OK (1 test); tv-api34 44370948987 OK (1 test; rail open 496 px logged) | CI, TV emulator |
+| G9-9 (TV API 24, unit) | `BackdropImportDeviceTest` on the old code: tv-api24 44368883691 (`corrupt.jpg: accepted`); unit `G9BrokenPictureLegacyTest` CI 44376215076: 1196 tests, 2 failed = exactly the two g9_9 tests (ab/g99-before = old code + test 0313cb6) | fix b813450 (`PictureEnd`: JPEG FFD9 after SOS, PNG IEND, before BitmapFactory); CI 44376277545: 1205 tests, 0 failed, 11 skipped; tv-api24 44372785542 OK (corrupt.jpg refused, BD_RESULT problems=0) | CI, TV emulator |
 | NBUG-9 | probe 44312163084 (both phones): not reproduced | — | emulator; owner network → OMT-31 |
-| Group regression | — | pending | emulator, TV emulator |
+| Group regression (phones) | — | batch 1 44323642049 (SettingsWalk, Backup, Bug1YumixRestore, RestoreAfterClear, ExtensionSharedFile, SettingsReset, Extensions, UniversalAddEcosystems, PinnedExtensions, ExtensionCompat) PASS, no skips; batch 2 44328532155 (Background/Choice/More/Notify/PlayerExtras/Player SettingsEffect, Yumix, ExtensionPopups, NetworkState, BackdropImport) PASS, 1 skip (api33-lowram `YumixDeviceTest#seeAllKeepsPagingWhileSearching`: the live row had one page; it ran and passed on api36). After the G9-8 fix and the TV test changes: 44376358282 (Choice, Player, PlayerExtras, NetworkState, Yumix, Pinned, BackdropImport, Notify, SettingsWalk, Bug1YumixRestore): 9 PASS both phones; Pinned test fault (7 sources, half-height sheet) → 11235c1; 44381638462 Yumix+Pinned PASS (2 sources); 44383661985 Pinned FAIL both phones (test fault: Back on a dragged-up sheet settles it to half height first, Material 3 by design; diagnostic 44386683931) → 622af30; 44389079092 (Choice, PlayerSettingsEffect, Pinned; 7 sources, drag path taken) PASS both phones | emulator |
+| Group regression (TV) | — | tv34 b1 44339783655 + 44343884669 + 44347442782, Pinned 44370948987; tv34 b2 44358110397 + 44365849314; tv34 close 44376363738 (Backdrop, Notify, Pinned) PASS; tv24 b1 44359805223 + Pinned 44363587262, 44381929837; tv24 b2 44368883691 + 44372785542; skips: PlayerExtras c1 (no PiP on TV), Yumix seeAll single page, NetworkState a / Yumix offlineRefresh where Ethernet stays up | TV emulator |
