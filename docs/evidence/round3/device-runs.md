@@ -978,3 +978,16 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | 44056138637 | r15-stability e71a041 | api33-lowram | DownloadsScreen, UniversalAddEcosystems, LocalPlayer#j, Yumix#extensionBarHidesOnScrollAndComesBack | 2/4: LocalPlayer j PASS, Y3 PASS. DownloadsScreen: a_open 0 main-thread disk calls, open/play PASS, then test fault (delete button looked up as a sibling of the title; it is a child of the folder row). UniversalAdd: Aniyomi/Mihon/Stremio search PASS, then test fault (loadLinks given the search URL instead of load()'s dataUrl). Both fixed in the next commit |
 | 44057033821 | scratch/a5-fail-before | api33-lowram | BrowserCheckCooldown (old code) | FAILED as expected: 3 next requests 60600 ms (ER-20 fail-before) |
 | 44162062169 | r15-stability 5f7f333 | api33-lowram | ExtensionsDeviceTest repeat 10 (EXT-T1) | 10/10 PASS (OK 7 tests each), anr-list empty; EXT_T1 line: focused MainActivity, added=[] every run. Not reproduced; condition (five failing drama feeds) not seeded |
+
+## 2026-11-18: G8 downloads close (v1.8.2 audit; emulator + TV emulator)
+
+| Run | Ref | Devices | Classes | Result |
+|---|---|---|---|---|
+| 44314925557 | ab/g8-close 34d99b8 (deleted) | tv-api24 | TV batch 2 (StorageMainThread, ForceDownload, ExternalDownloader, Torrent, YtDownloadPipeline, StreamWatchDownload, DownloadThroughput) | ForceDownload 2/3 FAIL (G8-9, G8-10); StreamWatchDownload 7a FAIL (phone-only, G8-TV7A); others PASS; cancelled at the 110-min limit |
+| 44339775707 | r15-stability (2fc2113 + docs) | tv-api24 | ForceDownload | OK (3 tests) — G8-9/G8-10 pass-after |
+| 44342030478 | r15-stability | api33-lowram, api36 | phone batch A (7 classes) | all PASS, no skips; rxOverSize 1.099 / 1.030 |
+| 44346504202 | r15-stability | api33-lowram, api36 | phone batch B (7 classes) | all PASS, no skips |
+| TV T1 | r15-stability | tv-api24 / tv-api34 | DownloadG8, Resume, Cleanup, Quality, LowStorage, DownloadsScreen, Kill | 44349351903 PASS (7 classes, no skips) / 44349359485 PASS (7 classes, no skips) |
+| TV T2a | r15-stability | tv-api24 / tv-api34 | StorageMainThread, ForceDownload, ExternalDownloader, Torrent, YtDownloadPipeline | 44351697156 PASS; StorageMainThread 2 tests skipped (penaltyListener needs API 28); ExternalDownloader 0 tests (@SdkSuppress 26) / 44351704098 PASS, no skips |
+| TV T2b | r15-stability | tv-api24 / tv-api34 | DownloadThroughput | 44353535608 PASS (DownloadThroughput OK 5 tests) / 44380154109 PASS (DownloadThroughput OK 5 tests) |
+

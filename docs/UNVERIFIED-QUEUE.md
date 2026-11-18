@@ -23,12 +23,18 @@ tv-api24), real hardware.
 | G7-L5-C | Manga home and reader read two tiny SharedPreferences on the main thread | G7 | code read (`MangaScreens.kt` 142, 520) | no StrictMode run | few bytes; not user-visible | stability-v2 deep (L5) | Queued |
 | G7-L5-D | Music track count says "1 tracks" (no singular) | G6 | code read; seen in SP1 work | no test | cosmetic | stability-v2 deep (L5) | Queued |
 | G7-AU-PIP | GROUP-7 audit row said "PiP, buffering, TV focus covered by G3 and BUG-5": overstated (PiP proven with a local clip only) | G7 | PiP in the shared player: emulator 43708220122 (`LocalPlayerDeviceTest c`), 43747147539, 43748560619 | PiP from a Live TV channel | wording corrected in GROUP-7; gaps = G7-GAP-1/2 | stability-v2 deep | Queued |
+| G8-CQ-1 | `OnlineDownloads.deleteFolder` is unused (dead code) | G8 | code read (G8 audit) | — | cleanup, no user effect | stability-v2 deep | Queued |
+| G8-CQ-2 | Download ids are 32-bit `hashCode`s (a collision would merge two items) | G8 | code read | no collision test | no report; needs a migration | stability-v2 deep | Queued |
+| G8-CQ-3 | `DashGrab.bytes` holds a whole segment in memory | G8 | code read; TV/low-RAM regression passed | memory peak on large segments | no OOM seen | stability-v2 deep | Queued |
+| G8-CQ-4 | Only the first `EXT-X-MAP` of an HLS playlist is written | G8 | code read | playlists that switch init segments | rare format | stability-v2 deep | Queued |
+| G8-TV7A | Website-video Download action on TV: the watch page (Download) shows only when the player is docked, never on a landscape TV (`VideoPlayerModal.kt:1582`); `StreamWatchDownloadDeviceTest` 7a fails on TV (44314925557) | G8 (TV) | phones PASS (44346504202) | TV has no website-video download | adding it on TV is a new feature | owner decision | Queued |
+| G8-WEBM7 | WebM video + audio join on Android 7–8.1 uses the platform muxer (ADR-022 keeps it) | G8 (TV) | MP4 join verified on tv-api24 (44339775707) | WebM join on API 24–27 | not exercised by the TV tests | stability-v2 deep | Queued |
 
 ## Owner bugs and earlier items
 
 | ID | Description | Group | Verified | Not verified | Why queued | Target | Status |
 |---|---|---|---|---|---|---|---|
-| BUG-3 / NBUG-1 | Download speed drops at ~50–70 % | G8 | emulator case d 6/6 (44043535616); DL-11 H3 fix 7a85df6 (44121429260) | real phone per 10 % band; DL-11 part 2 budget | real Wi-Fi/phone; DL-11 part 2 is G8 work this cycle | G8 (DL-11 part 2) + user-assisted (OMT-14, OMT-20) | Queued |
+| BUG-3 / NBUG-1 | Download speed drops at ~50–70 % | G8 | emulator case d 6/6 (44043535616); DL-11 part 2 budget met (877413b, 44286280482, medians 1.050 / 1.030) | real phone per 10 % band | real Wi-Fi/phone | user-assisted (OMT-14, OMT-20) | Queued |
 | BUG-5 / TV-4 | Cross-source search on TV | G7 | focus + answer on TV emulators (NBUG-2c) | scope decision | owner decision (options A/B/C) | user-assisted decision (OMT-21) | Queued |
 | NBUG-4d | Freeze with upscaling on | G3 | injected decoder failure recovers, both phones (43946324687) | real GPU | cannot reproduce on emulator GL | user-assisted (OMT-16) | Queued |
 | NBUG-6 | ISP blocking: per-feature DNS | G12 | side effects measured; guards SmartDnsResilience / DnsWire / DataCacheBounds green | not built | owner gate "no side effect" not passed | user-assisted decision (OMT-27), then stability-v2 | Queued |
@@ -82,6 +88,7 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | OMT-27 | NBUG-6 decision | owner decision | Blocked: owner |
 | OMT-28 | Headphones unplugged pauses music | user-assisted | Blocked: owner (hardware) |
 | OMT-29 | Endless Music Home on a home connection | user-assisted | Pending |
+| OMT-30 | A real HLS site with separate audio: the saved file plays with sound (G8-2) | user-assisted | Pending |
 
 ## Features (all queued, nothing built in this cycle except G6-QP)
 
@@ -111,7 +118,7 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 
 | ID | Description | Target | Status |
 |---|---|---|---|
-| L4 | Line-by-line re-audit of Groups 1–4 (verified by earlier-cycle tests only) | stability-v2 deep | Queued |
+| L4 | §13a re-audit (line by line, findings register, fail-before/pass-after, group regression) of Groups 1–5, 12 and 13 (closed by earlier-cycle tests only) | stability-v2 deep | Queued |
 | L5 | Final sweep | stability-v2 deep | Queued |
 
-Count: 8 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 29 owner tests + 19 features + 2 release-scope = 76 rows.
+Count: 14 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 30 owner tests + 19 features + 2 release-scope = 83 rows.

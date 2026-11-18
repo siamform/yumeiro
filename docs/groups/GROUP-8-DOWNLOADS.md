@@ -163,20 +163,32 @@ reschedules a waiting worker; torrent through TorrServer uses Segmented with ran
 
 ADR-020 (this audit); ADR-016 (DL-11) amended by the stall grace; ADR-022 (G8-9, G8-10: the join on Android 7–8.1).
 
-### Verification (labels: unit = CI; emulator = device-check, both phones)
+### Verification (labels: unit = CI; emulator = device-check, both phones; TV emulator = tv-api24 / tv-api34)
 
 | Item | Fail-before | Pass-after | Label |
 |---|---|---|---|
-| G8-1…G8-5, DL-11 p2 (unit) | pending (one CI run, temp branch: old code + tests) | pending | unit |
-| G8-2, G8-6, G8-7 (device) | pending (one device run, same branch) | pending | emulator |
-| DL-11 p2 real-host budget | 44121429260 (one 1.1004×) | pending: `DownloadThroughputDeviceTest` a + d ×3 | emulator, real host |
-| Group regression | — | pending: full download inventory, both phones + TV images | emulator |
+| G8-1…G8-5, DL-11 p2 (unit) | CI 44275576843 (ab/g8-before = 0d3e53d): 1192 tests, 8 failed = exactly the 8 new tests | CI 44278620756 (1b45fc2): 1215 tests, 0 failed | unit |
+| G8-2, G8-6, G8-7 (device) | 44275580304: G8D_RESULT a/b/c FAIL, both phones | 44278624792: a/b/c PASS, both phones | emulator |
+| DL-11 p2 real-host budget | 44121429260 (one 1.1004×); 44280021547 missed (median 1.081 api33-lowram); test f2a7c73 → CI 44283506177 1 failed = `Dl11PaceTest#aFastLinkAtItsOwnSpeedDoesNotTrip` | fix 877413b; CI 44286276997 (1216, 0 failed); device 44286280482 a + d ×3: medians 1.050 / 1.030, each ≤ 1.10 | emulator, real host |
+| G8-8 Retry lost while the worker ends (found by TV regression tv-api34 44299928223) | test 22fc1da/d699d96/78caf5e; 44305926621 (ab/g88-before): `DownloadG8DeviceTest#d` FAIL both phones (`status=QUEUED`) | fix 8a4cfa0; CI 44302429664; device 44307672019 OK (4 tests) both phones | emulator |
+| G8-9, G8-10 join on Android 7 (found by TV regression tv-api24 44314925557) | 44314925557 (34d99b8): `ForceDownloadDeviceTest` 2/3 FAIL on tv-api24 | fixes c239a83, 2fc2113 (ADR-022); CI 44336335642 (1194, 0 failed, 11 skipped); tv-api24 44339775707 OK (3 tests) | TV emulator |
+| Test faults (not product) | DownloadKill fixed 1.5 s kill on a fast link; LowStorage fallocate on 32-bit | 45d6763, 0a4bd0b | — |
+| Group regression on the fix (code 2fc2113; later commits are docs and androidTest only) | — | phones A 44342030478, B 44346504202: 14 classes PASS, both phones, no skips (rxOverSize 1.099 / 1.030). TV T1 tv-api24 44349351903 PASS (7 classes, no skips); tv-api34 44349359485 PASS (7 classes, no skips). TV T2a (StorageMainThread, ForceDownload, ExternalDownloader, Torrent, YtDownloadPipeline) tv-api24 44351697156 PASS; StorageMainThread 2 tests skipped (penaltyListener needs API 28); ExternalDownloader 0 tests (@SdkSuppress 26); tv-api34 44351704098 PASS, no skips. TV T2b (DownloadThroughput alone, 110-min job limit) tv-api24 44353535608 PASS (DownloadThroughput OK 5 tests); tv-api34 44380154109 PASS (DownloadThroughput OK 5 tests) | emulator, TV emulator |
+
+TV scope notes: `ExternalDownloaderDeviceTest` runs 0 tests on tv-api24 (`@SdkSuppress(minSdkVersion = 26)`); T1 reported no
+skipped test on either TV (no INSTRUMENTATION_STATUS_CODE -3/-4; same test counts on both);
+`StreamWatchDownloadDeviceTest` is left out of TV batches (phone-only watch
+page, owner decision "TV 7a" in UNVERIFIED-QUEUE). Earlier regression at 78caf5e: phones 44309347790, 44309363764;
+TV batch 1 44310073153 (tv-api24), 44312157796 (tv-api34), all PASS.
+
+**Status: G8 closed** (all findings Verified with fail-before and pass-after; group regression PASS on both
+phones and both TVs, with the scope notes above).
 
 ### Owner-only tests
 
 - OMT-14 Wi-Fi power save with the screen off (emulator has none). OMT-D6 real YouTube download (CI IPs blocked).
-- New: OMT-G8a a real HLS site with separate audio (e.g. a multi-language anime source) on a real phone: the
-  saved file plays with sound in a gallery app.
+- OMT-30 (was OMT-G8a): a real HLS site with separate audio (e.g. a multi-language anime source) on a real
+  phone: the saved file plays with sound in a gallery app.
 
 ### Competitor research (exact versions, read line by line; ideas only)
 
@@ -198,7 +210,8 @@ ADR-020 (this audit); ADR-016 (DL-11) amended by the stall grace; ADR-022 (G8-9,
 - `OnlineDownloads.deleteFolder` is unused (dead code; removal is a cleanup for stability-v2). 32-bit `hashCode`
   ids. `DashGrab.bytes` holds a whole segment in memory. `MediaMux.merge` releases the first extractor only in
   `finally` after the muxer was created (a failing second `setDataSource` leaks the first until GC). Only the
-  first EXT-X-MAP is written. These are recorded in UNVERIFIED-QUEUE.md (stability-v2), not changed in v1.8.2.
+  first EXT-X-MAP is written. These are recorded in UNVERIFIED-QUEUE.md (G8-CQ-1…4, stability-v2), not changed in v1.8.2 (the `MediaMux`
+  extractor leak was fixed with G8-9, c239a83).
 
 ### CI usage
 

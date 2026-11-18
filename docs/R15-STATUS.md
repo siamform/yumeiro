@@ -4,7 +4,7 @@
 
 - **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method:
   research, side effects, ADR, tests, fixes) → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
-- **G8:** regression done except T2b tv-api34; close docs pending (script /tmp/g8close.py).
+- **G8:** closed (T2b tv-api34 44380154109 PASS; close commit = this one).
 - **G9:** G9-8 Verified both TVs (172a9da; 44363587262, 44370948987). G9-9 (backdrop below API 28): register 2ff1393,
   tests 945462d + 0313cb6 (API 34 BitmapFactory path; first version at sdk 27 was invalid, CI 44371647326), fix
   b813450; tv24 pass-after 44372785542 PASS. Running: unit fail-before 44376215076 (ab/g99-before), pass-after CI
