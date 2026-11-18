@@ -663,6 +663,38 @@ flowchart LR
   Metrolist v14.0.0 `PersistPlayerState.kt`, `MusicService.kt`.
 - **Status:** accepted and verified 2026-11-18: device pass-after 44266534566, regression 44272600174, CI 44268336205.
 
+### ADR-020: Download work files, HLS renditions and the join space check (G8, v1.8.2 audit)
+
+- **Scope:** `online/download/` — `ForceGrab` (Segmented, DashGrab, RequestPace), `HlsDownloader`,
+  `DownloadWorker.forced`, `OnlineDownloads` (work-file removal). No UI, no schema, no new dependency.
+- **Context (findings G8-1…G8-7, DL-11 part 2):** each engine deleted its resume record the moment its own
+  track finished, so a job that stopped later (other track, join, pause, retry) fetched finished tracks again;
+  the DASH record was two files written one after the other; the HLS parser had no byte ranges and no audio
+  renditions and named fMP4 output `.ts`; split video + audio checked space per track, without the join;
+  the HLS retry back-off slept the thread; a single stalled read restarted a healthy request (DL-11).
+- **Options:** A. One owner of work files: engines keep their records; the worker removes every side file of
+  the job (`<file>.part.*`) after the final rename (NewPipe `DownloadMission`: state deleted only after
+  post-processing, lines 380–394). B. Keep deleting per engine and add a job-level "track done" marker.
+  C. Move all engines to media3 `HlsDownloader`/`DashDownloader` + a cache (media3 1.11.1 offline).
+- **Decision:** A for records (one record per track in one write, the HLS `count:bytes` format; an old
+  int-only DASH record restarts that track). HLS: parse `#EXT-X-BYTERANGE` / MAP `BYTERANGE` (media3
+  1.11.1 `HlsPlaylistParser` rules: no `@offset` continues after the previous range of the same URI); a
+  chosen variant with an `AUDIO` group whose rendition has a URI also saves that rendition (DEFAULT=YES
+  first) and joins it with `MediaMux`; output with `EXT-X-MAP` or a join is `.mp4` (renamed like the WebM
+  case). Split video + audio: the space check counts the join (twice the bytes still to fetch, both tracks
+  together). Back-off uses `delay`. DL-11: a slow pace window whose wait is one read (≥ 60 % of the window's
+  wait) gets one window of grace (aria2 averages speed over a window; curl `speed-time`); a second slow
+  window, or waits spread over many reads (a capped host, BUG-3), restarts as before.
+- **Consequences:** a rerun after a late failure costs one probe per finished track instead of the track.
+  Side files live until the worker finishes or the item is deleted (DL-7 already removes `x.*`). A stalled
+  read costs at most one more 256 KiB window before a restart.
+- **Alternatives rejected:** B (a second record format for the same fact); C (rewrites every engine, loses
+  RequestPace/BUG-3 behaviour and the forced-download header escalation; far from least risk).
+- **References:** docs/groups/GROUP-8-DOWNLOADS.md "v1.8.2 full audit"; ADR-016 (DL-11); NewPipe 853917509100;
+  androidx/media 1.11.1 (8c6678b657ed); CloudStream 2dcc25c3945c; aria2 9e7273583f83.
+- **Status:** accepted (agent decision inside the approved G8 audit scope); verified only after the G8
+  pass-after and group regression runs.
+
 ## 11. Risks
 
 | Risk | Mitigation |
