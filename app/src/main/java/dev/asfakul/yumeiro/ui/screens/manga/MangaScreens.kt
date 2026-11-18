@@ -319,7 +319,8 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
             runCatching {
                 val next = page + 1
                 when (feed) { Feed.POPULAR -> provider.popular(next); Feed.LATEST -> provider.latest(next); Feed.SEARCH -> provider.search(query, next) }
-            }.onSuccess { r -> page++; hasNext = r.hasNext && r.items.isNotEmpty(); items.addAll(r.items.filter { n -> items.none { it.url == n.url } }) }
+            }.onSuccess { r -> page++; hasNext = r.hasNext && r.items.isNotEmpty(); // G7-MB1: a title repeated inside one page is added once too (the grid is keyed by URL).
+                val seen = items.mapTo(HashSet()) { it.url }; items.addAll(r.items.filter { seen.add(it.url) }) }
                 .onFailure { error = OnlineErrors.friendly(it) }
             loading = false
         }
@@ -386,7 +387,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
         error = null
         // R16 (G7): runCatching also caught the cancellation of an old load (Retry, or leaving the
         // page), which then put "Couldn't load" over the new one. Cancellation is rethrown now.
-        try { details = provider.details(url); chapters = provider.chapters(url) }
+        // G7-MB1: the chapter list is keyed by URL; a chapter listed twice is shown once.
+        try { details = provider.details(url); chapters = provider.chapters(url).distinctBy { it.url } }
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (e: Exception) { error = OnlineErrors.friendly(e) }
     }
