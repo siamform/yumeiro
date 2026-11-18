@@ -235,13 +235,13 @@ automatic updates are dropped without a word.
 
 | ID | Finding | Root cause | Severity | Status |
 |---|---|---|---|---|
-| NB16-1 | The playlist market (and any data branch that gains a new file) never publishes | Sparse checkout (`.github`) + `git worktree add` gives a sparse worktree; `git add -A` exits 1 on a new path outside the cone; `data-changed.sh` (`set -e`) reads that as "no changes" and the job reports success | High (catalog frozen since 2026-11-08: no market playlist can update) | Open |
-| NB16-2 | "Keep the last good copy" never works in the data builds | The same sparse worktree has none of the previous files (`playlists/`, mirrors), so `os.path.exists(prev)` is always false: a source that fails once is dropped from the catalog (`build_market.py` ~462), the curated mirror fallback (`build_extension_market.py` ~489) and `sync_streams.py:97` never fire | High (catalog entries vanish on one bad day) | Open |
-| NB16-3 | A market playlist stays "needs an update" after a manual Refresh | `refresh(id)` without a sha keeps the old `marketSha` although it downloaded the newest mirror | Medium (the owner's "flags again") | Open |
-| NB16-4 | An extension is flagged for an update to the version it already has | `install` stores `remote.version` (the listing); community/discovered entries point at the author's live file, which is often newer than the market's listing | Medium (the owner's "flags again"; extra downloads) | Open |
-| NB16-5 | A newer build in the user's own repository is hidden by the older market copy | `ExtensionSources.all` keeps the first copy per key (market first) | Low–Medium (auto-update waits up to 3 days for the market) | Open |
-| NB16-6 | An automatic update refused by the safety check is dropped silently | `sync` installs with `Mode.AUTO`; `autoDecision` refuses DANGER/unreadable files; `failed` is never shown, so the user does not know why "auto-update" did nothing | Low (the Update button stays) | Open |
-| NB16-7 | Background checks run too rarely | Extension `sync` runs only in `MTPlayerApp`'s first `LaunchedEffect` (once per activity creation; a TV keeps the activity for days); the playlist market check runs only while the Live TV screen is open | Medium (TV: never) | Open |
+| NB16-1 | The playlist market (and any data branch that gains a new file) never publishes | Sparse checkout (`.github`) + `git worktree add` gives a sparse worktree; `git add -A` exits 1 on a new path outside the cone; `data-changed.sh` (`set -e`) reads that as "no changes" and the job reports success | High (catalog frozen since 2026-11-08: no market playlist can update) | Verified |
+| NB16-2 | "Keep the last good copy" never works in the data builds | The same sparse worktree has none of the previous files (`playlists/`, mirrors), so `os.path.exists(prev)` is always false: a source that fails once is dropped from the catalog (`build_market.py` ~462), the curated mirror fallback (`build_extension_market.py` ~489) and `sync_streams.py:97` never fire | High (catalog entries vanish on one bad day) | Verified |
+| NB16-3 | A market playlist stays "needs an update" after a manual Refresh | `refresh(id)` without a sha keeps the old `marketSha` although it downloaded the newest mirror | Medium (the owner's "flags again") | Verified |
+| NB16-4 | An extension is flagged for an update to the version it already has | `install` stores `remote.version` (the listing); community/discovered entries point at the author's live file, which is often newer than the market's listing | Medium (the owner's "flags again"; extra downloads) | Verified |
+| NB16-5 | A newer build in the user's own repository is hidden by the older market copy | `ExtensionSources.all` keeps the first copy per key (market first) | Low–Medium (auto-update waits up to 3 days for the market) | Verified |
+| NB16-6 | An automatic update refused by the safety check is dropped silently | `sync` installs with `Mode.AUTO`; `autoDecision` refuses DANGER/unreadable files; `failed` is never shown, so the user does not know why "auto-update" did nothing | Low (the Update button stays) | Fixed (queued for old-code proof) |
+| NB16-7 | Background checks run too rarely | Extension `sync` runs only in `MTPlayerApp`'s first `LaunchedEffect` (once per activity creation; a TV keeps the activity for days); the playlist market check runs only while the Live TV screen is open | Medium (TV: never) | Fixed (queued for old-code proof) |
 
 Not findings: the 6 h market interval and 30 min repository cache (by design, ADR-025 keeps them);
 Tachiyomi has no update flags; curated sha256 match.
@@ -254,11 +254,20 @@ See docs/SYSTEM-DESIGN.md ADR-025.
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB16-1, NB16-2 | pending (`.github/scripts/tests/data-branch-test.sh`) | pending | local shell + CI |
-| NB16-3 | pending (`PlaylistMarketTest.manualRefreshClearsTheUpdateFlag`) | pending | CI unit (Robolectric) |
-| NB16-4 | pending (`Nbug16ExtensionVersionDeviceTest`) | pending | emulator |
-| NB16-5 | pending (`ExtensionFormatsTest.newerUserRepoCopyWinsOverMarket`) | pending | CI unit (Robolectric) |
-| NB16-6, NB16-7 | no test can drive the old code (no hook for "6 h later" or a refused background update) | pending (unit, new code) | UNVERIFIED-QUEUE |
+| NB16-1, NB16-2 | CI 44407599670 (bf23a1f, throwaway `ab/n16-before`): data-branch shell test 9 failures | CI 44410507243 (992dc13): shell test PASS | CI (shell) |
+| NB16-3 | CI 44407599670: `PlaylistMarketTest.manualRefreshClearsTheUpdateFlag` FAIL | CI 44410507243: PlaylistMarketTest 11/11 | CI unit (Robolectric) |
+| NB16-4 | phones 44408003339: FAIL both ("manifest=22 listed=21 installed.version=21 flaggedAgainst=22") | phones 44410526165: PASS api33-lowram + api36; tv-api34 44411302633 PASS | emulator, TV emulator |
+| NB16-5 | CI 44407599670: `ExtensionFormatsTest.newerUserRepoCopyWinsOverMarket` FAIL | CI 44410507243: ExtensionFormatsTest 12/12 | CI unit (Robolectric) |
+| NB16-6, NB16-7 | no test can drive the old code (no hook for "6 h later" or a refused background update) | CI 44410507243: `BackgroundUpdatesTest` 2/2 (new code only) | UNVERIFIED-QUEUE |
+
+Group regression (NBUG-16 touches extensions + `MTPlayerApp`): phones 44410526165 ExtensionSharedFile, Extensions,
+PinnedExtensions, HomeNavigation PASS both; tv-api34 44411302633 HomeNavigation, Extensions PASS. Whole unit suite
+CI 44410507243: 1249 tests, 0 failures, 11 skipped. tv-api24: in the next TV run.
+
+The workflow fixes (NB16-1, NB16-2) act only on `main`: the scheduled data builds run from the default branch, so
+the live catalog stays frozen until the owner merges.
+
+**Status: NBUG-16 Verified** (NB16-1…NB16-5; NB16-6/7 fixed, queued for old-code proof), tv-api24 regression pending.
 
 ## NBUG-14: IPTV channel logos don't show
 
