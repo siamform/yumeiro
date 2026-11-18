@@ -78,7 +78,7 @@ class ExtensionSharedFileDeviceTest {
 
     private fun providersOf(file: File) = APIHolder.allProviders.toList().count { it.sourcePlugin == file.absolutePath }
 
-    @Test fun uninstallingOneCopyKeepsTheOther() = runBlocking {
+    @Test fun uninstallingOneCopyKeepsTheOther(): Unit = runBlocking {
         val a = ExtensionManager.install(ctx, remote("a"), ExtensionReview.Mode.AUTO)
         val b = ExtensionManager.install(ctx, remote("b"), ExtensionReview.Mode.AUTO)
         val s = ExtensionManager.state.value
