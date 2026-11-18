@@ -711,8 +711,10 @@ flowchart LR
   internal name + hash, so two repository entries can share one file, and every delete ignored that.
 - **Options:** A. Small fixes in place: lists → SOURCES; one shared retry helper (start, network back,
   back-off 30 s / 2 min / 10 min, stops when nothing is missing or after 12 tries per process); repair asks
-  (IF_RISKY) when the review host is on screen, otherwise waits for the next try; a plugin file is deleted
-  only when no other entry uses it; JS code of a listed source is downloaded again like an install.
+  (IF_RISKY) when the review host is on screen, otherwise waits for the next try; each installed entry gets
+  its own plugin file (`<name>-<sha12>-<keyhash8>.cs3`, because providers are unregistered by file path, so
+  a shared file would still unload both copies) and a file is deleted only when no other entry uses it
+  (older installs that already share a name); JS code of a listed source is downloaded again like an install.
   B. Always put extension files in backups (big files, stale code, defeats "they come from their own
   repositories"). C. A WorkManager job per ecosystem for restore downloads (survives process death, but
   adds a second scheduler, and process start already runs the repair).

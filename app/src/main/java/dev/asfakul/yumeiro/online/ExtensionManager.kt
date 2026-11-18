@@ -396,7 +396,10 @@ object ExtensionManager {
         if (bytes.size < 64) throw ExtensionException("The download is empty")
         if (readManifest(bytes) == null) throw ExtensionException("${ext.name} is not a valid extension file")
         val safe = ext.internalName.replace(RX_EXTENSIONMANAGER_1, "_")
-        val file = File(pluginDir(context), "$safe-${ext.sha256.take(12)}.cs3")
+        // G9-7: the same file from two repos used to share one file name, so uninstalling (or a
+        // failed update of) one copy deleted the other's file and unloaded its providers. Each
+        // installed entry now has its own file.
+        val file = File(pluginDir(context), "$safe-${ext.sha256.take(12)}-${sha256(ext.key.toByteArray()).take(8)}.cs3")
         if (!file.exists()) {
             val tmp = File(file.parentFile, file.name + ".part")
             tmp.delete()
@@ -411,11 +414,11 @@ object ExtensionManager {
             // Keep the previous working version when the new one can't load.
             if (previous != null && previous.fileName != file.name) {
                 File(pluginDir(context), previous.fileName).takeIf { it.exists() }?.let { loadInternal(context, previous) }
-                deleteFile(file)
-            } else if (previous == null) deleteFile(file)
+                deleteIfUnused(context, file, ext.key)
+            } else if (previous == null) deleteIfUnused(context, file, ext.key)
             throw ExtensionException("${ext.name} can't run in this app: ${info.error ?: "unknown error"}")
         }
-        if (previous != null && previous.fileName != file.name) deleteFile(File(pluginDir(context), previous.fileName))
+        if (previous != null && previous.fileName != file.name) deleteIfUnused(context, File(pluginDir(context), previous.fileName), previous.key)
         removedDefaults.remove(installed.key)
         // The user added Internet Archive themselves: the 1.8.0 clean-up must not take it away.
         if (previous == null && installed.key == DEFAULT_KEY) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
@@ -435,7 +438,7 @@ object ExtensionManager {
         mutex.withLock {
             val ext = _state.value.installed.firstOrNull { it.key == key } ?: return@withLock
             unloadInternal(key)
-            deleteFile(File(pluginDir(context), ext.fileName))
+            deleteIfUnused(context, File(pluginDir(context), ext.fileName), key)
             if (key == DEFAULT_KEY) removedDefaults.add(key)
             _state.update { s -> s.copy(installed = s.installed.filterNot { it.key == key }, runtime = s.runtime - key, generation = s.generation + 1) }
             writeState(context)
@@ -697,6 +700,13 @@ object ExtensionManager {
     }
 
     private fun deleteFile(f: File) { runCatching { f.setWritable(true); f.delete() } }
+
+    /** G9-7: deletes [f] unless another installed entry than [ownerKey] still uses it (older installs shared names). */
+    private fun deleteIfUnused(context: Context, f: File, ownerKey: String) {
+        if (f.name.isBlank() || f.parentFile != pluginDir(context)) return
+        val used = _state.value.installed.any { it.key != ownerKey && it.fileName == f.name }
+        if (!used) deleteFile(f)
+    }
 
     /** Removes files no installed extension points to (failed updates, crashes mid-install). */
     private fun cleanupFiles(context: Context) {
