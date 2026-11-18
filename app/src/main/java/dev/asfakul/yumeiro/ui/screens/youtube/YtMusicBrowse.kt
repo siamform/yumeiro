@@ -104,11 +104,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** One loaded YouTube Music page with the shelves/rows appended by "load more". */
-private data class YmState(val page: YmPage? = null, val loading: Boolean = true, val error: String? = null, val more: Boolean = false, val fails: Int = 0) {
+internal data class YmState(val page: YmPage? = null, val loading: Boolean = true, val error: String? = null, val more: Boolean = false, val fails: Int = 0) {
     val canLoadMore get() = page?.continuation != null && !more && !loading && fails < MAX_MORE_FAILS
 }
 
-private const val MAX_MORE_FAILS = 3
+internal const val MAX_MORE_FAILS = 3
+
+/**
+ * G6-PG1: an album / playlist / artist page after a failed "load more". Same rule as Home and search
+ * (R15): the continuation stays and the next scroll retries; after [MAX_MORE_FAILS] it stops asking.
+ * It used to clear the continuation, so one network blip ended a long playlist for good.
+ */
+internal fun YmState.afterDetailMoreFailed(): YmState = copy(more = false, fails = fails + 1)
 
 /**
  * R15 Phase 3 (ADR-008, see ui/feed/LiveFeed.kt): YouTube Music's home, search results and open
@@ -676,10 +683,13 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
         if (!cur.canLoadMore) return
         state = cur.copy(more = true)
         scope.launch {
-            state = runCatching { YtMusicApi.more(context, "browse", token) }.fold(
-                { p -> cur.copy(page = cur.page.copy(shelves = mergeRows(cur.page.shelves, p.shelves), continuation = p.continuation), more = false) },
-                { cur.copy(more = false, page = cur.page.copy(continuation = null)) },
-            )
+            runCatching { YtMusicApi.more(context, "browse", token) }.onSuccess { p ->
+                state = cur.copy(page = cur.page.copy(shelves = mergeRows(cur.page.shelves, p.shelves), continuation = p.continuation), more = false, fails = 0)
+            }.onFailure {
+                // Backoff as on Home (1.5, 3, 6 s), then the next scroll near the end retries.
+                kotlinx.coroutines.delay((1_500L shl cur.fails.coerceIn(0, 3)).coerceAtMost(12_000L))
+                state = cur.afterDetailMoreFailed()
+            }
         }
     }
     LaunchedEffect(target) { load() }
