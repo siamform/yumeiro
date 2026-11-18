@@ -91,11 +91,13 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
             val bytes = when (item.kind) {
                 OnlineDownloads.Kind.YT_VIDEO, OnlineDownloads.Kind.YT_AUDIO -> YtDownloads.download(applicationContext, client, item, part, onProgress)
-                else -> forced(client, item, part, onProgress) { webm ->
-                    // A DASH stream whose tracks are both WebM is saved as .webm.
-                    if (webm && out.extension.equals("mp4", true)) {
-                        val renamed = File(out.parentFile, out.nameWithoutExtension + ".webm")
-                        OnlineDownloads.resolved(id) { it.copy(fileName = it.fileName.substringBeforeLast('.') + ".webm") }
+                else -> forced(client, item, part, onProgress) { ext ->
+                    // A DASH stream whose tracks are both WebM is saved as .webm. G8-6: an fMP4 or joined
+                    // HLS stream is an MP4 file; it was named .ts and published as video/mp2t.
+                    val from = if (ext == "webm") "mp4" else "ts"
+                    if (out.extension.equals(from, true)) {
+                        val renamed = File(out.parentFile, out.nameWithoutExtension + "." + ext)
+                        OnlineDownloads.resolved(id) { it.copy(fileName = it.fileName.substringBeforeLast('.') + "." + ext) }
                         out = renamed
                     }
                 }
@@ -179,7 +181,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
      * R15 forced download (see [ForceGrab]): DASH, split video + audio, torrents through
      * TorrServer, HLS, and direct files over several connections with header escalation.
      */
-    private suspend fun forced(client: OkHttpClient, item: OnlineDownloads.Item, part: File, progress: (Long, Long) -> Unit, onWebm: (Boolean) -> Unit): Long {
+    private suspend fun forced(client: OkHttpClient, item: OnlineDownloads.Item, part: File, progress: (Long, Long) -> Unit, onContainer: (String) -> Unit): Long {
         val lowEnd = dev.asfakul.yumeiro.DeviceClass.lowEnd
         val space: (Long) -> Unit = { need ->
             val free = OnlineDownloads.freeBytes(applicationContext)
@@ -188,7 +190,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         fun direct(url: String, headers: Map<String, String>, f: File, p: (Long, Long) -> Unit) =
             Segmented(client, ForceGrab.connections(lowEnd), space).let { s -> suspend { s.download(url, headers, f, p) } }
         return when {
-            item.isDash -> DashGrab(client, item.headers).download(item.url, part, DownloadSettings.quality.value, lowEnd, progress).also { onWebm(it.webm) }.bytes
+            item.isDash -> DashGrab(client, item.headers).download(item.url, part, DownloadSettings.quality.value, lowEnd, progress).also { if (it.webm) onContainer("webm") }.bytes
             item.audioUrl != null -> {
                 val v = File(part.parentFile, part.name + ".v"); val a = File(part.parentFile, part.name + ".a")
                 var vb = 0L; var ab = 0L
@@ -203,7 +205,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
             // G8-2: a variant with a separate audio rendition is saved as two tracks and joined here.
             item.isHls -> HlsDownloader(client, item.headers, DownloadSettings.quality.value)
-                .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, progress = progress)
+                .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, onContainer = onContainer, progress = progress)
             dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value

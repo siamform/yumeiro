@@ -52,7 +52,8 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
      * rendition (`AUDIO="group"` + `EXT-X-MEDIA:TYPE=AUDIO,URI=…`), the video and the audio are saved to
      * side files `out.v` / `out.a` (each with its own resume record) and joined into [out] by [join]
      * (MediaMuxer on the device); [onContainer] is then told the result is "mp4". Without a [join] such a
-     * stream fails instead of being saved silent.
+     * stream fails instead of being saved silent. G8-6: an fMP4 stream (`EXT-X-MAP`) is an MP4 file, not
+     * MPEG-TS; [onContainer] is told "mp4" once it is saved, so the worker names it .mp4.
      */
     suspend fun download(
         url: String, out: File,
@@ -68,7 +69,8 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
             text = fetchText(playlistUrl)
             if (audioUrl != null) return downloadJoined(playlistUrl, text, audioUrl, out, join, onContainer, progress)
         }
-        return saveMedia(playlistUrl, text, out, progress)
+        var fmp4 = false
+        return saveMedia(playlistUrl, text, out, { fmp4 = true }, progress).also { if (fmp4) onContainer("mp4") }
     }
 
     private suspend fun downloadJoined(
@@ -78,8 +80,8 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         val v = File(out.parentFile, out.name + ".v"); val a = File(out.parentFile, out.name + ".a")
         var vb = 0L; var ab = 0L; var vt = 0L; var at = 0L
         fun report() = progress(vb + ab, if (vt > 0 && at > 0) vt + at else -1)
-        saveMedia(videoUrl, videoText, v) { d, t -> vb = d; vt = t; report() }
-        saveMedia(audioUrl, fetchText(audioUrl), a) { d, t -> ab = d; at = t; report() }
+        saveMedia(videoUrl, videoText, v, {}) { d, t -> vb = d; vt = t; report() }
+        saveMedia(audioUrl, fetchText(audioUrl), a, {}) { d, t -> ab = d; at = t; report() }
         if (join == null) throw IOException("This stream keeps its audio in a separate track and can't be joined here")
         coroutineContext.ensureActive()
         join(v, a, out)
@@ -88,11 +90,12 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         return out.length()
     }
 
-    private suspend fun saveMedia(playlistUrl: String, text: String, out: File, progress: (Long, Long) -> Unit): Long {
+    private suspend fun saveMedia(playlistUrl: String, text: String, out: File, onFmp4: () -> Unit, progress: (Long, Long) -> Unit): Long {
         if (RX_HLSDOWNLOADER_1.containsMatchIn(text)) throw IOException("This stream is DRM-protected and can't be saved")
         if ("#EXT-X-ENDLIST" !in text) throw IOException("Live streams can't be downloaded")
         val segments = parseMedia(text, playlistUrl)
         if (segments.isEmpty()) throw IOException("The playlist has no segments")
+        if (segments.first().initUrl != null) onFmp4()
         val state = File(out.parentFile, out.name + ".idx")
         // R16 (G8): the side file now records "segments:bytes". It is written every 5 segments, so
         // after a pause the file can hold a few segments more than recorded; they were appended a
