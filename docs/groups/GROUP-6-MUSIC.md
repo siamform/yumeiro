@@ -61,7 +61,9 @@ Cancelled runs in this group: none.
 | ID | Finding | Status | Evidence |
 |---|---|---|---|
 | G6-ST1 | Sleep timer lived in MainViewModel scope; closing the screen cancelled it while music played on | Verified (emulator, both phones) | 44215701198 fail-before, fix 3b6e2be, 44217196977 pass-after |
-| G6-WL | Streams ran with WAKE_MODE_LOCAL (no Wi-Fi lock) | Implemented—unverified | 44217196977 fail-before, fix fb359cf |
+| G6-WL | Streams ran with WAKE_MODE_LOCAL (no Wi-Fi lock) | Verified (emulator, both phones) | 44217196977 fail-before, fix fb359cf, 44219681816 pass-after |
+| G6-AF | Audio focus behaviour (Media3) | Verified (emulator, both phones); unplug OMT-28 | 44219681816 |
+| G6-NC | Notification + outside controls | Verified (emulator, both phones) | 44219681816 |
 
 ## Proposals (not implemented; need owner approval)
 

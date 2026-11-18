@@ -1,6 +1,6 @@
 # G6-WL — Music streams ran without a Wi-Fi lock
 
-Status: **Implemented—unverified** (fail-before run 44217196977: http wifiLock=false on api33-lowram and api36; pass-after pending). Group L2 G6 (Music). Found by code read, 2026-11-18.
+Status: **Verified (emulator, both phones)** — fail-before 44217196977 (http wifiLock=false), pass-after 44219681816 (lock held only while the stream plays), CI 44218538378 green. Real stall prevention under Wi-Fi power save: hardware, not claimed. Group L2 G6 (Music). Found by code read, 2026-11-18.
 
 ## 1. Code read (head 3b6e2be)
 

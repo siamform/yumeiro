@@ -231,4 +231,6 @@ Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs 
 (Filled at the end of the audit.)
 | G5-LL | Cold MediaStore scan cost with a large library (Library Jump back in / Most played wait) | androidTest LargeLibraryScanDeviceTest (5,000 songs) | 44211556974: 99–180 ms api33-lowram, 162–238 ms api36 |
 | G6-ST1 | Music sleep timer with no screen (process object MusicSleepTimer) | androidTest SleepTimerWithoutScreenDeviceTest | 44217196977 PASS both phones |
-| G6-WL | Wi-Fi lock while a music stream plays (PlaybackService.wakeModeFor) | unit MusicWakeModeTest; androidTest MusicWifiLockDeviceTest | pass-after pending |
+| G6-WL | Wi-Fi lock while a music stream plays (PlaybackService.wakeModeFor) | unit MusicWakeModeTest; androidTest MusicWifiLockDeviceTest | 44219681816 PASS both phones |
+| G6-AF | Audio focus: transient / duck / permanent | androidTest MusicAudioFocusDeviceTest | 44219681816 PASS both phones; unplug OMT-28 |
+| G6-NC | Media notification + outside MediaController | androidTest MusicNotificationControlsDeviceTest | 44219681816 PASS both phones |

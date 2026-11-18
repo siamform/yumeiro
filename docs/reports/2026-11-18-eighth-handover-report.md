@@ -104,6 +104,9 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44214312408 | RtlLayoutDeviceTest + WidgetUpdatesDeviceTest both phones at db52f4c | OK: RTL 1 test RTL_RESULT PASS, Widget 5 tests, both phones |
 | 44215701198 | G6-ST1 fail-before SleepTimerWithoutScreenDeviceTest at 0a47b48 | ST_RESULT FAIL both phones: still playing at 100 s after a 1-minute timer, screen closed |
 | 44217196977 | G6-ST1 pass-after + G6-WL fail-before at 3b6e2be, both phones | ST_RESULT PASS 60354 / 60357 ms; WL_RESULT FAIL http=false (no ExoPlayer:WifiLockManager in dumpsys wifi) |
+| 44218535243 | G6-WL pass-after at fb359cf, both phones | api36 PASS; api33-lowram FILE2 wifiLock=true with empty "Locks held:" → test check too wide, tightened c4abe23 |
+| 44218538378 | CI at fb359cf | green (build, unit incl. MusicWakeModeTest 2/2, lint, gitleaks) |
+| 44219681816 | MusicWifiLock + MusicAudioFocus + MusicNotificationControls at c4abe23, both phones | all OK; WL_RESULT PASS, AF_RESULT PASS (noisy not delivered: protected → OMT-28), NC_RESULT PASS |
 | 44211556974 | LargeLibraryScanDeviceTest both phones | OK both; 5,000 songs; scan 180/111/99 ms api33-lowram, 238/181/162 ms api36; insert 135 s / 128 s; cleanup removed 5,000 |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 

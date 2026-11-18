@@ -44,6 +44,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Blocked: owner (decision) |
 | OMT-26 | EXT-T1: Back closes a pop-up instead of Source status | Blocked: owner (phone) |
 | OMT-27 | NBUG-6: per-feature DNS has measured side effects — build anyway, narrow it, or drop | Blocked: owner (decision) |
+| OMT-28 | G6-AF: unplug wired headphones / turn off Bluetooth headphones while music plays | Blocked: owner (hardware) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -472,6 +473,16 @@ Blocked (you couldn't run it; say why).
   stays as is.
 - **What to send back:** drop it, or name one narrow case (for example "drama always over DoH") to plan as a gated note.
 - **Status:** Blocked: owner (decision).
+
+### OMT-28 — Music pauses when headphones are unplugged (phone + headphones)
+
+- **Why you:** "headphones unplugged" (AUDIO_BECOMING_NOISY) is a protected system broadcast; the emulator shell
+  can send the command but the system does not deliver it (44219681816: music kept playing on both emulators).
+  The code turns the behaviour on (`PlaybackService`: `setHandleAudioBecomingNoisy(true)`). Audio focus (calls,
+  other apps, notification sounds) and the notification / lock-screen controls are verified on the emulators.
+- **Steps:** play a song with wired or Bluetooth headphones, then unplug them (or switch the Bluetooth headphones off).
+- **Pass:** the music pauses and does not come out of the speaker. **Fail:** it keeps playing on the speaker.
+- **Status:** Blocked: owner (hardware).
 
 ## Not owner tests (handled by the agent)
 
