@@ -1,0 +1,107 @@
+# Unverified queue
+
+The honest list of what v1.8.2 ships without full proof. An item leaves this list only with a
+fail-before run and a pass-after run (or, for an owner test, the owner's recorded result).
+Created 2026-11-18 at cf1691b (master prompt "hard rules, group completion, v1.8.2 release").
+
+Targets: **stability-v2 deep** (agent work after the v1.8.2 merge) · **user-assisted** (owner or
+recruited users, `docs/OWNER-MANUAL-TESTS.md`, brief in `docs/USER-TEST-PROGRAM.md`) ·
+**v1.8.2 soft** (agent, before the release gate, if time allows; otherwise moves to stability-v2).
+
+Labels: unit (JVM/Robolectric in CI), CI, emulator (CI phones api33-lowram / api36, TV tv-api34 /
+tv-api24), real hardware.
+
+## Agent findings and gaps
+
+| ID | Description | Group | Verified | Not verified | Why queued | Target | Status |
+|---|---|---|---|---|---|---|---|
+| G6-PG2 | Endless Music Home: offline scrolls no longer close the feed; 80-shelf cap | G6 | unit (CI 44235994633 → 44238631828) | emulator end-to-end: skipped in 44242208629, 44243818628 (YouTube bot wall on CI IPs) | the "Similar to" call cannot be answered from CI | user-assisted (OMT-29) | Queued |
+| G7-GAP-1 | Live TV buffering / stall behaviour on a real channel | G7 | unit: G3 P14 recovery tests (`PlaybackRecoveryTest`, `StarvationLoadControlTest`) | no device run of a Live TV channel buffering | no reachable test channel from CI; a local HLS stall test is possible | stability-v2 deep (local HLS server test); user-assisted (OMT-11) | Queued |
+| G7-GAP-2 | Live TV and Manga screens with the TV remote (D-pad focus) | G7 | emulator TV for Home/Search/player (`TvBug5ReproDeviceTest` 43908926085, 43912693329, 43935810414, 43949571344, 43957029647) | Live TV and Manga screens never opened on the TV images | not covered by the BUG-5 test | stability-v2 deep (TV device test); user-assisted (OMT-4, OMT-11) | Queued |
+| G7-L5-A | M3U parser ignores single-quoted attributes (`tvg-logo='…'`): logo/group lost, channel plays | G7 | code read (`M3uParser.ATTR`) | no test | minor, no user report | stability-v2 deep (L5) | Queued |
+| G7-L5-B | M3U channel lines without a scheme (relative URLs) are skipped | G7 | code read (`M3uParser.URL_LINE`) | no test | behaviour change; needs a proposal | stability-v2 deep (L5) | Queued |
+| G7-L5-C | Manga home and reader read two tiny SharedPreferences on the main thread | G7 | code read (`MangaScreens.kt` 142, 520) | no StrictMode run | few bytes; not user-visible | stability-v2 deep (L5) | Queued |
+| G7-L5-D | Music track count says "1 tracks" (no singular) | G6 | code read; seen in SP1 work | no test | cosmetic | stability-v2 deep (L5) | Queued |
+| G7-AU-PIP | GROUP-7 audit row said "PiP, buffering, TV focus covered by G3 and BUG-5": overstated (PiP proven with a local clip only) | G7 | PiP in the shared player: emulator 43708220122 (`LocalPlayerDeviceTest c`), 43747147539, 43748560619 | PiP from a Live TV channel | wording corrected in GROUP-7; gaps = G7-GAP-1/2 | stability-v2 deep | Queued |
+
+## Owner bugs and earlier items
+
+| ID | Description | Group | Verified | Not verified | Why queued | Target | Status |
+|---|---|---|---|---|---|---|---|
+| BUG-3 / NBUG-1 | Download speed drops at ~50–70 % | G8 | emulator case d 6/6 (44043535616); DL-11 H3 fix 7a85df6 (44121429260) | real phone per 10 % band; DL-11 part 2 budget | real Wi-Fi/phone; DL-11 part 2 is G8 work this cycle | G8 (DL-11 part 2) + user-assisted (OMT-14, OMT-20) | Queued |
+| BUG-5 / TV-4 | Cross-source search on TV | G7 | focus + answer on TV emulators (NBUG-2c) | scope decision | owner decision (options A/B/C) | user-assisted decision (OMT-21) | Queued |
+| NBUG-4d | Freeze with upscaling on | G3 | injected decoder failure recovers, both phones (43946324687) | real GPU | cannot reproduce on emulator GL | user-assisted (OMT-16) | Queued |
+| NBUG-6 | ISP blocking: per-feature DNS | G12 | side effects measured; guards SmartDnsResilience / DnsWire / DataCacheBounds green | not built | owner gate "no side effect" not passed | user-assisted decision (OMT-27), then stability-v2 | Queued |
+| ST-17 | Compose spin stress, cause-naming logging | G12 | 44145301927 (20/20, 0 spins) | stays open by order | standing order | stability-v2 deep | Queued |
+| ST-7 | Jank on software-rendered emulators | G12 | 44002112195, 44138627579 | real phone | emulators render in software | user-assisted (OMT-12) | Queued |
+| X2-1 | Baseline profile gain | G12 | emulator startup 44142300486 (no gain claimed) | real hardware gain | software rendering on CI | user-assisted (OMT-12) | Queued |
+| EXT-T1 | Back closes a pop-up instead of Source status (NF-3 / ADR-014 part) | G2/G12 | NF-3 blocker emulator-verified (43825449454, 43866791994) | owner's phone reproduction | cannot reproduce on emulator | user-assisted (OMT-26) | Queued |
+
+## Pending owner tests (user-assisted)
+
+Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
+
+| ID | Description | Target | Status |
+|---|---|---|---|
+| OMT-1 | YouTube playback and quality switching | user-assisted | Pending |
+| OMT-2 | Chromecast casting | user-assisted | Pending |
+| OMT-3 | Low-RAM phone run | user-assisted | Pending |
+| OMT-4 | Android TV with the remote | user-assisted | Pending |
+| OMT-5 | Yumix offline on a real phone | user-assisted | Pending |
+| OMT-6 | Heat, battery and long playback | user-assisted | Pending |
+| OMT-7 | Predictive back animation | user-assisted | Pending |
+| OMT-8 | Launcher widget | user-assisted | Pending |
+| OMT-9 | Usability feedback | user-assisted | Pending |
+| OMT-10 | Last.fm with your own account | user-assisted | Pending |
+| OMT-11 | Manga and Live TV with your own sources | user-assisted | Pending |
+| OMT-12 | Cold start with the baseline profile | user-assisted | Pending |
+| OMT-13 | Restrict the Firebase API key (console) | owner | Pending |
+| OMT-14 | Download speed with Wi-Fi power saving | user-assisted | Pending |
+| OMT-15 | Each YouTube quality really plays | user-assisted | Pending |
+| OMT-16 | Play link streams and upscaling on a real GPU | user-assisted | Pending |
+| OMT-17 | Downloads in the phone's gallery | user-assisted | Pending |
+| OMT-18 | Yumeiro behind a VPN | user-assisted | Pending |
+| OMT-19 | A real YouTube download | user-assisted | Pending |
+| OMT-20 | BUG-3 speed per 10 % band | user-assisted | Blocked: owner |
+| OMT-21 | TV search scope decision | owner decision | Blocked: owner |
+| OMT-22 | Firebase Test Lab role (console) | owner | Blocked: owner |
+| OMT-23 | Phone Jackson version decision | owner decision | Blocked: owner |
+| OMT-24 | "Vega" meaning | owner question | Blocked: owner |
+| OMT-25 | Telegram / Terabox / Diskwala / manga cloud path | owner decision | Blocked: owner |
+| OMT-26 | EXT-T1 on the owner's phone | user-assisted | Blocked: owner |
+| OMT-27 | NBUG-6 decision | owner decision | Blocked: owner |
+| OMT-28 | Headphones unplugged pauses music | user-assisted | Blocked: owner (hardware) |
+| OMT-29 | Endless Music Home on a home connection | user-assisted | Pending |
+
+## Features (all queued, nothing built in this cycle except G6-QP)
+
+| ID | Description | Group | Proposal | Target | Status |
+|---|---|---|---|---|---|
+| F-01 | Sub/Dub badges and preselect | G3/G4 | FEATURE-F-01 | stability-v2 | Queued |
+| F-02 | Telegram option | new | FEATURE-F-02 (OMT-25) | stability-v2 | Queued |
+| F-03 | Terabox / Diskwala links | G3 | FEATURE-F-03 (OMT-25) | stability-v2 | Queued |
+| F-04 | User-added WebView site list | G2 | FEATURE-F-04 | stability-v2 | Queued |
+| F-05 | Nuvio / SkyStream / Vega repositories | G2 | FEATURE-F-05 (OMT-24) | stability-v2 | Queued |
+| F-06 | 200 % volume booster | G3 | FEATURE-F-06 | stability-v2 | Queued |
+| F-07 | External video player | G3 | FEATURE-F-07 | stability-v2 | Queued |
+| F-08 | Upcoming Movies & Series | G4 | FEATURE-F-08 | stability-v2 | Queued |
+| F-09 | Watch Later + Favorite on posters | G5 | FEATURE-F-09 | stability-v2 | Queued |
+| F-10 | Glassmorphism theme (ADR-017 proposed) | G9 | FEATURE-F-10 | stability-v2 | Queued |
+| F-11 | Manga auto-translation | G7 | FEATURE-F-11 (OMT-25) | stability-v2 | Queued |
+| F-12 | Vertical video player (ADR-018 proposed) | G3 | FEATURE-F-12 | stability-v2 | Queued |
+| F-13 | Offline manga chapters | G7 | to write | stability-v2 | Queued |
+| F-14 | Automatic Live TV failover | G7 | to write | stability-v2 | Queued |
+| F-15 | Live TV EPG / TV guide | G7 | to write | stability-v2 | Queued |
+| NF-1 | Episode watch status (Watched / In progress / Fresh) | G5 | checklist C | stability-v2 | Queued |
+| NF-2a | Download storage labels (Offline cache vs Permanent) | G8 | checklist C | stability-v2 | Queued |
+| NF-2b | Universal stream download (HLS/DASH without a provider button) | G8 | checklist C | stability-v2 | Queued |
+| NF-3 | Extension pop-up blocker (ADR-014): already implemented earlier; only EXT-T1 open | G2/G12 | ADR-014 | stability-v2 (no work this cycle) | Queued |
+
+## Release-scope gaps (named in the v1.8.2 notes)
+
+| ID | Description | Target | Status |
+|---|---|---|---|
+| L4 | Line-by-line re-audit of Groups 1–4 (verified by earlier-cycle tests only) | stability-v2 deep | Queued |
+| L5 | Final sweep | stability-v2 deep | Queued |
+
+Count: 8 agent findings/gaps + 8 earlier items + 29 owner tests + 19 features + 2 release-scope = 66 rows.

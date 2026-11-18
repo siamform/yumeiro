@@ -79,6 +79,10 @@ study needed (test-only or our own defect with an obvious cause).
 
 Gate state: **not passed** (DL-11 budget not claimed; EXT-T1 cannot reproduce on emulator, owner phone test OMT-26). Nothing below is built.
 
+**2026-11-18 master prompt (v1.8.2):** every feature below is `Queued: stability-v2` (also listed in
+`docs/UNVERIFIED-QUEUE.md`). Nothing is built in this cycle except G6-QP (section B). NF-3 was implemented in an
+earlier cycle (ADR-014); only EXT-T1 is open.
+
 | ID | Description | Group | Competitor sources | Status | Evidence |
 |---|---|---|---|---|---|
 | F-01 = "Sub/Dub badges" | Language / Sub / Dub badges on search posters; tap preselects | G3/G4 | CloudStream, Hikari | Not started (build); proposal written. Badges already ship (ReleaseTags + PosterTags, ff7cb19); gaps: detail write-back, JS/Aniyomi, device test | docs/proposals/FEATURE-F-01-language-sub-dub-badges.md |
@@ -93,6 +97,9 @@ Gate state: **not passed** (DL-11 budget not claimed; EXT-T1 cannot reproduce on
 | F-10 | Glassmorphism theme | G9 | haze 30528aa, PrismalAGSL 0da7d9c, ui-ux-pro-max e59ff37 | Not started; proposal + ADR-017 (proposed) | docs/proposals/FEATURE-F-10-glassmorphism-theme.md |
 | F-11 | Manga auto-translation | G7 | jedzqer c980b45 (AGPL), Kotlin9527/Kala9527 54867de | Not started; proposal written; cloud path Blocked: owner (OMT-25) | docs/proposals/FEATURE-F-11-manga-translation.md |
 | F-12 | Dedicated vertical video player | G3 | RN-VideoFeed ee2394f, compose-reels be0373c | Not started; proposal + ADR-018 (proposed) | docs/proposals/FEATURE-F-12-vertical-video-player.md |
+| F-13 | Offline manga chapters (found in the G7 audit: not present) | G7 | to read: Mihon, Kotatsu download managers | Queued: stability-v2 (not built) | docs/groups/GROUP-7 "Eighth cycle audit"; UNVERIFIED-QUEUE |
+| F-14 | Automatic Live TV failover (today: manual "Sources for this channel") | G7 | to read: TiviMate-style players, Kodi PVR | Queued: stability-v2 (not built) | GROUP-7 audit (`StreamScreen.playLive`); UNVERIFIED-QUEUE |
+| F-15 | Live TV EPG / TV guide (today: only the url-tvg address is read) | G7 | to read: Kodi PVR IPTV Simple, open-source XMLTV parsers | Queued: stability-v2 (not built) | GROUP-7 audit (`PlaylistStore.EPG_URL_RX`); UNVERIFIED-QUEUE |
 | NF-1 | Episode watch status: Watched, In Progress bar with position, Fresh | G5 | to read: CloudStream, Hikari | Not started (as a feature). Existing: episode list shows a Watched check when `finished` (OnlinePlayerUi.kt:246, 661) from the BUG-1 resume store; no progress bar, no Fresh state | code read 2026-11-18 |
 | NF-2a | Download manager storage labels: Offline cache vs Permanent | G8 | — | Not started (as a feature). Existing: Offline / Permanent labels and filter already on the Downloads page (DownloadsScreen.kt:95, 184, 298; DownloadPrompt.kt:121); gap to confirm: "public gallery" wording and per-row location | code read 2026-11-18 |
 | NF-2b | Universal stream download (HLS/DASH muxing without a provider button) | G8 | to read: Seal, ytdlnis, 1DM | Not started. Existing: HlsDownloader, stream download from Web URL (NBUG-4a) | code read 2026-11-18 |

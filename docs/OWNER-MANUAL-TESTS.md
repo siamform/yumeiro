@@ -50,6 +50,43 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
 
+**For every test (owner and users):** capture a screenshot or short screen recording when something looks
+wrong, plus a note, **plus the app version** (Settings → About) and the phone/TV model and Android version.
+Send results to the owner (developer); recruited users send them to the person who invited them (see
+[USER-TEST-PROGRAM.md](USER-TEST-PROGRAM.md)). The owner forwards them to the agent, who records them here,
+in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
+
+The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
+**owner (developer)** section after it (OMT-1…OMT-29, full detail; some need consoles, logs or decisions).
+
+## Yumeiro users checklist
+
+Short tasks for people helping to test. No computer or developer tools needed. Install the test build the
+owner sends you, then pick any task you can do.
+
+| # | Task (what you check) | You need | Steps | It passes if | Same as |
+|---|---|---|---|---|---|
+| U-1 | Music pauses when headphones are unplugged | phone + wired or Bluetooth headphones | 1. Play a song in Music with headphones on. 2. Unplug them (or switch the Bluetooth headphones off). | the music pauses and does not play from the speaker | OMT-28 |
+| U-2 | Music Home keeps loading | phone, your home Wi-Fi | 1. Music → tap the source pill → Online → Home. 2. Scroll to the bottom again and again until shelves called "Similar to …" appear. 3. Turn Wi-Fi off for 10 seconds, then on. 4. Go back to Online Home and keep scrolling. | new "Similar to …" shelves keep appearing after Wi-Fi comes back | OMT-29 |
+| U-3 | YouTube videos play and change quality | phone, home Wi-Fi | 1. Open any YouTube video in Yumeiro. 2. Tap Quality and pick each height, one after another. | each pick plays without stopping, and the picture gets sharper or softer | OMT-1, OMT-15 |
+| U-4 | Downloads appear in your gallery | phone | 1. Download a video in Yumeiro. 2. When it finishes, open your phone's Gallery or Photos app. | the video is there and plays | OMT-17 |
+| U-5 | Downloads keep a good speed | phone, home Wi-Fi | 1. Start a large download (a full episode or film). 2. Watch the speed shown at 10 %, 50 %, 70 %, 90 %. | the speed does not drop sharply after half way | OMT-14, OMT-20 |
+| U-6 | Yumeiro with a VPN | phone + any VPN app | 1. Turn the VPN on. 2. Open Home, a video and Music Online. | everything loads, or a clear message says what's wrong | OMT-18 |
+| U-7 | TV remote | Android TV + its remote | 1. Move around Home, Search, Live TV, Manga and the player with only the remote's arrows, OK and Back. | you can reach every button, see where you are, and Back always works | OMT-4 |
+| U-8 | Low-memory phone | a phone with 2–3 GB RAM | 1. Use Yumeiro for 15 minutes: Home, a video, Music, Manga. 2. Switch to another app and back a few times. | no crash, no long freeze | OMT-3 |
+| U-9 | Long playback and heat | phone | 1. Play videos or music for 45 minutes. | the phone does not get very hot and battery use looks normal | OMT-6 |
+| U-10 | Manga and Live TV with your own sources | phone or TV, your own playlist / source | 1. Add your playlist or manga source. 2. Open 5 channels or 2 chapters. | channels play and pages load | OMT-11 |
+| U-11 | Home screen widget | phone | 1. Add the Yumeiro widget to your home screen. 2. Play music. | the widget shows the song and its buttons work | OMT-8 |
+| U-12 | Back gesture animation | phone with Android 14 or newer | 1. Swipe back slowly from a screen inside Yumeiro. | you see the previous screen peek in, and letting go returns there | OMT-7 |
+| U-13 | Casting to a TV | phone + Chromecast or Google TV | 1. Play a video and tap Cast. | the video plays on the TV | OMT-2 |
+| U-14 | Yumix offline | phone | 1. Open Yumix once online. 2. Turn on airplane mode and open Yumix again. | what you saw before is still there, with a clear "offline" note | OMT-5 |
+| U-15 | General feedback | phone or TV | Use Yumeiro as you normally would for a day. | tell us anything confusing, slow or broken | OMT-9 |
+
+Report for each task: task number, Passed/Failed, one sentence, a screenshot if something looked wrong,
+the app version and your device. Don't send passwords or account details.
+
+## Owner (developer) tests
+
 ---
 
 ### OMT-1 — YouTube playback and quality switching

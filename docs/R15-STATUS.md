@@ -1,6 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 10)
+## Resume here (updated 2026-11-18, v1.8.2 cycle, step 1)
+
+- **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" (2026-11-18). It replaces the pause
+  and the old order (G8 → G9 → G10 → L3 → L4 → L5). **New order: G6-QP → G8 → G9 → G10 → G11 → v1.8.2 release
+  (owner approval) → stability-v2** (L4 re-audit G1–4, L5 sweep, all features F-01…F-15, NF-1…NF-3, the queue).
+  Completion standard: every item fail-before + pass-after, or in `docs/UNVERIFIED-QUEUE.md` with a reason.
+- **Start state:** head cf1691b, clean tree, no newer commits, no runs in progress (last: CI 44245720453 green,
+  device 44245826911 OK). Differences from the prompt: NF-3 (ADR-014 blocker) is already implemented and
+  emulator-verified, only EXT-T1 open; queue and user-test brief did not exist (created).
+- **Current group / step:** G6-QP (queue persistence, Option 1 approved). Step: second competitor read, then
+  `docs/proposals/FEATURE-G6-QP-queue-persistence.md`, ADR, feature profile, migration test, build.
+- **Runs in progress:** none.
+- **Next three actions:** (1) G6-QP proposal + ADR; (2) G6-QP unit tests (fail-before) and build; (3) G6-QP device
+  test on both phones (5 songs, kill, reopen) + regression of BUG-1, G5-EP, G6-WL, G6-AF, G6-NC.
+- **UNVERIFIED-QUEUE.md:** 66 rows (8 agent gaps, 8 earlier items, 29 owner tests, 19 features, L4, L5).
+
+### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 10)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18, plus the owner's message of 2026-11-18: finish G7
   and its docs, then **stop and wait**. Do **not** start G8, G9, G10 or any later item until the owner says so.
