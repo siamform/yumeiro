@@ -90,6 +90,7 @@ class YumixDeviceTest {
             .mapNotNull { it.config.getOrElseNullable(FeedCardKey) { null } }.toSet()
 
     @Test fun offlineRefreshKeepsTheFeed() {
+        org.junit.Assume.assumeFalse("Ethernet stays up when Wi-Fi and data go off (TV emulator)", FirstRun.hasEthernet())
         FirstRun.tapVisible(rule, "nav_tab_home"); idle(600)
         FirstRun.tapVisible(rule, "quick_card_hues"); idle(600)
         // Wait until the count is at least 3 on two checks in a row (runs 43716649966 and

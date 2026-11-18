@@ -51,6 +51,15 @@ object FirstRun {
         runCatching { androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync() }
     }
 
+    /** TV emulators have an Ethernet link (eth0) next to Wi-Fi; `svc wifi/data disable` can't take it
+     *  down, so the app correctly stays online (tv-api34 44353540462). Offline tests skip there. */
+    @Suppress("DEPRECATION")
+    fun hasEthernet(): Boolean = runCatching {
+        val cm = InstrumentationRegistry.getInstrumentation().targetContext
+            .getSystemService(android.net.ConnectivityManager::class.java)
+        cm.allNetworks.any { cm.getNetworkCapabilities(it)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) == true }
+    }.getOrDefault(false)
+
     fun shell(cmd: String): String {
         if (cmd.startsWith("input keyevent")) awaitKeyFocus(cmd)
         return InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd).let { pfd ->

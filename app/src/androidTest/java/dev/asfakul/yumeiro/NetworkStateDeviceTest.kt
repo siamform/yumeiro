@@ -56,6 +56,7 @@ class NetworkStateDeviceTest {
     }
 
     @Test fun a_offlineThenBack() {
+        org.junit.Assume.assumeFalse("Ethernet stays up when Wi-Fi and data go off (TV emulator)", FirstRun.hasEthernet())
         FirstRun.toTabs(rule)
         val t0 = SystemClock.uptimeMillis()
         try {

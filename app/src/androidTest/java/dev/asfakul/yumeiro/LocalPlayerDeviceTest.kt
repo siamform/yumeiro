@@ -106,7 +106,7 @@ class LocalPlayerDeviceTest {
 
     /** Videos → Device → (rescan) → the clip. */
     private fun openClipFromDevice() {
-        wait("Videos tab") { has("nav_tab_videos") }
+        wait("Videos tab") { FirstRun.hasNav(rule, "nav_tab_videos") } // TV: rail
         tap("nav_tab_videos")
         wait("video source switch", 20_000) { has("video_source_device") || has("video_source_switch") }
         if (!has("video_source_device")) tap("video_source_switch")

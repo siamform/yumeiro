@@ -68,7 +68,7 @@ class FloatingMessageDeviceTest {
     }
 
     @Test fun messageNeverCoversTheFloatingPlayer() {
-        wait("Videos tab") { has("nav_tab_videos") }
+        wait("Videos tab") { FirstRun.hasNav(rule, "nav_tab_videos") } // TV: rail
         FirstRun.tapVisible(rule, "nav_tab_videos")
         wait("video source switch", 20_000) { has("video_source_device") || has("video_source_switch") }
         if (!has("video_source_device")) FirstRun.tapVisible(rule, "video_source_switch")
