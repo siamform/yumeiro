@@ -92,11 +92,15 @@ object Backup {
         }
     }
 
-    /** Runnable code: CloudStream plugins, Aniyomi / Mihon APKs, JavaScript providers. */
+    /**
+     * Runnable code: CloudStream plugins, Aniyomi / Mihon APKs, JavaScript providers' code.
+     * G9-1: only `js/<id>.js` is code; `js/repos.json` and `js/sources.json` are the user's source
+     * lists (SOURCES). Before, every `js/` file counted as code, so a default backup lost both lists.
+     */
     internal fun isCode(name: String): Boolean {
         val rel = name.removePrefix("files/")
         return rel.startsWith("extensions/plugins/") || (rel.startsWith("extensions/") && rel.endsWith(".cs3")) ||
-            (rel.startsWith("tachiyomi/") && rel.endsWith(".ext")) || rel.startsWith("js/")
+            (rel.startsWith("tachiyomi/") && rel.endsWith(".ext")) || (rel.startsWith("js/") && rel.endsWith(".js"))
     }
 
     private fun isTransient(f: File): Boolean {

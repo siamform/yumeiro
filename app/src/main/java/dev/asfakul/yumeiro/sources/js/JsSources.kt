@@ -66,7 +66,27 @@ object JsSources {
         app = context.applicationContext
         scope.launch {
             runCatching { ensureLoaded(app); publish() }.onFailure { Log.e(TAG, "start", it) }
+            // G9-1: a restore brings the lists back without the code; download it again.
+            runCatching { repairMissing(app) }.onFailure { Log.w(TAG, "repair", it) }
         }
+    }
+
+    /** Listed sources whose code file is missing (restored without extension files, or deleted). */
+    fun missingCode(context: Context): List<Entry> = _state.value.installed.filter { !File(dir(context), "${it.id}.js").isFile }
+
+    /**
+     * G9-1: downloads the code of every listed source whose file is missing, with the same check as
+     * an install. True when nothing that can be downloaded is missing any more.
+     */
+    suspend fun repairMissing(context: Context): Boolean = withContext(Dispatchers.IO) {
+        ensureLoaded(context)
+        val missing = missingCode(context).filter { it.codeUrl.startsWith("http") }
+        if (missing.isEmpty()) return@withContext true
+        var failed = 0
+        for (e in missing) {
+            install(context, e).onFailure { Log.w(TAG, "repair ${e.name}: ${it.message}"); failed++ }
+        }
+        failed == 0
     }
 
     /*
