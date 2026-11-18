@@ -1,46 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 14:40 UTC, v1.8.2 cycle, G8 step 9 regression + G9 step 5)
+## Resume here (updated 2026-11-18 15:40 UTC, v1.8.2 cycle, G8 reopened on Android 7 TV + G9 step 9)
 
-- **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" + owner handover prompt of 2026-11-18
-  (new agent) + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
-- **G8 results read by the new agent (all at head 3680464 = fix 877413b + docs):**
-  - Fail-before DL-11 p2 baseline: CI 44283506177 (f2a7c73): 1193 tests, 1 failed = exactly
-    `Dl11PaceTest#aFastLinkAtItsOwnSpeedDoesNotTrip` (Dl11PaceTest.kt:68). Proven.
-  - Pass-after CI 44286276997: 1216 tests, 0 failures, 11 skipped (G8DownloadsBatchTest 7/7, Dl11PaceTest 8/8,
-    DownloadThroughputTest 8/8).
-  - Pass-after device 44286280482 (`DownloadThroughputDeviceTest` a + d ×3): all PASS. Case a rxOverSize
-    api33-lowram 1.056/1.050/1.038 (median 1.050), api36 1.030/1.036/1.030 (median 1.030): **budget met**
-    (each ≤ 1.10, median ≤ 1.06). Case d 1.048/1.050/1.043 and 1.059/1.044/1.044.
-  - Phone regression (both phones, all PASS): 44289731618 (Cleanup, Kill, Quality, Resume, Throughput,
-    DownloadsScreen, ExternalDownloader) and 44289743979 (DownloadG8, ForceDownload, LowStorage, StorageMainThread,
-    StreamWatchDownload, TorrentDownload, YtDownloadPipeline) = all 14 download device classes. Case c (per-request
-    capped local host, restarts intended, no rx budget) read 1.103 on api33-lowram.
-- **TV regression batch 1 read (head 3680464):** tv-api24 44299923467: G8, Resume, Cleanup, Quality PASS; LowStorage a
-  PASS, b SKIPPED (no fallocate on Android 7); DownloadsScreen SKIPPED (API 28 gate); DownloadKill FAIL = test fault
-  (~50 MB/s link finished the file in the fixed 1.5 s before the kill) → test fixes 45d6763, 0a4bd0b.
-  tv-api34 44299928223: DownloadsScreen, G8, Kill, Cleanup, Quality PASS; LowStorage b SKIPPED (32-bit fallocate
-  filled 1.1 GB of 5.2 GB; dd fallback 0a4bd0b); **DownloadResume b FAIL = new finding G8-8** (Retry during the
-  failing worker's last moment dropped by ExistingWorkPolicy.KEEP → item "Queued" forever). Test 22fc1da
-  (DownloadG8DeviceTest#d), fix 8a4cfa0.
-- **G8-8 proof:** fail-before 44305926621 (throwaway ab/g88-before = old code + final test, branch deleted): d FAIL
-  on both phones, `status=QUEUED` (proven). Earlier attempts were test faults: 44302259076 lowram (hold enqueued
-  while first run RUNNING → d699d96), 44304053909 api36 passed on old code (MTApplication start-up resumeQueued at
-  +8 s rescued it → 78caf5e waits until the process is up 20 s). CI 44302429664 on f6e26b0 (fix 8a4cfa0): success;
-  only androidTest changed since.
-- **G8-8 pass-after:** device 44307672019 (78caf5e): DownloadG8DeviceTest OK (4 tests) on both phones.
-- **G8 regression (code = 78caf5e; 34d99b8 docs only), all PASS, no skips:** phones A 44309347790, B 44309363764
-  (14 classes, both phones; throughput rxOverSize 1.099/1.030); TV batch 1 tv-api24 44310073153, tv-api34 44312157796.
-  Running: TV batch 2 tv-api24 44314925557 (ref ab/g8-close = 34d99b8, throwaway), then tv-api34. Probe NBUG-9
-  44312163084 (Nbug9DnsProbeDeviceTest, phones) running.
-- **G9:** steps 1–3 34d99b8 (register + ADR-021). Tests b51424b. Fail-before CI 44312331848 (ab/g9-before = b51424b):
-  1194 tests, 1 failed = exactly G9SettingsBatchTest#g9_1 (proven); device fail-before (RestoreAfterClear,
-  ExtensionSharedFile, phones) not yet run. Fixes pushed: 30c4641 G9-1, 6219b4a G9-2 (backup/RepairRetry), d9b01cb
-  G9-5, c056ff4 G9-7.
-- **Next three actions:** (1) device fail-before on ab/g9-before; read NBUG-9 probe (add finding + test if
-  reproduced); (2) TV batch 2 tv-api34, then G8 close docs in one push (gaps listed in the superseded note below
-  are still open); (3) G9 pass-after CI + device, then G9 group regression.
-- **UNVERIFIED-QUEUE.md:** 70 rows.
+- **Orders:** master prompt + owner handover prompt of 2026-11-18 + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2
+  (owner approval) → stability-v2. Full G8 evidence list: the superseded notes below and GROUP-8 (close docs pending).
+- **G8 reopened:** TV batch 2 tv-api24 44314925557 (34d99b8): StorageMainThread, Torrent, YtDownloadPipeline,
+  DownloadThroughput PASS; ExternalDownloader 0 tests (`@SdkSuppress(26)`); ForceDownload 2/3 FAIL = new findings
+  **G8-9** (Android 7 MPEG4Writer rejects B-frames) and **G8-10** (Android 7 MediaExtractor can't open joined DASH
+  fMP4); StreamWatchDownload 7a FAIL on TV = phone-only watch page (VideoPlayerModal.kt:1582) → owner decision, class
+  left out of TV batches. The run hit the 110-min limit → split TV batch 2 (DownloadThroughput alone).
+  Register + ADR-022 30ad033; fixes c239a83 G8-9 (media3-muxer), 2fc2113 G8-10 (media3-inspector), Media3 only
+  below API 28. Branch ab/g8-close deleted. CI 44336335642 (2fc2113) running.
+- **G9 regression:** phones batch 1 44323642049 PASS; batch 2 44328532155 PASS (both phones; 1 skip: Yumix
+  seeAllKeepsPaging on api33, live row had one page). TV batch 1 tv-api24 44335814445, tv-api34 44335820792 running.
+- **Next three actions:** (1) after CI, tv-api24 ForceDownload pass-after, then G8 regression again on 2fc2113
+  (phones A/B, TV 1, TV 2a, TV 2b throughput, both TVs); (2) TV G9 batch 2, then G9 close docs; (3) G8 close docs.
+- **UNVERIFIED-QUEUE.md:** 70 rows (G8/G9 additions pending with the close docs).
 
 ### Previous resume note — superseded (v1.8.2 cycle, G6 closed, G8 batch)
 
