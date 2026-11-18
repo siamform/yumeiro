@@ -222,7 +222,7 @@ internal class RequestPace(
         if (t0 < 0) { t0 = nowNs; winStart = nowNs }
         seen += n
         if (baseline < 0) {
-            if (seen >= baselineBytes) { baseline = seen / maxOf(nowNs - t0, 1_000_000L).toDouble(); winBytes = 0; winWait = 0; winStart = nowNs }
+            if (seen >= baselineBytes) { baseline = seen / maxOf(nowNs - t0, BASELINE_MIN_NS).toDouble(); winBytes = 0; winWait = 0; winMaxWait = 0; winStart = nowNs }
             return false
         }
         winBytes += n
@@ -244,6 +244,15 @@ internal class RequestPace(
     }
 
     companion object {
+        /**
+         * DL-11 part 2 (G8 pass-after 44280021547): the baseline is never timed over less than this. On a
+         * fast link the first MiB comes out of the socket buffer in ~2 ms (the floor was 1 ms), so the
+         * baseline read hundreds of MB/s and the link's own speed tripped the rule. 50 ms caps the
+         * baseline at 20 MiB/s per MiB: a request trips only under ~6.7 MiB/s; the capped hosts of
+         * BUG-3 (150 KiB/s – 1.5 MiB/s after the burst) still trip.
+         */
+        const val BASELINE_MIN_NS = 50_000_000L
+
         /** DL-11 part 2: one read holding this share of a slow window's wait is a single stall. */
         const val STALL_SHARE = 0.6
     }
