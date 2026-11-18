@@ -2,6 +2,18 @@
 
 ## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, owner bug list NBUG-11…16)
 
+- **Orders:** master prompt + §13a. Owner order 2026-11-19: GROUP-14 (NBUG-11…16) → G10 → G11 → v1.8.2 (owner
+  approval) → stability-v2. GROUP-14 doc: docs/groups/GROUP-14-OWNER-BUGS.md.
+- **Verified:** NBUG-11, NBUG-12 (app; NB12-2 → OMT-32), NBUG-16 (incl. tv-api24 44415981071); NBUG-13 owner decision.
+- **NBUG-14 / NBUG-15 (d):** fail-before and pass-after done (CI 44415534058: 1250 tests 0 failures; phones
+  44413812316; tv34 44411302633). Open: tv-api24 Nbug14 rerun + PlaylistRetry LT-2 raw path on Android 7
+  (run 44419976178, diagnostics); then docs close.
+- **NBUG-15 (a)–(c)** (ADR-028, docs/proposals/FEATURE-NBUG-15-live-tv-redesign.md): test 213fbf5, fixes bcbfb01 +
+  2001197. Fail-before phones 44419972353 (throwaway ab/n15r-before = 99e92ed, old app code). Pass-after CI
+  44420159581; device pass-after (phones, tv24, tv34) next, then group regression.
+
+### Previous resume note — superseded (NBUG-16 pass-after)
+
 - **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method)
   → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
 - **G8, G9 closed.** **GROUP-14** (docs/groups/GROUP-14-OWNER-BUGS.md): NBUG-11 Verified, NBUG-12 Verified in the
