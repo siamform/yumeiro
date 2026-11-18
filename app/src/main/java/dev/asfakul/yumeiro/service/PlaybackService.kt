@@ -30,6 +30,16 @@ class PlaybackService : MediaSessionService() {
             private set
 
         /**
+         * G6-WL: wake mode for the item about to play. Streams (YouTube Music `mtyt:`, http/https/…)
+         * need `WAKE_MODE_NETWORK` (wake lock + Wi-Fi lock) or Wi-Fi may enter power save with the
+         * screen off and the song stalls; device files keep `WAKE_MODE_LOCAL` (no Wi-Fi lock, less
+         * battery). Same rule as the video/stream player (StreamMediaFactory).
+         */
+        internal fun wakeModeFor(uri: String?): Int =
+            if (uri != null && (uri.trim().startsWith(dev.asfakul.yumeiro.youtube.YouTubeAudioDataSource.SCHEME + ":", ignoreCase = true) ||
+                    dev.asfakul.yumeiro.stream.StreamMediaFactory.isNetworkUri(uri))) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL
+
+        /**
          * Tests only: forget the process player so a test can start from a cold process. Not
          * released: ExoPlayer.release() waits for its playback thread against SystemClock, which
          * Robolectric's paused clock never advances (CI 43831093449 hung in the unit tests).
@@ -72,6 +82,10 @@ class PlaybackService : MediaSessionService() {
                 player.addListener(object : androidx.media3.common.Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         dev.asfakul.yumeiro.player.ListeningTime.playerIsPlaying(app, isPlaying)
+                    }
+
+                    override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                        player.setWakeMode(wakeModeFor(mediaItem?.localConfiguration?.uri?.toString()))
                     }
                 })
 
