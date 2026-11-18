@@ -48,6 +48,8 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-29 | G6-PG2: endless Music Home keeps adding "Similar to" shelves, also after the connection drops | Pending |
 | OMT-30 | G8a: a download from a real HLS site with separate audio plays with sound in your gallery app | Pending |
 | OMT-31 | NBUG-9: fresh install on your own network loads online content without changing DNS | Pending |
+| OMT-32 | NBUG-12: a Porn4fans title plays on your network; tell the extension author | Pending |
+| OMT-33 | NBUG-13: choose a network option, then adult hosts without a VPN | Blocked: owner (decision) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -59,7 +61,7 @@ Send results to the owner (developer); recruited users send them to the person w
 in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
 
 The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
-**owner (developer)** section after it (OMT-1…OMT-31, full detail; some need consoles, logs or decisions).
+**owner (developer)** section after it (OMT-1…OMT-33, full detail; some need consoles, logs or decisions).
 
 ## Yumeiro users checklist
 
@@ -568,6 +570,29 @@ the app version and your device. Don't send passwords or account details.
   Private DNS), how long you waited, and a screen recording of steps 3 and 4.
 - **Failed attempts (agent):** none failed; the emulator only produces the "resolver says no" shape (above).
 - **Status:** Pending
+
+### OMT-32 — Porn4fans on your network (NBUG-12)
+
+- **Why you:** the fix is verified against a local copy of a KVS site on the emulators; the real site, your
+  network and your installed extension version only show on your phone.
+- **Steps:** 1. Install the build with the GROUP-14 fix. 2. Settings → 18+ on. 3. Open any Porn4fans title and
+  tap Play. 4. Wait up to 60 s (the app first tries the extension's link, then the title page).
+- **Pass:** the video plays. **Fail:** "Access denied" or "Every source refused playback".
+- **Also:** the extension (phisher98/CXXX, Porn4fans) reads a link the site now refuses for everyone (NB12-2);
+  please tell its author, so the extension works without Yumeiro's fallback.
+- **Record:** with and without your VPN, and a screen recording of a failure.
+- **Status:** Pending
+
+### OMT-33 — Adult hosts without a VPN (NBUG-13)
+
+- **Why you:** the CI network blocks nothing. Yumeiro already bypasses DNS blocking on its own connections
+  (Settings → Network → DNS, auto bypass); blocking by address or by site name (common in Bangladesh) can
+  only be passed by a proxy or a tunnel, which is a new feature.
+- **Decision needed:** (1) a proxy setting in Yumeiro (HTTP/SOCKS5, also for the in-app web pages); (2) DNS
+  bypass also for in-app web pages (helps only DNS blocking); (3) keep using a system VPN or Private DNS.
+  See docs/SYSTEM-DESIGN.md ADR-024.
+- **Then:** retest an adult title without the VPN on your network.
+- **Status:** Blocked: owner (decision)
 
 ## Not owner tests (handled by the agent)
 

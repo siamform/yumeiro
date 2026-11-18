@@ -801,6 +801,40 @@ flowchart LR
 - **Status:** accepted (agent decision inside the owner-ordered bug-list scope); verified only after the
   fail-before and pass-after runs.
 
+### ADR-024: Refused direct links: title page, page HTML and KVS players before WebView (NBUG-12, NBUG-13)
+
+- **Scope:** `online/OnlineSession` last resort (`pageFor`, a new page-HTML step before
+  `HeadlessCapture`), new `online/CapturePage` (which page to open), new `stream/KvsPlayer` (KVS /
+  kt_player `flashvars`, de-scrambling), `stream/WebPageExtractor` (KVS candidates first). No change to
+  the AccessLadder, the player or extension loading.
+- **Requirements:** a title whose extension link is refused for everyone, but whose site page still
+  plays, must play from that page; KVS pages (links ending `.mp4/`, inside `flashvars`, often scrambled
+  with `function/0/`) must be read; links needing login (`_redirect=1`, no `/get_file/`) skipped.
+  Non-functional: no new dependency or permission; at most one extra page request and the existing
+  `StreamResolver` probe limit (6); the WebView capture stays the final step.
+- **Context:** NB12-1 (`pageFor` opened the refused `.mp4` as "the page"), NB12-3 (no KVS support; the
+  live WebView capture of a real KVS page found nothing, diagnostic 44389256785). The owner's extension
+  (Porn4fans, third party) reads a dead `contentUrl` (NB12-2): only the site's page has working links.
+- **Options:** A. title page + page HTML (OkHttp, referer = site, CloudStream User-Agent) with KVS
+  support, then WebView. B. WebView only, simulating a tap on the player (fragile per site, slow,
+  needs a visible-like WebView). C. Patch the extension (third party; not ours to ship).
+- **Decision:** A. It is how yt-dlp handles KVS (ported from `_kvs_get_real_url`, Unlicense), it needs no
+  JavaScript, and B remains as the fallback that already exists.
+- **NBUG-13 (network):** `SmartDns` with "auto" already resolves blocked hosts over DoH on every OkHttp
+  path (the new page step included). WebView has no DNS hook, and IP/SNI blocking (Bangladesh gateway
+  filtering, [OONI 2025](https://ooni.org/post/2025-bangladesh-report/)) cannot be bypassed by DNS. Options
+  for the owner, **nothing built without approval** (new network feature): (1) a user proxy (HTTP/SOCKS5)
+  for OkHttp and, through `androidx.webkit.ProxyController`, WebView; (2) a local DNS proxy for WebView
+  (DNS-only blocks); (3) rely on a system VPN / Private DNS. Retest on the owner's network: OMT.
+- **Failure modes:** page HTML needs JavaScript to build links → step 3 (WebView) as before; KVS
+  scrambling changes → no candidate, WebView as before; a page with many links → probe limit 6.
+- **Security / privacy:** only the title page the user opened is fetched, with the same client, DNS
+  and cookies as the extension; no new data leaves the device.
+- **Consequences:** refused direct links get one more attempt (a page request + probes) before the
+  WebView step; the final error text is unchanged.
+- **Status:** accepted (agent decision inside the owner-ordered bug-list scope) for NB12-1 / NB12-3;
+  NBUG-13 options await the owner. Verified only after fail-before and pass-after.
+
 ## 11. Risks
 
 | Risk | Mitigation |

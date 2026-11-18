@@ -45,8 +45,8 @@ tv-api24), real hardware.
 | NBUG-9 | Fresh install / cleared data: nothing online loads until DNS is set to Cloudflare by hand | G9 (touches G11/G12, NBUG-6) | probe 44312163084 (both phones): not reproduced (auto bypass loaded 3/3 hosts) | the owner's ISP; H1 (TLS handshake hang on a block-page IP not counted as blocking) | needs the owner's network | user-assisted (OMT-31) | Blocked: owner |
 | NBUG-10 | Yumix "Show videos from" search shows only 2 of the matching installed extensions | G4 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; G4 is closed and only G6-QP is built this cycle | stability-v2 deep (G4 reopen), unless the owner moves it into this cycle | Open (G9-8 fixed the half-height sheet on TV; the phone search case is not reproduced yet) |
 | NBUG-11 | Adult toggle off, adult titles still in Home → Most Played | GROUP-14 (touches G1) | code read: NB11-1, NB11-2 (GROUP-14) | everything | not run yet | GROUP-14, this cycle (ADR-023) | Open |
-| NBUG-12 | "Access denied" on some feed streams (e.g. PORN4FANS); all three player fallbacks fail | G10 (touches G3, G2) | none (owner report 2026-11-18) | everything | not reproduced yet | G10 audit, this cycle (error states / fallback chain) | Open |
-| NBUG-13 | Adult streams need a VPN instead of working through the app's network setup | G12 (touches G11, NBUG-6) | none (owner report 2026-11-18) | everything | likely ISP blocking; CI network is not blocked | G11/G12 audit; home-network reproduction user-assisted | Open |
+| NBUG-12 | "Access denied" on some feed streams (e.g. PORN4FANS); all three player fallbacks fail | GROUP-14 (touches G3, G2) | site probe: the extension's link is 403 for everyone, the page's KVS links 206 | everything in the app | not run yet | GROUP-14, this cycle (ADR-024); real site on the owner network: OMT-32 | Open |
+| NBUG-13 | Adult streams need a VPN instead of working through the app's network setup | GROUP-14 (touches G11/G12, NBUG-6) | code read: SmartDns auto-DoH covers OkHttp paths; WebView has no DNS hook; IP/SNI blocks need a tunnel | the owner's network | CI network is not blocked; a proxy is a new feature | owner decision on ADR-024 options, then OMT-33 | Blocked: owner |
 | NBUG-14 | IPTV channel logos missing | G7 | none (owner report 2026-11-18) | everything | G7 is closed | stability-v2 (G7 reopen), unless the owner moves it into this cycle | Open |
 | NBUG-15 | Live TV redesign + logic (filter/search/pins, category grouping across playlists, 50-channel paging, Tools modal with Playlists page, separate Play Link / Live TV recents) | G7 (touches G4) | none (owner report 2026-11-18) | everything | redesign needs a ui-ux-pro-max proposal and owner approval; (d) recents is a logic bug | stability-v2 (G7 reopen) after owner approval of the design | Open |
 | NBUG-16 | Extensions and M3U8 playlists never auto-update; re-sync flags them as needing an update again | G2 (touches G7, G11) | none (owner report 2026-11-18) | everything | G2 is closed | stability-v2 (G2 reopen), unless the owner moves it into this cycle | Open |
@@ -92,6 +92,8 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | OMT-29 | Endless Music Home on a home connection | user-assisted | Pending |
 | OMT-30 | A real HLS site with separate audio: the saved file plays with sound (G8-2) | user-assisted | Pending |
 | OMT-31 | NBUG-9 on the owner's network: fresh install, default DNS | user-assisted | Blocked: owner |
+| OMT-32 | NBUG-12: a Porn4fans title plays on your network (after the GROUP-14 fix); tell the extension author the link is dead | user-assisted | Pending |
+| OMT-33 | NBUG-13: pick a network option (ADR-024) and retest adult hosts without a VPN | user-assisted decision | Blocked: owner |
 
 ## Features (all queued, nothing built in this cycle except G6-QP)
 
@@ -124,4 +126,4 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | L4 | §13a re-audit (line by line, findings register, fail-before/pass-after, group regression) of Groups 1–5, 12 and 13 (closed by earlier-cycle tests only) | stability-v2 deep | Queued |
 | L5 | Final sweep | stability-v2 deep | Queued |
 
-Count: 16 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 31 owner tests + 19 features + 2 release-scope = 86 rows.
+Count: 16 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 33 owner tests + 19 features + 2 release-scope = 88 rows.
