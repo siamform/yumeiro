@@ -85,8 +85,12 @@ internal fun SourceFilterSheet(
     onDismiss: () -> Unit,
     pins: List<String> = emptyList(),
     onTogglePin: ((String) -> Unit)? = null,
+    texts: SourceFilterTexts = SourceFilterTexts.Extensions,
+    label: ((String) -> String)? = null,
 ) {
     val p = LocalMtPalette.current
+    val t = texts
+    fun nameOf(id: String) = label?.invoke(id) ?: id
     // G9-8 (YF-TV-1): on TV the half-height sheet left every row below the second one off-screen,
     // and a remote cannot drag a sheet up. TV opens it fully; the list scrolls inside it.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = dev.asfakul.yumeiro.Edition.isTv)
@@ -95,13 +99,13 @@ internal fun SourceFilterSheet(
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
         dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() },
     ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("online_filter_sheet")) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("${t.tag}_sheet")) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Show videos from", color = p.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("${names.size} extensions on · pick one to filter Yumix", color = p.textSecondary, fontSize = 12.sp)
+                    Text(t.title, color = p.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(t.subtitle(names.size), color = p.textSecondary, fontSize = 12.sp)
                 }
-                if (selected != null) TextButton(onClick = { onPick(null) }, modifier = Modifier.testTag("online_filter_clear")) {
+                if (selected != null) TextButton(onClick = { onPick(null) }, modifier = Modifier.testTag("${t.tag}_clear")) {
                     Text("Clear", color = p.accent, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -109,35 +113,69 @@ internal fun SourceFilterSheet(
             // you type (accent and case blind, every word must match, in any order).
             var query by rememberSaveable { mutableStateOf("") }
             // R15 Phase 5: pinned extensions first (in pin order), then the rest.
-            val shown = remember(names, query, pins) { dev.asfakul.yumeiro.online.PinnedExtensions.pinnedFirst(filterExtensionNames(names, query), pins) }
+            val shown = remember(names, query, pins) {
+                val hits = if (label == null) filterExtensionNames(names, query) else filterByTitle(names, query) { nameOf(it) }
+                dev.asfakul.yumeiro.online.PinnedExtensions.pinnedFirst(hits, pins)
+            }
             if (names.size >= SEARCH_FROM) {
                 dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                    query = query, onQuery = { query = it.take(60) }, hint = "Search extensions",
-                    tag = "online_filter_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    query = query, onQuery = { query = it.take(60) }, hint = t.searchHint,
+                    tag = "${t.tag}_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                 )
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                if (query.isBlank()) item("all") { FilterRow(null, "All extensions", "Everything mixed in one feed", selected == null) { onPick(null) } }
+                if (query.isBlank()) item("all") { FilterRow(null, t.allTitle, t.allSub, selected == null, tagPrefix = t.tag) { onPick(null) } }
                 if (shown.isEmpty()) item("none") {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("online_filter_empty")) {
-                        Text("No extension called \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("${t.tag}_empty")) {
+                        Text("${t.noneCalled} \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Text("Check the spelling, or clear the search to see all ${names.size}.", color = p.textSecondary, fontSize = 12.sp)
-                        TextButton(onClick = { query = "" }, modifier = Modifier.testTag("online_filter_search_clear")) { Text("Clear search", color = p.accent, fontWeight = FontWeight.SemiBold) }
+                        TextButton(onClick = { query = "" }, modifier = Modifier.testTag("${t.tag}_search_clear")) { Text("Clear search", color = p.accent, fontWeight = FontWeight.SemiBold) }
                     }
                 }
                 items(shown, key = { it }) { n ->
                     val sub = when (val st = status(n)) {
                         SourceStatus.Loading -> "Loading…"
-                        SourceStatus.Failed -> "Didn't load. Open it to retry"
-                        is SourceStatus.Ready -> if (st.titles == 0) "Search only" else "${st.titles} titles on its home"
+                        SourceStatus.Failed -> t.failed
+                        is SourceStatus.Ready -> t.ready(st.titles)
                     }
                     FilterRow(
-                        n, n, sub, selected == n, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed,
-                        pinned = n in pins, onTogglePin = onTogglePin?.let { t -> { t(n) } },
+                        n, nameOf(n), sub, selected == n, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed,
+                        pinned = n in pins, onTogglePin = onTogglePin?.let { tp -> { tp(n) } }, tagPrefix = t.tag,
                     ) { onPick(n) }
                 }
             }
         }
+    }
+}
+
+/**
+ * NBUG-15 (ADR-028): the words of [SourceFilterSheet], so Live TV reuses the same sheet for playlists.
+ * [tag] prefixes every test tag; [Extensions] keeps Yumix exactly as it was.
+ */
+internal data class SourceFilterTexts(
+    val tag: String,
+    val title: String,
+    val subtitle: (Int) -> String,
+    val allTitle: String,
+    val allSub: String,
+    val searchHint: String,
+    val noneCalled: String,
+    val failed: String,
+    val ready: (Int) -> String,
+) {
+    companion object {
+        val Extensions = SourceFilterTexts(
+            tag = "online_filter", title = "Show videos from", subtitle = { "$it extensions on · pick one to filter Yumix" },
+            allTitle = "All extensions", allSub = "Everything mixed in one feed", searchHint = "Search extensions",
+            noneCalled = "No extension called", failed = "Didn't load. Open it to retry",
+            ready = { if (it == 0) "Search only" else "$it titles on its home" },
+        )
+        val Playlists = SourceFilterTexts(
+            tag = "live_filter", title = "Show videos from", subtitle = { "$it playlists on · pick one to filter Live TV" },
+            allTitle = "All playlists", allSub = "Every channel, grouped by category", searchHint = "Search playlists",
+            noneCalled = "No playlist called", failed = "Didn't load. Retry from Playlists",
+            ready = { "$it channels" },
+        )
     }
 }
 
@@ -178,7 +216,7 @@ internal const val SECTION_SEARCH_CAP = 2000
 @Composable
 private fun FilterRow(
     name: String?, title: String, sub: String, sel: Boolean, loading: Boolean = false, failed: Boolean = false,
-    pinned: Boolean = false, onTogglePin: (() -> Unit)? = null, onClick: () -> Unit,
+    pinned: Boolean = false, onTogglePin: (() -> Unit)? = null, tagPrefix: String = "online_filter", onClick: () -> Unit,
 ) {
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.14f) else Color.Transparent, label = "filter_bg")
@@ -186,10 +224,10 @@ private fun FilterRow(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).background(bg, RoundedCornerShape(16.dp))
             .selectable(selected = sel, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp)
-            .testTag(if (name == null) "online_filter_all" else "online_filter_$name"),
+            .testTag(if (name == null) "${tagPrefix}_all" else "${tagPrefix}_$name"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ChannelAvatar(name ?: "All", selected = sel, size = 40.dp, mix = name == null)
+        ChannelAvatar(if (name == null) "All" else title, selected = sel, size = 40.dp, mix = name == null)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = p.textPrimary, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -202,7 +240,7 @@ private fun FilterRow(
         // R15 Phase 5: pin a favourite. A 48 dp toggle of its own, so it never selects the row.
         if (onTogglePin != null && name != null) IconToggleButton(
             checked = pinned, onCheckedChange = { onTogglePin() },
-            modifier = Modifier.size(48.dp).testTag("online_filter_pin_$name"),
+            modifier = Modifier.size(48.dp).testTag("${tagPrefix}_pin_$name"),
         ) {
             Icon(
                 if (pinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
