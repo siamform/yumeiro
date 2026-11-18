@@ -6,10 +6,12 @@
   → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
 - **G8, G9 closed.** **GROUP-14** (docs/groups/GROUP-14-OWNER-BUGS.md): NBUG-11 Verified, NBUG-12 Verified in the
   app (NB12-2 → OMT-32), NBUG-13 owner decision (ADR-024, OMT-33).
-- **Now: NBUG-16** (auto-update + "needs update" again; ADR-025). Register 06cc6c0, tests bf23a1f, fixes 28a4468,
-  e241457, a16a273, ec7163c, 7d91c48, 2b06fb2, dc44432. Running: fail-before CI 44407599670 and phones 44408003339 on
-  throwaway ab/n16-before (bf23a1f). Next: delete the branch, pass-after CI + phones + TVs at HEAD, docs close.
-- **Then:** NBUG-14 (IPTV logos) → NBUG-15 (d) separate recents → NBUG-15 (a)–(c) proposal (owner approval) → G10.
+- **NBUG-16** fixes done (06cc6c0…dc44432); fail-before proven (CI 44407599670, phones 44408003339). Pass-after
+  running: CI 44410507243 + phones 44410526165 (992dc13; same run = NB14 fail-before). TV34 44411302633 (ace04e5).
+- **NBUG-14** (logos, ADR-026): tests 992dc13, fixes b212379 (NB14-1/3), f572716 (NB14-2). Pass-after pending.
+- **NBUG-15 (d)** (separate recents, ADR-027): register a940fdd, tests ace04e5, fixes 1103da9 (NB15D-1), 5008687
+  (NB15D-2). Fail-before CI 44411680293 on throwaway ab/n15-before (ace04e5); phones fail-before still to run.
+- **Then:** docs close NBUG-16/14/15d → NBUG-15 (a)–(c) proposal (owner approval) → G10 → G11.
 
 ### Previous resume note — superseded (G9 close)
 
