@@ -1,6 +1,6 @@
 # G7-MB1: a title or chapter listed twice closes the app
 
-Status: Verified (CI unit) — fail-before CI 44241940033 (ab/mb1-before): only the 2 MangaBrowseDuplicateTest cases red with `IllegalArgumentException: Key "yumb://t/1" was already used` (thrown in layout, so the app closes), of 1175 tests; pass-after CI pending. Group G7 Manga (sources, browse, library).
+Status: Verified (CI unit + emulator, both phones) — fix b3c0ccb; CI pass-after 44245720453 green (1198 tests, 0 failures); device fail-before 44245822405 2/2 red both phones, pass-after 44245826911 OK 2 both phones. CI fail-before 44241940033 (ab/mb1-before): only the 2 MangaBrowseDuplicateTest cases red with `IllegalArgumentException: Key "yumb://t/1" was already used` (thrown in layout, so the app closes), of 1175 tests. Group G7 Manga (sources, browse, library).
 
 ## Problem (code read, 2026-11-18)
 

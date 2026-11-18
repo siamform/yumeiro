@@ -240,4 +240,5 @@ Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs 
 | G6-LY | LRCLIB find path (LrcLib.find) | unit LrcLibMockedTest (server mocked) | CI 44232721209 8/8 |
 | G6-SP1 | Music access card (PermissionCenter.audioAllowed, MusicScreen audioAccess) | Robolectric UI MusicAccessPromptTest; androidTest MusicAccessDeviceTest (script phases a/b/c) | CI 44232721209; device 44234120924 PASS both phones |
 | G6-PG2 | Endless Home seeds (YmEndless.seedsUsed / afterCall) | unit YmEndlessCapTest, YmEndlessOfflineTest; androidTest MusicEndlessNetworkDeviceTest | CI 44238631828; device skips on CI (bot wall) → OMT-29 |
-| G7-MR1 | Manga page decode plan + strips (MangaPagePlan, MangaScreens.loadPage/PageImage) | unit MangaPagePlanTest; androidTest MangaTallPageDeviceTest | device 44239024442 PASS both phones |
+| G7-MR1 | Manga page decode plan + strips (MangaPagePlan, MangaScreens.loadPage/PageImage) | unit MangaPagePlanTest; androidTest MangaTallPageDeviceTest | CI 44245720453 MangaPagePlanTest 4/4; device 44239024442 PASS both phones |
+| G7-MB1 | Manga grid / chapter list unique keys (MangaScreens.MangaGrid, MangaDetailScreen) | unit MangaBrowseDuplicateTest; androidTest MangaDuplicateDeviceTest | CI 44245720453 2/2; device 44245826911 OK 2 both phones |

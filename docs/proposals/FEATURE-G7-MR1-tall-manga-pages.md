@@ -1,6 +1,6 @@
 # G7-MR1: tall manga / webtoon pages (reader memory)
 
-Status: Verified (emulator, both phones). device fail-before 44238006080 (old code + test, temp branch deleted): b red on api33-lowram (107 MB page blank, red share 0.0), a passed on both, b passed on api36; fix fad077a; pass-after 44239024442 MangaTallPageDeviceTest OK 2 on both phones (a: red top, blue after scrolling; b: drawn); shots mt_a_low/mt_b checked. Unit MangaPagePlanTest: CI pending. Group G7 Manga (reader: image loading, memory, paging).
+Status: Verified (CI unit + emulator, both phones). device fail-before 44238006080 (old code + test, temp branch deleted): b red on api33-lowram (107 MB page blank, red share 0.0), a passed on both, b passed on api36; fix fad077a; pass-after 44239024442 MangaTallPageDeviceTest OK 2 on both phones (a: red top, blue after scrolling; b: drawn); shots mt_a_low/mt_b checked. Unit MangaPagePlanTest 4/4 in CI 44241940033 and 44245720453. Group G7 Manga (reader: image loading, memory, paging).
 
 ## Problem (code read, 2026-11-18)
 

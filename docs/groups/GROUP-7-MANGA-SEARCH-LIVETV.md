@@ -1,11 +1,12 @@
 # Group 7 audit: Manga, search, sources and Live TV (R16)
 
 Branch `r15-stability`. Inventory rows T1–T5 (and Y2 for Yumix search, audited in Group 4).
-Devices: no Group 7 device test yet. CI emulators have no manga source and region-locked channels
+Devices (eighth cycle): MangaTallPageDeviceTest and MangaDuplicateDeviceTest on both CI phones (api33-lowram, api36).
+Earlier note: CI emulators have no manga source and region-locked channels
 can't open from the CI network, so the device side is owner test OMT-11.
 
 Each result is labelled unit (JVM test), compile (builds, code read), device (named emulator) or
-hardware (real phone/TV). Nothing in this group is device- or hardware-verified yet.
+hardware (real phone/TV). Eighth cycle: MR1 and MB1 are emulator-verified; nothing is hardware-verified.
 
 ## Status
 
@@ -64,3 +65,42 @@ Cancelled runs in this group: none.
 - No manga source or region-locked channel runs on CI; device test planned for Live TV only.
 - `PlaylistMarket.friendlyError` wording is a Group 10 item.
 - Owner test: OMT-11.
+
+## Eighth cycle audit (2026-11-18)
+
+Every G7 scope area from the eighth handover, checked against the code at `r15-stability`.
+Labels: unit (JVM/Robolectric in CI), emulator (CI `device-check.yml`, api33-lowram and api36
+phones), code read. Competitors: Mihon v0.21.3, Kotatsu v9.4.1 (ideas only).
+
+| Area | What the code does | Result | Evidence |
+|---|---|---|---|
+| Sources, source selection | `SourceHub` publishes providers; the picked source is kept in prefs `manga_home/source` | OK | code read; `MangaRetryDeviceTest` (earlier cycle) |
+| Search, filter, browse paging | keyed state per source/feed/query; old answers write only to the discarded state | fixed **G7-MB1** (title twice in one page, chapter twice → duplicate key → app closed) | CI 44241940033 → 44245720453 (unit); device 44245822405 → 44245826911 (emulator, both phones) |
+| Reader image loading / memory | tall pages split into ≤2048 px strips, width ≤1600, page budget 96 MB (48 MB on low-RAM) | fixed **G7-MR1** | unit `MangaPagePlanTest` 4/4 (CI 44245720453); emulator `MangaTallPageDeviceTest` both phones (44239024442) |
+| Reader zoom, paging, progress | vertical/paged switch kept in prefs; progress per page; Retry per page | OK (MG-1 earlier) | code read |
+| Library | `MangaLibrary` read on `Dispatchers.IO` | OK | code read (MG-1) |
+| Offline chapters | not present | feature, not a bug: Part 8 gate + owner approval | — |
+| M3U parsing, huge/malformed | line-streamed parser, CRLF/BOM/pipe headers/#EXTHTTP/KODIPROP, garbage tolerated; 40 MB cap | OK (LT-1…LT-4) | unit `StreamPlaylistTest` |
+| Failover | no automatic switch; the player has "Sources for this channel" for a manual pick | feature (automatic failover) → gated | code read `StreamScreen.playLive` |
+| EPG | only the `url-tvg`/`x-tvg-url` address is read and shown (`PlaylistStore.EPG_URL_RX`); no guide | feature (guide) → gated | code read |
+| Buffering, PiP | Live TV plays through the shared online player (`IncomingMedia.open`) | covered by G3 P10 | `LocalPlayerDeviceTest c` (G3) |
+| TV focus | Live TV / manga on TV | covered by BUG-5 agent part | `TvBug5ReproDeviceTest` (G3/BUG-5) |
+| Real playlists on phone/TV | region-locked channels can't open from CI | owner | OMT-11 |
+
+Minor notes, not fixed (no user report, low risk; kept for the L5 sweep):
+- `M3uParser.ATTR` only reads double-quoted attributes (`tvg-logo='…'` is ignored). Lists in the
+  wild use double quotes; the channel still plays, only the logo/group is lost.
+- Channel lines without a scheme (relative URLs) are skipped. IPTV lists use absolute URLs;
+  resolving against the playlist URL would be a behaviour change and needs a proposal.
+- `MangaHomeScreen` and the reader read two tiny SharedPreferences on the main thread. The files
+  are a few bytes; StrictMode-level only, not a user-visible stall.
+
+Eighth cycle fixes:
+
+| ID | Problem | Fix | Evidence | Label |
+|---|---|---|---|---|
+| G7-MR1 | tall page decoded whole (width cap only): 107 MB page blank on api33-lowram | fad077a `MangaPagePlan` strips via BitmapRegionDecoder | device 44238006080 → 44239024442; CI unit 44245720453 | Verified (CI unit + emulator, both phones) |
+| G7-MB1 | title twice in one page / chapter twice → Compose "Key … was already used" → app closes | b3c0ccb unique URLs (HashSet; `distinctBy { it.url }`) | CI 44241940033 → 44245720453; device 44245822405 → 44245826911 | Verified (CI unit + emulator, both phones) |
+
+G7 status: done for agent scope. Open: OMT-11 (owner sources/playlists), OMT-21 (TV search decision), gated features
+(offline chapters, automatic failover, EPG guide).

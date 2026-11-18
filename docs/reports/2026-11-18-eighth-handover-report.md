@@ -4,6 +4,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 ## State
 
+- **Current (2026-11-18, session 2, step 10):** L2 G5, G6 and G7 done for agent scope. Head after this push:
+  see `git log`; last code commit b3c0ccb (G7-MB1). No run in progress. **Paused by the owner after G7** ("stop
+  after G7; do not start G8, G9, G10 or anything else; wait for further commands"). Next when resumed: G8 Downloads.
+- Earlier state lines below are history.
 - Head at start (session 1, 2026-11-17): 2cbb2ae (docs only after 912093b). No run after 44094439021 then.
 - Head at start (session 2, 2026-11-18): 063b552 — 47 commits after 912093b, all pushed by session 1; the master
   prompt's "last state 912093b" was out of date (repo wins). Newest run at start: 44162062169 (EXT-T1), done.
@@ -38,6 +42,11 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | G5-PC2 | Home Continue saved only by MainViewModel; same root cause | a96db17 watch saves Continue on the same steps, full track from the process queue | as G5-PC1 (Continue = B → C) | verified (emulator) |
 | NBUG-5 (D) | One Dub list mixed language runs; `episodesOf` number sort interleaved them: count inflated, Next Dub 1 → Spanish 1, Sub → Dub could land on Spanish | 546cdbe labelledEpisodes (runs kept together, version-named run first) + caption + count; 957e4b2 pattern moved for RegexWarmup | 44206044268 fail-before → 44211141941 green; device 44209853612 | verified (emulator, api33-lowram) |
 | G5-LL | Library Jump back in waits for the cold scan (no cached track list) | none needed | 44211556974: 5,000 songs, 99–180 ms / 162–238 ms | measured (emulator); no fix |
+| G6 (ST1, WL, AF, NC, PG1, MO1, SP1, LF, LY) | see checklist rows G6-* | see checklist / GROUP-6 | runs in the Runs table | verified (CI unit and/or emulator, both phones); unplug → OMT-28 |
+| G6-PG2 | Endless Home: offline call counted as a miss and used its seed (6 offline scrolls closed the feed); cap counted artist keys too (~40 not 80) | 2114836 YmEndless.seedsUsed/afterCall + 3 s offline wait | 44235994633 → 44238631828 (CI unit) | verified (CI unit); emulator end-to-end Blocked: owner OMT-29 (CI bot wall) |
+| G6-QP | Queue lost on process death | proposal only | — | Blocked: owner (GROUP-6 proposal 1) |
+| G7-MR1 | Tall page decoded as one bitmap (width cap only); 107 MB page blank on the low-RAM phone | fad077a MangaPagePlan strips | device 44238006080 → 44239024442; CI unit 44245720453 | verified (CI unit + emulator, both phones) |
+| G7-MB1 | Duplicate title in one page / duplicate chapter → Compose duplicate key → app closes | b3c0ccb unique URLs | CI 44241940033 → 44245720453; device 44245822405 → 44245826911 | verified (CI unit + emulator, both phones) |
 
 ## Test faults
 
@@ -118,6 +127,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44243818628 | same + diagnostics, api36 | skipped: Home shows its 2 shelves then blank; log `SignInConfirmNotBotException` on every `YouTube.related` (CI IP bot wall) → OMT-29 (emulator) |
 | 44238006080 | G7-MR1 device fail-before (old code + MangaTallPageDeviceTest), both phones | b red on api33-lowram (blank page); a passed both; b passed api36 (emulator) |
 | 44239024442 | MangaTallPageDeviceTest at fad077a, both phones | OK 2 both (emulator) |
+| 44241940033 | G7-MB1 fail-before CI (ab/mb1-before, includes fad077a) | red as intended: only MangaBrowseDuplicateTest 2 of 1175 ("Key … was already used"); MangaPagePlanTest 4/4 (CI unit) |
+| 44245720453 | CI at b3c0ccb (MB1 fix) | green; 1198 tests, 0 failures, 11 skipped; MangaBrowseDuplicateTest 2/2, MangaPagePlanTest 4/4, SmartDns/DnsWire/DataCacheBounds 4/4 each (CI unit) |
+| 44245822405 | G7-MB1 device fail-before (b3c0ccb^ + MangaDuplicateDeviceTest), both phones | red as intended: 2/2 both, same exception (emulator) |
+| 44245826911 | MangaDuplicateDeviceTest at 0b1cf84, both phones | OK 2 both: MD_GRID counts=[1, 1, 1], MD_CHAPTERS chapter1=1 (emulator) |
 | 44236250052 | G6-MO1 device fail-before (7d1486a^ + MusicModeNetworkDeviceTest), both phones | red as intended: after reconnect mode stayed On device (emulator) |
 | 44236207213 | MusicModeNetworkDeviceTest both phones at 5893397 | OK both: MM_OFFLINE On device, MM_BACK Online, MM_DEVICE_PICK stays (emulator, svc wifi/data) |
 | 44230037374 | G6-SP1 fail-before CI on ab/sp1-before | red as intended: MusicAccessPromptTest ("no card"); plus the pre-00c4ded LrcLibMockedTest copy (3), nothing else |
@@ -151,7 +164,7 @@ See docs/CHECKLIST-FEATURES-BUGS.md sections A and B.
 
 ## Owner-blocked
 
-BUG-3 (= NBUG-1) real phone; BUG-5 TV-4 cross-source search (G7 proposal 3); OMT-1…19; X3-TL; X13-6; OMT-12
+BUG-3 (= NBUG-1) real phone; BUG-5 TV-4 cross-source search (G7 proposal 3); OMT-1…29 (new this step: OMT-29 endless Music Home on a home connection; G6-QP approval); X3-TL; X13-6; OMT-12
 cold start; NBUG-4d real GPU (OMT-16); Vega meaning; Telegram/Terabox/Diskwala/manga-translation cloud path.
 
 ## Feature phase
@@ -160,6 +173,11 @@ Gate not passed. Part 8 not started. Proposals F-01…F-12 written (checklist se
 ADR-018 shorts player are proposed, not accepted). Owner decisions listed in each note §7/§8.
 
 ## Handover prompt for the next agent
+
+Status at this handover: paused by the owner after G7. Do not start G8 until the owner says so. When told to
+continue: G8 Downloads (scope in the master prompt §8; includes DL-11 part 2 and NBUG-1), then G9, G10, L3 G11,
+L4 re-audit G1–4, L5 final sweep (L5 notes: "1 tracks" plural in Music; GROUP-7 minor notes: single-quoted
+M3U attributes, relative channel URLs, tiny prefs reads on main).
 
 Continue the eighth-cycle master prompt on siamform/yumeiro r15-stability. Read "Resume here" in
 docs/R15-STATUS.md, this report and docs/CHECKLIST-FEATURES-BUGS.md first; the repo is the truth. No PR, merge

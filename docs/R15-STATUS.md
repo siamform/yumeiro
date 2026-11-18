@@ -1,6 +1,25 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 9)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 10)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18, plus the owner's message of 2026-11-18: finish G7
+  and its docs, then **stop and wait**. Do **not** start G8, G9, G10 or any later item until the owner says so.
+  Report: docs/reports/2026-11-18-eighth-handover-report.md. Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** paused after L2 G7. G5, G6, G7 done for agent scope.
+  - G6 verified: ST1, WL, AF, NC, PG1, MO1, SP1 (CI unit and/or emulator, both phones); LF, LY (CI unit, servers
+    mocked); PG2 (CI unit; emulator end-to-end Blocked: owner OMT-29, YouTube bot wall on CI IPs, runs 44242208629,
+    44243818628). G6-QP Blocked: owner (GROUP-6 proposal 1). Unplug → OMT-28; Last.fm real account → OMT-10.
+  - G7 verified: MR1 tall pages (CI unit 44245720453 + emulator 44239024442), MB1 duplicate keys (CI 44241940033 →
+    44245720453; emulator 44245822405 → 44245826911). Scope audit in GROUP-7 "Eighth cycle audit"; offline
+    chapters, automatic failover, EPG guide = features (Part 8 gate). Real sources → OMT-11.
+- **Runs in progress:** none. Temp branches: none (ab/mb1-before, ab/mb1-dev-before deleted).
+- **Next three actions (only when the owner resumes):** (1) G8 Downloads per master prompt §8 (queue/concurrency,
+  ranges, resume after kill, network change, disk full, duplicates, cancellation, HLS/DASH merge, scoped storage;
+  includes DL-11 part 2 and NBUG-1); (2) G9 Settings; (3) G10 Errors, then L3 G11, L4, L5.
+- **L5 notes kept:** Music "1 tracks" plural; GROUP-7 minor notes (single-quoted M3U attributes, relative channel
+  URLs, tiny prefs reads on main).
+
+### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 9)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
