@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 13:15 UTC, v1.8.2 cycle, G8 step 8: G8-8 found in regression)
+## Resume here (updated 2026-11-18 14:55 UTC, v1.8.2 cycle, G8 step 8: G8-8 pass-after running)
 
 - **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" + owner handover prompt of 2026-11-18
   (new agent) + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
@@ -23,14 +23,18 @@
   filled 1.1 GB of 5.2 GB; dd fallback 0a4bd0b); **DownloadResume b FAIL = new finding G8-8** (Retry during the
   failing worker's last moment dropped by ExistingWorkPolicy.KEEP → item "Queued" forever). Test 22fc1da
   (DownloadG8DeviceTest#d), fix 8a4cfa0.
-- **Runs in progress:** device 44302259076 on 22fc1da (G8-8 fail-before, both phones; d must be red).
-- **Next three actions:** (1) read 44302259076 (d red on both phones); (2) pass-after: CI on 8a4cfa0 + device
-  DownloadG8DeviceTest (a–d) both phones; (3) rerun the group regression on the close commit: phones (14 classes,
-  2 runs) and TV batches 1 + 2 on tv-api24 and tv-api34; then G8 close docs in one push. Doc gaps to fix in the
-  close push: GROUP-8 verification table (still "pending"), DL-11 p2 cause 2 + G8-8 rows, ledger G8 rows (none
-  yet), checklist BUG-3 / DL-11 p2 rows, queue: 5 G8 code-quality items the GROUP-8 doc says are queued (missing),
-  OMT-G8a referenced but missing in OWNER-MANUAL-TESTS.md, cycle report G8 section, GROUP-1…5/9/10/12 closed item
-  by item before §13a (need §13a re-audit, record in queue).
+- **G8-8 proof:** fail-before 44305926621 (throwaway ab/g88-before = old code + final test, branch deleted): d FAIL
+  on both phones, `status=QUEUED` (proven). Earlier attempts were test faults: 44302259076 lowram (hold enqueued
+  while first run RUNNING → d699d96), 44304053909 api36 passed on old code (MTApplication start-up resumeQueued at
+  +8 s rescued it → 78caf5e waits until the process is up 20 s). CI 44302429664 on f6e26b0 (fix 8a4cfa0): success;
+  only androidTest changed since.
+- **Runs in progress:** device 44307672019 on 78caf5e (DownloadG8DeviceTest a–d, both phones) = pass-after.
+- **Next three actions:** (1) read 44307672019; (2) group regression on the close commit: phones 2 runs (14 classes)
+  + TV batches 1 + 2 on tv-api24 and tv-api34 (≤2 device workflows at once); (3) G8 close docs in one push. Doc gaps
+  to fix in the close push: GROUP-8 verification table (still "pending"), DL-11 p2 cause 2 + G8-8 rows, ledger G8
+  rows (none yet), checklist BUG-3 / DL-11 p2 rows, queue: 5 G8 code-quality items the GROUP-8 doc says are queued
+  (missing), OMT-G8a referenced but missing in OWNER-MANUAL-TESTS.md, cycle report G8 section, GROUP-1…5/9/10/12
+  closed item by item before §13a (need §13a re-audit, record in queue).
 - **UNVERIFIED-QUEUE.md:** 70 rows.
 
 ### Previous resume note — superseded (v1.8.2 cycle, G6 closed, G8 batch)
