@@ -25,6 +25,8 @@ private val RX_HLSDOWNLOADER_4 = Regex("""METHOD=([A-Z0-9-]+)""")
 private val RX_HLS_RESOLUTION = Regex("""RESOLUTION=\d+x(\d+)""")
 private val RX_HLS_URI = Regex("""URI="([^"]+)"""")
 private val RX_HLSDOWNLOADER_5 = Regex("""IV=0[xX]([0-9a-fA-F]+)""")
+private val RX_HLS_AUDIO_GROUP = Regex("""(?<![A-Z-])AUDIO="([^"]+)"""")
+private val RX_HLS_GROUP_ID = Regex("""GROUP-ID="([^"]+)"""")
 private val RX_HLS_MAP_BYTERANGE = Regex("""BYTERANGE="(\d+)(?:@(\d+))?"""")
 
 /**
@@ -44,13 +46,48 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         val start: Long = -1, val length: Long = -1, val initStart: Long = -1, val initLength: Long = -1,
     )
 
-    suspend fun download(url: String, out: File, progress: (Long, Long) -> Unit): Long {
+    /**
+     * Saves the stream at [url] into [out]. G8-2: when the chosen variant takes its audio from a separate
+     * rendition (`AUDIO="group"` + `EXT-X-MEDIA:TYPE=AUDIO,URI=…`), the video and the audio are saved to
+     * side files `out.v` / `out.a` (each with its own resume record) and joined into [out] by [join]
+     * (MediaMuxer on the device); [onContainer] is then told the result is "mp4". Without a [join] such a
+     * stream fails instead of being saved silent.
+     */
+    suspend fun download(
+        url: String, out: File,
+        join: ((video: File, audio: File, out: File) -> Unit)? = null,
+        onContainer: (String) -> Unit = {},
+        progress: (Long, Long) -> Unit,
+    ): Long {
         var playlistUrl = url
         var text = fetchText(url)
         if ("#EXT-X-STREAM-INF" in text) {
             playlistUrl = bestVariant(text, url, maxHeight) ?: throw IOException("No playable variant in the playlist")
+            val audioUrl = audioRendition(text, url, playlistUrl)
             text = fetchText(playlistUrl)
+            if (audioUrl != null) return downloadJoined(playlistUrl, text, audioUrl, out, join, onContainer, progress)
         }
+        return saveMedia(playlistUrl, text, out, progress)
+    }
+
+    private suspend fun downloadJoined(
+        videoUrl: String, videoText: String, audioUrl: String, out: File,
+        join: ((File, File, File) -> Unit)?, onContainer: (String) -> Unit, progress: (Long, Long) -> Unit,
+    ): Long {
+        val v = File(out.parentFile, out.name + ".v"); val a = File(out.parentFile, out.name + ".a")
+        var vb = 0L; var ab = 0L; var vt = 0L; var at = 0L
+        fun report() = progress(vb + ab, if (vt > 0 && at > 0) vt + at else -1)
+        saveMedia(videoUrl, videoText, v) { d, t -> vb = d; vt = t; report() }
+        saveMedia(audioUrl, fetchText(audioUrl), a) { d, t -> ab = d; at = t; report() }
+        if (join == null) throw IOException("This stream keeps its audio in a separate track and can't be joined here")
+        coroutineContext.ensureActive()
+        join(v, a, out)
+        onContainer("mp4")
+        listOf(v, a).forEach { f -> f.delete(); File(f.parentFile, f.name + ".idx").delete() }
+        return out.length()
+    }
+
+    private suspend fun saveMedia(playlistUrl: String, text: String, out: File, progress: (Long, Long) -> Unit): Long {
         if (RX_HLSDOWNLOADER_1.containsMatchIn(text)) throw IOException("This stream is DRM-protected and can't be saved")
         if ("#EXT-X-ENDLIST" !in text) throw IOException("Live streams can't be downloaded")
         val segments = parseMedia(text, playlistUrl)
@@ -148,6 +185,24 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
             return (all.filter { it.second in 1..maxHeight }.maxWithOrNull(compareBy<Triple<Long, Int, String>> { it.second }.thenBy { it.first })
                 ?: all.filter { it.second <= 0 }.maxByOrNull { it.first }
                 ?: all.minWith(compareBy<Triple<Long, Int, String>> { it.second }.thenBy { it.first })).third
+        }
+
+        /**
+         * G8-2: media playlist of the separate audio rendition the chosen [variant] of [master] plays with
+         * (its `AUDIO="group"`; the `DEFAULT=YES` rendition of that group first), or null when the variant
+         * has no audio group or the group's audio is muxed into the variant (no `URI`).
+         */
+        fun audioRendition(master: String, base: String, variant: String): String? {
+            val lines = master.lines().map { it.trim() }
+            val group = lines.indices.firstNotNullOfOrNull { i ->
+                val l = lines[i]
+                if (!l.startsWith("#EXT-X-STREAM-INF")) return@firstNotNullOfOrNull null
+                val uri = lines.drop(i + 1).firstOrNull { it.isNotBlank() && !it.startsWith("#") } ?: return@firstNotNullOfOrNull null
+                if (resolve(base, uri) != variant) null else RX_HLS_AUDIO_GROUP.find(l)?.groupValues?.get(1) ?: ""
+            }?.takeIf { it.isNotEmpty() } ?: return null
+            val media = lines.filter { it.startsWith("#EXT-X-MEDIA:") && "TYPE=AUDIO" in it && RX_HLS_GROUP_ID.find(it)?.groupValues?.get(1) == group }
+            val pick = media.firstOrNull { "DEFAULT=YES" in it && RX_HLS_URI.containsMatchIn(it) } ?: media.firstOrNull { RX_HLS_URI.containsMatchIn(it) } ?: return null
+            return RX_HLS_URI.find(pick)?.groupValues?.get(1)?.let { resolve(base, it) }
         }
 
         /**

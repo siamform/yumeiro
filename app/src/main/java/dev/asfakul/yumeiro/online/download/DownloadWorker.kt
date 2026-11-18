@@ -200,7 +200,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 v.delete(); a.delete()
                 part.length()
             }
-            item.isHls -> HlsDownloader(client, item.headers, DownloadSettings.quality.value).download(item.url, part, progress)
+            // G8-2: a variant with a separate audio rendition is saved as two tracks and joined here.
+            item.isHls -> HlsDownloader(client, item.headers, DownloadSettings.quality.value)
+                .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, progress = progress)
             dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
