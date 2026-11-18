@@ -104,6 +104,17 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     echo "YuEmptyProfileScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
     timeout 300 adb shell am instrument -w -r -e class "$C#b_newProcessShowsHistoryRightAway" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
     if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
+  elif [ "$C" = "dev.asfakul.yumeiro.QueuePersistenceDeviceTest" ]; then
+    # G6-QP: pm clear, then phase a queues five songs, skips to song 2 and kills its own process
+    # ("Process crashed" by design); phase b, a new process, plays Home Continue and checks all five.
+    P=dev.asfakul.yumeiro.debug
+    adb shell pm clear $P > /dev/null 2>&1
+    for PERM in READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    timeout 300 adb shell am instrument -w -r -e class "$C#a_queueFiveThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    sleep 2
+    echo "YuQueuePersistScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
+    timeout 300 adb shell am instrument -w -r -e class "$C#b_reopenContinueBringsAllFive" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1; RC=$?
+    if grep -q 'FAILURES' "inst-$C-a.txt"; then cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; else cp "inst-$C-b.txt" "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.DownloadKillDeviceTest" ]; then
     # G8: phase a downloads to 25 % and kills its own process ("Process crashed" by design);
     # phase b, a new process, checks the download finished by itself, then the delete case.
