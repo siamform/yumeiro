@@ -105,7 +105,12 @@ class Bug1YumixRestoreDeviceTest {
 
             wait("Home tab") { FirstRun.hasNav(rule, "nav_tab_home") } // TV: tv_nav_tab_home on the rail
             FirstRun.tapVisible(rule, "nav_tab_home")
-            wait("Home → Jump back in shows the Yumix title", 30_000) { has("home_continue_video") && hasText(short) }
+            // TV (tv-api34, 44343884669): the Continue row is below the fold of the lazy Home list and is
+            // not composed until scrolled to; the phone shows it at once.
+            wait("Home → Jump back in shows the Yumix title", 30_000) {
+                runCatching { rule.onAllNodesWithTag("home_list", true)[0].performScrollToNode(hasTestTag("home_continue_video")) }
+                has("home_continue_video") && hasText(short)
+            }
             FirstRun.shot("bug1y_home_jump_in")
             log("BUG1Y_B home jump-in PASS")
 
