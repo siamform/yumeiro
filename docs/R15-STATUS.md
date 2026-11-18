@@ -13,9 +13,14 @@
   and api36. Nothing went to the queue (no test passed on old code).
 - **Fix commits (one per finding, test order):** ab27bc1 G8-1, 34d6560 G8-2, 43c1c11 G8-3, dcfd9c0 G8-4, 3185faf G8-5,
   b099802 G8-6, e8f450c G8-7, 1b45fc2 DL-11 part 2.
-- **Runs in progress:** see the next commit (pass-after CI + DownloadG8DeviceTest on r15-stability).
-- **Next three actions:** (1) read pass-after CI + device; a red item is isolated and only its commit corrected;
-  (2) DownloadThroughputDeviceTest a + d, repeat=3, both phones (real-host budget); (3) group regression campaign
+- **Pass-after so far:** CI 44278620756 (1b45fc2): 1215 tests, 0 failures, all 8 new green. Device 44278624792:
+  G8D_RESULT a/b/c PASS on both phones. Throughput device 44280021547 (a + d ×3, both phones): all PASS, but the
+  DL-11 p2 real-host budget is MISSED (rxOverSize 1.075/1.127/1.081 api33-lowram, 1.051/1.047/1.030 api36; median
+  1.063 > 1.06, one > 1.10). Second cause found (baseline over 1 ms from the socket buffer); DL-11 p2 isolated
+  (§13a step 7): test f2a7c73, fix 877413b (BASELINE_MIN_NS 50 ms).
+- **Runs in progress:** CI 44283506177 on f2a7c73 (fail-before of Dl11PaceTest#aFastLinkAtItsOwnSpeedDoesNotTrip).
+- **Next three actions:** (1) read 44283506177 (the new test must be red, all else green); (2) pass-after CI on 877413b
+  + DownloadThroughputDeviceTest a + d ×3 both phones (budget each ≤ 1.10, median ≤ 1.06); (3) group regression campaign
   (≤10 classes per run) on the close commit, then the close docs in one push.
 - **UNVERIFIED-QUEUE.md:** 70 rows.
 
