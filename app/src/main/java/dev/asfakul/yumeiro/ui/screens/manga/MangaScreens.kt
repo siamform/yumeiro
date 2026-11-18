@@ -89,6 +89,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.wrapContentSize
+import kotlinx.coroutines.ensureActive
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -467,22 +471,40 @@ fun MangaCoverImage(providerId: String, cover: String?, modifier: Modifier = Mod
     dev.asfakul.yumeiro.ui.screens.online.PosterImage(cover, headers, modifier, fallbackIcon = Icons.AutoMirrored.Filled.MenuBookMirrored)
 }
 
-private val pageCache = object : android.util.LruCache<String, Bitmap>(64 * 1024 * 1024) {
-    override fun sizeOf(key: String, value: Bitmap) = value.byteCount
+/** A decoded page: one bitmap, or strips top to bottom for a tall page (G7-MR1, [MangaPagePlan]). */
+internal class PageBitmap(val strips: List<Bitmap>, val width: Int, val height: Int) {
+    val bytes: Int get() = strips.sumOf { it.byteCount }
 }
 
-private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef): Bitmap = withContext(Dispatchers.IO) {
+private val pageCache = object : android.util.LruCache<String, PageBitmap>(64 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: PageBitmap) = value.bytes
+}
+
+private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef, lowRam: Boolean): PageBitmap = withContext(Dispatchers.IO) {
     val key = provider.id + "|" + (page.imageUrl ?: page.url) + "|" + page.index
     pageCache.get(key)?.let { return@withContext it }
     val img = provider.image(page)
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(img.bytes, 0, img.bytes.size, bounds)
-    var sample = 1
-    while (bounds.outWidth / sample > 1600) sample *= 2
-    val bmp = BitmapFactory.decodeByteArray(img.bytes, 0, img.bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-        ?: error("This page isn't an image")
-    pageCache.put(key, bmp)
-    bmp
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) error("This page isn't an image")
+    val plan = dev.asfakul.yumeiro.sources.manga.MangaPagePlan.plan(bounds.outWidth, bounds.outHeight,
+        if (lowRam) dev.asfakul.yumeiro.sources.manga.MangaPagePlan.PAGE_BUDGET_LOW_RAM else dev.asfakul.yumeiro.sources.manga.MangaPagePlan.PAGE_BUDGET)
+    val opts = BitmapFactory.Options().apply { inSampleSize = plan.sample }
+    val strips: List<Bitmap> = if (plan.bands.size == 1) {
+        listOf(BitmapFactory.decodeByteArray(img.bytes, 0, img.bytes.size, opts) ?: error("This page isn't an image"))
+    } else {
+        @Suppress("DEPRECATION")
+        val dec = runCatching { android.graphics.BitmapRegionDecoder.newInstance(img.bytes, 0, img.bytes.size, false) }.getOrNull()
+        // A format that can't be split (GIF): one bitmap as before, now within the page budget (under the draw limit).
+        if (dec == null) listOf(BitmapFactory.decodeByteArray(img.bytes, 0, img.bytes.size, opts) ?: error("This page isn't an image"))
+        else try {
+            plan.bands.map { b ->
+                ensureActive()
+                dec.decodeRegion(android.graphics.Rect(0, b.top, bounds.outWidth, b.bottom), opts) ?: error("This page isn't an image")
+            }
+        } finally { dec.recycle() }
+    }
+    PageBitmap(strips, strips.maxOf { it.width }, strips.sumOf { it.height }).also { pageCache.put(key, it) }
 }
 
 /** Reader: vertical (webtoon) or paged (manga), pinch to zoom, progress saved per chapter. */
@@ -579,7 +601,13 @@ private fun ZoomBox(onTap: () -> Unit, content: @Composable () -> Unit) {
 @Composable
 private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Boolean) {
     var attempt by remember { mutableStateOf(0) }
-    val bmp by produceState<Result<Bitmap>?>(null, page, attempt) { value = runCatching { loadPage(provider, page) } }
+    val context = LocalContext.current
+    val lowRam = remember { (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice }
+    val bmp by produceState<Result<PageBitmap>?>(null, page, attempt) {
+        value = try { Result.success(loadPage(provider, page, lowRam)) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Throwable) { Result.failure(e) }
+    }
     val r = bmp
     when {
         r == null -> Box(Modifier.fillMaxWidth().aspectRatio(0.7f), contentAlignment = Alignment.Center) {
@@ -589,9 +617,26 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
             Text("Page ${page.index + 1} failed · tap to retry", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
         }
         else -> {
-            val b = r.getOrThrow()
-            Image(b.asImageBitmap(), "Page ${page.index + 1}", contentScale = if (fillWidth) ContentScale.FillWidth else ContentScale.Fit,
-                modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+            val p = r.getOrThrow()
+            if (p.strips.size == 1) {
+                Image(p.strips[0].asImageBitmap(), "Page ${page.index + 1}", contentScale = if (fillWidth) ContentScale.FillWidth else ContentScale.Fit,
+                    modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+            } else {
+                // A tall page: each strip is drawn on its own, so no single bitmap passes the draw or texture limit.
+                val images = remember(p) { p.strips.map { it.asImageBitmap() } }
+                val ratio = p.width.toFloat() / p.height
+                val box = if (fillWidth) Modifier.fillMaxWidth().aspectRatio(ratio) else Modifier.fillMaxSize().wrapContentSize().aspectRatio(ratio)
+                androidx.compose.foundation.Canvas(box.semantics { contentDescription = "Page ${page.index + 1}" }) {
+                    val k = size.width / p.width
+                    var top = 0f
+                    for (img in images) {
+                        val h = img.height * k
+                        drawImage(img, dstOffset = androidx.compose.ui.unit.IntOffset(0, top.toInt()),
+                            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), (top + h).toInt() - top.toInt()))
+                        top += h
+                    }
+                }
+            }
         }
     }
 }
