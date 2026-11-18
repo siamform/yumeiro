@@ -642,6 +642,27 @@ flowchart LR
   green. Note: docs/proposals/FEATURE-F-12-vertical-video-player.md.
 - **Status:** proposed (2026-11-18); gated by 4.4 and the owner.
 
+### ADR-019: Music queue kept across a process death (G6-QP)
+
+- **Scope:** `player/LastPlayed` (new queue file), `player/MusicPlayerManager` (save on queue change),
+  Home Continue (`HomeScreen`, `MTPlayerApp`), `backup/Backup` + `ResetCenter` (exclude / reset).
+- **Context:** Home Continue rebuilt the queue from Recently played after a process death, so album and
+  playlist order and the songs not yet played were lost. The single song and its position were already saved
+  (Round 13, G5-PC2).
+- **Options:** 1. Extend `LastPlayed` with a `SafeJsonFile` queue file; position stays in the 5 s `audio` save.
+  2. Room table. 3. Restore into the player at service start (InnerTune v0.5.10).
+- **Decision (2026-11-18, owner: Option 1):** 1. A JSON file written on every queue change on one background
+  thread, latest request wins. Read once on IO and used by Continue only when it holds the Continue song.
+  A missing, broken or old file falls back to the previous behaviour. No save in incognito; at most 1000 songs.
+  Not in backups.
+- **Consequences:** no startup cost and no schema. No auto-restore into the notification after a reboot.
+  Shuffle and repeat are not restored (as before).
+- **Alternatives rejected:** 2 (schema and migrations for one list), 3 (changes startup and ADR-002 player
+  lifecycle; not requested).
+- **References:** docs/proposals/FEATURE-G6-QP-queue-persistence.md; InnerTune v0.5.10 `MusicService.kt`;
+  Metrolist v14.0.0 `PersistPlayerState.kt`, `MusicService.kt`.
+- **Status:** accepted; verified only when the device pass-after and regression runs are green.
+
 ## 11. Risks
 
 | Risk | Mitigation |
