@@ -11,6 +11,8 @@
   the open rail before tapping a clip). tv34 b2 44358110397: 7/10 PASS, 3 player classes = rail fault → rerun
   44362609758. tv24 b1 44359805223: 9/10 PASS. PinnedExtensions fails on both TVs = **G9-8 (YF-TV-1)**, real bug:
   the filter sheet opens half-height on TV → registered in GROUP-9, fix = sheet fully open on TV.
+- **Owner bugs NBUG-11…16 (2026-11-18 evening):** registered in CHECKLIST §A + UNVERIFIED-QUEUE. NBUG-11 (Adult
+  toggle vs Most Played) taken into G9 before close; NBUG-12 → G10; NBUG-13 → G11/G12; NBUG-14/15/16 → G7/G2 reopen.
 - **Next three actions:** (1) G9-8 fix commit + CI + PinnedExtensions on both TVs and phones; (2) tv24 b2, tv34 G8
   T2b; (3) G8 then G9 close docs.
 

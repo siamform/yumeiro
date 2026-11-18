@@ -36,6 +36,12 @@ tv-api24), real hardware.
 | NBUG-8 | One extension's content loads forever or very slowly | G10 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G10 audit, this cycle (stuck loading states) | Open |
 | NBUG-9 | Fresh install / cleared data: nothing online loads until DNS is set to Cloudflare by hand | G9 (touches G11/G12, NBUG-6) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G9 audit, this cycle (Network default) | Open |
 | NBUG-10 | Yumix "Show videos from" search shows only 2 of the matching installed extensions | G4 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; G4 is closed and only G6-QP is built this cycle | stability-v2 deep (G4 reopen), unless the owner moves it into this cycle | Open |
+| NBUG-11 | Adult toggle off, adult titles still in Home → Most Played | G9 (touches G1) | none (owner report 2026-11-18) | everything | reported during the G9 regression | G9 audit, this cycle (setting effect) | Open |
+| NBUG-12 | "Access denied" on some feed streams (e.g. PORN4FANS); all three player fallbacks fail | G10 (touches G3, G2) | none (owner report 2026-11-18) | everything | not reproduced yet | G10 audit, this cycle (error states / fallback chain) | Open |
+| NBUG-13 | Adult streams need a VPN instead of working through the app's network setup | G12 (touches G11, NBUG-6) | none (owner report 2026-11-18) | everything | likely ISP blocking; CI network is not blocked | G11/G12 audit; home-network reproduction user-assisted | Open |
+| NBUG-14 | IPTV channel logos missing | G7 | none (owner report 2026-11-18) | everything | G7 is closed | stability-v2 (G7 reopen), unless the owner moves it into this cycle | Open |
+| NBUG-15 | Live TV redesign + logic (filter/search/pins, category grouping across playlists, 50-channel paging, Tools modal with Playlists page, separate Play Link / Live TV recents) | G7 (touches G4) | none (owner report 2026-11-18) | everything | redesign needs a ui-ux-pro-max proposal and owner approval; (d) recents is a logic bug | stability-v2 (G7 reopen) after owner approval of the design | Open |
+| NBUG-16 | Extensions and M3U8 playlists never auto-update; re-sync flags them as needing an update again | G2 (touches G7, G11) | none (owner report 2026-11-18) | everything | G2 is closed | stability-v2 (G2 reopen), unless the owner moves it into this cycle | Open |
 | ST-17 | Compose spin stress, cause-naming logging | G12 | 44145301927 (20/20, 0 spins) | stays open by order | standing order | stability-v2 deep | Queued |
 | ST-7 | Jank on software-rendered emulators | G12 | 44002112195, 44138627579 | real phone | emulators render in software | user-assisted (OMT-12) | Queued |
 | X2-1 | Baseline profile gain | G12 | emulator startup 44142300486 (no gain claimed) | real hardware gain | software rendering on CI | user-assisted (OMT-12) | Queued |
@@ -108,4 +114,4 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | L4 | Line-by-line re-audit of Groups 1–4 (verified by earlier-cycle tests only) | stability-v2 deep | Queued |
 | L5 | Final sweep | stability-v2 deep | Queued |
 
-Count: 8 agent findings/gaps + 12 earlier items (incl. NBUG-7, NBUG-8, NBUG-9, NBUG-10 added 2026-11-18 from the owner) + 29 owner tests + 19 features + 2 release-scope = 70 rows.
+Count: 8 agent findings/gaps + 18 earlier items (incl. NBUG-7…NBUG-16 added 2026-11-18 from the owner) + 29 owner tests + 19 features + 2 release-scope = 76 rows.
