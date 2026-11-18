@@ -335,8 +335,8 @@ Restore: Backup.stage(chosen; default without EXTENSION_FILES) → Restart.now �
 | G9-1 | A default backup (Extension files unticked) loses every Mangayomi JS repository and installed JS source; after a restore the JS list is empty and nothing downloads it again | `Backup.isCode` (96–100) counts every `js/` path as code, so `js/repos.json` and `js/sources.json` go to EXTENSION_FILES (`sectionOf` 86) although `js` is in `dataDirs` (69, meant for SOURCES); JsSources has no repair for a missing `.js` | lists → SOURCES, only `js/*.js` is code; JsSources downloads missing code of listed sources (same check as install) | unit `G9SettingsBatchTest#g9_1_jsListsTravelWithSources`; device `RestoreAfterClearDeviceTest` c (JS repo and source back, code present) |
 | G9-2 | After a restore, extensions that could not be downloaded at the first start (no network yet, DNS failing, one timeout) stay listed but missing until the app is closed and opened again; no message | `ExtensionManager.start` (128–139) calls `repairMissing` once per process; `repairMissing` (158–162) returns at once when offline; `TachiyomiExtensions.start` (145–152) / `reinstallAfterRestore` (161) the same | one restore-repair loop per ecosystem: run at start, again when `Connectivity.online` turns true, and with back-off (30 s, 2 min, then 10 min; at most 12 tries per process) while anything is missing | device `RestoreAfterClearDeviceTest` c (repo answers 503 to the first request → extension back without a restart) |
 | G9-5 | An extension the user accepted after a safety warning is refused on every start after a restore, silently | `repairMissing` (169) uses `ExtensionReview.Mode.AUTO`; `autoDecision` refuses DANGER/unreadable | repair asks the user (IF_RISKY) when the review host is on screen; otherwise it waits for the next try; No = not asked again in this process. Not silent either way (a restored hash comes from a user-picked file, so it is no proof) | device `RestoreAfterClearDeviceTest` c (flagged fixture: asked, Yes → back) |
-| G9-7 | The same CloudStream extension installed from two repositories shares one file; uninstalling one copy (or a failed load/update of one) deletes the other's file | `installBytes` (385–386) names the file `internalName-sha12.cs3`; `uninstall` (425), failed load (401–402) and update clean-up (405) delete it without checking other entries | delete a plugin file only when no other installed entry uses it | device `ExtensionSharedFileDeviceTest` (two repos, uninstall one, other still loaded) |
-| NBUG-9 | see below | probe pending | — | `Nbug9DnsProbeDeviceTest` |
+| G9-7 | The same CloudStream extension installed from two repositories shares one file; uninstalling one copy (or a failed load/update of one) deletes the other's file | `installBytes` (385–386) names the file `internalName-sha12.cs3`; `uninstall` (425), failed load (401–402) and update clean-up (405) delete it without checking other entries | each installed entry gets its own file (`<name>-<sha12>-<keyhash8>.cs3`; providers are unregistered by file path) and a plugin file is deleted only when no other installed entry uses it | device `ExtensionSharedFileDeviceTest` (two repos, uninstall one, other still loaded) |
+| NBUG-9 | Not reproduced (emulator): with the system resolver failing, the fresh-install setting loads everything | — (see NBUG-9 probe below) | none (no change without a reproduction) | probe `Nbug9DnsProbeDeviceTest` 44312163084; owner test OMT-31 |
 
 IDs: G9-3 (Aniyomi/Mihon restore download also once per process) is part of G9-2; G9-4 is by design
 (below); G9-6 (Privacy → Clear cache kept pages in memory) was a candidate, disproved by reading the code.
@@ -350,6 +350,25 @@ language, then a number. `Restart.now` exits right after `BackupStore.save` → 
 clears saved pages in memory too (`OnlineRepository.clearCaches` → `DataCache.invalidateAll` → `clearMemory`);
 it leaves `externalCacheDir` (share temp files only), which Reset → Clear cache empties: kept.
 
+### NBUG-9 probe (44312163084, head 34d99b8, api33-lowram and api36)
+
+The emulator's resolver was broken the way a failing ISP resolver is (Private DNS strict to
+`nbug9-broken-resolver.invalid`: every system lookup fails with UnknownHostException after ~4.2 s, network
+not validated, app still "online"). Real HTTPS requests (music.youtube.com, gstatic generate_204,
+api.github.com) through the app's client:
+
+| Phase | fresh install (System DNS + auto bypass) | Cloudflare, fallback | Cloudflare, always |
+|---|---|---|---|
+| baseline | 3/3, 1.1–1.7 s, SYSTEM | 3/3, SYSTEM | 3/3, ALTERNATIVE |
+| broken system DNS | **3/3**, 9.5–11.1 s total (~4.5 s per new host, ALTERNATIVE) | 3/3, 14.3–14.7 s | 3/3, 1.5 s |
+
+Result: not reproduced. The default setting recovers through the encrypted-DNS bypass; the only cost is the
+system resolver's own time-out on the first request to each host. Shapes the emulator cannot produce: a
+resolver that answers a public block-page address whose TLS handshake hangs (`AutoBypassInterceptor.
+looksLikeBlocking` does not count read / handshake time-outs, so no bypass; code-read hypothesis H1, not
+tested), and a resolver that hangs much longer than 4 s. No code change without a reproduction; owner test
+OMT-31 records the owner's network (UNVERIFIED-QUEUE NBUG-9).
+
 ### ADRs
 
 ADR-021 (this audit).
@@ -358,7 +377,8 @@ ADR-021 (this audit).
 
 | Item | Fail-before | Pass-after | Label |
 |---|---|---|---|
-| G9-1 (unit) | pending | pending | unit |
-| G9-1, G9-2, G9-5, G9-7 (device, pm clear recipe) | pending | pending | emulator |
-| NBUG-9 | probe pending | — | emulator |
+| G9-1 (unit) | CI 44312331848 (ab/g9-before = b51424b): 1194 tests, 1 failed = exactly `G9SettingsBatchTest#g9_1_jsListsTravelWithSources` | pending | unit |
+| G9-1, G9-2, G9-5 (device, pm clear recipe) | 44315631356, both phones: `RAC c G9-2 FAIL · G9-5 FAIL · G9-1 FAIL` (after 240 s both extensions still missing, JS repo/source/code gone) | pending | emulator |
+| G9-7 (device) | 44318262848 (old code + test fix 989b6f1), both phones: one shared file `InternetArchiveProvider-dd70f0e9d706.cs3`, uninstalling b deleted it, a missing, 0 providers. (44315631356: test fault, method returned Int → "should be void") | pending | emulator |
+| NBUG-9 | probe 44312163084 (both phones): not reproduced | — | emulator; owner network → OMT-31 |
 | Group regression | — | pending | emulator, TV emulator |

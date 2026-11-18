@@ -46,6 +46,8 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-27 | NBUG-6: per-feature DNS has measured side effects — build anyway, narrow it, or drop | Blocked: owner (decision) |
 | OMT-28 | G6-AF: unplug wired headphones / turn off Bluetooth headphones while music plays | Blocked: owner (hardware) |
 | OMT-29 | G6-PG2: endless Music Home keeps adding "Similar to" shelves, also after the connection drops | Pending |
+| OMT-30 | G8a: a download from a real HLS site with separate audio plays with sound in your gallery app | Pending |
+| OMT-31 | NBUG-9: fresh install on your own network loads online content without changing DNS | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -57,7 +59,7 @@ Send results to the owner (developer); recruited users send them to the person w
 in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
 
 The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
-**owner (developer)** section after it (OMT-1…OMT-29, full detail; some need consoles, logs or decisions).
+**owner (developer)** section after it (OMT-1…OMT-31, full detail; some need consoles, logs or decisions).
 
 ## Yumeiro users checklist
 
@@ -535,6 +537,36 @@ the app version and your device. Don't send passwords or account details.
 - **Pass:** new "Similar to …" shelves keep appearing after the connection comes back.
   **Fail:** no new shelves, or Home ends with a blank space.
 - **Automated test you can run:** `MusicEndlessNetworkDeviceTest` (log tag `YuEndless`, `EN_RESULT PASS`).
+- **Status:** Pending
+
+### OMT-30 — A real HLS download with separate audio (G8a)
+
+- **Why you:** G8-2 (separate audio track merged into the saved file) is verified on the emulators with a local
+  HLS fixture (DownloadG8DeviceTest a, device 44278624792 and regression 44309363764). Real sites (for example
+  a multi-language anime source) are not reachable from CI the same way, and the gallery app is yours.
+- **Steps:** on your phone, open a video from a source that offers more than one audio language, download it,
+  wait until it says Done, then open it in your phone's Gallery / Photos app.
+- **Pass:** it plays with picture and sound in the gallery app. **Fail:** no sound, no picture, or it does not
+  open (send the source name, the title and a screen recording).
+- **Record:** source, title, audio language picked, app version, phone model and Android version.
+- **Status:** Pending
+
+### OMT-31 — Fresh install on your own network (NBUG-9)
+
+- **Why you:** NBUG-9 was not reproduced on the emulators. Probe 44312163084 broke the emulator's resolver
+  (every system lookup fails): with the fresh-install setting (System DNS + auto bypass) music.youtube.com,
+  gstatic and api.github.com all loaded through the encrypted-DNS bypass, ~4.5 s extra for the first request
+  to each site. Your provider's resolver may answer differently (a block page, or no answer for a long time),
+  which only your network shows.
+- **Steps:** 1. On your home network (Wi-Fi or mobile data, the one where it happened), Settings → Apps →
+  Yumeiro → Storage → Clear all data. 2. Open Yumeiro, finish the welcome screens, leave Settings → Network →
+  DNS as it is (it reads "System DNS · auto bypass for blocked sites"). 3. Open Music → Online, then Yumix Home. Wait up to 30 s.
+  4. If nothing loads: Settings → Network → DNS → Cloudflare, try again and note the difference.
+- **Pass:** music and Yumix load within 30 s without touching DNS. **Fail:** nothing loads until Cloudflare is
+  picked.
+- **Record:** provider name, Wi-Fi or mobile data, whether Android's Private DNS is on (Settings → Network →
+  Private DNS), how long you waited, and a screen recording of steps 3 and 4.
+- **Failed attempts (agent):** none failed; the emulator only produces the "resolver says no" shape (above).
 - **Status:** Pending
 
 ## Not owner tests (handled by the agent)
