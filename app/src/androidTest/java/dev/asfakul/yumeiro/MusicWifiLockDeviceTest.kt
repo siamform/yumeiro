@@ -39,7 +39,26 @@ class MusicWifiLockDeviceTest {
     private fun shell(cmd: String): String =
         inst.uiAutomation.executeShellCommand(cmd).let { pfd -> android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).bufferedReader().use { it.readText() } }
 
-    private fun wifiLockHeld(): Boolean = shell("dumpsys wifi").lineSequence().any { TAG in it }
+    /**
+     * Held locks only: the `WifiLock{…}` lines right under a "Locks held:" header. The tag can also
+     * appear further down in lock history/stats sections (api33 does this after a release), which
+     * must not count (44218535243 api33-lowram: FILE2 matched the tag while "Locks held:" listed nothing;
+     * `tagElsewhere` logs where it was).
+     */
+    private fun heldLockLines(dump: String): List<String> {
+        val held = mutableListOf<String>(); var inHeld = false
+        for (raw in dump.lineSequence()) {
+            val l = raw.trim()
+            when {
+                l == "Locks held:" -> inHeld = true
+                inHeld && l.startsWith("WifiLock{") -> held += l
+                else -> inHeld = false
+            }
+        }
+        return held
+    }
+
+    private fun wifiLockHeld(dump: String): Boolean = heldLockLines(dump).any { TAG in it }
 
     private fun playAndCheck(uri: String, what: String): Boolean {
         inst.runOnMainSync {
@@ -53,9 +72,11 @@ class MusicWifiLockDeviceTest {
         while (!playing() && SystemClock.elapsedRealtime() - t0 < 20_000) Thread.sleep(200)
         assertTrue("$what did not start", playing())
         Thread.sleep(1_500)
-        val held = wifiLockHeld()
-        val lines = shell("dumpsys wifi").lineSequence().filter { "WifiLock" in it || "Locks held" in it || TAG in it }.take(8).joinToString(" | ") { it.trim().take(160) }
-        log("WL_$what playing=${playing()} wifiLock=$held dump=[$lines]")
+        val dump = shell("dumpsys wifi")
+        val held = wifiLockHeld(dump)
+        val lines = dump.lineSequence().filter { "WifiLock" in it || "Locks held" in it || TAG in it }.take(8).joinToString(" | ") { it.trim().take(160) }
+        val elsewhere = dump.lineSequence().filter { TAG in it }.map { it.trim().take(160) }.filter { it !in heldLockLines(dump) }.take(3).joinToString(" | ")
+        log("WL_$what playing=${playing()} wifiLock=$held dump=[$lines] tagElsewhere=[$elsewhere]")
         inst.runOnMainSync { PlaybackService.sharedPlayer?.pause() }
         Thread.sleep(800)
         return held
