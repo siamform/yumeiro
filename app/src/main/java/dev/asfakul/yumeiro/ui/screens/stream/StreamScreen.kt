@@ -284,7 +284,7 @@ fun StreamScreen(
         if (format == StreamFormat.AUTO && looksLikeM3uPlaylist(u)) { loadPlaylist(u, Uri.parse(u).lastPathSegment); return }
         val request = currentRequest()
         // A format picked by hand (or RTSP) is played exactly as before, without inspection.
-        if (format != StreamFormat.AUTO || (!u.startsWith("http", ignoreCase = true) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u))) { IncomingMedia.open(context, request); return }
+        if (format != StreamFormat.AUTO || (!u.startsWith("http", ignoreCase = true) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u))) { IncomingMedia.open(context, request, recent = IncomingMedia.Recent.LINK); return }
         // Otherwise look at what the link really returns (headers, MIME type, redirects, content).
         loading = true
         scope.launch {
@@ -292,7 +292,7 @@ fun StreamScreen(
                 .getOrElse { Resolution.Failed("Couldn't open the link", dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Check the link and try again.")) }
             loading = false
             when (r) {
-                is Resolution.Playable -> IncomingMedia.open(context, r.request)
+                is Resolution.Playable -> IncomingMedia.open(context, r.request, recent = IncomingMedia.Recent.LINK)
                 is Resolution.Playlist -> {
                     StreamRepository.setPlaylist(r.name ?: Uri.parse(u).lastPathSegment ?: Uri.parse(u).host, r.channels)
                     onOpenPlaylist(OPENED_PLAYLIST_SLUG)
@@ -363,7 +363,7 @@ fun StreamScreen(
         // Same as the playlist page: the player gets the whole list, so channel up / down and
         // "Sources for this channel" keep working.
         StreamRepository.setPlaylist(p.name, list, p.id)
-        runCatching { IncomingMedia.open(context, ch) }
+        runCatching { IncomingMedia.open(context, ch, recent = IncomingMedia.Recent.LIVE) }
             .onFailure { toastError("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") }
     }
     val liveNearEnd by remember { androidx.compose.runtime.derivedStateOf { val i = listState.layoutInfo; (i.visibleItemsInfo.lastOrNull()?.index ?: 0) >= i.totalItemsCount - 8 } }
@@ -388,7 +388,7 @@ fun StreamScreen(
             pageUrl = pf.pageUrl,
             reason = pf.reason,
             base = pf.base,
-            onPlay = { req -> pageFinder = null; IncomingMedia.open(context, req) },
+            onPlay = { req -> pageFinder = null; IncomingMedia.open(context, req, recent = IncomingMedia.Recent.LINK) },
             onDismiss = { pageFinder = null },
             auto = pf.auto,
         )
@@ -561,7 +561,7 @@ fun StreamScreen(
             items(history, key = { "h_${it.url}" }) { h ->
                 StreamRow(
                     h, subtitle = h.url,
-                    onClick = { IncomingMedia.open(context, h) },
+                    onClick = { IncomingMedia.open(context, h, recent = IncomingMedia.Recent.LINK) },
                     onDelete = { StreamRepository.remove(context, h) },
                     onEdit = {
                         url = h.url; format = h.format; customUa = h.userAgent.orEmpty(); referer = h.referer.orEmpty()

@@ -70,7 +70,7 @@ class StreamWatchDownloadDeviceTest {
         PlaybackDiagnostics.reset("")
         val media = server.url("/media/site-clip.mp4").toString()
         val page = server.url("/watch/page.html").toString()
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = media, title = "Site clip", referer = page, pageUrl = page), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = media, title = "Site clip", referer = page, pageUrl = page)) }
         runCatching { rule.waitUntil(25_000) { PlaybackDiagnostics.state.value.firstFrame } }
         runCatching { rule.waitUntil(10_000) { has("stream_watch_panel") } }
         runCatching { rule.onNodeWithTag("stream_watch_panel", true).performScrollToNode(hasTestTag("stream_watch_download")) }

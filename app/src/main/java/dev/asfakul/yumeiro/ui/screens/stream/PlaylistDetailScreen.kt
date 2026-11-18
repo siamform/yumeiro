@@ -362,7 +362,7 @@ fun PlaylistDetailScreen(
                                 val (index, ch) = v
                                 StreamRow(
                                     ch, subtitle = ch.group ?: ch.resolvedFormat().label,
-                                    onClick = { runCatching { IncomingMedia.open(context, ch) }.onFailure { fail("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") } },
+                                    onClick = { runCatching { IncomingMedia.open(context, ch, recent = IncomingMedia.Recent.LIVE) }.onFailure { fail("Can't play this stream. ${dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try another channel.")}") } },
                                     onAdd = if (editable) null else ({ addTarget = ch }),
                                     onEditIcon = if (editable) ({ editChannel = index to ch }) else null,
                                     onDelete = if (editable) ({

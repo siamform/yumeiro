@@ -132,12 +132,12 @@ object StreamWatch {
         _mode.value = if (step == null) _mode.value - base.url else _mode.value + (base.url to step)
         AccessLadder.reset(base.url)
         val id = base.toVideoItem().id + (step?.let { "~" + it.name } ?: "")
-        IncomingMedia.open(context, variant, remember = step == null, id = id, folder = base.group)
+        IncomingMedia.open(context, variant, recent = if (step == null) IncomingMedia.Recent.KEEP else IncomingMedia.Recent.NONE, id = id, folder = base.group)
     }
 
     fun play(context: android.content.Context, r: StreamRequest) {
         _mode.value = _mode.value - r.url
-        IncomingMedia.open(context, r, folder = r.group)
+        IncomingMedia.open(context, r, recent = IncomingMedia.Recent.LIVE, folder = r.group)
     }
 
     // ---- Auto-zap for live channels: a channel that can't be opened hands over to the next. ----

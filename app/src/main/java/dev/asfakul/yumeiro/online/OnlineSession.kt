@@ -319,7 +319,7 @@ object OnlineSession {
         val request = OnlinePlayback.request(s.title, link, s.subtitles, s.detail.posterUrl)
         val site = runCatching { provider?.mainUrl }.getOrNull()
         AccessLadder.reset(request.url); AccessLadder.hint(request.url, site)
-        IncomingMedia.open(context, request, remember = false, id = id, positionMs = resume, folder = s.detail.api)
+        IncomingMedia.open(context, request, id = id, positionMs = resume, folder = s.detail.api)
     }
 
     /** Switches to another link of the same episode, keeping the position. */
@@ -413,7 +413,7 @@ object OnlineSession {
                 }
                 val id = videoIdFor(cur.api, cur.data ?: "") + ":web"
                 _state.value = cur.copy(phase = Phase.PLAYING, videoId = id, message = null)
-                IncomingMedia.open(app, req, remember = false, id = id, positionMs = positionMs, folder = cur.detail.api)
+                IncomingMedia.open(app, req, id = id, positionMs = positionMs, folder = cur.detail.api)
             }
             return true
         }

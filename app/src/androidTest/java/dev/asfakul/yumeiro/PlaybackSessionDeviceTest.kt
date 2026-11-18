@@ -48,7 +48,7 @@ class PlaybackSessionDeviceTest {
 
     private fun play(url: String, title: String) {
         PlaybackDiagnostics.reset("")
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = title), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = title)) }
         rule.waitUntil(75_000) { PlaybackDiagnostics.state.value.firstFrame || PlaybackDiagnostics.state.value.error != null }
         assertTrue("first frame for $title: ${PlaybackDiagnostics.state.value}", PlaybackDiagnostics.state.value.firstFrame)
     }
@@ -72,7 +72,7 @@ class PlaybackSessionDeviceTest {
         note("closed")
         assertEquals("kept during the grace", 1, PlaybackSession.alive)
         val res0 = PlaybackSession.resumedCount
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4", title = "Session C"), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4", title = "Session C")) }
         rule.waitUntil(15_000) { PlaybackSession.resumedCount > res0 }
         var playing = false
         rule.waitUntil(20_000) { rule.runOnUiThread { playing = PlaybackSession.isPlaying() }; playing }

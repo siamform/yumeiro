@@ -54,7 +54,7 @@ class SurfaceModeDeviceTest {
 
     private fun play(url: String, title: String) {
         PlaybackDiagnostics.reset("")
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = title), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = title)) }
         rule.waitUntil(75_000) { PlaybackDiagnostics.state.value.firstFrame || PlaybackDiagnostics.state.value.error != null }
         assertTrue("first frame for $title: ${PlaybackDiagnostics.state.value}", PlaybackDiagnostics.state.value.firstFrame)
     }

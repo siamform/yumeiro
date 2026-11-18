@@ -76,7 +76,7 @@ class StreamFormatMismatchDeviceTest {
         watch.reset()
         PlaybackDiagnostics.reset("")
         val url = server.url(path).toString()
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = "Mismatch $name", format = format), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = "Mismatch $name", format = format)) }
         val ended = runCatching {
             rule.waitUntil(25_000) { PlaybackDiagnostics.state.value.let { it.error != null || it.firstFrame } }; true
         }.getOrDefault(false)

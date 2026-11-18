@@ -87,7 +87,7 @@ class YtQualityDeviceTest {
 
         val req = runBlocking { YouTubeStreams.videoRequest(ctx, id, maxHeight = 360) }
         log("request url=${req.url.substringAfterLast('/')} page=${req.pageUrl} group=${req.group}")
-        rule.runOnUiThread { IncomingMedia.open(ctx, req, remember = false, id = "yt:$id", folder = "YouTube") }
+        rule.runOnUiThread { IncomingMedia.open(ctx, req, id = "yt:$id", folder = "YouTube") }
         val ok = runCatching { rule.waitUntil(90_000) { PlaybackDiagnostics.state.value.firstFrame }; true }.getOrDefault(false)
         assertTrue("no first frame · ${PlaybackDiagnostics.state.value}", ok)
         val settle = System.currentTimeMillis() + 3_000

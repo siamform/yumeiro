@@ -95,7 +95,7 @@ class OnlinePlaybackDeviceTest {
 
     @Test fun a_directMp4Plays() {
         rule.runOnUiThread {
-            IncomingMedia.open(ctx, StreamRequest(url = "https://archive.org/download/f20110625mad/f20110625mad.mp4", title = "Direct MP4"), remember = false)
+            IncomingMedia.open(ctx, StreamRequest(url = "https://archive.org/download/f20110625mad/f20110625mad.mp4", title = "Direct MP4"))
         }
         val s = waitForPlayback("direct_mp4")
         assertTrue("direct mp4: $s", s.firstFrame)

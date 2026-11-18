@@ -70,7 +70,7 @@ object OnlinePlayback {
     }
 
     fun play(context: Context, title: String, link: OnlineLink, subtitles: List<OnlineSubtitle>, poster: String? = null) {
-        IncomingMedia.open(context, request(title, link, subtitles, poster), remember = false)
+        IncomingMedia.open(context, request(title, link, subtitles, poster))
     }
 
     /** "English" / "en" / "Português (Brasil)" → BCP-47 tag when recognisable. */

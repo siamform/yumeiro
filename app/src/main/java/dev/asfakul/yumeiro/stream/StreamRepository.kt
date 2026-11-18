@@ -21,9 +21,16 @@ object StreamRepository {
     private const val PREFS = "mt_streams"
     private const val KEY_HISTORY = "history"
     private const val MAX_HISTORY = 40
+    private const val KEY_LIVE = "live_history"
+    private const val KEY_SPLIT = "recents_split_v1"
+    private const val MAX_LIVE = 30
 
     private val _history = MutableStateFlow<List<StreamRequest>>(emptyList())
+    /** Play Link recents: only streams launched from the Play Link page or shared to the app (ADR-027). */
     val history: StateFlow<List<StreamRequest>> = _history.asStateFlow()
+    private val _liveHistory = MutableStateFlow<List<StreamRequest>>(emptyList())
+    /** Live TV "Recently played": channels played from Live TV lists (ADR-027). */
+    val liveHistory: StateFlow<List<StreamRequest>> = _liveHistory.asStateFlow()
     private val active = ConcurrentHashMap<String, StreamRequest>()
     private val _playlist = MutableStateFlow<List<StreamRequest>>(emptyList())
     /** Channels of the currently opened M3U playlist (kept while the app runs). */
@@ -42,9 +49,26 @@ object StreamRepository {
 
     fun init(context: Context) {
         if (loaded) return
-        _history.value = StreamRequest.listFromJson(prefs(context).getString(KEY_HISTORY, null))
+        val p = prefs(context)
+        var link = StreamRequest.listFromJson(p.getString(KEY_HISTORY, null))
+        var live = StreamRequest.listFromJson(p.getString(KEY_LIVE, null))
+        if (!p.getBoolean(KEY_SPLIT, false)) {
+            // NB15D-1 one-time split: before ADR-027 every played channel went into Play Link recents.
+            // Entries carrying a channel group or logo came from a playlist, so they move to Live TV.
+            val (fromList, typed) = link.partition(::fromPlaylist)
+            link = typed
+            live = (live + fromList).distinctBy { it.url }.take(MAX_LIVE)
+            p.edit().putString(KEY_HISTORY, StreamRequest.listToJson(link))
+                .putString(KEY_LIVE, StreamRequest.listToJson(live)).putBoolean(KEY_SPLIT, true).apply()
+        }
+        _history.value = link
+        _liveHistory.value = live
         loaded = true
     }
+
+    /** True when [request] carries playlist metadata (channel group or logo), i.e. it came from a list. */
+    internal fun fromPlaylist(request: StreamRequest): Boolean =
+        !request.group.isNullOrBlank() || !request.logoUrl.isNullOrBlank()
 
     /** Registers [request] so the player can find its headers / DRM by URL. */
     fun register(request: StreamRequest) { active[request.url] = request }
@@ -64,8 +88,38 @@ object StreamRepository {
 
     fun clear(context: Context) { _history.value = emptyList(); save(context) }
 
+    /** Records a channel played from a Live TV list in Live TV "Recently played". */
+    fun addLive(context: Context, request: StreamRequest) {
+        init(context)
+        _liveHistory.value = (listOf(request) + _liveHistory.value.filterNot { it.url == request.url }).take(MAX_LIVE)
+        saveLive(context)
+    }
+
+    fun removeLive(context: Context, request: StreamRequest) {
+        init(context)
+        _liveHistory.value = _liveHistory.value.filterNot { it.url == request.url }
+        saveLive(context)
+    }
+
+    fun clearLive(context: Context) { init(context); _liveHistory.value = emptyList(); saveLive(context) }
+
+    /**
+     * Moves [request] to the front of whichever recents list already holds its URL, without adding it to
+     * the other one (used when the watch panel switches back to a stream's own link).
+     */
+    fun touch(context: Context, request: StreamRequest) {
+        init(context)
+        when {
+            _liveHistory.value.any { it.url == request.url } -> addLive(context, request)
+            _history.value.any { it.url == request.url } -> addToHistory(context, request)
+        }
+    }
+
     private fun save(context: Context) =
         prefs(context).edit().putString(KEY_HISTORY, StreamRequest.listToJson(_history.value)).apply()
+
+    private fun saveLive(context: Context) =
+        prefs(context).edit().putString(KEY_LIVE, StreamRequest.listToJson(_liveHistory.value)).apply()
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 

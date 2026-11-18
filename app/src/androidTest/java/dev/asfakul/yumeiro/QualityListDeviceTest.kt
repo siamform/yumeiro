@@ -131,7 +131,7 @@ class QualityListDeviceTest {
         val heights = manifestHeights()
         log("manifest heights: $heights")
         assertTrue("test stream has no ladder: $heights", heights.size >= 3)
-        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = "Quality ladder"), remember = false) }
+        rule.runOnUiThread { IncomingMedia.open(ctx, StreamRequest(url = url, title = "Quality ladder")) }
         wait(90_000, "first frame") { PlaybackDiagnostics.state.value.firstFrame }
         FirstRun.shot("quality_playing")
         log("playing: ${PlaybackDiagnostics.state.value} · ${FirstRun.onScreen(rule)}")

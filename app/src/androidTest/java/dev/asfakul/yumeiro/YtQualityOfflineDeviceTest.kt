@@ -109,7 +109,7 @@ class YtQualityOfflineDeviceTest {
         val clip = File(dir, "${id}_test.mp4")
         InstrumentationRegistry.getInstrumentation().context.assets.open("yumeiro_test_clip.mp4").use { i -> clip.outputStream().use { i.copyTo(it) } }
         val req = StreamRequest(url = android.net.Uri.fromFile(clip).toString(), title = "Yumeiro BUG-4 test", pageUrl = YouTube.watchUrl(id), group = "YouTube")
-        rule.runOnUiThread { IncomingMedia.open(ctx, req, remember = false, id = "yt:$id", folder = "YouTube") }
+        rule.runOnUiThread { IncomingMedia.open(ctx, req, id = "yt:$id", folder = "YouTube") }
         val ok = runCatching { rule.waitUntil(60_000) { PlaybackDiagnostics.state.value.firstFrame }; true }.getOrDefault(false)
         assertTrue("no first frame · ${PlaybackDiagnostics.state.value}", ok)
         val settle = System.currentTimeMillis() + 2_000

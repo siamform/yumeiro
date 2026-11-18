@@ -24,11 +24,30 @@ object IncomingMedia {
 
     fun consume() { _pending.value = null }
 
-    /** Opens a stream request in the player (also used by the Stream screen). */
-    fun open(context: Context, request: StreamRequest, remember: Boolean = true, id: String? = null, positionMs: Long = 0L, folder: String? = null) {
+    /** Which recents list a stream opened with [open] goes into (ADR-027). */
+    enum class Recent {
+        /** Not recorded (websites, extensions, YouTube, the player's own re-opens). */
+        NONE,
+        /** Play Link "Recent streams": typed / pasted / shared links. */
+        LINK,
+        /** Live TV "Recently played": channels picked from a Live TV list. */
+        LIVE,
+        /** Refreshes the entry in whichever list already holds the URL; adds nothing new. */
+        KEEP,
+    }
+
+    /**
+     * Opens a stream request in the player (also used by the Stream screen). Callers say where the stream
+     * came from with [recent]; the default records nothing (NB15D-1).
+     */
+    fun open(context: Context, request: StreamRequest, recent: Recent = Recent.NONE, id: String? = null, positionMs: Long = 0L, folder: String? = null) {
         StreamRepository.register(request)
-        // Online extension links are short-lived (signed URLs), so they aren't kept in stream history.
-        if (remember) StreamRepository.addToHistory(context, request)
+        when (recent) {
+            Recent.NONE -> Unit
+            Recent.LINK -> StreamRepository.addToHistory(context, request)
+            Recent.LIVE -> StreamRepository.addLive(context, request)
+            Recent.KEEP -> StreamRepository.touch(context, request)
+        }
         val item = request.toVideoItem()
         _pending.value = item.copy(
             id = id ?: item.id,
@@ -54,7 +73,7 @@ object IncomingMedia {
             return true
         }
         when (scheme) {
-            "http", "https", "rtsp", "rtsps", "rtmp" -> open(context, StreamRequest(url = uri.toString()))
+            "http", "https", "rtsp", "rtsps", "rtmp" -> open(context, StreamRequest(url = uri.toString()), recent = Recent.LINK)
             "content", "file" -> _pending.value = VideoItem(
                 id = "external:$uri",
                 title = displayName(context, uri) ?: uri.lastPathSegment ?: "Video",
