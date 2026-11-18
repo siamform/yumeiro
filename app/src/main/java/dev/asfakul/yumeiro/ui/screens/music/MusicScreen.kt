@@ -122,9 +122,12 @@ fun MusicScreen(
     onAddSelectedToPlaylist: () -> Unit,
     onRescanClick: () -> Unit,
     onRequestPermission: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** G6-SP1: music (audio) permission; null = not read yet. */
+    audioAccess: Boolean? = null,
 ) {
     val tabs = listOf("Tracks", "Albums", "Artists", "Folders", "Favorites")
+    val noAudioAccess = audioAccess == false
     var showSortMenu by remember { mutableStateOf(false) }
 
     var expandedAlbumId by remember { mutableStateOf<Long?>(null) }
@@ -143,7 +146,9 @@ fun MusicScreen(
         PillTabRow(tabs = tabs, selectedIndex = activeTab, onSelect = onTabChange, tagPrefix = "music_tab")
 
         // Permission banner if needed
-        if (!stats.hasStoragePermission && stats.permissionPermanentlyDenied) {
+        // G6-SP1: shown whenever music access is off. Before, it needed a "permanently denied" flag
+        // no caller set, so a user who denied music access only saw "No audio files… Rescan".
+        if (noAudioAccess || (!stats.hasStoragePermission && stats.permissionPermanentlyDenied)) {
             PermissionPromptCard(
                 onRequestPermission = onRequestPermission,
                 modifier = Modifier.padding(16.dp)
@@ -290,7 +295,10 @@ fun MusicScreen(
         when (activeTab) {
             0, 4 -> {
                 // Tracks or Favorites Tab
-                if (currentTrackList.isEmpty()) {
+                if (currentTrackList.isEmpty() && noAudioAccess && activeTab == 0) {
+                    // The access card above says what to do; "place files and Rescan" would mislead.
+                    Spacer(Modifier.weight(1f))
+                } else if (currentTrackList.isEmpty()) {
                     EmptyMediaView(
                         title = if (activeTab == 4) "No favorite songs yet" else "No audio files detected",
                         subtitle = if (activeTab == 4) "Tap the heart icon on any song to add it to your favorites."

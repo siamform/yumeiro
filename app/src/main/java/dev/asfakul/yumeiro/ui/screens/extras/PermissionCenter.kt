@@ -29,6 +29,16 @@ object PermissionCenter {
         ContextCompat.checkSelfPermission(c, it) == PackageManager.PERMISSION_GRANTED
     }
 
+    /**
+     * G6-SP1: the one permission Music needs. Android 13+ asks for music and for videos in two
+     * dialogs; videos allowed is not music access. Binder call: read it off the main thread.
+     */
+    fun audioPermission(): String =
+        if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+
+    fun audioAllowed(c: Context): Boolean =
+        ContextCompat.checkSelfPermission(c, audioPermission()) == PackageManager.PERMISSION_GRANTED
+
     fun notificationsAllowed(c: Context): Boolean = AppNotifier.systemAllowed(c)
 
     /** Media and notification permission, as the setup checklist shows them. */

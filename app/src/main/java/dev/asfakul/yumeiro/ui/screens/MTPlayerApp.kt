@@ -295,6 +295,21 @@ fun MTPlayerApp(
     // Permissions launcher for Android media access & notifications
     var permissionAskedAt by remember { mutableLongStateOf(0L) }
     var startupPermissionsDone by rememberSaveable { mutableStateOf(false) }
+    // G6-SP1: Music needs the audio permission itself (videos allowed is not music access). Read off
+    // the main thread at start, on every resume (back from Android settings) and after each answer;
+    // null until read, so the card never flashes.
+    var audioAccess by remember { mutableStateOf<Boolean?>(null) }
+    var audioCheck by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var musicAccessAsked by remember { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { audioCheck++; onPauseOrDispose { } }
+    LaunchedEffect(audioCheck) {
+        val now = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.audioAllowed(context)
+        }
+        // Allowed outside the app (Android settings): scan now instead of after a restart.
+        if (audioAccess == false && now) viewModel.onPermissionResult(true, false)
+        audioAccess = now
+    }
     val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -313,6 +328,12 @@ fun MTPlayerApp(
             results[Manifest.permission.READ_EXTERNAL_STORAGE] == true
         }
         viewModel.onPermissionResult(mediaGranted, false)
+        audioCheck++
+        val audioPerm = dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.audioPermission()
+        if (musicAccessAsked && audioPerm in results) {
+            musicAccessAsked = false
+            if (results[audioPerm] != true) dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.explainDenied(context, audioPerm, "Music access")
+        }
     }
 
     // Videos opens on Hues when there is a network, otherwise on device videos. It follows the
@@ -823,11 +844,11 @@ fun MTPlayerApp(
                                     viewModel.openAddToPlaylist(selectedTrackIds.toList())
                                 },
                                 onRescanClick = viewModel::scanMedia,
+                                audioAccess = audioAccess,
                                 onRequestPermission = {
-                                    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO)
-                                    } else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-                                    permissionsLauncher.launch(permissions)
+                                    // G6-SP1: ask for music access; the answer is explained (ER-11 flow).
+                                    musicAccessAsked = true
+                                    permissionsLauncher.launch(arrayOf(dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.audioPermission()))
                                 }
                             )
                             }

@@ -1,6 +1,6 @@
 # G6-SP1 — Music shows no way to allow music access (Android 13+ and older)
 
-Status: In progress — fail-before pending. Group G6 Music (local scan, Android 13+ storage).
+Status: Implemented — unverified. Fail-before CI 44230037374 (ab/sp1-before): MusicAccessPromptTest red ("no card"); the other reds there are the pre-00c4ded LrcLibMockedTest copy. Group G6 Music (local scan, Android 13+ storage).
 
 ## Problem (read in code, 2026-11-18)
 

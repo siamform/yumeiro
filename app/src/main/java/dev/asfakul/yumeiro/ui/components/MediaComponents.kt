@@ -1173,7 +1173,7 @@ fun PermissionPromptCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Storage access required",
+                    text = "Music access is off",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -1183,7 +1183,7 @@ fun PermissionPromptCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Yumeiro operates 100% offline. Allow media access to scan and play your device's audio tracks and video clips.",
+                text = "Allow access to music and audio so Yumeiro can show and play the songs on this phone.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary
             )
@@ -1197,7 +1197,7 @@ fun PermissionPromptCard(
                 modifier = Modifier.testTag("grant_permission_button")
             ) {
                 Text(
-                    text = "Grant media access",
+                    text = "Allow access",
                     color = OnAccent,
                     fontWeight = FontWeight.Bold
                 )
