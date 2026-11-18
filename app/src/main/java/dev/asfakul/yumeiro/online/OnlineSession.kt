@@ -468,13 +468,15 @@ object OnlineSession {
             dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "${version.ifBlank { "That version" }} isn't available for $what yet. Still playing ${s.version.ifBlank { "the current version" }}.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
             return
         }
-        _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE)
+        _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE,
+            refreshed = false, captured = false) // NBUG-12 NB12-5
         resolve(context.applicationContext, null)
     }
 
     fun retry(context: Context) {
         val s = _state.value ?: return
-        _state.value = s.copy(phase = Phase.RESOLVING, links = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE)
+        _state.value = s.copy(phase = Phase.RESOLVING, links = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE,
+            refreshed = false, captured = false) // NBUG-12 NB12-5
         resolve(context.applicationContext, null)
     }
 
