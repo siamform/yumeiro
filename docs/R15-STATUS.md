@@ -1,20 +1,15 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 18:25 UTC, v1.8.2 cycle, G8 TV regression + G9 TV regression)
+## Resume here (updated 2026-11-19 UTC, v1.8.2 cycle, G9 TV regression)
 
-- **Orders:** master prompt + owner handover prompt of 2026-11-18 + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2
-  (owner approval) → stability-v2.
-- **G8 reopen (G8-9, G8-10, ADR-022):** fixes c239a83, 2fc2113; CI 44336335642 green. Regression on the fix: phones
-  A 44342030478, B 44346504202; TV T1 44349351903/44349359485; T2a 44351697156 (tv24: StorageMainThread 2 skipped,
-  needs API 28)/44351704098; T2b tv24 44353535608 PASS. Left: T2b tv-api34, then G8 close docs.
-- **G9 TV regression:** test-only TV fixes c4d08b1, Bug1 scroll, cb271d3 (rail wait, Ethernet skip), f11172d (leave
-  the open rail before tapping a clip). tv34 b2 44358110397: 7/10 PASS, 3 player classes = rail fault → rerun
-  44362609758. tv24 b1 44359805223: 9/10 PASS. PinnedExtensions fails on both TVs = **G9-8 (YF-TV-1)**, real bug:
-  the filter sheet opens half-height on TV → registered in GROUP-9, fix = sheet fully open on TV.
-- **Owner bugs NBUG-11…16 (2026-11-18 evening):** registered in CHECKLIST §A + UNVERIFIED-QUEUE. NBUG-11 (Adult
-  toggle vs Most Played) taken into G9 before close; NBUG-12 → G10; NBUG-13 → G11/G12; NBUG-14/15/16 → G7/G2 reopen.
-- **Next three actions:** (1) G9-8 fix commit + CI + PinnedExtensions on both TVs and phones; (2) tv24 b2, tv34 G8
-  T2b; (3) G8 then G9 close docs.
+- **Orders:** master prompt + §13a. Owner order 2026-11-19: close G9 → owner bug list NBUG-11…16 (full method:
+  research, side effects, ADR, tests, fixes) → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
+- **G8:** regression done except T2b tv-api34; close docs pending (script /tmp/g8close.py).
+- **G9:** G9-8 (YF-TV-1) register 3434e8e, fix 172a9da, CI 44363567063 (1194/0/11). Pass-after tv24 44363587262 PASS;
+  tv34 44368888674 running. Test-only TV fixes: c4d08b1, cb271d3, f0de19a (`FirstRun.clickCard`). tv34 b2:
+  44358110397 7/10 + 44365849314 Choice/Player/PlayerExtras PASS (c1 skip: no PiP on TV). tv24 b1 44359805223 9/10
+  (Pinned = G9-8); tv24 b2 44368883691 running. Then phones rerun of the changed test classes, then close.
+- **Next three actions:** (1) read 44368883691 / 44368888674; (2) G8 T2b tv34 + phones rerun; (3) G8 + G9 close docs.
 
 ### Previous resume note — superseded (14:40 UTC, G8 step 9 regression + G9 step 5)
 
