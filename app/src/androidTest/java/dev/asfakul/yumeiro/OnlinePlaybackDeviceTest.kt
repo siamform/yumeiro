@@ -128,6 +128,9 @@ class OnlinePlaybackDeviceTest {
 
     @Test fun c_uiFlowPlays() {
         installArchive()
+        // A fresh install opens on the welcome guide over the tabs (api33/api36 run 44401023896:
+        // SetupGuide.WelcomePage on screen, the source menu never reachable). Get past it as a user does.
+        FirstRun.toTabs(rule)
         rule.waitUntil(30_000) { rule.onAllNodesWithTag("nav_tab_videos", true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag("nav_tab_videos", true).performClick()
         // The source choice (Yumix · YouTube · Device · Live TV) sits in the menu under the page title.
