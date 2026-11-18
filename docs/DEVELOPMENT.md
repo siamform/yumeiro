@@ -14,41 +14,56 @@ For the current maintainer and whoever picks this up next.
 - Every new Kotlin file starts with the GPL header (see any file in `dev/asfakul/yumeiro`). Vendored Apache-2.0 files
   keep their origin and get a line in `NOTICE`.
 
-## Group batch CI (owner rule §13a, 2026-11-18)
+## Group batch CI (owner rule §13a, 2026-11-18; updated by the owner's handover prompt, 2026-11-18)
 
-CI is the bottleneck, so CI work is done one group at a time, not one item at a time. This applies from
-G8 onward. G6-QP was already in progress when the rule arrived and finishes as a single item.
+CI is slow, so work is done one whole group at a time, not one feature at a time. This applies from G8
+onward (G6-QP finished as a single item before the rule).
 
 Group lifecycle, in strict order:
 
-1. **Read** the code for every item in the group.
-2. **Research** competitors for every item (master prompt §8: at least two implementations per item, exact tag, files).
-3. **Write every regression test for the group in one commit**, one test per finding. Each test must fail on the old code.
-4. **Run fail-before once** for the whole group (one CI run; device findings: one device run).
-   - Every test must fail.
-   - A test that passes on the old code means its finding is not proven. Remove it from the batch and put
-     it in `docs/UNVERIFIED-QUEUE.md` with the reason. Do not fix it.
-5. **Commit the fixes**, one small logical commit per item, in the order the tests were written. No squash.
-6. **Run pass-after once** for the whole group. Every test must pass.
-7. **If one item fails pass-after:**
-   - isolate it and revert or correct only its commit;
-   - run only that failing test, then continue;
-   - do not rerun the whole group, weaken the test, or drop the item without a queue reason.
-8. **Group regression** on the close commit: full inventory regression on both phones, and on both TV images where relevant.
-9. **Update ledger, queue and "Resume here" in one push.** Close the group.
+1. **Read the entire group line by line.** Every file of every feature in the group, completely. Record the
+   files and line ranges reviewed in the group doc.
+2. **Audit it.** For every feature: side effects, advantages and disadvantages, the action-reaction table
+   (unhappy paths included: cancel, Back, rotate, kill and restore, no or slow network, low memory, denied
+   permission, double taps, two events at once), competitor and open-source research (at least two
+   implementations per item, exact tag and files), optimization opportunities, architecture and system design.
+   Hunt bugs: threading, coroutines, lifecycle, Compose, memory, network, data, errors, security, battery,
+   accessibility, TV, code quality.
+3. **Write the findings register and ADRs.** Each finding: ID, severity, file and line, root cause, fix plan.
+   Redesign only with evidence, an ADR (options, advantages and disadvantages, decision, migration, rollback)
+   and behaviour-parity tests.
+4. **Write every regression test for the group in one commit**, one test per finding; each must fail on the old code.
+5. **Run fail-before once** for the whole group (one CI run; one device run for device findings). Every test must fail.
+   - A test that passes on the old code means its finding is not proven: take it out of the batch and put it in
+     `docs/UNVERIFIED-QUEUE.md` with the reason.
+   - If every test for a layer passes on the old code, the read was wrong: re-read that layer and rewrite its tests.
+6. **Commit the fixes**, one small logical commit per finding, in test order. No squash.
+7. **Run pass-after once** for the whole group. Every test must pass.
+8. **If anything fails:** audit the failures, find the root cause, fix all of them. Only the failing tests may be
+   run first to prove each fix, but then **rerun the group CI**. Repeat until the whole group passes. Never weaken a
+   test, drop an item, or call a partial pass a pass.
+9. **Group regression** on the close commit: the full inventory regression for the group on both phone emulators,
+   and on both TV emulators where the group touches TV.
+10. **Close the group** in one push: the group status table (every feature and function, status, how verified,
+    pass/fail, evidence run ID and test name), ledger rows, queue entries and "Resume here".
 
 Evidence per item is preserved:
 - The fail-before log names every failing test; the pass-after log names every passing test.
 - Each ledger row cites the group run ID plus the test name. A batch is N findings proven in two runs, not one merged finding.
+- Every result is labelled by what proved it: `unit`, `emulator`, `CI`, `TV emulator`, `real hardware`.
 
 Size cap and other limits:
-- **Size cap:** more than 30 findings → at most two batches, split by layer (for example G8-a: queue, ranges,
-  resume, cancellation; G8-b: HLS/DASH, torrent, forced downloads, MediaStore, DB).
+- **Size cap:** more than 30 findings → at most two batches, split by layer.
 - **Never cross groups:** G8 batches are G8-only, G9 batches are G9-only.
 - **The release gate is never batched:** one unbatched full regression on the release commit, both phones
   and both TV images.
-- **Broken read:** if every test for a layer passes on the old code, the read was wrong. Stop, re-read that
-  layer, rewrite its tests, and rerun that layer only.
+- **CI budget:** check Actions first, never duplicate a running equivalent, ≤ ~10 test classes per run, ≤ 2 device
+  workflows at once, no stacked large runs, no scheduled workflows. Throwaway fail-before branches are deleted after.
+- **Handover safety:** commit and push after every step; update "Resume here" (docs/R15-STATUS.md) before any long
+  wait; a multi-file doc update starts with `DOCS UPDATE IN PROGRESS: <files>` in "Resume here", removed by the push
+  that completes it.
+- **Owner tests:** only what needs real hardware, a personal account, a home network or human judgment goes to
+  `docs/OWNER-MANUAL-TESTS.md` (steps, expected result, pass/fail rule, what to record, failed agent attempts).
 
 ## Local setup
 
