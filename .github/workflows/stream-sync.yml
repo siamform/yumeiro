@@ -40,14 +40,9 @@ jobs:
           persist-credentials: false
 
       - name: Checkout streams branch
+        # Full worktree of the data branch (NBUG-16 NB16-2: the sparse one had no previous files).
         run: |
-          set -e
-          if git ls-remote --exit-code --heads origin streams >/dev/null 2>&1; then
-            git fetch --depth=1 origin streams
-            git worktree add out origin/streams
-          else
-            mkdir -p out
-          fi
+          bash .github/scripts/open-data-branch.sh streams out
 
       - name: Download and validate playlists
         run: python3 .github/scripts/sync_streams.py out

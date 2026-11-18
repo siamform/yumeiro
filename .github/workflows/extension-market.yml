@@ -53,14 +53,9 @@ jobs:
           persist-credentials: false
 
       - name: Checkout extensions branch
+        # Full worktree of the data branch (NBUG-16 NB16-2: the sparse one had no previous files).
         run: |
-          set -e
-          if git ls-remote --exit-code --heads origin extensions >/dev/null 2>&1; then
-            git fetch --depth=1 origin extensions
-            git worktree add out origin/extensions
-          else
-            mkdir -p out
-          fi
+          bash .github/scripts/open-data-branch.sh extensions out
 
       - name: Discover, rank and mirror extensions
         run: python3 .github/scripts/build_extension_market.py out

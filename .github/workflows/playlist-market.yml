@@ -48,14 +48,9 @@ jobs:
           persist-credentials: false
 
       - name: Checkout market branch
+        # Full worktree of the data branch (NBUG-16 NB16-2: the sparse one had no previous files).
         run: |
-          set -e
-          if git ls-remote --exit-code --heads origin market >/dev/null 2>&1; then
-            git fetch --depth=1 origin market
-            git worktree add out origin/market
-          else
-            mkdir -p out
-          fi
+          bash .github/scripts/open-data-branch.sh market out
 
       - name: Discover, repair and validate playlists
         run: python3 .github/scripts/build_market.py out
