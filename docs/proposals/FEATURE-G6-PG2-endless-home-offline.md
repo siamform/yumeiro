@@ -1,6 +1,6 @@
 # G6-PG2 — Endless Music Home: offline scrolls ended it for good, and it stopped at about 40 shelves instead of 80
 
-Status: Not started (queued after G6-SP1). Group L2 G6 (Music, infinite feed pagination, online/offline).
+Status: Implemented — unverified. Fail-before CI 44235994633 (ab/pg2-before): only YmEndlessCapTest red ("seeds before the cap expected:<80> but was:<40>"), 1168 tests. Group L2 G6 (Music, infinite feed pagination, online/offline).
 Found by code read, 2026-11-18. This was noted in FEATURE-G6-PG1 as "not changed".
 
 ## Problem (code read)

@@ -216,12 +216,14 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
     // failing), keep adding "Similar to …" shelves from the listening history and the songs shown.
     val endlessOpen = chip == CHIP_HOME && home.page != null && (home.page?.continuation == null || home.fails >= MAX_MORE_FAILS) &&
         !home.more && !home.loading && endlessMisses < 6 &&
-        endlessUsed.size < dev.asfakul.yumeiro.youtube.music.YmEndless.MAX_SHELVES * 2
+        dev.asfakul.yumeiro.youtube.music.YmEndless.seedsUsed(endlessUsed) < dev.asfakul.yumeiro.youtube.music.YmEndless.MAX_SHELVES
     fun moreEndless() {
         val cur = home
         val page = cur.page ?: return
         val seed = dev.asfakul.yumeiro.youtube.music.YmEndless.nextSeed(listened, page.shelves, endlessUsed) ?: run { endlessMisses = 99; return }
+        val usedBefore = endlessUsed
         endlessUsed = dev.asfakul.yumeiro.youtube.music.YmEndless.use(endlessUsed, seed)
+        val usedAfter = endlessUsed
         val g = YmStore.homeGen
         home = cur.copy(more = true)
         io.launch {
@@ -230,7 +232,13 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 dev.asfakul.yumeiro.youtube.music.YmEndless.shelfFor(seed, related, dev.asfakul.yumeiro.youtube.music.YmEndless.shownIds(page.shelves))
             }
             if (g != YmStore.homeGen) return@launch
-            if (shelf == null) endlessMisses++ else endlessMisses = 0
+            // G6-PG2: nothing back while offline gives the seed back and is not a miss.
+            val offline = shelf == null && !dev.asfakul.yumeiro.network.Connectivity.online.value
+            val (used, misses) = dev.asfakul.yumeiro.youtube.music.YmEndless.afterCall(usedBefore, usedAfter, endlessMisses, shelf, offline)
+            if (endlessUsed == usedAfter) endlessUsed = used
+            endlessMisses = misses
+            // Offline calls fail at once: wait before the next try so a scroll at the end can't loop.
+            if (offline) { kotlinx.coroutines.delay(3_000); if (g != YmStore.homeGen) return@launch }
             // R15: applied to the page as it is *now* (append only), never to the copy from before the call.
             val now = home
             val p = now.page ?: return@launch

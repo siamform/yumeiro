@@ -24,17 +24,35 @@ object YmEndless {
 
     /** The next seed not used yet: history first (spread over artists), then songs on the page. */
     fun nextSeed(history: List<YtItem>, shelves: List<YmShelf>, used: Set<String>): Seed? {
-        if (used.size >= MAX_SHELVES) return null
+        // G6-PG2: count seeds, not keys (use() also stores the artist), so the cap is 80 shelves, not ~40.
+        if (seedsUsed(used) >= MAX_SHELVES) return null
         val fromHistory = history.asSequence().filter { it.id.length == 11 }.map { Seed(it.id, it.title, it.channel.removeSuffix(" - Topic")) }
         val fromPage = shelves.asSequence().flatMap { it.items.asSequence() }.filterIsInstance<YmItem.Song>()
             .filter { it.videoId.length == 11 }.map { Seed(it.videoId, it.title, it.artistLine) }
         val all = (fromHistory + fromPage).filter { it.id !in used && it.title.isNotBlank() }.toList()
         // Prefer an artist we have not seeded yet, so the feed stays varied.
-        return all.firstOrNull { s -> artistKey(s.artist) !in used } ?: all.firstOrNull()
+        return all.firstOrNull { s -> ARTIST + artistKey(s.artist) !in used } ?: all.firstOrNull()
+    }
+
+    private const val ARTIST = "a:"
+
+    /** Seeds used so far (artist marks not counted). */
+    fun seedsUsed(used: Set<String>): Int = used.count { !it.startsWith(ARTIST) }
+
+    /**
+     * G6-PG2: what one "Similar to" call leaves behind. A shelf keeps the seed and clears the misses.
+     * Nothing back while offline gives the seed back and counts no miss, so the feed carries on when
+     * the connection returns (before, six offline scrolls closed it for the session). Nothing back
+     * online is a miss (six in a row stop the feed, as before).
+     */
+    fun afterCall(before: Set<String>, after: Set<String>, misses: Int, shelf: YmShelf?, offline: Boolean): Pair<Set<String>, Int> = when {
+        shelf != null -> after to 0
+        offline -> before to misses
+        else -> after to misses + 1
     }
 
     /** Records [seed] as used (both its id and its artist, so the next seed is a different artist). */
-    fun use(used: Set<String>, seed: Seed): Set<String> = used + seed.id + artistKey(seed.artist)
+    fun use(used: Set<String>, seed: Seed): Set<String> = used + seed.id + (ARTIST + artistKey(seed.artist))
 
     /** A "Similar to <title>" shelf from [related], without songs already on the page or the seed itself. */
     fun shelfFor(seed: Seed, related: List<YtItem>, shown: Set<String>): YmShelf? {
