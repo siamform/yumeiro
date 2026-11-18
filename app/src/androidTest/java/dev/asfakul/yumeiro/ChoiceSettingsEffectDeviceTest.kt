@@ -115,13 +115,14 @@ class ChoiceSettingsEffectDeviceTest {
             tap("video_source_device")
             repeat(4) {
                 if (hasText(title)) return@repeat
-                if (hasText("YumeiroTest")) runCatching { rule.onAllNodesWithText("YumeiroTest", substring = true)[0].performClick() }
+                if (hasText("YumeiroTest")) runCatching { FirstRun.leaveRail(rule); rule.onAllNodesWithText("YumeiroTest", substring = true)[0].performClick() }
                 else if (has("video_rescan_btn")) runCatching { tap("video_rescan_btn") }
                 runCatching { rule.waitUntil(10_000) { hasText(title) || hasText("YumeiroTest") } }
             }
         }
         wait("the clip in Videos → Device", 30_000) { hasText(title) }
         PlaybackDiagnostics.reset("")
+        FirstRun.leaveRail(rule) // TV: the open rail covers the grid; Right moves focus to the page
         rule.onAllNodesWithText(title, substring = true)[0].performClick()
         if (firstFrame) wait("first frame", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
         else wait("player open", 30_000) { has("video_player_root") }

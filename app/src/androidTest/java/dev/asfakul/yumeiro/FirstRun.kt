@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -271,6 +272,21 @@ object FirstRun {
         // On TV the top bar has no Settings button; Settings is at the bottom of the rail (MTTopBar.kt).
         tag == "topbar_settings_action" && !has(rule, tag) && has(rule, "tv_nav_rail") -> "tv_nav_settings"
         else -> tag
+    }
+
+    /** TV: a touch tap on a rail item leaves focus in the rail, which opens it over the page (248 dp)
+     *  and takes taps meant for the grid. A TV user presses Right to go to the page; do the same until
+     *  the rail is back to its collapsed width. No-op on phones (no rail). */
+    fun leaveRail(rule: AndroidComposeTestRule<*, *>) {
+        if (!has(rule, "tv_nav_rail")) return
+        val limit = with(rule.density) { 160.dp.toPx() } // collapsed 84 dp, open 248 dp (TvNavRail.kt)
+        fun width() = runCatching { rule.onAllNodesWithTag("tv_nav_rail", true).fetchSemanticsNodes().first().size.width.toFloat() }.getOrDefault(0f)
+        var presses = 0
+        while (width() > limit && presses < 4) {
+            shell("input keyevent KEYCODE_DPAD_RIGHT"); presses++
+            Thread.sleep(400); rule.waitForIdle()
+        }
+        if (width() > limit) { shot("rail_still_open"); throw AssertionError("TV rail still open after $presses D-pad Right presses · ${onScreen(rule)}") }
     }
 
     /** True if the bar item [tag] (or its TV rail twin) is on screen. */
