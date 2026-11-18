@@ -1,6 +1,17 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 4)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 5)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** NBUG-5 signal D (mixed language runs in one Dub list; Yumeiro's number sort interleaved
+  them). Fix written (OnlineSession.labelledEpisodes + tile caption + count), note §4b/§5b. G5-PC1/PC2 CI green; reopen timing PASS.
+- **Runs in progress:** CI 44206044268 (fail-before on ab/nb5-before).
+- **Next three actions:** (1) fail-before red on the 3 target tests → commit fix on r15-stability, CI pass-after;
+  (2) device re-run DubCountProbeDeviceTest (shown12 run by run); (3) upgrade from v1.8.0, RtlLayout + WidgetUpdates re-run, G6.
+
+### Previous resume note (step 4)
+
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.

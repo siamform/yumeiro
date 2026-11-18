@@ -1,6 +1,6 @@
 # NBUG-5 — Dub list shows the Sub count, Episode 7 on Dub plays Episode 1
 
-Status: **In progress — investigation (no fix yet)**. Owner report 2026-11-18 (docs/NEW-BUGS-FEATURES-2026-11-18.md).
+Status: **Implemented — signal D fix (section 5b); verification in section 8**. Owner report 2026-11-18 (docs/NEW-BUGS-FEATURES-2026-11-18.md).
 Group G3 (source metadata; F-01 uses the same path).
 
 ## 1. Report
@@ -46,6 +46,21 @@ links equal Dub Episode 1's links. It fails nothing; no reachable extension → 
 
 Run: `device-check.yml`, test `DubCountProbeDeviceTest`, phone api33-lowram, repeat 1.
 
+## 4b. Probe results (emulator api33-lowram)
+
+- Probe 1 and probe 2 (run 44203720877, head 962fdbf): signals A, B and C absent — Dub entries have distinct
+  `data`, never reuse Sub `data`, and the last Dub episode's links differ from Dub 1's.
+- **Signal D (new):** KickassAnime puts several languages in one `DubStatus.Dubbed` list, one run per language,
+  marked only in the episode name ("… (Dub)", "… (Spanish)") and `?lang=`: Frieren {Dub=28, Spanish=56}, Solo
+  Leveling {Spanish=24, Dub=12}, Dandadan {Dub=12, Spanish=12}, Kaiju No. 8 {Dub=12, Spanish=6}, Blue Lock
+  {Dub=24, Spanish=35}; One Piece is clean {Dub=1064}. Raw order is run by run; **Yumeiro's `episodesOf` sorted
+  the whole list by number** and interleaved the runs (shown: e1 Spanish, e1 Spanish, e1 Dub, e2 …).
+- Anichi: card counts = list counts, distinct data, clean.
+
+Effects of D in Yumeiro (the owner's symptoms): the header counts entries (Blue Lock Dub "59 episodes" for 24);
+the grid reads 1, 1, 1, 2, 2, 2 so a tile's position is not its episode; **"Next" from Dub 1 plays Spanish 1**
+(index + 1); a Sub → Dub switch can land on a Spanish copy (first exact number match).
+
 ## 5. Candidate fixes (chosen after the probe, least risk first)
 
 | Id | Signal | Change | Risk |
@@ -55,13 +70,38 @@ Run: `device-check.yml`, test `DubCountProbeDeviceTest`, phone api33-lowram, rep
 | C | links for Dub ep K equal Dub ep 1 | no list change; on play, a K ≠ 1 episode whose links equal ep 1's shows "No dub for episode K yet — play Sub?" | higher; needs a second link load |
 | — | probe shows Yumeiro side drops/merges | fix that step instead | — |
 
+| **D** | one list mixes language runs (repeated numbers + ≥ 2 name tags) | keep each run together, sorted on its own; run named like the version first; tile caption + count of different episodes | low; ordering only, nothing dropped; lists without the mix unchanged |
+
 Never: substitute another episode silently, or hide Dub entirely.
+
+## 5b. Chosen: D (A–C have no evidence)
+
+| Option | Pros | Cons |
+|---|---|---|
+| D1 split into new versions ("Dub", "Dub · Spanish") | clean chips | new version keys touch history, downloads, matcher, default version; overlaps gated F-01 |
+| **D2 keep runs together in one list + label** | one function (`OnlineSession.labelledEpisodes`), every caller (grid, watch page, next, switch) gets it; nothing hidden | Spanish runs still in the Dub list (labelled) |
+| D3 drop non-matching languages | short list | hides real content (data loss of choice) — rejected |
+
+Run key = (name tag, how many times this number was already seen under the tag), so two Spanish runs become
+"Spanish" and "Spanish 2". Applied only when numbers repeat AND ≥ 2 different tags exist; otherwise the old
+number sort is used as is. Tag = trailing "(Word…)" of the name (2–24 letters/space/.-), generic, no source name.
+
+Competitors (ideas only): CloudStream v4.9.1 shows the list as the extension sends it (no re-sort across runs);
+Aniyomi v0.18.2.1 keeps the source's order and shows names. Idea taken: do not reorder across what the source
+grouped.
+
+Not changed: `NewEpisodesWorker.episodeCount` (largest list size) — consistent between checks, so a new
+Spanish episode is still a "new episode"; recorded, not in scope.
 
 ## 6. Action–reaction (target behaviour)
 
 | Action | Reaction |
 |---|---|
 | Open Dub on a title whose dub lags | only dubbed episodes listed; header count matches |
+| Open Dub on a list with Dub + Spanish runs | English run first (1..N), then "Spanish", "Spanish 2"; tiles captioned; header "24 episodes · 3 versions" |
+| Next on Dub 3 | Dub 4 (same run), never Spanish 3 |
+| Sub 3 → Dub | English Dub 3 |
+| Clean list (One Piece, Anichi) | unchanged: number order, no captions, plain count |
 | Tap a Dub episode that has no dub at the source | message "No dub for episode N yet" with "Play Sub" |
 | Switch Sub → Dub on an episode with no dub | existing message (EpisodeMatcher), keeps playing |
 
@@ -69,3 +109,9 @@ Never: substitute another episode silently, or hide Dub entirely.
 
 Unit (fail before / pass after) on the chosen signal with a fake `AnimeLoadResponse`; device: probe re-run shows
 the mapped Dub count equal to the card's count for the probed titles.
+
+## 8. Verification
+
+- Unit `online/MixedLanguageEpisodesTest` (Robolectric): fail-before CI run on temp branch ab/nb5-before (3 of
+  the 4 tests, the 4th needs the new API) — see report Runs; pass-after CI at the fix commit.
+- Device: `DubCountProbeDeviceTest` re-run logs `shown12` from `episodesOf` → expected run-by-run order.
