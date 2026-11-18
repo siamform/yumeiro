@@ -290,6 +290,19 @@ object FirstRun {
         rule.waitForIdle()
     }
 
+    /** [tapVisible] for phones. TV (no touch screen): the node's own click action, as the remote's OK
+     *  would; logs the rail width first, since an open rail (248 dp) over the page takes touch taps
+     *  (PinnedExtensions on tv-api34, run 44368888674: the chip tap landed on the rail's Home item). */
+    fun clickTag(rule: AndroidComposeTestRule<*, *>, tag: String, timeoutMs: Long = 30_000) {
+        if (!has(rule, "tv_nav_rail")) { tapVisible(rule, tag, timeoutMs); return }
+        val ok = runCatching { rule.waitUntil(timeoutMs) { has(rule, tag) }; true }.getOrDefault(false)
+        if (!ok) { shot("missing_$tag"); throw AssertionError("no '$tag' after ${timeoutMs}ms · ${onScreen(rule)}") }
+        val rail = runCatching { rule.onAllNodesWithTag("tv_nav_rail", true).fetchSemanticsNodes().first().size.width }.getOrDefault(-1)
+        Log.i("YuTvTap", "clickTag $tag railWidthPx=$rail")
+        rule.onAllNodesWithTag(tag, true)[0].performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        rule.waitForIdle()
+    }
+
     /** True if the bar item [tag] (or its TV rail twin) is on screen. */
     fun hasNav(rule: AndroidComposeTestRule<*, *>, tag: String): Boolean = has(rule, navTag(rule, tag))
 

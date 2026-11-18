@@ -101,8 +101,8 @@ class PinnedExtensionsDeviceTest {
         waitTag("online_pinned_bar"); waitTag("online_pinned_$target")
 
         // The chip narrows the feed to that one source; a second tap goes back to all.
-        tap("online_pinned_$target"); waitTag("online_filter_active", 20_000)
-        tap("online_pinned_$target"); waitGone("online_filter_active", 20_000)
+        FirstRun.clickTag(rule, "online_pinned_$target"); waitTag("online_filter_active", 20_000) // TV: OK, not touch
+        FirstRun.clickTag(rule, "online_pinned_$target"); waitGone("online_filter_active", 20_000)
 
         // Written to storage (not only kept in memory).
         rule.waitUntil(5_000) {
