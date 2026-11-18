@@ -13,7 +13,9 @@ import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.newEpisode
 import com.lagradost.cloudstream3.newMovieLoadResponse
+import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
@@ -75,6 +77,21 @@ class Nbug12RefusedMediaPageDeviceTest {
         }
     }
 
+    /** NB12-5: the same site as a two-episode series; both episodes' links are refused files. */
+    private class KvsSeries(base: String) : MainAPI() {
+        override var name = "YuNB12 KVS Series"
+        override var mainUrl = base
+        override val supportedTypes = setOf(TvType.TvSeries)
+        override suspend fun load(url: String): LoadResponse = newTvSeriesLoadResponse("Yu NB12 Show", url, TvType.TvSeries, listOf(
+            newEpisode("$mainUrl/get_file/5/deadbeef/1/e1.mp4/", { name = "E1"; episode = 1 }, false),
+            newEpisode("$mainUrl/get_file/5/deadbeef/1/e2.mp4/", { name = "E2"; episode = 2 }, false),
+        ))
+        override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+            callback(newExtractorLink(name, name, data) { this.referer = mainUrl; this.quality = Qualities.Unknown.value })
+            return true
+        }
+    }
+
     @Before fun setUp() {
         val clip = inst.context.assets.open("yumeiro_test_clip.mp4").use { it.readBytes() }
         server = MockWebServer()
@@ -103,7 +120,7 @@ class Nbug12RefusedMediaPageDeviceTest {
 
     @After fun tearDown() {
         rule.runOnUiThread { runCatching { OnlineSession.end() } }
-        SourceHub.remove(BRIDGE)
+        SourceHub.remove(BRIDGE); SourceHub.remove(BRIDGE_SERIES)
         AccessLadder.forgetLearned()
         runCatching { server.close() }
     }
@@ -138,6 +155,49 @@ class Nbug12RefusedMediaPageDeviceTest {
         log("NB12_RESULT PASS")
     }
 
+    /** Waits until the current episode plays from the title page, fails, or [ms] pass. */
+    private fun waitWeb(ms: Long, index: Int): Boolean = runCatching {
+        rule.waitUntil(ms) {
+            val s = OnlineSession.state.value
+            (s?.index == index && PlaybackDiagnostics.state.value.firstFrame && s.videoId?.endsWith(":web") == true) || s?.phase == OnlineSession.Phase.FAILED
+        }; true
+    }.getOrDefault(false)
+
+    /**
+     * NB12-5: episode 1 recovers from the title page; then episode 2 (also a refused file) must get
+     * its own refresh and page step. Before, `playEpisode` kept `refreshed` and `captured` from
+     * episode 1, so episode 2 skipped both and stayed on the player error.
+     */
+    @Test fun nextEpisodeGetsItsOwnRecovery() {
+        val api = KvsSeries(base)
+        SourceHub.publishVideo(BRIDGE_SERIES, SourceHub.Ecosystem.CLOUDSTREAM, listOf(api))
+        OnlineRepository.clearCaches()
+        // A series opens its title screen; a tap on episode 1 there calls OnlineSession.play.
+        val detail = kotlinx.coroutines.runBlocking { OnlineRepository.load(api, "$base/video/1/") }
+        assertTrue("precondition: the series has two episodes", OnlineSession.episodesOf(detail, OnlineSession.defaultVersion(detail.versions)).size == 2)
+        rule.runOnUiThread { OnlineSession.play(ctx, detail, episodeIndex = 0) }
+        val e1 = waitWeb(240_000, 0)
+        val s1 = OnlineSession.state.value
+        log("NB12_CASE b ep1 ok=$e1 index=${s1?.index} phase=${s1?.phase} videoId=${s1?.videoId} firstFrame=${PlaybackDiagnostics.state.value.firstFrame}")
+        assertTrue("precondition: episode 1 did not play from the title page: phase=${s1?.phase} videoId=${s1?.videoId}",
+            s1?.index == 0 && s1.videoId?.endsWith(":web") == true)
+        val pagesBefore = synchronized(paths) { paths.count { it.startsWith("/video/1/") } }
+        PlaybackDiagnostics.reset("")
+        rule.runOnUiThread { OnlineSession.playEpisode(ctx, 1) }
+        val e2 = waitWeb(240_000, 1)
+        val s2 = OnlineSession.state.value
+        val d = PlaybackDiagnostics.state.value
+        val seen = synchronized(paths) { paths.toList() }
+        val pagesAfter = seen.count { it.startsWith("/video/1/") }
+        log("NB12_CASE b ep2 ok=$e2 index=${s2?.index} phase=${s2?.phase} videoId=${s2?.videoId} message=${s2?.message} firstFrame=${d.firstFrame} error=${d.error} pageLoads=$pagesBefore->$pagesAfter")
+        log("NB12_CASE b requests=${seen.joinToString(" ")}")
+        assertTrue("episode 2's link was never requested: $seen", seen.any { it.endsWith("/e2.mp4/") })
+        assertTrue("episode 2 never reached the title page again (pageLoads $pagesBefore -> $pagesAfter)", pagesAfter > pagesBefore)
+        assertTrue("episode 2 did not play from the title page: phase=${s2?.phase} videoId=${s2?.videoId} message=${s2?.message} diag=$d",
+            s2?.index == 1 && s2.phase == OnlineSession.Phase.PLAYING && s2.videoId?.endsWith(":web") == true && d.firstFrame)
+        log("NB12_RESULT b PASS")
+    }
+
     /**
      * A KVS title page: no <video> element, only the player config (as on the real site). The 480p
      * address is scrambled (`function/0/`); the real hash below is what yt-dlp's
@@ -159,5 +219,6 @@ class Nbug12RefusedMediaPageDeviceTest {
         const val TOKEN = "YUNB12TOKEN"
         const val TAG = "YuNb12Test"
         const val BRIDGE = "yu-nb12-test"
+        const val BRIDGE_SERIES = "yu-nb12-series"
     }
 }
