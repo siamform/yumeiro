@@ -65,7 +65,13 @@ class Nbug11MostPlayedAdultDeviceTest {
         PlayCounts.resetForTests(); PlayCounts.ensureLoaded(ctx)
     }
 
+    /**
+     * The row is a LazyRow: a card past the screen edge is not composed, so first scroll the row to
+     * the card's item key ("most_v_" + entry key, HomeScreen); a key the row does not have throws.
+     */
     private fun shown(key: String) = runCatching {
+        rule.onNodeWithTag("home_most_played", true).performScrollToKey("most_v_$key")
+        rule.waitForIdle()
         rule.onAllNodesWithTag("home_most_$key", true).fetchSemanticsNodes().isNotEmpty()
     }.getOrDefault(false)
 
