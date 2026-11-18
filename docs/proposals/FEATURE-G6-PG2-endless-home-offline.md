@@ -1,6 +1,6 @@
 # G6-PG2 — Endless Music Home: offline scrolls ended it for good, and it stopped at about 40 shelves instead of 80
 
-Status: Implemented — unverified. Fail-before CI 44235994633 (ab/pg2-before): only YmEndlessCapTest red ("seeds before the cap expected:<80> but was:<40>"), 1168 tests. Group L2 G6 (Music, infinite feed pagination, online/offline).
+Status: Verified (CI unit). fail-before CI 44235994633 (ab/pg2-before: only YmEndlessCapTest red, 40 seeds not 80, of 1168); fix 2114836; pass-after CI 44238631828 green (1192 tests, YmEndlessCap 1/1, YmEndlessOffline 1/1, SmartDns/DnsWire/DataCacheBounds 4/4 each). Offline half has no fail-before (new afterCall API). Emulator network toggle on Home: in progress. Group L2 G6.
 Found by code read, 2026-11-18. This was noted in FEATURE-G6-PG1 as "not changed".
 
 ## Problem (code read)
