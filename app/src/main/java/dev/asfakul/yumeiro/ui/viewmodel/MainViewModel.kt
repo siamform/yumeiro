@@ -455,15 +455,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playerManager.togglePlayPause()
     }
 
-    /** Music sleep timer (countdown with fade-out, or end of the current song). */
-    val sleepTimer = dev.asfakul.yumeiro.player.SleepTimer(
-        scope = viewModelScope,
-        positionMs = { playerManager.playbackState.value.currentPositionMs },
-        durationMs = { playerManager.playbackState.value.durationMs },
-        trackId = { playerManager.playbackState.value.currentTrack?.id },
-        setVolume = playerManager::setPlayerVolume,
-        pause = playerManager::pause,
-    )
+    /**
+     * Music sleep timer (countdown with fade-out, or end of the current song). G6-ST1: process-wide and
+     * driven by the shared player, so it still fires after this ViewModel is cleared (swipe from recents).
+     */
+    val sleepTimer: dev.asfakul.yumeiro.player.SleepTimer get() = dev.asfakul.yumeiro.player.MusicSleepTimer.timer
 
     fun seekTo(positionMs: Long) {
         playerManager.seekTo(positionMs)
