@@ -83,11 +83,11 @@ phones), code read. Competitors: Mihon v0.21.3, Kotatsu v9.4.1 (ideas only).
 | M3U parsing, huge/malformed | line-streamed parser, CRLF/BOM/pipe headers/#EXTHTTP/KODIPROP, garbage tolerated; 40 MB cap | OK (LT-1…LT-4) | unit `StreamPlaylistTest` |
 | Failover | no automatic switch; the player has "Sources for this channel" for a manual pick | feature (automatic failover) → gated | code read `StreamScreen.playLive` |
 | EPG | only the `url-tvg`/`x-tvg-url` address is read and shown (`PlaylistStore.EPG_URL_RX`); no guide | feature (guide) → gated | code read |
-| Buffering, PiP | Live TV plays through the shared online player (`IncomingMedia.open`) | covered by G3 P10 | `LocalPlayerDeviceTest c` (G3) |
-| TV focus | Live TV / manga on TV | covered by BUG-5 agent part | `TvBug5ReproDeviceTest` (G3/BUG-5) |
+| Buffering, PiP | Live TV plays through the shared online player (`IncomingMedia.open`) | PiP of the shared player emulator-verified with a **local clip**, not a Live TV channel; Live TV buffering **not device-tested** (G3 P14 recovery is unit only) → G7-GAP-1, G7-AU-PIP in UNVERIFIED-QUEUE | emulator 43708220122 (`LocalPlayerDeviceTest c`), 43747147539, 43748560619 (PL-13); unit `PlaybackRecoveryTest`, `StarvationLoadControlTest` |
+| TV focus | Live TV / manga on TV | **not device-tested**: `TvBug5ReproDeviceTest` covers Home, Search and the player, never opens Live TV or Manga → G7-GAP-2 in UNVERIFIED-QUEUE | tv-api34 43908926085, 43912693329, 43935810414; tv-api24 43949571344, 43957029647 (other screens) |
 | Real playlists on phone/TV | region-locked channels can't open from CI | owner | OMT-11 |
 
-Minor notes, not fixed (no user report, low risk; kept for the L5 sweep):
+Minor notes, not fixed (no user report, low risk; queued as G7-L5-A, -B, -C in UNVERIFIED-QUEUE; correction 2026-11-18: the first version of this table said PiP/buffering/TV focus were "covered", which overstated the evidence):
 - `M3uParser.ATTR` only reads double-quoted attributes (`tvg-logo='…'` is ignored). Lists in the
   wild use double quotes; the channel still plays, only the logo/group is lost.
 - Channel lines without a scheme (relative URLs) are skipped. IPTV lists use absolute URLs;
