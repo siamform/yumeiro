@@ -168,6 +168,11 @@ video/index.m3u8
     }
 
     @Test fun d_retryWhileTheFailedWorkIsStillRunningStarts() = runBlocking<Unit> {
+        // MTApplication's start-up thread calls OnlineDownloads.resumeQueued about 8 s after launch; inside
+        // the window it re-enqueued the stuck item (api36 44304053909 passed on the old code that way). A
+        // user's Retry comes after start-up, so the case starts once the process has been up 20 s.
+        val upMs = android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime()
+        if (upMs < 20_000) delay(20_000 - upMs)
         val up = AtomicBoolean(false)
         val payload = ByteArray(64 * 1024) { (it % 251).toByte() }
         val s = server { _, _ -> if (up.get()) body(payload) else MockResponse.Builder().code(503).build() }
