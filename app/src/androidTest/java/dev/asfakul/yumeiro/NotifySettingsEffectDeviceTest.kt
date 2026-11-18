@@ -103,7 +103,7 @@ class NotifySettingsEffectDeviceTest {
             val sbn = waitActive(onN)
             assertTrue("$key on: system notification shown", sbn != null)
             if (Build.VERSION.SDK_INT >= 26) assertEquals("$key channel", channel, sbn!!.notification.channelId)
-            log("NFX_CASE $key off=refused on=shown channel=${sbn!!.notification.channelId}")
+            log("NFX_CASE $key off=refused on=shown channel=${if (Build.VERSION.SDK_INT >= 26) sbn!!.notification.channelId else "none (API ${Build.VERSION.SDK_INT})"}")
         }
         log("NFX_RESULT PASS a")
     }
@@ -133,8 +133,16 @@ class NotifySettingsEffectDeviceTest {
         if (Build.VERSION.SDK_INT >= 26) {
             assertEquals("sound off is silent", Notification.GROUP_ALERT_SUMMARY, off!!.groupAlertBehavior)
             assertTrue("sound on alerts", on!!.groupAlertBehavior != Notification.GROUP_ALERT_SUMMARY)
+            log("NFX_CASE chime off: groupAlert=${off.groupAlertBehavior} group=${off.group}; on: groupAlert=${on.groupAlertBehavior}")
+        } else {
+            // No channels below API 26: NotificationCompat.setSilent drops the sound; setSound sets ours.
+            @Suppress("DEPRECATION") val offSound = off!!.sound
+            @Suppress("DEPRECATION") val onSound = on!!.sound
+            @Suppress("DEPRECATION") val offDefaultSound = (off.defaults and Notification.DEFAULT_SOUND) != 0
+            assertTrue("sound off is silent (sound=$offSound defaultSound=$offDefaultSound)", offSound == null && !offDefaultSound)
+            assertTrue("sound on has a sound", onSound != null)
+            log("NFX_CASE chime (API ${Build.VERSION.SDK_INT}) off: sound=$offSound; on: sound=$onSound")
         }
-        log("NFX_CASE chime off: groupAlert=${off?.groupAlertBehavior} group=${off?.group}; on: groupAlert=${on?.groupAlertBehavior}")
         log("NFX_RESULT PASS c")
     }
 }
