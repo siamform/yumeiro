@@ -67,6 +67,7 @@ Cancelled runs in this group: none.
 | G6-PG1 | Detail page "load more" failure ended the list | Verified (CI unit + emulator, both phones) | 44220997354 → f8564b8 → 44223304640; device 44225724090 |
 | G6-MO1 | Picked Online lost after a connection drop | Verified (CI unit, Robolectric UI) | 44225572082 → 7d1486a → 44227662448 |
 | G6-LF | Last.fm queue rules with the server mocked | Verified (CI unit) | 3128a1b; 44227662448 8/8 |
+| G6-QP | Queue after process death | Blocked: owner (proposal 1) | audit only; screen-recreation case Verified by QueueSurvivesScreenTest |
 | G6-LY | LRCLIB with the server mocked | Verified (CI unit) | f3879dd + 00c4ded; 44232721209 8/8 |
 | G6-SP1 | No music-access prompt when access denied | Verified (CI unit + emulator, both phones) | 44230037374 / 44232723925 → b2eb2bd → 44232721209 / 44234120924 |
 
@@ -81,3 +82,11 @@ Cancelled runs in this group: none.
 
 - OMT-10: Last.fm with your own account (needs your login).
 - Equalizer audibility on real speakers/headphones is part of OMT-6 (long playback) feedback.
+
+## Last.fm observations (audit 2026-11-18, no change)
+
+- The offline queue is flushed at manager start, after each scrobble and at sign-in, not when the
+  connection returns. Listens waiting offline go out with the next scrobble or the next app start.
+- The saved queue is rewritten only at the end of a flush. If the process is killed mid-flush, a
+  batch Last.fm already accepted can be sent again; Last.fm de-duplicates same track + timestamp,
+  so the impact is low. Recorded for the owner; not changed (no failing case on CI or emulator).
