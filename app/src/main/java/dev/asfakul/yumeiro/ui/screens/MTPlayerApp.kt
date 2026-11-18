@@ -767,9 +767,9 @@ fun MTPlayerApp(
                                 onTogglePlayPause = viewModel::togglePlayPause,
                                 onOpenNowPlaying = viewModel::openNowPlaying,
                                 resumeVideo = homeResumeVideo,
-                                onResumeTrack = { t, at ->
-                                    val q = recentlyPlayed.let { r -> if (r.any { it.id == t.id }) r else listOf(t) }
-                                    viewModel.playTrack(t, q, at)
+                                onResumeTrack = { t, q, at ->
+                                    // G6-QP: Home picked the queue (saved queue, or the old fallback).
+                                    viewModel.playTrack(t, q.ifEmpty { listOf(t) }, at)
                                 },
                                 onPlayYouTube = { item, list ->
                                     if (item.music) {

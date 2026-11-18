@@ -30,7 +30,7 @@ object ResetCenter {
 
     fun labelOf(id: String) = Scope.entries.firstOrNull { it.id == id }?.label?.lowercase() ?: id
 
-    private val historyFiles = listOf("online_history.json")
+    private val historyFiles = listOf("online_history.json", dev.asfakul.yumeiro.player.LastPlayed.QUEUE_FILE) // G6-QP: Continue queue
     private val sourceDirs = listOf("extensions", "tachiyomi", "js", "stremio", "streams", "servers")
 
     /** Clears caches now; returns the bytes freed. */

@@ -360,6 +360,7 @@ class MusicPlayerManager(
             )
         }
 
+        persistQueue(track)
         try {
             player.setMediaItems(mediaItems, startIndex, startMs.coerceAtLeast(0L))
             player.prepare()
@@ -381,6 +382,7 @@ class MusicPlayerManager(
         currentQueue = currentQueue.toMutableList().apply { add(insertIndex, track) }
         player.addMediaItem(insertIndex.coerceAtMost(player.mediaItemCount), createMediaItem(track))
         _playbackState.update { it.copy(queue = currentQueue) }
+        persistQueue()
     }
 
     fun addToQueue(track: AudioTrack) = addMultipleToQueue(listOf(track))
@@ -394,6 +396,7 @@ class MusicPlayerManager(
         currentQueue = currentQueue + tracks
         player.addMediaItems(tracks.map { createMediaItem(it) })
         _playbackState.update { it.copy(queue = currentQueue) }
+        persistQueue()
     }
 
     fun removeFromQueue(index: Int) = safely("remove from queue") {
@@ -401,7 +404,17 @@ class MusicPlayerManager(
             currentQueue = currentQueue.toMutableList().apply { removeAt(index) }
             player.removeMediaItem(index)
             _playbackState.update { it.copy(queue = currentQueue) }
+            persistQueue()
         }
+    }
+
+    /**
+     * G6-QP: saves the queue for Home Continue after a process death (ADR-019). Called by each
+     * queue change made here; the sync from the player in restoreExistingState is not a change.
+     */
+    private fun persistQueue(current: AudioTrack? = _playbackState.value.currentTrack) {
+        runCatching { LastPlayed.saveQueue(context, currentQueue, current) }
+            .onFailure { Log.w(TAG, "queue not saved: ${it.javaClass.simpleName}") }
     }
 
     fun togglePlayPause() = safely("play/pause") {

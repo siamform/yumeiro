@@ -261,7 +261,7 @@ fun HomeScreen(
     /** Last watched video of any source (null → "nothing yet" card). */
     resumeVideo: ResumeVideo? = null,
     /** Round 13: plays the last song from where it was left (Home → Continue). */
-    onResumeTrack: ((AudioTrack, Long) -> Unit)? = null,
+    onResumeTrack: ((AudioTrack, List<AudioTrack>, Long) -> Unit)? = null,
     /** Plays a YouTube item (music → as a song, otherwise as a video). */
     onPlayYouTube: (YtItem, List<YtItem>) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
@@ -275,8 +275,12 @@ fun HomeScreen(
     val savedAudio = lastAudio?.takeIf { selectedTrack == null && it.track.id == continueTrack?.id }
     val resumeTrack: (AudioTrack) -> Unit = { t ->
         val at = savedAudio?.positionMs?.takeIf { p -> savedAudio.durationMs <= 0 || p < savedAudio.durationMs - 3_000 } ?: 0L
-        val queue = recentlyPlayed.ifEmpty { allTracks }.let { q -> if (q.any { it.id == t.id }) q else listOf(t) }
-        if (onResumeTrack != null && at > 0) onResumeTrack(t, at) else onTrackClick(t, queue)
+        // G6-QP (ADR-019): the queue the song was played in, saved across a process death; a
+        // missing, broken or old-format file falls back to the queue built before G6-QP.
+        val queue = dev.asfakul.yumeiro.player.LastPlayed.continueQueue(dev.asfakul.yumeiro.player.LastPlayed.queue.value, t) {
+            recentlyPlayed.ifEmpty { allTracks }.let { q -> if (q.any { it.id == t.id }) q else listOf(t) }
+        }
+        if (onResumeTrack != null && at > 0) onResumeTrack(t, queue, at) else onTrackClick(t, queue)
     }
 
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context) } }

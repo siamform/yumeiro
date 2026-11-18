@@ -265,6 +265,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             runCatching { dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(application) }
             runCatching { dev.asfakul.yumeiro.youtube.YtHistory.load(application) }
+            // G6-QP: the queue Home Continue plays after a process death (file read, so on IO).
+            runCatching { dev.asfakul.yumeiro.player.LastPlayed.loadQueue(application) }
         }
         // Real music listening time for Library: counted by the shared player (PlaybackService),
         // so it keeps counting after this screen is gone. Only the saved total is loaded here.
