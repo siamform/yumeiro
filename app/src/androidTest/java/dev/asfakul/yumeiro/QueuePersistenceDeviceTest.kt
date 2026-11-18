@@ -136,13 +136,29 @@ class QueuePersistenceDeviceTest {
             FirstRun.toTabs(rule)
             wait("Home Continue shows song 2", 30_000) { has("home_continue_play") && hasText("YuQP Song 2") }
             pause(3_000) // the saved queue is read on IO when the app opens
+            // The queue is recorded by a player listener the moment Continue starts it, then paused.
+            // The tap returns only when compose is idle; in run 44264818204 (api36) that took long
+            // enough for the 12 s clips to play on to song 5 before the test could look.
+            poll("the shared player", 15_000) { var p = false; inst.runOnMainSync { p = PlaybackService.sharedPlayer != null }; p }
+            val started = java.util.concurrent.atomic.AtomicReference<Pair<List<String>, String?>?>(null)
+            val listener = object : androidx.media3.common.Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    val p = PlaybackService.sharedPlayer ?: return
+                    if (isPlaying && started.get() == null) {
+                        started.set((0 until p.mediaItemCount).map { p.getMediaItemAt(it).mediaId } to p.currentMediaItem?.mediaId)
+                        p.volume = 0f
+                        p.pause()
+                    }
+                }
+            }
+            inst.runOnMainSync { PlaybackService.sharedPlayer?.addListener(listener) }
             FirstRun.tapVisible(rule, "home_continue_play")
-            poll("song 2 playing from Continue", 20_000) { current() == ids[1] }
-            inst.runOnMainSync { PlaybackService.sharedPlayer?.volume = 0f }
-            val got = playerIds()
-            log("QP_B queue=$got current=${current()} expected=$ids")
+            poll("playback started from Continue", 20_000) { started.get() != null }
+            inst.runOnMainSync { PlaybackService.sharedPlayer?.removeListener(listener) }
+            val (got, cur) = started.get()!!
+            log("QP_B queue=$got current=$cur expected=$ids now=${playerIds()}")
             assertEquals("G6-QP queue after kill + Continue", ids, got)
-            assertEquals("G6-QP current song", ids[1], current())
+            assertEquals("G6-QP current song", ids[1], cur)
             log("QP_RESULT PASS")
         } finally {
             rule.runOnUiThread { PlaybackService.sharedPlayer?.stop(); PlaybackService.sharedPlayer?.clearMediaItems() }
