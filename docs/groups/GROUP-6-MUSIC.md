@@ -64,6 +64,7 @@ Cancelled runs in this group: none.
 | G6-WL | Streams ran with WAKE_MODE_LOCAL (no Wi-Fi lock) | Verified (emulator, both phones) | 44217196977 fail-before, fix fb359cf, 44219681816 pass-after |
 | G6-AF | Audio focus behaviour (Media3) | Verified (emulator, both phones); unplug OMT-28 | 44219681816 |
 | G6-NC | Notification + outside controls | Verified (emulator, both phones) | 44219681816 |
+| G6-PG1 | Detail page "load more" failure ended the list | Verified (CI unit) | 44220997354 → f8564b8 → 44223304640 |
 
 ## Proposals (not implemented; need owner approval)
 

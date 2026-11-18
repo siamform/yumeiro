@@ -5,11 +5,11 @@
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
 - **Current group / step:** L2 G6 Music. G6-ST1, G6-WL, G6-AF, G6-NC verified (emulator, both phones; 44219681816).
-  Headphones unplugged → OMT-28. G6-PG1 (detail page "load more" failure ended the list) found; fail-before on
-  ab/pg1-before.
-- **Runs in progress:** CI 44220997354 (ab/pg1-before, fail-before of YmDetailPagingTest).
-- **Next three actions:** (1) G6-PG1 fix commit + CI pass-after; (2) G6 online/offline auto-switch; (3) lyrics with
-  LRCLIB mocked, Last.fm rules/queue/retries mocked, Android 13+ storage.
+  Headphones unplugged → OMT-28. G6-PG1 verified (CI unit, 44223304640). G6-MO1 (picked Online lost after a
+  connection drop) found; fix written locally, fail-before on ab/mo1-before.
+- **Runs in progress:** CI 44225572082 (ab/mo1-before, fail-before of MusicModeReconnectTest).
+- **Next three actions:** (1) G6-MO1 fix commit + CI pass-after; (2) device paging past page 1 with the network
+  toggled (G6-PG1 device); (3) lyrics with LRCLIB mocked, Last.fm rules/queue/retries mocked, Android 13+ storage.
 
 ### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 6)
 

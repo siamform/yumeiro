@@ -1,6 +1,6 @@
 # G6-PG1 — Album / playlist / artist page stopped for good after one failed "load more"
 
-Status: **Implemented—unverified** — fail-before CI 44220997354 (ab/pg1-before): YmDetailPagingTest 2 of 1149 failed, nothing else; pass-after CI pending. Group L2 G6 (Music, infinite feed
+Status: **Verified (CI unit)** — fail-before CI 44220997354 (ab/pg1-before): YmDetailPagingTest 2 of 1149 failed, nothing else; fix f8564b8; pass-after CI 44223304640 green. Device paging with the network toggled: pending. Group L2 G6 (Music, infinite feed
 pagination). Found by code read, 2026-11-18.
 
 ## 1. Code read (head c4abe23, `ui/screens/youtube/YtMusicBrowse.kt`)
