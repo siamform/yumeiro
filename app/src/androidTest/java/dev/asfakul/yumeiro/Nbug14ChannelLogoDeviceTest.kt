@@ -79,7 +79,15 @@ class Nbug14ChannelLogoDeviceTest {
 
     /** Share of pixels close to [r],[g],[b] in tile [index]. */
     private fun share(index: Int, r: Int, g: Int, b: Int): Double {
-        val bmp = compose.onAllNodesWithTag("live_channel", true)[index].captureToImage().asAndroidBitmap()
+        val node = compose.onAllNodesWithTag("live_channel", true)[index]
+        // captureToImage needs PixelCopy for windows (API 26+); Android 7 TVs crop a screen shot instead.
+        val bmp = if (android.os.Build.VERSION.SDK_INT >= 26) node.captureToImage().asAndroidBitmap() else {
+            val n = node.fetchSemanticsNode()
+            val shot = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            val x = n.positionOnScreen.x.toInt().coerceIn(0, shot.width - 1)
+            val y = n.positionOnScreen.y.toInt().coerceIn(0, shot.height - 1)
+            android.graphics.Bitmap.createBitmap(shot, x, y, n.size.width.coerceAtMost(shot.width - x), n.size.height.coerceAtMost(shot.height - y))
+        }
         var hit = 0; var all = 0
         for (y in 0 until bmp.height step 2) for (x in 0 until bmp.width step 2) {
             val p = bmp.getPixel(x, y); all++
