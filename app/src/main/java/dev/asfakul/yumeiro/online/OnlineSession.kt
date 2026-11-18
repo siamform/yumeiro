@@ -413,14 +413,9 @@ object OnlineSession {
         return false
     }
 
-    /** The web page that plays this episode: the embed a link came from, else the episode URL. */
-    private fun pageFor(s: State): String? {
-        fun web(u: String?) = u?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
-        // A referer with a path is an embed page; a bare origin ("https://host/") is not worth loading.
-        return s.links.firstNotNullOfOrNull { l -> web(l.referer)?.takeIf { r -> r.substringAfter("://").substringAfter('/', "").isNotBlank() } }
-            ?: web(s.data)
-            ?: web(s.detail.url)
-    }
+    /** The web page that plays this episode (NBUG-12: never a refused stream file), see [CapturePage]. */
+    private fun pageFor(s: State): String? =
+        CapturePage.pick(s.links.map { it.referer }, s.links.map { it.url }, s.data, s.detail.url)
 
     fun playEpisode(context: Context, index: Int) {
         val s = _state.value ?: return
