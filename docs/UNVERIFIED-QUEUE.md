@@ -32,6 +32,9 @@ tv-api24), real hardware.
 | BUG-5 / TV-4 | Cross-source search on TV | G7 | focus + answer on TV emulators (NBUG-2c) | scope decision | owner decision (options A/B/C) | user-assisted decision (OMT-21) | Queued |
 | NBUG-4d | Freeze with upscaling on | G3 | injected decoder failure recovers, both phones (43946324687) | real GPU | cannot reproduce on emulator GL | user-assisted (OMT-16) | Queued |
 | NBUG-6 | ISP blocking: per-feature DNS | G12 | side effects measured; guards SmartDnsResilience / DnsWire / DataCacheBounds green | not built | owner gate "no side effect" not passed | user-assisted decision (OMT-27), then stability-v2 | Queued |
+| NBUG-7 | Restore after "Clear all data": extensions listed but not installed/usable; duplicate names across repositories and extension types | G9 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G9 audit, this cycle (backup restore is in G9 scope) | Open |
+| NBUG-8 | One extension's content loads forever or very slowly | G10 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G10 audit, this cycle (stuck loading states) | Open |
+| NBUG-9 | Fresh install / cleared data: nothing online loads until DNS is set to Cloudflare by hand | G9 (touches G11/G12, NBUG-6) | none (owner report 2026-11-18) | everything | reported during G6-QP; not reproduced yet | G9 audit, this cycle (Network default) | Open |
 | ST-17 | Compose spin stress, cause-naming logging | G12 | 44145301927 (20/20, 0 spins) | stays open by order | standing order | stability-v2 deep | Queued |
 | ST-7 | Jank on software-rendered emulators | G12 | 44002112195, 44138627579 | real phone | emulators render in software | user-assisted (OMT-12) | Queued |
 | X2-1 | Baseline profile gain | G12 | emulator startup 44142300486 (no gain claimed) | real hardware gain | software rendering on CI | user-assisted (OMT-12) | Queued |
@@ -104,4 +107,4 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | L4 | Line-by-line re-audit of Groups 1–4 (verified by earlier-cycle tests only) | stability-v2 deep | Queued |
 | L5 | Final sweep | stability-v2 deep | Queued |
 
-Count: 8 agent findings/gaps + 8 earlier items + 29 owner tests + 19 features + 2 release-scope = 66 rows.
+Count: 8 agent findings/gaps + 11 earlier items (incl. NBUG-7, NBUG-8, NBUG-9 added 2026-11-18 from the owner) + 29 owner tests + 19 features + 2 release-scope = 69 rows.
