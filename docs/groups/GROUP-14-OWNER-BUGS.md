@@ -356,3 +356,34 @@ See docs/SYSTEM-DESIGN.md ADR-027.
 |---|---|---|---|
 | NB15D-1, NB15D-2 | pending (`StreamRecentsTest` unit; `Nbug15RecentsDeviceTest`: a channel played from Live TV must not be in Play Link recents and must be in the Live TV row; a link played from Play Link the other way round) | pending | CI unit, emulator, TV emulator |
 
+
+## NBUG-15 (a)–(c): Live TV page redesign
+
+Proposal and research: docs/proposals/FEATURE-NBUG-15-live-tv-redesign.md (ui-ux-pro-max, TiviMate, Kodi PVR
+IPTV Simple, Yumix filter). Design: ADR-028.
+
+### Files and lines read
+
+- `ui/screens/stream/StreamScreen.kt` 330–380 (loads, `playLive`, near-end paging), 534–548 (tools),
+  583–650 (hub: header, strip, `liveHubItems`, tools, playlists section, cards).
+- `ui/screens/stream/LiveTvHub.kt` all (strip, tiles, section header with "View", shelves of 16, grid).
+- `ui/screens/online/YumixFilter.kt` 80–240 (`SourceFilterSheet`, `FilterRow`, pinned bar),
+  `online/PinnedExtensions.kt` (pins).
+- `ui/screens/stream/PlaylistDetailScreen.kt` (search, edit, save: unchanged by this work).
+
+### Findings register (owner spec items, each against the code)
+
+| ID | Spec item | Old code | Status |
+|---|---|---|---|
+| NB15-A | Filter button with "Show videos from", search, pins | stories strip of avatars; no search, no pins | Open |
+| NB15-B1 | No playlist names, no "View" | `LiveSectionHeader` (name + "View") per playlist, "+N more" | Open |
+| NB15-B2 | Channels grouped by category across all playlists | "All" = one shelf per playlist; groups only inside one playlist | Open |
+| NB15-B3 | 50 channels first, more on scroll | "All": 16 per playlist, no paging; one playlist: pages of 48 | Open |
+| NB15-C1 | One Tools button → modal with every tool | "Play link" header action + Tools section + Playlists section on the feed | Open |
+| NB15-C2 | "Playlists" in Tools → playlist management page | playlists are cards at the bottom of the feed | Open |
+
+### Verification
+
+| Item | Fail-before (old code) | Pass-after | Label |
+|---|---|---|---|
+| NB15-A…C2 | pending (`LiveFeedTest`, `PinnedPlaylistsTest`, `Nbug15RedesignDeviceTest`) | pending | CI unit, emulator, TV emulator |

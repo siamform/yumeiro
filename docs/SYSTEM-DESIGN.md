@@ -928,6 +928,33 @@ flowchart LR
 - **Not done here:** incognito and "Clear watch history" for stream recents (NB15D-OB1, owner decision).
 - **Status:** accepted (owner spec; agent decisions inside it). Verified only after fail-before and pass-after.
 
+### ADR-028: Live TV page redesign: filter sheet, one merged feed by category, Tools modal, Playlists page (NBUG-15 a–c)
+
+- **Scope:** `StreamScreen` hub (header, feed), `LiveTvHub`, `YumixFilter.SourceFilterSheet` (generalised by
+  parameters, Yumix texts and tags unchanged), new `PinnedPlaylists`, new `LiveFeed` (pure model), new
+  `PlaylistsScreen`. Proposal: docs/proposals/FEATURE-NBUG-15-live-tv-redesign.md.
+- **Requirements (owner spec 2026-11-18):** filter button with "Show videos from", search and pins; no
+  playlist names or "View" on the feed; channels grouped by category across all playlists; 50 channels, more on
+  scroll; one Tools button → modal with every tool incl. Playlists → playlist management page.
+  Non-functional: no new dependency; feed built off the main thread; LargePlaylistMemory budget kept; D-pad
+  usable on TV (full-height sheets, focusable buttons); 48 dp targets.
+- **Options (feed):** A. One merged list, category sections, global paging of 50, category chips to filter.
+  B. One horizontal shelf per category with "See all" (needs "View"-like buttons the owner asked to remove).
+  C. Category list first, channels on a second level (TiviMate TV guide; one more step on phones).
+  **Decision: A.** Duplicate URLs across playlists show once (first copy, pinned playlists first).
+- **Options (filter):** A. Reuse `SourceFilterSheet` with parameters. B. A copy for Live TV (two sheets to
+  keep in step). **Decision: A.** Single choice like Yumix; pins by playlist id (names can repeat), ≤ 8.
+- **Options (tools):** A. Modal sheet with a tile grid (today's tiles and tags). B. Dropdown menu (long
+  list on TV, no status lines). **Decision: A.**
+- **Playlists page:** rows built from the existing card actions and dialogs (no behaviour change); sections
+  On / Off; search from 6 playlists.
+- **Migration / rollback:** device tests move to the new tags in the feature commits (reason given, none
+  weakened); one revert restores the old page; `PinnedPlaylists` is its own prefs file.
+- **Not built (new features, owner decision):** channel search on the feed, hiding categories, favourites,
+  drag reordering.
+- **Status:** accepted (owner spec; agent decisions inside it, reported to the owner). Verified only after
+  fail-before and pass-after.
+
 ## 11. Risks
 
 | Risk | Mitigation |
