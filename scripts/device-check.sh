@@ -147,6 +147,28 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
       adb shell am force-stop $P
     done
     if grep -q '^OK (' "inst-$C-a.txt"; then cp "inst-$C-b.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
+  elif [ "$C" = "dev.asfakul.yumeiro.MusicAccessDeviceTest" ]; then
+    # G6-SP1 (Android 13+): a song pushed by the shell (not owned by the app); phase a gets past
+    # first run with everything allowed; the script takes music access away (videos stay) and
+    # phase b, a new process, expects the "Music access is off" card and Android's dialog from it;
+    # the script allows music and phase c expects no card and the song listed.
+    P=dev.asfakul.yumeiro.debug
+    SONG=/sdcard/Music/YuAccess/yu_access_song.m4a
+    adb shell mkdir -p /sdcard/Music/YuAccess
+    adb push app/src/androidTest/assets/yt_audio_only.m4a $SONG > /dev/null 2>&1
+    adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://$SONG 2>&1 | tail -1 | sed 's/^/YuMusicAccessScript scan: /'
+    timeout 300 adb shell am instrument -w -r -e class "$C#a_prepare" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    adb shell am force-stop $P
+    adb shell pm grant $P android.permission.READ_MEDIA_VIDEO 2>&1 | sed 's/^/YuMusicAccessScript grant video: /'
+    adb shell pm revoke $P android.permission.READ_MEDIA_AUDIO 2>&1 | sed 's/^/YuMusicAccessScript revoke audio: /'
+    adb shell pm clear-permission-flags $P android.permission.READ_MEDIA_AUDIO user-set user-fixed 2>&1 | sed 's/^/YuMusicAccessScript flags: /'
+    echo "YuMusicAccessScript before b: $(adb shell dumpsys package $P | grep -m1 'READ_MEDIA_AUDIO: granted' | tr -d '\r')"
+    timeout 400 adb shell am instrument -w -r -e class "$C#b_videosOnly" -e phase b $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1
+    adb shell am force-stop $P
+    adb shell pm grant $P android.permission.READ_MEDIA_AUDIO 2>&1 | sed 's/^/YuMusicAccessScript grant audio: /'
+    timeout 400 adb shell am instrument -w -r -e class "$C#c_audioAllowed" -e phase c $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-c.txt" 2>&1; RC=$?
+    adb shell rm -rf /sdcard/Music/YuAccess
+    if grep -q '^OK (' "inst-$C-a.txt" && grep -q '^OK (' "inst-$C-b.txt"; then cp "inst-$C-c.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" "inst-$C-c.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.CrashUiDeviceTest" ]; then
     # G12 X6: phase a really crashes the app (its own result is "Process crashed" by design).
     P=dev.asfakul.yumeiro.debug
