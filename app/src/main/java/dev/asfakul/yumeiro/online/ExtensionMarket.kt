@@ -183,6 +183,23 @@ object ExtensionSources {
         repo to items
     }
 
+    /**
+     * Market items plus the user's repositories, one per key. A curated market copy (mirrored and
+     * checked by the market) always wins. NBUG-16 NB16-5: a community/discovered market copy is the
+     * author's file listed up to 3 days ago, so a newer version in the author's repository wins; the
+     * market's metadata (origin, verified, stars) is kept.
+     */
+    internal fun merge(market: List<RemoteExtension>, user: List<RemoteExtension>): List<RemoteExtension> {
+        val newer = user.groupBy { it.key }.mapValues { (_, v) -> v.maxBy { it.version } }
+        val fromMarket = market.map { m ->
+            val u = newer[m.key]
+            if (u != null && m.origin != "curated" && u.version > m.version)
+                m.copy(version = u.version, url = u.url, sha256 = u.sha256, fileSize = u.fileSize, apiVersion = u.apiVersion, status = u.status)
+            else m
+        }
+        return (fromMarket + user).distinctBy { it.key }
+    }
+
     // Round 13: merging thousands of listings ran on the caller (the main thread in the market screen).
     suspend fun all(context: Context, force: Boolean = false): Available = withContext(Dispatchers.Default) { coroutineScope {
         val market = async { ExtensionMarket.load(context, force) }
@@ -198,9 +215,7 @@ object ExtensionSources {
         val cat = market.await()
         val marketRepos = cat?.repos.orEmpty().map { RepoListing(it.url, it.name, it.description, it.count, it.verified, if (it.ok) null else "Unavailable", it.stars, it.origin, it.pushed, it.github) }
         val customUrls = custom.map { it.first.url.lowercase() }.toSet()
-        val items = (cat?.extensions.orEmpty() + custom.flatMap { it.second })
-            // Market copy (verified, mirrored) wins over the same plugin from a user-added repo.
-            .distinctBy { it.key }
+        val items = merge(cat?.extensions.orEmpty(), custom.flatMap { it.second })
         val warning = (ExtensionMarket.state.value as? ExtensionMarket.State.Ready)?.warning
             ?: (ExtensionMarket.state.value as? ExtensionMarket.State.Error)?.message
         Available(items, marketRepos.filter { it.url.lowercase() !in customUrls } + custom.map { it.first }, warning)
