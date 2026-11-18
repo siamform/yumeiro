@@ -1,6 +1,6 @@
 # G6-SP1 — Music shows no way to allow music access (Android 13+ and older)
 
-Status: Implemented — unverified. Fail-before CI 44230037374 (ab/sp1-before): MusicAccessPromptTest red ("no card"); the other reds there are the pre-00c4ded LrcLibMockedTest copy. Group G6 Music (local scan, Android 13+ storage).
+Status: Verified (CI unit + emulator, both phones). fail-before CI 44230037374 (ab/sp1-before, MusicAccessPromptTest red "no card") and device 44232723925 at f418d80 (phase b red both phones: MA_CARD shown=false); fix b2eb2bd; pass-after CI 44232721209 green (1190 tests; MusicAccessPromptTest 1/1; SmartDns/DnsWire/DataCacheBounds 4/4 each) and device 44234120924 (MusicAccessDeviceTest a/b/c OK both phones: card shown, Allow access opens Android's music dialog, after grant no card and the shell-pushed song listed). Group G6 Music (local scan, Android 13+ storage).
 
 ## Problem (read in code, 2026-11-18)
 
@@ -59,3 +59,7 @@ No change to scanning, MediaStore queries, the startup request, or videos.
 - Emulator (both phones): MusicAccessDeviceTest via scripts/device-check.sh phases.
   - Phase a: video granted, audio revoked by the script → card shown, no crash.
   - Phase b: audio granted → card gone, songs pushed by shell are listed.
+
+## Noted, not changed
+
+- The track count says "1 tracks" (no singular). Cosmetic; recorded for the L5 sweep.

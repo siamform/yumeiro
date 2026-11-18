@@ -237,4 +237,5 @@ Proposals only (eighth cycle, 2026-11-18). No code exists for these; each needs 
 | G6-PG1 | Detail page "load more" keeps the continuation (YmState.afterDetailMoreFailed) | unit YmDetailPagingTest; androidTest YmPagingNetworkDeviceTest | CI 44223304640; device 44225724090 PASS both phones |
 | G6-MO1 | Music mode follows the connection, keeps the user's pick (MusicMode.follow) | unit Round13LogicTest; Robolectric UI MusicModeReconnectTest | CI 44227662448 |
 | G6-LF | Last.fm queue flush rules (Scrobbler.flush) | unit ScrobbleFlushMockedTest (server mocked) | CI 44227662448 8/8 |
-| G6-LY | LRCLIB find path (LrcLib.find) | unit LrcLibMockedTest (server mocked) | pending re-run |
+| G6-LY | LRCLIB find path (LrcLib.find) | unit LrcLibMockedTest (server mocked) | CI 44232721209 8/8 |
+| G6-SP1 | Music access card (PermissionCenter.audioAllowed, MusicScreen audioAccess) | Robolectric UI MusicAccessPromptTest; androidTest MusicAccessDeviceTest (script phases a/b/c) | CI 44232721209; device 44234120924 PASS both phones |

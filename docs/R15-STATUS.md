@@ -1,6 +1,16 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 8)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 9)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** L2 G6 Music. Verified: ST1, WL, AF, NC, PG1, SP1 (emulator both phones); MO1, LF, LY (CI unit).
+  G6-PG2 (endless Home: offline scrolls closed it; cap ~40 not 80) fix written locally; fail-before CI on ab/pg2-before.
+- **Runs in progress:** CI 44235994633 (ab/pg2-before, YmEndlessCapTest fail-before).
+- **Next three actions:** (1) PG2 commit + CI pass-after; (2) G6 device run: MO1 with the emulator network toggled;
+  (3) queue persistence audit (GROUP-6 proposal 1 = owner approval), then G7 Manga & Live TV.
+
+### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 8)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
