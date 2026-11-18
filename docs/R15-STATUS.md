@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18 13:02 UTC, v1.8.2 cycle, G8 step 9: group regression running)
+## Resume here (updated 2026-11-18 14:40 UTC, v1.8.2 cycle, G8 step 9 regression + G9 step 5)
 
 - **Orders:** master prompt "HARD RULES, GROUP COMPLETION, v1.8.2 RELEASE" + owner handover prompt of 2026-11-18
   (new agent) + §13a. Order: G8 → G9 → G10 → G11 → v1.8.2 (owner approval) → stability-v2.
@@ -29,15 +29,17 @@
   +8 s rescued it → 78caf5e waits until the process is up 20 s). CI 44302429664 on f6e26b0 (fix 8a4cfa0): success;
   only androidTest changed since.
 - **G8-8 pass-after:** device 44307672019 (78caf5e): DownloadG8DeviceTest OK (4 tests) on both phones.
-- **Runs in progress:** group regression on 78caf5e code: phones batch A 44309347790 (Cleanup, Kill, Quality, Resume,
-  Throughput, DownloadsScreen, ExternalDownloader), batch B 44309363764 (G8, Force, LowStorage, StorageMainThread,
-  StreamWatch, Torrent, YtDownloadPipeline). TV batches 1 + 2 on tv-api24 / tv-api34 after these.
-- **Next three actions:** (1) read 44307672019; (2) group regression on the close commit: phones 2 runs (14 classes)
-  + TV batches 1 + 2 on tv-api24 and tv-api34 (≤2 device workflows at once); (3) G8 close docs in one push. Doc gaps
-  to fix in the close push: GROUP-8 verification table (still "pending"), DL-11 p2 cause 2 + G8-8 rows, ledger G8
-  rows (none yet), checklist BUG-3 / DL-11 p2 rows, queue: 5 G8 code-quality items the GROUP-8 doc says are queued
-  (missing), OMT-G8a referenced but missing in OWNER-MANUAL-TESTS.md, cycle report G8 section, GROUP-1…5/9/10/12
-  closed item by item before §13a (need §13a re-audit, record in queue).
+- **G8 regression (code = 78caf5e; 34d99b8 docs only), all PASS, no skips:** phones A 44309347790, B 44309363764
+  (14 classes, both phones; throughput rxOverSize 1.099/1.030); TV batch 1 tv-api24 44310073153, tv-api34 44312157796.
+  Running: TV batch 2 tv-api24 44314925557 (ref ab/g8-close = 34d99b8, throwaway), then tv-api34. Probe NBUG-9
+  44312163084 (Nbug9DnsProbeDeviceTest, phones) running.
+- **G9:** steps 1–3 34d99b8 (register + ADR-021). Tests b51424b. Fail-before CI 44312331848 (ab/g9-before = b51424b):
+  1194 tests, 1 failed = exactly G9SettingsBatchTest#g9_1 (proven); device fail-before (RestoreAfterClear,
+  ExtensionSharedFile, phones) not yet run. Fixes pushed: 30c4641 G9-1, 6219b4a G9-2 (backup/RepairRetry), d9b01cb
+  G9-5, c056ff4 G9-7.
+- **Next three actions:** (1) device fail-before on ab/g9-before; read NBUG-9 probe (add finding + test if
+  reproduced); (2) TV batch 2 tv-api34, then G8 close docs in one push (gaps listed in the superseded note below
+  are still open); (3) G9 pass-after CI + device, then G9 group regression.
 - **UNVERIFIED-QUEUE.md:** 70 rows.
 
 ### Previous resume note — superseded (v1.8.2 cycle, G6 closed, G8 batch)
