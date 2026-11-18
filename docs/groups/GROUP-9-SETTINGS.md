@@ -276,3 +276,89 @@ Switch effects 34/34 and choice rows (SE-6) have tests with device (emulator) or
 `ChoiceSettingsEffectDeviceTest` a–f PASS on both phones (43974089878). qa_gpu_tier needs a real GPU:
 owner test OMT-16. Group 9 is closed for agent work.
 
+
+## v1.8.2 full audit (2026-11-18, master prompt §7, owner rule §13a)
+
+Head at the read: d3c46a0 (settings/backup/network code unchanged since the R17 close). Scope added by the
+owner on 2026-11-18: NBUG-7 (restore after "Clear all data": extensions listed but not usable; duplicate
+names across repositories and ecosystems) and NBUG-9 (fresh install: nothing online loads until DNS is set
+to Cloudflare). Skills: architecture-designer (ADR-021 before code), kotlin-specialist (every Kotlin change),
+rea when stuck. UI: no visual change planned; if one becomes needed, ui-ux-pro-max is read first.
+
+How the files were read (honest note): logic files line by line. Compose UI files were read with pure
+layout lines (imports, `modifier =`, colours, sizes, closing brackets) filtered out, so every state read,
+setter, side effect, coroutine and dialog was read but not every padding value. SettingsDesign.kt (visual
+building blocks) and the long help texts in UserGuide.kt / SetupGuides.kt were read for claims about
+behaviour only (each claim about backup, DNS and extensions was checked against code).
+
+### Files and lines reviewed
+
+| File | Lines | Notes |
+|---|---|---|
+| network/NetworkSettings.kt, NetworkClient.kt, AutoBypassInterceptor.kt, SmartDns.kt, Connectivity.kt, DnsMessage.kt, BoundedRead.kt | 1–126, 1–97, 1–53, 1–265, 1–72, 1–195, 1–24 | DNS config, client, auto bypass (sinkhole + markBlocked), resolver chain, online flag, wire DNS |
+| backup/Backup.kt, PrefSections.kt, PendingRestore.kt, BackupStore.kt, AutoBackupWorker.kt, ResetCenter.kt, Restart.kt | all | sections, export/stage/apply, auto backups, resets, restart |
+| ui/screens/settings/BackupCenterScreen.kt | 1–497 (logic) | restore flow, safety backup, section picker |
+| online/ExtensionManager.kt | start, repairMissing, ensureLoaded, install*, gate, installBytes, uninstall (≈125–430) | CloudStream engine |
+| online/ExtensionReview.kt, ExtensionScanner.kt (scan) | all / 173–215 | AUTO/IF_RISKY/ALWAYS, DANGER rules |
+| sources/tachiyomi/TachiyomiExtensions.kt | trust (≈120–143), start, reinstallAfterRestore (≈145–172), install, load | Aniyomi / Mihon bridge |
+| sources/js/JsSources.kt | 40–170 | Mangayomi JS lists, install, engine |
+| sources/SourceHub.kt uniqueName, sources/stremio/StremioAddons.kt file | 71–78, 85 | duplicate names, add-on list |
+| ui/screens/settings/*.kt (21 files) | all (logic filter above) | every setting row and action |
+
+### Data flow (backup and restore of sources)
+
+```
+Backup.export(sections) ─ prefs.json (PrefSections per value) + files/ (sectionOf per path) ─ zip
+  files/extensions/state.json → SOURCES     files/extensions/plugins/*.cs3 → EXTENSION_FILES
+  files/tachiyomi/*.ext → EXTENSION_FILES   tachiyomi_bridge prefs (repos, trusted_v2 sealed) → SOURCES
+  files/js/** → EXTENSION_FILES (isCode)    files/stremio/addons.json → SOURCES
+Restore: Backup.stage(chosen; default without EXTENSION_FILES) → Restart.now → PendingRestore.applyIfAny
+  (Application.onCreate) → ExtensionManager.start → ensureLoaded → repairMissing (once per process)
+  → TachiyomiExtensions.start → reinstallAfterRestore (once per process) · JsSources.start (no repair)
+```
+
+### Action → reaction
+
+| Action | Expected reaction | Checked by |
+|---|---|---|
+| Default backup → Clear all data → restore | CloudStream, Aniyomi/Mihon, JS and Stremio sources listed and usable after the downloads | **G9-1** JS lists lost; **G9-2** no retry |
+| First launch after the restore has no network (or the repo times out once) | extensions downloaded when the network is back | **G9-2** (was: only at the next app start) |
+| Restored extension the user had accepted after a safety warning | downloaded again (same file, already accepted) | **G9-5** (was: refused silently on every start) |
+| Same extension from two repositories, one uninstalled | the other keeps working | **G9-7** (was: shared file deleted) |
+| Fresh install, ISP resolver failing | online content loads with the default setting | NBUG-9 probe (below) |
+| Aniyomi / Mihon extension restored on a new phone | listed; signed by its repo's key → trusted; others need one Trust tap | G9-4: by design (Mihon `Preference.appStateKey("trusted_extensions")`, not in backups) |
+
+### Findings register
+
+| ID | Finding | Root cause (file:line at d3c46a0) | Fix (ADR-021) | Test (fails on the old code) |
+|---|---|---|---|---|
+| G9-1 | A default backup (Extension files unticked) loses every Mangayomi JS repository and installed JS source; after a restore the JS list is empty and nothing downloads it again | `Backup.isCode` (96–100) counts every `js/` path as code, so `js/repos.json` and `js/sources.json` go to EXTENSION_FILES (`sectionOf` 86) although `js` is in `dataDirs` (69, meant for SOURCES); JsSources has no repair for a missing `.js` | lists → SOURCES, only `js/*.js` is code; JsSources downloads missing code of listed sources (same check as install) | unit `G9SettingsBatchTest#g9_1_jsListsTravelWithSources`; device `RestoreAfterClearDeviceTest` c (JS repo and source back, code present) |
+| G9-2 | After a restore, extensions that could not be downloaded at the first start (no network yet, DNS failing, one timeout) stay listed but missing until the app is closed and opened again; no message | `ExtensionManager.start` (128–139) calls `repairMissing` once per process; `repairMissing` (158–162) returns at once when offline; `TachiyomiExtensions.start` (145–152) / `reinstallAfterRestore` (161) the same | one restore-repair loop per ecosystem: run at start, again when `Connectivity.online` turns true, and with back-off (30 s, 2 min, then 10 min; at most 12 tries per process) while anything is missing | device `RestoreAfterClearDeviceTest` c (repo answers 503 to the first request → extension back without a restart) |
+| G9-5 | An extension the user accepted after a safety warning is refused on every start after a restore, silently | `repairMissing` (169) uses `ExtensionReview.Mode.AUTO`; `autoDecision` refuses DANGER/unreadable | repair asks the user (IF_RISKY) when the review host is on screen; otherwise it waits for the next try; No = not asked again in this process. Not silent either way (a restored hash comes from a user-picked file, so it is no proof) | device `RestoreAfterClearDeviceTest` c (flagged fixture: asked, Yes → back) |
+| G9-7 | The same CloudStream extension installed from two repositories shares one file; uninstalling one copy (or a failed load/update of one) deletes the other's file | `installBytes` (385–386) names the file `internalName-sha12.cs3`; `uninstall` (425), failed load (401–402) and update clean-up (405) delete it without checking other entries | delete a plugin file only when no other installed entry uses it | device `ExtensionSharedFileDeviceTest` (two repos, uninstall one, other still loaded) |
+| NBUG-9 | see below | probe pending | — | `Nbug9DnsProbeDeviceTest` |
+
+IDs: G9-3 (Aniyomi/Mihon restore download also once per process) is part of G9-2; G9-4 is by design
+(below); G9-6 (Privacy → Clear cache kept pages in memory) was a candidate, disproved by reading the code.
+
+Checked and not a finding (this audit): `tachiyomi_bridge` `trusted_v2` is sealed with the Keystore, so it is
+empty after Clear all data / on a new phone (G9-4, matches Mihon; restored extensions from a repository with a
+signing key are trusted at once). Duplicate display names across ecosystems: `SourceHub.uniqueName` adds the
+language, then a number. `Restart.now` exits right after `BackupStore.save` → `recordBackup` uses `apply()`, so
+"last backup" time can be lost (cosmetic; the restore markers use `commit()`): → UNVERIFIED-QUEUE, stability-v2
+(no deterministic test). Settings home `rememberStatuses` reads prefs already warmed by `PrefsWarmup`. Privacy → Clear cache
+clears saved pages in memory too (`OnlineRepository.clearCaches` → `DataCache.invalidateAll` → `clearMemory`);
+it leaves `externalCacheDir` (share temp files only), which Reset → Clear cache empties: kept.
+
+### ADRs
+
+ADR-021 (this audit).
+
+### Verification
+
+| Item | Fail-before | Pass-after | Label |
+|---|---|---|---|
+| G9-1 (unit) | pending | pending | unit |
+| G9-1, G9-2, G9-5, G9-7 (device, pm clear recipe) | pending | pending | emulator |
+| NBUG-9 | probe pending | — | emulator |
+| Group regression | — | pending | emulator, TV emulator |

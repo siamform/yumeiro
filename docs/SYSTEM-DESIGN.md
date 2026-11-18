@@ -695,6 +695,43 @@ flowchart LR
 - **Status:** accepted (agent decision inside the approved G8 audit scope); verified only after the G8
   pass-after and group regression runs.
 
+### ADR-021: Restoring sources after "Clear all data" (G9, v1.8.2 audit, NBUG-7)
+
+- **Scope:** `backup/Backup.sectionOf`/`isCode`, `ExtensionManager` (repair, plugin file clean-up),
+  `TachiyomiExtensions.reinstallAfterRestore`, `JsSources` (missing code). No UI change, no schema change
+  (backup format 2 kept; old backups restore as before), no new dependency.
+- **Requirements:** a default backup (Extension files unticked) restored on a cleared or new phone gives back
+  every source list and, once online, every extension, without the user restarting the app; a file the
+  user accepted after a safety warning is not installed silently and not refused silently; one extension
+  installed from two repositories must not break the other. Non-functional: no extra work when nothing is
+  missing; no loop when a repository is gone for good; works on the TV app (minSdk 24) and low-RAM phones.
+- **Context (G9-1, G9-2, G9-5, G9-7):** `isCode` put every `js/` file in EXTENSION_FILES, so JS lists were
+  dropped; each ecosystem tried its restore download once per process, and returned at once when offline;
+  the CloudStream repair used AUTO review (DANGER refused, user never asked); plugin files are named by
+  internal name + hash, so two repository entries can share one file, and every delete ignored that.
+- **Options:** A. Small fixes in place: lists → SOURCES; one shared retry helper (start, network back,
+  back-off 30 s / 2 min / 10 min, stops when nothing is missing or after 12 tries per process); repair asks
+  (IF_RISKY) when the review host is on screen, otherwise waits for the next try; a plugin file is deleted
+  only when no other entry uses it; JS code of a listed source is downloaded again like an install.
+  B. Always put extension files in backups (big files, stale code, defeats "they come from their own
+  repositories"). C. A WorkManager job per ecosystem for restore downloads (survives process death, but
+  adds a second scheduler, and process start already runs the repair).
+- **Decision:** A. Trust of Aniyomi/Mihon extensions stays device-bound (G9-4; Mihon keeps
+  `trusted_extensions` as app state outside backups); restored entries from a repository with a signing key
+  are trusted at once, others need one Trust tap, as on a new install.
+- **Security:** no silent install of a flagged file: the restored `sha256` comes from a backup file the user
+  picked, so it is not proof of an earlier acceptance; the user is asked again. JS code gets the same check
+  as a user install (`DefaultExtension` marker).
+- **Failure modes:** repository gone → stays missing after 12 tries, retried at the next start (as before);
+  user says No → not asked again in this process; offline → waits for `Connectivity.online`.
+- **Consequences:** at most 12 small requests per missing extension per process; JS sources work after a
+  restore; uninstalling one of two copies keeps the other.
+- **Alternatives rejected:** B (size, stale code), C (second scheduler for a once-per-restore job).
+- **References:** docs/groups/GROUP-9-SETTINGS.md "v1.8.2 full audit"; Mihon `SourcePreferences.kt`
+  (`Preference.appStateKey("trusted_extensions")`) and `PreferenceBackupCreator` (`isAppState` filtered).
+- **Status:** accepted (agent decision inside the approved G9 audit scope); verified only after the G9
+  pass-after and group regression runs.
+
 ## 11. Risks
 
 | Risk | Mitigation |
