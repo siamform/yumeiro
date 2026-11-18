@@ -34,11 +34,11 @@ import org.junit.runners.MethodSorters
  * G6-QP (docs/proposals/FEATURE-G6-QP-queue-persistence.md, ADR-019): queue five songs, kill the
  * app, reopen, Home Continue, all five come back in order with the second one current.
  *
- * Phase a (`-e phase a`, after `pm clear`): five songs on the device, plays them as one queue,
- * skips to song 2, pauses there (a pause saves Continue), kills its own process ("Process crashed" by design).
+ * Phase a (`-e phase a`, after `pm clear`): five songs on the device, plays them as one queue
+ * starting at song 2, pauses there (a pause saves Continue), kills its own process ("Process crashed" by design).
  * Phase b (`-e phase b`, a new process): Home → Continue → Play. The player must hold the same five
  * songs in the same order, on song 2. Before G6-QP the queue was rebuilt from Recently played,
- * so only songs 2 and 1 came back.
+ * so only the songs already played came back.
  * Uses only APIs that existed before G6-QP, so the same file runs before and after the fix.
  * `scripts/device-check.sh` runs both phases.
  */
@@ -62,11 +62,18 @@ class QueuePersistenceDeviceTest {
     private fun pause(ms: Long) { val until = System.currentTimeMillis() + ms; runCatching { rule.waitUntil(ms + 2_000) { System.currentTimeMillis() > until } } }
     private fun playerIds(): List<String> {
         var out = emptyList<String>()
-        rule.runOnUiThread { PlaybackService.sharedPlayer?.let { p -> out = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).mediaId } } }
+        inst.runOnMainSync { PlaybackService.sharedPlayer?.let { p -> out = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).mediaId } } }
         return out
     }
-    private fun current(): String? { var id: String? = null; rule.runOnUiThread { id = PlaybackService.sharedPlayer?.currentMediaItem?.mediaId }; return id }
-    private fun playing(): Boolean { var p = false; rule.runOnUiThread { p = PlaybackService.sharedPlayer?.isPlaying == true }; return p }
+    private fun current(): String? { var id: String? = null; inst.runOnMainSync { id = PlaybackService.sharedPlayer?.currentMediaItem?.mediaId }; return id }
+    private fun playing(): Boolean { var p = false; inst.runOnMainSync { p = PlaybackService.sharedPlayer?.isPlaying == true }; return p }
+    /** Polls every 100 ms without waiting for compose to be idle. */
+    private fun poll(what: String, ms: Long, cond: () -> Boolean) {
+        val end = System.currentTimeMillis() + ms
+        while (System.currentTimeMillis() < end) { if (cond()) return; Thread.sleep(100) }
+        FirstRun.shot("qp_fail_${what.replace(' ', '_')}")
+        throw AssertionError("$what (after ${ms}ms) · current=${current()} playing=${playing()}")
+    }
     private fun vm(): MainViewModel { var vm: MainViewModel? = null; rule.runOnUiThread { vm = ViewModelProvider(rule.activity)[MainViewModel::class.java] }; return vm!! }
 
     private fun addSong(title: String): Long {
@@ -106,16 +113,14 @@ class QueuePersistenceDeviceTest {
                 vm.rawAudioTracks.first { l -> l.count { it.id in ids } == 5 }.filter { it.id in ids }.sortedBy { ids.indexOf(it.id) }
             }
         }
-        rule.runOnUiThread { vm.playTrack(tracks[0], tracks); PlaybackService.sharedPlayer?.volume = 0f }
-        wait("song 1 playing", 20_000) { current() == ids[0] && playing() }
-        pause(2_000)
-        rule.runOnUiThread { PlaybackService.sharedPlayer?.seekToNextMediaItem() }
-        wait("song 2 playing", 20_000) { current() == ids[1] && playing() }
-        pause(1_500)
-        // Paused on song 2 (a pause saves Continue), so the 12 s clip cannot run on into song 3 on
-        // a slow emulator (run 44251573024, api33-lowram: song 3 had started).
-        rule.runOnUiThread { PlaybackService.sharedPlayer?.pause() }
-        pause(3_000) // a person does not kill the app within 1 s of a pause
+        // Starts the queue on song 2 and pauses there (a pause saves Continue). Polled straight on the
+        // main thread: the compose wait polls slowly while the player screen animates, and in runs
+        // 44251573024 / 44252955021 the 12 s clips ran on to songs 3 and 4 before the skip.
+        inst.runOnMainSync { vm.playTrack(tracks[1], tracks); PlaybackService.sharedPlayer?.volume = 0f }
+        poll("song 2 playing", 20_000) { current() == ids[1] && playing() }
+        Thread.sleep(1_500)
+        inst.runOnMainSync { PlaybackService.sharedPlayer?.pause() }
+        Thread.sleep(3_000) // a person does not kill the app within 1 s of a pause
         log("QP_A queue=${playerIds()} continue=${LastPlayed.audio.value?.track?.id}")
         assertEquals("phase a queue", ids, playerIds())
         assertEquals("phase a Continue song", ids[1], LastPlayed.audio.value?.track?.id)
@@ -132,8 +137,8 @@ class QueuePersistenceDeviceTest {
             wait("Home Continue shows song 2", 30_000) { has("home_continue_play") && hasText("YuQP Song 2") }
             pause(3_000) // the saved queue is read on IO when the app opens
             FirstRun.tapVisible(rule, "home_continue_play")
-            wait("song 2 playing from Continue", 20_000) { current() == ids[1] }
-            rule.runOnUiThread { PlaybackService.sharedPlayer?.volume = 0f }
+            poll("song 2 playing from Continue", 20_000) { current() == ids[1] }
+            inst.runOnMainSync { PlaybackService.sharedPlayer?.volume = 0f }
             val got = playerIds()
             log("QP_B queue=$got current=${current()} expected=$ids")
             assertEquals("G6-QP queue after kill + Continue", ids, got)
