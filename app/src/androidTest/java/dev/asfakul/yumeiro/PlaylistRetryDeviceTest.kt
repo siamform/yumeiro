@@ -110,7 +110,7 @@ class PlaylistRetryDeviceTest {
             assertTrue("LT-2: a failed store start shows 'not found' instead of the reason", !has("playlist_not_found"))
             assertTrue("Retry on screen", hasText("Retry"))
             log("PLR a shown=" + compose.onAllNodes(androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("playlist_error")), true)
-                .fetchSemanticsNodes().mapNotNull { it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.joinToString() }.joinToString(" | "))
+                .fetchSemanticsNodes().mapNotNull { n -> n.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.joinToString { t -> t.text } }.joinToString(" | "))
             log("PLR a startErr=${startErr?.message}")
             assertTrue("LT-2: the store error shows a raw file path", !hasText("/data/") && !hasText("EACCES"))
             assertTrue("LT-2: the store error blames the connection", !hasText("Check your connection"))
