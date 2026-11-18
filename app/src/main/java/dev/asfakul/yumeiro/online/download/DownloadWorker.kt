@@ -187,16 +187,26 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             val free = OnlineDownloads.freeBytes(applicationContext)
             if (free in 0 until need + DiskFull.MARGIN) throw DiskFull(need, free)
         }
-        fun direct(url: String, headers: Map<String, String>, f: File, p: (Long, Long) -> Unit) =
-            Segmented(client, ForceGrab.connections(lowEnd), space).let { s -> suspend { s.download(url, headers, f, p) } }
+        fun direct(url: String, headers: Map<String, String>, f: File, check: (Long) -> Unit = space, p: (Long, Long) -> Unit) =
+            Segmented(client, ForceGrab.connections(lowEnd), check).let { s -> suspend { s.download(url, headers, f, p) } }
         return when {
             item.isDash -> DashGrab(client, item.headers).download(item.url, part, DownloadSettings.quality.value, lowEnd, progress).also { if (it.webm) onContainer("webm") }.bytes
             item.audioUrl != null -> {
                 val v = File(part.parentFile, part.name + ".v"); val a = File(part.parentFile, part.name + ".a")
                 var vb = 0L; var ab = 0L
+                // G8-7: each track checked only its own size, so two tracks that fit one by one were both
+                // downloaded and the join (about their size again) then hit a full disk. The latest need of
+                // each track is kept; both tracks plus the joined file must fit. HLS video has no size up
+                // front and is not counted.
+                val needs = LongArray(2)
+                fun trackSpace(i: Int): (Long) -> Unit = { need ->
+                    val sum = synchronized(needs) { needs[i] = need; needs.sum() }
+                    val free = OnlineDownloads.freeBytes(applicationContext)
+                    if (free in 0 until 2 * sum + DiskFull.MARGIN) throw DiskFull(2 * sum, free)
+                }
                 kotlinx.coroutines.coroutineScope {
-                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.quality.value).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v) { d, _ -> vb = d; progress(vb + ab, -1) }() }
-                    val aj = this.async { direct(item.audioUrl, item.headers, a) { d, _ -> ab = d; progress(vb + ab, -1) }() }
+                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.quality.value).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v, trackSpace(0)) { d, _ -> vb = d; progress(vb + ab, -1) }() }
+                    val aj = this.async { direct(item.audioUrl, item.headers, a, trackSpace(1)) { d, _ -> ab = d; progress(vb + ab, -1) }() }
                     vj.await(); aj.await()
                 }
                 MediaMux.merge(v, a, part, webm = item.fileName.endsWith(".webm", true))
@@ -210,9 +220,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
                 if (server.isBlank()) throw NoLink("This is a torrent. Add your TorrServer address in Settings › Network to download it")
-                direct(dev.asfakul.yumeiro.stream.LinkHosts.torrServerUrl(server, item.url, item.title, m3u = false), emptyMap(), part, progress)()
+                direct(dev.asfakul.yumeiro.stream.LinkHosts.torrServerUrl(server, item.url, item.title, m3u = false), emptyMap(), part, p = progress)()
             }
-            else -> direct(item.url, item.headers, part, progress)()
+            else -> direct(item.url, item.headers, part, p = progress)()
         }
     }
 
