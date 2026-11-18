@@ -174,6 +174,10 @@ internal const val MAX_RESTARTS = 32
  * gives it ([slowed] `waitedNs`), not by the wall clock. Our own pauses between reads (disk write, GC,
  * a busy low-RAM CPU) are not the host slowing down; closing the request for them threw away the
  * bytes already on the way ([ownPauses] counts the windows that the wall clock alone would have tripped).
+ * DL-11 part 2 (v1.8.2, ADR-020): a slow window whose time went almost all into one read (one stall of
+ * the host, >= [STALL_SHARE] of the window's wait) gets one grace: the request is kept and only a second
+ * slow window in a row trips. A single stall ended a request that was fast again right after it; a
+ * capped request (waits spread over every read) trips as before. A fast window clears the grace.
  * Pure; `Bug3PieceTest`, `Dl11PaceTest`.
  */
 internal class RequestPace(
@@ -188,6 +192,12 @@ internal class RequestPace(
     private var winBytes = 0L
     private var winStart = 0L
     private var winWait = 0L
+    private var winMaxWait = 0L
+    private var grace = false
+
+    /** Slow windows that were one stall of the host and were ridden out (DL-11 part 2). */
+    var stallGraces = 0
+        private set
 
     /** The request's first-[baselineBytes] speed in bytes per ns (wall clock); -1 until known. */
     val baselineRate: Double get() = baseline
@@ -216,8 +226,9 @@ internal class RequestPace(
             return false
         }
         winBytes += n
-        if (waitedNs >= 0) winWait += waitedNs
+        if (waitedNs >= 0) { winWait += waitedNs; if (waitedNs > winMaxWait) winMaxWait = waitedNs }
         if (winBytes < window) return false
+        val maxWait = winMaxWait; val totalWait = winWait; winMaxWait = 0
         val wall = maxOf(nowNs - winStart, 1_000_000L)
         val span = if (waitedNs >= 0) minOf(maxOf(winWait, 1_000_000L), wall) else wall
         val rate = winBytes / span.toDouble()
@@ -226,7 +237,15 @@ internal class RequestPace(
         lastWindowRate = rate
         val slow = rate * factor < baseline
         if (wallSlow && !slow) ownPauses++
-        return slow
+        if (!slow) { grace = false; return false }
+        if (!grace && waitedNs >= 0 && totalWait > 0 && maxWait >= totalWait * STALL_SHARE) { grace = true; stallGraces++; return false }
+        grace = false
+        return true
+    }
+
+    companion object {
+        /** DL-11 part 2: one read holding this share of a slow window's wait is a single stall. */
+        const val STALL_SHARE = 0.6
     }
 }
 
@@ -327,7 +346,7 @@ class Segmented(
         val restartsAll = java.util.concurrent.atomic.AtomicInteger()
         val retries = java.util.concurrent.atomic.AtomicInteger()
         val gate = PaceGate()
-        requests.set(0); dropped.set(0); ownPauses.set(0); trips.clear(); active.clear()
+        requests.set(0); dropped.set(0); ownPauses.set(0); stallGraces.set(0); trips.clear(); active.clear()
         coroutineScope {
             (0 until connections).map {
                 async {
@@ -374,7 +393,7 @@ class Segmented(
         // split job whose other track failed runs again and must find this track complete, not refetch it.
         ForceGrab.lastStats = "total=$total connections=$connections chunks=${ranges.size} resumedChunks=$resumedChunks " +
             "requests=${requests.get()} paceRestarts=${restartsAll.get()} splits=${splits.get()} retries=${retries.get()} droppedPastEnd=${dropped.get()}" +
-            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()} protocol=$protocol" +
+            " paceHelped=${gate.helped} paceWasted=${gate.wasted} paceOff=${if (gate.open) 0 else 1} ownPauses=${ownPauses.get()} stallGrace=${stallGraces.get()} protocol=$protocol" +
             " trips=${synchronized(trips) { trips.joinToString(",", "[", "]") }}"
         return total
     }
@@ -403,6 +422,7 @@ class Segmented(
         return e
     }
     private val ownPauses = java.util.concurrent.atomic.AtomicInteger()
+    private val stallGraces = java.util.concurrent.atomic.AtomicInteger()
     /** DL-11 cause logging: the wire protocol of the probe (h2 = all ranges share one TCP connection). */
     @Volatile private var protocol = "?"
 
@@ -479,7 +499,7 @@ class Segmented(
                             if (!judged && meter.baselineRate > 0) { judged = true; trip?.append(if (gate.judge(meter.baselineRate, after)) "jH" else "jU") }
                             if (slowed && gate.open && p.left() >= RESTART_MIN_LEFT) return meter.lastWindowRate to tripEntry(p, meter)
                         }
-                    } finally { active.remove(p); ownPauses.addAndGet(meter.ownPauses) }
+                    } finally { active.remove(p); ownPauses.addAndGet(meter.ownPauses); stallGraces.addAndGet(meter.stallGraces) }
                 }
             }
             if (!judged) trip?.append("j-")
