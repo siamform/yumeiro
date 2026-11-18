@@ -902,6 +902,32 @@ flowchart LR
 - **Status:** accepted (agent decision inside the owner-ordered bug list). Verified only after fail-before
   and pass-after.
 
+### ADR-027: Two stream recents: Play Link and Live TV (NBUG-15 d)
+
+- **Scope:** `stream/StreamRepository` (stores), `stream/IncomingMedia.open` (who records where), the Play Link
+  page list, a "Recently played" row on the Live TV feed (`StreamScreen` hub, `LiveTvHub`).
+- **Requirements (owner spec):** Play Link recents hold only links opened through Play Link; channels played
+  from Live TV go to a "Recently played" row on the Live TV feed. Non-functional: no new dependency or
+  permission, same prefs file (backed up as before), no extra work on the main thread.
+- **Who records where:** `IncomingMedia.open(…, recent = Recent.NONE)` replaces `remember = true`; the default
+  records nothing, so a new caller cannot leak into either list.
+  LINK: the Play Link page (typed or pasted link, its resolved stream, its page finder, its own recents) and
+  links shared from other apps (the Play Link page offers sharing as its other way in).
+  LIVE: Live TV hub tiles, the playlist page, the watch panel's channel list, the new row.
+  KEEP: the watch panel's header modes re-open the current stream; the entry is refreshed where it already is.
+  NONE: websites, the player's page finder, YouTube, online extensions.
+- **Options (old data):** the old list mixed both. A. Move entries that carry a playlist mark (`group` or
+  `logoUrl`, which links typed into Play Link never have) into Live TV once, keep the rest in Play Link.
+  B. Move everything to Play Link (keeps the owner's complaint until the user clears it). C. Match every entry
+  against every installed playlist (loads every channel list at start). **Decision: A** (one-time, flag
+  `recents_split_v1`).
+- **Live TV row:** on the "All" view, above the playlists strip, newest first, at most 20 tiles (the same
+  `LiveChannelTile`), with Clear. Playing from the row gives the player the channel's playlist when that list is
+  loaded (channel up/down keeps working), otherwise the channel alone.
+- **Sizes:** Play Link 40 (unchanged), Live TV 30 (20 shown).
+- **Not done here:** incognito and "Clear watch history" for stream recents (NB15D-OB1, owner decision).
+- **Status:** accepted (owner spec; agent decisions inside it). Verified only after fail-before and pass-after.
+
 ## 11. Risks
 
 | Risk | Mitigation |

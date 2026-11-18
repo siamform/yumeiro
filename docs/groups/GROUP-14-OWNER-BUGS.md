@@ -310,3 +310,40 @@ See docs/SYSTEM-DESIGN.md ADR-026.
 | NB14-1, NB14-3 | pending (`.github/scripts/tests/test_build_market_logos.py`) | pending | CI (Python) |
 | NB14-2 | pending (`Nbug14ChannelLogoDeviceTest`: local server answers 403 to library User-Agents) | pending | emulator, TV emulator |
 
+## NBUG-15 (d): separate recents for Play Link and Live TV
+
+Owner spec 2026-11-18: "Play Link Page Recents: restrict recent streams strictly to items launched via the Play
+Link feature. Live TV Page Recents: route all general recently played channels into a dedicated 'Recently
+Played' category row on the main Live TV feed." Parts (a)–(c) are the redesign (ui-ux-pro-max proposal, owner
+approval before building); (d) is behaviour and is built now. The row is placed so the redesign keeps it.
+
+### Files and lines read
+
+- `stream/StreamRepository.kt` 19–70: one list `history` (prefs `mt_streams`, key `history`, 40 entries).
+- `stream/IncomingMedia.kt` 27–37: `open(remember = true)` adds every stream to that list by default.
+- Callers of `IncomingMedia.open` (all 14): Play Link page play / resolved play / page finder / its own recents
+  (`StreamScreen` 287, 295, 391, 564); Live TV hub tiles (`StreamScreen` 366); playlist page
+  (`PlaylistDetailScreen` 365); watch panel channel list and header modes (`StreamWatchPanel` 135, 140); websites
+  (`WebSitesScreen` 103); the player's page finder (`VideoPlayerModal` 1498); links shared from other apps
+  (`IncomingMedia.handle`); YouTube, online extensions (`remember = false`).
+- `StreamScreen` 536–575: the Play Link page shows "Recent streams" = that one list; the Tools tile "Recent".
+- `security/Privacy.kt`, `SettingsControls` 313: incognito and "Clear watch history" never touch stream recents.
+
+### Findings register
+
+| ID | Finding | Root cause | Severity | Status |
+|---|---|---|---|---|
+| NB15D-1 | Play Link "Recent streams" lists every channel played anywhere (Live TV, playlists, websites, the player's page finder) | one shared list, and `IncomingMedia.open` records by default | Medium (owner spec) | Open |
+| NB15D-2 | Live TV has no recently played channels | no store and no row | Medium (owner spec) | Open |
+| NB15D-OB1 | Stream recents are kept while incognito is on, and "Clear watch history" leaves them | `addToHistory` reads no privacy switch; the clear action names device, online and YouTube only | Low (not in the owner's report; the setting's text does not promise it) | Queued (owner decision) |
+
+### Design (ADR-027)
+
+See docs/SYSTEM-DESIGN.md ADR-027.
+
+### Verification
+
+| Item | Fail-before (old code) | Pass-after | Label |
+|---|---|---|---|
+| NB15D-1, NB15D-2 | pending (`StreamRecentsTest` unit; `Nbug15RecentsDeviceTest`: a channel played from Live TV must not be in Play Link recents and must be in the Live TV row; a link played from Play Link the other way round) | pending | CI unit, emulator, TV emulator |
+
