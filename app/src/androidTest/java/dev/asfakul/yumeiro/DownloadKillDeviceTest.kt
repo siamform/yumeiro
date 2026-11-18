@@ -93,8 +93,14 @@ class DownloadKillDeviceTest {
         val id = enqueue("kill", url)
         val item = waitFor(id, 180_000, "25 %") { it.bytes >= size / 4 || it.status == Status.FAILED }
         assertTrue("failed before 25 %: ${item.error}", item.status != Status.FAILED)
-        delay(1_500) // let finished chunks reach the side file, as they would on a phone
+        // G8 regression (tv-api24 44299923467): a fixed 1.5 s wait let a ~50 MB/s link finish the whole file
+        // before the kill, so phase b had nothing to resume. Kill as soon as a finished chunk is on disk.
+        val chunks = File(OnlineDownloads.fileOf(ctx, item).path + ".part.chunks")
+        val until = System.currentTimeMillis() + 5_000
+        while (System.currentTimeMillis() < until && chunks.length() == 0L &&
+            OnlineDownloads.get(id)?.status != Status.DONE) delay(20)
         val bytes = OnlineDownloads.get(id)?.bytes ?: 0
+        assertTrue("finished before the kill (bytes=$bytes of $size): the kill must land mid-download", bytes < size)
         state.writeText("$id\n$size\n$bytes\n")
         log("DL_KILL_A id=$id size=$size bytesAtKill=$bytes files=${filesOf(item)} pid=${android.os.Process.myPid()} — killing the process now")
         android.os.Process.killProcess(android.os.Process.myPid())
@@ -106,6 +112,7 @@ class DownloadKillDeviceTest {
         val (id, sizeS, killS) = state.readText().trim().lines()
         val size = sizeS.toLong(); val atKill = killS.toLong()
         state.delete()
+        assertTrue("phase a killed after the end (atKill=$atKill of $size): nothing to resume", atKill < size)
         val rx0 = TrafficStats.getUidRxBytes(android.os.Process.myUid())
         OnlineDownloads.ensureLoaded(ctx)
         val start = OnlineDownloads.get(id)
