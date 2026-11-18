@@ -100,6 +100,10 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44208655473 | CI at 546cdbe (NBUG-5 fix) | red: MixedLanguageEpisodesTest passed; RegexGuardTest.everyPatternHolderIsWarmedOffMain failed (new pattern in object OnlineSession) → 957e4b2 |
 | 44209853612 | DubCountProbeDeviceTest api33-lowram at f7da100 | success; shown12 starts with the English Dub run for Frieren, Solo Leveling (raw Spanish first), S2, Dandadan, Kaiju, Blue Lock |
 | 44211141941 | CI at 957e4b2 | green (build, unit, lint, gitleaks) |
+| 44214275251 | Upgrade v1.8.0 → db52f4c (api33-lowram) | UPGRADE_RESULT PASS compare=0 played=1 resumed=1 fatal=0; 0 lost, 1 changed (updater last_check) |
+| 44214312408 | RtlLayoutDeviceTest + WidgetUpdatesDeviceTest both phones at db52f4c | OK: RTL 1 test RTL_RESULT PASS, Widget 5 tests, both phones |
+| 44215701198 | G6-ST1 fail-before SleepTimerWithoutScreenDeviceTest at 0a47b48 | ST_RESULT FAIL both phones: still playing at 100 s after a 1-minute timer, screen closed |
+| 44217196977 | G6-ST1 pass-after + G6-WL fail-before at 3b6e2be, both phones | ST_RESULT PASS 60354 / 60357 ms; WL_RESULT FAIL http=false (no ExoPlayer:WifiLockManager in dumpsys wifi) |
 | 44211556974 | LargeLibraryScanDeviceTest both phones | OK both; 5,000 songs; scan 180/111/99 ms api33-lowram, 238/181/162 ms api36; insert 135 s / 128 s; cleanup removed 5,000 |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
@@ -107,12 +111,12 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 
 | Item | Ledger evidence | This cycle |
 |---|---|---|
-| Upgrade from v1.8.0 (X10-5) | 43891389012 PASS at c306e7e (emulator api33-lowram) | re-run at head: start-up changed (cbad735, 77d387a) and data code changed since c306e7e |
+| Upgrade from v1.8.0 (X10-5) | 43891389012 PASS at c306e7e (emulator api33-lowram) | re-run at db52f4c: 44214275251 PASS (0 lost, played, resumed, fatal=0; emulator api33-lowram) |
 | MASVS write-up (X7-5) | 460b840 docs/security/MASVS.md | no redo: document review, no security-relevant code change this cycle (NBUG-6 not built) |
-| Widget updates (G12-WD) | 7569065 WidgetUpdatesDeviceTest | re-run with RTL: widget refresh runs at start-up, which 77d387a touched |
+| Widget updates (G12-WD) | 7569065 WidgetUpdatesDeviceTest | re-run at db52f4c: 44214312408 OK 5 tests both phones |
 | Decoder fault tests (G12-DF) | 24bcc65 DecoderFaultDeviceTest | no redo: player code untouched this cycle |
 | Anime4K (G12-A4K) | 7787fde Anime4kGlDeviceTest | no redo: shader/player code untouched |
-| RTL (G12-RTL) | ec0c7ae RtlLayoutDeviceTest | re-run: Home composition timing changed (77d387a) |
+| RTL (G12-RTL) | ec0c7ae RtlLayoutDeviceTest | re-run at db52f4c: 44214312408 RTL_RESULT PASS both phones |
 | X11–X16 | INVENTORY rows 186–189; X11/X12 re-read in CI 44067269319 | no redo; SmartDnsResilience 4/4, DnsWire 4/4, DataCacheBounds 4/4 again green in CI 44192309663 |
 | ST-17 | 44145301927 | stays open by order (cause-naming logging per campaign) |
 

@@ -1,6 +1,16 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-18, eighth cycle, session 2, step 6)
+## Resume here (updated 2026-11-18, eighth cycle, session 2, step 7)
+
+- **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
+  Index: docs/CHECKLIST-FEATURES-BUGS.md.
+- **Current group / step:** L2 G6 Music. Upgrade (44214275251) and RTL + widget (44214312408) re-runs PASS at db52f4c.
+  G6-ST1 verified (emulator, both phones). G6-WL fix fb359cf pushed, pass-after pending.
+- **Runs in progress:** device 44218535243 (MusicWifiLockDeviceTest both phones at fb359cf), CI 44218538378.
+- **Next three actions:** (1) record G6-WL pass-after (if dumpsys wifi cannot show the lock on the emulator, record that
+  honestly); (2) G6 audio focus + becoming-noisy + notification controls; (3) G6 online/offline switch, feed paging, lyrics, Last.fm mocks.
+
+### Previous resume note — superseded (updated 2026-11-18, eighth cycle, session 2, step 6)
 
 - **Orders:** eighth-cycle master handover prompt of 2026-11-18. Report: docs/reports/2026-11-18-eighth-handover-report.md.
   Index: docs/CHECKLIST-FEATURES-BUGS.md.
