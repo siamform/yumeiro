@@ -272,11 +272,17 @@ object ExtensionManager {
             val liveFile = remote.origin == "community" || remote.origin == "discovered"
             if (remote.sha256 != null && remote.sha256 != sha && !liveFile) throw ExtensionException("Download of ${remote.name} is corrupted (checksum mismatch)")
             val isUpdate = _state.value.installed.any { it.key == remote.key }
-            gate(review, remote.name, remote.version, remote.repoName, isUpdate, bytes)
+            // NBUG-16 NB16-4: the file's own manifest version is what is installed (CloudStream saves the
+            // same). Community/discovered listings lag the author's live file (StreamPlay listed 711,
+            // file 713), and storing the listing's number flagged the same file as an update later.
+            // Never below the listing: a file older than its listing would otherwise be flagged (and
+            // downloaded again) on every sync.
+            val version = maxOf(readManifest(bytes)?.version ?: remote.version, remote.version)
+            gate(review, remote.name, version, remote.repoName, isUpdate, bytes)
             mutex.withLock {
                 val previous = _state.value.installed.firstOrNull { it.key == remote.key }
                 val ext = InstalledExtension(
-                    internalName = remote.internalName, name = remote.name, version = remote.version,
+                    internalName = remote.internalName, name = remote.name, version = version,
                     repoUrl = remote.repoUrl, repoName = remote.repoName, fileName = "", sourceUrl = remote.sourceUrl ?: remote.url,
                     sha256 = sha, description = remote.description, authors = remote.authors, tvTypes = remote.tvTypes,
                     language = remote.language, iconUrl = remote.iconUrl, enabled = previous?.enabled ?: true,
