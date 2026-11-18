@@ -11,8 +11,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.platform.app.InstrumentationRegistry
@@ -274,19 +275,19 @@ object FirstRun {
         else -> tag
     }
 
-    /** TV: a touch tap on a rail item leaves focus in the rail, which opens it over the page (248 dp)
-     *  and takes taps meant for the grid. A TV user presses Right to go to the page; do the same until
-     *  the rail is back to its collapsed width. No-op on phones (no rail). */
-    fun leaveRail(rule: AndroidComposeTestRule<*, *>) {
-        if (!has(rule, "tv_nav_rail")) return
-        val limit = with(rule.density) { 160.dp.toPx() } // collapsed 84 dp, open 248 dp (TvNavRail.kt)
-        fun width() = runCatching { rule.onAllNodesWithTag("tv_nav_rail", true).fetchSemanticsNodes().first().size.width.toFloat() }.getOrDefault(0f)
-        var presses = 0
-        while (width() > limit && presses < 4) {
-            shell("input keyevent KEYCODE_DPAD_RIGHT"); presses++
-            Thread.sleep(400); rule.waitForIdle()
-        }
-        if (width() > limit) { shot("rail_still_open"); throw AssertionError("TV rail still open after $presses D-pad Right presses · ${onScreen(rule)}") }
+    /** Opens the card that shows [text]. Phones: a real touch tap on the text. TV: a touch tap on a
+     *  rail item leaves focus in the rail, which then opens (248 dp) over the grid and takes the tap
+     *  (run 44358110397); D-pad Right in touch mode moved the pager to another tab (44362609758). A TV
+     *  has no touch screen, so on TV the card's own click action runs, as the remote's OK would. */
+    fun clickCard(rule: AndroidComposeTestRule<*, *>, text: String) {
+        if (!has(rule, "tv_nav_rail")) { rule.onAllNodesWithText(text, substring = true)[0].performClick(); return }
+        val m = androidx.compose.ui.test.hasClickAction() and
+            androidx.compose.ui.test.hasAnyDescendant(androidx.compose.ui.test.hasText(text, substring = true))
+        val nodes = rule.onAllNodes(m, true).fetchSemanticsNodes()
+        if (nodes.isEmpty()) { shot("no_card_$text"); throw AssertionError("no clickable card with '$text' · ${onScreen(rule)}") }
+        val i = nodes.indices.minByOrNull { nodes[it].size.width.toLong() * nodes[it].size.height }!!
+        rule.onAllNodes(m, true)[i].performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        rule.waitForIdle()
     }
 
     /** True if the bar item [tag] (or its TV rail twin) is on screen. */
