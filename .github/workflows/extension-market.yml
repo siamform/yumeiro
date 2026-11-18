@@ -77,8 +77,14 @@ jobs:
       - name: Check for changes
         id: diff
         run: |
-          if bash .github/scripts/data-changed.sh out; then echo "changed=true" >> "$GITHUB_OUTPUT"
-          else echo "changed=false" >> "$GITHUB_OUTPUT"; echo "No changes since the last publish; skipped." >> "$GITHUB_STEP_SUMMARY"; fi
+          # 0 changed, 1 unchanged, anything else is an error and fails the job (NBUG-16 NB16-1:
+          # errors used to read as "unchanged", so a catalog with new files was never published).
+          rc=0; bash .github/scripts/data-changed.sh out || rc=$?
+          case $rc in
+            0) echo "changed=true" >> "$GITHUB_OUTPUT" ;;
+            1) echo "changed=false" >> "$GITHUB_OUTPUT"; echo "No changes since the last publish; skipped." >> "$GITHUB_STEP_SUMMARY" ;;
+            *) echo "::error::The change check failed (exit $rc); nothing was published"; exit 1 ;;
+          esac
 
       - name: Publish to extensions branch
         if: steps.diff.outputs.changed == 'true'
