@@ -112,6 +112,8 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44225572082 | G6-MO1 fail-before CI on ab/mo1-before | red as intended: MusicModeReconnectTest 1 of 1150 ("On device" after reconnect), nothing else |
 | 44225724090 | YmPagingNetworkDeviceTest both phones at 3816573 | OK both; PG_RESULT PASS page1=100, offline more failed (UnknownHostException), back → retries=1, 5 pages / 499 rows |
 | 44227662448 | CI at 7d1486a (MO1 fix + LY/LF mocked tests) | red only in LrcLibMockedTest 3 of 8 (test isolation: LrcLib.prefs kept across Robolectric apps → 00c4ded); 1166 tests; MusicModeReconnectTest 1/1, Round13LogicTest 13/13, ScrobbleFlushMockedTest 8/8, SmartDns/DnsWire/DataCacheBounds 4/4 each |
+| 44236250052 | G6-MO1 device fail-before (7d1486a^ + MusicModeNetworkDeviceTest), both phones | red as intended: after reconnect mode stayed On device (emulator) |
+| 44236207213 | MusicModeNetworkDeviceTest both phones at 5893397 | OK both: MM_OFFLINE On device, MM_BACK Online, MM_DEVICE_PICK stays (emulator, svc wifi/data) |
 | 44230037374 | G6-SP1 fail-before CI on ab/sp1-before | red as intended: MusicAccessPromptTest ("no card"); plus the pre-00c4ded LrcLibMockedTest copy (3), nothing else |
 | 44232723925 | G6-SP1 device fail-before at f418d80, both phones | phase b red both (MA_CARD shown=false); a/c OK (song pushed by shell listed once allowed) |
 | 44232721209 | CI at b2eb2bd (SP1 fix) | green; 1190 tests; MusicAccessPromptTest 1/1, LrcLibMockedTest 8/8, ScrobbleFlushMockedTest 8/8, MusicModeReconnectTest 1/1; SmartDns/DnsWire/DataCacheBounds 4/4 each |
