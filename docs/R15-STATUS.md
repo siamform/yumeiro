@@ -11,7 +11,11 @@
 - **NBUG-12 lead (network probe 2026-11-18):** Porn4fans' `contentUrl` is refused (403) for everyone; the page's KVS
   player config has working `?v-acctoken=` links; the last-resort page capture loaded the refused `.mp4` instead of
   the title page. Live headless capture of the real page also failed (diag 44389256785, throwaway, deleted).
-- **Next three actions:** (1) NBUG-11 register + test commit; (2) NBUG-11 fail-before on phones; (3) NBUG-11 fix.
+- **NBUG-11:** register ee4afc2, test dfd9fc4, fix 9e12192. Running: fail-before 44392693373 (dfd9fc4), CI
+  44392816697, pass-after phones 44392821485 (Nbug11 + HomeNavigation, AdultSearchFilter, OnlineSwitchesEffect).
+- **NBUG-12:** register 15280ae, test 86b9c2e (old code pinned on throwaway ab/n12-before), fixes 8e020b1 (NB12-1),
+  db723eb (NB12-3). Next: fail-before on ab/n12-before, then pass-after, TVs, delete the branch.
+- **Next three actions:** (1) read the NBUG-11 runs; (2) NBUG-12 fail-before; (3) TVs for both.
 
 ### Previous resume note — superseded (G9 close)
 
