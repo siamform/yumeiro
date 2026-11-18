@@ -177,7 +177,9 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
     val seasons = remember(d, version) { d.seasons(version) }
     var seasonIndex by rememberSaveable(d.url, version) { mutableIntStateOf(0) }
     val season = seasons.getOrNull(seasonIndex) ?: seasons.firstOrNull()
-    val ordered = remember(d, version) { OnlineSession.episodesOf(d, version) }
+    // NBUG-5: a list that mixes language runs keeps each run together and labels its tiles.
+    val labelled = remember(d, version) { OnlineSession.labelledEpisodes(d, version) }
+    val ordered = remember(labelled) { labelled.map { it.first } }
     val episodes = remember(ordered, season) { ordered.withIndex().filter { season == null || it.value.season == season.number } }
     val historyVersion by OnlineHistory.version.collectAsState()
     // Round 13: thumbnails for episodes the extension sends without one.
@@ -310,7 +312,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
         if (episodes.isNotEmpty()) {
             item("ep_header") {
                 Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { SectionHeader(if (seasons.size > 1) season?.title ?: "Episodes" else "Episodes", "${episodes.size} episode${if (episodes.size == 1) "" else "s"}") }
+                    Box(Modifier.weight(1f)) { SectionHeader(if (seasons.size > 1) season?.title ?: "Episodes" else "Episodes", episodeCountText(episodes.map { it.value }, episodes.mapNotNull { labelled[it.index].second }.distinct().size)) }
                     IconButton(onClick = { gridMode = !gridMode }, modifier = Modifier.testTag("online_episode_layout")) {
                         Icon(if (gridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, if (gridMode) "Show as list" else "Show as grid", tint = TextSecondary)
                     }
@@ -322,7 +324,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         line.forEach { (i, e) ->
                             val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(d.api, e.data) }
-                            EpisodeTile(e, current = i == resumeIndex, progress = p?.fraction ?: 0f, watched = p?.finished == true, downloaded = e.data in savedData, modifier = Modifier.weight(1f)) { onPlay(version, i) }
+                            EpisodeTile(e, tag = labelled[i].second, current = i == resumeIndex, progress = p?.fraction ?: 0f, watched = p?.finished == true, downloaded = e.data in savedData, modifier = Modifier.weight(1f)) { onPlay(version, i) }
                         }
                         repeat(tileCols - line.size) { Spacer(Modifier.weight(1f)) }
                     }
@@ -391,10 +393,12 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeTile(e: OnlineEpisode, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, downloaded: Boolean = false, onClick: () -> Unit) {
+private fun EpisodeTile(e: OnlineEpisode, tag: String? = null, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, downloaded: Boolean = false, onClick: () -> Unit) {
     val bg = when { current -> SpotifyGreen.copy(alpha = 0.24f); watched -> Color.White.copy(alpha = 0.04f); else -> GlassFill }
     Box(modifier.aspectRatio(1.25f).clip(RoundedCornerShape(12.dp)).background(bg).clickable(onClick = onClick).testTag("online_episode"), contentAlignment = Alignment.Center) {
         Text(e.episode?.toString() ?: "•", color = if (watched) TextTertiary else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        if (tag != null) Text(tag, color = TextSecondary, fontSize = 9.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 3.dp, end = 14.dp).testTag("online_episode_tag"))
         if (downloaded) Icon(Icons.Default.CheckCircle, "Downloaded", tint = SpotifyGreen, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(12.dp))
         if (progress > 0.01f) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.12f))) {
@@ -402,6 +406,15 @@ private fun EpisodeTile(e: OnlineEpisode, current: Boolean, progress: Float, wat
             }
         }
     }
+}
+
+/**
+ * Header count. NBUG-5: when one list holds several language runs ([runs] > 1) the count is of different
+ * episodes, not of entries — Blue Lock's Dub list said "59 episodes" for 24.
+ */
+internal fun episodeCountText(list: List<OnlineEpisode>, runs: Int): String {
+    val n = if (runs > 1) OnlineSession.distinctEpisodeCount(list) else list.size
+    return "$n episode${if (n == 1) "" else "s"}" + if (runs > 1) " · $runs versions" else ""
 }
 
 internal fun formatClock(ms: Long): String {

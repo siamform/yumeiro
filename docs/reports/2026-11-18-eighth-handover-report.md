@@ -93,7 +93,7 @@ Kept current after every job. The repo is the truth; this file and "Resume here"
 | 44203248895 | CI at f390272 (pass-after G5-PC1/PC2) | green (build, unit, lint, gitleaks) |
 | 44203529014 | LibraryEmptyProfileDeviceTest both phones, reopen timing split | PASS both; EP_B open=6693 / continue=6693 / library=6695 ms (api33-lowram), 3667 / 3667 / 3668 ms (api36); 3 songs only |
 | 44203720877 | DubCountProbeDeviceTest probe 2 (api33-lowram) | success; signal D found (KickassAnime mixes Dub + Spanish runs in one list; Yumeiro sort interleaved them) |
-| 44206044268 | CI on ab/nb5-before (NBUG-5 fail-before, MixedLanguageEpisodesTest) | running |
+| 44206044268 | CI on ab/nb5-before (NBUG-5 fail-before, MixedLanguageEpisodesTest) | red as expected: 1144 tests, 2 failed (nextEpisodeStaysInTheSameLanguage, runNamedLikeTheVersionComesFirst); clean-list guard passed |
 | 44182727961 | ST-18 before: HomeTraceDeviceTest api33-lowram at 03fb2e4 (no deferral) | PASS. Frame 1 (cold) 3613 / 1768 ms; VerifyClass of the hosts deferred in cbad735 inside frame 1: 64 / 15 ms (OnlinePlayerUiKt 28/7, WatchScreensKt 15/3, ReminderHostKt 12/2, BrowserCheckHostKt 7/2); trace 2 missed the cold start (frame 1 299 ms, 23 verifies). Older 43863246577: 53/74/122 ms (emulator) |
 
 ## L1 G12 order: items verified in earlier cycles

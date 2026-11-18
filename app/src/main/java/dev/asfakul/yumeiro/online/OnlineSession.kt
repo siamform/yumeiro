@@ -151,9 +151,50 @@ object OnlineSession {
     fun isOnline(video: VideoItem?) = video != null && video.id.startsWith("online:") && _state.value?.videoId == video.id
 
     /** All episodes of [version] in watch order. */
-    fun episodesOf(detail: OnlineDetail, version: String): List<OnlineEpisode> =
-        detail.episodes[version].orEmpty().sortedWith(compareBy({ it.season ?: 0 }, { it.episode ?: Int.MAX_VALUE }))
-            .let { sorted -> if (sorted.all { it.episode == null }) detail.episodes[version].orEmpty() else sorted }
+    fun episodesOf(detail: OnlineDetail, version: String): List<OnlineEpisode> = labelledEpisodes(detail, version).map { it.first }
+
+    private val watchOrder = compareBy<OnlineEpisode>({ it.season ?: 0 }, { it.episode ?: Int.MAX_VALUE })
+    private fun inWatchOrder(list: List<OnlineEpisode>): List<OnlineEpisode> =
+        list.sortedWith(watchOrder).let { sorted -> if (sorted.all { it.episode == null }) list else sorted }
+
+    /** NBUG-5: language marker an extension appends to an episode name, e.g. "The Journey's End (Spanish)" → "Spanish". */
+    internal fun languageTag(e: OnlineEpisode): String? =
+        e.name?.let { LANGUAGE_TAG.find(it) }?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
+    private val LANGUAGE_TAG = Regex("""\((\p{L}[\p{L} .\-]{1,23})\)\s*$""")
+
+    /**
+     * Episodes of [version] in watch order, each with the label of its language run (null when the list is
+     * a single language — the usual case, unchanged).
+     *
+     * NBUG-5 (signal D): some extensions put several languages in one Sub/Dub list, one run per language
+     * ("… (Spanish)" 1..12, then "… (Dub)" 1..12). Sorting the whole list by number interleaved the runs, so
+     * "next" went from Dub 1 to Spanish 1 and the grid read 1, 1, 1, 2, 2, 2. When the list has repeated
+     * numbers AND at least two different name tags, each run (tag + how many times that number was already
+     * seen under the tag) is kept together and sorted on its own; the run named like the version comes
+     * first, the rest keep the extension's order. Nothing is dropped or merged.
+     */
+    fun labelledEpisodes(detail: OnlineDetail, version: String): List<Pair<OnlineEpisode, String?>> {
+        val raw = detail.episodes[version].orEmpty()
+        val keys = raw.map { it.season to it.episode }
+        val repeats = keys.size != keys.toSet().size
+        val tags = if (repeats) raw.map(::languageTag) else emptyList()
+        if (!repeats || tags.filterNotNull().distinct().size < 2) return inWatchOrder(raw).map { it to null }
+        val seen = HashMap<Triple<String?, Int?, Int?>, Int>()
+        val runs = LinkedHashMap<Pair<String?, Int>, MutableList<OnlineEpisode>>()
+        raw.forEachIndexed { i, e ->
+            val n = seen.merge(Triple(tags[i], e.season, e.episode), 1) { a, b -> a + b }!!
+            runs.getOrPut(tags[i] to n) { ArrayList() }.add(e)
+        }
+        val order = runs.keys.sortedBy { (tag, n) -> if (n == 1 && tag != null && tag.equals(version, ignoreCase = true)) 0 else 1 } // stable
+        return order.flatMap { key ->
+            val label = key.first?.let { if (key.second == 1) it else "$it ${key.second}" }
+            inWatchOrder(runs.getValue(key)).map { it to label }
+        }
+    }
+
+    /** Number of different episodes (season + number) in [list]; the header count when runs repeat numbers. */
+    fun distinctEpisodeCount(list: List<OnlineEpisode>): Int =
+        if (list.any { it.episode == null }) list.size else list.distinctBy { it.season to it.episode }.size
 
     /**
      * Resolves and plays [episodeIndex] of [version] (or the movie when there are no episodes).
