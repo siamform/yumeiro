@@ -78,6 +78,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.online.ExtensionScanner",
         "dev.asfakul.yumeiro.online.ExtensionScannerKt",
         "dev.asfakul.yumeiro.online.OnlinePlaybackKt",
+        "dev.asfakul.yumeiro.online.OnlineSessionKt",
         "dev.asfakul.yumeiro.online.OnlineRepositoryKt",
         "dev.asfakul.yumeiro.online.ReleaseTags",
         "dev.asfakul.yumeiro.online.SearchRankerKt",

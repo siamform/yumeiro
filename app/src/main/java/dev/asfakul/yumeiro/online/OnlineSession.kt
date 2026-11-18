@@ -159,8 +159,7 @@ object OnlineSession {
 
     /** NBUG-5: language marker an extension appends to an episode name, e.g. "The Journey's End (Spanish)" → "Spanish". */
     internal fun languageTag(e: OnlineEpisode): String? =
-        e.name?.let { LANGUAGE_TAG.find(it) }?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
-    private val LANGUAGE_TAG = Regex("""\((\p{L}[\p{L} .\-]{1,23})\)\s*$""")
+        e.name?.let { EPISODE_LANGUAGE_TAG.find(it) }?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
 
     /**
      * Episodes of [version] in watch order, each with the label of its language run (null when the list is
@@ -499,3 +498,6 @@ internal object GatherCap {
     fun enough(started: Boolean, playable: Int, subtitles: Int, sinceFirstMs: Long, cap: Int = dev.asfakul.yumeiro.player.HeatGuard.linkCap()): Boolean =
         started && playable >= cap && (subtitles > 0 || sinceFirstMs >= SUB_WAIT_MS)
 }
+
+/** NBUG-5: trailing "(Spanish)"-style language marker; top level so RegexWarmup can load it off main (OnlineSessionKt). */
+private val EPISODE_LANGUAGE_TAG = Regex("""\((\p{L}[\p{L} .\-]{1,23})\)\s*$""")
