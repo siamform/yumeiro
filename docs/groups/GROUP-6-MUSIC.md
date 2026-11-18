@@ -88,5 +88,5 @@ Cancelled runs in this group: none.
 - The offline queue is flushed at manager start, after each scrobble and at sign-in, not when the
   connection returns. Listens waiting offline go out with the next scrobble or the next app start.
 - The saved queue is rewritten only at the end of a flush. If the process is killed mid-flush, a
-  batch Last.fm already accepted can be sent again; Last.fm de-duplicates same track + timestamp,
-  so the impact is low. Recorded for the owner; not changed (no failing case on CI or emulator).
+  batch Last.fm already accepted can be sent again and may show as a duplicate listen (needs a
+  kill during the few seconds of a flush, so rare; not verified against Last.fm). Recorded for the owner; not changed (no failing case on CI or emulator).
