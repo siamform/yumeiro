@@ -42,7 +42,7 @@ echo "Migrations still needed (in order): ${need[*]:-none}"
 echo "Worker secrets present: $(curl -sf "$API/accounts/$ACCOUNT/workers/scripts/yumeiro-cloud/secrets" -H "$AUTH" | python3 -c 'import sys,json;print(sorted(s["name"] for s in json.load(sys.stdin)["result"]))')"
 
 if [[ $GO -eq 0 ]]; then
-  echo "Dry run only. Re-run with --go after the owner's go. Plan: migrations above, then 'wrangler deploy'."
+  echo "Dry run only. Re-run with --go after the owner's go. Plan: migrations above, then 'wrangler deploy', then the Last.fm signing secrets (ADR-048)."
   exit 0
 fi
 
@@ -56,4 +56,11 @@ for m in "${need[@]}"; do
   npx wrangler d1 execute yumeiro --remote --file="migrations/$m"
 done
 npx wrangler deploy
+# SEC-LFM (ADR-048): Last.fm signs on the Worker, so the APK carries no shared secret. Values come from
+# .env through stdin only (never argv, never echoed). Skipped when .env has no Last.fm pair.
+if [[ -n "${LASTFM_API_KEY:-}" && -n "${LASTFM_SHARED_SECRET:-}" ]]; then
+  printf '%s' "$LASTFM_API_KEY" | npx wrangler secret put LASTFM_API_KEY >/dev/null
+  printf '%s' "$LASTFM_SHARED_SECRET" | npx wrangler secret put LASTFM_SHARED_SECRET >/dev/null
+  echo "Last.fm signing secrets set."
+fi
 echo "Deployed. Watch: npx wrangler tail yumeiro-cloud --format pretty (look for 'wake' queue sends after the next */10 cron)."

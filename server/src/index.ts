@@ -13,6 +13,7 @@ import {
 import {
   FANOUT_PER_MESSAGE, buildMessage, buildWake, needsFanout, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
 } from "./fcm.ts";
+import { apiSig, signRequest } from "./lastfm.ts";
 
 export interface Env {
   DB: D1Database;
@@ -29,6 +30,11 @@ export interface Env {
   ADMIN_TOKEN?: string;
   /** Secret (wrangler secret put FCM_SERVICE_ACCOUNT): the Firebase service-account JSON. Never in the app. */
   FCM_SERVICE_ACCOUNT?: string;
+  /** SEC-LFM (ADR-048): Yumeiro's Last.fm API key (public; the app has the same one) and its shared secret (wrangler secret put). */
+  LASTFM_API_KEY?: string;
+  LASTFM_SHARED_SECRET?: string;
+  /** Per-IP limit on Last.fm signatures (a phone needs a few a minute). */
+  LASTFM_SIGN?: RateLimit;
 }
 
 /** Airing nudges (UnifiedPush endpoints) or NOTIFY-1 direct copies of a broadcast (FCM ids). */
@@ -56,6 +62,7 @@ export default {
       if (url.pathname === "/v1/devices" && req.method === "DELETE") return await unregister(req, env);
       if (url.pathname === "/v1/fcm/devices" && req.method === "POST") return await fcmRegister(req, env);
       if (url.pathname === "/v1/fcm/devices" && req.method === "DELETE") return await fcmUnregister(req, env);
+      if (url.pathname === "/v1/lastfm/sign" && req.method === "POST") return await lastfmSign(req, env);
       if (url.pathname === "/v1/admin/notify" && req.method === "POST") return await adminNotify(req, env);
       if (url.pathname === "/v1/admin/fcm/stats" && req.method === "GET") return await adminStats(req, env);
       return fail(404, "not_found");
@@ -87,6 +94,18 @@ export default {
  * For uptime monitors: 200 only if D1 answers and the 10-minute job ran in the last 30 minutes.
  * `cron_s` = seconds since the job last finished. One D1 read per call.
  */
+/** SEC-LFM (ADR-048): signs one of the app's four Last.fm calls for the built-in key. Never logs parameters. */
+async function lastfmSign(req: Request, env: Env): Promise<Response> {
+  if (!env.LASTFM_SHARED_SECRET || !env.LASTFM_API_KEY) return fail(503, "lastfm_off");
+  if (env.LASTFM_SIGN && !(await env.LASTFM_SIGN.limit({ key: `lfm:${req.headers.get("cf-connecting-ip") ?? "?"}` })).success) return fail(429, "slow_down");
+  if (Number(req.headers.get("content-length") ?? "0") > 40_000) return fail(413, "too_large");
+  let body: unknown;
+  try { body = await req.json(); } catch { return fail(400, "bad_json"); }
+  const r = signRequest(body, env.LASTFM_API_KEY);
+  if ("error" in r) return fail(r.error === "too_large" ? 413 : r.error === "bad_params" ? 400 : 403, r.error);
+  return json({ api_sig: apiSig(r.params, env.LASTFM_SHARED_SECRET) });
+}
+
 async function health(env: Env): Promise<Response> {
   const last = Number(await getState(env, "aired_to").catch(() => null));
   const ago = last > 0 ? now() - last : null;

@@ -32,6 +32,14 @@ name = "DEVICE_SYNC"
 namespace_id = "7002"
 simple = { limit = 3, period = 60 }
 
+# SEC-LFM (ADR-048): per-IP limit on Last.fm signatures (now playing + scrobble + sign-in polls).
+[[ratelimits]]
+name = "LASTFM_SIGN"
+namespace_id = "7003"
+simple = { limit = 30, period = 60 }
+
+# LASTFM_API_KEY and LASTFM_SHARED_SECRET are Worker secrets (scripts/deploy-worker.sh puts them from .env).
+
 [triggers]
 # Every 10 minutes: episodes that just aired on AniList. the 03:00 UTC run also prunes silent devices.
 crons = ["*/10 * * * *"]
