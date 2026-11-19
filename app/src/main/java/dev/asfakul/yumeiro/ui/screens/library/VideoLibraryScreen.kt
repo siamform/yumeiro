@@ -227,7 +227,7 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
         }
         Spacer(Modifier.height(5.dp))
         Text(b.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
-        Text(listOfNotNull(if (b.favorite) "♥" else null, b.status.takeIf { it.listed }?.label).joinToString(" ").ifBlank { "Favorite" } + " · " + b.api, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(listOfNotNull(if (b.favorite) "♥" else null, b.status.takeIf { it != OnlineBookmarks.Status.NONE }?.label).joinToString(" ").ifBlank { "Favorite" } + " · " + b.api, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
