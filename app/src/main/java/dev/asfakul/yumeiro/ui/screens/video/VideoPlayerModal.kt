@@ -273,7 +273,12 @@ private fun VideoPlayerModalContent(
     val activity = context as? Activity
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
-    val volumeAccumulator = remember(maxVolume) { VolumeAccumulator(maxVolume) }
+    // F-06: boost above 100 % (LoudnessEnhancer) when allowed in Settings and the device supports it; phones only.
+    val boostSetting by dev.asfakul.yumeiro.player.PlayerSettings.volumeBoost.collectAsState()
+    val boostSupported by dev.asfakul.yumeiro.player.VolumeBoost.supported.collectAsState()
+    val boostAllowed = boostSetting && boostSupported && !dev.asfakul.yumeiro.Edition.isTv
+    val volumeAccumulator = remember(maxVolume, boostAllowed) { VolumeAccumulator(maxVolume, boostAllowed) }
+    var boostLevel by remember(video.id) { mutableFloatStateOf(0f) }
 
     // Playback state
     var isPlaying by remember { mutableStateOf(true) }
@@ -486,6 +491,11 @@ private fun VideoPlayerModalContent(
     val sleepState by dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.collectAsState()
     val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, "End of this video")
     var showSleepSheet by remember { mutableStateOf(false) }
+    // F-06: every video starts without boost, and closing the player frees the effect.
+    DisposableEffect(exoPlayer, video.id) {
+        dev.asfakul.yumeiro.player.VolumeBoost.reset()
+        onDispose { dev.asfakul.yumeiro.player.VolumeBoost.reset() }
+    }
     DisposableEffect(exoPlayer, video.id) {
         dev.asfakul.yumeiro.player.VideoSleepTimer.attach(exoPlayer, video.id)
         onDispose { dev.asfakul.yumeiro.player.VideoSleepTimer.detach(exoPlayer) }
@@ -1767,12 +1777,17 @@ private fun VideoPlayerModalContent(
                     if (!volumeAccumulator.active) {
                         // Sync with hardware-button changes made since the last swipe.
                         currentVolumeLevel = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                        volumeAccumulator.begin(currentVolumeLevel)
+                        volumeAccumulator.begin(currentVolumeLevel, boostLevel)
                     }
                     val newVol = volumeAccumulator.add(delta, currentVolumeLevel)
                     if (newVol != currentVolumeLevel) {
                         currentVolumeLevel = newVol
                         runCatching { audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0) }
+                    }
+                    val b = volumeAccumulator.boost
+                    if (b != boostLevel) {
+                        boostLevel = b
+                        dev.asfakul.yumeiro.player.VolumeBoost.set(exoPlayer.audioSessionId, b)
                     }
                     isVolumeHUDVisible = true
                 },
@@ -1850,6 +1865,7 @@ private fun VideoPlayerModalContent(
             volumeLevel = currentVolumeLevel,
             maxVolume = maxVolume,
             isVisible = isVolumeHUDVisible,
+            boost = if (currentVolumeLevel >= maxVolume) boostLevel else 0f,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 20.dp, top = 28.dp, bottom = 28.dp)

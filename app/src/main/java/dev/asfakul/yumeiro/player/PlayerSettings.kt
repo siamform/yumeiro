@@ -27,6 +27,9 @@ object PlayerSettings {
     val backAction: StateFlow<BackAction> = _backAction.asStateFlow()
     private val _captionsDefault = MutableStateFlow(true)
     val captionsDefault: StateFlow<Boolean> = _captionsDefault.asStateFlow()
+    /** F-06: swipe past 100 % into a volume boost (up to 200 %). Phones only; TVs leave loudness to the TV / receiver. */
+    private val _volumeBoost = MutableStateFlow(true)
+    val volumeBoost: StateFlow<Boolean> = _volumeBoost.asStateFlow()
     private val _subtitleLanguage = MutableStateFlow("eng")
     val subtitleLanguage: StateFlow<String> = _subtitleLanguage.asStateFlow()
     @Volatile private var loaded = false
@@ -37,6 +40,7 @@ object PlayerSettings {
         _backgroundPlay.value = p.getBoolean("background_play", true)
         _autoPip.value = p.getBoolean("auto_pip", true)
         _captionsDefault.value = p.getBoolean("captions_default", true)
+        _volumeBoost.value = p.getBoolean("volume_boost", true)
         _backAction.value = backActionFrom(p.getString(KEY_BACK_ACTION, null), p.getString("back_action", null))
         _subtitleLanguage.value = p.getString("subtitle_language", "eng") ?: "eng"
         loaded = true
@@ -61,5 +65,6 @@ object PlayerSettings {
         return if (legacy == BackAction.CLOSE.name) BackAction.CLOSE else BackAction.MINIMIZE
     }
     fun setCaptionsDefault(c: Context, v: Boolean) { _captionsDefault.value = v; put(c, "captions_default", v) }
+    fun setVolumeBoost(c: Context, v: Boolean) { _volumeBoost.value = v; put(c, "volume_boost", v); if (!v) VolumeBoost.reset() }
     fun setSubtitleLanguage(c: Context, v: String) { _subtitleLanguage.value = v; put(c, "subtitle_language", v) }
 }

@@ -190,6 +190,12 @@ fun VideoPlayerSettingsCard() {
         SettingsToggleRow("Captions on by default", "Show embedded or loaded subtitles automatically (CC)", cc,
             { PlayerSettings.setCaptionsDefault(context, it) }, "toggle_cc_default")
         SettingsDivider()
+        if (!dev.asfakul.yumeiro.Edition.isTv) {
+            val boostOn by PlayerSettings.volumeBoost.collectAsState()
+            SettingsToggleRow("Volume boost up to 200 %", "Swipe up past full volume to make quiet videos louder. It resets for every video. Loud sound can damage your hearing and small speakers", boostOn,
+                { PlayerSettings.setVolumeBoost(context, it) }, "toggle_volume_boost")
+            SettingsDivider()
+        }
         var subStyleOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))

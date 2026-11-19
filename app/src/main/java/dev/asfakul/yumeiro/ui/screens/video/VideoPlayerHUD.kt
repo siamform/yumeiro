@@ -68,9 +68,11 @@ private fun VerticalLevelBar(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     tag: String,
+    number: Int? = null,
+    fill: Color? = null,
 ) {
     val animated by androidx.compose.animation.core.animateFloatAsState(level.coerceIn(0f, 1f), androidx.compose.animation.core.tween(90), label = "level")
-    val accent = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent
+    val accent = fill ?: dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent
     // Phone-style linear level: a hairline track with a glowing gold fill, no box behind it.
     val shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.7f), blurRadius = 8f)
     Column(
@@ -82,7 +84,7 @@ private fun VerticalLevelBar(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            "${(animated * 100).toInt()}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            "${number ?: (animated * 100).toInt()}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             style = androidx.compose.ui.text.TextStyle(shadow = shadow),
         )
         Spacer(Modifier.height(8.dp))
@@ -118,7 +120,9 @@ fun VolumeHUD(
     volumeLevel: Int,
     maxVolume: Int,
     isVisible: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** F-06: 0..1 above the system maximum (100..200 %). */
+    boost: Float = 0f,
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -133,7 +137,16 @@ fun VolumeHUD(
             ratio < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
             else -> Icons.AutoMirrored.Filled.VolumeUp
         }
-        VerticalLevelBar(ratio, icon, "Volume", "volume_hud")
+        if (boost > 0f) {
+            // F-06: the bar shows 100-200 %, in a warm warning colour, with a hearing warning beside it.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Loud: protect your hearing", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
+                )
+                VerticalLevelBar(boost, icon, "Volume boost", "volume_hud", number = dev.asfakul.yumeiro.player.VolumeBoost.percent(volumeLevel, maxVolume, boost), fill = Color(0xFFFF8A3D))
+            }
+        } else VerticalLevelBar(ratio, icon, "Volume", "volume_hud")
     }
 }
 
