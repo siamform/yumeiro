@@ -73,6 +73,9 @@ class ExtensionPopupsDeviceTest {
     private fun focus(): String = FirstRun.focusedWindow()
     private fun focusIsDialog(): Boolean = FirstRun.isDialogType(FirstRun.windowType(focus()))
     private fun back() { FirstRun.shell("input keyevent 4"); settle() }
+    /** The card of the test fake ("An extension" = no installed extension owns its class), not a real extension's. */
+    private fun fakeCard() = AppMessages.current.value?.takeIf { it.text.startsWith("An extension ") }
+    private fun fakeHeld() = ExtensionPopups.held.value.filter { it.extName == "An extension" }
     private fun resetPrefs() = ctx.getSharedPreferences("extension_popups", 0).edit().clear().commit()
 
     @Before fun setUp() {
@@ -126,12 +129,16 @@ class ExtensionPopupsDeviceTest {
         // The extension still believes its dialog is open, and closing it must not crash.
         assertTrue(dialog.isShowing)
 
-        val id = mine().single().id
+        val held = mine().single(); val id = held.id
+        // The card on screen is the fake's (another extension's card waits behind it, ER-29).
+        val card = AppMessages.current.value
+        assertTrue("card on screen is not the fake's: ${card?.text}", card?.text?.contains(held.extName) == true)
         // The user's path: tap "Show" on the card.
         rule.onAllNodesWithTag("app_message_action", true)[0].performClick()
         settle()
         assertTrue("held entry kept after Show", ExtensionPopups.held.value.none { it.id == id })
-        assertNull("card stayed after Show", AppMessages.current.value)
+        // Run 44512112484: AniKoto's own start-up card (queued behind ours) came next; ours must be gone.
+        assertTrue("card stayed after Show: ${AppMessages.current.value}", AppMessages.current.value?.id != card!!.id)
         log("p1 revealed roots=${roots()} focus=${focus()}")
         assertEquals("revealed window not added", before + 1, roots())
         assertTrue("revealed dialog not focused: ${focus()}", focusIsDialog())
@@ -149,12 +156,12 @@ class ExtensionPopupsDeviceTest {
         val first = ui { FakeExtension.donation(rule.activity) }; settle()
         ui { AppMessages.current.value?.let { AppMessages.dismiss(it.id) } }
         val second = ui { FakeExtension.donation(rule.activity) }; settle()
-        log("p2 roots=${roots()} held=${ExtensionPopups.held.value.size} card=${AppMessages.current.value?.text}")
+        log("p2 roots=${roots()} held=${fakeHeld().size} card=${AppMessages.current.value?.text}")
         assertEquals(before, roots())
-        assertEquals("second prompt replaced or added a held message", 1, ExtensionPopups.held.value.size)
-        assertNull("second card shown", AppMessages.current.value)
+        assertEquals("second prompt replaced or added a held message", 1, fakeHeld().size)
+        assertNull("second card shown", fakeCard())
         ui { first.dismiss(); second.dismiss() }; settle() // removing windows that were never added: no crash
-        assertEquals(0, ExtensionPopups.held.value.size)
+        assertEquals(0, fakeHeld().size)
     }
 
     /** A login form is functional: shown at once (framed), focused, and Back closes it and nothing else. */
@@ -191,8 +198,8 @@ class ExtensionPopupsDeviceTest {
         val before = roots()
         val d = ui { FakeExtension.donation(rule.activity) }; settle()
         assertEquals(before, roots())
-        assertEquals(0, ExtensionPopups.held.value.size)
-        assertNull(AppMessages.current.value)
+        assertEquals(0, fakeHeld().size)
+        assertNull(fakeCard())
         val l = ui { FakeExtension.login(rule.activity) }; settle()
         assertEquals("login must still show when promotional is blocked", before + 1, roots())
         ui { d.dismiss(); l.dismiss() }; settle()
@@ -206,7 +213,7 @@ class ExtensionPopupsDeviceTest {
         val before = roots()
         val dialog = ui { FakeExtension.donation(rule.activity) }; settle()
         assertEquals(before, roots())
-        assertNull("card shown during playback", AppMessages.current.value)
+        assertNull("card shown during playback", fakeCard())
         ExtensionPopups.testPlayerOnScreen = null
         settle()
         assertTrue("card not shown after playback", AppMessages.current.value?.text?.contains("has a message") == true)
@@ -239,7 +246,7 @@ class ExtensionPopupsDeviceTest {
     @Test fun p8_extensionsScreenListsHeldMessagesAndSwitchesMode() {
         val before = roots()
         val dialog = ui { FakeExtension.donation(rule.activity) }; settle()
-        assertEquals(1, ExtensionPopups.held.value.size)
+        assertEquals(1, fakeHeld().size)
         inst.runOnMainSync { dev.asfakul.yumeiro.ui.navigation.NavPrefs.setShortcut(ctx, dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS, true) }
         try {
             // The TV rail tags its items "tv_" + the bar tag (TvNavRail); run 43865392890 waited for
@@ -266,9 +273,11 @@ class ExtensionPopupsDeviceTest {
             // were not there when `before` was taken on Home (run 43812110468 failed on that).
             val atDismiss = roots(); val namesAtDismiss = rootNames()
             log("p8 before=$before atDismiss=$atDismiss roots=[$namesAtDismiss]")
+            // Only the fake's row stays, so [0] is it (a real extension's start-up prompt may be listed too).
+            ui { ExtensionPopups.held.value.filter { it.extName != "An extension" }.forEach { ExtensionPopups.discard(it.id) } }; rule.waitForIdle()
             rule.onAllNodesWithTag("extensions_popup_discard", true)[0].performClick(); rule.waitForIdle()
-            assertTrue("held entry kept after Dismiss", ExtensionPopups.held.value.isEmpty())
-            assertNull("card stayed after Dismiss", AppMessages.current.value)
+            assertTrue("held entry kept after Dismiss", fakeHeld().isEmpty())
+            assertNull("card stayed after Dismiss", fakeCard())
             val after = roots(); val namesAfter = rootNames()
             log("p8 afterDismiss=$after roots=[$namesAfter]")
             assertEquals("Dismiss added a window: before=[$namesAtDismiss] after=[$namesAfter]", atDismiss, after)
