@@ -138,8 +138,8 @@ class Nbug15RedesignDeviceTest {
         val chip = has("live_pinned_$idB")
         FirstRun.shot("nb15r_a_filtered")
         click("live_pinned_$idB")
-        // B alone: 10 + 40 + its copy of A's stream = 51 channels.
-        wait("the pinned chip shows B's channels") { headerState() == "Showing 50 of 51 channels" && shown("YuF$run Other 0") && !shown("YuF$run Sports 0") }
+        // B alone: 10 + 40 + its copy of A's stream = 51 channels ("Other" always sorts last, so B's news is on screen).
+        wait("the pinned chip shows B's channels") { headerState() == "Showing 50 of 51 channels" && shown("YuF$run BNews 0") && !shown("YuF$run Sports 0") }
         // Unpin again so the next test starts clean.
         click("live_filter_button")
         wait("filter sheet again") { has("live_filter_pin_$idB") }
