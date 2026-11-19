@@ -152,8 +152,9 @@ out += ["", f"Rows: {len(rows)}. Device classes: {len(classes)}; mapped to a row
 # Written reasons for every skip (assumption messages from the inst files of the runs named).
 SKIP_REASONS = [
     ("tv-api24", "AdultSearchFilterDeviceTest", "\"penaltyListener needs API 28\": the main-thread StrictMode check uses StrictMode.penaltyListener (API 28+); the same class runs fully on tv-api34 and the phones (see their cells)."),
-    ("tv-api24", "AniSkipDeviceTest", "\"no switchable network on this TV image\": the Android 7 TV emulator has no network the test can switch off; the same class runs fully on tv-api34 and the phones (see their cells)."),
-    ("tv-api24", "AppLockDeviceTest", "b_pinOpensTheAppAndTheLockStaysOn: \"locksettings needs API 26\" (the test sets a device PIN with `cmd lock_settings`, missing on Android 7); a_ passes."),
+    ("tv-api24, tv-api34", "AniSkipDeviceTest", "\"no switchable network on this TV image\": both TV emulators are on emulated Ethernet, which `svc wifi/data` cannot switch off and a test (shell uid, no root) cannot take down. The offline path is shared code and passes on both phones; a real TV offline check is OMT-54."),
+    ("tv-api24", "AppLockDeviceTest", "b_pinOpensTheAppAndTheLockStaysOn: \"locksettings needs API 26\" (the test sets a device PIN with `locksettings`, missing on Android 7); a_ passes."),
+    ("tv-api34", "AppLockDeviceTest", "b_pinOpensTheAppAndTheLockStaysOn: \"could not set a PIN on this emulator\" (`locksettings set-pin` leaves the Android TV image without a secure lock); a_ passes; b_ passes on both phones; real TV: OMT-55."),
 ]
 out += ["", "## Skips with written reasons (§5)", "", "| Device | Class | Reason |", "|---|---|---|"]
 out += [f"| {d} | {c.replace('DeviceTest','')} | {r} |" for d, c, r in SKIP_REASONS]

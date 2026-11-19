@@ -1,0 +1,16 @@
+44607305833 tv-api24 AnimeSignInMessageDeviceTest P1 PASS tests=2 skipped=0 sha=1c44b93
+44607305833 tv-api24 AnimeSignInMessageDeviceTest P2 PASS tests=2 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackNavigationDeviceTest P1 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackNavigationDeviceTest P2 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackdropImportDeviceTest P1 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackdropImportDeviceTest P2 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackgroundSettingsEffectDeviceTest P1 PASS tests=5 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackgroundSettingsEffectDeviceTest P2 PASS tests=5 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackupDeviceTest P1 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BackupDeviceTest P2 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BrowserCheckCooldownDeviceTest P1 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 BrowserCheckCooldownDeviceTest P2 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 Bug1YumixRestoreDeviceTest P1 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 Bug1YumixRestoreDeviceTest P2 PASS tests=1 skipped=0 sha=1c44b93
+44607305833 tv-api24 ChoiceSettingsEffectDeviceTest P1 PASS tests=6 skipped=0 sha=1c44b93
+44607305833 tv-api24 ChoiceSettingsEffectDeviceTest P2 PASS tests=6 skipped=0 sha=1c44b93

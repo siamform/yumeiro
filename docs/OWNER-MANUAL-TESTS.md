@@ -95,6 +95,8 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-51 | F-11: manga auto-translation on a real chapter | Owner/community test (pending) |
 | OMT-52 | F-AIR: airing alert on a Firebase phone (after the Worker deploy) | Owner/community test (pending) |
 | OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
+| OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
+| OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -775,6 +777,19 @@ the app version and your device. Don't send passwords or account details.
 - **Steps:** Settings → Network → Proxy: enter your HTTP or SOCKS5 proxy (with login if it needs one), open an adult
   host that your network blocks, then turn the proxy off. **Pass:** with the proxy the site loads in the app and in its
   web pages; off, the app goes direct again. **Status:** Owner/community test (pending)
+
+### OMT-54 — Skip-intro times after the TV was offline (final test, AniSkip on TV)
+
+- **Steps:** on your Android TV, unplug the network cable or turn Wi-Fi off, open an anime episode, then reconnect
+  and open the same episode again. **Pass:** offline the episode plays without skip buttons; once online again the
+  "Skip intro" button appears (the offline failure was not remembered). Why you: both TV emulators use emulated
+  Ethernet that a test cannot switch off (MASTER-CHECKLIST-FINAL, skips). **Status:** Owner/community test (pending)
+
+### OMT-55 — App lock with a PIN on a TV (final test, AppLock on TV)
+
+- **Steps:** only if your TV has a screen lock (PIN): Settings → Privacy → App lock on, leave the app, open it again.
+  **Pass:** the app asks for the TV's PIN and opens after it; without a screen lock the switch explains why it is off.
+  Why you: the TV emulators cannot set a PIN from a test. **Status:** Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 
