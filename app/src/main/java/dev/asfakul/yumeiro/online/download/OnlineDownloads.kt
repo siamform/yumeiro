@@ -88,6 +88,8 @@ object OnlineDownloads {
         val isDash: Boolean = false,
         /** R15 forced download: separate audio file joined with the video after both are saved. */
         val audioUrl: String? = null,
+        /** NF-2b-4: "convert" while a TS download is rewritten as MP4. Not saved. */
+        val stage: String? = null,
     ) {
         val fraction: Float get() = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
         val active: Boolean get() = status == Status.QUEUED || status == Status.RUNNING
@@ -359,7 +361,8 @@ object OnlineDownloads {
     internal fun progress(id: String, bytes: Long, total: Long) = set(id, persist = false) {
         it.copy(status = if (it.status == Status.PAUSED) Status.PAUSED else Status.RUNNING, bytes = bytes, total = total)
     }
-    internal fun finished(id: String, bytes: Long) = set(id) { it.copy(status = Status.DONE, bytes = bytes, total = bytes, error = null, finishedAt = System.currentTimeMillis()) }
+    internal fun finished(id: String, bytes: Long) = set(id) { it.copy(status = Status.DONE, bytes = bytes, total = bytes, error = null, finishedAt = System.currentTimeMillis(), stage = null) }
+    internal fun stage(id: String, stage: String?) = set(id, persist = false) { it.copy(stage = stage) }
     internal fun resolved(id: String, change: (Item) -> Item) = set(id, change = change)
     internal fun failed(id: String, message: String) = set(id) { it.copy(status = Status.FAILED, error = message) }
     internal fun paused(id: String) = set(id) { if (it.status != Status.DONE) it.copy(status = Status.PAUSED) else it }

@@ -52,6 +52,15 @@ object DownloadSettings {
     /** Who saves "Download this video": "" = Yumeiro, a package name (1DM, ADM…), or "chooser". */
     val downloader: StateFlow<String> = _downloader.asStateFlow()
 
+    /**
+     * NF-2b kill switches (local prefs, no UI): `dl_ts_remux` off keeps TS HLS as .ts; `dl_hls_parallel`
+     * off fetches HLS segments one at a time.
+     */
+    @Volatile var tsRemux: Boolean = true
+        private set
+    @Volatile var hlsParallel: Boolean = true
+        private set
+
     @Synchronized
     fun init(context: Context) {
         if (prefs != null) return
@@ -64,6 +73,8 @@ object DownloadSettings {
         _askFirst.value = p.getBoolean("ask_first", true)
         _showTips.value = p.getBoolean("show_tips", true)
         _downloader.value = p.getString("downloader", null).orEmpty()
+        tsRemux = p.getBoolean("dl_ts_remux", true)
+        hlsParallel = p.getBoolean("dl_hls_parallel", true)
     }
 
     fun setAutoDeleteDays(context: Context, days: Int) { init(context); _autoDeleteDays.value = days; prefs?.edit()?.putInt("auto_delete_days", days)?.apply() }

@@ -45,10 +45,19 @@ object DownloadNaming {
         // R15: DASH and split video/audio are joined into one MP4 (WebM when both tracks are WebM).
         link.isDash -> "mp4"
         link.audioTracks.isNotEmpty() -> if (link.container == "webm") "webm" else "mp4"
-        link.isHls -> "ts"
+        // NF-2b-4: TS HLS is remuxed to MP4 after the download (fMP4 already is MP4); the worker renames
+        // it .ts only when the remux is off or fails.
+        link.isHls -> "mp4"
         link.container in setOf("mp4", "mkv", "webm", "m4v", "mov", "avi") -> link.container!!
         else -> "mp4"
     }
+
+    /** NF-2b-4: an HLS file keeps its name across the ts / mp4 naming change, so a partial file resumes. */
+    fun sameFile(fileName: String, ext: String, isHls: Boolean): Boolean {
+        val have = fileName.substringAfterLast('.', "").lowercase()
+        return have == ext || (isHls && have in HLS_EXT && ext in HLS_EXT)
+    }
+    private val HLS_EXT = setOf("ts", "mp4")
 
     /**
      * The link to save for an episode: DASH only when [allowDash] (forced download), best one within

@@ -296,9 +296,9 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
             val line = when (d.status) {
                 OnlineDownloads.Status.DONE -> listOfNotNull(
                     if (d.keep) "Permanent" else "Offline", d.quality, DownloadPrompt.sizeText(d.bytes).ifBlank { null },
-                    if (d.publicUri != null) "on phone" else null, deleteLine(d, days),
+                    if (d.publicUri != null) "on phone" else null, if (d.fileName.endsWith(".ts", true)) "TS file" else null, deleteLine(d, days),
                 ).joinToString(" · ")
-                OnlineDownloads.Status.RUNNING -> if (d.total > 0) "${(d.fraction * 100).toInt()}% · ${DownloadPrompt.sizeText(d.bytes)} of ~${DownloadPrompt.sizeText(d.total)}" else "Downloading · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "starting" }}"
+                OnlineDownloads.Status.RUNNING -> if (d.stage == "convert") "Converting to MP4…" else if (d.total > 0) "${(d.fraction * 100).toInt()}% · ${DownloadPrompt.sizeText(d.bytes)} of ~${DownloadPrompt.sizeText(d.total)}" else "Downloading · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "starting" }}"
                 OnlineDownloads.Status.QUEUED -> "Waiting for a free slot…"
                 OnlineDownloads.Status.PAUSED -> "Paused · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "0 MB" }} · tap ↓ to resume"
                 OnlineDownloads.Status.FAILED -> d.error ?: "Failed"

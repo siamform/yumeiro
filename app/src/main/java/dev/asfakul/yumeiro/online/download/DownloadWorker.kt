@@ -43,6 +43,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         const val ACTION_OPEN_DOWNLOADS = "dev.asfakul.yumeiro.OPEN_DOWNLOADS"
         private const val LOG = "DownloadWorker"
         private const val LINK_TIMEOUT_MS = 90_000L
+        /** Extensions the worker may switch between once the real container is known. */
+        private val RENAMEABLE = setOf("ts", "mp4", "webm")
     }
 
     private val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -93,9 +95,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 OnlineDownloads.Kind.YT_VIDEO, OnlineDownloads.Kind.YT_AUDIO -> YtDownloads.download(applicationContext, client, item, part, onProgress)
                 else -> forced(client, item, part, onProgress) { ext ->
                     // A DASH stream whose tracks are both WebM is saved as .webm. G8-6: an fMP4 or joined
-                    // HLS stream is an MP4 file; it was named .ts and published as video/mp2t.
-                    val from = if (ext == "webm") "mp4" else "ts"
-                    if (out.extension.equals(from, true)) {
+                    // HLS stream is an MP4 file; it was named .ts and published as video/mp2t. NF-2b-4: HLS is
+                    // named .mp4 up front and goes back to .ts when the TS file could not be remuxed.
+                    if (!out.extension.equals(ext, true) && out.extension.lowercase() in RENAMEABLE) {
                         val renamed = File(out.parentFile, out.nameWithoutExtension + "." + ext)
                         OnlineDownloads.resolved(id) { it.copy(fileName = it.fileName.substringBeforeLast('.') + "." + ext) }
                         out = renamed
@@ -169,7 +171,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val ext = DownloadNaming.extensionFor(link)
         val base = item.baseName ?: DownloadNaming.clean(item.episodeLabel ?: "Episode ${item.order + 1}", 90)
         // Same file name on retries so a partial file resumes.
-        val name = if (item.fileName.isNotBlank() && item.fileName.substringAfterLast('.') == ext) item.fileName else "$base.$ext"
+        val name = if (item.fileName.isNotBlank() && DownloadNaming.sameFile(item.fileName, ext, link.isHls)) item.fileName else "$base.$ext"
         OnlineDownloads.resolved(item.id) {
             it.copy(url = link.url, isHls = link.isHls, headers = OnlineDownloads.headersFor(link), fileName = name, quality = link.qualityLabel.ifBlank { null },
                 isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first)
@@ -214,8 +216,24 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 part.length()
             }
             // G8-2: a variant with a separate audio rendition is saved as two tracks and joined here.
-            item.isHls -> HlsDownloader(client, item.headers, DownloadSettings.quality.value)
-                .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, onContainer = onContainer, progress = progress)
+            item.isHls -> {
+                var container: String? = null
+                val n = HlsDownloader(client, item.headers, DownloadSettings.quality.value)
+                    .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, onContainer = { container = it }, progress = progress)
+                // NF-2b-4: fMP4 and joined streams are MP4 already; a TS stream is remuxed to MP4 here, or kept as TS.
+                val c = container ?: run {
+                    OnlineDownloads.stage(item.id, "convert")
+                    val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+                    val result = try {
+                        MediaMux.tsToMp4(part, DownloadSettings.tsRemux, OnlineDownloads.freeBytes(applicationContext)) { job?.isActive != false }
+                    } finally { OnlineDownloads.stage(item.id, null) }
+                    // The segment record describes the TS bytes; once the part is MP4 it must not be resumed from.
+                    if (result == "mp4") OnlineDownloads.removeSideFiles(part)
+                    result
+                }
+                onContainer(c)
+                if (container == null && c == "mp4") part.length() else n
+            }
             dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
