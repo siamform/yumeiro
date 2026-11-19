@@ -1,18 +1,20 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 09:08 UTC, master handover; no PR / merge without the owner's "go")
+## Resume here (updated 2026-11-19 10:05 UTC, master handover; no PR / merge without the owner's "go")
 
-- **Built, not tested (all pushed, flags on):** NF-2b, SRC-1/2, F-05 step 1, F-09, F-16 + F-01, NF-1, F-08 (ADR-034),
-  F-06, F-07, F-12 (ADR-018), F-17, F-10 (ADR-017, no blur), F-04, X13-6 Jackson 2.18.11 (ADR-035, **conflicts with the
-  owner's earlier condition 3; agent decided per the master order**), NB15D-OB1, NB14-OB1, NB11-OB1, TV-4 (ADR-036).
-- **Not in this release (ADR-037):** F-02, F-03 login path, F-11, NBUG-6, NBUG-13 proxy, Vega step 4, F-13/F-14/F-15.
-- **Fail-before confirmed:** F-16/NF-1 44489413319; F-08/F-06/F-07/F-12 44491273393 (compile). Running: F-01/F-17/F-10/
-  F-04/batch-1 on `ab/wsB-before` 44493139660, X13-6/incognito on `ab/wsF1-before` 44493184506; pass-after head
-  44493135652 (before TV-4). Previous head run 44489174781: 1 fail SheetHandleScanTest (F-09 sheet) → fixed 6cee4581.
-- **tv-api24 regression 44487437177:** PinnedExtensions, YtChannelUi, FeedPosition liveTv FAIL; all three are
-  phone-gesture tests (queue TV-FP-1, TV-PIN-1, TV-YTC-1); 5 other classes PASS.
-- **Next:** read the three CI runs → fix → one more head CI (incl. TV-4) → device pass-after (≤2 at once) → docs
-  close (checklist, ledger, inventory, queue, OWNER-MANUAL-TESTS) → release gate → ask the owner for "go".
+- **Built, not tested (pushed, flags on):** NF-2b, SRC-1/2, F-05 step 1, F-09, F-16, F-01, NF-1, F-08, F-06, F-07, F-12,
+  F-17, F-10, F-04, X13-6 (conflicts with the owner's condition 3), NB15D-OB1, NB14-OB1, NB11-OB1, TV-4.
+- **Not in this release (ADR-037):** F-02, F-03 login, F-11, NBUG-6, NBUG-13 proxy, Vega step 4, F-13/F-14/F-15.
+- **Fail-before confirmed:** 44489413319, 44491273393, 44494081502 (wsB), 44494085935 (Jackson + incognito FAILED).
+  Running: TV-4 on `ab/tv4-before` 44497797507; head pass-after 44497315643 (6939e570: F-06 search table + StatsScreen
+  locale lint fixes for 44494077489, plus new `ReleaseFeaturesDeviceTest`). Other throwaway branches deleted.
+- **Next:** head CI green → device pass-after (≤2 at once: phones ReleaseFeatures + JsTimeLimit + PosterActions +
+  StreamWatchDownload + DownloadG8 + extension suite; TV ReleaseFeatures + PosterActions) → ledger / inventory /
+  device-runs / cycle report → release gate → ask the owner for "go".
+
+### Previous resume note — superseded (09:08 UTC 2026-11-19)
+
+- Head CI 44494077489 had 1 unit + lint failures; fail-before runs were open.
 
 ### Previous resume note — superseded (08:33 UTC 2026-11-19)
 
