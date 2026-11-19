@@ -176,9 +176,10 @@ object BackupMeta {
     fun setAutoIncludeCode(c: Context, on: Boolean) = p(c).edit().putBoolean("auto_code", on).apply()
     fun lastAutoAt(c: Context) = p(c).getLong("last_auto_at", 0)
     fun lastAutoFingerprint(c: Context) = p(c).getString("last_auto_fp", null)
-    fun recordAuto(c: Context, fp: String) = p(c).edit().putLong("last_auto_at", System.currentTimeMillis()).putString("last_auto_fp", fp).apply()
+    // G9-CQ-1: commit(), not apply(): a restart right after a backup ends the process before apply() writes.
+    fun recordAuto(c: Context, fp: String) { p(c).edit().putLong("last_auto_at", System.currentTimeMillis()).putString("last_auto_fp", fp).commit() }
     fun lastBackupAt(c: Context) = p(c).getLong("last_backup_at", 0)
-    fun recordBackup(c: Context) = p(c).edit().putLong("last_backup_at", System.currentTimeMillis()).apply()
+    fun recordBackup(c: Context) { p(c).edit().putLong("last_backup_at", System.currentTimeMillis()).commit() }
 
     /** A folder the user picked (Storage Access Framework tree), or null for the default. */
     fun folder(c: Context): String? = p(c).getString("folder_uri", null)
