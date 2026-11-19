@@ -31,7 +31,7 @@ EXTRA = {
  "M1":["LibraryPersistDeviceTest","LargeLibraryScanDeviceTest","MusicAccessDeviceTest"], "M2":["MusicModeNetworkDeviceTest","MusicTapThroughDeviceTest"],
  "M3":["MusicEndlessNetworkDeviceTest","YmPagingNetworkDeviceTest"], "M5":["MusicQueueDeviceTest","QueuePersistenceDeviceTest","MusicNotificationControlsDeviceTest","MusicAudioFocusDeviceTest","MusicWifiLockDeviceTest","SleepTimerWithoutScreenDeviceTest","MiniPlayerDeviceTest"],
  "M7":["ScrobbleFlushDeviceTest"],
- "T1":["MangaDuplicateDeviceTest","MangaRetryDeviceTest"], "T2":["MangaTallPageDeviceTest","MangaTranslateDeviceTest","ReleaseFeaturesDeviceTest"],
+ "T1":["MangaDuplicateDeviceTest","MangaRetryDeviceTest","MangaOfflineDeviceTest"], "T2":["MangaTallPageDeviceTest","MangaTranslateDeviceTest","ReleaseFeaturesDeviceTest"],
  "T3":["PlaylistIndexRecoveryDeviceTest","PlaylistRetryDeviceTest","LargePlaylistMemoryDeviceTest","RemotePlaylistMemoryDeviceTest","Nbug14ChannelLogoDeviceTest","Nbug15RedesignDeviceTest","FeatureSmokeDeviceTest"],
  "T4":["HeaderStreamDeviceTest","Nbug12RefusedMediaPageDeviceTest","FeatureSmokeDeviceTest"],
  "D1":["DownloadResumeDeviceTest","DownloadCleanupDeviceTest","DownloadKillDeviceTest","DownloadQualityDeviceTest","DownloadThroughputDeviceTest"],
@@ -49,6 +49,20 @@ EXTRA = {
  "X9":["TvBug5ReproDeviceTest","SheetFocusTvDeviceTest","HomeNavigationDeviceTest"], "X11":["Nbug9DnsProbeDeviceTest","Nbug6EngineCostDeviceTest","ProxyDeviceTest"],
  "N2":["SiteSignOutDeviceTest","HeaderStreamDeviceTest","FeatureSmokeDeviceTest"], "N3":["UpdateMainThreadDeviceTest"], "N6":["AppLockDeviceTest","ProfilesDeviceTest"],
  "N7":["InboxMainThreadDeviceTest"], "N10":["ProfilesDeviceTest","ReleaseFeaturesDeviceTest"],
+ # Rows whose classes exist but were not named in INVENTORY (mapped 2026-11-20 from the test names; FinalCoverage is new).
+ "H2":["HomeNavigationDeviceTest","ResumeAcrossProcessDeviceTest"], "H3":["HomeNavigationDeviceTest"],
+ "H5":["HomeNavigationDeviceTest","TvBug5ReproDeviceTest"], "H9":["FinalCoverageDeviceTest"],
+ "H10":["HomeNavigationDeviceTest","ReleaseFeaturesDeviceTest","TvBug5ReproDeviceTest"],
+ "E2":["ExtensionsDeviceTest"], "E3":["ExtensionsDeviceTest"], "E4":["ExtensionsDeviceTest","ExtensionSharedFileDeviceTest"],
+ "E6":["ExtensionsDeviceTest"], "E7":["ExtensionsDeviceTest"], "E9":["ExtensionsDeviceTest"], "E11":["ExtensionsDeviceTest"],
+ "Y3":["YumixDeviceTest"], "Y4":["DramaPlaybackDeviceTest"], "L2":["BackgroundSettingsEffectDeviceTest"],
+ "L9":["LibraryEmptyProfileDeviceTest","YumixDeviceTest"], "L10":["LocalPlayerDeviceTest","ChoiceSettingsEffectDeviceTest"],
+ "M4":["OnlineSwitchesEffectDeviceTest"], "M6":["FinalCoverageDeviceTest"], "M8":["YtDownloadPipelineDeviceTest"],
+ "M9":["FinalCoverageDeviceTest"], "T5":["FinalCoverageDeviceTest"], "D7":["SurfaceModeDeviceTest","StorageMainThreadDeviceTest"],
+ "I6":["OnlineSwitchesEffectDeviceTest"], "I9":["FinalCoverageDeviceTest"], "I10":["FinalCoverageDeviceTest"],
+ "X12":["FinalCoverageDeviceTest","Nbug14ChannelLogoDeviceTest"], "X13":["FinalCoverageDeviceTest","NewPipeCompatDeviceTest"],
+ "X15":["FeedPositionDeviceTest","YumixDeviceTest"], "N1":["FinalCoverageDeviceTest"], "N4":["RetryActionsDeviceTest"],
+ "N8":["HomeNavigationDeviceTest"], "N9":["FinalCoverageDeviceTest"],
 }
 ENTRY = {"G1":"Home tab / nav bar / rail","G2":"Settings → Sources → Extensions; Extension market","G3":"any title → Play (player)",
  "G4":"Videos → Yumix","G5":"Library tab","G6":"Music tab","G7":"Manga / Live TV (Videos → Live TV)","G8":"Downloads (top bar)",
@@ -84,7 +98,7 @@ NEW = [
  ("F-AIR","Airing alerts through push with the app closed","Follow a show; Notifications",["FcmAiringWakeDeviceTest","ClosedAppAlertDeviceTest"]),
  ("NBUG-13","Own HTTP / SOCKS5 proxy","Settings → Network → Proxy",["ProxyDeviceTest"]),
  ("NBUG-6","Automatic DNS fallback (default Off)","Settings → Network → Automatic DNS fallback",["Nbug6EngineCostDeviceTest","Nbug9DnsProbeDeviceTest"]),
- ("F-REL","1.9.0 features: Watch Later/Favourite, Upcoming, Shorts, booster, external player, glass, offline manga, Live TV failover, Now/Next","various",["ReleaseFeaturesDeviceTest","PosterActionsDeviceTest","ProfilesDeviceTest"]),
+ ("F-REL","1.9.0 features: Watch Later/Favourite, Upcoming, Shorts, booster, external player, glass, offline manga, Live TV failover, Now/Next","various",["ReleaseFeaturesDeviceTest","PosterActionsDeviceTest","ProfilesDeviceTest","MangaOfflineDeviceTest","FinalCoverageDeviceTest","LocalPlayerDeviceTest"]),
 ]
 for rid, item, entry, cls in NEW: rows.append(dict(id=rid, item=item, entry=entry, code="", classes=cls))
 # Results.
@@ -113,7 +127,7 @@ FINDINGS = {
     "AnimeSignInMessageDeviceTest": "FINAL-8",
 }
 def cell(cls, tgt, p):
-    if not cls: return "Not run (no device class; see note)"
+    if not cls: return "Not a device feature (see note)"
     got = [res.get((c, tgt, p)) for c in cls]
     if all(g is None for g in got): return "Not run"
     flat = [x for g in got if g for x in g]
@@ -149,6 +163,17 @@ used = sorted({c for r in rows for c in r["classes"]})
 unused = [c for c in classes if c not in used]
 out += ["", f"Rows: {len(rows)}. Device classes: {len(classes)}; mapped to a row: {len(used)}.",
         "Classes not mapped to a row (they still run in every pass): " + (", ".join(unused) or "none") + "."]
+# Rows that are not app features a device can run; where each is checked instead (§5 written reason).
+NON_DEVICE = [
+    ("X1", "Architecture and layering: a code property, checked in docs/CODE-AUDIT-FINAL.md (Architecture row, AUD-ARCH-1/2)."),
+    ("X7", "Security: secrets in the APK, storage, network, integrity: ApkSecretsTest in CI plus the review-APK string scan, gitleaks and the virus scan in docs/RELEASE-SUMMARY-FINAL.md; the integrity check itself runs on devices in FinalCoverage g_ (row N9)."),
+    ("X10", "Build, CI, release, signing: proved by the CI runs on the head and the review APK checks (apksigner, ABIs, R8/X10-1) in docs/RELEASE-SUMMARY-FINAL.md."),
+    ("X16", "Cloud Worker: server code, tested in docs/SERVER-TEST-FINAL.md (40/40 + Last.fm 5/5, failure cases); its device side is row I8/F-AIR (FcmAiringWake, ClosedAppAlert)."),
+]
+out += ["", "## Rows that are not device features (§5 written reasons)", "", "| ID | Reason |", "|---|---|"]
+out += [f"| {i} | {r} |" for i, r in NON_DEVICE]
+missing_reason = [r["id"] for r in rows if not r["classes"] and r["id"] not in dict(NON_DEVICE)]
+assert not missing_reason, f"rows without a device class or a written reason: {missing_reason}"
 # Written reasons for every skip (assumption messages from the inst files of the runs named).
 SKIP_REASONS = [
     ("tv-api24", "AdultSearchFilterDeviceTest", "\"penaltyListener needs API 28\": the main-thread StrictMode check uses StrictMode.penaltyListener (API 28+); the same class runs fully on tv-api34 and the phones (see their cells)."),

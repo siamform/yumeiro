@@ -482,5 +482,46 @@ class LocalPlayerDeviceTest {
         }
     }
 
+    /**
+     * P-2X (ADR-041) through real touch input: holding a finger on the video plays it at 2x while held,
+     * and lifting it gives the viewer's speed back. The hold is injected as a touch DOWN, MOVE events on
+     * the same spot for 1.5 s, then UP, the way a finger stays on the glass.
+     */
+    @Test fun k_holdPlaysAtTwiceAndReleaseRestoresTheSpeed() {
+        openClipFromDevice()
+        loopClip()
+        wait("player root") { has("video_player_root") }
+        wait("playing", 20_000) { onPlayer { it.isPlaying } == true }
+        pause(5_000) // let the controls hide so the hold lands on the gesture layer
+        val before = onPlayer { it.playbackParameters.speed } ?: -1f
+        val r = playerBox()
+        val x = r.left + r.width() * 0.5f; val y = r.top + r.height() * 0.45f
+        val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val t0 = android.os.SystemClock.uptimeMillis()
+        fun ev(action: Int, t: Long) = android.view.MotionEvent.obtain(t0, t, action, x, y, 0).apply { source = android.view.InputDevice.SOURCE_TOUCHSCREEN }
+        assertTrue("touch down was not injected", ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_DOWN, t0), true))
+        var held = -1f
+        try {
+            val end = t0 + 1_500
+            while (android.os.SystemClock.uptimeMillis() < end) {
+                ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_MOVE, android.os.SystemClock.uptimeMillis()), true)
+                android.os.SystemClock.sleep(100)
+            }
+            val until = android.os.SystemClock.uptimeMillis() + 3_000
+            while (android.os.SystemClock.uptimeMillis() < until && held != 2f) {
+                held = onPlayer { it.playbackParameters.speed } ?: -1f
+                ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_MOVE, android.os.SystemClock.uptimeMillis()), true)
+                android.os.SystemClock.sleep(100)
+            }
+        } finally {
+            ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_UP, android.os.SystemClock.uptimeMillis()), true)
+        }
+        pause(1_000)
+        val after = onPlayer { it.playbackParameters.speed } ?: -1f
+        log("P2X speed before=$before held=$held after=$after")
+        assertEquals("speed while held", 2f, held)
+        assertEquals("speed after release", before, after)
+    }
+
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
 }
