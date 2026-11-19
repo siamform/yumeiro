@@ -18,7 +18,8 @@ import org.json.JSONObject
  * Never throws for malformed input; unparseable entries are skipped.
  */
 object M3uParser {
-    private val ATTR = Regex("""([\w-]+)\s*=\s*"([^"]*)"""")
+    /** G7-L5-A: `key="value"` or `key='value'`. */
+    private val ATTR = Regex("""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
     private val URL_LINE = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://\\S+")
     private val PLAYABLE_SCHEMES = setOf("http", "https", "rtsp", "rtsps", "rtmp", "rtmps", "rtp", "udp", "mms", "srt")
 
@@ -32,11 +33,15 @@ object M3uParser {
     /** Splits an `#EXTINF:` line into (attribute part, title) at the first comma outside quotes. */
     internal fun splitExtInf(line: String): Pair<String, String> {
         val body = line.substringAfter(':', "")
-        var inQuotes = false
+        // G7-L5-A: a single quote opens a value only right after `=` (so an apostrophe stays an apostrophe).
+        var quote: Char? = null
         for (i in body.indices) {
-            when (body[i]) {
-                '"' -> inQuotes = !inQuotes
-                ',' -> if (!inQuotes) return body.substring(0, i) to body.substring(i + 1).trim()
+            when (val c = body[i]) {
+                '"' -> quote = if (quote == null) '"' else if (quote == '"') null else quote
+                '\'' -> if (quote == '\'') quote = null
+                    else if (quote == null && body.substring(0, i).trimEnd().endsWith('=')) quote = '\''
+                ',' -> if (quote == null) return body.substring(0, i) to body.substring(i + 1).trim()
+                else -> Unit
             }
         }
         return body to ""
@@ -80,7 +85,7 @@ object M3uParser {
                         // Options (#EXTVLCOPT / #KODIPROP) may come before or after #EXTINF, so only the
                         // title fields are replaced here; everything is cleared after each URL line.
                         val (attrPart, name) = splitExtInf(line)
-                        val attrs = ATTR.findAll(attrPart).associate { it.groupValues[1].lowercase() to it.groupValues[2].trim() }
+                        val attrs = ATTR.findAll(attrPart).associate { m -> m.groupValues[1].lowercase() to (m.groups[2] ?: m.groups[3])?.value.orEmpty().trim() }
                         title = name.ifBlank { attrs["tvg-name"].orEmpty() }
                         logo = attrs["tvg-logo"]?.ifBlank { null }
                         tvgId = attrs["tvg-id"]?.ifBlank { null } // F-15: guide (XMLTV) channel id
