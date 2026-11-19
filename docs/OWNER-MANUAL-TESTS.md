@@ -97,6 +97,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
 | OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
+| OMT-56 | G9-CQ-1: "Last backup" time survives a restore that restarts the app | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -790,6 +791,12 @@ the app version and your device. Don't send passwords or account details.
 - **Steps:** only if your TV has a screen lock (PIN): Settings → Privacy → App lock on, leave the app, open it again.
   **Pass:** the app asks for the TV's PIN and opens after it; without a screen lock the switch explains why it is off.
   Why you: the TV emulators cannot set a PIN from a test. **Status:** Owner/community test (pending)
+
+### OMT-56 — "Last backup" time after a restore restarts the app (G9-CQ-1)
+
+- **Steps:** Settings → Backup → back up now, then restore that backup (the app restarts on its own). Open Settings → Backup again.
+  **Pass:** "Last backup" shows the time of the backup you just made, not an older time or "never".
+  Why you: the restart kills the process at a moment a test cannot reproduce the same way every time. **Status:** Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 
