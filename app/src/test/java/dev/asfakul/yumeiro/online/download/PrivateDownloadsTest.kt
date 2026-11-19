@@ -27,7 +27,9 @@ import org.robolectric.annotation.Config
 class PrivateDownloadsTest {
     private val ctx get() = ApplicationProvider.getApplicationContext<Context>()
     private fun item(id: String) = Item(
-        id, "Clip $id", "Network", "u", null, null, emptyMap(), "", false, emptyMap(), "clip$id.mp4",
+        // A real link download always has its URL; the list loader drops a LINK row without one, so the
+        // restart case needs it (CI 44514234313: theHiddenFlagSurvivesARestart NPE, fixture error).
+        id, "Clip $id", "Network", "u", null, null, emptyMap(), "https://example.org/clip$id.mp4", false, emptyMap(), "clip$id.mp4",
         status = Status.DONE, bytes = 4, total = 4,
     )
 
