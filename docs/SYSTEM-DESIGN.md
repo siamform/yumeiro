@@ -984,6 +984,23 @@ flowchart LR
 - **Rollback:** one revert per finding commit.
 - **Status:** accepted; Verified only after fail-before and pass-after.
 
+### ADR-030: Integration failures are failures (G11 re-audit, IG-9…IG-13)
+
+- **Scope:** `AnimeIds`, `AniList`, `MyAnimeList`, `Kitsu`, `Trakt`, `Simkl`, `EpisodeStills`. No new dependency.
+- **Rules:**
+  1. A network helper returns "not found" only for HTTP 404 or an empty result. 429, 5xx, other 4xx and
+     network errors throw. IG-9, IG-13 (Mihon v0.19.1 `awaitSuccess`).
+  2. A tracker write that gets 429, 5xx or a network error throws, so AnimeSync's per-tracker retry
+     (IG-2, ≤3 attempts) runs. IG-10.
+  3. "Never lowers progress" needs a successful read; without one nothing is written. IG-11.
+  4. A token the service rejects (AniList 401; refused refresh elsewhere) signs the account out, so Settings
+     shows the truth. IG-12 (Mihon `AnilistInterceptor`).
+- **Options considered:** A. A persistent retry queue like Mihon's `DelayedTrackingStore` (new storage and a
+  worker: a new feature, needs owner approval, proposal material). B. Throw on failure and keep the existing
+  in-session retry. **Decision: B.**
+- **Rollback:** one revert per finding commit.
+- **Status:** accepted; Verified only after fail-before and pass-after.
+
 ## 11. Risks
 
 | Risk | Mitigation |

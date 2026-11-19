@@ -94,3 +94,76 @@ Checked against source code on 2026-11-17:
 | emulator, IG-2…IG-5 fail-before | 44050574003 (`scratch/ig2-fail-before` 42cc6a8, old code, api33-lowram) | FAIL in every case, as expected: ANIME_TRK a trakt=0 simkl=0, MAL/Kitsu tokens never refreshed (mal-old, kitsu-old); b trakt=0 simkl=0 with Kitsu called on every tick (4); c Simkl tried once and never again (old code swallowed its error and kept the episode key: the update was lost, expected 3 tries); SCROBBLE_FLUSH on main, requests=0, listen left queued; STILLS a stills=null, b no second lookup (episodeCalls=1) |
 | emulator, IG-6…IG-8 fail-before | 44052308373 (`scratch/ig2-fail-before` 41b8c0a, api33-lowram) | FAIL as expected: CLOUD cached=0, SUBS hash hit lost on 429, SIGNIN rejected said "Signed in to AniList as OldUser" |
 | emulator, IG-6…IG-8 after | 44054360131 (ee1808c, api33-lowram) | PASS: CLOUD_RESULT, SUBS fallback + titleOnly, SIGNIN accepted + rejected. IG-6…IG-8 verified (emulator, both phones) |
+
+## Re-audit under the group method (§13a), 2026-11-19
+
+The owner's handover of 2026-11-19 asks for G11 to be redone fully under docs/DEVELOPMENT.md §13a. IG-1…IG-8
+above stay as they are (fixed and verified on the emulator, 2026-11-17). This section is the new pass.
+
+### Step 1: files read
+
+Read line by line this pass: `tracking/Trakt.kt`, `Simkl.kt`, `Kitsu.kt`; `online/anime/AnimeSync.kt`,
+`AniList.kt` (AniList, MyAnimeList, OAuthGuard), `AnimeIds.kt`, `AniSkip.kt`; `online/EpisodeStills.kt`;
+`scrobble/LastFm.kt`, `Scrobbler.kt`; `online/subtitles/OpenSubtitles.kt`, `SubtitleHub.kt`, `SubDL.kt`,
+`SubSource.kt`; `lyrics/LrcLib.kt`; `notify/CloudAlerts.kt`, `FcmPush.kt`, `PushWake.kt` (plan + state);
+`update/GitHubReleaseClient.kt`. Checked against their last full read (2026-11-17), with `git log` showing no
+change since except `youtube/YtAccount.kt` (cf4d6507, G13 M2-1, three cache-invalidate lines, read) and
+`online/subtitles` (IG-7 itself): `notify/AppFeed.kt`, `PushWake` workers, `YumeiroMessagingService`,
+`update/UpdateManager.kt`, `ApkInstaller.kt`, `UpdateConfig.kt`, `youtube/YtCookiePaste.kt`, `YtAuthHash.kt`,
+`cast/CastSubtitleServer.kt`, `subtitles/*`, `lyrics/Lyrics.kt`, `EmbeddedLyrics.kt`, `scrobble/ScrobbleRules.kt`,
+`LastFmSignature.kt`, `server/src/*.ts`.
+
+### Step 2: audit
+
+One pattern runs through the new findings: an HTTP answer that is not 2xx (429 rate limit, 5xx, 401) is turned
+into `null` / `false`, which callers read as "not found" or "done". AnimeSync only retries a tracker that
+throws (IG-2), so these answers drop the update for good. AniList's limit is 90 requests a minute and
+currently 30 while the API is degraded ([AniList docs](https://docs.anilist.co/guide/rate-limiting)); TVmaze
+allows at least 20 calls per 10 s and asks clients to retry a 429 "instead of treating it as a permanent
+failure" ([TVmaze API](https://www.tvmaze.com/api)). At 200k users these answers are normal, not rare.
+
+| Path | Action | Expected | Unhappy path (old code) | Finding |
+|---|---|---|---|---|
+| Episode ends, AniList/MAL/Kitsu signed in, extension gives no ids | ids looked up on AniList | ids found, or retried later | AniList 429/5xx or offline: `AnimeIds.of` catches it and returns null; the trackers skip the episode for good (the "id lookup failed: retry" branch in AnimeSync never runs) | IG-9 |
+| Tracker write (AniList mutation, MAL PATCH, Kitsu POST/PATCH, Trakt history + search, Simkl history) | episode added | added, or retried later | 429 or 5xx answer returns `false`; key stays claimed; never retried. MAL also turns a network error into -1 = false | IG-10 |
+| AniList / MAL progress read before the write | "never lowers progress" | no write when the read failed | read 429/5xx: progress taken as 0, write sent: a rewatch of episode 3 sets 12/12 back to 3 and COMPLETED back to CURRENT | IG-11 |
+| AniList token expired or revoked (implicit grant, no refresh) | user told to sign in again | signed out, card shows "Sign in" | every call 401 → null → false; card keeps "Signed in as …", nothing syncs, no message (IG-3 recorded this as an observation; reclassified: the user cannot see it) | IG-12 |
+| Episode thumbnails (ani.zip / TVmaze) | stills shown, retried after a failure (IG-5) | a 429/5xx is a failure | `get()` returns null on any non-2xx, so a 429 is "nothing found" and the title stays marked tried until restart | IG-13 |
+| Trakt title match | right show | — | `pickId` falls back to the first result when no title matches exactly (KDoc says "null when no confident match"). Not a defect: extension titles rarely match exactly ("(Dub)", season suffixes) and the search is year-filtered; KDoc corrected with IG-10 | — |
+| Trakt/Simkl/Last.fm sign-in poll | approve on the site | — | one network error ends the poll with an error; the user taps Sign in again (judged 2026-11-17, unchanged; Mihon has no device flow to compare) | — |
+| AniList implicit grant | — | — | no `state`; OAuthGuard's 10-min single-use window covers login CSRF; MAL uses PKCE. Mihon v0.19.1 has no state either | — |
+| Last.fm batch | — | — | a permanent Last.fm error (e.g. 13) drops the batch of ≤50: the same listens would fail again; transient errors keep it (read) | — |
+| OpenSubtitles / SubDL bodies, `cacheDir/subtitles` | — | — | JSON answers are small paged lists; downloaded files go to cacheDir, which Android trims under pressure; the SubDL key in the query is required by that API and no logging interceptor exists | — |
+| Cloud alerts, FCM, PushWake, GitHub releases, YouTube account | — | — | IG-6 holds (failure not cached); register back-off 6 h → 3 days; 401/403 drops the device secret; update checks keep the trust gate (official repo, SHA-256, GitHub-only redirects) | — |
+
+Competitor / OSS references (source read at the tag):
+
+- Mihon v0.19.1 `app/src/main/java/eu/kanade/domain/track/interactor/TrackChapter.kt` 36–49: a failed tracker
+  update goes to `DelayedTrackingStore` and `DelayedTrackingUpdateJob` (60–65: network required, exponential
+  back-off from 5 min) sends it later. Same goal as AnimeSync's retry; it only works if failures throw (IG-9, IG-10).
+- Mihon v0.19.1 `core/common/.../network/OkHttpExtensions.kt` 113–121 `awaitSuccess` throws `HttpException` on any
+  non-2xx; `AnilistApi.kt` 69, 110, 132 and the MAL API use it, so a 429/5xx is never "done" (IG-10). The update
+  in `TrackChapter.kt` 38–41 runs `service.refresh` first and writes only after it succeeded (IG-11).
+- Mihon v0.19.1 `data/track/anilist/AnilistInterceptor.kt` 33–35: an expired AniList token logs the account out
+  (IG-12). CloudStream master 2dcc25c `syncproviders/providers/AniListApi.kt` 59 stores `expires_in`.
+- CloudStream master 2dcc25c `AniListApi.kt` 508–523 `postApi` reads the body without a status check and 764+
+  `postDataAboutId` returns false on an unparsable answer: the same gap as IG-9/IG-10, with no retry.
+- TVmaze API rate-limit section (above) for IG-13.
+
+Optimization and architecture: no new dependency or layer. One rule per layer: a network helper reports
+"not found" only for 404 / an empty result and throws for everything else (ADR-030). No extra requests: a
+retry happens only on the next progress tick (AnimeSync, ≤3 attempts) or the next screen visit (stills).
+
+### Step 3: register (re-audit)
+
+| ID | Item | Problem | Root cause | Fix | Test | Status |
+|---|---|---|---|---|---|---|
+| IG-9 | I3 | Anime trackers silently skip an episode when the id lookup hits AniList 429/5xx or offline | `AnimeIds.of` wraps the lookup in `runCatching` and `AnimeIds.post` returns null on non-2xx | strict lookup: 404/empty = not found, other failures throw, so AnimeSync's retry runs | `g11/AnimeIdsLookupFailureTest` | Open |
+| IG-10 | I1–I3 | A 429/5xx from any tracker write counts as done; never retried | writes return `code in 200..299` / `isSuccessful`; Trakt search returns null on non-2xx; MAL maps network errors to -1 | `TrackerHttp.transient(code)` throws for 429, 5xx and network errors in all five trackers | `g11/TrackerTransientFailureTest` | Open |
+| IG-11 | I3 | AniList / MAL can lower progress and undo COMPLETED after a failed read | a failed progress read is taken as 0 and the write is still sent | no write unless the read succeeded; a failed read throws (retried) | `g11/TrackerProgressReadTest` | Open |
+| IG-12 | I3 | Expired / revoked AniList token: "Signed in" shown, nothing syncs | 401 → null → false; no sign-out | AniList 401 with the user's token signs out (card asks to sign in again), as MAL/Kitsu/Trakt do on a refused refresh | `g11/AniListExpiredTokenTest` | Open |
+| IG-13 | I4 | A 429/5xx from ani.zip or TVmaze hides thumbnails until restart | `EpisodeStills.get` returns null for any non-2xx = "nothing found" | `get` returns null only for 404; other non-2xx throw, which clears the tried mark (IG-5 path) | `g11/EpisodeStillsRateLimitTest` | Open |
+
+Scope check (INVENTORY G11 I1–I11 and CHECKLIST against the code): the only open CHECKLIST row touching G11 is
+NBUG-6 (DNS routing, a G12 item blocked on the owner's gate), so it stays out. INVENTORY rows I1–I11 match the
+files above; I3 and I4 get the new IDs at close.

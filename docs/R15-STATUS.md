@@ -1,16 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 05:30 UTC, G10 closed → G11 step 1)
+## Resume here (updated 2026-11-19 05:40 UTC, G11 step 3 → step 4)
 
 - **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 (closed) → G11 → v1.8.2
   (owner approval) → stability-v2.
-- **G10:** closed 2026-11-19. ER-21…ER-30 fixed and verified (ER-30 = owner NBUG-8); group CI 44457297312
-  (1274/0); regression phones 44460656954, tv-api24 44460663805, tv-api34 44461533827. Queued ER-28-TV34,
-  TV-A11Y-1 (pre-existing, old code 44462757164), OMT-34. Details: docs/groups/GROUP-10-ERRORS.md.
-- **Runs in progress:** none. Throwaway branches ab/g10-* deleted.
-- **Next three actions:** (1) G11 step 1: read every integration file line by line (Trakt, Simkl, Kitsu, AniList,
-  TMDB, subtitles, LRCLIB, Last.fm, Firebase, Cloudflare Worker, YouTube account, GitHub releases); (2) step 2 audit
-  with ≥2 references each; (3) step 3 register + ADR.
+- **G11 (re-audit):** steps 1–3 done (docs/groups/GROUP-11-INTEGRATIONS.md, "Re-audit under the group method").
+  New findings IG-9…IG-13 (tracker / stills failures read as "done" or "not found"), ADR-030.
+- **Runs in progress:** none.
+- **Next three actions:** (1) step 4: tests `g11/*Test` in one commit; (2) step 5: fail-before on
+  `ab/g11-before` (CI), then delete it; (3) steps 6–7: one fix commit per finding, pass-after.
+
+### Previous resume note — superseded (05:30 UTC 2026-11-19, G10 closed → G11 step 1; real clock was ~05:20)
+
+- G10 closed; next was G11 step 1.
 
 ### Previous resume note — superseded (04:17 UTC 2026-11-19, G10 step 8 loop; its header said 08:08, wrong clock)
 
