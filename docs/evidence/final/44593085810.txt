@@ -1,20 +1,20 @@
-44593085810 tv-api34 CloudRecaptureDeviceTest P1 FAIL tests=? skipped=0
-44593085810 tv-api34 CloudRecaptureDeviceTest P2 FAIL tests=? skipped=0
-44593085810 tv-api34 FcmAiringWakeDeviceTest P1 PASS tests=1 skipped=0
-44593085810 tv-api34 FcmAiringWakeDeviceTest P2 PASS tests=1 skipped=0
-44593085810 tv-api34 FeatureSmokeDeviceTest P1 PASS tests=2 skipped=0
-44593085810 tv-api34 FeatureSmokeDeviceTest P2 PASS tests=2 skipped=0
-44593085810 tv-api34 JsTimeLimitDeviceTest P1 PASS tests=3 skipped=0
-44593085810 tv-api34 JsTimeLimitDeviceTest P2 PASS tests=3 skipped=0
-44593085810 tv-api34 MangaTranslateDeviceTest P1 FAIL tests=? skipped=0
-44593085810 tv-api34 MangaTranslateDeviceTest P2 FAIL tests=? skipped=0
-44593085810 tv-api34 ProxyDeviceTest P1 PASS tests=3 skipped=0
-44593085810 tv-api34 ProxyDeviceTest P2 PASS tests=3 skipped=0
-44593085810 tv-api34 TelegramPlaybackDeviceTest P1 PASS tests=2 skipped=0
-44593085810 tv-api34 TelegramPlaybackDeviceTest P2 PASS tests=2 skipped=0
-44593085810 tv-api34 TelegramPublicDeviceTest P1 FAIL tests=? skipped=0
-44593085810 tv-api34 TelegramPublicDeviceTest P2 FAIL tests=? skipped=0
-44593085810 tv-api34 UniversalAddEcosystemsDeviceTest P1 PASS tests=1 skipped=0
-44593085810 tv-api34 UniversalAddEcosystemsDeviceTest P2 PASS tests=1 skipped=0
-44593085810 tv-api34 VegaProviderDeviceTest P1 PASS tests=3 skipped=0
-44593085810 tv-api34 VegaProviderDeviceTest P2 PASS tests=3 skipped=0
+44593085810 tv-api34 CloudRecaptureDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593085810 tv-api34 CloudRecaptureDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593085810 tv-api34 FcmAiringWakeDeviceTest P1 PASS tests=1 skipped=0 sha=ea513ea
+44593085810 tv-api34 FcmAiringWakeDeviceTest P2 PASS tests=1 skipped=0 sha=ea513ea
+44593085810 tv-api34 FeatureSmokeDeviceTest P1 PASS tests=2 skipped=0 sha=ea513ea
+44593085810 tv-api34 FeatureSmokeDeviceTest P2 PASS tests=2 skipped=0 sha=ea513ea
+44593085810 tv-api34 JsTimeLimitDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593085810 tv-api34 JsTimeLimitDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593085810 tv-api34 MangaTranslateDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593085810 tv-api34 MangaTranslateDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593085810 tv-api34 ProxyDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593085810 tv-api34 ProxyDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593085810 tv-api34 TelegramPlaybackDeviceTest P1 PASS tests=2 skipped=0 sha=ea513ea
+44593085810 tv-api34 TelegramPlaybackDeviceTest P2 PASS tests=2 skipped=0 sha=ea513ea
+44593085810 tv-api34 TelegramPublicDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593085810 tv-api34 TelegramPublicDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593085810 tv-api34 UniversalAddEcosystemsDeviceTest P1 PASS tests=1 skipped=0 sha=ea513ea
+44593085810 tv-api34 UniversalAddEcosystemsDeviceTest P2 PASS tests=1 skipped=0 sha=ea513ea
+44593085810 tv-api34 VegaProviderDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593085810 tv-api34 VegaProviderDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea

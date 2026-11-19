@@ -1,40 +1,40 @@
-44593053433 api36 CloudRecaptureDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api36 CloudRecaptureDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api36 FcmAiringWakeDeviceTest P1 PASS tests=1 skipped=0
-44593053433 api36 FcmAiringWakeDeviceTest P2 PASS tests=1 skipped=0
-44593053433 api36 FeatureSmokeDeviceTest P1 PASS tests=2 skipped=0
-44593053433 api36 FeatureSmokeDeviceTest P2 PASS tests=2 skipped=0
-44593053433 api36 JsTimeLimitDeviceTest P1 PASS tests=3 skipped=0
-44593053433 api36 JsTimeLimitDeviceTest P2 PASS tests=3 skipped=0
-44593053433 api36 MangaTranslateDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api36 MangaTranslateDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api36 ProxyDeviceTest P1 PASS tests=3 skipped=0
-44593053433 api36 ProxyDeviceTest P2 PASS tests=3 skipped=0
-44593053433 api36 TelegramPlaybackDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api36 TelegramPlaybackDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api36 TelegramPublicDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api36 TelegramPublicDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api36 UniversalAddEcosystemsDeviceTest P1 PASS tests=1 skipped=0
-44593053433 api36 UniversalAddEcosystemsDeviceTest P2 PASS tests=1 skipped=0
-44593053433 api36 VegaProviderDeviceTest P1 PASS tests=3 skipped=0
-44593053433 api36 VegaProviderDeviceTest P2 PASS tests=3 skipped=0
-44593053433 api33-lowram CloudRecaptureDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api33-lowram CloudRecaptureDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api33-lowram FcmAiringWakeDeviceTest P1 PASS tests=1 skipped=0
-44593053433 api33-lowram FcmAiringWakeDeviceTest P2 PASS tests=1 skipped=0
-44593053433 api33-lowram FeatureSmokeDeviceTest P1 PASS tests=2 skipped=0
-44593053433 api33-lowram FeatureSmokeDeviceTest P2 PASS tests=2 skipped=0
-44593053433 api33-lowram JsTimeLimitDeviceTest P1 PASS tests=3 skipped=0
-44593053433 api33-lowram JsTimeLimitDeviceTest P2 PASS tests=3 skipped=0
-44593053433 api33-lowram MangaTranslateDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api33-lowram MangaTranslateDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api33-lowram ProxyDeviceTest P1 PASS tests=3 skipped=0
-44593053433 api33-lowram ProxyDeviceTest P2 PASS tests=3 skipped=0
-44593053433 api33-lowram TelegramPlaybackDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api33-lowram TelegramPlaybackDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api33-lowram TelegramPublicDeviceTest P1 FAIL tests=? skipped=0
-44593053433 api33-lowram TelegramPublicDeviceTest P2 FAIL tests=? skipped=0
-44593053433 api33-lowram UniversalAddEcosystemsDeviceTest P1 PASS tests=1 skipped=0
-44593053433 api33-lowram UniversalAddEcosystemsDeviceTest P2 PASS tests=1 skipped=0
-44593053433 api33-lowram VegaProviderDeviceTest P1 PASS tests=3 skipped=0
-44593053433 api33-lowram VegaProviderDeviceTest P2 PASS tests=3 skipped=0
+44593053433 api36 CloudRecaptureDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 CloudRecaptureDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 FcmAiringWakeDeviceTest P1 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api36 FcmAiringWakeDeviceTest P2 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api36 FeatureSmokeDeviceTest P1 PASS tests=2 skipped=0 sha=ea513ea
+44593053433 api36 FeatureSmokeDeviceTest P2 PASS tests=2 skipped=0 sha=ea513ea
+44593053433 api36 JsTimeLimitDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api36 JsTimeLimitDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api36 MangaTranslateDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 MangaTranslateDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 ProxyDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api36 ProxyDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api36 TelegramPlaybackDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 TelegramPlaybackDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 TelegramPublicDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 TelegramPublicDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api36 UniversalAddEcosystemsDeviceTest P1 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api36 UniversalAddEcosystemsDeviceTest P2 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api36 VegaProviderDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api36 VegaProviderDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api33-lowram CloudRecaptureDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram CloudRecaptureDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram FcmAiringWakeDeviceTest P1 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api33-lowram FcmAiringWakeDeviceTest P2 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api33-lowram FeatureSmokeDeviceTest P1 PASS tests=2 skipped=0 sha=ea513ea
+44593053433 api33-lowram FeatureSmokeDeviceTest P2 PASS tests=2 skipped=0 sha=ea513ea
+44593053433 api33-lowram JsTimeLimitDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api33-lowram JsTimeLimitDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api33-lowram MangaTranslateDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram MangaTranslateDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram ProxyDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api33-lowram ProxyDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api33-lowram TelegramPlaybackDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram TelegramPlaybackDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram TelegramPublicDeviceTest P1 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram TelegramPublicDeviceTest P2 FAIL tests=? skipped=0 sha=ea513ea
+44593053433 api33-lowram UniversalAddEcosystemsDeviceTest P1 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api33-lowram UniversalAddEcosystemsDeviceTest P2 PASS tests=1 skipped=0 sha=ea513ea
+44593053433 api33-lowram VegaProviderDeviceTest P1 PASS tests=3 skipped=0 sha=ea513ea
+44593053433 api33-lowram VegaProviderDeviceTest P2 PASS tests=3 skipped=0 sha=ea513ea
