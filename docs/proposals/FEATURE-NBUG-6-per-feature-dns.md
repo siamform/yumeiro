@@ -147,3 +147,85 @@ Cheaper fallback (proposal only; the owner decides whether to build it):
 - F2: the 5 `HttpURLConnection` calls (subtitles 2, app update 3) would follow the app's DNS by moving them onto `NetworkClient`.
   This is a behaviour change for the update check, so it needs its own test and is also an owner call.
 - What a DNS change can't fix (IP/SNI blocks, NBUG-13) is covered by the proxy option (FEATURE-NBUG-13-proxy.md), not by DNS.
+
+## Tenth cycle (2026-11-19): the sequential fallback is built (ADR-046)
+
+Owner order: per-feature DNS stays rejected; build the sequential fallback under the hard limits of
+the tenth-cycle prompt §6. Built in 61e6eb9 (tests 0fba73b).
+
+### Which lookup took 15 s
+
+The 15 091 ms was the first lookup of a blocked host in `Nbug6ExhaustionTimingTest` (CI 44192309663),
+in the DoH stage after system DNS had failed: three DoH requests in a row whose *TCP connect* to the
+resolver's bootstrap IP literal timed out (Cloudflare 5057, Quad9 5004, Google 5006 ms, each
+`SocketTimeoutException: Connect timed out`). It is the bootstrap client's 5 s connect timeout × 3,
+not a DNS lookup of the resolver's name (bootstrap entries are IP literals, `InetAddress.getByName`
+on a literal does no lookup, §3). So the fallback inherits only its own connect timeout, which it sets
+to 3.5 s and pays at most twice per network session — the design is not broken by it.
+
+### Hard limits and how each is met
+
+| Limit | How | Evidence |
+|---|---|---|
+| Per attempt 3–4 s | `FALLBACK_ATTEMPT_MS = 3500` for connect, read and call on the fallback engine | `Nbug6FallbackTest#blackholedNetwork…`: first lookup ≥ 3.5 s (the dead resolver's budget) and < 6.2 s |
+| ≤ 3 resolvers | `FALLBACK_CHAIN = [CLOUDFLARE, QUAD9]` after system DNS | `#everythingDead…`: 2 attempts |
+| Sequential, never parallel, no second engine | one `chainLock`; fallback engine = the provider's existing bootstrap client via `newBuilder()` (shares dispatcher + pool) | `#concurrentRequests…`: `fallbackMaxConcurrent == 1` with 4 threads |
+| Only on failure / timeout | system DNS first on the caller's thread with no wrapper; chain only after `UnknownHostException` while online, or a connection failure seen by `AutoBypassInterceptor` | `#aHealthyNetworkNeverFires…`: 0 attempts in 20 lookups |
+| Session cache | `sessionResolver` after a system-wide failure (EAI_AGAIN / timeout); cleared on network change and Clear caches | `#blackholedNetwork…`: second request < 1 s, system DNS not asked |
+| Flag + kill switch | `nbug6_dns_fallback` (`FeatureFlags.Flag.DNS_FALLBACK`); off hides the row and disables the path | `#theKillSwitch…` |
+| Setting, default Off | Settings → Network → "Automatic DNS fallback", `dns_fallback_auto`, default false | `#theSettingIsOffByDefault`, `#theSettingSurvivesARestart` |
+| Mock blackholed network | local UDP DNS that drops every query; local TCP resolver that never answers; local RFC 8484 server | `Nbug6FallbackTest` |
+
+One limit the app cannot set: the system attempt's own timeout belongs to Android's resolver
+(netd: 5 s base, 2 retries). Bounding it to 3.5 s would need a timer thread per lookup, which is a
+measurable side effect on a healthy network, so it is not done. The OS timeout is paid once per
+network session because the session resolver is kept afterwards. In the test the OS timeout is
+modelled at 1.2 s; on a real blackholed network it is the device's value (owner test OMT-47).
+
+### Feature profile
+
+- Purpose: keep the app usable when the network's DNS stops answering (ISP resolver down or
+  blackholed), without a VPN. Not for IP/SNI blocks (that is the NBUG-13 proxy).
+- Entry points: Settings → Network → "Automatic DNS fallback" (phone and TV; a `SettingsToggleRow`,
+  D-pad focusable like the other rows). Shown only with System DNS and the flag on.
+- Storage / migration: `dns_fallback_auto` in the existing network prefs file; absent = Off. No migration.
+- Permissions: none new.
+- Backup / restore: the network prefs file is backed up as before, so the choice is restored.
+  Reset clears it (Off).
+- Errors / offline: offline (`Connectivity.online` false) never walks the chain; the error is the
+  system one. All resolvers dead: the system error after ≤ OS timeout + 7 s, then dead resolvers are
+  skipped for 2 min (existing `resolverDownUntil`).
+- Accessibility: plain toggle with a title and a one-sentence subtitle; TalkBack reads both.
+- TV / low-end: no extra threads or engines; nothing runs on a healthy network.
+- Performance budget: healthy network 0 extra work per lookup (one boolean read); failure: ≤ 2 × 3.5 s
+  once per session; memory: one `DnsOverHttps` object per provider sharing the existing client.
+- Inventory: INVENTORY network row "Automatic DNS fallback" added.
+
+### Action → reaction
+
+| Action / event | Reaction |
+|---|---|
+| Toggle On / Off | Saved at once, caches cleared, next lookup follows the new choice |
+| Rapid taps | Each tap writes the latest value; last write wins; no lookups started by the toggle |
+| Back / rotate / kill and restore | Value is in prefs; session resolver is in memory and starts empty after a kill (first failure re-learns it) |
+| Healthy network | System DNS only; chain never walked |
+| System DNS times out | One walk: 1.1.1.1 (≤ 3.5 s) → 9.9.9.9 (≤ 3.5 s); the one that answers is kept for the session |
+| One name refused (EAI_NODATA) | That host only goes through the chain; session unchanged |
+| Connection reset after a system answer | `AutoBypassInterceptor` marks the host, retries GET/HEAD once through the chain |
+| Network changes (Wi-Fi ↔ mobile) | Session resolver dropped; system DNS first again |
+| Two requests fail at once | One walks the chain under the lock; the other waits and then uses the found resolver |
+| Session resolver stops answering | Dropped; system DNS tried again, then the chain |
+| User picks an explicit resolver (Cloudflare etc.) | Fallback row hidden; the explicit mode rules |
+| Proxy on (NBUG-13) | Proxied requests resolve at the proxy; DoH itself is not proxied (ADR-045) |
+| Low memory | Nothing held beyond two small objects |
+
+### Side effects
+
+- Stability: off by default; a healthy network takes no new code path (one boolean).
+- Battery / startup: nothing at startup; no background work.
+- Memory / threads: no new client, dispatcher or pool (newBuilder of the existing one). Measured cost
+  of a *new* engine (+5–6 threads) does not apply.
+- Existing features: auto bypass unchanged when the fallback is Off. With it On, a blocked host uses
+  the 2-resolver 3.5 s chain instead of the 3-resolver 5 s rotation — a shorter worst case.
+- Terms: Cloudflare 1.1.1.1 and Quad9 public resolvers are free for public use; no API key; no
+  access control bypassed (DNS only).

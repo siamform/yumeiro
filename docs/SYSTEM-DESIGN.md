@@ -1349,6 +1349,29 @@ Consequences.
 - SOCKS5 with a login can't cover web pages, a WebView limit that is shown in Settings.
 - A real blocked host is an owner/community test.
 
+### ADR-046: Automatic DNS fallback, sequential, default Off (NBUG-6 F1)
+
+Status: accepted 2026-11-19 (tenth cycle). Network. Flag `nbug6_dns_fallback`. Replaces the "rejected,
+fallback waits for the owner" row of NBUG-6; per-feature DNS stays rejected.
+
+Context. Per-feature DNS failed the side-effect gate (device 44192612391, CI 44192309663). The 15 s
+worst case was three 5 s DoH bootstrap *connect* timeouts in a row, not a lookup of the resolver's
+name (bootstrap entries are IP literals).
+
+Options. (a) Race resolvers in parallel: fastest, but three engines at once — rejected (§2 cost).
+(b) Wrap every system lookup in a 3.5 s timer thread: bounds the OS timeout, but costs a thread hop
+on every healthy lookup — rejected (side effect on a healthy network). (c) System DNS untouched,
+sequential chain only after a failure, session-cached resolver, engine shared via `newBuilder()` —
+chosen.
+
+Decision. System DNS → 1.1.1.1 → 9.9.9.9, 3.5 s per DoH attempt, one walk at a time under one lock,
+only on failure; the resolver that answered after a system-wide failure is used first until the
+network changes. User setting "Automatic DNS fallback", default Off. Details and evidence:
+docs/proposals/FEATURE-NBUG-6-per-feature-dns.md "Tenth cycle".
+
+Consequences. Off: identical to before. On, healthy network: no extra work. On, dead DNS: the OS
+resolver's own timeout once per session plus ≤ 7 s. Real-network proof is owner test OMT-47.
+
 ## 11. Risks
 
 | Risk | Mitigation |
