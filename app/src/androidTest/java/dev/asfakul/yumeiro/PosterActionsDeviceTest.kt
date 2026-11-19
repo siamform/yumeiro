@@ -86,7 +86,11 @@ class PosterActionsDeviceTest {
         log("POSTER_ACTIONS tv sheet=$opened focused=$focused")
         FirstRun.shot("poster_actions_tv")
         assertTrue("Menu did not open the poster sheet", opened)
-        assertEquals("poster_actions_watch_later", focused)
+        // Each window keeps its own focused node: the poster stays focused in the main window behind the
+        // dialog (api36, tv-api34 showed "online_poster+poster_actions_watch_later"). Keys go to the dialog
+        // window, so the sheet's own focus must be Watch later, and only that row in the sheet.
+        val inSheet = focused.split("+").filter { it.startsWith("poster_actions") }
+        assertEquals("focused=$focused", listOf("poster_actions_watch_later"), inSheet)
         key(23) // DPAD_CENTER
         compose.waitUntil(8_000) { !has("poster_actions") }
         assertEquals(OnlineBookmarks.Status.PLAN, OnlineBookmarks.items.value.singleOrNull()?.status)
