@@ -21,6 +21,23 @@ REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
 # Final test (MASTER-CHECKLIST-FINAL): P1 = every class from cleared data and a cold start; P2 = the
 # same classes again with P1's data kept, the app killed and reopened (warm start, populated data).
 PASSES="${PASSES:-false}"; [ "$PASSES" = "true" ] && REPEAT=2
+# FINAL-12 (api33-lowram, run 44617327290): the system launcher hung during boot ("ANR in
+# com.google.android.apps.nexuslauncher" before the first test) and kept window focus, so every
+# focus check saw the launcher, not Yumeiro. hide_error_dialogs hides the dialog but not the hang.
+# Before each class: if a system app (launcher / System UI) went ANR since the last check, restart it
+# and go Home. Logged as HARNESS lines; the ANR itself stays in logcat and the evidence.
+ANR_SEEN=0
+recover_system_anr() {
+  local n; n=$(grep -cE "ANR in (com\.google\.android\.apps\.nexuslauncher|com\.google\.android\.tvlauncher|com\.google\.android\.apps\.tv\.launcherx|com\.android\.systemui|com\.android\.launcher3)" logcat.txt 2>/dev/null)
+  [ "${n:-0}" -le "$ANR_SEEN" ] && return 0
+  ANR_SEEN=$n
+  local pkg; pkg=$(grep -oE "ANR in (com\.google\.android\.apps\.nexuslauncher|com\.google\.android\.tvlauncher|com\.google\.android\.apps\.tv\.launcherx|com\.android\.systemui|com\.android\.launcher3)" logcat.txt | tail -1 | sed 's/ANR in //')
+  echo "HARNESS system ANR seen ($pkg, $n so far): restarting it before the next class"
+  if [ "$pkg" = "com.android.systemui" ]; then adb shell pkill -f com.android.systemui > /dev/null 2>&1 || true
+  else adb shell am force-stop "$pkg" > /dev/null 2>&1 || true; fi
+  sleep 3; adb shell input keyevent 3 > /dev/null 2>&1 || true; sleep 3
+  echo "HARNESS focus after restart: $(adb shell dumpsys window | grep -m1 mCurrentFocus | tr -d '\r' | sed 's/^ *//')"
+}
 for N in $(seq 1 "$REPEAT"); do
 for C in $(echo "$FILTER" | tr ',' ' '); do
   # R16: repeats start from cleared app data, like a fresh install.
@@ -35,6 +52,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   if [ "$SDK" -lt 28 ]; then
     for PERM in READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE; do adb shell pm grant dev.asfakul.yumeiro.debug android.permission.$PERM > /dev/null 2>&1; done
   fi
+  recover_system_anr
   echo "::group::$C (run $N/$REPEAT)"
   L0=$(wc -l < logcat.txt)
   if [ "$C" = "dev.asfakul.yumeiro.HomeTraceDeviceTest" ]; then
