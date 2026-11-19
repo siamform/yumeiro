@@ -101,25 +101,19 @@ fun ProfileAvatar(profile: Profiles.Profile, size: Dp, selected: Boolean = false
 /** The "Who's watching?" cover was passed in this process (or the app restarted into a chosen profile). */
 object ProfileSession {
     val chosen = MutableStateFlow(false)
-    private const val KEY = "unlocked_for_restart"
 
-    /** Before a restart into [id]: the next start opens it without asking again (one time only). */
-    fun passThroughRestart(context: android.content.Context, id: String) {
-        context.getSharedPreferences(Profiles.PREFS, android.content.Context.MODE_PRIVATE).edit().putString(KEY, id).commit()
-    }
-
-    internal fun consumePass(context: android.content.Context): Boolean {
-        val p = context.getSharedPreferences(Profiles.PREFS, android.content.Context.MODE_PRIVATE)
-        val id = p.getString(KEY, null) ?: return false
-        p.edit().remove(KEY).commit()
-        return id == Profiles.currentId(context)
+    /** MainActivity.onCreate, before the first frame. */
+    fun decide(context: android.content.Context) {
+        if (chosen.value) return
+        val need = FeatureFlags.on(context, FeatureFlags.Flag.PROFILES) && Profiles.askAtStart(context) && !Profiles.consumePass(context)
+        chosen.value = !need
     }
 
     /** Opens [id]: in place when it is the current one, otherwise saves it and restarts the app. */
     fun open(activity: Activity, id: String) {
         if (id == Profiles.currentId(activity)) { chosen.value = true; return }
         Profiles.select(activity, id)
-        passThroughRestart(activity, id)
+        Profiles.passRestart(activity, id)
         dev.asfakul.yumeiro.backup.Restart.now(activity)
     }
 }
@@ -129,11 +123,6 @@ object ProfileSession {
 fun ProfileGate(activity: Activity) {
     val chosen by ProfileSession.chosen.collectAsState()
     if (chosen) return
-    val context = LocalContext.current
-    val need = remember {
-        FeatureFlags.on(context, FeatureFlags.Flag.PROFILES) && Profiles.askAtStart(context) && !ProfileSession.consumePass(context)
-    }
-    if (!need) { LaunchedEffect(Unit) { ProfileSession.chosen.value = true }; return }
     WhoIsWatching(activity, onManage = null)
 }
 
@@ -198,18 +187,56 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
         return
     }
     if (!profile.hasPin) return // the system prompt is up
+    var forgot by remember { mutableStateOf(false) }
+    if (forgot) { ForgotPinDialog(activity, profile, onDismiss = { forgot = false }, onCleared = onUnlocked); return }
     PinPadDialog(
         title = title, subtitle = if (bioOk) "Enter the PIN or use your fingerprint" else "Enter the PIN",
         error = error,
         onBiometric = if (bioOk) ({ bio() }) else null,
+        onForgot = { forgot = true },
         onDismiss = onDismiss,
         onPin = { pin ->
             when (Profiles.checkPin(context, profile.id, pin)) {
                 Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> { error = null; onUnlocked() }
                 Profiles.PinCheck.WRONG -> error = "Wrong PIN"
-                Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${(Profiles.lockoutLeft(profile.id) / 1000) + 1} s"
+                Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, profile.id))}"
             }
         },
+    )
+}
+
+/**
+ * Forgot PIN. With a phone screen lock, the phone's owner removes the PIN with it (the profile keeps its
+ * data). Without one, nothing can prove who is asking, so the PIN goes only together with what it
+ * protects (as a phone's safe folder): the profile is deleted, or for the main profile its own lists,
+ * history and private downloads are cleared.
+ */
+@Composable
+private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, onDismiss: () -> Unit, onCleared: () -> Unit) {
+    val context = LocalContext.current
+    val device = remember { Privacy.canAuthenticate(activity) }
+    dev.asfakul.yumeiro.ui.components.TsukiDialog(
+        tone = if (device) dev.asfakul.yumeiro.ui.components.DialogTone.NEUTRAL else dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
+        onDismissRequest = onDismiss,
+        title = { Text("Forgot the PIN?") },
+        text = {
+            Text(
+                if (device) "Use this phone's screen lock to remove ${profile.name}'s PIN. Nothing else changes."
+                else if (profile.id == Profiles.DEFAULT) "This phone has no screen lock, so the PIN can only be removed together with ${profile.name}'s history, lists, YouTube history and private downloads. Extensions and settings stay."
+                else "This phone has no screen lock, so the PIN can only be removed by deleting ${profile.name} with its history, lists and private downloads.",
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (device) Privacy.verify(activity, "Remove ${profile.name}'s PIN") { ok ->
+                    if (ok) { Profiles.setPin(context, profile.id, null); onCleared() } else onDismiss()
+                } else {
+                    Profiles.resetForgotten(context, profile.id)
+                    dev.asfakul.yumeiro.backup.Restart.now(activity) // every store reloads without the old data
+                }
+            }, modifier = Modifier.testTag("pin_forgot_confirm")) { Text(if (device) "Use screen lock" else if (profile.id == Profiles.DEFAULT) "Clear and unlock" else "Delete ${profile.name}") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
@@ -225,6 +252,7 @@ fun PinPadDialog(
     onDismiss: () -> Unit,
     onPin: (String) -> Unit,
     onBiometric: (() -> Unit)? = null,
+    onForgot: (() -> Unit)? = null,
 ) {
     var pin by remember { mutableStateOf("") }
     LaunchedEffect(error) { if (error != null) { delay(150); pin = "" } }
@@ -281,6 +309,7 @@ fun PinPadDialog(
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onDismiss) { Text("Cancel") }
+                if (onForgot != null) TextButton(onClick = onForgot, modifier = Modifier.testTag("pin_forgot")) { Text("Forgot?") }
                 if (onBiometric != null) TextButton(onClick = onBiometric) {
                     Icon(Icons.Default.Fingerprint, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Screen lock")
                 }

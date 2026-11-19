@@ -70,6 +70,9 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         handleIntent(intent)
         dev.asfakul.yumeiro.ui.tv.TvMode.init(this)
 
+        // PR-1: decided before the first frame, so nothing of the app is drawn (or reachable with the
+        // remote) behind "Who's watching?" (Plex fixed exactly that bypass on Android TV).
+        dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.decide(this)
         setContent {
             val palette = rememberMtPalette()
             LaunchedEffect(palette.isDark) {
@@ -84,8 +87,9 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
             androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.tv.LocalTvMode provides tv) {
                 MTPlayerTheme(palette = palette) {
                     val viewModel: MainViewModel = viewModel()
-                    MTPlayerApp(viewModel = viewModel)
-                    dev.asfakul.yumeiro.ui.screens.profiles.ProfileGate(this@MainActivity) // PR-1
+                    val profileChosen by dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.chosen.collectAsState()
+                    if (profileChosen) MTPlayerApp(viewModel = viewModel)
+                    else dev.asfakul.yumeiro.ui.screens.profiles.ProfileGate(this@MainActivity) // PR-1
                     dev.asfakul.yumeiro.ui.screens.extras.AppLockGate(this@MainActivity)
                 }
             }

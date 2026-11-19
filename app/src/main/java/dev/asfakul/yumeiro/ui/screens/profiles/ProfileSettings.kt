@@ -67,6 +67,7 @@ fun ProfilesSettings(activity: Activity?) {
     var editing by remember { mutableStateOf<String?>(null) }
     var unlocking by remember { mutableStateOf<Profiles.Profile?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var mainCheck by remember { mutableStateOf(false) }
     Column(Modifier.testTag("profiles_settings")) {
         list.forEach { p ->
             Row(
@@ -88,7 +89,7 @@ fun ProfilesSettings(activity: Activity?) {
             }
         }
         if (list.size < Profiles.MAX_PROFILES) Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { adding = true }.padding(vertical = 10.dp).testTag("profile_add"),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { if (Profiles.needsMainUnlock(context)) mainCheck = true else adding = true }.padding(vertical = 10.dp).testTag("profile_add"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(40.dp).clip(CircleShape).border(1.dp, TextTertiary, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = TextPrimary) }
@@ -102,6 +103,10 @@ fun ProfilesSettings(activity: Activity?) {
         adding = false
         val p = Profiles.add(context, name, tone)
         AppMessages.success(context, "${p.name} added. Open it from Who's watching? or here.")
+    }
+    // Netflix's "require PIN to add profiles": with the main profile locked, a child's profile can't add one.
+    if (mainCheck && activity != null) Profiles.find(context, Profiles.DEFAULT)?.let { main ->
+        UnlockProfileDialog(activity, main, title = "${main.name}'s lock is needed to add a profile", onDismiss = { mainCheck = false }, onUnlocked = { mainCheck = false; adding = true })
     }
     unlocking?.let { p -> if (activity != null) UnlockProfileDialog(activity, p, title = "Edit ${p.name}", onDismiss = { unlocking = null }, onUnlocked = { unlocking = null; editing = p.id }) }
     editing?.let { id -> list.firstOrNull { it.id == id }?.let { p -> EditProfileDialog(activity, p, isCurrent = p.id == current, onDismiss = { editing = null }) } }

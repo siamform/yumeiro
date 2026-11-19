@@ -46,6 +46,14 @@ fun OnlineSettingsCard() {
     val subdlKey by OnlineSettings.subdlKey.collectAsState()
     val subsourceKey by OnlineSettings.subsourceKey.collectAsState()
     var confirmAdult by remember { mutableStateOf(false) }
+    var adultMainCheck by remember { mutableStateOf(false) }
+    // PR-1: with the main profile locked, another profile turns 18+ on only after the main profile's lock.
+    if (adultMainCheck) (context as? android.app.Activity)?.let { act ->
+        dev.asfakul.yumeiro.profiles.Profiles.find(context, dev.asfakul.yumeiro.profiles.Profiles.DEFAULT)?.let { main ->
+            dev.asfakul.yumeiro.ui.screens.profiles.UnlockProfileDialog(act, main, title = "${main.name}'s lock is needed for 18+",
+                onDismiss = { adultMainCheck = false }, onUnlocked = { adultMainCheck = false; confirmAdult = true })
+        }
+    }
     var edit by remember { mutableStateOf<String?>(null) }
 
     if (confirmAdult) TsukiDialog(
@@ -90,7 +98,11 @@ fun OnlineSettingsCard() {
     }
 
     SettingsCard {
-        SettingsToggleRow("Show 18+ content", "Adult extensions and titles. Off by default.", adult, { on -> if (on) confirmAdult = true else OnlineSettings.setAdult(context, false) }, "setting_adult")
+        SettingsToggleRow("Show 18+ content", "Adult extensions and titles. Off by default.", adult, { on ->
+            if (!on) OnlineSettings.setAdult(context, false)
+            else if (dev.asfakul.yumeiro.profiles.Profiles.needsMainUnlock(context)) adultMainCheck = true
+            else confirmAdult = true
+        }, "setting_adult")
         if (adult) {
             val priv by OnlineSettings.adultPrivate.collectAsState()
             SettingsToggleRow("Keep 18+ activity private", "18+ titles you watch are saved quietly: they never show in Home, feeds, suggestions or Continue watching. Find them with search", priv,
