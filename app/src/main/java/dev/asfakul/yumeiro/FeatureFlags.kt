@@ -27,6 +27,8 @@ object FeatureFlags {
         SHORTS_PLAYER("f12_shorts_player", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
+        /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */
+        GLASS_THEME("f10_glass_theme", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

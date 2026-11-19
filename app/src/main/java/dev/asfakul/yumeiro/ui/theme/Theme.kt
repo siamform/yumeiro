@@ -72,12 +72,18 @@ fun rememberMtPalette(): MtPalette {
     val dayPart by produceState(currentDayPart(), mode) {
         while (mode == ThemeMode.TIME) { value = currentDayPart(); delay(60_000) }
     }
+    // F-10: Kasumi re-checks battery saver / heat every minute while it is the theme (kill switch -> Tsuki Night).
+    val glassOn = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.GLASS_THEME) }
+    val glassTier by produceState(remember(context) { GlassTier.current(context) }, mode) {
+        while (mode == ThemeMode.GLASS) { value = GlassTier.current(context); delay(60_000) }
+    }
     val palette = when (mode) {
         ThemeMode.LIGHT -> Palettes.Light
         ThemeMode.DARK -> Palettes.Dark
         ThemeMode.SYSTEM -> if (systemDark) Palettes.Dark else Palettes.Light
         ThemeMode.TIME -> dayPart.palette()
         ThemeMode.AFTERGLOW -> Palettes.Afterglow
+        ThemeMode.GLASS -> if (glassOn) Palettes.kasumi(glassTier) else Palettes.Dark
         ThemeMode.DYNAMIC -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             (if (systemDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).toPalette(systemDark)
         } else if (systemDark) Palettes.Dark else Palettes.Light
@@ -92,6 +98,7 @@ fun previewPaletteFor(mode: ThemeMode, systemDark: Boolean, current: MtPalette):
     ThemeMode.SYSTEM -> if (systemDark) Palettes.Dark else Palettes.Light
     ThemeMode.TIME -> currentDayPart().palette()
     ThemeMode.AFTERGLOW -> Palettes.Afterglow
+    ThemeMode.GLASS -> Palettes.kasumi(GlassTier.GLASS)
     ThemeMode.DYNAMIC -> if (current.scene == DreamScene.YOU) current else (if (systemDark) Palettes.Dark else Palettes.Light).copy(scene = DreamScene.YOU)
 }
 

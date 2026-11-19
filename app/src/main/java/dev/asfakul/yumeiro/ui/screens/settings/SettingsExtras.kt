@@ -102,8 +102,9 @@ fun AppearanceSettingsCard() {
     val amoled by ThemeSettings.amoled.collectAsState()
     val ambient by ThemeSettings.ambient.collectAsState()
     val kana by ThemeSettings.kana.collectAsState()
+    val glassOn = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.GLASS_THEME) }
     SettingsCard {
-        ThemeMode.entries.forEach { m ->
+        ThemeMode.entries.filter { it != ThemeMode.GLASS || glassOn }.forEach { m ->
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
                     .clickable { ThemeSettings.setMode(context, m) }

@@ -18,6 +18,32 @@ enum class ThemeMode(val label: String, val description: String) {
     DYNAMIC("Material You", "Colors from your wallpaper (Android 12+)"),
     TIME("Time of day", "Morning, noon, afternoon, evening and midnight moods"),
     AFTERGLOW("Afterglow", "Warm ember accent on deep black"),
+    /** F-10 (ADR-017): glass bars, sheets and mini player over a misty moonlit scene. */
+    GLASS("Kasumi", "Misty glass bars and player over a moonlit scene"),
+}
+
+/**
+ * F-10 (ADR-017): how see-through the Kasumi chrome is. No backdrop blur in this release (no GPU cost on any
+ * device); GLASS = translucent chrome, TINT = nearly solid, for low-RAM phones, TV, battery saver, a hot phone
+ * or "Remove animations / reduce transparency" in accessibility.
+ */
+enum class GlassTier {
+    GLASS, TINT;
+
+    companion object {
+        fun choose(lowEnd: Boolean, tv: Boolean, saver: Boolean, hot: Boolean, reduceTransparency: Boolean): GlassTier =
+            if (lowEnd || tv || saver || hot || reduceTransparency) TINT else GLASS
+
+        /** Reads the device state once per call (cheap system services, no I/O). */
+        fun current(context: Context): GlassTier {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            val hot = android.os.Build.VERSION.SDK_INT >= 29 && (pm?.currentThermalStatus ?: 0) >= android.os.PowerManager.THERMAL_STATUS_SEVERE
+            val reduce = runCatching {
+                android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+            }.getOrDefault(false)
+            return choose(dev.asfakul.yumeiro.DeviceClass.lowEnd, dev.asfakul.yumeiro.Edition.isTv, pm?.isPowerSaveMode == true, hot, reduce)
+        }
+    }
 }
 
 enum class DayPart(val label: String) { MORNING("Morning"), NOON("Noon"), AFTERNOON("Afternoon"), EVENING("Evening"), MIDNIGHT("Midnight") }

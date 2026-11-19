@@ -144,6 +144,19 @@ object Palettes {
         chipSelected = Color(0xFF17161A), onChipSelected = Color.White,
     )
 
+    /**
+     * F-10 "Kasumi" (霞, mist): Tsuki Night's moonlight accent over a cool misty scene; bars, mini player and
+     * glass fills are see-through ([GlassTier.GLASS]) or nearly solid ([GlassTier.TINT]). Content stays opaque.
+     */
+    fun kasumi(tier: GlassTier): MtPalette = Dark.copy(
+        surface = Color(0xFF161A22), surfaceContainer = Color(0xFF12151C), surfaceContainerHigh = Color(0xFF1D222C),
+        surfaceVariant = Color(0xFF29303B), outline = Color(0xFF3A4250), outlineVariant = Color(0xFF242A34),
+        bgTop = Color(0xFF223047), bgMid = Color(0xFF111620), bgBottom = Color(0xFF0A0C11),
+        navBar = if (tier == GlassTier.GLASS) Color(0xCC12151C) else Color(0xEB12151C),
+        glass = if (tier == GlassTier.GLASS) Color(0x24FFFFFF) else Color(0x16FFFFFF),
+        miniPlayer = if (tier == GlassTier.GLASS) Color(0xD91C212B) else Color(0xF51C212B), onMiniPlayer = Color.White,
+    )
+
     /** Prototype "Afterglow" — warm editorial dark variant. */
     val Afterglow = MtPalette(
         isDark = true,
