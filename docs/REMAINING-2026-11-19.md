@@ -67,5 +67,9 @@ Owner/community test (pending). "Not in this release" means the flag is off or n
 
 ## 5. Not in this release (flag off or nothing shipped)
 
-F-02 Telegram, F-03 login path, F-11 manga translation, NBUG-6 per-feature DNS, NBUG-13 proxy, Vega step 4,
-FCM episode airing, G7-L5-C, G8-CQ-2…4, G8-WEBM7. Reasons in section 3 and ADR-037.
+G7-L5-C, G8-CQ-2…4, G8-WEBM7. Reasons in section 3.
+
+Moved into 1.9.0 by the owner (order 2026-11-19 16:00 UTC, overrules ADR-037 / ADR-039 deferral): F-02 Telegram,
+F-03 TeraBox / DiskWala, F-11 manga translation, NBUG-6 per-feature DNS over HTTPS (side-effect gate stays),
+NBUG-13 proxy, Vega step 4 (meaning asked of the owner), episode-airing push (F-AIR, with the Worker fix).
+Status: Not started. Batches and evidence: docs/reports/2026-11-19-ninth-handover-report.md.

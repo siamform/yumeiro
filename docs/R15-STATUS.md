@@ -1,13 +1,20 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 11:45 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-19 16:20 UTC; no PR / merge / deploy without the owner's "go")
 
-- **Gate commit:** 8bf19898 (1.9.0 / code 17 + three test fixes). Release gate running: 13 chunks of ≤10 classes ×
-  phones (both) / tv-api24 / tv-api34, ≤2 device workflows at once; head CI 44514234313. Run IDs go to device-runs.md.
-- **Pass-after done:** ProfilesDeviceTest 3/3 api36 + api33-lowram (44512112484), tv-api34 (44512116247);
-  ExtensionCompat → ExtensionPopups 8/8 → Extensions on both phones (44514239084). Test errors fixed: ed35b093
-  (closed folder), c5dbde6c + 8bf19898 (AniKoto's real start-up prompt counted as the fake's).
-- **Open list:** docs/REMAINING-2026-11-19.md. **Next:** gate results → docs → owner "go".
+- **Order:** "STOP THE SLOW RUN, ADD THE MISSING ITEMS, FIX THE SERVER, THEN ONE FINAL RUN". Report:
+  docs/reports/2026-11-19-ninth-handover-report.md (full-run evidence kept, 6 TV test faults, Jackson answer).
+- **Head:** e444ac90 (app code = e53ba21d; later commits are androidTest only). Full run stopped at 16:05 UTC;
+  chunk_02 tv-api24 44544937378 is allowed to finish. Chunks 03–12 run once, in the final run.
+- **Plan:** (1) seven items in three batches: A = F-02 Telegram + F-03 TeraBox/DiskWala; B = F-11 manga
+  translation + episode-airing push + Worker fix (missed alerts); C = NBUG-6 DoH per feature (side-effect gate) +
+  proxy + Vega step 4 (owner asked what "Vega" means) → (2) one final run → (3) gate 1.9.0 → owner "go".
+- **Queue:** UNVERIFIED-QUEUE 113 rows (36 Queued, 23 Pending, 12 Blocked: owner, 11 Built, not tested).
+- **Next:** batch A research → proposals → ADR → fail-before.
+
+### Previous resume note — superseded (11:45 UTC 2026-11-19)
+
+- Gate commit 8bf19898; release gate running (13 chunks × phones / tv-api24 / tv-api34).
 
 ### Previous resume note — superseded (11:05 UTC 2026-11-19)
 

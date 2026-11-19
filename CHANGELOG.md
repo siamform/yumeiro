@@ -15,7 +15,7 @@ listed at the end (full list: docs/REMAINING-2026-11-19.md).
   time, also after the app is closed. A child's profile needs the main profile's lock to add profiles or turn 18+ on.
   "Forgot?" uses the phone's screen lock; without one, the PIN goes together with that profile's data.
 - Private downloads: hide a finished video (eye button). It leaves every list and never appears in the gallery. Open
-  "Private" with the PIN or phone lock; it closes when you leave the app and can't be screenshotted. Stealth mode
+  Private (the lock at the top of Downloads) with the PIN or phone lock; it closes when you leave the app and can't be screenshotted. Stealth mode
   hides the entry (long-press the storage card).
 - Honest limits: files are kept in Yumeiro's private storage, not encrypted; a rooted phone can read them.
 
