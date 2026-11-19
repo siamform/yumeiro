@@ -47,7 +47,17 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 |---|---|---|
 | 44573633005 | head CI | failed (RegexWarmup on main thread) → fix 4788a1c |
 | 44578908005 | head CI 4788a1c | cancelled: "Lint (TV app)" hung 10 h after unit tests passed |
-| 44583808297 | head CI 9193694 | (pending) |
+| 44583808297 | head CI 9193694 | failed: SettingsSearchCoverageTest "switches missing from search table: [Automatic DNS fallback]" → fix 9dd0213 (NBUG-6) |
+| 44587248595 | head CI 9dd0213 | success: unit (1455 tests), lint, TV lint, gitleaks |
+| 44592881571 | fail-before c2 (NBUG-6, 4a8f59c) | failed as expected: Nbug6FallbackTest does not compile (no fallback API); cancelled after the unit step to free the runner |
+| 44595319629 | fail-before c3 (Vega, 8f652ee) | running |
+| 44593053433 / 44593085810 | device chunk_00, phones / tv-api34, passes P1+P2 | 6 of 10 classes pass both passes on api36, api33-lowram, tv-api34. Failures FINAL-1..4 (player touched off the main thread after a refresh; tests waited on the first transient 403; `SavedSites.add("@name")` refused; a non-void JUnit method) → fix 1158c01 |
+| 44595993499 / 44595998571 | re-run of the 4 failing classes, phones / tv-api34 | running |
+
+Final-test cycle findings so far: SEC-LFM (Last.fm secret in the APK, ADR-048, b57e155), AUD-ZIP (archive manifest read
+uncapped, 2e68bf9), FINAL-1..4 (1158c01). Fail-before for SEC-LFM, AUD-ZIP and FINAL-3: `tmp/sec-lfm-fail-before`
+(dispatched after c3). Commit-body timestamps of 2026-11-19 19:15–19:45 were estimated ahead of the clock; the git
+commit times are the true ones.
 
 ## 5. Feature smoke (section 10)
 
