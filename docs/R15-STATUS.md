@@ -1,19 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 07:05 UTC, G10 regression, ER-29 loop)
+## Resume here (updated 2026-11-19 08:08 UTC, G10 step 8 loop: ER-29, ER-30)
 
 - **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 → G11 → v1.8.2 (owner
   approval) → stability-v2.
-- **GROUP-14:** closed (docs/groups/GROUP-14-OWNER-BUGS.md). tv-api34 44440614210: 7 Live TV classes PASS;
-  FeedPosition#youtube FAIL twice (rerun 44443748315) = pre-existing TV YouTube layout, queued TV-YT-1.
-- **G10 step:** 9 group regression → step 8 loop for ER-29 (new finding: extension promo card replaced
-  the message on screen; MessagesDeviceTest failed on phones 44452173594/44454531660). Test and
-  fix pushed; throwaway `ab/g10-er29-before` (delete after). Regression so far: phones 10/11 classes PASS
-  (44452173594); tv-api24 4/4 PASS (44452176693 + 44454630375 after DialogsDeviceTest scroll fix);
-  tv-api34 SheetFocus, Nbug15Redesign, Dialogs PASS, Messages a11y FAIL (44453210587) → details run.
-- **Runs in progress:** CI fail-before ER-29 44456278746 (`ab/g10-er29-before`); CI pass-after/group rerun
-  44456281899; Messages phones 44456284891; Messages tv-api34 details 44455588206.
-- **Next three actions:** (1) read the four runs; (2) tv-api34 a11y finding (MSG_A11Y lines); (3) close.
+- **G10:** register now ER-21…ER-30. ER-29 (promo card replaced messages; dad92181 broke compile, fixed
+  6bb180ef `showQuiet`). ER-30 = owner NBUG-8 (blocked extension outlives `withTimeout`), missed earlier,
+  added at the scope check: test deb6987e, fix `ExtensionCall.bounded`.
+- **Runs in progress:** fail-before ER-29 CI 44456278746 (`ab/g10-er29-before`), ER-30 CI 44457201367
+  (`ab/g10-er30-before`). Both branches are throwaway: delete them after.
+- **Next three actions:** (1) record both fail-before runs; (2) group CI rerun + group regression (phones 9
+  classes, TVs 4) on the close commit; (3) close G10 in one push (queue: TV-A11Y-1, ER-28-TV34, NB15-OB2).
+
+### Previous resume note — superseded (07:05 UTC 2026-11-19, ER-29 loop)
+
+- Regression: phones 10/11 PASS (44452173594); tv-api24 4/4 PASS (44452176693, 44454630375); tv-api34
+  Messages a11y FAIL (44453210587, details 44455588206: one 44 dp background view → TV-A11Y-1).
 
 ### Previous resume note — superseded (02:25 UTC 2026-11-19, GROUP-14 close)
 
