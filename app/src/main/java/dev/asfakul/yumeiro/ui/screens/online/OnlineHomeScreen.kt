@@ -473,9 +473,15 @@ fun OnlineHomeScreen(
                         if (continueItems.isNotEmpty()) item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
                         }
-                        val mine = bookmarks.filter { b -> providers.any { it.name == b.api } }.distinctBy { it.api + "|" + it.url }
+                        val saved = bookmarks.filter { b -> providers.any { it.name == b.api } }.distinctBy { it.api + "|" + it.url }
+                        // F-09: My List holds listed titles; Favorites get their own shelf (a Favorite can be in both).
+                        val mine = saved.filter { it.listed }
+                        val favorites = saved.filter { it.favorite }
                         if (mine.isNotEmpty()) item("mylist") {
                             PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
+                        }
+                        if (favorites.isNotEmpty()) item("favorites") {
+                            PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         if (picks.isNotEmpty()) item("feed_label") {
                             PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)

@@ -42,6 +42,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
@@ -178,10 +180,17 @@ internal fun HeroCarousel(
                                 Spacer(Modifier.width(4.dp))
                                 Text("Play", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
-                            val isSaved = saved.any { it.api == item.api && it.url == item.url }
+                            val entry = saved.firstOrNull { it.api == item.api && it.url == item.url }
+                            val isSaved = entry?.listed == true
                             HeroRoundButton(if (isSaved) Icons.Default.Check else Icons.Default.Add, if (isSaved) "Remove from My List" else "Add to My List") {
                                 val now = OnlineBookmarks.toggle(context, item)
                                 dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
+                            }
+                            // F-09: Favorite next to My List.
+                            val fav = entry?.favorite == true
+                            HeroRoundButton(if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder, if (fav) "Remove from Favorites" else "Add to Favorites") {
+                                val c = OnlineBookmarks.toggleFavorite(context, item)
+                                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == OnlineBookmarks.Change.ADDED) "Added to Favorites" else "Removed from Favorites")
                             }
                             HeroRoundButton(androidx.compose.material.icons.Icons.Outlined.Description, "Details") { onInfo(item) }
                         }

@@ -177,7 +177,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                         fun S(t: String, k: SuggestionKind, d: String?) = dev.asfakul.yumeiro.ui.components.Suggestion(t, k, d)
                 val c = buildList {
                     history.forEach { add(S(it, SuggestionKind.RECENT, null)) }
-                    bookmarks.forEach { add(S(it.name, SuggestionKind.TITLE, "My List · ${it.api}")) }
+                    bookmarks.forEach { add(S(it.name, SuggestionKind.TITLE, (if (it.listed) "My List" else "Favorites") + " · ${it.api}")) }
                     watched.forEach { add(S(it.name, SuggestionKind.TITLE, "Watched · ${it.api}")) }
                     all.take(60).forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
                     OnlineRepository.previews.values.take(300).forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }

@@ -73,6 +73,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -428,7 +432,9 @@ internal fun formatClock(ms: Long): String {
 private fun MyListButton(d: OnlineDetail) {
     val context = LocalContext.current
     val saved by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
-    val b = saved.firstOrNull { it.api == d.api && it.url == d.url }
+    val saved0 = saved.firstOrNull { it.api == d.api && it.url == d.url }
+    // F-09: a Favorite-only title is saved but not in My List.
+    val b = saved0?.takeIf { it.listed }
     var menu by remember { mutableStateOf(false) }
     Spacer(Modifier.height(10.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -449,10 +455,23 @@ private fun MyListButton(d: OnlineDetail) {
                 Text(b.status.label, color = TextPrimary, fontSize = 13.sp)
             }
             androidx.compose.material3.DropdownMenu(menu, onDismissRequest = { menu = false }) {
-                dev.asfakul.yumeiro.online.OnlineBookmarks.Status.entries.forEach { st ->
+                dev.asfakul.yumeiro.online.OnlineBookmarks.Status.picks.forEach { st ->
                     androidx.compose.material3.DropdownMenuItem(text = { Text(st.label) }, onClick = { dev.asfakul.yumeiro.online.OnlineBookmarks.setStatus(context, d.api, d.url, st); menu = false })
                 }
             }
+        }
+        // F-09: Favorite, independent of My List.
+        val fav = saved0?.favorite == true
+        androidx.compose.material3.OutlinedButton(
+            onClick = {
+                val item = OnlineItem(d.name, d.url, d.api, d.posterUrl, d.posterHeaders, d.type)
+                val c = dev.asfakul.yumeiro.online.OnlineBookmarks.toggleFavorite(context, item)
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == dev.asfakul.yumeiro.online.OnlineBookmarks.Change.ADDED) "Added to Favorites" else "Removed from Favorites")
+            },
+            shape = RoundedCornerShape(24.dp), contentPadding = PaddingValues(horizontal = 14.dp),
+            modifier = Modifier.height(46.dp).testTag("online_detail_favorite").semantics { contentDescription = if (fav) "Remove from Favorites" else "Add to Favorites" },
+        ) {
+            Icon(if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (fav) Color(0xFFFF6B8B) else TextPrimary)
         }
     }
 }

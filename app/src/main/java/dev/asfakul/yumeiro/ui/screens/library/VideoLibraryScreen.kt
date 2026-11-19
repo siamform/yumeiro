@@ -118,7 +118,8 @@ fun VideoLibraryContent(
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     val history = androidx.compose.runtime.remember(historyAll, adultOn, adultPrivate) { OnlineHistory.forFeed(historyAll, adultOn, adultPrivate) }
     var status by rememberSaveable { mutableStateOf<String?>(null) }
-    val shown = remember(bookmarks, status) { bookmarks.filter { status == null || it.status.name == status } }
+    // F-09: "FAV" = Favorites chip; "All" = everything saved (Favorite-only titles included).
+    val shown = remember(bookmarks, status) { bookmarks.filter { status == null || (status == "FAV" && it.favorite) || it.status.name == status } }
     val openFolders = remember { androidx.compose.runtime.mutableStateListOf<String>() }
 
     LazyVerticalGrid(
@@ -166,7 +167,8 @@ fun VideoLibraryContent(
                 LibHeader("My List", subtitle = if (bookmarks.isEmpty()) null else "${bookmarks.size} saved")
                 if (bookmarks.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item { OnlineChip("All", status == null, { status = null }) }
-                    items(OnlineBookmarks.Status.entries.filter { s -> bookmarks.any { it.status == s } }, key = { it.name }) { s ->
+                    if (bookmarks.any { it.favorite }) item("fav") { OnlineChip("Favorites", status == "FAV", { status = if (status == "FAV") null else "FAV" }) }
+                    items(OnlineBookmarks.Status.picks.filter { s -> bookmarks.any { it.status == s } }, key = { it.name }) { s ->
                         OnlineChip(s.label, status == s.name, { status = if (status == s.name) null else s.name })
                     }
                 }
@@ -214,9 +216,10 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
                     }
                 }
                 DropdownMenu(menu, onDismissRequest = { menu = false }) {
-                    OnlineBookmarks.Status.entries.forEach { s ->
+                    OnlineBookmarks.Status.picks.forEach { s ->
                         DropdownMenuItem(text = { Text((if (s == b.status) "✓ " else "") + s.label) }, onClick = { OnlineBookmarks.setStatus(context, b.api, b.url, s); menu = false })
                     }
+                    DropdownMenuItem(text = { Text(if (b.favorite) "♥ Remove from Favorites" else "♡ Add to Favorites") }, onClick = { OnlineBookmarks.toggleFavorite(context, b.toItem()); menu = false })
                     DropdownMenuItem(text = { Text(if (b.notify) "Turn off new-episode alerts" else "Alert me about new episodes") }, onClick = { OnlineBookmarks.setNotify(context, b.api, b.url, !b.notify); menu = false })
                     DropdownMenuItem(text = { Text("Remove from My List") }, onClick = { OnlineBookmarks.remove(context, b.api, b.url); menu = false })
                 }
@@ -224,7 +227,7 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
         }
         Spacer(Modifier.height(5.dp))
         Text(b.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
-        Text(b.status.label + " · " + b.api, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(listOfNotNull(if (b.favorite) "♥" else null, b.status.takeIf { it.listed }?.label).joinToString(" ").ifBlank { "Favorite" } + " · " + b.api, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

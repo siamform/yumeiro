@@ -1195,7 +1195,7 @@ fun MTPlayerApp(
                                         val b by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
                                         val d by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
                                         dev.asfakul.yumeiro.ui.screens.library.VideoLibraryHero(
-                                            historyCount = h.size, savedCount = b.size, downloadCount = d.size,
+                                            historyCount = h.size, savedCount = b.count { it.listed }, downloadCount = d.size,
                                             onHistory = { navigateSub(Screen.OnlineHistory.route) },
                                             onDownloads = { navigateSub(Screen.Downloads.route) },
                                             onTogether = { navigateSub(Screen.WatchTogether.route) },
