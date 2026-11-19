@@ -11,7 +11,7 @@ import {
   type AiringRow, type PendingRow,
 } from "./logic.ts";
 import {
-  buildMessage, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
+  FANOUT_PER_MESSAGE, buildMessage, needsFanout, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
 } from "./fcm.ts";
 
 export interface Env {
@@ -31,7 +31,8 @@ export interface Env {
   FCM_SERVICE_ACCOUNT?: string;
 }
 
-interface WakeJob { endpoints: string[] }
+/** Airing nudges (UnifiedPush endpoints) or NOTIFY-1 direct copies of a broadcast (FCM ids). */
+interface WakeJob { endpoints?: string[]; fcm?: { fids: string[]; notice: Notice; sent: number } }
 
 const DAY = 86_400;
 const now = () => Math.floor(Date.now() / 1000);
@@ -70,7 +71,8 @@ export default {
 
   async queue(batch: MessageBatch<WakeJob>, env: Env): Promise<void> {
     for (const msg of batch.messages) {
-      const results = await Promise.all(msg.body.endpoints.map(async (ep) => [ep, await wake(ep)] as const));
+      if (msg.body.fcm) { await fanoutSend(env, msg.body.fcm); msg.ack(); continue; }
+      const results = await Promise.all((msg.body.endpoints ?? []).map(async (ep) => [ep, await wake(ep)] as const));
       const gone = results.filter(([, r]) => r === "gone").map(([ep]) => ep);
       if (gone.length) await forget(env, gone);
       msg.ack(); // no retries: a missed nudge is fine, the app also checks on its own schedule
@@ -245,6 +247,8 @@ async function fcmRegister(req: Request, env: Env): Promise<Response> {
   const fid = validFid(body.fid);
   if (!fid) return fail(400, "bad_fid");
   const topics = parseTopics(body.topics).join(",");
+  // NOTIFY-1: what the switches ask for (new apps). null = an older app that does not say.
+  const want = Array.isArray(body.want) ? parseTopics(body.want).join(",") : null;
   const version = typeof body.app_version === "number" && Number.isInteger(body.app_version) && body.app_version > 0 && body.app_version < 2e9
     ? body.app_version : 0;
   const channel = body.channel === "preview" || body.channel === "debug" ? body.channel : "release";
@@ -262,8 +266,8 @@ async function fcmRegister(req: Request, env: Env): Promise<Response> {
     if (env.DEVICE_SYNC && !(await env.DEVICE_SYNC.limit({ key: `fcm:${id}` })).success) return fail(429, "slow_down");
     await env.DB.batch([
       env.DB.prepare("DELETE FROM fcm_devices WHERE fid = ? AND id <> ?").bind(fid, id), // FID moved to this row
-      env.DB.prepare("UPDATE fcm_devices SET fid = ?, topics = ?, app_version = ?, channel = ?, seen = ? WHERE id = ?")
-        .bind(fid, topics, version, channel, t, id),
+      env.DB.prepare("UPDATE fcm_devices SET fid = ?, topics = ?, want = ?, app_version = ?, channel = ?, seen = ? WHERE id = ?")
+        .bind(fid, topics, want, version, channel, t, id),
     ]);
     return json({ id, token: null });
   }
@@ -275,10 +279,10 @@ async function fcmRegister(req: Request, env: Env): Promise<Response> {
   const token = randomToken();
   const th = await sha256(token);
   await env.DB.prepare(
-    `INSERT INTO fcm_devices (id, token_hash, fid, topics, app_version, channel, created, seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET token_hash = excluded.token_hash, fid = excluded.fid, topics = excluded.topics,
+    `INSERT INTO fcm_devices (id, token_hash, fid, topics, want, app_version, channel, created, seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET token_hash = excluded.token_hash, fid = excluded.fid, topics = excluded.topics, want = excluded.want,
        app_version = excluded.app_version, channel = excluded.channel, seen = excluded.seen`,
-  ).bind(newId, th, fid, topics, version, channel, t, t).run();
+  ).bind(newId, th, fid, topics, want, version, channel, t, t).run();
   return json({ id: newId, token });
 }
 
@@ -334,7 +338,20 @@ async function adminNotify(req: Request, env: Env): Promise<Response> {
     return json({ ok: false, error: "device_gone", id: n.id }, 410);
   }
   if (r.outcome !== "ok") return json({ ok: false, error: r.error ?? "send_failed", fcm_status: r.status, id: n.id }, r.outcome === "retry" ? 503 : 502);
-  return json({ ok: true, id: n.id, dry_run: n.dry_run, target: "topic" in target ? target.topic : "device", name: r.name ?? null });
+  // NOTIFY-1: phones the topic does not reach get their own copy (same id: the app shows it once).
+  let fanout = 0;
+  if (n.kind !== "direct") {
+    const kind = n.kind;
+    const rows = await env.DB.prepare("SELECT fid, topics, want FROM fcm_devices WHERE channel = ?").bind(n.channel)
+      .all<{ fid: string; topics: string; want: string | null }>();
+    const fids = rows.results.filter((d) => needsFanout(kind, n.channel, d.topics, d.want)).map((d) => d.fid);
+    fanout = fids.length;
+    if (fids.length && !n.dry_run) {
+      const msgs = chunk(fids, FANOUT_PER_MESSAGE).map((g) => ({ body: { fcm: { fids: g, notice: n as Notice, sent: t } } }));
+      for (const b of chunk(msgs, 100)) await env.WAKES.sendBatch(b);
+    }
+  }
+  return json({ ok: true, id: n.id, dry_run: n.dry_run, target: "topic" in target ? target.topic : "device", name: r.name ?? null, fanout });
 }
 
 /** Device counts per channel/topic, for the admin. No ids or FIDs leave the Worker. */
@@ -399,6 +416,25 @@ async function wake(endpoint: string): Promise<"ok" | "gone" | "retry"> {
     return pushOutcome(r.status);
   } catch {
     return "retry";
+  }
+}
+
+/** NOTIFY-1: one queue message = up to FANOUT_PER_MESSAGE direct sends. A gone FID drops its row. */
+async function fanoutSend(env: Env, job: { fids: string[]; notice: Notice; sent: number }): Promise<void> {
+  const sa = parseServiceAccount(env.FCM_SERVICE_ACCOUNT);
+  if (!sa) return;
+  const gone: string[] = [];
+  for (const fid of job.fids) {
+    try {
+      const r = await send(sa, buildMessage(job.notice, { fid }, job.sent), false, now());
+      if (r.outcome === "gone") gone.push(fid);
+    } catch (e) {
+      console.error("fanout", e instanceof Error ? e.message : "error");
+      return; // OAuth / FCM down: the rest of this group is skipped, the topic copy still went out
+    }
+  }
+  for (const ids of chunk(gone, 90)) {
+    await env.DB.prepare(`DELETE FROM fcm_devices WHERE fid IN (${ids.map(() => "?").join(",")})`).bind(...ids).run();
   }
 }
 

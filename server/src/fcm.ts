@@ -35,6 +35,22 @@ export const TOPIC_OF: Record<Exclude<NoticeKind, "direct">, string> = {
 export const topicFor = (kind: Exclude<NoticeKind, "direct">, channel: Channel): string =>
   channel === "release" ? TOPIC_OF[kind] : `${channel}-${TOPIC_OF[kind]}`;
 
+/**
+ * NOTIFY-1 (ADR-039): a phone whose topic subscription failed (Play services timeout, an ISP that blocks the
+ * topic API) never got broadcasts. Production 2026-11-19: 87 of 226 current-version phones had no "updates"
+ * topic and 32 had none at all. Such phones also get each broadcast straight to their FID. `want` is what the
+ * user's switches ask for (sent by new apps); older apps did not send it, so only "update" (never switched
+ * off in the app) is sent to them, which keeps the user's choices.
+ */
+export function needsFanout(kind: Exclude<NoticeKind, "direct">, channel: Channel, topics: string, want: string | null): boolean {
+  const t = topicFor(kind, channel);
+  if (topics.split(",").includes(t)) return false;
+  if (want != null) return want.split(",").includes(t);
+  return kind === "update";
+}
+/** Direct sends per queue message: one OAuth call (cached) + these stay under the 50-subrequest limit. */
+export const FANOUT_PER_MESSAGE = 40;
+
 export const MAX_TITLE = 80;
 export const MAX_BODY = 600;
 export const ACTIONS = new Set(["update", "extensions", "market", "streams", "support", "downloads", "inbox"]);

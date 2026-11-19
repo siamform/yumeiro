@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS fcm_devices (
   token_hash  TEXT NOT NULL,            -- SHA-256 of the device's secret token
   fid         TEXT NOT NULL UNIQUE,     -- Firebase installation id (FCM target)
   topics      TEXT NOT NULL DEFAULT '', -- comma list, e.g. "announcements,maintenance,updates"
+  want        TEXT,                     -- NOTIFY-1: topics the switches ask for (null = older app)
   app_version INTEGER NOT NULL DEFAULT 0,
   channel     TEXT NOT NULL DEFAULT 'release', -- release | preview | debug
   created     INTEGER NOT NULL,
