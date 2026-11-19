@@ -5,6 +5,12 @@
  */
 package dev.asfakul.yumeiro.ui.screens.manga
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.semantics.selected
+import androidx.compose.material.icons.filled.Translate
+import dev.asfakul.yumeiro.sources.manga.MangaTlPlan
+import dev.asfakul.yumeiro.sources.manga.MangaTranslate
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.animation.AnimatedVisibility
@@ -568,6 +574,24 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
     var vertical by rememberSaveable { mutableStateOf(context.getSharedPreferences("manga_reader", 0).getBoolean("vertical", true)) }
     var chrome by remember { mutableStateOf(true) }
     var current by remember { mutableStateOf(0) }
+    // F-11 (ADR-044): Translate pages (on-device). Off until the user turns it on in the reader.
+    val tlAllowed = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.MANGA_TRANSLATE) }
+    var tl by remember { mutableStateOf(MangaTranslate.settings(context)) }
+    var tlSheet by remember { mutableStateOf(false) }
+    var tlReady by remember { mutableStateOf(false) }
+    var tlStatus by remember { mutableStateOf<String?>(null) }
+    var tlTry by remember { mutableStateOf(0) }
+    LaunchedEffect(tlAllowed, tl.on, tl.src, tl.dst, tl.wifiOnly, tlTry) {
+        tlReady = false
+        if (!tlAllowed || !tl.on) { tlStatus = null; return@LaunchedEffect }
+        val pair = "${tl.src.label} → ${MangaTlPlan.TARGETS[tl.dst] ?: tl.dst}"
+        tlStatus = if (MangaTranslate.ready(context, tl)) null else "Getting the $pair language pack…"
+        MangaTranslate.prepare(context, tl)
+            .onSuccess { tlReady = true; tlStatus = null }
+            .onFailure { tlStatus = "Couldn't get the $pair language pack. Check the connection, then tap to try again." }
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { MangaTranslate.release() } }
+    val tlUse = if (tlAllowed && tl.on && tlReady) tl else null
     val item = MangaItem(providerId, mangaUrl, mangaTitle, MangaLibrary.get(providerId, mangaUrl)?.cover)
     val chapter = MangaChapter(chapterUrl, chapterName)
     LaunchedEffect(attempt) {
@@ -595,7 +619,7 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
                 LaunchedEffect(state) { snapshotFlow { state.firstVisibleItemIndex }.collect { current = it } }
                 ZoomBox(onTap = { chrome = !chrome }) {
                     LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
-                        itemsIndexed(list, key = { i, _ -> i }) { _, p -> PageImage(provider!!, p, fillWidth = true) }
+                        itemsIndexed(list, key = { i, _ -> i }) { _, p -> PageImage(provider!!, p, fillWidth = true, tl = tlUse) }
                     }
                 }
             }
@@ -603,7 +627,7 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
                 val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size }
                 LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { current = it } }
                 HorizontalPager(pager, modifier = Modifier.fillMaxSize(), reverseLayout = false, beyondViewportPageCount = 1) { i ->
-                    ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false) } }
+                    ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false, tl = tlUse) } }
                 }
             }
         }
@@ -613,6 +637,9 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
                 Column(Modifier.weight(1f)) {
                     Text(mangaTitle, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(chapterName, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (tlAllowed) IconButton(onClick = { tlSheet = true }, modifier = Modifier.testTag("reader_translate")) {
+                    Icon(Icons.Default.Translate, if (tl.on) "Translate pages: on" else "Translate pages: off", tint = if (tl.on) SpotifyGreen else Color.White)
                 }
                 IconButton(onClick = { vertical = !vertical; context.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", vertical).apply() }, modifier = Modifier.testTag("reader_mode")) {
                     Icon(if (vertical) Icons.Default.ViewCarousel else Icons.Default.SwapVert, if (vertical) "Paged mode" else "Vertical mode", tint = Color.White)
@@ -624,7 +651,83 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
             Text("${current + 1} / $total", color = Color.White, fontSize = 12.sp,
                 modifier = Modifier.navigationBarsPadding().padding(12.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp))
         }
+        tlStatus?.let { msg ->
+            Text(msg, color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 44.dp)
+                    .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(12.dp)).clickable { tlTry++ }
+                    .padding(horizontal = 12.dp, vertical = 6.dp).testTag("tl_status"))
+        }
+        if (tlSheet) TranslateSheet(tl, onChange = { tl = it; MangaTranslate.save(context, it) }, onDismiss = { tlSheet = false })
         androidx.activity.compose.BackHandler(onBack = onBack)
+    }
+}
+
+/** F-11: reader's Translate pages settings (switch, language from / to, Wi-Fi only for the pack). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun TranslateSheet(s: MangaTranslate.Settings, onChange: (MangaTranslate.Settings) -> Unit, onDismiss: () -> Unit) {
+    @Composable fun Chip(label: String, on: Boolean, tag: String, click: () -> Unit) {
+        Text(label, color = if (on) OnAccent else TextPrimary, fontSize = 13.sp,
+            modifier = Modifier.padding(end = 6.dp, bottom = 6.dp).background(if (on) SpotifyGreen else Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                .clickable(onClick = click).padding(horizontal = 12.dp, vertical = 7.dp).testTag(tag)
+                .semantics { selected = on })
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss, modifier = Modifier.testTag("tl_done")) { Text("Done") } },
+        title = { Text("Translate pages") },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).testTag("tl_sheet")) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Translate speech bubbles", Modifier.weight(1f), color = TextPrimary)
+                    androidx.compose.material3.Switch(s.on, { onChange(s.copy(on = it)) }, modifier = Modifier.testTag("tl_switch"))
+                }
+                Text("Read on this phone. Only the language pack is downloaded, once per language.", color = TextSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(10.dp))
+                Text("From", color = TextSecondary, fontSize = 12.sp)
+                androidx.compose.foundation.layout.FlowRow {
+                    for (src in MangaTlPlan.Src.entries) Chip(src.label, s.src == src, "tl_src_${src.code}") { onChange(s.copy(src = src)) }
+                }
+                Text("To", color = TextSecondary, fontSize = 12.sp)
+                androidx.compose.foundation.layout.FlowRow {
+                    for ((code, label) in MangaTlPlan.TARGETS) Chip(label, s.dst == code, "tl_dst_$code") { onChange(s.copy(dst = code)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Download language packs on Wi-Fi only", Modifier.weight(1f), color = TextPrimary, fontSize = 13.sp)
+                    androidx.compose.material3.Switch(s.wifiOnly, { onChange(s.copy(wifiOnly = it)) }, modifier = Modifier.testTag("tl_wifi"))
+                }
+                Text("Long-press a translation to hide it.", color = TextSecondary, fontSize = 12.sp)
+            }
+        },
+    )
+}
+
+/** F-11: translated bubbles drawn over one page, placed with the same scaling as the page image. */
+@Composable
+private fun TlOverlay(bubbles: List<MangaTlPlan.Bubble>, pageIndex: Int, w: Int, h: Int, fillWidth: Boolean, modifier: Modifier) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        val (k, dx, dy) = MangaTlPlan.fit(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), w, h, fillWidth)
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        var hidden by remember(bubbles) { mutableStateOf(emptySet<Int>()) }
+        bubbles.forEachIndexed { i, b ->
+            if (i in hidden) return@forEachIndexed
+            val (l, t, r, bt) = MangaTlPlan.layout(b, w).toList()
+            Box(
+                Modifier.offset { androidx.compose.ui.unit.IntOffset((dx + l * k).toInt(), (dy + t * k).toInt()) }
+                    .size(with(density) { ((r - l) * k).toDp() }, with(density) { ((bt - t) * k).toDp() })
+                    .background(Color.White.copy(alpha = 0.94f), RoundedCornerShape(6.dp))
+                    .pointerInput(b) { detectTapGestures(onLongPress = { hidden = hidden + i }) }
+                    .semantics { contentDescription = b.text }
+                    .testTag("tl_box_${pageIndex}_$i"),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.foundation.text.BasicText(
+                    b.text, Modifier.padding(2.dp),
+                    style = androidx.compose.ui.text.TextStyle(color = Color.Black, fontWeight = FontWeight.Medium, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 6.sp, maxFontSize = 20.sp, stepSize = 0.5.sp),
+                )
+            }
+        }
     }
 }
 
@@ -649,7 +752,7 @@ private fun ZoomBox(onTap: () -> Unit, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Boolean) {
+private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Boolean, tl: MangaTranslate.Settings? = null) {
     var attempt by remember { mutableStateOf(0) }
     val context = LocalContext.current
     val lowRam = remember { (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice }
@@ -659,6 +762,13 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
         catch (e: Throwable) { Result.failure(e) }
     }
     val r = bmp
+    val loaded = r?.getOrNull()
+    val bubbles by produceState<List<MangaTlPlan.Bubble>?>(null, loaded, tl) {
+        value = null
+        if (loaded != null && tl != null) value = runCatching {
+            MangaTranslate.page(context, provider.id + "|" + (page.imageUrl ?: page.url) + "|" + page.index, loaded.strips, tl)
+        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }.getOrNull()
+    }
     when {
         r == null -> Box(Modifier.fillMaxWidth().aspectRatio(0.7f), contentAlignment = Alignment.Center) {
             Text("${page.index + 1}", color = Color.White.copy(alpha = 0.4f), fontSize = 28.sp)
@@ -668,15 +778,17 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
         }
         else -> {
             val p = r.getOrThrow()
-            if (p.strips.size == 1) {
+            if (p.strips.size == 1) Box(if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
                 Image(p.strips[0].asImageBitmap(), "Page ${page.index + 1}", contentScale = if (fillWidth) ContentScale.FillWidth else ContentScale.Fit,
                     modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+                bubbles?.let { TlOverlay(it, page.index, p.width, p.height, fillWidth, Modifier.matchParentSize()) }
             } else {
                 // A tall page: each strip is drawn on its own, so no single bitmap passes the draw or texture limit.
                 val images = remember(p) { p.strips.map { it.asImageBitmap() } }
                 val ratio = p.width.toFloat() / p.height
                 val box = if (fillWidth) Modifier.fillMaxWidth().aspectRatio(ratio) else Modifier.fillMaxSize().wrapContentSize().aspectRatio(ratio)
-                androidx.compose.foundation.Canvas(box.semantics { contentDescription = "Page ${page.index + 1}" }) {
+                Box(box) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize().semantics { contentDescription = "Page ${page.index + 1}" }) {
                     val k = size.width / p.width
                     var top = 0f
                     for (img in images) {
@@ -685,6 +797,8 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
                             dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), (top + h).toInt() - top.toInt()))
                         top += h
                     }
+                }
+                bubbles?.let { TlOverlay(it, page.index, p.width, p.height, true, Modifier.matchParentSize()) }
                 }
             }
         }
