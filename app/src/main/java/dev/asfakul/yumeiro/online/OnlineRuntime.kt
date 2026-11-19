@@ -61,6 +61,10 @@ object OnlineRuntime {
 
 /** Human-readable messages for network / extension failures. */
 object OnlineErrors {
+    /** G10 ER-21: text for a socket or DNS call that Android or a firewall app blocked. */
+    const val NETWORK_BLOCKED =
+        "Android or a firewall app is blocking Yumeiro's internet. Allow Wi-Fi and mobile data for Yumeiro in Settings › Apps"
+
     /** OkHttp's message for a link without http(s) — a site/extension data problem, not an outdated extension. */
     fun isBadLink(e: Throwable): Boolean {
         val m = e.message.orEmpty()
@@ -90,6 +94,13 @@ object OnlineErrors {
             // the raw "write failed: ENOSPC (No space left on device)".
             chain.any { val t = it.message.orEmpty(); "ENOSPC" in t || "No space left" in t } ->
                 "Not enough storage. Free up some space, then try again"
+            // G10 ER-21: EPERM/EACCES on a socket, connect or DNS lookup means Android (data saver,
+            // "Allow network access" off, Private DNS) or a firewall app blocks the app's internet.
+            // Chromium maps the same errnos to ERR_ACCESS_DENIED (net_errors_posix.cc); this must win
+            // over the storage rule below, which said "couldn't use its storage" for a network block.
+            chain.any { it is java.net.SocketException || it is java.net.UnknownHostException } &&
+                chain.any { val t = it.message.orEmpty(); "EPERM" in t || "EACCES" in t || "Permission denied" in t } ->
+                NETWORK_BLOCKED
             // G7 LT-2: a file the app can't write (folder not writable, read-only storage) showed the raw
             // "/data/user/0/…/playlists.json.tmp: open failed: EACCES (Permission denied)".
             // GROUP-14 LT-2b: Android 7 words it "<path> (Permission denied)" with no errno; any file error

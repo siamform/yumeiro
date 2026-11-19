@@ -54,6 +54,12 @@ object ErrorHelp {
         fun has(vararg k: String) = k.any { it in t }
         val out = mutableListOf<String>()
         when {
+            // G10 ER-21: before "firewall" (browser check) and "refused" (403 tips).
+            has("blocking yumeiro's internet") -> {
+                out += "Open Settings › Apps › Yumeiro › Mobile data & Wi-Fi and allow background and mobile data"
+                out += "Turn off Data Saver, or allow Yumeiro in it"
+                out += "If you use a firewall, ad-block or VPN app, allow Yumeiro there"
+            }
             has("on device", "on this phone", "file not found", "filenotfound", "file was moved", "enoent") -> {
                 out += "The file was moved or deleted — rescan your music or videos"
                 out += "Check that the SD card or USB storage is still connected"
