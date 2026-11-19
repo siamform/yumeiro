@@ -6,9 +6,11 @@
   docs/PROGRAM-2026-11-19.md**: research competitors → design → build every feature and bug, then release.
   Features F-01…F-14 approved on that condition; owner tests run day by day (never block).
 - **G11:** closed (IG-9…IG-13 verified). v1.8.2 gate stopped; it runs last on the final commit.
-- **Runs in progress:** none.
-- **Next three actions:** (1) research + design docs for workstreams A–F (competitor code at tags);
-  (2) commit the proposals; (3) build in order A → B → F → C → D → E, each under §13a.
+- **Runs in progress:** none. Research agents A–E write to /home/user/workspace/research/ (outside the repo).
+- **Current group:** G15 open agent bugs (docs/groups/GROUP-15-OPEN-AGENT-BUGS.md, ADR-031): G15-1 NBUG-10,
+  G15-2 TV-YT-1, G15-3 TV-A11Y-1. Steps 1–3 done.
+- **Next three actions:** (1) G15 tests commit + fail-before (CI unit, tv-api34); (2) fixes, pass-after,
+  regression; (3) review research docs and build workstreams A → B → C → D → E under §13a.
 
 ### Previous resume note — superseded (06:31 UTC 2026-11-19, G11 closed → v1.8.2 gate)
 

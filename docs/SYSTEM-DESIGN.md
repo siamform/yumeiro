@@ -1001,6 +1001,20 @@ flowchart LR
 - **Rollback:** one revert per finding commit.
 - **Status:** accepted; Verified only after fail-before and pass-after.
 
+### ADR-031: Pickers with a search box open fully; wide screens get a video grid (G15)
+
+Status: accepted 2026-11-19 (G15-1, G15-2).
+
+Context: NBUG-10 (owner report) — on phones the "Show videos from" sheet opened at half height; when the keyboard
+opened the matches stayed under it. TV-YT-1 — the YouTube stream used one column of full-width cards at every width.
+
+Decision: (1) every bottom sheet that holds a search field opens fully (`skipPartiallyExpanded = true`), like
+YuSearch, CloudStream's provider picker (STATE_EXPANDED) and Mihon's AdaptiveSheet. Sheets without a search field
+may keep a half-height state. (2) Video streams use a grid on wide screens: columns = width / 300 dp, 2–4, from
+600 dp; one column below that (NewPipe's Auto mode does the same on large landscape screens).
+
+Consequences: one Back closes a search sheet; TV and tablets show 2–4 videos per row; phones in portrait unchanged.
+
 ## 11. Risks
 
 | Risk | Mitigation |
