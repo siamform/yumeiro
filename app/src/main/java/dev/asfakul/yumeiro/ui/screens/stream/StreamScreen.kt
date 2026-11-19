@@ -709,7 +709,9 @@ fun StreamScreen(
             Box(Modifier.semantics { stateDescription = if (shownNow < feedShown.size) "Showing $shownNow of ${feedShown.size} channels" else "All ${feedShown.size} channels" }.testTag("live_header")) {
             dev.asfakul.yumeiro.ui.components.YuSection(
                 "生", "Live TV",
-                if (activePlaylists.isEmpty()) "Channels" else if (liveSel != null) "${feed.size} channels" else "$total channels",
+                // The merged feed's count once every list is in (a stream in two playlists counts once);
+                // the saved counts while lists are still loading.
+                if (activePlaylists.isEmpty()) "Channels" else if (liveSel != null || (feedLoading == 0 && feed.size > 0)) "${feed.size} channels" else "$total channels",
                 top = 4.dp,
                 trailing = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
