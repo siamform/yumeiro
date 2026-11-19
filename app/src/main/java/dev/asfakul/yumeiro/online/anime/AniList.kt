@@ -60,7 +60,8 @@ object AniList {
         if (episode <= have) return true
         val eps = total ?: cur?.optInt("episodes")?.takeIf { it > 0 }
         val status = if (eps != null && episode >= eps) "COMPLETED" else "CURRENT"
-        return graphql(client, "mutation(\$id:Int,\$p:Int,\$s:MediaListStatus){SaveMediaListEntry(mediaId:\$id,progress:\$p,status:\$s){id}}",
+        // IG-10: a 429/5xx on the write throws (retried by AnimeSync) instead of returning false.
+        return graphqlOrThrow(client, "mutation(\$id:Int,\$p:Int,\$s:MediaListStatus){SaveMediaListEntry(mediaId:\$id,progress:\$p,status:\$s){id}}",
             JSONObject().put("id", mediaId).put("p", episode).put("s", status), t) != null
     }
 
@@ -159,11 +160,11 @@ object MyAnimeList {
     /** Marks [episode] watched (never lowers progress). A 401 refreshes the token once and tries again. */
     fun watched(context: Context, client: OkHttpClient, malId: Int, episode: Int, total: Int?): Boolean {
         val t = validToken(context, client) ?: return false
-        val code = watchedWith(client, t, malId, episode, total)
+        val code = dev.asfakul.yumeiro.tracking.TrackerHttp.check("MyAnimeList", watchedWith(client, t, malId, episode, total)) // IG-10
         if (code != 401) return code in 200..299
         val fresh = validToken(context, client, force = true) ?: return false
         if (fresh == t) return false
-        return watchedWith(client, fresh, malId, episode, total) in 200..299
+        return dev.asfakul.yumeiro.tracking.TrackerHttp.check("MyAnimeList", watchedWith(client, fresh, malId, episode, total)) in 200..299
     }
 
     /** HTTP code of the decisive call (401 from either call), 200 when already up to date, -1 on a network error. */

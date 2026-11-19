@@ -141,6 +141,6 @@ object Kitsu {
                 .put("anime", JSONObject().put("data", JSONObject().put("id", animeId).put("type", "anime"))))
             Request.Builder().url(BASE + "library-entries").post(JSONObject().put("data", data).toString().toRequestBody(VND))
         }
-        return client.newCall(req.header("Authorization", "Bearer $t").header("Accept", "application/vnd.api+json").build()).execute().use { it.isSuccessful }
+        return client.newCall(req.header("Authorization", "Bearer $t").header("Accept", "application/vnd.api+json").build()).execute().use { TrackerHttp.check("Kitsu", it.code) in 200..299 } // IG-10
     }
 }

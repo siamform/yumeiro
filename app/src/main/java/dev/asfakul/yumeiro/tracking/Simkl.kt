@@ -191,6 +191,7 @@ object Simkl {
             val fresh = validToken(context, client, force = true) ?: return false
             post(fresh).also { code = it.first; text = it.second }
         }
+        TrackerHttp.check("Simkl", code) // IG-10: 429/5xx is retried, not dropped
         return code in 200..299 && added(text)
     }
 }

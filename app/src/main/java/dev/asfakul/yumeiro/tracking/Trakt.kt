@@ -148,11 +148,14 @@ object Trakt {
 
     fun signOut(context: Context) = listOf("trakt_token", "trakt_refresh", "trakt_expires", "trakt_user").forEach { OnlineSettings.setSecret(context, it, null) }
 
-    /** Trakt id for a title; null when no confident match. */
+    /**
+     * Trakt id for a title: the exact title match, else Trakt's first (year-filtered) result; null when
+     * Trakt has none. IG-10: a 429/5xx answer throws instead of looking like "no match".
+     */
     internal fun findId(client: OkHttpClient, type: String, title: String, year: Int?): Long? {
         val q = URLEncoder.encode(title, "UTF-8")
         val path = "/search/$type?query=$q&limit=5" + (year?.let { "&years=$it" } ?: "")
-        val arr = client.newCall(req(path).build()).execute().use { r -> if (!r.isSuccessful) return null; JSONArray(r.body.string()) }
+        val arr = client.newCall(req(path).build()).execute().use { r -> if (!r.isSuccessful) { TrackerHttp.check("Trakt", r.code); return null }; JSONArray(r.body.string()) }
         return pickId(arr, type, title)
     }
 
@@ -177,10 +180,10 @@ object Trakt {
             .put("seasons", JSONArray().put(JSONObject().put("number", season ?: 1).put("episodes", JSONArray().put(JSONObject().put("number", episode)))))))
         else JSONObject().put("movies", JSONArray().put(JSONObject().put("ids", JSONObject().put("trakt", id))))
         val post = { tok: String -> client.newCall(req("/sync/history", tok).post(body.toString().toRequestBody(JSON)).build()).execute().use { it.code } }
-        val code = post(t)
+        val code = TrackerHttp.check("Trakt", post(t)) // IG-10
         if (code != 401) return code in 200..299
         // Token revoked or expired early (e.g. signed in before expiry was tracked): refresh once and retry.
         val fresh = validToken(context, client, force = true) ?: return false
-        return post(fresh) in 200..299
+        return TrackerHttp.check("Trakt", post(fresh)) in 200..299
     }
 }
