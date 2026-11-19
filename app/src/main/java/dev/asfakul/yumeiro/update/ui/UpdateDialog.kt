@@ -195,16 +195,23 @@ private fun AvailableContent(
     onDownload: () -> Unit,
     onRemindLater: () -> Unit,
 ) {
+    // G10 ER-23: on a 540 dp TV or a 400 dp landscape phone the header, notes and buttons were taller
+    // than the window and Download / Remind me later were cut off. Like Mihon's NewUpdateScreen
+    // (InfoScreen: scrolling body, buttons in a bottom bar), the body scrolls and the buttons stay put.
     Column {
-        Header(icon = Icons.Default.SystemUpdate, title = "Update available", pulse = true) {
-            VersionChip(from = currentVersion, to = release.versionName)
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+            Header(icon = Icons.Default.SystemUpdate, title = "Update available", pulse = true) {
+                VersionChip(from = currentVersion, to = release.versionName)
+            }
+            Column(Modifier.padding(horizontal = 22.dp)) {
+                MetaRow(release)
+                Spacer(Modifier.height(16.dp))
+                Text("What's new", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(Modifier.height(8.dp))
+                ReleaseNotes(release.notes, Modifier.heightIn(max = 260.dp))
+            }
         }
         Column(Modifier.padding(horizontal = 22.dp)) {
-            MetaRow(release)
-            Spacer(Modifier.height(16.dp))
-            Text("What's new", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Spacer(Modifier.height(8.dp))
-            ReleaseNotes(release.notes, Modifier.heightIn(max = 260.dp))
             Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
