@@ -51,7 +51,11 @@ class AniSkipDeviceTest {
         val mal = 52991; val ep = 1
 
         FirstRun.shell("svc wifi disable"); FirstRun.shell("svc data disable")
-        assertTrue("network did not go offline", waitFor(20_000) { !reachable() })
+        val off = waitFor(20_000) { !reachable() }
+        // The Android 7 TV image is on emulated Ethernet: `svc wifi/data` cannot take it offline (run 44516546098).
+        // Phones must still go offline, so the skip is for that TV image only.
+        if (!off && Edition.isTv && android.os.Build.VERSION.SDK_INT < 26) { online(); org.junit.Assume.assumeTrue("no switchable network on this TV image", false) }
+        assertTrue("network did not go offline", off)
         val offline = AniSkip.segments(client, mal, ep, 24 * 60_000L)
         log("offline: ${offline.size} segments, calls=${calls.get()}")
         assertEquals("no segments while offline", 0, offline.size)
