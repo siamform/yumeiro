@@ -85,6 +85,17 @@ fun NetworkSettingsCard() {
                 onCheckedChange = { NetworkSettings.setDns(context, config.copy(auto = it)) },
                 testTag = "toggle_dns_auto",
             )
+            // NBUG-6 (ADR-046): default Off; hidden when the kill switch is off.
+            if (remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.DNS_FALLBACK) }) {
+                SettingsDivider()
+                SettingsToggleRow(
+                    title = "Automatic DNS fallback",
+                    subtitle = "If your network's DNS stops answering, Yumeiro asks Cloudflare (1.1.1.1), then Quad9 (9.9.9.9), one at a time, and keeps the one that works until the network changes. Off: system DNS only",
+                    checked = config.fallback,
+                    onCheckedChange = { NetworkSettings.setDns(context, config.copy(fallback = it)) },
+                    testTag = "toggle_dns_fallback_auto",
+                )
+            }
             val vpn = remember { dev.asfakul.yumeiro.network.Connectivity.vpnActive(context) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

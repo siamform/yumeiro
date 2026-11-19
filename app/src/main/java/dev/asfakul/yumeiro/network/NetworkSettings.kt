@@ -59,6 +59,13 @@ data class DnsConfig(
      * (Cloudflare → Quad9 → Google). On by default; nothing changes for hosts that work.
      */
     val auto: Boolean = true,
+    /**
+     * NBUG-6 (ADR-046) "Automatic DNS fallback", default Off. With System DNS: when the system
+     * resolver itself fails or times out, ask 1.1.1.1 and then 9.9.9.9 in turn (3.5 s each, never at
+     * once) and keep the one that answered for the rest of the session. Kill switch
+     * `nbug6_dns_fallback`.
+     */
+    val fallback: Boolean = false,
 ) {
     val usesAlternative: Boolean get() = provider != DnsProvider.SYSTEM
     val summary: String get() = if (!usesAlternative) (if (auto) "System DNS · auto bypass for blocked sites" else "System DNS") else "${provider.label} (${provider.primaryIp}) · ${transport.label} · ${mode.label.lowercase()}"
@@ -87,6 +94,9 @@ object NetworkSettings {
      */
     fun attach(context: Context) { app = context.applicationContext ?: context }
 
+    /** NBUG-6: the kill switch; true when no context is attached (unit tests drive [SmartDns] directly). */
+    internal fun fallbackAllowed(): Boolean = app?.let { dev.asfakul.yumeiro.FeatureFlags.on(it, dev.asfakul.yumeiro.FeatureFlags.Flag.DNS_FALLBACK) } ?: true
+
     /** Loads the settings if [attach] was called and nothing loaded them yet. Disk read: off main. */
     fun ensureLoaded() { if (!loaded) app?.let { init(it) } }
 
@@ -99,6 +109,7 @@ object NetworkSettings {
             transport = enumOr(p.getString("dns_transport", null), DnsTransport.DOH),
             mode = enumOr(p.getString("dns_mode", null), DnsMode.FALLBACK),
             auto = p.getBoolean("dns_auto", true),
+            fallback = p.getBoolean("dns_fallback_auto", false),
         )
         prefs = p
         SmartDns.restoreBypass(p.getStringSet(BYPASS_KEY, emptySet()).orEmpty())
@@ -113,6 +124,7 @@ object NetworkSettings {
             .putString("dns_transport", config.transport.name)
             .putString("dns_mode", config.mode.name)
             .putBoolean("dns_auto", config.auto)
+            .putBoolean("dns_fallback_auto", config.fallback)
             .apply()
         SmartDns.clearCache()
     }

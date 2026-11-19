@@ -45,7 +45,7 @@ object SmartDns : Dns {
     @Volatile internal var now: () -> Long = System::currentTimeMillis
     @Volatile internal var online: () -> Boolean = { Connectivity.online.value }
 
-    fun clearCache() { cache.clear(); systemFailures.clear(); lastSource.clear(); bypass.clear(); preferred = 0; resolverDownUntil.clear() }
+    fun clearCache() { cache.clear(); systemFailures.clear(); lastSource.clear(); bypass.clear(); preferred = 0; resolverDownUntil.clear(); sessionResolver = null }
 
     /**
      * G12 X11-1: a resolver that could not be reached (timeout, refused, TLS) is skipped for
@@ -56,7 +56,7 @@ object SmartDns : Dns {
     private val resolverDownUntil = ConcurrentHashMap<DnsProvider, Long>()
 
     /** A new network: resolvers that were unreachable may work now. */
-    fun onNetworkChanged() { resolverDownUntil.clear() }
+    fun onNetworkChanged() { resolverDownUntil.clear(); sessionResolver = null }
 
     fun lastSourceFor(host: String): DnsSource? = lastSource[host.lowercase()]
 
@@ -65,7 +65,12 @@ object SmartDns : Dns {
         NetworkSettings.ensureLoaded()
         val config = NetworkSettings.dns.value
         if (isIpLiteral(host)) return systemLookup(host)
-        if (!config.usesAlternative) return if (config.auto && !isLocalName(host)) autoLookup(host) else systemLookup(host)
+        if (!config.usesAlternative) return when {
+            isLocalName(host) -> systemLookup(host)
+            config.fallback && NetworkSettings.fallbackAllowed() -> fallbackLookup(host, config)
+            config.auto -> autoLookup(host)
+            else -> systemLookup(host)
+        }
         return when (config.mode) {
             DnsMode.ALWAYS -> try {
                 alternativeLookup(host, config)
@@ -170,6 +175,98 @@ object SmartDns : Dns {
 
     // endregion
 
+    // region NBUG-6 automatic DNS fallback (ADR-046)
+
+    /**
+     * The chain after system DNS: at most three resolvers in all (system, 1.1.1.1, 9.9.9.9). Quad9 is
+     * the third rather than Google: same reach, and it is already one of the auto-bypass engines.
+     */
+    internal val FALLBACK_CHAIN = listOf(DnsProvider.CLOUDFLARE, DnsProvider.QUAD9)
+    /** Per attempt: connect, read and whole call, so one dead resolver costs at most this. */
+    internal const val FALLBACK_ATTEMPT_MS = 3_500L
+
+    /** The resolver that answered after system DNS failed; used first until the network changes. */
+    @Volatile internal var sessionResolver: DnsProvider? = null
+        private set
+    private val chainLock = Any()
+    /** Test evidence: attempts made while walking the chain and the most that ever ran at once (must stay 1). */
+    internal val fallbackAttempts = java.util.concurrent.atomic.AtomicInteger()
+    internal val fallbackMaxConcurrent = java.util.concurrent.atomic.AtomicInteger()
+    private val fallbackRunning = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
+     * System DNS first, on the caller's thread, with no wrapper: a healthy network pays nothing. Only a
+     * failure (UnknownHostException while online, or a host the connection check marked blocked) walks
+     * the chain, one resolver at a time. A system-wide failure (the resolver timed out or is unreachable)
+     * keeps the resolver that answered for the session, so the timeout is paid once, not per request; a
+     * single host the network refuses is remembered for that host only, as in auto bypass.
+     */
+    private fun fallbackLookup(host: String, config: DnsConfig): List<InetAddress> {
+        sessionResolver?.let { p ->
+            try { return fallbackAttempt(host, p) } catch (e: UnknownHostException) { throw e } catch (_: IOException) {
+                sessionResolver = null // that resolver went away: system DNS may be back
+            }
+        }
+        if (isBypassed(host)) runCatching { chain(host, sessionWide = false) }.getOrNull()?.let { return it }
+        val started = now()
+        val answer = try {
+            systemLookup(host)
+        } catch (systemError: UnknownHostException) {
+            if (!online()) throw systemError
+            val wide = isSystemWide(systemError, now() - started)
+            val real = chain(host, sessionWide = wide) ?: throw systemError
+            if (!wide) markBlocked(host)
+            return real
+        }
+        if (config.auto && looksSinkholed(host, answer)) {
+            val real = runCatching { chain(host, sessionWide = false) }.getOrNull()
+            if (real != null && !looksSinkholed(host, real)) { markBlocked(host); return real }
+        }
+        return answer
+    }
+
+    /**
+     * The system resolver failed as a whole (not "this name has no address"): Android reports a
+     * timeout or an unreachable resolver as EAI_AGAIN ("Try again"), and a lookup that took the full
+     * attempt budget is a timeout whatever it says.
+     */
+    internal fun isSystemWide(e: UnknownHostException, tookMs: Long): Boolean {
+        if (tookMs >= FALLBACK_ATTEMPT_MS) return true
+        var c: Throwable? = e
+        while (c != null) {
+            val m = c.message.orEmpty()
+            if ("EAI_AGAIN" in m || "Try again" in m || "timed out" in m || "ETIMEDOUT" in m) return true
+            c = c.cause
+        }
+        return false
+    }
+
+    /** Walks [FALLBACK_CHAIN] in order, one attempt at a time across all threads. Null: none answered. */
+    private fun chain(host: String, sessionWide: Boolean): List<InetAddress>? = synchronized(chainLock) {
+        // Another thread may have found a resolver while this one waited for the lock.
+        sessionResolver?.let { p -> runCatching { fallbackAttempt(host, p) }.getOrNull()?.let { return it } }
+        for (p in FALLBACK_CHAIN) {
+            try {
+                return chainAttempt(host, p).also { if (sessionWide) sessionResolver = p }
+            } catch (e: UnknownHostException) {
+                throw e // a real answer (NXDOMAIN, no records): another resolver won't know better
+            } catch (_: IOException) { /* unreachable or timed out (ResolverUnreachable): next resolver */ }
+        }
+        null
+    }
+
+    private fun fallbackAttempt(host: String, provider: DnsProvider): List<InetAddress> =
+        alternativeLookup(host, DnsConfig(provider, DnsTransport.DOH, DnsMode.FALLBACK, auto = true, fallback = true))
+
+    /** One attempt of the chain walk, counted (the walk must never run two at once). */
+    private fun chainAttempt(host: String, provider: DnsProvider): List<InetAddress> {
+        fallbackAttempts.incrementAndGet()
+        fallbackMaxConcurrent.accumulateAndGet(fallbackRunning.incrementAndGet()) { a, b -> maxOf(a, b) }
+        try { return fallbackAttempt(host, provider) } finally { fallbackRunning.decrementAndGet() }
+    }
+
+    // endregion
+
     private fun systemLookup(host: String): List<InetAddress> =
         system.lookup(host).also { lastSource[host] = DnsSource.SYSTEM }
 
@@ -196,7 +293,7 @@ object SmartDns : Dns {
             addresses = override(host, config)
         } else when (config.transport) {
             DnsTransport.DOH -> addresses = try {
-                doh(config.provider).lookup(host)
+                (if (config.fallback) fallbackDoh(config.provider) else doh(config.provider)).lookup(host)
             } catch (e: UnknownHostException) {
                 // G12 X11-3: OkHttp's DnsOverHttps reports a failed request (timeout, refused, TLS) as
                 // UnknownHostException with the network error as its cause. Only a cause-less one is a
@@ -231,19 +328,45 @@ object SmartDns : Dns {
     /** Test hook: replaces the real DNS-over-HTTPS clients. */
     @Volatile internal var dohFactory: ((DnsProvider) -> Dns)? = null
 
-    private fun doh(provider: DnsProvider): Dns = dohFactory?.invoke(provider) ?: dohClients.getOrPut(provider) {
-        // Separate client: its own lookups must never recurse into SmartDns; bootstrap IPs avoid DNS entirely.
-        val bootstrapClient = OkHttpClient.Builder()
-            .connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS)
-            .build()
-        DnsOverHttps.Builder()
-            .client(bootstrapClient)
-            .url(provider.dohUrl!!.toHttpUrl())
-            .bootstrapDnsHosts(provider.bootstrap.map { InetAddress.getByName(it) })
+    /** Test hook (NBUG-6 blackhole test): the DoH URL and bootstrap IP literals of a provider. */
+    @Volatile internal var dohEndpoint: (DnsProvider) -> Pair<String, List<String>> = { it.dohUrl!! to it.bootstrap }
+    private val bootstrapClients = ConcurrentHashMap<DnsProvider, OkHttpClient>()
+    private val fallbackClients = ConcurrentHashMap<DnsProvider, Dns>()
+
+    // Separate client: its own lookups must never recurse into SmartDns; bootstrap IPs avoid DNS entirely.
+    private fun bootstrapClient(provider: DnsProvider): OkHttpClient = bootstrapClients.getOrPut(provider) {
+        OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
+    }
+
+    private fun buildDoh(provider: DnsProvider, client: OkHttpClient): Dns {
+        val (url, bootstrap) = dohEndpoint(provider)
+        return DnsOverHttps.Builder()
+            .client(client)
+            .url(url.toHttpUrl())
+            .bootstrapDnsHosts(bootstrap.map { InetAddress.getByName(it) })
             .includeIPv6(true)
             .resolvePrivateAddresses(false)
             .build()
     }
+
+    private fun doh(provider: DnsProvider): Dns = dohFactory?.invoke(provider) ?: dohClients.getOrPut(provider) {
+        buildDoh(provider, bootstrapClient(provider))
+    }
+
+    /**
+     * NBUG-6: the same provider's engine with a [FALLBACK_ATTEMPT_MS] budget. `newBuilder()` shares the
+     * provider's dispatcher and connection pool, so this is not a second engine: no extra threads, no
+     * second pool (the cost measured in device run 44192612391 came from separate clients).
+     */
+    private fun fallbackDoh(provider: DnsProvider): Dns = dohFactory?.invoke(provider) ?: fallbackClients.getOrPut(provider) {
+        val budget = FALLBACK_ATTEMPT_MS
+        buildDoh(provider, bootstrapClient(provider).newBuilder()
+            .connectTimeout(budget, TimeUnit.MILLISECONDS).readTimeout(budget, TimeUnit.MILLISECONDS)
+            .callTimeout(budget, TimeUnit.MILLISECONDS).build())
+    }
+
+    /** Tests: drop the built engines so a changed [dohEndpoint] takes effect. */
+    internal fun resetEnginesForTests() { dohClients.clear(); fallbackClients.clear(); bootstrapClients.clear() }
 
     private fun failure(host: String, config: DnsConfig, cause: Exception) =
         UnknownHostException("Unable to resolve host \"$host\" with system DNS or ${config.provider.label} (${config.transport.label}): ${cause.message}")

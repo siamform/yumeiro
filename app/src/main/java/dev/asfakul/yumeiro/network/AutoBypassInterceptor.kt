@@ -28,7 +28,8 @@ object AutoBypassInterceptor : Interceptor {
         } catch (e: IOException) {
             val host = request.url.host
             val config = NetworkSettings.dns.value
-            val eligible = config.auto && !config.usesAlternative &&
+            // NBUG-6: the automatic DNS fallback also reacts to a connection failure (its other trigger).
+            val eligible = (config.auto || config.fallback && NetworkSettings.fallbackAllowed()) && !config.usesAlternative &&
                 request.method in RETRYABLE && looksLikeBlocking(e) &&
                 SmartDns.lastSourceFor(host) == DnsSource.SYSTEM &&
                 Connectivity.online.value &&

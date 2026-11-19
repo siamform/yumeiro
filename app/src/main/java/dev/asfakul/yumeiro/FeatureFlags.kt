@@ -49,6 +49,8 @@ object FeatureFlags {
         MANGA_TRANSLATE("f11_manga_translate", true),
         /** NBUG-13 (ADR-045): Settings → Network → Proxy (HTTP / SOCKS5) for app requests and web pages. */
         APP_PROXY("nbug13_proxy", true),
+        /** NBUG-6 (ADR-046): Settings → Network → "Automatic DNS fallback" (the user setting itself is Off by default). */
+        DNS_FALLBACK("nbug6_dns_fallback", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null
