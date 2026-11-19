@@ -118,7 +118,9 @@ fun UpdateDialog(
     val dismissAction: () -> Unit = when (state) {
         is UpdateState.Available -> onRemindLater
         is UpdateState.Downloading -> onContinueInBackground
-        is UpdateState.Installing -> ({})
+        // G10 ER-24: Back on "Installing…" did nothing (a dead key on TV). Hiding the dialog is safe:
+        // the installer keeps running and its result still arrives through the update state.
+        is UpdateState.Installing -> onDismiss
         else -> onDismiss
     }
     Dialog(
