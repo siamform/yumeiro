@@ -23,3 +23,51 @@ Status: in preparation. This is the release candidate for 1.9.0, tested on three
 
 ## Review APK
 ## Install and test guide for the owner
+
+The review APK is signed with the release certificate (checked in CI against
+`.github/release-signing-cert.sha256`), so it installs over 1.8.x on the same phone without losing data.
+Version: 1.9.0 (version code 17). Files: `yumeiro-1.9.0-<hash>-review.apk` (phone),
+`yumeiro-tv-1.9.0-<hash>-review.apk` (TV), `SHA256SUMS`, `INTEGRITY.txt` (artifact `yumeiro-review-apk` of the
+CI run in the Review APK section).
+
+### Before installing
+
+1. In the installed 1.8.x: Settings → Backup & restore → Back up now, and copy the file off the phone. This is the
+   rollback point.
+2. Check the download: `sha256sum -c SHA256SUMS` (Linux/macOS) or `certutil -hashfile <apk> SHA256`
+   (Windows) must match the line for the APK.
+
+### Install
+
+- Phone: open the APK on the phone and allow "Install unknown apps" for the file manager, or
+  `adb install -r yumeiro-1.9.0-<hash>-review.apk`.
+- TV: `adb connect <tv-ip>` then `adb install -r yumeiro-tv-1.9.0-<hash>-review.apk`.
+- Android refuses the update with "App not installed" only if the installed copy was signed with a
+  different key (for example a debug or preview build); that copy has to be backed up and uninstalled first.
+
+### Test
+
+1. Work through docs/OWNER-MANUAL-TESTS.md (owner rows first: they need real hardware, accounts or the
+   Worker). Each row says what to do, what should happen, and where to write the result.
+2. Spot-check the features in "What changed since 1.8.1" with your own sources and accounts.
+3. Leave the app running for a day of normal use (music, a video, a download, an airing alert).
+
+### Report
+
+- Settings → Crash reports: open a report and tap Share to send the whole file (read it first; it holds
+  the stack trace and device details).
+- Write findings as GitHub issues on siamform/yumeiro with: device, Android version, what you did, what you
+  expected, what happened, and the shared crash report if any. Or tell the agent; each finding gets an ID,
+  a root-cause fix with a regression test and a new review APK.
+
+### Roll back
+
+Android does not install an older version over a newer one. To go back to 1.8.1:
+
+1. Settings → Backup & restore → Back up now in 1.9.0 (keeps anything new since the update).
+2. Uninstall Yumeiro, install the 1.8.1 APK from the v1.8.1 GitHub release.
+3. Settings → Backup & restore → Choose a backup file, pick the file from step 1 (or the one made before installing). Both versions write and read
+   backup format 2 (`Backup.FORMAT` is 2 in v1.8.1 and in 1.9.0), so 1.8.1 accepts the file.
+
+Nothing here publishes, merges or deploys: the store listing, `main`, the Worker and the website stay as they
+are until the owner says "go".
