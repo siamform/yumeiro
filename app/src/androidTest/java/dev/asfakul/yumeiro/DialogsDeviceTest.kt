@@ -56,8 +56,20 @@ class DialogsDeviceTest {
         FirstRun.tapVisible(rule, "topbar_settings_action")
         runCatching { rule.waitUntil(20_000) { has("settings_home") } }
             .onFailure { throw AssertionError("Settings home never showed · ${FirstRun.onScreen(rule)}") }
-        FirstRun.tapVisible(rule, "settings_cat_privacy"); SystemClock.sleep(1_200)
         val rows = listOf("privacy_clear_watch", "privacy_clear_adult", "privacy_clear_listening", "privacy_clear_search", "privacy_clear_inbox", "privacy_clear_cache")
+        // FINAL-10 (tv-api34 P1, run 44613955120): on a fresh install the first tap on the category landed
+        // while the cold start was still settling, the page never opened and all six rows were "not on
+        // this state". Wait for the page; tap the category once more if it has not opened; then fail
+        // with the screen instead of reporting nothing checked.
+        fun pageOpen() = rows.any { has(it) } || runCatching { FirstRun.scrollTo(rule, rows[0]) }.let { has(rows[0]) }
+        FirstRun.tapVisible(rule, "settings_cat_privacy")
+        if (!runCatching { rule.waitUntil(10_000) { pageOpen() }; true }.getOrDefault(false)) {
+            log("DLG_RETRY privacy page not open after first tap · ${FirstRun.onScreen(rule)}")
+            FirstRun.tapVisible(rule, "settings_cat_privacy")
+            runCatching { rule.waitUntil(15_000) { pageOpen() } }
+                .onFailure { throw AssertionError("Privacy page never opened · ${FirstRun.onScreen(rule)}") }
+        }
+        SystemClock.sleep(800)
         val problems = ArrayList<String>()
         var checked = 0
         for (row in rows) {
