@@ -61,6 +61,9 @@ class DialogsDeviceTest {
         val problems = ArrayList<String>()
         var checked = 0
         for (row in rows) {
+            // G10 regression on tv-api24 (44452176693): at 540 dp the rows sit below the fold of the lazy
+            // list and were never composed, so all six were skipped. Scroll to each row first.
+            if (!has(row)) runCatching { FirstRun.scrollTo(rule, row); SystemClock.sleep(400) }
             if (!has(row)) { log("DLG_CASE $row not on this build/state, skipped"); continue }
             AppMessages.current.value?.let { m -> InstrumentationRegistryMain.run { AppMessages.dismiss(m.id) } }
             FirstRun.tapVisible(rule, row)

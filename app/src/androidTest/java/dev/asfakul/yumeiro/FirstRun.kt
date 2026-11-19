@@ -254,7 +254,7 @@ object FirstRun {
     }
 
     /** Scrolls any list on screen until a node with [tag] is composed (cards below the fold). */
-    private fun scrollTo(rule: AndroidComposeTestRule<*, *>, tag: String) {
+    fun scrollTo(rule: AndroidComposeTestRule<*, *>, tag: String) {
         // Vertical lists only: the tab pager also scrolls to a node, and asking it would flip tabs.
         val vertical = androidx.compose.ui.test.hasScrollToNodeAction() and
             androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
