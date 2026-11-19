@@ -90,6 +90,8 @@ object PendingRestore {
 
     private fun applyRestore(context: Context, d: File, plan: Plan): Report {
         var prefs = 0; var files = 0; var failed = 0
+        // PR-1 (ADR-041): a restored (older) profile list can never remove a lock set on this phone.
+        val profilesBefore = runCatching { dev.asfakul.yumeiro.profiles.Profiles.lockSnapshot(context) }.getOrNull()
         File(d, Backup.PREFS_JSON).takeIf { it.isFile }?.let { f ->
             val all = runCatching { JSONObject(f.readText()) }.getOrNull() ?: JSONObject()
             all.keys().forEach { name ->
@@ -121,6 +123,7 @@ object PendingRestore {
                 if (ok) files++ else failed++
             }
         }
+        profilesBefore?.let { b -> runCatching { dev.asfakul.yumeiro.profiles.Profiles.keepLocksAfterRestore(context, b) } }
         if (plan.redownload) BackupMeta.setPendingDownloads(context, plan.tachiyomi)
         return Report(prefs, files, failed)
     }

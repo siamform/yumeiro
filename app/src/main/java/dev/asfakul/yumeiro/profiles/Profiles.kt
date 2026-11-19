@@ -31,6 +31,13 @@ object Profiles {
     private const val MAX_FAILS = 5
     private const val ITERATIONS = 12_000
     const val MAX_PROFILES = 8
+    /** One-time "restart into this profile" pass. "_" files are never in backups ([Backup.prefIncluded]). */
+    const val PASS_PREFS = "_profile_pass"
+    /** Wrong-PIN counts and lockouts; kept on disk so killing the app does not reset them. Never backed up. */
+    const val GUARD_PREFS = "_profile_guard"
+    private const val MAX_LOCKOUT_MS = 60 * 60_000L
+    /** Files that are a profile's own (top level for the default profile). */
+    val PROFILE_FILES = listOf("online_history.json", "online_bookmarks.json")
 
     data class Profile(
         val id: String,
@@ -53,7 +60,6 @@ object Profiles {
     private val _current = MutableStateFlow(DEFAULT)
     val currentFlow: StateFlow<String> = _current.asStateFlow()
     @Volatile private var loaded = false
-    private val fails = HashMap<String, Pair<Int, Long>>() // id -> (wrong tries, locked until)
 
     private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -123,28 +129,37 @@ object Profiles {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
         val hash = hash(pin, salt)
         replace(context, id) { it.copy(pinHash = hash, salt = Base64.encodeToString(salt, Base64.NO_WRAP)) }
-        synchronized(fails) { fails.remove(id) }
+        clearGuard(context, id)
         return true
     }
 
+    private fun guard(context: Context) = context.applicationContext.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
+    private fun clearGuard(context: Context, id: String) { guard(context).edit().remove("n_$id").remove("u_$id").remove("k_$id").commit() }
+
+    /**
+     * Checks a PIN. Five wrong tries lock the profile for [LOCKOUT_MS], each further lockout twice as
+     * long (up to an hour). The counts are on disk, so killing the app does not give new tries.
+     */
+    @Synchronized
     fun checkPin(context: Context, id: String, pin: String, now: Long = System.currentTimeMillis()): PinCheck {
         val p = find(context, id) ?: return PinCheck.WRONG
         val stored = p.pinHash ?: return PinCheck.NO_PIN
-        synchronized(fails) {
-            val (n, until) = fails[id] ?: (0 to 0L)
-            if (until > now) return PinCheck.LOCKED_OUT
-            val salt = runCatching { Base64.decode(p.salt, Base64.NO_WRAP) }.getOrNull() ?: return PinCheck.WRONG
-            val ok = MessageDigest.isEqual(hash(pin, salt).toByteArray(), stored.toByteArray())
-            if (ok) { fails.remove(id); return PinCheck.OK }
-            val count = if (until in 1..now) 1 else n + 1 // a finished lockout starts a new count
-            fails[id] = if (count >= MAX_FAILS) 0 to now + LOCKOUT_MS else count to 0L
-            return PinCheck.WRONG
-        }
+        val g = guard(context)
+        if (g.getLong("u_$id", 0L) > now) return PinCheck.LOCKED_OUT
+        val salt = runCatching { Base64.decode(p.salt, Base64.NO_WRAP) }.getOrNull() ?: return PinCheck.WRONG
+        if (MessageDigest.isEqual(hash(pin, salt).toByteArray(), stored.toByteArray())) { clearGuard(context, id); return PinCheck.OK }
+        val n = g.getInt("n_$id", 0) + 1
+        if (n >= MAX_FAILS) {
+            val k = g.getInt("k_$id", 0)
+            val ms = (LOCKOUT_MS shl k.coerceAtMost(7)).coerceAtMost(MAX_LOCKOUT_MS)
+            g.edit().putInt("n_$id", 0).putLong("u_$id", now + ms).putInt("k_$id", k + 1).commit()
+        } else g.edit().putInt("n_$id", n).commit()
+        return PinCheck.WRONG
     }
 
     /** Milliseconds left in a lockout, or 0. */
-    fun lockoutLeft(id: String, now: Long = System.currentTimeMillis()): Long =
-        synchronized(fails) { ((fails[id]?.second ?: 0L) - now).coerceAtLeast(0L) }
+    fun lockoutLeft(context: Context, id: String, now: Long = System.currentTimeMillis()): Long =
+        (guard(context).getLong("u_$id", 0L) - now).coerceAtLeast(0L)
 
     /** Makes [id] current. Saved with commit(): the caller restarts the app right after. */
     @Synchronized
@@ -165,9 +180,92 @@ object Profiles {
         _all.value = _all.value.filterNot { it.id == id }
         if (_current.value == id) _current.value = DEFAULT
         save(context) { putString("current", _current.value) }
-        synchronized(fails) { fails.remove(id) }
+        clearGuard(context, id)
         return true
     }
+
+    // region guards (ADR-041 security review)
+
+    /** The phone's main (default) profile is locked and someone else's profile is open. */
+    fun needsMainUnlock(context: Context): Boolean = currentId(context) != DEFAULT && find(context, DEFAULT)?.locked == true
+
+    /** The home-screen widget shows nothing of a locked profile. */
+    fun hideFromWidget(context: Context): Boolean = current(context).locked
+
+    fun passRestart(context: Context, id: String) {
+        context.applicationContext.getSharedPreferences(PASS_PREFS, Context.MODE_PRIVATE).edit().putString("id", id).putLong("at", System.currentTimeMillis()).commit()
+    }
+
+    /** True once, right after [passRestart] into the current profile (and within a minute). */
+    fun consumePass(context: Context): Boolean {
+        val p = context.applicationContext.getSharedPreferences(PASS_PREFS, Context.MODE_PRIVATE)
+        val id = p.getString("id", null) ?: return false
+        val at = p.getLong("at", 0L)
+        p.edit().clear().commit()
+        return id == currentId(context) && System.currentTimeMillis() - at in 0..60_000L
+    }
+
+    /** Every profile as it is now, for [keepLocksAfterRestore]. */
+    fun lockSnapshot(context: Context): String = JSONArray().apply { all(context).forEach { put(json(it)) } }.toString()
+
+    /**
+     * After a restore: a backup may hold an older profile list (without a PIN set later, or without a
+     * profile added later). Local locks always win, and local profiles missing from the backup stay,
+     * so a restore can never open a locked profile.
+     */
+    @Synchronized
+    fun keepLocksAfterRestore(context: Context, before: String) {
+        val local = runCatching { JSONArray(before) }.getOrNull()?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::from) } }.orEmpty()
+        unload()
+        init(context)
+        val restored = _all.value
+        val merged = restored.map { r ->
+            val l = local.firstOrNull { it.id == r.id } ?: return@map r
+            if (l.locked) r.copy(pinHash = l.pinHash, salt = l.salt, biometric = l.biometric) else r
+        } + local.filter { l -> restored.none { it.id == l.id } }
+        _all.value = merged
+        save(context)
+    }
+
+    /**
+     * "Forgot PIN": like a phone's safe folder, the lock can only go together with what it protects.
+     * Another profile is deleted; the default profile (which can not be deleted) loses its lock, its
+     * lists, history, YouTube history and private downloads, and keeps everything shared.
+     */
+    @Synchronized
+    fun resetForgotten(context: Context, id: String): Boolean {
+        if (find(context, id) == null) return false
+        if (id != DEFAULT) return remove(context, id)
+        val app = context.applicationContext
+        PROFILE_FILES.forEach { File(app.filesDir, it).delete() }
+        app.getSharedPreferences("yt_history", Context.MODE_PRIVATE).edit().clear().commit()
+        app.getSharedPreferences("online_settings", Context.MODE_PRIVATE).edit().putBoolean("adult", false).commit()
+        runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, DEFAULT) }
+        replace(context, DEFAULT) { it.copy(pinHash = null, salt = null, biometric = false) }
+        clearGuard(context, DEFAULT)
+        return true
+    }
+
+    /** Profiles whose data stays out of a backup made now: locked ones other than the open one. */
+    fun lockedOthers(context: Context): Set<String> = all(context).filter { it.locked && it.id != currentId(context) }.map { it.id }.toSet()
+
+    /** A backup zip entry (files/...) that belongs to a locked profile other than the open one. */
+    fun hiddenFromBackup(context: Context, zipName: String, others: Set<String> = lockedOthers(context)): Boolean {
+        if (others.isEmpty()) return false
+        val rel = zipName.removePrefix("files/")
+        if (rel.startsWith("profiles/")) return rel.removePrefix("profiles/").substringBefore('/') in others
+        return DEFAULT in others && rel in PROFILE_FILES
+    }
+
+    /** A preference file that belongs to a locked profile other than the open one. */
+    fun prefsHiddenFromBackup(context: Context, name: String, others: Set<String> = lockedOthers(context)): Boolean {
+        if (others.isEmpty()) return false
+        val at = name.lastIndexOf("@p")
+        if (at > 0) return name.substring(at + 2) in others
+        return DEFAULT in others && (name == "yt_history" || name == "private_vault")
+    }
+
+    // endregion
 
     /** A per-profile file: the old path for the default profile, `filesDir/profiles/<id>/<name>` otherwise. */
     fun file(context: Context, name: String): File {
@@ -218,10 +316,18 @@ object Profiles {
     @androidx.annotation.VisibleForTesting
     internal fun resetForTests(context: Context) {
         prefs(context).edit().clear().commit()
+        context.applicationContext.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+        context.applicationContext.getSharedPreferences(PASS_PREFS, Context.MODE_PRIVATE).edit().clear().commit()
         root(context).deleteRecursively()
         unloadForTests()
     }
 
     @androidx.annotation.VisibleForTesting
-    internal fun unloadForTests() { synchronized(this) { loaded = false; _all.value = emptyList(); _current.value = DEFAULT }; synchronized(fails) { fails.clear() } }
+    internal fun unloadForTests() = unload()
+
+    @Synchronized
+    private fun unload() { loaded = false; _all.value = emptyList(); _current.value = DEFAULT }
+
+    /** "45 s" or "3 min" for a lockout message. */
+    fun waitText(ms: Long): String = if (ms < 60_000L) "${ms / 1000 + 1} s" else "${(ms + 59_999L) / 60_000L} min"
 }

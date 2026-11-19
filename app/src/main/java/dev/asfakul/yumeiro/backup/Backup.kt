@@ -115,14 +115,17 @@ object Backup {
     internal fun collect(context: Context, sections: Set<Section>): List<Pair<String, File>> {
         val files = context.filesDir
         val out = ArrayList<Pair<String, File>>()
+        // PR-1 (ADR-041): a locked profile's own data goes only into backups made from that profile.
+        val others = dev.asfakul.yumeiro.profiles.Profiles.lockedOthers(context)
+        val hidden: (String) -> Boolean = { n -> dev.asfakul.yumeiro.profiles.Profiles.hiddenFromBackup(context, n, others) }
         files.listFiles()?.filter { it.isFile && !isTransient(it) }?.forEach { f ->
             val n = "files/${f.name}"
-            if (sectionOf(n) in sections) out += n to f
+            if (sectionOf(n) in sections && !hidden(n)) out += n to f
         }
         dataDirs.forEach { d ->
             File(files, d).takeIf { it.isDirectory }?.walkTopDown()?.filter { it.isFile && !isTransient(it) && it.length() in 1..MAX_FILE }?.forEach { f ->
                 val n = "files/" + f.relativeTo(files).invariantSeparatorsPath
-                if (sectionOf(n) in sections) out += n to f
+                if (sectionOf(n) in sections && !hidden(n)) out += n to f
             }
         }
         return out.sortedBy { it.first }
@@ -131,7 +134,8 @@ object Backup {
     /** Typed snapshot of every included preference file. */
     internal fun prefsSnapshot(context: Context, sections: Set<Section>): JSONObject {
         val root = JSONObject()
-        prefNames(context).forEach { name ->
+        val others = dev.asfakul.yumeiro.profiles.Profiles.lockedOthers(context)
+        prefNames(context).filterNot { dev.asfakul.yumeiro.profiles.Profiles.prefsHiddenFromBackup(context, it, others) }.forEach { name ->
             val all = runCatching { context.getSharedPreferences(name, Context.MODE_PRIVATE).all }.getOrNull() ?: return@forEach
             val chosen = all.filterKeys { k -> PrefSections.sectionOf(name, k) in sections }
             if (chosen.isNotEmpty()) root.put(name, PrefCodec.encode(chosen))

@@ -87,7 +87,8 @@ class ContinueWidget : AppWidgetProvider() {
 
         private suspend fun render(context: Context, manager: AppWidgetManager, ids: IntArray, gen: Long = generation.incrementAndGet()) {
             OnlineHistory.ensureLoaded(context)
-            val hidden = Privacy.incognito.value || Privacy.lockEnabled.value
+            val hidden = Privacy.incognito.value || Privacy.lockEnabled.value ||
+                runCatching { dev.asfakul.yumeiro.profiles.Profiles.hideFromWidget(context) }.getOrDefault(true) // PR-1
             val entry = if (hidden) null else OnlineHistory.forFeed(OnlineHistory.entries.value).firstOrNull()
             val views = RemoteViews(context.packageName, R.layout.widget_continue)
             val openApp = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
