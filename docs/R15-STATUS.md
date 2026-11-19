@@ -1,20 +1,25 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 19:05 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-19 19:50 UTC; no PR / merge / deploy without the owner's "go")
 
 - **Task:** final test and release preparation (master prompt "THE FINAL TEST AND RELEASE PREPARATION").
 - **Pre-conditions (§2): NOT met yet**, so the final passes are not counted as the final test:
-  1. tenth-cycle device verification: chunk_00 running (phones 44593053433, tv-api34 44593085810); tv-api24 next;
-  2. fail-before CI open: c2 NBUG-6 44592881571 running; c3 Vega (`tmp/batch-c3-fail-before` 8f652ee) and
-     SEC-LFM (`tmp/sec-lfm-fail-before`) not dispatched yet;
-  3. head b57e155 (SEC-LFM) not yet on a green CI (last green 44587248595 on 9dd0213).
-- **New finding SEC-LFM (§9):** the APK carried the Last.fm shared secret. Fixed in b57e155 (ADR-048): Yumeiro
-  Cloud signs the built-in key; the built-in Last.fm path needs the Worker deploy (owner's go).
-- **Next three:** 1. c2 result → dispatch c3, SEC-LFM fail-before, head CI (one heavy run at a time);
-  2. chunk_00 results → `scripts/final_collect.sh <run>` → `python3 scripts/final_checklist.py`;
-  3. chunks 01–18 per docs/evidence/final/PLAN.md (≤ 2 device workflows).
+  1. tenth-cycle device verification: chunk_00 passes P1/P2 on api33-lowram, api36, tv-api34 (44593053433,
+     44593085810, re-runs 44595993499/44595998571, 44598214395/44598220085 after FINAL-1..6); tv-api24 44600322143 running;
+  2. fail-before CI: c2 NBUG-6 44592881571 and c3 Vega 44595319629 failed to compile as expected; SEC-LFM
+     44597459511 failed to compile (`cloudSig` unresolved) as expected; part 2 (ApkSecretsTest, AUD-ZIP, FINAL-3
+     against old code) 44599561077 running on `tmp/fail-before-part2`;
+  3. head 9484c09 not yet on a green CI (last green 44587248595 on 9dd0213). Head CI is next after part 2.
+- **Chunks 01–18:** chunk_01 phones 44600328162 running. Order per docs/evidence/final/PLAN.md, ≤ 2 device workflows.
+- **New finding SEC-LFM (§9):** fixed in b57e155 (ADR-048); the built-in Last.fm path needs the Worker deploy (owner's go).
+- **Next three:** 1. part 2 result → head CI; 2. collect each chunk (`scripts/final_collect.sh <run>`,
+  `python3 scripts/final_checklist.py`), fix findings under the protocol; 3. audit/perf rows, review APK.
 - **Final docs:** docs/MASTER-CHECKLIST-FINAL.md, CODE-AUDIT-FINAL.md, SERVER-TEST-FINAL.md, RELEASE-SUMMARY-FINAL.md.
 - Report: docs/reports/2026-11-19-tenth-handover-report.md.
+
+### Previous resume note — superseded (19:05 UTC 2026-11-19; head b57e155)
+
+- chunk_00 running; c2 running; c3 and SEC-LFM fail-before not dispatched.
 
 ### Previous resume note — superseded (05:05 UTC 2026-11-20 label; head 9dd0213)
 
