@@ -39,6 +39,29 @@ class MessagesDeviceTest {
     private fun log(m: String) = Log.i("YuMessages", m)
     private val inst = InstrumentationRegistry.getInstrumentation()
 
+    private val RX_BOUNDS = Regex("""\[(\d+),(\d+)\]\[(\d+),(\d+)\]""")
+
+    /** Logs the semantics nodes (in every window) whose window bounds are within 3 px of [l, t, r, b]. */
+    private fun logNodesAt(l: Float, t: Float, r: Float, b: Float) {
+        fun near(a: Float, c: Float) = kotlin.math.abs(a - c) <= 3f
+        val all = rule.onAllNodes(androidx.compose.ui.test.isRoot(), true).fetchSemanticsNodes()
+        fun tagOf(n: androidx.compose.ui.semantics.SemanticsNode) = n.config.getOrNull(SemanticsProperties.TestTag)
+        var found = 0
+        fun visit(n: androidx.compose.ui.semantics.SemanticsNode, parentTag: String?) {
+            val tag = tagOf(n) ?: parentTag
+            val w = n.boundsInWindow
+            if (near(w.left, l) && near(w.top, t) && near(w.right, r) && near(w.bottom, b)) {
+                found++
+                val text = n.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }
+                    ?: n.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+                log("MSG_A11Y_NODE [$l,$t][$r,$b] tag=${tagOf(n)} under=$parentTag role=${n.config.getOrNull(SemanticsProperties.Role)} text=${text?.take(60)} click=${n.config.contains(androidx.compose.ui.semantics.SemanticsActions.OnClick)}")
+            }
+            n.children.forEach { visit(it, tag) }
+        }
+        all.forEach { visit(it, null) }
+        if (found == 0) log("MSG_A11Y_NODE [$l,$t][$r,$b] none: not a Compose node (an Android View) · ${FirstRun.onScreen(rule)}")
+    }
+
     @Test fun everyLiteralMessageShowsWhole() {
         FirstRun.toTabs(rule)
         val rows = inst.context.assets.open("messages.tsv").bufferedReader().readLines().filter { it.isNotBlank() }.map { it.split('\t') }
@@ -75,6 +98,9 @@ class MessagesDeviceTest {
                 // G10 regression (first TV run, tv-api34 44453210587): only the first line was kept, which
                 // names no check. Log the whole result so the failing view and check are on record.
                 err?.message?.let { log("MSG_A11Y $site ${it.replace('\n', ' ').take(900)}") }
+                // G15-3 (TV-A11Y-1): name the flagged view. The result gives window pixels; log every
+                // semantics node whose bounds match (tag, role, text, and the nearest tagged parent).
+                err?.message?.let { m -> RX_BOUNDS.findAll(m).map { it.destructured }.distinct().forEach { (l, t, r, b) -> logNodesAt(l.toFloat(), t.toFloat(), r.toFloat(), b.toFloat()) } }
                 a11y = err?.message?.lines()?.firstOrNull() ?: "ok"
                 rule.disableAccessibilityChecks()
             }
