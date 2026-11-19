@@ -955,7 +955,7 @@ flowchart LR
 - **Status:** accepted (owner spec; agent decisions inside it, reported to the owner). Verified only after
   fail-before and pass-after.
 
-### ADR-029: Error wording and dialog rules (G10 re-audit, ER-21…ER-28)
+### ADR-029: Error wording and dialog rules (G10 re-audit, ER-21…ER-30)
 
 - **Scope:** `OnlineErrors.friendly`, `ErrorHelp`, `PlaybackRecovery.decide`, `StreamResolver.failureFor`,
   `AppMessageHost`, `UpdateDialog`, `ExtensionReviewHost`, every `ModalBottomSheet`. No new dependency.
@@ -975,6 +975,10 @@ flowchart LR
   7. A second confirm for a dangerous action counts only after a pause (1 s) after arming. ER-27.
   8. On TV no sheet has a drag handle (`sheetDragHandle()` is null on TV): a remote can't drag, and Material's
      handle is a focusable button that dismisses the sheet. ER-28 (NB15-OB2).
+  9. A message the app posts on its own (an extension's promo card) waits behind the message on screen
+     (`AppMessages.showQuiet`); only messages caused by the user replace. ER-29.
+  10. A timeout on extension code must not depend on that code suspending: the extension runs as a detached
+     job and the caller awaits it under the timeout (`ExtensionCall.bounded`). ER-30 (NBUG-8).
 - **Options considered:** A. Fix each call site. B. One rule per layer as above, each with its test.
   **Decision: B** (small, testable, no new abstraction beyond `sheetDragHandle()`).
 - **Rollback:** one revert per finding commit.
