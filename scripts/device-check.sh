@@ -38,8 +38,26 @@ recover_system_anr() {
   sleep 3; adb shell input keyevent 3 > /dev/null 2>&1 || true; sleep 3
   echo "HARNESS focus after restart: $(adb shell dumpsys window | grep -m1 mCurrentFocus | tr -d '\r' | sed 's/^ *//')"
 }
+# FINAL-15 (tv-api24 run 44620669094): after DownloadThroughputDeviceTest (screen off + forced Doze) the
+# next adb call never returned and the job sat 100 min until the 110-min limit, so P1/P2 of the rest of the
+# chunk never ran and no artifacts but the logcat were kept. Every class now starts with a bounded adb
+# check; a dead link gets one reconnect and a screen wake, and a link still dead ends the loop with a
+# HARNESS line so the remaining classes are reported as not run and the artifacts upload.
+ADB_LOST=0
+adb_alive() {
+  timeout 20 adb shell true > /dev/null 2>&1 && return 0
+  echo "HARNESS adb did not answer in 20 s before $C (run $N): reconnecting"
+  timeout 30 adb reconnect > /dev/null 2>&1 || true
+  timeout 120 adb wait-for-device > /dev/null 2>&1 || true
+  timeout 20 adb shell input keyevent 224 > /dev/null 2>&1 || true
+  timeout 20 adb shell dumpsys deviceidle unforce > /dev/null 2>&1 || true
+  if timeout 20 adb shell true > /dev/null 2>&1; then echo "HARNESS adb back after reconnect"; return 0; fi
+  echo "HARNESS adb lost before $C (run $N): stopping; the remaining classes are not run"
+  ADB_LOST=1; return 1
+}
 for N in $(seq 1 "$REPEAT"); do
 for C in $(echo "$FILTER" | tr ',' ' '); do
+  adb_alive || break 2
   # R16: repeats start from cleared app data, like a fresh install.
   if [ "$PASSES" = "true" ]; then
     adb shell am force-stop dev.asfakul.yumeiro.debug > /dev/null 2>&1
@@ -257,20 +275,22 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   # Final test §10: keep each class's screenshots (FirstRun.shot) before the next class clears the
   # app data, so the images in docs/assets/final come from the final passes themselves.
   SHOTS=/sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots
-  if adb shell "[ -d $SHOTS ]" > /dev/null 2>&1; then
+  if timeout 30 adb shell "[ -d $SHOTS ]" > /dev/null 2>&1; then
     mkdir -p "stress/shots-P$N/${C##*.}"
-    adb pull "$SHOTS/." "stress/shots-P$N/${C##*.}/" > /dev/null 2>&1 || true
-    adb shell rm -rf "$SHOTS" > /dev/null 2>&1 || true
+    timeout 120 adb pull "$SHOTS/." "stress/shots-P$N/${C##*.}/" > /dev/null 2>&1 || true
+    timeout 30 adb shell rm -rf "$SHOTS" > /dev/null 2>&1 || true
   fi
   echo "::endgroup::"
 done
 done
-mkdir -p stress && adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/stress stress/ || true
-adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots stress/ || true
-adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/feedpos stress/ || true
-adb shell dumpsys meminfo dev.asfakul.yumeiro.debug > stress/meminfo.txt || true
-adb shell dumpsys activity exit-info dev.asfakul.yumeiro.debug > stress/exit-info.txt || true
-adb shell ls /data/anr > stress/anr-list.txt 2>&1 || true
+mkdir -p stress && timeout 120 adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/stress stress/ || true
+timeout 120 adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots stress/ || true
+timeout 120 adb pull /sdcard/Android/data/dev.asfakul.yumeiro.debug/files/feedpos stress/ || true
+timeout 60 adb shell dumpsys meminfo dev.asfakul.yumeiro.debug > stress/meminfo.txt || true
+timeout 60 adb shell dumpsys activity exit-info dev.asfakul.yumeiro.debug > stress/exit-info.txt || true
+timeout 60 adb shell ls /data/anr > stress/anr-list.txt 2>&1 || true
 grep -E "YuStress|YuResume|YuChannel|YuYtQuality|YuWidgetTest|YuDecoderFault|YuAnime4k|YuRtl|YuA11y|YuHeat|YuClosed|YuCrashUi|YuLibraryTest|YuEmptyProfile|YuDownloadTest|YuBackupTest|YuFeedPos|YuQualityTest|YuPinTest|YuExtTest|YuLocalPlayer|YuStart|YuGate|YuStall|YuMemory|YuPlayerTest|YuSurfaceTest|YuHang|YuSession|MTDeviceTest|StrictMode|ANR in|FATAL|OutOfMemory|lowmemorykiller" logcat.txt > stress/logcat-key.txt || true
 cp inst-*.txt repeat-results.txt stress/ 2>/dev/null || true
 echo "::group::evidence"; tail -n 400 stress/logcat-key.txt; cat stress/exit-info.txt | head -80; cat stress/anr-list.txt; for f in $(find stress -type f -name '*report*.txt' | head -20); do echo "== $f"; head -c 6000 "$f"; done; echo "::endgroup::"
+# FINAL-15: a lost adb link is a failed run, never a quiet partial pass.
+if [ "$ADB_LOST" = 1 ]; then echo "HARNESS adb lost: the run is incomplete"; exit 1; fi
