@@ -75,6 +75,8 @@ object StreamRepository {
     fun requestFor(url: String): StreamRequest? = active[url]
 
     fun addToHistory(context: Context, request: StreamRequest) {
+        // NB15D-OB1: incognito records nothing, as every other history does.
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         init(context)
         val list = listOf(request) + _history.value.filterNot { it.url == request.url }
         _history.value = list.take(MAX_HISTORY)
@@ -90,6 +92,7 @@ object StreamRepository {
 
     /** Records a channel played from a Live TV list in Live TV "Recently played". */
     fun addLive(context: Context, request: StreamRequest) {
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         init(context)
         _liveHistory.value = (listOf(request) + _liveHistory.value.filterNot { it.url == request.url }).take(MAX_LIVE)
         saveLive(context)

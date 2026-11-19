@@ -282,6 +282,14 @@ fun PermissionsCard(onMediaGranted: () -> Unit) {
 
 private data class ClearAction(val title: String, val body: String, val done: String, val run: suspend () -> Unit)
 
+/** NB15D-OB1: what "Clear watch history" also removes: stream link and Live TV recents. */
+object WatchHistoryClear {
+    fun streams(context: android.content.Context) {
+        dev.asfakul.yumeiro.stream.StreamRepository.clear(context)
+        dev.asfakul.yumeiro.stream.StreamRepository.clearLive(context)
+    }
+}
+
 @Composable
 fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: () -> Unit) {
     val context = LocalContext.current
@@ -313,7 +321,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
         SettingsActionRow("Clear watch history", "Continue watching, resume points and watched marks (device, online and YouTube)", "privacy_clear_watch") {
             pending = ClearAction("Clear watch history?", "Continue watching, resume positions and watched marks are removed everywhere.", "Watch history cleared") {
                 onClearWatchHistory()
-                io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context) }
+                io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context); WatchHistoryClear.streams(context) }
             }
         }
         if (adultOn) {
