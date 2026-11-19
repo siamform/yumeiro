@@ -50,6 +50,10 @@ class ErrorTaxonomyTest {
             "Not enough storage. Free up some space, then try again", "storage space"),
         Case("file not writable (LT-2)", java.io.FileNotFoundException("/data/user/0/dev.asfakul.yumeiro/files/streams/playlists.json.tmp: open failed: EACCES (Permission denied)"),
             "The app couldn't use its storage on this device. Restart the app, then try again", "storage space"),
+        // GROUP-14 regression LT-2b: Android 7 words the same failure "<path> (Permission denied)" with no
+        // "open failed:" and no errno (tv-api24 run 44421882957).
+        Case("file not writable, Android 7 wording (LT-2b)", java.io.FileNotFoundException("/data/user/0/dev.asfakul.yumeiro.debug/files/streams/playlists.json.tmp (Permission denied)"),
+            "The app couldn't use its storage on this device. Restart the app, then try again", "storage space"),
         Case("read-only storage in cause", java.io.IOException("save failed", java.io.IOException("write failed: EROFS (Read-only file system)")),
             "The app couldn't use its storage on this device. Restart the app, then try again", "storage space"),
         Case("broken link", IllegalArgumentException("Expected URL scheme 'http' or 'https' but no scheme was found for /x"),
@@ -65,6 +69,17 @@ class ErrorTaxonomyTest {
             val tips = ErrorHelp.suggestionsFor(c.text)
             assertTrue("${c.name}: tips $tips should mention '${c.tip}'", tips.any { c.tip in it })
             c.notTip?.let { n -> assertFalse("${c.name}: tips $tips should not mention '$n'", tips.any { n in it }) }
+        }
+    }
+
+    @Test fun `no raw app file path is shown (LT-2b)`() {
+        listOf(
+            java.io.FileNotFoundException("/data/user/0/dev.asfakul.yumeiro/files/streams/playlists.json (No such file or directory)"),
+            java.io.IOException("save failed", java.io.FileNotFoundException("/data/data/dev.asfakul.yumeiro/files/backup.zip (Read-only file system)")),
+            java.io.FileNotFoundException("/storage/emulated/0/Android/data/dev.asfakul.yumeiro/files/x.part (Permission denied)"),
+        ).forEach { e ->
+            val text = OnlineErrors.friendly(e)
+            assertFalse("$e -> $text", "/data/" in text || "/storage/" in text)
         }
     }
 
