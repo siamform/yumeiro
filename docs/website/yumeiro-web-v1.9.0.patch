@@ -1,0 +1,74 @@
+From d6302550ba88a22f293cc828c07f8ffa83fcaaaa Mon Sep 17 00:00:00 2001
+From: Asfakul Siam <71690568+siamform@users.noreply.github.com>
+Date: Thu, 19 Nov 2026 21:43:34 +0000
+Subject: [PATCH] v1.9.0: changelog highlight
+
+Co-authored-by: Perplexity <noreply@perplexity.ai>
+---
+ app/changelog/page.tsx |  2 +-
+ lib/changelog.ts       | 27 +++++++++++++--------------
+ 2 files changed, 14 insertions(+), 15 deletions(-)
+
+diff --git a/app/changelog/page.tsx b/app/changelog/page.tsx
+index ec0f20a..25ba61c 100644
+--- a/app/changelog/page.tsx
++++ b/app/changelog/page.tsx
+@@ -11,7 +11,7 @@ export const revalidate = 600;
+ export const metadata: Metadata = {
+   title: "Changelog",
+   alternates: { canonical: "/changelog" },
+-  description: "What's new in Yumeiro: v1.8.1, where every drama title plays, one quality list everywhere, an honest Library, a cooler phone and notifications on time, and every release before it.",
++  description: "What's new in Yumeiro: v1.9.0, with profiles and locks, private downloads, accent colours and hold for 2x, a faster start, Live TV that keeps playing, offline manga, and every release before it.",
+ };
+ 
+ export default async function ChangelogPage() {
+diff --git a/lib/changelog.ts b/lib/changelog.ts
+index 070e210..0f4b853 100644
+--- a/lib/changelog.ts
++++ b/lib/changelog.ts
+@@ -4,29 +4,28 @@
+  */
+ export const REDESIGN_AFTER = "v1.8.0";
+ 
+-export const highlightTitle = "v1.8.1: every title plays";
++export const highlightTitle = "v1.9.0: yours, and fast";
+ export const highlightLede =
+-  "A correction release. Every fix was tested again instead of trusting earlier notes: Yumeiro Drama plays tap to finish, one quality list everywhere, an honest Library, a cooler phone and notifications that arrive on time.";
++  "Profiles with locks, private downloads, accent colours and hold for 2x, a faster start, Live TV that switches to a working link, offline manga and more sources. Every feature was tested twice on a low-RAM phone, two Android TV versions and a recent phone.";
+ 
+ export const redesign: { title: string; items: { name: string; text: string }[] }[] = [
+   {
+-    title: "Fixed",
++    title: "New",
+     items: [
+-      { name: "Yumeiro Drama", text: "Every title opens and plays again. In 1.8.0 tapping a title showed \"Unknown drama catalog\". Studios whose video server is down are hidden and checked again later, and the same title plays from another studio when one fails." },
+-      { name: "Quality", text: "The player and the download sheet now show the same qualities. Streams with only one quality, and videos on your phone, get Yumeiro's own levels: smaller ones scaled on the GPU and one sharper level with Anime4K." },
+-      { name: "Theme pictures", text: "Custom theme pictures open again (they were refused since 1.6). JPEG, PNG, WebP, GIF, BMP, HEIC/HEIF and AVIF are accepted, and the app says why when a file can't be used." },
+-      { name: "Library", text: "Only your own likes and playlists, and play time measured from real listening. The demo playlists are gone." },
+-      { name: "Jump back in", text: "Ready as soon as the app opens." },
+-      { name: "Yumix", text: "No extension header between sections, and the extension list always has a search field." },
+-      { name: "Loading", text: "A calm, neutral loader unless Yumeiro is sure which screen comes next." },
++      { name: "Profiles", text: "Up to 8 profiles with \"Who's watching?\". Each has its own watch history, lists, YouTube history and 18+ setting, and can be locked with a PIN or the phone's fingerprint. Upgrading changes nothing: your data becomes the first profile." },
++      { name: "Private downloads", text: "Hide a finished video from every list and from the gallery. Open Private with the PIN or the phone's lock; it closes when you leave the app. Files stay in Yumeiro's private storage; they are not encrypted." },
++      { name: "Look and player", text: "Five accent colours (Gold, Ao, Sakura, Matcha, Fuji). Hold the video for 2x. A Shorts player, volume boost to 200 %, external players and the Kasumi glass theme." },
++      { name: "Live TV", text: "When a channel's link fails, Yumeiro switches to the channel's other link. Now and Next from the playlist's guide." },
++      { name: "Manga", text: "Saved chapters open without the source, and the reader can translate pages on the phone." },
++      { name: "More sources", text: "Public Telegram channels, TeraBox and DiskWala links anyone can open, Vega provider repositories you trust (in a sandbox), your own HTTP or SOCKS5 proxy, and an optional DNS fallback." },
+     ],
+   },
+   {
+-    title: "New",
++    title: "Faster and safer",
+     items: [
+-      { name: "Keep notifications on time", text: "Settings, Background: live checks for notifications, battery optimisation and background limits, each with a one-tap fix, plus step-by-step settings for Xiaomi, Samsung, Huawei, Honor, OPPO, realme, OnePlus, vivo, Tecno, Infinix, itel, ASUS, Nokia and Meizu." },
+-      { name: "Heat guard", text: "Yumeiro follows your phone's temperature and battery saver. It checks less often in the background, runs fewer extensions at once, pauses Anime4K when the phone is hot and stops collecting extra sources once enough are ready." },
+-      { name: "Crash reports on your phone", text: "Settings, Crash reports: read, share or delete reports of crashes and freezes. They stay on your phone and nothing is sent anywhere." },
++      { name: "Start-up", text: "Setup, feed, extensions and catalog show at once; extensions load behind, pinned ones first. An extension update keeps the saved catalog." },
++      { name: "Airing alerts", text: "Alerts also reach phones that use Firebase push." },
++      { name: "Last.fm", text: "The app no longer carries Yumeiro's Last.fm shared secret; Yumeiro Cloud signs those calls. Your own Last.fm key keeps working." },
+     ],
+   },
+ ];
+-- 
+2.53.0
+
