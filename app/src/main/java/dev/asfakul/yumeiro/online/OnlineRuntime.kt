@@ -92,7 +92,11 @@ object OnlineErrors {
                 "Not enough storage. Free up some space, then try again"
             // G7 LT-2: a file the app can't write (folder not writable, read-only storage) showed the raw
             // "/data/user/0/…/playlists.json.tmp: open failed: EACCES (Permission denied)".
-            chain.any { val t = it.message.orEmpty(); "EACCES" in t || "EROFS" in t || "EPERM" in t || ("open failed:" in t && "/data/" in t) } ->
+            // GROUP-14 LT-2b: Android 7 words it "<path> (Permission denied)" with no errno; any file error
+            // that names an app path is a storage problem, and the path itself is never shown.
+            chain.any { val t = it.message.orEmpty(); "EACCES" in t || "EROFS" in t || "EPERM" in t ||
+                "Permission denied" in t || "Read-only file system" in t ||
+                ((it is java.io.FileNotFoundException || "open failed:" in t) && ("/data/" in t || "/storage/" in t)) } ->
                 "The app couldn't use its storage on this device. Restart the app, then try again"
             // G7-L1: an IPTV extension whose site answered with a web page or an error text.
             chain.any { val t = it.message.orEmpty(); "#EXTM3U" in t && ("start" in t || "header" in t.lowercase()) } ->
