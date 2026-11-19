@@ -48,8 +48,8 @@ fun OnlineHomePicks(
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
-    val providers = remember(engine.generation, engine.ready, adultOn, adultPrivate) {
-        if (engine.ready) ExtensionManager.providers().filter { it.hasMainPage }
+    val providers = remember(engine.generation, engine.usable, adultOn, adultPrivate) {
+        if (engine.usable) ExtensionManager.providers().filter { it.hasMainPage }
             .filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }.take(3) else emptyList()
     }
     var rows by remember { mutableStateOf<List<OnlineRow>?>(null) }

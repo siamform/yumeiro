@@ -192,8 +192,8 @@ fun OnlineHomeScreen(
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     // 18+ Hues stay out of the feed when 18+ is off or kept private (they are still searchable).
-    val providers = remember(engine.generation, engine.ready, adultOn, adultPrivate) {
-        if (engine.ready) ExtensionManager.providers().filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) } else emptyList()
+    val providers = remember(engine.generation, engine.usable, adultOn, adultPrivate) {
+        if (engine.usable) ExtensionManager.providers().filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) } else emptyList()
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var showFilter by rememberSaveable { mutableStateOf(false) }
@@ -334,7 +334,7 @@ fun OnlineHomeScreen(
         )
 
         when {
-            !engine.ready -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
+            !engine.ready && providers.isEmpty() -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
             engine.installed.isEmpty() && providers.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
             providers.isEmpty() -> StateMessage(
                 icon = Icons.Default.Extension,

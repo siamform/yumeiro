@@ -73,6 +73,8 @@ object ExtensionManager {
 
     data class Snapshot(
         val ready: Boolean = false,
+        /** SPD-1: at least one extension is loaded and usable while the rest still load. */
+        val partial: Boolean = false,
         val installed: List<InstalledExtension> = emptyList(),
         val runtime: Map<String, LoadInfo> = emptyMap(),
         val repos: List<RepoRef> = emptyList(),
@@ -83,6 +85,8 @@ object ExtensionManager {
     ) {
         fun info(key: String) = runtime[key] ?: LoadInfo()
         val enabledCount: Int get() = installed.count { it.enabled && runtime[it.key]?.loaded == true }
+        /** SPD-1: the feed can show what is loaded so far. */
+        val usable: Boolean get() = ready || partial
     }
 
     open class ExtensionException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -195,7 +199,7 @@ object ExtensionManager {
         }
         _repair.value = null
         if (failed == 0) dev.asfakul.yumeiro.backup.BackupMeta.clearPendingDownloads(context)
-        if (ok > 0) OnlineRepository.clearCaches()
+        if (ok > 0) OnlineRepository.refreshAfterExtensionChange()
         ok to failed
     }
 
@@ -206,12 +210,29 @@ object ExtensionManager {
             if (_state.value.ready) return@withLock
             OnlineRuntime.init(context)
             readState(context)
-            val runtime = HashMap<String, LoadInfo>()
-            for (ext in _state.value.installed) {
-                runtime[ext.key] = if (ext.enabled) loadInternal(context, ext) else LoadInfo()
-            }
+            val runtime = java.util.concurrent.ConcurrentHashMap<String, LoadInfo>()
+            val all = _state.value.installed
+            all.filter { !it.enabled }.forEach { runtime[it.key] = LoadInfo() }
+            // SPD-1 (ADR-038): the feed used to wait here for every extension. Each one is published as soon
+            // as it is loaded (pinned first), and the next files are opened while the current one loads.
+            val pins = runCatching { PinnedExtensions.init(context); PinnedExtensions.pins.value }.getOrDefault(emptyList())
+            val order = StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
+            StartupSpeed.loadProgressively(
+                order,
+                ahead = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 2 else 4,
+                open = { ext ->
+                    val file = File(pluginDir(context), ext.fileName)
+                    if (!file.isFile || synchronized(plugins) { plugins.containsKey(ext.key) }) null
+                    else { runCatching { file.setReadOnly() }; loaderFactory(file, context.classLoader) }
+                },
+                load = { ext, loader -> loadInternal(context, ext, loader) },
+                publish = { ext, info ->
+                    runtime[ext.key] = info
+                    if (info.loaded) _state.update { it.copy(partial = true, runtime = it.runtime + (ext.key to info), generation = it.generation + 1) }
+                },
+            )
             cleanupFiles(context)
-            _state.update { it.copy(ready = true, runtime = runtime, generation = it.generation + 1) }
+            _state.update { it.copy(ready = true, partial = true, runtime = HashMap(runtime), generation = it.generation + 1) }
         }
     }
 
@@ -579,7 +600,7 @@ object ExtensionManager {
     @androidx.annotation.VisibleForTesting
     internal var loaderFactory: (File, ClassLoader) -> ClassLoader = { f, parent -> PathClassLoader(f.absolutePath, parent) }
 
-    private fun loadInternal(context: Context, ext: InstalledExtension): LoadInfo {
+    private fun loadInternal(context: Context, ext: InstalledExtension, opened: ClassLoader? = null): LoadInfo {
         val file = File(pluginDir(context), ext.fileName)
         if (!file.exists()) return LoadInfo(error = "File missing — reinstall it")
         synchronized(plugins) { plugins[ext.key] }?.let { p ->
@@ -587,7 +608,7 @@ object ExtensionManager {
         }
         return try {
             runCatching { file.setReadOnly() }
-            val loader = loaderFactory(file, context.classLoader)
+            val loader = opened ?: loaderFactory(file, context.classLoader)
             val manifestText = loader.getResourceAsStream("manifest.json")?.use { it.readBytes().decodeToString() }
                 ?: return LoadInfo(error = "No manifest in the extension")
             val manifest = JSONObject(manifestText)
