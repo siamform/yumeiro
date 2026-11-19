@@ -27,6 +27,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.stream.PlaylistStore
 import dev.asfakul.yumeiro.ui.components.AppMessageHost
 import dev.asfakul.yumeiro.ui.screens.stream.StreamScreen
+import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -104,7 +105,7 @@ class Nbug15RedesignDeviceTest {
             idA = PlaylistStore.addRemote(ctx, nameA, server.url("/a.m3u").toString()).id
             idB = PlaylistStore.addRemote(ctx, nameB, server.url("/b.m3u").toString()).id
         }
-        compose.setContent { Box(Modifier.fillMaxSize()) { StreamScreen(); AppMessageHost() } }
+        compose.setContent { MTPlayerTheme { Box(Modifier.fillMaxSize()) { StreamScreen(); AppMessageHost() } } }
     }
 
     @After fun tearDown() {
@@ -131,12 +132,14 @@ class Nbug15RedesignDeviceTest {
         click("live_filter_pin_$idB")
         wait("a pinned playlist goes first") { has("live_filter_$idA") && top("live_filter_$idB") < top("live_filter_$idA") }
         click("live_filter_$idA")
-        wait("picking A shows A's channels") { !has("live_filter_sheet") && shown("YuF$run News 0") }
+        // A alone: 70 channels (Sports 40 sorts above News 30, so A's first Sports tile is the one on screen).
+        wait("picking A shows A's channels") { !has("live_filter_sheet") && headerState() == "Showing 50 of 70 channels" && shown("YuF$run Sports 0") }
         val onlyA = !shown("YuF$run BNews") && !shown("YuF$run Other")
         val chip = has("live_pinned_$idB")
         FirstRun.shot("nb15r_a_filtered")
         click("live_pinned_$idB")
-        wait("the pinned chip shows B's channels") { shown("YuF$run BNews 0") && !shown("YuF$run Sports 0") }
+        // B alone: 10 + 40 + its copy of A's stream = 51 channels.
+        wait("the pinned chip shows B's channels") { headerState() == "Showing 50 of 51 channels" && shown("YuF$run Other 0") && !shown("YuF$run Sports 0") }
         // Unpin again so the next test starts clean.
         click("live_filter_button")
         wait("filter sheet again") { has("live_filter_pin_$idB") }
@@ -157,6 +160,7 @@ class Nbug15RedesignDeviceTest {
         val names = inside("stream_screen", nameA) || inside("stream_screen", nameB)
         val chips = has("live_cat_Sports") && has("live_cat_Other")
         val first = headerState()
+        val title = inside("live_header", "120 channels", substring = false)
         FirstRun.shot("nb15r_b_feed")
         val list = compose.onAllNodesWithTag("stream_screen", true)[0]
         list.performScrollToNode(hasText("YuF$run Sports 9")); compose.waitForIdle()
@@ -166,7 +170,7 @@ class Nbug15RedesignDeviceTest {
         val dup = shown("YuF$run Dup")
         list.performScrollToIndex(0); compose.waitForIdle()
         val third = headerState()
-        log("NB15R_RESULT b newsCount40=$newsCount view=$view names=$names chips=$chips paging=[$first | $second | $third] dup=$dup")
+        log("NB15R_RESULT b newsCount40=$newsCount view=$view names=$names chips=$chips paging=[$first | $second | $third] dup=$dup title120=$title")
         assertEquals("NB15-B1: the feed shows 'View' buttons", 0, view)
         assertTrue("NB15-B1: the feed shows playlist names", !names)
         assertTrue("NB15-B2: 'News' does not hold A's 30 and B's 10 channels", newsCount)
@@ -175,6 +179,7 @@ class Nbug15RedesignDeviceTest {
         assertEquals("NB15-B3: after reaching the end once", "Showing 100 of 120 channels", second)
         assertEquals("NB15-B3: after reaching the end twice", "All 120 channels", third)
         assertTrue("a stream in both playlists showed twice", !dup)
+        assertTrue("the header counts a stream in both playlists twice (not '120 channels')", title)
     }
 
     @Test fun c_toolsModalHoldsEveryToolAndOpensPlaylists() {
