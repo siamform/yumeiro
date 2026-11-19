@@ -186,6 +186,19 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
     val ordered = remember(labelled) { labelled.map { it.first } }
     val episodes = remember(ordered, season) { ordered.withIndex().filter { season == null || it.value.season == season.number } }
     val historyVersion by OnlineHistory.version.collectAsState()
+    // NF-1: what was the newest episode last time? Read once per title + version off the main thread, then remember
+    // what this visit shows (the stored value only grows). Episodes newer than the old value are "Fresh".
+    val ctxNf1 = androidx.compose.ui.platform.LocalContext.current
+    val episodeStatusOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(ctxNf1, dev.asfakul.yumeiro.FeatureFlags.Flag.EPISODE_STATUS) }
+    val seenBefore by androidx.compose.runtime.produceState<Int?>(null, d.api, d.url, version) {
+        value = if (!episodeStatusOn) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val old = dev.asfakul.yumeiro.online.EpisodeStatus.Seen.get(ctxNf1, d.api, d.url, version)
+            dev.asfakul.yumeiro.online.EpisodeStatus.highest(ordered)?.let { dev.asfakul.yumeiro.online.EpisodeStatus.Seen.put(ctxNf1, d.api, d.url, version, it) }
+            old
+        }
+    }
+    fun statusOf(e: OnlineEpisode, p: OnlineHistory.Progress?): dev.asfakul.yumeiro.online.EpisodeStatus? = if (!episodeStatusOn) null else
+        dev.asfakul.yumeiro.online.EpisodeStatus.of(p, (dev.asfakul.yumeiro.online.EpisodeStatus.ordinal(e) ?: 0) - 1, seenBefore)
     // Round 13: thumbnails for episodes the extension sends without one.
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(d.api, d.url) { dev.asfakul.yumeiro.online.EpisodeStills.ensure(ctx, d) }
@@ -328,7 +341,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         line.forEach { (i, e) ->
                             val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(d.api, e.data) }
-                            EpisodeTile(e, tag = labelled[i].second, current = i == resumeIndex, progress = p?.fraction ?: 0f, watched = p?.finished == true, downloaded = e.data in savedData, modifier = Modifier.weight(1f)) { onPlay(version, i) }
+                            EpisodeTile(e, tag = labelled[i].second, current = i == resumeIndex, progress = p?.fraction ?: 0f, watched = p?.finished == true, downloaded = e.data in savedData, modifier = Modifier.weight(1f), fresh = statusOf(e, p) == dev.asfakul.yumeiro.online.EpisodeStatus.Fresh) { onPlay(version, i) }
                         }
                         repeat(tileCols - line.size) { Spacer(Modifier.weight(1f)) }
                     }
@@ -336,7 +349,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             } else {
                 items(episodes, key = { "ep_" + it.index + it.value.data }) { (i, e) ->
                     val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(d.api, e.data) }
-                    EpisodeRow(e, d, stills, progress = p?.fraction ?: 0f, watched = p?.finished == true, trailing = { EpisodeDownloadIcon(d, version, i, e) }) { onPlay(version, i) }
+                    EpisodeRow(e, d, stills, progress = p?.fraction ?: 0f, watched = p?.finished == true, status = statusOf(e, p), trailing = { EpisodeDownloadIcon(d, version, i, e) }) { onPlay(version, i) }
                 }
             }
         }
@@ -352,7 +365,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
 }
 
 @Composable
-private fun EpisodeRow(e: OnlineEpisode, d: OnlineDetail, stills: Map<String, String>?, progress: Float = 0f, watched: Boolean = false, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
+private fun EpisodeRow(e: OnlineEpisode, d: OnlineDetail, stills: Map<String, String>?, progress: Float = 0f, watched: Boolean = false, status: dev.asfakul.yumeiro.online.EpisodeStatus? = null, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable(onClick = onClick).testTag("online_episode")) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))) {
@@ -366,7 +379,11 @@ private fun EpisodeRow(e: OnlineEpisode, d: OnlineDetail, stills: Map<String, St
             Column(Modifier.weight(1f)) {
                 Text(e.label, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 e.description?.takeIf { it.isNotBlank() }?.let { Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp) }
-                e.runtimeMin?.takeIf { it > 0 }?.let { Text("${it} min", color = TextTertiary, fontSize = 11.sp) }
+                val runtime = e.runtimeMin?.takeIf { it > 0 }?.let { "$it min" }
+                if (status != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(status.label, color = if (status is dev.asfakul.yumeiro.online.EpisodeStatus.InProgress) TextSecondary else SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("online_episode_status"))
+                    if (runtime != null) Text("  ·  $runtime", color = TextTertiary, fontSize = 11.sp)
+                } else runtime?.let { Text(it, color = TextTertiary, fontSize = 11.sp) }
             }
             trailing()
         }
@@ -397,12 +414,14 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeTile(e: OnlineEpisode, tag: String? = null, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, downloaded: Boolean = false, onClick: () -> Unit) {
+private fun EpisodeTile(e: OnlineEpisode, tag: String? = null, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, downloaded: Boolean = false, fresh: Boolean = false, onClick: () -> Unit) {
     val bg = when { current -> SpotifyGreen.copy(alpha = 0.24f); watched -> Color.White.copy(alpha = 0.04f); else -> GlassFill }
     Box(modifier.aspectRatio(1.25f).clip(RoundedCornerShape(12.dp)).background(bg).clickable(onClick = onClick).testTag("online_episode"), contentAlignment = Alignment.Center) {
         Text(e.episode?.toString() ?: "•", color = if (watched) TextTertiary else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         if (tag != null) Text(tag, color = TextSecondary, fontSize = 9.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 3.dp, end = 14.dp).testTag("online_episode_tag"))
+        // NF-1: a small green dot for an episode added since the last visit (TalkBack reads "Fresh").
+        if (fresh && !downloaded) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).size(7.dp).clip(CircleShape).background(SpotifyGreen).semantics { contentDescription = "Fresh" }.testTag("online_episode_fresh"))
         if (downloaded) Icon(Icons.Default.CheckCircle, "Downloaded", tint = SpotifyGreen, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(12.dp))
         if (progress > 0.01f) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.12f))) {
