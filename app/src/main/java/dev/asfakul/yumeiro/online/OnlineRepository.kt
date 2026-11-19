@@ -207,6 +207,18 @@ object OnlineRepository {
     /** Forgets loaded pages (memory and the copy saved on the phone): settings or extensions changed. */
     fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear(); runCatching { dev.asfakul.yumeiro.cache.DataCache.invalidateAll() } }
 
+    /**
+     * SPD-2 (ADR-038): an extension was installed or updated in the background. Before, this used [clearCaches],
+     * which deleted every saved page on the phone, so the next Yumix / Home visit asked every extension again
+     * (slow feed after almost every launch). Now only the memory copies go; saved pages stay and are shown at
+     * once, then refreshed in the background (stale-while-revalidate) because they predate the change.
+     */
+    fun refreshAfterExtensionChange() {
+        staleBefore = System.currentTimeMillis()
+        homeCache.clear(); detailCache.clear(); searchCache.clear()
+    }
+    @Volatile private var staleBefore = 0L
+
     /** Items a home row already showed (for an instant "See all"). */
     fun cachedRow(api: String, pageData: String): List<OnlineItem>? =
         homeCache[api]?.value?.filter { it.pageData == pageData }?.flatMap { it.items }?.distinctBy { it.url }?.takeIf { it.isNotEmpty() }
@@ -222,7 +234,8 @@ object OnlineRepository {
             homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
             // R15: a saved page is shown at once, but it may be hours old. The caller refreshes it
             // in the background (stale-while-revalidate) instead of leaving the old copy up.
-            if ((dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L) > CACHE_MS) diskServed.add(api.name)
+            val age = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L
+            if (age > CACHE_MS || System.currentTimeMillis() - age < staleBefore) diskServed.add(api.name)
             return@withContext rows
         }
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
