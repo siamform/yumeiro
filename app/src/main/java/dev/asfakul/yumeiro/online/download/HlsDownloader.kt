@@ -86,17 +86,22 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         coroutineContext.ensureActive()
         join(v, a, out)
         onContainer("mp4")
-        listOf(v, a).forEach { f -> f.delete(); File(f.parentFile, f.name + ".idx").delete() }
+        listOf(v, a).forEach { f -> f.delete(); File(f.parentFile, f.name + ".idx").delete(); File(f.parentFile, f.name + STATE_FILTERED).delete() }
         return out.length()
     }
 
-    private suspend fun saveMedia(playlistUrl: String, text: String, out: File, onFmp4: () -> Unit, progress: (Long, Long) -> Unit): Long {
-        if (RX_HLSDOWNLOADER_1.containsMatchIn(text)) throw IOException("This stream is DRM-protected and can't be saved")
-        if ("#EXT-X-ENDLIST" !in text) throw IOException("Live streams can't be downloaded")
+    private suspend fun saveMedia(playlistUrl: String, rawText: String, out: File, onFmp4: () -> Unit, progress: (Long, Long) -> Unit): Long {
+        if (RX_HLSDOWNLOADER_1.containsMatchIn(rawText)) throw IOException("This stream is DRM-protected and can't be saved")
+        if ("#EXT-X-ENDLIST" !in rawText) throw IOException("Live streams can't be downloaded")
+        // NF-2b-2: the same ad-break filter the player uses (HlsAdFilter, conservative and capped), so a saved
+        // file has no spliced ads that turn black or stall. A filtered list keeps its resume record in its own
+        // side file: a record written for the unfiltered list (before this change) must not be reused.
+        val filtered = dev.asfakul.yumeiro.stream.HlsAdFilter.clean(rawText, playlistUrl)
+        val text = filtered.text
         val segments = parseMedia(text, playlistUrl)
         if (segments.isEmpty()) throw IOException("The playlist has no segments")
         if (segments.first().initUrl != null) onFmp4()
-        val state = File(out.parentFile, out.name + ".idx")
+        val state = File(out.parentFile, out.name + if (filtered.removedSegments > 0) STATE_FILTERED else ".idx")
         // R16 (G8): the side file now records "segments:bytes". It is written every 5 segments, so
         // after a pause the file can hold a few segments more than recorded; they were appended a
         // second time on resume (repeated video). The file is cut back to the recorded length.
@@ -170,6 +175,9 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
     }
 
     companion object {
+        /** NF-2b-2: resume record of an ad-filtered playlist (see [saveMedia]). */
+        internal const val STATE_FILTERED = ".aidx"
+
         fun resolve(base: String, ref: String): String =
             base.toHttpUrlOrNull()?.resolve(ref.trim())?.toString() ?: ref.trim()
 
