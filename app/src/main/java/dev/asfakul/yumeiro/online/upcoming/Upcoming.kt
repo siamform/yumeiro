@@ -27,7 +27,7 @@ import java.util.Locale
 
 /**
  * F-08 Upcoming (ADR-034): what comes out in the next two weeks, from Simkl's public calendar files
- * (`data.simkl.in/calendar/*.json`, no key, no account; the same files Simkl's own site uses). ADR-013 keeps
+ * (`data.simkl.in/calendar/<kind>.json`, no key, no account; the same files Simkl's own site uses). ADR-013 keeps
  * TMDB keys out of the APK, so TMDB is not used.
  *
  * Memory: the series file is ~2.5 MB (460 KB gzip) with ~5,600 entries. It is decoded one element at a time
