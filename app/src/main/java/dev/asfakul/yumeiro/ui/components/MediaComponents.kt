@@ -1229,7 +1229,7 @@ fun SongActionBottomSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = DarkSurfaceContainerHigh,
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
-        dragHandle = { MoonSheetHandle() },
+        dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(),
         modifier = modifier.testTag("song_action_bottom_sheet")
     ) {
         Column(

@@ -270,6 +270,16 @@ fun MoonTag(text: String, modifier: Modifier = Modifier, strong: Boolean = false
 /** Secondary line colour helper for rows (keeps tertiary text consistent). */
 val RowSubtle: Color @Composable get() = TextSecondary.copy(alpha = 0.86f)
 
+/**
+ * G10 ER-28 (NB15-OB2): the drag handle to pass to every ModalBottomSheet. Material3 wraps a non-null
+ * handle in a clickable "Drag handle" node (BottomSheet.kt, androidx-main), so on TV the first remote key
+ * focused the handle, showed a "Drag handle" tooltip, and OK closed the sheet. A remote can't drag, so
+ * TV gets no handle and the first key lands in the sheet's content.
+ */
+@Composable
+fun sheetDragHandle(): (@Composable () -> Unit)? =
+    if (dev.asfakul.yumeiro.ui.tv.LocalTvMode.current) null else ({ MoonSheetHandle() })
+
 /** Drag handle for every bottom sheet: the moon path as a short gold stroke. */
 @Composable
 fun MoonSheetHandle() {

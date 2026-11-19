@@ -258,7 +258,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss, containerColor = pal.surface,
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
-        dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() },
+        dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(),
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("manga_source_sheet")) {
             Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp)) {

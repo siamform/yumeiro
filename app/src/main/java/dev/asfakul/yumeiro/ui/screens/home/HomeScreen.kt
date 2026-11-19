@@ -764,7 +764,7 @@ fun HomeScreen(
     }
 
     if (customizing) {
-        ModalBottomSheet(onDismissRequest = { customizing = false }, containerColor = p.surfaceContainerHigh) {
+        ModalBottomSheet(onDismissRequest = { customizing = false }, containerColor = p.surfaceContainerHigh, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 16.dp).testTag("home_customize_sheet")) {
                 Text("Customize home", style = SectionTitleStyle, color = p.textPrimary)
                 Text("Turn sections on or off. Continue always stays at the top.", style = MaterialTheme.typography.bodySmall, color = p.textSecondary, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))

@@ -165,7 +165,7 @@ internal fun LiveToolsSheet(tools: List<LiveTool>, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss, containerColor = pal.surface, sheetState = sheetState,
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
-        dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() },
+        dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(),
     ) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState())

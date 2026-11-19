@@ -97,7 +97,7 @@ internal fun SourceFilterSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss, containerColor = p.surface, sheetState = sheetState,
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
-        dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() },
+        dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(),
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("${t.tag}_sheet")) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {

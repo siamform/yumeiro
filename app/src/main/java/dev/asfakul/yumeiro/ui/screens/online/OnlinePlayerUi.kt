@@ -686,7 +686,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
 
     if (sheet != null) {
         val sheetPal = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = sheetPal.surfaceContainer, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { sheet = null }, containerColor = sheetPal.surfaceContainer, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
           androidx.compose.runtime.CompositionLocalProvider(LocalPanelInk provides sheetPal.textPrimary) {
             Text(if (sheet == Sheet.SOURCES) "Sources" else "Subtitles", color = sheetPal.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             Box(Modifier.fillMaxWidth().heightIn(max = 460.dp)) {

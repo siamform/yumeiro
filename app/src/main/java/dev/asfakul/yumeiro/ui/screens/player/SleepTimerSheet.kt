@@ -78,7 +78,7 @@ fun SleepTimerSheet(
 ) {
     val p = LocalMtPalette.current
     val remaining = rememberSleepRemaining(state, endLabel)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = { dev.asfakul.yumeiro.ui.components.MoonSheetHandle() }) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("sleep_timer_sheet")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Bedtime, null, tint = p.accent, modifier = Modifier.size(22.dp))
