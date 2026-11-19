@@ -244,3 +244,61 @@ box, timing of first stream.
 8. SkyStream only on demand (M).
 About 2,500 lines including tests for steps 1-7. No new dependency (QuickJS and jsoup already
 present).
+
+## Tenth cycle (2026-11-20): corrected by ADR-047, Vega step 4 built
+
+Section 5 above describes three separate loaders. ADR-047 replaces that with one repository
+registry (`sources/ecosystem/EcosystemRegistry.kt`), one manifest parser per format
+(`RepoFormats.kt`) and one runtime adapter per ecosystem (`VegaAdapter.kt`, sharing
+`ScriptRuntime.kt` + `ScriptHost.kt` + `assets/js/provider_runtime.js`). The CloudStream loader is
+not touched. Nuvio and SkyStream are recognised but not run in 1.9.0 (evidence in ADR-047: both
+are TMDB-keyed stream add-ons and Yumeiro has no stream-merge seam yet). Steps 1-3 of section 7
+were already done in earlier cycles (UniversalAdd detection, SRC-2 `PublicOnly`, JS time limits).
+
+Competitors (design read only, no code copied): Hikari v0.12.51 (registry of script sources with
+per-plugin sandbox), tapframe/NuvioStreaming e022cfdf7f (`PluginModels`, scraper manifest, per-call
+runtime), Zenda-Cross/vega-providers 24054d4484 (provider file layout and `ProviderContext`).
+
+### Feature profile
+
+| | |
+|---|---|
+| Who | Users who already have a Vega provider repository link they trust |
+| Where | Sources > Script repos (new tab); Universal add routes Vega manifests here |
+| Default | Nothing installed, no repository built in; kill switch `scripts_vega` (default on) |
+| Cost when unused | None: the registry loads one small JSON file at start, no runtime is created |
+| Cost per call | One QuickJS (≤ 48 MB, 32 MB low-end/TV) for ≤ 25 s, then closed; ≤ 4 at once (2 low-end/TV) |
+| Storage | `filesDir/scripts` ≤ 50 MB; `script_kv_<provider>` ≤ 64 KB each; not in backups |
+
+### Action → reaction
+
+| Action | Reaction |
+|---|---|
+| Paste a Vega `manifest.json` | Parsed; "Vega providers added · N providers"; listed under Available |
+| Paste a Nuvio or SkyStream repo | "Yumeiro recognises it, but can't run … in this version yet. Nothing was added." |
+| Paste a CloudStream repo here | "This is a CloudStream repository; add it from its own section" (existing loader) |
+| Tap Install on a provider | Files downloaded (staged, capped, hashed); home rows read; source appears in Home/Search/Source status |
+| Open a title from it | meta → details; series lists become seasons; episodes pages fetched once per list |
+| Play | getStream; DRM streams dropped silently (logged); others in the stream list with quality |
+| Provider loops / hangs | Stopped at the call budget: "This source took too long and was stopped"; next call works |
+| Provider asks for 192.168.x.x / 127.0.0.1 | Refused by SRC-2; the call sees a failed request |
+| Code changed on disk | Plugin left out, "Not loaded: code changed on disk" on its row; others keep working |
+| Uninstall | Folder and its key/value store deleted; source gone |
+| Remove repo (confirm dialog, Cancel first) | Repo removed; installed sources stay until uninstalled |
+| Kill switch off | No Vega source is published; Script repos says sources are switched off on add |
+
+### Side effects checked
+
+- CloudStream, Aniyomi, Mihon, Stremio, JavaScript (Mangayomi) sources: separate bridge keys; the
+  registry publishes only `eco:vega`, `eco:nuvio`, `eco:skystream`. A failure in one plugin is caught
+  per plugin.
+- `JsBridge` reused unchanged (same guard and caps); the Mangayomi JS engine is not touched.
+- One OkHttp client for all script calls (a new `NetworkHelper` per call would open a second disk
+  cache on the same folder).
+- Main thread: all registry IO, downloads and calls run on `Dispatchers.IO`.
+- Regex: none in the new code (RegexGuardTest).
+
+### Terms check
+
+No DRM bypass (DRM streams dropped), no login or paywall handling, no `openWebView`, no repository
+or provider built in or suggested. The user adds sources they choose, like CloudStream repositories.

@@ -1372,6 +1372,73 @@ docs/proposals/FEATURE-NBUG-6-per-feature-dns.md "Tenth cycle".
 Consequences. Off: identical to before. On, healthy network: no extra work. On, dead DNS: the OS
 resolver's own timeout once per session plus ≤ 7 s. Real-network proof is owner test OMT-47.
 
+### ADR-047: Script ecosystems — one registry, one parser per format, one adapter per ecosystem (Vega step 4)
+
+Status: accepted 2026-11-20 (tenth cycle). Sources. Flag `scripts_vega`. Corrects proposal F-05
+(docs/proposals/FEATURE-F-05-nuvio-skystream-repos.md), which planned three separate loaders
+(`NuvioRepo`, `VegaRepo`, `SkyStreamRepo`).
+
+Context. Vega (Zenda-Cross/vega-providers 24054d4484), Nuvio (tapframe/NuvioStreaming e022cfdf7f,
+tapframe/nuvio-providers cb4bf14421) and SkyStream (sky-universe a0dc58fde3, skystream-plugins)
+publish JavaScript plugins in three repository formats. Hikari v0.12.51 and NuvioStreaming were read
+as references (design only; no code copied). The CloudStream loader must stay untouched and no
+ecosystem may break another.
+
+Evidence (read from the projects, not assumed).
+- Vega: `manifest.json` is a bare array `{display_name, value, version, type, disabled}`; code is
+  `dist/<value>/{catalog,posts,meta,episodes,stream}.js`, CommonJS from esbuild; `ProviderContext`
+  is `{axios, cheerio, commonHeaders, kvStore, getCookies, openWebView}`; `Stream.drm` carries keys.
+  It browses its own site (posts → meta → episodes → stream), so it maps onto `MainAPI` like any
+  source. Verified locally: the real `dist/` files ran in QuickJS-WebAssembly (quickjs-emscripten
+  0.31.0) under `provider_runtime.js` with a Node host emulating the bridge: `getPosts` → 2 posts,
+  `catalog` export read, `getMeta` → title, synopsis, imdbId, type series.
+- Nuvio: object manifest `{name, version, scrapers:[{id, filename, supportedTypes, enabled}]}` or a
+  bare array of scrapers; each scraper is `getStreams(tmdbId, mediaType, season, episode)` and needs
+  `cheerio-without-node-native`. It has no catalog: it adds streams to a title the app already knows
+  by TMDB id. Yumeiro has no seam that merges extra streams into another source's title — even
+  stream-only Stremio add-ons are unused today (`StremioAddons.publish` only publishes add-ons with
+  catalogs). Building that seam is a separate feature with its own side effects.
+- SkyStream: `repo.json {name, packageName|id, manifestVersion, pluginLists}` and
+  `mega_repo.json {name, id, manifestVersion, repos}`; plugins are `.sky` archives; shortcodes
+  resolve through `https://cutt.ly/sky-<code>`. The plugin API is also TMDB-keyed.
+
+Options. (a) Three loaders as F-05 wrote — rejected by the tenth-cycle order and because each would
+re-implement download, caps, hashes, storage and UI. (b) One registry, one `ManifestParser` per
+format, one `RuntimeAdapter` per ecosystem, sharing one sandboxed `ScriptRuntime` — chosen.
+(c) Ship all three runtimes now — rejected: Nuvio and SkyStream would need the stream-merge seam
+first (above); shipping them half-working would show sources that never return a stream.
+
+Decision.
+- `RepoFormats`: parsers for Vega, Nuvio (both shapes), SkyStream (repo and mega repo) and
+  CloudStream (detect only, so a CloudStream link is sent to the existing loader). Parsers read JSON
+  only; ids pass `safeId` so a manifest can't name a path outside the plugin folder.
+- `EcosystemRegistry`: the user's repositories and installed plugins in
+  `filesDir/scripts/registry.json` (`SafeJsonFile`); no repository is built in. Install is explicit
+  per provider (Install tap), staged in `<id>.new` and renamed; 1 MB manifest, 2 MB per file, 50 MB
+  in total; SHA-256 per file, re-checked before every publish. Each ecosystem publishes on its own
+  bridge key `eco:<name>`; a plugin that fails to build is left out and reported in the Script repos
+  tab; the others go on. Kill switch per ecosystem.
+- `ScriptRuntime` (shared): a fresh QuickJS per call, closed after; 48 MB (32 MB on low-end and TV),
+  1 MB stack; each evaluate gets what is left of a 25 s call budget (at most 20 s); 4 calls at once
+  (2 on low-end and TV); network only through `JsBridge`, so SRC-2 `PublicOnly` and the 5 MB cap
+  apply, 12 s per request, 30 requests per call; a 64 KB key/value store per provider; no
+  `openWebView` (rejects with a message).
+- `VegaAdapter`: catalog → home rows (read once at install), posts → home and search, meta →
+  details (movie or seasons), episodes → episode lists, stream → links. Streams with `drm` are
+  dropped (no provider-supplied keys, same rule as F-05 §4 and the terms check).
+- Nuvio and SkyStream: recognised; adding one says Yumeiro can't run that ecosystem yet and saves
+  nothing. Queued in UNVERIFIED-QUEUE (needs the stream-merge seam, then one adapter each).
+
+Deviation noted. F-05 asked for the extension review screen before install; `ExtensionReview` is for
+DEX permissions and does not fit scripts. Consent here is the explicit Install tap per provider, as
+in the JavaScript tab, with the sandbox stated on the tab.
+
+Consequences. CloudStream code is untouched. Vega providers appear in Home, Search and Source status
+like any source (Source status lists `SourceHub.ecosystemOf(api).label`). A hostile or broken
+provider can use at most its call budget and memory cap, can't reach the home network and can't
+leave its folder. Not backed up: `filesDir/scripts` and `script_kv_*` (re-install from the repo).
+Real-repository proof is an owner test (OMT-48).
+
 ## 11. Risks
 
 | Risk | Mitigation |
