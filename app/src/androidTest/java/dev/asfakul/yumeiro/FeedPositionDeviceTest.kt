@@ -280,7 +280,16 @@ class FeedPositionDeviceTest {
     /** NBUG-15 (ADR-028): Live TV's feed is one long grid merged from every playlist, by category. */
     @Test fun liveTv() = run("live") {
         fromHome("quick_card_live")
-        rule.waitUntil(120_000) { rule.onAllNodesWithTag("live_channel", true).fetchSemanticsNodes().isNotEmpty() }
+        val tiles = runCatching { rule.waitUntil(120_000) { rule.onAllNodesWithTag("live_channel", true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
+        if (!tiles) {
+            // Diagnostics (tv-api24 44435753383: no tile in 120 s): what the page and the store show.
+            FirstRun.shot("feed_live_none")
+            val header = rule.onAllNodesWithTag("live_header", true).fetchSemanticsNodes().firstOrNull()
+                ?.config?.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.StateDescription) { null }
+            val lists = dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.filter { it.enabled }.map { "${it.name}:${it.channelCount}" }
+            log("live: no tile · header=$header · enabled=$lists · ${onScreen()}")
+        }
+        assertTrue("live: no channel tile in 120 s · ${onScreen()}", tiles)
         log("live channels on screen: ${rule.onAllNodesWithTag("live_channel", true).fetchSemanticsNodes().size}")
         idle(1_000)
     }
