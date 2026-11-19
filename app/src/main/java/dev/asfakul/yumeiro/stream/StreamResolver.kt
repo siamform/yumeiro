@@ -251,6 +251,15 @@ object StreamResolver {
         val host = PlatformRules.hostOf(p.requestedUrl) ?: "the server"
         p.failure?.let { f ->
             val dns = NetworkSettings.dns.value
+            // G10 ER-26: with no network at all, DNS, timeout and connect errors all mean "offline". The
+            // DNS text and its "turn on an alternative DNS" button sent people to a setting that can't help.
+            if (!dev.asfakul.yumeiro.network.Connectivity.online.value &&
+                (f == NetworkFailure.DNS || f == NetworkFailure.TIMEOUT || f == NetworkFailure.CONNECTION)
+            ) return Resolution.Failed(
+                "No internet connection",
+                "This device is offline. Turn on Wi-Fi or mobile data, then try again.",
+                suggestDns = false,
+            )
             return when (f) {
                 NetworkFailure.DNS -> Resolution.Failed(
                     "Can't find the server",
