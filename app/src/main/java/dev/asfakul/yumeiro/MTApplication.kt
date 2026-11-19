@@ -105,6 +105,7 @@ class MTApplication : Application(), ImageLoaderFactory {
         .fetcherDispatcher(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(if (DeviceClass.lowEnd) 4 else 8))
         .decoderDispatcher(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(if (DeviceClass.lowEnd) 2 else 3))
         .components {
+            dev.asfakul.yumeiro.ui.image.ImageDecoders.factories().forEach { add(it) }
             add(VideoThumbnailFetcher.Keyer())
             add(VideoThumbnailFetcher.Factory(this@MTApplication))
         }

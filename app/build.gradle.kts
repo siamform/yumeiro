@@ -321,6 +321,7 @@ dependencies {
   // CloudStream extensions look up NavHostFragment; keep the class available to them.
   implementation(libs.androidx.navigation.fragment)
   implementation(libs.coil.compose)
+  implementation(libs.coil.svg) // NB14-OB1: SVG channel logos
 
   // Media3
   implementation(libs.media3.exoplayer)
