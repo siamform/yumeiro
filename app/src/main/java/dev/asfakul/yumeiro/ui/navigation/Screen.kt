@@ -53,6 +53,8 @@ sealed class Screen(val route: String) {
     }
     /** "See all" for Continue watching. */
     data object OnlineHistory : Screen("videos/online/history")
+    /** F-08: release calendar. */
+    data object OnlineUpcoming : Screen("videos/online/upcoming")
     /** My List, downloads and watch history for videos. */
     data object OnlineLibrary : Screen("videos/library")
     /** Offline downloads: Permanent / Offline groups, settings and tips. */

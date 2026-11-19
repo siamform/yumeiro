@@ -903,6 +903,7 @@ fun MTPlayerApp(
                                     onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
                                     onOpenInfo = { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) },
                                     onOpenLibrary = { navigateSub(Screen.OnlineLibrary.route) },
+                                    onOpenUpcoming = { navigateSub(Screen.OnlineUpcoming.route) },
                                 )
                             } else {
                             VideoScreen(
@@ -1095,6 +1096,14 @@ fun MTPlayerApp(
                             onOpenTitle = openOnline,
                             onOpenExtensions = { navigateSub(Screen.Extensions.route) },
                         )
+                        }
+                    }
+                    page(subPad, Screen.OnlineUpcoming.route) {
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.UpcomingScreen(onBack = popSub, onSearch = { q ->
+                            dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q
+                            navigateSub(Screen.OnlineSearch.route)
+                        })
                         }
                     }
                     page(subPad, Screen.OnlineHistory.route) {

@@ -180,6 +180,7 @@ fun OnlineHomeScreen(
     onOpenHistory: () -> Unit = {},
     onOpenInfo: (OnlineItem) -> Unit = onOpenTitle,
     onOpenLibrary: () -> Unit = onOpenHistory,
+    onOpenUpcoming: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -388,6 +389,7 @@ fun OnlineHomeScreen(
                         buildMixFeed(ready, 24, cardsPerShelf = Int.MAX_VALUE, skip = bannerKeys)
                             .filterIsInstance<FeedEntry.Card>().map { it.item }
                     }
+                    val upcomingOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.UPCOMING) }
                     val tagSections = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.YUMIX_TAG_SECTIONS) }
                     val cats = remember(ready) { YumixFeed.categories(ready, byTags = tagSections) }
                     var cat by rememberSaveable { mutableStateOf<String?>(null) }
@@ -484,6 +486,8 @@ fun OnlineHomeScreen(
                         if (favorites.isNotEmpty()) item("favorites") {
                             PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
+                        // F-08: one compact entry to the release calendar (kill switch FeatureFlags.UPCOMING).
+                        if (onOpenUpcoming != null && upcomingOn) item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
                         if (picks.isNotEmpty()) item("feed_label") {
                             PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
@@ -643,4 +647,22 @@ fun VideoSourceSwitch(
         modifier = modifier,
         testTag = "video_source_switch",
     )
+}
+
+@Composable
+private fun UpcomingEntryCard(onClick: () -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp))
+            .background(dev.asfakul.yumeiro.ui.theme.GlassFill).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp)
+            .testTag("online_upcoming_entry"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, null, tint = dev.asfakul.yumeiro.ui.theme.SpotifyGreen)
+        androidx.compose.foundation.layout.Spacer(Modifier.width(12.dp))
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+            Text("Upcoming", color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 15.sp)
+            Text("Movies, series and anime in the next two weeks", color = dev.asfakul.yumeiro.ui.theme.TextSecondary, fontSize = 12.sp, maxLines = 1)
+        }
+        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = dev.asfakul.yumeiro.ui.theme.TextTertiary)
+    }
 }

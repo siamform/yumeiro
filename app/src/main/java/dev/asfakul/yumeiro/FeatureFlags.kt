@@ -21,6 +21,8 @@ object FeatureFlags {
         YUMIX_TAG_SECTIONS("f16_tag_sections", true),
         /** NF-1: episode status line (Watched, N min left, Fresh). */
         EPISODE_STATUS("nf1_episode_status", true),
+        /** F-08: Upcoming calendar entry on Yumix (Simkl public calendar). */
+        UPCOMING("f08_upcoming", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

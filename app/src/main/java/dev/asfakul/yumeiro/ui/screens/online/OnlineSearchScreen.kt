@@ -104,8 +104,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         else ExtensionManager.providers().filter { adultOn || !dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }
     }
 
-    var text by rememberSaveable { mutableStateOf("") }
-    var submitted by rememberSaveable { mutableStateOf("") }
+    // F-08: a search started from Upcoming arrives with its title already typed and submitted.
+    val pending = remember { OnlineSearchPending.take() }
+    var text by rememberSaveable { mutableStateOf(pending.orEmpty()) }
+    var submitted by rememberSaveable { mutableStateOf(pending.orEmpty()) }
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }
     val results = remember { mutableStateMapOf<String, ProviderResult>() }
