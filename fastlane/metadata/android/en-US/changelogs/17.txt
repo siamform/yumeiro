@@ -1,0 +1,2 @@
+Profiles with a PIN or phone lock ("Who's watching?"), each with its own history, lists and 18+ setting. Private downloads: hide videos behind a lock, never in the gallery. Accent colours (blue Ao, Sakura, Matcha, Fuji, Gold). Hold the video for 2x.
+Faster start: catalog and setup show at once, extensions load behind. Watch Later and Favourite on posters, statistics, Upcoming, Shorts player, volume boost to 200%, external players, offline manga, Live TV failover and Now/Next.

@@ -2,6 +2,53 @@
 
 All notable changes to Yumeiro.
 
+## v1.9.0: yours, and fast
+
+Planned as v1.8.2; it adds features, so it ships as 1.9.0. What is proven and what still needs your phones is
+listed at the end (full list: docs/REMAINING-2026-11-19.md).
+
+### Profiles and privacy
+- Profiles (up to 8) with "Who's watching?". Each profile has its own watch history, lists, YouTube history and 18+
+  setting. A profile can be locked with a 4–8 digit PIN and/or the phone's fingerprint / screen lock. Upgrading
+  changes nothing: your data becomes the first profile.
+- Nothing of the app can be reached with the remote behind "Who's watching?". Wrong PINs lock out for longer each
+  time, also after the app is closed. A child's profile needs the main profile's lock to add profiles or turn 18+ on.
+  "Forgot?" uses the phone's screen lock; without one, the PIN goes together with that profile's data.
+- Private downloads: hide a finished video (eye button). It leaves every list and never appears in the gallery. Open
+  "Private" with the PIN or phone lock; it closes when you leave the app and can't be screenshotted. Stealth mode
+  hides the entry (long-press the storage card).
+- Honest limits: files are kept in Yumeiro's private storage, not encrypted; a rooted phone can read them.
+
+### Look and player
+- Accent colours: Gold, Ao (blue), Sakura, Matcha, Fuji.
+- Hold the video for 2x; long-press the speed button to switch 1x / 2x.
+- Shorts player, volume boost to 200 %, external players, Kasumi glass theme, statistics (on the device only).
+
+### Faster
+- Setup, feed, extensions and catalog show at once; extensions load behind, pinned ones first. An extension update
+  no longer throws away the saved catalog. Starter extensions install side by side.
+
+### Also new
+- Watch Later and Favourite on posters; Upcoming movies and series; Yumix sections and Sub / Dub / dual-audio tags;
+  your own website list; Nuvio / SkyStream repositories; TV search online; episode watch status.
+- Offline manga chapters; Live TV switches to the channel's other links when one fails; Now / Next from the
+  playlist's guide.
+- Website videos can be downloaded on TV and in landscape.
+
+### Fixes
+- Notices reach phones whose notification subscription failed (server side, deployed with this release).
+- "Show videos from" search shows every match; YouTube on TV shows a grid; M3U logos in single quotes and relative
+  channel links; "1 track"; last-backup time kept.
+
+### Not in this release
+- Telegram, TeraBox / DiskWala login path, manga translation, per-feature DNS, adult proxy, running Vega providers,
+  episode alerts through push (reasons in docs/SYSTEM-DESIGN.md ADR-037).
+
+### Still to be proven on real phones (community tests)
+- Profiles and Private with your remote and phone (OMT-44, OMT-45), hold for 2x (OMT-46), external players,
+  volume boost, Shorts on a 2–3 GB phone, glass theme battery, statistics, Upcoming time zone, SVG logos,
+  your extensions after the library update (OMT-35…OMT-43), and the earlier network / GPU cases (OMT-14…34).
+
 ## v1.8.1: every title plays
 
 A correction release. Every item was re-tested instead of trusting earlier notes, and four
