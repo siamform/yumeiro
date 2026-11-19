@@ -38,6 +38,8 @@ class NewEpisodesWorker(context: Context, params: WorkerParameters) : CoroutineW
         /** Series worth checking: not movies, not finished or dropped. */
         fun due(all: List<OnlineBookmarks.Bookmark>): List<OnlineBookmarks.Bookmark> = all.filter {
             it.status != OnlineBookmarks.Status.COMPLETED && it.status != OnlineBookmarks.Status.DROPPED &&
+                // F-09: a Favorite outside My List is not followed for episodes unless the user turned alerts on.
+                (it.status != OnlineBookmarks.Status.NONE || it.notify) &&
                 it.type?.contains("movie", true) != true
         }.sortedByDescending { it.status == OnlineBookmarks.Status.WATCHING }
 
