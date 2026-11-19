@@ -59,7 +59,20 @@ object UniversalAdd {
         JELLYFIN("Jellyfin server"),
         EMBY("Emby server"),
         PLEX("Plex server"),
+        // F-05 step 1 (ADR-032): recognised so they are not mistaken for CloudStream; running them comes later.
+        SKYSTREAM_REPO("SkyStream repository"),
+        SKY_PLUGIN("SkyStream plugin (.sky)"),
+        NUVIO_REPO("Nuvio scrapers repository"),
+        VEGA_REPO("Vega providers repository"),
+        ;
+
+        /** F-05: formats Yumeiro recognises but can't run in this version. */
+        val notYet: Boolean get() = this == SKYSTREAM_REPO || this == SKY_PLUGIN || this == NUVIO_REPO || this == VEGA_REPO
     }
+
+    /** F-05: the message for a recognised format that this version can't run. */
+    fun notYetMessage(kind: Kind): String =
+        "This is a ${kind.label}. Yumeiro recognises it, but can't run it in this version yet. Nothing was added."
 
     /** What happened. [needsSignIn] is set for home servers: the user still has to sign in. */
     data class Outcome(val kind: Kind, val message: String, val needsSignIn: HomeServers.Kind? = null, val url: String? = null)
@@ -138,7 +151,11 @@ object UniversalAdd {
         if (text.startsWith("{")) {
             val o = runCatching { JSONObject(text) }.getOrNull() ?: return null
             return when {
+                // F-05: SkyStream repositories also list "pluginLists" but carry a packageName (CloudStream ones never do), or "repos" + id.
+                o.has("pluginLists") && o.has("packageName") -> Kind.SKYSTREAM_REPO
+                o.optJSONArray("repos") != null && o.has("id") && !o.has("resources") -> Kind.SKYSTREAM_REPO
                 o.has("pluginLists") -> Kind.CS_REPO
+                o.optJSONArray("scrapers") != null -> Kind.NUVIO_REPO
                 o.has("resources") && (o.has("catalogs") || o.has("types")) && o.has("id") -> Kind.STREMIO
                 o.optJSONObject("meta")?.let { it.has("signingKeyFingerprint") || it.has("name") } == true || o.has("index_v2") -> Kind.TACHI_REPO
                 o.has("ProductName") || (o.has("ServerName") && o.has("Version") && o.has("Id")) ->
@@ -152,6 +169,7 @@ object UniversalAdd {
             if (items.isEmpty()) return null
             return when {
                 items.any { it.has("internalName") && it.has("url") } -> Kind.CS_LIST
+                items.any { it.has("display_name") && it.has("value") && it.has("version") } -> Kind.VEGA_REPO
                 items.any { it.has("pkg") && it.has("apk") } ->
                     if (items.any { it.optString("pkg").contains(".animeextension.") }) Kind.ANIYOMI_REPO else Kind.MIHON_REPO
                 items.any { it.has("sourceCodeUrl") || (it.has("baseUrl") && (it.has("itemType") || it.has("isManga"))) } -> Kind.JS_REPO
@@ -167,14 +185,22 @@ object UniversalAdd {
     private fun zipKind(bytes: ByteArray): Kind? = runCatching {
         ZipInputStream(bytes.inputStream()).use { z ->
             var apk = false
+            var skyJson = false
+            var skyJs = false
             while (true) {
                 val e = z.nextEntry ?: break
                 when (e.name) {
                     "manifest.json" -> if (z.readBytes().decodeToString().contains("pluginClassName")) return Kind.CS_PLUGIN
                     "AndroidManifest.xml" -> apk = true
+                    "plugin.json" -> skyJson = true
+                    "plugin.js" -> skyJs = true
                 }
             }
-            if (apk) Kind.TACHI_APK else null
+            when {
+                apk -> Kind.TACHI_APK
+                skyJson && skyJs -> Kind.SKY_PLUGIN
+                else -> null
+            }
         }
     }.getOrNull()
 
@@ -219,6 +245,7 @@ object UniversalAdd {
                     Outcome(Kind.CS_PLUGIN, "${ext.name} installed")
                 }
                 Kind.TACHI_APK -> Outcome(Kind.TACHI_APK, installApk(context, head))
+                Kind.SKY_PLUGIN -> error(notYetMessage(Kind.SKY_PLUGIN))
                 else -> error("This file isn't an extension Yumeiro knows (.cs3, Aniyomi or Mihon .apk)")
             }
         }
@@ -239,6 +266,7 @@ object UniversalAdd {
         Kind.TACHI_APK -> Outcome(kind, installApk(context, body ?: download(context, url)))
         Kind.STREMIO -> StremioAddons.add(context, url).getOrThrow().let { Outcome(kind, "${it.name} added") }
         Kind.JS_REPO -> JsSources.addRepo(context, url).getOrThrow().let { Outcome(kind, "JavaScript repository added ($it sources)") }
+        Kind.SKYSTREAM_REPO, Kind.SKY_PLUGIN, Kind.NUVIO_REPO, Kind.VEGA_REPO -> error(notYetMessage(kind))
         Kind.JELLYFIN, Kind.EMBY, Kind.PLEX -> {
             val base = url.substringBefore("/System/Info/Public").substringBefore("/identity").removeSuffix("/manifest.json")
             val sk = when (kind) { Kind.EMBY -> HomeServers.Kind.EMBY; Kind.PLEX -> HomeServers.Kind.PLEX; else -> HomeServers.Kind.JELLYFIN }
