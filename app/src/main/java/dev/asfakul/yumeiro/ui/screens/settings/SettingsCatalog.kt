@@ -47,8 +47,8 @@ object SettingsCatalog {
             settings = listOf("Reset to default")),
 
         PLAYER(Group.WATCH, "Player", "Background play, picture-in-picture, captions, Back button",
-            listOf("video", "pip", "subtitles", "cc", "floating", "minimize", "background"),
-            settings = listOf("Background play", "Picture-in-picture", "Captions on by default", "Player info overlay")),
+            listOf("video", "pip", "subtitles", "cc", "floating", "minimize", "background", "volume", "boost", "louder"),
+            settings = listOf("Background play", "Picture-in-picture", "Captions on by default", "Player info overlay", "Volume boost up to 200 %")),
         AUDIO(Group.WATCH, "Audio quality & sound", "Hi-Res, lossless or data saver, separately for Wi-Fi and mobile; equalizer",
             listOf("sound", "eq", "equalizer", "bass", "music", "3d", "virtualizer", "quality", "flac", "lossless", "hi-res", "hires", "dolby", "atmos", "kbps", "bitrate", "data saver", "320"),
             settings = listOf("Quality and audio", "Resume playback", "Anime4K enhancement", "Equalizer & sound effects")),

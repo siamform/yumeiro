@@ -22,7 +22,7 @@ class SettingsSearchCoverageTest {
     private val where: Map<String, Set<Category>> = buildMap {
         fun put(c: Category, vararg names: String) = names.forEach { put(it, setOf(c)) }
         put(Category.APPEARANCE, "Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents")
-        put(Category.PLAYER, "Background play", "Picture-in-picture", "Captions on by default")
+        put(Category.PLAYER, "Background play", "Picture-in-picture", "Captions on by default", "Volume boost up to 200 %")
         // The overlay switch is on the Player page and on the "Quality and audio" sheet.
         put("Player info overlay", setOf(Category.PLAYER, Category.AUDIO))
         put(Category.AUDIO, "Resume playback", "Anime4K enhancement", "Equalizer & sound effects", "Quality and audio")

@@ -82,6 +82,7 @@ fun StatsScreen(onBack: () -> Unit) {
     val milestones = remember(days) { StatsMath.milestones(days, today) }
     var selected by rememberSaveable { mutableStateOf(today) }
     var confirmClear by remember { mutableStateOf(false) }
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.ROOT
 
     LazyColumn(Modifier.fillMaxSize().testTag("stats_screen"), contentPadding = PaddingValues(bottom = 24.dp)) {
         item("header") { SubPageHeader(title = "Your activity", subtitle = "Kept only on this device", onBack = onBack) }
@@ -103,7 +104,7 @@ fun StatsScreen(onBack: () -> Unit) {
                 SectionTitle("Activity")
                 ActivityMap(byDay, today, selected, onSelect = { selected = it })
                 val d = byDay[selected]
-                val label = LocalDate.ofEpochDay(selected).format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
+                val label = LocalDate.ofEpochDay(selected).format(DateTimeFormatter.ofPattern("EEE d MMM", locale))
                 Text(
                     if (d == null || !d.active) "$label: nothing played" else "$label: ${StatsMath.duration(d.totalMs)} · ${plays(d.plays.sum())}",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).testTag("stats_selected_day"),
