@@ -103,7 +103,10 @@ class ExtensionPopupsDeviceTest {
         log("p1 after donation roots=${roots()} focus=${focus()} card=${AppMessages.current.value?.text}")
         assertEquals("a promotional window was added", before, roots())
         assertFalse("focus moved to a dialog: ${focus()}", focusIsDialog())
-        assertEquals(1, ExtensionPopups.held.value.size)
+        // Only the fake's own window counts: extensions installed by an earlier class (ExtensionCompat)
+        // load in this process and may hold their own start-up prompt meanwhile (run 44509508921).
+        fun mine() = ExtensionPopups.held.value.filter { it.view === dialog.window?.decorView }
+        assertEquals(1, mine().size)
         assertTrue("no quiet card: ${AppMessages.current.value}", AppMessages.current.value?.text?.contains("has a message") == true)
         val drawn = runCatching { rule.waitUntil(4_000) { rule.onAllNodesWithTag("app_message", true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
         log("p1 card on screen=$drawn · ${FirstRun.onScreen(rule).take(300)}")
@@ -123,7 +126,7 @@ class ExtensionPopupsDeviceTest {
         // The extension still believes its dialog is open, and closing it must not crash.
         assertTrue(dialog.isShowing)
 
-        val id = ExtensionPopups.held.value.single().id
+        val id = mine().single().id
         // The user's path: tap "Show" on the card.
         rule.onAllNodesWithTag("app_message_action", true)[0].performClick()
         settle()
