@@ -27,6 +27,8 @@ green debug APK from `ci.yml` on `r15-stability`.
 | 4 | Player and hardware | OMT-16 your Play links + upscaling on your GPU · OMT-6 heat, battery, long playback · OMT-7 predictive back animation · OMT-12 cold start with the baseline profile · OMT-2 Chromecast |
 | 5 | Android TV with the remote | OMT-4 TV with the remote · OMT-11 manga and Live TV on phone and TV · OMT-8 launcher widget |
 | 6 | Your network | OMT-18 behind a VPN · OMT-32 the Porn4fans title on your network · OMT-33 adult hosts without a VPN (after the agent's network option ships) |
+| 7 | New in this release (phone) | OMT-35 external players · OMT-36 volume boost · OMT-37 Shorts swipes on a 2–3 GB phone · OMT-38 Kasumi glass theme · OMT-39 statistics over three days · OMT-40 Upcoming in your time zone · OMT-43 extensions after the Jackson change |
+| 8 | New in this release (TV, playlists) | OMT-41 Home search → Search online with the remote · OMT-42 SVG channel logos in your playlists |
 | any | Your judgement | OMT-9 usability feedback (anything that feels slow, confusing or off-vibe) |
 
 Owner-only console actions (not tests, only the account owner can do them): OMT-13 restrict the Firebase API key,
@@ -60,27 +62,36 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-18 | Yumeiro behind a VPN on your phone (G10 network states) | Pending |
 | OMT-19 | A real YouTube download (video + audio) on your home network (G8 D6) | Pending |
 | OMT-20 | BUG-3 download speed per 10 % band on your phone (eighth cycle rule) | Blocked: owner |
-| OMT-21 | BUG-5 / TV-4: choose how TV search should work (G7 proposal 3) | Blocked: owner (decision) |
+| OMT-21 | BUG-5 / TV-4: choose how TV search should work (G7 proposal 3) | Decided (agent) |
 | OMT-22 | X3-TL: give the service account the Firebase Test Lab role | Blocked: owner (console) |
-| OMT-23 | X13-6: phone Jackson 2.19.4 → 2.18.11 | Blocked: owner (decision) |
-| OMT-24 | Vega: what do you mean by "Vega"? | Blocked: owner (question) |
-| OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Blocked: owner (decision) |
+| OMT-23 | X13-6: phone Jackson 2.19.4 → 2.18.11 | Decided (agent) |
+| OMT-24 | Vega: what do you mean by "Vega"? | Decided (agent) |
+| OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Decided (agent) |
 | OMT-26 | EXT-T1: Back closes a pop-up instead of Source status | Blocked: owner (phone) |
-| OMT-27 | NBUG-6: per-feature DNS has measured side effects — build anyway, narrow it, or drop | Blocked: owner (decision) |
+| OMT-27 | NBUG-6: per-feature DNS has measured side effects — build anyway, narrow it, or drop | Decided (agent) |
 | OMT-28 | G6-AF: unplug wired headphones / turn off Bluetooth headphones while music plays | Blocked: owner (hardware) |
 | OMT-29 | G6-PG2: endless Music Home keeps adding "Similar to" shelves, also after the connection drops | Pending |
 | OMT-30 | G8a: a download from a real HLS site with separate audio plays with sound in your gallery app | Pending |
 | OMT-31 | NBUG-9: fresh install on your own network loads online content without changing DNS | Pending |
 | OMT-32 | NBUG-12: a Porn4fans title plays on your network; tell the extension author | Pending |
-| OMT-33 | NBUG-13: choose a network option, then adult hosts without a VPN | Blocked: owner (decision) |
+| OMT-33 | NBUG-13: choose a network option, then adult hosts without a VPN | Decided (agent) |
 | OMT-34 | NBUG-8: the extension that kept loading now stops with a message, and Back leaves at once | Pending |
+| OMT-35 | F-07: external players with headers, subtitles and position | Owner/community test (pending) |
+| OMT-36 | F-06: volume boost to 200 % | Owner/community test (pending) |
+| OMT-37 | F-12: Shorts swipes on a 2–3 GB phone | Owner/community test (pending) |
+| OMT-38 | F-10: Kasumi glass theme looks and battery | Owner/community test (pending) |
+| OMT-39 | F-17: statistics over three days | Owner/community test (pending) |
+| OMT-40 | F-08: Upcoming in your time zone | Owner/community test (pending) |
+| OMT-41 | TV-4: TV search online with a real remote | Owner/community test (pending) |
+| OMT-42 | NB14-OB1: SVG channel logos in your playlists | Owner/community test (pending) |
+| OMT-43 | X13-6: your extensions after the Jackson change | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
 
 **For every test (owner and users):** capture a screenshot or short screen recording when something looks
 wrong, plus a note, **plus the app version** (Settings → About) and the phone/TV model and Android version.
-Send results to the owner (developer); recruited users send them to the person who invited them (see
+Report with the GitHub issue form "Test report" (Issues → New issue; `.github/ISSUE_TEMPLATE/test-report.yml`) or send results to the owner (developer); recruited users send them to the person who invited them (see
 [USER-TEST-PROGRAM.md](USER-TEST-PROGRAM.md)). The owner forwards them to the agent, who records them here,
 in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
 
@@ -108,6 +119,13 @@ owner sends you, then pick any task you can do.
 | U-12 | Back gesture animation | phone with Android 14 or newer | 1. Swipe back slowly from a screen inside Yumeiro. | you see the previous screen peek in, and letting go returns there | OMT-7 |
 | U-13 | Casting to a TV | phone + Chromecast or Google TV | 1. Play a video and tap Cast. | the video plays on the TV | OMT-2 |
 | U-14 | Yumix offline | phone | 1. Open Yumix once online. 2. Turn on airplane mode and open Yumix again. | what you saw before is still there, with a clear "offline" note | OMT-5 |
+| U-16 | Open a video in another player | phone with VLC or MX Player installed | 1. Open any Yumix title. 2. Tap ⋮ → Open in… → VLC (or MX). 3. Watch a minute, go back to Yumeiro. | it plays in the other app, and Yumeiro remembers where you stopped | OMT-35 |
+| U-17 | Volume boost | phone + headphones | 1. Play a video. 2. Swipe up on the right side past 100 %. | a warning appears once; sound gets louder up to 200 % without crackling | OMT-36 |
+| U-18 | Shorts | phone | 1. Videos → YouTube → open a Short. 2. Swipe up through 20 Shorts quickly. 3. Press Back. | each Short starts within about 2 s, no freeze, Back closes the Shorts player | OMT-37 |
+| U-19 | Kasumi theme | phone | 1. Settings → Appearance → Theme → Kasumi. 2. Use Home, Yumix and the player for 10 minutes. | bars look see-through, text is easy to read, nothing feels slower | OMT-38 |
+| U-20 | Your statistics | phone, three days of normal use | 1. Library → Statistics after each day. | each day you used Yumeiro is filled in; the streak counts the days | OMT-39 |
+| U-21 | Upcoming | phone | 1. Yumix → Upcoming. 2. Open the Anime, Movies and Series tabs. | titles are grouped by day in your own time zone (Today, Tomorrow…) | OMT-40 |
+| U-22 | Search online on TV | Android TV + remote | 1. Home → search icon. 2. Type a show name, press Search. 3. Press "Search online for …". | the online search opens with your words and shows results | OMT-41 |
 | U-15 | General feedback | phone or TV | Use Yumeiro as you normally would for a day. | tell us anything confusing, slow or broken | OMT-9 |
 
 Report for each task: task number, Passed/Failed, one sentence, a screenshot if something looked wrong,
@@ -475,7 +493,7 @@ the app version and your device. Don't send passwords or account details.
 - **Recommendation:** B now (it is what users expect from a search box and reuses tested code), C later
   as a gated feature after the eighth-cycle gate.
 - **What to send back:** A, B or C.
-- **Status:** Blocked: owner (decision). Development does not wait for it.
+- **Status:** Decided by the agent 2026-11-19: option B, built (ADR-036, TV-4); retest = OMT-41.
 
 ---
 
@@ -503,7 +521,7 @@ the app version and your device. Don't send passwords or account details.
 - "Vega" can mean Amazon's Vega OS (the new Fire TV system, not Android) or the Vega app's provider
   repositories (listed next to Nuvio and Skystream in F-05; hikari v0.10.57 calls them "Vega").
   These are very different jobs. **What to send back:** which one. No design starts before the answer.
-- **Status:** Blocked: owner (question).
+- **Status:** Decided by the agent (F-05 proposal §2): Vega = the Vega app's provider repositories, not Amazon Vega OS. Running them is not in this release (ADR-037).
 
 ---
 
@@ -515,7 +533,7 @@ the app version and your device. Don't send passwords or account details.
   what data leaves the phone, and an off-by-default switch. Telegram needs your own API id (user login
   through TDLib), so it would be "bring your own account"; manga translation would run on-device first.
 - **What to send back:** which of the four to plan, and whether a user login (Telegram) is acceptable.
-- **Status:** Blocked: owner (decision).
+- **Status:** Decided by the agent 2026-11-19: F-02, F-03 login path and F-11 are not in this release (ADR-037); the public-link WebView path for TeraBox/DiskWala stays.
 
 ### OMT-26 — EXT-T1: Back closes a pop-up instead of Source status (phone)
 
@@ -538,7 +556,7 @@ the app version and your device. Don't send passwords or account details.
 - **Your rule:** build only without side effects, so it is **not built**. The automatic bypass that exists today
   stays as is.
 - **What to send back:** drop it, or name one narrow case (for example "drama always over DoH") to plan as a gated note.
-- **Status:** Blocked: owner (decision).
+- **Status:** Decided by the agent 2026-11-19: not built (side effects measured; ADR-037).
 
 ### OMT-28 — Music pauses when headphones are unplugged (phone + headphones)
 
@@ -616,7 +634,7 @@ the app version and your device. Don't send passwords or account details.
   bypass also for in-app web pages (helps only DNS blocking); (3) keep using a system VPN or Private DNS.
   See docs/SYSTEM-DESIGN.md ADR-024.
 - **Then:** retest an adult title without the VPN on your network.
-- **Status:** Blocked: owner (decision)
+- **Status:** Decided by the agent 2026-11-19: option 3 for this release (system VPN or Private DNS); a proxy is not in this release (ADR-037). The retest still applies.
 
 ### OMT-34 — The extension that kept loading (NBUG-8)
 
@@ -628,6 +646,53 @@ the app version and your device. Don't send passwords or account details.
   leaves at once. **Fail:** the spinner stays longer, or Back does nothing.
 - **Record:** the extension name and version, the title, and a screen recording.
 - **Status:** Pending
+
+### OMT-35 — External players (F-07)
+
+- **Why you:** CI emulators have no VLC, mpv, MX or Just Player installed. **Hardware:** phone + one of them.
+- **Steps:** 1. Open a Yumix title with a header-protected source. 2. ⋮ → Open in… → the player. 3. Watch 2 minutes, go back.
+- **Pass:** it plays with subtitles; Yumeiro resumes at the position the player returned. **Fail:** error, no
+  subtitles, or the position is lost. **Record:** player name and version, source name. **Status:** Owner/community test (pending)
+
+### OMT-36 — Volume boost (F-06)
+
+- **Why you:** loudness and distortion can only be judged with real speakers and ears. **Hardware:** phone + headphones.
+- **Steps:** swipe volume past 100 % to 200 %, then back down. **Pass:** one hearing warning, louder without
+  crackling, boost drops first on the way down. **Status:** Owner/community test (pending)
+
+### OMT-37 — Shorts on a low-RAM phone (F-12)
+
+- **Why you:** swipe feel and real decoders on a 2–3 GB phone. **Steps:** U-18 with 50 Shorts.
+- **Pass:** no freeze or crash; memory warning absent in `adb logcat -s YuMemory`. **Status:** Owner/community test (pending)
+
+### OMT-38 — Kasumi glass theme (F-10)
+
+- **Why you:** looks and battery on a real screen. **Steps:** U-19 for one hour with battery saver off and on.
+- **Pass:** readable text, solid bars with battery saver on, no extra heat. **Status:** Owner/community test (pending)
+
+### OMT-39 — Statistics over days (F-17)
+
+- **Why you:** streaks need real days. **Steps:** U-20. **Pass:** days and streak correct; incognito days not
+  counted; "Clear statistics" empties it. **Status:** Owner/community test (pending)
+
+### OMT-40 — Upcoming in your time zone (F-08)
+
+- **Steps:** U-21 on your phone in Asia/Dhaka. **Pass:** day groups match your local dates. **Status:** Owner/community test (pending)
+
+### OMT-41 — TV search online (TV-4)
+
+- **Hardware:** a real Android TV and remote. **Steps:** U-22. **Pass:** the button is reachable with the remote
+  and opens the online search. **Status:** Owner/community test (pending)
+
+### OMT-42 — SVG channel logos (NB14-OB1)
+
+- **Steps:** open Live TV with your own playlists. **Pass:** channels whose logo is an SVG show the logo, not a
+  blank tile. **Status:** Owner/community test (pending)
+
+### OMT-43 — Extensions after the Jackson change (X13-6)
+
+- **Steps:** open each extension you use (home, a title, Play). **Pass:** they all work as before.
+  **Record:** any extension that fails, with its version. **Status:** Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 

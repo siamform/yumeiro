@@ -1,0 +1,25 @@
+name: Test report (owner or community)
+description: Send back the result of a test from docs/OWNER-MANUAL-TESTS.md (OMT-… or U-…).
+title: "[Test] <test ID>: pass / fail"
+labels: ["test-report"]
+body:
+  - type: input
+    id: test_id
+    attributes: { label: Test ID, description: "For example OMT-37 or U-18", placeholder: "U-18" }
+    validations: { required: true }
+  - type: dropdown
+    id: result
+    attributes: { label: Result, options: ["Pass", "Fail", "Could not run"] }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: App version, description: "Settings → About" }
+    validations: { required: true }
+  - type: input
+    id: device
+    attributes: { label: Phone or TV model and Android version, placeholder: "Redmi 9A, Android 11, 2 GB" }
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes: { label: What you saw, description: "Steps you took and what happened. Attach a screenshot or screen recording if something looked wrong. Never paste passwords, tokens or keys." }
+    validations: { required: true }
