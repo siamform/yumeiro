@@ -123,6 +123,16 @@ object LinkHosts {
         return null
     }
 
+    /** F-03: "TeraBox" / "DiskWala" when [url] is on one of their hosts (their streams expire; see CloudRecapture). */
+    fun cloudHost(url: String): String? {
+        val host = hostOf(url) ?: return null
+        return when {
+            TERABOX.any { under(host, it) } -> "TeraBox"
+            DISKWALA.any { under(host, it) } -> "DiskWala"
+            else -> null
+        }
+    }
+
     fun isMediaFire(url: String): Boolean = hostOf(url)?.let { under(it, "mediafire.com") } == true
 
     /** The download button address of a MediaFire file page, or null. */

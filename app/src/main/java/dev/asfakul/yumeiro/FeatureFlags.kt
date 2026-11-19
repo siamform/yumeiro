@@ -43,6 +43,8 @@ object FeatureFlags {
         PRIVATE_DOWNLOADS("f18_private_downloads", true),
         /** F-02 (ADR-042): public Telegram channels and post links, read from Telegram's web preview (no login). */
         TELEGRAM_PUBLIC("telegram_public", true),
+        /** F-03 (ADR-042): an expired TeraBox / DiskWala stream is found again on its page and resumes at the same place. */
+        CLOUD_CAPTURE_V2("cloud_capture_v2", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null
