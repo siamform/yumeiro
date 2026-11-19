@@ -205,3 +205,56 @@ test("prune: silent devices and their rows go at 03:00 UTC", async () => {
   for (const t of ["devices", "follows", "airing", "follow_changes"]) assert.equal((db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as any).n, 0, t);
   assert.ok(a.id);
 });
+
+// ---- NOTIFY-1 (ADR-039): broadcasts also reach phones whose topic subscription failed ----
+
+test("notify-1: needsFanout keeps the user's switches", async () => {
+  const { needsFanout } = await import("../src/fcm.ts");
+  assert.equal(needsFanout("update", "release", "announcements,maintenance,updates", null), false); // topic reaches it
+  assert.equal(needsFanout("update", "release", "", null), true); // older app, "updates" is always on
+  assert.equal(needsFanout("announcement", "release", "", null), false); // older app: its news switch is unknown
+  assert.equal(needsFanout("announcement", "release", "", "announcements,updates"), true);
+  assert.equal(needsFanout("maintenance", "release", "", "announcements,updates"), false); // switched off
+  assert.equal(needsFanout("update", "preview", "updates", "preview-updates"), true); // release topic ≠ preview
+});
+
+test("notify-1: a broadcast is copied to each phone the topic misses; a gone FID drops its row", async () => {
+  const { generateKeyPairSync } = await import("node:crypto");
+  const { _resetTokenCache } = await import("../src/fcm.ts");
+  _resetTokenCache();
+  const pem = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+  const strong = "z".repeat(40);
+  const { env, db, sent } = fakeEnv({ admin: strong });
+  (env as any).FCM_SERVICE_ACCOUNT = JSON.stringify({ type: "service_account", project_id: "demo", client_email: "svc@demo.iam.gserviceaccount.com", private_key: pem });
+  const A = "c" + "A".repeat(21), B = "c" + "B".repeat(21), C = "c" + "C".repeat(21);
+  await call(env, req("POST", "/v1/fcm/devices", { fid: A, topics: ["announcements", "maintenance", "updates"], want: ["announcements", "maintenance", "updates"] }));
+  await call(env, req("POST", "/v1/fcm/devices", { fid: B, topics: [], want: ["announcements", "updates"] }));
+  await call(env, req("POST", "/v1/fcm/devices", { fid: C, topics: ["announcements"] })); // older app: no want
+  assert.equal((db.prepare("SELECT want FROM fcm_devices WHERE fid = ?").get(C) as any).want, null);
+  const real = globalThis.fetch;
+  const fcmTargets: string[] = [];
+  globalThis.fetch = (async (u: string | URL | Request, init?: RequestInit) => {
+    const url = String(u);
+    if (url.includes("oauth2") || url.includes("token")) return new Response(JSON.stringify({ access_token: "at", expires_in: 3600 }), { status: 200 });
+    const m = JSON.parse(String(init?.body)).message;
+    fcmTargets.push(m.topic ?? m.fid);
+    if (m.fid === C) return new Response('{"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}}', { status: 404 });
+    return new Response('{"name":"projects/demo/messages/1"}', { status: 200 });
+  }) as typeof fetch;
+  try {
+    const up = await call(env, req("POST", "/v1/admin/notify", { kind: "update", title: "New version", body: "b" }, "Bearer " + strong));
+    assert.equal(up.status, 200, JSON.stringify(up.body));
+    assert.equal(up.body.fanout, 2); // B (wants updates, no topic) and C (older app, no updates topic)
+    const job = sent.at(-1)!.body as any;
+    assert.deepEqual([...job.fcm.fids].sort(), [B, C].sort());
+    const news = await call(env, req("POST", "/v1/admin/notify", { kind: "announcement", title: "News", body: "b" }, "Bearer " + strong));
+    assert.equal(news.body.fanout, 1); // B only: C has the topic, A has the topic
+    fcmTargets.length = 0;
+    let acked = 0;
+    await worker.queue({ messages: [{ body: job, ack: () => { acked++; } }] } as never, env, {} as ExecutionContext);
+    assert.equal(acked, 1);
+    assert.deepEqual([...fcmTargets].sort(), [B, C].sort());
+  } finally { globalThis.fetch = real; _resetTokenCache(); }
+  const left = (db.prepare("SELECT fid FROM fcm_devices ORDER BY fid").all() as any[]).map((r) => r.fid);
+  assert.deepEqual(left, [A, B]); // C was UNREGISTERED
+});

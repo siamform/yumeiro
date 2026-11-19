@@ -93,4 +93,11 @@ class FcmPlanTest {
         assertNotEquals(a, FcmPlan.fingerprint("fid", setOf("a"), 1))
         assertNotEquals(a, FcmPlan.fingerprint("fid", setOf("a", "b"), 2))
     }
+
+    /** NOTIFY-1 (ADR-039): a switch change alone must re-send the check-in, or the Worker never learns it. */
+    @Test fun fingerprintChangesWithWantedTopics() {
+        val on = FcmPlan.fingerprint("fid", emptySet(), 1, setOf("announcements", "updates"))
+        assertNotEquals(on, FcmPlan.fingerprint("fid", emptySet(), 1, setOf("updates")))
+        assertEquals(on, FcmPlan.fingerprint("fid", emptySet(), 1, setOf("updates", "announcements")))
+    }
 }
