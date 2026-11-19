@@ -1598,7 +1598,15 @@ fun MTPlayerApp(
         // Styled in-app messages (falls back to system toasts when no host is attached).
         dev.asfakul.yumeiro.ui.screens.online.ExtensionReviewHost()
         dev.asfakul.yumeiro.ui.screens.downloads.DownloadPromptHost()
-        AppMessageHost(bottomPadding = if (isSubpage) androidx.compose.ui.unit.Dp(24f) else androidx.compose.ui.unit.Dp(150f))
+        // G15-3 (TV-A11Y-1): 150 dp clears the phone's nav bar + mini player. The TV layout has neither
+        // (the rail is on the left), so the pill floated at 72 % of a 540 dp screen, over the Home cards
+        // (tv-api34: a quick card left 44 dp uncovered under it). TV: at the bottom, above the mini player.
+        val tvMessages = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+        AppMessageHost(bottomPadding = when {
+            isSubpage -> androidx.compose.ui.unit.Dp(24f)
+            tvMessages -> if (playbackState.currentTrack != null) androidx.compose.ui.unit.Dp(96f) else androidx.compose.ui.unit.Dp(24f)
+            else -> androidx.compose.ui.unit.Dp(150f)
+        })
 
         // In-app updater popup (GitHub Releases). Hidden during splash and fullscreen video.
         dev.asfakul.yumeiro.ui.components.AfterFirstFrame { UpdateHost(enabled = !showSplash && activePlayingVideo == null) }
