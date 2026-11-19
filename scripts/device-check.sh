@@ -231,8 +231,9 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   grep -qE "^OK \(" "inst-$C.txt" || echo "TESTS_FAILED" > failed.txt
   if grep -qE "^OK \(" "inst-$C.txt" && [ $RC -ne 124 ]; then V=PASS; else V=FAIL; fi
   PL=""; [ "$PASSES" = "true" ] && PL=" pass=P$N"
-  # Assumption failures (status -3) are skips; the final test reports them, never hides them.
-  SK=$(grep -c "INSTRUMENTATION_STATUS_CODE: -3" "inst-$C.txt" 2>/dev/null | tr -d ' '); OKN=$(sed -n 's/^OK (\([0-9]*\) test.*/\1/p' "inst-$C.txt" | tail -1)
+  # Ignored tests (status -3) and assumption failures (status -4, e.g. "needs API 26") are skips; the final
+  # test reports them, never hides them (FINAL-9: -4 was not counted, so a skipped test read as a pass).
+  SK=$(grep -cE "INSTRUMENTATION_STATUS_CODE: -(3|4).?$" "inst-$C.txt" 2>/dev/null | tr -d ' '); OKN=$(sed -n 's/^OK (\([0-9]*\) test.*/\1/p' "inst-$C.txt" | tail -1)
   echo "REPEAT_RESULT $C run=$N/$REPEAT$PL $V tests=${OKN:-?} skipped=${SK:-0}" | tee -a repeat-results.txt
   cp "inst-$C.txt" "inst-$C-run$N.txt" 2>/dev/null || true
   echo "::endgroup::"
