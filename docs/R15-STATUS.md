@@ -9,10 +9,10 @@
   pass-after tv-api24 44603655334); FINAL-8 OnlineSettings.init race (82c5b93, pass-after next tv-api24 run);
   FINAL-9 assumption skips counted as passes (1c44b93, evidence re-collected); AUD-UI-1 48 dp targets (df49c5d).
 - **Fail-before done:** 44604147006 (FINAL-7 guard, AUD-UI-1 guard: 2 expected failures), 44607714314 (FINAL-8:
-  1 expected failure). **Running:** head CI 44610265729 on 6f11509. Device: tv-api34 chunk_01 44607298962, tv-api24
-  chunk_02 + AnimeSignInMessage 44607305833.
-- **Device progress (latest per chunk):** phones chunk_00..02 pass; tv-api34 chunk_00 pass; tv-api24 chunk_00..01 pass
-  (3 platform skips with reasons). Next: phones chunk_03, then TV chunks, per docs/evidence/final/PLAN.md.
+  1 expected failure). **Head CI 44610265729 on 6f11509: success** (later commits are docs/evidence only).
+  Running: phones chunk_04 44613835799, tv-api34 chunk_03 44613955120 (lane driver /tmp/lane.sh, log /tmp/lanes.log).
+- **Device progress (latest per chunk):** phones chunk_00..03 pass; tv-api34 chunk_00..02 pass; tv-api24 chunk_00..02 pass
+  (platform skips with written reasons). Next: phones chunk_04.., tv-api34/tv-api24 chunk_03.. alternating, per docs/evidence/final/PLAN.md.
 - **Next three:** 1. fail-before results → head CI; 2. collect each run (`scripts/final_collect.sh <run>`,
   `python3 scripts/final_checklist.py`); 3. bench (startup/jank), audit rows, review APK.
 - Report: docs/reports/2026-11-19-tenth-handover-report.md.

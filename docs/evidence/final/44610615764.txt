@@ -1,0 +1,14 @@
+44610615764 tv-api34 BackNavigationDeviceTest P1 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BackNavigationDeviceTest P2 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BackdropImportDeviceTest P1 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BackdropImportDeviceTest P2 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BackgroundSettingsEffectDeviceTest P1 PASS tests=5 skipped=0 sha=57750f8
+44610615764 tv-api34 BackgroundSettingsEffectDeviceTest P2 PASS tests=5 skipped=0 sha=57750f8
+44610615764 tv-api34 BackupDeviceTest P1 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BackupDeviceTest P2 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BrowserCheckCooldownDeviceTest P1 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 BrowserCheckCooldownDeviceTest P2 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 Bug1YumixRestoreDeviceTest P1 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 Bug1YumixRestoreDeviceTest P2 PASS tests=1 skipped=0 sha=57750f8
+44610615764 tv-api34 ChoiceSettingsEffectDeviceTest P1 PASS tests=6 skipped=0 sha=57750f8
+44610615764 tv-api34 ChoiceSettingsEffectDeviceTest P2 PASS tests=6 skipped=0 sha=57750f8

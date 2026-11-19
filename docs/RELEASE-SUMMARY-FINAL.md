@@ -19,7 +19,7 @@ Status: in preparation. This is the release candidate for 1.9.0, tested on three
 | Licences | NOTICE vs. `implementation(...)` list | LIC-1 (owner decision): NOTICE lists the vendored and open-source runtime libraries but not the Google SDKs linked into the APK: Firebase Messaging (Apache-2.0, pulls in Google Play services), Cast framework and ML Kit text recognition / translation (Google's own terms, closed binaries). GPL-3.0 projects that link closed Google SDKs usually state it; this needs the owner's choice of wording or a build without them | 2026-11-19 |
 | Virus scan | VirusTotal (or equivalent) on the review APK | pending the review APK | |
 | APK integrity | apksigner verify, cert, ABIs, R8 (X10-1) | pending the review APK | |
-| CI on the exact head | ci.yml | pending | |
+| CI on the exact head | ci.yml | 44610265729 success on 6f11509; to repeat on the review-APK commit | 2026-11-20 |
 
 ## Review APK
 ## Install and test guide for the owner
