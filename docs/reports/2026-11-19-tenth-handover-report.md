@@ -60,7 +60,9 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 | 44600328162 | chunk_01 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
 | 44603655334 | CloudRecapture + chunk_01 tv-api24 | CloudRecapture passes P1/P2 (FINAL-7 pass-after); AnimeSignInMessage P1 fails (FINAL-8 init race) → fix 82c5b93; 3 platform skips (FINAL-9 found they were counted as passes → 1c44b93) |
 | 44603660590 | chunk_02 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
-| 44604147006 | fail-before FINAL-7 guard + AUD-UI-1 guard (`tmp/final7-fail-before` dd78a56) | running |
+| 44604147006 | fail-before FINAL-7 guard + AUD-UI-1 guard (`tmp/final7-fail-before` dd78a56) | failed as expected: 1463 tests, 2 failed — WebViewLoadUrlGuardTest.noDirectLoadUrlWithHeadersInAppSources, TouchTargetTest.smallClickablesReserveFortyEightDp; cancelled after the unit step |
+| 44607714314 | fail-before FINAL-8 (`tmp/final8-fail-before` b7cdc1b: old init + test hook only) | failed as expected: 1466 tests, 1 failed — OnlineSettingsInitRaceTest.aTokenWrittenWhileStartUpInitRunsIsKept; cancelled after the unit step |
+| 44610265729 | head CI 6f11509 | running |
 | 44607298962 / 44607305833 | chunk_01 tv-api34 / chunk_02 + AnimeSignInMessage tv-api24 | running |
 | 44598214395 / 44598220085 | re-run TelegramPublic + MangaTranslate, phones / tv-api34 | pass P1 and P2 on api33-lowram, api36, tv-api34 |
 

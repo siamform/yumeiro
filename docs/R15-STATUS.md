@@ -8,8 +8,8 @@
 - **Findings this cycle:** FINAL-1..6 (fixed, device-verified); FINAL-7 WebView header map on Android 7 (d35614c,
   pass-after tv-api24 44603655334); FINAL-8 OnlineSettings.init race (82c5b93, pass-after next tv-api24 run);
   FINAL-9 assumption skips counted as passes (1c44b93, evidence re-collected); AUD-UI-1 48 dp targets (df49c5d).
-- **Running:** fail-before CI 44604147006 (`tmp/final7-fail-before`: FINAL-7 guard + AUD-UI-1 guard); then
-  fail-before `tmp/final8-fail-before` (b7cdc1b); then head CI. Device: tv-api34 chunk_01 44607298962, tv-api24
+- **Fail-before done:** 44604147006 (FINAL-7 guard, AUD-UI-1 guard: 2 expected failures), 44607714314 (FINAL-8:
+  1 expected failure). **Running:** head CI 44610265729 on 6f11509. Device: tv-api34 chunk_01 44607298962, tv-api24
   chunk_02 + AnimeSignInMessage 44607305833.
 - **Device progress (latest per chunk):** phones chunk_00..02 pass; tv-api34 chunk_00 pass; tv-api24 chunk_00..01 pass
   (3 platform skips with reasons). Next: phones chunk_03, then TV chunks, per docs/evidence/final/PLAN.md.
