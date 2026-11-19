@@ -197,7 +197,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
 }
 
 @Composable
-private fun PlayerChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tag: String, onClick: () -> Unit) {
+internal fun PlayerChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tag: String, onClick: () -> Unit) {
     Surface(shape = CircleShape, color = ChipColor, modifier = Modifier.clip(CircleShape).clickable(onClick = onClick).testTag(tag)) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(16.dp))

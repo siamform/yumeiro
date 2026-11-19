@@ -1510,7 +1510,12 @@ fun MTPlayerApp(
                         dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.failover(context, video.uri) ||
                             (streamNext != null && dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.autoSwitch(context, video.uri))
                     }) else null,
-                    overlay = if (online != null) { visible, player -> OnlinePlayerOverlay(visible, player, closePlayer) } else null,
+                    overlay = when {
+                        online != null -> { visible, player -> OnlinePlayerOverlay(visible, player, closePlayer) }
+                        // G8-TV7A: Download for links / website videos when no watch page is docked (TV, landscape).
+                        isStream -> { visible, _ -> dev.asfakul.yumeiro.ui.screens.watch.StreamPlayerOverlay(visible, video.uri) }
+                        else -> null
+                    },
                     onFatalError = if (online != null) { pos -> dev.asfakul.yumeiro.online.OnlineSession.failover(context, pos, video.id) } else null,
                     watchPage = watchPage,
                     minimized = videoMinimized,

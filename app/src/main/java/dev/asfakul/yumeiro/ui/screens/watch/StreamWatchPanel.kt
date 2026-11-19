@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -203,6 +204,35 @@ object StreamWatch {
         dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "This channel isn't available — playing ${next.displayTitle}")
         play(context, next)
         return true
+    }
+}
+
+/**
+ * G8-TV7A: Download for a link / website video when the watch page is not docked (TV, landscape phone,
+ * fullscreen). Same action and checks as the watch page's Download; shown with the player controls.
+ */
+@Composable
+fun androidx.compose.foundation.layout.BoxScope.StreamPlayerOverlay(controlsVisible: Boolean, currentUrl: String) {
+    val context = LocalContext.current
+    val channels by StreamRepository.playlist.collectAsState()
+    val base = remember(currentUrl, channels) { channels.firstOrNull { it.url == currentUrl } ?: StreamRepository.requestFor(currentUrl) }
+    if (base == null || !dev.asfakul.yumeiro.stream.StreamDownload.canSave(base)) return
+    val docked = dev.asfakul.yumeiro.ui.screens.video.LocalPlayerDocked.current
+    androidx.compose.animation.AnimatedVisibility(
+        visible = controlsVisible && !docked, enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut(),
+        modifier = Modifier.align(Alignment.TopCenter),
+    ) {
+        Row(
+            Modifier.statusBarsPadding().padding(top = 60.dp, start = 12.dp, end = 12.dp).testTag("stream_player_bar"),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            dev.asfakul.yumeiro.ui.screens.online.PlayerChip(Icons.Default.Download, "Download", "stream_watch_download") {
+                when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, base, base.pageUrl ?: currentUrl)) {
+                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, o.message)
+                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
+                }
+            }
+        }
     }
 }
 
