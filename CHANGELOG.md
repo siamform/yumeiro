@@ -4,8 +4,10 @@ All notable changes to Yumeiro.
 
 ## v1.9.0: yours, and fast
 
-Planned as v1.8.2; it adds features, so it ships as 1.9.0. What is proven and what still needs your phones is
-listed at the end (full list: docs/REMAINING-2026-11-19.md).
+Planned as v1.8.2; it adds features, so it ships as 1.9.0. This is a feature release on a branch that is being
+stabilised, not a stable release: the L4 and L5 findings and the rest of the stabilisation work are scheduled for
+stability-v2. What is proven and what still needs your phones is listed at the end (full list:
+docs/REMAINING-2026-11-19.md and docs/UNVERIFIED-QUEUE.md).
 
 ### Profiles and privacy
 - Profiles (up to 8) with "Who's watching?". Each profile has its own watch history, lists, YouTube history and 18+
@@ -30,7 +32,7 @@ listed at the end (full list: docs/REMAINING-2026-11-19.md).
 
 ### Also new
 - Watch Later and Favourite on posters; Upcoming movies and series; Yumix sections and Sub / Dub / dual-audio tags;
-  your own website list; Nuvio / SkyStream repositories; TV search online; episode watch status.
+  your own website list; TV search online; episode watch status.
 - Offline manga chapters; Live TV switches to the channel's other links when one fails; Now / Next from the
   playlist's guide.
 - Website videos can be downloaded on TV and in landscape.
@@ -40,14 +42,30 @@ listed at the end (full list: docs/REMAINING-2026-11-19.md).
 - "Show videos from" search shows every match; YouTube on TV shows a grid; M3U logos in single quotes and relative
   channel links; "1 track"; last-backup time kept.
 
+### Sources and network (tenth cycle)
+- Telegram: public channels play without a login (F-02). Private channels say they can't be opened.
+- TeraBox and DiskWala share links that the site lets anyone open play or download (F-03); nothing behind a login
+  is bypassed.
+- Manga auto-translation in the reader, on the device (F-11).
+- Script repos: add a Vega provider repository you trust and install its providers; they show in Home, Search and
+  Source status, run in a time- and memory-limited sandbox with no access to your home network, and streams that need
+  DRM keys are not played. Nuvio and SkyStream repositories are recognised but can't run yet.
+- Your own HTTP or SOCKS5 proxy for the app and its web pages (NBUG-13).
+- Automatic DNS fallback (Settings → Network, off by default): when your network's DNS fails, Yumeiro tries
+  1.1.1.1, then 9.9.9.9, one at a time (NBUG-6).
+- Airing alerts reach phones that use Firebase push, not only UnifiedPush (F-AIR). This needs the server update that
+  is deployed with this release.
+
 ### Not in this release
-- Telegram, TeraBox / DiskWala login path, manga translation, per-feature DNS, adult proxy, running Vega providers,
-  episode alerts through push (reasons in docs/SYSTEM-DESIGN.md ADR-037).
+- Nuvio and SkyStream runtimes, per-feature DNS (rejected for its cost), Telegram login and private channels.
 
 ### Still to be proven on real phones (community tests)
 - Profiles and Private with your remote and phone (OMT-44, OMT-45), hold for 2x (OMT-46), external players,
   volume boost, Shorts on a 2–3 GB phone, glass theme battery, statistics, Upcoming time zone, SVG logos,
   your extensions after the library update (OMT-35…OMT-43), and the earlier network / GPU cases (OMT-14…34).
+- Tenth-cycle items are emulator verified, owner verification pending: DNS fallback on a dead-DNS network (OMT-47),
+  a real Vega repository on phone and TV (OMT-48), Telegram (OMT-49), TeraBox / DiskWala (OMT-50), manga
+  translation (OMT-51), airing alerts on a Firebase phone after the server update (OMT-52), your own proxy (OMT-53).
 
 ## v1.8.1: every title plays
 
