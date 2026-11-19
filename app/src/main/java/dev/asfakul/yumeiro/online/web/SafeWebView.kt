@@ -34,6 +34,8 @@ object SafeWebView {
     // RestrictedApi check misreads its @RestrictTo annotation on the constant's group.
     @android.annotation.SuppressLint("RestrictedApi")
     fun harden(web: WebView) {
+        // NBUG-13 (ADR-045): the user's proxy is in place before the page loads.
+        runCatching { dev.asfakul.yumeiro.network.AppProxy.ensureWebView(web.context) }
         runCatching {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
                 WebSettingsCompat.setRequestedWithHeaderOriginAllowList(web.settings, emptySet())
@@ -86,5 +88,11 @@ open class SafeWebViewClient(private val onGone: (() -> Unit)? = null) : WebView
         val handled = SafeWebView.handleRenderGone(view, detail)
         runCatching { onGone?.invoke() }
         return handled
+    }
+
+    /** NBUG-13: the proxy's own login prompt is answered with the saved login; other prompts as before. */
+    override fun onReceivedHttpAuthRequest(view: WebView?, handler: android.webkit.HttpAuthHandler, host: String?, realm: String?) {
+        if (dev.asfakul.yumeiro.network.AppProxy.answerWebAuth(host, handler)) return
+        super.onReceivedHttpAuthRequest(view, handler, host, realm)
     }
 }
