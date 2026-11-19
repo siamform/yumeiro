@@ -42,6 +42,9 @@ jacksonTv = "2.13.5"
 castFramework = "23.0.0"
 # Push (FCM only — no Analytics, Auth or Firestore). BoM 35.2.0 → firebase-messaging 26.0.2.
 firebaseBom = "35.2.0"
+# F-11 manga translation (ADR-044): on-device ML Kit. OCR models bundled; translation packs downloaded per language.
+mlkitTextRecognition = "16.0.1"
+mlkitTranslate = "17.0.3"
 mediarouter = "1.8.1"
 
 # Testing
@@ -131,6 +134,11 @@ rhino = { group = "org.mozilla", name = "rhino", version = "1.8.1" }
 cloudstream-library = { group = "com.github.recloudstream.cloudstream", name = "library-android", version.ref = "cloudstreamLibrary" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+mlkit-text-latin = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+mlkit-text-japanese = { group = "com.google.mlkit", name = "text-recognition-japanese", version.ref = "mlkitTextRecognition" }
+mlkit-text-chinese = { group = "com.google.mlkit", name = "text-recognition-chinese", version.ref = "mlkitTextRecognition" }
+mlkit-text-korean = { group = "com.google.mlkit", name = "text-recognition-korean", version.ref = "mlkitTextRecognition" }
+mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkitTranslate" }
 cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "castFramework" }
 androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }

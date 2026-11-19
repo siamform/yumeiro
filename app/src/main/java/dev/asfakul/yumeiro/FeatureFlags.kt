@@ -45,6 +45,8 @@ object FeatureFlags {
         TELEGRAM_PUBLIC("telegram_public", true),
         /** F-03 (ADR-042): an expired TeraBox / DiskWala stream is found again on its page and resumes at the same place. */
         CLOUD_CAPTURE_V2("cloud_capture_v2", true),
+        /** F-11 (ADR-044): "Translate pages" in the manga reader (on-device OCR + translation). */
+        MANGA_TRANSLATE("f11_manga_translate", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

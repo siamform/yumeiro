@@ -308,6 +308,12 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- F-11 (ADR-044): ML Kit would start itself at every app launch through this provider. Removed;
+             MlKitTlEngine initialises ML Kit when the reader first translates a page. -->
+        <provider
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
         <!-- R15 audit: crash reports are shared as file attachments (no size limit in the share sheet). -->
         <provider
             android:name="androidx.core.content.FileProvider"

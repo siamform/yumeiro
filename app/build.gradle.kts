@@ -356,6 +356,12 @@ dependencies {
   // plugin, no Analytics); a build without FCM config simply runs with push off.
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.messaging)
+  // F-11 (ADR-044): manga page translation on the device (ML Kit). OCR bundled, translation packs on demand.
+  implementation(libs.mlkit.text.latin)
+  implementation(libs.mlkit.text.japanese)
+  implementation(libs.mlkit.text.chinese)
+  implementation(libs.mlkit.text.korean)
+  implementation(libs.mlkit.translate)
   implementation(libs.androidx.mediarouter)
   implementation(libs.jackson.module.kotlin) // same Jackson the CloudStream library already ships; extensions use it
   implementation(libs.nicehttp) // CloudStream's `app` HTTP helper, wired to our OkHttp client
