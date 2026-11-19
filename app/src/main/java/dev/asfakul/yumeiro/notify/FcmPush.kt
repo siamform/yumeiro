@@ -160,23 +160,22 @@ object FcmPush {
         for (t in drop) runCatching { await(fm.unsubscribeFromTopic(t)); now -= t }.onFailure { topicsOk = false; Log.w(TAG, "unsubscribe $t") }
         p.edit().putStringSet("topics", now).apply()
 
-        val cloudOk = registerWithCloud(c, fid, now)
+        val cloudOk = registerWithCloud(c, fid, now, wanted)
         _status.value = if (topicsOk && cloudOk) Status.ON else Status.ERROR
         return topicsOk && cloudOk
     }
 
     /** Tells the Worker this device's FID (for messages to one device) and its topics (counts only). */
-    private fun registerWithCloud(c: Context, fid: String, topics: Set<String>): Boolean {
+    private fun registerWithCloud(c: Context, fid: String, topics: Set<String>, wanted: Set<String>): Boolean {
         val host = BuildConfig.CLOUD_HOST
         if (host.isBlank()) return true
         val p = prefs(c)
         val nowMs = System.currentTimeMillis()
         val creds = OnlineSettings.secret(SECRET)
-        val fp = FcmPlan.fingerprint(fid, topics, BuildConfig.VERSION_CODE)
+        val fp = FcmPlan.fingerprint(fid, topics, BuildConfig.VERSION_CODE, wanted)
         if (creds != null && !FcmPlan.due(fp, p.getString("fp", null), nowMs, p.getLong("synced_at", 0L))) return true
         if (nowMs < p.getLong("retry_at", 0L)) return true // backing off; topics still work meanwhile
-        val body = JSONObject().put("fid", fid).put("topics", JSONArray(topics.sorted()))
-            .put("app_version", BuildConfig.VERSION_CODE).put("channel", BuildConfig.PUSH_CHANNEL).toString()
+        val body = FcmPlan.cloudBody(fid, topics, wanted, BuildConfig.VERSION_CODE, BuildConfig.PUSH_CHANNEL)
         val req = Request.Builder().url("https://$host/v1/fcm/devices")
             .post(body.toRequestBody("application/json".toMediaType()))
             .apply { if (creds != null) header("Authorization", "Bearer $creds") }
@@ -274,9 +273,19 @@ object FcmPlan {
 
     fun diff(had: Set<String>, wanted: Set<String>): Pair<Set<String>, Set<String>> = (wanted - had) to (had - wanted)
 
-    fun fingerprint(fid: String, topics: Set<String>, version: Int): String =
-        MessageDigest.getInstance("SHA-256").digest("f1|$fid|${topics.sorted().joinToString(",")}|$version".toByteArray())
+    /** NOTIFY-1: [want] changes the fingerprint too, so a new switch reaches the Worker. */
+    fun fingerprint(fid: String, topics: Set<String>, version: Int, want: Set<String> = topics): String =
+        MessageDigest.getInstance("SHA-256").digest("f2|$fid|${topics.sorted().joinToString(",")}|${want.sorted().joinToString(",")}|$version".toByteArray())
             .take(12).joinToString("") { "%02x".format(it) }
+
+    /**
+     * NOTIFY-1 (ADR-039): the check-in says which topics the phone is on and which the switches ask for. When a
+     * subscription failed (Play services timeout, a blocked topic API), the Worker sends broadcasts straight to
+     * this phone instead, so the notice still arrives.
+     */
+    fun cloudBody(fid: String, topics: Set<String>, want: Set<String>, version: Int, channel: String): String =
+        JSONObject().put("fid", fid).put("topics", JSONArray(topics.sorted())).put("want", JSONArray(want.sorted()))
+            .put("app_version", version).put("channel", channel).toString()
 
     data class Message(
         val id: String, val kind: Inbox.Kind, val title: String, val body: String, val link: String?,
