@@ -1,0 +1,14 @@
+44630204932 tv-api24 ClosedAppAlertDeviceTest P1 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 ClosedAppAlertDeviceTest P2 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 CloudAlertsLookupDeviceTest P1 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 CloudAlertsLookupDeviceTest P2 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 CrashUiDeviceTest P1 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 CrashUiDeviceTest P2 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 DecoderFaultDeviceTest P1 PASS tests=3 skipped=0 sha=77b24a6
+44630204932 tv-api24 DecoderFaultDeviceTest P2 PASS tests=3 skipped=0 sha=77b24a6
+44630204932 tv-api24 DialogsDeviceTest P1 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 DialogsDeviceTest P2 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 DownloadCleanupDeviceTest P1 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 DownloadCleanupDeviceTest P2 PASS tests=1 skipped=0 sha=77b24a6
+44630204932 tv-api24 DownloadG8DeviceTest P1 PASS tests=4 skipped=0 sha=77b24a6
+44630204932 tv-api24 DownloadG8DeviceTest P2 PASS tests=4 skipped=0 sha=77b24a6
