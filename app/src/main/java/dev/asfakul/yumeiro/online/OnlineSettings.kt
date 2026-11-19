@@ -78,6 +78,8 @@ object OnlineSettings {
 
     /** Small secrets store for sync accounts (tokens). */
     fun secret(key: String): String? = readSecret("secret:$key")
+    /** Drops a stored secret (a rejected token). Needs [init] to have run, as reading the secret did. */
+    fun clearSecret(key: String) = writeSecret("secret:$key", null)
     fun setSecret(context: Context, key: String, value: String?) {
         init(context)
         writeSecret("secret:$key", value)

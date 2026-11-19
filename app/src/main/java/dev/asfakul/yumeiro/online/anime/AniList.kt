@@ -55,6 +55,19 @@ object AniList {
     /** Sets progress to [episode] (never lowers it) and marks the show as watching / completed. */
     fun watched(client: OkHttpClient, mediaId: Int, episode: Int, total: Int?): Boolean {
         val t = token() ?: return false
+        return try {
+            watchedWith(client, t, mediaId, episode, total)
+        } catch (e: AnimeIds.HttpError) {
+            if (e.code != 401) throw e
+            // IG-12: implicit-grant tokens can't be refreshed. AniList rejected this one (expired after a year
+            // or revoked), so sign out: Settings then asks to sign in again instead of showing "Signed in"
+            // while nothing syncs. Only if the token is still the one that failed (no re-sign-in meanwhile).
+            if (token() == t) { OnlineSettings.clearSecret("anilist_token"); OnlineSettings.clearSecret("anilist_user") }
+            false
+        }
+    }
+
+    private fun watchedWith(client: OkHttpClient, t: String, mediaId: Int, episode: Int, total: Int?): Boolean {
         // IG-11: the write needs a successful read ("never lowers progress"); a failed read throws.
         val cur = graphqlOrThrow(client, "query(\$id:Int){Media(id:\$id){episodes mediaListEntry{progress status}}}", JSONObject().put("id", mediaId), t)?.optJSONObject("Media")
         val have = cur?.optJSONObject("mediaListEntry")?.optInt("progress") ?: 0
