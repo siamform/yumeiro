@@ -34,7 +34,7 @@ class SettingsSearchCoverageTest {
             "Yumeiro news", "Service alerts", "Suggestions", "Yumeiro chime", "Instant alerts", "In-app reminders",
             "Send a test notification", "Reliable alerts (UnifiedPush)")
         put(Category.BACKGROUND, "Background checks", "Wi-Fi only")
-        put(Category.NETWORK, "Get around blocked sites automatically", "Only when system DNS fails")
+        put(Category.NETWORK, "Get around blocked sites automatically", "Only when system DNS fails", "Automatic DNS fallback")
         put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Hide the Private entry", "Clear watch history",
             "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications",
             "Clear cache", "All app permissions")
