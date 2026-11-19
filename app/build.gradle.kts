@@ -421,7 +421,7 @@ configurations.matching { it.name.startsWith("tv") && it.name.endsWith("Classpat
 
 // X13-6 (ADR-035): the phone build stays on one Jackson line (2.18.11, no open OSV advisories) even when a
 // library asks for a newer one; the TV rule above keeps 2.13.x. JacksonPhoneVersion test in WsFBugBatch1Test.
-configurations.matching { it.name.startsWith("phone") && it.name.endsWith("Classpath") }.configureEach {
+configurations.matching { (it.name.startsWith("mobile") || it.name.startsWith("debug") || it.name.startsWith("release")) && it.name.endsWith("Classpath") }.configureEach {
   resolutionStrategy.eachDependency {
     if (requested.group.startsWith("com.fasterxml.jackson")) {
       useVersion(libs.versions.jackson.get())
