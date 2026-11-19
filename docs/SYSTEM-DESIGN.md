@@ -438,7 +438,7 @@ scrubbed text. Credentials live only in CI secrets or the git-ignored `.secrets/
 | `KITSU_CLIENT_ID` / `KITSU_CLIENT_SECRET` | "The client secret **must** be kept confidential", but "Application registration has not yet been implemented … can be omitted" ([Kitsu](https://kitsu.docs.apiary.io/)) | 3 | **removed**; the password grant is sent with no client fields. Live probe 2026-11-16 (kitsu.app and kitsu.io): no client fields → `invalid_grant` (user check reached), empty fields → `invalid_client` |
 | `TMDB_API_KEY` | — | 3 by default | **removed**: shipped but read by no app code (it was reserved for the gated trailer feed; that feature's proposal must classify it again here before it ships) |
 | `LASTFM_API_KEY` | key identifies the app; ToS has no confidentiality rule ([ToS](https://www.last.fm/api/tos)) | 2 | keep |
-| `LASTFM_SHARED_SECRET` | the mobile flow signs `auth.getMobileSession` on the device with the secret ([mobile auth](https://www.last.fm/api/mobileauth)); no confidentiality rule in the ToS | 2 (accepted) | keep: the provider's own mobile flow requires it on the device. A Worker signing service would need the user's password to pass through our server for `getMobileSession`, which is worse for users. Users can enter their own key and secret |
+| `LASTFM_SHARED_SECRET` | the mobile flow signs `auth.getMobileSession` on the device with the secret ([mobile auth](https://www.last.fm/api/mobileauth)); no confidentiality rule in the ToS | removed (ADR-048) | Superseded by ADR-048: Yumeiro uses web auth, not the mobile flow, so Yumeiro Cloud signs the built-in key's calls and the secret left the APK. Old note: the provider's own mobile flow requires it on the device. A Worker signing service would need the user's password to pass through our server for `getMobileSession`, which is worse for users. Users can enter their own key and secret |
 | `OPENSUBTITLES_API_KEY` | key identifies the consumer app (sent as the `Api-Key` header from the client); the getting-started docs state no confidentiality rule | 2 | keep; users can enter their own |
 | `LRCLIB_APP_ID` | client identification header | 1 | keep |
 | `FCM_APP_ID`, `FCM_PROJECT_ID`, `FCM_SENDER_ID` | "API keys for Firebase services are not secret" ([Firebase checklist](https://firebase.google.com/support/guides/security-checklist?hl=en)) | 1 | keep |
@@ -1458,6 +1458,52 @@ like any source (Source status lists `SourceHub.ecosystemOf(api).label`). A host
 provider can use at most its call budget and memory cap, can't reach the home network and can't
 leave its folder. Not backed up: `filesDir/scripts` and `script_kv_*` (re-install from the repo).
 Real-repository proof is an owner test (OMT-48).
+
+### ADR-048: Yumeiro Cloud signs Last.fm calls for the built-in key; no shared secret in the APK (SEC-LFM)
+
+Status: accepted 2026-11-20 (final-test cycle, security check §9). Supersedes the `LASTFM_SHARED_SECRET`
+row of the ADR-013 secrets table.
+
+Context. The final-test prompt (§9) says the APK must not contain the Last.fm shared secret. The release
+build put it in `BuildConfig.LASTFM_SHARED_SECRET` (app/build.gradle.kts, release.yml), so anyone could
+read it from the APK and sign calls as Yumeiro. ADR-013 accepted that because it assumed the mobile flow
+(`auth.getMobileSession`) where a server signer would see the user's password. Yumeiro does not use that
+flow: it uses web auth (`auth.getToken` → the user approves in the browser → `auth.getSession`), so a
+signer only ever sees the call's parameters and the session key, never a password.
+
+Competitors. Pano Scrobbler (kawaiiDango/pano-scrobbler) ships its key and secret in the app; Web Scrobbler
+(web-scrobbler/web-scrobbler) ships them in the extension; both accept the leak. Neither uses a server
+signer. Yumeiro already runs a Worker (ADR-013 Yumeiro Cloud), so it can avoid the leak at low cost.
+
+Options. (a) Keep the secret in the APK — rejected by §9. (b) Drop the built-in key, own key only —
+rejected: most users would lose scrobbling. (c) Worker endpoint `POST /v1/lastfm/sign` that returns
+`api_sig` for the built-in key only — chosen.
+
+Decision.
+- Worker (server/src/lastfm.ts): `signRequest` accepts `{params}`, refuses any `api_key` that is not the
+  built-in one (403 `wrong_key`), refuses a method outside an allow list (auth.getToken, auth.getSession,
+  track.updateNowPlaying, track.scrobble — the only calls the app makes), caps the body (260 params, 32 KB), and
+  returns `{api_sig}`. Rate limit `LASTFM_SIGN` 30 per 60 s per IP. 503 `lastfm_off` when the secret is
+  not set. The secret is a Worker secret, put by `scripts/deploy-worker.sh --go` from stdin.
+- App (scrobble/LastFm.kt): `sign()` signs locally with the user's own key and secret; for the built-in
+  key it calls `cloudSig()`. 429 → error 29 (transient); 5xx, unreadable or bad signature → 16 (transient);
+  a refusal → 16 (transient); no cloud host → 26 with "add your own API key". Transient keeps the plays
+  in the queue for the next flush; nothing loops (the queue flushes on its own schedule).
+- The secret no longer exists in BuildConfig or the release workflow. `ApkSecretsTest` now lists it with
+  the other removed secrets.
+
+Side effects. Built-in Last.fm sign-in and scrobbling only work after the Worker is deployed with
+`LASTFM_SHARED_SECRET` (owner's go, §12). Until then the app says so and keeps the plays; a user's own key
+works without the Worker. One extra request per Last.fm call (small JSON, same host as other cloud calls).
+The Worker and the phone sign identically: server/test/lastfm.test.ts checks the app's test vectors.
+
+Terms. Last.fm API ToS (https://www.last.fm/api/tos): the key identifies the app; signing on our own server
+for our own key is the documented model (https://www.last.fm/api/authspec). No access control is bypassed.
+
+Tests. Fail-before branch `tmp/sec-lfm-fail-before`: `ApkSecretsTest.removedTrueSecretsStayOut` fails and
+`LastFmCloudSignTest` does not compile. After: both pass; `ScrobbleFlushMockedTest` and
+`ScrobbleFlushDeviceTest` answer the sign call from their mock servers. Server: 38/40 → 40/40, then 5/5
+in lastfm.test.ts with the cross-vectors.
 
 ## 11. Risks
 

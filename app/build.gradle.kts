@@ -145,7 +145,7 @@ android {
     fun optionalKey(prop: String, env: String) = (providers.gradleProperty(prop).orNull ?: System.getenv(env) ?: "").let(::buildConfigSafe)
     buildConfigField("String", "SIMKL_CLIENT_ID", "\"${optionalKey("simklClientId", "SIMKL_CLIENT_ID")}\"")
     buildConfigField("String", "LASTFM_API_KEY", "\"${optionalKey("lastfmApiKey", "LASTFM_API_KEY")}\"")
-    buildConfigField("String", "LASTFM_SHARED_SECRET", "\"${optionalKey("lastfmSharedSecret", "LASTFM_SHARED_SECRET")}\"")
+    // SEC-LFM (ADR-048): no Last.fm shared secret in the APK; Yumeiro Cloud signs the built-in key's calls.
     buildConfigField("String", "LRCLIB_APP_ID", "\"${optionalKey("lrclibAppId", "LRCLIB_APP_ID")}\"")
     buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
     // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.

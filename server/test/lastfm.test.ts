@@ -24,6 +24,10 @@ test("signature equals the app's format: sorted names, format/callback/api_sig l
   const p = { method: "track.scrobble", api_key: KEY, sk: "S", "artist[0]": "Yōko Kanno", "track[0]": "Tank!", "timestamp[0]": "1700000000", format: "json" };
   assert.equal(signatureBase(p, SECRET), `api_key${KEY}artist[0]Yōko Kannomethodtrack.scrobbleskStimestamp[0]1700000000track[0]Tank!${SECRET}`);
   assert.equal(apiSig(p, SECRET), nodeMd5(signatureBase(p, SECRET)));
+  // The app's own vector (app/src/test/.../LastFmTest.kt): the Worker and the phone sign the same way.
+  const app = { method: "track.scrobble", api_key: "k", sk: "SK", "artist[0]": "Björk", "track[0]": "Jóga", format: "json", callback: "x" };
+  assert.equal(apiSig(app, "s"), "0886adad51e1f072f531d9f437427cd8");
+  assert.equal(apiSig({ token: "t", method: "auth.getSession", api_key: "k" }, "s"), "4b1fe62eb056c03672443be528ff2633");
 });
 
 test("only the app's four calls, with Yumeiro's key, within the size cap, can be signed", () => {

@@ -19,14 +19,14 @@ class ApkSecretsTest {
     private val fields = BuildConfig::class.java.declaredFields.map { it.name }.toSet()
 
     @Test fun removedTrueSecretsStayOut() {
-        val back = fields intersect setOf("TMDB_API_KEY", "TRAKT_CLIENT_SECRET", "KITSU_CLIENT_ID", "KITSU_CLIENT_SECRET")
+        val back = fields intersect setOf("TMDB_API_KEY", "TRAKT_CLIENT_SECRET", "KITSU_CLIENT_ID", "KITSU_CLIENT_SECRET", "LASTFM_SHARED_SECRET") // SEC-LFM: signed by Yumeiro Cloud
         assertTrue("back in BuildConfig: $back", back.isEmpty())
     }
 
     @Test fun everySecretLikeFieldIsClassified() {
         val secretLike = fields.filter { n -> listOf("SECRET", "TOKEN", "KEY", "PASSWORD").any { it in n } }.toSet()
         val classified = setOf(
-            "LASTFM_API_KEY", "LASTFM_SHARED_SECRET", "OPENSUBTITLES_API_KEY", "FCM_API_KEY", // class 2
+            "LASTFM_API_KEY", "OPENSUBTITLES_API_KEY", "FCM_API_KEY", // class 2
             "UPDATER_TOKEN_BYTES", // empty in release/preview (build guard), debug-only otherwise
             "UPDATER_TOKEN_KEY", // XOR key for the cert digest, not a credential
         )

@@ -11,6 +11,8 @@ import dev.asfakul.yumeiro.online.OnlineSettings
 import kotlinx.coroutines.delay
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -19,8 +21,9 @@ import org.json.JSONObject
  * Last.fm scrobbling with the desktop auth flow (https://www.last.fm/api/desktopauth): get a token,
  * the user approves it on last.fm in the browser, then the app trades it for a session key. The
  * user's password never touches Yumeiro. Session keys don't expire; a revoked one (error 9) signs
- * out. The API key and shared secret are a pair: a user's own key is never signed with the
- * built-in secret.
+ * out. The API key and shared secret are a pair: a user's own key is signed on the phone with the
+ * user's own secret; Yumeiro's built-in key is signed by Yumeiro Cloud (SEC-LFM, ADR-048), so its
+ * shared secret is not in the APK.
  */
 object LastFm {
     private const val API = "https://ws.audioscrobbler.com/2.0/"
@@ -28,8 +31,9 @@ object LastFm {
 
     private fun userKey(): String = OnlineSettings.secret("lastfm_key").orEmpty()
     fun apiKey(): String = userKey().ifBlank { BuildConfig.LASTFM_API_KEY }
-    private fun secret(): String = if (userKey().isNotBlank()) OnlineSettings.secret("lastfm_secret").orEmpty() else BuildConfig.LASTFM_SHARED_SECRET
-    val configured: Boolean get() = apiKey().isNotBlank() && secret().isNotBlank()
+    private fun userSecret(): String = OnlineSettings.secret("lastfm_secret").orEmpty()
+    /** Built-in key: signed by Yumeiro Cloud. Own key: needs its own secret. */
+    val configured: Boolean get() = if (userKey().isNotBlank()) userSecret().isNotBlank() else BuildConfig.LASTFM_API_KEY.isNotBlank() && BuildConfig.CLOUD_HOST.isNotBlank()
     fun session(): String? = OnlineSettings.secret("lastfm_session")
     fun user(): String? = OnlineSettings.secret("lastfm_user")
     val signedIn: Boolean get() = session() != null
@@ -47,6 +51,33 @@ object LastFm {
     internal fun signed(params: Map<String, String>, secret: String): Map<String, String> =
         params + ("api_sig" to LastFmSignature.sign(params, secret)) + ("format" to "json")
 
+    /** The signed parameters: on the phone for the user's own key, by Yumeiro Cloud for the built-in one. */
+    private fun sign(client: OkHttpClient, params: Map<String, String>): Map<String, String> =
+        if (userKey().isNotBlank()) signed(params, userSecret())
+        else params + ("api_sig" to cloudSig(client, params, BuildConfig.CLOUD_HOST)) + ("format" to "json")
+
+    /**
+     * SEC-LFM: asks Yumeiro Cloud for the signature. Its refusals become transient [ApiException]s (Last.fm's
+     * codes 16 / 29), so the scrobble queue keeps the plays and tries again on its next flush, never in a loop.
+     */
+    internal fun cloudSig(client: OkHttpClient, params: Map<String, String>, host: String): String {
+        if (host.isBlank()) throw ApiException(26, "Last.fm needs your own API key in this build (Settings → Tracking)")
+        val body = JSONObject().put("params", JSONObject(params)).toString()
+            .toRequestBody("application/json".toMediaType())
+        val req = Request.Builder().url("https://$host/v1/lastfm/sign").post(body).header("User-Agent", userAgent()).build()
+        return client.newCall(req).execute().use { r ->
+            val o = runCatching { JSONObject(r.body.string()) }.getOrNull()
+            val sig = o?.optString("api_sig").orEmpty()
+            when {
+                r.isSuccessful && sig.length == 32 -> sig
+                r.code == 429 -> throw ApiException(29, "Last.fm is busy. Your plays are kept and sent later")
+                r.code == 503 || r.code >= 500 || o == null -> throw ApiException(16, "Yumeiro's Last.fm link isn't available right now. Your plays are kept and sent later; you can also add your own API key in Settings → Tracking")
+                // Kept as transient: a refusal is a server set-up problem, never the user's plays (they expire after 14 days).
+                else -> throw ApiException(16, "Yumeiro's server refused this Last.fm request (${o.optString("error").ifBlank { "HTTP ${r.code}" }})")
+            }
+        }
+    }
+
     /** Throws [ApiException] when the JSON is a Last.fm error. */
     internal fun check(text: String): JSONObject {
         val o = runCatching { JSONObject(text) }.getOrElse { throw ApiException(16, "Last.fm sent an unreadable answer") }
@@ -55,12 +86,12 @@ object LastFm {
     }
 
     private fun get(client: OkHttpClient, params: Map<String, String>): JSONObject {
-        val url = API.toHttpUrl().newBuilder().apply { signed(params, secret()).forEach { (k, v) -> addQueryParameter(k, v) } }.build()
+        val url = API.toHttpUrl().newBuilder().apply { sign(client, params).forEach { (k, v) -> addQueryParameter(k, v) } }.build()
         return client.newCall(Request.Builder().url(url).header("User-Agent", userAgent()).build()).execute().use { check(it.body.string()) }
     }
 
     private fun post(client: OkHttpClient, params: Map<String, String>): JSONObject {
-        val body = FormBody.Builder().apply { signed(params, secret()).forEach { (k, v) -> add(k, v) } }.build()
+        val body = FormBody.Builder().apply { sign(client, params).forEach { (k, v) -> add(k, v) } }.build()
         return client.newCall(Request.Builder().url(API).post(body).header("User-Agent", userAgent()).build()).execute().use { check(it.body.string()) }
     }
 

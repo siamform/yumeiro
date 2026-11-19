@@ -270,7 +270,10 @@ the app version and your device. Don't send passwords or account details.
 - **Why the agent can't do it:** it needs your Last.fm login; the agent must not sign in to your accounts.
   The agent checks the scrobble rules and the background watch with unit and emulator tests
   (`ScrobbleTrackerTest`, `ScrobbleQueueTest`, `LibraryDeviceTest`), but not the real Last.fm server.
-- **Hardware / environment:** your phone with internet, a Last.fm account.
+- **Hardware / environment:** your phone with internet, a Last.fm account. Since SEC-LFM (ADR-048) the built-in key
+  is signed by Yumeiro Cloud, so run this after the Worker deploy (§12); with your own Last.fm API key and secret it
+  works before the deploy too. Before the deploy, the built-in sign-in shows a "try again later" message and the
+  plays stay queued.
 - **Instructions:** Settings → Last.fm → sign in. Play two songs on the phone, each for more than half its
   length (or 4 minutes). For the second song, press Back until you leave the app and let it keep playing.
   Then open last.fm in a browser → your profile → Recent tracks.

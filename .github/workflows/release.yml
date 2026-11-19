@@ -100,7 +100,6 @@ jobs:
           # ADR-013: no Trakt/Kitsu client secret and no TMDB key in the APK.
           SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
-          LASTFM_SHARED_SECRET: ${{ secrets.LASTFM_SHARED_SECRET }}
           LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
           # Optional Firebase client config for instant notices (docs/PUSH-FCM.md). Not secret, but kept out of git.

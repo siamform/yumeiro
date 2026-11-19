@@ -42,6 +42,11 @@ docs/REMAINING-2026-11-19.md and docs/UNVERIFIED-QUEUE.md).
 - "Show videos from" search shows every match; YouTube on TV shows a grid; M3U logos in single quotes and relative
   channel links; "1 track"; last-backup time kept.
 
+### Security
+- Last.fm: the app no longer carries Yumeiro's Last.fm shared secret. Yumeiro Cloud signs the built-in key's calls
+  (SEC-LFM, ADR-048). Until the cloud update is live, built-in Last.fm sign-in waits and keeps your plays; your own
+  Last.fm API key and secret (Settings → Last.fm) work without it.
+
 ### Sources and network (tenth cycle)
 - Telegram: public channels play without a login (F-02). Private channels say they can't be opened.
 - TeraBox and DiskWala share links that the site lets anyone open play or download (F-03); nothing behind a login

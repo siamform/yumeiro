@@ -47,6 +47,9 @@ class ScrobbleFlushMockedTest {
 
     private val mock = OkHttpClient.Builder().addInterceptor(Interceptor { chain ->
         val req = chain.request()
+        // SEC-LFM (ADR-048): the built-in key is signed by Yumeiro Cloud first; that call is not a scrobble batch.
+        if (req.url.encodedPath == "/v1/lastfm/sign") return@Interceptor Response.Builder().request(req).protocol(Protocol.HTTP_1_1).code(200).message("ok")
+            .body("{\"api_sig\":\"0123456789abcdef0123456789abcdef\"}".toResponseBody("application/json".toMediaType())).build()
         val form = Buffer().also { req.body?.writeTo(it) }.readUtf8()
         val fields = form.split('&').map { java.net.URLDecoder.decode(it, "UTF-8") }
         val tracks = fields.filter { it.startsWith("track[") }.sortedBy { it.substringAfter('[').substringBefore(']').toInt() }.map { it.substringAfter('=') }
