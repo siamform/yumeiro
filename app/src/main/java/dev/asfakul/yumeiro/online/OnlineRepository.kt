@@ -275,7 +275,7 @@ object OnlineRepository {
             runCatching {
                 resp.items.orEmpty().map { r ->
                     OnlineRow(
-                        api.name, r.name.orEmpty(), r.list.orEmpty().mapNotNull { runCatching { it.toItem(api.name) }.getOrNull() }.distinctBy { it.url }.take(MAX_ROW_ITEMS),
+                        api.name, r.name.orEmpty(), r.list.orEmpty().mapNotNull { runCatching { it.toItem(api.name, feed = true) }.getOrNull() }.distinctBy { it.url }.take(MAX_ROW_ITEMS),
                         r.isHorizontalImages,
                         pageName = page.name, pageData = page.data, hasNext = resp.hasNext && resp.items.size == 1,
                     )
@@ -304,7 +304,7 @@ object OnlineRepository {
         val resp = parallel.withPermit {
             ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
         } ?: return@withContext OnlinePage(emptyList(), false)
-        val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name) } }.distinctBy { it.url }
+        val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name, feed = true) } }.distinctBy { it.url }
         OnlinePage(items, resp.hasNext && items.isNotEmpty())
     }
 
@@ -407,7 +407,7 @@ object OnlineRepository {
             contentRating = r.contentRating, playData = playData,
             episodes = episodes.mapValues { (_, l) -> l.sortedWith(compareBy({ it.season ?: 0 }, { it.episode ?: Int.MAX_VALUE })) },
             seasonNames = seasonNames,
-            recommendations = r.recommendations.orEmpty().mapNotNull { it.toItem(api.name) }.distinctBy { it.url }.take(24),
+            recommendations = r.recommendations.orEmpty().mapNotNull { it.toItem(api.name, feed = true) }.distinctBy { it.url }.take(24),
             unsupportedReason = unsupported,
             malId = runCatching { with(LoadResponse) { r.getMalId() }?.toIntOrNull() }.getOrNull(),
             aniListId = runCatching { with(LoadResponse) { r.getAniListId() }?.toIntOrNull() }.getOrNull(),
@@ -502,9 +502,9 @@ object OnlineRepository {
      * and leave a wrong `apiName`, so trusting it attributed results to another Hue (opening them
      * with the wrong extension, and colliding list keys that could crash the results grid).
      */
-    internal fun SearchResponse.toItem(owner: String = apiName): OnlineItem? {
+    internal fun SearchResponse.toItem(owner: String = apiName, feed: Boolean = false): OnlineItem? {
         val n = name.trim().ifBlank { return null }
-        if (type == TvType.NSFW && !OnlineSettings.adult.value) return null
+        if (AdultContent.dropNsfw(type == TvType.NSFW, feed, OnlineSettings.adult.value, OnlineSettings.adultPrivate.value)) return null
         return OnlineItem(
             name = n, url = url, api = owner.ifBlank { apiName }, posterUrl = posterUrl?.takeIf { it.isNotBlank() },
             posterHeaders = posterHeaders.orEmpty(), type = type?.let(::typeLabel),

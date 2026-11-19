@@ -18,6 +18,14 @@ object AdultContent {
         (types.isNotEmpty() && types.all { it == TvType.NSFW }) || ExtensionManager.extensionOf(p)?.let { ext -> ext.tvTypes.any { it.equals("NSFW", true) } } == true
     }.getOrDefault(false)
 
+    /**
+     * NB11-OB1 (ADR-035): should a title CloudStream marks NSFW be dropped? 18+ off drops it everywhere; 18+ on but
+     * private drops it from feed rows (home rows, paging, recommendations) of mixed extensions, while search and
+     * opening the title stay available, the same rule as hideInFeeds() for whole 18+ extensions.
+     */
+    fun dropNsfw(nsfw: Boolean, feed: Boolean, adultOn: Boolean, private: Boolean): Boolean =
+        nsfw && (!adultOn || (feed && private))
+
     fun isAdult(api: String, type: String?): Boolean = isAdultType(type) || isAdultApi(api)
 
     /**
