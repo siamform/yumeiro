@@ -18,9 +18,11 @@ class StreamDownloadTest {
         assertTrue(StreamDownload.canSave(StreamRequest(url = "https://example.com/x", format = StreamFormat.PROGRESSIVE)))
     }
 
-    @Test fun dashSmoothAndDrmAreRefused() {
-        assertFalse(StreamDownload.canSave(StreamRequest(url = "https://example.com/manifest.mpd")))
-        assertFalse(StreamDownload.canSave(StreamRequest(url = "https://example.com/a.mp4", format = StreamFormat.DASH)))
+    // NF-2b: DASH is saved now (DashGrab); Smooth Streaming and DRM stay refused.
+    @Test fun smoothAndDrmAreRefused() {
+        assertTrue(StreamDownload.canSave(StreamRequest(url = "https://example.com/manifest.mpd")))
+        assertTrue(StreamDownload.canSave(StreamRequest(url = "https://example.com/a.mp4", format = StreamFormat.DASH)))
+        assertFalse(StreamDownload.canSave(StreamRequest(url = "https://example.com/a.mpd", drmScheme = DrmScheme.CLEARKEY)))
         assertFalse(StreamDownload.canSave(StreamRequest(url = "https://example.com/a.mp4", format = StreamFormat.SMOOTH)))
         assertFalse(StreamDownload.canSave(StreamRequest(url = "https://example.com/a.mp4", drmScheme = DrmScheme.WIDEVINE)))
     }

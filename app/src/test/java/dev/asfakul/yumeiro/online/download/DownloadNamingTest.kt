@@ -44,7 +44,7 @@ class DownloadNamingTest {
     }
 
     @Test fun extensionFollowsLink() {
-        assertEquals("ts", DownloadNaming.extensionFor(link(720, "https://x.test/a.m3u8", hls = true)))
+        assertEquals("mp4", DownloadNaming.extensionFor(link(720, "https://x.test/a.m3u8", hls = true))) // NF-2b: TS is remuxed to MP4
         assertEquals("mkv", DownloadNaming.extensionFor(link(720, "https://x.test/a.mkv?t=1")))
         assertEquals("mp4", DownloadNaming.extensionFor(link(720, "https://x.test/play")))
     }
