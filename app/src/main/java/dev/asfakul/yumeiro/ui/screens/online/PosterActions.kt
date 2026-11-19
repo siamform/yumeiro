@@ -126,16 +126,20 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
         Dialog(onDismissRequest = onDismiss) {
             // F-09 fix: the dialog window attaches a few frames after composition on slow phones (api33-lowram),
             // so a single requestFocus() from outside the dialog was lost and focus stayed on the poster.
-            // Ask from inside the dialog, once per frame, until the panel really holds focus (max ~1 s).
+            // Ask from inside the dialog, once per frame, until the panel really holds focus (max ~2.5 s).
             var held by remember { mutableStateOf(false) }
             Box(
                 Modifier.widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF16161C))
                     .onFocusChanged { if (it.hasFocus) held = true }.padding(vertical = 12.dp),
             ) { body(first) }
+            // The dialog's own window can start in touch mode (api33-lowram, device run 44502098420), where a
+            // plain focus request is refused: leave touch mode from the dialog's view first (TVs have none).
+            val dialogView = androidx.compose.ui.platform.LocalView.current
             LaunchedEffect(Unit) {
-                repeat(20) {
+                repeat(40) {
                     if (held) return@LaunchedEffect
                     androidx.compose.runtime.withFrameNanos { }
+                    if (dialogView.isInTouchMode || !dialogView.hasFocus()) runCatching { dialogView.requestFocusFromTouch() }
                     runCatching { first.requestFocus() }
                     kotlinx.coroutines.delay(50)
                 }
