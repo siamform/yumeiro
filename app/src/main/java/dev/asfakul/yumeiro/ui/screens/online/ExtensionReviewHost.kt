@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.ExtensionReview
+import kotlinx.coroutines.delay
 import dev.asfakul.yumeiro.online.ExtensionScanner
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
@@ -60,6 +62,8 @@ internal fun levelLabel(l: ExtensionScanner.Level): String = when (l) {
     ExtensionScanner.Level.DANGER -> "Danger"
 }
 
+private const val CONFIRM_DELAY_MS = 1_000L
+
 /** The safety review shown between download and install (see [ExtensionReview]). Add once at the app root. */
 @Composable
 fun ExtensionReviewHost() {
@@ -70,6 +74,11 @@ fun ExtensionReviewHost() {
     val req by ExtensionReview.pending.collectAsState()
     val r = req ?: return
     var confirmDanger by remember(r) { mutableStateOf(false) }
+    // G10 ER-27: the confirming tap counts only a moment after the warning line appears, so a double tap,
+    // two quick OK presses on a remote or a key repeat can't install flagged code unseen (AOSP 14
+    // PackageInstallerActivity enables OK only once its confirm text is shown). Compose clock, not wall time.
+    var canConfirm by remember(r) { mutableStateOf(false) }
+    LaunchedEffect(r, confirmDanger) { if (confirmDanger) { delay(CONFIRM_DELAY_MS); canConfirm = true } }
     val danger = r.report.level == ExtensionScanner.Level.DANGER || !r.report.readable
     TsukiDialog(
         tone = (if (danger) dev.asfakul.yumeiro.ui.components.DialogTone.CRITICAL else if (r.report.level == ExtensionScanner.Level.SAFE) dev.asfakul.yumeiro.ui.components.DialogTone.SUCCESS else dev.asfakul.yumeiro.ui.components.DialogTone.WARNING),
@@ -112,15 +121,17 @@ fun ExtensionReviewHost() {
                     color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp,
                 )
                 if (danger && confirmDanger) Text(
-                    "Installing anyway gives this code the risks listed above. Tap Install anyway again to confirm.",
+                    "Installing anyway gives this code the risks listed above. Tap again to confirm.",
                     color = ErrorColor, fontSize = 12.sp,
                 )
             }
         },
         confirmButton = {
             if (!r.report.readable) Unit
-            else if (danger) TextButton(onClick = { if (confirmDanger) ExtensionReview.answer(true) else confirmDanger = true },
-                modifier = Modifier.testTag("extension_review_install_anyway")) { Text("Install anyway", color = ErrorColor) }
+            else if (danger) TextButton(onClick = { if (!confirmDanger) confirmDanger = true else if (canConfirm) ExtensionReview.answer(true) },
+                modifier = Modifier.testTag("extension_review_install_anyway")) {
+                Text(if (confirmDanger && canConfirm) "Tap again to install" else "Install anyway", color = ErrorColor)
+            }
             else TextButton(onClick = { ExtensionReview.answer(true) }, modifier = Modifier.testTag("extension_review_install")) {
                 Text(if (r.isUpdate) "Update" else "Install", color = SpotifyGreen, fontWeight = FontWeight.Bold)
             }
