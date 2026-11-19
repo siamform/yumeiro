@@ -302,6 +302,13 @@ class LocalPlayerDeviceTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync { ready = dev.asfakul.yumeiro.cast.CastSupport.ready(ctx) }
         val callMs = android.os.SystemClock.uptimeMillis() - t0
         log("P17 ready() returned in $callMs ms, value=${ready!!.value}")
+        assertTrue("ready() must not block (was $callMs ms)", callMs < 500)
+        // The Android TV image has no Cast sender: the module never loads there, and the app hides
+        // the Cast button (castOk stays false), which is correct (pass-after 44526618412, tv-api34).
+        if (dev.asfakul.yumeiro.Edition.isTv && !runCatching { rule.waitUntil(30_000) { ready!!.value }; true }.getOrDefault(false)) {
+            log("P17 TV: Cast module not available, button stays hidden")
+            org.junit.Assume.assumeTrue("no Cast sender on this TV image", false)
+        }
         wait("Cast module loaded", 30_000) { ready!!.value }
         log("P17 cast ready after ${android.os.SystemClock.uptimeMillis() - t0} ms")
         assertTrue("ready() must not block (was $callMs ms)", callMs < 500)
@@ -346,6 +353,8 @@ class LocalPlayerDeviceTest {
 
     /** R17 PL-18: on a phone one Back leaves full screen and the player together (floating window). */
     @Test fun g_oneBackLeavesFullscreenOnPhone() {
+        // Phone only: the TV player is always full screen and has no fullscreen button (showFullscreenButton = !tvPlayer).
+        org.junit.Assume.assumeFalse("TV player has no fullscreen toggle", dev.asfakul.yumeiro.Edition.isTv)
         openClipFromDevice()
         loopClip()
         control("video_fullscreen_btn")
