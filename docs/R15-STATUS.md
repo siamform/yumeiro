@@ -1,15 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 03:05 UTC, G10 step 5 fail-before running)
+## Resume here (updated 2026-11-19 04:15 UTC, G10 step 7 pass-after running)
 
 - **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 → G11 → v1.8.2 (owner
   approval) → stability-v2.
 - **GROUP-14:** closed (docs/groups/GROUP-14-OWNER-BUGS.md). tv-api34 44440614210: 7 Live TV classes PASS;
   FeedPosition#youtube FAIL twice (rerun 44443748315) = pre-existing TV YouTube layout, queued TV-YT-1.
-- **G10 step:** 4 done (tests 48bee9ad) → 5 fail-before on throwaway `ab/g10-before` (delete after).
-- **Runs in progress:** CI 44445709090; device SheetFocusTvDeviceTest tv-api34 44445713091, api33-lowram 44445734996.
-- **Next three actions:** (1) read fail-before results; tests passing on old code go to UNVERIFIED-QUEUE; (2) delete
-  `ab/g10-before`; (3) fixes one commit per finding (ER-21…ER-28).
+- **G10 step:** 6 fixes pushed (ER-21 829073bb … ER-28 2564ef48, one commit each) → 7 pass-after.
+  Fail-before: CI 44445709090 = 9/10 G10 unit tests fail on old code; ER-27 test passed (test fault:
+  main thread not drained) → fixed 8336dbf3, rerun on `ab/g10-before`. Device 44445734996 api33 FAIL
+  (reproduced); tv-api34 44445713091 PASS on old code (not reproduced there → queue).
+- **Runs in progress:** pass-after CI 44448997376 + device api33-lowram 44449003874 (2564ef48);
+  ER-27 fail-before rerun CI 44449000456 (`ab/g10-before` 90006ba3).
+- **Next three actions:** (1) read the three runs; (2) delete `ab/g10-before`; (3) group regression on
+  the close commit: phones + tv-api24 + tv-api34 (G10 device classes + SheetFocusTv + Nbug15Redesign).
 
 ### Previous resume note — superseded (02:25 UTC 2026-11-19, GROUP-14 close)
 
