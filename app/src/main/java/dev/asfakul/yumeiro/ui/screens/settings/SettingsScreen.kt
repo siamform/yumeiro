@@ -356,6 +356,7 @@ private fun CategoryPage(
     onOpenPage: (String) -> Unit, onOpenCategory: (Category) -> Unit,
 ) {
     val look = c.look()
+    val context = LocalContext.current
     Column(Modifier.fillMaxSize().testTag("settings_page_${c.name.lowercase()}")) {
         SubPageHeader(title = c.title, onBack = onBack, subtitle = c.group.label)
         LazyColumn(
@@ -414,6 +415,7 @@ private fun CategoryPage(
                 Category.BACKGROUND -> item("c") { BackgroundActivityCard() }
                 Category.NETWORK -> {
                     item("c") { NetworkSettingsCard() }
+                    if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.APP_PROXY)) item("proxy") { GroupLabel("Proxy"); ProxySettingsCard() }
                     item("torrent") { GroupLabel("Torrent streaming"); TorrServerCard() }
                 }
                 Category.PRIVACY -> {
