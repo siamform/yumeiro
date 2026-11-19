@@ -139,6 +139,15 @@ export function buildMessage(n: Notice, target: { topic: string } | { fid: strin
   };
 }
 
+/**
+ * F-AIR (ADR-043): "an episode you follow just aired, check now". Data-only, no show name or id in it
+ * (the app looks up what is new itself), high priority so Doze lets the check run, collapsible so a
+ * phone that was offline gets one wake, not a pile. Six hours to live, like the UnifiedPush nudge.
+ */
+export function buildWake(target: { fid: string }): Record<string, unknown> {
+  return { ...target, data: { y: "1", kind: "wake" }, android: { priority: "high", ttl: "21600s", collapse_key: "yumeiro-wake" } };
+}
+
 export type SendOutcome = "ok" | "gone" | "retry" | "fail";
 /** Maps an FCM v1 error to what the Worker should do with the target. */
 export function sendOutcome(status: number, body: string): SendOutcome {

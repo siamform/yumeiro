@@ -11,7 +11,7 @@ import {
   type AiringRow, type PendingRow,
 } from "./logic.ts";
 import {
-  FANOUT_PER_MESSAGE, buildMessage, needsFanout, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
+  FANOUT_PER_MESSAGE, buildMessage, buildWake, needsFanout, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
 } from "./fcm.ts";
 
 export interface Env {
@@ -32,7 +32,9 @@ export interface Env {
 }
 
 /** Airing nudges (UnifiedPush endpoints) or NOTIFY-1 direct copies of a broadcast (FCM ids). */
-interface WakeJob { endpoints?: string[]; fcm?: { fids: string[]; notice: Notice; sent: number } }
+// endpoints: UnifiedPush wake-ups. fcm: a broadcast copied to phones the topic misses (NOTIFY-1).
+// wake: F-AIR (ADR-043) data-only "check now" to Firebase phones that follow a show that just aired.
+interface WakeJob { endpoints?: string[]; fcm?: { fids: string[]; notice: Notice; sent: number }; wake?: { fids: string[] } }
 
 const DAY = 86_400;
 const now = () => Math.floor(Date.now() / 1000);
@@ -72,6 +74,7 @@ export default {
   async queue(batch: MessageBatch<WakeJob>, env: Env): Promise<void> {
     for (const msg of batch.messages) {
       if (msg.body.fcm) { await fanoutSend(env, msg.body.fcm); msg.ack(); continue; }
+      if (msg.body.wake) { await wakeSend(env, msg.body.wake.fids); msg.ack(); continue; }
       const results = await Promise.all((msg.body.endpoints ?? []).map(async (ep) => [ep, await wake(ep)] as const));
       const gone = results.filter(([, r]) => r === "gone").map(([ep]) => ep);
       if (gone.length) await forget(env, gone);
@@ -139,62 +142,73 @@ async function register(req: Request, env: Env): Promise<Response> {
     }
   }
 
-  // Follow list: only changed rows are written, and at most once per 10 minutes per device, so one
-  // token can't burn the free plan's daily D1 write budget (that would stop push for everyone).
-  let followsPending = false;
-  if (row.follows_v !== version) {
-    const last = await env.DB.prepare("SELECT at FROM follow_changes WHERE device_id = ?").bind(row.id).first<{ at: number }>();
-    if (last && t - last.at < FOLLOW_CHANGE_COOLDOWN_S && row.follows_v !== "") {
-      followsPending = true; // the app sends the list again on its next check-in
-    } else {
-      const cur = (await env.DB.prepare("SELECT media_id FROM follows WHERE device_id = ?").bind(row.id).all<{ media_id: number }>())
-        .results.map((r) => r.media_id);
-      const { add, remove } = followDiff(cur, follows);
-      const stmts: D1PreparedStatement[] = [];
-      for (const ids of chunk(remove, 90)) {
-        stmts.push(env.DB.prepare(`DELETE FROM follows WHERE device_id = ? AND media_id IN (${ids.map(() => "?").join(",")})`).bind(row.id, ...ids));
-      }
-      for (const ids of chunk(add, 45)) {
-        stmts.push(env.DB.prepare(
-          `INSERT OR IGNORE INTO follows (media_id, device_id) VALUES ${ids.map(() => "(?, ?)").join(",")}`,
-        ).bind(...ids.flatMap((m) => [m, row!.id])));
-      }
-      stmts.push(env.DB.prepare("UPDATE devices SET follows_v = ? WHERE id = ?").bind(version, row.id));
-      stmts.push(env.DB.prepare("INSERT INTO follow_changes (device_id, at) VALUES (?, ?) ON CONFLICT(device_id) DO UPDATE SET at = excluded.at").bind(row.id, t));
-      await env.DB.batch(stmts);
-    }
-  }
-
-  // Shared timetable: one phone can't move a confirmed time for everyone (see planAiring).
-  const reports = parseAiring(body.airing, follows, t);
-  let airingWrites = 0;
-  if (reports.length) {
-    const rows: AiringRow[] = [];
-    const pending: PendingRow[] = [];
-    for (const ids of chunk(reports.map(([m]) => m), 90)) {
-      const q = ids.map(() => "?").join(",");
-      rows.push(...(await env.DB.prepare(`SELECT media_id, at, rolls FROM airing WHERE media_id IN (${q})`).bind(...ids).all<AiringRow>()).results);
-      pending.push(...(await env.DB.prepare(`SELECT media_id, at, device_id FROM airing_pending WHERE media_id IN (${q})`).bind(...ids).all<PendingRow>()).results);
-    }
-    const ops = planAiring(reports, rows, pending, row.id, t - row.created);
-    const stmts: D1PreparedStatement[] = [];
-    for (const o of ops) {
-      if (o.op === "set") {
-        stmts.push(env.DB.prepare(
-          "INSERT INTO airing (media_id, at, rolls) VALUES (?, ?, 0) ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, rolls = 0",
-        ).bind(o.media_id, o.at));
-        if (pending.some((p) => p.media_id === o.media_id)) stmts.push(env.DB.prepare("DELETE FROM airing_pending WHERE media_id = ?").bind(o.media_id));
-      } else {
-        stmts.push(env.DB.prepare(
-          `INSERT INTO airing_pending (media_id, at, device_id, reported) VALUES (?, ?, ?, ?)
-           ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, device_id = excluded.device_id, reported = excluded.reported`,
-        ).bind(o.media_id, o.at, row.id, t));
-      }
-    }
-    for (const b of chunk(stmts, 50)) await env.DB.batch(b);
-    airingWrites = ops.length;
-  }
+  const followsPending = await storeFollows(env, UP, row.id, row.follows_v, version, follows, t);
+  const airingWrites = await storeAiring(env, row.id, t - row.created, parseAiring(body.airing, follows, t), t);
   return json({ id: row.id, token, follows: follows.length, airing: airingWrites, follows_pending: followsPending });
+}
+
+// ---- follow lists and the shared airing timetable (UnifiedPush and Firebase phones alike) ----
+
+interface FollowStore { devices: string; follows: string; col: string; cooldownKey: (id: string) => string }
+const UP: FollowStore = { devices: "devices", follows: "follows", col: "device_id", cooldownKey: (id) => id };
+// F-AIR: Firebase phones keep their own list; their cooldown/vote key is "fcm:<id>" so it never collides.
+const FCM: FollowStore = { devices: "fcm_devices", follows: "fcm_follows", col: "fcm_id", cooldownKey: (id) => `fcm:${id}` };
+
+/**
+ * Follow list: only changed rows are written, and at most once per 10 minutes per device, so one
+ * token can't burn the free plan's daily D1 write budget (that would stop push for everyone).
+ * Returns true when the change was held back (the app sends the list again on its next check-in).
+ */
+async function storeFollows(env: Env, k: FollowStore, id: string, storedV: string, version: string, follows: number[], t: number): Promise<boolean> {
+  if (storedV === version) return false;
+  const key = k.cooldownKey(id);
+  const last = await env.DB.prepare("SELECT at FROM follow_changes WHERE device_id = ?").bind(key).first<{ at: number }>();
+  if (last && t - last.at < FOLLOW_CHANGE_COOLDOWN_S && storedV !== "") return true;
+  const cur = (await env.DB.prepare(`SELECT media_id FROM ${k.follows} WHERE ${k.col} = ?`).bind(id).all<{ media_id: number }>())
+    .results.map((r) => r.media_id);
+  const { add, remove } = followDiff(cur, follows);
+  const stmts: D1PreparedStatement[] = [];
+  for (const ids of chunk(remove, 90)) {
+    stmts.push(env.DB.prepare(`DELETE FROM ${k.follows} WHERE ${k.col} = ? AND media_id IN (${ids.map(() => "?").join(",")})`).bind(id, ...ids));
+  }
+  for (const ids of chunk(add, 45)) {
+    stmts.push(env.DB.prepare(
+      `INSERT OR IGNORE INTO ${k.follows} (media_id, ${k.col}) VALUES ${ids.map(() => "(?, ?)").join(",")}`,
+    ).bind(...ids.flatMap((m) => [m, id])));
+  }
+  stmts.push(env.DB.prepare(`UPDATE ${k.devices} SET follows_v = ? WHERE id = ?`).bind(version, id));
+  stmts.push(env.DB.prepare("INSERT INTO follow_changes (device_id, at) VALUES (?, ?) ON CONFLICT(device_id) DO UPDATE SET at = excluded.at").bind(key, t));
+  await env.DB.batch(stmts);
+  return false;
+}
+
+/** Shared timetable: one phone can't move a confirmed time for everyone (see planAiring). */
+async function storeAiring(env: Env, voter: string, ageS: number, reports: [number, number][], t: number): Promise<number> {
+  if (!reports.length) return 0;
+  const rows: AiringRow[] = [];
+  const pending: PendingRow[] = [];
+  for (const ids of chunk(reports.map(([m]) => m), 90)) {
+    const q = ids.map(() => "?").join(",");
+    rows.push(...(await env.DB.prepare(`SELECT media_id, at, rolls FROM airing WHERE media_id IN (${q})`).bind(...ids).all<AiringRow>()).results);
+    pending.push(...(await env.DB.prepare(`SELECT media_id, at, device_id FROM airing_pending WHERE media_id IN (${q})`).bind(...ids).all<PendingRow>()).results);
+  }
+  const ops = planAiring(reports, rows, pending, voter, ageS);
+  const stmts: D1PreparedStatement[] = [];
+  for (const o of ops) {
+    if (o.op === "set") {
+      stmts.push(env.DB.prepare(
+        "INSERT INTO airing (media_id, at, rolls) VALUES (?, ?, 0) ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, rolls = 0",
+      ).bind(o.media_id, o.at));
+      if (pending.some((p) => p.media_id === o.media_id)) stmts.push(env.DB.prepare("DELETE FROM airing_pending WHERE media_id = ?").bind(o.media_id));
+    } else {
+      stmts.push(env.DB.prepare(
+        `INSERT INTO airing_pending (media_id, at, device_id, reported) VALUES (?, ?, ?, ?)
+         ON CONFLICT(media_id) DO UPDATE SET at = excluded.at, device_id = excluded.device_id, reported = excluded.reported`,
+      ).bind(o.media_id, o.at, voter, t));
+    }
+  }
+  for (const b of chunk(stmts, 50)) await env.DB.batch(b);
+  return ops.length;
 }
 
 async function unregister(req: Request, env: Env): Promise<Response> {
@@ -230,9 +244,13 @@ async function prune(env: Env): Promise<void> {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM follows WHERE device_id IN (SELECT id FROM devices WHERE seen < ?)").bind(cut),
     env.DB.prepare("DELETE FROM devices WHERE seen < ?").bind(cut),
-    env.DB.prepare("DELETE FROM airing WHERE media_id NOT IN (SELECT media_id FROM follows)"),
+    env.DB.prepare("DELETE FROM fcm_follows WHERE fcm_id IN (SELECT id FROM fcm_devices WHERE seen < ?)").bind(cut),
     env.DB.prepare("DELETE FROM fcm_devices WHERE seen < ?").bind(cut),
-    env.DB.prepare("DELETE FROM follow_changes WHERE device_id NOT IN (SELECT id FROM devices)"),
+    env.DB.prepare("DELETE FROM fcm_follows WHERE fcm_id NOT IN (SELECT id FROM fcm_devices)"), // rows of a moved FID
+    env.DB.prepare("DELETE FROM airing WHERE media_id NOT IN (SELECT media_id FROM follows UNION SELECT media_id FROM fcm_follows)"),
+    env.DB.prepare(
+      "DELETE FROM follow_changes WHERE device_id NOT IN (SELECT id FROM devices) AND device_id NOT IN (SELECT 'fcm:' || id FROM fcm_devices)",
+    ),
     env.DB.prepare("DELETE FROM airing_pending WHERE reported < ? OR media_id NOT IN (SELECT media_id FROM airing)").bind(now() - 15 * DAY),
   ]);
 }
@@ -252,29 +270,42 @@ async function fcmRegister(req: Request, env: Env): Promise<Response> {
   const version = typeof body.app_version === "number" && Number.isInteger(body.app_version) && body.app_version > 0 && body.app_version < 2e9
     ? body.app_version : 0;
   const channel = body.channel === "preview" || body.channel === "debug" ? body.channel : "release";
+  // F-AIR (ADR-043): new apps also send the shows they follow and their airing times. An older app
+  // sends no `anilist`, and then its stored list is left alone (never wiped by a check-in).
+  const follows = Array.isArray(body.anilist) ? parseFollows(body.anilist) : null;
   const t = now();
+  const withFollows = async (id: string, storedV: string, created: number, token: string | null) => {
+    if (!follows) return json({ id, token });
+    const version = (await sha256(follows.join(","))).slice(0, 16);
+    const pending = await storeFollows(env, FCM, id, storedV, version, follows, t);
+    const airing = await storeAiring(env, FCM.cooldownKey(id), t - created, parseAiring(body.airing, follows, t), t);
+    return json({ id, token, follows: follows.length, airing, follows_pending: pending });
+  };
 
   let id: string | null = null;
+  let stored = { v: "", created: t };
   const auth = bearer(req);
   if (auth) {
-    const r = await env.DB.prepare("SELECT id, token_hash FROM fcm_devices WHERE id = ?").bind(auth.id)
-      .first<{ id: string; token_hash: string }>();
-    if (r && same(r.token_hash, await sha256(auth.token))) id = r.id;
+    const r = await env.DB.prepare("SELECT id, token_hash, follows_v, created FROM fcm_devices WHERE id = ?").bind(auth.id)
+      .first<{ id: string; token_hash: string; follows_v: string; created: number }>();
+    if (r && same(r.token_hash, await sha256(auth.token))) { id = r.id; stored = { v: r.follows_v, created: r.created }; }
     else if (r) return fail(403, "bad_token");
   }
   if (id) {
     if (env.DEVICE_SYNC && !(await env.DEVICE_SYNC.limit({ key: `fcm:${id}` })).success) return fail(429, "slow_down");
     await env.DB.batch([
+      env.DB.prepare("DELETE FROM fcm_follows WHERE fcm_id IN (SELECT id FROM fcm_devices WHERE fid = ? AND id <> ?)").bind(fid, id),
       env.DB.prepare("DELETE FROM fcm_devices WHERE fid = ? AND id <> ?").bind(fid, id), // FID moved to this row
       env.DB.prepare("UPDATE fcm_devices SET fid = ?, topics = ?, want = ?, app_version = ?, channel = ?, seen = ? WHERE id = ?")
         .bind(fid, topics, want, version, channel, t, id),
     ]);
-    return json({ id, token: null });
+    return withFollows(id, stored.v, stored.created, null);
   }
   if (env.NEW_DEVICES && !(await env.NEW_DEVICES.limit({ key: req.headers.get("cf-connecting-ip") ?? "?" })).success) {
     return fail(429, "slow_down");
   }
-  const old = await env.DB.prepare("SELECT id FROM fcm_devices WHERE fid = ?").bind(fid).first<{ id: string }>();
+  const old = await env.DB.prepare("SELECT id, follows_v, created FROM fcm_devices WHERE fid = ?").bind(fid)
+    .first<{ id: string; follows_v: string; created: number }>();
   const newId = old?.id ?? randomToken(12);
   const token = randomToken();
   const th = await sha256(token);
@@ -283,7 +314,7 @@ async function fcmRegister(req: Request, env: Env): Promise<Response> {
      ON CONFLICT(id) DO UPDATE SET token_hash = excluded.token_hash, fid = excluded.fid, topics = excluded.topics, want = excluded.want,
        app_version = excluded.app_version, channel = excluded.channel, seen = excluded.seen`,
   ).bind(newId, th, fid, topics, want, version, channel, t, t).run();
-  return json({ id: newId, token });
+  return withFollows(newId, old ? "?" : "", old?.created ?? t, token);
 }
 
 async function fcmUnregister(req: Request, env: Env): Promise<Response> {
@@ -292,7 +323,11 @@ async function fcmUnregister(req: Request, env: Env): Promise<Response> {
   const r = await env.DB.prepare("SELECT token_hash FROM fcm_devices WHERE id = ?").bind(auth.id).first<{ token_hash: string }>();
   if (!r) return json({ ok: true });
   if (!same(r.token_hash, await sha256(auth.token))) return fail(403, "bad_token");
-  await env.DB.prepare("DELETE FROM fcm_devices WHERE id = ?").bind(auth.id).run();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM fcm_follows WHERE fcm_id = ?").bind(auth.id),
+    env.DB.prepare("DELETE FROM follow_changes WHERE device_id = ?").bind(FCM.cooldownKey(auth.id)),
+    env.DB.prepare("DELETE FROM fcm_devices WHERE id = ?").bind(auth.id),
+  ]);
   return json({ ok: true });
 }
 
@@ -393,6 +428,17 @@ async function airingWakes(env: Env): Promise<void> {
     for (const x of r.results) endpoints.add(x.endpoint);
   }
   await enqueue(env, [...endpoints], AIRING_WAKE_DELAYS_S);
+  // F-AIR (ADR-043): Firebase phones that follow these shows get the same nudge through FCM.
+  const fids = new Set<string>();
+  for (const ids of chunk(media, 90)) {
+    const r = await env.DB.prepare(
+      `SELECT DISTINCT d.fid FROM fcm_follows f JOIN fcm_devices d ON d.id = f.fcm_id WHERE f.media_id IN (${ids.map(() => "?").join(",")})`,
+    ).bind(...ids).all<{ fid: string }>();
+    for (const x of r.results) fids.add(x.fid);
+  }
+  const msgs: MessageSendRequest<WakeJob>[] = [];
+  for (const g of chunk([...fids], FANOUT_PER_MESSAGE)) for (const d of AIRING_WAKE_DELAYS_S) msgs.push({ body: { wake: { fids: g } }, delaySeconds: d });
+  for (const b of chunk(msgs, 100)) await env.WAKES.sendBatch(b);
 }
 
 async function enqueue(env: Env, endpoints: string[], delays: number[]): Promise<number> {
@@ -435,6 +481,28 @@ async function fanoutSend(env: Env, job: { fids: string[]; notice: Notice; sent:
   }
   for (const ids of chunk(gone, 90)) {
     await env.DB.prepare(`DELETE FROM fcm_devices WHERE fid IN (${ids.map(() => "?").join(",")})`).bind(...ids).run();
+  }
+}
+
+/** F-AIR: data-only wake per FID (the app runs its own new-episode check). A gone FID drops its row and follows. */
+async function wakeSend(env: Env, fids: string[]): Promise<void> {
+  const sa = parseServiceAccount(env.FCM_SERVICE_ACCOUNT);
+  if (!sa) return;
+  const gone: string[] = [];
+  for (const fid of fids) {
+    try {
+      if ((await send(sa, buildWake({ fid }), false, now())).outcome === "gone") gone.push(fid);
+    } catch (e) {
+      console.error("wake", e instanceof Error ? e.message : "error");
+      break; // OAuth / FCM down: the app's own 2-hour check still runs
+    }
+  }
+  for (const ids of chunk(gone, 90)) {
+    const q = ids.map(() => "?").join(",");
+    await env.DB.batch([
+      env.DB.prepare(`DELETE FROM fcm_follows WHERE fcm_id IN (SELECT id FROM fcm_devices WHERE fid IN (${q}))`).bind(...ids),
+      env.DB.prepare(`DELETE FROM fcm_devices WHERE fid IN (${q})`).bind(...ids),
+    ]);
   }
 }
 

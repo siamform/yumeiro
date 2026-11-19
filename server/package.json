@@ -11,7 +11,8 @@
     "db:init": "wrangler d1 execute yumeiro --remote --file=schema.sql",
     "db:migrate:fcm": "wrangler d1 execute yumeiro --remote --file=migrations/0002_fcm_devices.sql",
     "db:migrate:guards": "wrangler d1 execute yumeiro --remote --file=migrations/0003_abuse_guards.sql",
-    "db:migrate:want": "wrangler d1 execute yumeiro --remote --file=migrations/0004_fcm_want.sql"
+    "db:migrate:want": "wrangler d1 execute yumeiro --remote --file=migrations/0004_fcm_want.sql",
+    "db:migrate:fcm-follows": "wrangler d1 execute yumeiro --remote --file=migrations/0005_fcm_follows.sql"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261110.1",

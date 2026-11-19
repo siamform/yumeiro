@@ -35,10 +35,18 @@ CREATE TABLE IF NOT EXISTS fcm_devices (
   want        TEXT,                     -- NOTIFY-1: topics the switches ask for (null = older app)
   app_version INTEGER NOT NULL DEFAULT 0,
   channel     TEXT NOT NULL DEFAULT 'release', -- release | preview | debug
+  follows_v   TEXT NOT NULL DEFAULT '', -- F-AIR: hash of the follow list (migration 0005)
   created     INTEGER NOT NULL,
   seen        INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS fcm_devices_seen ON fcm_devices(seen);
+-- F-AIR (ADR-043): the AniList ids a Firebase phone follows, so an aired episode can wake it too.
+CREATE TABLE IF NOT EXISTS fcm_follows (
+  media_id INTEGER NOT NULL,            -- AniList media id
+  fcm_id   TEXT NOT NULL,               -- fcm_devices.id
+  PRIMARY KEY (media_id, fcm_id)
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS fcm_follows_device ON fcm_follows(fcm_id);
 CREATE TABLE IF NOT EXISTS airing_pending (
   media_id  INTEGER PRIMARY KEY,
   at        INTEGER NOT NULL,
