@@ -422,7 +422,7 @@ How it was built, for the owner:
   (tv-api24 screenshot nb15r_c_tools; the Material sheet's handle, which the Yumix filter sheet uses too, by code
   read). Queued as NB15-OB2.
 
-**Status: NBUG-15 (a)–(c) Verified** (emulator; TV emulator tv-api24; tv-api34 see TV34-NB15).
+**Status: NBUG-15 (a)–(c) Verified** (emulator; TV emulator tv-api24 44435753383 and tv-api34 44440614210).
 
 ## GROUP-14 regression: LT-2b (found by the tv-api24 regression run)
 
@@ -442,9 +442,13 @@ How it was built, for the owner:
 | 44425944757 (2001197) | api33-lowram, api36 | Nbug15Recents, Nbug14ChannelLogo, LargePlaylistMemory, PlaylistRetry, RemotePlaylistMemory, FeedPosition, HomeNavigation | all PASS (Nbug15Redesign a: test fault, fixed) |
 | 44435753383 (a149bc1) | tv-api24 | Nbug15Redesign, Nbug15Recents, Nbug14ChannelLogo, LargePlaylistMemory, PlaylistRetry, RemotePlaylistMemory, HomeNavigation | all PASS |
 | 44435753383, 44438500496 (26d914d), 44438504785 (old code) | tv-api24 | FeedPosition | liveTv and youtube FAIL on new and on old code alike: the test taps the phone's `nav_tab_home`, so on TV the Live TV page never opens (logged tags show Home). A phone-only test; queued as TV-FP-1, not a regression |
-| TV34-NB15 | tv-api34 | the 8 classes above | see TV34-NB15 |
+| 44440614210 (26d914d) | tv-api34 | Nbug15Redesign, Nbug15Recents, Nbug14ChannelLogo, LargePlaylistMemory, PlaylistRetry, RemotePlaylistMemory, HomeNavigation, FeedPosition | 7 classes all PASS (Nbug15Redesign a, b, c; Nbug15Recents 2; Nbug14 1; PlaylistRetry 2; HomeNavigation 11); FeedPosition 5 of 6 PASS (liveTv, home, yumix, onlineMusic, videoSourceMenuSwitchesSource); youtube FAIL "the feed never showed 3 cards in 120 s (cards=2)". Early "adb: device offline" at boot was transient (infra, no test lost) |
+| 44443748315 (7f5fc98, same app code) | tv-api34 | FeedPosition#youtube | FAIL again, same reason (cards=2): screenshot feed_youtube shows the For You list as one column of full-width 16:9 cards on 960×540 dp, so under 2 cards fit a 1080p screen. Pre-existing TV layout (YouTubeScreens.kt untouched since 033bd58, before GROUP-14); not a GROUP-14 regression; queued as TV-YT-1 |
 | 44431463030 (0e0bc84) | tv-api34 | 8 classes | Nbug15Recents PASS; the emulator went offline after the second class (adb "device offline", infra); rerun as TV34-NB15 |
 
-**Status: GROUP-14 closed** when TV34-NB15 passes: NBUG-11, NBUG-12 (app), NBUG-14, NBUG-15 (a)–(d), NBUG-16 Verified;
-NBUG-13 owner decision (OMT-33); queued: NB11-OB1, NB12-5b, NB14-OB1, NB15D-OB1, NB15-OB2, NB16-6, NB16-7, TV-FP-1.
+**Status: GROUP-14 closed (2026-11-19 02:45 UTC).** NBUG-11, NBUG-12 (app), NBUG-14, NBUG-15 (a)–(d), NBUG-16 Verified
+(CI unit, emulator, TV emulator); NBUG-13 owner decision (OMT-33). Queued items, each with its reason in
+docs/UNVERIFIED-QUEUE.md: NB11-OB1, NB12-5b, NB14-OB1, NB15D-OB1, NB16-6, NB16-7 (old-code proof or real
+hardware still needed), TV-FP-1 and TV-YT-1 (TV feed test / TV YouTube layout, stability-v2 TV pass). NB15-OB2
+moved into G10 as ER-28 (dialogs and sheets are G10 scope).
 

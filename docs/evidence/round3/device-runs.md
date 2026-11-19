@@ -1025,4 +1025,5 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | 44435747803 | r15-stability a149bc1 | api33-lowram, api36 | Nbug15Redesign, Nbug15Recents, FeedPosition, LargePlaylistMemory, HomeNavigation | all PASS |
 | 44435753383 | r15-stability a149bc1 | tv-api24 | 8 Live TV classes | 7 PASS (incl. LT-2b and NB14-2); FeedPosition liveTv/youtube FAIL |
 | 44438500496, 44438504785 | r15-stability 26d914d; ab/n15r-before (old code) | tv-api24 | FeedPosition | same 2 FAIL on new and old code: the test never opens Live TV on TV (TV-FP-1) |
-| TV34-NB15 | r15-stability | tv-api34 | 8 Live TV classes | pending |
+| 44440614210 | r15-stability 26d914d | tv-api34 | 8 Live TV classes | 7 classes PASS; FeedPosition 5/6, youtube FAIL (cards=2) |
+| 44443748315 | r15-stability 7f5fc98 (same app code) | tv-api34 | FeedPosition#youtube | FAIL again (cards=2): one column of full-width cards on a 1080p TV, pre-existing (TV-YT-1) |

@@ -1,15 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 02:25 UTC, new agent, GROUP-14 close)
+## Resume here (updated 2026-11-19 02:50 UTC, GROUP-14 closed, G10 re-audit)
 
-- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19 (new agent). Order: GROUP-14 → G10 → G11 →
-  v1.8.2 (owner approval) → stability-v2. HEAD at takeover: 52eeaaf (no newer commits; hashes checked).
-- **GROUP-14 step:** 9 (group regression) → 10 (close). Verified: NBUG-11, NBUG-12 (app), NBUG-14, NBUG-15 (a)–(d)
-  on phones + tv-api24, NBUG-16, LT-2b. NBUG-13 owner decision (OMT-33). Only tv-api34 is missing.
-- **Run in progress:** TV34-NB15 = Device check 44440614210 (26d914d, tv-api34, 8 Live TV classes), started 01:56 UTC.
-- **Next three actions:** (1) read 44440614210 (if the emulator goes offline: infra, rerun); (2) fill the GROUP-14
-  group regression table + close docs (ledger, checklist, queue, inventory, device-runs, cycle report) in one push;
-  (3) G10 §13a step 1 (read the whole group).
+- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 → G11 → v1.8.2 (owner
+  approval) → stability-v2.
+- **GROUP-14:** closed (docs/groups/GROUP-14-OWNER-BUGS.md). tv-api34 44440614210: 7 Live TV classes PASS;
+  FeedPosition#youtube FAIL twice (rerun 44443748315) = pre-existing TV YouTube layout, queued TV-YT-1.
+- **G10 step:** 3 → 4. Steps 1–2 done in the working copy (read list, audit, register ER-21…ER-28, ADR-029); next
+  push: register + ADR, then all G10 tests in one commit.
+- **Runs in progress:** none.
+- **Next three actions:** (1) push G10 register + ADR-029 and the tests commit; (2) fail-before once: CI on
+  throwaway `ab/g10-before` (unit) + one device run (SheetFocusTvDeviceTest, phones + tv-api34); (3) fixes one
+  commit per finding (ER-21…ER-28).
+
+### Previous resume note — superseded (02:25 UTC 2026-11-19, GROUP-14 close)
+
+- GROUP-14 step 9 → 10; TV34-NB15 = 44440614210 was running; then close docs in one push; then G10 step 1.
 
 ### Previous resume note — superseded (23:22 UTC 2026-11-18, NBUG-15 (a)–(c) runs in flight)
 

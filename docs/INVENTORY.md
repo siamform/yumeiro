@@ -120,7 +120,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 |---|---|---|---|---|
 | T1 | Manga search, filter, source selection | ui/screens/manga/MangaScreens, sources/manga | code read; MG-1 fixed (unit/compile) | `TachiyomiIndexTest`, `SourceMarketTest`; no manga source on CI |
 | T2 | Manga title page and reader | MangaTitle, MangaReader routes | code read; MG-1 fixed (compile) | owner reading test OMT-11 |
-| T3 | Live TV hub, playlists, playlist market | ui/screens/stream/*, stream/PlaylistMarket, PlaylistStore | LT-1, LT-2 verified on device (emulator); market code read, no bug | `StreamPlaylistTest`, `PlaylistIndexRecoveryDeviceTest`, `PlaylistRetryDeviceTest`; ledger LT-1, LT-2, FEED-1 |
+| T3 | Live TV hub, playlists, playlist market | ui/screens/stream/*, stream/PlaylistMarket, PlaylistStore | LT-1, LT-2 verified on device (emulator); market code read, no bug | `StreamPlaylistTest`, `PlaylistIndexRecoveryDeviceTest`, `PlaylistRetryDeviceTest`; ledger LT-1, LT-2, FEED-1. GROUP-14: NBUG-14 channel logos (`Nbug14ChannelLogoDeviceTest`), NBUG-15 Live TV redesign — filter sheet, merged feed by category, Tools modal, Playlists page, separate recents (`LiveChannelFeedTest`, `Nbug15RedesignDeviceTest`, `Nbug15RecentsDeviceTest`; ADR-027, ADR-028), LT-2b |
 | T4 | M3U parsing, stream resolving, sniffing, page stream finder | stream/M3uParser, StreamResolver, StreamSniffer, PageStreamFinderDialog | LT-3 fixed (unit); code read | `StreamPlaylistTest`, `StreamDetectionTest`, `RequestHeadersTest` |
 | T5 | HLS ad filter for streams | stream/HlsAdFilter, AdFilterDataSource | unit only, no bug found | `HlsAdFilterTest` |
 
