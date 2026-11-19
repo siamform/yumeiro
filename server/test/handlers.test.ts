@@ -258,3 +258,84 @@ test("notify-1: a broadcast is copied to each phone the topic misses; a gone FID
   const left = (db.prepare("SELECT fid FROM fcm_devices ORDER BY fid").all() as any[]).map((r) => r.fid);
   assert.deepEqual(left, [A, B]); // C was UNREGISTERED
 });
+
+// ---- F-AIR (ADR-043): airing alerts reach Firebase phones too ----
+// Production 2026-11-19: 406 fcm_devices, 1 UnifiedPush device, 0 follows, 0 airing rows. Airing wakes went
+// only to UnifiedPush endpoints, so a Firebase phone never got one.
+
+async function fakeFcm() {
+  const { generateKeyPairSync } = await import("node:crypto");
+  const { _resetTokenCache } = await import("../src/fcm.ts");
+  _resetTokenCache();
+  const pem = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+  return { sa: JSON.stringify({ type: "service_account", project_id: "demo", client_email: "svc@demo.iam.gserviceaccount.com", private_key: pem }), reset: _resetTokenCache };
+}
+
+test("air-1: a Firebase phone's follows and airing times are stored; an aired episode sends it a data-only wake", async () => {
+  const { sa, reset } = await fakeFcm();
+  const { env, db, sent } = fakeEnv();
+  (env as any).FCM_SERVICE_ACCOUNT = sa;
+  const A = "d" + "A".repeat(21);
+  const t = Math.floor(Date.now() / 1000);
+  const r = await call(env, req("POST", "/v1/fcm/devices", { fid: A, topics: ["updates"], want: ["updates"], anilist: [42, 7], airing: [[42, t + 3600]] }));
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.follows, 2);
+  const f = (db.prepare("SELECT media_id FROM fcm_follows WHERE fcm_id = ? ORDER BY media_id").all(r.body.id) as any[]).map((x) => x.media_id);
+  assert.deepEqual(f, [7, 42]);
+  assert.equal((db.prepare("SELECT at FROM airing WHERE media_id = 42").get() as any).at, t + 3600);
+  // The episode airs.
+  db.prepare("UPDATE airing SET at = ? WHERE media_id = 42").run(t - 60);
+  db.prepare("INSERT INTO state (k, v) VALUES ('aired_to', ?)").run(String(t - 600));
+  await worker.scheduled({ scheduledTime: Date.now(), cron: "*/10 * * * *", noRetry() {} } as ScheduledController, env, {} as ExecutionContext);
+  const jobs = sent.filter((m: any) => m.body.wake);
+  assert.equal(jobs.length, 1, "no Firebase wake was queued (old code: UnifiedPush only)");
+  assert.deepEqual((jobs[0].body as any).wake.fids, [A]);
+  assert.equal(jobs[0].delaySeconds, 30 * 60);
+  // The queue sends it: data-only, high priority, collapsible, nothing about the show in it.
+  const real = globalThis.fetch;
+  const msgs: any[] = [];
+  globalThis.fetch = (async (u: string | URL | Request, init?: RequestInit) => {
+    if (String(u).includes("oauth2")) return new Response(JSON.stringify({ access_token: "at", expires_in: 3600 }), { status: 200 });
+    msgs.push(JSON.parse(String(init?.body)).message);
+    return new Response('{"name":"projects/demo/messages/2"}', { status: 200 });
+  }) as typeof fetch;
+  let acked = 0;
+  try {
+    await worker.queue({ messages: [{ body: jobs[0].body, ack: () => { acked++; } }] } as never, env, {} as ExecutionContext);
+  } finally { globalThis.fetch = real; reset(); }
+  assert.equal(acked, 1);
+  assert.equal(msgs.length, 1);
+  assert.equal(msgs[0].fid, A);
+  assert.deepEqual(msgs[0].data, { y: "1", kind: "wake" });
+  assert.equal(msgs[0].notification, undefined);
+  assert.equal(msgs[0].android.priority, "high");
+  assert.equal(msgs[0].android.collapse_key, "yumeiro-wake");
+});
+
+test("air-1: an older app's check-in (no anilist) keeps the follows; sign-off, a gone FID and prune remove them", async () => {
+  const { sa, reset } = await fakeFcm();
+  const { env, db } = fakeEnv();
+  (env as any).FCM_SERVICE_ACCOUNT = sa;
+  const A = "e" + "A".repeat(21), B = "e" + "B".repeat(21), C = "e" + "C".repeat(21);
+  const a = (await call(env, req("POST", "/v1/fcm/devices", { fid: A, topics: [], anilist: [1, 2] }))).body;
+  await call(env, req("POST", "/v1/fcm/devices", { fid: A, topics: [] }, `Bearer ${a.id}.${a.token}`));
+  assert.equal((db.prepare("SELECT COUNT(*) AS n FROM fcm_follows WHERE fcm_id = ?").get(a.id) as any).n, 2, "a check-in without anilist must not wipe the list");
+  await call(env, req("DELETE", "/v1/fcm/devices", undefined, `Bearer ${a.id}.${a.token}`));
+  assert.equal((db.prepare("SELECT COUNT(*) AS n FROM fcm_follows").get() as any).n, 0, "sign-off leaves follows behind");
+  // A gone FID during a wake drops the row and its follows.
+  const b = (await call(env, req("POST", "/v1/fcm/devices", { fid: B, topics: [], anilist: [3] }))).body;
+  const real = globalThis.fetch;
+  globalThis.fetch = (async (u: string | URL | Request) => String(u).includes("oauth2")
+    ? new Response(JSON.stringify({ access_token: "at", expires_in: 3600 }), { status: 200 })
+    : new Response('{"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}}', { status: 404 })) as typeof fetch;
+  try {
+    await worker.queue({ messages: [{ body: { wake: { fids: [B] } }, ack: () => {} }] } as never, env, {} as ExecutionContext);
+  } finally { globalThis.fetch = real; reset(); }
+  assert.equal((db.prepare("SELECT COUNT(*) AS n FROM fcm_devices WHERE id = ?").get(b.id) as any).n, 0);
+  assert.equal((db.prepare("SELECT COUNT(*) AS n FROM fcm_follows").get() as any).n, 0);
+  // Prune: a silent phone's follows go with it.
+  await call(env, req("POST", "/v1/fcm/devices", { fid: C, topics: [], anilist: [4] }));
+  db.prepare("UPDATE fcm_devices SET seen = seen - 46 * 86400").run();
+  await worker.scheduled({ scheduledTime: Date.UTC(2026, 10, 16, 3, 5), cron: "*/10 * * * *", noRetry() {} } as ScheduledController, env, {} as ExecutionContext);
+  assert.equal((db.prepare("SELECT COUNT(*) AS n FROM fcm_follows").get() as any).n, 0);
+});
