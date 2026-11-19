@@ -85,6 +85,7 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
                 MTPlayerTheme(palette = palette) {
                     val viewModel: MainViewModel = viewModel()
                     MTPlayerApp(viewModel = viewModel)
+                    dev.asfakul.yumeiro.ui.screens.profiles.ProfileGate(this@MainActivity) // PR-1
                     dev.asfakul.yumeiro.ui.screens.extras.AppLockGate(this@MainActivity)
                 }
             }

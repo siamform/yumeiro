@@ -37,6 +37,10 @@ object FeatureFlags {
         LIVE_GUIDE("f15_live_guide", true),
         /** F-13 (ADR-040): save manga chapters on the phone for offline reading (chapter list button). */
         OFFLINE_MANGA("f13_offline_manga", true),
+        /** PR-1 (ADR-041): profiles with their own data and lock (Settings → Profiles, "Who's watching?"). */
+        PROFILES("f18_profiles", true),
+        /** DL-H (ADR-041): hide downloads in the Private vault (Downloads → Private). */
+        PRIVATE_DOWNLOADS("f18_private_downloads", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

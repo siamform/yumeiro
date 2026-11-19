@@ -124,6 +124,19 @@ fun PrivacyScreen(onBack: () -> Unit) {
                     SettingsToggleRow("Hide content in recents", "Blank preview in the app switcher and no screenshots", hide, { on -> activity?.let { Privacy.setHideInRecents(it, on) } }, "privacy_hide_recents")
                 }
             }
+            if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PROFILES)) {
+                Section("Profiles", "Everyone in the house gets their own history and lists. Lock a profile with a PIN or the phone's lock.") {
+                    dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(activity)
+                }
+            }
+            if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS)) {
+                val stealth by dev.asfakul.yumeiro.online.download.PrivateDownloads.stealth.collectAsState()
+                androidx.compose.runtime.LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.download.PrivateDownloads.loadStealth(context) }
+                Section("Private downloads", "Hide a download from the Downloads list, the gallery and other apps. Open them in Downloads → Private with your phone's lock or the profile PIN.") {
+                    SettingsToggleRow("Hide the Private entry", if (stealth) "Open it by long-pressing the storage card in Downloads" else "Private shows at the top of Downloads", stealth,
+                        { dev.asfakul.yumeiro.online.download.PrivateDownloads.setStealth(context, it) }, "privacy_vault_stealth")
+                }
+            }
         }
     }
 }

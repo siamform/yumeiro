@@ -167,6 +167,15 @@ object Privacy {
         runCatching { activity.startActivityForResult(intent, REQ_CONFIRM_CREDENTIAL) }.onFailure { pendingCredential = null; done(false) }
     }
 
+    /**
+     * PR-1 / DL-H: asks for the fingerprint, face or screen lock (the same prompt as the app lock) to
+     * open a locked profile or the Private vault. False when the phone has no secure lock screen.
+     */
+    fun verify(activity: Activity, title: String, done: (Boolean) -> Unit) {
+        if (!canAuthenticate(activity)) { done(false); return }
+        authenticate(activity, title, done)
+    }
+
     private fun authenticate(activity: Activity, title: String, done: (Boolean) -> Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) { confirmCredential(activity, title, done); return }
         val builder = BiometricPrompt.Builder(activity).setTitle(title).setSubtitle("Use your fingerprint, face or screen lock")
