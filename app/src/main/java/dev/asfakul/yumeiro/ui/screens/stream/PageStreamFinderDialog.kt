@@ -415,7 +415,7 @@ fun PageStreamFinderDialog(
                                     base?.referer?.let { put("Referer", it) }
                                     base?.headers?.let { putAll(it) }
                                 }
-                                loadUrl(pageUrl, headers)
+                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, pageUrl, headers)
                             }
                             page
                         },

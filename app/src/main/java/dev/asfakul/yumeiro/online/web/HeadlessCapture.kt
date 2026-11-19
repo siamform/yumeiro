@@ -73,7 +73,7 @@ object HeadlessCapture {
         try {
             web = create(context.applicationContext, pageUrl, title, capture, result)
             val headers = referer?.takeIf { it.isNotBlank() }?.let { mapOf("Referer" to it) } ?: emptyMap()
-            web.loadUrl(pageUrl, headers)
+            SafeWebView.loadUrl(web, pageUrl, headers)
             withTimeoutOrNull(timeoutMs) { result.await() }
         } catch (t: Throwable) {
             Log.w(TAG, "capture failed for ${android.net.Uri.parse(pageUrl).host}", t)

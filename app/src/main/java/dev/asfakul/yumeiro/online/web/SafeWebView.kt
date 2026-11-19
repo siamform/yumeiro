@@ -29,6 +29,17 @@ import androidx.webkit.WebViewFeature
 object SafeWebView {
     private const val TAG = "SafeWebView"
 
+    /**
+     * FINAL-7: loads [url] with extra request headers. Older WebView builds (Chromium 53 on Android 7,
+     * the TV image tv-api24) remove "Referer" from the caller's map inside `AwContents.loadUrl`; a
+     * read-only map (`mapOf`, `emptyMap`, `buildMap`) then throws UnsupportedOperationException and the
+     * page never opens (device-check 44600322143). The headers are always handed over as a fresh HashMap.
+     */
+    fun loadUrl(web: WebView, url: String, headers: Map<String, String>) = web.loadUrl(url, headersFor(headers))
+
+    /** The header map WebView receives: a mutable copy, so the WebView may edit it. */
+    fun headersFor(headers: Map<String, String>): MutableMap<String, String> = HashMap(headers)
+
     /** Applies the common settings. Call once right after creating the WebView. */
     // The allow-list feature constant is public API guarded by isFeatureSupported; lint's
     // RestrictedApi check misreads its @RestrictTo annotation on the constant's group.

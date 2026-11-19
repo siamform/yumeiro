@@ -134,7 +134,7 @@ object CloudRecapture {
                         view?.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
                     }
                 }
-                loadUrl(pageUrl, old.referer?.let { mapOf("Referer" to it) } ?: emptyMap())
+                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, pageUrl, old.referer?.let { mapOf("Referer" to it) } ?: emptyMap())
             }
             val found: CapturedStream? = withTimeoutOrNull(PageStreamCapture.AUTO_TIMEOUT_MS) {
                 coroutineScope {
