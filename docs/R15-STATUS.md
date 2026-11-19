@@ -1,17 +1,22 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 08:33 UTC, master handover; no PR / merge without the owner's "go")
+## Resume here (updated 2026-11-19 09:08 UTC, master handover; no PR / merge without the owner's "go")
 
-- **Orders:** master handover 2026-11-19 + PROGRAM-2026-11-19 + §13a. IDs: new features are F-16 (Yumix sections, tags)
-  and F-17 (profile statistics); F-13/F-14/F-15 stay offline manga / Live TV failover / Live TV guide.
-- **Landed, Built, not tested:** NF-2b-1..4 save bugs, SRC-1 JS time limit, SRC-2 JS private-network block, F-05 step 1
-  (recognise SkyStream / Nuvio / Vega; running them is not in this release), F-09 Watch later + Favorite (ADR-033).
-- **Runs in progress:** CI 44488505354 @e1cf86d1 (pass-after for all four batches); G15 regression phones
-  44487432724, tv-api24 44487437177 (rerun: first try died on a Maven Central download, not a test result).
-- **Next three actions:** (1) green CI + device pass-after (JsTimeLimitDeviceTest, PosterActionsDeviceTest phones+TV);
-  (2) G15 tv-api34 regression and close G15; (3) workstreams A F-16/F-01/F-08/NF-1 → B F-17 → C F-06/F-07/F-12 →
-  D F-04/F-11/NF-2b → E F-10 → F bugs, then gate.
-- Research folder from the previous sandbox was lost (see PROGRAM-2026-11-19 "Research files").
+- **Built, not tested (all pushed, flags on):** NF-2b, SRC-1/2, F-05 step 1, F-09, F-16 + F-01, NF-1, F-08 (ADR-034),
+  F-06, F-07, F-12 (ADR-018), F-17, F-10 (ADR-017, no blur), F-04, X13-6 Jackson 2.18.11 (ADR-035, **conflicts with the
+  owner's earlier condition 3; agent decided per the master order**), NB15D-OB1, NB14-OB1, NB11-OB1, TV-4 (ADR-036).
+- **Not in this release (ADR-037):** F-02, F-03 login path, F-11, NBUG-6, NBUG-13 proxy, Vega step 4, F-13/F-14/F-15.
+- **Fail-before confirmed:** F-16/NF-1 44489413319; F-08/F-06/F-07/F-12 44491273393 (compile). Running: F-01/F-17/F-10/
+  F-04/batch-1 on `ab/wsB-before` 44493139660, X13-6/incognito on `ab/wsF1-before` 44493184506; pass-after head
+  44493135652 (before TV-4). Previous head run 44489174781: 1 fail SheetHandleScanTest (F-09 sheet) → fixed 6cee4581.
+- **tv-api24 regression 44487437177:** PinnedExtensions, YtChannelUi, FeedPosition liveTv FAIL; all three are
+  phone-gesture tests (queue TV-FP-1, TV-PIN-1, TV-YTC-1); 5 other classes PASS.
+- **Next:** read the three CI runs → fix → one more head CI (incl. TV-4) → device pass-after (≤2 at once) → docs
+  close (checklist, ledger, inventory, queue, OWNER-MANUAL-TESTS) → release gate → ask the owner for "go".
+
+### Previous resume note — superseded (08:33 UTC 2026-11-19)
+
+- Pass-after CI for the first four batches was running; workstreams A–F followed.
 
 ### Previous resume note — superseded (06:59 UTC 2026-11-19, G15 started)
 
