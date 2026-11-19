@@ -40,18 +40,19 @@ class AccessibilityDeviceTest {
 
     private val inst get() = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
     /**
-     * Touch-target size only means something where there is touch. Android TV has no touchscreen
-     * (`android.hardware.touchscreen` absent; D-pad focus is covered by the TV focus tests), and its
+     * Touch-target size only means something where there is touch. The TV app is driven by the
+     * remote (D-pad focus is covered by the TV focus tests; the TV emulator still reports a
+     * touchscreen feature, pass-after 44526618412, so the TV edition is the signal), and its
      * expanded rail floats over the left of every page, so ATF measures the visible slice of chips
      * under it (gate run 44523673246, tv-api34: nav_tab_videos 3 dp, nav_tab_music 43 dp). Every
      * other check still runs on TV, and phones keep the full set.
      */
-    private val touch get() = inst.targetContext.packageManager.hasSystemFeature("android.hardware.touchscreen")
+    private val touch get() = !dev.asfakul.yumeiro.Edition.isTv
     private val validator get() = AccessibilityValidator().setRunChecksFromRootView(true)
         .setThrowExceptionFor(AccessibilityCheckResult.AccessibilityCheckResultType.ERROR)
         .also { v ->
             if (!touch) {
-                log("A11Y no touchscreen: TouchTargetSizeCheck suppressed, all other checks run")
+                log("A11Y TV edition: TouchTargetSizeCheck suppressed, all other checks run")
                 v.setSuppressingResultMatcher(
                     com.google.android.apps.common.testing.accessibility.framework.AccessibilityCheckResultUtils
                         .matchesCheckNames(org.hamcrest.Matchers.equalTo("TouchTargetSizeCheck")),
