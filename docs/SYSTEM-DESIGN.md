@@ -624,7 +624,11 @@ flowchart LR
   (`GlassTier`), dropped to tint on trim memory, battery saver and "reduce transparency".
 - **Evidence needed before acceptance:** FrameTimingBenchmark Home P90 within 5 % of Tsuki Night on both
   phones; contrast ≥ 4.5:1; APK growth ≤ 300 KB. Note: docs/proposals/FEATURE-F-10-glassmorphism-theme.md.
-- **Status:** proposed (2026-11-18); gated by 4.4 and the owner.
+- **Status:** proposed (2026-11-18). **Accepted 2026-11-19 (agent decision, master order) as a first step without
+  blur:** `ThemeMode.GLASS` "Kasumi" gives translucent chrome (`GlassTier.GLASS`) and a solid tint (`GlassTier.TINT`)
+  on low-RAM, TV, battery saver, hot device and reduced motion; no `RenderEffect`, no AGSL, no APK growth.
+  Kill switch `f10_glass_theme`. Backdrop blur is not in this release. Evidence owed: frame timing, contrast test
+  (`F10GlassThemeTest`), device check. Status word: Built, not tested.
 
 ### ADR-018: Vertical shorts player: one player and preloaded sources (F-12, proposed)
 
@@ -640,7 +644,11 @@ flowchart LR
 - **Evidence needed before acceptance:** one decoder in use during 30 rapid swipes; first frame after
   settle ≤ 600 ms (api36) / ≤ 1200 ms (api33-lowram) on the fixture server; no ANR; player parity tests
   green. Note: docs/proposals/FEATURE-F-12-vertical-video-player.md.
-- **Status:** proposed (2026-11-18); gated by 4.4 and the owner.
+- **Status:** proposed (2026-11-18). **Accepted 2026-11-19 (agent decision) as option B without
+  `DefaultPreloadManager`:** one player through the shared `PlaybackSession` lease, stream links resolved ahead
+  (`ShortsWindow`: 2 ahead / 1 behind, 1 ahead on low-end), resolved entries outside the window dropped. Media
+  buffering ahead is not in this release. Phones only; TV keeps the normal player. Kill switch `f12_shorts_player`.
+  Status word: Built, not tested.
 
 ### ADR-019: Music queue kept across a process death (G6-QP)
 
@@ -1057,6 +1065,61 @@ saved state; My List gets a Favorites chip; Yumix gets a Favorites shelf. A new 
 Consequences: no new file and no backup change; the 1000-title cap covers both. After a downgrade, a Favorite-only
 title shows as Watch later; an edit in the old build drops the Favorite flag. Rollback: revert the commits; files stay
 readable.
+
+### ADR-034: Upcoming calendar from Simkl's public files (F-08)
+
+Status: accepted 2026-11-19 (agent decision per the master order; was waiting on the owner).
+
+Context: F-08 asks for upcoming movies, series and anime. TMDB needs a key, which ADR-013 keeps out of the APK;
+AniList covers anime only. Hikari 8aa1652b reads Simkl's public calendar files for anime.
+
+Decision: Simkl's public calendar files (`data.simkl.in/calendar/*.json`, no key, no account) for all three kinds,
+next 14 days, decoded one element at a time, at most `MAX` kept per kind, reduced list cached 6 h. Kill switch
+`f08_upcoming`. Consequences: no key in the app; if Simkl changes the files the page shows its error state, nothing
+else breaks. Rollback: flag off.
+
+### ADR-035: Workstream F decisions: Jackson line, SVG logos, private 18+ feeds (X13-6, NB14-OB1, NB11-OB1)
+
+Status: accepted 2026-11-19 (agent decision; the owner asked the agent to decide with evidence).
+
+- **X13-6 (OMT-23 option A):** the phone build moves from Jackson 2.19.4 (16 OSV advisories, the 2.19 line gets no
+  patches) to 2.18.11 (0 advisories, below the 2.20 `invokeExact` limit for minSdk 28). A resolution rule pins
+  every `mobile*` classpath so a library can not pull it back up; the TV rule (ADR-015, 2.13.x) is unchanged.
+  This conflicts with the owner's earlier "condition 3" (keep the phone version); the master order of 2026-11-19
+  says the agent decides, so the change is made and reported to the owner. Evidence owed: extension device suite on
+  both phones. Rollback: one line in `gradle/libs.versions.toml`.
+- **NB14-OB1:** `io.coil-kt:coil-svg` 2.7.0 (Apache-2.0, same Coil version) is added to the one ImageLoader, so
+  SVG `tvg-logo` channel logos show. It only claims SVG responses; other images keep the default decoders.
+- **NB11-OB1:** with 18+ on but private, CloudStream titles marked `TvType.NSFW` from mixed extensions are kept out
+  of feed rows (home rows, paging, recommendations), the same rule `AdultContent.hideInFeeds()` applies to whole
+  18+ extensions. Search and opening a title stay available.
+- **NB15D-OB1:** incognito records no stream or Live TV recents; "Clear watch history" clears both lists.
+
+### ADR-036: TV and Home search reach online sources in one step (TV-4, OMT-21 option B)
+
+Status: accepted 2026-11-19 (agent decision; recommendation of OMT-21).
+
+Context: Home's search box ranks only the device library, so an empty TV library gave no results. Kodi and
+SmartTube search online from one box; option C (one global screen across Yumix, manga and Live TV) is a new feature.
+
+Decision: option B as one explicit step. Local results stay first; once a query of two or more letters is
+committed (Search key or a picked suggestion), a 48 dp focusable "Search online for …" button opens the
+all-extension Yumix search with the same words (`OnlineSearchPending`). No network call per keystroke (data saver
+and 2 GB phones). Phone and TV. Kill switch `tv4_online_search`. Option C is not in this release.
+
+### ADR-037: Not in this release, with reasons (F-02, F-03 login path, F-11, NBUG-6, NBUG-13 proxy, F-13…F-15)
+
+Status: accepted 2026-11-19 (agent decision per the master order: unfinished work stays out, flag off, listed).
+
+| Item | Why not now (evidence) | What ships instead |
+|---|---|---|
+| F-02 Telegram | needs TDLib (native, ~20–30 MB per ABI, over the 2 GB phone and APK budget) and each user's own API id and phone login; no device can verify it here. docs/proposals/FEATURE-F-02-telegram.md | nothing; proposal kept |
+| F-03 TeraBox / DiskWala login path | the logged-in path needs account cookies and conflicts with the sites' terms; no DRM or auth bypass (master rule) | the existing hidden-WebView catch of public links (BEHAVIOR-SPEC "Cloud links") stays |
+| F-11 manga translation | needs on-device OCR + translation models (tens of MB each) and real-device verification on 2 GB phones | nothing; proposal kept |
+| NBUG-6 per-feature DNS | measured side effects (2 connections instead of 1, 5–6 threads per resolver, split cache, WebView not covered). docs/proposals/FEATURE-NBUG-6-per-feature-dns.md | the automatic DNS bypass already shipped |
+| NBUG-13 proxy (OMT-33 options 1/2) | a proxy is a new feature with WebView `ProxyController` and per-site rules; can not be verified on CI (nothing is blocked there) | option 3: system VPN or Private DNS, explained in the help text; DNS bypass for Yumeiro's own connections |
+| Vega (OMT-24) | decided in F-05: Vega means the Vega app's provider repositories, not Amazon Vega OS (does not run Android apps). Step 4 (running Vega providers) is not in this release | repository detection from F-05 step 1 |
+| F-13 offline manga chapters, F-14 Live TV failover, F-15 EPG | stability-v2 items found in the G7 audit; each is a new feature with its own storage or parser; not started, and today's release work came first | manual "Sources for this channel"; online manga reading |
 
 ## 11. Risks
 

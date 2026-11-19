@@ -41,7 +41,9 @@ Group lifecycle, in strict order:
 7. **Run pass-after once** for the whole group. Every test must pass.
 8. **If anything fails:** audit the failures, find the root cause, fix all of them. Only the failing tests may be
    run first to prove each fix, but then **rerun the group CI**. Repeat until the whole group passes. Never weaken a
-   test, drop an item, or call a partial pass a pass.
+   test, drop an item, or call a partial pass a pass. (Master handover 2026-11-19: "fix failures and rerun until
+   the whole group passes"; an infrastructure failure, such as an emulator going offline, is rerun and is neither a
+   pass nor a fail.)
 9. **Group regression** on the close commit: the full inventory regression for the group on both phone emulators,
    and on both TV emulators where the group touches TV.
 10. **Close the group** in one push: the group status table (every feature and function, status, how verified,
