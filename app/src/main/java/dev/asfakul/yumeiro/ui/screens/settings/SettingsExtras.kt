@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import android.content.Intent
 import android.net.Uri
@@ -146,6 +148,8 @@ fun AppearanceSettingsCard() {
             }
         }
         SettingsDivider()
+        AccentToneSection(mode)
+        SettingsDivider()
         BackdropSettingsSection()
         SettingsDivider()
         SettingsToggleRow(
@@ -171,6 +175,41 @@ fun AppearanceSettingsCard() {
             onCheckedChange = { ThemeSettings.setKana(context, it) },
             testTag = "toggle_kana",
         )
+    }
+}
+
+/** TH-1: accent colour over the theme. Round moon swatches (48 dp targets) with their kana. */
+@Composable
+private fun AccentToneSection(mode: ThemeMode) {
+    val context = LocalContext.current
+    val accent by ThemeSettings.accent.collectAsState()
+    Text("Accent colour", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+    Text(
+        if (mode == ThemeMode.DYNAMIC) "Material You uses your wallpaper colours; the accent applies to the other themes"
+        else "Buttons, highlights and the selected tab",
+        color = TextSecondary, style = MaterialTheme.typography.bodySmall,
+    )
+    Spacer(Modifier.height(10.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        dev.asfakul.yumeiro.ui.theme.AccentTone.entries.forEach { t ->
+            val selected = accent == t
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClickLabel = t.label) { ThemeSettings.setAccent(context, t) }
+                    .padding(vertical = 4.dp).testTag("accent_${t.name.lowercase()}")
+                    .semantics { this.selected = selected },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    Modifier.size(48.dp).clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(t.swatch, t.swatch.copy(alpha = 0.55f))))
+                        .border(if (selected) 3.dp else 1.dp, if (selected) TextPrimary else TextPrimary.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { Text(t.kana, color = Color(0xFF101014), fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.height(4.dp))
+                Text(t.label.substringBefore(' '), color = if (selected) TextPrimary else TextTertiary, fontSize = 11.sp, maxLines = 1)
+            }
+        }
     }
 }
 

@@ -73,6 +73,7 @@ object ThemeSettings {
     private const val KEY_AMOLED = "amoled_black"
     private const val KEY_AMBIENT = "ambient_artwork"
     private const val KEY_KANA = "kana_accents"
+    private const val KEY_ACCENT = "accent_tone"
 
     private val _mode = MutableStateFlow(ThemeMode.SYSTEM)
     val mode: StateFlow<ThemeMode> = _mode.asStateFlow()
@@ -84,6 +85,9 @@ object ThemeSettings {
     private val _kana = MutableStateFlow(true)
     /** Small Japanese accents (kana overlines such as 設定 or 音楽) next to page titles. */
     val kana: StateFlow<Boolean> = _kana.asStateFlow()
+    private val _accent = MutableStateFlow(AccentTone.GOLD)
+    /** TH-1: accent colour over the chosen theme (gold = the theme's own). */
+    val accent: StateFlow<AccentTone> = _accent.asStateFlow()
     @Volatile private var loaded = false
 
     fun init(context: Context) {
@@ -93,12 +97,18 @@ object ThemeSettings {
         _amoled.value = p.getBoolean(KEY_AMOLED, false)
         _ambient.value = p.getBoolean(KEY_AMBIENT, true)
         _kana.value = p.getBoolean(KEY_KANA, true)
+        _accent.value = AccentTone.from(p.getString(KEY_ACCENT, null))
         loaded = true
     }
 
     fun setMode(context: Context, mode: ThemeMode) {
         _mode.value = mode
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_MODE, mode.name).apply()
+    }
+
+    fun setAccent(context: Context, tone: AccentTone) {
+        _accent.value = tone
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_ACCENT, tone.name).apply()
     }
 
     fun setKana(context: Context, enabled: Boolean) {

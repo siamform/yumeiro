@@ -68,6 +68,7 @@ fun rememberMtPalette(): MtPalette {
     remember(context) { ThemeSettings.init(context); ThemeSettings }
     val mode by ThemeSettings.mode.collectAsStateWithLifecycle()
     val amoled by ThemeSettings.amoled.collectAsStateWithLifecycle()
+    val accent by ThemeSettings.accent.collectAsStateWithLifecycle()
     val systemDark = isSystemInDarkTheme()
     val dayPart by produceState(currentDayPart(), mode) {
         while (mode == ThemeMode.TIME) { value = currentDayPart(); delay(60_000) }
@@ -88,7 +89,9 @@ fun rememberMtPalette(): MtPalette {
             (if (systemDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).toPalette(systemDark)
         } else if (systemDark) Palettes.Dark else Palettes.Light
     }
-    return if (amoled) palette.amoled() else palette
+    // TH-1: the chosen accent over every Yumeiro theme; Material You keeps the system's own colours.
+    val toned = if (mode == ThemeMode.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) palette else palette.withAccent(accent)
+    return if (amoled) toned.amoled() else toned
 }
 
 /** The palette a theme mode would use, for previews in Settings (Material You shows the current one). */
