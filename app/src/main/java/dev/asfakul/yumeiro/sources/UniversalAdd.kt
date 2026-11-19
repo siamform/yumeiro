@@ -67,7 +67,7 @@ object UniversalAdd {
         ;
 
         /** F-05: formats Yumeiro recognises but can't run in this version. */
-        val notYet: Boolean get() = this == SKYSTREAM_REPO || this == SKY_PLUGIN || this == NUVIO_REPO || this == VEGA_REPO
+        val notYet: Boolean get() = this == SKYSTREAM_REPO || this == SKY_PLUGIN || this == NUVIO_REPO
     }
 
     /** F-05: the message for a recognised format that this version can't run. */
@@ -266,7 +266,10 @@ object UniversalAdd {
         Kind.TACHI_APK -> Outcome(kind, installApk(context, body ?: download(context, url)))
         Kind.STREMIO -> StremioAddons.add(context, url).getOrThrow().let { Outcome(kind, "${it.name} added") }
         Kind.JS_REPO -> JsSources.addRepo(context, url).getOrThrow().let { Outcome(kind, "JavaScript repository added ($it sources)") }
-        Kind.SKYSTREAM_REPO, Kind.SKY_PLUGIN, Kind.NUVIO_REPO, Kind.VEGA_REPO -> error(notYetMessage(kind))
+        // ADR-047: Vega runs through the shared ecosystem registry; Nuvio and SkyStream are recognised only.
+        Kind.VEGA_REPO -> dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.addRepo(context, url).getOrThrow()
+            .let { Outcome(kind, "${it.name} added (${it.plugins.size} providers). Install them in Sources → Script repos") }
+        Kind.SKYSTREAM_REPO, Kind.SKY_PLUGIN, Kind.NUVIO_REPO -> error(notYetMessage(kind))
         Kind.JELLYFIN, Kind.EMBY, Kind.PLEX -> {
             val base = url.substringBefore("/System/Info/Public").substringBefore("/identity").removeSuffix("/manifest.json")
             val sk = when (kind) { Kind.EMBY -> HomeServers.Kind.EMBY; Kind.PLEX -> HomeServers.Kind.PLEX; else -> HomeServers.Kind.JELLYFIN }

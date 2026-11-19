@@ -29,6 +29,8 @@ object SourceHub {
         CLOUDSTREAM("CloudStream"), ANIYOMI("Aniyomi"), MIHON("Mihon"), STREMIO("Stremio"),
         JAVASCRIPT("JavaScript"), JELLYFIN("Jellyfin"), EMBY("Emby"), PLEX("Plex"), DLNA("DLNA"),
         SMB("SMB share"), WEBDAV("WebDAV"), YUMEIRO("Yumeiro"),
+        // ADR-047: script ecosystems run through sources/ecosystem (one registry, one adapter each).
+        VEGA("Vega"), NUVIO("Nuvio"), SKYSTREAM("SkyStream"),
     }
 
     data class State(

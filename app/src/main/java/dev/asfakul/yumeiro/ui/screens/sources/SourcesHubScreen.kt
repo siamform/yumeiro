@@ -91,7 +91,7 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = 0) {
-    val tabs = listOf("Aniyomi", "Mihon", "Stremio", "JavaScript", "Home servers")
+    val tabs = listOf("Aniyomi", "Mihon", "Stremio", "JavaScript", "Home servers", "Script repos")
     var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0, tabs.lastIndex)) }
     val context = LocalContext.current
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext) }
@@ -111,6 +111,7 @@ fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = 0) {
                     1 -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA)
                     2 -> StremioTab()
                     3 -> JsTab()
+                    5 -> ScriptReposTab()
                     else -> ServersTab()
                 }
             }

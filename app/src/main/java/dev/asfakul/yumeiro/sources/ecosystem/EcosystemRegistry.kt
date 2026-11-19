@@ -1,0 +1,302 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro.sources.ecosystem
+
+import android.content.Context
+import android.util.Log
+import com.lagradost.cloudstream3.MainAPI
+import dev.asfakul.yumeiro.FeatureFlags
+import dev.asfakul.yumeiro.data.SafeJsonFile
+import dev.asfakul.yumeiro.network.NetworkClient
+import dev.asfakul.yumeiro.sources.SourceHub
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
+import okhttp3.Request
+import java.io.File
+import java.security.MessageDigest
+
+/**
+ * ADR-047: what an ecosystem must provide to run its plugins. One object per ecosystem; adding a
+ * fourth ecosystem is one parser in [RepoFormats] plus one adapter registered in
+ * [EcosystemRegistry.adapters], with no change to the registry, the store or the UI.
+ */
+interface RuntimeAdapter {
+    val ecosystem: SourceHub.Ecosystem
+    /** Remote kill switch for this ecosystem only. */
+    val flag: FeatureFlags.Flag
+    /** Files of [PluginEntry.files] that must download for an install to count. */
+    fun required(p: PluginEntry): Set<String>
+    /** Runs once after download (for example to read home rows); the result is saved with the plugin. */
+    suspend fun prepare(context: Context, plugin: EcosystemRegistry.Installed, dir: File): JsonObject = JsonObject(emptyMap())
+    fun build(context: Context, plugin: EcosystemRegistry.Installed, dir: File, displayName: String): MainAPI
+}
+
+/**
+ * ADR-047: the one repository registry for script ecosystems (Vega, Nuvio, SkyStream and later
+ * ones). It stores the user's repositories and installed plugins, downloads code with caps and
+ * hashes, and publishes each ecosystem's sources to [SourceHub] under its own bridge key, so a
+ * broken plugin or ecosystem can't take another one down. CloudStream repositories are never
+ * handled here: their loader is unchanged.
+ *
+ * No repository is built in. Files: `filesDir/scripts/registry.json` and
+ * `filesDir/scripts/<ecosystem>/<repo key>/<plugin id>/`.
+ */
+object EcosystemRegistry {
+    private const val TAG = "EcosystemRegistry"
+    const val MAX_MANIFEST_BYTES = 1L * 1024 * 1024
+    const val MAX_FILE_BYTES = 2L * 1024 * 1024
+    const val MAX_TOTAL_BYTES = 50L * 1024 * 1024
+
+    /** Ecosystems that can run in this version. Nuvio and SkyStream are recognised, not run (ADR-047). */
+    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter).associateBy { it.ecosystem }
+
+    /** Script ecosystems the registry knows the format of. */
+    val known = setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO, SourceHub.Ecosystem.SKYSTREAM)
+
+    data class Repo(val url: String, val ecosystem: SourceHub.Ecosystem, val name: String, val addedAt: Long) {
+        val key: String get() = sha256(url).take(12)
+    }
+
+    data class Installed(
+        val repoUrl: String,
+        val ecosystem: SourceHub.Ecosystem,
+        val id: String,
+        val name: String,
+        val version: String,
+        val lang: String?,
+        /** File name → SHA-256 of the saved code. */
+        val hashes: Map<String, String>,
+        val extra: JsonObject = JsonObject(emptyMap()),
+    ) {
+        /** Unique across repos and ecosystems. */
+        val key: String get() = "${ecosystem.name.lowercase()}:${sha256(repoUrl).take(12)}:$id"
+        val storeName: String get() = key.replace(':', '_')
+    }
+
+    data class State(val repos: List<Repo> = emptyList(), val installed: List<Installed> = emptyList())
+
+    private val _state = MutableStateFlow(State())
+    val state: StateFlow<State> = _state.asStateFlow()
+
+    /** Last publish error per ecosystem, for Source status and the Script repos tab. */
+    private val _problems = MutableStateFlow<Map<String, String>>(emptyMap())
+    val problems: StateFlow<Map<String, String>> = _problems.asStateFlow()
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lock = Any()
+    @Volatile private var loaded = false
+    @Volatile private var started = false
+    private lateinit var app: Context
+
+    fun start(context: Context) {
+        if (started) return
+        started = true
+        app = context.applicationContext
+        scope.launch { runCatching { ensureLoaded(app); publish(app) }.onFailure { Log.e(TAG, "start", it) } }
+    }
+
+    private fun root(c: Context) = File(c.filesDir, "scripts").apply { mkdirs() }
+    private fun file(c: Context) = File(root(c), "registry.json")
+    fun dirOf(c: Context, p: Installed) = File(root(c), "${p.ecosystem.name.lowercase()}/${sha256(p.repoUrl).take(12)}/${p.id}")
+
+    private fun ensureLoaded(context: Context) = synchronized(lock) {
+        if (loaded) return@synchronized
+        val saved = SafeJsonFile.read(file(context)) { t -> decode(RepoFormats.json.parseToJsonElement(t) as JsonObject) }.value ?: State()
+        _state.value = State((saved.repos + _state.value.repos).distinctBy { it.url }, (saved.installed + _state.value.installed).distinctBy { it.key })
+        loaded = true
+    }
+
+    private fun change(context: Context, f: (State) -> State) = synchronized(lock) {
+        ensureLoaded(context)
+        _state.value = f(_state.value)
+        SafeJsonFile.write(file(context), encode(_state.value).toString())
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); _problems.value = emptyMap() }
+
+    // region repositories
+
+    /** Reads [url] and returns what it is, without saving anything (Universal add uses this to route). */
+    suspend fun inspect(context: Context, url: String): ParsedRepo = withContext(Dispatchers.IO) {
+        RepoFormats.parse(fetchText(context, url, MAX_MANIFEST_BYTES), url) ?: error("This repository file is not valid")
+    }
+
+    /** Adds a script repository. CloudStream repositories are refused: they belong to the existing loader. */
+    suspend fun addRepo(context: Context, url: String): Result<ParsedRepo> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!started) start(context)
+            val parsed = inspect(context, url)
+            require(parsed.ecosystem in known) { "This is a ${parsed.ecosystem.label} repository; add it from its own section" }
+            val adapter = adapters[parsed.ecosystem]
+                ?: error("This is a ${parsed.ecosystem.label} repository. Yumeiro recognises it, but can't run ${parsed.ecosystem.label} plugins in this version yet. Nothing was added.")
+            require(FeatureFlags.on(context, adapter.flag)) { "${parsed.ecosystem.label} sources are switched off in this version" }
+            require(parsed.plugins.isNotEmpty()) { "That repository has no ${parsed.ecosystem.label} plugins" }
+            change(context) { s -> s.copy(repos = s.repos.filterNot { it.url == url } + Repo(url, parsed.ecosystem, parsed.name, System.currentTimeMillis())) }
+            parsed
+        }
+    }
+
+    fun removeRepo(context: Context, url: String) { change(context) { s -> s.copy(repos = s.repos.filterNot { it.url == url }) } }
+
+    /** Every plugin offered by the saved repositories that has a runtime, newest manifest first. */
+    suspend fun available(context: Context): List<Pair<Repo, PluginEntry>> = withContext(Dispatchers.IO) {
+        ensureLoaded(context)
+        _state.value.repos.filter { adapters.containsKey(it.ecosystem) }.flatMap { r ->
+            runCatching { inspect(context, r.url) }.onFailure { Log.w(TAG, "repo ${r.name}: ${it.message}") }
+                .getOrNull()?.plugins.orEmpty().filter { !it.disabled }.map { r to it }
+        }
+    }
+
+    // endregion
+
+    // region plugins
+
+    suspend fun install(context: Context, repo: Repo, entry: PluginEntry): Result<Installed> = withContext(Dispatchers.IO) {
+        runCatching {
+            val adapter = adapters[repo.ecosystem] ?: error("Yumeiro can't run ${repo.ecosystem.label} plugins in this version")
+            val base = Installed(repo.url, repo.ecosystem, RepoFormats.safeId(entry.id), entry.name, entry.version, entry.lang, emptyMap())
+            val dir = dirOf(context, base)
+            val staging = File(dir.parentFile, dir.name + ".new").apply { deleteRecursively(); mkdirs() }
+            val used = root(context).walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            val hashes = LinkedHashMap<String, String>()
+            var total = 0L
+            try {
+                for ((fileName, url) in entry.files) {
+                    val safe = RepoFormats.safeId(fileName)
+                    val bytes = runCatching { fetchBytes(context, url, MAX_FILE_BYTES) }.getOrElse { e ->
+                        if (fileName in adapter.required(entry)) throw IllegalStateException("Couldn't download $fileName: ${e.message}") else null
+                    } ?: continue
+                    total += bytes.size
+                    require(used + total <= MAX_TOTAL_BYTES) { "Script sources are using all their space (50 MB). Remove some first." }
+                    File(staging, safe).writeBytes(bytes)
+                    hashes[safe] = sha256(bytes)
+                }
+                val missing = adapter.required(entry) - hashes.keys
+                require(missing.isEmpty()) { "This plugin is missing ${missing.joinToString()}" }
+                dir.deleteRecursively()
+                require(staging.renameTo(dir)) { "Couldn't save the plugin" }
+            } finally { staging.deleteRecursively() }
+            val prepared = base.copy(hashes = hashes)
+            val extra = runCatching { adapter.prepare(context, prepared, dir) }.getOrDefault(JsonObject(emptyMap()))
+            val done = prepared.copy(extra = extra)
+            change(context) { s -> s.copy(installed = s.installed.filterNot { it.key == done.key } + done) }
+            publish(context)
+            done
+        }
+    }
+
+    fun uninstall(context: Context, key: String) {
+        val p = _state.value.installed.firstOrNull { it.key == key } ?: return
+        dirOf(context, p).deleteRecursively()
+        context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply()
+        change(context) { s -> s.copy(installed = s.installed.filterNot { it.key == key }) }
+        publish(context)
+    }
+
+    /** True when the saved code still matches the hashes recorded at install. */
+    fun intact(context: Context, p: Installed): Boolean = p.hashes.all { (name, h) -> File(dirOf(context, p), name).let { it.isFile && sha256(it.readBytes()) == h } }
+
+    // endregion
+
+    /**
+     * Publishes each ecosystem on its own bridge key. A plugin that fails to build, or whose code
+     * changed on disk, is left out and reported; the others and the other ecosystems go on.
+     */
+    fun publish(context: Context) {
+        val c = context.applicationContext
+        val problems = HashMap<String, String>()
+        for (eco in known) {
+            val adapter = adapters[eco]
+            val apis = if (adapter == null || !FeatureFlags.on(c, adapter.flag)) emptyList() else {
+                val taken = HashSet<String>()
+                _state.value.installed.filter { it.ecosystem == eco }.mapNotNull { p ->
+                    runCatching {
+                        check(intact(c, p)) { "code changed on disk" }
+                        adapter.build(c, p, dirOf(c, p), SourceHub.uniqueName(p.name, p.lang, taken).also(taken::add))
+                    }.onFailure { problems[p.key] = it.message ?: it.javaClass.simpleName; Log.w(TAG, "${p.key}: ${it.message}") }.getOrNull()
+                }
+            }
+            runCatching { SourceHub.publishVideo(bridgeKey(eco), eco, apis) }.onFailure { problems[eco.name] = it.message.orEmpty() }
+        }
+        _problems.value = problems
+    }
+
+    fun bridgeKey(eco: SourceHub.Ecosystem) = "eco:" + eco.name.lowercase()
+
+    // region io
+
+    private fun fetchBytes(context: Context, url: String, cap: Long): ByteArray {
+        require(url.startsWith("https://") || url.startsWith("http://")) { "Only web links can be used" }
+        return NetworkClient.get(context).newCall(Request.Builder().url(url).build()).execute().use { r ->
+            if (!r.isSuccessful) error("HTTP ${r.code}")
+            val len = r.body.contentLength()
+            require(len <= cap) { "The file is too big" }
+            val src = r.body.source()
+            src.request(cap + 1)
+            require(src.buffer.size <= cap) { "The file is too big" }
+            src.buffer.readByteArray()
+        }
+    }
+
+    private fun fetchText(context: Context, url: String, cap: Long) = String(fetchBytes(context, url, cap), Charsets.UTF_8)
+
+    fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { b ->
+        val v = b.toInt() and 0xff
+        HEX[v shr 4].toString() + HEX[v and 15]
+    }
+    private const val HEX = "0123456789abcdef"
+    fun sha256(s: String): String = sha256(s.toByteArray())
+
+    // endregion
+
+    // region store format
+
+    internal fun encode(s: State): JsonObject = buildJsonObject {
+        put("v", 1)
+        put("repos", JsonArray(s.repos.map { r -> buildJsonObject { put("url", r.url); put("ecosystem", r.ecosystem.name); put("name", r.name); put("addedAt", r.addedAt) } }))
+        put("installed", JsonArray(s.installed.map { p ->
+            buildJsonObject {
+                put("repoUrl", p.repoUrl); put("ecosystem", p.ecosystem.name); put("id", p.id); put("name", p.name); put("version", p.version)
+                p.lang?.let { put("lang", it) }
+                put("hashes", JsonObject(p.hashes.mapValues { JsonPrimitive(it.value) }))
+                put("extra", p.extra)
+            }
+        }))
+    }
+
+    internal fun decode(o: JsonObject): State {
+        fun JsonObject.s(k: String) = (this[k] as? JsonPrimitive)?.contentOrNull
+        fun eco(n: String?) = SourceHub.Ecosystem.entries.firstOrNull { it.name == n }
+        val repos = (o["repos"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }.mapNotNull { r ->
+            Repo(r.s("url") ?: return@mapNotNull null, eco(r.s("ecosystem")) ?: return@mapNotNull null, r.s("name").orEmpty(), (r["addedAt"] as? JsonPrimitive)?.longOrNull ?: 0)
+        }
+        val installed = (o["installed"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }.mapNotNull { p ->
+            Installed(
+                p.s("repoUrl") ?: return@mapNotNull null, eco(p.s("ecosystem")) ?: return@mapNotNull null,
+                p.s("id") ?: return@mapNotNull null, p.s("name").orEmpty(), p.s("version").orEmpty(), p.s("lang"),
+                (p["hashes"] as? JsonObject).orEmpty().mapValues { (it.value as? JsonPrimitive)?.contentOrNull.orEmpty() },
+                p["extra"] as? JsonObject ?: JsonObject(emptyMap()),
+            )
+        }
+        return State(repos, installed)
+    }
+
+    // endregion
+}
