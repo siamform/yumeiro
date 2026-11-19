@@ -9,6 +9,11 @@ on:
   pull_request:
     paths-ignore: ["**/*.md", "docs/**"]
   workflow_dispatch:
+    inputs:
+      review_apk:
+        description: "Final test §11: after build, tests, lint and the secret scan pass, build the signed review APKs (artifact only, never published)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -146,3 +151,10 @@ jobs:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
+
+  review-apk:
+    name: Review APK (signed, not published)
+    needs: [build, secrets-scan]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.review_apk }}
+    uses: ./.github/workflows/review-apk.yml
+    secrets: inherit
