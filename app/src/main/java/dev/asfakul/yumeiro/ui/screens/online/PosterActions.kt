@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -121,9 +124,23 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
     if (LocalTvMode.current) {
         val first = remember { FocusRequester() }
         Dialog(onDismissRequest = onDismiss) {
-            Box(Modifier.widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF16161C)).padding(vertical = 12.dp)) { body(first) }
+            // F-09 fix: the dialog window attaches a few frames after composition on slow phones (api33-lowram),
+            // so a single requestFocus() from outside the dialog was lost and focus stayed on the poster.
+            // Ask from inside the dialog, once per frame, until the panel really holds focus (max ~1 s).
+            var held by remember { mutableStateOf(false) }
+            Box(
+                Modifier.widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF16161C))
+                    .onFocusChanged { if (it.hasFocus) held = true }.padding(vertical = 12.dp),
+            ) { body(first) }
+            LaunchedEffect(Unit) {
+                repeat(20) {
+                    if (held) return@LaunchedEffect
+                    androidx.compose.runtime.withFrameNanos { }
+                    runCatching { first.requestFocus() }
+                    kotlinx.coroutines.delay(50)
+                }
+            }
         }
-        LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     } else {
         ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
             Box(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) { body(null) }
