@@ -71,7 +71,11 @@ class MessagesDeviceTest {
                 a11yRuns++
                 rule.enableAccessibilityChecks(AccessibilityValidator().setRunChecksFromRootView(true)
                     .setThrowExceptionFor(AccessibilityCheckResult.AccessibilityCheckResultType.ERROR))
-                a11y = runCatching { rule.onAllNodes(isRoot(), true)[0].tryPerformAccessibilityChecks() }.exceptionOrNull()?.message?.lines()?.firstOrNull() ?: "ok"
+                val err = runCatching { rule.onAllNodes(isRoot(), true)[0].tryPerformAccessibilityChecks() }.exceptionOrNull()
+                // G10 regression (first TV run, tv-api34 44453210587): only the first line was kept, which
+                // names no check. Log the whole result so the failing view and check are on record.
+                err?.message?.let { log("MSG_A11Y $site ${it.replace('\n', ' ').take(900)}") }
+                a11y = err?.message?.lines()?.firstOrNull() ?: "ok"
                 rule.disableAccessibilityChecks()
             }
             log("MSG_CASE ${i + 1}/${rows.size} $site kind=${r[0]} shown=$shown whole=${seen.isNotEmpty() && overflow == false} lines=$lines action=${action ?: "-"}:$actionShown a11y=$a11y")
