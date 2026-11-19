@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro
 
-import android.app.Activity
 import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
@@ -14,7 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -96,7 +98,7 @@ class ProfilesDeviceTest {
         added = Profiles.add(ctx, "Kid", AccentTone.SAKURA).id
         assertTrue(Profiles.setPin(ctx, Profiles.DEFAULT, "2468"))
         ProfileSession.chosen.value = false
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { WhoIsWatching(LocalContext.current as Activity, onManage = null) } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { WhoIsWatching(androidx.activity.compose.LocalActivity.current!!, onManage = null) } } }
         assertTrue("gate shown", waitTag("profile_gate"))
         assertTrue("both profiles", has("profile_pick_${Profiles.DEFAULT}") && has("profile_pick_$added"))
         compose.onNodeWithTag("profile_pick_${Profiles.DEFAULT}", true).performClick()
@@ -148,7 +150,7 @@ class ProfilesDeviceTest {
 }
 
 private fun androidx.compose.ui.test.SemanticsNodeInteraction.assertTextContainsDescription(part: String) =
-    assert(androidx.compose.ui.test.SemanticsMatcher("description has $part") { n ->
-        n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription).orEmpty().any { it.contains(part) }
+    assert(SemanticsMatcher("description has $part") { n ->
+        n.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty().any { it.contains(part) }
     })
 
