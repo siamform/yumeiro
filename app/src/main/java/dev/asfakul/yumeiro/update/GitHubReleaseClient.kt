@@ -91,7 +91,7 @@ internal class GitHubReleaseClient(
 
     /** Small public file (SHA256SUMS.txt); redirects must stay on GitHub hosts. */
     private fun getSmall(url: String): String {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(url)) as HttpURLConnection).apply {
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
             // Needed for API asset URLs (redirects to the file); harmless for browser URLs.
@@ -132,7 +132,7 @@ internal class GitHubReleaseClient(
 
     /** Asks the API for the signed download link; null when GitHub doesn't hand one out. */
     private fun signedAssetUrl(apiUrl: String, useToken: Boolean): ResolvedDownload? {
-        val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(apiUrl)) as HttpURLConnection).apply {
             instanceFollowRedirects = false
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
@@ -163,7 +163,7 @@ internal class GitHubReleaseClient(
     private class HttpStatusException(val code: Int) : IOException("HTTP $code")
 
     private fun get(url: String, token: String?): String {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(url)) as HttpURLConnection).apply {
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
             setRequestProperty("Accept", "application/vnd.github+json")

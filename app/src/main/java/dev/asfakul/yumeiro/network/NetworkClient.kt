@@ -39,6 +39,9 @@ object NetworkClient {
                 })
                 .connectionPool(okhttp3.ConnectionPool(if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 6 else 10, 2, TimeUnit.MINUTES))
                 .dns(SmartDns)
+                // NBUG-13 (ADR-045): the user's proxy; off = the system selector, exactly as before.
+                .proxySelector(AppProxy)
+                .proxyAuthenticator(AppProxy)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(20, TimeUnit.SECONDS)
                 .followRedirects(true)

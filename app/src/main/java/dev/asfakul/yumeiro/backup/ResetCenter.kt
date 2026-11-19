@@ -92,6 +92,8 @@ object ResetCenter {
             prefNames.filter { it !in keep }.forEach { name ->
                 removeWhere(context, name) { k -> PrefSections.sectionOf(name, k) == Backup.Section.SETTINGS }
             }
+            // NBUG-13: the proxy settings went with mt_network; its sealed password goes too.
+            context.getSharedPreferences(dev.asfakul.yumeiro.network.AppProxy.SECRET_PREFS, Context.MODE_PRIVATE).edit().clear().commit()
         }
     }
 

@@ -56,7 +56,7 @@ object Backup {
     /** Shared preferences that must stay on this device. */
     internal val excludedPrefs = setOf(
         "mt_updater", "online_secrets", "privacy", "WebViewChromiumPrefs", "fcm_push", "push_wake",
-        "mt_oauth_guard", "yt_account", "site_logins", "yumeiro_tv_mode", BackupMeta.PREFS,
+        "mt_oauth_guard", "yt_account", "site_logins", dev.asfakul.yumeiro.network.AppProxy.SECRET_PREFS, "yumeiro_tv_mode", BackupMeta.PREFS,
     )
     private val excludedPrefPrefixes = listOf("com.google.", "androidx.", "WebView", "org.chromium", "_")
     internal fun prefIncluded(name: String) = name !in excludedPrefs && excludedPrefPrefixes.none { name.startsWith(it) }

@@ -98,7 +98,7 @@ class OpenSubtitlesProvider internal constructor(
         }
 
     private fun request(url: String, hashMatch: Boolean): List<OnlineSubtitle> {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(url)) as HttpURLConnection).apply {
             connectTimeout = 15_000; readTimeout = 20_000
             setRequestProperty("User-Agent", ua)
             setRequestProperty("X-User-Agent", ua)
@@ -132,7 +132,7 @@ class OpenSubtitlesProvider internal constructor(
     }
 
     override suspend fun download(context: Context, subtitle: OnlineSubtitle): LocalSubtitle = withContext(Dispatchers.IO) {
-        val conn = (URL(subtitle.downloadUrl).openConnection() as HttpURLConnection).apply {
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(subtitle.downloadUrl)) as HttpURLConnection).apply {
             connectTimeout = 15_000; readTimeout = 30_000; instanceFollowRedirects = true
             setRequestProperty("User-Agent", ua)
         }

@@ -47,6 +47,8 @@ object FeatureFlags {
         CLOUD_CAPTURE_V2("cloud_capture_v2", true),
         /** F-11 (ADR-044): "Translate pages" in the manga reader (on-device OCR + translation). */
         MANGA_TRANSLATE("f11_manga_translate", true),
+        /** NBUG-13 (ADR-045): Settings → Network → Proxy (HTTP / SOCKS5) for app requests and web pages. */
+        APP_PROXY("nbug13_proxy", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

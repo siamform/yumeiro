@@ -30,6 +30,9 @@ class MTApplication : Application(), ImageLoaderFactory {
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
         // G12 X11-2: the first network request loads the user's DNS settings (not the defaults).
         dev.asfakul.yumeiro.network.NetworkSettings.attach(this)
+        // NBUG-13 (ADR-045): proxy settings load with the first request; WebView set-up only when it is on, at idle.
+        dev.asfakul.yumeiro.network.AppProxy.attach(this)
+        runCatching { dev.asfakul.yumeiro.network.AppProxy.applyWhenIdle(this) }
         // R15: load the settings files the first screen reads, off the main thread.
         dev.asfakul.yumeiro.startup.PrefsWarmup.start(this)
         // Round 2: crash reports are written to the phone (Settings → Crash reports) before anything else can fail.
