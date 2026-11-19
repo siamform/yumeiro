@@ -70,8 +70,14 @@ object EpisodeStills {
 
     private fun lookup(context: Context, d: OnlineDetail): Map<String, String> {
         val client = dev.asfakul.yumeiro.network.NetworkClient.get(context)
+        // IG-13: only 404 is "nothing found". A 429/5xx throws, which clears the tried mark (IG-5) so the
+        // next visit asks again; TVmaze asks clients to retry a 429, not treat it as permanent.
         fun get(url: String): String? = client.newCall(Request.Builder().url(url).header("Accept", "application/json").build()).execute().use { r ->
-            if (r.isSuccessful) r.body?.string() else null
+            when {
+                r.isSuccessful -> r.body?.string()
+                r.code == 404 -> null
+                else -> throw java.io.IOException("HTTP ${r.code}")
+            }
         }
         if (d.kind == OnlineKind.ANIME || d.aniListId != null || d.malId != null) {
             val q = d.aniListId?.let { "anilist_id=$it" } ?: d.malId?.let { "mal_id=$it" }
