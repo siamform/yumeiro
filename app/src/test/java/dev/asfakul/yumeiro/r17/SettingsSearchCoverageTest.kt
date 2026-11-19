@@ -35,7 +35,7 @@ class SettingsSearchCoverageTest {
             "Send a test notification", "Reliable alerts (UnifiedPush)")
         put(Category.BACKGROUND, "Background checks", "Wi-Fi only")
         put(Category.NETWORK, "Get around blocked sites automatically", "Only when system DNS fails")
-        put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Clear watch history",
+        put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Hide the Private entry", "Clear watch history",
             "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications",
             "Clear cache", "All app permissions")
         put(Category.BACKUP, "Back up automatically", "Save loaded pages on the phone", "Erase everything")
