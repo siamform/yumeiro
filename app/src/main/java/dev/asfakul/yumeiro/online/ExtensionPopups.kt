@@ -174,6 +174,8 @@ object ExtensionPopups {
     private fun card(h: Held) {
         dev.asfakul.yumeiro.ui.components.AppMessages.show(
             appContext, cardText(h), actionLabel = "Show", action = { reveal(h.id) },
+            // G10 ER-29: the card waits for a message on screen instead of replacing it.
+            quiet = true,
         )
     }
 
@@ -208,6 +210,7 @@ object ExtensionPopups {
     /** Opened or discarded from the Extensions screen: its card must not stay on screen. */
     private fun dropCard(h: Held) {
         deferred.entries.removeAll { it.value.id == h.id }
+        dev.asfakul.yumeiro.ui.components.AppMessages.dropWaiting(cardText(h))
         val m = dev.asfakul.yumeiro.ui.components.AppMessages.current.value ?: return
         if (m.text == cardText(h)) dev.asfakul.yumeiro.ui.components.AppMessages.dismiss(m.id)
     }

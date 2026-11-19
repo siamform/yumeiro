@@ -117,13 +117,22 @@ object AppMessages {
     @Volatile internal var hosts = 0
     private val main by lazy { Handler(Looper.getMainLooper()) }
 
+    /** G10 ER-29: a [quiet] message waiting for the one on screen to close (latest only). */
+    @Volatile private var waiting: Message? = null
+
+    /**
+     * @param quiet the app posted it on its own (e.g. an extension's held promotional window): it never
+     *   replaces a message on screen, it waits until that one closes (like SnackbarHostState's queue).
+     */
     fun show(
         context: android.content.Context?, text: String, kind: Kind = Kind.INFO,
-        actionLabel: String? = null, action: (() -> Unit)? = null,
+        actionLabel: String? = null, action: (() -> Unit)? = null, quiet: Boolean = false,
     ) {
         if (text.isBlank()) return
         val duration = if (actionLabel != null || kind == Kind.ERROR) 4_500L else 2_600L
-        if (hosts > 0) {
+        if (hosts > 0 && quiet && _current.value != null) {
+            waiting = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration)
+        } else if (hosts > 0) {
             // Same text again (e.g. repeated taps) just restarts the timer instead of stacking.
             _current.value = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration)
         } else if (context != null) {
@@ -137,7 +146,14 @@ object AppMessages {
     fun error(context: android.content.Context?, text: String, actionLabel: String? = null, action: (() -> Unit)? = null) =
         show(context, text, Kind.ERROR, actionLabel, action)
 
-    fun dismiss(id: Long) { if (_current.value?.id == id) _current.value = null }
+    fun dismiss(id: Long) {
+        if (_current.value?.id != id) return
+        val next = waiting; waiting = null
+        _current.value = next?.copy(id = seq.incrementAndGet())
+    }
+
+    /** Drops a waiting quiet message with this text (its reason went away before it could show). */
+    fun dropWaiting(text: String) { if (waiting?.text == text.take(240)) waiting = null }
 }
 
 /** Renders [AppMessages] at the bottom of its parent box. Add once, near the app root. */
