@@ -31,6 +31,8 @@ object FeatureFlags {
         GLASS_THEME("f10_glass_theme", true),
         /** TV-4 (ADR-036): Home's library search offers "Search online" (Yumix) for the committed words. */
         TV4_ONLINE_SEARCH("tv4_online_search", true),
+        /** F-14 (ADR-040): a dead Live TV link tries the channel's other links before Auto-zap or the error card. */
+        LIVE_FAILOVER("f14_live_failover", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

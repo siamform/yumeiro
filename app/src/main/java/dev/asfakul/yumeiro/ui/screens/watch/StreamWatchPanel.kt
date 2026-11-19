@@ -155,7 +155,43 @@ object StreamWatch {
     }
 
     @Synchronized
-    internal fun resetAutoSwitch() = switches.clear()
+    internal fun resetAutoSwitch() { switches.clear(); failKey = null; failTried.clear() }
+
+    /** F-14: how long the links already tried for one channel are remembered. */
+    const val FAILOVER_WINDOW_MS = 2L * 60 * 1000
+    private var failKey: String? = null
+    private var failAt = 0L
+    private val failTried = HashSet<String>()
+
+    /**
+     * F-14 (ADR-040): the next link of the same channel after [failedUrl] dies, each link once per round
+     * (Kodi PVR and TiviMate-style players fail over to backup URLs the same way). Null when every link of
+     * the channel has failed in the last [FAILOVER_WINDOW_MS], or the channel has only one link.
+     */
+    @Synchronized
+    fun failoverSource(channels: List<StreamRequest>, failedUrl: String, now: Long): StreamRequest? {
+        val alts = alternatives(channels, failedUrl)
+        if (alts.size < 2) return null
+        val key = nameKey(alts.first { it.url == failedUrl }.displayTitle)
+        if (key != failKey || now - failAt > FAILOVER_WINDOW_MS) { failKey = key; failTried.clear() }
+        failAt = now
+        failTried += failedUrl
+        val from = alts.indexOfFirst { it.url == failedUrl }
+        val next = (1 until alts.size).map { alts[(from + it) % alts.size] }.firstOrNull { it.url !in failTried } ?: return null
+        failTried += next.url
+        return next
+    }
+
+    /** F-14: plays the channel's next link; false when there is none (then Auto-zap or the error card). */
+    fun failover(context: android.content.Context, failedUrl: String): Boolean {
+        if (!dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.LIVE_FAILOVER)) return false
+        val list = StreamRepository.playlist.value
+        val next = failoverSource(list, failedUrl, System.currentTimeMillis()) ?: return false
+        val n = alternatives(list, failedUrl).indexOfFirst { it.url == next.url } + 1
+        dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "This source isn't working — trying source $n")
+        play(context, next)
+        return true
+    }
 
     /** Called when [failedUrl] couldn't be played: opens the next channel when Auto-zap is on. */
     fun autoSwitch(context: android.content.Context, failedUrl: String): Boolean {
@@ -191,7 +227,6 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
     val p = LocalMtPalette.current
     val listState = rememberLazyListState()
     val learned = remember(currentUrl) { AccessLadder.learned(currentUrl) }
-
     Box(modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().testTag("stream_watch_panel"), state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
             item(key = "controls") {

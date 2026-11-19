@@ -1505,7 +1505,11 @@ fun MTPlayerApp(
                             else -> viewModel.playPreviousVideo()
                         }
                     },
-                    onGiveUp = if (isStream && streamNext != null) ({ dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.autoSwitch(context, video.uri) }) else null,
+                    // F-14: a dead link first tries the channel's other links, then Auto-zap moves to the next channel.
+                    onGiveUp = if (isStream) ({
+                        dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.failover(context, video.uri) ||
+                            (streamNext != null && dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.autoSwitch(context, video.uri))
+                    }) else null,
                     overlay = if (online != null) { visible, player -> OnlinePlayerOverlay(visible, player, closePlayer) } else null,
                     onFatalError = if (online != null) { pos -> dev.asfakul.yumeiro.online.OnlineSession.failover(context, pos, video.id) } else null,
                     watchPage = watchPage,
