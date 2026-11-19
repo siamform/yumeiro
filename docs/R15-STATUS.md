@@ -1,16 +1,21 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 06:59 UTC, owner order: everything before the release)
+## Resume here (updated 2026-11-19 08:33 UTC, master handover; no PR / merge without the owner's "go")
 
-- **Orders:** master prompt + §13a + owner handover 2026-11-19 + **owner order 2026-11-19 (second message):
-  docs/PROGRAM-2026-11-19.md**: research competitors → design → build every feature and bug, then release.
-  Features F-01…F-14 approved on that condition; owner tests run day by day (never block).
-- **G11:** closed (IG-9…IG-13 verified). v1.8.2 gate stopped; it runs last on the final commit.
-- **Runs in progress:** none. Research agents A–E write to /home/user/workspace/research/ (outside the repo).
-- **Current group:** G15 open agent bugs (docs/groups/GROUP-15-OPEN-AGENT-BUGS.md, ADR-031): G15-1 NBUG-10,
-  G15-2 TV-YT-1, G15-3 TV-A11Y-1. Steps 1–3 done.
-- **Next three actions:** (1) G15 tests commit + fail-before (CI unit, tv-api34); (2) fixes, pass-after,
-  regression; (3) review research docs and build workstreams A → B → C → D → E under §13a.
+- **Orders:** master handover 2026-11-19 + PROGRAM-2026-11-19 + §13a. IDs: new features are F-16 (Yumix sections, tags)
+  and F-17 (profile statistics); F-13/F-14/F-15 stay offline manga / Live TV failover / Live TV guide.
+- **Landed, Built, not tested:** NF-2b-1..4 save bugs, SRC-1 JS time limit, SRC-2 JS private-network block, F-05 step 1
+  (recognise SkyStream / Nuvio / Vega; running them is not in this release), F-09 Watch later + Favorite (ADR-033).
+- **Runs in progress:** CI 44488505354 @e1cf86d1 (pass-after for all four batches); G15 regression phones
+  44487432724, tv-api24 44487437177 (rerun: first try died on a Maven Central download, not a test result).
+- **Next three actions:** (1) green CI + device pass-after (JsTimeLimitDeviceTest, PosterActionsDeviceTest phones+TV);
+  (2) G15 tv-api34 regression and close G15; (3) workstreams A F-16/F-01/F-08/NF-1 → B F-17 → C F-06/F-07/F-12 →
+  D F-04/F-11/NF-2b → E F-10 → F bugs, then gate.
+- Research folder from the previous sandbox was lost (see PROGRAM-2026-11-19 "Research files").
+
+### Previous resume note — superseded (06:59 UTC 2026-11-19, G15 started)
+
+- G15 steps 1–3 done; tests + fail-before were next.
 
 ### Previous resume note — superseded (06:31 UTC 2026-11-19, G11 closed → v1.8.2 gate)
 
