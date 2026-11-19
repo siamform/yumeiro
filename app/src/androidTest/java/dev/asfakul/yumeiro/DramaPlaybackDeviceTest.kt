@@ -78,13 +78,20 @@ class DramaPlaybackDeviceTest {
             PlaybackDiagnostics.reset("")
             val playAt = android.os.SystemClock.elapsedRealtime()
             rule.runOnUiThread { OnlineSession.play(ctx, detail) }
-            val ok = runCatching {
-                rule.waitUntil(120_000) {
-                    val d = PlaybackDiagnostics.state.value
-                    d.firstFrame || OnlineSession.state.value?.phase == OnlineSession.Phase.FAILED
-                }
-            }.isSuccess && PlaybackDiagnostics.state.value.firstFrame
-            val playMs = android.os.SystemClock.elapsedRealtime() - playAt
+            // FINAL-11 (tv-api34 P1, run 44617190495: 10 615 ms, P2 7 017 ms): rule.waitUntil syncs with
+            // Compose idling on the main thread at every poll, and the stall samples during that cold
+            // start were mostly the test harness (samples=app,harness,harness,render). Time it with a
+            // plain poll of the state flows on this thread so the test does not slow the main thread it
+            // measures. Same start point (before the tap is posted) and the same 10 s budget.
+            var firstFrameAt = 0L
+            val deadline = android.os.SystemClock.elapsedRealtime() + 120_000
+            while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                if (PlaybackDiagnostics.state.value.firstFrame) { firstFrameAt = android.os.SystemClock.elapsedRealtime(); break }
+                if (OnlineSession.state.value?.phase == OnlineSession.Phase.FAILED) break
+                android.os.SystemClock.sleep(20)
+            }
+            val ok = firstFrameAt > 0L
+            val playMs = (if (ok) firstFrameAt else android.os.SystemClock.elapsedRealtime()) - playAt
             Log.i("MTDeviceTest", "drama timing: ${item.name}: detail load ${loadMs}ms, play to first frame ${playMs}ms (ok=$ok)")
             val st = OnlineSession.state.value
             tried += "${item.name}: firstFrame=$ok phase=${st?.phase} links=${st?.links?.size} msg=${st?.message?.take(80)} uri=${PlaybackDiagnostics.state.value.uri.take(80)}"
