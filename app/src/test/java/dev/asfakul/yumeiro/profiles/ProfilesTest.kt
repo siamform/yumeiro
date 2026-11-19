@@ -101,4 +101,11 @@ class ProfilesTest {
         assertEquals(AccentTone.AO, Profiles.find(ctx, p.id)?.tone)
         assertEquals(Profiles.PinCheck.OK, Profiles.checkPin(ctx, p.id, "2468", 5L))
     }
+
+    @Test fun eachProfilesDataGoesIntoBackupsAndHistoryResets() {
+        assertEquals(dev.asfakul.yumeiro.backup.Backup.Section.LIBRARY, dev.asfakul.yumeiro.backup.Backup.sectionOf("files/profiles/2/online_history.json"))
+        assertEquals(dev.asfakul.yumeiro.backup.Backup.Section.LIBRARY, dev.asfakul.yumeiro.backup.PrefSections.sectionOf("yt_history@p2", "v"))
+        assertTrue(dev.asfakul.yumeiro.backup.PrefSections.isHistory("yt_history@p2", "v"))
+        assertEquals(dev.asfakul.yumeiro.backup.Backup.Section.LIBRARY, dev.asfakul.yumeiro.backup.PrefSections.sectionOf(Profiles.PREFS, "list"))
+    }
 }
