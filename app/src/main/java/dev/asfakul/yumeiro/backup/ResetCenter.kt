@@ -41,6 +41,7 @@ object ResetCenter {
             root.listFiles()?.forEach { f -> freed += sizeOf(f); f.deleteRecursively() }
         }
         runCatching { dev.asfakul.yumeiro.cache.DataCache.clearMemory() }
+        runCatching { dev.asfakul.yumeiro.sources.manga.MangaTranslate.clear(c) } // F-11: in-memory page translations too
         freed
     }
 
