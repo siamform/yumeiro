@@ -110,7 +110,7 @@ fun VideoLibraryContent(
         }
     }
     val bookmarks by OnlineBookmarks.items.collectAsState()
-    val downloads by OnlineDownloads.items.collectAsState()
+    val downloads by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     remember { dev.asfakul.yumeiro.online.download.DownloadSettings.init(context); true }
     val dlDays by dev.asfakul.yumeiro.online.download.DownloadSettings.autoDeleteDays.collectAsState()
     val historyAll by OnlineHistory.entries.collectAsState()

@@ -76,7 +76,7 @@ import dev.asfakul.yumeiro.youtube.YtItem
 @Composable
 internal fun EpisodeDownloadIcon(d: OnlineDetail, version: String, index: Int, e: OnlineEpisode) {
     val context = LocalContext.current
-    val all by OnlineDownloads.items.collectAsState()
+    val all by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     val id = remember(d.api, d.url, version, e.data) { OnlineDownloads.episodeId(d.api, d.url, version.ifBlank { null }, e.data) }
     val item = all.firstOrNull { it.id == id }
     Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
@@ -99,7 +99,7 @@ internal fun EpisodeDownloadIcon(d: OnlineDetail, version: String, index: Int, e
 /** "Download" button on a title page: opens the episode download sheet. */
 @Composable
 internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>, seasonTitle: String?, modifier: Modifier = Modifier) {
-    val all by OnlineDownloads.items.collectAsState()
+    val all by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     var open by remember { mutableStateOf(false) }
     val folder = remember(d, version) { DownloadNaming.seriesFolder(d.name, d.api, version) }
     val saved = all.count { it.folder == folder && it.status == OnlineDownloads.Status.DONE }
@@ -126,7 +126,7 @@ private fun EpisodeDownloadSheet(
     LaunchedEffect(Unit) { DownloadSettings.init(context) }
     val quality by DownloadSettings.quality.collectAsState()
     val autoDelete by DownloadSettings.autoDeleteDays.collectAsState()
-    val all by OnlineDownloads.items.collectAsState()
+    val all by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     val have = all.filter { it.folder == folder && (it.active || it.status == OnlineDownloads.Status.DONE) }.mapNotNull { it.data }.toSet()
     fun queue(list: List<Pair<Int, OnlineEpisode>>, what: String) {
         onDismiss()

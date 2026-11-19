@@ -284,7 +284,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context) } }
-    val downloadItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+    val downloadItems by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     val activeDownloads = remember(downloadItems) { dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloadItems).active.size }
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { OnlineBookmarks.ensureLoaded(context) } }
     val bookmarks by OnlineBookmarks.items.collectAsState()

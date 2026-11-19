@@ -213,7 +213,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
     var gridMode by rememberSaveable(d.url) { mutableStateOf(true) }
     val tileCols = (gridColumns() + 2).coerceAtLeast(5)
     var plotExpanded by remember { mutableStateOf(false) }
-    val downloads by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+    val downloads by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     val savedData = remember(downloads, d.url, d.api) {
         downloads.filter { it.api == d.api && it.titleUrl == d.url && it.status == dev.asfakul.yumeiro.online.download.OnlineDownloads.Status.DONE }.mapNotNull { it.data }.toSet()
     }

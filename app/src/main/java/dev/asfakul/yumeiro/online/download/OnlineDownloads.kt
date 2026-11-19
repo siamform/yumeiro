@@ -90,6 +90,10 @@ object OnlineDownloads {
         val audioUrl: String? = null,
         /** NF-2b-4: "convert" while a TS download is rewritten as MP4. Not saved. */
         val stage: String? = null,
+        /** DL-H: kept in the private vault (app-only storage), out of every normal list. */
+        val hidden: Boolean = false,
+        /** DL-H / PR-1: the profile that hid it (only that profile sees and unhides it). */
+        val profile: String = "0",
     ) {
         val fraction: Float get() = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
         val active: Boolean get() = status == Status.QUEUED || status == Status.RUNNING
@@ -117,7 +121,12 @@ object OnlineDownloads {
     /** Folder a YouTube download goes into ([enqueueYouTube]). */
     fun youTubeFolder(audioOnly: Boolean, music: Boolean) = if (audioOnly || music) "YouTube Music" else "YouTube"
 
-    fun fileOf(context: Context, item: Item): File = File(folderDir(context, item.folder).apply { mkdirs() }, item.fileName)
+    fun fileOf(context: Context, item: Item): File =
+        if (item.hidden) File(PrivateDownloads.vaultDir(context, item.profile).apply { mkdirs() }, item.fileName)
+        else File(folderDir(context, item.folder).apply { mkdirs() }, item.fileName)
+
+    /** DL-H: replaces one item and saves the list. */
+    internal fun replace(id: String, change: (Item) -> Item) = set(id, true, change)
 
     /** Something playable is saved for [item] (in the app folder or the phone's media folders). */
     fun isSaved(context: Context, item: Item): Boolean =
@@ -257,7 +266,7 @@ object OnlineDownloads {
     fun cleanup(context: Context, now: Long = System.currentTimeMillis()): Int {
         ensureLoaded(context); DownloadSettings.init(context)
         val days = DownloadSettings.autoDeleteDays.value
-        val old = _items.value.filter { it.status == Status.DONE && DownloadNaming.expired(it.finishedAt, it.keep, days, now) }
+        val old = _items.value.filter { it.status == Status.DONE && !it.hidden && DownloadNaming.expired(it.finishedAt, it.keep, days, now) }
         old.forEach { delete(context, it.id) }
         // Empty series folders go too.
         runCatching { dir(context).listFiles()?.filter { it.isDirectory && it.list().isNullOrEmpty() }?.forEach { it.delete() } }
@@ -427,6 +436,7 @@ object OnlineDownloads {
         .put("ytId", i.ytId).put("vItag", i.videoItag).put("aItag", i.audioItag).put("container", i.container)
         .put("keep", i.keep).put("finishedAt", i.finishedAt).put("quality", i.quality).put("publicUri", i.publicUri)
         .put("base", i.baseName).put("dash", i.isDash).put("audio", i.audioUrl)
+        .put("hidden", i.hidden).put("profile", i.profile)
 
     private fun from(o: JSONObject): Item? {
         fun map(k: String) = o.optJSONObject(k)?.let { h -> h.keys().asSequence().associateWith { h.optString(it) } }.orEmpty()
@@ -444,6 +454,7 @@ object OnlineDownloads {
             ytId = str("ytId"), videoItag = o.optInt("vItag", -1), audioItag = o.optInt("aItag", -1), container = str("container"),
             keep = o.optBoolean("keep"), finishedAt = o.optLong("finishedAt"), quality = str("quality"), publicUri = str("publicUri"), baseName = str("base"),
             isDash = o.optBoolean("dash"), audioUrl = str("audio"),
+            hidden = o.optBoolean("hidden"), profile = o.optString("profile").ifBlank { "0" },
         )
     }
 

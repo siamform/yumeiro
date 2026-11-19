@@ -8,6 +8,9 @@ package dev.asfakul.yumeiro.ui.screens.downloads
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -104,7 +107,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
     val context = LocalContext.current
     // G8 D8 (R17): the list file and the settings were read on the main thread when the page opened.
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { OnlineDownloads.ensureLoaded(context); DownloadSettings.init(context) } }
-    val all by OnlineDownloads.items.collectAsState()
+    val all by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     val days by DownloadSettings.autoDeleteDays.collectAsState()
     val quality by DownloadSettings.quality.collectAsState()
     val parallel by DownloadSettings.parallel.collectAsState()
@@ -115,6 +118,14 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
     val open = remember { mutableStateListOf<String>() }
     val used = remember(all) { all.filter { it.status == OnlineDownloads.Status.DONE }.sumOf { it.bytes } }
     val free by rememberFreeBytes(context, all)
+    // DL-H: the Private vault. Not saved: leaving the page (or the app) locks it again.
+    val vaultOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS) }
+    var vaultOpen by remember { mutableStateOf(false) }
+    var askVault by remember { mutableStateOf(false) }
+    val stealth by dev.asfakul.yumeiro.online.download.PrivateDownloads.stealth.collectAsState()
+    LaunchedEffect(Unit) { if (vaultOn) withContext(Dispatchers.IO) { dev.asfakul.yumeiro.online.download.PrivateDownloads.loadStealth(context) } }
+    if (askVault) VaultUnlock(onDismiss = { askVault = false }, onOpen = { askVault = false; vaultOpen = true })
+    if (vaultOpen) { PrivateVault(days, onBack = { vaultOpen = false }, onPlayVideo = onPlayVideo); return }
 
     Column(Modifier.fillMaxSize().testTag("downloads_screen")) {
         SubPageHeader(
@@ -133,8 +144,10 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("downloads")) {
             item("storage") {
-                StorageCard(used, free, days, quality, parallel, onSettings = { settingsOpen = !settingsOpen })
+                StorageCard(used, free, days, quality, parallel, onSettings = { settingsOpen = !settingsOpen },
+                    onLongPress = if (vaultOn) ({ askVault = true }) else null)
             }
+            if (vaultOn && !stealth) item("private") { PrivateEntry(onClick = { askVault = true }) }
             if (settingsOpen) item("settings") {
                 Column {
                     Text("Offline settings", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
@@ -220,8 +233,10 @@ private fun SectionHead(icon: ImageVector, title: String, subtitle: String, acti
 }
 
 @Composable
-private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, parallel: Int, onSettings: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, parallel: Int, onSettings: () -> Unit, onLongPress: (() -> Unit)? = null) {
+    Surface(shape = RoundedCornerShape(16.dp), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+        .then(if (onLongPress != null) Modifier.clip(RoundedCornerShape(16.dp)).combinedClickable(onClickLabel = null, onLongClickLabel = null, onLongClick = onLongPress, onClick = {}) else Modifier)) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen)
@@ -283,12 +298,18 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val done = d.status == OnlineDownloads.Status.DONE
+    val hideOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS) }
+    val canHide = done && hideOn
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer)
             .clickable(enabled = done) { scope.launch { play(context, d, onPlayVideo) } }.padding(10.dp).testTag("library_download"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) { PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize()) }
+        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) {
+            PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize())
+            // DL-H: the play mark sits on the poster, so a finished row has room for Hide.
+            if (done) Icon(Icons.Default.PlayArrow, "Play", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(26.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x66000000)).padding(3.dp))
+        }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(d.episodeLabel?.takeIf { d.kind == OnlineDownloads.Kind.EPISODE } ?: d.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -311,7 +332,18 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
             }
         }
         when (d.status) {
-            OnlineDownloads.Status.DONE -> Icon(Icons.Default.PlayArrow, "Play", tint = SpotifyGreen, modifier = Modifier.padding(horizontal = 6.dp))
+            OnlineDownloads.Status.DONE -> if (canHide) IconButton(onClick = {
+                scope.launch {
+                    val ok = withContext(Dispatchers.IO) {
+                        if (d.hidden) dev.asfakul.yumeiro.online.download.PrivateDownloads.unhide(context, d.id)
+                        else dev.asfakul.yumeiro.online.download.PrivateDownloads.hide(context, d.id)
+                    }
+                    if (!ok) AppMessages.error(context, if (d.hidden) "Couldn't move it back (not enough space?)" else "Couldn't hide it (not enough space?)")
+                    else AppMessages.success(context, if (d.hidden) "Back in Downloads" else "Moved to Private")
+                }
+            }, modifier = Modifier.testTag(if (d.hidden) "download_unhide" else "download_hide")) {
+                Icon(if (d.hidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, if (d.hidden) "Unhide (back to Downloads)" else "Hide in Private", tint = TextTertiary)
+            }
             OnlineDownloads.Status.RUNNING, OnlineDownloads.Status.QUEUED -> IconButton(onClick = { OnlineDownloads.pause(context, d.id) }) { Icon(Icons.Default.Pause, "Pause", tint = TextPrimary) }
             OnlineDownloads.Status.PAUSED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Download, "Resume", tint = TextPrimary) }
             OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Refresh, "Retry", tint = TextPrimary) }
