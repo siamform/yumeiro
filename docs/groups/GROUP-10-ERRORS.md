@@ -68,3 +68,60 @@ Every row above has device (emulator) or CI evidence except VPN, which needs a r
 consent dialog: owner test OMT-18. New findings in the close-out: ER-19 (fixed, verified) and ST-21
 (message over the floating video window, fixed, verified). Group 10 is closed for agent work.
 
+
+## Re-audit under the group method (§13a), 2026-11-19
+
+The 2026-11-17 close-out above predates the 10-step group method; the handover asks for G10 to be
+redone in full. This section is that pass. Earlier rows (ER-10 … ER-20) stay as they are.
+
+### Step 1: files read line by line
+
+`online/OnlineRuntime.kt` 1–130 (`OnlineErrors.friendly`), `ui/components/ErrorHelp.kt` 1–179,
+`ui/components/StateViews.kt` 1–383 (`AppMessages`, `AppMessageHost`), `ui/screens/extras/PermissionCenter.kt`
+1–171, `network/Connectivity.kt` 1–72, `ui/components/TsukiDialog.kt` 1–259, `ui/components/OfflineNotice.kt`
+1–109, `ui/screens/online/ExtensionReviewHost.kt` 1–130, `online/ExtensionReview.kt` 1–70,
+`update/ui/UpdateDialog.kt` (all), `update/ui/UpdateHost.kt` (all), `update/UpdateManager.kt` 128–145 and
+340–430, `update/UpdateReceivers.kt` 25–60, `ui/screens/online/BrowserCheckHost.kt` (all),
+`player/StreamRecovery.kt` (all), `player/RecoveryRouter.kt` (all), `ui/screens/video/VideoPlayerModal.kt`
+440–470 and 730–830 (router and recovery call sites), `stream/StreamResolver.kt` 240–287 (`failureFor`),
+`stream/StreamProbe.kt` 19–113, `ui/components/YumeKit.kt` 270–283 (`MoonSheetHandle`), every
+`ModalBottomSheet(` call (10: YumixFilter, OnlinePlayerUi, DownloadSheets ×2, MangaScreens, LiveTvChrome,
+HomeScreen, SleepTimerSheet, YuSearch, MediaComponents), `ui/tv/TvMode.kt`, `res/xml/network_security_config.xml`.
+Library code read for behaviour: material3 `BottomSheet.kt` 359–399 and `SheetDefaults.kt` 603–640
+(androidx-main, fetched 2026-11-19): a non-null `dragHandle` is wrapped in `clickable` + a "Drag handle"
+tooltip; on an expanded sheet the click calls `animateToDismiss()`.
+
+### Step 2: audit (side effects, action–reaction, competitors)
+
+| ID | Action → reaction today (unhappy path) | Competitor / reference (exact tag, file) | Fix chosen (pros / cons) |
+|---|---|---|---|
+| ER-21 | Network blocked for the app (MIUI/ColorOS per-app data switch, NetGuard, no INTERNET in a work profile) → `socket failed: EPERM`, `connect failed: EACCES`, `getaddrinfo EACCES` → the storage rule matches "EPERM"/"Permission denied" → "The app couldn't use its storage on this device. Restart the app" (wrong cause, useless step) | Chromium 130.0.6723.58 `net/base/net_errors_posix.cc` lines 31, 104: EACCES and EPERM → ERR_ACCESS_DENIED (network) | A branch for network exceptions with EACCES/EPERM before the storage rule: "Android or a firewall app is blocking Yumeiro's internet…", tip to allow Wi-Fi and mobile data in Settings › Apps. Pro: right cause; con: none (storage rule unchanged for file errors) |
+| ER-22 | Message with Retry/Open/Undo → closes after 4.5 s whatever the user's "Time to take action" setting | material3 androidx-main `SnackbarHost.kt` line 311; material-components-android 1.12.0 `Snackbar.java` line 375 | Ask `LocalAccessibilityManager` for the recommended timeout (icon, text, controls). Pro: platform setting honoured; con: none (default unchanged) |
+| ER-23 | Update available on a 1080p TV (540 dp) or phone landscape (~400 dp) → card ~620 dp, no scroll → Download / Remind me later clipped; on TV the update can't be started | material3 androidx-main `AlertDialog.kt` line 358 (`weight(1f, fill = false)` for the text slot); Mihon v0.19.1 `NewUpdateScreen.kt` + `InfoScreen.kt` (buttons in the bottom bar, notes scroll) | Notes take the remaining height (`weight(1f, fill = false)`), header/meta scroll with them on very short screens; buttons always placed. Pro: no layout change on tall phones; con: fewer note lines visible on TV |
+| ER-24 | "Installing…" and the installer never reports (Home on the system confirm, installer killed) → Back and outside do nothing → the modal covers the app until restart | Android `PackageInstaller.Session.commit(IntentSender)`: status arrives asynchronously, possibly never if the confirm is abandoned; Yumeiro's material3 `Dialog` already lets Back leave every other state | Back hides the dialog (state kept; success/failure still arrive through `UpdateReceivers` and re-open it). Pro: never trapped; con: none |
+| ER-25 | Audio output fails (Bluetooth switch, `AUDIO_TRACK_INIT_FAILED`), player timeout, runtime check, unspecified, or a stream's file-not-found / no-permission / cleartext / 416 → "Unsupported video format … hardware decoders … set Video decoder to Software" | NewPipe v0.28.0 `Player.java` 1450–1480 (these I/O codes = stream failure, TIMEOUT/UNSPECIFIED = reload); media3 1.8.0 demo `PlayerActivity.java` 529–559 (decoder text only for DecoderInitializationException) | Decoder text only for 4xxx; 5xxx retry once then an audio message; the four I/O codes and 1xxx get their own wording with Retry. Pro: right next step; con: more strings |
+| ER-26 | Play Link / Live TV channel / playlist refresh while offline → probe UnknownHost → "Can't find the server … turn on an alternative DNS" + DNS button | Yumeiro's own `OnlineErrors.friendly` (offline → "No internet connection"); NewPipe v0.28.0 `ErrorInfo.kt` line 96 (network-related first) | Offline check first in `failureFor` for DNS / timeout / connection. Pro: consistent with the shared mapper; con: none |
+| ER-27 | Danger extension → "Install anyway" twice → a double tap or two quick OK presses (key repeat) installs with the warning line never seen | AOSP android-14.0.0_r1 `PackageInstallerActivity.java` lines 158–162, 445–450 (OK enabled only once the confirm text is shown, disabled on pause, touches filtered when obscured) | Second tap counts only 1 s after arming; label reads "Tap again to install" when armed. Pro: deliberate; con: 1 s wait |
+| ER-28 | TV: open any sheet → first remote key focuses the drag handle, "Drag handle" tooltip, OK closes the sheet without acting (NB15-OB2) | material3 androidx-main `BottomSheet.kt` 359–399 (clickable handle → dismiss); androidx tv-material (no bottom sheet at all for TV) | `sheetDragHandle()` = null on TV, moon handle elsewhere, used by all 10 sheets. Pro: first key lands in content; con: no visual handle on TV (nothing to drag there) |
+
+Lower findings (kept, not changed this pass, reason): Connectivity ignores captive portals (no
+NET_CAPABILITY_VALIDATED; a portal shows as online and every request fails as "can't be reached" — behaviour
+change for all users, proposal for stability-v2); the Toast fallback drops a message's action (only before the
+host attaches, e.g. start-up); BrowserCheckHost Back cancels the whole check instead of going back in the
+WebView (by design: the check page has no history worth keeping); 4xx other than 401/403/404/410/429/451 are
+labelled "Server error" (rare codes; next pass).
+
+### Step 3: findings register
+
+| ID | Finding | Severity | Layer | Test (fails on old code) | Status |
+|---|---|---|---|---|---|
+| ER-21 | Blocked network shown as a storage problem | Medium | mapper | `g10/NetworkBlockedErrorTest` (unit) | Open |
+| ER-22 | Message pill ignores the accessibility timeout | Medium (a11y) | UI host | `g10/AppMessageTimeoutTest` (unit, Robolectric UI) | Open |
+| ER-23 | Update dialog buttons off-screen on TV and phone landscape | High (TV) | dialog | `g10/UpdateDialogFitTest` tv1080p, phoneLandscape (unit, Robolectric UI) | Open |
+| ER-24 | "Installing…" dialog can't be left | Medium | dialog | `g10/UpdateDialogFitTest` installingCanBeLeftWithBack | Open |
+| ER-25 | Player calls non-decoder errors a decoder failure | Medium | player | `g10/PlaybackErrorWordingTest` (unit) | Open |
+| ER-26 | Stream link offline gets DNS advice | Medium | stream | `g10/StreamOfflineTest` (unit) | Open |
+| ER-27 | Double tap installs a Danger extension | Low (security) | dialog | `g10/ExtensionReviewConfirmTest` (unit, Robolectric UI) | Open |
+| ER-28 | TV sheets: handle takes the first key, OK dismisses (NB15-OB2) | Medium (TV) | sheets | `g10/SheetHandleScanTest` (unit), `SheetFocusTvDeviceTest` (emulator, TV emulator) | Open |
+
+ADR-029 (docs/SYSTEM-DESIGN.md) holds the rules. 8 findings: one batch.

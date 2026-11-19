@@ -955,6 +955,31 @@ flowchart LR
 - **Status:** accepted (owner spec; agent decisions inside it, reported to the owner). Verified only after
   fail-before and pass-after.
 
+### ADR-029: Error wording and dialog rules (G10 re-audit, ER-21…ER-28)
+
+- **Scope:** `OnlineErrors.friendly`, `ErrorHelp`, `PlaybackRecovery.decide`, `StreamResolver.failureFor`,
+  `AppMessageHost`, `UpdateDialog`, `ExtensionReviewHost`, every `ModalBottomSheet`. No new dependency.
+- **Rules (each one a finding of the 2026-11-19 re-audit, docs/groups/GROUP-10-ERRORS.md):**
+  1. Cause before keyword: an errno on a socket or a DNS lookup (EPERM / EACCES) is a blocked network, never a
+     storage problem (Chromium `net_errors_posix.cc` maps both to ERR_ACCESS_DENIED). ER-21.
+  2. Offline first: every network failure seen while `Connectivity.online` is false says "No internet
+     connection"; DNS or VPN advice only when online. ER-26 (the shared mapper already did this).
+  3. Name the decoder only for decoder errors (4xxx). Audio output errors (5xxx) retry once, then say audio;
+     other codes say what failed and offer Retry. ER-25 (NewPipe v0.28.0 Player.java, media3 1.8.0 demo).
+  4. Timed messages honour Android's accessibility timeout (`LocalAccessibilityManager`, as Material3
+     SnackbarHost). ER-22.
+  5. A dialog's actions are always on screen: long content takes the remaining height
+     (`weight(1f, fill = false)`, as Material3 AlertDialog) and scrolls. ER-23.
+  6. A modal progress state can always be left with Back; the work goes on and reports through its normal
+     path. ER-24.
+  7. A second confirm for a dangerous action counts only after a pause (1 s) after arming. ER-27.
+  8. On TV no sheet has a drag handle (`sheetDragHandle()` is null on TV): a remote can't drag, and Material's
+     handle is a focusable button that dismisses the sheet. ER-28 (NB15-OB2).
+- **Options considered:** A. Fix each call site. B. One rule per layer as above, each with its test.
+  **Decision: B** (small, testable, no new abstraction beyond `sheetDragHandle()`).
+- **Rollback:** one revert per finding commit.
+- **Status:** accepted; Verified only after fail-before and pass-after.
+
 ## 11. Risks
 
 | Risk | Mitigation |

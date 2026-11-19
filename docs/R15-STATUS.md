@@ -1,17 +1,16 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 02:50 UTC, GROUP-14 closed, G10 re-audit)
+## Resume here (updated 2026-11-19 02:58 UTC, GROUP-14 closed, G10 step 3 done)
 
 - **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 → G11 → v1.8.2 (owner
   approval) → stability-v2.
 - **GROUP-14:** closed (docs/groups/GROUP-14-OWNER-BUGS.md). tv-api34 44440614210: 7 Live TV classes PASS;
   FeedPosition#youtube FAIL twice (rerun 44443748315) = pre-existing TV YouTube layout, queued TV-YT-1.
-- **G10 step:** 3 → 4. Steps 1–2 done in the working copy (read list, audit, register ER-21…ER-28, ADR-029); next
-  push: register + ADR, then all G10 tests in one commit.
+- **G10 step:** 3 done (register ER-21…ER-28 in docs/groups/GROUP-10-ERRORS.md, ADR-029) → 4 (tests, one commit).
 - **Runs in progress:** none.
-- **Next three actions:** (1) push G10 register + ADR-029 and the tests commit; (2) fail-before once: CI on
-  throwaway `ab/g10-before` (unit) + one device run (SheetFocusTvDeviceTest, phones + tv-api34); (3) fixes one
-  commit per finding (ER-21…ER-28).
+- **Next three actions:** (1) push the G10 tests commit (7 unit classes in app/src/test/.../g10, device
+  SheetFocusTvDeviceTest); (2) fail-before once: CI on throwaway `ab/g10-before` + one device run of
+  SheetFocusTvDeviceTest (phones + tv-api34); (3) fixes one commit per finding (ER-21…ER-28).
 
 ### Previous resume note — superseded (02:25 UTC 2026-11-19, GROUP-14 close)
 
