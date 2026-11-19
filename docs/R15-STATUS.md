@@ -6,7 +6,9 @@
   v1.8.2 release gate (owner approval) → stability-v2 → final sweep.
 - **G11:** re-audit closed. IG-9…IG-13 Verified (CI unit, emulator regression); ADR-030. Runs: fail-before
   44465186662, pass-after 44467817362 (1286/0), regression 44471298455 (phones), 44471301890 (tv-api34).
-- **Runs in progress:** none. `ab/g11-before` deleted.
+- **Runs in progress:** v1.8.2 gate at 8dbe6074 (app code = d11676cb): all 122 device classes in 13 chunks of ≤10
+  (alphabetical), lane A phones (both), lane B TVs (tv-api24 then tv-api34). Chunk 00: phones 44472857135, tv-api24
+  44472860397. Results go to the cycle report "v1.8.2 release gate" section.
 - **Open agent item outside G11:** NBUG-10 (G4, Yumix "Show videos from" search shows 2 results); not reproduced yet.
 - **Next three actions:** (1) release gate: unbatched full device regression on the release commit, both phones
   and both TVs; (2) gate report in the cycle report; (3) ask the owner for v1.8.2 approval (no release without it).
