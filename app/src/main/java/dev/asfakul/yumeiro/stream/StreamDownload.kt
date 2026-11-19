@@ -29,16 +29,25 @@ object StreamDownload {
     fun titleFor(req: StreamRequest, sourceUrl: String): String =
         req.title.ifBlank { runCatching { Uri.parse(req.url).lastPathSegment?.substringBeforeLast('.') }.getOrNull()?.ifBlank { null } ?: PlatformRules.hostOf(sourceUrl) ?: "Video" }
 
-    /** Queues [req] (already resolved/playable). [sourceUrl] is what the user opened (page or link). */
-    fun enqueue(context: Context, req: StreamRequest, sourceUrl: String = req.url): Outcome {
-        if (!canSave(req)) return Outcome.Refused("This stream can't be saved (DASH or protected). You can still play it.")
+    /** Why [req] can't be saved, or null when it can. Pure (unit-tested). */
+    fun refusal(req: StreamRequest): String? =
+        if (!canSave(req)) "This stream can't be saved (DASH or protected). You can still play it." else null
+
+    /** The download link for [req] (already resolved/playable). Pure (unit-tested). */
+    fun linkFor(req: StreamRequest, sourceUrl: String = req.url): dev.asfakul.yumeiro.online.OnlineLink {
         val fmt = req.resolvedFormat()
         val headers = req.requestHeaders() + listOfNotNull(req.userAgent?.let { "User-Agent" to it })
-        val title = titleFor(req, sourceUrl)
-        val link = dev.asfakul.yumeiro.online.OnlineLink(
-            name = title, source = PlatformRules.hostOf(sourceUrl) ?: "Link", url = req.url, referer = req.referer, quality = 0,
+        return dev.asfakul.yumeiro.online.OnlineLink(
+            name = titleFor(req, sourceUrl), source = PlatformRules.hostOf(sourceUrl) ?: "Link", url = req.url, referer = req.referer, quality = 0,
             isHls = fmt == StreamFormat.HLS, isDash = false, headers = headers,
         )
+    }
+
+    /** Queues [req] (already resolved/playable). [sourceUrl] is what the user opened (page or link). */
+    fun enqueue(context: Context, req: StreamRequest, sourceUrl: String = req.url): Outcome {
+        refusal(req)?.let { return Outcome.Refused(it) }
+        val link = linkFor(req, sourceUrl)
+        val title = link.name
         val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", sourceUrl, null, req.logoUrl, emptyMap(), link)
         return if (err != null) Outcome.Refused(err) else Outcome.Queued(title)
     }

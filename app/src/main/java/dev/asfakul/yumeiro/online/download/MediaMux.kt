@@ -158,4 +158,18 @@ object MediaMux {
             sources.forEach { runCatching { it.first.release() } }
         }
     }
+
+    /**
+     * NF-2b: rewrites a one-file MPEG-TS download as MP4 (no re-encoding). Not supported yet: throws, so
+     * callers keep the TS file.
+     */
+    fun remux(input: File, out: File) {
+        throw IOException("TS to MP4 isn't supported yet (${input.name} -> ${out.name})")
+    }
+
+    /**
+     * NF-2b: after a TS HLS download, turns [part] into MP4 when [enabled] and [freeBytes] allow it.
+     * Returns the container of [part] afterwards ("mp4" or "ts"). Today TS stays TS.
+     */
+    fun tsToMp4(part: File, enabled: Boolean, freeBytes: Long): String = "ts"
 }
