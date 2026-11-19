@@ -405,18 +405,25 @@ fun StreamScreen(
     val feedShown = remember(feed, liveGroup) { LiveChannelFeed.filter(feed, liveGroup) }
     LaunchedEffect(feed) { if (liveGroup != null && feedLoading == 0 && feed.categories.none { it.name.equals(liveGroup, ignoreCase = true) }) liveGroup = null }
     // Near the end = the footer or one of the last two shown tile rows is on screen. Read from the item
-    // keys (not the item count), so a layout from before the list grew can never page twice.
+    // keys (not the item count). The footer's key carries the feed size, and a page is added only when the
+    // list is still near its end after two fresh frames, so a layout from before a playlist finished
+    // loading can never add a page (phones 44431459816: api36 showed 100 before any scroll).
     val liveColumns = (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp / 120).coerceIn(3, 7)
+    val feedShownSize = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    androidx.compose.runtime.SideEffect { feedShownSize.intValue = feedShown.size }
     val liveNearEnd by remember(liveColumns, liveSel, liveGroup) {
         androidx.compose.runtime.derivedStateOf {
             val vis = listState.layoutInfo.visibleItemsInfo
-            vis.any { it.key == "live_feed_footer" } ||
+            vis.any { it.key == "live_feed_footer_${feedShownSize.intValue}" } ||
                 vis.lastOrNull { (it.key as? String)?.startsWith("live_row_") == true }
                     ?.let { (it.key as String).substringAfterLast('_').toIntOrNull() }
                     ?.let { it >= liveLimit - 2 * liveColumns } == true
         }
     }
-    LaunchedEffect(liveNearEnd, feedShown.size) {
+    LaunchedEffect(liveNearEnd, feedShown.size, liveLimit) {
+        if (!liveNearEnd) return@LaunchedEffect
+        androidx.compose.runtime.withFrameNanos { }
+        androidx.compose.runtime.withFrameNanos { }
         if (liveNearEnd) liveLimit = LiveChannelFeed.nextLimit(liveLimit, feedShown.size)
     }
     val feedRows = remember(feed, feedShown, liveLimit, liveColumns, liveGroup) {
@@ -746,7 +753,7 @@ fun StreamScreen(
                 feed.size == 0 -> { if (feedFailed.isEmpty()) item(key = "live_empty") { LiveProblem("No channels in these playlists right now", onRetry = { feedIds.forEach { id -> activePlaylists.firstOrNull { it.id == id }?.let { loadLive(it, force = true) } } }) } }
                 else -> {
                     liveFeedItems(feedRows, liveColumns) { playEntry(it) }
-                    item(key = "live_feed_footer") { LiveFeedFooter(liveLimit.coerceAtMost(feedShown.size), feedShown.size, feedLoading) }
+                    item(key = "live_feed_footer_${feedShown.size}") { LiveFeedFooter(liveLimit.coerceAtMost(feedShown.size), feedShown.size, feedLoading) }
                 }
             }
         } else item(key = "live_none") {
