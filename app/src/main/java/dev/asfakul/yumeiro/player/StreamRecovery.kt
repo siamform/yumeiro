@@ -126,6 +126,41 @@ class PlaybackRecovery(
             "Unsupported stream format",
             "The data from this link isn't a media format the player understands${f.message?.let { " ($it)" }.orEmpty()}. If it's a web page, open it from the Stream tab so its player stream can be found.",
         )
+        // G10 ER-25: only decoder errors (4xxx) are video format problems. Audio output, the player's own
+        // errors and the four excluded I/O errors used to fall through to "hardware decoders could not
+        // play this file", and switching the video decoder can't fix any of them (NewPipe v0.28.0
+        // Player.onPlayerError and the media3 1.8.0 demo name decoders only for decoder failures).
+        val detail = "\n\n${f.message ?: "Playback error"}"
+        if (f.errorCode in 5000..5999) {
+            val n = next("audio")
+            return if (n <= 1) RecoveryAction.Retry(1_000L, n, 1, "Audio output stopped — restarting")
+            else RecoveryAction.Fail(
+                "Audio output failed",
+                "The audio couldn't play on this device's speaker or headset. Reconnect the headset or switch the audio output, then retry.$detail",
+            )
+        }
+        when (f.errorCode) {
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> return RecoveryAction.Fail(
+                "File or stream not found",
+                "The file was moved or deleted, or the stream's link no longer exists. Rescan your files or get a fresh link.$detail",
+            )
+            PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> return RecoveryAction.Fail(
+                "Can't open this file",
+                "Yumeiro isn't allowed to read this file. Pick it again from the file picker, or allow access to the folder.$detail",
+            )
+            PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED -> return RecoveryAction.Fail(
+                "Insecure link blocked",
+                "This stream uses plain http, which this device doesn't allow. Use the https link if the provider has one.$detail",
+            )
+            PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE -> return RecoveryAction.Fail(
+                "Couldn't seek in this stream",
+                "The server can't jump to that position. Retry from the start or try another source.$detail",
+            )
+        }
+        if (!f.isDecoder) return RecoveryAction.Fail(
+            "Playback error",
+            "The player stopped unexpectedly. Retry; if it keeps happening, try another quality or source.$detail",
+        )
         return RecoveryAction.Fail(
             "Unsupported video format",
             "This device's hardware decoders could not play this file, or the media stream is corrupted. " +
