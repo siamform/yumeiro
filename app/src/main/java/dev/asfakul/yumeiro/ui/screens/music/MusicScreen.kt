@@ -165,7 +165,7 @@ fun MusicScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${currentTrackList.size} tracks",
+                    text = tracksLabel(currentTrackList.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextTertiary
                 )
@@ -778,3 +778,6 @@ internal fun shortFolderPath(path: String): String? {
     val short = p.replace(RX_MUSICSCREEN_1, "").replace(RX_MUSICSCREEN_2, "SD card/")
     return short.trimEnd('/').ifBlank { null }
 }
+
+/** G7-L5-D: "1 track", "12 tracks". */
+internal fun tracksLabel(n: Int): String = if (n == 1) "1 track" else "$n tracks"
