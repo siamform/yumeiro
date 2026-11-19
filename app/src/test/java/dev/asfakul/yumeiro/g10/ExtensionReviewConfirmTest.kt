@@ -64,6 +64,10 @@ class ExtensionReviewConfirmTest {
         rule.mainClock.advanceTimeBy(100)
         tapInstallAnyway()
         rule.mainClock.advanceTimeBy(100)
+        // The answer reaches the caller through a coroutine on the main thread; drain it (the clock does
+        // not move) or the check runs before an install could arrive (fail-before 44445709090 passed).
+        rule.waitForIdle()
+        assertTrue("ER-27: the dialog closed on a double tap", ExtensionReview.pending.value != null)
         assertTrue("ER-27: a double tap on Install anyway installed a Danger extension", !answer.isCompleted || answer.getCompleted() == false)
         // A deliberate second tap still installs.
         rule.mainClock.advanceTimeBy(1_500)
