@@ -6,7 +6,7 @@ R="$1"; OUT="docs/evidence/final/$R.txt"; mkdir -p docs/evidence/final; : > "$OU
 for J in $(gh api "repos/siamform/yumeiro/actions/runs/$R/jobs" -q '.jobs[]|select(.name|startswith("emulator"))|"\(.id)"'); do
   NAME=$(gh api "repos/siamform/yumeiro/actions/jobs/$J" -q .name)
   DEV=$(echo "$NAME" | sed -E 's/^emulator \([0-9]+, ([^,]+),.*/\1/')
-  gh api "repos/siamform/yumeiro/actions/jobs/$J/logs" 2>/dev/null | sed -n 's/.*REPEAT_RESULT dev\.asfakul\.yumeiro\.\([A-Za-z0-9]*\) run=[0-9]*\/[0-9]* pass=\(P[12]\) \(PASS\|FAIL\) tests=\([0-9?]*\) skipped=\([0-9]*\).*/\1 \2 \3 \4 \5/p' | sort -u |
+  gh api --allow-escape-sequences "repos/siamform/yumeiro/actions/jobs/$J/logs" 2>/dev/null | sed -n 's/.*REPEAT_RESULT dev\.asfakul\.yumeiro\.\([A-Za-z0-9]*\) run=[0-9]*\/[0-9]* pass=\(P[12]\) \(PASS\|FAIL\) tests=\([0-9?]*\) skipped=\([0-9]*\).*/\1 \2 \3 \4 \5/p' | sort -u |
   while read -r C P V T S; do
     if [ "$V" = PASS ] && [ "$T" != "?" ] && [ "$S" -gt 0 ] && [ "$S" -ge "$T" ]; then V=SKIPPED; fi
     echo "$R $DEV $C $P $V tests=$T skipped=$S" >> "$OUT"
