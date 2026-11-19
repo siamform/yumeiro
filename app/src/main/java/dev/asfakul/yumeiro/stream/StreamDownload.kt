@@ -19,19 +19,23 @@ object StreamDownload {
         data class Refused(val message: String) : Outcome
     }
 
-    /** True when [req] can be saved as one file (not DASH / SmoothStreaming / DRM). */
-    fun canSave(req: StreamRequest): Boolean {
-        val fmt = req.resolvedFormat()
-        return fmt != StreamFormat.DASH && fmt != StreamFormat.SMOOTH && req.drmScheme == DrmScheme.NONE
-    }
+    /**
+     * True when [req] can be saved as one file. NF-2b: DASH is saved too (DashGrab joins its tracks);
+     * Smooth Streaming and any DRM (Widevine, ClearKey) are refused. Live HLS is refused by the
+     * downloader once it sees the playlist.
+     */
+    fun canSave(req: StreamRequest): Boolean = refusal(req) == null
 
     /** Pure parts, unit-tested: the title a saved link gets. */
     fun titleFor(req: StreamRequest, sourceUrl: String): String =
         req.title.ifBlank { runCatching { Uri.parse(req.url).lastPathSegment?.substringBeforeLast('.') }.getOrNull()?.ifBlank { null } ?: PlatformRules.hostOf(sourceUrl) ?: "Video" }
 
     /** Why [req] can't be saved, or null when it can. Pure (unit-tested). */
-    fun refusal(req: StreamRequest): String? =
-        if (!canSave(req)) "This stream can't be saved (DASH or protected). You can still play it." else null
+    fun refusal(req: StreamRequest): String? = when {
+        req.drmScheme != DrmScheme.NONE || !req.clearKeys.isNullOrBlank() -> "Protected video, can't be saved. You can still play it."
+        req.resolvedFormat() == StreamFormat.SMOOTH -> "This stream type (Smooth Streaming) can't be saved. You can still play it."
+        else -> null
+    }
 
     /** The download link for [req] (already resolved/playable). Pure (unit-tested). */
     fun linkFor(req: StreamRequest, sourceUrl: String = req.url): dev.asfakul.yumeiro.online.OnlineLink {
@@ -39,7 +43,9 @@ object StreamDownload {
         val headers = req.requestHeaders() + listOfNotNull(req.userAgent?.let { "User-Agent" to it })
         return dev.asfakul.yumeiro.online.OnlineLink(
             name = titleFor(req, sourceUrl), source = PlatformRules.hostOf(sourceUrl) ?: "Link", url = req.url, referer = req.referer, quality = 0,
-            isHls = fmt == StreamFormat.HLS, isDash = false, headers = headers,
+            isHls = fmt == StreamFormat.HLS, isDash = fmt == StreamFormat.DASH, headers = headers,
+            // NF-2b: a video with its audio in a separate file was saved silent; the worker joins both.
+            audioTracks = if (fmt == StreamFormat.DASH) emptyList() else req.audioTracks.map { it.url to it.headers },
         )
     }
 
