@@ -154,6 +154,7 @@ verified on a device, evidence linked), `not covered` (reason given).
 | A3 | Error views with recovery actions | ErrorHelp, StateViews, OfflineNotice | verified: ER-10, ER-13 (unit, CI); ER-12 Retry (emulator) | `ErrorTaxonomyTest`, `PlaybackRecoveryTest`, `RetryActionsDeviceTest` |
 | A4 | No network, slow network, VPN, low storage | network/Connectivity, OnlineErrors | verified on device (emulator): ER-14, ER-17; VPN → OMT-18 | ledger ER-14, ER-17; OMT-18 |
 | A5 | Browser check / Cloudflare challenge host | online/web/BrowserCheck, BrowserCheckHost | ER-20 fixed 065f455 (failed check remembered 60 s), verified (emulator, both phones): fail-before 44057033821 → 44054360131 (api33-lowram), 44073375083 (api36) | `BrowserCheckTest`, `BrowserCheckCooldownDeviceTest` (ledger ER-20) |
+| A6 | Re-audit 2026-11-19 (§13a): ER-21…ER-30 | OnlineErrors, AppMessages (`showQuiet`), UpdateDialog, ExtensionReviewHost, StreamResolver, PlaybackRecovery, `sheetDragHandle()`, online/ExtensionCall | verified: CI unit all ten; emulator ER-28, ER-29; TV emulator ER-28; group regression phones 44460656954, tv-api24 44460663805, tv-api34 44461533827 (TV-A11Y-1 pre-existing) | `g10/*` (10 unit classes), `SheetFocusTvDeviceTest`, `MessagesDeviceTest`, `DialogsDeviceTest` (ledger ER-21…ER-30) |
 
 ## G11 Integrations
 | ID | Item | Code | Status | Covered by |

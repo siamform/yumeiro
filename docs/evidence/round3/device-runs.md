@@ -1027,3 +1027,7 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | 44438500496, 44438504785 | r15-stability 26d914d; ab/n15r-before (old code) | tv-api24 | FeedPosition | same 2 FAIL on new and old code: the test never opens Live TV on TV (TV-FP-1) |
 | 44440614210 | r15-stability 26d914d | tv-api34 | 8 Live TV classes | 7 classes PASS; FeedPosition 5/6, youtube FAIL (cards=2) |
 | 44443748315 | r15-stability 7f5fc98 (same app code) | tv-api34 | FeedPosition#youtube | FAIL again (cards=2): one column of full-width cards on a 1080p TV, pre-existing (TV-YT-1) |
+| 44460656954 | r15-stability f504a934 | api33-lowram, api36 | G10 regression, 9 classes | all PASS on both; Messages 101/0 with both promo cards during the test (ER-29) |
+| 44460663805 | r15-stability f504a934 | tv-api24 | SheetFocusTv, Nbug15Redesign, Dialogs, Messages | all PASS (Dialogs checked=5, Messages 101/0) |
+| 44461533827 | r15-stability f504a934 | tv-api34 | same 4 | 3 PASS; Messages problems=11, one 44 dp view (TV-A11Y-1) |
+| 44462757164 | ab/g10-tva11y-before (6dbfde03 + today's test; deleted) | tv-api34 | Messages | old code problems=13, same view → TV-A11Y-1 pre-existing |

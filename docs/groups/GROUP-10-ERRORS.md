@@ -117,15 +117,55 @@ labelled "Server error" (rare codes; next pass).
 
 | ID | Finding | Severity | Layer | Test (fails on old code) | Status |
 |---|---|---|---|---|---|
-| ER-21 | Blocked network shown as a storage problem | Medium | mapper | `g10/NetworkBlockedErrorTest` (unit) | Open |
-| ER-22 | Message pill ignores the accessibility timeout | Medium (a11y) | UI host | `g10/AppMessageTimeoutTest` (unit, Robolectric UI) | Open |
-| ER-23 | Update dialog buttons off-screen on TV and phone landscape | High (TV) | dialog | `g10/UpdateDialogFitTest` tv1080p, phoneLandscape (unit, Robolectric UI) | Open |
-| ER-24 | "Installing…" dialog can't be left | Medium | dialog | `g10/UpdateDialogFitTest` installingCanBeLeftWithBack | Open |
-| ER-25 | Player calls non-decoder errors a decoder failure | Medium | player | `g10/PlaybackErrorWordingTest` (unit) | Open |
-| ER-26 | Stream link offline gets DNS advice | Medium | stream | `g10/StreamOfflineTest` (unit) | Open |
-| ER-27 | Double tap installs a Danger extension | Low (security) | dialog | `g10/ExtensionReviewConfirmTest` (unit, Robolectric UI) | Open |
-| ER-28 | TV sheets: handle takes the first key, OK dismisses (NB15-OB2) | Medium (TV) | sheets | `g10/SheetHandleScanTest` (unit), `SheetFocusTvDeviceTest` (emulator, TV emulator) | Open |
-| ER-29 | Extension promo card replaces the message on screen | Medium | UI host | `g10/PromoCardWaitsTest` (unit, Robolectric), `MessagesDeviceTest` (emulator) | Open |
-| ER-30 | A blocked extension keeps its page loading past every timeout (NBUG-8) | High | online repository | `g10/BlockedExtensionTimeoutTest` (unit, Robolectric) | Open |
+| ER-21 | Blocked network shown as a storage problem | Medium | mapper | `g10/NetworkBlockedErrorTest` (unit) | Fixed 829073bb |
+| ER-22 | Message pill ignores the accessibility timeout | Medium (a11y) | UI host | `g10/AppMessageTimeoutTest` (unit, Robolectric UI) | Fixed 4268f89d |
+| ER-23 | Update dialog buttons off-screen on TV and phone landscape | High (TV) | dialog | `g10/UpdateDialogFitTest` tv1080p, phoneLandscape (unit, Robolectric UI) | Fixed 5af20d35 |
+| ER-24 | "Installing…" dialog can't be left | Medium | dialog | `g10/UpdateDialogFitTest` installingCanBeLeftWithBack | Fixed 05263e28 |
+| ER-25 | Player calls non-decoder errors a decoder failure | Medium | player | `g10/PlaybackErrorWordingTest` (unit) | Fixed 627501bb |
+| ER-26 | Stream link offline gets DNS advice | Medium | stream | `g10/StreamOfflineTest` (unit) | Fixed 0804bbf2 |
+| ER-27 | Double tap installs a Danger extension | Low (security) | dialog | `g10/ExtensionReviewConfirmTest` (unit, Robolectric UI) | Fixed 7ee7bdab |
+| ER-28 | TV sheets: handle takes the first key, OK dismisses (NB15-OB2) | Medium (TV) | sheets | `g10/SheetHandleScanTest` (unit), `SheetFocusTvDeviceTest` (emulator, TV emulator) | Fixed 2564ef48 |
+| ER-29 | Extension promo card replaces the message on screen | Medium | UI host | `g10/PromoCardWaitsTest` (unit, Robolectric), `MessagesDeviceTest` (emulator) | Fixed dad92181 + 6bb180ef |
+| ER-30 | A blocked extension keeps its page loading past every timeout (NBUG-8) | High | online repository | `g10/BlockedExtensionTimeoutTest` (unit, Robolectric) | Fixed 6bce3dbf |
 
 ADR-029 (docs/SYSTEM-DESIGN.md) holds the rules. 10 findings (ER-29 found in step 9, ER-30 = NBUG-8 added at step 8 after a scope check against the checklist): one batch. Both get their own fail-before and pass-after before the group CI rerun.
+
+### Steps 4–9: evidence
+
+Labels: unit = JVM/Robolectric in CI; emulator = phones api33-lowram and api36; TV emulator = tv-api24 and tv-api34.
+
+| Step | ER-21…ER-28 | ER-29 | ER-30 |
+|---|---|---|---|
+| 4 tests | 48bee9ad (+ 8336dbf3, ER-27 test fault) | 7fd2bf3b | deb6987e |
+| 5 fail-before | CI [44445709090](https://github.com/siamform/yumeiro/actions/runs/44445709090) 9/10, rerun [44449000456](https://github.com/siamform/yumeiro/actions/runs/44449000456) 10/10 failed; device api33 [44445734996](https://github.com/siamform/yumeiro/actions/runs/44445734996) ER-28 reproduced; tv-api34 [44445713091](https://github.com/siamform/yumeiro/actions/runs/44445713091) not reproduced (queue ER-28-TV34) | CI [44456278746](https://github.com/siamform/yumeiro/actions/runs/44456278746) PromoCardWaitsTest failed (expected 2 messages, 3 shown); device: MessagesDeviceTest api36 failed right after "card shown" ([44452173594](https://github.com/siamform/yumeiro/actions/runs/44452173594), [44454531660](https://github.com/siamform/yumeiro/actions/runs/44454531660)) | CI [44457201367](https://github.com/siamform/yumeiro/actions/runs/44457201367): load() 8005 ms, home() 8132 ms (limit 4000 ms) |
+| 6 fixes | one commit each (register) | dad92181 broke compilation (a new last parameter caught callers' trailing lambdas; CI 44456281899 and device 44456284891 failed to build); 6bb180ef keeps `show()` and adds `showQuiet()` | 6bce3dbf `ExtensionCall.bounded` (home, See all, search, details, links, Source Health) |
+| 7 pass-after | CI [44448997376](https://github.com/siamform/yumeiro/actions/runs/44448997376) 1271/0; device api33 [44449003874](https://github.com/siamform/yumeiro/actions/runs/44449003874) | group CI (step 8) | group CI (step 8) |
+| 8 group CI rerun | CI [44457297312](https://github.com/siamform/yumeiro/actions/runs/44457297312) at f504a934: 1274 tests, 0 failed, mobile and TV lint | same | same |
+
+Step 9, group regression at f504a934 (app code unchanged since):
+
+- Phones [44460656954](https://github.com/siamform/yumeiro/actions/runs/44460656954): 9 classes PASS on both (RetryActions 5, Messages 101/0, Dialogs,
+  PermissionFlow, NetworkState 4, LowStorage 2, SheetFocusTv, Nbug15Redesign 3, Extensions 8). Both promo cards
+  ("card shown") fired during MessagesDeviceTest on both phones with problems=0: ER-29 verified (emulator).
+- tv-api24 [44460663805](https://github.com/siamform/yumeiro/actions/runs/44460663805): SheetFocusTv, Nbug15Redesign 3, Dialogs (checked=5), Messages 101/0 PASS.
+- tv-api34 [44461533827](https://github.com/siamform/yumeiro/actions/runs/44461533827): SheetFocusTv, Nbug15Redesign 3, Dialogs (checked=5) PASS; Messages
+  problems=11, every one the same 44 dp view [484,780][756,867] (TouchTargetSizeCheck). Old code (6dbfde03 with the
+  same test, throwaway branch, deleted) [44462757164](https://github.com/siamform/yumeiro/actions/runs/44462757164): problems=13, the same view on 12 cases →
+  pre-existing, not a G10 regression; queued TV-A11Y-1.
+
+Runs on the way (test faults, fixed in the tests): tv-api24 44452176693 DialogsDeviceTest "no dialog was checked"
+(rows below the fold on a 540 dp TV; 080a5bf8, then 44454630375 PASS); MessagesDeviceTest logs the whole
+accessibility result since 74cc5b6e (details run 44455588206).
+
+ER-30 is verified by unit tests only. A device run with a real extension that blocks needs the owner's extension and
+network: OMT-34. Lower finding kept: the Manga providers (`MangaScreens.kt` 321) are Yumeiro's own suspend code, not
+wrapped by `ExtensionCall` (no blocking call found in them; next pass).
+
+Correction: the times written in the bodies of commits f1cc127b…f504a934 (07:05–08:08 UTC) are wrong; the git
+commit dates (04:08–04:17 UTC, 2026-11-19) are right.
+
+## Close-out (2026-11-19, §13a re-audit)
+
+G10 closed. ER-21…ER-30 are fixed and verified: CI unit for all; emulator for ER-28, ER-29 and the regression; TV
+emulator for ER-28 (tv-api24) and the regression. Queued: ER-28-TV34, TV-A11Y-1, OMT-34. NB15-OB2 resolved by ER-28.
+NBUG-8 fixed as ER-30.

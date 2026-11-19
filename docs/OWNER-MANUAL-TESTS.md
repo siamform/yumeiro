@@ -50,6 +50,7 @@ artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" 
 | OMT-31 | NBUG-9: fresh install on your own network loads online content without changing DNS | Pending |
 | OMT-32 | NBUG-12: a Porn4fans title plays on your network; tell the extension author | Pending |
 | OMT-33 | NBUG-13: choose a network option, then adult hosts without a VPN | Blocked: owner (decision) |
+| OMT-34 | NBUG-8: the extension that kept loading now stops with a message, and Back leaves at once | Pending |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -61,7 +62,7 @@ Send results to the owner (developer); recruited users send them to the person w
 in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
 
 The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
-**owner (developer)** section after it (OMT-1…OMT-33, full detail; some need consoles, logs or decisions).
+**owner (developer)** section after it (OMT-1…OMT-34, full detail; some need consoles, logs or decisions).
 
 ## Yumeiro users checklist
 
@@ -593,6 +594,17 @@ the app version and your device. Don't send passwords or account details.
   See docs/SYSTEM-DESIGN.md ADR-024.
 - **Then:** retest an adult title without the VPN on your network.
 - **Status:** Blocked: owner (decision)
+
+### OMT-34 — The extension that kept loading (NBUG-8)
+
+- **Why you:** you saw it with one extension on your phone; the fix (G10 ER-30) is proven with a fake extension
+  that blocks (unit test), but not with yours.
+- **Steps:** 1. Install the build with the G10 fix. 2. Open the same extension's page and the same title as before.
+  3. If it is slow, wait, then press Back once.
+- **Pass:** within about 25 s (home) or 35 s (a title) you see either the content or a message with Retry; Back
+  leaves at once. **Fail:** the spinner stays longer, or Back does nothing.
+- **Record:** the extension name and version, the title, and a screen recording.
+- **Status:** Pending
 
 ## Not owner tests (handled by the agent)
 

@@ -1,16 +1,20 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 08:08 UTC, G10 step 8 loop: ER-29, ER-30)
+## Resume here (updated 2026-11-19 05:30 UTC, G10 closed → G11 step 1)
 
-- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 → G11 → v1.8.2 (owner
-  approval) → stability-v2.
-- **G10:** register now ER-21…ER-30. ER-29 (promo card replaced messages; dad92181 broke compile, fixed
-  6bb180ef `showQuiet`). ER-30 = owner NBUG-8 (blocked extension outlives `withTimeout`), missed earlier,
-  added at the scope check: test deb6987e, fix `ExtensionCall.bounded`.
-- **Runs in progress:** fail-before ER-29 CI 44456278746 (`ab/g10-er29-before`), ER-30 CI 44457201367
-  (`ab/g10-er30-before`). Both branches are throwaway: delete them after.
-- **Next three actions:** (1) record both fail-before runs; (2) group CI rerun + group regression (phones 9
-  classes, TVs 4) on the close commit; (3) close G10 in one push (queue: TV-A11Y-1, ER-28-TV34, NB15-OB2).
+- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 (closed) → G11 → v1.8.2
+  (owner approval) → stability-v2.
+- **G10:** closed 2026-11-19. ER-21…ER-30 fixed and verified (ER-30 = owner NBUG-8); group CI 44457297312
+  (1274/0); regression phones 44460656954, tv-api24 44460663805, tv-api34 44461533827. Queued ER-28-TV34,
+  TV-A11Y-1 (pre-existing, old code 44462757164), OMT-34. Details: docs/groups/GROUP-10-ERRORS.md.
+- **Runs in progress:** none. Throwaway branches ab/g10-* deleted.
+- **Next three actions:** (1) G11 step 1: read every integration file line by line (Trakt, Simkl, Kitsu, AniList,
+  TMDB, subtitles, LRCLIB, Last.fm, Firebase, Cloudflare Worker, YouTube account, GitHub releases); (2) step 2 audit
+  with ≥2 references each; (3) step 3 register + ADR.
+
+### Previous resume note — superseded (04:17 UTC 2026-11-19, G10 step 8 loop; its header said 08:08, wrong clock)
+
+- ER-29 and ER-30 fail-before 44456278746 / 44457201367 were running; then group CI and regression.
 
 ### Previous resume note — superseded (07:05 UTC 2026-11-19, ER-29 loop)
 
