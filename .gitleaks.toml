@@ -27,3 +27,14 @@ paths = [
 regexes = [
   '''data-ad-key="[0-9a-f]{32}"''',
 ]
+
+# SEC-LFM test fixtures (2026-11-19): two commits put a fake 32-hex Last.fm signature in test mocks
+# (a hash of the public test secret "s", not a credential). The files were changed to a low-entropy
+# fake in the next commit; only these two commits, only these two test files, only that match.
+[[allowlists]]
+description = "Fake api_sig in SEC-LFM test mocks (commits 1bbce9186e7cfb7fee34c0955380f81e5e6212ea, b57e1559bab8ca48fc631fba71e7bf5e4610231b)"
+condition = "AND"
+commits = ["1bbce9186e7cfb7fee34c0955380f81e5e6212ea", "b57e1559bab8ca48fc631fba71e7bf5e4610231b"]
+paths = [
+  '''^app/src/(test|androidTest)/java/dev/asfakul/yumeiro/(scrobble/LastFmCloudSignTest|ScrobbleFlushDeviceTest)\.kt$''',
+]

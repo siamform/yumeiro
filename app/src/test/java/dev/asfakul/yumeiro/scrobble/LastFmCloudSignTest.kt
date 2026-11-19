@@ -32,11 +32,13 @@ class LastFmCloudSignTest {
         Response.Builder().request(r).protocol(Protocol.HTTP_1_1).code(code).message("x")
             .body(body.toResponseBody("application/json".toMediaType())).build()
     }).build()
+    // A fake 32-hex signature, low entropy on purpose so the secret scan never mistakes it for a key.
+    private val fakeSig = "ab".repeat(16)
     private val params = mapOf("method" to "track.scrobble", "api_key" to "k", "sk" to "SK", "artist[0]" to "Björk", "track[0]" to "Jóga")
 
     @Test fun theWorkerSignsAndThePhoneSendsOnlyTheParameters() {
-        val sig = LastFm.cloudSig(client(200, """{"api_sig":"0886adad51e1f072f531d9f437427cd8"}"""), params, "api.yumeiro.click")
-        assertEquals("0886adad51e1f072f531d9f437427cd8", sig)
+        val sig = LastFm.cloudSig(client(200, """{"api_sig":"$fakeSig"}"""), params, "api.yumeiro.click")
+        assertEquals(fakeSig, sig)
         assertEquals("https://api.yumeiro.click/v1/lastfm/sign", seen.single().url.toString())
         val sent = JSONObject(bodies.single()).getJSONObject("params")
         assertEquals(params.keys, sent.keys().asSequence().toSet())

@@ -63,7 +63,7 @@ class ScrobbleFlushDeviceTest {
                     .body("""{"scrobbles":{"@attr":{"accepted":1,"ignored":0},"scrobble":[]}}""").build()
                 // SEC-LFM (ADR-048): Yumeiro Cloud signs the built-in key's calls first.
                 else if (request.url.encodedPath == "/v1/lastfm/sign") MockResponse.Builder().code(200)
-                    .body("""{"api_sig":"0123456789abcdef0123456789abcdef"}""").build()
+                    .body("""{"api_sig":"${"ab".repeat(16)}"}""").build()
                 else MockResponse.Builder().code(404).build()
         }
         server.start()
