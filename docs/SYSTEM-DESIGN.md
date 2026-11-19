@@ -1015,6 +1015,31 @@ may keep a half-height state. (2) Video streams use a grid on wide screens: colu
 
 Consequences: one Back closes a search sheet; TV and tablets show 2–4 videos per row; phones in portrait unchanged.
 
+### ADR-032: Script sources run with a time limit and reach the public internet only (SRC-1, SRC-2)
+
+Status: accepted 2026-11-19 (feat/sources).
+
+Context: Mangayomi JavaScript sources run in QuickJS with no evaluation time limit
+(`sources/js/JsEngine.kt:79-81`), so one `while(true)` blocks the source forever, and `JsBridge.http`
+(`sources/js/JsBridge.kt:120-140`) fetches any URL a script asks for, including the router, a NAS or
+TorrServer on 127.0.0.1, and hands the answer back to the script. The two QuickJS runtimes given to
+DEX extensions (`JavaScriptEngine`, `app.cash.quickjs.QuickJs`) also have no limit.
+
+Options: (A) quickjs-kt `evaluationTimeoutMillis` plus an OkHttp network interceptor that refuses
+private addresses after DNS on every hop; (B) a custom `Dns` that filters answers (misses IP literals,
+which OkHttp does not resolve through `Dns`); (C) a URL host deny-list (misses DNS rebinding and
+redirects).
+
+Decision: A. Limits: 20 s to load a source, 60 s per call (wall clock per `evaluate`, which also covers
+the HTTP calls a source makes), 10 s in the helper runtimes; after a stop the runtime is closed and
+rebuilt. `JsBridge` adds `PublicOnly`, which checks the connected socket address with
+`SmartDns.isBogon` (plus multicast) on every network hop. Repo index and code downloads typed by the
+user (`JsSources`) are not guarded, so home-hosted repos keep working. Nuvio, SkyStream and Vega support
+(F-05) reuse the same rules.
+
+Consequences: a source that needs a LAN server no longer works through the bridge (none known);
+slow sources over 60 s per call fail with a clear message. Rollback: revert the two commits.
+
 ## 11. Risks
 
 | Risk | Mitigation |

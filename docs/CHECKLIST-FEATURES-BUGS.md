@@ -99,7 +99,9 @@ earlier cycle (ADR-014); only EXT-T1 is open.
 | F-02 | Telegram option | new | Hikari 8aa1652 | Not started; proposal written; Blocked: owner (OMT-25) | docs/proposals/FEATURE-F-02-telegram.md |
 | F-03 | Terabox / Diskwala links | G3 | — | Not started; proposal written; live check Blocked: owner (OMT-25) | docs/proposals/FEATURE-F-03-terabox-diskwala.md |
 | F-04 | User-added WebView site list | G2 | Hikari 8aa1652 | Not started; proposal written | docs/proposals/FEATURE-F-04-webview-site-list.md |
-| F-05 | Nuvio / SkyStream / Vega repositories | G2 | Nuvio 511ebd5, SkyStream f5523ae | Not started; proposal written; Vega Blocked: owner (OMT-24) | docs/proposals/FEATURE-F-05-nuvio-skystream-repos.md |
+| F-05 | Nuvio / SkyStream / Vega repositories | G2 | Nuvio 1.1.0-beta.2 81f836d4, SkyStream v2.9.0 287375b6, Vega app v5.3.3 6f2d7579 (read only), Hikari v0.12.51 | In progress (feat/sources): step 1 detection fix (SkyStream sniffed as CloudStream) | docs/proposals/FEATURE-F-05-nuvio-skystream-repos.md; `UniversalAddFormatsTest` |
+| SRC-1 | JS sources: QuickJS time limit (looping script blocked the source forever) | G2 | quickjs-kt v1.0.18 673a6df9, Nuvio 81f836d4 | In progress (feat/sources) | docs/proposals/FINDING-SRC-JS-HARDENING.md; ADR-032; `JsTimeLimitGuardTest`, `JsTimeLimitDeviceTest` |
+| SRC-2 | JS sources: no access to private / loopback addresses (SSRF) | G2 | Vega app urlGuard.ts (read only) | In progress (feat/sources) | docs/proposals/FINDING-SRC-JS-HARDENING.md; ADR-032; `JsBridgePrivateNetworkTest` |
 | F-06 | 200 % volume booster | G3 | Next Player 08845f8 | Not started; proposal written | docs/proposals/FEATURE-F-06-volume-booster.md |
 | F-07 | External video player | G3 | CloudStream 2dcc25c | Not started; proposal written (base hand-off exists) | docs/proposals/FEATURE-F-07-external-player.md |
 | F-08 | Upcoming Movies & Series | G4 | Hikari 8aa1652 | Not started; proposal written; data source = owner call | docs/proposals/FEATURE-F-08-upcoming-movies-series.md |

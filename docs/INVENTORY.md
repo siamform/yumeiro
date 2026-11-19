@@ -50,6 +50,8 @@ verified on a device, evidence linked), `not covered` (reason given).
 | E10 | Repositories / Universal add (CloudStream, Aniyomi, Mihon, Stremio, JS) | sources/UniversalAdd, SourceMarket, ui/screens/sources/* | audited | link path on device (E8); Aniyomi, Mihon, Stremio, JS unit only (G2 report) |
 | E11 | Sources hub and source health screen | ui/screens/sources/SourcesHubScreen, SourceHealthScreen | done | `e11` 43704211410, 43705847970 |
 | E12 | Provider overrides, adult-content filter | online/ProviderOverrides, AdultContent | audited | override on device (`e12`); adult search filter code only (needs a fake NSFW provider) |
+| E13 | JS source sandbox: time limit, public network only (SRC-1, SRC-2) | sources/js/JsEngine, JsBridge, network/PublicOnly | in progress (feat/sources) | `JsTimeLimitGuardTest`, `JsBridgePrivateNetworkTest`, `JsTimeLimitDeviceTest` |
+| E14 | Universal add: SkyStream, Nuvio, Vega detected (not run yet) (F-05 step 1) | sources/UniversalAdd | in progress (feat/sources) | `UniversalAddFormatsTest` |
 
 ## G3 Player
 | ID | Item | Code | Status | Covered by |
