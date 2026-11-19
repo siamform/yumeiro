@@ -79,8 +79,15 @@ class CrashUiDeviceTest {
             val chooser = (0 until 40).any { Thread.sleep(250); top = topActivity(); "Chooser" in top || "Resolver" in top || "intentresolver" in top }
             log("share top activity: $top")
             assertTrue("share sheet opened: $top", chooser)
-            FirstRun.shell("input keyevent 4")
-            waitUntil("back in the app", 10_000) { ctx.packageName in topActivity() && "Chooser" !in topActivity() }
+            // The Android 7 TV chooser can eat the first Back (it moves focus inside the sheet),
+            // gate run 44542850496: one Back left ChooserActivity on top. That is the system sheet,
+            // not the app; send Back again (up to 3) until the app is on top, then assert.
+            val inApp = { ctx.packageName in topActivity() && "Chooser" !in topActivity() }
+            for (i in 1..3) {
+                FirstRun.shell("input keyevent 4")
+                if ((0 until 12).any { Thread.sleep(250); inApp() }) { log("share sheet closed after $i Back"); break }
+            }
+            waitUntil("back in the app", 10_000) { inApp() }
 
             // Delete asks first; Keep keeps it.
             FirstRun.tapVisible(rule, "crash_clear")
