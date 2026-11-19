@@ -1,14 +1,17 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 11:05 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-19 11:45 UTC; no PR / merge / deploy without the owner's "go")
 
-- **Open list:** docs/REMAINING-2026-11-19.md (everything not Verified, decisions taken, not-in-release).
-- **New (ADR-041):** P-2X, TH-1, PR-1 (+ PR-1-SEC ten review fixes), DL-H. Built, not tested. Unit fail-before
-  44506927082 (ab/privacy-before2) and 44506931345 (ab/guard-before); head CI 44506922893 (rerun after a Maven
-  resolve glitch). Device test `ProfilesDeviceTest` written.
-- **Next:** head CI green → device pass-after (≤2 at once): tv-api34 PosterActions + StreamWatchDownload +
-  ReleaseFeatures + ProfilesDeviceTest; phones ProfilesDeviceTest + extension suite (X13-6) → delete ab/ branches →
-  release gate (unbatched, both phones + both TVs, version bump, notes, signed build, secret scan) → owner "go".
+- **Gate commit:** 8bf19898 (1.9.0 / code 17 + three test fixes). Release gate running: 13 chunks of ≤10 classes ×
+  phones (both) / tv-api24 / tv-api34, ≤2 device workflows at once; head CI 44514234313. Run IDs go to device-runs.md.
+- **Pass-after done:** ProfilesDeviceTest 3/3 api36 + api33-lowram (44512112484), tv-api34 (44512116247);
+  ExtensionCompat → ExtensionPopups 8/8 → Extensions on both phones (44514239084). Test errors fixed: ed35b093
+  (closed folder), c5dbde6c + 8bf19898 (AniKoto's real start-up prompt counted as the fake's).
+- **Open list:** docs/REMAINING-2026-11-19.md. **Next:** gate results → docs → owner "go".
+
+### Previous resume note — superseded (11:05 UTC 2026-11-19)
+
+- New ADR-041 items P-2X, TH-1, PR-1 (+ PR-1-SEC), DL-H built; device pass-after was next.
 
 ### Previous resume note — superseded (10:05 UTC 2026-11-19)
 
