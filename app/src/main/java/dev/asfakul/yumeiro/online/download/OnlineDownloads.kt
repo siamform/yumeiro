@@ -253,13 +253,6 @@ object OnlineDownloads {
         update { list -> list.map { if (it.folder == folder) it.copy(keep = keep) else it } }
     }
 
-    /** Deletes every download in [folder] and the folder itself. */
-    fun deleteFolder(context: Context, folder: String) {
-        ensureLoaded(context)
-        _items.value.filter { it.folder == folder }.forEach { delete(context, it.id) }
-        if (folder.isNotBlank()) runCatching { folderDir(context, folder).deleteRecursively() }
-    }
-
     /** Removes finished, unpinned downloads older than the auto-delete timer. Returns how many. */
     fun cleanup(context: Context, now: Long = System.currentTimeMillis()): Int {
         ensureLoaded(context); DownloadSettings.init(context)
