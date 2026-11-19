@@ -52,6 +52,10 @@ object LinkHosts {
     data class Browser(val pageUrl: String, val host: String, val reason: String, val auto: Boolean = false) : Route
     /** A magnet or .torrent link. */
     data class Torrent(val link: String) : Route
+    /** F-02 (ADR-042): a public Telegram post; its video comes from Telegram's web preview. */
+    data class TelegramPost(val channel: String, val post: Int) : Route
+    /** F-02: a private Telegram chat or invite link (needs an account; never opened). */
+    data object TelegramPrivate : Route
 
     private val TERABOX = listOf(
         "terabox.com", "teraboxapp.com", "terabox.club", "teraboxlink.com", "terasharefile.com", "terashare.co", "nephobox.com",
@@ -129,6 +133,11 @@ object LinkHosts {
         val u = url.trim()
         if (isTorrent(u)) return Torrent(u)
         val host = hostOf(u) ?: return null
+        when (val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(u).takeIf { "://" in u && dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled }) {
+            is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Post -> return TelegramPost(tg.channel, tg.id)
+            dev.asfakul.yumeiro.online.telegram.TelegramPublic.Private -> return TelegramPrivate
+            else -> Unit
+        }
         googleDriveId(u)?.let { return Direct(googleDriveDirect(it), "Google Drive") }
         dropboxDirect(u)?.let { return Direct(it, "Dropbox") }
         pixeldrainDirect(u)?.let { return Direct(it, "Pixeldrain") }

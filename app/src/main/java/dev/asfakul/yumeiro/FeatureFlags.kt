@@ -41,6 +41,8 @@ object FeatureFlags {
         PROFILES("f18_profiles", true),
         /** DL-H (ADR-041): hide downloads in the Private vault (Downloads → Private). */
         PRIVATE_DOWNLOADS("f18_private_downloads", true),
+        /** F-02 (ADR-042): public Telegram channels and post links, read from Telegram's web preview (no login). */
+        TELEGRAM_PUBLIC("telegram_public", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

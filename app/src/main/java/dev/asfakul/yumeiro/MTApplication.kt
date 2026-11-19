@@ -47,6 +47,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.online.AccessLadder.attach(this) }
         // YouTube / YouTube Music (no login): NewPipe init + fresh-link refresher for 403/expiry.
         runCatching { dev.asfakul.yumeiro.youtube.YouTubePlayback.install(this) }
+        // F-02 (ADR-042): fresh-link refresher for Telegram posts (no I/O here).
+        runCatching { dev.asfakul.yumeiro.online.telegram.TelegramPlayback.install(this) }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }

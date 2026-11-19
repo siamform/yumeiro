@@ -69,6 +69,7 @@ object StreamResolver {
             if (req != null) return@withContext Resolution.Playable(req, Sniff(MediaKind.VIDEO, "YouTube", "extractor"))
         }
         TorrentSettings.init(context.applicationContext)
+        dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
         val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
         if (r is Resolution.Handoff && r.platform == "YouTube" && request.group != "YouTube") {
@@ -78,6 +79,28 @@ object StreamResolver {
         }
         r
     }
+
+    /** F-02 (ADR-042): plays the video Telegram's public web preview links for this post. */
+    private fun resolveTelegram(request: StreamRequest, route: LinkHosts.TelegramPost, client: OkHttpClient): Resolution {
+        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic
+        return when (val r = tg.fetchPost(client, route.channel, route.post)) {
+            is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Result.Failed -> Resolution.Failed("Telegram post can't play", r.message)
+            is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Result.Ok -> Resolution.Playable(
+                request.copy(
+                    url = r.value.videoUrl!!,
+                    title = request.title.ifBlank { r.value.text.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: "@${route.channel} · ${route.post}" },
+                    format = StreamFormat.PROGRESSIVE,
+                    referer = "https://t.me/",
+                    pageUrl = r.value.link,
+                    logoUrl = request.logoUrl ?: r.value.thumbUrl,
+                    group = TELEGRAM_GROUP,
+                ),
+                Sniff(MediaKind.VIDEO, "Telegram", "page"),
+            )
+        }
+    }
+
+    const val TELEGRAM_GROUP = "Telegram"
 
     /**
      * @param thorough also probe URLs whose extension looks certain (`.m3u8` can be an IPTV list).
@@ -101,6 +124,8 @@ object StreamResolver {
                 return resolveBlocking(request.copy(url = LinkHosts.torrServerUrl(server, route.link, request.title), format = StreamFormat.AUTO), userAgent, client, thorough = true)
                     .let { r -> if (r is Resolution.Failed) Resolution.Failed("TorrServer didn't answer", "Check that TorrServer is running at $server. ${r.message}") else r }
             }
+            is LinkHosts.TelegramPost -> return resolveTelegram(request, route, client)
+            LinkHosts.TelegramPrivate -> return Resolution.Failed("Private Telegram link", dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.PRIVATE)
             null -> Unit
         }
         val url = request.url.trim()
