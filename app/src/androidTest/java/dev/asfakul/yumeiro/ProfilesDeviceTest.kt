@@ -25,7 +25,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -139,7 +138,6 @@ class ProfilesDeviceTest {
         assertTrue("one item in the folder", compose.onAllNodesWithText("1 item", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithTag("downloads_list", true).performScrollToNode(hasText("Open Movie PR"))
         assertTrue("hidden item not in the list", compose.onAllNodesWithText("Secret Movie PR", true).fetchSemanticsNodes().isEmpty())
-        compose.onNodeWithTag("downloads_list", true).performScrollToNode(hasTestTag("downloads_private"))
         assertTrue("Private entry", waitTag("downloads_private"))
         compose.onNodeWithTag("downloads_private", true).performClick()
         // A phone with a screen lock asks with the system prompt first; the emulators have none.

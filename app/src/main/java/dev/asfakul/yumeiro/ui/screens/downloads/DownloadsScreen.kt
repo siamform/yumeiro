@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
@@ -135,6 +136,11 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
                 if (split.active.isNotEmpty()) "${split.active.size} in progress" else null,
             ).joinToString(" · "),
         ) {
+            // DL-H: a lock in the header, not a row in the list, so the page looks the same for everyone
+            // and nothing moves down (DownloadUiScreenshotTest, CI 44514234313). Hidden in stealth mode.
+            if (vaultOn && !stealth) IconButton(onClick = { askVault = true }, modifier = Modifier.testTag("downloads_private")) {
+                Icon(Icons.Default.Lock, "Private (locked)", tint = TextPrimary)
+            }
             IconButton(onClick = { settingsOpen = !settingsOpen }, modifier = Modifier.testTag("downloads_settings")) {
                 Icon(Icons.Default.Settings, "Offline settings", tint = if (settingsOpen) SpotifyGreen else TextPrimary)
             }
@@ -147,7 +153,6 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
                 StorageCard(used, free, days, quality, parallel, onSettings = { settingsOpen = !settingsOpen },
                     onLongPress = if (vaultOn) ({ askVault = true }) else null)
             }
-            if (vaultOn && !stealth) item("private") { PrivateEntry(onClick = { askVault = true }) }
             if (settingsOpen) item("settings") {
                 Column {
                     Text("Offline settings", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
