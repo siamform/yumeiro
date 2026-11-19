@@ -98,7 +98,7 @@ class MangaTranslateDeviceTest {
         override suspend fun image(page: MangaPageRef) = MangaImage(bytes, "image/png")
     }
 
-    private fun boxes() = runCatching { compose.onAllNodes(SemanticsMatcher("tag starts with tl_box_0_") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("tl_box_0_") == true }, useUnmergedTree = true).fetchSemanticsNodes() }.getOrDefault(emptyList())
+    private fun boxes() = runCatching { compose.onAllNodes(SemanticsMatcher("tag starts with tl_box_0_") { it.config.getOrElseNullable(SemanticsProperties.TestTag) { null }?.startsWith("tl_box_0_") == true }, useUnmergedTree = true).fetchSemanticsNodes() }.getOrDefault(emptyList())
 
     @Test fun b_readerShowsTranslationsAndTurnsThemOff() {
         ctx.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", false).commit()
