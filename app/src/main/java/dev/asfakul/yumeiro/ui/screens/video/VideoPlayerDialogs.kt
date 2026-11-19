@@ -145,7 +145,7 @@ fun PlaybackSpeedDialog(
         text = {
             Column {
                 Text(
-                    text = "Adjust video and audio speed seamlessly with pitch preservation.",
+                    text = "Adjust video and audio speed seamlessly with pitch preservation. Quick 2x: touch and hold the video, or long-press the speed button.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )

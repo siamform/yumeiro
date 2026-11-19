@@ -12,6 +12,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -311,6 +312,9 @@ private fun VideoPlayerModalContent(
     var zoomHintJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var playerAreaSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     var currentSpeed by remember { mutableFloatStateOf(dev.asfakul.yumeiro.player.VideoPrefs.speed.value) }
+    // P-2X: touch-and-hold 2x (restored on release) and the 1x / 2x quick toggle.
+    val holdSpeed = remember { dev.asfakul.yumeiro.player.HoldSpeed() }
+    var holdBoost by remember { mutableStateOf(false) }
     var isScreenLocked by remember { mutableStateOf(false) }
     var isLockedUnlockPillVisible by remember { mutableStateOf(false) }
     // The player opens in the normal (portrait) layout with system bars visible. Only the
@@ -1719,7 +1723,13 @@ private fun VideoPlayerModalContent(
                     onMinimize != null -> ({ isControlsVisible = false; onMinimize() })
                     else -> null
                 },
-                onHoldStart = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress) },
+                onHoldStart = {
+                    haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    // P-2X: play at 2x while the finger stays down (not for live streams).
+                    holdSpeed.start(currentSpeed, exoPlayer.isCurrentMediaItemLive)?.let { exoPlayer.playbackParameters = PlaybackParameters(it); holdBoost = true }
+                },
+                onHoldEnd = { holdSpeed.end()?.let { exoPlayer.playbackParameters = PlaybackParameters(it) }; holdBoost = false },
+                holdEnabled = !isScreenLocked,
                 onPinch = if (isScreenLocked || docked) null else ({ zoomBy, pan ->
                     videoZoom = dev.asfakul.yumeiro.player.VideoZoom.step(videoZoom, zoomBy, pan.x, pan.y,
                         playerAreaSize.width.toFloat(), playerAreaSize.height.toFloat())
@@ -1823,6 +1833,23 @@ private fun VideoPlayerModalContent(
                     }
                 }
             )
+        }
+
+        // P-2X: a small "2x" pill while the hold boost is on (fast-forward look, no layout shift).
+        androidx.compose.animation.AnimatedVisibility(
+            visible = holdBoost && !hideChrome,
+            enter = fadeIn(), exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = if (docked) 12.dp else 56.dp),
+        ) {
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
+                    .padding(horizontal = 14.dp, vertical = 6.dp).testTag("video_hold_2x"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("2x", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(start = 4.dp))
+                Icon(androidx.compose.material.icons.Icons.Default.FastForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
+            }
         }
 
         // Pinch-to-zoom: live percentage while pinching, and a reset pill while zoomed.
@@ -1965,6 +1992,13 @@ private fun VideoPlayerModalContent(
                     onAudioTrackClick = { showAudioTrackDialog = true },
                     onSubtitleClick = { showSubtitleDialog = true },
                     onSpeedClick = { showSpeedDialog = true },
+                    onSpeedLongClick = {
+                        val next = dev.asfakul.yumeiro.player.HoldSpeed.toggle(currentSpeed)
+                        currentSpeed = next
+                        exoPlayer.playbackParameters = PlaybackParameters(next)
+                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        showToast("Speed: ${next}x")
+                    },
                     captionsOn = !isSubtitlesDisabled,
                     onCaptionsToggle = { setCaptionsEnabled(isSubtitlesDisabled) },
                     onAspectRatioClick = { showAspectRatioDialog = true },

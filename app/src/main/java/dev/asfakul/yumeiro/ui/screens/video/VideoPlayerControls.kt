@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -92,6 +93,7 @@ enum class ScreenOrientationOption {
     PORTRAIT
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun VideoPlayerTopBar(
     video: VideoItem,
@@ -101,6 +103,7 @@ fun VideoPlayerTopBar(
     onAudioTrackClick: () -> Unit,
     onSubtitleClick: () -> Unit,
     onSpeedClick: () -> Unit,
+    onSpeedLongClick: () -> Unit = {},
     captionsOn: Boolean = true,
     onCaptionsToggle: () -> Unit = {},
     onAspectRatioClick: () -> Unit,
@@ -271,11 +274,20 @@ fun VideoPlayerTopBar(
                     }
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.SPEED -> {
                         // Speed
-                        IconButton(
-                            onClick = onSpeedClick,
+                        // P-2X: tap opens the speed list; long press (touch or a held OK key) switches 1x / 2x.
+                        Box(
                             modifier = Modifier
                                 .minimumInteractiveComponentSize()
-                                .testTag("video_speed_btn")
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .combinedClickable(
+                                    onClick = onSpeedClick,
+                                    onLongClick = onSpeedLongClick,
+                                    onLongClickLabel = "Switch between 1x and 2x",
+                                    role = androidx.compose.ui.semantics.Role.Button,
+                                )
+                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                                .testTag("video_speed_btn"),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(

@@ -65,8 +65,12 @@ fun VideoGestureOverlay(
      * Null disables it (the hold then behaves like a normal touch).
      */
     onHoldSwipeDown: (() -> Unit)? = null,
-    /** The hold was recognised (for a small haptic / hint). */
+    /** The hold was recognised (for a small haptic / hint, and P-2X: play at 2x while held). */
     onHoldStart: () -> Unit = {},
+    /** P-2X: a recognised hold ended (finger lifted, slid, pinched or the gesture was cancelled). */
+    onHoldEnd: () -> Unit = {},
+    /** P-2X: recognise a hold even when hold-and-slide-down (picture-in-picture) is not available. */
+    holdEnabled: Boolean = false,
     /**
      * Two-finger pinch / spread: zoom factor since the last event and the two-finger pan in px.
      * Null disables pinch-to-zoom (docked player, locked screen).
@@ -79,6 +83,8 @@ fun VideoGestureOverlay(
     val currentOnPinchEnd by rememberUpdatedState(onPinchEnd)
     val currentOnHoldSwipeDown by rememberUpdatedState(onHoldSwipeDown)
     val currentOnHoldStart by rememberUpdatedState(onHoldStart)
+    val currentOnHoldEnd by rememberUpdatedState(onHoldEnd)
+    val currentHoldEnabled by rememberUpdatedState(holdEnabled)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
     val currentOnSwipeDownProgress by rememberUpdatedState(onSwipeDownProgress)
     val coroutineScope = rememberCoroutineScope()
@@ -137,10 +143,11 @@ fun VideoGestureOverlay(
                     var currentEventUptime: Long? = null
                     val holdAt = down.uptimeMillis + viewConfiguration.longPressTimeoutMillis
 
+                    try {
                     while (true) {
                         // Before the first move, wake up at the long-press time to recognise a hold.
                         val waitMs = holdAt - (currentEventUptime ?: down.uptimeMillis)
-                        val event = if (!isDragging && !held && currentOnHoldSwipeDown != null && waitMs > 0) {
+                        val event = if (!isDragging && !held && (currentOnHoldSwipeDown != null || currentHoldEnabled) && waitMs > 0) {
                             withTimeoutOrNull(waitMs) { awaitPointerEvent() } ?: run {
                                 held = true
                                 pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
@@ -282,6 +289,10 @@ fun VideoGestureOverlay(
                                 DragMode.NONE -> {}
                             }
                         }
+                    }
+                    } finally {
+                        // P-2X: every way out of a held gesture (lift, slide, pinch, cancellation) restores the speed.
+                        if (held) currentOnHoldEnd()
                     }
                 }
             }
