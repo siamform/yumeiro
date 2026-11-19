@@ -8,6 +8,7 @@ package dev.asfakul.yumeiro.ui.screens.sites
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +32,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Language
@@ -89,6 +95,11 @@ fun WebSitesScreen(onBack: () -> Unit) {
     var open by remember { mutableStateOf<SavedSites.Site?>(null) }
     var renaming by remember { mutableStateOf<SavedSites.Site?>(null) }
     var help by rememberSaveable { mutableStateOf(false) }
+    // F-04: search (shown from 6 sites), pin, move, import / export.
+    var query by rememberSaveable { mutableStateOf("") }
+    var importing by rememberSaveable { mutableStateOf(false) }
+    val shown = remember(sites, query) { SavedSites.filter(SavedSites.ordered(sites), query) }
+    androidx.activity.compose.BackHandler(enabled = query.isNotEmpty()) { query = "" }
 
     fun add() {
         val err = SavedSites.add(context, input)
@@ -111,6 +122,33 @@ fun WebSitesScreen(onBack: () -> Unit) {
         confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text("Got it") } },
     )
 
+    if (importing) {
+        var text by rememberSaveable { mutableStateOf("") }
+        TsukiDialog(
+            onDismissRequest = { importing = false },
+            title = { Text("Add websites from a list") },
+            text = {
+                Column {
+                    Text("Paste links, one per line. Sites you already saved stay as they are.", fontSize = 13.sp)
+                    OutlinedTextField(text, { text = it }, minLines = 4, maxLines = 8, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("site_import_field"))
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    val r = SavedSites.importText(context, text)
+                    importing = false
+                    dev.asfakul.yumeiro.ui.components.AppMessages.info(context, buildString {
+                        append(if (r.added == 1) "1 website added" else "${r.added} websites added")
+                        if (r.duplicates > 0) append(", ${r.duplicates} already saved")
+                        if (r.bad > 0) append(", ${r.bad} not web addresses")
+                        if (r.overLimit > 0) append(", ${r.overLimit} over the 200 limit")
+                    })
+                }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text("Add") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { importing = false }) { Text("Cancel") } },
+        )
+    }
+
     renaming?.let { site ->
         var name by remember(site.url) { mutableStateOf(site.name) }
         TsukiDialog(
@@ -125,6 +163,12 @@ fun WebSitesScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("websites_screen")) {
         SubPageHeader(title = "Websites", onBack = onBack, subtitle = if (sites.isEmpty()) "Play videos from any site" else "${sites.size} saved") {
+            IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", tint = p.textSecondary) }
+            if (sites.isNotEmpty()) IconButton(onClick = {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, SavedSites.export(sites))
+                runCatching { context.startActivity(android.content.Intent.createChooser(send, "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, "Share website list", tint = p.textSecondary) }
             IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "How websites work", tint = p.textSecondary) }
         }
         LazyColumn(
@@ -160,6 +204,19 @@ fun WebSitesScreen(onBack: () -> Unit) {
                     error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
                 }
             }
+            if (sites.size >= 6) item("search") {
+                OutlinedTextField(
+                    value = query, onValueChange = { query = it }, singleLine = true,
+                    placeholder = { Text("Search your websites") },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
+                    modifier = Modifier.fillMaxWidth().testTag("site_search"),
+                )
+            }
+            if (sites.isNotEmpty() && shown.isEmpty()) item("no_match") {
+                Text("No saved website matches \"$query\"", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("site_no_match"))
+            }
             if (sites.isEmpty()) item("empty") {
                 Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
@@ -171,8 +228,13 @@ fun WebSitesScreen(onBack: () -> Unit) {
                     Text("No websites yet", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text("Add a site you watch on. Its videos play in Yumeiro.", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                 }
-            } else items(sites, key = { it.url }) { site ->
-                SiteRow(site, onOpen = { open = site }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) })
+            } else items(shown, key = { it.url }) { site ->
+                SiteRow(
+                    site, onOpen = { open = site }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) },
+                    onPin = { SavedSites.setPinned(context, site.url, !site.pinned) },
+                    onMove = if (query.isBlank()) ({ up -> SavedSites.moveSite(context, site.url, up) }) else null,
+                    modifier = Modifier.animateItem(),
+                )
             }
             // The step-by-step guide lives behind the "?" in the header (not in the list) so the
             // saved sites stay the focus of the page.
@@ -193,11 +255,14 @@ fun WebSitesScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SiteRow(site: SavedSites.Site, onOpen: () -> Unit, onRename: () -> Unit, onRemove: () -> Unit) {
+private fun SiteRow(
+    site: SavedSites.Site, onOpen: () -> Unit, onRename: () -> Unit, onRemove: () -> Unit,
+    onPin: () -> Unit = {}, onMove: ((up: Boolean) -> Unit)? = null, modifier: Modifier = Modifier,
+) {
     val p = LocalMtPalette.current
     var menu by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh)
+        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh)
             .combinedClickable(onClickLabel = "Open ${site.name}", onLongClick = { menu = true }, onClick = onOpen)
             .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp).testTag("site_row"),
         verticalAlignment = Alignment.CenterVertically,
@@ -212,11 +277,16 @@ private fun SiteRow(site: SavedSites.Site, onOpen: () -> Unit, onRename: () -> U
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(site.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(site.host, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (site.pinned) "Pinned · ${site.host}" else site.host, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box {
             IconButton(onClick = { menu = true }, modifier = Modifier.testTag("site_menu")) { Icon(Icons.Default.MoreVert, "More for ${site.name}", tint = p.textSecondary) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text(if (site.pinned) "Unpin" else "Pin to top") }, leadingIcon = { Icon(Icons.Default.PushPin, null) }, onClick = { menu = false; onPin() }, modifier = Modifier.testTag("site_pin"))
+                if (onMove != null) {
+                    DropdownMenuItem(text = { Text("Move up") }, leadingIcon = { Icon(Icons.Default.ArrowUpward, null) }, onClick = { menu = false; onMove(true) }, modifier = Modifier.testTag("site_move_up"))
+                    DropdownMenuItem(text = { Text("Move down") }, leadingIcon = { Icon(Icons.Default.ArrowDownward, null) }, onClick = { menu = false; onMove(false) }, modifier = Modifier.testTag("site_move_down"))
+                }
                 DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
                 DropdownMenuItem(text = { Text("Remove") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("site_remove"))
             }

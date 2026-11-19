@@ -20,7 +20,7 @@ import java.net.URI
  */
 object SavedSites {
     @Serializable
-    data class Site(val url: String, val name: String, val addedAt: Long = 0) {
+    data class Site(val url: String, val name: String, val addedAt: Long = 0, val pinned: Boolean = false) {
         val host: String get() = hostOf(url) ?: url
     }
 
@@ -36,7 +36,72 @@ object SavedSites {
         if (loaded) return
         loaded = true
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
-        _sites.value = raw?.let { runCatching { json.decodeFromString<List<Site>>(it) }.getOrNull() }.orEmpty()
+        _sites.value = decode(raw)
+    }
+
+    /** Old lists (before F-04) decode unchanged: new fields take their defaults. */
+    fun decode(raw: String?): List<Site> = raw?.let { runCatching { json.decodeFromString<List<Site>>(it) }.getOrNull() }.orEmpty()
+
+    private fun keyOf(url: String): String = hostOf(url) + runCatching { URI(url).path }.getOrNull().orEmpty().trimEnd('/')
+
+    // F-04: list helpers (pure; unit-tested).
+
+    /** Pinned sites first; each group keeps its saved order. */
+    fun ordered(list: List<Site>): List<Site> = list.filter { it.pinned } + list.filterNot { it.pinned }
+
+    fun filter(list: List<Site>, query: String): List<Site> {
+        val q = query.trim()
+        if (q.isEmpty()) return list
+        return list.filter { it.name.contains(q, ignoreCase = true) || it.host.contains(q, ignoreCase = true) }
+    }
+
+    /** Moves [url] one place up or down in [list] (already [ordered]); never across the pinned / unpinned line. */
+    fun move(list: List<Site>, url: String, up: Boolean): List<Site> {
+        val i = list.indexOfFirst { it.url == url }
+        val j = if (up) i - 1 else i + 1
+        if (i < 0 || j !in list.indices || list[i].pinned != list[j].pinned) return list
+        return list.toMutableList().also { val t = it[i]; it[i] = it[j]; it[j] = t }
+    }
+
+    class Merge(val sites: List<Site>, val added: Int, val duplicates: Int, val bad: Int, val overLimit: Int)
+
+    /** Adds every link in [text] (one per line) after [existing]; never replaces or removes a saved site. */
+    fun merge(existing: List<Site>, text: String, now: Long): Merge {
+        val out = existing.toMutableList()
+        val keys = existing.map { keyOf(it.url) }.toHashSet()
+        var added = 0; var dup = 0; var bad = 0; var over = 0
+        text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.forEach { line ->
+            val url = normalize(line)
+            when {
+                url == null -> bad++
+                !keys.add(keyOf(url)) -> dup++
+                out.size >= MAX -> over++
+                else -> { out += Site(url, defaultName(url).take(40), now); added++ }
+            }
+        }
+        return Merge(out, added, dup, bad, over)
+    }
+
+    fun export(list: List<Site>): String = ordered(list).joinToString("\n") { it.url }
+
+    fun importText(context: Context, text: String): Merge {
+        init(context)
+        val r = merge(_sites.value, text, System.currentTimeMillis())
+        _sites.value = r.sites
+        persist(context)
+        return r
+    }
+
+    fun setPinned(context: Context, url: String, pinned: Boolean) {
+        init(context)
+        _sites.value = _sites.value.map { if (it.url == url) it.copy(pinned = pinned) else it }
+        persist(context)
+    }
+
+    fun moveSite(context: Context, url: String, up: Boolean) {
+        init(context)
+        _sites.value = move(ordered(_sites.value), url, up)
+        persist(context)
     }
 
     private fun persist(context: Context) {
@@ -76,9 +141,10 @@ object SavedSites {
         init(context)
         val url = normalize(input) ?: return "That doesn't look like a web address"
         val n = name?.trim()?.takeIf { it.isNotEmpty() } ?: defaultName(url)
-        val key = hostOf(url) + URI(url).path.orEmpty().trimEnd('/')
-        val rest = _sites.value.filterNot { hostOf(it.url) + runCatching { URI(it.url).path }.getOrNull().orEmpty().trimEnd('/') == key }
-        _sites.value = (listOf(Site(url, n.take(40), now)) + rest).take(MAX)
+        val key = keyOf(url)
+        val old = _sites.value.firstOrNull { keyOf(it.url) == key }
+        val rest = _sites.value.filterNot { keyOf(it.url) == key }
+        _sites.value = (listOf(Site(url, n.take(40), now, old?.pinned == true)) + rest).take(MAX)
         persist(context)
         return null
     }
