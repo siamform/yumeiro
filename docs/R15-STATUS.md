@@ -1,16 +1,26 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 16:20 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-19 17:08 UTC; no PR / merge / deploy without the owner's "go")
 
-- **Order:** "STOP THE SLOW RUN, ADD THE MISSING ITEMS, FIX THE SERVER, THEN ONE FINAL RUN". Report:
-  docs/reports/2026-11-19-ninth-handover-report.md (full-run evidence kept, 6 TV test faults, Jackson answer).
-- **Head:** e444ac90 (app code = e53ba21d; later commits are androidTest only). Full run stopped at 16:05 UTC;
-  chunk_02 tv-api24 44544937378 is allowed to finish. Chunks 03–12 run once, in the final run.
-- **Plan:** (1) seven items in three batches: A = F-02 Telegram + F-03 TeraBox/DiskWala; B = F-11 manga
-  translation + episode-airing push + Worker fix (missed alerts); C = NBUG-6 DoH per feature (side-effect gate) +
-  proxy + Vega step 4 (owner asked what "Vega" means) → (2) one final run → (3) gate 1.9.0 → owner "go".
-- **Queue:** UNVERIFIED-QUEUE 113 rows (36 Queued, 23 Pending, 12 Blocked: owner, 11 Built, not tested).
-- **Next:** batch A research → proposals → ADR → fail-before.
+- **Head:** 899c195b. Batches A and B are in code; batch C proxy (NBUG-13, ADR-045) is in code. NBUG-6 was
+  rejected at the side-effect gate, and a cheaper fallback waits for the owner. Vega step 4 waits for the
+  owner to say what "Vega" means.
+- **Running:**
+  - pass-after CI 44573633005 (head);
+  - batch C fail-before CI 44573626244 (`tmp/batch-c-fail-before`);
+  - F-AIR fail-before CI 44572968675 and device 44572961369 (`tmp/batch-b-fail-before` = e6a7cd6d + the
+    F-AIR tests). The rerun is needed because the F-11 compile errors in 44569525861 hid the F-AIR
+    assertions.
+- **Next:**
+  1. Head CI green.
+  2. Device runs, at most 2 at once: batch A, B, C on both phones and both TVs.
+  3. Ledger, queue and inventory.
+  4. Owner answers on Vega and NBUG-6.
+  5. One final run, then the gate.
+
+### Previous resume note — superseded (16:20 UTC 2026-11-19)
+
+- Batch A research → proposals → ADR → fail-before was next (head e444ac90).
 
 ### Previous resume note — superseded (11:45 UTC 2026-11-19)
 

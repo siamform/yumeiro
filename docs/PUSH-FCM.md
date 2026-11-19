@@ -162,3 +162,24 @@ Broadcasts don't touch D1 at all. If the Worker is ever down, phones keep receiv
 A topic subscription can fail on the phone. The check-in sends both `topics` (subscribed) and `want` (switches).
 After the topic send, `/v1/admin/notify` queues direct copies to devices that want the notice but are not on its
 topic, and returns `fanout` (how many). Check after a send: `fanout` should drop as phones re-subscribe.
+
+## Episode-airing wakes for Firebase phones (F-AIR, ADR-043)
+
+Before: airing wakes went only to UnifiedPush endpoints, so the 406 Firebase phones (production count
+2026-11-19) never got one.
+
+Now:
+- The phone's check-in (`POST /v1/fcm/devices`) carries `anilist` and `airing`. Its fingerprint
+  includes the follows (`f3` prefix), so it is sent again within 3 days of a change, or from
+  `DiscoveryWorker` via `FcmPush.syncFollows`.
+- The server keeps them in `fcm_follows` (migration 0005).
+- The cron queues `{wake:{fids}}` (40 per message, 30-minute delay). It shares cooldowns with
+  UnifiedPush under the key `fcm:<id>`.
+- The Worker sends a data-only `{y:"1", kind:"wake"}` message: priority high, TTL 6 h, collapse key
+  `yumeiro-wake`.
+- `FcmPush.handle` sees `kind=wake` and calls `BackgroundWork.wake`, which schedules the unique work
+  `push_catch_up_episodes`. That's the same check the app runs on its own, and it shows the notification.
+- With Episodes or Background off, the phone sends an empty list, so it gets no wakes.
+
+Tests: server `npm test` (35/35), unit `FcmAiringWakeTest`, device `FcmAiringWakeDeviceTest`. A real alert
+on a phone after the deploy is an owner/community test.

@@ -22,6 +22,8 @@ Cron every 10 min ── airing rows with at in (last run → now] ───┤ 
                                                                 ▼
                      POST "w" to each endpoint (ntfy / any UnifiedPush server) ─► app wakes
                      404 / 410 → device deleted
+                     Firebase phones (F-AIR, ADR-043): {wake:{fids}} ─► FCM data message
+                     {y:"1",kind:"wake"} ─► app runs the episode check; UNREGISTERED → row + follows deleted
 ```
 
 | Endpoint | What it does |
@@ -29,7 +31,7 @@ Cron every 10 min ── airing rows with at in (last run → now] ───┤ 
 | `GET /v1/health` | `200 {ok:true, v:2, cron_s}` when D1 answers and the 10-minute job ran in the last 30 min; `503 {ok:false}` otherwise. `cron_s` = seconds since the last run. Point an uptime monitor here. |
 | `POST /v1/devices` | Register or refresh. Optional `airing: [[anilistId, unixSeconds]]`: next-episode times the phone got from AniList; kept only for followed ids and times from 1 h ago to 15 days ahead. Check-ins limited to 3 per minute per device. New devices are limited to 5 per minute per IP (free rate-limit binding, best-effort, IPs not stored); `429 slow_down` otherwise. Body `{endpoint, anilist}`. Returns `{id, token}`. The token is only returned on first registration. Later calls send `Authorization: Bearer <id>.<token>`. Only the token's SHA-256 is stored. |
 | `DELETE /v1/devices` | Remove this device (Bearer). |
-| `POST /v1/fcm/devices` | Instant notices (FCM): register or refresh `{fid, topics, app_version, channel}`, weekly. Same `{id, token}` / Bearer scheme and limits as above. See [PUSH-FCM.md](PUSH-FCM.md). |
+| `POST /v1/fcm/devices` | Instant notices (FCM): register or refresh `{fid, topics, app_version, channel, anilist?, airing?}`, every 3 days with follows (7 without). `anilist`/`airing` work as for `/v1/devices` and go to `fcm_follows` (F-AIR, ADR-043); a check-in without `anilist` keeps the stored list. Same `{id, token}` / Bearer scheme and limits as above. See [PUSH-FCM.md](PUSH-FCM.md). |
 | `DELETE /v1/fcm/devices` | Remove this phone's FCM row (Bearer). |
 | `POST /v1/admin/notify` | Owner only (`Authorization: Bearer $ADMIN_TOKEN`): send an announcement, update, maintenance or direct notice through FCM. |
 | `GET /v1/admin/fcm/stats` | Owner only: device counts per topic. |
@@ -138,10 +140,16 @@ No secrets are needed in the repo. CI (`.github/workflows/server.yml`) only runs
 
 `/v1/health` answers `{"ok":true,"v":2}` and the cron runs every 10 minutes, so the server is on. The deployed
 Worker dates from 2026-11-12: it lacks migration 0003 (`airing_pending`, `follow_changes`), the R11 abuse guards,
-the X16-2 address check and NOTIFY-1 (ADR-039). Deploy only after the owner's "go":
+the X16-2 address check and NOTIFY-1 (ADR-039).
+
+Why users get no episode alerts (F-AIR, read-only D1 count 2026-11-19): 406 `fcm_devices`, 1 UnifiedPush device,
+0 follows, 0 airing rows. Airing wakes went only to UnifiedPush endpoints, and Firebase phones never sent their
+shows. ADR-043 fixes both: migration 0005 (`fcm_follows`) plus the Firebase wake path.
+
+Deploy only after the owner's "go" (not deployed):
 
 ```
-npm run db:migrate:guards && npm run db:migrate:want && npx wrangler deploy
+cd server && npm run db:migrate:guards && npm run db:migrate:want && npm run db:migrate:fcm-follows && npx wrangler deploy
 ```
 
 ## Local development

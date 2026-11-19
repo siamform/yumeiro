@@ -1109,15 +1109,15 @@ and 2 GB phones). Phone and TV. Kill switch `tv4_online_search`. Option C is not
 
 ### ADR-037: Not in this release, with reasons (F-02, F-03 login path, F-11, NBUG-6, NBUG-13 proxy, F-13…F-15 moved to ADR-040)
 
-Status: accepted 2026-11-19, amended same day by ADR-040 (agent decision per the master order: unfinished work stays out, flag off, listed).
+Status: accepted 2026-11-19, amended same day by ADR-040, ADR-042, ADR-044 and ADR-045 (agent decision per the master order: unfinished work stays out, flag off, listed).
 
 | Item | Why not now (evidence) | What ships instead |
 |---|---|---|
-| F-02 Telegram | needs TDLib (native, ~20–30 MB per ABI, over the 2 GB phone and APK budget) and each user's own API id and phone login; no device can verify it here. docs/proposals/FEATURE-F-02-telegram.md | nothing; proposal kept |
+| ~~F-02 Telegram~~ | moved into this release on 2026-11-19 without login (owner decision 22:23 +06, ADR-042) | see ADR-042 |
 | F-03 TeraBox / DiskWala login path | the logged-in path needs account cookies and conflicts with the sites' terms; no DRM or auth bypass (master rule) | the existing hidden-WebView catch of public links (BEHAVIOR-SPEC "Cloud links") stays |
-| F-11 manga translation | needs on-device OCR + translation models (tens of MB each) and real-device verification on 2 GB phones | nothing; proposal kept |
-| NBUG-6 per-feature DNS | measured side effects (2 connections instead of 1, 5–6 threads per resolver, split cache, WebView not covered). docs/proposals/FEATURE-NBUG-6-per-feature-dns.md | the automatic DNS bypass already shipped |
-| NBUG-13 proxy (OMT-33 options 1/2) | a proxy is a new feature with WebView `ProxyController` and per-site rules; can not be verified on CI (nothing is blocked there) | option 3: system VPN or Private DNS, explained in the help text; DNS bypass for Yumeiro's own connections |
+| ~~F-11 manga translation~~ | moved into this release on 2026-11-19 (master prompt item 3; owner: size doesn't matter), ADR-044 | see ADR-044 |
+| NBUG-6 per-feature DNS | measured side effects (2 connections instead of 1, 5–6 threads per resolver, split cache, WebView not covered). docs/proposals/FEATURE-NBUG-6-per-feature-dns.md | the automatic DNS bypass already shipped; re-checked at the 2026-11-19 gate: still rejected, cheaper fallback offered to the owner (FEATURE-NBUG-6 gate section) |
+| ~~NBUG-13 proxy~~ | moved into this release on 2026-11-19 (master prompt item 5), ADR-045 | see ADR-045 |
 | Vega (OMT-24) | decided in F-05: Vega means the Vega app's provider repositories, not Amazon Vega OS (does not run Android apps). Step 4 (running Vega providers) is not in this release | repository detection from F-05 step 1 |
 | ~~F-13, F-14, F-15~~ | moved into this release on 2026-11-19 (ADR-040); flags `f13_offline_manga`, `f14_live_failover`, `f15_live_guide` | see ADR-040 |
 
@@ -1251,6 +1251,103 @@ asserted in `AccentToneTest`; Back on "Who's watching?" leaves the app (never in
 
 References: `ProfilesTest`, `ProfilesGuardTest`, `PrivateDownloadsTest`, `AccentToneTest`, `HoldSpeedTest`,
 `ProfilesDeviceTest`; CHECKLIST rows P-2X, TH-1, PR-1, DL-H; OWNER-MANUAL-TESTS OMT-44…OMT-46.
+
+### ADR-042: Public Telegram channels without login; TeraBox / DiskWala streams found again when they expire (F-02, F-03)
+
+Status: accepted 2026-11-19. F-02 scope is an owner decision (22:23 +06): "go with no login system like other but with
+a better experience". F-03 is the least-risk build from its proposal. Network and player change; both are behind
+flags (`telegram_public`, `cloud_capture_v2`).
+
+Context. Telegram links fell through to the generic page probe and a saved t.me site opened the page browser.
+TeraBox / DiskWala streams that the link finder captured expire after some time, and then the player showed "Access
+denied". Competitors read (ideas only, nothing copied; commits in the proposals): Hikari b186ab9b (web preview plus
+optional TDLib), FreshRSS TelegramChannels 6ebe781e, TMPlayer e674f784; terabox-gateway 063f61fc and TeraboxDL
+dbf7f2ce (both call TeraBox's share API with jsToken and usually a copied `ndus` account cookie: rejected because it
+gets around the site's own access).
+
+Decision.
+- F-02 reads only Telegram's public web preview: `t.me/s/<channel>` (`?before=`, `?q=`) and `t.me/<channel>/<post>?embed=1`.
+  - New `LinkHosts` routes `TelegramPost` / `TelegramPrivate`. Private links fail with a message and make no request.
+  - `TelegramPlayback` is a `StreamRefreshers` refresher: on 403/410 it reads the post again, and `RecoveryRouter.RefreshLink` resumes at the saved position.
+  - Channel screen: header, new-since-last-visit marks (`tg_seen_<channel>` in `yu_sites`), automatic older pages (at most 5), "Open in Telegram" for app-only posts.
+  - No TDLib, no account, no api_id.
+- F-03 `CloudRecapture` is a `StreamRefreshers` refresher for requests whose page is on a TeraBox / DiskWala host.
+  - It opens the same page once more off screen in a hardened WebView, starts its player the way the link finder's auto mode does, and returns the stream that the page itself requests.
+  - Budget: 2 tries per page per 10 minutes, 25 s each, and the WebView is destroyed afterwards.
+  - A page that needs the user (sign-in, check) returns null, so the player shows its error card.
+
+Consequences.
+- No startup or background cost: two registrations, no I/O.
+- The Telegram parser can break when Telegram changes its page. When that happens the list is empty and a message shows; nothing crashes.
+- The TeraBox folder-share file list is queued with a reason: there's no verifiable public fixture, and the API route is rejected.
+- Live checks with a real channel or share are owner/community tests.
+
+
+### ADR-043: Episode-airing wakes for Firebase phones (F-AIR)
+
+Status: accepted 2026-11-19. Server + startup-adjacent (push). Server not deployed until the owner's "go".
+
+Context. In production, 405 of 406 push users are Firebase phones (read-only D1 count). Airing wakes went only to
+UnifiedPush endpoints, and Firebase phones never reported their shows. Competitors (Mihon f64d82b9
+`LibraryUpdateWorker`, Kotatsu 34f6e523 `TrackWorker`) only poll periodically.
+
+Decision.
+- Migration 0005 adds `fcm_follows`. Firebase check-ins carry `anilist`/`airing` and are stored by the same code as UnifiedPush.
+- The cron queues `{wake:{fids}}`, and the Worker sends a data-only, high-priority `kind=wake` message (TTL 6 h, collapse key).
+- The app routes it to `BackgroundWork.wake` (unique work `push_catch_up_episodes`).
+- Tokens that are gone delete their row and follows.
+
+Consequences.
+- Alerts arrive about 30 min after airing instead of at the next periodic check.
+- No new permission, and no change for UnifiedPush.
+- Deploy needs migrations 0003, 0004 and 0005 first (the script is in SERVER.md).
+
+### ADR-044: Manga page translation on the device (F-11)
+
+Status: accepted 2026-11-19. Startup + extensions-adjacent (reader). Flag `f11_manga_translate`.
+
+Context. The reader had no translation. The owner said APK size doesn't matter. Competitors
+(jedzqer/manga-translator-android c980b45b, AGPL; Kala9527/ImmersiveComicReadingTranslation 54867de0, no licence)
+need screen capture or an overlay, and one uploads pages to a cloud model with the user's key.
+
+Decision.
+- Bundled ML Kit text recognition (ja/zh/ko/Latin) and on-device ML Kit Translation, with language packs downloaded once (Wi-Fi only optional).
+- Inside Yumeiro's reader only.
+- `MlKitInitProvider` is removed so startup is unchanged.
+- One page at a time; memory LRU 48 and 8 MB disk cache, cleared by Clear caches; models released on trim memory and reader close.
+- OCR capped at 2048 px. There's no cloud path, so no key and no upload.
+
+Consequences.
+- A larger APK (accepted by the owner).
+- The quality is ML Kit's, and real-chapter quality is an owner/community test.
+- With the setting off nothing new runs.
+
+### ADR-045: The user's own HTTP / SOCKS5 proxy for app requests and web pages (NBUG-13)
+
+Status: accepted 2026-11-19. Network + startup. Flag `nbug13_proxy`. Replaces the NBUG-13 row of ADR-037.
+
+Context. OMT-33: some hosts are blocked by IP/SNI and played only through a system VPN, and DNS can't
+fix that. Competitors: alexch33/super-video-downloader 1ae2300a (GPL-3.0) uses JVM-wide proxy properties,
+a default Authenticator and a local 127.0.0.1 relay; nextcloud/android 0c1060ce (AGPL) uses a WebView
+`ProxyController` override only, without a login.
+
+Decision.
+- `AppProxy` is a `ProxySelector` plus an OkHttp authenticator on the shared `NetworkClient`. The five
+  `HttpURLConnection` calls go through `AppProxy.open`.
+- No JVM-wide properties and no local relay. Local and private hosts stay direct. A failing proxy never
+  falls back to direct.
+- The password is sealed with SecretBox in `mt_proxy_secret`, which is excluded from backups and cleared
+  by Reset.
+- `java.net.Authenticator` is set only while a proxy with a login is on, and answers only for that host.
+- WebView uses the `ProxyController` override; the proxy's login is answered at most 3 times a minute,
+  and an unsupported WebView is reported as such.
+- Settings load lazily, so startup isn't touched.
+
+Consequences.
+- Off: behaviour is identical to before.
+- On: one network hop. Torrent peers and SmartDns's own DoH are not proxied, and the UI says so.
+- SOCKS5 with a login can't cover web pages, a WebView limit that is shown in Settings.
+- A real blocked host is an owner/community test.
 
 ## 11. Risks
 

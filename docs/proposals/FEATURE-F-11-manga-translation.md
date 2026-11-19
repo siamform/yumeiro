@@ -1,73 +1,90 @@
-# F-11 Manga auto-translation (proposal only; gated; cloud path is an owner call, OMT-25)
+# F-11 Manga page translation, on the device (ADR-044)
 
-Status: **proposal, not built.** Part 8 gate not passed (4.4). The owner approves before any code.
+Status: **Built, not tested** (batch B of PROGRAM-2026-11-19). Flag `f11_manga_translate` (kill switch).
+Owner decisions used: "size never matters for me, just do what ever is best" (2026-11-19), so the OCR
+models are bundled. There's no cloud key and no page upload. OMT-25 (cloud with the user's own key) is
+closed: **not built**, because on-device needs no key and sends nothing.
 
-## 1. Current code (read 2026-11-18, head 3ed2d14)
+## 1. Current code (read 2026-11-19, head cf124d38)
 
-- `ui/screens/manga/MangaScreens.kt:490` `MangaReaderScreen`: pages from `provider.pages(chapterUrl)`,
-  webtoon (`LazyColumn`) and paged (`HorizontalPager`) modes, `ZoomBox` pinch zoom, resume page via
-  `MangaLibrary` (`lastChapterUrl`, `lastPage`).
-- `sources/manga/MangaProvider.kt`, `MangaLibrary.kt`; Mihon/Mangayomi sources feed it.
-- No OCR, no on-device ML runtime (no ML Kit / TFLite / ONNX in `gradle/libs.versions.toml`), no
-  translation code.
+- `ui/screens/manga/MangaScreens.kt` `MangaReaderScreen`: webtoon (`LazyColumn`, fill width) and paged
+  (`HorizontalPager`, Fit) modes, `ZoomBox`, `PageImage` (tall pages split into strips, G7-MR1).
+- No OCR, ML runtime or translation code before this item.
 
-## 2. Sources read (ideas and contracts only; **neither licence lets us copy into Yumeiro without the owner**)
+## 2. Competitors (ideas only; nothing copied)
 
-- jedzqer/manga-translator-android at c980b45b3c806b678829307b68fd57d23c0892c7 (**AGPL-3.0**, LICENSE line
-  4): pipeline detection → OCR → translate → render. `detection/BubbleDetector.kt`, `TfliteDualModel.kt`,
-  `TextBlockMerger.kt` with a 21.4 MB `assets/models/detection/mixed-dual-s-e5_float16.tflite`;
-  `ocr/OcrEngine.kt` (`recognize(bitmap)`, scored by region), `PaddleOcrBase.kt`, `PPOcrV6SmallRec.kt`,
-  `KoreanOcr.kt`, `EnglishLineDetector.kt`, `LocalOcrConcurrency.kt`; translation through an LLM client
-  (`network/LlmClient.kt`, `RequestTimeoutBudget.kt`, `RetryHandler.kt`); `detection/LocalModelMemoryManager.kt`
-  unloads models; floating overlay over other apps via MediaProjection.
-- Kala9527/ImmersiveComicReadingTranslation at 54867de006effe299e987317adc06c7c35efd935 (the brief's
-  "Kotlin9527" repo is 404; this is the matching repo; **no licence file**, so nothing may be reused):
-  screen capture overlay (`capture/ScreenshotCapturer.java`, `overlay/OverlayTranslationService.java`), page
-  sent as a base64 JPEG to an OpenAI-compatible `/chat/completions` endpoint
-  (`ai/OpenAiCompatibleClient.java:71-73, 318`), API key in AndroidKeyStore AES-GCM (`settings/SecretStore.java`).
+| Project | Commit | Files read | Notes |
+|---|---|---|---|
+| [jedzqer/manga-translator-android](https://github.com/jedzqer/manga-translator-android) (AGPL-3.0) | c980b45b3c806b678829307b68fd57d23c0892c7 | `detection/BubbleDetector.kt`, `TfliteDualModel.kt`, `TextBlockMerger.kt`, `LocalModelMemoryManager.kt`; `ocr/OcrEngine.kt`, `PaddleOcrBase.kt`, `PPOcrV6SmallRec.kt`, `KoreanOcr.kt`, `EnglishLineDetector.kt`, `LocalOcrConcurrency.kt`; `network/LlmClient.kt`, `RequestTimeoutBudget.kt`, `RetryHandler.kt` | Detection → OCR → LLM translation; floating overlay over other apps (MediaProjection); 21.4 MB detector model |
+| [Kala9527/ImmersiveComicReadingTranslation](https://github.com/Kala9527/ImmersiveComicReadingTranslation) (no licence) | 54867de006effe299e987317adc06c7c35efd935 | `capture/ScreenshotCapturer.java`, `overlay/OverlayTranslationService.java`, `ai/OpenAiCompatibleClient.java`, `settings/SecretStore.java` | Sends the whole page as JPEG to an OpenAI-compatible endpoint with the user's key |
 
-Weaknesses: the first adds 20+ MB of models and heavy RAM (not for 2 GB phones by default); the second
-sends whole pages to a third-party cloud with the user's key (privacy, cost, terms) and needs
-screen-capture permission.
+Both need screen capture or an overlay permission. One of them also sends pages to a cloud service.
+Yumeiro translates inside its own reader, so it needs no permission and sends no page. It also caches
+results per page and releases the models under memory pressure.
 
-## 3. Design (inside Yumeiro's own reader; no overlay, no screen capture)
+## 3. Design (built)
 
-- Entry: reader menu "Translate pages" (off by default), per series language pair.
-- Pipeline in a `MangaTranslate` service, one page at a time ahead of the reader, off main:
-  1. Text-region detection + OCR **on device** as a downloadable model pack (not in the APK), only on
-     non-low-end devices; size and model licence (e.g. PaddleOCR Apache-2.0) to be approved.
-  2. Translation: on-device model pack where available; **cloud only if the owner approves**, with the
-     user's own key, stored in AndroidKeyStore, and only text (never the page image) sent.
-  3. Render: text boxes drawn over the page image in Compose (original kept; toggle to compare).
-- Cache translations per page hash in `cache/manga-tl/` (bounded, cleared by Clear caches).
-- Memory: model loaded on first use, unloaded on trim memory and when the reader closes.
-- Feature flag `manga_translate`, kill switch; not offered on `DeviceClass.isLowEnd` or TV unless the user
-  forces it.
+- `sources/manga/MangaTranslate.kt`:
+  - `MangaTranslate`:
+    - settings `tl_on/tl_src/tl_dst/tl_wifi_only` in the `manga_reader` prefs;
+    - `prepare` downloads the language pack (Wi-Fi only if the user chooses it, 300 s limit);
+    - `page()` works one page at a time (mutex), memory LRU 48 → disk `cacheDir/manga-tl` (8 MB cap, oldest out) → OCR + translate;
+    - `release()` on trim memory / reader close;
+    - `clear()` for Clear caches.
+  - `MlKitTlEngine`: [ML Kit](https://developers.google.com/ml-kit/terms) text recognition (bundled
+    Japanese / Chinese / Korean / Latin models) and on-device Translation. OCR reads at most 2048 px on
+    the long side and scales the boxes back.
+  - `MangaTlPlan` (pure):
+    - line join per script, with "-" mending for Latin;
+    - filtering of page numbers, punctuation, specks and single Latin letters;
+    - tall (vertical-text) bubbles widened around their centre, up to 45 % of the page;
+    - image-fit mapping (Fit vs fill width);
+    - cache key = SHA-256 of engine + source + target + page id;
+    - JSON encode/decode.
+- Reader UI:
+  - Translate icon (`reader_translate`);
+  - a sheet with on/off, source (ja/zh/ko/latin), 14 targets (the default is the device language when supported) and Wi-Fi only;
+  - a status chip (`tl_status`, tap to retry);
+  - translations drawn as white boxes over each bubble (`tl_box_<page>_<i>`, the content description is the translation). Long-press hides a box, and the original page always stays underneath.
+- `MlKitInitProvider` is removed from the manifest, so ML Kit starts only when the user turns this on.
 
-## 4. Action–reaction
+## 4. Feature profile
 
-| Action / event | Reaction |
+| Field | Value |
 |---|---|
-| Turn on Translate pages | Asks to download the model pack (size shown); Wi-Fi only by default |
-| Page scrolls in | Translated overlay appears when ready; original shown meanwhile |
-| Toggle original | Overlay hidden, same page |
-| Low memory | Model unloaded, translation paused with a note |
-| Offline (cloud mode) | On-device result if present, otherwise original pages and a note |
-| Back / close reader | Work cancelled, model unloaded |
-| Rotate | Overlay re-laid out from cached boxes |
-| Bad OCR | Long-press a box to edit or hide it |
+| Purpose | Read raw Japanese / Chinese / Korean / Latin-script manga in the user's language |
+| Entry points | Manga reader top bar → Translate |
+| Storage / migration | 4 keys in `manga_reader`; cache files in `cacheDir/manga-tl`; ML Kit language packs in app files (managed by ML Kit); no migration |
+| Permissions | None new |
+| Settings | Translate sheet; flag `f11_manga_translate` |
+| Backup / restore | `manga_reader` prefs go with the existing backup (choices restored); cache and packs are not backed up |
+| Reset | Clear caches → `MangaTranslate.clear` (unit-tested); app data reset removes the packs |
+| Errors / offline | Pack missing → chip "Getting the Japanese → English language pack…"; failure or offline → chip "Couldn't get the … language pack. Check the connection, then tap to try again." (Wi-Fi only on mobile data ends the same way after 300 s); a page whose OCR/translation fails stays as the original page (no box, no crash); cached pages work offline |
+| Accessibility | Each box carries its translation as content description; buttons labelled; contrast black on white |
+| TV | Icon and sheet are focusable; same reader on TV; checked on both TV images |
+| Low-end | Off by default; OCR capped at 2048 px; one page at a time; models released on trim memory |
+| Performance budget | 0 ms at cold start (provider removed); per page ≤ 3 s on a mid phone after the pack is present (owner test); emulator assertion ≤ 20 s; disk ≤ 8 MB |
+| Inventory | INVENTORY rows F-11 Translate sheet, F-11 overlay, F-11 cache/reset |
 
-## 5. Pros and cons
+## 5. Side effects
 
-- On-device first: + private, works offline; − large download, slower on mid phones, quality varies.
-- Cloud (owner call): + quality; − privacy, cost, terms, key handling.
-- Inside our reader vs overlay: + no MediaProjection or overlay permission; − only works in Yumeiro.
+- APK size grows by the bundled OCR models (about 30–40 MB across ABIs; accepted by the owner).
+- Startup: none (the init provider is removed). Memory: models only while translating.
+- Existing reader: with the setting off nothing new runs, and `MangaTallPageDeviceTest` runs as regression.
+- Network: only the one-time language pack download from Google, after the user turns translation on.
 
-## 6. Tests (when approved)
+## 6. Service terms
 
-Unit (pure): box merge and layout from fixture OCR output; cache key. Device: fixture chapter with known
-text on api36 (OCR + overlay), memory check on api33-lowram (feature hidden), Back during work.
+Translation runs on the device under the [ML Kit terms](https://developers.google.com/ml-kit/terms).
+Pages aren't uploaded anywhere, and DRM, sign-in and paywalls aren't touched. It translates only pages
+the reader already shows.
 
-## 7. Owner decision (OMT-25)
+## 7. Tests
 
-On-device only, or also cloud with the user's own key? Model pack size limit? Licences of any model.
+- Unit `MangaTranslateTest` (fail-before = compile failure): join, filtering, fit, layout, key,
+  encode/decode, page pipeline with a fake engine (strip offsets, cache, release, clear), settings.
+- Device `MangaTranslateDeviceTest`:
+  - a: real ML Kit reads the fixture `tl_page.png` (こんにちは / ありがとう, a page number and a face) → "hello" / "thank";
+  - b: in the reader the boxes appear, and turning it off removes them.
+  - Runs on both phones and both TVs, with `MangaTallPageDeviceTest` as regression.
+- Owner/community test: quality on real chapters (OWNER-MANUAL-TESTS, Yumeiro users section).

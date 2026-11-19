@@ -124,3 +124,26 @@ without a WebView proxy (app-wide) or moving the two `HttpURLConnection` users t
 cost (§2): +5 to +6 threads per extra engine for ~60 s and a second pooled connection per host per non-default
 feature. **Gate decision: not passed — not built.** Cheaper option already shipped: the single-engine
 sequential auto bypass. §2 and §4 are now measured; a build would need the owner to accept (i)–(iv) or a narrower ask (for example one extra policy for drama only).
+
+## Gate under the 2026-11-19 master prompt (batch C): rejected, cheaper fallback proposed
+
+Rule: "if any measurable side effect exists, the design is rejected and a cheaper fallback is proposed. Do not build
+it past the gate." Measurable side effects already recorded above:
+- (iv) on device 44192612391: +5 to +6 OkHttp threads per extra engine for about 60 s;
+- one pooled connection becomes two when the `Dns` differs (Address.equalsNonHost, OkHttp 5.5.1);
+- first lookup up to 15 091 ms on a network that blocks DoH (CI 44192309663).
+
+**Per-feature DNS routing is rejected and not built.** This isn't silently dropped: it is listed in
+UNVERIFIED-QUEUE as "Rejected at gate, owner decides".
+
+Cheaper fallback (proposal only; the owner decides whether to build it):
+- F1 "DoH from the first call" for a feature's known hosts. A feature (for example a drama catalog or an
+  extension's base URL) pre-marks its hosts in the existing auto-bypass set (`SmartDns.bypass`, max 200, 12 h).
+  - It keeps one `Dns` object, so the pool stays shared.
+  - There is one policy per host, so the cache isn't split.
+  - It uses the same engines as today's auto mode, so no extra engine or threads.
+  - The only change is that the first lookup of those hosts skips the system resolver.
+  - Before building, the cost would be measured with an `Nbug6EngineCostDeviceTest` variant: same thread and pool counts as auto mode, or rejected.
+- F2: the 5 `HttpURLConnection` calls (subtitles 2, app update 3) would follow the app's DNS by moving them onto `NetworkClient`.
+  This is a behaviour change for the update check, so it needs its own test and is also an owner call.
+- What a DNS change can't fix (IP/SNI blocks, NBUG-13) is covered by the proxy option (FEATURE-NBUG-13-proxy.md), not by DNS.

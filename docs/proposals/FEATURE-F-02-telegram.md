@@ -1,72 +1,106 @@
-# F-02 Telegram option (proposal only; gated; owner decision OMT-25)
+# F-02 Telegram: public channels and post links, no login (ADR-042)
 
-Status: **proposal, not built.** Part 8 gate not passed (4.4). Terms and privacy are an owner call (OMT-25).
+Status: **Built, not tested** (batch A of PROGRAM-2026-11-19). Flag `telegram_public` (kill switch).
+The owner decided on 2026-11-19 at 22:23 +06: "go with no login system like other but with a better
+experience". So there's no TDLib and no Telegram account; option B below is closed by that decision. It
+isn't silently dropped.
 
-## 1. Current code (read 2026-11-18, head 52f88de)
+## 1. Current code (read 2026-11-19, head cf40512b)
 
-- Telegram appears only as community links: `notify/Reminders.kt:27-28` (channel and group `t.me` links).
-- No Telegram source, no TDLib, no `t.me` handling in `stream/LinkHosts.kt` (a pasted `t.me` post link
-  goes to the generic link finder).
+- Before this item, Telegram showed up only as community links (`notify/Reminders.kt`). A pasted `t.me`
+  post went to the generic page probe, a private `t.me/c/…` link was probed too, and a saved `t.me`
+  site opened the page browser.
+- Player recovery path that gets reused: `RecoveryRouter` returns `RefreshLink` on a refused stream or a
+  network error when a `StreamRefreshers` refresher owns the request, at most twice. Then
+  `VideoPlayerModal` restarts the fresh request at the saved position.
 
-## 2. Competitor (ideas and contracts only; Hikari GPL-3.0, no code copied)
+## 2. Competitors (ideas and contracts only; no code copied)
 
-Hikari `codegeasse1/hikari` at 8aa1652b2af151aca85be316b926cbabee742e63, `app/src/main/java/com/hikari/app/telegram/`:
+| Project | Commit / tag | Files read | What it does |
+|---|---|---|---|
+| Hikari [codegeasse1/hikari](https://github.com/codegeasse1/hikari) (GPL-3.0) | b186ab9b02531c287373d67637f31795671fb0bc (first read at 8aa1652b) | `app/src/main/java/com/hikari/app/telegram/{TelegramWeb.kt, TelegramLinks.kt, TelegramChannels.kt, TelegramError.kt, Td.kt, TdStream.kt}`, `ui/screens/TelegramScreen.kt`, `jniLibs/README.md` | Two layers. Web preview (`t.me/s/<name>`, `?before=` paging, `?q=` search, saved post links incl. `tg://resolve`, `?single`/`?comment`; document file names as titles; `data-src`/poster fallbacks; counts "unpublished" videos). Optional TDLib login with the user's own api_id/api_hash; `TdFileDataSource` streams by byte offset and repairs file references; prebuilt `libtdjni.so` from Telegram X 0.29.0.1813 (arm64 20,060,432 B, armv7 14,264,480 B, plus libsslx/libcryptox/libc++). |
+| FreshRSS-xExtension-TelegramChannels [shcheglovnd](https://github.com/shcheglovnd/FreshRSS-xExtension-TelegramChannels) | 6ebe781e | `lib/TelegramChannelsPage.php` | Reads the same `t.me/s/` preview (message wrap, `data-post`, date) to make a feed. |
+| TMPlayer [dracu-lah/TMPlayer](https://github.com/dracu-lah/TMPlayer) | e674f784 | repository tree, README | Account-based player (TDLib/MTProto); no public-preview mode. |
+| HardPlay [hariomgupta70427/HardPlay](https://github.com/hariomgupta70427/HardPlay) | 1581661728c4 | README, tree | Telegram-bot / account based streaming. |
+| telegramedia [kernoeb/telegramedia](https://github.com/kernoeb/telegramedia) | 4666a08f111c | README, tree | Server that needs an account session. |
 
-- `TelegramWeb.kt` (256 lines): **no login** path. Reads a public channel's web preview
-  `https://t.me/s/<name>` (`?before=` paging, `?q=` search), parses video posts and their CDN file URL;
-  counts posts Telegram withholds from browsers; `normalize` accepts `@name`, `t.me/name`, `t.me/s/name`,
-  post links.
-- `Td.kt` (1,272 lines) + `TdStream.kt` (309): **login** path with TDLib; the user enters their own
-  `api_id`/`api_hash` (`Td.kt:208-219`), phone, code, password states; `TdFileDataSource` streams a file to
-  Media3 by asking TDLib for byte windows and repairs expired file references.
-- `TelegramChannels.kt`, `TelegramLinks.kt`: saved channels and post links (`t.me/c/<id>/<post>` for private).
-- Native cost: `jniLibs/arm64-v8a/libtdjni.so` 20.1 MB, `armeabi-v7a` 14.3 MB; `TdApi.java` 5.2 MB source.
+What Hikari's web layer doesn't do (read in `TelegramWeb.kt` / `TelegramScreen.kt`): there's no refresh
+when the preview's temporary file address expires, no page cache, no channel header (photo,
+subscribers, description), no "new since the last visit" marks for public channels (its unread counts
+come from TDLib), and nothing to do with an app-only post.
 
-Weaknesses: TDLib adds ~14–20 MB per ABI to the APK and a resident native client (memory on 2 GB phones,
-TV); the user must create a Telegram developer app; the web-preview path breaks whenever Telegram changes
-the page and only covers public channels.
+## 3. Options and owner decision
 
-## 3. Options
+| Option | Gives | Cost / risk | Decision |
+|---|---|---|---|
+| A. Public preview (no login) | Public channels, post links, search, paging | Parser can break when Telegram changes the page; public only | **Build** |
+| B. TDLib login | Private chats, big files, seeking | +14–25 MB per ABI; 30–80 MB native memory while running; full account session in the app; api_id needed ([Telegram API terms](https://core.telegram.org/api/terms)); [unofficial-client accounts are observed](https://core.telegram.org/api/obtaining_api_id) | **Not built: owner decision 2026-11-19 22:23 +06** |
+| C. Post link only | One pasted post plays | Smallest | Part of A |
 
-| Option | What it gives | Cost / risk |
-|---|---|---|
-| A. Public channel preview (no login) | Watch videos posted in public channels; save channels | HTML parsing can break; public only; fits 200k users |
-| B. TDLib bring-your-own account | Private chats/channels, large files, seeking | +14–20 MB APK per ABI, native memory, account security, Telegram API terms; split APK or on-demand module required |
-| C. Link only | `t.me/<channel>/<post>` pasted → player via A's parser | Smallest; one link at a time |
+## 4. Design (built)
 
-Recommendation: **C then A**, behind flag `telegram_public`, off by default. B only as a separate
-dynamic-feature module if the owner accepts the size and the terms.
+- `online/telegram/TelegramPublic.kt`:
+  - `parse()` handles `@name`, t.me / telegram.me / telegram.dog, `/s/`, `tg://resolve|privatepost|join`, and the reserved paths.
+  - `parsePage()` reads posts, video, document title, thumb/poster, date, `data-before`, and the header: photo, subscribers, description.
+  - `fetchChannel()` has a 15 s limit and a 10-minute LRU cache of 8 pages. `fetchPost()` is never cached.
+- `stream/LinkHosts.kt` has new routes `TelegramPost` / `TelegramPrivate`. They apply only to a full
+  address and only when the flag is on. `StreamResolver.resolveTelegram` handles a post, and a private
+  link fails with a clear message and makes no request.
+- `online/telegram/TelegramPlayback.kt` is a `StreamRefreshers` refresher. An expired file address
+  (403/410) re-reads the post, and playback resumes at the same position.
+- `online/telegram/TelegramSeen.kt` stores one Int per channel in `yu_sites` (the newest post seen).
+- `ui/screens/sites/TelegramChannelScreen.kt` has:
+  - the channel header and a search box (Telegram's own `?q=`; Back clears the search);
+  - older pages that load on their own at the end of the list (at most 5 per opening, and they stop after a failure), with the "Older posts" button kept for remotes and screen readers;
+  - "New" marks since the last visit;
+  - a card with "Open in Telegram" for app-only posts;
+  - honest errors with Retry.
+- Saving `@name` or a t.me channel link in Web sites saves `https://t.me/s/<name>` named "@name".
 
-## 4. Design (A/C)
+Better than the competitors read: expired links refresh with resume; the header, new marks and
+app-only hand-off are added; pages are cached; private links never trigger a request.
 
-- `LinkHosts.classify`: `t.me/<name>/<post>` → new route `TelegramPost` (pure, unit-tested).
-- `TelegramPublic` (online/telegram): fetch the post's `?embed=1` page or `t.me/s/<name>` through OkHttp,
-  parse the video URL, 15 s timeout, cache channel pages 10 min.
-- Saved channels: list like Web sites (F-04), in SharedPreferences with backup in the SOURCES section.
-- Playback: the CDN URL goes to the existing player; download through the existing download path.
-- No data leaves the phone except the request to `t.me` (stated in the help text).
+## 5. Feature profile
 
-## 5. Action–reaction
-
-| Action / event | Reaction |
+| Field | Value |
 |---|---|
-| Paste a public post link | Plays the video; title from the caption |
-| Paste a private (`t.me/c/…`) link | Clear message: needs a Telegram login (not supported) |
-| Post has no video / withheld | Message "Telegram does not publish this file to browsers" |
-| Page layout changed | Parser returns nothing → message and a crash-free fallback to the link finder |
-| Offline / slow | Timeout message, cached page if any |
-| Flag off | Telegram links go to the generic link finder as today |
+| Purpose | Watch videos from public Telegram channels and pasted post links, without an account |
+| Entry points | Web sites → add `@name` / t.me link → channel screen; any pasted t.me post link (Stream, share intent) |
+| Storage / migration | Saved channel = an existing `SavedSites.Site` (no schema change); `tg_seen_<channel>` Int in `yu_sites`; no migration |
+| Permissions | None new (INTERNET already) |
+| Settings | Feature flag `telegram_public` (default on, kill switch) |
+| Backup / restore | `yu_sites` is a Library file in `PrefSections` → saved channels and seen marks go with Library backup/restore |
+| Reset | Library reset clears `yu_sites`; removing a saved channel forgets its seen mark |
+| Errors / offline | Offline → "Couldn't reach Telegram…" + Retry; unknown/private channel → "no public posts…"; app-only post → explanation + Open in Telegram; layout change → empty list + message, no crash |
+| Accessibility | Rows are buttons with click labels ("Play" / "Why it can't play"); text contrast from the palette; the Older posts button stays alongside the automatic loading |
+| TV | Rows, search, Older posts and Open in Telegram are focusable buttons; checked on both TV images in pass-after |
+| Low-end | No work at startup (refresher registration only); one HTTP GET per page; page cache of 8 entries; thumbnails through the existing Coil cache |
+| Performance budget | Channel page ≤ 15 s hard limit (normally one GET of about 100–200 KB of HTML); parse off the main thread; 0 ms added to cold start |
+| Inventory | INVENTORY rows: F-02 channel screen, F-02 post link, F-02 expired-link refresh |
 
-## 6. Pros and cons
+## 6. Side effects
 
-- A/C: + no login, no native library, small; − public only, fragile parser.
-- B: + full Telegram; − APK size, memory, account risk, terms.
+- Stability: the new code runs only when a Telegram link or channel is opened. Every failure path returns
+  a message, never throws (unit-tested).
+- Battery: no background work, polling or service.
+- Startup: one object registration in `MTApplication` (no I/O).
+- Memory: at most 8 cached parsed pages (each a few KB of strings).
+- Existing features: other links keep their routes (the full `LinkHostsTest` runs in CI). With the flag
+  off, t.me links take the old path (`flagOffKeepsTheOldPath`).
 
-## 7. Tests (when approved)
+## 7. Service terms
 
-Unit (pure): `t.me` link classification and HTML parsing from saved fixtures (fail-before: classify returns
-generic). Device: fixture-served page on api33-lowram and tv-api34; Back/rotate/kill during load.
+The app reads only the public web preview that Telegram shows to any browser: no login, no API, and
+no access to private chats. A post that Telegram limits to its apps stays limited, and the user is sent
+to Telegram. DRM, authentication and access controls aren't touched.
 
-## 8. Owner decision (OMT-25)
+## 8. Tests
 
-Plan A/C? Is a user login (B, TDLib, own api_id) ever acceptable?
+- Unit tests (fail-before = compile failure, the classes are missing):
+  - `TelegramPublicTest`: links, page parse, header, new marks, cache, errors, search/paging.
+  - `TelegramAndCloudRoutesTest`.
+- Device tests:
+  - `TelegramPublicDeviceTest`: saved channel → list, header, new marks, app-only card, search, play.
+  - `TelegramPlaybackDeviceTest`: a post link plays, and an expired 403 token is refreshed to a first frame.
+  - These run on both phones and both TVs (network + player).
+- Owner/community test: a real public channel (OMT, Yumeiro users section).
