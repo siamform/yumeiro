@@ -66,7 +66,7 @@ object Backup {
     /** Top-level files that are device-specific. */
     private val excludedFiles = setOf("online_downloads.json", dev.asfakul.yumeiro.player.LastPlayed.QUEUE_FILE) // G6-QP: device URIs, refills on play
     /** Folders under filesDir that hold user data. */
-    internal val dataDirs = listOf("streams", "servers", "manga", "stremio", "js", "lyrics", "extensions", "tachiyomi")
+    internal val dataDirs = listOf("streams", "servers", "manga", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles")
     private const val PHOTO = "backdrop_photo.jpg"
 
     data class Summary(val entries: Int, val bytes: Long, val createdAt: Long, val appVersion: String)
@@ -85,6 +85,7 @@ object Backup {
         return when {
             isCode(name) -> Section.EXTENSION_FILES
             top == "manga" || top == "lyrics" -> Section.LIBRARY
+            top == "profiles" -> if (rel.endsWith(".json")) Section.LIBRARY else null // PR-1: each profile's lists
             top == "tachiyomi" && rel.startsWith("tachiyomi/memo/") -> Section.LIBRARY
             top == "extensions" -> if (rel == "extensions/state.json") Section.SOURCES else null // market caches refill themselves
             top in dataDirs -> Section.SOURCES

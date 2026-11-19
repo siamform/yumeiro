@@ -79,7 +79,7 @@ object OnlineBookmarks {
     fun ensureLoaded(context: Context) {
         if (loaded) return
         loaded = true
-        val f = File(context.applicationContext.filesDir, "online_bookmarks.json").also { file = it }
+        val f = dev.asfakul.yumeiro.profiles.Profiles.file(context, "online_bookmarks.json") /* PR-1 */.also { file = it }
         // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
         val a = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { JSONObject(it).getJSONArray("items") }.value ?: return
         publish((0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::from) }.sortedByDescending { it.addedAt })

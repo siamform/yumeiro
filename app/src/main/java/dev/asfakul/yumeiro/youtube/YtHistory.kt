@@ -25,7 +25,7 @@ object YtHistory {
     fun load(context: Context): List<YtItem> {
         if (!loaded) {
             loaded = true
-            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+            val raw = context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).getString(KEY, null)
             _items.value = runCatching { decode(raw) }.getOrDefault(emptyList())
         }
         return _items.value
@@ -40,7 +40,7 @@ object YtHistory {
         val kept = if (item.channelUrl == null && old?.channelUrl != null) item.copy(channelUrl = old.channelUrl, channelAvatar = item.channelAvatar ?: old.channelAvatar) else item
         val next = (listOf(kept) + _items.value.filterNot { it.id == item.id }).take(MAX)
         _items.value = next
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()
     }
 
     /** BUG-2 (E3): the watch page learned the channel of [id]; history cards can open it now. */
@@ -52,12 +52,12 @@ object YtHistory {
         if (i < 0) return
         val next = cur.toMutableList().also { it[i] = it[i].copy(channelUrl = channelUrl, channelAvatar = it[i].channelAvatar ?: avatar) }
         _items.value = next
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().putString(KEY, encode(next)).apply()
     }
 
     fun clear(context: Context) {
         _items.value = emptyList()
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().remove(KEY).apply()
     }
 
     internal fun encode(list: List<YtItem>): String = JSONArray().apply {

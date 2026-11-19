@@ -76,6 +76,7 @@ object ResetCenter {
             ?.filter { Backup.prefIncluded(it) }.orEmpty()
         if ("history" in ids) {
             historyFiles.forEach { File(files, it).delete() }
+            File(files, "profiles").listFiles()?.forEach { dir -> historyFiles.forEach { File(dir, it).delete() } } // PR-1
             prefNames.forEach { name -> removeWhere(context, name) { k -> PrefSections.isHistory(name, k) } }
         }
         if ("extensions" in ids) {

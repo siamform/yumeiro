@@ -52,13 +52,17 @@ object OnlineSettings {
     /** Optional free SubSource API key (adds SubSource results to subtitle search). Stored encrypted. */
     val subsourceKey: StateFlow<String> = _subsourceKey.asStateFlow()
 
+    @Volatile private var adultPrefs: SharedPreferences? = null
+
     fun init(context: Context) {
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences("online_settings", Context.MODE_PRIVATE).also { prefs = it }
         val s = context.applicationContext.getSharedPreferences(SECRETS_FILE, Context.MODE_PRIVATE).also { secrets = it }
         migrateSecrets(p, s)
-        _adult.value = p.getBoolean("adult", false)
-        _adultPrivate.value = p.getBoolean("adult_private", true)
+        // PR-1: the adult switches belong to the profile (a new profile starts with adult content off).
+        val a = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, "online_settings"), Context.MODE_PRIVATE).also { adultPrefs = it }
+        _adult.value = a.getBoolean("adult", false)
+        _adultPrivate.value = a.getBoolean("adult_private", true)
         _skipIntro.value = p.getBoolean("skip_intro", true)
         _autoSkip.value = p.getBoolean("auto_skip", false)
         _subtitleLang.value = p.getString("subtitle_lang", null) ?: java.util.Locale.getDefault().language.ifBlank { "en" }
@@ -67,8 +71,8 @@ object OnlineSettings {
         _subsourceKey.value = readSecret("subsource_key").orEmpty()
     }
 
-    fun setAdult(context: Context, v: Boolean) { init(context); _adult.value = v; prefs?.edit()?.putBoolean("adult", v)?.apply(); OnlineRepository.clearCaches() }
-    fun setAdultPrivate(context: Context, v: Boolean) { init(context); _adultPrivate.value = v; prefs?.edit()?.putBoolean("adult_private", v)?.apply() }
+    fun setAdult(context: Context, v: Boolean) { init(context); _adult.value = v; adultPrefs?.edit()?.putBoolean("adult", v)?.apply(); OnlineRepository.clearCaches() }
+    fun setAdultPrivate(context: Context, v: Boolean) { init(context); _adultPrivate.value = v; adultPrefs?.edit()?.putBoolean("adult_private", v)?.apply() }
     fun setSkipIntro(context: Context, v: Boolean) { init(context); _skipIntro.value = v; prefs?.edit()?.putBoolean("skip_intro", v)?.apply() }
     fun setAutoSkip(context: Context, v: Boolean) { init(context); _autoSkip.value = v; prefs?.edit()?.putBoolean("auto_skip", v)?.apply() }
     fun setSubtitleLang(context: Context, v: String) { init(context); _subtitleLang.value = v; prefs?.edit()?.putString("subtitle_lang", v)?.apply() }

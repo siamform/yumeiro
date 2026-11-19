@@ -68,7 +68,7 @@ object OnlineHistory {
     fun ensureLoaded(context: Context) {
         if (loaded) return
         loaded = true
-        val f = File(context.applicationContext.filesDir, "online_history.json").also { file = it }
+        val f = dev.asfakul.yumeiro.profiles.Profiles.file(context, "online_history.json") /* PR-1 */.also { file = it }
         // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
         val o = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { JSONObject(it) }.value ?: return
         val list = o.optJSONArray("titles")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::entryFrom) } }.orEmpty()
