@@ -1116,17 +1116,32 @@ private fun VideoPlayerModalContent(
     var externalChecked by remember(video.id) { mutableStateOf(false) }
     var askPlayer by remember(video.id) { mutableStateOf(false) }
     val closeNow by rememberUpdatedState(onClose)
+    val currentOnProgressUpdateForHandOff by rememberUpdatedState(onProgressUpdate)
     fun handOffExternal() {
         val cfg = exoPlayer.currentMediaItem?.localConfiguration ?: return
         val mime = cfg.mimeType?.takeIf { it.startsWith("video/") || it.startsWith("application/") } ?: "video/*"
         val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
-        val i = Intent(Intent.ACTION_VIEW).setDataAndType(cfg.uri, mime)
-            .putExtra("title", video.title)
-            .putExtra("position", pos.toInt()) // MX Player
-            .putExtra("from_start", pos <= 0L) // VLC
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-        val ok = runCatching { context.startActivity(Intent.createChooser(i, "Play with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+        // F-07: the stream's own headers and subtitles go with it, in the chosen app's extras.
+        val req = runCatching { dev.asfakul.yumeiro.stream.StreamRepository.requestFor(cfg.uri.toString()) }.getOrNull()
+        val headers = buildMap { req?.userAgent?.takeIf { it.isNotBlank() }?.let { put("User-Agent", it) }; req?.requestHeaders()?.let { putAll(it) } }
+        val subs = (req?.subtitles?.map { dev.asfakul.yumeiro.player.ExternalPlayers.Sub(it.url, it.label) }.orEmpty() +
+            cfg.subtitleConfigurations.map { dev.asfakul.yumeiro.player.ExternalPlayers.Sub(it.uri.toString(), it.label ?: it.language ?: "Subtitle") })
+            .distinctBy { it.url }.filter { it.url.startsWith("http") || it.url.startsWith("content:") }
+        val selectedLang = exoPlayer.currentTracks.groups.firstOrNull { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT && it.isSelected }?.mediaTrackGroup?.getFormat(0)?.label
+        val selected = subs.indexOfFirst { it.name == selectedLang }.takeIf { it >= 0 }
+        val pkg = dev.asfakul.yumeiro.player.VideoPrefs.externalApp.value
+        val app = dev.asfakul.yumeiro.player.ExternalPlayers.App.entries.firstOrNull { it.pkg == pkg }
+            ?.takeIf { a -> dev.asfakul.yumeiro.player.ExternalPlayers.installed(context).contains(a) }
+        val extras = dev.asfakul.yumeiro.player.ExternalPlayers.extras(app, video.title, pos, headers, subs, selected)
+        val i = dev.asfakul.yumeiro.player.ExternalPlayers.toIntent(app, cfg.uri, mime, extras)
+        val id = video.id
+        val report = currentOnProgressUpdateForHandOff
+        val onBack: (dev.asfakul.yumeiro.player.ExternalPlayers.Watched) -> Unit = { w -> if (w.durationMs > 0) report(id, w.positionMs, w.durationMs) }
+        var ok = dev.asfakul.yumeiro.player.ExternalPlayerHost.launch(context, i, if (app == null) "Play with" else null, onBack)
+        // VLC renamed its player activity once; fall back to the package without a component.
+        if (!ok && app != null) ok = dev.asfakul.yumeiro.player.ExternalPlayerHost.launch(context, i.setComponent(null), null, onBack)
         if (!ok) { showToast("No other video player is installed"); return }
+        if (headers.isNotEmpty() && !dev.asfakul.yumeiro.player.ExternalPlayers.passesHeaders(app)) showToast("${app?.label ?: "That app"} can't receive this link's headers; it may not play there")
         exoPlayer.pause()
         closeNow()
     }

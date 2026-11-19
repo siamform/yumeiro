@@ -51,6 +51,10 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // F-07: one result launcher for hand-offs to VLC / MX / mpv / Just (watched position comes back here).
+        dev.asfakul.yumeiro.player.ExternalPlayerHost.launcher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
+            dev.asfakul.yumeiro.player.ExternalPlayerHost.onResult(it.data)
+        }
         dev.asfakul.yumeiro.online.ExtensionPopups.init(this)
         enableEdgeToEdge()
         StreamRepository.init(this)

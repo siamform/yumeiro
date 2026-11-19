@@ -154,6 +154,17 @@ fun QualityAndAudioCard() {
     SettingsCard {
         ChoiceRow("Default player", "qa_player", VideoPrefs.DefaultPlayer.entries, player, { it.label }, { it.detail }) { VideoPrefs.setDefaultPlayer(context, it) }
         SettingsDivider()
+        if (player != VideoPrefs.DefaultPlayer.YUMEIRO) {
+            // F-07: which other app; only players that are installed are offered.
+            val ext by VideoPrefs.externalApp.collectAsState()
+            val apps = androidx.compose.runtime.remember { listOf<dev.asfakul.yumeiro.player.ExternalPlayers.App?>(null) + dev.asfakul.yumeiro.player.ExternalPlayers.installed(context) }
+            val picked = apps.firstOrNull { it?.pkg == ext } ?: apps.first()
+            ChoiceRow("Other player app", "qa_external_app", apps, picked, { it?.label ?: "Choose each time" },
+                { a -> when { a == null -> "Android asks which app to use"; dev.asfakul.yumeiro.player.ExternalPlayers.passesHeaders(a) -> "Gets the link's headers and subtitles"; else -> "Gets subtitles; links that need a login or referer may not play" } }) {
+                VideoPrefs.setExternalApp(context, it?.pkg.orEmpty())
+            }
+            SettingsDivider()
+        }
         PlayerControlsEditor()
     }
 }

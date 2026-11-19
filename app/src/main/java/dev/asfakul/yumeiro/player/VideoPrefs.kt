@@ -83,6 +83,8 @@ object VideoPrefs {
     private val _anime4k = MutableStateFlow(false); val anime4k: StateFlow<Boolean> = _anime4k.asStateFlow()
     private val _gpuTier = MutableStateFlow(GpuTier.MID); val gpuTier: StateFlow<GpuTier> = _gpuTier.asStateFlow()
     private val _defaultPlayer = MutableStateFlow(DefaultPlayer.YUMEIRO); val defaultPlayer: StateFlow<DefaultPlayer> = _defaultPlayer.asStateFlow()
+    /** F-07: the other app to hand videos to ("" = Android's chooser each time). Package name of an [ExternalPlayers.App]. */
+    private val _externalApp = MutableStateFlow(""); val externalApp: StateFlow<String> = _externalApp.asStateFlow()
     private val _controls = MutableStateFlow(Control.entries.toList()); val controls: StateFlow<List<Control>> = _controls.asStateFlow()
     private val _hidden = MutableStateFlow<Set<Control>>(emptySet()); val hidden: StateFlow<Set<Control>> = _hidden.asStateFlow()
     private val _resume = MutableStateFlow(true); val resume: StateFlow<Boolean> = _resume.asStateFlow()
@@ -102,6 +104,7 @@ object VideoPrefs {
         _anime4k.value = p.getBoolean("anime4k", false)
         _gpuTier.value = enumOf(p.getString("gpu_tier", null), GpuTier.MID)
         _defaultPlayer.value = enumOf(p.getString("default_player", null), DefaultPlayer.YUMEIRO)
+        _externalApp.value = p.getString("external_app", "").orEmpty()
         _controls.value = orderFrom(p.getString("controls", null))
         _hidden.value = p.getString("hidden_controls", null).orEmpty().split(',').mapNotNull { n -> Control.entries.firstOrNull { it.name == n } }.toSet()
         _resume.value = p.getBoolean("resume", true)
@@ -132,6 +135,7 @@ object VideoPrefs {
     fun setRenderer(c: Context, v: Renderer) { _renderer.value = v; edit(c) { putString("renderer", v.name) } }
     fun setAnime4k(c: Context, v: Boolean) { _anime4k.value = v; edit(c) { putBoolean("anime4k", v) } }
     fun setGpuTier(c: Context, v: GpuTier) { _gpuTier.value = v; edit(c) { putString("gpu_tier", v.name) } }
+    fun setExternalApp(c: Context, pkg: String) { _externalApp.value = pkg; edit(c) { putString("external_app", pkg) } }
     fun setDefaultPlayer(c: Context, v: DefaultPlayer) { _defaultPlayer.value = v; edit(c) { putString("default_player", v.name) } }
     fun setControls(c: Context, order: List<Control>, hidden: Set<Control>) {
         _controls.value = order; _hidden.value = hidden
