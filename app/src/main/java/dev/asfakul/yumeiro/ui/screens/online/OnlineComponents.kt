@@ -8,6 +8,16 @@ package dev.asfakul.yumeiro.ui.screens.online
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import dev.asfakul.yumeiro.online.OnlineBookmarks
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -152,9 +162,23 @@ private fun TagChip(tag: dev.asfakul.yumeiro.online.ReleaseTags.Tag, compact: Bo
 }
 
 @Composable
-internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.dp, horizontal: Boolean = false, showSource: Boolean = false, modifier: Modifier? = null, progress: Float? = null) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.dp, horizontal: Boolean = false, showSource: Boolean = false, modifier: Modifier? = null, progress: Float? = null, actions: Boolean = true) {
     val w = if (horizontal) width * 1.6f else width
-    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
+    val ctx = LocalContext.current
+    @Suppress("NAME_SHADOWING") val actions = actions && androidx.compose.runtime.remember { dev.asfakul.yumeiro.FeatureFlags.on(ctx, dev.asfakul.yumeiro.FeatureFlags.Flag.POSTER_ACTIONS) }
+    // F-09 (ADR-033): long press (phone, or hold OK on TV) or the remote's Menu key opens Watch later / Favorite.
+    var sheet by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val marks by OnlineBookmarks.marks.collectAsState()
+    val mark = if (actions) marks[posterMarkKey(item)] else null
+    val press = if (actions) Modifier
+        .onPreviewKeyEvent { e ->
+            if (e.key == Key.Menu && e.type == KeyEventType.KeyUp) { sheet = true; true } else e.key == Key.Menu
+        }
+        .combinedClickable(onClick = onClick, onLongClick = { sheet = true }, onLongClickLabel = "Watch later or Favorite")
+    else Modifier.clickable(onClick = onClick)
+    if (sheet) PosterActionsSheet(item) { sheet = false }
+    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).then(press).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
@@ -168,6 +192,7 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
                     Text(String.format(java.util.Locale.US, "%.1f", s), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            PosterMark(mark, Modifier.align(Alignment.BottomEnd).padding(bottom = if (progress != null && progress > 0f) 3.dp else 0.dp))
             if (progress != null && progress > 0f) {
                 Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
                     Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(3.dp).background(SpotifyGreen))

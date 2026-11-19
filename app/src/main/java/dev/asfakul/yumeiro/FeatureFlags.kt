@@ -1,0 +1,39 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro
+
+import android.content.Context
+
+/**
+ * Kill switches for features added in the 2026-11-19 program (PROGRAM-2026-11-19.md, completion standard 3.3).
+ * A feature that is not verified ships with its default off and stays out of the release notes' feature list.
+ * Local prefs only (file `feature_flags`), no network, no UI except where a feature says so; a support build or
+ * `adb shell` can flip one: `run-as dev.asfakul.yumeiro` and edit shared_prefs/feature_flags.xml.
+ */
+object FeatureFlags {
+    enum class Flag(val key: String, val default: Boolean) {
+        /** F-09: Watch later / Favorite sheet on posters (long press, TV Menu key) and poster marks. */
+        POSTER_ACTIONS("f09_poster_actions", true),
+    }
+
+    @Volatile private var cache: Map<String, Boolean>? = null
+
+    fun on(context: Context, flag: Flag): Boolean {
+        val c = cache ?: load(context).also { cache = it }
+        return c[flag.key] ?: flag.default
+    }
+
+    private fun load(context: Context): Map<String, Boolean> = runCatching {
+        val p = context.applicationContext.getSharedPreferences("feature_flags", Context.MODE_PRIVATE)
+        Flag.entries.associate { it.key to p.getBoolean(it.key, it.default) }
+    }.getOrDefault(emptyMap())
+
+    /** For tests and support: set a flag and drop the cache. */
+    fun set(context: Context, flag: Flag, on: Boolean) {
+        context.applicationContext.getSharedPreferences("feature_flags", Context.MODE_PRIVATE).edit().putBoolean(flag.key, on).apply()
+        cache = null
+    }
+}
