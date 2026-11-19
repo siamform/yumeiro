@@ -66,6 +66,15 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 | 44607298962 / 44607305833 | chunk_01 tv-api34 / chunk_02 + AnimeSignInMessage tv-api24 | pass P1/P2 except written platform skips (AniSkip, AppLock b_); AnimeSignInMessage passes on tv-api24 (FINAL-8 pass-after) |
 | 44610610454 / 44610615764 | chunk_03 phones / chunk_02 tv-api34 | 7/7 pass P1/P2 on api33-lowram and api36; 7/7 pass P1/P2 on tv-api34 |
 | 44598214395 / 44598220085 | re-run TelegramPublic + MangaTranslate, phones / tv-api34 | pass P1 and P2 on api33-lowram, api36, tv-api34 |
+| 44613835799 | chunk_04 phones | pass P1/P2 on api33-lowram and api36 |
+| 44613955120 | chunk_03 tv-api34 | DialogsDeviceTest P1 fails (FINAL-10: Privacy page not open yet) → fix 1199d74 (compile 44618876153) |
+| 44616946466 | chunk_03 tv-api24 | infrastructure failure (Maven download); re-run 44630204932 |
+| 44617190495 | chunk_04 tv-api34 | DramaPlaybackDeviceTest P1 timing 10615 ms (FINAL-11: frame-callback wait) → fix 65a88d2 (compile 44621887018) |
+| 44617327290 | chunk_05 phones | ExtensionPopups/Extensions fail on api33-lowram: launcher ANR held focus (FINAL-12 → e9a7e89); promo card lost after a displacing message (FINAL-13 → 022a95f) |
+| 44623909085 | fail-before FINAL-13 (`tmp/final13-fail-before`) | failed as expected: 1468 tests, 1 failed — PromoCardComesBackTest |
+| 44626358644 | head CI 022a95f | success |
+| 44623469339 | chunk_06 phones | pass P1/P2 on api33-lowram and api36 |
+| 44627424706 | chunk_07 phones | all pass except LargeLibraryScan P1 api33-lowram 4999/5000 (FINAL-14 → 99f9288, compile 44630435344); re-run queued |
 
 Final-test cycle findings so far: SEC-LFM (Last.fm secret in the APK, ADR-048, b57e155), AUD-ZIP (archive manifest read
 uncapped, 2e68bf9), FINAL-1..4 (1158c01), FINAL-5/6 (test fixes, device-verified in 44598214395/44598220085). Commit-body timestamps of 2026-11-19 19:15–19:45 were estimated ahead of the clock; the git

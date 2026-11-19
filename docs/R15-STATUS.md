@@ -1,21 +1,24 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 20:40 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-19 22:50 UTC; no PR / merge / deploy without the owner's "go")
 
 - **Task:** final test and release preparation (master prompt "THE FINAL TEST AND RELEASE PREPARATION").
-- **Pre-conditions (§2): NOT met yet** (head not on a green CI; new findings FINAL-7/8, AUD-UI-1 need fail-before
-  CI and device pass-after), so the passes so far are recorded but not yet counted as the final test.
-- **Findings this cycle:** FINAL-1..6 (fixed, device-verified); FINAL-7 WebView header map on Android 7 (d35614c,
-  pass-after tv-api24 44603655334); FINAL-8 OnlineSettings.init race (82c5b93, pass-after next tv-api24 run);
-  FINAL-9 assumption skips counted as passes (1c44b93, evidence re-collected); AUD-UI-1 48 dp targets (df49c5d).
-- **Fail-before done:** 44604147006 (FINAL-7 guard, AUD-UI-1 guard: 2 expected failures), 44607714314 (FINAL-8:
-  1 expected failure). **Head CI 44610265729 on 6f11509: success** (later commits are docs/evidence only).
-  Running: phones chunk_04 44613835799, tv-api34 chunk_03 44613955120 (lane driver /tmp/lane.sh, log /tmp/lanes.log).
-- **Device progress (latest per chunk):** phones chunk_00..03 pass; tv-api34 chunk_00..02 pass; tv-api24 chunk_00..02 pass
-  (platform skips with written reasons). Next: phones chunk_04.., tv-api34/tv-api24 chunk_03.. alternating, per docs/evidence/final/PLAN.md.
-- **Next three:** 1. fail-before results → head CI; 2. collect each run (`scripts/final_collect.sh <run>`,
-  `python3 scripts/final_checklist.py`); 3. bench (startup/jank), audit rows, review APK.
+- **Pre-conditions (§2):** head CI 44626358644 on 022a95f **success**; later commits are test/script/docs only
+  and are compile-checked; a final head CI runs with the review APK. Passes are recorded per chunk.
+- **New findings:** FINAL-10 Dialogs Privacy page wait (1199d74); FINAL-11 Drama timing poll (65a88d2);
+  FINAL-12 hung launcher/SystemUI recovery in device-check.sh (e9a7e89); FINAL-13 promo card re-queued after a
+  displacing message (022a95f, fail-before 44623909085); FINAL-14 LargeLibraryScan names missed rows and checks
+  MediaStore's own music list (99f9288, compile 44630435344). Device pass-afters queued.
+- **Device progress:** phones chunk_00..04, 06 pass; 05 (FINAL-12/13) and 07 (FINAL-14) re-runs queued;
+  tv-api34 00..02 pass, 03 (FINAL-10) and 04 (FINAL-11) re-runs queued; tv-api24 00..02 pass, 03 re-run
+  44630204932 queued, 04 running 44620669094. Workers: /tmp/worker.sh W1/W2, queue /tmp/queue.txt, log /tmp/lanes.log.
+- **Next three:** 1. collect each run (`scripts/final_collect.sh <run>`, `python3 scripts/final_checklist.py`);
+  2. bench (startup/jank) and Stability audit rows; 3. head CI with `-f review_apk=true`, APK scans, images, summary.
 - Report: docs/reports/2026-11-19-tenth-handover-report.md.
+
+### Previous resume note — superseded (20:40 UTC 2026-11-19)
+
+- Pre-conditions not met; FINAL-7/8, AUD-UI-1 fail-before pending; phones chunk_04 and tv-api34 chunk_03 running.
 
 ### Previous resume note — superseded (19:50 UTC 2026-11-19; head 849bae6)
 
