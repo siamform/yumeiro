@@ -18,10 +18,18 @@ FLAVOR="${FLAVOR:-Mobile}"
 # spent 70 min in one) can't hide every other result; results go into the job log.
 SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r'); case "$SDK" in ''|*[!0-9]*) SDK=99;; esac
 REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
+# Final test (MASTER-CHECKLIST-FINAL): P1 = every class from cleared data and a cold start; P2 = the
+# same classes again with P1's data kept, the app killed and reopened (warm start, populated data).
+PASSES="${PASSES:-false}"; [ "$PASSES" = "true" ] && REPEAT=2
 for N in $(seq 1 "$REPEAT"); do
 for C in $(echo "$FILTER" | tr ',' ' '); do
   # R16: repeats start from cleared app data, like a fresh install.
-  [ "$N" -gt 1 ] && adb shell pm clear dev.asfakul.yumeiro.debug > /dev/null 2>&1
+  if [ "$PASSES" = "true" ]; then
+    adb shell am force-stop dev.asfakul.yumeiro.debug > /dev/null 2>&1
+    [ "$N" -eq 1 ] && adb shell pm clear dev.asfakul.yumeiro.debug > /dev/null 2>&1
+  else
+    [ "$N" -gt 1 ] && adb shell pm clear dev.asfakul.yumeiro.debug > /dev/null 2>&1
+  fi
   # G12 X9: Android 7–8 (TV app) asks for storage at start, before a test can grant it, and
   # UiAutomation.grantRuntimePermission only exists from API 28 (run 43759794246). Grant it first.
   if [ "$SDK" -lt 28 ]; then
@@ -222,7 +230,8 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   grep -qE "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2|Process crashed" "inst-$C.txt" && echo "TESTS_FAILED" > failed.txt
   grep -qE "^OK \(" "inst-$C.txt" || echo "TESTS_FAILED" > failed.txt
   if grep -qE "^OK \(" "inst-$C.txt" && [ $RC -ne 124 ]; then V=PASS; else V=FAIL; fi
-  echo "REPEAT_RESULT $C run=$N/$REPEAT $V" | tee -a repeat-results.txt
+  PL=""; [ "$PASSES" = "true" ] && PL=" pass=P$N"
+  echo "REPEAT_RESULT $C run=$N/$REPEAT$PL $V" | tee -a repeat-results.txt
   cp "inst-$C.txt" "inst-$C-run$N.txt" 2>/dev/null || true
   echo "::endgroup::"
 done
