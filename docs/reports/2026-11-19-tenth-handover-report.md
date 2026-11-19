@@ -54,7 +54,8 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 | 44593053433 / 44593085810 | device chunk_00, phones / tv-api34, passes P1+P2 | 6 of 10 classes pass both passes on api36, api33-lowram, tv-api34. Failures FINAL-1..4 (player touched off the main thread after a refresh; tests waited on the first transient 403; `SavedSites.add("@name")` refused; a non-void JUnit method) → fix 1158c01 |
 | 44595993499 / 44595998571 | re-run of the 4 failing classes, phones / tv-api34 | CloudRecapture and TelegramPlayback pass on all three; TelegramPublic fails on tv-api34 (FINAL-5, rows off-screen in the lazy list); MangaTranslate fails (FINAL-6, the model answered "Good afternoon") → fix in the next commit |
 | 44597459511 | fail-before SEC-LFM + AUD-ZIP + FINAL-3 (`tmp/sec-lfm-fail-before`) | failed as expected: LastFmCloudSignTest "Unresolved reference 'cloudSig'"; gitleaks passed with the scoped allowlist; cancelled after the unit step |
-| 44599561077 | fail-before part 2 (`tmp/fail-before-part2`: same without LastFmCloudSignTest, so ApkSecretsTest, AUD-ZIP and FINAL-3 tests run on the old code) | running |
+| 44599561077 | fail-before part 2 (`tmp/fail-before-part2`: same without LastFmCloudSignTest, so ApkSecretsTest, AUD-ZIP and FINAL-3 tests run on the old code) | failed as expected: 1458 tests, 4 failed — SavedSitesTelegramTest.aChannelHandleOrLinkIsSavedAsItsPublicPage, ApkSecretsTest.everySecretLikeFieldIsClassified, ApkSecretsTest.removedTrueSecretsStayOut, UniversalAddFormatsTest.anOversizedManifestInAnArchiveIsNotInflated; cancelled after the unit step |
+| 44603218553 | head CI 1b3e644 | running |
 | 44598214395 / 44598220085 | re-run TelegramPublic + MangaTranslate, phones / tv-api34 | pass P1 and P2 on api33-lowram, api36, tv-api34 |
 | 44600322143 | chunk_00 on tv-api24 | running |
 | 44600328162 | chunk_01 phones | running |

@@ -7,9 +7,9 @@
   1. tenth-cycle device verification: chunk_00 passes P1/P2 on api33-lowram, api36, tv-api34 (44593053433,
      44593085810, re-runs 44595993499/44595998571, 44598214395/44598220085 after FINAL-1..6); tv-api24 44600322143 running;
   2. fail-before CI: c2 NBUG-6 44592881571 and c3 Vega 44595319629 failed to compile as expected; SEC-LFM
-     44597459511 failed to compile (`cloudSig` unresolved) as expected; part 2 (ApkSecretsTest, AUD-ZIP, FINAL-3
-     against old code) 44599561077 running on `tmp/fail-before-part2`;
-  3. head 9484c09 not yet on a green CI (last green 44587248595 on 9dd0213). Head CI is next after part 2.
+     44597459511 failed to compile (`cloudSig` unresolved) as expected; part 2 44599561077 failed as expected (the 4
+     new tests fail on the old code: SavedSitesTelegram, ApkSecrets ×2, UniversalAddFormats oversized manifest);
+  3. head CI 44603218553 on 1b3e644 running (last green 44587248595 on 9dd0213).
 - **Chunks 01–18:** chunk_01 phones 44600328162 running. Order per docs/evidence/final/PLAN.md, ≤ 2 device workflows.
 - **New finding SEC-LFM (§9):** fixed in b57e155 (ADR-048); the built-in Last.fm path needs the Worker deploy (owner's go).
 - **Next three:** 1. part 2 result → head CI; 2. collect each chunk (`scripts/final_collect.sh <run>`,
