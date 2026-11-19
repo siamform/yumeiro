@@ -1429,6 +1429,26 @@ Decision.
 - Nuvio and SkyStream: recognised; adding one says Yumeiro can't run that ecosystem yet and saves
   nothing. Queued in UNVERIFIED-QUEUE (needs the stream-merge seam, then one adapter each).
 
+Shape (architecture-designer skill: diagram, trade-offs and failure modes stated):
+
+```mermaid
+graph TD
+  UA["Universal add / Script repos tab"] --> REG["EcosystemRegistry (registry.json, caps, hashes)"]
+  REG --> PF["RepoFormats: Vega · Nuvio · SkyStream · CloudStream(detect)"]
+  REG -->|"adapters[eco]"| VA["VegaAdapter"]
+  REG -.->|"recognised, no adapter yet"| NS["Nuvio · SkyStream"]
+  PF -.->|"CloudStream link"| CS["Existing CloudStream loader (untouched)"]
+  VA --> RT["ScriptRuntime (fresh QuickJS per call, budgets)"]
+  RT --> HOST["ScriptHost: JsBridge (SRC-2, 5 MB) · jsoup DOM · KV 64 KB"]
+  VA -->|"MainAPI, bridge eco:vega"| HUB["SourceHub → Home, Search, Source status"]
+```
+
+Trade-offs. Isolation (a fresh runtime per call) is chosen over speed: each call pays the QuickJS
+start (measured by VegaProviderDeviceTest's log line) instead of keeping a warm engine that could
+leak state between titles. Failure modes: provider throws → that call fails, the title shows the
+usual error; provider loops → stopped at the budget; repo unreachable → Available keeps the last
+list; registry file corrupt → `SafeJsonFile` keeps a `.bad` copy and starts empty.
+
 Deviation noted. F-05 asked for the extension review screen before install; `ExtensionReview` is for
 DEX permissions and does not fit scripts. Consent here is the explicit Install tap per provider, as
 in the JavaScript tab, with the sandbox stated on the tab.
