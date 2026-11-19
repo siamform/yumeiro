@@ -9,7 +9,10 @@ import android.util.Log
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -49,6 +52,16 @@ class TelegramPublicDeviceTest {
     private val paths = Collections.synchronizedList(mutableListOf<String>())
     private fun has(tag: String) = compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
     private fun waitTag(tag: String, ms: Long = 15_000) = runCatching { compose.waitUntil(ms) { has(tag) }; true }.getOrDefault(false)
+    /**
+     * FINAL-5: a lazy list composes only what fits. On tv-api34 (540 dp tall) post 6 was below the fold and
+     * never composed (run 44595998571), so look for a row by scrolling the list to it, as a user would.
+     */
+    private fun row(tag: String): Boolean = runCatching { compose.onNodeWithTag("tg_list").performScrollToNode(hasTestTag(tag)); compose.waitForIdle(); has(tag) }.getOrDefault(false)
+    private fun rowWithin(tag: String, ms: Long): Boolean {
+        val end = android.os.SystemClock.uptimeMillis() + ms
+        while (android.os.SystemClock.uptimeMillis() < end) { if (row(tag)) return true; Thread.sleep(300) }
+        return row(tag)
+    }
     private fun log(s: String) = Log.i("YuTelegram", s)
 
     @Before fun setUp() {
@@ -91,21 +104,22 @@ class TelegramPublicDeviceTest {
         assertTrue("no site row", waitTag("site_row"))
         compose.onAllNodesWithTag("site_row", true).onFirst().performClick()
         assertTrue("the channel screen didn't open (old code opens the page browser)", waitTag("tg_channel"))
-        assertTrue("post 6 not listed; requests=$paths", waitTag("tg_post_6"))
-        assertTrue("withheld post 7 not listed", has("tg_post_7"))
-        assertTrue("file-name post 10 not listed", has("tg_post_10"))
-        assertTrue("older posts button missing (data-before=5)", waitTag("tg_older", 30_000))
-        // The channel's own header, and what is new since the last visit.
-        assertTrue("no channel header", has("tg_header"))
+        assertTrue("no post listed; requests=$paths", runCatching { compose.waitUntil(15_000) { compose.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("tg_post_*") { it.config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { null }?.startsWith("tg_post_") == true }, true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false))
+        // The channel's own header (top of the list), and what is new since the last visit.
+        assertTrue("no channel header", row("tg_header"))
         assertTrue("no subscriber count", has("tg_subscribers"))
+        assertTrue("file-name post 10 not listed", row("tg_post_10"))
         assertTrue("post 10 (after the last visit) isn't marked new", has("tg_new_10"))
+        assertTrue("withheld post 7 not listed", row("tg_post_7"))
+        assertTrue("post 6 not listed; requests=$paths", row("tg_post_6"))
         assertTrue("post 6 (seen last time) is marked new", !has("tg_new_6"))
+        assertTrue("older posts button missing (data-before=5)", rowWithin("tg_older", 30_000))
         assertEquals("the newest post is remembered for the next visit", 10, TelegramSeen.get(ctx, "yutest"))
         FirstRun.shot("telegram_channel")
 
         // A withheld post says why, with a way to open it in Telegram, instead of a player that would fail.
-        compose.onAllNodesWithTag("tg_post_7", true).onFirst().performClick()
-        assertTrue("no card for the app-only post", waitTag("tg_app_only"))
+        row("tg_post_7"); compose.onAllNodesWithTag("tg_post_7", true).onFirst().performClick()
+        assertTrue("no card for the app-only post", rowWithin("tg_app_only", 15_000))
         assertTrue("no Open in Telegram button", has("tg_open_app"))
         assertEquals(null, IncomingMedia.pending.value)
 
@@ -116,7 +130,7 @@ class TelegramPublicDeviceTest {
         compose.waitUntil(10_000) { has("tg_post_6") && !has("tg_post_7") }
         FirstRun.shot("telegram_search")
 
-        compose.onAllNodesWithTag("tg_post_6", true).onFirst().performClick()
+        row("tg_post_6"); compose.onAllNodesWithTag("tg_post_6", true).onFirst().performClick()
         compose.waitUntil(5_000) { IncomingMedia.pending.value != null }
         val item = IncomingMedia.pending.value!!
         log("TG play uri=${item.uri} folder=${item.folderName} requests=$paths")

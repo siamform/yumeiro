@@ -182,7 +182,7 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("tg_search"),
         )
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().testTag("tg_list"),
             state = list,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

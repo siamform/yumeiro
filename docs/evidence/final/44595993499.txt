@@ -1,0 +1,16 @@
+44595993499 api36 CloudRecaptureDeviceTest P1 PASS tests=1 skipped=0
+44595993499 api36 CloudRecaptureDeviceTest P2 PASS tests=1 skipped=0
+44595993499 api36 MangaTranslateDeviceTest P1 FAIL tests=? skipped=0
+44595993499 api36 MangaTranslateDeviceTest P2 FAIL tests=? skipped=0
+44595993499 api36 TelegramPlaybackDeviceTest P1 PASS tests=2 skipped=0
+44595993499 api36 TelegramPlaybackDeviceTest P2 PASS tests=2 skipped=0
+44595993499 api36 TelegramPublicDeviceTest P1 PASS tests=1 skipped=0
+44595993499 api36 TelegramPublicDeviceTest P2 PASS tests=1 skipped=0
+44595993499 api33-lowram CloudRecaptureDeviceTest P1 PASS tests=1 skipped=0
+44595993499 api33-lowram CloudRecaptureDeviceTest P2 PASS tests=1 skipped=0
+44595993499 api33-lowram MangaTranslateDeviceTest P1 FAIL tests=? skipped=0
+44595993499 api33-lowram MangaTranslateDeviceTest P2 FAIL tests=? skipped=0
+44595993499 api33-lowram TelegramPlaybackDeviceTest P1 PASS tests=2 skipped=0
+44595993499 api33-lowram TelegramPlaybackDeviceTest P2 PASS tests=2 skipped=0
+44595993499 api33-lowram TelegramPublicDeviceTest P1 PASS tests=1 skipped=0
+44595993499 api33-lowram TelegramPublicDeviceTest P2 PASS tests=1 skipped=0

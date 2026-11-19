@@ -76,11 +76,17 @@ class MangaTranslateDeviceTest {
         log("TL_A page_ms=$ms bubbles=${out.map { it.source + " -> " + it.text }}")
         assertTrue("both bubbles expected, got ${out.size}: $out", out.size == 2)
         val all = out.joinToString(" | ") { it.source + "=" + it.text.lowercase() }
-        assertTrue("こんにちは not read/translated: $all", out.any { "にちは" in it.source && "hello" in it.text.lowercase() })
+        assertTrue("こんにちは not read/translated: $all", out.any { "にちは" in it.source && greeting(it.text) })
         assertTrue("ありがとう not read/translated: $all", out.any { "がとう" in it.source && "thank" in it.text.lowercase() })
         assertTrue("page took $ms ms (emulator budget 20 s)", ms < 20_000)
         log("TL_RESULT_A PASS")
     }
+
+    /**
+     * FINAL-6: こんにちは is a greeting; ML Kit's ja→en model on the CI image says "Good afternoon" (run 44595993499),
+     * earlier models said "Hello". Both are correct translations; anything else (or the Japanese left as is) fails.
+     */
+    private fun greeting(t: String) = t.lowercase().let { l -> listOf("hello", "good afternoon", "good day", "hi").any { g -> Regex("\\b$g\\b").containsMatchIn(l) } }
 
     private val fake = object : MangaProvider {
         override val id = "yu_test_tl"
@@ -110,7 +116,7 @@ class MangaTranslateDeviceTest {
         val texts = boxes().map { it.config.getOrElse(SemanticsProperties.ContentDescription) { emptyList() }.joinToString() }
         FirstRun.shot("tl_on")
         log("TL_B on boxes=$texts")
-        assertTrue("translations not shown over the page: $texts", texts.any { "hello" in it.lowercase() })
+        assertTrue("translations not shown over the page: $texts", texts.any { greeting(it) })
         compose.onNodeWithTag("reader_translate").performClick()
         compose.onNodeWithTag("tl_switch").performClick()
         compose.onNodeWithTag("tl_done").performClick()
