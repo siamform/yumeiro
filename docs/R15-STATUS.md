@@ -1,18 +1,17 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 04:05 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 05:05 UTC; no PR / merge / deploy without the owner's "go")
 
-- **Head:** see `git log -1` (Vega step 4 fix 9193694 + docs). All seven items are in code: F-02, F-03,
-  F-11, F-AIR (Worker fix 45abcd2, deploy script `scripts/deploy-worker.sh`, dry-run only), NBUG-13
-  (ADR-045), NBUG-6 F1 sequential fallback (ADR-046, default Off), Vega step 4 (ADR-047: one registry,
-  one parser per format, one adapter per ecosystem; Vega runs, Nuvio/SkyStream recognised only).
-- **Current batch / step:** batch C, pass-after CI on head, then device runs.
-- **Running:** CI 44583808297 (head 9193694). Cancelled: 44578908005 (4788a1c; runner stuck 10 h in
-  "Lint (TV app)" after unit tests passed).
+- **Head:** see `git log -1`. All seven items are in code (F-02, F-03, F-11, F-AIR, NBUG-13, NBUG-6, Vega
+  step 4); feature smoke class FeatureSmokeDeviceTest (4ed327b); 1.9.0 notes updated (not "stable").
+- **Current batch / step:** batch C pass-after CI on head, then fail-before CI c2/c3, then device runs.
+- **Running:** CI 44587248595 (head, after fix "Settings search finds Automatic DNS fallback").
+  Failed: 44583808297 (SettingsSearchCoverageTest caught the unsearchable new switch; fixed).
+  Cancelled: 44578908005 (Lint (TV app) hung 10 h).
 - **Fail-before branches:** `tmp/batch-c2-fail-before` (NBUG-6, 4a8f59c), `tmp/batch-c3-fail-before`
-  (Vega, 8f652ee); CI to dispatch one at a time after the head run.
-- **Next three:** 1. head CI green; 2. fail-before CI on c2 and c3; 3. device runs (≤ 2 at once) for
-  the seven items on api33-lowram + api36 + tv-api24 + tv-api34, then the feature smoke.
+  (Vega, 8f652ee); one at a time after the head run.
+- **Next three:** 1. head CI green; 2. fail-before CI on c2 and c3; 3. device runs (≤ 2 at once): seven-item
+  set then feature smoke on api33-lowram + api36 + tv-api24 + tv-api34.
 - **UNVERIFIED-QUEUE:** count in docs/UNVERIFIED-QUEUE.md (header line).
 - Report: docs/reports/2026-11-19-tenth-handover-report.md.
 
