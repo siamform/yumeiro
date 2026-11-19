@@ -4,10 +4,11 @@ All notable changes to Yumeiro.
 
 ## v1.9.0: yours, and fast
 
-Planned as v1.8.2; it adds features, so it ships as 1.9.0. This is a feature release on a branch that is being
-stabilised, not a stable release: the L4 and L5 findings and the rest of the stabilisation work are scheduled for
-stability-v2. What is proven and what still needs your phones is listed at the end (full list:
-docs/REMAINING-2026-11-19.md and docs/UNVERIFIED-QUEUE.md).
+Release candidate for 1.9.0 (planned as v1.8.2; it adds features, so it ships as 1.9.0). It is waiting for the
+owner's review and is not published. The final test runs every feature twice (fresh install, then warm start with
+data) on a low-RAM phone, Android TV 14, Android TV 7 and a phone on Android 16 emulators; results per feature are
+in docs/MASTER-CHECKLIST-FINAL.md. What still needs your phones is listed at the end (full list:
+docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 
 ### Profiles and privacy
 - Profiles (up to 8) with "Who's watching?". Each profile has its own watch history, lists, YouTube history and 18+
@@ -71,6 +72,8 @@ docs/REMAINING-2026-11-19.md and docs/UNVERIFIED-QUEUE.md).
 - Tenth-cycle items are emulator verified, owner verification pending: DNS fallback on a dead-DNS network (OMT-47),
   a real Vega repository on phone and TV (OMT-48), Telegram (OMT-49), TeraBox / DiskWala (OMT-50), manga
   translation (OMT-51), airing alerts on a Firebase phone after the server update (OMT-52), your own proxy (OMT-53).
+- Final-test items the emulators can't do: skip-intro times after the TV was offline (OMT-54), app lock with a PIN
+  on a TV (OMT-55), last-backup time after a restore restarts the app (OMT-56).
 
 ## v1.8.1: every title plays
 

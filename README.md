@@ -30,6 +30,22 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
+## What's new in 1.9.0 (release candidate)
+
+The release candidate for 1.9.0, waiting for the owner's review; the latest published version is still 1.8.1.
+Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md).
+
+| | |
+|---|---|
+| **Profiles with locks** | Up to 8 profiles with "Who's watching?", each with its own history, lists and 18+ setting; lock one with a PIN or the phone's fingerprint. |
+| **Private downloads** | Hide a finished video from every list and the gallery; open Private with the PIN or phone lock. |
+| **Your look, your speed** | Five accent colours; hold the video for 2x; Shorts player; volume boost to 200 %; external players. |
+| **Faster start** | Setup, feed, extensions and catalog show at once; extensions load behind, pinned ones first. |
+| **Live TV that keeps playing** | A dead link switches to the channel's other link; Now / Next from the playlist's guide. |
+| **More sources** | Public Telegram channels, open TeraBox / DiskWala links, Vega provider repos in a sandbox, your own proxy, DNS fallback. |
+| **Manga offline** | Saved chapters open without the source; on-device translation in the reader. |
+| **Safer by design** | The app no longer carries Yumeiro's Last.fm shared secret; Yumeiro Cloud signs those calls. |
+
 ## What's new in 1.8.1
 
 A correction release: every item was re-tested instead of trusting earlier notes. Full notes:
