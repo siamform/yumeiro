@@ -23,6 +23,8 @@ object FeatureFlags {
         EPISODE_STATUS("nf1_episode_status", true),
         /** F-08: Upcoming calendar entry on Yumix (Simkl public calendar). */
         UPCOMING("f08_upcoming", true),
+        /** F-12: vertical Shorts player (swipe up / down) from the YouTube Shorts shelf; phones only. */
+        SHORTS_PLAYER("f12_shorts_player", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

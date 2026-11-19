@@ -131,13 +131,25 @@ internal fun readable(m: String): String {
 /** Videos → YouTube: a login-free home planned from what you watch, pin and search. */
 @Composable
 fun YouTubeVideoScreen(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    // F-12 (ADR-018): a Short from the shelf opens the vertical Shorts player on phones.
+    var shorts by remember { mutableStateOf<Pair<List<YtItem>, Int>?>(null) }
     YtBrowse(
         music = false,
         searchFilter = YouTube.Filter.VIDEOS,
         placeholder = "Search YouTube",
-        onPlay = { item, _ -> onPlay(item) },
+        onPlay = { item, list ->
+            val queue = list.filter { it.isShort() }
+            val on = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_PLAYER)
+            if (ShortsWindow.opens(item.isShort(), queue.size, dev.asfakul.yumeiro.Edition.isTv, on)) {
+                shorts = queue to queue.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
+            } else onPlay(item)
+        },
         modifier = modifier.testTag("youtube_video_home"),
     )
+    shorts?.let { (queue, start) ->
+        ShortsPlayerDialog(queue, start, onDismiss = { shorts = null }, onFullPlayer = { shorts = null; onPlay(it) })
+    }
 }
 
 /** Music → YouTube Music: songs planned from what you play, your topics and today's mix. */

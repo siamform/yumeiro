@@ -1,0 +1,249 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro.ui.screens.youtube
+
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SmartDisplay
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import dev.asfakul.yumeiro.stream.StreamRequest
+import dev.asfakul.yumeiro.youtube.YtItem
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+
+/**
+ * F-12 (ADR-018): which neighbours of the Short on screen get their link resolved ahead. Only links are
+ * resolved (a small network call); no second player or decoder is ever built, so a 2 GB phone stays at one.
+ */
+object ShortsWindow {
+    /** Pages to resolve after [index] settles, nearest first: 2 ahead + 1 behind; 1 ahead on low-RAM phones. */
+    fun prefetch(index: Int, size: Int, lowEnd: Boolean): List<Int> {
+        val wanted = if (lowEnd) listOf(index + 1) else listOf(index + 1, index + 2, index - 1)
+        return wanted.filter { it in 0 until size && it != index }
+    }
+
+    /** Resolved links kept in memory; everything else is dropped so long sessions stay flat. */
+    fun keep(index: Int, size: Int, lowEnd: Boolean): Set<Int> {
+        val r = if (lowEnd) 1 else 2
+        return ((index - r)..(index + r)).filter { it in 0 until size }.toSet()
+    }
+
+    /** The Shorts player opens for a Short on phones when the feature is on; TV keeps the normal player. */
+    fun opens(isShort: Boolean, queueSize: Int, tv: Boolean, enabled: Boolean): Boolean =
+        enabled && !tv && isShort && queueSize >= 1
+}
+
+/** Full-screen vertical pager over [items]; swipe up / down for the next / previous Short. */
+@Composable
+fun ShortsPlayerDialog(items: List<YtItem>, startIndex: Int, onDismiss: () -> Unit, onFullPlayer: (YtItem) -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        ShortsPlayer(items, startIndex, onDismiss, onFullPlayer)
+    }
+}
+
+@Composable
+private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Unit, onFullPlayer: (YtItem) -> Unit) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val lowEnd = dev.asfakul.yumeiro.DeviceClass.lowEnd
+    val height = if (lowEnd) 480 else 720
+    val pager = rememberPagerState(initialPage = startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))) { items.size }
+    val resolved = remember { mutableStateMapOf<String, StreamRequest>() }
+    val failed = remember { mutableStateMapOf<String, String>() }
+    val inFlight = remember { HashSet<String>() }
+    var lease by remember { mutableStateOf<dev.asfakul.yumeiro.player.PlaybackSession.Lease?>(null) }
+    var playing by remember { mutableStateOf(true) }
+    var buffering by remember { mutableStateOf(true) }
+    var fast by remember { mutableStateOf(false) }
+
+    fun resolve(i: Int) {
+        val item = items.getOrNull(i) ?: return
+        if (item.id in resolved || item.id in inFlight) return
+        inFlight += item.id
+        scope.launch {
+            runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, item.id, height) }
+                .onSuccess { resolved[item.id] = it; failed.remove(item.id) }
+                .onFailure { e -> if (e !is kotlinx.coroutines.CancellationException) failed[item.id] = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e) }
+            inFlight -= item.id
+        }
+    }
+
+    // The page on screen plays in the one shared player (ADR-006); neighbours only get their links.
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
+            resolve(page)
+            ShortsWindow.prefetch(page, items.size, lowEnd).forEach { resolve(it) }
+            val keep = ShortsWindow.keep(page, items.size, lowEnd).mapNotNull { items.getOrNull(it)?.id }.toSet()
+            resolved.keys.filterNot { it in keep }.forEach { resolved.remove(it) }
+        }
+    }
+    val current = items.getOrNull(pager.settledPage)
+    val currentReq = current?.let { resolved[it.id] }
+    LaunchedEffect(current?.id, currentReq) {
+        val item = current ?: return@LaunchedEffect
+        val req = currentReq ?: return@LaunchedEffect
+        val l = dev.asfakul.yumeiro.player.PlaybackSession.acquire(context, "yt:${item.id}", req.url)
+        lease = l
+        buffering = true
+        dev.asfakul.yumeiro.stream.StreamRepository.register(req)
+        dev.asfakul.yumeiro.stream.StreamMediaFactory.setMedia(l.player, req.url, title = item.title)
+        l.player.repeatMode = Player.REPEAT_MODE_ONE
+        l.player.setPlaybackSpeed(1f)
+        l.player.prepare()
+        l.player.playWhenReady = true
+        playing = true
+        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
+    }
+    DisposableEffect(lease) {
+        val l = lease ?: return@DisposableEffect onDispose { }
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) buffering = false }
+            override fun onPlayerError(error: PlaybackException) {
+                current?.let { failed[it.id] = "This Short couldn't play." }
+            }
+        }
+        l.addListener(listener)
+        onDispose { l.removeListener(listener) }
+    }
+    // Closing the pager hands the player back (paused, released after the session's grace time).
+    DisposableEffect(Unit) { onDispose { lease?.let { dev.asfakul.yumeiro.player.PlaybackSession.detach(it) } } }
+    // App to background: pause. Coming back does not auto-play (same as the full player).
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_STOP) { lease?.player?.pause(); playing = false } }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black).testTag("shorts_player")) {
+        VerticalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 0, key = { items[it].id }) { page ->
+            val item = items[page]
+            Box(Modifier.fillMaxSize().testTag("shorts_page_$page")) {
+                val onScreen = page == pager.settledPage && lease != null && resolved[item.id] != null
+                if (onScreen) {
+                    AndroidView(
+                        factory = { ctx ->
+                            (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
+                                useController = false
+                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                            }
+                        },
+                        update = { v -> if (v.player !== lease?.player) v.player = lease?.player },
+                        onRelease = { v -> v.player = null },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    dev.asfakul.yumeiro.ui.screens.online.PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
+                }
+                // Tap: pause / play. Hold: 2x while held.
+                Box(
+                    Modifier.fillMaxSize().testTag("shorts_touch").pointerInput(item.id) {
+                        detectTapGestures(
+                            onTap = {
+                                val p = lease?.player ?: return@detectTapGestures
+                                if (p.isPlaying) { p.pause(); playing = false } else { p.play(); playing = true }
+                            },
+                            onPress = {
+                                val p = lease?.player
+                                val held = kotlinx.coroutines.withTimeoutOrNull(450) { tryAwaitRelease() }
+                                if (held == null && p != null && p.isPlaying) {
+                                    p.setPlaybackSpeed(2f); fast = true
+                                    tryAwaitRelease()
+                                    p.setPlaybackSpeed(1f); fast = false
+                                }
+                            },
+                        )
+                    }
+                )
+                val err = failed[item.id]
+                when {
+                    err != null -> Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(err, color = Color.White)
+                        TextButton(onClick = { failed.remove(item.id); resolved.remove(item.id); resolve(page) }, modifier = Modifier.testTag("shorts_retry")) { Text("Retry") }
+                    }
+                    page == pager.settledPage && (resolved[item.id] == null || buffering) ->
+                        CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = Color.White)
+                    page == pager.settledPage && !playing ->
+                        Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.Center).size(64.dp))
+                }
+                if (fast && page == pager.settledPage) {
+                    Text("2x", color = Color.White, modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp)
+                        .background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp).testTag("shorts_fast"))
+                }
+                Column(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
+                        .safeDrawingPadding().padding(16.dp)
+                ) {
+                    Text(item.title, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (item.channel.isNotBlank()) Text(item.channel, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose, modifier = Modifier.testTag("shorts_close")) { Icon(Icons.Default.ArrowBack, "Close Shorts", tint = Color.White) }
+            TextButton(
+                onClick = { current?.let { lease?.player?.pause(); onFullPlayer(it) } },
+                modifier = Modifier.testTag("shorts_full_player").semantics { contentDescription = "Full player" },
+            ) {
+                Icon(Icons.Default.OpenInFull, null, tint = Color.White)
+                Text("  Full player", color = Color.White)
+            }
+        }
+    }
+}
