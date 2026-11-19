@@ -464,6 +464,7 @@ fun MTPlayerApp(
     // R16 (G1 H10): ranked on a background thread after a short pause in typing. It folds up to
     // 600 titles (Unicode normalise + two regex passes each) and reads the recent-search prefs,
     // which ran in composition on the main thread on every keystroke (StrictMode, run 43683520404).
+    val onlineSearchFlag = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TV4_ONLINE_SEARCH) }
     val topBarSuggestions by androidx.compose.runtime.produceState(emptyList<dev.asfakul.yumeiro.ui.components.Suggestion>(), searchQuery, filteredTracks, albums, artists, filteredVideos, recentTick) {
         if (searchQuery.isBlank()) { value = emptyList(); return@produceState }
         kotlinx.coroutines.delay(120)
@@ -564,6 +565,10 @@ fun MTPlayerApp(
                             else -> "Search your library"
                         },
                         offline = !isOnline,
+                        onSearchOnline = if (onlineSearchFlag) ({ q ->
+                            dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q
+                            navigateSub(Screen.OnlineSearch.route)
+                        }) else null,
                     )
                 }
     }

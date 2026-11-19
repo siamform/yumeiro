@@ -29,6 +29,8 @@ object FeatureFlags {
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */
         GLASS_THEME("f10_glass_theme", true),
+        /** TV-4 (ADR-036): Home's library search offers "Search online" (Yumix) for the committed words. */
+        TV4_ONLINE_SEARCH("tv4_online_search", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -128,6 +129,8 @@ fun MTTopBar(
     /** Replaces the inline library search (e.g. Yumix opens the all-extension search page). */
     onSearchClick: (() -> Unit)? = null,
     searchDescription: String = "Search your library",
+    /** TV-4 (ADR-036): runs the committed library query as an online Yumix search; null = no button. */
+    onSearchOnline: ((String) -> Unit)? = null,
 ) {
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     // The text last committed; suggestions hide until the user types something new.
@@ -217,10 +220,23 @@ fun MTTopBar(
             // no match nothing used to change, which read as "search is broken" (an empty TV library).
             if (searchQuery.isNotBlank() && searchQuery == committed && suggestions.isEmpty()) {
                 Text(
-                    "Nothing on this device matches \"${searchQuery.trim()}\". This box searches your songs and videos; to search online, open Videos or Music and pick YouTube or Yumix.",
+                    if (onSearchOnline != null) "Nothing on this device matches \"${searchQuery.trim()}\"."
+                    else "Nothing on this device matches \"${searchQuery.trim()}\". This box searches your songs and videos; to search online, open Videos or Music and pick YouTube or Yumix.",
                     style = MaterialTheme.typography.bodySmall, color = TextSecondary,
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp).testTag("topbar_search_empty"),
                 )
+            }
+            // TV-4 (ADR-036): local results stay first; one press runs the same words across Yumix sources.
+            val online = onSearchOnline?.let { TopBarSearch.onlineQuery(searchQuery, committed) }
+            if (online != null) {
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = { onSearchOnline(online) },
+                    modifier = Modifier.padding(start = 12.dp, top = 8.dp).then(Modifier.heightIn(min = 48.dp)).testTag("topbar_search_online"),
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Search online for \"$online\"", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             }
         } else {
@@ -414,5 +430,16 @@ private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, ta
             label = "sourcePill",
         ) { t -> Text(t, color = TextPrimary, fontSize = if (narrow) 11.sp else 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, letterSpacing = 0.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, null, tint = p.accent, modifier = Modifier.size(16.dp).rotate(turn))
+    }
+}
+
+/** TV-4 (ADR-036): which library query, if any, the top bar offers as an online search. */
+object TopBarSearch {
+    const val MAX = 100
+    /** Only a committed query (Search key or a picked suggestion) of two or more letters; null while typing. */
+    fun onlineQuery(query: String, committed: String): String? {
+        val q = query.trim()
+        if (q.length < 2 || query != committed) return null
+        return q.take(MAX)
     }
 }
