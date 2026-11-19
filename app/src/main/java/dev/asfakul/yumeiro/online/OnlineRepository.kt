@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.supervisorScope
 import java.util.concurrent.ConcurrentHashMap
 
@@ -266,7 +265,7 @@ object OnlineRepository {
                 async {
                     parallel.withPermit {
                         runCatching {
-                            withTimeout(HOME_TIMEOUT) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
+                            ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
                         }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { page to it }
                     }
                 }
@@ -303,7 +302,7 @@ object OnlineRepository {
     suspend fun page(api: MainAPI, pageName: String, pageData: String, page: Int): OnlinePage = withContext(Dispatchers.IO) {
         val req = api.mainPage.firstOrNull { it.name == pageName && it.data == pageData } ?: api.mainPage.firstOrNull { it.data == pageData }
         val resp = parallel.withPermit {
-            withTimeout(HOME_TIMEOUT) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
+            ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
         } ?: return@withContext OnlinePage(emptyList(), false)
         val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name) } }.distinctBy { it.url }
         OnlinePage(items, resp.hasNext && items.isNotEmpty())
@@ -323,7 +322,7 @@ object OnlineRepository {
             launch {
                 val update = parallel.withPermit {
                     runCatching {
-                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { withTimeout(SEARCH_TIMEOUT) { searchOne(api, q) } }
+                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(SEARCH_TIMEOUT) { searchOne(api, q) } }
                     }.fold(
                         { SearchUpdate(api.name, it) },
                         { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
@@ -370,7 +369,7 @@ object OnlineRepository {
             detailCache[key] = Timed(System.currentTimeMillis(), saved)
             return@withContext saved
         }
-        val resp = withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { withTimeout(LOAD_TIMEOUT) { api.load(url) } } ?: throw IllegalStateException("This title isn't available anymore")
+        val resp = withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(LOAD_TIMEOUT) { api.load(url) } } ?: throw IllegalStateException("This title isn't available anymore")
         val detail = map(api, resp)
         detailCache[key] = Timed(System.currentTimeMillis(), detail)
         if (detail.unsupportedReason == null) dev.asfakul.yumeiro.cache.DataCache.write("detail", dk, dev.asfakul.yumeiro.cache.OnlineCodec.detail(detail))
@@ -428,7 +427,7 @@ object OnlineRepository {
         val base = runCatching { api.mainUrl }.getOrNull().orEmpty()
         val job = launch(Dispatchers.IO + ProviderBase(base)) {
             val result = runCatching {
-                withTimeout(LINKS_TIMEOUT) {
+                ExtensionCall.bounded(LINKS_TIMEOUT) {
                     api.loadLinks(
                         data, false,
                         { sub -> UrlFix.normalize(sub.url, base).takeIf { UrlFix.isHttp(it) }?.let { trySend(LinkEvent.Subtitle(OnlineSubtitle(sub.lang.ifBlank { "Unknown" }, it, sub.headers.orEmpty()))) } },
