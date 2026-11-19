@@ -92,8 +92,10 @@ internal fun SourceFilterSheet(
     val t = texts
     fun nameOf(id: String) = label?.invoke(id) ?: id
     // G9-8 (YF-TV-1): on TV the half-height sheet left every row below the second one off-screen,
-    // and a remote cannot drag a sheet up. TV opens it fully; the list scrolls inside it.
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = dev.asfakul.yumeiro.Edition.isTv)
+    // and a remote cannot drag a sheet up. G15-1 (NBUG-10, ADR-031): phones too — a half-height sheet
+    // stays put when the keyboard opens, so search matches sat under the keyboard. Every device opens
+    // it fully (CloudStream's provider picker and Mihon's sheets do the same); the list scrolls inside it.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss, containerColor = p.surface, sheetState = sheetState,
         shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
