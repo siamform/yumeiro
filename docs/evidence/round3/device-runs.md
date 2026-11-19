@@ -1005,3 +1005,24 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | 44406473476 | r15-stability beeda9c | tv-api34 | OnlinePlayback | PASS (4 tests) |
 | 44406478289 | r15-stability beeda9c | tv-api24 | Nbug11, HomeNavigation, Nbug12, OnlinePlayback | all PASS |
 
+## 2026-11-19: GROUP-14 NBUG-14, NBUG-15, NBUG-16, LT-2b (emulator + TV emulator)
+
+| Run | Ref | Devices | Classes | Result |
+|---|---|---|---|---|
+| 44408003339 | ab/n16-before bf23a1f (deleted) | api33-lowram, api36 | Nbug16ExtensionVersion | FAIL both (fail-before NB16-4) |
+| 44410526165 | r15-stability 992dc13 | api33-lowram, api36 | Nbug16, ExtensionSharedFile, Extensions, PinnedExtensions, HomeNavigation, Nbug14ChannelLogo | all PASS; Nbug14 FAIL both (fail-before NB14-2: okhttp User-Agent) |
+| 44411302633 | r15-stability ace04e5 | tv-api34 | Nbug14, Nbug15Recents, Nbug16, HomeNavigation, Extensions | Nbug14, Nbug16, HomeNavigation, Extensions PASS; Nbug15Recents a FAIL (fail-before NB15D) |
+| 44413808456 | ab/n15-before ace04e5 (deleted) | api33-lowram, api36 | Nbug15Recents | a FAIL both (fail-before NB15D-1/2) |
+| 44413812316 | r15-stability 5008687 | api33-lowram, api36 | Nbug14, Nbug15Recents, LargePlaylistMemory, PlaylistRetry, RemotePlaylistMemory, StreamWatchDownload, StreamFormatMismatch, HeaderStream, PlaybackSession, SurfaceMode | all PASS |
+| 44415981071 | r15-stability 2723a6a | tv-api24 | Nbug14, Nbug15Recents, Nbug16, HomeNavigation, Extensions, PlaylistRetry | Nbug15Recents, Nbug16, HomeNavigation, Extensions PASS; Nbug14 test fault (PixelCopy API 26+) → test fix; PlaylistRetry a FAIL (raw path, LT-2b) |
+| 44415985160 | r15-stability 2723a6a | tv-api34 | Nbug15Recents, PlaylistRetry, RemotePlaylistMemory | all PASS |
+| 44419972353, 44419976178 | ab/n15r-before, r15-stability 99e92ed | phones, tv-api24 | Nbug15Redesign; Nbug14 + PlaylistRetry | no test ran: androidTest compile error in Nbug15RedesignDeviceTest (213fbf5) → f8926b8 |
+| 44421879508 | ab/n15r-before 4d5ffe0 (old app, deleted) | api33-lowram, api36 | Nbug15Redesign | a, b, c FAIL both (fail-before NB15-A, B2, C1) |
+| 44421882957 (attempt 2) | ab/n15r-before 4d5ffe0 | tv-api24 | Nbug14, PlaylistRetry | Nbug14 PASS; PlaylistRetry a FAIL (LT-2b raw path, diagnostics); attempt 1: Maven resolve failure (infra) |
+| 44425944757 | r15-stability 2001197 | api33-lowram, api36 | 8 Live TV classes | 7 PASS both; Nbug15Redesign a test fault → 1b65c67; title count 121 → 0e0bc84 |
+| 44431459816 | r15-stability 0e0bc84 | api33-lowram, api36 | Nbug15Redesign | a test fault → 25b2b5c; api36 b "Showing 100" before any scroll → a149bc1 |
+| 44431463030 | r15-stability 0e0bc84 | tv-api34 | 8 Live TV classes | Nbug15Recents PASS; emulator offline after class 2 (infra) |
+| 44435747803 | r15-stability a149bc1 | api33-lowram, api36 | Nbug15Redesign, Nbug15Recents, FeedPosition, LargePlaylistMemory, HomeNavigation | all PASS |
+| 44435753383 | r15-stability a149bc1 | tv-api24 | 8 Live TV classes | 7 PASS (incl. LT-2b and NB14-2); FeedPosition liveTv/youtube FAIL |
+| 44438500496, 44438504785 | r15-stability 26d914d; ab/n15r-before (old code) | tv-api24 | FeedPosition | same 2 FAIL on new and old code: the test never opens Live TV on TV (TV-FP-1) |
+| TV34-NB15 | r15-stability | tv-api34 | 8 Live TV classes | pending |

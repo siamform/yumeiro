@@ -262,12 +262,13 @@ See docs/SYSTEM-DESIGN.md ADR-025.
 
 Group regression (NBUG-16 touches extensions + `MTPlayerApp`): phones 44410526165 ExtensionSharedFile, Extensions,
 PinnedExtensions, HomeNavigation PASS both; tv-api34 44411302633 HomeNavigation, Extensions PASS. Whole unit suite
-CI 44410507243: 1249 tests, 0 failures, 11 skipped. tv-api24: in the next TV run.
+CI 44410507243: 1249 tests, 0 failures, 11 skipped. tv-api24 44415981071 (ace04e5…): Nbug16ExtensionVersion,
+HomeNavigation, Extensions PASS.
 
 The workflow fixes (NB16-1, NB16-2) act only on `main`: the scheduled data builds run from the default branch, so
 the live catalog stays frozen until the owner merges.
 
-**Status: NBUG-16 Verified** (NB16-1…NB16-5; NB16-6/7 fixed, queued for old-code proof), tv-api24 regression pending.
+**Status: NBUG-16 Verified** (NB16-1…NB16-5; NB16-6/7 fixed, queued for old-code proof).
 
 ## NBUG-14: IPTV channel logos don't show
 
@@ -300,9 +301,9 @@ User-Agent except `upload.wikimedia.org` (403: "Please set a user-agent and resp
 
 | ID | Finding | Root cause | Severity | Status |
 |---|---|---|---|---|
-| NB14-1 | Every iptv-org country playlist from the market shows no logos (340 of 400 entries) | The market copies the repository's raw `streams/` files, which carry `tvg-id` only; iptv-org adds logos when it publishes | High (most Live TV channels) | Open |
-| NB14-2 | Logos on Wikimedia (and hosts with the same rule) never load | Image requests carry OkHttp's default User-Agent; Wikimedia refuses it (403) | Medium (457 curated logos, 3 117 in iptv-org's data) | Open |
-| NB14-3 | iptv-org country playlists have no categories (every channel "Other") | Same as NB14-1: `group-title` is added only when iptv-org publishes | Medium (needed for NBUG-15 (b) grouping by category) | Open |
+| NB14-1 | Every iptv-org country playlist from the market shows no logos (340 of 400 entries) | The market copies the repository's raw `streams/` files, which carry `tvg-id` only; iptv-org adds logos when it publishes | High (most Live TV channels) | Verified in CI (b212379); live after merge |
+| NB14-2 | Logos on Wikimedia (and hosts with the same rule) never load | Image requests carry OkHttp's default User-Agent; Wikimedia refuses it (403) | Medium (457 curated logos, 3 117 in iptv-org's data) | Verified (f572716) |
+| NB14-3 | iptv-org country playlists have no categories (every channel "Other") | Same as NB14-1: `group-title` is added only when iptv-org publishes | Medium (needed for NBUG-15 (b) grouping by category) | Verified in CI (b212379); live after merge |
 | NB14-OB1 | SVG logos never show | Coil has no SVG decoder in the app (new dependency) | Low (18 curated logos) | Queued |
 
 Not findings: parser and cache keep `tvg-logo`; cleartext logos are allowed (`network_security_config`
@@ -316,8 +317,16 @@ See docs/SYSTEM-DESIGN.md ADR-026.
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB14-1, NB14-3 | pending (`.github/scripts/tests/test_build_market_logos.py`) | pending | CI (Python) |
-| NB14-2 | pending (`Nbug14ChannelLogoDeviceTest`: local server answers 403 to library User-Agents) | pending | emulator, TV emulator |
+| NB14-1, NB14-3 | CI 44410507243 (992dc13, tests before the fixes): `test_build_market_logos.py` FAIL | CI 44411680293 (ace04e5) and 44415534058 (2723a6a): PASS | CI (Python) |
+| NB14-2 | phones 44410526165 (992dc13): `Nbug14ChannelLogoDeviceTest` FAIL both ("never showed · requests=[… ua=okhttp/5.5.1]") | phones 44413812316 PASS both; tv-api34 44411302633 PASS; tv-api24: see below | emulator, TV emulator |
+| NB14-OB1 | SVG logos (new dependency) | not built | UNVERIFIED-QUEUE |
+
+The NB14-1 and NB14-3 market fix acts when the scheduled market build runs from `main` (after the owner merges).
+tv-api24: the first run (44415981071) failed inside the test (Compose `captureToImage` uses a PixelCopy call that
+Android 7 lacks); the test reads the pixels another way below API 26 (test-only change). Rerun: tv-api24 44421882957 PASS and 44435753383 PASS (both tiles shown, red share 0.421).
+
+**Status: NBUG-14 Verified** (NB14-2 in the app on phones and both TVs; NB14-1, NB14-3 in CI, live after the
+owner merges; NB14-OB1 queued).
 
 ## NBUG-15 (d): separate recents for Play Link and Live TV
 
@@ -342,8 +351,8 @@ approval before building); (d) is behaviour and is built now. The row is placed 
 
 | ID | Finding | Root cause | Severity | Status |
 |---|---|---|---|---|
-| NB15D-1 | Play Link "Recent streams" lists every channel played anywhere (Live TV, playlists, websites, the player's page finder) | one shared list, and `IncomingMedia.open` records by default | Medium (owner spec) | Open |
-| NB15D-2 | Live TV has no recently played channels | no store and no row | Medium (owner spec) | Open |
+| NB15D-1 | Play Link "Recent streams" lists every channel played anywhere (Live TV, playlists, websites, the player's page finder) | one shared list, and `IncomingMedia.open` records by default | Medium (owner spec) | Verified (1103da9) |
+| NB15D-2 | Live TV has no recently played channels | no store and no row | Medium (owner spec) | Verified (5008687) |
 | NB15D-OB1 | Stream recents are kept while incognito is on, and "Clear watch history" leaves them | `addToHistory` reads no privacy switch; the clear action names device, online and YouTube only | Low (not in the owner's report; the setting's text does not promise it) | Queued (owner decision) |
 
 ### Design (ADR-027)
@@ -354,7 +363,13 @@ See docs/SYSTEM-DESIGN.md ADR-027.
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB15D-1, NB15D-2 | pending (`StreamRecentsTest` unit; `Nbug15RecentsDeviceTest`: a channel played from Live TV must not be in Play Link recents and must be in the Live TV row; a link played from Play Link the other way round) | pending | CI unit, emulator, TV emulator |
+| NB15D-1 | CI 44411680293 (ace04e5, throwaway `ab/n15-before`): `StreamRecentsTest` FAIL ("put into Play Link recents") | CI 44415534058: StreamRecentsTest 1/1 | CI unit (Robolectric) |
+| NB15D-1, NB15D-2 | phones 44413808456 and tv-api34 44411302633: `Nbug15RecentsDeviceTest` case a FAIL ("liveRow=false inPlayLink=true") | phones 44413812316 PASS; tv-api34 44415985160 PASS; tv-api24 44415981071 PASS | emulator, TV emulator |
+
+Case b (a Play Link stream stays out of the Live TV row) passes on old code by design: old code had no Live TV
+row, so nothing could leak into it. It guards the new row; listed in UNVERIFIED-QUEUE.
+
+**Status: NBUG-15 (d) Verified** (NB15D-1, NB15D-2; NB15D-OB1 queued for an owner decision).
 
 
 ## NBUG-15 (a)–(c): Live TV page redesign
@@ -375,15 +390,61 @@ IPTV Simple, Yumix filter). Design: ADR-028.
 
 | ID | Spec item | Old code | Status |
 |---|---|---|---|
-| NB15-A | Filter button with "Show videos from", search, pins | stories strip of avatars; no search, no pins | Open |
-| NB15-B1 | No playlist names, no "View" | `LiveSectionHeader` (name + "View") per playlist, "+N more" | Open |
-| NB15-B2 | Channels grouped by category across all playlists | "All" = one shelf per playlist; groups only inside one playlist | Open |
-| NB15-B3 | 50 channels first, more on scroll | "All": 16 per playlist, no paging; one playlist: pages of 48 | Open |
-| NB15-C1 | One Tools button → modal with every tool | "Play link" header action + Tools section + Playlists section on the feed | Open |
-| NB15-C2 | "Playlists" in Tools → playlist management page | playlists are cards at the bottom of the feed | Open |
+| NB15-A | Filter button with "Show videos from", search, pins | stories strip of avatars; no search, no pins | Verified (bcbfb01, 2001197) |
+| NB15-B1 | No playlist names, no "View" | `LiveSectionHeader` (name + "View") per playlist, "+N more" | Verified (2001197) |
+| NB15-B2 | Channels grouped by category across all playlists | "All" = one shelf per playlist; groups only inside one playlist | Verified (bcbfb01, 2001197, 0e0bc84) |
+| NB15-B3 | 50 channels first, more on scroll | "All": 16 per playlist, no paging; one playlist: pages of 48 | Verified (bcbfb01, 2001197, a149bc1) |
+| NB15-C1 | One Tools button → modal with every tool | "Play link" header action + Tools section + Playlists section on the feed | Verified (2001197) |
+| NB15-C2 | "Playlists" in Tools → playlist management page | playlists are cards at the bottom of the feed | Verified (2001197) |
 
 ### Verification
 
 | Item | Fail-before (old code) | Pass-after | Label |
 |---|---|---|---|
-| NB15-A…C2 | pending (`LiveFeedTest`, `PinnedPlaylistsTest`, `Nbug15RedesignDeviceTest`) | pending | CI unit, emulator, TV emulator |
+| NB15-A, B1, B2, C1 (each case's first check) | phones 44421879508 (throwaway `ab/n15r-before` = 99e92ed app + test 4d5ffe0): a "NB15-A: a Filter button in the Live TV header", b "NB15-B2: a 'News' category heading on the feed", c "NB15-C1: a Tools button in the Live TV header" FAIL on api33-lowram and api36 | phones 44435747803 (a149bc1): a, b, c PASS both; tv-api24 44435753383 PASS; tv-api34: TV34-NB15 | emulator, TV emulator |
+| NB15-B3 (50, then 100, then all) | the old page had no paging across playlists (case b stops at its first check) | same runs: "Showing 50 of 120" → "Showing 100 of 120" → "All 120 channels" on every device | emulator, TV emulator |
+| model (merge, dedupe, categories, pages, rows, pins) | new code only (`LiveChannelFeedTest`, 7 tests); the old-code proof is the device test above | CI 44421874744: 1257 tests, 0 failures; CI 44437261080 (a149bc1): 1258, 0 | CI unit (Robolectric) |
+
+How it was built, for the owner:
+- The page is one rewrite (2001197) on shared parts (bcbfb01), like NB14-1 + NB14-3. Six spec items, two fix commits.
+- The test helper `hasText` shadowed the Compose matcher, so the first fail-before (44419972353) and a tv-api24 run
+  (44419976178) never ran a test; fixed in f8926b8 and rerun. I pushed that compile break; the CI gate caught it.
+- Two test faults on the new page (case a waited for tiles that sort below the screen) were fixed in 1b65c67 and
+  25b2b5c (no check removed); the screen now runs inside the app theme, so screenshots show real contrast.
+- Pass-after found two defects in the new page, both fixed and re-proven: the title counted a stream in two
+  playlists twice ("121 channels" over 120; 0e0bc84), and on api36 a page was added before any scroll because the
+  near-end check read the layout from before a playlist finished loading (a149bc1).
+- Built per the owner's spec of 2026-11-18. Earlier I had said a design proposal would go to the owner first;
+  the owner's later order was to build it. The proposal (docs/proposals/FEATURE-NBUG-15-live-tv-redesign.md)
+  records what was built. Not built (optional, not in the spec): channel search on the feed, hiding categories,
+  favourites, drag-to-reorder playlists.
+- Seen on TV, not new: every bottom sheet opens with TV focus on the drag handle, which shows a "Drag handle" label
+  (tv-api24 screenshot nb15r_c_tools; the Material sheet's handle, which the Yumix filter sheet uses too, by code
+  read). Queued as NB15-OB2.
+
+**Status: NBUG-15 (a)–(c) Verified** (emulator; TV emulator tv-api24; tv-api34 see TV34-NB15).
+
+## GROUP-14 regression: LT-2b (found by the tv-api24 regression run)
+
+| ID | Finding | Root cause | Severity | Status |
+|---|---|---|---|---|
+| LT-2b | On Android 7 the playlist page shows "/data/user/0/…/playlists.json.tmp (Permission denied)" when the store can't write | Android 7 words the failure "<path> (Permission denied)"; the G7 LT-2 rule looked only for errno names and "open failed:" | Low (Android 7 TVs, read-only storage) | Verified (f57b832) |
+
+| Item | Fail-before (old code) | Pass-after | Label |
+|---|---|---|---|
+| LT-2b | tv-api24 44421882957 `PlaylistRetryDeviceTest` a FAIL ("shows a raw file path"); CI 44429002276 (2b0e67e): `ErrorTaxonomyTest` 2 new cases FAIL | CI 44432711573 (f57b832): 1258 tests, 0 failures, ErrorTaxonomyTest 5/5; tv-api24 44435753383 PASS ("The app couldn't use its storage on this device…") | CI unit, TV emulator |
+
+## GROUP-14 group regression
+
+| Run | Device | Classes | Result |
+|---|---|---|---|
+| 44435747803 (a149bc1) | api33-lowram, api36 | Nbug15Redesign, Nbug15Recents, FeedPosition, LargePlaylistMemory, HomeNavigation | all PASS |
+| 44425944757 (2001197) | api33-lowram, api36 | Nbug15Recents, Nbug14ChannelLogo, LargePlaylistMemory, PlaylistRetry, RemotePlaylistMemory, FeedPosition, HomeNavigation | all PASS (Nbug15Redesign a: test fault, fixed) |
+| 44435753383 (a149bc1) | tv-api24 | Nbug15Redesign, Nbug15Recents, Nbug14ChannelLogo, LargePlaylistMemory, PlaylistRetry, RemotePlaylistMemory, HomeNavigation | all PASS |
+| 44435753383, 44438500496 (26d914d), 44438504785 (old code) | tv-api24 | FeedPosition | liveTv and youtube FAIL on new and on old code alike: the test taps the phone's `nav_tab_home`, so on TV the Live TV page never opens (logged tags show Home). A phone-only test; queued as TV-FP-1, not a regression |
+| TV34-NB15 | tv-api34 | the 8 classes above | see TV34-NB15 |
+| 44431463030 (0e0bc84) | tv-api34 | 8 classes | Nbug15Recents PASS; the emulator went offline after the second class (adb "device offline", infra); rerun as TV34-NB15 |
+
+**Status: GROUP-14 closed** when TV34-NB15 passes: NBUG-11, NBUG-12 (app), NBUG-14, NBUG-15 (a)–(d), NBUG-16 Verified;
+NBUG-13 owner decision (OMT-33); queued: NB11-OB1, NB12-5b, NB14-OB1, NB15D-OB1, NB15-OB2, NB16-6, NB16-7, TV-FP-1.
+
