@@ -73,10 +73,14 @@ object ListeningTime {
                     try {
                         while (true) {
                             delay(30_000L)
-                            val now = clock(); _total.value = add(_total.value, now - last); last = now; save()
+                            val now = clock(); _total.value = add(_total.value, now - last)
+                            dev.asfakul.yumeiro.stats.ActivityLog.addTime(context, music = true, deltaMs = (now - last).coerceIn(0L, 60_000L))
+                            last = now; save()
                         }
                     } finally {
-                        _total.value = add(_total.value, clock() - last); save()
+                        val d = clock() - last
+                        _total.value = add(_total.value, d); save()
+                        dev.asfakul.yumeiro.stats.ActivityLog.addTime(context, music = true, deltaMs = d.coerceIn(0L, 60_000L), flush = true)
                     }
                 }
             }

@@ -206,12 +206,15 @@ internal fun LazyListScope.musicOverview(
     shortcuts: List<LibraryShortcut> = emptyList(),
     listenedMs: Long = 0L,
     allPlaylists: List<Playlist> = playlists,
+    statsEntry: (@Composable () -> Unit)? = null,
 ) {
     // Round 2: only what the user did. Liked = songs they hearted; playlists = ones they made
     // (the internal liked list is shown as the hero, not counted twice); play time = measured.
     val favorites = allTracks.filter { it.isFavorite }
     @Suppress("NAME_SHADOWING") val playlists = allPlaylists.filter { it.id != "favorites_default" }
     if (shortcuts.isNotEmpty()) item(key = "shortcuts") { LibraryShortcutGrid(shortcuts, Modifier.padding(top = 4.dp)) }
+    // F-17: profile statistics entry.
+    if (statsEntry != null) item(key = "stats_entry") { statsEntry() }
     item(key = "hero") {
         LibraryHero(
             overline = "Your music", title = "Liked songs",

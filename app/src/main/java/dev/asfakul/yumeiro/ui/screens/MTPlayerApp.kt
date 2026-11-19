@@ -968,6 +968,7 @@ fun MTPlayerApp(
                                 onOpenHistory = { navigateSub(Screen.OnlineHistory.route) },
                                 onOpenDownloads = { navigateSub(Screen.Downloads.route) },
                                 onOpenTogether = { navigateSub(Screen.WatchTogether.route) },
+                                onOpenStats = if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PROFILE_STATS)) ({ navigateSub(Screen.Stats.route) }) else null,
                             )
                             }
                         }
@@ -1097,6 +1098,9 @@ fun MTPlayerApp(
                             onOpenExtensions = { navigateSub(Screen.Extensions.route) },
                         )
                         }
+                    }
+                    page(subPad, Screen.Stats.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.stats.StatsScreen(onBack = popSub) }
                     }
                     page(subPad, Screen.OnlineUpcoming.route) {
                         OpaquePage {

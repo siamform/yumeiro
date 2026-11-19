@@ -55,6 +55,8 @@ sealed class Screen(val route: String) {
     data object OnlineHistory : Screen("videos/online/history")
     /** F-08: release calendar. */
     data object OnlineUpcoming : Screen("videos/online/upcoming")
+    /** F-17: profile statistics. */
+    data object Stats : Screen("library/stats")
     /** My List, downloads and watch history for videos. */
     data object OnlineLibrary : Screen("videos/library")
     /** Offline downloads: Permanent / Offline groups, settings and tips. */

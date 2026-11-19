@@ -116,6 +116,7 @@ object PlaybackSession {
     private fun releaseInTwoSteps() {
         val cur = current ?: return
         current = null
+        dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop()
         cur.revoke()
         currentUri = null
         val p = cur.player
@@ -165,11 +166,19 @@ object PlaybackSession {
                 reused++
                 return Lease(key, p, resumed = false).also { current = it }
             }
+            dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop()
             runCatching { p.release() }
             current = null
         }
         currentUri = uri
         val p = factory(context.applicationContext, uri) { currentUri ?: uri }
+        // F-17: watching time for the profile statistics (on-device only).
+        val app = context.applicationContext
+        runCatching {
+            p.addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) { dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.playing(app, isPlaying) }
+            })
+        }
         defaults = p.trackSelectionParameters
         network = net
         created++
@@ -193,6 +202,7 @@ object PlaybackSession {
         main.removeCallbacks(releaseLater)
         val cur = current ?: return
         current = null
+        dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop()
         cur.revoke()
         timedRelease(cur.player)
         currentUri = null

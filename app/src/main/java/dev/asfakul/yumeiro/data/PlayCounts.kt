@@ -68,6 +68,11 @@ object PlayCounts {
         adult: Boolean? = null,
     ) {
         if (id.isBlank() || dev.asfakul.yumeiro.security.Privacy.incognito.value) return
+        dev.asfakul.yumeiro.stats.ActivityLog.addPlay(context, when (kind) {
+            Kind.DEVICE -> dev.asfakul.yumeiro.stats.StatsMath.Kind.DEVICE
+            Kind.ONLINE -> dev.asfakul.yumeiro.stats.StatsMath.Kind.ONLINE
+            Kind.YOUTUBE -> dev.asfakul.yumeiro.stats.StatsMath.Kind.YOUTUBE
+        })
         ensureLoaded(context)
         synchronized(this) {
             val list = _entries.value

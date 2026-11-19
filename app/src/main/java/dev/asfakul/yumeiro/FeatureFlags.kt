@@ -25,6 +25,8 @@ object FeatureFlags {
         UPCOMING("f08_upcoming", true),
         /** F-12: vertical Shorts player (swipe up / down) from the YouTube Shorts shelf; phones only. */
         SHORTS_PLAYER("f12_shorts_player", true),
+        /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
+        PROFILE_STATS("f17_profile_stats", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

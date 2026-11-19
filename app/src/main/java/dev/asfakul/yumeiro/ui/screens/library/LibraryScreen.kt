@@ -120,6 +120,7 @@ fun LibraryScreen(
     onOpenHistory: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
     onOpenTogether: () -> Unit = {},
+    onOpenStats: (() -> Unit)? = null,
 ) {
     var selectedPlaylistId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) } // kept across rotation
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -522,6 +523,7 @@ fun LibraryScreen(
                     onDownloads = onOpenDownloads, onTogether = onOpenTogether,
                 ),
                 listenedMs = listenedMs,
+                statsEntry = onOpenStats?.let { open -> { dev.asfakul.yumeiro.ui.screens.stats.StatsEntryCard(open) } },
             )
         }
     }

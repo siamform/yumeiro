@@ -26,6 +26,7 @@ internal object PrefSections {
         "yumeiro_listening",     // total listening time
         "yu_sites",              // saved websites
         "scrobble",              // Last.fm queue of plays not sent yet (and its on/off)
+        "activity_log",          // F-17: per-day activity for the profile statistics
     )
 
     /** Files that go with the sources (the extension list, servers, overrides). */
@@ -46,7 +47,7 @@ internal object PrefSections {
 
     /** History a "Clear watch and search history" reset removes, as file → key test. */
     fun isHistory(file: String, key: String): Boolean = when (file) {
-        "play_counts", "search_recent", "yt_history", "online", "yu_last_played" -> true
+        "play_counts", "search_recent", "yt_history", "online", "yu_last_played", "activity_log" -> true
         "mt_player_video_prefs" -> key.startsWith("pos_") || key.startsWith("watched_")
         "mt_player_music_prefs" -> key == "recently_played_ids" || key == "play_counts_json"
         else -> false

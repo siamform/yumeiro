@@ -703,6 +703,7 @@ class OfflineMediaRepository(
 
     override suspend fun recordTrackPlayed(trackId: String) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
+        dev.asfakul.yumeiro.stats.ActivityLog.addPlay(context, dev.asfakul.yumeiro.stats.StatsMath.Kind.MUSIC)
         // Recently played (front, max 50) and play counts. The same rule records plays made with
         // no screen listening (G5-PC1, MusicPlayHistory).
         val (recent, counts) = dev.asfakul.yumeiro.data.MusicPlayHistory.next(_recentlyPlayedIds.value, _playCounts.value, trackId)
