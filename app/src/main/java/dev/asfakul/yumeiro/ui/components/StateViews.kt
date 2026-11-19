@@ -121,12 +121,20 @@ object AppMessages {
     @Volatile private var waiting: Message? = null
 
     /**
-     * @param quiet the app posted it on its own (e.g. an extension's held promotional window): it never
-     *   replaces a message on screen, it waits until that one closes (like SnackbarHostState's queue).
+     * A message the app posts on its own (e.g. an extension's held promotional window): it never replaces
+     * a message on screen, it waits until that one closes (like SnackbarHostState's queue).
      */
+    fun showQuiet(context: android.content.Context?, text: String, actionLabel: String? = null, action: (() -> Unit)? = null) =
+        post(context, text, Kind.INFO, actionLabel, action, quiet = true)
+
     fun show(
         context: android.content.Context?, text: String, kind: Kind = Kind.INFO,
-        actionLabel: String? = null, action: (() -> Unit)? = null, quiet: Boolean = false,
+        actionLabel: String? = null, action: (() -> Unit)? = null,
+    ) = post(context, text, kind, actionLabel, action, quiet = false)
+
+    private fun post(
+        context: android.content.Context?, text: String, kind: Kind,
+        actionLabel: String?, action: (() -> Unit)?, quiet: Boolean,
     ) {
         if (text.isBlank()) return
         val duration = if (actionLabel != null || kind == Kind.ERROR) 4_500L else 2_600L

@@ -172,10 +172,9 @@ object ExtensionPopups {
     }
 
     private fun card(h: Held) {
-        dev.asfakul.yumeiro.ui.components.AppMessages.show(
+        // G10 ER-29: the card waits for a message on screen instead of replacing it.
+        dev.asfakul.yumeiro.ui.components.AppMessages.showQuiet(
             appContext, cardText(h), actionLabel = "Show", action = { reveal(h.id) },
-            // G10 ER-29: the card waits for a message on screen instead of replacing it.
-            quiet = true,
         )
     }
 
