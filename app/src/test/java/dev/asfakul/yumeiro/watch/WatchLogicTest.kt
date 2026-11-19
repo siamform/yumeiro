@@ -42,6 +42,23 @@ class WatchLogicTest {
         assertEquals(listOf(2), StreamWatch.filter(list, null, "world").map { it.index })
     }
 
+    /** F-14: a dead source moves to the next link of the same channel, each link once, then gives up. */
+    @Test fun failoverTriesEachSourceOfTheChannelOnce() {
+        val list = listOf(ch("https://a/1", "Sony HD"), ch("https://n/9", "News"), ch("https://b/2", "Sony (Backup)"), ch("https://c/3", "SONY 1080p"))
+        assertEquals("https://b/2", StreamWatch.failoverSource(list, "https://a/1", 1_000L)?.url)
+        assertEquals("https://c/3", StreamWatch.failoverSource(list, "https://b/2", 2_000L)?.url)
+        assertNull(StreamWatch.failoverSource(list, "https://c/3", 3_000L)) // all three failed: Auto-zap or the error card
+        assertNull(StreamWatch.failoverSource(list, "https://n/9", 3_500L)) // a channel with one link has nothing to try
+        // Later (the window has passed) the channel gets a fresh round, starting after the failed link.
+        assertEquals("https://b/2", StreamWatch.failoverSource(list, "https://a/1", 3_000L + StreamWatch.FAILOVER_WINDOW_MS + 1)?.url)
+    }
+
+    @Test fun failoverWrapsAroundToEarlierLinks() {
+        val list = listOf(ch("https://a/1", "Sony HD"), ch("https://b/2", "Sony (Backup)"))
+        assertEquals("https://a/1", StreamWatch.failoverSource(list, "https://b/2", 1_000L)?.url)
+        assertNull(StreamWatch.failoverSource(list, "https://a/1", 1_500L))
+    }
+
     @Test fun autoSwitchIsRateLimited() {
         repeat(StreamWatch.MAX_AUTO_SWITCHES) { assertTrue(StreamWatch.allowAutoSwitch(1_000L + it)) }
         assertFalse(StreamWatch.allowAutoSwitch(2_000L))
