@@ -161,8 +161,8 @@ verified on a device, evidence linked), `not covered` (reason given).
 |---|---|---|---|---|
 | I1 | Trakt | tracking/Trakt | verified (emulator): IG-1, IG-2 | `TrackerSignInDeviceTest`, `AnimeTrackersDeviceTest` |
 | I2 | Simkl | tracking/Simkl | verified (emulator): IG-1, IG-2 | `TrackerSignInDeviceTest`, `AnimeTrackersDeviceTest` |
-| I3 | Kitsu, AniList | tracking/Kitsu, online/anime/AniList | IG-2, IG-3 verified (emulator); IG-8 verified (emulator, both phones: 44051808801, 44054360131) | `AnimeTrackersDeviceTest`, `KitsuLoginTest`, `AnimeSignInMessageDeviceTest` |
-| I4 | TMDB (metadata) | online/SourceFacts / EpisodeStills | verified (emulator): IG-5 | `EpisodeStillsDeviceTest` |
+| I3 | Kitsu, AniList | tracking/Kitsu, online/anime/AniList | IG-2, IG-3 verified (emulator); IG-8 verified (emulator, both phones: 44051808801, 44054360131); IG-9…IG-12 verified (CI unit 44467817362, regression 44471298455) | `AnimeTrackersDeviceTest`, `KitsuLoginTest`, `AnimeSignInMessageDeviceTest` |
+| I4 | TMDB (metadata) | online/SourceFacts / EpisodeStills | verified (emulator): IG-5; IG-13 verified (CI unit 44467817362, regression 44471298455) | `EpisodeStillsDeviceTest` |
 | I5 | OpenSubtitles, SubDL, SubSource | online/subtitles/* | code read, IG-7 verified (emulator, both phones: 44051808801, 44054360131) | `OnlineSubtitlesFallbackDeviceTest` |
 | I6 | LRCLIB | lyrics/LrcLib | code read, no finding (on IO, 512 KB cap, miss marks pruned); unit | `LrcLibTest`, `LrcLibMissesTest`, `LyricsParsingTest` |
 | I7 | Last.fm | scrobble/LastFm | verified (emulator): IG-4; real account send → OMT-10 | `ScrobbleFlushDeviceTest` |

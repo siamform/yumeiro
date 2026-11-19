@@ -10,7 +10,7 @@ labelled verification, competitor notes. Results are labelled unit, emulator, CI
 
 ## Status
 
-In progress. Started 2026-11-17 with the lead left by the sixth agent (Trakt/Simkl `awaitToken`).
+Closed 2026-11-19 06:30 UTC (re-audit under §13a: IG-9…IG-13). IG-1…IG-8 closed 2026-11-17.
 
 ## Findings register
 
@@ -158,12 +158,34 @@ retry happens only on the next progress tick (AnimeSync, ≤3 attempts) or the n
 
 | ID | Item | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|---|
-| IG-9 | I3 | Anime trackers silently skip an episode when the id lookup hits AniList 429/5xx or offline | `AnimeIds.of` wraps the lookup in `runCatching` and `AnimeIds.post` returns null on non-2xx | strict lookup: 404/empty = not found, other failures throw, so AnimeSync's retry runs | `g11/AnimeIdsLookupFailureTest` | Open |
-| IG-10 | I1–I3 | A 429/5xx from any tracker write counts as done; never retried | writes return `code in 200..299` / `isSuccessful`; Trakt search returns null on non-2xx; MAL maps network errors to -1 | `TrackerHttp.transient(code)` throws for 429, 5xx and network errors in all five trackers | `g11/TrackerTransientFailureTest` | Open |
-| IG-11 | I3 | AniList / MAL can lower progress and undo COMPLETED after a failed read | a failed progress read is taken as 0 and the write is still sent | no write unless the read succeeded; a failed read throws (retried) | `g11/TrackerProgressReadTest` | Open |
-| IG-12 | I3 | Expired / revoked AniList token: "Signed in" shown, nothing syncs | 401 → null → false; no sign-out | AniList 401 with the user's token signs out (card asks to sign in again), as MAL/Kitsu/Trakt do on a refused refresh | `g11/AniListExpiredTokenTest` | Open |
-| IG-13 | I4 | A 429/5xx from ani.zip or TVmaze hides thumbnails until restart | `EpisodeStills.get` returns null for any non-2xx = "nothing found" | `get` returns null only for 404; other non-2xx throw, which clears the tried mark (IG-5 path) | `g11/EpisodeStillsRateLimitTest` | Open |
+| IG-9 | I3 | Anime trackers silently skip an episode when the id lookup hits AniList 429/5xx or offline | `AnimeIds.of` wraps the lookup in `runCatching` and `AnimeIds.post` returns null on non-2xx | strict lookup: 404/empty = not found, other failures throw, so AnimeSync's retry runs | `g11/AnimeIdsLookupFailureTest` | Verified (CI unit, emulator regression) |
+| IG-10 | I1–I3 | A 429/5xx from any tracker write counts as done; never retried | writes return `code in 200..299` / `isSuccessful`; Trakt search returns null on non-2xx; MAL maps network errors to -1 | `TrackerHttp.transient(code)` throws for 429, 5xx and network errors in all five trackers | `g11/TrackerTransientFailureTest` | Verified (CI unit, emulator regression) |
+| IG-11 | I3 | AniList / MAL can lower progress and undo COMPLETED after a failed read | a failed progress read is taken as 0 and the write is still sent | no write unless the read succeeded; a failed read throws (retried) | `g11/TrackerProgressReadTest` | Verified (CI unit, emulator regression) |
+| IG-12 | I3 | Expired / revoked AniList token: "Signed in" shown, nothing syncs | 401 → null → false; no sign-out | AniList 401 with the user's token signs out (card asks to sign in again), as MAL/Kitsu/Trakt do on a refused refresh | `g11/AniListExpiredTokenTest` | Verified (CI unit, emulator regression) |
+| IG-13 | I4 | A 429/5xx from ani.zip or TVmaze hides thumbnails until restart | `EpisodeStills.get` returns null for any non-2xx = "nothing found" | `get` returns null only for 404; other non-2xx throw, which clears the tried mark (IG-5 path) | `g11/EpisodeStillsRateLimitTest` | Verified (CI unit, emulator regression) |
 
 Scope check (INVENTORY G11 I1–I11 and CHECKLIST against the code): the only open CHECKLIST row touching G11 is
 NBUG-6 (DNS routing, a G12 item blocked on the owner's gate), so it stays out. INVENTORY rows I1–I11 match the
 files above; I3 and I4 get the new IDs at close.
+
+### Steps 4–9: evidence
+
+| Step | Run / commit | Result |
+|---|---|---|
+| 4 tests (one commit) | 7924f16b | 5 classes, 12 tests + `FakeHttp` |
+| 5 fail-before (CI) | 44465186662 on `ab/g11-before` (old code + tests; branch deleted) | 1263 tests, 12 failed = every new test, each for the expected reason (no throw / mutation or PATCH sent after a failed read / still signed in / ani.zip asked once) |
+| 6 fixes (one commit each, test order) | ab3b93bc IG-9, 4c234e56 IG-10, 5926d234 IG-11, d8d4c35e IG-12, d11676cb IG-13 | — |
+| 7 pass-after (CI) | 44467817362 at d11676cb | 1286 tests, 0 failed; mobile and TV lint pass |
+| 8 loop | not needed | — |
+| 9 group regression (emulator) | 44471298455 at d11676cb, api33-lowram + api36 | AnimeTrackers 3/3, TrackerSignIn 2/2, ScrobbleFlush 1/1, EpisodeStills 2/2, CloudAlertsLookup 1/1, OnlineSubtitlesFallback 2/2, AnimeSignInMessage 2/2: all PASS on both phones (each class twice) |
+| 9 TV cross-check (TV emulator) | 44471301890 at d11676cb, tv-api34 | AnimeTrackers 3/3, EpisodeStills 2/2 PASS. No TV UI changed, so tv-api24 was not run; the release gate covers both TVs |
+
+Fail-before was CI only: the findings are in plain network code that the unit tests drive end to end with a
+fake client; the emulator regression shows the device flows still pass with the fixes.
+
+Not covered (no owner test added; already in OMT rows for real accounts): a real AniList token expiring after a
+year, real 429s from AniList / TVmaze.
+
+### Close-out (2026-11-19 06:30 UTC)
+
+G11 re-audit closed. IG-9…IG-13 Verified (CI unit; device flows emulator). ADR-030 accepted. IG-1…IG-8 unchanged.

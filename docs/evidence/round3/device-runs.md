@@ -1031,3 +1031,7 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | 44460663805 | r15-stability f504a934 | tv-api24 | SheetFocusTv, Nbug15Redesign, Dialogs, Messages | all PASS (Dialogs checked=5, Messages 101/0) |
 | 44461533827 | r15-stability f504a934 | tv-api34 | same 4 | 3 PASS; Messages problems=11, one 44 dp view (TV-A11Y-1) |
 | 44462757164 | ab/g10-tva11y-before (6dbfde03 + today's test; deleted) | tv-api34 | Messages | old code problems=13, same view → TV-A11Y-1 pre-existing |
+| 44465186662 | ab/g11-before (old code + g11 tests; deleted) | CI | G11 fail-before | 1263 tests, 12 failed = all new G11 tests |
+| 44467817362 | r15-stability d11676cb | CI | G11 pass-after | 1286 tests, 0 failed |
+| 44471298455 | r15-stability d11676cb | api33-lowram, api36 | G11 regression, 7 classes | all PASS on both |
+| 44471301890 | r15-stability d11676cb | tv-api34 | AnimeTrackers, EpisodeStills | PASS |

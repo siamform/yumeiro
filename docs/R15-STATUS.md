@@ -1,14 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 05:40 UTC, G11 step 3 → step 4)
+## Resume here (updated 2026-11-19 06:31 UTC, G11 closed → v1.8.2 release gate)
 
-- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 (closed) → G11 → v1.8.2
-  (owner approval) → stability-v2.
-- **G11 (re-audit):** steps 1–3 done (docs/groups/GROUP-11-INTEGRATIONS.md, "Re-audit under the group method").
-  New findings IG-9…IG-13 (tracker / stills failures read as "done" or "not found"), ADR-030.
-- **Runs in progress:** none.
-- **Next three actions:** (1) step 4: tests `g11/*Test` in one commit; (2) step 5: fail-before on
-  `ab/g11-before` (CI), then delete it; (3) steps 6–7: one fix commit per finding, pass-after.
+- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 (closed) → G11 (closed) →
+  v1.8.2 release gate (owner approval) → stability-v2 → final sweep.
+- **G11:** re-audit closed. IG-9…IG-13 Verified (CI unit, emulator regression); ADR-030. Runs: fail-before
+  44465186662, pass-after 44467817362 (1286/0), regression 44471298455 (phones), 44471301890 (tv-api34).
+- **Runs in progress:** none. `ab/g11-before` deleted.
+- **Open agent item outside G11:** NBUG-10 (G4, Yumix "Show videos from" search shows 2 results); not reproduced yet.
+- **Next three actions:** (1) release gate: unbatched full device regression on the release commit, both phones
+  and both TVs; (2) gate report in the cycle report; (3) ask the owner for v1.8.2 approval (no release without it).
+
+### Previous resume note — superseded (05:40 UTC 2026-11-19, G11 step 3 → step 4)
+
+- G11 steps 1–3 done; tests, fail-before and fixes were next.
 
 ### Previous resume note — superseded (05:30 UTC 2026-11-19, G10 closed → G11 step 1; real clock was ~05:20)
 
