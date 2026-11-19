@@ -1040,6 +1040,24 @@ user (`JsSources`) are not guarded, so home-hosted repos keep working. Nuvio, Sk
 Consequences: a source that needs a LAN server no longer works through the bridge (none known);
 slow sources over 60 s per call fail with a clear message. Rollback: revert the two commits.
 
+### ADR-033: Watch later and Favorite live in My List (F-09)
+
+Status: accepted 2026-11-19 (F-09, stream A-yumix).
+
+Context: users want to save a title from any poster without opening it, as Watch later or as a Favorite.
+CloudStream keeps favorites in a store apart from the watch state and opens its long-press popup only after loading
+the full detail page; Aniyomi adds to the library on long press; Hikari uses a hold-and-slide menu with no remote path.
+
+Decision: one store (`online_bookmarks.json`). Watch later is status PLAN. Favorite is an additive flag (`"fav"`).
+A Favorite outside My List has the in-memory status NONE, written as `"status":"PLAN"` + `"nostatus":true`, so older
+builds still read the title (as Watch later). File version stays 1. Every `PosterCard` and the hero open a small sheet
+on long press, hold OK or the TV Menu key; the sheet uses only the item on screen (no network). A corner mark shows the
+saved state; My List gets a Favorites chip; Yumix gets a Favorites shelf. A new Favorite starts with alerts off.
+
+Consequences: no new file and no backup change; the 1000-title cap covers both. After a downgrade, a Favorite-only
+title shows as Watch later; an edit in the old build drops the Favorite flag. Rollback: revert the commits; files stay
+readable.
+
 ## 11. Risks
 
 | Risk | Mitigation |
