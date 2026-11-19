@@ -48,6 +48,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -106,6 +108,7 @@ import dev.asfakul.yumeiro.sources.manga.MangaChapter
 import dev.asfakul.yumeiro.sources.manga.MangaDetails
 import dev.asfakul.yumeiro.sources.manga.MangaItem
 import dev.asfakul.yumeiro.sources.manga.MangaLibrary
+import dev.asfakul.yumeiro.sources.manga.MangaOffline
 import dev.asfakul.yumeiro.sources.manga.MangaPageRef
 import dev.asfakul.yumeiro.sources.manga.MangaProvider
 import dev.asfakul.yumeiro.ui.components.FilterPill
@@ -383,14 +386,33 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
     val library by MangaLibrary.entries.collectAsState()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.load(context) } }
     LaunchedEffect(providerId, url, attempt) {
-        if (provider == null) { error = "This source isn't installed any more"; return@LaunchedEffect }
+        if (provider == null) {
+            error = "This source isn't installed any more"
+            // F-13: chapters saved on the phone still open without the source.
+            chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
+                .filter { it.providerId == providerId && it.mangaUrl == url }.map { MangaChapter(it.chapterUrl, it.chapterName) }.takeIf { it.isNotEmpty() }
+            return@LaunchedEffect
+        }
         error = null
         // R16 (G7): runCatching also caught the cancellation of an old load (Retry, or leaving the
         // page), which then put "Couldn't load" over the new one. Cancellation is rethrown now.
         // G7-MB1: the chapter list is keyed by URL; a chapter listed twice is shown once.
         try { details = provider.details(url); chapters = provider.chapters(url).distinctBy { it.url } }
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
-        catch (e: Exception) { error = OnlineErrors.friendly(e) }
+        catch (e: Exception) {
+            // F-13: no connection (or the source broke): the chapters saved on this phone stay readable.
+            val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
+                .filter { it.providerId == providerId && it.mangaUrl == url }
+            if (saved.isNotEmpty()) chapters = saved.map { MangaChapter(it.chapterUrl, it.chapterName) }
+            error = OnlineErrors.friendly(e)
+        }
+    }
+    val offlineGen by MangaOffline.changes.collectAsState()
+    val offlineOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFLINE_MANGA) }
+    val saving by MangaOffline.progress.collectAsState()
+    val savedUrls by produceState(emptySet<String>(), offlineGen, chapters) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
+            .filter { it.providerId == providerId && it.mangaUrl == url }.map { it.chapterUrl }.toSet()
     }
     val entry = library.firstOrNull { it.providerId == providerId && it.url == url }
     val item = MangaItem(providerId, url, details?.title?.takeIf { it.isNotBlank() } ?: title,
@@ -450,7 +472,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                 items(list, key = { it.url }) { ch ->
                     val read = entry?.readChapters?.contains(ch.url) == true
                     Surface(shape = RoundedCornerShape(12.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onRead(item, ch) }) {
-                        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 10.dp)) {
                             Text(ch.name, color = if (read) TextTertiary else TextPrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val meta = listOfNotNull(
                                 ch.dateUpload.takeIf { it > 0 }?.let { java.text.DateFormat.getDateInstance().format(java.util.Date(it)) },
@@ -458,6 +481,29 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                             )
                             if (meta.isNotEmpty()) Text(meta.joinToString(" · "), color = TextTertiary, fontSize = 11.sp)
                         }
+                        // F-13: save this chapter on the phone / saving (tap to stop) / saved (tap to remove).
+                        val key = MangaOffline.folderName(providerId, ch.url)
+                        val pct = saving[key]
+                        val isSaved = ch.url in savedUrls
+                        if (offlineOn || isSaved) IconButton(
+                            onClick = {
+                                when {
+                                    pct != null -> MangaOffline.cancel(providerId, ch.url)
+                                    isSaved -> { MangaOffline.delete(context, providerId, ch.url); android.widget.Toast.makeText(context, "Removed from this device", android.widget.Toast.LENGTH_SHORT).show() }
+                                    provider != null -> MangaOffline.enqueue(context, provider, item, ch) { e ->
+                                        android.widget.Toast.makeText(context, if (e == null) "Saved for offline reading" else "Couldn't save: ${OnlineErrors.friendly(e)}", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.testTag("manga_offline_${ch.url.hashCode()}"),
+                        ) {
+                            when {
+                                pct != null -> CircularProgressIndicator(progress = { pct }, color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                                isSaved -> Icon(Icons.Default.DownloadDone, "Saved on this device, tap to remove", tint = SpotifyGreen)
+                                else -> Icon(Icons.Default.Download, "Save for offline reading", tint = TextSecondary)
+                            }
+                        }
+                      }
                     }
                 }
             }
@@ -513,7 +559,9 @@ private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef, lowRam
 @Composable
 fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit) {
     val context = LocalContext.current
-    val provider = remember(providerId) { SourceHub.manga(providerId) }
+    val online = remember(providerId) { SourceHub.manga(providerId) }
+    // F-13: a chapter saved on the phone reads from disk (no network, works with the source removed).
+    val provider = remember(providerId, chapterUrl, online) { MangaOffline.provider(context, providerId, chapterUrl, online?.name ?: "Saved") ?: online }
     var pages by remember { mutableStateOf<List<MangaPageRef>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }

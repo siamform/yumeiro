@@ -35,6 +35,8 @@ object FeatureFlags {
         LIVE_FAILOVER("f14_live_failover", true),
         /** F-15 (ADR-040): Live TV watch page shows Now / Next from the playlist's XMLTV guide (url-tvg). */
         LIVE_GUIDE("f15_live_guide", true),
+        /** F-13 (ADR-040): save manga chapters on the phone for offline reading (chapter list button). */
+        OFFLINE_MANGA("f13_offline_manga", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null
