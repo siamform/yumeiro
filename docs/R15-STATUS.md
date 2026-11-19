@@ -1,21 +1,25 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 19:50 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-19 20:40 UTC; no PR / merge / deploy without the owner's "go")
 
 - **Task:** final test and release preparation (master prompt "THE FINAL TEST AND RELEASE PREPARATION").
-- **Pre-conditions (§2): NOT met yet**, so the final passes are not counted as the final test:
-  1. tenth-cycle device verification: chunk_00 passes P1/P2 on api33-lowram, api36, tv-api34 (44593053433,
-     44593085810, re-runs 44595993499/44595998571, 44598214395/44598220085 after FINAL-1..6); tv-api24 44600322143 running;
-  2. fail-before CI: c2 NBUG-6 44592881571 and c3 Vega 44595319629 failed to compile as expected; SEC-LFM
-     44597459511 failed to compile (`cloudSig` unresolved) as expected; part 2 44599561077 failed as expected (the 4
-     new tests fail on the old code: SavedSitesTelegram, ApkSecrets ×2, UniversalAddFormats oversized manifest);
-  3. head CI 44603218553 on 1b3e644 running (last green 44587248595 on 9dd0213).
-- **Chunks 01–18:** chunk_01 phones 44600328162 running. Order per docs/evidence/final/PLAN.md, ≤ 2 device workflows.
-- **New finding SEC-LFM (§9):** fixed in b57e155 (ADR-048); the built-in Last.fm path needs the Worker deploy (owner's go).
-- **Next three:** 1. part 2 result → head CI; 2. collect each chunk (`scripts/final_collect.sh <run>`,
-  `python3 scripts/final_checklist.py`), fix findings under the protocol; 3. audit/perf rows, review APK.
-- **Final docs:** docs/MASTER-CHECKLIST-FINAL.md, CODE-AUDIT-FINAL.md, SERVER-TEST-FINAL.md, RELEASE-SUMMARY-FINAL.md.
+- **Pre-conditions (§2): NOT met yet** (head not on a green CI; new findings FINAL-7/8, AUD-UI-1 need fail-before
+  CI and device pass-after), so the passes so far are recorded but not yet counted as the final test.
+- **Findings this cycle:** FINAL-1..6 (fixed, device-verified); FINAL-7 WebView header map on Android 7 (d35614c,
+  pass-after tv-api24 44603655334); FINAL-8 OnlineSettings.init race (82c5b93, pass-after next tv-api24 run);
+  FINAL-9 assumption skips counted as passes (1c44b93, evidence re-collected); AUD-UI-1 48 dp targets (df49c5d).
+- **Running:** fail-before CI 44604147006 (`tmp/final7-fail-before`: FINAL-7 guard + AUD-UI-1 guard); then
+  fail-before `tmp/final8-fail-before` (b7cdc1b); then head CI. Device: tv-api34 chunk_01 44607298962, tv-api24
+  chunk_02 + AnimeSignInMessage 44607305833.
+- **Device progress (latest per chunk):** phones chunk_00..02 pass; tv-api34 chunk_00 pass; tv-api24 chunk_00..01 pass
+  (3 platform skips with reasons). Next: phones chunk_03, then TV chunks, per docs/evidence/final/PLAN.md.
+- **Next three:** 1. fail-before results → head CI; 2. collect each run (`scripts/final_collect.sh <run>`,
+  `python3 scripts/final_checklist.py`); 3. bench (startup/jank), audit rows, review APK.
 - Report: docs/reports/2026-11-19-tenth-handover-report.md.
+
+### Previous resume note — superseded (19:50 UTC 2026-11-19; head 849bae6)
+
+- chunk_00 tv-api24 and chunk_01 phones running; fail-before part 2 running.
 
 ### Previous resume note — superseded (19:05 UTC 2026-11-19; head b57e155)
 

@@ -55,10 +55,14 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 | 44595993499 / 44595998571 | re-run of the 4 failing classes, phones / tv-api34 | CloudRecapture and TelegramPlayback pass on all three; TelegramPublic fails on tv-api34 (FINAL-5, rows off-screen in the lazy list); MangaTranslate fails (FINAL-6, the model answered "Good afternoon") → fix in the next commit |
 | 44597459511 | fail-before SEC-LFM + AUD-ZIP + FINAL-3 (`tmp/sec-lfm-fail-before`) | failed as expected: LastFmCloudSignTest "Unresolved reference 'cloudSig'"; gitleaks passed with the scoped allowlist; cancelled after the unit step |
 | 44599561077 | fail-before part 2 (`tmp/fail-before-part2`: same without LastFmCloudSignTest, so ApkSecretsTest, AUD-ZIP and FINAL-3 tests run on the old code) | failed as expected: 1458 tests, 4 failed — SavedSitesTelegramTest.aChannelHandleOrLinkIsSavedAsItsPublicPage, ApkSecretsTest.everySecretLikeFieldIsClassified, ApkSecretsTest.removedTrueSecretsStayOut, UniversalAddFormatsTest.anOversizedManifestInAnArchiveIsNotInflated; cancelled after the unit step |
-| 44603218553 | head CI 1b3e644 | running |
+| 44603218553 | head CI 1b3e644 | cancelled: superseded by FINAL-7 / AUD-UI-1 fixes before the unit step |
+| 44600322143 | chunk_00 tv-api24 | 9/10 pass P1/P2; CloudRecapture fails (FINAL-7: Chromium 53 edits the read-only header map) → fix d35614c |
+| 44600328162 | chunk_01 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
+| 44603655334 | CloudRecapture + chunk_01 tv-api24 | CloudRecapture passes P1/P2 (FINAL-7 pass-after); AnimeSignInMessage P1 fails (FINAL-8 init race) → fix 82c5b93; 3 platform skips (FINAL-9 found they were counted as passes → 1c44b93) |
+| 44603660590 | chunk_02 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
+| 44604147006 | fail-before FINAL-7 guard + AUD-UI-1 guard (`tmp/final7-fail-before` dd78a56) | running |
+| 44607298962 / 44607305833 | chunk_01 tv-api34 / chunk_02 + AnimeSignInMessage tv-api24 | running |
 | 44598214395 / 44598220085 | re-run TelegramPublic + MangaTranslate, phones / tv-api34 | pass P1 and P2 on api33-lowram, api36, tv-api34 |
-| 44600322143 | chunk_00 on tv-api24 | running |
-| 44600328162 | chunk_01 phones | running |
 
 Final-test cycle findings so far: SEC-LFM (Last.fm secret in the APK, ADR-048, b57e155), AUD-ZIP (archive manifest read
 uncapped, 2e68bf9), FINAL-1..4 (1158c01), FINAL-5/6 (test fixes, device-verified in 44598214395/44598220085). Commit-body timestamps of 2026-11-19 19:15–19:45 were estimated ahead of the clock; the git
