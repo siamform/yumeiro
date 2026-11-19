@@ -97,7 +97,7 @@ internal fun VaultUnlock(onDismiss: () -> Unit, onOpen: () -> Unit) {
             when (Profiles.checkPin(context, profile.id, pin)) {
                 Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> onOpen()
                 Profiles.PinCheck.WRONG -> error = "Wrong PIN"
-                Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${(Profiles.lockoutLeft(profile.id) / 1000) + 1} s"
+                Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, profile.id))}"
             }
         },
     )
@@ -109,6 +109,18 @@ internal fun PrivateVault(days: Int, onBack: () -> Unit, onPlayVideo: (VideoItem
     val all by OnlineDownloads.items.collectAsState()
     val me = remember { Profiles.currentId(context) }
     val items = remember(all) { all.filter { it.hidden && it.profile == me }.sortedByDescending { it.finishedAt } }
+    // Locks again as soon as the app leaves the screen, and no screenshots / recents preview meanwhile.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val window = (context as? Activity)?.window
+        window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) onBack() }
+        lifecycle.lifecycle.addObserver(obs)
+        onDispose {
+            lifecycle.lifecycle.removeObserver(obs)
+            if (!(Privacy.hideInRecents.value && Privacy.lockEnabled.value)) window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
     Column(Modifier.fillMaxSize().testTag("downloads_vault")) {
         SubPageHeader("Private", onBack, subtitle = "${items.size} hidden · only on this phone, only for ${Profiles.current(context).name}")
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
