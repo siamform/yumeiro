@@ -132,11 +132,11 @@ class JsBridge(
         }
         val req = Request.Builder().url(url).headers(headers.toHeaders()).method(method, body).build()
         val timed = (a.getOrNull(1) as? JsonObject)?.get("timeout")?.let { (it as? JsonPrimitive)?.contentOrNull?.toLongOrNull() }
-            ?.let { client.newBuilder().callTimeout(it, TimeUnit.SECONDS).build() } ?: client
+            ?.let { guarded.newBuilder().callTimeout(it, TimeUnit.SECONDS).build() } ?: guarded
         return timed.newCall(req).execute().use { r ->
             buildJsonObject {
                 put("statusCode", r.code)
-                put("body", if (method == "HEAD") "" else r.body.string())
+                put("body", if (method == "HEAD") "" else capped(r))
                 put("headers", JsonObject(r.headers.toMultimap().mapValues { JsonPrimitive(it.value.joinToString(",")) }))
                 put("isRedirect", r.isRedirect)
                 put("reasonPhrase", r.message)
@@ -146,6 +146,19 @@ class JsBridge(
     }
 
     private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
+
+    /** SRC-2: every script request is checked on every hop (redirects, rebinding) against private addresses. */
+    private val guarded: OkHttpClient by lazy { client.newBuilder().addNetworkInterceptor(dev.asfakul.yumeiro.network.PublicOnly).build() }
+
+    /** SRC-2: a script can't fill memory with one huge response (5 MB, the rest is dropped). */
+    private fun capped(r: okhttp3.Response): String {
+        val src = r.body.source()
+        src.request(MAX_BODY + 1)
+        val buf = src.buffer
+        val n = minOf(buf.size, MAX_BODY)
+        val charset = r.body.contentType()?.charset() ?: Charsets.UTF_8
+        return buf.readString(n, charset)
+    }
 
     // endregion
 
@@ -240,6 +253,8 @@ class JsBridge(
 
     companion object {
         private const val TAG = "JsBridge"
+        /** SRC-2: largest response body handed to a script. */
+        internal const val MAX_BODY = 5L * 1024 * 1024
         /** Upper bound for one `xxxExtractor` call from a JS source. */
         const val EXTRACTOR_TIMEOUT_MS = 30_000L
     }
