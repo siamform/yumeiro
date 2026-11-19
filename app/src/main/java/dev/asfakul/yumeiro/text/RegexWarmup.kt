@@ -113,6 +113,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.sources.stremio.StremioProviderKt",
         "dev.asfakul.yumeiro.sources.tachiyomi.AniyomiProviderKt",
         "dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensionsKt",
+        "dev.asfakul.yumeiro.stream.EpgGuide",
         "dev.asfakul.yumeiro.stream.AdFilterDataSource",
         "dev.asfakul.yumeiro.stream.HlsAdFilter",
         "dev.asfakul.yumeiro.stream.IncomingMediaKt",
