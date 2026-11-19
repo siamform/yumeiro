@@ -176,7 +176,10 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
 @Composable
 private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, onPlay: (version: String, index: Int) -> Unit) {
     val versions = d.versions
-    var version by rememberSaveable(d.url) { mutableStateOf(dev.asfakul.yumeiro.online.OnlineSession.defaultVersion(versions)) }
+    // F-01: a Dub / Sub chip tapped on the poster picks that version first.
+    var version by rememberSaveable(d.url) {
+        mutableStateOf(dev.asfakul.yumeiro.online.VersionHint.pick(versions, dev.asfakul.yumeiro.online.VersionHint.take(d.url), dev.asfakul.yumeiro.online.OnlineSession.defaultVersion(versions)))
+    }
     if (version !in versions && versions.isNotEmpty()) version = versions.first()
     val seasons = remember(d, version) { d.seasons(version) }
     var seasonIndex by rememberSaveable(d.url, version) { mutableIntStateOf(0) }

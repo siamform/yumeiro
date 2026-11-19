@@ -126,7 +126,7 @@ internal fun SoftBackdrop(url: String?, headers: Map<String, String>, modifier: 
  * the hero; theatre recordings (CAM / TS) get an amber tint as a quality hint.
  */
 @Composable
-internal fun androidx.compose.foundation.layout.BoxScope.PosterTags(item: OnlineItem, compact: Boolean = false, max: Int = 3) {
+internal fun androidx.compose.foundation.layout.BoxScope.PosterTags(item: OnlineItem, compact: Boolean = false, max: Int = 3, onVersion: ((String) -> Unit)? = null) {
     val tags = item.tags
     if (tags.isEmpty()) return
     val type = tags.firstOrNull { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE }
@@ -141,7 +141,13 @@ internal fun androidx.compose.foundation.layout.BoxScope.PosterTags(item: Online
     if (top.isNotEmpty()) Row(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(start = pad, top = pad, end = pad + scoreRoom).testTag("poster_tags"), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         top.forEach { Box(Modifier.weight(1f, fill = false)) { TagChip(it, compact, strong = it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE) } }
     }
-    if (audio != null) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(pad), contentAlignment = Alignment.BottomStart) { TagChip(audio, compact, strong = false) }
+    if (audio != null) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(pad), contentAlignment = Alignment.BottomStart) {
+        // F-01: on phones the Dub / Sub chip opens the title on that version (TV keeps one focus stop per card).
+        val want = remember(audio.label) { dev.asfakul.yumeiro.online.VersionHint.wantFor(audio.label) }
+        val tap = if (onVersion != null && want != null && !dev.asfakul.yumeiro.Edition.isTv)
+            Modifier.testTag("poster_version_tag").clickable(onClickLabel = "Open ${audio.label}") { onVersion(want) } else Modifier
+        Box(tap) { TagChip(audio, compact, strong = false) }
+    }
 }
 
 @Composable
@@ -182,7 +188,7 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
-            PosterTags(item, compact = true)
+            PosterTags(item, compact = true, onVersion = { want -> dev.asfakul.yumeiro.online.VersionHint.set(item.url, want); onClick() })
             item.score?.takeIf { it > 0 }?.let { s ->
                 Row(
                     Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp),
