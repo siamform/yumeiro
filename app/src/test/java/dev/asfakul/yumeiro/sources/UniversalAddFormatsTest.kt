@@ -54,6 +54,19 @@ class UniversalAddFormatsTest {
         assertEquals("SKY_PLUGIN", UniversalAdd.sniff("p.sky", sky)?.name)
     }
 
+    /**
+     * AUD-ZIP (CODE-AUDIT-FINAL, error handling): a downloaded archive's manifest.json was read whole with
+     * readBytes(), so a tiny zip that inflates to hundreds of MB (a "zip bomb" behind a repo link) was
+     * expanded into memory. The read is capped at 1 MB; a larger manifest is not a plugin.
+     */
+    @Test fun anOversizedManifestInAnArchiveIsNotInflated() {
+        val small = zip("manifest.json" to """{"pluginClassName":"a.B"}""")
+        assertEquals("CS_PLUGIN", UniversalAdd.sniff("p.cs3", small)?.name)
+        val bomb = zip("manifest.json" to " ".repeat(2_000_000) + """{"pluginClassName":"a.B"}""")
+        assertTrue("compresses small: ${bomb.size}", bomb.size < 50_000)
+        assertEquals(null, UniversalAdd.sniff("p.cs3", bomb))
+    }
+
     @Test fun unsupportedFormatsSayWhatTheyAre() {
         val labels = listOf("SKYSTREAM_REPO", "SKY_PLUGIN", "NUVIO_REPO", "VEGA_REPO").map { n ->
             UniversalAdd.Kind.entries.firstOrNull { it.name == n }?.label.orEmpty()

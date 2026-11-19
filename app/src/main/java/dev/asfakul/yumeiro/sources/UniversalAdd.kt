@@ -182,6 +182,8 @@ object UniversalAdd {
         return null
     }
 
+    private const val MANIFEST_MAX = 1L shl 20
+
     private fun zipKind(bytes: ByteArray): Kind? = runCatching {
         ZipInputStream(bytes.inputStream()).use { z ->
             var apk = false
@@ -190,7 +192,8 @@ object UniversalAdd {
             while (true) {
                 val e = z.nextEntry ?: break
                 when (e.name) {
-                    "manifest.json" -> if (z.readBytes().decodeToString().contains("pluginClassName")) return Kind.CS_PLUGIN
+                    // AUD-ZIP: capped read; a zip bomb's manifest throws instead of filling the memory.
+                    "manifest.json" -> if (z.readNBytesCompat(MANIFEST_MAX).decodeToString().contains("pluginClassName")) return Kind.CS_PLUGIN
                     "AndroidManifest.xml" -> apk = true
                     "plugin.json" -> skyJson = true
                     "plugin.js" -> skyJs = true
