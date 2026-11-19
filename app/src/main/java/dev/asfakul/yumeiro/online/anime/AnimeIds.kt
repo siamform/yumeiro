@@ -35,9 +35,15 @@ object AnimeIds {
         if (d.malId != null && d.aniListId != null) return Ids(d.aniListId, d.malId, null)
         val key = "${d.api}|${d.url}"
         cache[key]?.let { return it }
-        val found = runCatching {
+        // IG-9: a failed lookup (offline, 429, 5xx) throws, so AnimeSync retries the trackers later.
+        // Before, it was caught here and the episode was silently skipped. Only "no such anime" is null.
+        // When the extension already gave the MAL id, MAL and Kitsu still go ahead (not cached).
+        val found = try {
             if (d.aniListId != null) byAniListId(client, d.aniListId) else search(client, cleanTitle(d.name), d.year)
-        }.getOrNull()
+        } catch (e: Exception) {
+            if (d.malId != null) return Ids(null, d.malId, null)
+            throw e
+        }
         val ids = Ids(found?.anilist ?: d.aniListId, d.malId ?: found?.mal, found?.episodes)
         if (ids.anilist != null || ids.mal != null) cache[key] = ids
         return ids.takeIf { it.anilist != null || it.mal != null }
@@ -70,16 +76,16 @@ object AnimeIds {
     private fun search(client: OkHttpClient, title: String, year: Int?): Ids? {
         val q = "query(\$s:String,\$y:Int){Page(perPage:5){media(search:\$s,type:ANIME,seasonYear:\$y){id idMal episodes}}}"
         val vars = JSONObject().put("s", title).apply { if (year != null) put("y", year) }
-        var media = AniList.graphql(client, q, vars, null)?.optJSONObject("Page")?.optJSONArray("media")
+        var media = AniList.graphqlOrThrow(client, q, vars, null)?.optJSONObject("Page")?.optJSONArray("media")
         if ((media == null || media.length() == 0) && year != null) {
-            media = AniList.graphql(client, q, JSONObject().put("s", title), null)?.optJSONObject("Page")?.optJSONArray("media")
+            media = AniList.graphqlOrThrow(client, q, JSONObject().put("s", title), null)?.optJSONObject("Page")?.optJSONArray("media")
         }
         val m = media?.optJSONObject(0) ?: return null
         return Ids(m.optInt("id").takeIf { it > 0 }, m.optInt("idMal").takeIf { it > 0 }, m.optInt("episodes").takeIf { it > 0 })
     }
 
     private fun byAniListId(client: OkHttpClient, id: Int): Ids? {
-        val m = AniList.graphql(client, "query(\$id:Int){Media(id:\$id){id idMal episodes}}", JSONObject().put("id", id), null)?.optJSONObject("Media") ?: return null
+        val m = AniList.graphqlOrThrow(client, "query(\$id:Int){Media(id:\$id){id idMal episodes}}", JSONObject().put("id", id), null)?.optJSONObject("Media") ?: return null
         return Ids(m.optInt("id").takeIf { it > 0 }, m.optInt("idMal").takeIf { it > 0 }, m.optInt("episodes").takeIf { it > 0 })
     }
 
@@ -88,5 +94,24 @@ object AnimeIds {
         val b = Request.Builder().url(url).post(body.toRequestBody(JSON)).header("Accept", "application/json")
         if (token != null) b.header("Authorization", "Bearer $token")
         return client.newCall(b.build()).execute().use { r -> if (!r.isSuccessful) null else JSONObject(r.body.string()) }
+    }
+
+    /** HTTP status of a failed call, so callers can tell a rejected token (401) from a transient failure. */
+    class HttpError(val code: Int) : java.io.IOException("HTTP $code")
+
+    /**
+     * ADR-030 rule 1: like [post], but only 404 means "not found" (null). Any other non-2xx throws [HttpError];
+     * network errors throw as usual.
+     */
+    internal fun postOrThrow(client: OkHttpClient, url: String, body: String, token: String?): JSONObject? {
+        val b = Request.Builder().url(url).post(body.toRequestBody(JSON)).header("Accept", "application/json")
+        if (token != null) b.header("Authorization", "Bearer $token")
+        return client.newCall(b.build()).execute().use { r ->
+            when {
+                r.isSuccessful -> JSONObject(r.body.string())
+                r.code == 404 -> null
+                else -> throw HttpError(r.code)
+            }
+        }
     }
 }

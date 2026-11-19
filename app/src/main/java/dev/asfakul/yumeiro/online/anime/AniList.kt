@@ -66,6 +66,10 @@ object AniList {
 
     internal fun graphql(client: OkHttpClient, query: String, vars: JSONObject, token: String?): JSONObject? =
         AnimeIds.post(client, API, JSONObject().put("query", query).put("variables", vars).toString(), token)?.optJSONObject("data")
+
+    /** [graphql] that throws on failure (ADR-030): null only for 404 or an answer without data. */
+    internal fun graphqlOrThrow(client: OkHttpClient, query: String, vars: JSONObject, token: String?): JSONObject? =
+        AnimeIds.postOrThrow(client, API, JSONObject().put("query", query).put("variables", vars).toString(), token)?.optJSONObject("data")
 }
 
 /** MyAnimeList account: OAuth with PKCE, then watched episodes update your list. */
