@@ -145,7 +145,17 @@ object AppMessages {
 fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
     DisposableEffect(Unit) { AppMessages.hosts++; onDispose { AppMessages.hosts-- } }
     val msg by AppMessages.current.collectAsState()
-    LaunchedEffect(msg?.id) { msg?.let { delay(it.durationMs); AppMessages.dismiss(it.id) } }
+    // G10 ER-22: honour Android's "Time to take action" setting, like material3 SnackbarHost and
+    // material-components Snackbar do; a fixed 4.5 s hid the Retry action from users who need longer.
+    val a11y = androidx.compose.ui.platform.LocalAccessibilityManager.current
+    LaunchedEffect(msg?.id) {
+        msg?.let {
+            val ms = a11y?.calculateRecommendedTimeoutMillis(
+                it.durationMs, containsIcons = true, containsText = true, containsControls = it.action != null,
+            ) ?: it.durationMs
+            delay(ms); AppMessages.dismiss(it.id)
+        }
+    }
     // ST-21: never over the in-app floating video window (its close button took no tap under the pill).
     val floatEdges by FloatingPlayerArea.edges.collectAsState()
     val density = androidx.compose.ui.platform.LocalDensity.current
