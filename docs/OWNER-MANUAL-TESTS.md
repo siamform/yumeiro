@@ -88,6 +88,13 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-44 | PR-1: profiles and the profile lock (also with the TV remote) | Owner/community test (pending) |
 | OMT-45 | DL-H: private downloads stay out of the gallery and lists | Owner/community test (pending) |
 | OMT-46 | P-2X hold for 2x; TH-1 accent tones | Owner/community test (pending) |
+| OMT-47 | NBUG-6: Automatic DNS fallback on a network whose DNS is dead | Owner/community test (pending) |
+| OMT-48 | Vega step 4: a real Vega provider repository on a phone and a TV | Owner/community test (pending) |
+| OMT-49 | F-02: a public Telegram channel (no login) plays | Owner/community test (pending) |
+| OMT-50 | F-03: a TeraBox / DiskWala share link | Owner/community test (pending) |
+| OMT-51 | F-11: manga auto-translation on a real chapter | Owner/community test (pending) |
+| OMT-52 | F-AIR: airing alert on a Firebase phone (after the Worker deploy) | Owner/community test (pending) |
+| OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -129,6 +136,9 @@ owner sends you, then pick any task you can do.
 | U-20 | Your statistics | phone, three days of normal use | 1. Library → Statistics after each day. | each day you used Yumeiro is filled in; the streak counts the days | OMT-39 |
 | U-21 | Upcoming | phone | 1. Yumix → Upcoming. 2. Open the Anime, Movies and Series tabs. | titles are grouped by day in your own time zone (Today, Tomorrow…) | OMT-40 |
 | U-22 | Search online on TV | Android TV + remote | 1. Home → search icon. 2. Type a show name, press Search. 3. Press "Search online for …". | the online search opens with your words and shows results | OMT-41 |
+| U-23 | Script repos (Vega) | phone and TV | 1. Sources → Script repos → Add. 2. Paste a Vega manifest.json link you trust. 3. Install one provider. 4. Open it from Home, play a title. | the provider's rows show on Home, a title opens and plays; Source status lists it as Vega | OMT-48 |
+| U-24 | Telegram channel | phone | 1. Sources → Universal add. 2. Paste a public t.me channel link with videos. 3. Open a video. | it plays without signing in | OMT-49 |
+| U-25 | Manga translation | phone | 1. Open a manga chapter in another language. 2. Reader menu → Translate. | text bubbles show in your language; turning it off shows the original | OMT-51 |
 | U-15 | General feedback | phone or TV | Use Yumeiro as you normally would for a day. | tell us anything confusing, slow or broken | OMT-9 |
 
 Report for each task: task number, Passed/Failed, one sentence, a screenshot if something looked wrong,
@@ -717,6 +727,51 @@ the app version and your device. Don't send passwords or account details.
 - **Steps:** hold a finger on a playing video: 2x while held, back to your speed on release; long-press the speed
   button: 1x / 2x. Settings → Appearance → Accent: try Ao (blue) and the others. **Pass:** smooth on a 2–3 GB phone,
   readable text in every accent. **Status:** Owner/community test (pending)
+
+### OMT-47 — Automatic DNS fallback (NBUG-6 F1)
+
+- **Steps:** Settings → Network → turn "Automatic DNS fallback" on. On a network whose DNS fails (for example a
+  router with a dead DNS server, or Private DNS set to a name that doesn't exist), open Home and a source. Then turn it
+  off and repeat. **Pass:** On: pages load after one short wait (the first lookup takes at most your phone's own DNS
+  timeout plus about 7 s), later pages without waiting. Off: same as before this release. **Status:** Owner/community
+  test (pending)
+
+### OMT-48 — A real Vega repository (Vega step 4)
+
+- **Steps:** Sources → Script repos → Add → paste a Vega `manifest.json` you trust. Install two providers. Use Home,
+  Search, a movie and a series episode; on the TV, do the same with the remote only. Uninstall one. **Pass:** rows and
+  search work, episodes play, a provider that is slow stops with a message after about 25 s, Source status lists them
+  as Vega, uninstall removes the source. **Status:** Owner/community test (pending)
+
+### OMT-49 — Public Telegram channel (F-02)
+
+- **Steps:** Universal add → a public `t.me/<channel>` link with videos → open and play one on a phone and a TV.
+  **Pass:** plays without any Telegram login; private channels say they can't be opened. **Status:** Owner/community
+  test (pending)
+
+### OMT-50 — TeraBox / DiskWala link (F-03)
+
+- **Steps:** paste a public TeraBox or DiskWala share link. **Pass:** a link the site lets anyone open plays or
+  downloads; a link that needs the site's login or app says so and nothing is bypassed. **Status:** Owner/community
+  test (pending)
+
+### OMT-51 — Manga auto-translation (F-11)
+
+- **Steps:** open a chapter in Japanese, Korean or Chinese → Translate. Read ten pages, then turn it off. **Pass:**
+  bubbles are readable and placed over the right text; no freeze on a 2–3 GB phone. **Status:** Owner/community test
+  (pending)
+
+### OMT-52 — Airing alert on a Firebase phone (F-AIR)
+
+- **Steps (after the owner's go and the Worker deploy):** follow an airing show on a phone that uses Firebase push
+  (not UnifiedPush), close the app, wait for the next episode. **Pass:** the alert arrives within about an hour of
+  release. **Status:** Owner/community test (pending)
+
+### OMT-53 — Your own proxy (NBUG-13)
+
+- **Steps:** Settings → Network → Proxy: enter your HTTP or SOCKS5 proxy (with login if it needs one), open an adult
+  host that your network blocks, then turn the proxy off. **Pass:** with the proxy the site loads in the app and in its
+  web pages; off, the app goes direct again. **Status:** Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 

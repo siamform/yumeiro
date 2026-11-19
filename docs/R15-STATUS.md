@@ -1,22 +1,24 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 17:08 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 04:05 UTC; no PR / merge / deploy without the owner's "go")
 
-- **Head:** 899c195b. Batches A and B are in code; batch C proxy (NBUG-13, ADR-045) is in code. NBUG-6 was
-  rejected at the side-effect gate, and a cheaper fallback waits for the owner. Vega step 4 waits for the
-  owner to say what "Vega" means.
-- **Running:**
-  - pass-after CI 44573633005 (head);
-  - batch C fail-before CI 44573626244 (`tmp/batch-c-fail-before`);
-  - F-AIR fail-before CI 44572968675 and device 44572961369 (`tmp/batch-b-fail-before` = e6a7cd6d + the
-    F-AIR tests). The rerun is needed because the F-11 compile errors in 44569525861 hid the F-AIR
-    assertions.
-- **Next:**
-  1. Head CI green.
-  2. Device runs, at most 2 at once: batch A, B, C on both phones and both TVs.
-  3. Ledger, queue and inventory.
-  4. Owner answers on Vega and NBUG-6.
-  5. One final run, then the gate.
+- **Head:** see `git log -1` (Vega step 4 fix 9193694 + docs). All seven items are in code: F-02, F-03,
+  F-11, F-AIR (Worker fix 45abcd2, deploy script `scripts/deploy-worker.sh`, dry-run only), NBUG-13
+  (ADR-045), NBUG-6 F1 sequential fallback (ADR-046, default Off), Vega step 4 (ADR-047: one registry,
+  one parser per format, one adapter per ecosystem; Vega runs, Nuvio/SkyStream recognised only).
+- **Current batch / step:** batch C, pass-after CI on head, then device runs.
+- **Running:** CI 44583808297 (head 9193694). Cancelled: 44578908005 (4788a1c; runner stuck 10 h in
+  "Lint (TV app)" after unit tests passed).
+- **Fail-before branches:** `tmp/batch-c2-fail-before` (NBUG-6, 4a8f59c), `tmp/batch-c3-fail-before`
+  (Vega, 8f652ee); CI to dispatch one at a time after the head run.
+- **Next three:** 1. head CI green; 2. fail-before CI on c2 and c3; 3. device runs (≤ 2 at once) for
+  the seven items on api33-lowram + api36 + tv-api24 + tv-api34, then the feature smoke.
+- **UNVERIFIED-QUEUE:** count in docs/UNVERIFIED-QUEUE.md (header line).
+- Report: docs/reports/2026-11-19-tenth-handover-report.md.
+
+### Previous resume note — superseded (17:08 UTC 2026-11-19)
+
+- Head 899c195b; said NBUG-6 and Vega waited on the owner. Both were then built in the tenth cycle.
 
 ### Previous resume note — superseded (16:20 UTC 2026-11-19)
 

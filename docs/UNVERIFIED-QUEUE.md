@@ -11,6 +11,8 @@ recruited users, `docs/OWNER-MANUAL-TESTS.md`, brief in `docs/USER-TEST-PROGRAM.
 Labels: unit (JVM/Robolectric in CI), CI, emulator (CI phones api33-lowram / api36, TV tv-api34 /
 tv-api24), real hardware.
 
+2026-11-20 tenth cycle: F-02, F-03, F-11, F-AIR, NBUG-6, NBUG-13 and Vega step 4 built; owner tests OMT-47 to OMT-53 added; Nuvio/SkyStream runtimes queued (F-05-N).
+
 2026-11-19 cross-check: the full list of what is still open, with decisions, is docs/REMAINING-2026-11-19.md.
 
 ## Agent findings and gaps
@@ -56,14 +58,14 @@ tv-api24), real hardware.
 | BUG-3 / NBUG-1 | Download speed drops at ~50–70 % | G8 | emulator case d 6/6 (44043535616); DL-11 part 2 budget met (877413b, 44286280482, medians 1.050 / 1.030) | real phone per 10 % band | real Wi-Fi/phone | user-assisted (OMT-14, OMT-20) | Queued |
 | BUG-5 / TV-4 | Cross-source search on TV | G7 | focus + answer on TV emulators (NBUG-2c) | scope decision | owner decision (options A/B/C) | user-assisted decision (OMT-21) | Queued |
 | NBUG-4d | Freeze with upscaling on | G3 | injected decoder failure recovers, both phones (43946324687) | real GPU | cannot reproduce on emulator GL | user-assisted (OMT-16) | Queued |
-| NBUG-6 | ISP blocking: per-feature DNS | G12 | side effects measured; guards SmartDnsResilience / DnsWire / DataCacheBounds green | not built | owner gate "no side effect" not passed | user-assisted decision (OMT-27), then stability-v2 | Queued |
+| NBUG-6 | ISP blocking: per-feature DNS rejected; sequential fallback built instead (ADR-046, default Off) | G12 | unit Nbug6FallbackTest (9; fail-before tmp/batch-c2-fail-before) | real blackholed network | CI networks are healthy | user-assisted (OMT-47) | Built (tenth cycle); owner verification pending |
 | NBUG-7 | Restore after "Clear all data": extensions listed but not installed/usable; duplicate names across repositories and extension types | G9 (touches G2) | CI unit + emulator both phones: G9-1/2/5/7 fail-before 44312331848, 44315631356, 44318262848 → pass-after 44318294335, 44319576018 | Stremio and Aniyomi restore on a real account; the owner's own backup | fixed and verified on emulator; owner's real backup not tried | user-assisted (owner retries the restore) | Verified (emulator) |
 | NBUG-8 | One extension's content loads forever or very slowly | G10 (touches G2) | CI unit as G10 ER-30 (fail-before 44457201367, pass-after 44457297312) | a real blocking extension on a device | the owner's extension and network | user-assisted (OMT-34) | Fixed (unit); OMT-34 pending |
 | NBUG-9 | Fresh install / cleared data: nothing online loads until DNS is set to Cloudflare by hand | G9 (touches G11/G12, NBUG-6) | probe 44312163084 (both phones): not reproduced (auto bypass loaded 3/3 hosts) | the owner's ISP; H1 (TLS handshake hang on a block-page IP not counted as blocking) | needs the owner's network | user-assisted (OMT-31) | Blocked: owner |
 | NBUG-10 | Yumix "Show videos from" search shows only 2 of the matching installed extensions | G4 (touches G2) | none (owner report 2026-11-18) | everything | reported during G6-QP; G4 is closed and only G6-QP is built this cycle | stability-v2 deep (G4 reopen), unless the owner moves it into this cycle | Verified (emulator): G15-1 4c6345f8, phones 44487432724 |
 | NBUG-11 | Adult toggle off, adult titles still in Home → Most Played | GROUP-14 (touches G1) | code read: NB11-1, NB11-2 (GROUP-14) | everything | not run yet | GROUP-14, this cycle (ADR-023) | Verified (GROUP-14; NB11-OB1 queued) |
 | NBUG-12 | "Access denied" on some feed streams (e.g. PORN4FANS); all three player fallbacks fail | GROUP-14 (touches G3, G2) | site probe: the extension's link is 403 for everyone, the page's KVS links 206 | everything in the app | not run yet | GROUP-14, this cycle (ADR-024); real site on the owner network: OMT-32 | Verified in the app (GROUP-14); OMT-32 pending |
-| NBUG-13 | Adult streams need a VPN instead of working through the app's network setup | GROUP-14 (touches G11/G12, NBUG-6) | code read: SmartDns auto-DoH covers OkHttp paths; WebView has no DNS hook; IP/SNI blocks need a tunnel | the owner's network | CI network is not blocked; a proxy is a new feature | owner decision on ADR-024 options, then OMT-33 | Blocked: owner |
+| NBUG-13 | Adult streams need a VPN instead of working through the app's network setup | GROUP-14 | user's own HTTP/SOCKS5 proxy built (ADR-045); ProxyDeviceTest | the owner's network | CI network is not blocked | user-assisted (OMT-53) | Built (tenth cycle); owner verification pending |
 | NBUG-14 | IPTV channel logos missing | G7 (GROUP-14) | CI, emulator, TV emulator (NB14-1…3; GROUP-14) | the live market until the owner merges (scheduled builds run from main); SVG logos (NB14-OB1) | market fix acts after merge | after merge: the next market build | Verified (GROUP-14) |
 | NBUG-15 | Live TV redesign + logic (filter/search/pins, category grouping across playlists, 50-channel paging, Tools modal with Playlists page, separate Play Link / Live TV recents) | G7 (GROUP-14, touches G4) | CI unit, emulator, TV emulator (NB15-A…C2, NB15D-1/2; GROUP-14) | real hardware and the owner's own playlists; NB15D-OB1, NB15-OB2 | built per the owner spec; look and feel is the owner's call | owner review on real hardware (OMT) | Verified (GROUP-14) |
 | NBUG-16 | Extensions and M3U8 playlists never auto-update; re-sync flags them as needing an update again | G2 (GROUP-14, touches G7, G11) | CI, CI unit, emulator, TV emulator (NB16-1…5; GROUP-14) | NB16-6/7 old-code proof; the data workflows on main | workflow fixes act after merge | after merge: the next scheduled data builds | Verified (GROUP-14; NB16-6/7 queued) |
@@ -101,33 +103,41 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | OMT-21 | TV search scope decision | owner decision | Blocked: owner |
 | OMT-22 | Firebase Test Lab role (console) | owner | Blocked: owner |
 | OMT-23 | Phone Jackson version decision | owner decision | Blocked: owner |
-| OMT-24 | "Vega" meaning | owner question | Blocked: owner |
+| OMT-24 | "Vega" meaning | owner question | Answered by the tenth-cycle order (multi-ecosystem adapter, ADR-047) |
 | OMT-25 | Telegram / Terabox / Diskwala / manga cloud path | owner decision | Blocked: owner |
 | OMT-26 | EXT-T1 on the owner's phone | user-assisted | Blocked: owner |
-| OMT-27 | NBUG-6 decision | owner decision | Blocked: owner |
+| OMT-27 | NBUG-6 decision | owner decision | Answered by the tenth-cycle order (sequential fallback, ADR-046); retest OMT-47 |
 | OMT-28 | Headphones unplugged pauses music | user-assisted | Blocked: owner (hardware) |
 | OMT-29 | Endless Music Home on a home connection | user-assisted | Pending |
 | OMT-30 | A real HLS site with separate audio: the saved file plays with sound (G8-2) | user-assisted | Pending |
 | OMT-31 | NBUG-9 on the owner's network: fresh install, default DNS | user-assisted | Blocked: owner |
 | OMT-32 | NBUG-12: a Porn4fans title plays on your network (after the GROUP-14 fix); tell the extension author the link is dead | user-assisted | Pending |
-| OMT-33 | NBUG-13: pick a network option (ADR-024) and retest adult hosts without a VPN | user-assisted decision | Blocked: owner |
+| OMT-33 | NBUG-13: pick a network option (ADR-024) and retest adult hosts without a VPN | user-assisted decision | Answered by the tenth-cycle order (own proxy, ADR-045); retest OMT-53 |
 | OMT-34 | NBUG-8: the extension that loaded forever now stops with a message within ~35 s, and Back leaves at once | user-assisted | Pending |
+| OMT-47 | NBUG-6 automatic DNS fallback on a dead-DNS network | user-assisted | Pending |
+| OMT-48 | Vega real repository, phone and TV | user-assisted | Pending |
+| OMT-49 | F-02 public Telegram channel | user-assisted | Pending |
+| OMT-50 | F-03 TeraBox / DiskWala link | user-assisted | Pending |
+| OMT-51 | F-11 manga translation, real chapter | user-assisted | Pending |
+| OMT-52 | F-AIR airing alert on a Firebase phone (after Worker deploy) | user-assisted | Pending (needs owner go) |
+| OMT-53 | NBUG-13 own proxy | user-assisted | Pending |
 
 ## Features (all queued, nothing built in this cycle except G6-QP)
 
 | ID | Description | Group | Proposal | Target | Status |
 |---|---|---|---|---|---|
 | F-01 | Sub/Dub badges and preselect | G3/G4 | FEATURE-F-01 | stability-v2 | Queued |
-| F-02 | Telegram option | new | FEATURE-F-02 (OMT-25) | stability-v2 | Queued |
-| F-03 | Terabox / Diskwala links | G3 | FEATURE-F-03 (OMT-25) | stability-v2 | Queued |
+| F-02 | Telegram public channels, no login (ADR-042) | new | FEATURE-F-02 | 1.9.0 (OMT-49) | Built (tenth cycle); emulator verified when device runs pass, owner verification pending |
+| F-03 | TeraBox / DiskWala public links (ADR-043) | G3 | FEATURE-F-03 | 1.9.0 (OMT-50) | Built (tenth cycle); emulator verified when device runs pass, owner verification pending |
 | F-04 | User-added WebView site list | G2 | FEATURE-F-04 | stability-v2 | Queued |
-| F-05 | Nuvio / SkyStream / Vega repositories | G2 | FEATURE-F-05 (OMT-24) | stability-v2 | Queued |
+| F-05 | Vega repositories run (ADR-047, Vega step 4) | G2 | FEATURE-F-05 "Tenth cycle" | 1.9.0 (OMT-48) | Built (tenth cycle); local QuickJS-wasm + device test; owner verification pending |
+| F-05-N | Nuvio and SkyStream runtimes (recognised only in 1.9.0) | G2 | ADR-047 | stability-v2 (needs a TMDB-keyed stream-merge seam first) | Queued |
 | F-06 | 200 % volume booster | G3 | FEATURE-F-06 | stability-v2 | Queued |
 | F-07 | External video player | G3 | FEATURE-F-07 | stability-v2 | Queued |
 | F-08 | Upcoming Movies & Series | G4 | FEATURE-F-08 | stability-v2 | Queued |
 | F-09 | Watch Later + Favorite on posters | G5 | FEATURE-F-09 | stability-v2 | Queued |
 | F-10 | Glassmorphism theme (ADR-017 proposed) | G9 | FEATURE-F-10 | stability-v2 | Queued |
-| F-11 | Manga auto-translation | G7 | FEATURE-F-11 (OMT-25) | stability-v2 | Queued |
+| F-11 | Manga auto-translation (ADR-044) | G7 | FEATURE-F-11 | 1.9.0 (OMT-51) | Built (tenth cycle); emulator verified when device runs pass, owner verification pending |
 | F-12 | Vertical video player (ADR-018 proposed) | G3 | FEATURE-F-12 | stability-v2 | Queued |
 | F-13 | Offline manga chapters | G7 | to write | stability-v2 | Built, not tested (ADR-040) |
 | F-14 | Automatic Live TV failover | G7 | to write | stability-v2 | Built, not tested (ADR-040) |
