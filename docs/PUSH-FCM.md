@@ -94,6 +94,7 @@ From `server/` with Node ≥ 22.12 (`wrangler` reads `CLOUDFLARE_API_TOKEN` / `C
 npm ci
 npm test && npm run typecheck
 npm run db:migrate:fcm                               # adds the fcm_devices table (idempotent)
+npm run db:migrate:want                              # NOTIFY-1: adds fcm_devices.want (run once; ADR-039)
 npx wrangler secret put ADMIN_TOKEN                  # paste the admin token
 npx wrangler secret put FCM_SERVICE_ACCOUNT < /path/to/service-account.json
 npx wrangler deploy
@@ -155,3 +156,9 @@ Broadcasts don't touch D1 at all. If the Worker is ever down, phones keep receiv
 - Build: `app/build.gradle.kts` (`FCM_*`, `PUSH_CHANNEL` BuildConfig fields), `gradle/libs.versions.toml` (Firebase BoM 35.2.0 → messaging 26.0.2).
 - Worker: `server/src/fcm.ts`, routes in `server/src/index.ts`, `server/schema.sql`, `server/migrations/0002_fcm_devices.sql`, tests in `server/test/fcm.test.ts`.
 - Tests: `app/src/test/.../notify/FcmPlanTest.kt`, `FcmDeliveryTest.kt`.
+
+## Phones the topic misses (NOTIFY-1, ADR-039)
+
+A topic subscription can fail on the phone. The check-in sends both `topics` (subscribed) and `want` (switches).
+After the topic send, `/v1/admin/notify` queues direct copies to devices that want the notice but are not on its
+topic, and returns `fanout` (how many). Check after a send: `fanout` should drop as phones re-subscribe.

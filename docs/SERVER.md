@@ -134,6 +134,16 @@ subdomain. The Worker doesn't need to serve on it.
 
 No secrets are needed in the repo. CI (`.github/workflows/server.yml`) only runs tests and the type check, and only when `server/**` changes.
 
+## Production state (checked 2026-11-19)
+
+`/v1/health` answers `{"ok":true,"v":2}` and the cron runs every 10 minutes, so the server is on. The deployed
+Worker dates from 2026-11-12: it lacks migration 0003 (`airing_pending`, `follow_changes`), the R11 abuse guards,
+the X16-2 address check and NOTIFY-1 (ADR-039). Deploy only after the owner's "go":
+
+```
+npm run db:migrate:guards && npm run db:migrate:want && npx wrangler deploy
+```
+
 ## Local development
 
 Needs Node.js 22.12 or newer (Wrangler's minimum).

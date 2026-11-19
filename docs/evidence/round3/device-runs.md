@@ -1035,3 +1035,18 @@ per-request capped host. Case d (the unit collapse profile) added for the tail.
 | 44467817362 | r15-stability d11676cb | CI | G11 pass-after | 1286 tests, 0 failed |
 | 44471298455 | r15-stability d11676cb | api33-lowram, api36 | G11 regression, 7 classes | all PASS on both |
 | 44471301890 | r15-stability d11676cb | tv-api34 | AnimeTrackers, EpisodeStills | PASS |
+
+## 2026-11-19: G15, release features, F-09, G8-TV7A (emulator + TV emulator)
+
+| Run | Ref | Devices | Classes | Result |
+|---|---|---|---|---|
+| 44477069801 | r15-stability 5f523316 (G15 tests, old app code) | tv-api34 | FeedPosition, Messages | FAIL both (fail-before TV-YT-1 cards=2, TV-A11Y-1 problems=11) |
+| 44480266808 | r15-stability 598bc366 | tv-api34 | FeedPosition, Messages | PASS |
+| 44487432724 | r15-stability 598bc366 | api33-lowram, api36 | FeedPosition, HomeNavigation, Messages, Nbug*, PinnedExtensions, YtChannelUi, Yumix | all PASS |
+| 44487437177 | r15-stability 598bc366 | tv-api24 | same | PASS except PinnedExtensions (TV-PIN-1), YtChannelUi (TV-YTC-1), FeedPosition live (TV-FP-1): phone-gesture test faults |
+| 44500142144 | r15-stability 4782bb68 | api33-lowram, api36 | ReleaseFeatures, JsTimeLimit, StreamWatchDownload, DownloadG8, PosterActions | all PASS except PosterActions (F-09 focus) |
+| 44500146795 | r15-stability 4782bb68 | tv-api34 | ReleaseFeatures, PosterActions | ReleaseFeatures PASS; PosterActions FAIL (F-09) |
+| 44502098420 | r15-stability 30c241c9 | api33-lowram, api36 | PosterActions | api36 PASS; api33-lowram FAIL (focus stays on poster) → 09d1005c |
+| 44502103283 | r15-stability 30c241c9 | tv-api24 | PosterActions, ReleaseFeatures | PASS |
+| 44504287444 | ab/tv7a-before (deleted) | tv-api34 | StreamWatchDownload | FAIL 7a "no Download action" (fail-before G8-TV7A) |
+| 44504293129 | r15-stability 09d1005c | api33-lowram | PosterActions | PASS |

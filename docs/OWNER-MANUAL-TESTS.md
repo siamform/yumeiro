@@ -85,6 +85,9 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-41 | TV-4: TV search online with a real remote | Owner/community test (pending) |
 | OMT-42 | NB14-OB1: SVG channel logos in your playlists | Owner/community test (pending) |
 | OMT-43 | X13-6: your extensions after the Jackson change | Owner/community test (pending) |
+| OMT-44 | PR-1: profiles and the profile lock (also with the TV remote) | Owner/community test (pending) |
+| OMT-45 | DL-H: private downloads stay out of the gallery and lists | Owner/community test (pending) |
+| OMT-46 | P-2X hold for 2x; TH-1 accent tones | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -693,6 +696,27 @@ the app version and your device. Don't send passwords or account details.
 
 - **Steps:** open each extension you use (home, a title, Play). **Pass:** they all work as before.
   **Record:** any extension that fails, with its version. **Status:** Owner/community test (pending)
+
+### OMT-44 — Profiles and profile lock (PR-1)
+
+- **Steps:** Settings → Privacy → Profiles: add "Kid", give your own profile a PIN, restart the app. On "Who's
+  watching?" try the remote's Play / OK and arrows: nothing behind the screen may react. Open Kid, watch something,
+  switch back with the PIN. Wrong PIN 5 times: wait message. In Kid, try to add a profile or turn 18+ on: your PIN is
+  asked. **Pass:** each profile shows only its own history, lists and 18+ setting; the lock can't be skipped.
+  **Status:** Owner/community test (pending)
+
+### OMT-45 — Private downloads (DL-H)
+
+- **Steps:** Downloads → eye button on a finished video → it leaves the list; open your phone's gallery: it is not
+  there. Open Private with the PIN or phone lock, play it, press Home and come back: Private is closed. Turn stealth on
+  (Settings → Privacy) and open Private with a long press on the storage card. **Pass:** never in the gallery, never in
+  any list, screenshots of Private are black. **Status:** Owner/community test (pending)
+
+### OMT-46 — Hold for 2x and accent tones (P-2X, TH-1)
+
+- **Steps:** hold a finger on a playing video: 2x while held, back to your speed on release; long-press the speed
+  button: 1x / 2x. Settings → Appearance → Accent: try Ao (blue) and the others. **Pass:** smooth on a 2–3 GB phone,
+  readable text in every accent. **Status:** Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 

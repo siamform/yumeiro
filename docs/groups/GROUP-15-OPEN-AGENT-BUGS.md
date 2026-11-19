@@ -12,7 +12,7 @@ regression (FeedPosition on tv-api24).
 
 ## Status
 
-Open 2026-11-19. Steps 1–3 done (this document, ADR-031).
+Closed 2026-11-19: Verified (emulator + TV emulator). Fail-before tv-api34 44477069801; pass-after tv-api34 44480266808, phones 44487432724; tv-api24 44487437177 (only known phone-gesture test faults).
 
 ## Code read
 
@@ -58,9 +58,9 @@ Open 2026-11-19. Steps 1–3 done (this document, ADR-031).
 
 | ID | Item | Problem | Root cause | Fix | Test | Status |
 |---|---|---|---|---|---|---|
-| G15-1 | NBUG-10 | Search in "Show videos from" shows only ~2 of the matching extensions on phones with many extensions; same for Live TV playlists | the sheet opens at half height on phones and stays there when the keyboard opens; M3 adds the keyboard as content padding, so the matches sit under the keyboard | open the sheet fully on every device (`skipPartiallyExpanded = true`), as CloudStream, Mihon and YuSearch do | unit `g15/FilterSheetSearchHeightTest` (Robolectric, 30 extensions, phone size) | tests next |
-| G15-2 | TV-YT-1 | YouTube For You on TV / wide screens: one column of full-width cards (under 2 per 1080p screen) | `YtVideoCard(wide = true)` in a single `LazyColumn` at every width | wide screens (≥ 600 dp) lay the stream out in rows of N cards (N = width / 300 dp, 2–4); Shorts and Watch again shelves stay between rows; phones unchanged | device `FeedPositionDeviceTest#youtube` on tv-api34 (old code failed twice: 44440614210, 44443748315) | tests next |
-| G15-3 | TV-A11Y-1 | tv-api34: one 44 dp touch target [484,780][756,867] (px) | not yet named; the a11y check reads the whole screen under the pill | test now logs the node at the flagged bounds (`MSG_A11Y_NODE`); fix follows from that log | device `MessagesDeviceTest` tv-api34 | tests next |
+| G15-1 | NBUG-10 | Search in "Show videos from" shows only ~2 of the matching extensions on phones with many extensions; same for Live TV playlists | the sheet opens at half height on phones and stays there when the keyboard opens; M3 adds the keyboard as content padding, so the matches sit under the keyboard | open the sheet fully on every device (`skipPartiallyExpanded = true`), as CloudStream, Mihon and YuSearch do | unit `g15/FilterSheetSearchHeightTest` (Robolectric, 30 extensions, phone size) | Verified (emulator / TV emulator) |
+| G15-2 | TV-YT-1 | YouTube For You on TV / wide screens: one column of full-width cards (under 2 per 1080p screen) | `YtVideoCard(wide = true)` in a single `LazyColumn` at every width | wide screens (≥ 600 dp) lay the stream out in rows of N cards (N = width / 300 dp, 2–4); Shorts and Watch again shelves stay between rows; phones unchanged | device `FeedPositionDeviceTest#youtube` on tv-api34 (old code failed twice: 44440614210, 44443748315) | Verified (emulator / TV emulator) |
+| G15-3 | TV-A11Y-1 | tv-api34: one 44 dp touch target [484,780][756,867] (px) | not yet named; the a11y check reads the whole screen under the pill | test now logs the node at the flagged bounds (`MSG_A11Y_NODE`); fix follows from that log | device `MessagesDeviceTest` tv-api34 | Verified (emulator / TV emulator) |
 
 ## Optimisation and architecture notes
 

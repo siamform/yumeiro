@@ -205,6 +205,10 @@ verified on a device, evidence linked), `not covered` (reason given).
 | N7 | Inbox / app feed / reminders | notify/Inbox, AppFeed, Reminders, InboxScreen | audited (GROUP-13): N7-1 fixed ac13d92, verified (emulator, both phones: 44062815556 → 44062811776, 44073375083) | `InboxMainThreadDeviceTest`, `RemindersTest`, `AppFeedTest` |
 | N8 | Support and user guide pages | extras/SupportScreen, settings/UserGuide | audited (GROUP-13): N8-1 fixed 5be755e, verified (CI unit: 44070875412 → 44062718477) | `LinksOpenTest` |
 | N9 | Edition and integrity (build flavours, trademark guard) | Edition, security/IntegrityGuard | audited (GROUP-13): code read, no finding | build guard (ADR-013) |
+| N10 | Profiles with locks (PR-1), private downloads (DL-H), accent tones (TH-1), hold for 2x (P-2X) | profiles/Profiles, ui/screens/profiles/*, online/download/PrivateDownloads, ui/screens/downloads/PrivateVault, ui/theme/AccentTone | Built, not tested (ADR-041; flags f18_profiles, f18_private_downloads) | `ProfilesTest`, `ProfilesGuardTest`, `PrivateDownloadsTest`, `AccentToneTest`, `HoldSpeedTest`, `ProfilesDeviceTest` |
+
+2026-11-19: F-01, F-04…F-10, F-12…F-17 below were built this cycle (status in CHECKLIST-FEATURES-BUGS and
+docs/REMAINING-2026-11-19.md); F-02, F-03 login path, F-11 are not in this release (ADR-037).
 
 ## Proposed features (4.4, gated, not built)
 

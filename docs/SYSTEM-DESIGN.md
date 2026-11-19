@@ -1107,9 +1107,9 @@ committed (Search key or a picked suggestion), a 48 dp focusable "Search online 
 all-extension Yumix search with the same words (`OnlineSearchPending`). No network call per keystroke (data saver
 and 2 GB phones). Phone and TV. Kill switch `tv4_online_search`. Option C is not in this release.
 
-### ADR-037: Not in this release, with reasons (F-02, F-03 login path, F-11, NBUG-6, NBUG-13 proxy, F-13…F-15)
+### ADR-037: Not in this release, with reasons (F-02, F-03 login path, F-11, NBUG-6, NBUG-13 proxy, F-13…F-15 moved to ADR-040)
 
-Status: accepted 2026-11-19 (agent decision per the master order: unfinished work stays out, flag off, listed).
+Status: accepted 2026-11-19, amended same day by ADR-040 (agent decision per the master order: unfinished work stays out, flag off, listed).
 
 | Item | Why not now (evidence) | What ships instead |
 |---|---|---|
@@ -1119,7 +1119,138 @@ Status: accepted 2026-11-19 (agent decision per the master order: unfinished wor
 | NBUG-6 per-feature DNS | measured side effects (2 connections instead of 1, 5–6 threads per resolver, split cache, WebView not covered). docs/proposals/FEATURE-NBUG-6-per-feature-dns.md | the automatic DNS bypass already shipped |
 | NBUG-13 proxy (OMT-33 options 1/2) | a proxy is a new feature with WebView `ProxyController` and per-site rules; can not be verified on CI (nothing is blocked there) | option 3: system VPN or Private DNS, explained in the help text; DNS bypass for Yumeiro's own connections |
 | Vega (OMT-24) | decided in F-05: Vega means the Vega app's provider repositories, not Amazon Vega OS (does not run Android apps). Step 4 (running Vega providers) is not in this release | repository detection from F-05 step 1 |
-| F-13 offline manga chapters, F-14 Live TV failover, F-15 EPG | stability-v2 items found in the G7 audit; each is a new feature with its own storage or parser; not started, and today's release work came first | manual "Sources for this channel"; online manga reading |
+| ~~F-13, F-14, F-15~~ | moved into this release on 2026-11-19 (ADR-040); flags `f13_offline_manga`, `f14_live_failover`, `f15_live_guide` | see ADR-040 |
+
+### ADR-038: Catalog and setup appear at once; extensions load in the background (SPD-1…SPD-4)
+
+Status: accepted 2026-11-19 (owner report: fresh and old installs wait too long for setup, feed, extensions and catalog).
+
+Context: start-up waited for every extension before Home showed anything; an extension update cleared the
+saved catalog pages (`clearCaches`), so the next open fetched everything again; first run waited 4 s before the
+first checks; starters installed one after another and the market list loaded only after the welcome screen.
+
+Decision: (1) `StartupSpeed.loadOrder` loads pinned extensions first and publishes each one as soon as it is
+usable (`Snapshot.partial`); Home shows rows from the first ready source, the skeleton only while none is ready
+(open-ahead 2 on low-RAM phones, 4 otherwise). (2) `refreshAfterExtensionChange` keeps saved pages and marks them
+stale, so they show at once and refresh behind. (3) No first-run delay; the market list is fetched while the
+welcome screen is open. (4) Starters install side by side. Tests: `StartupSpeedTest` (8, fail-before run
+44499065629). Same features; nothing removed.
+
+### ADR-039: Broadcast notices also go straight to phones whose topic subscription failed (NOTIFY-1)
+
+Status: accepted 2026-11-19 (owner report: users do not receive notifications properly).
+
+Context (evidence, production D1 2026-11-19): of 226 phones on app v16, 87 lack the always-on `updates` topic and
+32 have no topic at all, so FCM topic broadcasts never reach them. Subscribing is a Play-services call that can time
+out; the old Worker sent only to topics. Production also runs code from 2026-11-12 without migration 0003, the R11
+abuse guards and the X16-2 fix.
+
+Decision: the app reports `want` (its switches) with each check-in (fingerprint includes it). `/v1/admin/notify`
+still sends the topic copy, then picks devices whose `topics` lack the broadcast topic but whose `want` asks for it
+(older apps with no `want`: only the always-on `updates`), and queues direct per-FID copies, 40 per queue message.
+Gone FIDs are deleted. A phone that gets both copies shows one (same notice id, inbox de-duplicates). Episode alerts
+stay on the app's own check (`NewEpisodesWorker`); FCM airing wakes need follows uploaded and are not in this release.
+Deploy (owner "go" only): `npm run db:migrate:guards && npm run db:migrate:want && npx wrangler deploy`.
+
+### ADR-040: Offline manga chapters, Live TV failover, Now/Next guide, and the small G7/G8/G9 queue fixes
+
+Status: accepted 2026-11-19 (master order: finish every remaining feature; amends ADR-037).
+
+F-13 offline manga (`sources/manga/MangaOffline.kt`, flag `f13_offline_manga`): a chapter is saved page by page into
+`filesDir/manga_offline/<hash>.part` and renamed only when complete (no half chapter is ever shown as saved); one
+download at a time, cancellable, progress per chapter. The reader prefers the offline copy; the detail page lists
+saved chapters when offline or when the source extension is gone. Tests: `MangaOfflineTest` (4).
+F-14 Live TV failover (`StreamWatch.failoverSource`, flag `f14_live_failover`): when a channel gives up, the player
+tries the next saved source for the same channel within a 2-minute window, then the old auto-switch. Tests:
+`WatchLogicTest` failover pair. F-15 guide (`stream/EpgGuide.kt`, flag `f15_live_guide`): XMLTV from the playlist's
+`url-tvg`/`x-tvg-url`, matched by `tvg-id`; streaming pull parser, gzip, 80 MB cap, 12 h window, 8 programmes per
+channel, 6 h cache in cacheDir, no download on metered networks. Shows Now/Next only; no full grid (memory on
+2 GB phones). Tests: `EpgGuideTest` (5).
+Queue fixes: G7-L5-A single-quoted M3U attributes; G7-L5-B relative links resolve against the playlist URL;
+G7-L5-D audio/subtitle track label; G9-CQ-1 backup time written with `commit()` (survives process death right after
+backup); G8-CQ-1 dead `deleteFolder` removed. Tests: `QueueSmallFixesTest`. F-09 (same day): the TV poster sheet
+requested focus once from outside its Dialog; on api33-lowram the window attached later and focus stayed on the
+poster. It now requests from inside the Dialog each frame until held (`PosterActionsDeviceTest`).
+Same features; nothing removed. Each new feature can be switched off by its flag.
+
+### ADR-041: Profiles with locks, private downloads, accent tones, hold for 2x (PR-1, DL-H, TH-1, P-2X)
+
+Status: accepted 2026-11-19 (owner feature request "Privacy & Stealth Controls"; agent decision with the evidence below,
+master order: research competitors first, do not ask the owner).
+
+Context. Owners share one phone or TV with family. They asked for: downloads hidden behind a PIN / biometric
+"stealth vault" and out of the gallery; Blue and other accents next to Golden; CloudStream-style user profiles with a
+lock, each with its own history, favourites, 18+ settings and private downloads; and a 2x speed toggle. Budgets:
+2 GB phones, Android TV 7 (minSdk 24 on TV), no new network calls, nothing sent anywhere. Competitor behaviour read
+(behaviour only, no code copied):
+- Netflix: a 4-digit profile lock is needed to open the profile and to play its downloads; "require PIN to add new
+  profiles" ([help 114277](https://help.netflix.com/en/node/114277), [help 122551](https://help.netflix.com/en/node/122551)).
+- Plex: PIN on user switch; a beta fixed "Play and Back on the remote reached the video behind the profile selection
+  screen, letting you skip the PIN" ([fast user switching](https://support.plex.tv/articles/204232453-fast-user-switching/),
+  [beta notes](https://forums.plex.tv/t/plex-for-mobile-tvs-android-ios-android-tv-tvos-beta-release-notes/912796/110)).
+- Kodi: master lock with 3 tries; "a locked profile doesn't provide any kind of security if other users have access
+  to the underlying file system" ([Profiles](https://kodi.wiki/view/Profiles),
+  [Master lock](https://kodi.wiki/view/Settings/Interface/Master_lock)).
+- Files by Google Safe folder: PIN or pattern; a forgotten PIN means a reset and lost files
+  ([answer 9935264](https://support.google.com/files/answer/9935264), [thread](https://support.google.com/files/thread/420855314)).
+- Jellyfin Bonfire profiles: salted PBKDF2 PINs ([repo](https://github.com/AHouseOfBards/Bonfire-JellyProfiles)).
+- CloudStream (webOS port read for behaviour): profile 0 keeps old data, keys scoped by profile index, PIN pad
+  ([profiles.hpp](https://github.com/sostk/cloudstream-webos-native/blob/b9293686/apps/csweb-tv/src/profiles/profiles.hpp),
+  [profiles_screen.hpp](https://github.com/sostk/cloudstream-webos-native/blob/b9293686/apps/csweb-tv/src/ui/screens/profiles_screen.hpp)).
+
+Decision.
+- PR-1 (`profiles/Profiles.kt`, UI `ui/screens/profiles/`, flag `f18_profiles`): up to 8 profiles. Profile "0" keeps
+  every legacy file and pref name, so an upgrade changes nothing. Other profiles get `profiles/<id>/` files
+  (online history, bookmarks), `@p<id>` pref names (YouTube history, 18+ keys). PIN 4–8 digits, PBKDF2WithHmacSHA1,
+  12 000 rounds, 16-byte random salt (SHA-256 PBKDF2 needs API 26; TV minSdk is 24). Optional phone biometric /
+  screen lock. Switching restarts the app so every store reloads cleanly. Accent and other settings stay global.
+- DL-H (`online/download/PrivateDownloads.kt`, `PrivateVault.kt`, flag `f18_private_downloads`): a hidden download
+  moves to `filesDir/private/<profile>/` (app sandbox, never MediaStore, so never in the gallery), leaves every list,
+  search, Continue watching and auto-delete. "Private" opens with the profile PIN or the phone lock. Stealth hides
+  the entry; a long press on the storage card opens it.
+- TH-1 (`ui/theme/AccentTone.kt`): Gold (default), Ao (blue), Sakura, Matcha, Fuji; all contrast-checked on the dark
+  and AMOLED surfaces; Dynamic colour ignores the accent.
+- P-2X: hold on the video for 2x while held (YouTube / MX behaviour), long-press the speed button to flip 1x / 2x.
+
+Security review (bounty pass, 2026-11-19) and fixes, each with a test that fails on the first build
+(`ProfilesGuardTest`, `ProfilesDeviceTest`):
+1. Lockout counted in memory: killing the app gave 5 new tries. Now on disk in `_profile_guard`, 30 s doubling to 1 h.
+2. A restored older profile list removed a PIN. Restores now keep local locks and local profiles.
+3. The restart pass could come back from a backup. One-time, 60 s, in a `_` file that backups skip.
+4. A backup made in another profile held the locked profile's history. Locked other profiles' data is left out.
+5. The home widget showed a locked profile's Continue watching. Hidden while the current profile is locked.
+6. "Who's watching?" was drawn over the app, so D-pad focus / Play could reach it (the Plex bug). The app is now
+   composed only after a profile is chosen (`ProfileSession.decide` before the first frame).
+7. A child's profile could add profiles or switch 18+ on. Both need the main profile's lock when it has one.
+8. No way out of a forgotten PIN. "Forgot?": the phone screen lock removes the PIN; with no screen lock the PIN goes
+   only with the data it protects (profile deleted, or the main profile's lists / history / private downloads).
+9. Private stayed open in the background and could be captured: FLAG_SECURE while open, closes on ON_STOP.
+10. A second wrong PIN left the digits in the pad. The pad clears after every try.
+
+Consequences.
+- Positive: family sharing without accounts or servers; nothing leaves the phone; upgrade-safe (profile 0); each
+  part has a kill switch; no new dependency; no work at start-up when only one unlocked profile exists.
+- Negative / honest limits: not encryption: files sit in the app sandbox (allowBackup=false), safe from the gallery
+  and other apps, not from a rooted phone; a 4–8 digit PIN can be brute-forced offline from its hash on a rooted
+  phone; the lockout trusts the wall clock; normal (not hidden) downloads are shared by all profiles; a forgotten PIN
+  without a phone screen lock costs that profile's data; anyone who knows the phone's own PIN can remove a profile PIN.
+- Neutral: switching profile restarts the app (about one cold start); accent is per device, not per profile.
+
+Alternatives considered. (a) Jetpack Security / Keystore encryption of the vault: rejected for this release:
+deprecated library, a large copy per file on 2 GB phones, and a lost key loses videos; revisit when files are
+streamed through a cipher. (b) One shared history with a profile column: rejected, one bug would leak between
+profiles; separate files fail safe. (c) No restart on switch: every singleton store would need a reload path;
+too much risk for one release. (d) Per-profile accent: deferred, no request.
+
+UI/UX check (ui-ux-pro-max `references/pro-rules.md`, 2026-11-19): PIN keys 64 dp and avatars 72 dp (over the 48 dp
+minimum); each key has a spoken label ("OK", "Delete", digits) and the dots say "n digits entered"; the error is
+text, not colour alone; D-pad and keyboard focus use the app-wide accent focus ring (Theme.kt `SoftPressIndication`,
+lifted on TV); remote number keys and Backspace work on the pad; first focus lands on key 1 / the first profile;
+accent swatches carry a name and a check mark, not colour alone; contrast of every accent on dark and AMOLED is
+asserted in `AccentToneTest`; Back on "Who's watching?" leaves the app (never into it).
+
+References: `ProfilesTest`, `ProfilesGuardTest`, `PrivateDownloadsTest`, `AccentToneTest`, `HoldSpeedTest`,
+`ProfilesDeviceTest`; CHECKLIST rows P-2X, TH-1, PR-1, DL-H; OWNER-MANUAL-TESTS OMT-44…OMT-46.
 
 ## 11. Risks
 

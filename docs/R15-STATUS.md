@@ -1,6 +1,16 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 10:05 UTC, master handover; no PR / merge without the owner's "go")
+## Resume here (updated 2026-11-19 11:05 UTC; no PR / merge / deploy without the owner's "go")
+
+- **Open list:** docs/REMAINING-2026-11-19.md (everything not Verified, decisions taken, not-in-release).
+- **New (ADR-041):** P-2X, TH-1, PR-1 (+ PR-1-SEC ten review fixes), DL-H. Built, not tested. Unit fail-before
+  44506927082 (ab/privacy-before2) and 44506931345 (ab/guard-before); head CI 44506922893 (rerun after a Maven
+  resolve glitch). Device test `ProfilesDeviceTest` written.
+- **Next:** head CI green → device pass-after (≤2 at once): tv-api34 PosterActions + StreamWatchDownload +
+  ReleaseFeatures + ProfilesDeviceTest; phones ProfilesDeviceTest + extension suite (X13-6) → delete ab/ branches →
+  release gate (unbatched, both phones + both TVs, version bump, notes, signed build, secret scan) → owner "go".
+
+### Previous resume note — superseded (10:05 UTC 2026-11-19)
 
 - **Built, not tested (pushed, flags on):** NF-2b, SRC-1/2, F-05 step 1, F-09, F-16, F-01, NF-1, F-08, F-06, F-07, F-12,
   F-17, F-10, F-04, X13-6 (conflicts with the owner's condition 3), NB15D-OB1, NB14-OB1, NB11-OB1, TV-4.
