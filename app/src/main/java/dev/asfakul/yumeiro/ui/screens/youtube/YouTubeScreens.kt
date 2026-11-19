@@ -375,6 +375,7 @@ private fun YtBrowse(
             val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_results:" + sub)
             val relatedSearches = store.related
             YtEndlessTrigger(listState, res.canLoadMore) { res.more() }
+            val rcols = if (music) 1 else ytVideoColumns()
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_results"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("res_head") {
                     YtFeedHeader(
@@ -397,7 +398,9 @@ private fun YtBrowse(
                 }
                 if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
                 if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem("No results for “$sub”.", null) }
-                itemsIndexed(res.items, key = { _, it -> "r_${it.id}" }) { _, item ->
+                if (rcols > 1) itemsIndexed(res.items.chunked(rcols), key = { _, r -> "rr_${r.first().id}" }) { _, row ->
+                    YtVideoRow(row, rcols, openChannel) { item -> onPlay(item, res.items) }
+                } else itemsIndexed(res.items, key = { _, it -> "r_${it.id}" }) { _, item ->
                     if (music) SongRow(item) { onPlay(item, res.items) } else YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, res.items) }
                 }
                 res.error?.let { e -> item("err") { YtProblem(e) { res.retry() } } }
@@ -429,6 +432,7 @@ private fun YtBrowse(
             val page = store.feed(app, selected)
             val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("yt_feed:" + selected.id)
             YtEndlessTrigger(listState, selected.pages && page.started && page.canLoadMore) { page.more() }
+            val fcols = if (music) 1 else ytVideoColumns()
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_feed_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("feed_head") {
                     YtFeedHeader(
@@ -438,7 +442,9 @@ private fun YtBrowse(
                     )
                 }
                 if (page.items.isEmpty() && (page.loading || !page.started) && page.error == null) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
-                itemsIndexed(page.items, key = { _, it -> "fi_${it.id}" }) { _, item ->
+                if (fcols > 1) itemsIndexed(page.items.chunked(fcols), key = { _, r -> "fr_${r.first().id}" }) { _, row ->
+                    YtVideoRow(row, fcols, openChannel) { item -> onPlay(item, page.items) }
+                } else itemsIndexed(page.items, key = { _, it -> "fi_${it.id}" }) { _, item ->
                     if (music) SongRow(item) { onPlay(item, page.items) } else YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, page.items) }
                 }
                 page.error?.let { e -> item("ferr") { YtProblem(e) { page.retry() } } }
@@ -474,6 +480,8 @@ private fun YtBrowse(
                 repeat(minOf(2, pageable.size)) { k -> paged[pageable[(store.turn + k) % pageable.size]].more() }
                 store.turn += 2
             }
+            val cols = ytVideoColumns()
+            val rows = if (cols == 1) null else remember(videos.size, videos.firstOrNull()?.id, cols) { videos.toList().chunked(cols) }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (videos.isEmpty() && anyLoading && netOnline) itemsIndexed(List(4) { it }, key = { i, _ -> "hsk$i" }) { _, _ ->
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -485,7 +493,24 @@ private fun YtBrowse(
                     }
                 }
                 if (videos.isEmpty() && allFailed) item("home_err") { YtProblem((shelves[feeds.first().id] as Load.Failed).message) { loadShelves(true) } }
-                itemsIndexed(videos, key = { _, it -> "h_${it.id}" }) { i, item ->
+                // G15-2 (TV-YT-1, ADR-031): wide screens (TV, tablets) lay the stream out in rows of
+                // 2–4 cards; phones keep one column. Rows are keyed by their first card, so a row that
+                // fills up as pages append stays in place (append-only, R15).
+                if (rows != null) itemsIndexed(rows, key = { _, r -> "hr_${r.first().id}" }) { ri, row ->
+                    YtVideoRow(row, cols, openChannel) { item -> onPlay(item, videos.toList()) }
+                    if (ri == 0 && shorts.isNotEmpty()) {
+                        Column(Modifier.padding(vertical = 8.dp).testTag("youtube_shorts_shelf")) {
+                            YtLabel("Shorts", "ショート")
+                            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                itemsIndexed(shorts, key = { _, s -> "s_${s.id}" }) { _, s -> YtShortCard(s, Modifier.width(150.dp)) { onPlay(s, shorts.toList()) } }
+                            }
+                        }
+                    }
+                    if (ri == 1 && mine.isNotEmpty()) {
+                        YtShelfRow("Watch again", null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
+                    }
+                }
+                if (rows == null) itemsIndexed(videos, key = { _, it -> "h_${it.id}" }) { i, item ->
                     YtVideoCard(item, wide = true, onChannel = openChannel) { onPlay(item, videos.toList()) }
                     if (i == 1 && shorts.isNotEmpty()) {
                         Column(Modifier.padding(vertical = 8.dp).testTag("youtube_shorts_shelf")) {
@@ -750,6 +775,21 @@ private fun YtShelfRow(
                 if (music) SquareCard(item, 144.dp) { onClick(item) } else Box(Modifier.width(240.dp)) { YtVideoCard(item, wide = false) { onClick(item) } }
             }
         }
+    }
+}
+
+/** G15-2 (ADR-031): one column below 600 dp; from there width / 300 dp, 2–4 (NewPipe's Auto grid, SmartTube rows). */
+internal fun ytColumnsFor(widthDp: Int): Int = if (widthDp < 600) 1 else (widthDp / 300).coerceIn(2, 4)
+
+@Composable
+internal fun ytVideoColumns(): Int = ytColumnsFor(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)
+
+/** A row of [cols] equal-width video cards (the last row keeps empty slots so cards never stretch). */
+@Composable
+private fun YtVideoRow(row: List<YtItem>, cols: Int, onChannel: ((YtItem) -> Unit)?, onPlay: (YtItem) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
+        row.forEach { item -> Box(Modifier.weight(1f)) { YtVideoCard(item, wide = true, onChannel = onChannel) { onPlay(item) } } }
+        repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
     }
 }
 
