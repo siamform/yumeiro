@@ -55,7 +55,8 @@ object AniList {
     /** Sets progress to [episode] (never lowers it) and marks the show as watching / completed. */
     fun watched(client: OkHttpClient, mediaId: Int, episode: Int, total: Int?): Boolean {
         val t = token() ?: return false
-        val cur = graphql(client, "query(\$id:Int){Media(id:\$id){episodes mediaListEntry{progress status}}}", JSONObject().put("id", mediaId), t)?.optJSONObject("Media")
+        // IG-11: the write needs a successful read ("never lowers progress"); a failed read throws.
+        val cur = graphqlOrThrow(client, "query(\$id:Int){Media(id:\$id){episodes mediaListEntry{progress status}}}", JSONObject().put("id", mediaId), t)?.optJSONObject("Media")
         val have = cur?.optJSONObject("mediaListEntry")?.optInt("progress") ?: 0
         if (episode <= have) return true
         val eps = total ?: cur?.optInt("episodes")?.takeIf { it > 0 }
@@ -175,6 +176,9 @@ object MyAnimeList {
                 .execute().use { r -> getCode = r.code; if (r.isSuccessful) JSONObject(r.body.string()) else null }
         }.getOrNull()
         if (getCode == 401) return 401
+        // IG-11: without the current progress nothing is written (a failed read used to count as 0 and
+        // could set 12/12 back to 3). 404 = no such anime; anything else is retried.
+        if (cur == null) { if (getCode == 404) return 404; throw java.io.IOException("MyAnimeList read HTTP $getCode") }
         val have = cur?.optJSONObject("my_list_status")?.optInt("num_episodes_watched") ?: 0
         if (episode <= have) return 200
         val eps = total ?: cur?.optInt("num_episodes")?.takeIf { it > 0 }
