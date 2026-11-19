@@ -50,14 +50,14 @@ object M3uParser {
      */
     fun parseLines(lines: Sequence<String>, baseHeaders: StreamRequest? = null): List<StreamRequest> {
         val out = mutableListOf<StreamRequest>()
-        var title = ""; var logo: String? = null; var group: String? = null
+        var title = ""; var logo: String? = null; var group: String? = null; var tvgId: String? = null
         var ua: String? = null; var referer: String? = null; var origin: String? = null
         var cookie: String? = null; var extra = mutableMapOf<String, String>()
         var drm = DrmScheme.NONE; var license: String? = null
         var format = StreamFormat.AUTO
 
         fun reset() {
-            title = ""; logo = null; group = null; ua = null; referer = null; origin = null
+            title = ""; logo = null; group = null; tvgId = null; ua = null; referer = null; origin = null
             cookie = null; extra = mutableMapOf(); drm = DrmScheme.NONE; license = null; format = StreamFormat.AUTO
         }
 
@@ -83,6 +83,7 @@ object M3uParser {
                         val attrs = ATTR.findAll(attrPart).associate { it.groupValues[1].lowercase() to it.groupValues[2].trim() }
                         title = name.ifBlank { attrs["tvg-name"].orEmpty() }
                         logo = attrs["tvg-logo"]?.ifBlank { null }
+                        tvgId = attrs["tvg-id"]?.ifBlank { null } // F-15: guide (XMLTV) channel id
                         group = attrs["group-title"]?.ifBlank { null }
                         attrs["http-user-agent"]?.ifBlank { null }?.let { ua = it }
                         attrs["http-referrer"]?.ifBlank { null }?.let { referer = it }
@@ -148,6 +149,7 @@ object M3uParser {
                                 drmLicenseUrl = lic?.takeIf { it.startsWith("http", true) },
                                 clearKeys = clearKeys,
                                 logoUrl = logo,
+                                tvgId = tvgId,
                                 group = group,
                             )
                         }
@@ -177,6 +179,7 @@ object M3uWriter {
         append('\n')
         for (c in channels) {
             append("#EXTINF:-1")
+            c.tvgId?.takeIf { it.isNotBlank() }?.let { append(" tvg-id=\"").append(attr(it)).append('"') }
             append(" tvg-name=\"").append(attr(c.displayTitle)).append('"')
             c.logoUrl?.takeIf { it.isNotBlank() }?.let { append(" tvg-logo=\"").append(attr(it)).append('"') }
             c.group?.takeIf { it.isNotBlank() }?.let { append(" group-title=\"").append(attr(it)).append('"') }

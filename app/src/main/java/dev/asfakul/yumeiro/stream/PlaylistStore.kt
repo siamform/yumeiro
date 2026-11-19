@@ -314,6 +314,13 @@ object PlaylistStore {
         file.bufferedReader().useLines { M3uParser.parseLines(it) }
     }
 
+    /** F-15: the guide address in the saved playlist's `#EXTM3U` line (url-tvg / x-tvg-url), if any. */
+    fun epgUrl(context: Context, id: String): String? = runCatching {
+        channelsFile(context, id).takeIf { it.exists() }?.bufferedReader()?.use { r ->
+            generateSequence { r.readLine() }.take(3).firstOrNull { it.trimStart('\uFEFF').startsWith("#EXTM3U", true) }
+        }?.let(EpgGuide::firstEpgUrl)
+    }.getOrNull()
+
     /** Downloads a remote playlist (mirror first, then the original source) and caches it. */
     suspend fun refresh(context: Context, id: String, marketSha: String? = null): Int = withContext(Dispatchers.IO) {
         val p = mutex.withLock { ensureLoaded(context); get(id) } ?: error("Playlist not found")

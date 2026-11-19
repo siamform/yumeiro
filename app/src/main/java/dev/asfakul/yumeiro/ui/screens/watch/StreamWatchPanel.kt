@@ -227,6 +227,17 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
     val p = LocalMtPalette.current
     val listState = rememberLazyListState()
     val learned = remember(currentUrl) { AccessLadder.learned(currentUrl) }
+    val playlistId by StreamRepository.playlistId.collectAsState()
+    val guide by androidx.compose.runtime.produceState<dev.asfakul.yumeiro.stream.EpgGuide.Guide?>(null, playlistId, inPlaylist) {
+        if (!inPlaylist || !dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.LIVE_GUIDE)) return@produceState
+        val id = playlistId ?: return@produceState
+        val url = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.stream.PlaylistStore.epgUrl(context, id) } ?: return@produceState
+        value = dev.asfakul.yumeiro.stream.EpgGuide.guide(context, url)
+    }
+    val minute by androidx.compose.runtime.produceState(System.currentTimeMillis() / 60_000L) {
+        while (true) { kotlinx.coroutines.delay(60_000L - System.currentTimeMillis() % 60_000L); value = System.currentTimeMillis() / 60_000L }
+    }
+
     Box(modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().testTag("stream_watch_panel"), state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
             item(key = "controls") {
@@ -244,6 +255,16 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                     meta = listOfNotNull(format, playlistName?.takeIf { inPlaylist }?.let { "from $it" }).joinToString(" · ").ifBlank { null },
                 )
                 PlaybackFactsRow()
+                // F-15: what is on now and next, from the playlist's TV guide (url-tvg).
+                val (on, next) = remember(guide, base, minute) { base?.let { guide?.nowNext(it, minute * 60_000L) } ?: (null to null) }
+                if (on != null || next != null) {
+                    val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+                    Text(
+                        listOfNotNull(on?.let { "Now: ${it.title} (until ${fmt.format(java.util.Date(it.stop))})" }, next?.let { "Next ${fmt.format(java.util.Date(it.start))}: ${it.title}" }).joinToString("  ·  "),
+                        color = TextTertiary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("stream_watch_guide"),
+                    )
+                }
             }
             if (base != null) item(key = "servers") {
                 val current = modes[currentUrl]
