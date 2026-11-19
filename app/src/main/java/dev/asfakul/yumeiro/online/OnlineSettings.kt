@@ -13,9 +13,13 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Preferences for online videos. */
 object OnlineSettings {
-    private var prefs: SharedPreferences? = null
+    @Volatile private var prefs: SharedPreferences? = null
     /** Account tokens and API keys. Kept in their own file so backups can exclude them. */
-    private var secrets: SharedPreferences? = null
+    @Volatile private var secrets: SharedPreferences? = null
+    /** FINAL-8: set last, so a caller that sees it also sees [prefs], [secrets] and the loaded values. */
+    @Volatile private var ready = false
+    /** Test hook: runs inside [init] right after [prefs] is set (where the FINAL-8 race was). */
+    @androidx.annotation.VisibleForTesting @Volatile internal var initPauseForTests: (() -> Unit)? = null
 
     private val _adult = MutableStateFlow(false)
     /** Show 18+ extensions and titles (off by default; turning on needs an age confirmation). */
@@ -54,9 +58,20 @@ object OnlineSettings {
 
     @Volatile private var adultPrefs: SharedPreferences? = null
 
+    /**
+     * FINAL-8: one init at a time. It used to return as soon as [prefs] was set; a second thread (the app's
+     * start-up init racing an AniList / MAL sign-in link that cold-started the app) then wrote its token while
+     * [secrets] was still null, and `writeSecret` dropped it silently (AnimeSignInMessageDeviceTest, tv-api24 P1,
+     * device-check 44603655334). Callers now wait for the running init to finish.
+     */
     fun init(context: Context) {
-        if (prefs != null) return
+        if (ready) return
+        synchronized(this) { if (!ready) initLocked(context) }
+    }
+
+    private fun initLocked(context: Context) {
         val p = context.applicationContext.getSharedPreferences("online_settings", Context.MODE_PRIVATE).also { prefs = it }
+        initPauseForTests?.invoke()
         val s = context.applicationContext.getSharedPreferences(SECRETS_FILE, Context.MODE_PRIVATE).also { secrets = it }
         migrateSecrets(p, s)
         // PR-1: the adult switches belong to the profile (a new profile starts with adult content off).
@@ -69,6 +84,7 @@ object OnlineSettings {
         _openSubtitlesKey.value = readSecret("os_key").orEmpty()
         _subdlKey.value = readSecret("subdl_key").orEmpty()
         _subsourceKey.value = readSecret("subsource_key").orEmpty()
+        ready = true
     }
 
     fun setAdult(context: Context, v: Boolean) { init(context); _adult.value = v; adultPrefs?.edit()?.putBoolean("adult", v)?.apply(); OnlineRepository.clearCaches() }
@@ -110,7 +126,7 @@ object OnlineSettings {
     }
 
     @androidx.annotation.VisibleForTesting
-    internal fun resetForTests() { prefs = null; secrets = null; volatileSecrets.clear() }
+    internal fun resetForTests() { ready = false; prefs = null; secrets = null; volatileSecrets.clear() }
 
     /** Same name as in res/xml/backup_rules.xml and data_extraction_rules.xml. */
     private const val SECRETS_FILE = "online_secrets"

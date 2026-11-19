@@ -110,6 +110,7 @@ FINDINGS = {
     "CloudRecaptureDeviceTest": "FINAL-2, FINAL-7",
     "TelegramPublicDeviceTest": "FINAL-3, FINAL-5",
     "MangaTranslateDeviceTest": "FINAL-4, FINAL-6",
+    "AnimeSignInMessageDeviceTest": "FINAL-8",
 }
 def cell(cls, tgt, p):
     if not cls: return "Not run (no device class; see note)"
