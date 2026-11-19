@@ -125,7 +125,7 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
         }
         LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     } else {
-        ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
             Box(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) { body(null) }
         }
     }
