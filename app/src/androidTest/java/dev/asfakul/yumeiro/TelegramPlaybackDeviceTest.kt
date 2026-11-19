@@ -12,6 +12,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.telegram.TelegramPublic
 import dev.asfakul.yumeiro.player.PlaybackDiagnostics
 import dev.asfakul.yumeiro.stream.IncomingMedia
+import dev.asfakul.yumeiro.stream.Resolution
 import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.stream.StreamResolver
 import kotlinx.coroutines.runBlocking
@@ -87,8 +88,8 @@ class TelegramPlaybackDeviceTest {
 
     @Test fun pastedPostLinkPlays() {
         val r = runBlocking { StreamResolver.resolve(ctx, StreamRequest("https://t.me/yutest/6")) }
-        assertTrue("post link didn't resolve to the preview's video: $r (requests $paths)", r is StreamResolver.Resolution.Playable)
-        val req = (r as StreamResolver.Resolution.Playable).request
+        assertTrue("post link didn't resolve to the preview's video: $r (requests $paths)", r is Resolution.Playable)
+        val req = (r as Resolution.Playable).request
         assertEquals("https://t.me/yutest/6", req.pageUrl)
         rule.runOnUiThread { IncomingMedia.open(ctx, req) }
         val s = waitFrame()

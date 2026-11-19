@@ -46,8 +46,8 @@ class TelegramAndCloudRoutesTest {
 
     @Test fun privateTelegramLinkFailsWithoutAnyRequest() {
         val r = StreamResolver.resolveBlocking(StreamRequest("https://t.me/c/1234567/89"), "UA", OkHttpClient())
-        assertTrue(r is StreamResolver.Resolution.Failed)
-        assertEquals(TelegramPublic.Messages.PRIVATE, (r as StreamResolver.Resolution.Failed).message)
+        assertTrue(r is Resolution.Failed)
+        assertEquals(TelegramPublic.Messages.PRIVATE, (r as Resolution.Failed).message)
     }
 
     @Test fun telegramPostPlaysThePreviewVideo() {
@@ -59,8 +59,8 @@ class TelegramAndCloudRoutesTest {
         server.start()
         TelegramPublic.base = server.url("/").toString()
         val r = StreamResolver.resolveBlocking(StreamRequest("https://t.me/yutest/6"), "UA", OkHttpClient())
-        assertTrue("was $r", r is StreamResolver.Resolution.Playable)
-        val req = (r as StreamResolver.Resolution.Playable).request
+        assertTrue("was $r", r is Resolution.Playable)
+        val req = (r as Resolution.Playable).request
         assertEquals("https://cdn.example.test/file/6.mp4?token=abc", req.url)
         assertEquals("https://t.me/yutest/6", req.pageUrl)
         assertEquals(StreamResolver.TELEGRAM_GROUP, req.group)
