@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens
 
+import dev.asfakul.yumeiro.ui.screens.watch.StreamPlayerOverlay
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
@@ -1513,7 +1514,7 @@ fun MTPlayerApp(
                     overlay = when {
                         online != null -> { visible, player -> OnlinePlayerOverlay(visible, player, closePlayer) }
                         // G8-TV7A: Download for links / website videos when no watch page is docked (TV, landscape).
-                        isStream -> { visible, _ -> dev.asfakul.yumeiro.ui.screens.watch.StreamPlayerOverlay(visible, video.uri) }
+                        isStream -> { visible, _ -> StreamPlayerOverlay(visible, video.uri) }
                         else -> null
                     },
                     onFatalError = if (online != null) { pos -> dev.asfakul.yumeiro.online.OnlineSession.failover(context, pos, video.id) } else null,
