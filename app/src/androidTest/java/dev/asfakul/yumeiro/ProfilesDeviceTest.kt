@@ -24,8 +24,12 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.asfakul.yumeiro.online.download.DownloadGroups
 import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Item
 import dev.asfakul.yumeiro.online.download.OnlineDownloads.Status
@@ -126,10 +130,18 @@ class ProfilesDeviceTest {
         OnlineDownloads.setItemsForTest(ctx, listOf(shown, secret))
         assertTrue("hide", dev.asfakul.yumeiro.online.download.PrivateDownloads.hide(ctx, secret.id))
         compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { DownloadsScreen(onBack = {}, onPlayVideo = {}, onBrowse = {}) } } }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("Open Movie PR", true).fetchSemanticsNodes().isNotEmpty() }
+        // Finished downloads sit in folders, closed by default (run 44509508921 waited for the title on
+        // the closed list: test error). Open "Other downloads", then look for both titles.
+        assertTrue("list", waitTag("downloads_list"))
+        compose.onNodeWithTag("downloads_list", true).performScrollToNode(hasText(DownloadGroups.LOOSE))
+        compose.onAllNodesWithText(DownloadGroups.LOOSE, true)[0].performClick()
+        compose.waitForIdle()
+        assertTrue("one item in the folder", compose.onAllNodesWithText("1 item", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithTag("downloads_list", true).performScrollToNode(hasText("Open Movie PR"))
         assertTrue("hidden item not in the list", compose.onAllNodesWithText("Secret Movie PR", true).fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithTag("downloads_list", true).performScrollToNode(hasTestTag("downloads_private"))
         assertTrue("Private entry", waitTag("downloads_private"))
-        compose.onNodeWithTag("downloads_private", true).performScrollTo().performClick()
+        compose.onNodeWithTag("downloads_private", true).performClick()
         // A phone with a screen lock asks with the system prompt first; the emulators have none.
         assertTrue("pin pad", waitTag("pin_pad"))
         type("2468")
