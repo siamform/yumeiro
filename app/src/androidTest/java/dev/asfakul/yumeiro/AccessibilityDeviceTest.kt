@@ -39,8 +39,25 @@ class AccessibilityDeviceTest {
     private fun log(s: String) = Log.i("YuA11y", s)
 
     private val inst get() = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+    /**
+     * Touch-target size only means something where there is touch. Android TV has no touchscreen
+     * (`android.hardware.touchscreen` absent; D-pad focus is covered by the TV focus tests), and its
+     * expanded rail floats over the left of every page, so ATF measures the visible slice of chips
+     * under it (gate run 44523673246, tv-api34: nav_tab_videos 3 dp, nav_tab_music 43 dp). Every
+     * other check still runs on TV, and phones keep the full set.
+     */
+    private val touch get() = inst.targetContext.packageManager.hasSystemFeature("android.hardware.touchscreen")
     private val validator get() = AccessibilityValidator().setRunChecksFromRootView(true)
         .setThrowExceptionFor(AccessibilityCheckResult.AccessibilityCheckResultType.ERROR)
+        .also { v ->
+            if (!touch) {
+                log("A11Y no touchscreen: TouchTargetSizeCheck suppressed, all other checks run")
+                v.setSuppressingResultMatcher(
+                    com.google.android.apps.common.testing.accessibility.framework.AccessibilityCheckResultUtils
+                        .matchesCheckNames(org.hamcrest.Matchers.equalTo("TouchTargetSizeCheck")),
+                )
+            }
+        }
     private fun has(tag: String) = runCatching { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
     private fun hasText(t: String) = runCatching { rule.onAllNodesWithText(t, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
     private fun waitFor(what: String, ms: Long = 30_000, cond: () -> Boolean) {
@@ -165,7 +182,7 @@ class AccessibilityDeviceTest {
                 runCatching { rule.waitUntil(10_000) { hasText(title) || hasText("YumeiroTest") } }
             }
             waitFor("the clip", 30_000) { hasText(title) }
-            rule.onAllNodesWithText(title, substring = true)[0].performClick()
+            FirstRun.openClip(rule, title)
             waitFor("first frame", 45_000) { dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.value.firstFrame }
             rule.runOnUiThread { dev.asfakul.yumeiro.player.PlaybackSession.playerForTest?.pause() }
             // Controls show on a tap and hide after a few seconds; check while they are up.

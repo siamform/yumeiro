@@ -121,7 +121,7 @@ class LocalPlayerDeviceTest {
             log("looking for the clip, attempt $attempt: ${FirstRun.onScreen(rule).take(400)}")
         }
         wait("the clip in Videos → Device", 30_000) { hasText(title) }
-        rule.onAllNodesWithText(title, substring = true)[0].performClick()
+        FirstRun.openClip(rule, title)
         wait("first frame of the device clip", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
         log("playing: ${PlaybackDiagnostics.state.value}")
     }
@@ -223,7 +223,7 @@ class LocalPlayerDeviceTest {
         PlaybackDiagnostics.reset("")
         val title = NAME.substringBeforeLast('.')
         wait("clip still listed") { hasText(title) }
-        rule.onAllNodesWithText(title, substring = true)[0].performClick()
+        FirstRun.openClip(rule, title)
         wait("first frame again", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
         val pill = has("video_resume_pill")
         val pos = onPlayer { it.currentPosition } ?: 0

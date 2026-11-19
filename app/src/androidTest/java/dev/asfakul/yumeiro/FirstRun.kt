@@ -303,6 +303,25 @@ object FirstRun {
         rule.waitForIdle()
     }
 
+    /**
+     * Opens the device clip titled [title] from the Videos grid. Two traps made a plain
+     * `onAllNodesWithText(title)[0].performClick()` miss on Android TV (gate run 44523673246,
+     * tv-api34, "first frame never showed"): the pager keeps the Library page composed, so the first
+     * match can be its copy of the clip; and a touch at the card's centre lands on the expanded
+     * TV rail that floats over the left of the grid. Match inside `video_screen_root` and send the
+     * click on TV as a semantics action, the same path a D-pad centre press takes.
+     */
+    fun openClip(rule: AndroidComposeTestRule<*, *>, title: String) {
+        val m = androidx.compose.ui.test.hasText(title, substring = true) and
+            androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("video_screen_root"))
+        val inGrid = rule.onAllNodes(m, useUnmergedTree = false)
+        val n = if (inGrid.fetchSemanticsNodes().isNotEmpty()) inGrid[0] else rule.onAllNodesWithText(title, substring = true)[0]
+        // Phones keep the real touch path; only TV (no touchscreen, rail overlay) uses the action.
+        if (dev.asfakul.yumeiro.Edition.isTv) n.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        else n.performClick()
+        rule.waitForIdle()
+    }
+
     /** True if the bar item [tag] (or its TV rail twin) is on screen. */
     fun hasNav(rule: AndroidComposeTestRule<*, *>, tag: String): Boolean = has(rule, navTag(rule, tag))
 

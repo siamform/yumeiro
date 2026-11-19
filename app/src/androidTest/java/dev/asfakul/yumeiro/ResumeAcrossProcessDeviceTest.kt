@@ -80,7 +80,7 @@ class ResumeAcrossProcessDeviceTest {
             runCatching { rule.waitUntil(10_000) { hasText(title) || hasText("YumeiroTest") } }
         }
         wait("the clip in Videos → Device") { hasText(title) }
-        rule.onAllNodesWithText(title, substring = true)[0].performClick()
+        FirstRun.openClip(rule, title)
         wait("first frame", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
         wait("playing past 1 s", 10_000) { (onPlayer { it.currentPosition } ?: 0) >= 1_000 }
         rule.runOnUiThread { PlaybackSession.playerForTest?.playWhenReady = false }

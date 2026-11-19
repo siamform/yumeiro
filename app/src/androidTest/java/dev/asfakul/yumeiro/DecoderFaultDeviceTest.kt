@@ -84,7 +84,7 @@ class DecoderFaultDeviceTest {
             runCatching { rule.waitUntil(10_000) { hasText(title) || hasText("YumeiroTest") } }
         }
         wait("the clip in Videos → Device", 30_000) { hasText(title) }
-        rule.onAllNodesWithText(title, substring = true)[0].performClick()
+        FirstRun.openClip(rule, title)
     }
 
     private fun decoderLog(): String = FirstRun.shell("logcat -d -t 400 -s MediaCodecRenderer:* YumeiroRenderers:*")
@@ -126,7 +126,7 @@ class DecoderFaultDeviceTest {
         wait("player closed", 15_000) { !hasText("can't decode") }
         val title = NAME.substringBeforeLast('.')
         wait("clip still listed", 20_000) { hasText(title) }
-        rule.onAllNodesWithText(title, substring = true)[0].performClick()
+        FirstRun.openClip(rule, title)
         wait("first frame after the fault cleared", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
         log("c: state=${PlaybackDiagnostics.state.value}")
         log("DECODER_FAULT_C_RESULT PASS")

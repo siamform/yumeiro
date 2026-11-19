@@ -81,7 +81,7 @@ class FloatingMessageDeviceTest {
             runCatching { rule.waitUntil(10_000) { hasText(title) || hasText("YumeiroTest") } }
         }
         wait("the clip in Videos → Device") { hasText(title) }
-        rule.onAllNodesWithText(title, substring = true)[0].performClick()
+        FirstRun.openClip(rule, title)
         wait("first frame", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
         var presses = 0
         while (presses < 3 && !has("floating_close")) {
