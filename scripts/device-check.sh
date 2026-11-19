@@ -254,6 +254,14 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   SK=$(grep -cE "INSTRUMENTATION_STATUS_CODE: -(3|4).?$" "inst-$C.txt" 2>/dev/null | tr -d ' '); OKN=$(sed -n 's/^OK (\([0-9]*\) test.*/\1/p' "inst-$C.txt" | tail -1)
   echo "REPEAT_RESULT $C run=$N/$REPEAT$PL $V tests=${OKN:-?} skipped=${SK:-0}" | tee -a repeat-results.txt
   cp "inst-$C.txt" "inst-$C-run$N.txt" 2>/dev/null || true
+  # Final test §10: keep each class's screenshots (FirstRun.shot) before the next class clears the
+  # app data, so the images in docs/assets/final come from the final passes themselves.
+  SHOTS=/sdcard/Android/data/dev.asfakul.yumeiro.debug/files/shots
+  if adb shell "[ -d $SHOTS ]" > /dev/null 2>&1; then
+    mkdir -p "stress/shots-P$N/${C##*.}"
+    adb pull "$SHOTS/." "stress/shots-P$N/${C##*.}/" > /dev/null 2>&1 || true
+    adb shell rm -rf "$SHOTS" > /dev/null 2>&1 || true
+  fi
   echo "::endgroup::"
 done
 done
