@@ -388,7 +388,8 @@ fun OnlineHomeScreen(
                         buildMixFeed(ready, 24, cardsPerShelf = Int.MAX_VALUE, skip = bannerKeys)
                             .filterIsInstance<FeedEntry.Card>().map { it.item }
                     }
-                    val cats = remember(ready) { YumixFeed.categories(ready) }
+                    val tagSections = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.YUMIX_TAG_SECTIONS) }
+                    val cats = remember(ready) { YumixFeed.categories(ready, byTags = tagSections) }
                     var cat by rememberSaveable { mutableStateOf<String?>(null) }
                     androidx.activity.compose.BackHandler(enabled = cat != null) { cat = null }
                     // Then one tidy section per extension: its first rows as shelves. More sections

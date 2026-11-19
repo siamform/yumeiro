@@ -6,6 +6,7 @@
 package dev.asfakul.yumeiro.ui.screens.online
 
 import dev.asfakul.yumeiro.online.OnlineItem
+import dev.asfakul.yumeiro.online.ReleaseTags
 import dev.asfakul.yumeiro.online.OnlineRow
 
 /**
@@ -28,10 +29,18 @@ internal object YumixFeed {
         return roundRobin(lists, max, skip)
     }
 
-    enum class Category(val label: String, val types: Set<String>, val words: Regex) {
+    /**
+     * [tagged] (F-16) puts a title in a section by what its own name / extension says (release tags), not only by
+     * the row it came in: "Dual Audio", "Sub", "Dub", "Web series".
+     */
+    enum class Category(val label: String, val types: Set<String>, val words: Regex, val tagged: (OnlineItem) -> Boolean = { false }) {
         ANIME("Anime", setOf("anime", "animemovie", "ova"), Regex("anime|donghua|アニメ", RegexOption.IGNORE_CASE)),
         MOVIES("Movies", setOf("movie", "animemovie"), Regex("\\bmovies?\\b|\\bfilms?\\b|cinema", RegexOption.IGNORE_CASE)),
         SERIES("Series", setOf("tvseries"), Regex("\\b(tv\\s*)?(series|shows?)\\b", RegexOption.IGNORE_CASE)),
+        WEB_SERIES("Web series", emptySet(), Regex("web[ ._-]?series|webseries", RegexOption.IGNORE_CASE), { WEB.containsMatchIn(it.name) }),
+        DUAL_AUDIO("Dual Audio", emptySet(), Regex("dual[ ._-]?audio|multi[ ._-]?audio", RegexOption.IGNORE_CASE), { i -> i.audio().any { it.startsWith("Dual") || it == "Multi Audio" } }),
+        SUB("Sub", emptySet(), Regex("\\bsub(bed|titled|s)?\\b", RegexOption.IGNORE_CASE), { i -> i.audio().any { it == "Sub" || it == "Dub · Sub" } }),
+        DUB("Dub", emptySet(), Regex("\\bdub(bed|s)?\\b", RegexOption.IGNORE_CASE), { i -> i.audio().any { it == "Dub" || it == "Dub · Sub" } || DUBBED.containsMatchIn(i.name) }),
         DRAMA("Drama", setOf("asiandrama"), Regex("drama", RegexOption.IGNORE_CASE)),
         ROMANCE("Romance", emptySet(), Regex("romance|romantic|love", RegexOption.IGNORE_CASE)),
         ACTION("Action", emptySet(), Regex("action|adventure|martial", RegexOption.IGNORE_CASE)),
@@ -48,19 +57,37 @@ internal object YumixFeed {
      * Titles per category: by the extension's own type, or by the row they came in ("Romance",
      * "Top Football"). Categories with fewer than [min] titles are left out so no chip is a dead end.
      */
-    fun categories(channels: List<Pair<String, List<OnlineRow>>>, min: Int = 4, maxPer: Int = 30): List<Pair<Category, List<OnlineItem>>> {
+    fun categories(channels: List<Pair<String, List<OnlineRow>>>, min: Int = 4, maxPer: Int = 30, byTags: Boolean = true): List<Pair<Category, List<OnlineItem>>> {
         val out = LinkedHashMap<Category, LinkedHashMap<String, OnlineItem>>()
         channels.forEach { (_, rows) ->
             rows.forEach { row ->
                 val byRow = Category.entries.filter { it.words.containsMatchIn(row.title) }
                 row.items.forEach { item ->
                     val t = item.type?.lowercase()?.replace(" ", "")
-                    val cats = (byRow + Category.entries.filter { t != null && t in it.types }).distinct()
+                    val cats = (byRow + Category.entries.filter { (t != null && t in it.types) || (byTags && it.tagged(item)) }).distinct()
                     cats.forEach { c -> out.getOrPut(c) { LinkedHashMap() }.putIfAbsent(item.key, item) }
                 }
             }
         }
         return Category.entries.mapNotNull { c -> out[c]?.values?.toList()?.takeIf { it.size >= min }?.let { c to it.take(maxPer) } }
+    }
+
+    private val WEB = Regex("web[ ._-]?series|webseries", RegexOption.IGNORE_CASE)
+    private val DUBBED = Regex("(?<![A-Za-z])dub(bed)?(?![A-Za-z])", RegexOption.IGNORE_CASE)
+    private fun OnlineItem.audio(): List<String> = tags.filter { it.kind == ReleaseTags.Kind.LANGUAGE }.map { it.label }
+
+    /**
+     * F-16: the banner line — type, resolution, release source, audio (Dual / Multi / language / Dub · Sub), from the
+     * same [ReleaseTags] the posters use; the raw extension quality word only when the name says nothing better.
+     */
+    fun heroTags(item: OnlineItem): List<String> {
+        val t = item.tags
+        val type = t.firstOrNull { it.kind == ReleaseTags.Kind.TYPE }?.label ?: item.type?.takeIf { it.isNotBlank() }
+        val res = t.filter { it.kind == ReleaseTags.Kind.RESOLUTION }.map { it.label }
+        val src = t.filter { it.kind == ReleaseTags.Kind.SOURCE }.map { it.label }
+        val audio = t.filter { it.kind == ReleaseTags.Kind.LANGUAGE }.map { it.label }
+        val raw = item.quality?.takeIf { it.isNotBlank() && it != "Unknown" && res.isEmpty() && src.isEmpty() }
+        return (listOfNotNull(type) + res + src + listOfNotNull(raw) + audio).filter { it.isNotBlank() }.distinct()
     }
 
     /**

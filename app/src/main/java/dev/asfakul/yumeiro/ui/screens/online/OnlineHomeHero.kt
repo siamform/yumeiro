@@ -57,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -167,7 +168,7 @@ internal fun HeroCarousel(
                             Spacer(Modifier.height(6.dp))
                             Text(item.name, color = Color.White, fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(6.dp))
-                            val tags = listOfNotNull(item.type, item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }, item.score?.takeIf { it > 0 }?.let { "★ %.1f".format(java.util.Locale.US, it) })
+                            val tags = remember(item.key) { if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.YUMIX_TAG_SECTIONS)) YumixFeed.heroTags(item) else listOfNotNull(item.type, item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }) } + listOfNotNull(item.score?.takeIf { it > 0 }?.let { "★ %.1f".format(java.util.Locale.US, it) })
                             Text((tags + item.api).joinToString("  ·  "), color = Color.White.copy(alpha = 0.72f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

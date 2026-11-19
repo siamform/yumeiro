@@ -17,6 +17,10 @@ object FeatureFlags {
     enum class Flag(val key: String, val default: Boolean) {
         /** F-09: Watch later / Favorite sheet on posters (long press, TV Menu key) and poster marks. */
         POSTER_ACTIONS("f09_poster_actions", true),
+        /** F-16: Yumix sections filled from release tags (Web series, Dual Audio, Sub, Dub) and banner tags. */
+        YUMIX_TAG_SECTIONS("f16_tag_sections", true),
+        /** NF-1: episode status line (Watched, N min left, Fresh). */
+        EPISODE_STATUS("nf1_episode_status", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null
