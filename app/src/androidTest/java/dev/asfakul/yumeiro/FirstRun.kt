@@ -269,6 +269,9 @@ object FirstRun {
     /** G12 X9-1: Yumeiro TV shows a side rail (`tv_nav_tab_*`, `tv_nav_shortcut_*`) instead of the
      *  bottom bar (`nav_tab_*`, `nav_shortcut_*`). */
     fun navTag(rule: AndroidComposeTestRule<*, *>, tag: String): String = when {
+        // The TV rail drops a pinned Settings shortcut on purpose: Settings already sits at the bottom
+        // of the rail (TvNavRail.railItems). Gate run 44537810500, tv-api24, CrashUi b_.
+        tag == "nav_shortcut_settings" && !has(rule, tag) && has(rule, "tv_nav_rail") -> "tv_nav_settings"
         (tag.startsWith("nav_tab_") || tag.startsWith("nav_shortcut_")) && !has(rule, tag) && has(rule, "tv_nav_rail") -> "tv_$tag"
         // On TV the top bar has no Settings button; Settings is at the bottom of the rail (MTTopBar.kt).
         tag == "topbar_settings_action" && !has(rule, tag) && has(rule, "tv_nav_rail") -> "tv_nav_settings"
