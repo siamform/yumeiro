@@ -94,6 +94,7 @@ fun ShortsPlayerDialog(items: List<YtItem>, startIndex: Int, onDismiss: () -> Un
     }
 }
 
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // PlayerView.resizeMode (Media3 pinned)
 @Composable
 private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Unit, onFullPlayer: (YtItem) -> Unit) {
     val context = LocalContext.current
