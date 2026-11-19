@@ -62,7 +62,8 @@ class MangaTranslateDeviceTest {
         MangaTranslate.clear(ctx)
     }
 
-    @Test fun a_engineReadsAndTranslatesBubblesOnDevice() = runBlocking {
+    // FINAL-4: JUnit needs a void test method; the last line (log) returned Int, so the class was invalid.
+    @Test fun a_engineReadsAndTranslatesBubblesOnDevice() = runBlocking<Unit> {
         MangaTranslate.clear(ctx)
         val t0 = SystemClock.elapsedRealtime()
         val prep = MangaTranslate.prepare(ctx, s)

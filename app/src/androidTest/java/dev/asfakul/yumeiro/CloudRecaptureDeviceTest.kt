@@ -85,7 +85,9 @@ class CloudRecaptureDeviceTest {
             pageUrl = "$base/s/1yutest", referer = "$base/s/1yutest",
         )
         rule.runOnUiThread { IncomingMedia.open(ctx, stale, positionMs = 2_000L) }
-        runCatching { rule.waitUntil(90_000) { PlaybackDiagnostics.state.value.let { it.firstFrame || (it.error != null && it.state == "IDLE") } } }
+        // FINAL-2: the first 403 sets error + IDLE before the re-capture starts (run 44593053433 ended the test
+        // there and the scope was forgotten mid-refresh). Wait for the frame; the asserts report what happened.
+        runCatching { rule.waitUntil(90_000) { PlaybackDiagnostics.state.value.firstFrame } }
         val s = PlaybackDiagnostics.state.value
         Log.i("YuCloud", "recapture -> $s pageLoads=${pageLoads.get()} requests=$paths")
         assertTrue("the share page was never opened again (no TeraBox / DiskWala refresher)", pageLoads.get() >= 1)

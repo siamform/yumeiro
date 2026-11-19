@@ -102,10 +102,8 @@ fun WebSitesScreen(onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(enabled = query.isNotEmpty()) { query = "" }
 
     fun add() {
-        // F-02: "@name" or a t.me channel link saves the channel's public page.
-        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input) as? dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
-        val err = if (tg != null) SavedSites.add(context, dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelUrl(tg.name), "@${tg.name}")
-        else SavedSites.add(context, input)
+        // F-02: "@name" or a t.me channel link saves the channel's public page (handled in SavedSites.add).
+        val err = SavedSites.add(context, input)
         if (err != null) error = err else { input = ""; error = null }
     }
 

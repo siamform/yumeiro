@@ -82,7 +82,9 @@ class TelegramPlaybackDeviceTest {
     }
 
     private fun waitFrame(ms: Long = 75_000): PlaybackDiagnostics.Snapshot {
-        runCatching { rule.waitUntil(ms) { PlaybackDiagnostics.state.value.let { it.firstFrame || (it.error != null && it.state == "IDLE") } } }
+        // FINAL-2: the first 403 sets error + IDLE before the refresh starts; waiting on it ended the test
+        // ~0.1 s into the recovery (run 44593053433). Wait for the frame; the asserts report what happened.
+        runCatching { rule.waitUntil(ms) { PlaybackDiagnostics.state.value.firstFrame } }
         return PlaybackDiagnostics.state.value
     }
 

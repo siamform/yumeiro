@@ -265,7 +265,10 @@ private fun VideoPlayerModalContent(
     remember { dev.asfakul.yumeiro.player.VideoPrefs.init(context); true }
     // Round 13: Settings → Quality and audio → Resume playback (off = always start at 0:00).
     val video = remember(videoIn) { if (dev.asfakul.yumeiro.player.VideoPrefs.resume.value) videoIn else videoIn.copy(playbackPositionMs = 0L) }
-    val coroutineScope = rememberCoroutineScope()
+    // FINAL-1: ExoPlayer must be used on the main thread. Recovery coroutines touch the player after a
+    // suspension (link refresh); pinning Main.immediate keeps that true whatever dispatcher the
+    // composition runs on (a test's Unconfined dispatcher resumed them on the IO thread: run 44593053433).
+    val coroutineScope = rememberCoroutineScope { kotlinx.coroutines.Dispatchers.Main.immediate }
     remember { dev.asfakul.yumeiro.ui.screens.watch.WatchPrefs.init(context); true }
     val autoNextOn by dev.asfakul.yumeiro.ui.screens.watch.WatchPrefs.autoNext.collectAsState()
     // Watch pages (Hues / YouTube / Stream) honour the Auto Play switch; device videos always start.

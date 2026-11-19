@@ -140,7 +140,10 @@ object SavedSites {
     /** Adds (or renames) a site. Returns an error text, or null when saved. */
     fun add(context: Context, input: String, name: String? = null, now: Long = System.currentTimeMillis()): String? {
         init(context)
-        val url = normalize(input) ?: return "That doesn't look like a web address"
+        // FINAL-3 (F-02): "@name", tg://resolve or a t.me channel link saves the channel's public page,
+        // here rather than only in the Sites screen, so every caller saves the same thing.
+        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input) as? dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
+        val url = tg?.let { dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelUrl(it.name) } ?: normalize(input) ?: return "That doesn't look like a web address"
         val n = name?.trim()?.takeIf { it.isNotEmpty() } ?: defaultName(url)
         val key = keyOf(url)
         val old = _sites.value.firstOrNull { keyOf(it.url) == key }
