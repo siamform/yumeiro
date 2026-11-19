@@ -130,6 +130,7 @@ object SavedSites {
 
     /** A readable default name: "www.my-site.co.uk" → "My Site". */
     fun defaultName(url: String): String {
+        dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(url)?.let { return "@$it" }
         val host = hostOf(url) ?: return url
         val parts = host.split('.')
         val core = if (parts.size >= 3 && parts[parts.size - 2].length <= 3) parts[parts.size - 3] else parts.getOrElse(parts.size - 2) { host }
@@ -160,6 +161,8 @@ object SavedSites {
         init(context)
         _sites.value = _sites.value.filterNot { it.url == url }
         persist(context)
+        // F-02: a removed Telegram channel also drops its "seen up to" mark.
+        dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(url)?.let { dev.asfakul.yumeiro.online.telegram.TelegramSeen.forget(context, it) }
     }
 
     /** For tests. */

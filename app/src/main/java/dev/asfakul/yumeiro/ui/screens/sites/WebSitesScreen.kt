@@ -102,8 +102,23 @@ fun WebSitesScreen(onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(enabled = query.isNotEmpty()) { query = "" }
 
     fun add() {
-        val err = SavedSites.add(context, input)
+        // F-02: "@name" or a t.me channel link saves the channel's public page.
+        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input) as? dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
+        val err = if (tg != null) SavedSites.add(context, dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelUrl(tg.name), "@${tg.name}")
+        else SavedSites.add(context, input)
         if (err != null) error = err else { input = ""; error = null }
+    }
+
+    // F-02 (ADR-042): a saved public Telegram channel opens its video posts, not the page browser.
+    val tgChannel = open?.let { site -> dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(site.url) }
+        ?.takeIf { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC) }
+    if (tgChannel != null) {
+        val site = open!!
+        TelegramChannelScreen(
+            channel = tgChannel, name = site.name, onBack = { open = null },
+            onPlay = { req -> IncomingMedia.open(context, req) },
+        )
+        return
     }
 
     open?.let { site ->
