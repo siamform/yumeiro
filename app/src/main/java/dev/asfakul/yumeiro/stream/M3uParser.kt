@@ -47,13 +47,29 @@ object M3uParser {
         return body to ""
     }
 
-    fun parse(text: String, baseHeaders: StreamRequest? = null): List<StreamRequest> = parseLines(text.lineSequence(), baseHeaders)
+    fun parse(text: String, baseHeaders: StreamRequest? = null, baseUrl: String? = null): List<StreamRequest> = parseLines(text.lineSequence(), baseHeaders, baseUrl)
 
     /**
      * R16 (G7): same as [parse] but reads lines one by one, so a large saved playlist (up to 40 MB)
      * is never held as one String next to its parsed channels on a low-RAM phone.
      */
-    fun parseLines(lines: Sequence<String>, baseHeaders: StreamRequest? = null): List<StreamRequest> {
+    /** G7-L5-B: a path-like channel line (no scheme, no spaces, no colon). */
+    private val RELATIVE = Regex("""^[A-Za-z0-9._~%/+\-][A-Za-z0-9._~%/+\-?=&;,!@$()*]*$""")
+
+    /** G7-L5-B: [line] resolved against [base] (the playlist's address), or null when it isn't a link. */
+    internal fun resolveRelative(line: String, base: String?): String? {
+        if (base == null) return null
+        val path = line.substringBefore('|')
+        if (!RELATIVE.matches(path) || !(path.contains('/') || path.contains('.'))) return null
+        val abs = runCatching { java.net.URI(base).resolve(path).toString() }.getOrNull() ?: return null
+        return abs.takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { a -> if (line.contains('|')) a + "|" + line.substringAfter('|') else a }
+    }
+
+    /**
+     * [baseUrl] (G7-L5-B): the playlist's own address; channel lines without a scheme are relative to it.
+     * Null (a file picked on the phone) keeps them skipped.
+     */
+    fun parseLines(lines: Sequence<String>, baseHeaders: StreamRequest? = null, baseUrl: String? = null): List<StreamRequest> {
         val out = mutableListOf<StreamRequest>()
         var title = ""; var logo: String? = null; var group: String? = null; var tvgId: String? = null
         var ua: String? = null; var referer: String? = null; var origin: String? = null
@@ -77,7 +93,10 @@ object M3uParser {
         }
 
         for (raw in lines) {
-            val line = raw.trim().trimStart('\uFEFF').trim()
+            val line0 = raw.trim().trimStart('\uFEFF').trim()
+            // Only right after an #EXTINF entry, so a stray word in a broken file never becomes a channel.
+            val line = if (baseUrl != null && (title.isNotEmpty() || logo != null || group != null) && line0.isNotEmpty() && !line0.startsWith("#") && !URL_LINE.matches(line0.substringBefore('|')))
+                resolveRelative(line0, baseUrl) ?: line0 else line0
             try {
                 when {
                     line.isEmpty() || line.startsWith("#EXTM3U", ignoreCase = true) -> Unit

@@ -136,7 +136,7 @@ object StreamRepository {
                 fetchText(source, base)
             }
             require(!M3uParser.isHlsPlaylist(text)) { "This is a single HLS stream, not a channel list" }
-            M3uParser.parse(text, base).also { require(it.isNotEmpty()) { "No channels found in playlist" } }
+            M3uParser.parse(text, base, baseUrl = source.takeIf { it.startsWith("http") }).also { require(it.isNotEmpty()) { "No channels found in playlist" } }
         }
 
     private fun fetchText(url: String, base: StreamRequest?): String {

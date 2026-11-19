@@ -231,7 +231,7 @@ object PlaylistStore {
     suspend fun addRemote(context: Context, name: String, url: String): StreamPlaylist = withContext(Dispatchers.IO) {
         val part = fetchToPart(context, url)
         try {
-            val count = countChannels(part)
+            val count = countChannels(part, url)
             val p = StreamPlaylist(
                 id = "u_" + UUID.randomUUID().toString().take(8), name = name.ifBlank { guessTitle(url) }, url = url,
                 category = "Custom", channelCount = count, lastUpdated = System.currentTimeMillis(),
@@ -311,7 +311,8 @@ object PlaylistStore {
             }
         }
         if (!file.exists()) return@withContext emptyList()
-        file.bufferedReader().useLines { M3uParser.parseLines(it) }
+        // G7-L5-B: relative channel links resolve against the original address (the mirror keeps the bytes).
+        file.bufferedReader().useLines { M3uParser.parseLines(it, baseUrl = if (p.isLocal) null else p.fallbackUrl ?: p.url) }
     }
 
     /** F-15: the guide address in the saved playlist's `#EXTM3U` line (url-tvg / x-tvg-url), if any. */
@@ -331,7 +332,7 @@ object PlaylistStore {
             try {
                 val part = fetchToPart(context, u)
                 try {
-                    val count = countChannels(part)
+                    val count = countChannels(part, u)
                     // NBUG-16 NB16-3: a plain Refresh of a market playlist downloads the newest mirror
                     // copy; the catalog digest is the sha256 of exactly those bytes (build_market.py),
                     // so record it, or the playlist stays "needing an update". A copy from the original
@@ -357,9 +358,9 @@ object PlaylistStore {
      * body used to be held as bytes and as one String and parsed from that String; a 16 MB list
      * peaked near the whole 192 MB heap of a low-RAM phone (RemotePlaylistMemoryDeviceTest).
      */
-    private fun countChannels(file: File): Int {
+    private fun countChannels(file: File, baseUrl: String? = null): Int {
         var hls = false
-        val channels = file.bufferedReader().useLines { lines -> M3uParser.parseLines(lines.onEach { if (!hls && M3uParser.isHlsLine(it)) hls = true }) }
+        val channels = file.bufferedReader().useLines { lines -> M3uParser.parseLines(lines.onEach { if (!hls && M3uParser.isHlsLine(it)) hls = true }, baseUrl = baseUrl) }
         require(!hls) { "This is a single HLS stream, not a channel list" }
         require(channels.isNotEmpty()) { "No channels found in playlist" }
         return channels.size
@@ -485,7 +486,7 @@ object PlaylistStore {
             try {
                 val part = fetchToPart(context, u)
                 try {
-                    val count = countChannels(part)
+                    val count = countChannels(part, u)
                     val p = StreamPlaylist(
                         id = entry.installId, name = entry.name, url = entry.url, fallbackUrl = entry.source,
                         category = entry.category, description = entry.description, channelCount = count,
