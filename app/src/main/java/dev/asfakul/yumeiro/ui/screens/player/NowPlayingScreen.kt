@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material.icons.outlined.Album
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.runtime.collectAsState
@@ -268,7 +269,7 @@ fun NowPlayingScreen(
                         }
                         if (tip != null) Text("Tip: $tip", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB3C0), modifier = Modifier.testTag("now_playing_error_tip"))
                     }
-                    Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClick = onDismissError).testTag("now_playing_error_dismiss"), contentAlignment = Alignment.Center) {
+                    Box(Modifier.minimumInteractiveComponentSize().size(32.dp).clip(CircleShape).clickable(onClick = onDismissError).testTag("now_playing_error_dismiss"), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Close, "Dismiss error", tint = Color(0xFFFFD6DD), modifier = Modifier.size(16.dp))
                     }
                 }

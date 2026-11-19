@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -120,7 +121,7 @@ fun UserGuideScreen(onBack: () -> Unit) {
             item(key = "top") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(44.dp).clip(CircleShape).background(p.glass).clickable(onClick = onBack).testTag("user_guide_back"),
+                        Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(p.glass).clickable(onClick = onBack).testTag("user_guide_back"),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = p.textPrimary) }
                     Spacer(Modifier.width(12.dp))

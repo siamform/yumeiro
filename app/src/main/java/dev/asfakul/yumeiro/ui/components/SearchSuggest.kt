@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -180,7 +181,7 @@ fun SuggestionList(
                     s.detail?.let { Text(it, color = p.textTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 Box(
-                    Modifier.size(36.dp).clip(CircleShape).clickable { onFill(s) }.testTag(tag + "_fill"),
+                    Modifier.minimumInteractiveComponentSize().size(36.dp).clip(CircleShape).clickable { onFill(s) }.testTag(tag + "_fill"),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Default.NorthWest, "Fill search box", tint = p.textTertiary, modifier = Modifier.size(16.dp)) }
             }

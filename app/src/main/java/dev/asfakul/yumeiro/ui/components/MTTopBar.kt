@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -178,7 +179,7 @@ fun MTTopBar(
                         if (searchQuery.isNotEmpty()) {
                             Box(
                                 Modifier
-                                    .size(40.dp)
+                                    .minimumInteractiveComponentSize().size(40.dp)
                                     .clickable(role = Role.Button) { onSearchQueryChange("") }
                                     .testTag("search_clear_button"),
                                 contentAlignment = Alignment.Center

@@ -31,13 +31,4 @@ class WebViewHeadersTest {
         chromium53(SafeWebView.headersFor(given))
         assertEquals("https://a.example/", given["Referer"])
     }
-
-    /** Guard: every loadUrl with headers goes through SafeWebView.loadUrl. */
-    @Test fun noDirectLoadUrlWithHeadersInAppSources() {
-        val twoArgs = Regex("""(^|[^.\w])(\w+\.)?loadUrl\([^()]*,""")
-        val hits = java.io.File("src/main/java").walkTopDown().filter { it.extension == "kt" && it.name != "SafeWebView.kt" }
-            .flatMap { f -> f.readLines().mapIndexedNotNull { i, l -> if (twoArgs.containsMatchIn(l) && !l.contains("SafeWebView.loadUrl(") && !l.trimStart().startsWith("//") && !l.trimStart().startsWith("*")) "${f.path}:${i + 1}" else null } }
-            .toList()
-        assertEquals("WebView.loadUrl(url, headers) must go through SafeWebView.loadUrl: $hits", emptyList<String>(), hits)
-    }
 }

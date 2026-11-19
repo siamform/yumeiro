@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.pointer.pointerInput
@@ -278,7 +279,7 @@ private const val HERO_LAPS = 2000
 @Composable
 private fun HeroRoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))
+        Modifier.minimumInteractiveComponentSize().size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f))
             .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape).clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = Color.White, modifier = Modifier.size(20.dp)) }

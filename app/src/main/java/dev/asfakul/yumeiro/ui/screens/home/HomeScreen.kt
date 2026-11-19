@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import dev.asfakul.yumeiro.ui.components.a11yLabel
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.runtime.rememberUpdatedState
@@ -832,7 +833,7 @@ private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> U
             }
         }
         Box(
-            Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Hide setup card", onClick = onHide).testTag("home_setup_hide"),
+            Modifier.minimumInteractiveComponentSize().size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Hide setup card", onClick = onHide).testTag("home_setup_hide"),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Default.Close, "Hide", tint = p.textTertiary, modifier = Modifier.size(18.dp)) }
     }
@@ -868,7 +869,7 @@ private fun ContinueCard(
             art()
             KanjiMark(kanji, Modifier.align(Alignment.BottomStart).padding(start = 6.dp), size = 44.sp, alpha = 0.10f)
             Box(
-                Modifier.align(Alignment.BottomEnd).padding(8.dp).size(42.dp).clip(CircleShape).background(p.accent)
+                Modifier.align(Alignment.BottomEnd).padding(8.dp).minimumInteractiveComponentSize().size(42.dp).clip(CircleShape).background(p.accent)
                     .clickable(role = Role.Button, onClick = onPlay).semantics { contentDescription = playLabel }.testTag(playTag),
                 contentAlignment = Alignment.Center,
             ) { Icon(playIcon, null, tint = p.onAccent, modifier = Modifier.size(22.dp)) }

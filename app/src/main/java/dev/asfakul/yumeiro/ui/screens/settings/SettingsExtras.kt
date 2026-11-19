@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -347,7 +348,7 @@ fun MadeInBangladesh(modifier: Modifier = Modifier) {
 @Composable
 private fun DevLink(vector: androidx.compose.ui.graphics.vector.ImageVector?, drawable: Int?, label: String, tag: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(GlassFill)
+        Modifier.minimumInteractiveComponentSize().size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(GlassFill)
             .clickable(onClickLabel = label, onClick = onClick).testTag(tag),
         contentAlignment = Alignment.Center,
     ) {
