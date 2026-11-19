@@ -74,6 +74,9 @@ class StreamWatchDownloadDeviceTest {
         runCatching { rule.waitUntil(25_000) { PlaybackDiagnostics.state.value.firstFrame } }
         runCatching { rule.waitUntil(10_000) { has("stream_watch_panel") } }
         runCatching { rule.onNodeWithTag("stream_watch_panel", true).performScrollToNode(hasTestTag("stream_watch_download")) }
+        // G8-TV7A: on TV (and landscape phones) there is no docked watch page; Download must be in the player's
+        // own top bar, which shows with the controls. DPAD_DOWN shows the controls (VideoPlayerModal key rule).
+        if (!has("stream_watch_download")) { FirstRun.shell("input keyevent 20"); Thread.sleep(600); rule.waitForIdle() }
         val button = runCatching { rule.waitUntil(5_000) { has("stream_watch_download") }; true }.getOrDefault(false)
         FirstRun.shot("wdl_a_panel")
         var queued = false; var done = false; var saved = false
