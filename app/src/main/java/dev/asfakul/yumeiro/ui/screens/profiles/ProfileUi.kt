@@ -255,7 +255,8 @@ fun PinPadDialog(
     onForgot: (() -> Unit)? = null,
 ) {
     var pin by remember { mutableStateOf("") }
-    LaunchedEffect(error) { if (error != null) { delay(150); pin = "" } }
+    // Every try clears the pad (the same "Wrong PIN" twice would not re-run an effect keyed on the text).
+    fun submit() { val p = pin; pin = ""; onPin(p) }
     val focus = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
@@ -267,7 +268,7 @@ fun PinPadDialog(
                     when {
                         d != null -> { if (pin.length < 8) pin += d; true }
                         e.key == Key.Backspace || e.key == Key.Delete -> { pin = pin.dropLast(1); true }
-                        e.key == Key.NumPadEnter -> { if (pin.length >= 4) onPin(pin); true }
+                        e.key == Key.NumPadEnter -> { if (pin.length >= 4) submit(); true }
                         else -> false
                     }
                 },
@@ -293,7 +294,7 @@ fun PinPadDialog(
                                 .background(if (k == "ok" && enabled) SpotifyGreen else TextPrimary.copy(alpha = 0.07f))
                                 .then(if (k == "1") Modifier.focusRequester(focus) else Modifier)
                                 .clickable(enabled = enabled, onClickLabel = when (k) { "ok" -> "OK"; "back" -> "Delete"; else -> k }) {
-                                    when (k) { "ok" -> onPin(pin); "back" -> pin = pin.dropLast(1); else -> pin += k }
+                                    when (k) { "ok" -> submit(); "back" -> pin = pin.dropLast(1); else -> pin += k }
                                 }
                                 .testTag("pin_key_$k"),
                             contentAlignment = Alignment.Center,
