@@ -1,0 +1,4 @@
+44598220085 tv-api34 MangaTranslateDeviceTest P1 PASS tests=2 skipped=0
+44598220085 tv-api34 MangaTranslateDeviceTest P2 PASS tests=2 skipped=0
+44598220085 tv-api34 TelegramPublicDeviceTest P1 PASS tests=1 skipped=0
+44598220085 tv-api34 TelegramPublicDeviceTest P2 PASS tests=1 skipped=0
