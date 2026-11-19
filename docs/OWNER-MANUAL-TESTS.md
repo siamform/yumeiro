@@ -13,6 +13,29 @@ Which build: the debug APK from the latest green `ci.yml` run on `r15-stability`
 artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" in
 `MANUAL-TESTS.md` (`adb logcat ... -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime`).
 
+## Day-by-day test plan (owner order 2026-11-19)
+
+The owner and users run these day by day on real phones and TVs; development never waits for them. Send back
+the result per test ID (pass / fail + what you saw, a screen recording or `adb logcat` helps). Use the latest
+green debug APK from `ci.yml` on `r15-stability`.
+
+| Day | Theme (what you need) | Tests |
+|---|---|---|
+| 1 | First run on your phone, home Wi-Fi | OMT-31 fresh install loads online content · OMT-5 Yumix offline · OMT-34 the slow extension now stops · OMT-26 Back closes a pop-up · OMT-3 low-RAM phone run (if you have a 2–3 GB phone) |
+| 2 | YouTube and music | OMT-1 playback + quality switching · OMT-15 each YouTube quality plays · OMT-19 a real YouTube download · OMT-29 endless Music Home after the connection drops · OMT-10 Last.fm scrobbles · OMT-28 unplug headphones while music plays |
+| 3 | Downloads | OMT-14 speed with Wi-Fi power saving · OMT-20 BUG-3 speed per 10 % band · OMT-17 website and Play link downloads in the gallery · OMT-30 HLS download with separate audio has sound |
+| 4 | Player and hardware | OMT-16 your Play links + upscaling on your GPU · OMT-6 heat, battery, long playback · OMT-7 predictive back animation · OMT-12 cold start with the baseline profile · OMT-2 Chromecast |
+| 5 | Android TV with the remote | OMT-4 TV with the remote · OMT-11 manga and Live TV on phone and TV · OMT-8 launcher widget |
+| 6 | Your network | OMT-18 behind a VPN · OMT-32 the Porn4fans title on your network · OMT-33 adult hosts without a VPN (after the agent's network option ships) |
+| any | Your judgement | OMT-9 usability feedback (anything that feels slow, confusing or off-vibe) |
+
+Owner-only console actions (not tests, only the account owner can do them): OMT-13 restrict the Firebase API key,
+OMT-22 give the service account the Firebase Test Lab role.
+
+Decision items OMT-21 (TV search), OMT-23 (Jackson), OMT-24 (Vega), OMT-25 (Telegram / Terabox / Diskwala / manga
+cloud), OMT-27 (NBUG-6 DNS) and the network option of OMT-33: per the owner order of 2026-11-19 the agent researches
+competitors, decides with the evidence written down, and builds; the owner only tests the result.
+
 ## Status summary
 
 | ID | Feature | Status |

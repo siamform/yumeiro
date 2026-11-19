@@ -1,17 +1,18 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 06:31 UTC, G11 closed → v1.8.2 release gate)
+## Resume here (updated 2026-11-19 06:59 UTC, owner order: everything before the release)
 
-- **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 (closed) → G11 (closed) →
-  v1.8.2 release gate (owner approval) → stability-v2 → final sweep.
-- **G11:** re-audit closed. IG-9…IG-13 Verified (CI unit, emulator regression); ADR-030. Runs: fail-before
-  44465186662, pass-after 44467817362 (1286/0), regression 44471298455 (phones), 44471301890 (tv-api34).
-- **Runs in progress:** v1.8.2 gate at 8dbe6074 (app code = d11676cb): all 122 device classes in 13 chunks of ≤10
-  (alphabetical), lane A phones (both), lane B TVs (tv-api24 then tv-api34). Chunk 00: phones 44472857135, tv-api24
-  44472860397. Results go to the cycle report "v1.8.2 release gate" section.
-- **Open agent item outside G11:** NBUG-10 (G4, Yumix "Show videos from" search shows 2 results); not reproduced yet.
-- **Next three actions:** (1) release gate: unbatched full device regression on the release commit, both phones
-  and both TVs; (2) gate report in the cycle report; (3) ask the owner for v1.8.2 approval (no release without it).
+- **Orders:** master prompt + §13a + owner handover 2026-11-19 + **owner order 2026-11-19 (second message):
+  docs/PROGRAM-2026-11-19.md**: research competitors → design → build every feature and bug, then release.
+  Features F-01…F-14 approved on that condition; owner tests run day by day (never block).
+- **G11:** closed (IG-9…IG-13 verified). v1.8.2 gate stopped; it runs last on the final commit.
+- **Runs in progress:** none.
+- **Next three actions:** (1) research + design docs for workstreams A–F (competitor code at tags);
+  (2) commit the proposals; (3) build in order A → B → F → C → D → E, each under §13a.
+
+### Previous resume note — superseded (06:31 UTC 2026-11-19, G11 closed → v1.8.2 gate)
+
+- Gate chunk 00 started (phones 44472857135 green; tv-api24 44472860397 cancelled by the new order).
 
 ### Previous resume note — superseded (05:40 UTC 2026-11-19, G11 step 3 → step 4)
 
