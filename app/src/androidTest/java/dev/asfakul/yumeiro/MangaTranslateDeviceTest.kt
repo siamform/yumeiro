@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -98,7 +98,7 @@ class MangaTranslateDeviceTest {
         override suspend fun image(page: MangaPageRef) = MangaImage(bytes, "image/png")
     }
 
-    private fun boxes() = runCatching { compose.onAllNodesWithTag("tl_box_0_", substring = true, useUnmergedTree = true).fetchSemanticsNodes() }.getOrDefault(emptyList())
+    private fun boxes() = runCatching { compose.onAllNodes(SemanticsMatcher("tag starts with tl_box_0_") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("tl_box_0_") == true }, useUnmergedTree = true).fetchSemanticsNodes() }.getOrDefault(emptyList())
 
     @Test fun b_readerShowsTranslationsAndTurnsThemOff() {
         ctx.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", false).commit()
