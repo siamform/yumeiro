@@ -130,7 +130,10 @@ class ExtensionPopupsDeviceTest {
         assertTrue(dialog.isShowing)
 
         val held = mine().single(); val id = held.id
-        // The card on screen is the fake's (another extension's card waits behind it, ER-29).
+        // The card on screen is the fake's (another extension's card waits behind it, ER-29). FINAL-13
+        // (run 44617327290, fresh install): the app's own "Ready to watch: … installed" message may be on
+        // screen now; the fake's card must come back once it closes.
+        runCatching { rule.waitUntil(10_000) { AppMessages.current.value?.text?.contains(held.extName) == true } }
         val card = AppMessages.current.value
         assertTrue("card on screen is not the fake's: ${card?.text}", card?.text?.contains(held.extName) == true)
         // The user's path: tap "Show" on the card.

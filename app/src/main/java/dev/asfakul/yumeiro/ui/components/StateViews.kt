@@ -109,7 +109,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 object AppMessages {
     enum class Kind { INFO, SUCCESS, ERROR, WARNING }
-    data class Message(val id: Long, val text: String, val kind: Kind, val actionLabel: String?, val action: (() -> Unit)?, val durationMs: Long)
+    data class Message(val id: Long, val text: String, val kind: Kind, val actionLabel: String?, val action: (() -> Unit)?, val durationMs: Long, val quiet: Boolean = false)
 
     private val seq = AtomicLong()
     private val _current = MutableStateFlow<Message?>(null)
@@ -139,10 +139,15 @@ object AppMessages {
         if (text.isBlank()) return
         val duration = if (actionLabel != null || kind == Kind.ERROR) 4_500L else 2_600L
         if (hosts > 0 && quiet && _current.value != null) {
-            waiting = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration)
+            waiting = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration, quiet = true)
         } else if (hosts > 0) {
+            // FINAL-13 (run 44617327290, api36 P1): an app message ("Ready to watch: … installed") replaced
+            // an extension's quiet card with its "Show" action, and that card never came back. A quiet
+            // card with an action that is pushed off the screen waits and shows again after this one.
+            val cur = _current.value
+            if (!quiet && cur != null && cur.quiet && cur.actionLabel != null && waiting == null && cur.text != text.take(240)) waiting = cur
             // Same text again (e.g. repeated taps) just restarts the timer instead of stacking.
-            _current.value = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration)
+            _current.value = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration, quiet = quiet)
         } else if (context != null) {
             val app = context.applicationContext
             main.post { runCatching { Toast.makeText(app, text, if (duration > 3_000) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show() } }
