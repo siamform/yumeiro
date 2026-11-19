@@ -15,6 +15,8 @@ class JavaScriptEngine(context: Context) {
     @Suppress("UNCHECKED_CAST")
     suspend fun <T> evaluate(script: String): T = withContext(Dispatchers.IO) {
         val q = QuickJs.create(Dispatchers.IO.limitedParallelism(1))
+        // SRC-1: helper scripts (decoders, unpackers) have no network bindings; 10 s is plenty.
+        q.evaluationTimeoutMillis = HELPER_TIMEOUT_MS
         try {
             val result: Any? = q.evaluate<Any?>(script, "extension.js", false)
             when (result) {
@@ -28,5 +30,10 @@ class JavaScriptEngine(context: Context) {
         } finally {
             q.close()
         }
+    }
+
+    companion object {
+        /** SRC-1: a looping helper script is stopped after this. */
+        const val HELPER_TIMEOUT_MS = 10_000L
     }
 }

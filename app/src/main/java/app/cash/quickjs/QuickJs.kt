@@ -47,6 +47,12 @@ class QuickJs private constructor(private val js: com.dokar.quickjs.QuickJs) : C
     companion object {
         /** A new, isolated JavaScript runtime. Close it when done. */
         @JvmStatic
-        fun create(): QuickJs = QuickJs(com.dokar.quickjs.QuickJs.create(Dispatchers.Unconfined))
+        fun create(): QuickJs = QuickJs(com.dokar.quickjs.QuickJs.create(Dispatchers.Unconfined).also {
+            // SRC-1: an extension's script that loops is stopped instead of hanging its thread forever.
+            it.evaluationTimeoutMillis = HELPER_TIMEOUT_MS
+        })
+
+        /** SRC-1: same limit as eu.kanade.tachiyomi.network.JavaScriptEngine. */
+        const val HELPER_TIMEOUT_MS = 10_000L
     }
 }

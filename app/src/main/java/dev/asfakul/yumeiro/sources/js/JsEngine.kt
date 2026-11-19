@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.sources.js
 
 import android.content.Context
 import com.dokar.quickjs.QuickJs
+import com.dokar.quickjs.QuickJsInterruptedException
 import com.dokar.quickjs.binding.FunctionBinding
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,8 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
         val q = QuickJs.create(Dispatchers.IO.limitedParallelism(1))
         q.memoryLimit = 64L * 1024 * 1024
         q.maxStackSize = 2L * 1024 * 1024
+        // SRC-1: a script that loops must not hold this source's mutex forever (wall clock per evaluate).
+        q.evaluationTimeoutMillis = LOAD_TIMEOUT_MS
         q.defineBinding("sendMessage", FunctionBinding<Any?> { args ->
             bridge.handle(args.getOrNull(0)?.toString().orEmpty(), args.getOrNull(1)?.toString() ?: "[]")
         })
@@ -90,13 +93,17 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
         q.evaluate<Any?>(code + "\nvar extention = new DefaultExtension();", "source.js", false)
         runCatching { q.evaluate<String>("JSON.stringify(extention.getSourcePreferences() || [])", "prefs.js", false) }.getOrNull()
             ?.let { prefs.defaults = JsPreferences.defaultsOf(JsJson.json.parseToJsonElement(it) as JsonArray) }
+        q.evaluationTimeoutMillis = CALL_TIMEOUT_MS
         js = q
         return q
     }
 
     /** Calls `extention.<expr>` (awaiting promises) and parses its JSON result. */
     suspend fun call(expr: String): JsonElement = mutex.withLock {
-        val q = runtime()
+        val q = try { runtime() } catch (e: QuickJsInterruptedException) {
+            runCatching { js?.close() }; js = null
+            throw IllegalStateException(STOPPED, e)
+        }
         try {
             result = null; failure = null
             q.evaluate<Any?>("__call(() => extention.$expr).then(__result, e => __error(String((e && e.stack) || e)))", "call.js", false)
@@ -105,6 +112,10 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
             while (result == null && failure == null && spins++ < 50) q.evaluate<Any?>("0", "tick.js", false)
             failure?.let { throw IllegalStateException(it.lineSequence().first()) }
             JsJson.json.parseToJsonElement(result ?: "null")
+        } catch (e: QuickJsInterruptedException) {
+            // SRC-1: the runtime may be mid-script; close it so the next call starts clean.
+            close()
+            throw IllegalStateException(STOPPED, e)
         } finally {
             bridge.reset()
         }
@@ -114,5 +125,13 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
         (call("getHeaders(${JsonPrimitive(url)})") as? JsonObject)?.mapValues { (_, v) -> (v as? JsonPrimitive)?.contentOrNull.orEmpty() }
     }.getOrNull().orEmpty()
 
-    fun close() { js?.close(); js = null }
+    fun close() { runCatching { js?.close() }; js = null }
+
+    companion object {
+        /** SRC-1: loading the runtime and the source. */
+        const val LOAD_TIMEOUT_MS = 20_000L
+        /** SRC-1: one call, including the HTTP requests the source makes inside it (Nuvio uses 60 s too). */
+        const val CALL_TIMEOUT_MS = 60_000L
+        const val STOPPED = "This source took too long and was stopped"
+    }
 }
