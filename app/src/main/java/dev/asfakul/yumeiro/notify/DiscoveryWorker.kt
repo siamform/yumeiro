@@ -202,6 +202,7 @@ class DiscoveryWorker(context: Context, params: WorkerParameters) : CoroutineWor
         BackgroundHealth.markRan(ctx)
         runCatching { PushWake.refillIfDue(ctx) }
         runCatching { CloudAlerts.sync(ctx) } // no-op unless follows changed or 3 days passed
+        runCatching { FcmPush.syncFollows(ctx) } // F-AIR: same for Firebase phones (no Firebase calls)
 
         if (NotifySettings.get(ctx, NotifySettings.Key.NUDGES)) {
             val st = ctx.getSharedPreferences(STATE, Context.MODE_PRIVATE)

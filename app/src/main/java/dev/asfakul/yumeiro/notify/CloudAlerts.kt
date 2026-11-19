@@ -52,30 +52,7 @@ object CloudAlerts {
         // never turns into every device retrying every 2 hours.
         if (System.currentTimeMillis() < p.getLong("retry_at", 0L)) return
         val client = NetworkClient.get(c)
-        OnlineBookmarks.ensureLoaded(c)
-        val cache = runCatching { JSONObject(p.getString("ids", null) ?: "{}") }.getOrDefault(JSONObject())
-        // IG-6: older versions stored a failed lookup as 0 too. Look those titles up once more.
-        if (p.getInt("ids_v", 1) < 2) {
-            cache.keys().asSequence().toList().filter { cache.optInt(it) <= 0 }.forEach { cache.remove(it) }
-            p.edit().putInt("ids_v", 2).apply()
-        }
-        var lookups = 0
-        val ids = ArrayList<Int>()
-        for (b in CloudAlertsPlan.watched(OnlineBookmarks.items.value)) {
-            if (!cache.has(b.key)) {
-                if (lookups++ >= LOOKUPS_PER_RUN) continue
-                // IG-6: a failed lookup is not cached (it used to be stored as 0 = "not anime" for good,
-                // so one offline moment or AniList 429 removed the show from airing alerts forever).
-                val found = try { AnimeIds.aniListIdOrThrow(client, b.name) } catch (e: Exception) {
-                    Log.i(TAG, "lookup: ${e.javaClass.simpleName}"); continue
-                }
-                cache.put(b.key, found ?: 0) // 0 = not anime / not found
-            }
-            cache.optInt(b.key).takeIf { it > 0 }?.let(ids::add)
-        }
-        p.edit().putString("ids", cache.toString()).apply()
-
-        val follows = CloudAlertsPlan.follows(ids)
+        val follows = followedIds(c, client)
         val fp = CloudAlertsPlan.fingerprint(endpoint, follows)
         val now = System.currentTimeMillis()
         val creds = OnlineSettings.secret(SECRET)
@@ -107,8 +84,40 @@ object CloudAlerts {
         }.onFailure { Log.w(TAG, "register: ${it.javaClass.simpleName}"); failed() }
     }
 
+    /**
+     * AniList ids of the shows the new-episode check watches (cached per bookmark; at most
+     * [LOOKUPS_PER_RUN] new lookups per call). Shared by UnifiedPush and, since F-AIR, Firebase check-ins.
+     */
+    internal fun followedIds(c: Context, client: okhttp3.OkHttpClient): List<Int> {
+        val p = prefs(c)
+        OnlineBookmarks.ensureLoaded(c)
+        val cache = runCatching { JSONObject(p.getString("ids", null) ?: "{}") }.getOrDefault(JSONObject())
+        // IG-6: older versions stored a failed lookup as 0 too. Look those titles up once more.
+        if (p.getInt("ids_v", 1) < 2) {
+            cache.keys().asSequence().toList().filter { cache.optInt(it) <= 0 }.forEach { cache.remove(it) }
+            p.edit().putInt("ids_v", 2).apply()
+        }
+        var lookups = 0
+        val ids = ArrayList<Int>()
+        for (b in CloudAlertsPlan.watched(OnlineBookmarks.items.value)) {
+            if (!cache.has(b.key)) {
+                if (lookups++ >= LOOKUPS_PER_RUN) continue
+                // IG-6: a failed lookup is not cached (it used to be stored as 0 = "not anime" for good,
+                // so one offline moment or AniList 429 removed the show from airing alerts forever).
+                val found = try { AnimeIds.aniListIdOrThrow(client, b.name) } catch (e: Exception) {
+                    Log.i(TAG, "lookup: ${e.javaClass.simpleName}"); continue
+                }
+                cache.put(b.key, found ?: 0) // 0 = not anime / not found
+            }
+            cache.optInt(b.key).takeIf { it > 0 }?.let(ids::add)
+        }
+        p.edit().putString("ids", cache.toString()).apply()
+
+        return CloudAlertsPlan.follows(ids)
+    }
+
     /** Next-episode times for [ids] from AniList, 50 per request. Empty on failure. */
-    private fun nextAiring(client: okhttp3.OkHttpClient, ids: List<Int>): List<Pair<Int, Long>> {
+    internal fun nextAiring(client: okhttp3.OkHttpClient, ids: List<Int>): List<Pair<Int, Long>> {
         val q = "query(\$ids:[Int]){Page(perPage:50){media(id_in:\$ids,type:ANIME){id nextAiringEpisode{airingAt}}}}"
         val found = ArrayList<Pair<Int, Long?>>()
         for (group in ids.chunked(50)) {

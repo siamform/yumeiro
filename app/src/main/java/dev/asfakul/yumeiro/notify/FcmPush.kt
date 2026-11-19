@@ -165,17 +165,38 @@ object FcmPush {
         return topicsOk && cloudOk
     }
 
-    /** Tells the Worker this device's FID (for messages to one device) and its topics (counts only). */
+    /**
+     * F-AIR (ADR-043): keeps the Worker's copy of this phone's followed shows current from the background
+     * check, without touching Firebase. Network only when the list changed or the 3-day refresh is due.
+     */
+    fun syncFollows(c: Context) {
+        if (!configured() || BuildConfig.CLOUD_HOST.isBlank()) return
+        NotifySettings.init(c)
+        if (!NotifySettings.get(c, NotifySettings.Key.FCM)) return
+        val p = prefs(c)
+        val fid = p.getString("fid", null)?.takeIf { it.isNotBlank() } ?: return
+        registerWithCloud(c, fid, p.getStringSet("topics", emptySet()).orEmpty(), wantedTopics(c))
+    }
+
+    /**
+     * Tells the Worker this device's FID (for messages to one device), its topics (counts only) and, since
+     * F-AIR, the AniList ids it follows plus their next airing times, so an aired episode wakes it.
+     */
     private fun registerWithCloud(c: Context, fid: String, topics: Set<String>, wanted: Set<String>): Boolean {
         val host = BuildConfig.CLOUD_HOST
         if (host.isBlank()) return true
         val p = prefs(c)
         val nowMs = System.currentTimeMillis()
-        val creds = OnlineSettings.secret(SECRET)
-        val fp = FcmPlan.fingerprint(fid, topics, BuildConfig.VERSION_CODE, wanted)
-        if (creds != null && !FcmPlan.due(fp, p.getString("fp", null), nowMs, p.getLong("synced_at", 0L))) return true
         if (nowMs < p.getLong("retry_at", 0L)) return true // backing off; topics still work meanwhile
-        val body = FcmPlan.cloudBody(fid, topics, wanted, BuildConfig.VERSION_CODE, BuildConfig.PUSH_CHANNEL)
+        val creds = OnlineSettings.secret(SECRET)
+        val net = NetworkClient.get(c)
+        // Episode alerts off (or background checks off) = an empty list, so the Worker stops waking this phone.
+        val wantsAiring = NotifySettings.get(c, NotifySettings.Key.EPISODES) && NotifySettings.get(c, NotifySettings.Key.BACKGROUND)
+        val follows = if (wantsAiring) runCatching { CloudAlerts.followedIds(c, net) }.getOrDefault(emptyList()) else emptyList()
+        val fp = FcmPlan.fingerprint(fid, topics, BuildConfig.VERSION_CODE, wanted, follows)
+        if (creds != null && !FcmPlan.due(fp, p.getString("fp", null), nowMs, p.getLong("synced_at", 0L), FcmPlan.refreshMs(follows))) return true
+        val airing = if (follows.isEmpty()) emptyList() else runCatching { CloudAlerts.nextAiring(net, follows) }.getOrDefault(emptyList())
+        val body = FcmPlan.cloudBody(fid, topics, wanted, BuildConfig.VERSION_CODE, BuildConfig.PUSH_CHANNEL, follows, airing)
         val req = Request.Builder().url("https://$host/v1/fcm/devices")
             .post(body.toRequestBody("application/json".toMediaType()))
             .apply { if (creds != null) header("Authorization", "Bearer $creds") }
@@ -186,7 +207,7 @@ object FcmPush {
             return false
         }
         return runCatching {
-            val client = NetworkClient.get(c).newBuilder().callTimeout(20, TimeUnit.SECONDS).build()
+            val client = net.newBuilder().callTimeout(20, TimeUnit.SECONDS).build()
             client.newCall(req).execute().use { r ->
                 if (r.code == 401 || r.code == 403) { OnlineSettings.setSecret(c, SECRET, null); p.edit().remove("fp").apply() }
                 if (!r.isSuccessful) { Log.w(TAG, "cloud HTTP ${r.code}"); return failed() }
@@ -231,6 +252,9 @@ object FcmPush {
 
     /** Turns a received message into an inbox item + notification. Called by the messaging service. */
     internal fun handle(c: Context, data: Map<String, String>, fallbackTitle: String?, fallbackBody: String?, sentMs: Long) {
+        // F-AIR: "an episode you follow aired" carries no text; it starts the usual new-episode check,
+        // which decides what (if anything) to show. Same path and 20-minute guard as a UnifiedPush wake.
+        if (FcmPlan.isWake(data)) { BackgroundWork.wake(c); return }
         val m = FcmPlan.parse(data, fallbackTitle, fallbackBody, sentMs) ?: run { Log.i(TAG, "ignored malformed message"); return }
         val nowS = System.currentTimeMillis() / 1000
         if (!FcmPlan.forThisApp(m, BuildConfig.VERSION_CODE, nowS)) { Log.i(TAG, "not for this version / expired: ${m.id}"); return }
@@ -253,8 +277,14 @@ object FcmPlan {
      */
     const val REFRESH_MS = 7L * 24 * 3600 * 1000
 
-    fun due(fp: String, oldFp: String?, now: Long, lastSync: Long): Boolean =
-        fp != oldFp || now - lastSync >= REFRESH_MS || now < lastSync
+    fun due(fp: String, oldFp: String?, now: Long, lastSync: Long, refreshMs: Long = REFRESH_MS): Boolean =
+        fp != oldFp || now - lastSync >= refreshMs || now < lastSync
+
+    /** F-AIR: a phone that follows shows checks in every 3 days (fresh airing times), others weekly. */
+    fun refreshMs(follows: List<Int>): Long = if (follows.isEmpty()) REFRESH_MS else CloudAlertsPlan.REFRESH_MS
+
+    /** F-AIR (ADR-043): the Worker's data-only airing wake. */
+    fun isWake(data: Map<String, String>): Boolean = data["y"] == "1" && data["kind"] == "wake"
 
     /** In-app actions a notice may open (same set the inbox understands), besides https links. */
     val ACTIONS = setOf("update", "extensions", "market", "streams", "support", "downloads", "inbox")
@@ -274,8 +304,10 @@ object FcmPlan {
     fun diff(had: Set<String>, wanted: Set<String>): Pair<Set<String>, Set<String>> = (wanted - had) to (had - wanted)
 
     /** NOTIFY-1: [want] changes the fingerprint too, so a new switch reaches the Worker. */
-    fun fingerprint(fid: String, topics: Set<String>, version: Int, want: Set<String> = topics): String =
-        MessageDigest.getInstance("SHA-256").digest("f2|$fid|${topics.sorted().joinToString(",")}|${want.sorted().joinToString(",")}|$version".toByteArray())
+    /** F-AIR: the follow list too ("f3": every phone checks in once after the update, so its list arrives). */
+    fun fingerprint(fid: String, topics: Set<String>, version: Int, want: Set<String> = topics, follows: List<Int> = emptyList()): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest("f3|$fid|${topics.sorted().joinToString(",")}|${want.sorted().joinToString(",")}|$version|${follows.joinToString(",")}".toByteArray())
             .take(12).joinToString("") { "%02x".format(it) }
 
     /**
@@ -283,9 +315,16 @@ object FcmPlan {
      * subscription failed (Play services timeout, a blocked topic API), the Worker sends broadcasts straight to
      * this phone instead, so the notice still arrives.
      */
-    fun cloudBody(fid: String, topics: Set<String>, want: Set<String>, version: Int, channel: String): String =
+    fun cloudBody(
+        fid: String, topics: Set<String>, want: Set<String>, version: Int, channel: String,
+        follows: List<Int> = emptyList(), airing: List<Pair<Int, Long>> = emptyList(),
+    ): String =
         JSONObject().put("fid", fid).put("topics", JSONArray(topics.sorted())).put("want", JSONArray(want.sorted()))
-            .put("app_version", version).put("channel", channel).toString()
+            .put("app_version", version).put("channel", channel)
+            // F-AIR (ADR-043): always sent by this version, so an empty list clears the Worker's copy.
+            .put("anilist", JSONArray(follows))
+            .put("airing", JSONArray().apply { airing.forEach { put(JSONArray().put(it.first).put(it.second)) } })
+            .toString()
 
     data class Message(
         val id: String, val kind: Inbox.Kind, val title: String, val body: String, val link: String?,
