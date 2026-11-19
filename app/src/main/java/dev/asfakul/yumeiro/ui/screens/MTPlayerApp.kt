@@ -382,7 +382,7 @@ fun MTPlayerApp(
     // front (each keeps its 6 h gate), not only once per activity creation (a TV keeps it for days).
     suspend fun backgroundUpdates() {
         val o = dev.asfakul.yumeiro.online.BackgroundUpdates.run(context.applicationContext) ?: return
-        if (o.extensions.installed.isNotEmpty() || o.extensions.updated.isNotEmpty()) dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
+        if (o.extensions.installed.isNotEmpty() || o.extensions.updated.isNotEmpty()) dev.asfakul.yumeiro.online.OnlineRepository.refreshAfterExtensionChange()
         val lines = dev.asfakul.yumeiro.online.BackgroundUpdates.messages(o)
         if (lines.isEmpty()) return
         val text = lines.joinToString(". ")
@@ -399,15 +399,23 @@ fun MTPlayerApp(
         dev.asfakul.yumeiro.backup.BackupMeta.takeNote(context)?.let { dev.asfakul.yumeiro.ui.components.AppMessages.success(context, it) }
         ExtensionManager.start(context)
         if (Build.FINGERPRINT == "robolectric") return@LaunchedEffect
+        // SPD-4 (ADR-038): while a new user reads the welcome screen, the market list (a small JSON file,
+        // nothing is installed or run) is fetched, so the starter extensions begin downloading the moment
+        // the guide closes instead of waiting for the list first.
+        if (firstRunAtLaunch && dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) launch {
+            runCatching { dev.asfakul.yumeiro.online.ExtensionMarket.load(context.applicationContext) }
+        }
         // A new user first finishes (or skips) the welcome screen and tour: no installs, syncs or
         // "extension updated" messages over it.
         dev.asfakul.yumeiro.online.OnboardingGate.awaitOpen()
-        kotlinx.coroutines.delay(4_000)
+        // SPD-3 (ADR-038): a new user already waited for the welcome screen; returning users keep the pause
+        // so the first frames stay smooth.
+        kotlinx.coroutines.delay(dev.asfakul.yumeiro.online.StartupSpeed.firstChecksDelayMs(firstRunAtLaunch))
         // First run: install one top-rated Movies, Anime and Sports extension so online video works right away.
         if (dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) {
             val starters = runCatching { dev.asfakul.yumeiro.online.StarterExtensions.ensure(context) }.getOrDefault(emptyList())
             if (starters.isNotEmpty()) {
-                dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
+                dev.asfakul.yumeiro.online.OnlineRepository.refreshAfterExtensionChange()
                 dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Ready to watch: ${starters.joinToString()} installed")
             }
         }

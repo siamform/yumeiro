@@ -44,10 +44,9 @@ object StarterExtensions {
         val catalog = try { ExtensionMarket.load(context) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { null } ?: return emptyList()
         val picks = pick(catalog.extensions)
         val have = ExtensionManager.state.value.installed.map { it.internalName }.toSet()
-        val names = picks.filter { it.internalName !in have }.mapNotNull { r ->
-            try { ExtensionManager.install(context, r, ExtensionReview.Mode.AUTO); r.name }
-            catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: Throwable) { null }
+        // SPD-3 (ADR-038): the picks download side by side (install() only locks for the final write).
+        val names = StartupSpeed.installAll(picks.filter { it.internalName !in have }) { r ->
+            ExtensionManager.install(context, r, ExtensionReview.Mode.AUTO); r.name
         }
         val now = ExtensionManager.state.value.installed.map { it.internalName }.toSet()
         val complete = picks.all { it.internalName in now }
