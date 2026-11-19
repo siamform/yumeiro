@@ -1,17 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 05:10 UTC, G10 step 9 group regression running)
+## Resume here (updated 2026-11-19 07:05 UTC, G10 regression, ER-29 loop)
 
 - **Orders:** master prompt + §13a + owner handover prompt of 2026-11-19. Order: G10 → G11 → v1.8.2 (owner
   approval) → stability-v2.
 - **GROUP-14:** closed (docs/groups/GROUP-14-OWNER-BUGS.md). tv-api34 44440614210: 7 Live TV classes PASS;
   FeedPosition#youtube FAIL twice (rerun 44443748315) = pre-existing TV YouTube layout, queued TV-YT-1.
-- **G10 step:** 7 pass-after done → 9 group regression. Fail-before: CI 44445709090 + rerun 44449000456
-  = all 10 G10 unit tests fail on old code (ER-27 test fixed 8336dbf3); device api33 44445734996 FAIL,
-  tv-api34 44445713091 PASS on old code (not reproduced there → queue). Pass-after: CI 44448997376
-  (1271/0), device api33 44449003874 PASS. `ab/g10-before` deleted.
-- **Runs in progress:** regression phones 44452173594 (9 classes), tv-api24 44452176693 (4 classes).
-- **Next three actions:** (1) read both; (2) tv-api34 regression (same 4 classes); (3) close in one push.
+- **G10 step:** 9 group regression → step 8 loop for ER-29 (new finding: extension promo card replaced
+  the message on screen; MessagesDeviceTest failed on phones 44452173594/44454531660). Test and
+  fix pushed; throwaway `ab/g10-er29-before` (delete after). Regression so far: phones 10/11 classes PASS
+  (44452173594); tv-api24 4/4 PASS (44452176693 + 44454630375 after DialogsDeviceTest scroll fix);
+  tv-api34 SheetFocus, Nbug15Redesign, Dialogs PASS, Messages a11y FAIL (44453210587) → details run.
+- **Runs in progress:** CI fail-before ER-29 44456278746 (`ab/g10-er29-before`); CI pass-after/group rerun
+  44456281899; Messages phones 44456284891; Messages tv-api34 details 44455588206.
+- **Next three actions:** (1) read the four runs; (2) tv-api34 a11y finding (MSG_A11Y lines); (3) close.
 
 ### Previous resume note — superseded (02:25 UTC 2026-11-19, GROUP-14 close)
 
