@@ -90,6 +90,9 @@ class AppLockDeviceTest {
     }
 
     @Test fun b_pinOpensTheAppAndTheLockStaysOn() {
+        // The `locksettings` shell command exists from Android 8.0; on Android 7 (tv-api24) exec is denied and
+        // the failure kills the whole instrumentation (run 44516546098). No other way to set a PIN from a test.
+        assumeTrue("locksettings needs API 26", android.os.Build.VERSION.SDK_INT >= 26)
         assumeTrue("emulator already has a screen lock", !secure())
         val out = FirstRun.shell("locksettings set-pin $PIN")
         pinSet = secure()
