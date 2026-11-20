@@ -121,6 +121,9 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.IncomingMediaKt",
         "dev.asfakul.yumeiro.stream.KvsPlayer",
         "dev.asfakul.yumeiro.stream.LinkHostsKt",
+        "dev.asfakul.yumeiro.stream.LinkHosts", // T-1 info-hash patterns
+        "dev.asfakul.yumeiro.stream.LiveCountry", // Live TV country filter
+        "dev.asfakul.yumeiro.profiles.Profiles", // F-19 answer normalising
         "dev.asfakul.yumeiro.stream.M3uParser",
         "dev.asfakul.yumeiro.stream.PlaylistMarketKt",
         "dev.asfakul.yumeiro.stream.PlaylistStoreKt",

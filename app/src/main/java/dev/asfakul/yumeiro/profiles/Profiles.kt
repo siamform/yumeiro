@@ -127,7 +127,8 @@ object Profiles {
     const val RECOVERY_QUESTIONS = 3
 
     /** Answers compare case-blind with spaces collapsed, so "  Dhaka " matches "dhaka". */
-    fun normalizeAnswer(a: String): String = a.trim().lowercase(java.util.Locale.ROOT).replace(Regex("\\s+"), " ")
+    private val SPACES = Regex("\\s+")
+    fun normalizeAnswer(a: String): String = a.trim().lowercase(java.util.Locale.ROOT).replace(SPACES, " ")
 
     /** Three different, non-blank questions and three answers of at least 2 characters. */
     fun validRecovery(questions: List<String>, answers: List<String>): Boolean =
