@@ -2,10 +2,9 @@
 
 ## Resume here (updated 2026-11-20 08:35 UTC)
 
-- **Now:** v1.9.0 (published 08:10 UTC) crashes when a video opens (FINAL-49, R8 VerifyError in the player). Owner
-  asked for the fixes as **2.0.0**. Read docs/BUGS-AND-FIXES-2.0.0.md first. Code fixed (eef90a2 FINAL-49, 574fdc8
-  FINAL-50), version 2.0.0 (18). CI with review APK: 44703556988. Next: upgrade check phone + TV on that review APK
-  (verify=0, fatal=0, resumed=1), then push r15-stability to main to publish 2.0.0.
+- **Now:** v2.0.0 published 2026-11-20 09:57 UTC (release.yml 44710765718), replacing the crashing v1.9.0. Release
+  dex = the tested review APK dex (CI 44703556988; phone upgrade check 44709239365 PASS verify=0 fatal=0). Deferred
+  by owner: TV upgrade re-check with the fixed script, 1.9.0→2.0.0 upgrade check. Bug list: docs/BUGS-AND-FIXES-2.0.0.md.
 - **Done today:** Settings reorganised (FINAL-47/47b, CI 44691804753 green, device shots phone 44692254096 + TV
   44694153514 18/18); Yumeiro Cloud deployed with migrations 0003–0005 (docs/SERVER.md); website changelog updated
   (yumeiro-web d17546c); 66 obsolete branches deleted (docs/evidence/final/BRANCHES-OBSOLETE-2026-11-20.md); social
