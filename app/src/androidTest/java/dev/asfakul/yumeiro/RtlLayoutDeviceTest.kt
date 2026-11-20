@@ -68,11 +68,18 @@ class RtlLayoutDeviceTest {
         log("locale=${rule.activity.resources.configuration.locales} layoutDirection=$dir")
         assertEquals("window layout direction", View.LAYOUT_DIRECTION_RTL, dir)
 
-        // Tab bar mirrored.
-        wait("tab bar") { has("nav_tab_home") && has("nav_tab_music") }
-        val home = bounds("nav_tab_home"); val music = bounds("nav_tab_music")
-        log("tabs home=$home music=$music")
-        assertTrue("Home (first tab) is right of Music in RTL: home=$home music=$music", home.left > music.left)
+        // Tab bar mirrored. FINAL-37 (run 44663558900, tv-api34): the TV layout has a vertical rail instead of
+        // the phone bar (tv_nav_tab_*); mirrored, the rail sits on the right edge.
+        wait("tab bar") { (has("nav_tab_home") && has("nav_tab_music")) || has("tv_nav_rail") }
+        if (has("nav_tab_home")) {
+            val home = bounds("nav_tab_home"); val music = bounds("nav_tab_music")
+            log("tabs home=$home music=$music")
+            assertTrue("Home (first tab) is right of Music in RTL: home=$home music=$music", home.left > music.left)
+        } else {
+            val rail = bounds("tv_nav_rail"); val w = rule.activity.window.decorView.width
+            log("tv rail=$rail width=$w")
+            assertTrue("TV rail is on the right in RTL: rail=$rail of $w", rail.center.x > w / 2f)
+        }
         FirstRun.shot("rtl_home")
 
         for (tab in listOf("nav_tab_videos", "nav_tab_library")) {
