@@ -15,10 +15,10 @@
     "db:migrate:fcm-follows": "wrangler d1 execute yumeiro --remote --file=migrations/0005_fcm_follows.sql"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261110.1",
+    "@cloudflare/workers-types": "^5.20261117.1",
     "tsx": "^4.20.0",
     "typescript": "^7.0.2",
-    "wrangler": "^4.160.0"
+    "wrangler": "^4.163.0"
   },
   "engines": {
     "node": ">=22.12"
