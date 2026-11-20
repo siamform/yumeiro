@@ -39,7 +39,8 @@ docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 - Website videos can be downloaded on TV and in landscape.
 
 ### Fixes
-- Notices reach phones whose notification subscription failed (server side, deployed with this release).
+- Notices reach phones whose notification subscription failed (server side: works once the Yumeiro Cloud update is
+  deployed; it is not deployed yet).
 - "Show videos from" search shows every match; YouTube on TV shows a grid; M3U logos in single quotes and relative
   channel links; "1 track"; last-backup time kept.
 
@@ -59,8 +60,8 @@ docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 - Your own HTTP or SOCKS5 proxy for the app and its web pages (NBUG-13).
 - Automatic DNS fallback (Settings → Network, off by default): when your network's DNS fails, Yumeiro tries
   1.1.1.1, then 9.9.9.9, one at a time (NBUG-6).
-- Airing alerts reach phones that use Firebase push, not only UnifiedPush (F-AIR). This needs the server update that
-  is deployed with this release.
+- Airing alerts can reach phones that use Firebase push, not only UnifiedPush (F-AIR). The app side is in this build;
+  it works once the Yumeiro Cloud update is deployed, which has not happened yet. UnifiedPush alerts work as before.
 
 ### Not in this release
 - Nuvio and SkyStream runtimes, per-feature DNS (rejected for its cost), Telegram login and private channels.
@@ -73,7 +74,22 @@ docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
   a real Vega repository on phone and TV (OMT-48), Telegram (OMT-49), TeraBox / DiskWala (OMT-50), manga
   translation (OMT-51), airing alerts on a Firebase phone after the server update (OMT-52), your own proxy (OMT-53).
 - Final-test items the emulators can't do: skip-intro times after the TV was offline (OMT-54), app lock with a PIN
-  on a TV (OMT-55), last-backup time after a restore restarts the app (OMT-56).
+  on a TV (OMT-55), last-backup time after a restore restarts the app (OMT-56), memory on an Android 7 TV after long
+  drama browsing (OMT-57), the TV notification question after two "Don't allow" (OMT-58), smoothness on an
+  Android 7–8 TV (OMT-59), Yumix "See all" loading a second page (OMT-60).
+
+### Known imperfect in this release candidate
+- YouTube can answer "Sign in to confirm you're not a bot" and refuse to play; the emulators in CI always get this,
+  so YouTube playback, quality list and endless Music Home were not checked there (OMT-29).
+- On Android TV the system keeps asking for the notification permission after every "Don't allow"; the "Open
+  settings" step after a block was checked on phones only (OMT-58).
+- On the Android 7 TV emulator the feed-position test taps the phone bar, which a TV does not have (a test fault,
+  TV-FP-1), and the TV emulators can't turn their network off, so offline checks on TV ran on phones only (OMT-54).
+- A phone set to Layout = TV in portrait was not verified (FINAL-31).
+- NOTICE does not yet name the Google SDKs the app uses (LIC-1).
+- Built-in Last.fm sign-in and Firebase airing alerts wait for the Yumeiro Cloud update (SEC-LFM, F-AIR).
+- Once, on the Android 7 TV emulator, memory rose from 61 to 479 MB during drama paging; two later runs peaked at
+  94 and 95 MB with no freeze, and no heap dump was taken (FINAL-35, OMT-57).
 
 ## v1.8.1: every title plays
 

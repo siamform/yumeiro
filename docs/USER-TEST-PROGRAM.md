@@ -17,7 +17,12 @@ Short tasks such as:
 - music pauses when you unplug your headphones;
 - videos and YouTube play and switch quality;
 - downloads finish at a good speed and appear in your gallery;
-- Yumeiro works with your TV remote, behind a VPN, on a low-memory phone.
+- Yumeiro works with your TV remote, behind a VPN, on a low-memory phone;
+- new in 1.9.0: profiles with a PIN, private downloads, hold for 2x, public Telegram channels and script repos.
+
+The build to test now is the **1.9.0 release candidate**. It is not the final release: a few things are known to be
+imperfect (for example YouTube sometimes asks "Sign in to confirm you're not a bot"); the list is in the
+[CHANGELOG](../CHANGELOG.md).
 
 The full list, with plain steps, is the **Yumeiro users** checklist at the top of
 [OWNER-MANUAL-TESTS.md](OWNER-MANUAL-TESTS.md#yumeiro-users-checklist).
@@ -28,7 +33,7 @@ Each task takes 5–15 minutes. Pick any you can do; you don't need to do them a
 
 ## What you need
 
-An Android phone (Android 8 or newer) or an Android TV, the test build of Yumeiro the owner sends you,
+An Android phone (Android 9 or newer) or an Android TV (Android 7 or newer), the 1.9.0 release candidate the owner sends you,
 and for some tasks headphones, a TV remote or a VPN app.
 
 ## How to report
@@ -41,7 +46,10 @@ For each task, send:
 4. The app version: Yumeiro → Settings → About (the version line).
 5. Your phone or TV model and Android version.
 
-Send it to the person who invited you (the owner tells you where: e-mail, chat group or form).
+If the app crashed or froze: Yumeiro → Settings → Crash reports → open the report → Share, and attach it.
+
+Send it to the person who invited you, or open an issue at
+[github.com/siamform/yumeiro/issues](https://github.com/siamform/yumeiro/issues) with the task number in the title.
 
 ## Privacy
 

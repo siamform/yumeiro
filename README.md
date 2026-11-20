@@ -44,23 +44,24 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER
 | **Live TV that keeps playing** | A dead link switches to the channel's other link; Now / Next from the playlist's guide. |
 | **More sources** | Public Telegram channels, open TeraBox / DiskWala links, Vega provider repos in a sandbox, your own proxy, DNS fallback. |
 | **Manga offline** | Saved chapters open without the source; on-device translation in the reader. |
-| **Safer by design** | The app no longer carries Yumeiro's Last.fm shared secret; Yumeiro Cloud signs those calls. |
+| **Safer by design** | The app no longer carries Yumeiro's Last.fm shared secret. Built-in Last.fm sign-in stays off until Yumeiro Cloud (which will sign those calls) is live; your own Last.fm key still works. |
 
-## What's new in 1.8.1
+## Release status
 
-A correction release: every item was re-tested instead of trusting earlier notes. Full notes:
-[CHANGELOG.md](CHANGELOG.md). What is done, still unproven and planned: [docs/STATUS-v1.8.1.md](docs/STATUS-v1.8.1.md).
+- **1.9.0 is a release candidate**, built for the owner's review. It is not published yet; the newest published
+  version is 1.8.1 ([CHANGELOG.md](CHANGELOG.md) has both).
+- **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
+  pass from a fresh install each. The second pass with data kept was dropped by the owner's decision to release in
+  time. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md); what is not proven yet:
+  [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
+- **Known imperfect in this build:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV
+  keeps showing the notification dialog after every "Don't allow"; built-in Last.fm sign-in stays off until Yumeiro
+  Cloud is live. Full list in the [CHANGELOG](CHANGELOG.md).
+- **Source status:** [yumeiro.click/status](https://yumeiro.click/status) · **Download:** [yumeiro.click/download](https://yumeiro.click/download)
 
-| | |
-|---|---|
-| **Yumeiro Drama plays again** | Every title opens and plays, tap to finish. Studios whose video server is down are hidden and re-checked; the same title plays from another studio when one fails. |
-| **One quality list** | The player and the download sheet show the same qualities. Single-quality streams and local videos get Yumeiro's own levels (GPU scaling, Anime4K upscale). |
-| **Honest Library** | Only your likes, your own playlists and play time measured from real listening. Jump back in is ready when the app opens. |
-| **Cooler phone** | A heat guard follows thermal status and battery saver: slower tickers in the background, fewer extension calls at once, Anime4K paused when hot, no endless source collecting. |
-| **Crash reports on your phone** | Settings, Crash reports: read, share or delete crash, freeze and native-crash reports. Nothing is sent anywhere. |
-| **Theme pictures work** | JPEG, PNG, WebP, GIF, BMP, HEIC/HEIF and AVIF open again, with clear reasons when a file is refused. |
-| **Notifications on time** | Settings, Background, "Keep notifications on time": live checks with one-tap fixes, plus step-by-step settings for Xiaomi, Samsung, Huawei/Honor, OPPO/realme/OnePlus, vivo, Tecno/Infinix/itel, ASUS, Nokia and Meizu. |
-| **Simpler loading and Yumix** | A neutral loader unless the next screen is certain; no extension headers between Yumix sections; search in the extension list. |
+**Installing on a TV:** download `Yumeiro-TV-v<version>.tv.apk` and open it with a file manager, or from a computer
+on the same network: `adb connect <tv-ip>:5555`, then `adb install -r Yumeiro-TV-v<version>.tv.apk` (`-r` keeps your
+data when you install over an older version). Turn on Developer options → USB/Network debugging on the TV first.
 
 ## What's new in the redesign
 

@@ -1,23 +1,29 @@
 # Owner manual tests
 
-These are the only checks left for you (the owner). Everything else is tested by the agent with
-unit tests, CI and the two emulators (Android 13 Pixel 3a with 2 GB RAM, and Android 16 Pixel 6).
-Each test here needs real hardware, your own accounts, your home network or a person looking at
-the screen. Development does not wait for these results; when you send one back, the agent
-records it here and in `docs/DONE-LEDGER.md`.
+These are the only checks left for you (the owner) and for Yumeiro users. Everything else was tested by the agent
+with unit tests, CI and four emulators (Android 13 Pixel 3a with 2 GB RAM, Android 16 Pixel 6, Android TV 7 and
+Android TV 14). Each test here needs real hardware, your own accounts, your home network or a person looking at the
+screen. When you send one back, the agent records it here and in `docs/DONE-LEDGER.md`.
 
-The detailed step-by-step scripts (Y, P, T, F) are in [`MANUAL-TESTS.md`](MANUAL-TESTS.md); this
-file says which ones are needed, why, and what to send back.
+The file has two sections: **Yumeiro users checklist** (anyone can run these on their own phone or TV) and **Owner
+(developer) tests** (need the owner's accounts, consoles or adb). The detailed step-by-step scripts (Y, P, T, F) are
+in [`MANUAL-TESTS.md`](MANUAL-TESTS.md).
 
-Which build: the debug APK from the latest green `ci.yml` run on `r15-stability` (Actions → CI →
-artifact `Yumeiro-debug-apk`). How to record logs: see "Which build to install" in
-`MANUAL-TESTS.md` (`adb logcat ... -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime`).
+Which build: the **1.9.0 release candidate review APK**, release-signed (artifact `yumeiro-review-apk` of the `ci.yml`
+run named in [`RELEASE-SUMMARY-FINAL.md`](RELEASE-SUMMARY-FINAL.md); check its SHA-256 against `SHA256SUMS.txt`).
+Back up 1.8.x first (Settings → Backup, storage & reset → Back up now), then install over it; your data stays. TV: `adb install -r` with the
+`.tv.apk`. How to record logs: see "Which build to install" in `MANUAL-TESTS.md`
+(`adb logcat ... -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime`). How to report: Settings → Crash
+reports → Share, plus a GitHub issue with the test ID.
+
+The final test ran one pass per feature from a fresh install (the warm-start second pass was dropped on the owner's
+decision of 2026-11-20); the rows below are what the emulators could not prove.
 
 ## Day-by-day test plan (owner order 2026-11-19)
 
 The owner and users run these day by day on real phones and TVs; development never waits for them. Send back
-the result per test ID (pass / fail + what you saw, a screen recording or `adb logcat` helps). Use the latest
-green debug APK from `ci.yml` on `r15-stability`.
+the result per test ID (pass / fail + what you saw, a screen recording or `adb logcat` helps). Use the 1.9.0
+release candidate review APK (above).
 
 | Day | Theme (what you need) | Tests |
 |---|---|---|
@@ -146,6 +152,9 @@ owner sends you, then pick any task you can do.
 | U-23 | Script repos (Vega) | phone and TV | 1. Sources → Script repos → Add. 2. Paste a Vega manifest.json link you trust. 3. Install one provider. 4. Open it from Home, play a title. | the provider's rows show on Home, a title opens and plays; Source status lists it as Vega | OMT-48 |
 | U-24 | Telegram channel | phone | 1. Sources → Universal add. 2. Paste a public t.me channel link with videos. 3. Open a video. | it plays without signing in | OMT-49 |
 | U-25 | Manga translation | phone | 1. Open a manga chapter in another language. 2. Reader menu → Translate. | text bubbles show in your language; turning it off shows the original | OMT-51 |
+| U-26 | Profiles and locks | phone or TV | 1. Settings → Privacy → Profiles → add a second profile and give it a PIN. 2. Close Yumeiro and open it again. 3. Pick that profile, type a wrong PIN once, then the right one. | "Who's watching?" shows first; the wrong PIN is refused; the right one opens that profile with its own history | OMT-44 |
+| U-27 | Private downloads | phone | 1. Downloads → tap the eye on a finished video. 2. Open your Gallery. 3. Downloads → the lock at the top → unlock. | the video is gone from lists and the Gallery, and shows inside Private after unlocking | OMT-45 |
+| U-28 | Hold for 2x | phone | 1. Play any video. 2. Press and hold on the picture, then let go. | it plays at 2x while you hold and goes back to normal when you let go | OMT-46 |
 | U-15 | General feedback | phone or TV | Use Yumeiro as you normally would for a day. | tell us anything confusing, slow or broken | OMT-9 |
 
 Report for each task: task number, Passed/Failed, one sentence, a screenshot if something looked wrong,
@@ -490,7 +499,7 @@ the app version and your device. Don't send passwords or account details.
 - **Why the agent can't do it:** the slowdown at 50–70 % was seen on your phone, host and Wi-Fi. The
   emulator case d (local host with a per-connection cap) stays green on every download change, but it
   cannot copy your Wi-Fi, phone maker battery rules or host.
-- **Instructions:** install the latest green debug APK. Add one download of 300–600 MB from a source that
+- **Instructions:** install the 1.9.0 release candidate review APK. Add one download of 300–600 MB from a source that
   was slow before, screen on. Each time the percentage passes 10, 20, … 100 note the stopwatch time.
   Optional: `adb logcat -s YuDownload` during the run and send the lines with `SEGMENTED_STATS`.
 - **Pass / fail rule (owner order, eighth cycle):** work out the ten band times (10→20 %, …, 90→100 %)
