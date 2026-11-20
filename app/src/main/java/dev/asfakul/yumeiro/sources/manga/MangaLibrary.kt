@@ -37,13 +37,22 @@ object MangaLibrary {
     val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
     @Volatile private var loaded = false
 
-    private fun file(context: Context) = File(context.filesDir, "manga/library.json").also { it.parentFile?.mkdirs() }
+    /**
+     * PROF-1: the library (saved titles and Continue reading) belongs to the current profile, like online history
+     * (Profiles.file: the old path for the default profile, profiles/<id>/manga/library.json otherwise). It was one
+     * file for everyone, so another profile's reading showed up in Continue reading.
+     */
+    private fun file(context: Context) = dev.asfakul.yumeiro.profiles.Profiles.file(context, "manga/library.json").also { it.parentFile?.mkdirs() }
+
+    /** File of the profile that was loaded; writes go there even if the profile changes before the restart. */
+    @Volatile private var loadedFile: File? = null
 
     @Synchronized
     fun load(context: Context) {
         if (loaded) return
+        val f = file(context).also { loadedFile = it }
         // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
-        _entries.value = dev.asfakul.yumeiro.data.SafeJsonFile.read(file(context)) { json.decodeFromString<List<Entry>>(it) }.value.orEmpty()
+        _entries.value = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { json.decodeFromString<List<Entry>>(it) }.value.orEmpty()
         loaded = true
     }
 
@@ -60,7 +69,7 @@ object MangaLibrary {
         if (pending.getAndSet((context.applicationContext ?: context) to _entries.value) != null) return
         writer.execute {
             pending.getAndSet(null)?.let { (c, list) ->
-                runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(file(c), json.encodeToString(list)) }
+                runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(loadedFile ?: file(c), json.encodeToString(list)) }
                     .onFailure { runCatching { android.util.Log.w("MangaLibrary", "save", it) } }
             }
         }
@@ -70,7 +79,7 @@ object MangaLibrary {
     fun flush() { runCatching { writer.submit {}.get(5, java.util.concurrent.TimeUnit.SECONDS) } }
 
     /** For tests: forget the loaded state, so the next call reads the file again. */
-    @Synchronized internal fun unloadForTests() { flush(); _entries.value = emptyList(); loaded = false }
+    @Synchronized internal fun unloadForTests() { flush(); _entries.value = emptyList(); loaded = false; loadedFile = null }
 
     fun get(providerId: String, url: String): Entry? = _entries.value.firstOrNull { it.providerId == providerId && it.url == url }
 
