@@ -102,6 +102,31 @@ object StreamResolver {
 
     const val TELEGRAM_GROUP = "Telegram"
 
+    /** TeraBox's sign-in page; the cookie it leaves in the web view is what [TeraBoxApi] reuses. */
+    const val TERABOX_SIGN_IN = "https://www.terabox.app/wap/outlogin/login"
+
+    /**
+     * B-29: TeraBox through its share API (original file, else full HLS). Never the 30-second
+     * no-login preview: without a TeraBox sign-in the user is sent to sign in once instead.
+     */
+    internal fun resolveTeraBox(request: StreamRequest, route: LinkHosts.Browser, client: OkHttpClient): Resolution =
+        when (val r = TeraBoxApi.resolve(client, route.pageUrl)) {
+            is TeraBoxApi.Result.Ok -> Resolution.Playable(
+                request.copy(
+                    url = r.streamUrl,
+                    title = request.title.ifBlank { r.fileName },
+                    format = if (r.hls) StreamFormat.HLS else StreamFormat.PROGRESSIVE,
+                    userAgent = r.userAgent,
+                    referer = "https://www.terabox.app/",
+                    cookie = r.cookie,
+                    pageUrl = request.pageUrl ?: route.pageUrl,
+                ),
+                Sniff(MediaKind.VIDEO, "TeraBox", "api"),
+            )
+            TeraBoxApi.Result.NeedsSignIn -> Resolution.NeedsBrowser(TERABOX_SIGN_IN, TeraBoxApi.SIGN_IN_REASON, request, auto = false)
+            is TeraBoxApi.Result.Failed -> Resolution.Failed("TeraBox link can't play", r.reason + ".")
+        }
+
     /**
      * @param thorough also probe URLs whose extension looks certain (`.m3u8` can be an IPTV list).
      * Player-side resolution uses `false` so confident links start instantly.
@@ -114,7 +139,10 @@ object StreamResolver {
             ).let { r ->
                 if (r is Resolution.Failed) Resolution.Failed(r.title, r.message + " If this is a ${route.host} file, check that it's shared as \"Anyone with the link\".") else r
             }
-            is LinkHosts.Browser -> return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
+            is LinkHosts.Browser -> {
+                if (route.host == "TeraBox") return resolveTeraBox(request, route, client)
+                return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
+            }
             is LinkHosts.Torrent -> {
                 val server = TorrentSettings.server.value
                 if (server.isBlank()) return Resolution.Handoff(
