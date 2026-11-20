@@ -87,7 +87,7 @@ class ReleaseShotsDeviceTest {
     }
 
     @Test fun a_proxySettings() {
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { Column(Modifier.verticalScroll(rememberScrollState())) { ProxySettingsCard() } } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { FirstRun.AppBackground { Column(Modifier.verticalScroll(rememberScrollState())) { ProxySettingsCard() } } } } }
         assertTrue("proxy card", waitTag("proxy_type_http"))
         Thread.sleep(1_500); compose.waitForIdle() // the card loads the saved config off the main thread first
         compose.onNodeWithTag("proxy_type_http", true).performScrollTo().performClick()
@@ -102,7 +102,7 @@ class ReleaseShotsDeviceTest {
 
     @Test fun b_dnsFallbackSetting() {
         NetworkSettings.setDns(ctx, dnsBefore.copy(provider = dev.asfakul.yumeiro.network.DnsProvider.SYSTEM, fallback = false))
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { Column(Modifier.verticalScroll(rememberScrollState())) { NetworkSettingsCard() } } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { FirstRun.AppBackground { Column(Modifier.verticalScroll(rememberScrollState())) { NetworkSettingsCard() } } } } }
         assertTrue("DNS fallback switch", waitTag("toggle_dns_fallback_auto"))
         compose.onNodeWithTag("toggle_dns_fallback_auto", true).performScrollTo().performClick()
         compose.waitUntil(5_000) { NetworkSettings.dns.value.fallback }
@@ -117,7 +117,7 @@ class ReleaseShotsDeviceTest {
         log("SHOTS repo add: ${added.exceptionOrNull()?.message ?: "ok"}")
         assertTrue("Vega repository added: ${added.exceptionOrNull()?.message}", added.isSuccess)
         repoUrl = url
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { ScriptReposTab() } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { FirstRun.AppBackground { ScriptReposTab() } } } }
         assertTrue("repository row", waitTag("script_repo"))
         compose.waitUntil(15_000) { compose.onAllNodesWithTag("script_available", true).fetchSemanticsNodes().size >= 2 }
         compose.waitForIdle()

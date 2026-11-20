@@ -7,6 +7,12 @@ package dev.asfakul.yumeiro
 
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.isRoot
@@ -24,6 +30,14 @@ import androidx.test.platform.app.InstrumentationRegistry
  * tap "Skip", and wait for the tab bar with nothing on top of it.
  */
 object FirstRun {
+    /** The app's page background behind a single card set with setContent. Without it the test activity's
+     *  default (light) window shows through the dark palette's see-through cards and the release images had
+     *  near-white text on white (run 44674391443, tv-api34: rc_proxy, accent_ao). The app's screens draw
+     *  this background themselves (Scaffold / MTPlayerApp). */
+    @Composable
+    fun AppBackground(content: @Composable () -> Unit) {
+        Box(Modifier.fillMaxSize().background(LocalMtPalette.current.background)) { content() }
+    }
     // Android 13+ media and notifications, plus the storage pair the app asks for on Android 7–12
     // (run 43757547383, TV API 24: only the 13+ names were granted and the storage dialog stayed up).
     private val PERMISSIONS = listOf(

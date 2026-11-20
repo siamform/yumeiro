@@ -153,7 +153,7 @@ class ProfilesDeviceTest {
 
     @Test fun accentTapChangesTheTheme() {
         ThemeSettings.setAccent(ctx, AccentTone.GOLD)
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { Column(Modifier.verticalScroll(rememberScrollState())) { AppearanceSettingsCard() } } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { FirstRun.AppBackground { Column(Modifier.verticalScroll(rememberScrollState())) { AppearanceSettingsCard() } } } } }
         assertTrue("swatch", waitTag("accent_ao"))
         compose.onNodeWithTag("accent_ao", true).performScrollTo().performClick()
         compose.waitUntil(5_000) { ThemeSettings.accent.value == AccentTone.AO }
