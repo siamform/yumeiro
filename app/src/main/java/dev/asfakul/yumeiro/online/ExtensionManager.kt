@@ -254,8 +254,17 @@ object ExtensionManager {
 
     fun pluginFile(context: Context, ext: InstalledExtension): File = File(pluginDir(context), ext.fileName)
 
-    /** Providers of enabled, loaded extensions. */
-    fun providers(): List<MainAPI> {
+    /**
+     * Providers of enabled, loaded extensions.
+     * FREEZE-2: built once per provider change ([providerStamp]) and shared. Screens read this while composing
+     * (several times per frame on Home, Yumix and Search); rebuilding it on every call was the cost behind the
+     * 2.0.0 touch freeze (FREEZE-1).
+     */
+    fun providers(): List<MainAPI> = providerMemo.get(providerStamp()) { buildProviders() }
+
+    private val providerMemo = StampMemo<List<MainAPI>>()
+
+    private fun buildProviders(): List<MainAPI> {
         val enabled = _state.value.installed.filter { it.enabled }.map { it.key }.toSet()
         val files = synchronized(plugins) { plugins.filterKeys { it in enabled }.values.mapNotNull { it.filename }.toSet() }
         val cloudstream = runCatching { APIHolder.allProviders.toList() }.getOrDefault(emptyList())
@@ -280,11 +289,12 @@ object ExtensionManager {
         dev.asfakul.yumeiro.sources.SourceHub.state.value,
         runCatching { APIHolder.allProviders.size }.getOrDefault(-1),
         synchronized(plugins) { plugins.size },
+        ProviderOverrides.ready,
     )
 
-    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int) {
+    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int, val overrides: Boolean) {
         override fun equals(other: Any?): Boolean = other is ProviderStamp && other.engine === engine &&
-            other.hub === hub && other.apis == apis && other.plugins == plugins
+            other.hub === hub && other.apis == apis && other.plugins == plugins && other.overrides == overrides
         override fun hashCode(): Int = System.identityHashCode(engine) * 31 + apis * 7 + plugins
     }
 
