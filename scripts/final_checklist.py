@@ -125,11 +125,19 @@ FINDINGS = {
     "TelegramPublicDeviceTest": "FINAL-3, FINAL-5",
     "MangaTranslateDeviceTest": "FINAL-4, FINAL-6",
     "AnimeSignInMessageDeviceTest": "FINAL-8",
+    "LocalPlayerDeviceTest": "FINAL-16, FINAL-16c, FINAL-25",
+    "PlaybackSessionDeviceTest": "FINAL-23",
+    "LargeLibraryScanDeviceTest": "FINAL-24",
+    "LibraryEmptyProfileDeviceTest": "FINAL-24",
+    "MiniPlayerDeviceTest": "FINAL-21, FINAL-21b",
+    "DramaPlaybackDeviceTest": "FINAL-22",
 }
 def cell(cls, tgt, p):
     if not cls: return "Not a device feature (see note)"
     got = [res.get((c, tgt, p)) for c in cls]
-    if all(g is None for g in got): return "Not run"
+    if all(g is None for g in got):
+        # §5: a "Not run" needs a written reason. The owner cut the final test to one pass (P1) on 2026-11-20.
+        return "Not run (owner's decision 2026-11-20: P1 only)" if p == "P2" else "Not run"
     flat = [x for g in got if g for x in g]
     bad = [x for x in flat if x[1] == "FAIL"]
     skipped = [x for x in flat if x[1] == "SKIPPED"]
