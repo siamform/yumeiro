@@ -46,6 +46,19 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER
 | **Manga offline** | Saved chapters open without the source; on-device translation in the reader. |
 | **Safer by design** | The app no longer carries Yumeiro's Last.fm shared secret. Built-in Last.fm sign-in stays off until Yumeiro Cloud (which will sign those calls) is live; your own Last.fm key still works. |
 
+<p align="center">
+  <img src="docs/assets/final/tv34-profiles-who-is-watching.png" width="380" alt="Who's watching? on Yumeiro TV" />
+  <img src="docs/assets/final/tv34-filter-sheet-no-keyboard.png" width="380" alt="TV filter sheet without the keyboard" />
+</p>
+<p align="center">
+  <img src="docs/assets/final/lowram-profiles-who-is-watching.png" width="180" alt="Who's watching? on a phone" />
+  <img src="docs/assets/final/phone-hold-for-2x.png" width="180" alt="Hold for 2x in the player" />
+  <img src="docs/assets/final/phone-telegram-channel.png" width="180" alt="A public Telegram channel" />
+  <img src="docs/assets/final/lowram-script-repos.png" width="180" alt="Vega script repository" />
+</p>
+
+Screenshots from the CI emulators with test data. More: [docs/assets/final](docs/assets/final/README.md).
+
 ## Release status
 
 - **1.9.0 is a release candidate**, built for the owner's review. It is not published yet; the newest published

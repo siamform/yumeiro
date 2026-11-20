@@ -41,6 +41,9 @@ docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 ### Fixes
 - Notices reach phones whose notification subscription failed (server side: works once the Yumeiro Cloud update is
   deployed; it is not deployed yet).
+- Android TV: sheets with a search box (Yumix "Show videos from", extension and market filters) no longer open the
+  full-screen keyboard by themselves; press OK on the box to type, one Back closes the sheet.
+- Android TV boxes without an AC-3 / E-AC-3 decoder play those audio tracks through FFmpeg.
 - "Show videos from" search shows every match; YouTube on TV shows a grid; M3U logos in single quotes and relative
   channel links; "1 track"; last-backup time kept.
 
