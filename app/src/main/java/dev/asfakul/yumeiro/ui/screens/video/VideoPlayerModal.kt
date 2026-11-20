@@ -1729,7 +1729,9 @@ private fun VideoPlayerModalContent(
                 onHoldStart = {
                     haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     // P-2X: play at 2x while the finger stays down (not for live streams).
-                    holdSpeed.start(currentSpeed, exoPlayer.isCurrentMediaItemLive)?.let { exoPlayer.playbackParameters = PlaybackParameters(it); holdBoost = true }
+                    val boost = holdSpeed.start(currentSpeed, exoPlayer.isCurrentMediaItemLive)
+                    if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.d("YuGesture", "hold start speed=$currentSpeed live=${exoPlayer.isCurrentMediaItemLive} -> $boost")
+                    boost?.let { exoPlayer.playbackParameters = PlaybackParameters(it); holdBoost = true }
                 },
                 onHoldEnd = { holdSpeed.end()?.let { exoPlayer.playbackParameters = PlaybackParameters(it) }; holdBoost = false },
                 holdEnabled = !isScreenLocked,

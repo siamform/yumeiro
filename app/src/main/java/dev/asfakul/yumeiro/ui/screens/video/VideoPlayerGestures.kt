@@ -114,6 +114,8 @@ fun VideoGestureOverlay(
             .pointerInput(isScreenLocked) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    // FINAL-16b: debug builds log the gesture's path so device tests can tell where a hold went.
+                    if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.d("YuGesture", "down at ${down.position} locked=$isScreenLocked hold=${currentOnHoldSwipeDown != null || currentHoldEnabled}")
                     val startX = down.position.x
                     val startY = down.position.y
                     val width = size.width.toFloat()
@@ -125,7 +127,11 @@ fun VideoGestureOverlay(
                         var released = false
                         while (true) {
                             val event = awaitPointerEvent()
-                            val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
+                            val pointer = event.changes.firstOrNull { it.id == down.id }
+                        if (dev.asfakul.yumeiro.BuildConfig.DEBUG && (pointer == null || !pointer.pressed || pointer.isConsumed)) {
+                            android.util.Log.d("YuGesture", "event ${event.type} pointer=${pointer?.id} pressed=${pointer?.pressed} consumed=${pointer?.isConsumed} held=$held drag=$isDragging")
+                        }
+                        if (pointer == null) break
                             if (!pointer.pressed) {
                                 released = true
                                 break
@@ -153,12 +159,14 @@ fun VideoGestureOverlay(
                         // the hold (and P-2X) was never recognised (LocalPlayerDeviceTest.k_, run 44640073858:
                         // held speed 1.0 on api36 and api33-lowram). Past that time with no drag, it is a hold.
                         if (holdArmed && waitMs <= 0) {
+                            if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.d("YuGesture", "hold (late event)")
                             held = true
                             pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
                             currentOnHoldStart()
                         }
                         val event = if (holdArmed && !held && waitMs > 0) {
                             withTimeoutOrNull(waitMs) { awaitPointerEvent() } ?: run {
+                                if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.d("YuGesture", "hold (timeout)")
                                 held = true
                                 pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
                                 currentOnHoldStart()

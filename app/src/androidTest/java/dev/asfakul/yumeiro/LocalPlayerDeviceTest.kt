@@ -14,6 +14,8 @@ import android.util.Log
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.performClick
 import androidx.media3.common.C
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -495,6 +497,9 @@ class LocalPlayerDeviceTest {
         pause(5_000) // let the controls hide so the hold lands on the gesture layer
         val before = onPlayer { it.playbackParameters.speed } ?: -1f
         val r = playerBox()
+        // FINAL-16b (run 44651167737, api36 P1/P2 still 1.0 after FINAL-16): say what is under the finger.
+        runCatching { rule.onRoot(useUnmergedTree = true).printToLog("YuLocalPlayerTree") }
+        log("P2X box=$r")
         val x = r.left + r.width() * 0.5f; val y = r.top + r.height() * 0.45f
         val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
         val t0 = android.os.SystemClock.uptimeMillis()
