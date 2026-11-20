@@ -85,7 +85,7 @@ class QueuePersistenceDeviceTest {
             if (Build.VERSION.SDK_INT >= 29) {
                 put(MediaStore.Audio.Media.RELATIVE_PATH, "Music/$FOLDER")
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
-            }
+            } else put(MediaStore.Audio.Media.DATA, LegacyMedia.path("Music", FOLDER, "$title.m4a")) // FINAL-24
         }
         val uri = ctx.contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)
             ?: throw AssertionError("MediaStore insert failed for $title")
