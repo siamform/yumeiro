@@ -53,6 +53,9 @@ class YmPagingNetworkDeviceTest {
         val token = page1.continuation!!
         val rows1 = page1.shelves.sumOf { it.items.size }
 
+        // FINAL-33 (run 44664324623, tv-api24): the TV emulator's Ethernet stays up when Wi-Fi and data go off,
+        // so the drop cannot be made there (same written reason as NetworkStateDeviceTest).
+        assumeTrue("Ethernet stays up when Wi-Fi and data go off (TV emulator)", !FirstRun.hasEthernet())
         FirstRun.shell("svc wifi disable"); FirstRun.shell("svc data disable")
         val off = waitFor(20_000) { !Connectivity.online.value }
         val failed = runCatching { YtMusicApi.more(ctx, "browse", token) }
