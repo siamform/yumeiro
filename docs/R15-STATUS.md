@@ -1,6 +1,6 @@
 ## Resume here (2026-11-20, after v2.0.0)
 
-Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md. Owner: fix everything, then release 2.1.0. Fixed on r15-stability for 2.1.0: FREEZE-1, PROF-1, T-1, FREEZE-2, F-18, F-02 split, Live TV country filter, NF-2b quality picker, PIN-1, F-19 security questions, per-profile pins, FREEZE-4 draw counter (rows B-10..B-21 in docs/BUGS-AND-FIXES-2.0.0.md). Pending CI: 44771583525 (+ fail-before 44771329328, 44771332825, 44771577361), then one CI on the head for B-14..B-21. Open: B-3 (needs a real link), PIN-2, F-19/F-20 security questions, discreet icon (owner decision), E3 ABI splits, FREEZE-4, GATE-1.
+Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md. Owner: fix everything, then release 2.1.0. Fixed on r15-stability for 2.1.0: FREEZE-1, PROF-1, T-1, FREEZE-2, F-18, F-02 split, Live TV country filter, NF-2b quality picker, PIN-1, F-19 security questions, per-profile pins, FREEZE-4 draw counter, PIN-2 same-name extensions (rows B-10..B-22 in docs/BUGS-AND-FIXES-2.0.0.md). Pending CI: 44771583525 (+ fail-before 44771329328, 44771332825, 44771577361), then one CI on the head for B-14..B-22. Open: B-3 (needs a real link), PIN-2, F-19/F-20 security questions, discreet icon (owner decision), E3 ABI splits, FREEZE-4, GATE-1.
 
 # R15 status: every item in the master prompt, with its evidence
 
