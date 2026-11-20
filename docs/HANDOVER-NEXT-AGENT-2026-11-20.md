@@ -121,3 +121,9 @@ What the runs showed (rows B-23, B-25, B-26 in docs/BUGS-AND-FIXES-2.0.0.md):
   (am start, no Compose rule, real `input tap`, same 700 ms limit). Run:
   `gh workflow run device-check.yml --ref r15-stability -f test=dev.asfakul.yumeiro.GateOnePrepareDeviceTest,dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest`
   Data is kept between classes when REPEAT=1 (scripts/device-check.sh clears only for N>1), which the pair relies on.
+
+Result (2026-11-21): the real-clock gate first failed on api33-lowram at 865 ms (run 44793350371): YouTube Music
+built its request JSON on the main thread (B-28, fixed 6fd31251, YtMusicOffMainTest). After the fix it passes,
+run 44795131763: api36 650 ms, api33-lowram 677 ms. That leaves little margin: if it goes red, read the
+`STALL_SAMPLE_REAL` stacks (log tag YuGate1) and fix what is on them. Do not raise the limit.
+B-27 (fixed): a released music screen could leave `MusicPlayHistory.screenRecorders` above 0 (fail-before 44793686032).
