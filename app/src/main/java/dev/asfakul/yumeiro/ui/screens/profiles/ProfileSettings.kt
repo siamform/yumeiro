@@ -120,6 +120,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
     var firstPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var questions by remember { mutableStateOf(false) }
     TsukiDialog(
         onDismissRequest = onDismiss,
         icon = { ProfileAvatar(p, 56.dp) },
@@ -131,6 +132,8 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                 ActionRow("Rename", "profile_rename") { rename = true }
                 ActionRow(if (p.hasPin) "Change PIN" else "Set a PIN", "profile_pin") { pinError = null; pinStep = 1 }
                 if (p.hasPin) ActionRow("Remove PIN", "profile_pin_remove") { Profiles.setPin(context, p.id, null); AppMessages.success(context, "PIN removed") }
+                if (p.hasPin) ActionRow(if (p.hasRecovery) "Change security questions" else "Set security questions", "profile_recovery") { questions = true }
+                if (p.hasRecovery) ActionRow("Remove security questions", "profile_recovery_remove") { Profiles.setRecovery(context, p.id, emptyList(), emptyList()); AppMessages.success(context, "Security questions removed") }
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Unlock with the phone's lock", color = TextPrimary, fontSize = 14.sp)
@@ -147,6 +150,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
     )
+    if (questions) SecurityQuestionsDialog(p) { questions = false }
     if (rename) NameAndColourDialog("Rename", p.name, null, onDismiss = { rename = false }) { name, _ -> rename = false; Profiles.rename(context, p.id, name) }
     if (pinStep > 0) PinPadDialog(
         title = if (pinStep == 1) "New PIN for ${p.name}" else "Repeat the PIN",

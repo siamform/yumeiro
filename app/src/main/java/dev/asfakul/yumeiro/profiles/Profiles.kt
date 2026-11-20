@@ -47,8 +47,13 @@ object Profiles {
         internal val salt: String? = null,
         /** Unlock with the phone's fingerprint / face / screen lock. */
         val biometric: Boolean = false,
+        /** F-19: three security questions (shown), answers kept only as one salted PBKDF2 hash. */
+        val recoveryQuestions: List<String> = emptyList(),
+        internal val recoveryHash: String? = null,
+        internal val recoverySalt: String? = null,
     ) {
         val hasPin: Boolean get() = pinHash != null
+        val hasRecovery: Boolean get() = recoveryHash != null && recoveryQuestions.size == RECOVERY_QUESTIONS
         val locked: Boolean get() = pinHash != null || biometric
         val initial: String get() = name.trim().firstOrNull()?.uppercase() ?: "?"
     }
@@ -118,6 +123,54 @@ object Profiles {
         return true
     }
 
+    /** F-19: how many security questions a profile has. */
+    const val RECOVERY_QUESTIONS = 3
+
+    /** Answers compare case-blind with spaces collapsed, so "  Dhaka " matches "dhaka". */
+    fun normalizeAnswer(a: String): String = a.trim().lowercase(java.util.Locale.ROOT).replace(Regex("\\s+"), " ")
+
+    /** Three different, non-blank questions and three answers of at least 2 characters. */
+    fun validRecovery(questions: List<String>, answers: List<String>): Boolean =
+        questions.size == RECOVERY_QUESTIONS && answers.size == RECOVERY_QUESTIONS &&
+            questions.all { it.isNotBlank() } && questions.map { it.trim().lowercase(java.util.Locale.ROOT) }.toSet().size == RECOVERY_QUESTIONS &&
+            answers.all { normalizeAnswer(it).length >= 2 }
+
+    private fun answersKey(answers: List<String>) = answers.joinToString("\u0000") { normalizeAnswer(it) }
+
+    /** F-19: sets (or with empty lists removes) the security questions. False when they are not valid. */
+    @Synchronized
+    fun setRecovery(context: Context, id: String, questions: List<String>, answers: List<String>): Boolean {
+        if (find(context, id) == null) return false
+        if (questions.isEmpty() && answers.isEmpty()) {
+            replace(context, id) { it.copy(recoveryQuestions = emptyList(), recoveryHash = null, recoverySalt = null) }; return true
+        }
+        if (!validRecovery(questions, answers)) return false
+        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val h = hash(answersKey(answers), salt)
+        replace(context, id) { it.copy(recoveryQuestions = questions.map { q -> q.trim() }, recoveryHash = h, recoverySalt = Base64.encodeToString(salt, Base64.NO_WRAP)) }
+        return true
+    }
+
+    /**
+     * F-19: "Forgot PIN" with the security questions. All three answers must match. Wrong answers count
+     * against the same tries and lockouts as wrong PINs. OK removes the PIN; the profile keeps its data.
+     */
+    @Synchronized
+    fun recoverWithAnswers(context: Context, id: String, answers: List<String>, now: Long = System.currentTimeMillis()): PinCheck {
+        val p = find(context, id) ?: return PinCheck.WRONG
+        if (!p.hasRecovery) return PinCheck.NO_PIN
+        val g = guard(context)
+        if (g.getLong("u_$id", 0L) > now) return PinCheck.LOCKED_OUT
+        val salt = runCatching { Base64.decode(p.recoverySalt, Base64.NO_WRAP) }.getOrNull() ?: return PinCheck.WRONG
+        if (answers.size == RECOVERY_QUESTIONS && MessageDigest.isEqual(hash(answersKey(answers), salt).toByteArray(), p.recoveryHash!!.toByteArray())) {
+            replace(context, id) { it.copy(pinHash = null, salt = null) }
+            clearGuard(context, id)
+            return PinCheck.OK
+        }
+        failed(g, id, now)
+        return PinCheck.WRONG
+    }
+
     fun validPin(pin: String): Boolean = pin.length in 4..8 && pin.all { it in '0'..'9' }
 
     /** Sets (or with null / "" removes) the PIN. False for an invalid PIN or an unknown profile. */
@@ -148,13 +201,17 @@ object Profiles {
         if (g.getLong("u_$id", 0L) > now) return PinCheck.LOCKED_OUT
         val salt = runCatching { Base64.decode(p.salt, Base64.NO_WRAP) }.getOrNull() ?: return PinCheck.WRONG
         if (MessageDigest.isEqual(hash(pin, salt).toByteArray(), stored.toByteArray())) { clearGuard(context, id); return PinCheck.OK }
+        failed(g, id, now)
+        return PinCheck.WRONG
+    }
+
+    private fun failed(g: android.content.SharedPreferences, id: String, now: Long) {
         val n = g.getInt("n_$id", 0) + 1
         if (n >= MAX_FAILS) {
             val k = g.getInt("k_$id", 0)
             val ms = (LOCKOUT_MS shl k.coerceAtMost(7)).coerceAtMost(MAX_LOCKOUT_MS)
             g.edit().putInt("n_$id", 0).putLong("u_$id", now + ms).putInt("k_$id", k + 1).commit()
         } else g.edit().putInt("n_$id", n).commit()
-        return PinCheck.WRONG
     }
 
     /** Milliseconds left in a lockout, or 0. */
@@ -221,7 +278,9 @@ object Profiles {
         val restored = _all.value
         val merged = restored.map { r ->
             val l = local.firstOrNull { it.id == r.id } ?: return@map r
-            if (l.locked) r.copy(pinHash = l.pinHash, salt = l.salt, biometric = l.biometric) else r
+            // F-19: the local security questions win too, so a backup can't bring answers someone else knows.
+            if (l.locked) r.copy(pinHash = l.pinHash, salt = l.salt, biometric = l.biometric,
+                recoveryQuestions = l.recoveryQuestions, recoveryHash = l.recoveryHash, recoverySalt = l.recoverySalt) else r
         } + local.filter { l -> restored.none { it.id == l.id } }
         _all.value = merged
         save(context)
@@ -297,12 +356,15 @@ object Profiles {
 
     private fun json(p: Profile) = JSONObject().put("id", p.id).put("name", p.name).put("tone", p.tone.name)
         .put("bio", p.biometric).apply { if (p.pinHash != null) { put("hash", p.pinHash); put("salt", p.salt) } }
+        .apply { if (p.recoveryHash != null) { put("rq", JSONArray(p.recoveryQuestions)); put("rh", p.recoveryHash); put("rs", p.recoverySalt) } }
 
     private fun from(o: JSONObject): Profile? {
         val id = o.optString("id").ifBlank { return null }
         return Profile(
             id, o.optString("name").ifBlank { "Profile $id" }, AccentTone.from(o.optString("tone")),
             o.optString("hash").ifBlank { null }, o.optString("salt").ifBlank { null }, o.optBoolean("bio"),
+            recoveryQuestions = o.optJSONArray("rq")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(),
+            recoveryHash = o.optString("rh").ifBlank { null }, recoverySalt = o.optString("rs").ifBlank { null },
         )
     }
 

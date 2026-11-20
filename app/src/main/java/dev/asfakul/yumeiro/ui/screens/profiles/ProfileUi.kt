@@ -188,7 +188,13 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
     }
     if (!profile.hasPin) return // the system prompt is up
     var forgot by remember { mutableStateOf(false) }
-    if (forgot) { ForgotPinDialog(activity, profile, onDismiss = { forgot = false }, onCleared = onUnlocked); return }
+    var otherWay by remember { mutableStateOf(false) }
+    if (forgot) {
+        // F-19: with security questions set, they replace the phone's screen lock (a child may know it).
+        if (profile.hasRecovery && !otherWay) RecoveryAnswerDialog(profile, onDismiss = { forgot = false }, onOtherWay = { otherWay = true }, onCleared = onUnlocked)
+        else ForgotPinDialog(activity, profile, allowDevice = !profile.hasRecovery, onDismiss = { forgot = false; otherWay = false }, onCleared = onUnlocked)
+        return
+    }
     PinPadDialog(
         title = title, subtitle = if (bioOk) "Enter the PIN or use your fingerprint" else "Enter the PIN",
         error = error,
@@ -212,9 +218,9 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
  * history and private downloads are cleared.
  */
 @Composable
-private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, onDismiss: () -> Unit, onCleared: () -> Unit) {
+private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, allowDevice: Boolean = true, onDismiss: () -> Unit, onCleared: () -> Unit) {
     val context = LocalContext.current
-    val device = remember { Privacy.canAuthenticate(activity) }
+    val device = remember { allowDevice && Privacy.canAuthenticate(activity) }
     dev.asfakul.yumeiro.ui.components.TsukiDialog(
         tone = if (device) dev.asfakul.yumeiro.ui.components.DialogTone.NEUTRAL else dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = onDismiss,
@@ -222,6 +228,8 @@ private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, onDis
         text = {
             Text(
                 if (device) "Use this phone's screen lock to remove ${profile.name}'s PIN. Nothing else changes."
+                else if (!allowDevice && profile.id == Profiles.DEFAULT) "Without the security answers, the PIN can only be removed together with ${profile.name}'s history, lists, YouTube history and private downloads. Extensions and settings stay."
+                else if (!allowDevice) "Without the security answers, the PIN can only be removed by deleting ${profile.name} with its history, lists and private downloads."
                 else if (profile.id == Profiles.DEFAULT) "This phone has no screen lock, so the PIN can only be removed together with ${profile.name}'s history, lists, YouTube history and private downloads. Extensions and settings stay."
                 else "This phone has no screen lock, so the PIN can only be removed by deleting ${profile.name} with its history, lists and private downloads.",
             )
