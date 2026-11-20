@@ -34,7 +34,7 @@ cloudstreamLibrary = "4.8.0"
 nicehttp = "0.4.18"
 # YouTube / YouTube Music / SoundCloud without login (same extractor NewPipe, ArchiveTune and AuraMusic use).
 newpipeExtractor = "v0.26.5"
-jackson = "2.18.11" # phone (minSdk 28). X13-6 (ADR-035): 2.19 line unpatched (16 OSV advisories); 2.18.11 has 0. 2.20+ uses MethodHandle.invokeExact; keep <= 2.19
+jackson = "2.19.4" # phone (minSdk 28). X13-6 (ADR-035): 2.19 line unpatched (16 OSV advisories); 2.18.11 has 0. 2.20+ uses MethodHandle.invokeExact; keep <= 2.19
 # TV (minSdk 24): 2.14+ needs Android 8 (SDK 26). 2.15+ makes ObjectMapper fail to load on 7.x
 # (ExceptionUtil -> java.lang.BootstrapMethodError, databind#4653; seen on the TV api24 emulator,
 # run 43765162241). 2.13 is the last line upstream supports on SDK 24, and CloudStream 4.8.0 asks for 2.13.1.
@@ -52,7 +52,7 @@ junit = "4.13.2"
 androidxJunit = "1.3.0"
 # G12 X2: cold-start Macrobenchmark and baseline profile generation (:benchmark module).
 benchmarkMacro = "1.5.0"
-uiautomator = "2.3.0"
+uiautomator = "2.4.1"
 androidxTestCore = "1.7.0"
 androidxTestRunner = "1.7.0"
 espressoCore = "3.7.0"
@@ -130,7 +130,7 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
-rhino = { group = "org.mozilla", name = "rhino", version = "1.8.1" }
+rhino = { group = "org.mozilla", name = "rhino", version = "1.9.2" }
 cloudstream-library = { group = "com.github.recloudstream.cloudstream", name = "library-android", version.ref = "cloudstreamLibrary" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
@@ -149,9 +149,9 @@ newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor
 injekt = { group = "com.github.mihonapp", name = "injekt", version = "91edab2317" }
 rxjava = { group = "io.reactivex", name = "rxjava", version = "1.3.8" }
 nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version = "2.3.1" }
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.11.0" }
-kotlinx-serialization-json-okio = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-okio", version = "1.11.0" }
-kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version = "1.11.0" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version = "1.13.0" }
+kotlinx-serialization-json-okio = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-okio", version = "1.13.0" }
+kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version = "1.13.0" }
 # JavaScript sources (Mangayomi format): QuickJS with async/await and Kotlin suspend bindings
 quickjs-kt = { group = "io.github.dokar3", name = "quickjs-kt-android", version = "1.0.18" }
 # Home servers: SMB / Windows shares
