@@ -84,6 +84,11 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 | 44643028088 | chunk_09 phones | MiniPlayer timing assumptions (FINAL-21 → faa431d); MusicEndlessNetwork skipped on CI: YouTube sign-in wall (OMT-29, Blocked with reason); re-run queued |
 | 44643868312 | chunk_04 tv-api34 re-run | DramaPlayback P1/P2: player page never composed because FINAL-11's plain poll stopped the Compose test clock (FINAL-22 → 155bbdb); re-run queued |
 | 44646789738 | chunk_10 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
+| 44649769757 | head CI 155bbdb | success: build, unit tests, lint, gitleaks (compiles FINAL-21/22) |
+| 44649033923 | chunk_11 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
+| 44653007533 | fail-before FINAL-17 (`tmp/final17-fail-before`: test on the old code) | failed as expected at compile: DiskFullGuardTest, unresolved DiskFullGuard. Behavioural fail-before is the device crash in 44640073858 |
+| 44651167737 | chunk_08 phones re-run | LowStorage passes on lowram (FINAL-17 pass-after); MangaRetry off-main passes (FINAL-18 pass-after); LocalPlayer k_ still 1.0 on api36 P1/P2 (FINAL-16 not fixed there; debug logs b8c0023, re-run 44653992809) |
+| 44648816115 | chunk_05 tv-api34 | 7/7 pass P1/P2 |
 
 Final-test cycle findings so far: SEC-LFM (Last.fm secret in the APK, ADR-048, b57e155), AUD-ZIP (archive manifest read
 uncapped, 2e68bf9), FINAL-1..4 (1158c01), FINAL-5/6 (test fixes, device-verified in 44598214395/44598220085). Commit-body timestamps of 2026-11-19 19:15–19:45 were estimated ahead of the clock; the git
