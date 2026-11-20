@@ -80,16 +80,27 @@ class DramaPlaybackDeviceTest {
             rule.runOnUiThread { OnlineSession.play(ctx, detail) }
             // FINAL-11 (tv-api34 P1, run 44617190495: 10 615 ms, P2 7 017 ms): rule.waitUntil syncs with
             // Compose idling on the main thread at every poll, and the stall samples during that cold
-            // start were mostly the test harness (samples=app,harness,harness,render). Time it with a
-            // plain poll of the state flows on this thread so the test does not slow the main thread it
-            // measures. Same start point (before the tap is posted) and the same 10 s budget.
-            var firstFrameAt = 0L
+            // start were mostly the test harness. FINAL-22 (run 44643868312, tv-api34 P1+P2): FINAL-11's
+            // plain poll never let the Compose test clock advance, so the player page was never composed
+            // (uri stayed "") and no episode could reach a frame. Now a background thread stamps the first
+            // frame the moment the app reports it, and the test thread lets Compose run every 100 ms
+            // (waitForIdle) instead of every poll. Same start point, same 10 s budget.
+            val firstFrameStamp = java.util.concurrent.atomic.AtomicLong(0L)
+            val stamper = Thread {
+                while (!Thread.currentThread().isInterrupted) {
+                    if (PlaybackDiagnostics.state.value.firstFrame) { firstFrameStamp.set(android.os.SystemClock.elapsedRealtime()); break }
+                    try { Thread.sleep(5) } catch (_: InterruptedException) { break }
+                }
+            }.apply { isDaemon = true; start() }
             val deadline = android.os.SystemClock.elapsedRealtime() + 120_000
             while (android.os.SystemClock.elapsedRealtime() < deadline) {
-                if (PlaybackDiagnostics.state.value.firstFrame) { firstFrameAt = android.os.SystemClock.elapsedRealtime(); break }
+                if (firstFrameStamp.get() > 0L) break
                 if (OnlineSession.state.value?.phase == OnlineSession.Phase.FAILED) break
-                android.os.SystemClock.sleep(20)
+                rule.waitForIdle()
+                android.os.SystemClock.sleep(100)
             }
+            stamper.interrupt()
+            val firstFrameAt = firstFrameStamp.get()
             val ok = firstFrameAt > 0L
             val playMs = (if (ok) firstFrameAt else android.os.SystemClock.elapsedRealtime()) - playAt
             Log.i("MTDeviceTest", "drama timing: ${item.name}: detail load ${loadMs}ms, play to first frame ${playMs}ms (ok=$ok)")
