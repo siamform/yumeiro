@@ -200,7 +200,7 @@ SKIP[("MangaRetryDeviceTest","tv-api24")] = ("blocked","FT-B1","library load: ne
 FAIL_BLOCK = {("FeedPositionDeviceTest","tv-api24"), ("YtChannelUiDeviceTest","tv-api24"), ("YtChannelUiDeviceTest","tv-api34")}
 P1_ONLY = "Not run (owner's decision 2026-11-20: P1 only)"
 def cell(cls, tgt, p):
-    if not cls: return "Not a device feature (see note)"
+    if not cls: return "Not run (no device class: checked off-device, see the note for this row)"
     if p == "P2":
         # The owner cut the final test to one pass on 2026-11-20 (§6). Earlier P2 runs on older code stay in evidence.
         return P1_ONLY
