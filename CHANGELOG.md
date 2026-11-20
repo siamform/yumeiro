@@ -5,9 +5,9 @@ All notable changes to Yumeiro.
 ## v1.9.0: yours, and fast
 
 Release candidate for 1.9.0 (planned as v1.8.2; it adds features, so it ships as 1.9.0). It is waiting for the
-owner's review and is not published. The final test runs every feature twice (fresh install, then warm start with
-data) on a low-RAM phone, Android TV 14, Android TV 7 and a phone on Android 16 emulators; results per feature are
-in docs/MASTER-CHECKLIST-FINAL.md. What still needs your phones is listed at the end (full list:
+owner's review and is not published. The final test ran every feature once (fresh install; the second, warm-start
+pass was dropped on the owner's decision of 2026-11-20 to release in time) on a low-RAM phone, Android TV 14,
+Android TV 7 and a phone on Android 16 emulators; results per feature are in docs/MASTER-CHECKLIST-FINAL.md. What still needs your phones is listed at the end (full list:
 docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 
 ### Profiles and privacy

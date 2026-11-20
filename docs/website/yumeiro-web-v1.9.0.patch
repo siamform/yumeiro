@@ -1,4 +1,4 @@
-From d6302550ba88a22f293cc828c07f8ffa83fcaaaa Mon Sep 17 00:00:00 2001
+From 51317d5eda5dfeeeeed3618e2d83d0b628667010 Mon Sep 17 00:00:00 2001
 From: Asfakul Siam <71690568+siamform@users.noreply.github.com>
 Date: Thu, 19 Nov 2026 21:43:34 +0000
 Subject: [PATCH] v1.9.0: changelog highlight
@@ -23,7 +23,7 @@ index ec0f20a..25ba61c 100644
  
  export default async function ChangelogPage() {
 diff --git a/lib/changelog.ts b/lib/changelog.ts
-index 070e210..0f4b853 100644
+index 070e210..a560224 100644
 --- a/lib/changelog.ts
 +++ b/lib/changelog.ts
 @@ -4,29 +4,28 @@
@@ -34,7 +34,7 @@ index 070e210..0f4b853 100644
 +export const highlightTitle = "v1.9.0: yours, and fast";
  export const highlightLede =
 -  "A correction release. Every fix was tested again instead of trusting earlier notes: Yumeiro Drama plays tap to finish, one quality list everywhere, an honest Library, a cooler phone and notifications that arrive on time.";
-+  "Profiles with locks, private downloads, accent colours and hold for 2x, a faster start, Live TV that switches to a working link, offline manga and more sources. Every feature was tested twice on a low-RAM phone, two Android TV versions and a recent phone.";
++  "Profiles with locks, private downloads, accent colours and hold for 2x, a faster start, Live TV that switches to a working link, offline manga and more sources. Every feature was tested on a low-RAM phone, two Android TV versions and a recent phone.";
  
  export const redesign: { title: string; items: { name: string; text: string }[] }[] = [
    {
