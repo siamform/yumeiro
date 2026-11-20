@@ -57,4 +57,20 @@ class AdultApiCostTest {
         assertEquals(true, AdultContent.loadedAdultApis()["YuF1 late"])
         assertEquals(false, AdultContent.loadedAdultApis()["YuF1 plain"])
     }
+
+    /** FREEZE-2: the provider list itself is shared until something changes, not rebuilt per call. */
+    @Test fun providerListIsBuiltOncePerChange() {
+        val n = 200
+        SourceHub.publishVideo("yu_freeze1_a", SourceHub.Ecosystem.JAVASCRIPT, (0 until n).map { api("YuF2 $it", setOf(TvType.Movie)) })
+        ExtensionManager.providers()
+        reads = 0
+        repeat(n) { assertEquals(n, ExtensionManager.providers().count { it.name.startsWith("YuF2 ") }) }
+        // The count above reads each name once per call (n * n); a rebuild per call reads them again (distinctBy).
+        assertTrue("FREEZE-2: $reads name reads for $n calls (shared list ≈ ${n * n})", reads < n * n + 10 * n)
+        val first = ExtensionManager.providers()
+        SourceHub.publishVideo("yu_freeze1_b", SourceHub.Ecosystem.JAVASCRIPT, listOf(api("YuF2 late", setOf(TvType.Movie))))
+        val after = ExtensionManager.providers()
+        assertTrue("a new provider must show up", after.any { it.name == "YuF2 late" })
+        assertTrue("the list must be rebuilt after a change", first !== after)
+    }
 }
