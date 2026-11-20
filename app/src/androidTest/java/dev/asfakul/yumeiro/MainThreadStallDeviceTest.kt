@@ -33,14 +33,39 @@ import java.util.concurrent.atomic.AtomicLong
  * the first screen is up, or when Android records a new ANR for the app. Log tag YuGate1.
  */
 @RunWith(AndroidJUnit4::class)
-class MainThreadStallDeviceTest {
+class MainThreadStallDeviceTest : StallWalk() {
+    @Test fun threeHundredProvidersDoNotStallTheMainThread() {
+        val anrBefore = lastAnr()
+        SourceHub.publishVideo(StallWalk.BRIDGE, SourceHub.Ecosystem.JAVASCRIPT, (1..300).map { StallWalk.Fake(it) })
+        val worst = walk()
+        log("GATE1_RESULT worst main-thread wait $worst ms with 300 providers (limit ${StallWalk.MAX_STALL_MS})")
+        assertTrue("main thread stalled $worst ms (limit ${StallWalk.MAX_STALL_MS} ms)", worst <= StallWalk.MAX_STALL_MS)
+        assertTrue("a new ANR was recorded", lastAnr() <= anrBefore)
+    }
+
+}
+
+/**
+ * GATE-1 control: the same walk with no fake providers, in its own class so it starts from cleared data
+ * like the gate. Logs only; it tells a stall the providers cause from the first-draw cost of a debug
+ * build on a CI emulator. Run both: test=dev.asfakul.yumeiro.MainThreadStallDeviceTest,dev.asfakul.yumeiro.MainThreadStallControlDeviceTest
+ */
+@RunWith(AndroidJUnit4::class)
+class MainThreadStallControlDeviceTest : StallWalk() {
+    @Test fun controlWalkWithoutProviders() {
+        val worst = walk()
+        log("GATE1_CONTROL worst main-thread wait $worst ms with no fake providers")
+    }
+}
+
+abstract class StallWalk {
     @get:Rule val hang = HangDumpRule()
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
-    private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
-    private fun log(s: String) = Log.i("YuGate1", s)
+    protected val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
+    protected fun log(s: String) = Log.i("YuGate1", s)
     private fun has(tag: String) = rule.onAllNodesWithTag(FirstRun.navTag(rule, tag), true).fetchSemanticsNodes().isNotEmpty()
 
-    private class Fake(n: Int) : MainAPI() {
+    protected class Fake(n: Int) : MainAPI() {
         override var name = "YuGate1 fake $n"
         override var mainUrl = "https://example.invalid/$n"
         override val supportedTypes = setOf(TvType.Movie)
@@ -49,16 +74,15 @@ class MainThreadStallDeviceTest {
 
     @After fun tearDown() { SourceHub.remove(BRIDGE) }
 
-    private fun lastAnr(): Long {
+    protected fun lastAnr(): Long {
         if (Build.VERSION.SDK_INT < 30) return 0L
         val am = ctx.getSystemService(ActivityManager::class.java) ?: return 0L
         return am.getHistoricalProcessExitReasons(ctx.packageName, 0, 20)
             .filter { it.reason == ApplicationExitInfo.REASON_ANR }.maxOfOrNull { it.timestamp } ?: 0L
     }
 
-    @Test fun threeHundredProvidersDoNotStallTheMainThread() {
-        val anrBefore = lastAnr()
-        SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.JAVASCRIPT, (1..300).map { Fake(it) })
+    /** Home → Videos → Yumix → Live TV → Home with the watchdog on; returns the longest main-thread wait. */
+    protected fun walk(): Long {
         FirstRun.toTabs(rule)
         rule.waitUntil(30_000) { has("home_screen_root") }
 
@@ -89,7 +113,7 @@ class MainThreadStallDeviceTest {
             }
         }, "yu-gate1").apply { start() }
         try {
-            Thread.sleep(5_000) // Home with 300 providers
+            Thread.sleep(5_000) // Home
             FirstRun.tapVisible(rule, "nav_tab_videos")
             rule.waitUntil(20_000) { has("video_source_switch") || has("video_source_online") }
             if (!has("video_source_online")) FirstRun.tapVisible(rule, "video_source_switch")
@@ -101,12 +125,10 @@ class MainThreadStallDeviceTest {
             running.set(false)
             watchdog.join(2_000)
         }
-        log("GATE1_RESULT worst main-thread wait ${worst.get()} ms (limit $MAX_STALL_MS)")
-        assertTrue("main thread stalled ${worst.get()} ms (limit $MAX_STALL_MS ms)", worst.get() <= MAX_STALL_MS)
-        assertTrue("a new ANR was recorded", lastAnr() <= anrBefore)
+        return worst.get()
     }
 
-    private companion object {
+    companion object {
         const val BRIDGE = "gate1"
         const val MAX_STALL_MS = 700L
     }
