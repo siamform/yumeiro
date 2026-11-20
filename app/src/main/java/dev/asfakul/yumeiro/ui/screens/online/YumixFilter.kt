@@ -253,26 +253,6 @@ private fun FilterRow(
     }
 }
 
-/**
- * R15 Phase 5: one-tap chips for the pinned extensions, beside the "Show videos from" filter.
- * "All" clears the filter; a pinned chip shows only that extension (tap again for all).
- */
-@Composable
-internal fun PinnedExtensionBar(pins: List<String>, selected: String?, onPick: (String?) -> Unit) {
-    if (pins.isEmpty()) return
-    LazyRow(
-        Modifier.fillMaxWidth().testTag("online_pinned_bar"),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        item("all") { CategoryChip("All", selected == null, "online_pinned_all") { onPick(null) } }
-        items(pins, key = { it }) { n ->
-            CategoryChip(n, selected == n, "online_pinned_$n") { onPick(if (selected == n) null else n) }
-        }
-    }
-}
-
 /** Shown on top of a filtered (single-extension) page: what's active, change it, or clear it. */
 @Composable
 internal fun ActiveFilterBar(name: String, onChange: () -> Unit, onClear: () -> Unit) {

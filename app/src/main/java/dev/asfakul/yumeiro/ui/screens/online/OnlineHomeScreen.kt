@@ -312,15 +312,12 @@ fun OnlineHomeScreen(
             }
         }
         }
-        // R15 Phase 5: favourite extensions, one tap away (only those that are on).
+        // R15 Phase 5: favourite extensions come first in "Show videos from" (only those that are on).
+        // PIN-1 (2.1.0, owner's master list): the extra row of pinned chips on the feed is gone; pins
+        // order the filter sheet and the feed, the sheet is the one place to pick an extension.
         val pinsAll by dev.asfakul.yumeiro.online.PinnedExtensions.pins.collectAsState()
         val pins = remember(pinsAll, channelNames) { pinsAll.filter { it in channelNames } }
         remember { dev.asfakul.yumeiro.online.PinnedExtensions.init(context); true }
-        if (providers.size > 1 && pins.isNotEmpty()) androidx.compose.animation.AnimatedVisibility(
-            visible = barHide.visible || showFilter,
-            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
-        ) { PinnedExtensionBar(pins, selected) { selected = it } }
         if (showFilter) SourceFilterSheet(
             names = channelNames, selected = selected,
             pins = pins,
