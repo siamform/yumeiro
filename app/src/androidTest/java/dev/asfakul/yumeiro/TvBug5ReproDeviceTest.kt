@@ -85,6 +85,15 @@ class TvBug5ReproDeviceTest {
         listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.POST_NOTIFICATIONS")
             .forEach { runCatching { inst.uiAutomation.grantRuntimePermission(ctx.packageName, it) } }
         FirstRun.toTabs(rule)
+        // FINAL-31 (run 44662669318, api36 and api33-lowram): the BUG-5 checks are TV checks (a landscape TV
+        // window, a remote). Until the final test this class only ran on the TV images; on a portrait phone
+        // with Layout = TV, TV-5 ("the TV window is landscape") cannot hold and TV-2 / TV-3 drive D-pad focus
+        // on a touch-mode phone. TV layout on phones runs where the window is TV-shaped (landscape).
+        if (!dev.asfakul.yumeiro.Edition.isTv) {
+            val dm = ctx.resources.displayMetrics
+            assumeTrue("BUG-5 TV checks need a landscape TV window; this phone is portrait (${dm.widthPixels}x${dm.heightPixels})",
+                dm.widthPixels > dm.heightPixels)
+        }
         if (!dev.asfakul.yumeiro.Edition.isTv) {
             inst.runOnMainSync { dev.asfakul.yumeiro.ui.tv.TvMode.set(ctx, dev.asfakul.yumeiro.ui.tv.TvMode.Pref.TV) }
             setTv = true
