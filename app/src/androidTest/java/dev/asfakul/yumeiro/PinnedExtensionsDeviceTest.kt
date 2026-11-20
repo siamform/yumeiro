@@ -72,6 +72,23 @@ class PinnedExtensionsDeviceTest {
     private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
     private fun back() { FirstRun.shell("input keyevent 4") }
 
+    /** The soft keyboard is up (InputMethodManagerService's own flag, present on API 24 and 34). */
+    private fun imeShown(): Boolean = FirstRun.shell("dumpsys input_method").lineSequence().any { "mInputShown=true" in it }
+
+    /**
+     * FINAL-39 (run 44666813073, tv-api34): on TV the sheet's first focus landed on its search field and
+     * focus alone opened the full-screen keyboard (ImeTracker onShown with no key pressed); the first
+     * Back then closed only the keyboard and the sheet stayed. On the TV layout the keyboard must stay
+     * down until OK is pressed on the field.
+     */
+    private fun assertNoKeyboardOnTv(where: String) {
+        if (!has("tv_nav_rail")) return
+        Thread.sleep(2_000)
+        val shown = imeShown()
+        log("TV keyboard after $where: shown=$shown")
+        assertTrue("TV: the keyboard opened by itself over the filter sheet ($where)", !shown)
+    }
+
     /** Extension rows in the filter sheet, top to bottom (without "All"). */
     private fun sheetOrder(): List<String> = rule.onAllNodes(SemanticsMatcher("filter row") { n ->
         val t = n.config.getOrElseNullable(SemanticsProperties.TestTag) { null } ?: return@SemanticsMatcher false
@@ -132,6 +149,7 @@ class PinnedExtensionsDeviceTest {
     @Test fun pinMovesFirstShowsAChipFiltersAndPersists() {
         openYumix()
         tap("online_filter"); waitTag("online_filter_sheet")
+        assertNoKeyboardOnTv("opening the sheet")
         val before = sheetOrder()
         log("sheet before: $before")
         assertTrue("need two sources in the sheet: $before", before.size >= 2)

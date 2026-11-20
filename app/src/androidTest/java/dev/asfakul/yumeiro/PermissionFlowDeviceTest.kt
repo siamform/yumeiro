@@ -112,12 +112,35 @@ class PermissionFlowDeviceTest {
         pause(3_500) // let the message go before the next one
 
         // 2: deny again; Android stops asking.
-        FirstRun.tapVisible(rule, "perm_notifications")
-        val b2 = denySystemDialog()
-        val m2 = awaitMessage("blocked for Yumeiro")
-        log("PERM_CASE deny2 button=$b2 message='${m2?.text}' action=${m2?.actionLabel} inFront=${appInFront()}")
-        FirstRun.shot("perm_deny2")
-        assertTrue("deny 2: expected 'blocked… allow it in Android settings', got '${m2?.text}'", m2 != null && m2.actionLabel == "Open settings")
+        // FINAL-39 (runs 44662694767 and 44666813073, tv-api34): the TV permission controller never offers
+        // "Don't allow and don't ask again" and keeps asking after every "Don't allow" (logcat: three
+        // POST_NOTIFICATIONS results 6 = USER_DENIED, dialog shown each time, no result 7). The app then
+        // correctly says "Tap again" (Android will ask again), and the old check waited for "blocked".
+        // The app's message must match Android's own state: shouldShowRequestPermissionRationale true =
+        // "not allowed. Tap again", false = "blocked" with "Open settings". Up to three more denials are
+        // tried; where Android never blocks, step 3 cannot happen and is skipped with that reason.
+        var m2: AppMessages.Message? = null
+        var blocked = false
+        for (round in 2..5) {
+            FirstRun.tapVisible(rule, "perm_notifications")
+            val b2 = denySystemDialog()
+            var rationale = true
+            rule.runOnUiThread { rationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(rule.activity, Manifest.permission.POST_NOTIFICATIONS) }
+            m2 = awaitMessage("Notifications")
+            log("PERM_CASE deny$round button=$b2 rationale=$rationale message='${m2?.text}' action=${m2?.actionLabel} inFront=${appInFront()}")
+            FirstRun.shot("perm_deny$round")
+            if (rationale) {
+                assertTrue("deny $round: Android will ask again, expected 'not allowed. Tap again…', got '${m2?.text}'", m2 != null && "Tap again" in m2.text)
+                assertTrue("deny $round: the app left the front", appInFront())
+                pause(3_500)
+                continue
+            }
+            assertTrue("deny $round: expected 'blocked… allow it in Android settings', got '${m2?.text}'", m2 != null && "blocked for Yumeiro" in m2.text && m2.actionLabel == "Open settings")
+            blocked = true
+            break
+        }
+        log("PERM_CASE blocked=$blocked")
+        assumeTrue("Android on this device keeps asking after every 'Don't allow' (no don't-ask-again state), so the 'Open settings' step cannot occur", blocked)
 
         // 3: the action opens Android settings.
         FirstRun.tapVisible(rule, "app_message_action", 8_000)

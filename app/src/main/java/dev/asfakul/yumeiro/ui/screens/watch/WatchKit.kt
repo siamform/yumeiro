@@ -69,6 +69,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -625,10 +630,26 @@ fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag
         Spacer(Modifier.width(8.dp))
         Box(Modifier.weight(1f)) {
             if (query.isEmpty()) Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.4f), fontSize = 13.sp, maxLines = 1)
+            // FINAL-39 (run 44666813073, tv-api34): a sheet window on TV puts the first focus on its first
+            // focusable, this field, and focus alone opened the full-screen TV keyboard over the sheet the
+            // moment it opened (ImeTracker onShown with no key pressed); Back then only closed the keyboard.
+            // On TV the keyboard opens when OK / Enter is pressed on the field, as in the system search
+            // fields of Android TV; phones keep opening it on focus (a tap).
+            val tv = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+            val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
             BasicTextField(
                 value = query, onValueChange = onQuery, singleLine = true,
                 textStyle = TextStyle(color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 13.sp), cursorBrush = SolidColor(p.accent),
-                modifier = Modifier.fillMaxWidth().testTag(tag),
+                keyboardOptions = if (tv) KeyboardOptions(showKeyboardOnFocus = false) else KeyboardOptions.Default,
+                modifier = Modifier.fillMaxWidth()
+                    .then(
+                        if (tv) Modifier.onPreviewKeyEvent { e ->
+                            val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                            if (ok && e.type == KeyEventType.KeyUp) keyboard?.show()
+                            ok
+                        } else Modifier,
+                    )
+                    .testTag(tag),
             )
         }
     }
