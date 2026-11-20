@@ -48,8 +48,8 @@ quality & playback · Settings → Music → Music & sound.
 - Website videos can be downloaded on TV and in landscape.
 
 ### Fixes
-- Notices reach phones whose notification subscription failed (server side: works once the Yumeiro Cloud update is
-  deployed; it is not deployed yet).
+- Notices reach phones whose notification subscription failed (server side: live since the Yumeiro Cloud update of
+  2026-11-20).
 - Android TV: sheets with a search box (Yumix "Show videos from", extension and market filters) no longer open the
   full-screen keyboard by themselves; press OK on the box to type, one Back closes the sheet.
 - Android TV boxes without an AC-3 / E-AC-3 decoder play those audio tracks through FFmpeg.
@@ -73,7 +73,7 @@ quality & playback · Settings → Music → Music & sound.
 - Automatic DNS fallback (Settings → Network, off by default): when your network's DNS fails, Yumeiro tries
   1.1.1.1, then 9.9.9.9, one at a time (NBUG-6).
 - Airing alerts can reach phones that use Firebase push, not only UnifiedPush (F-AIR). The app side is in this build;
-  it works once the Yumeiro Cloud update is deployed, which has not happened yet. UnifiedPush alerts work as before.
+  the Yumeiro Cloud update with it went live on 2026-11-20. UnifiedPush alerts work as before.
 
 ### Not in this release
 - Nuvio and SkyStream runtimes, per-feature DNS (rejected for its cost), Telegram login and private channels.
@@ -100,7 +100,8 @@ quality & playback · Settings → Music → Music & sound.
   TV-FP-1), and the TV emulators can't turn their network off, so offline checks on TV ran on phones only (OMT-54).
 - A phone set to Layout = TV in portrait was not verified (FINAL-31).
 - NOTICE does not yet name the Google SDKs the app uses (LIC-1).
-- Built-in Last.fm sign-in and Firebase airing alerts wait for the Yumeiro Cloud update (SEC-LFM, F-AIR).
+- Built-in Last.fm sign-in stays off until the Last.fm shared secret is rotated and set on Yumeiro Cloud (SEC-LFM);
+  your own Last.fm key works.
 - Once, on the Android 7 TV emulator, memory rose from 61 to 479 MB during drama paging; two later runs peaked at
   94 and 95 MB with no freeze, and no heap dump was taken (FINAL-35, OMT-57).
 
