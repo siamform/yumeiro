@@ -346,6 +346,18 @@ object FirstRun {
             ok = runCatching { rule.waitUntil(timeoutMs) { runCatching { visible() >= 0 }.getOrDefault(false) }; true }.getOrDefault(false)
         }
         if (!ok) { shot("missing_$tag"); throw AssertionError("no visible '$tag' after ${timeoutMs}ms · ${onScreen(rule)}") }
+        // FINAL-19 (tv-api34 P1, runs 44613955120 and 44640840216): the tap is a real touch. When it lands
+        // while the list is still moving (the scroll above, or the page sliding in), the touch only stops
+        // the scroll, as it does for a finger, and the row never opens. Wait until the row stands still
+        // (same bounds in two reads 150 ms apart, at most 3 s) before tapping.
+        var lastBounds: androidx.compose.ui.geometry.Rect? = null
+        val settleUntil = android.os.SystemClock.uptimeMillis() + 3_000
+        while (android.os.SystemClock.uptimeMillis() < settleUntil) {
+            val b = runCatching { rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().getOrNull(visible())?.boundsInRoot }.getOrNull()
+            if (b != null && b == lastBounds) break
+            lastBounds = b
+            android.os.SystemClock.sleep(150)
+        }
         rule.onAllNodesWithTag(tag, true)[visible()].performClick()
         rule.waitForIdle()
     }
