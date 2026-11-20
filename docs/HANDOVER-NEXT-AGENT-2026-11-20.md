@@ -155,3 +155,8 @@ New owner feature requests 2026-11-21 (full spec in MAJOR-BUGS-AND-FEATURES-2.x.
 rows (title + language chip, "N sources • ecosystem • repo") in the market, Installed list and "Show videos from"
 sheet; F-22 Upcoming page filters (country, category, extension) with date-grouped headers (Today / Tomorrow / full
 date) and air time, episode, genre, country badges on cards.
+
+Owner report 2026-11-21: "HindiSubAnime didn't load: Nothing came back from this extension" (real extension, Retry
+does not help) is B-32 in BUGS-AND-FIXES-2.0.0.md with the investigation order.
+Owner rule 2026-11-21: when the owner says "add", write it into these repo docs and push at once (agents can run out of
+limit at any time).

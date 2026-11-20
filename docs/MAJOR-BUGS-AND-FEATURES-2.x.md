@@ -136,6 +136,7 @@ Now (2.0.1, stability only)
 
 Next (2.1, owner 2026-11-21: no release until all is fixed and tested)
 - B-29 TeraBox full video (done in code), B-30 DiskWala hand-off (done in code), B-31 built-in torrent engine.
+- B-32 extensions that load nothing ("Nothing came back from this extension", e.g. HindiSubAnime): find the real cause and say it.
 - F-21 extension metadata rows, F-22 Upcoming filters + date sections.
 - E1 Yumeiro master extension (replaces the removed starters, B-26).
 - E4 engine (scheduler, SWR, quarantine, throttling) and FREEZE-3 thread cap.
