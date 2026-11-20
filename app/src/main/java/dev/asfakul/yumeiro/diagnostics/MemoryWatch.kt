@@ -85,7 +85,37 @@ object MemoryWatch {
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
             dev.asfakul.yumeiro.text.RegexCache.clear()
         }
-        handler?.post { runCatching { sample("trim:$name") } } ?: add("trim:$name")
+        // FINAL-50: Android 17 sent the same TRIM_MEMORY_BACKGROUND about 15 times within one second
+        // to a cached process (owner crash report 2026-11-20 14:08). Each sample walks /proc/self/task
+        // and allocates, so the trail filled with copies and the heap rose with every one while the
+        // app was trying to look small. One sample per level per [TRIM_REPEAT_MS]; repeats are counted.
+        val repeats = trimGate.admit(name, SystemClock.elapsedRealtime()) ?: return
+        val label = if (repeats > 0) "trim:$name (+$repeats repeats)" else "trim:$name"
+        handler?.post { runCatching { sample(label) } } ?: add(label)
+    }
+
+    private const val TRIM_REPEAT_MS = 5_000L
+    internal val trimGate = TrimGate(TRIM_REPEAT_MS)
+
+    /**
+     * Pure. Lets the first trim callback of a level through, then drops the same level for
+     * [windowMs]. [admit] returns null for a dropped repeat, else how many repeats it dropped since
+     * the last admitted one of that level.
+     */
+    internal class TrimGate(private val windowMs: Long) {
+        private val lastAt = HashMap<String, Long>()
+        private val dropped = HashMap<String, Int>()
+
+        @Synchronized
+        fun admit(level: String, nowMs: Long): Int? {
+            val last = lastAt[level]
+            if (last != null && nowMs - last < windowMs) {
+                dropped[level] = (dropped[level] ?: 0) + 1
+                return null
+            }
+            lastAt[level] = nowMs
+            return dropped.remove(level) ?: 0
+        }
     }
 
     /** One line with the numbers that matter for an out-of-memory kill. Background thread only. */

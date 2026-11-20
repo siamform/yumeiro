@@ -151,7 +151,7 @@ every card the pager prefetched, which matches the Xiaomi ANR stack (`Pattern.co
 Pressure handling: `MemoryWatch` samples every 30 s (heap, native, free system memory, thread families),
 clears the image cache at ≥ 85 % heap, and reacts to `onTrimMemory` / `onLowMemory`. `CrashLog` keeps a
 512 KB reserve that is released when an OOM is thrown so the report can still be written. Background
-low-memory kills reported by `ApplicationExitInfo` are labelled "Closed to free memory", not "Out of memory".
+low-memory kills reported by `ApplicationExitInfo` are not written as crash reports (FINAL-50; 1.9.0 labelled them "Closed to free memory"); a low-memory kill while on screen, visible or in a foreground service is "Out of memory".
 
 ## 5. Device tiers
 

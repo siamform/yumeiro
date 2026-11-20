@@ -67,9 +67,22 @@ class KanaAndCachesTest {
     @Test fun backgroundMemoryKillIsNotReportedAsACrash() {
         assertEquals("Out of memory", CrashLog.exitKind(ApplicationExitInfo.REASON_LOW_MEMORY, ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND))
         assertEquals("Out of memory", CrashLog.exitKind(ApplicationExitInfo.REASON_LOW_MEMORY, ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE))
-        assertEquals("Closed to free memory", CrashLog.exitKind(ApplicationExitInfo.REASON_LOW_MEMORY, ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED))
+        assertEquals("Out of memory", CrashLog.exitKind(ApplicationExitInfo.REASON_LOW_MEMORY, ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE))
+        // FINAL-50: Android reclaiming a cached / background process is not a crash report at all.
+        assertNull(CrashLog.exitKind(ApplicationExitInfo.REASON_LOW_MEMORY, ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED))
+        assertNull(CrashLog.exitKind(ApplicationExitInfo.REASON_LOW_MEMORY, ActivityManager.RunningAppProcessInfo.IMPORTANCE_SERVICE))
         assertEquals("Freeze", CrashLog.exitKind(ApplicationExitInfo.REASON_ANR, 100))
         assertNull(CrashLog.exitKind(ApplicationExitInfo.REASON_USER_REQUESTED, 100))
+    }
+
+    @Test fun repeatedTrimCallbacksAreSampledOnce() {
+        // FINAL-50: ~15 TRIM_MEMORY_BACKGROUND callbacks within one second gave ~15 samples.
+        val gate = MemoryWatch.TrimGate(5_000L)
+        assertEquals(0, gate.admit("background", 1_000L))
+        repeat(14) { assertNull(gate.admit("background", 1_000L + it * 60L)) }
+        assertEquals(0, gate.admit("ui_hidden", 1_500L))
+        assertEquals(14, gate.admit("background", 6_100L))
+        assertEquals(0, gate.admit("background", 11_200L))
     }
 
     @Test fun threadFamilies() {

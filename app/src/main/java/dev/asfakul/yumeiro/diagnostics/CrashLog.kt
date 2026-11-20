@@ -113,14 +113,17 @@ object CrashLog {
 
     /**
      * Pure. Which exit records are problems worth a report. A low-memory kill while the app was
-     * cached or in the background is Android reclaiming memory, not a crash: it is still recorded
-     * (it shows how often it happens) but labelled so it isn't mistaken for one.
+     * on screen, playing or downloading (foreground service) or visible (picture-in-picture) is ours
+     * to fix: "Out of memory". FINAL-50: a low-memory kill of a cached or background process is
+     * Android reclaiming memory from an app nobody was using; it is not a crash and is no longer
+     * written as one (1.9.0 put it in the crash list and Downloads as "Closed to free memory", and
+     * the owner read it as the app crashing). It stays visible in the memory trail of the next report.
      */
     internal fun exitKind(reason: Int, importance: Int): String? = when (reason) {
         ApplicationExitInfo.REASON_ANR -> "Freeze"
         ApplicationExitInfo.REASON_CRASH_NATIVE -> "Native crash"
         ApplicationExitInfo.REASON_LOW_MEMORY ->
-            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE) "Out of memory" else "Closed to free memory"
+            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) "Out of memory" else null
         else -> null
     }
 
