@@ -184,6 +184,7 @@ fun OnlineHomeScreen(
     onOpenLibrary: () -> Unit = onOpenHistory,
     onOpenUpcoming: (() -> Unit)? = null,
 ) {
+    androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("yumix") } // FREEZE-4
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine by ExtensionManager.state.collectAsState()

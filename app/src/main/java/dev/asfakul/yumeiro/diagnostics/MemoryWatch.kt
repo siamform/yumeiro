@@ -130,7 +130,8 @@ object MemoryWatch {
             "sysFree=${mi.availMem / MB}M low=${mi.lowMemory}"
         }.orEmpty()
         val threads = threadGroups()
-        add("$why heap=${used}/${max}M native=${native}M $sys threads=$threads")
+        val draws = DrawCounter.drain().let { if (it.isEmpty()) "" else " $it" } // FREEZE-4
+        add("$why heap=${used}/${max}M native=${native}M $sys threads=$threads$draws")
         // A Java heap that is nearly full is the moment to let go of decoded images.
         if (max > 0 && used * 100 / max >= 85) {
             add("pressure: java heap ${used * 100 / max}% — clearing image memory cache")

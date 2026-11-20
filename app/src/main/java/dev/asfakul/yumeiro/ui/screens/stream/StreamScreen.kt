@@ -143,6 +143,7 @@ fun StreamScreen(
     onOpenWebsites: () -> Unit = {},
     onOpenTelegram: () -> Unit = {},
 ) {
+    androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("live") } // FREEZE-4
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current

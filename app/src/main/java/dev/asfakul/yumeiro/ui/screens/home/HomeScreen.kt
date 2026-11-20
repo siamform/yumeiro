@@ -267,6 +267,7 @@ fun HomeScreen(
     onPlayYouTube: (YtItem, List<YtItem>) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("home") } // FREEZE-4
     val context = LocalContext.current
     val p = LocalMtPalette.current
     val scope = rememberCoroutineScope()
