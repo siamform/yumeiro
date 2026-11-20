@@ -143,12 +143,18 @@ class MiniPlayerDeviceTest {
 
         // Tap opens Now Playing; closing it brings the bar back with the same track.
         // Run 44064339793: the centre of the whole bar is the Previous button; a person taps the artwork/title.
+        // FINAL-21b (run 44653514099, api36 P1): the tap to the page took ~14 s on a busy emulator, longer than
+        // the 12 s clip, so mini_t3 was rightly playing by then. Rewind first, and check what the step claims:
+        // the bar comes back with the track that was playing when the page opened.
+        rule.runOnUiThread { vm().seekTo(0L) }
         rule.onNodeWithTag("mini_player_swipe_area", true).performClick()
         rule.waitUntil(10_000) { has("now_playing_screen_root") }
-        log("MINI_CASE h_open nowPlaying=true current=${current()}")
-        rule.runOnUiThread { vm().closeNowPlaying() }
+        val atOpen = current()
+        log("MINI_CASE h_open nowPlaying=true current=$atOpen")
+        assertTrue("h_open: nothing playing", atOpen != null)
+        rule.runOnUiThread { vm().seekTo(0L); vm().closeNowPlaying() }
         rule.waitUntil(10_000) { has("mini_player_bar") && !has("now_playing_screen_root") }
-        assertEquals("mini_t2", current())
+        assertEquals("h_close: the bar shows another track", atOpen, current())
 
         // Close stops playback and hides the bar.
         rule.onNodeWithTag("mini_player_close_button", true).performClick()
