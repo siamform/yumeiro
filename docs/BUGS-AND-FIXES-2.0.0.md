@@ -8,13 +8,13 @@ Trust the repo and run IDs over this text; every "Verified" needs a run ID.
 
 | ID | Bug | Severity | Fix commit | Status |
 |---|---|---|---|---|
-| B-1 / FINAL-49 | v1.9.0 crashes when a video opens: `VerifyError: Verifier rejected class ok6` | Critical, every user | eef90a2 | Fixed in code; verify with the 2.0.0 review APK + upgrade check (see "Verification") |
-| B-2 / FINAL-50 | "Closed to free memory" crash report for a normal background kill | Medium (looks like a crash) | 574fdc8 | Fixed in code; unit test in CI |
-| B-3 / FINAL-50 | Same memory-trim event logged ~15 times a second | Low | 574fdc8 | Fixed in code; unit test in CI |
+| B-1 / FINAL-49 | v1.9.0 crashes when a video opens: `VerifyError: Verifier rejected class ok6` | Critical, every user | eef90a2 | Fixed. CI 44703556988 green (player 262 → 202 registers); phone upgrade check 44709239365 PASS verify=0 fatal=0; TV 44709249640 verify=0 fatal=0 |
+| B-2 / FINAL-50 | "Closed to free memory" crash report for a normal background kill | Medium (looks like a crash) | 574fdc8 | Fixed; unit tests green in CI 44703556988 |
+| B-3 / FINAL-50 | Same memory-trim event logged ~15 times a second | Low | 574fdc8 | Fixed; unit tests green in CI 44703556988 |
 | B-4 | Dependabot PR #36 failing CI 6/7 (moves Jackson past the owner's 2.18.11 pin) | Low | 2026-11-20 config commit | Closed PR #36; Dependabot ignores Jackson 2.19+ |
 | B-5 | README "What's new" images badly placed (two sizes, old screenshots) | Low | README commit | Fixed: one 3-column grid of the real social images |
 | B-6 | README / docs changes were on r15-stability, not on main | Low | push with 2.0.0 | Fixed when 2.0.0 is pushed to main |
-| B-7 | Upgrade check from v1.8.1 FAIL (run 44700731576): fatal=1, verify=3, resumed=0 | Critical (same as B-1) | eef90a2 | Re-run with the 2.0.0 review APK |
+| B-7 | Upgrade check from v1.8.1 FAIL (run 44700731576): fatal=1, verify=3, resumed=0 | Critical (same as B-1) | eef90a2 | Phone PASS 44709239365. Deferred by owner: TV re-run with the fixed script, 1.9.0→2.0.0 upgrade check |
 | B-8 | Thread spike: 171 threads 30 s after start (mali 30, Dispatcher 24, OkHttp 20) | Watch | none | Open: measure on a real phone in 2.0.x |
 | B-9 | Built-in Last.fm sign-in off; shared secret must be rotated before it is enabled | Owner action | none | Open (owner): rotate, then `wrangler secret put LASTFM_SHARED_SECRET` |
 
