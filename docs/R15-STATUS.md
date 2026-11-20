@@ -1,6 +1,6 @@
 ## Resume here (2026-11-20, after v2.0.0)
 
-Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md. Open P0: FREEZE-1 fix d072e4d8 on r15-stability, pass-after CI 44764168235 pending, not released. Must-do list: docs/MAJOR-BUGS-AND-FEATURES-2.x.md.
+Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md. Owner: fix everything, then release 2.1.0. Fixed on r15-stability for 2.1.0: FREEZE-1, PROF-1, T-1, FREEZE-2, F-18, F-02 split, Live TV country filter, NF-2b quality picker, PIN-1 (rows B-10..B-18 in docs/BUGS-AND-FIXES-2.0.0.md). Pending CI: 44771583525 (+ fail-before 44771329328, 44771332825, 44771577361), then one CI on the head for B-14..B-18. Open: B-3 (needs a real link), PIN-2, F-19/F-20 security questions, discreet icon (owner decision), E3 ABI splits, FREEZE-4, GATE-1.
 
 # R15 status: every item in the master prompt, with its evidence
 
