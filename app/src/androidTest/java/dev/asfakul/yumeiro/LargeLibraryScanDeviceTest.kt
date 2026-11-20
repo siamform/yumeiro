@@ -51,6 +51,9 @@ class LargeLibraryScanDeviceTest {
                     put(MediaStore.Audio.Media.MIME_TYPE, "audio/mp4")
                     put(MediaStore.Audio.Media.IS_MUSIC, 1)
                     if (Build.VERSION.SDK_INT >= 29) { put(MediaStore.Audio.Media.RELATIVE_PATH, "Music/$FOLDER"); put(MediaStore.Audio.Media.IS_PENDING, 1) }
+                    // FINAL-24 (run 44659196962, tv-api24): before Android 10 MediaStore needs the file path (DATA),
+                    // else its insert throws NullPointerException in MediaProvider.
+                    else put(MediaStore.Audio.Media.DATA, legacyMusicFile("ll_$i.m4a"))
                 }
                 val uri = ctx.contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values) ?: break
                 ctx.contentResolver.openOutputStream(uri)?.use { it.write(head) }
@@ -114,5 +117,12 @@ class LargeLibraryScanDeviceTest {
     private companion object {
         const val N = 5000
         const val FOLDER = "YuLargeLibrary"
+    }
+
+    /** Android 7–9: the path MediaStore indexes for a new song in Music/FOLDER (the folder is made first). */
+    private fun legacyMusicFile(name: String): String {
+        val dir = java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC), FOLDER)
+        dir.mkdirs()
+        return java.io.File(dir, name).absolutePath
     }
 }
