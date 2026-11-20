@@ -1,6 +1,6 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 05:05 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 04:32 UTC; no PR / merge / deploy without the owner's "go")
 
 - **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
 - **Heads:** code 753b9dc (app code = df4ba9d's; FINAL-42b test fix, 9ecf1bf reverted). CI 44674984195 on 753b9dc
