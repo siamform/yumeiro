@@ -56,6 +56,10 @@ class PlaybackSessionDeviceTest {
     private fun closePlayer() = rule.runOnUiThread { ViewModelProvider(rule.activity)[MainViewModel::class.java].closeVideoPlayer() }
 
     @Test fun oneplayerForEveryVideoAndReleaseAfterClose() {
+        // FINAL-23b (runs 44659067541, 44661962064): P1 starts each class from cleared app data, so the app
+        // asks for media and notifications at launch and Android's dialog covers MainActivity ("No compose
+        // hierarchies found"). FirstRun.toTabs grants them, closes the dialog and gets past first run.
+        FirstRun.toTabs(rule)
         rule.waitUntil(30_000) { has("nav_tab_videos") || has("nav_tab_home") }
         val c0 = PlaybackSession.created; val r0 = PlaybackSession.reused
         note("start")

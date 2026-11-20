@@ -63,7 +63,10 @@ class NotifySettingsEffectDeviceTest {
     private fun resetPacer() { ctx.getSharedPreferences("notify_pacer", Context.MODE_PRIVATE).edit().clear().commit() }
 
     private fun active(n: Int): android.service.notification.StatusBarNotification? = nm.activeNotifications.firstOrNull { it.id == n && it.packageName == ctx.packageName }
-    private fun waitActive(n: Int, ms: Long = 5_000): android.service.notification.StatusBarNotification? {
+    // FINAL-29 (run 44661962064, api33-lowram): the class ran 16 s after BOOT_COMPLETED while the system was
+    // still doing first-boot work (RoleService, onetimeinitializer, SetupWizard; "Notification sound delayed by
+    // 1310msecs"); the posted notification was not listed within 5 s. Wait up to 15 s; the check is the same.
+    private fun waitActive(n: Int, ms: Long = 15_000): android.service.notification.StatusBarNotification? {
         val end = System.currentTimeMillis() + ms
         while (System.currentTimeMillis() < end) { active(n)?.let { return it }; Thread.sleep(200) }
         return null
