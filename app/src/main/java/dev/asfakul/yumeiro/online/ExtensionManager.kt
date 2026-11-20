@@ -271,6 +271,30 @@ object ExtensionManager {
 
     fun provider(name: String): MainAPI? = providers().firstOrNull { it.name == name }
 
+    /**
+     * FREEZE-1: changes whenever [providers] can change: engine state, bridged sources, loaded CloudStream
+     * providers or plugins. Engine and bridge states are compared by identity (every update is a new copy).
+     */
+    fun providerStamp(): Any = ProviderStamp(
+        _state.value,
+        dev.asfakul.yumeiro.sources.SourceHub.state.value,
+        runCatching { APIHolder.allProviders.size }.getOrDefault(-1),
+        synchronized(plugins) { plugins.size },
+    )
+
+    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int) {
+        override fun equals(other: Any?): Boolean = other is ProviderStamp && other.engine === engine &&
+            other.hub === hub && other.apis == apis && other.plugins == plugins
+        override fun hashCode(): Int = System.identityHashCode(engine) * 31 + apis * 7 + plugins
+    }
+
+    /** FREEZE-1: [extensionOf] for many providers with one pass over the plugins. */
+    fun extensionLookup(): (MainAPI) -> InstalledExtension? {
+        val byFile = synchronized(plugins) { plugins.entries.mapNotNull { e -> e.value.filename?.let { it to e.key } }.toMap() }
+        val byKey = _state.value.installed.associateBy { it.key }
+        return { api -> byFile[api.sourcePlugin]?.let { byKey[it] } }
+    }
+
     /** Extension that registered [api]. */
     fun extensionOf(api: MainAPI): InstalledExtension? {
         val key = synchronized(plugins) { plugins.entries.firstOrNull { it.value.filename == api.sourcePlugin }?.key } ?: return null

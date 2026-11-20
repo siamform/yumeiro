@@ -11,12 +11,13 @@ import com.lagradost.cloudstream3.TvType
 object AdultContent {
     fun isAdultType(type: String?): Boolean = type != null && (type.equals("NSFW", true) || type == "18+")
 
-    /** An extension that only serves 18+ content (CloudStream marks these with TvType.NSFW). */
-    fun isAdultApi(api: String): Boolean = runCatching {
-        val p = ExtensionManager.provider(api) ?: return false
-        val types = p.supportedTypes
-        (types.isNotEmpty() && types.all { it == TvType.NSFW }) || ExtensionManager.extensionOf(p)?.let { ext -> ext.tvTypes.any { it.equals("NSFW", true) } } == true
-    }.getOrDefault(false)
+    /**
+     * An extension that only serves 18+ content (CloudStream marks these with TvType.NSFW).
+     * FREEZE-1: answered from [loadedAdultApis] (one pass per extension change). It used to rebuild the whole
+     * provider list per call, and screens call it once per provider while composing, so Home spun the main
+     * thread for minutes with many extensions (2.0.0 freeze report, Input dispatching timed out).
+     */
+    fun isAdultApi(api: String): Boolean = loadedAdultApis()[api] == true
 
     /**
      * NB11-OB1 (ADR-035): should a title CloudStream marks NSFW be dropped? 18+ off drops it everywhere; 18+ on but
@@ -32,13 +33,18 @@ object AdultContent {
      * NBUG-11 (ADR-023): every loaded extension → is it 18+-only. One pass over the loaded list, so a
      * screen does not rebuild the provider list once per title. Missing name = not loaded.
      */
-    fun loadedAdultApis(): Map<String, Boolean> = runCatching {
-        ExtensionManager.providers().associate { p ->
-            val types = p.supportedTypes
-            p.name to ((types.isNotEmpty() && types.all { it == TvType.NSFW }) ||
-                ExtensionManager.extensionOf(p)?.let { ext -> ext.tvTypes.any { it.equals("NSFW", true) } } == true)
-        }
-    }.getOrDefault(emptyMap())
+    fun loadedAdultApis(): Map<String, Boolean> = memo.get(ExtensionManager.providerStamp()) {
+        runCatching {
+            val extensionOf = ExtensionManager.extensionLookup()
+            ExtensionManager.providers().associate { p ->
+                val types = p.supportedTypes
+                p.name to ((types.isNotEmpty() && types.all { it == TvType.NSFW }) ||
+                    extensionOf(p)?.let { ext -> ext.tvTypes.any { it.equals("NSFW", true) } } == true)
+            }
+        }.getOrDefault(emptyMap())
+    }
+
+    private val memo = StampMemo<Map<String, Boolean>>()
 
     /**
      * NBUG-11 (ADR-023): what is known about an online title without a stored 18+ mark: its extension

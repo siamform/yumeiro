@@ -322,17 +322,20 @@ fun HomeScreen(
     // NBUG-11 (ADR-023): the 18+ check depends on which extensions are loaded, so Most played is
     // worked out again when they change (it ran once, before they had loaded, and let 18+ through).
     val engine by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
+    // FREEZE-1: the 18+ map is worked out off the main thread; until it is known, unknown plays stay out.
+    var adultLoaded by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     LaunchedEffect(engine.ready, engine.generation) {
         if (engine.ready) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val loaded = dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis()
             PlayCounts.learnAdult(context) { e -> dev.asfakul.yumeiro.online.AdultContent.knownAdult(e.api, e.url, loaded) }
+            adultLoaded = loaded
         }
     }
-    val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate, engine.ready, engine.generation) {
+    val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate, adultLoaded) {
         val byId = recentVideos.associateBy { it.id }
         val songs = mostPlayed.take(12).map { Played.Song(it) }
         val hide = !adultOn || adultPrivate
-        val loaded = if (hide && videoPlays.any { it.kind == PlayCounts.Kind.ONLINE }) dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis() else emptyMap()
+        val loaded = adultLoaded
         val videos = videoPlays.asSequence()
             .filterNot { it.kind == PlayCounts.Kind.ONLINE && hide && dev.asfakul.yumeiro.online.AdultContent.hidePlay(it.adult, it.api, it.url, loaded) }
             .mapNotNull { e -> if (e.kind == PlayCounts.Kind.DEVICE) byId[e.id]?.let { Played.Video(e, it) } else Played.Video(e) }
