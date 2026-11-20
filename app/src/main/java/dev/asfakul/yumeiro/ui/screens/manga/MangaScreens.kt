@@ -581,7 +581,7 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
         val p = SourceHub.manga(providerId) ?: return@LaunchedEffect
         chapters = try { p.chapters(mangaUrl) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
     }
-    val (prev, next) = remember(chapters, cur.first) { MangaChapterNav.neighbours(chapters, cur.first) }
+    val (prev, next) = remember(chapters, cur.first) { dev.asfakul.yumeiro.sources.manga.MangaChapterNav.neighbours(chapters, cur.first) }
     androidx.compose.runtime.key(cur.first) {
         MangaReaderChapter(
             providerId, mangaUrl, mangaTitle, cur.first, cur.second, onBack,
