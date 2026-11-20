@@ -127,11 +127,7 @@ fun VideoGestureOverlay(
                         var released = false
                         while (true) {
                             val event = awaitPointerEvent()
-                            val pointer = event.changes.firstOrNull { it.id == down.id }
-                        if (dev.asfakul.yumeiro.BuildConfig.DEBUG && (pointer == null || !pointer.pressed || pointer.isConsumed)) {
-                            android.util.Log.d("YuGesture", "event ${event.type} pointer=${pointer?.id} pressed=${pointer?.pressed} consumed=${pointer?.isConsumed} held=$held drag=$isDragging")
-                        }
-                        if (pointer == null) break
+                            val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!pointer.pressed) {
                                 released = true
                                 break
@@ -198,7 +194,11 @@ fun VideoGestureOverlay(
                             currentOnPinchEnd()
                             return@awaitEachGesture
                         }
-                        val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val pointer = event.changes.firstOrNull { it.id == down.id }
+                        if (dev.asfakul.yumeiro.BuildConfig.DEBUG && (pointer == null || !pointer.pressed || pointer.isConsumed)) {
+                            android.util.Log.d("YuGesture", "event ${event.type} pointer=${pointer?.id} pressed=${pointer?.pressed} consumed=${pointer?.isConsumed} held=$held drag=$isDragging")
+                        }
+                        if (pointer == null) break
 
                         if (!pointer.pressed) {
                             // Finger lifted!
