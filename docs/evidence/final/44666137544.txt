@@ -1,0 +1,7 @@
+44666137544 tv-api24 DownloadKillDeviceTest P1 PASS tests=2 skipped=0 sha=da98754
+44666137544 tv-api24 DownloadQualityDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
+44666137544 tv-api24 DownloadResumeDeviceTest P1 PASS tests=4 skipped=0 sha=da98754
+44666137544 tv-api24 DownloadThroughputDeviceTest P1 PASS tests=5 skipped=0 sha=da98754
+44666137544 tv-api24 DownloadsScreenDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
+44666137544 tv-api24 DramaPlaybackDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
+44666137544 tv-api24 DubCountProbeDeviceTest P1 PASS tests=1 skipped=0 sha=da98754

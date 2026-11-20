@@ -1,0 +1,3 @@
+44668053699 api36 FinalCoverageDeviceTest P1 PASS tests=11 skipped=0 sha=ffbfb90
+44668053699 api36 LocalPlayerDeviceTest P1 PASS tests=11 skipped=0 sha=ffbfb90
+44668053699 api36 MangaOfflineDeviceTest P1 PASS tests=2 skipped=0 sha=ffbfb90

@@ -16,6 +16,9 @@ Telegram and share-link playback, DNS fallback, own proxy). Phone and TV APKs co
 The user-facing list is CHANGELOG.md, section "v1.9.0: yours, and fast" (profiles and privacy, look and player,
 faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes in the app itself (not only tests):
 
+- FINAL-39 / 39b (ADR-051): on Android TV, opening a sheet with a search box (Yumix "Show videos from",
+  extension and market filters) no longer pops the full-screen keyboard by itself; the keyboard opens when OK is
+  pressed on the box, and one Back closes the sheet (tv-api34 and tv-api24, fail-before 44666813073 / 44669263390).
 - FINAL-30 (ADR-050): Android TV boxes without an AC-3 / E-AC-3 decoder play those audio tracks through FFmpeg
   instead of failing with DECODER_INIT_FAILED (tv-api24, pass-after 44664839512).
 - FINAL-17 / FINAL-18 / FINAL-20 / FINAL-13 / FINAL-16 (earlier in the window): full-disk WorkManager no longer
@@ -30,7 +33,7 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
   docs/evidence/final/<run>.txt; lane log: docs/evidence/final/lanes.log.
 - Unit tests, lint and the build: `ci.yml` on the review-APK commit (see Review APK).
 - Server: docs/SERVER-TEST-FINAL.md. Code audit (checks only): docs/CODE-AUDIT-FINAL.md.
-- Findings of the final test and their fixes: docs/HANDOVER-FINAL-LANES.md (FINAL-16c … FINAL-34), each with a
+- Findings of the final test and their fixes: docs/HANDOVER-FINAL-LANES.md (FINAL-16c … FINAL-41), each with a
   fail-before run and a pass-after run where one finished.
 
 ## What is queued
@@ -52,6 +55,18 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
 - Phone with Layout = TV in portrait is not verified (FINAL-31: the BUG-5 TV checks need a landscape TV window).
 - LIC-1: NOTICE does not yet name the Google SDKs linked into the APK; owner's wording needed.
 - SEC-LFM and F-AIR need the Worker deploy that comes with "go"; until then built-in Last.fm sign-in waits.
+- FINAL-35 (open, not reproduced): once, on tv-api24 (run 44663218206, StabilityStress pagerFocusAndScrollStress), the
+  Java heap grew from 61 to 479 of 512 MB in about 90 s while the drama source's server (onshort.net) answered 503
+  during feed paging; Compose never went idle and the next broadcast hit an ANR. The same class passed on the same
+  app code in 44666637483 (peak heap 94 MB, no ANR) and earlier TV runs; a further tv-api24 run on the final head is
+  listed in docs/HANDOVER-FINAL-LANES.md. No heap dump was captured, so the cause is not known. Owner check: OMT-57.
+- Android TV's permission dialog keeps asking after every "Don't allow" (no "don't ask again"); the app then says
+  "Tap again", which is right there; the "blocked → Open settings" path is verified on phones only (FINAL-39).
+- CI: Gradle's configuration cache twice failed to store `processNavigationResources` state in "Build APKs" (runs
+  44667182892, 44668053699; no test ran, both re-run). An infrastructure fault, not an app or test result.
+- The Timestamp lines in the bodies of 099689d, a5bc4da and d91f052 are 10–25 min ahead of the real commit time
+  (the commit dates are right). b84b934's body says "disk-full IO", which is not what that commit fixed.
+
 ## Security checks (§9)
 
 | Check | How | Result | Date |

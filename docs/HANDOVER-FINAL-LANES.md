@@ -65,8 +65,15 @@ file: `git log`, `docs/evidence/final/*.txt` and `docs/MASTER-CHECKLIST-FINAL.md
 | FINAL-32 | TV: Continue row below Spaces not composed (scroll to it); rail Home tag; QualityList greyed (unplayable) rows on tv-api24 | 87ea3a2 | 44662863280, 44662890080 | tv24 14 / tv34 14 re-runs |
 | FINAL-33 | YmPagingNetwork network drop impossible with TV Ethernet (written reason, as NetworkState) | adb0526 | 44664324623, 44664431589 | — (skip) |
 | FINAL-34 | TV tab taps hit off-screen phone-bar twins; SurfaceMode start race; Messages pill race; TV full-screen keyboard over a form | 1a22844 | 44660329194, 44662525331, 44663118888, 44663218206 | tv24 09/15/16, phone 16 re-runs |
-| FINAL-35 (open) | StabilityStress on tv-api24: Java heap 61 → 479 MB in 90 s after "tab back: page 2 → Home", Compose never idle, ANR at the next broadcast | under investigation; tv24 16 re-run for reproducibility | 44663218206 | — |
+| FINAL-35 (open, not reproduced) | StabilityStress on tv-api24: Java heap 61 → 479 MB in 90 s after "tab back: page 2 → Home", Compose never idle, ANR at the next broadcast; in the same window onshort.net answered 503 to drama feed paging (dramawave page 2, netshort) | no root cause (no heap dump); 44666637483 on 1a22844 passed 3/3, peak heap 94 MB, 0 ANR; second re-run 44670841174 on d91f052; Known imperfect + OMT-57 | 44663218206 | 44666637483 |
 | YT-WALL | YtChannelUi (tv-api24) watch page: YouTube "Sign in to confirm you're not a bot" (SignInConfirmNotBotException) on the CI network | Blocked: external (OMT-29) | 44664527460 | — |
+| FINAL-36 | FinalCoverage a_h9 expected EXPLORED after Back; the app records SKIPPED (EXPLORED only on finishing the tour) | 2d19cc1 | 44665104133, 44665616397 | phone 19 re-run |
+| FINAL-37 | RtlLayout on TV: the rail is mirrored to the right half in RTL | ffbfb90 | 44663558900 | tv34 15 re-run |
+| FINAL-38 | RetryActions e: the Kitsu card is below the fold of the landscape TV window; the unscrolled click hit nothing | aeb37d5 | 44666731015, 44667327410 | tv24 15 / tv34 15 re-runs |
+| FINAL-39 / 39b | App (TV): the filter sheet's search field took first focus and focus alone opened the full-screen keyboard; Back closed only the keyboard. 39 (099689d) set showKeyboardOnFocus on the legacy field, which ignores it; 39b (d91f052) uses the TextFieldState field. ADR-051. Also PermissionFlow on TV: Android keeps asking after every deny, the app's "Tap again" is right; the test follows shouldShowRequestPermissionRationale | 099689d, d91f052 | 44662694767, 44666813073 | tv34 12 / tv24 12 re-runs |
+| FINAL-40 | PlaybackSession waited for phone-bar tags on TV | a5bc4da | 44662694767, 44666813073, 44667417908 | tv34 12 / tv24 12 re-runs |
+| FINAL-41 | NotifySettingsEffect: the app's own DiscoveryWorker took the notification pacer's slot during the case (pacer right); the class now cancels that work first | a5bc4da | 44666813073 | tv34 12 re-run |
+| INFRA | tv34 19 run 44667182892: Gradle configuration-cache write error in "Build APKs" after 22 s (no test ran); re-dispatched as 44668014172 (pass) | — | — | 44668014172 |
 | TV-FP-1 | `FeedPositionDeviceTest` live/youtube on tv-api24 taps the phone tab (known test fault, same on old code 44438504785) | test rewrite queued (stability-v2) | 44658520448 | — |
 
 ## What is left for the release (in order)

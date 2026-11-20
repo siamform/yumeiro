@@ -1,0 +1,7 @@
+44666223828 tv-api24 TrackerSignInDeviceTest P1 PASS tests=2 skipped=0 sha=da98754
+44666223828 tv-api24 TvBug5ReproDeviceTest P1 PASS tests=5 skipped=0 sha=da98754
+44666223828 tv-api24 UpdateMainThreadDeviceTest P1 SKIPPED tests=1 skipped=1 sha=da98754
+44666223828 tv-api24 UpscaleFreezeDeviceTest P1 PASS tests=3 skipped=0 sha=da98754
+44666223828 tv-api24 WidgetUpdatesDeviceTest P1 PASS tests=5 skipped=0 sha=da98754
+44666223828 tv-api24 YmPagingNetworkDeviceTest P1 SKIPPED tests=1 skipped=1 sha=da98754
+44666223828 tv-api24 YtChannelProbeDeviceTest P1 PASS tests=1 skipped=0 sha=da98754

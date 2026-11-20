@@ -98,6 +98,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
 | OMT-56 | G9-CQ-1: "Last backup" time survives a restore that restarts the app | Owner/community test (pending) |
+| OMT-57 | FINAL-35: memory on an old Android TV while scrolling drama feeds for 10 minutes | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -797,6 +798,14 @@ the app version and your device. Don't send passwords or account details.
 - **Steps:** Settings → Backup → back up now, then restore that backup (the app restarts on its own). Open Settings → Backup again.
   **Pass:** "Last backup" shows the time of the backup you just made, not an older time or "never".
   Why you: the restart kills the process at a moment a test cannot reproduce the same way every time. **Status:** Owner/community test (pending)
+
+### OMT-57 — Memory on an old Android TV while scrolling drama feeds (FINAL-35)
+
+- **Steps:** On an Android 7–9 TV box, add the drama source, open Drama and switch tabs and pages with the remote for
+  about 10 minutes (go to page 2 and further, back to the rail, other tabs). **Pass:** the app stays responsive, no
+  "app isn't responding" dialog, no crash. If it slows down or freezes, send the "Send logs" report from Settings
+  → About right after. Why you: seen once on the tv-api24 emulator while the source's server answered 503, not
+  reproduced since. **Status:** Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 
