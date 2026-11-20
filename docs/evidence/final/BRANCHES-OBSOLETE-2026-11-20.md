@@ -52,7 +52,7 @@ Each holds a regression test without its fix (or a one-off compile/check), pushe
 | `tmp/final8-fail-before` | ahead 1 | 2026-11-19 |
 | `tmp/sec-lfm-fail-before` | ahead 4 | 2026-11-19 |
 
-`tmp/final42-fail-before` becomes obsolete once its CI run is recorded in the FINAL-42 row.
+`tmp/final42-fail-before` is obsolete: its CI run 44680944481 (fail-before) is recorded in the FINAL-42 row.
 
 ## Obsolete: fully contained in r15-stability (2)
 

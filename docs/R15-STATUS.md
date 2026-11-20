@@ -1,6 +1,25 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 04:32 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 06:07 UTC; no PR / merge / deploy without the owner's "go")
+
+- **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
+  Handover steps 1-7 done; step 8 (one owner message) sent with this push; then wait for the owner.
+- **Review APK:** ci.yml 44675081410 on 8cef8a6 (app code = df4ba9d): unit, lint, gitleaks, review APK all
+  success. Artifact `yumeiro-review-apk`: yumeiro-1.9.0-8cef8a6-review.apk d890e8ab…f877,
+  yumeiro-tv-1.9.0-8cef8a6-review.apk df3ec66c…2204. Later commits change docs, images, device tests and the
+  upgrade-check harness only.
+- **Proven this hour:** upgrade over v1.8.1 with the exact review APKs: phone 44683540047 PASS; TV 44684601986
+  installs, plays, 0 verifier rejections, data compare Blocked (no root, OMT-61). FINAL-46 found and recorded
+  (44681019595: a build without four build-value groups had a player ART rejects; harness fixed). FINAL-42
+  fail-before 44680944481. Scans: ClamAV 0 infected, APK byte scan clean, cert = release-signing-cert.sha256.
+- **Not done on purpose:** tv24 re-run of RetryActions/Messages/FloatingMessage (cells already Pass; FINAL-42
+  pass-after shown on tv34 and phones). Nothing merged, published, deployed; website patch not pushed; no branch
+  deleted.
+- **Next (only after the owner's go):** merge, release.yml (then the upgrade check on the release APK, FINAL-46b),
+  Worker deploy + Last.fm secret rotation, push the website patch, delete the obsolete branches.
+
+### Previous resume note — superseded (04:32 UTC 2026-11-20)
+
 
 - **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
 - **Heads:** code 753b9dc (app code = df4ba9d's; FINAL-42b test fix, 9ecf1bf reverted). CI 44674984195 on 753b9dc
