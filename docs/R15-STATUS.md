@@ -1,6 +1,23 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 04:30 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 05:05 UTC; no PR / merge / deploy without the owner's "go")
+
+- **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
+- **Heads:** code 753b9dc (app code = df4ba9d's; FINAL-42b test fix, 9ecf1bf reverted). CI 44674984195 on 753b9dc
+  running; 44672545816 (4d125b3) failed only on the FINAL-42 test's thread-name check; 44674855781 cancelled.
+- **Device runs:** phone 44673996183 (dcc5622: chunk 17 + RetryActions, Messages, FloatingMessage, PermissionFlow,
+  Profiles, LocalPlayer, PinnedExtensions, ReleaseShots); tv34 44674391443 (b676c66: MiniPlayer, MusicAccess =
+  FINAL-44 pass-after, Profiles, PinnedExtensions, ReleaseShots for the TV images).
+- **Done this hour:** tv34 re-run 44672818277: RetryActions 5/5 (FINAL-42 pass-after on tv34), FINAL-43 closed as
+  Blocked (message shown after every deny; Open settings cannot occur on TV, OMT-58). FINAL-44 (test faults on TV)
+  fixed in 0687e72. README / CHANGELOG / OMT / USER-TEST-PROGRAM / website patch / branch list updated.
+- **Open:** UpscaleFreeze api33-lowram (44665076936; re-run in 44673996183), tv24 [RetryActions, Messages,
+  FloatingMessage], FINAL-42 unit fail-before on tmp/final42-fail-before (after head CI).
+- **Next three:** 1. collect both device runs, regenerate the checklist; 2. `ci.yml -f review_apk=true` on the
+  final code commit, then INTEGRITY / secret / ClamAV scans; 3. images, RELEASE-SUMMARY, owner message.
+
+### Previous resume note — superseded (04:30 UTC 2026-11-20)
+
 
 - **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
 - **Heads:** code df4ba9d (FINAL-42 fix) + 4d125b3 (FINAL-43 diagnostics); CI 44672545816 on 4d125b3 running.
