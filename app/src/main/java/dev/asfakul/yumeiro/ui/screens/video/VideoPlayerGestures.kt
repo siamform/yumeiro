@@ -147,7 +147,17 @@ fun VideoGestureOverlay(
                     while (true) {
                         // Before the first move, wake up at the long-press time to recognise a hold.
                         val waitMs = holdAt - (currentEventUptime ?: down.uptimeMillis)
-                        val event = if (!isDragging && !held && (currentOnHoldSwipeDown != null || currentHoldEnabled) && waitMs > 0) {
+                        val holdArmed = !isDragging && !held && (currentOnHoldSwipeDown != null || currentHoldEnabled)
+                        // FINAL-16: a finger that stays down sends MOVE events without leaving the touch slop.
+                        // When one of them arrived at or after the long-press time, the timeout never fired and
+                        // the hold (and P-2X) was never recognised (LocalPlayerDeviceTest.k_, run 44640073858:
+                        // held speed 1.0 on api36 and api33-lowram). Past that time with no drag, it is a hold.
+                        if (holdArmed && waitMs <= 0) {
+                            held = true
+                            pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
+                            currentOnHoldStart()
+                        }
+                        val event = if (holdArmed && !held && waitMs > 0) {
                             withTimeoutOrNull(waitMs) { awaitPointerEvent() } ?: run {
                                 held = true
                                 pendingSingleTapJob?.cancel(); pendingSingleTapJob = null
