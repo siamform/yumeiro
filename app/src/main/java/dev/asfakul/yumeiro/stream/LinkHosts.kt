@@ -74,6 +74,26 @@ object LinkHosts {
         return u.startsWith("http", ignoreCase = true) && u.substringBefore('?').substringBefore('#').endsWith(".torrent", ignoreCase = true)
     }
 
+    /**
+     * T-1 (owner list: "raw torrent info-hash → magnet"): a bare BitTorrent v1 info-hash (40 hex or 32 base32
+     * characters, optionally "urn:btih:" in front) as a magnet link, with an optional display name and trackers;
+     * null for anything else (a URL, a magnet that is already one, plain text).
+     */
+    fun magnetFromHash(text: String, name: String? = null, trackers: List<String> = emptyList()): String? {
+        val raw = text.trim().let { if (it.startsWith("urn:btih:", ignoreCase = true)) it.substring(9) else it }
+        if (!RX_BTIH_HEX.matches(raw) && !RX_BTIH_B32.matches(raw)) return null
+        val hash = if (raw.length == 40) raw.lowercase() else raw.uppercase()
+        val enc = { v: String -> java.net.URLEncoder.encode(v, "UTF-8") }
+        return buildString {
+            append("magnet:?xt=urn:btih:").append(hash)
+            name?.trim()?.takeIf { it.isNotEmpty() }?.let { append("&dn=").append(enc(it.take(200))) }
+            trackers.map { it.trim() }.filter { it.isNotEmpty() }.distinct().forEach { append("&tr=").append(enc(it)) }
+        }
+    }
+
+    private val RX_BTIH_HEX = Regex("[0-9a-fA-F]{40}")
+    private val RX_BTIH_B32 = Regex("[A-Za-z2-7]{32}")
+
     /** The file id of a Google Drive share link, or null. */
     fun googleDriveId(url: String): String? {
         val host = hostOf(url) ?: return null

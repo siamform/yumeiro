@@ -282,7 +282,8 @@ fun StreamScreen(
     }
 
     fun play() {
-        val u = url.trim()
+        // T-1: a pasted info-hash plays as the magnet link it stands for.
+        val u = dev.asfakul.yumeiro.stream.LinkHosts.magnetFromHash(url) ?: url.trim()
         error = null
         if (!RX_STREAMSCREEN_1.matches(u) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
             error = "Enter a valid http(s)://, rtsp:// or magnet: link"

@@ -133,11 +133,18 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
             }
             for ((a, streams) in streamJobs.awaitAll()) {
                 for (s in streams) {
-                    val url = s.str("url") ?: continue // torrents (infoHash) and YouTube ids are skipped
+                    // T-1: torrent add-ons (Torrentio and the like) send only infoHash; it becomes a magnet link with
+                    // the add-on's "tracker:" sources, so it can be downloaded through TorrServer like other torrents.
+                    // YouTube ids are still skipped.
+                    val url = s.str("url") ?: s.str("infoHash")?.let { h ->
+                        val trackers = (s["sources"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content }
+                            .filter { it.startsWith("tracker:") }.map { it.removePrefix("tracker:") }
+                        dev.asfakul.yumeiro.stream.LinkHosts.magnetFromHash(h, s.str("title")?.substringBefore('\n'), trackers)
+                    } ?: continue
                     val label = listOfNotNull(s.str("name"), s.str("title") ?: s.str("description")).joinToString(" · ").replace("\n", " ").ifBlank { a.name }
                     val headers = ((s["behaviorHints"] as? JsonObject)?.get("proxyHeaders") as? JsonObject)?.get("request")
                         ?.let { h -> (h as? JsonObject)?.mapValues { (_, v) -> (v as? JsonPrimitive)?.content.orEmpty() } }.orEmpty()
-                    val linkType = if (url.contains(".m3u8", true)) ExtractorLinkType.M3U8 else if (url.contains(".mpd", true)) ExtractorLinkType.DASH else ExtractorLinkType.VIDEO
+                    val linkType = if (url.startsWith("magnet:", true)) ExtractorLinkType.MAGNET else if (url.contains(".m3u8", true)) ExtractorLinkType.M3U8 else if (url.contains(".mpd", true)) ExtractorLinkType.DASH else ExtractorLinkType.VIDEO
                     callback(newExtractorLink(a.name, label.take(160), url, linkType) {
                         this.headers = headers
                         quality = RX_STREMIOPROVIDER_1.find(label)?.groupValues?.get(1)?.toIntOrNull()
