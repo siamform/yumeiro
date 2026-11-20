@@ -15,6 +15,25 @@ tv-api24), real hardware.
 
 2026-11-19 cross-check: the full list of what is still open, with decisions, is docs/REMAINING-2026-11-19.md.
 
+## Final test of the 1.9.0 release candidate (2026-11-20): dropped, Blocked and queued
+
+Every Blocked cell of docs/MASTER-CHECKLIST-FINAL.md and every item the final test did not prove, with its reason
+and target. Codes match the checklist's "Skips and Blocked cells" table.
+
+| ID | What is not proven | Why | Target | Status |
+|---|---|---|---|---|
+| FT-P2 | The second pass (P2: warm start, data kept) for every class on every target | owner's decision 2026-11-20: P1 only, to release in time (stated in CHANGELOG and the owner guide) | stability-v2 (after 1.9.0) | Dropped (owner's decision) |
+| FT-B1 | Main-thread (StrictMode) checks on Android 7 TV: AdultSearchFilter, InboxMainThread, LibraryTabsMainThread, MangaLibraryMainThread, MangaRetry (library load), StorageMainThread, UpdateMainThread on tv-api24 | the checker needs `StrictMode.penaltyListener` (API 28); the same code passes on tv-api34 and both phones | user-assisted: OMT-59 (smoothness on an Android 7–8 TV) | Blocked (test tool) |
+| FT-B2 | App lock with the device PIN on TV (AppLock b_) | tv-api24 has no `locksettings` (API 26+); on tv-api34 `locksettings set-pin` leaves no secure lock | user-assisted: OMT-55 | Blocked (emulator) |
+| FT-B3 | Yumix "See all" paging to a second page while searching | the rows the CI machine got had a single page (30–40 titles) on all four targets | user-assisted: OMT-60 | Blocked (CI data) |
+| FINAL-33 | Network-drop checks on both TV images: AniSkip offline, NetworkState a_, YmPagingNetwork, MusicModeNetwork, Yumix offline refresh | TV emulators run on emulated Ethernet, which a test cannot switch off; phones run these checks | user-assisted: OMT-54 | Blocked (emulator) |
+| YT-WALL | YouTube watch, quality list and endless Music Home: YtQuality, PlayerSwitch c_, MusicEndlessNetwork (all targets), YtChannelUi (both TVs) | YouTube answers CI addresses with "Sign in to confirm you're not a bot" | user-assisted: OMT-29, OMT-1, OMT-15 | Blocked (external) |
+| TV-FP-1 | FeedPosition live / YouTube on tv-api24 | test fault: it taps the phone nav bar (same on old code 44438504785) | stability-v2 (TV version of the test) | Blocked (test fault) |
+| FINAL-31 | Phone with Layout = TV in portrait | the BUG-5 TV checks need a landscape TV window | user-assisted: OMT-4 on a phone set to Layout = TV | Not verified |
+| FINAL-35 | Memory on Android 7 TV under drama-feed paging (heap 61 → 479 MB once, 44663218206) | not reproduced in 44666637483 (peak 94 MB) or 44670841174 (peak 95 MB, 0 ANR); no heap dump | user-assisted: OMT-57 | Open, not reproduced |
+| FINAL-43 | Android TV notification permission: the blocked → "Open settings" step (PermissionFlow b on tv-api34) | Android TV 14 shows the system dialog again after every "Don't allow" (5 in a row in 44672818277), so the blocked state never comes; the "Tap again" message did show after each deny. The 3 earlier runs where no message showed within 10 s were not reproduced; their cause is not proven | user-assisted: OMT-58 | Blocked (Android TV behaviour) |
+| SEC-LFM / F-AIR | Built-in Last.fm sign-in and push airing alerts end to end | need the Worker deploy and a rotated Last.fm shared secret (owner's "go") | owner: Worker deploy, then OMT-10, OMT-52 | Waiting for owner |
+
 ## Agent findings and gaps
 
 | ID | Description | Group | Verified | Not verified | Why queued | Target | Status |

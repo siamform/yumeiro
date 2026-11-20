@@ -171,8 +171,8 @@ SKIP.update(_r(("tv-api24",), ["AdultSearchFilterDeviceTest","InboxMainThreadDev
     "the main-thread checker needs StrictMode.penaltyListener (API 28); Android 7 TV cannot run it"))
 SKIP.update(_r(TV, ["AniSkipDeviceTest","NetworkStateDeviceTest","YmPagingNetworkDeviceTest"], "blocked", "FINAL-33",
     "TV emulators are on emulated Ethernet, which a test cannot switch off (OMT-54)"))
-SKIP.update(_r(("tv-api24",), ["MusicModeNetworkDeviceTest"], "blocked", "FINAL-33",
-    "TV emulator Ethernet stays up, the app never sees the drop (OMT-54)"))
+SKIP.update(_r(TV, ["MusicModeNetworkDeviceTest"], "blocked", "FINAL-33",
+    "TV emulator Ethernet stays up, the app never sees the drop (OMT-54; tv-api34: 'network toggle not seen by the app', run 44671880872)"))
 SKIP.update(_r(TV, ["YumixDeviceTest"], "blocked", "FINAL-33",
     "offline refresh: TV Ethernet stays up (OMT-54); see-all paging: the CI row had a single page (FT-B3)"))
 SKIP.update(_r(PH, ["YumixDeviceTest"], "blocked", "FT-B3",
@@ -189,6 +189,7 @@ SKIP.update(_r(TV, ["PlayerExtrasSettingsEffectDeviceTest"], "na", "", "auto-PiP
 SKIP[("MoreSettingsEffectDeviceTest","tv-api24")] = ("na","","YouTube-to-phone uses MediaStore publishing (Android 10+)")
 SKIP[("MusicAccessDeviceTest","tv-api24")] = ("na","","the separate music permission exists from Android 13")
 SKIP[("PermissionFlowDeviceTest","tv-api24")] = ("na","","the notification permission exists from Android 13")
+SKIP[("PermissionFlowDeviceTest","tv-api34")] = ("blocked","FINAL-43","Android TV 14 shows the system dialog again after every 'Don't allow' (5 in a row, no don't-ask-again state), so the blocked -> Open settings step cannot occur; the 'Tap again' message did show after each deny (run 44672818277); owner test OMT-58")
 SKIP[("RtlLayoutDeviceTest","tv-api24")] = ("na","","per-app language exists from Android 13 (API 33)")
 SKIP.update(_r(PH, ["TvBug5ReproDeviceTest"], "na", "", "TV-only checks (landscape TV window); Phone Layout = TV in portrait is FINAL-31, not verified"))
 SKIP.update(_r(ALL, ["MangaRetryDeviceTest"], "na", "",

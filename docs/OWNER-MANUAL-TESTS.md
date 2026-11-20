@@ -99,6 +99,9 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
 | OMT-56 | G9-CQ-1: "Last backup" time survives a restore that restarts the app | Owner/community test (pending) |
 | OMT-57 | FINAL-35: memory on an old Android TV while scrolling drama feeds for 10 minutes | Owner/community test (pending) |
+| OMT-58 | FINAL-43: notification permission on an Android 13+ TV after two "Don't allow" | Owner/community test (pending) |
+| OMT-59 | FT-B1: smoothness on an Android 7–8 TV (main-thread checks need Android 9 on emulators) | Owner/community test (pending) |
+| OMT-60 | FT-B3: Yumix "See all" keeps paging while searching | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -110,7 +113,7 @@ Report with the GitHub issue form "Test report" (Issues → New issue; `.github/
 in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
 
 The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
-**owner (developer)** section after it (OMT-1…OMT-34, full detail; some need consoles, logs or decisions).
+**owner (developer)** section after it (OMT-1…OMT-60, full detail; some need consoles, logs or decisions).
 
 ## Yumeiro users checklist
 
@@ -806,6 +809,28 @@ the app version and your device. Don't send passwords or account details.
   "app isn't responding" dialog, no crash. If it slows down or freezes, send the "Send logs" report from Settings
   → About right after. Why you: seen once on the tv-api24 emulator while the source's server answered 503, not
   reproduced since. **Status:** Owner/community test (pending)
+
+### OMT-58 — Notification permission on an Android TV, said "no" twice (FINAL-43)
+
+- **Steps:** on an Android 13+ TV with a fresh install: when Yumeiro asks to send notifications, choose "Don't
+  allow". Open Settings → Notifications in Yumeiro and turn an alert on again; choose "Don't allow" a second time.
+  **Pass:** after each "Don't allow" Yumeiro shows a short message that notifications are off and how to turn them
+  on; no crash, and the app keeps working. Why you: on the TV emulator the message after the second "Don't allow"
+  was not seen within 10 seconds (cause not yet found). **Status:** Owner/community test (pending)
+
+### OMT-59 — Smoothness on an Android 7–8 TV (final test, main-thread checks)
+
+- **Steps:** on an Android 7 or 8 TV box: open Library (all tabs), Manga library pages, Inbox, Settings → Storage and
+  Settings → About → Check for updates. **Pass:** nothing freezes or stutters for more than a moment. Why you: the
+  automatic main-thread checker needs Android 9, so it could not run on the Android 7 TV emulator. **Status:**
+  Owner/community test (pending)
+
+### OMT-60 — Yumix "See all" keeps paging while you search (final test)
+
+- **Steps:** Yumix → open a row with many titles → See all. Type a word in the search box and scroll to the
+  bottom of the results, twice. **Pass:** more results keep loading at the bottom; nothing repeats or jumps.
+  Why you: on the CI machines every row had a single page, so the second page never loaded. **Status:**
+  Owner/community test (pending)
 
 ## Not owner tests (handled by the agent)
 
