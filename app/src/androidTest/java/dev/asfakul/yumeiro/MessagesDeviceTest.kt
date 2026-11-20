@@ -88,6 +88,18 @@ class MessagesDeviceTest {
                 n.children.forEach { walk(it) }
             }
             nodes.forEach { walk(it) }
+            // FINAL-34 (run 44660329194, tv-api24, case 20): an app message posted by the app itself in the
+            // same moment (an extension's quiet card) replaced the case's pill before it was read. Log what
+            // replaced it and show the case once more; a pill that never shows the text still fails.
+            val other = AppMessages.current.value?.text
+            if (seen.isEmpty() && other != null && other != text.take(240)) {
+                log("MSG_RACE ${i + 1} $site: the pill showed '${other.take(80)}' instead; showing the case again")
+                AppMessages.current.value?.let { m -> inst.runOnMainSync { AppMessages.dismiss(m.id) } }
+                inst.runOnMainSync { AppMessages.show(ctx, text, kind, action, if (action != null) ({}) else null) }
+                runCatching { rule.waitUntil(4_000) { AppMessages.current.value?.text == text.take(240) } }
+                rule.waitForIdle()
+                rule.onAllNodesWithTag("app_message", true).fetchSemanticsNodes().forEach { walk(it) }
+            }
             val actionShown = rule.onAllNodesWithTag("app_message_action", true).fetchSemanticsNodes().isNotEmpty()
             var a11y = "-"
             if (shown && (i % 5 == 0 || action != null || text.length > 80)) {

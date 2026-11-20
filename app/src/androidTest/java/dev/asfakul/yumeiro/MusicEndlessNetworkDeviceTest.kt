@@ -43,7 +43,9 @@ class MusicEndlessNetworkDeviceTest {
         while (SystemClock.uptimeMillis() < end) { if (ok()) return true; SystemClock.sleep(300) }
         return ok()
     }
-    private fun tap(tag: String) { rule.onAllNodesWithTag(tag, true)[0].performClick(); rule.waitForIdle() }
+    // FINAL-34 (run 44660329194, tv-api24): the first node with a nav tag can be the phone bar's twin laid
+    // out off screen on TV ("Failed to inject touch input"). Tap the one on screen, or the rail's twin.
+    private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
     private fun mode(): String = runCatching {
         rule.onAllNodesWithTag("music_source_switch", false).fetchSemanticsNodes().first().config.let { c ->
             (c.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text } ?: "") + " " + (c.getOrNull(SemanticsProperties.ContentDescription)?.joinToString(" ") ?: "")

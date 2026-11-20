@@ -143,6 +143,11 @@ class RetryActionsDeviceTest {
 
     /** A real tap on the screen at the node's centre: goes through window order like a finger. */
     private fun screenTap(tag: String) {
+        // FINAL-34 (run 44663118888, tv-api24): after typing the server URL, the landscape TV keyboard opens in
+        // full-screen mode over the form, so the screen tap on Retry landed on the keyboard (hits=0). Close
+        // the keyboard first, as a TV user does with Back (no-op when no keyboard is shown).
+        runCatching { androidx.test.espresso.Espresso.closeSoftKeyboard() }
+        compose.waitForIdle()
         val n = compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().first()
         val x = n.positionOnScreen.x + n.size.width / 2f
         val y = n.positionOnScreen.y + n.size.height / 2f

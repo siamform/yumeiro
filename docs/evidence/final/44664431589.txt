@@ -1,0 +1,7 @@
+44664431589 tv-api34 TrackerSignInDeviceTest P1 PASS tests=2 skipped=0 sha=8007648
+44664431589 tv-api34 TvBug5ReproDeviceTest P1 PASS tests=5 skipped=0 sha=8007648
+44664431589 tv-api34 UpdateMainThreadDeviceTest P1 PASS tests=1 skipped=0 sha=8007648
+44664431589 tv-api34 UpscaleFreezeDeviceTest P1 PASS tests=3 skipped=0 sha=8007648
+44664431589 tv-api34 WidgetUpdatesDeviceTest P1 PASS tests=5 skipped=0 sha=8007648
+44664431589 tv-api34 YmPagingNetworkDeviceTest P1 FAIL tests=? skipped=0 sha=8007648
+44664431589 tv-api34 YtChannelProbeDeviceTest P1 PASS tests=1 skipped=0 sha=8007648

@@ -60,7 +60,11 @@ class SurfaceModeDeviceTest {
     }
 
     @Test fun viewDownloadsMovesVideoToFloatingAndNewVideoExpands() {
-        rule.waitUntil(30_000) { has("nav_tab_videos") || has("nav_tab_home") }
+        // FINAL-34 (runs 44662525331 api36, 44663218206 tv-api24): the class started before the activity's
+        // first frame ("No compose hierarchies found") and, on TV, waited for the phone bar's tags. Start the
+        // way the other classes do and accept the TV rail's Home.
+        FirstRun.toTabs(rule)
+        rule.waitUntil(30_000) { FirstRun.hasNav(rule, "nav_tab_videos") || FirstRun.hasNav(rule, "nav_tab_home") }
         play("https://archive.org/download/f20110625mad/f20110625mad.mp4", "Surface A")
         rule.waitUntil(10_000) { has("video_player_root") }
         assertTrue("starts full screen (no floating window)", !has("video_floating_player"))
