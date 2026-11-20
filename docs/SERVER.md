@@ -136,21 +136,18 @@ subdomain. The Worker doesn't need to serve on it.
 
 No secrets are needed in the repo. CI (`.github/workflows/server.yml`) only runs tests and the type check, and only when `server/**` changes.
 
-## Production state (checked 2026-11-19)
+## Production state (deployed 2026-11-20 07:27 UTC)
 
-`/v1/health` answers `{"ok":true,"v":2}` and the cron runs every 10 minutes, so the server is on. The deployed
-Worker dates from 2026-11-12: it lacks migration 0003 (`airing_pending`, `follow_changes`), the R11 abuse guards,
-the X16-2 address check and NOTIFY-1 (ADR-039).
+Deployed with the owner's "go" (2026-11-20): migrations 0003 (abuse guards), 0004 (`fcm_devices.want`) and 0005
+(`fcm_follows`) ran on the remote D1 without errors, then `wrangler deploy` (wrangler 4.160.0, Node 22) uploaded
+`yumeiro-cloud`, version `26f0ba1a-a51b-4680-9bbf-8c2d055f3cf4`: custom domain api.yumeiro.click, cron every
+10 minutes, queue yumeiro-wakes. Server tests 40/40 and the type check passed first. `/v1/health` then answered
+`{"ok":true,"v":2,...}`. Secrets present: `ADMIN_TOKEN`, `FCM_SERVICE_ACCOUNT`. `LASTFM_SHARED_SECRET` is
+deliberately not set, so `/v1/lastfm/sign` answers 503 and built-in Last.fm sign-in stays off: rotate the Last.fm
+shared secret first, then set the new one with `wrangler secret put LASTFM_SHARED_SECRET`.
 
-Why users get no episode alerts (F-AIR, read-only D1 count 2026-11-19): 406 `fcm_devices`, 1 UnifiedPush device,
-0 follows, 0 airing rows. Airing wakes went only to UnifiedPush endpoints, and Firebase phones never sent their
-shows. ADR-043 fixes both: migration 0005 (`fcm_follows`) plus the Firebase wake path.
-
-Deploy only after the owner's "go" (not deployed):
-
-```
-cd server && npm run db:migrate:guards && npm run db:migrate:want && npm run db:migrate:fcm-follows && npx wrangler deploy
-```
+Now live: R11 abuse guards, the X16-2 address check, NOTIFY-1 (ADR-039) and the Firebase airing-alert path
+(F-AIR, ADR-043).
 
 ## Local development
 
