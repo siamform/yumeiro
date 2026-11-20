@@ -47,6 +47,26 @@ object SavedSites {
     // F-04: list helpers (pure; unit-tested).
 
     /** Pinned sites first; each group keeps its saved order. */
+    /** F-02 split: the Telegram page shows saved channels, the Websites page everything else. */
+    enum class Kind { TELEGRAM, WEBSITE }
+
+    fun kindOf(url: String): Kind =
+        if (dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(url) != null) Kind.TELEGRAM else Kind.WEBSITE
+
+    /** Sites of one kind; null keeps every site. */
+    fun ofKind(list: List<Site>, kind: Kind?): List<Site> = if (kind == null) list else list.filter { kindOf(it.url) == kind }
+
+    /** An error when [input] belongs on the other page, so nothing is saved where the user can't see it. */
+    fun wrongPage(input: String, kind: Kind?): String? {
+        if (kind == null || input.isBlank()) return null
+        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input.trim()) is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
+        return when {
+            kind == Kind.TELEGRAM && !tg -> "Type @channel or a t.me link. Websites go on the Websites page."
+            kind == Kind.WEBSITE && tg -> "That's a Telegram channel. Add it on the Telegram page."
+            else -> null
+        }
+    }
+
     fun ordered(list: List<Site>): List<Site> = list.filter { it.pinned } + list.filterNot { it.pinned }
 
     fun filter(list: List<Site>, query: String): List<Site> {

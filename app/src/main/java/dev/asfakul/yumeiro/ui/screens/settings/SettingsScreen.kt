@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -188,7 +189,8 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.SOURCES -> CategoryLook(Icons.Default.Extension, Violet)
     Category.SOURCE_STATUS -> CategoryLook(Icons.Default.MonitorHeart, Mint)
     Category.TRACKING -> CategoryLook(Icons.Default.SyncAlt, Sky)
-    Category.TELEGRAM -> CategoryLook(Icons.Default.Public, Sky)
+    Category.TELEGRAM -> CategoryLook(Icons.AutoMirrored.Filled.Send, Sky)
+    Category.WEBSITES -> CategoryLook(Icons.Default.Public, Teal)
     Category.YOUTUBE -> CategoryLook(Icons.Default.AccountCircle, YtRed)
     Category.TOGETHER -> CategoryLook(Icons.Default.Groups, Rose)
     Category.NOTIFICATIONS -> CategoryLook(Icons.Default.Notifications, BrandGold)
@@ -205,7 +207,7 @@ internal fun Category.look(): CategoryLook = when (this) {
 
 /** The page's Japanese name, shown as a watermark on its banner. */
 internal fun Category.kana(): String = when (this) {
-    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PROFILES -> "人"; Category.STATS -> "数"; Category.TELEGRAM -> "電報"; Category.PLAYER -> "映"; Category.VIDEO_QUALITY -> "画"; Category.SUBTITLES -> "字幕"; Category.MUSIC -> "音"
+    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PROFILES -> "人"; Category.STATS -> "数"; Category.TELEGRAM -> "電報"; Category.WEBSITES -> "網"; Category.PLAYER -> "映"; Category.VIDEO_QUALITY -> "画"; Category.SUBTITLES -> "字幕"; Category.MUSIC -> "音"
     Category.DOWNLOADS -> "保存"; Category.LIBRARY -> "蔵"; Category.SOURCES -> "源"
     Category.SOURCE_STATUS -> "診"; Category.TRACKING -> "記録"; Category.YOUTUBE -> "動画"; Category.TOGETHER -> "共"
     Category.NOTIFICATIONS -> "通知"; Category.BACKGROUND -> "電池"; Category.NETWORK -> "接続"; Category.PRIVACY -> "鍵"

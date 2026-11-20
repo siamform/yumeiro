@@ -88,8 +88,11 @@ object SettingsCatalog {
                 "script repos", "javascript", "cloudstream", "providers"), route = "sources"),
         SOURCE_STATUS(Group.SOURCES, "Source status", "See which installed sources respond right now",
             listOf("health", "broken", "working", "check"), route = "health"),
-        TELEGRAM(Group.SOURCES, "Telegram & web sites", "Public Telegram channels with no login, TeraBox and DiskWala links, your saved sites",
-            listOf("telegram", "t.me", "channel", "channels", "link", "websites", "sites", "browser", "web"), route = "websites"),
+        // F-02 split: Telegram and Websites are two pages, each with its own entry.
+        TELEGRAM(Group.SOURCES, "Telegram", "Public Telegram channels with no login, TeraBox and DiskWala links in posts",
+            listOf("telegram", "t.me", "channel", "channels", "terabox", "diskwala"), route = "telegram"),
+        WEBSITES(Group.SOURCES, "Websites", "Sites you saved to play their videos in Yumeiro",
+            listOf("websites", "sites", "browser", "web", "link"), route = "websites"),
         TRACKING(Group.SOURCES, "Tracking", "AniList, MyAnimeList, Kitsu, Trakt, Simkl and Last.fm sign-in",
             listOf("anilist", "mal", "myanimelist", "kitsu", "trakt", "simkl", "sync", "list", "progress", "account", "scrobble"), route = "tracking",
             settings = listOf("Scrobble what I play", "Last.fm")),

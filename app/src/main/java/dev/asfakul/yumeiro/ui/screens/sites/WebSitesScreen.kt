@@ -85,11 +85,14 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun WebSitesScreen(onBack: () -> Unit) {
+fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     val context = LocalContext.current
     val p = LocalMtPalette.current
     LaunchedEffect(Unit) { SavedSites.init(context) }
-    val sites by SavedSites.sites.collectAsState()
+    val allSites by SavedSites.sites.collectAsState()
+    // F-02 split: the Telegram page and the Websites page each show their own kind.
+    val sites = remember(allSites, only) { SavedSites.ofKind(allSites, only) }
+    val telegramPage = only == SavedSites.Kind.TELEGRAM
     var input by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<SavedSites.Site?>(null) }
@@ -103,7 +106,7 @@ fun WebSitesScreen(onBack: () -> Unit) {
 
     fun add() {
         // F-02: "@name" or a t.me channel link saves the channel's public page (handled in SavedSites.add).
-        val err = SavedSites.add(context, input)
+        val err = SavedSites.wrongPage(input, only) ?: SavedSites.add(context, input)
         if (err != null) error = err else { input = ""; error = null }
     }
 
@@ -174,8 +177,11 @@ fun WebSitesScreen(onBack: () -> Unit) {
         )
     }
 
-    Column(Modifier.fillMaxSize().testTag("websites_screen")) {
-        SubPageHeader(title = "Websites", onBack = onBack, subtitle = if (sites.isEmpty()) "Play videos from any site" else "${sites.size} saved") {
+    Column(Modifier.fillMaxSize().testTag(if (telegramPage) "telegram_screen" else "websites_screen")) {
+        SubPageHeader(
+            title = if (telegramPage) "Telegram" else "Websites", onBack = onBack,
+            subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else if (telegramPage) "Public channels, no login" else "Play videos from any site",
+        ) {
             IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", tint = p.textSecondary) }
             if (sites.isNotEmpty()) IconButton(onClick = {
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
@@ -194,7 +200,7 @@ fun WebSitesScreen(onBack: () -> Unit) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
                         .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
                 ) {
-                    Text("Add a website or Telegram channel", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(when (only) { SavedSites.Kind.TELEGRAM -> "Add a public Telegram channel"; SavedSites.Kind.WEBSITE -> "Add a website"; null -> "Add a website or Telegram channel" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(

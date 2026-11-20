@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import dev.asfakul.yumeiro.stream.PlaylistStore
@@ -140,6 +141,7 @@ fun StreamScreen(
     onOpenPlaylist: (String) -> Unit = {},
     onOpenMarket: () -> Unit = {},
     onOpenWebsites: () -> Unit = {},
+    onOpenTelegram: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -596,6 +598,7 @@ fun StreamScreen(
         },
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
+        LiveTool("stream_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
         LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
         LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
         LiveTool("live_tool_sync", "Update all", if (syncing) "Updating…" else "Every playlist", Icons.Default.Sync, liveHue("sync")) { sync() },

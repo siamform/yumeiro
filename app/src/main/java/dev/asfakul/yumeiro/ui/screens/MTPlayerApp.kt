@@ -607,6 +607,7 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YOUTUBE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YUMIX -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YTMUSIC -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MIX -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX)
@@ -902,6 +903,7 @@ fun MTPlayerApp(
                                     onOpenPlaylist = { id -> navigateSub(Screen.PlaylistDetail.route(id)) },
                                     onOpenMarket = { navigateSub(Screen.Market.route) },
                                     onOpenWebsites = { navigateSub(Screen.WebSites.route) },
+                                    onOpenTelegram = { navigateSub(Screen.Telegram.route) },
                                 )
                             } else if (vs == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
@@ -1156,7 +1158,10 @@ fun MTPlayerApp(
                         }
                     }
                     page(subPad, Screen.WebSites.route) {
-                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub) }
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.WEBSITE) }
+                    }
+                    page(subPad, Screen.Telegram.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.TELEGRAM) }
                     }
                     page(subPad, Screen.MangaTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
                         val a = entry.arguments
@@ -1288,6 +1293,7 @@ fun MTPlayerApp(
                                     "youtube" -> Screen.YouTubeAccount.route
                                     "stats" -> Screen.Stats.route
                                     "websites" -> Screen.WebSites.route
+                                    "telegram" -> Screen.Telegram.route
                                     else -> Screen.Privacy.route
                                 })
                             },
