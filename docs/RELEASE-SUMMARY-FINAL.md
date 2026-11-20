@@ -65,6 +65,9 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
   app's "Notifications not allowed. Tap again…" message was not seen within 10 s after the second "Don't allow"; in
   the run with diagnostics (44672818277, after the FINAL-42 main-thread fix) it showed after each of 5 denials. The
   cause of the three misses is not proven (FINAL-43, OMT-58).
+- FINAL-45 (open, not reproduced): once, on api33-lowram (44665076936, UpscaleFreeze 7d), the main thread waited
+  2781 ms in a window-manager binder call (IWindowManager.getWindowInsets) while the player opened its More menu;
+  the same class passed 3/3 there in 44673996183 and on api36 in both runs.
 - FINAL-46: a release build made without the Last.fm, LRCLIB, OpenSubtitles and FCM build values had a video
   player that Android refused to load (VerifyError, crash on play). The review APKs were built with all values and
   pass; why R8 does this was not reduced (queue FINAL-46b). Any rebuild must pass the upgrade check before it is
