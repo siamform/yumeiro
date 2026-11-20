@@ -12,9 +12,15 @@ on:
         description: "Published release tag to upgrade from"
         type: string
         required: true
+      new_apk_run:
+        description: "ci.yml run whose yumeiro-review-apk artifact holds the phone APK to install (empty = build one here)"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   upgrade:
@@ -37,6 +43,7 @@ jobs:
           cp rel/release-Yumeiro-*.apk old.apk
 
       - name: Restore constant release keystore
+        if: ${{ inputs.new_apk_run == '' }}
         env:
           MT_KEYSTORE_BASE64: ${{ secrets.MT_KEYSTORE_BASE64 }}
         run: |
@@ -46,6 +53,7 @@ jobs:
           echo "MT_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
       - name: Build this branch's release APK (test build, not published)
+        if: ${{ inputs.new_apk_run == '' }}
         env:
           MT_KEYSTORE_PASSWORD: ${{ secrets.MT_KEYSTORE_PASSWORD }}
           MT_KEY_ALIAS: ${{ secrets.MT_KEY_ALIAS }}
@@ -64,11 +72,24 @@ jobs:
           fi
           echo "MT_KEYSTORE_PATH=" >> "$GITHUB_ENV"
 
+      - name: Use the review APK of a ci.yml run (exact bytes the owner gets)
+        if: ${{ inputs.new_apk_run != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ inputs.new_apk_run }}
+        run: |
+          gh run download "$RUN" -R "$GITHUB_REPOSITORY" -n yumeiro-review-apk -D review
+          (cd review && sha256sum -c SHA256SUMS.txt)
+          cp "$(ls review/yumeiro-*-review.apk | grep -v -- '-tv-' | head -1)" new.apk
+          echo "UPGRADE new.apk from review run $RUN sha256=$(sha256sum new.apk | cut -d' ' -f1)"
+
       - name: Same signing certificate on both APKs; versionCode goes up
         run: |
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-          SRC=$(ls app/build/outputs/apk/mobile/release/*.apk | grep -v unsigned | head -1)
-          cp "$SRC" new.apk
+          if [ ! -f new.apk ]; then
+            SRC=$(ls app/build/outputs/apk/mobile/release/*.apk | grep -v unsigned | head -1)
+            cp "$SRC" new.apk
+          fi
           EXPECTED=$(tr -d '[:space:]' < .github/release-signing-cert.sha256)
           for A in old.apk new.apk; do
             D=$("$BT/apksigner" verify --print-certs "$A" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
@@ -104,7 +125,7 @@ jobs:
 
       - name: Remove the test APKs before upload
         if: always()
-        run: rm -f new.apk old.apk
+        run: rm -rf new.apk old.apk review
 
       - name: Upload results (no APKs)
         if: always()

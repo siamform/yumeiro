@@ -54,6 +54,10 @@ on:
         description: "G12 X10: run the upgrade check from this published tag (e.g. v1.8.0) instead; empty = device tests"
         required: false
         default: ""
+      upgrade_apk_run:
+        description: "With upgrade_from: install the phone APK of this ci.yml review_apk run's yumeiro-review-apk artifact instead of building one (proves the exact review APK)"
+        required: false
+        default: ""
       passes:
         description: "Final test: each class twice on one emulator. P1 = cleared data and cold start before every class; P2 = data kept from P1, app killed and reopened (warm, populated)"
         type: boolean
@@ -83,6 +87,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   bench:
@@ -94,8 +99,12 @@ jobs:
   upgrade:
     if: ${{ inputs.upgrade_from != '' && !(inputs.bench == 'startup' || inputs.bench == 'jank' || inputs.bench == 'profile' || inputs.bench == 'restore') }}
     uses: ./.github/workflows/upgrade-check.yml
+    permissions:
+      contents: read
+      actions: read
     with:
       from: ${{ inputs.upgrade_from }}
+      new_apk_run: ${{ inputs.upgrade_apk_run }}
     secrets: inherit
 
   emulator:
