@@ -1,0 +1,7 @@
+44660919539 tv-api24 Nbug15RecentsDeviceTest P1 PASS tests=2 skipped=0 sha=c6787f9
+44660919539 tv-api24 Nbug15RedesignDeviceTest P1 PASS tests=3 skipped=0 sha=c6787f9
+44660919539 tv-api24 Nbug16ExtensionVersionDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660919539 tv-api24 Nbug6EngineCostDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660919539 tv-api24 Nbug9DnsProbeDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660919539 tv-api24 NetworkStateDeviceTest P1 PASS tests=4 skipped=1 sha=c6787f9
+44660919539 tv-api24 NewPipeCompatDeviceTest P1 PASS tests=2 skipped=0 sha=c6787f9

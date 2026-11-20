@@ -1,0 +1,7 @@
+44661411586 tv-api34 MusicNotificationControlsDeviceTest P1 PASS tests=1 skipped=0 sha=f03666a
+44661411586 tv-api34 MusicQueueDeviceTest P1 PASS tests=1 skipped=0 sha=f03666a
+44661411586 tv-api34 MusicTapThroughDeviceTest P1 PASS tests=1 skipped=0 sha=f03666a
+44661411586 tv-api34 MusicWifiLockDeviceTest P1 PASS tests=1 skipped=0 sha=f03666a
+44661411586 tv-api34 Nbug11MostPlayedAdultDeviceTest P1 PASS tests=2 skipped=0 sha=f03666a
+44661411586 tv-api34 Nbug12RefusedMediaPageDeviceTest P1 PASS tests=2 skipped=0 sha=f03666a
+44661411586 tv-api34 Nbug14ChannelLogoDeviceTest P1 PASS tests=1 skipped=0 sha=f03666a

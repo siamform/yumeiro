@@ -11,6 +11,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.player.PlaybackDiagnostics
@@ -43,6 +45,13 @@ class ResumeAcrossProcessDeviceTest {
 
     private fun log(s: String) = Log.i("YuResume", s)
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
+    /** FINAL-32 (run 44662863280, tv-api24): on TV the Continue row sits below the setup card and Spaces,
+     *  so the lazy list has not composed it. Scroll to it, as a user does (same as HomeNavigationDeviceTest). */
+    private fun scrollToContinue() {
+        if (!has("home_continue_card") && !has("home_continue_video")) runCatching {
+            rule.onNodeWithTag("home_list", true).performScrollToKey("continue_row"); rule.waitForIdle()
+        }
+    }
     private fun hasText(t: String) = rule.onAllNodesWithText(t, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
     private fun wait(what: String, ms: Long = 30_000, cond: () -> Boolean) {
         val ok = runCatching { rule.waitUntil(ms) { cond() }; true }.getOrDefault(false)
@@ -99,9 +108,11 @@ class ResumeAcrossProcessDeviceTest {
         try {
             FirstRun.toTabs(rule)
             PlaybackDiagnostics.reset("")
-            wait("Home tab") { has("nav_tab_home") }
-            tap("nav_tab_home")
+            // FINAL-32: the TV layout's Home tab is tv_nav_tab_home (the rail), not nav_tab_home.
+            wait("Home tab") { has("nav_tab_home") || has("tv_nav_tab_home") }
+            tap(if (has("nav_tab_home")) "nav_tab_home" else "tv_nav_tab_home")
             wait("Jump back in shows the clip", 30_000) {
+                scrollToContinue()
                 rule.onAllNodesWithTag("home_continue_video", true).fetchSemanticsNodes().isNotEmpty() && hasText(title)
             }
             FirstRun.shot("resume_b_home")

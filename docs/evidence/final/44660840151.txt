@@ -1,0 +1,7 @@
+44660840151 api36 PushAlertsEffectDeviceTest P1 PASS tests=3 skipped=0 sha=c6787f9
+44660840151 api36 QualityListDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660840151 api36 QueuePersistenceDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660840151 api36 ReleaseFeaturesDeviceTest P1 PASS tests=5 skipped=0 sha=c6787f9
+44660840151 api36 RemotePlaylistMemoryDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660840151 api36 RestoreAfterClearDeviceTest P1 PASS tests=1 skipped=0 sha=c6787f9
+44660840151 api36 ResumeAcrossProcessDeviceTest P1 FAIL tests=? skipped=0 sha=c6787f9

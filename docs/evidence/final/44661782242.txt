@@ -1,0 +1,7 @@
+44661782242 tv-api24 LibraryTabsMainThreadDeviceTest P1 SKIPPED tests=1 skipped=1 sha=10701aa
+44661782242 tv-api24 LocalPlayerDeviceTest P1 PASS tests=11 skipped=4 sha=10701aa
+44661782242 tv-api24 LowStorageDeviceTest P1 PASS tests=2 skipped=0 sha=10701aa
+44661782242 tv-api24 MangaDuplicateDeviceTest P1 PASS tests=2 skipped=0 sha=10701aa
+44661782242 tv-api24 MangaLibraryMainThreadDeviceTest P1 SKIPPED tests=1 skipped=1 sha=10701aa
+44661782242 tv-api24 MangaRetryDeviceTest P1 SKIPPED tests=2 skipped=2 sha=10701aa
+44661782242 tv-api24 MangaTallPageDeviceTest P1 PASS tests=2 skipped=0 sha=10701aa

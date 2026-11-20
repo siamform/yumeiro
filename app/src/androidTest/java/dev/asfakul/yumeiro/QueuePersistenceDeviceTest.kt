@@ -13,6 +13,8 @@ import android.util.Log
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToKey
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -53,6 +55,13 @@ class QueuePersistenceDeviceTest {
     private val notes get() = ctx.getSharedPreferences("yu_test_queue_persist", Context.MODE_PRIVATE)
     private fun log(s: String) = Log.i("YuQueuePersist", s)
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
+    /** FINAL-32 (run 44662863280, tv-api24): on TV the Continue row sits below the setup card and Spaces,
+     *  so the lazy list has not composed it. Scroll to it, as a user does (same as HomeNavigationDeviceTest). */
+    private fun scrollToContinue() {
+        if (!has("home_continue_card") && !has("home_continue_video")) runCatching {
+            rule.onNodeWithTag("home_list", true).performScrollToKey("continue_row"); rule.waitForIdle()
+        }
+    }
     private fun hasText(t: String) = rule.onAllNodesWithText(t, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
     private fun wait(what: String, ms: Long, cond: () -> Boolean) {
         val ok = runCatching { rule.waitUntil(ms) { cond() }; true }.getOrDefault(false)
@@ -134,7 +143,7 @@ class QueuePersistenceDeviceTest {
         assertEquals("phase a did not finish", 5, ids.size)
         try {
             FirstRun.toTabs(rule)
-            wait("Home Continue shows song 2", 30_000) { has("home_continue_play") && hasText("YuQP Song 2") }
+            wait("Home Continue shows song 2", 30_000) { scrollToContinue(); has("home_continue_play") && hasText("YuQP Song 2") }
             pause(3_000) // the saved queue is read on IO when the app opens
             // The queue is recorded by a player listener the moment Continue starts it, then paused.
             // The tap returns only when compose is idle; in run 44264818204 (api36) that took long

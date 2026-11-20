@@ -92,6 +92,24 @@ class QualityListDeviceTest {
         }
     }
 
+    /**
+     * FINAL-32 (run 44662863280, tv-api24): rows the app greys out (BUG-4: "Not playable on this device")
+     * cannot be picked. Each one must be disabled and say why, read from the dialog itself.
+     */
+    private fun unplayableRows(): Map<String, String> {
+        val nodes = rule.onAllNodes(SemanticsMatcher("quality row") { n ->
+            n.config.getOrElseNullable(SemanticsProperties.TestTag) { null }?.startsWith("quality_") == true
+        }, true).fetchSemanticsNodes()
+        return nodes.filter { SemanticsProperties.Disabled in it.config }.associate { n ->
+            val tag = n.config[SemanticsProperties.TestTag].removePrefix("quality_")
+            val texts = rule.onAllNodes(SemanticsMatcher("text in $tag") { c ->
+                c.config.getOrElseNullable(SemanticsProperties.Text) { null } != null &&
+                    generateSequence(c.parent) { it.parent }.any { p -> p.id == n.id }
+            }, true).fetchSemanticsNodes().flatMap { it.config[SemanticsProperties.Text].map { t -> t.text } }
+            tag to texts.joinToString(" | ")
+        }
+    }
+
     private fun back() { FirstRun.shell("input keyevent 4") }
 
     /** Back presses that did not close the dialog (run 43857809658: one after the 288p pick). */
@@ -149,16 +167,25 @@ class QualityListDeviceTest {
         assertEquals("rows must be highest first: $labels", listed.sortedDescending(), listed)
         assertEquals("rows must be exactly the stream's heights", heights, listed)
         assertTrue("Auto should be selected by default: $r", r.first().second)
+        val greyed = unplayableRows()
+        log("unplayable rows: $greyed")
+        greyed.forEach { (label, texts) ->
+            assertTrue("$label is greyed out without saying why: $texts", texts.contains("Not playable on this device"))
+        }
         closeDialog("list")
+        val playable = heights.filter { "${it}p" !in greyed }
+        // At least two real heights must be pickable, or the switch itself is untested on this device.
+        assertTrue("fewer than two playable heights: $playable (greyed $greyed)", playable.size >= 2)
 
         // BUG-4: every real height, lowest first, each checked on the decoder and in the dialog,
         // then back to Auto.
-        for (h in heights.reversed()) { pick("${h}p", h); FirstRun.shot("quality_applied_${h}p") }
+        // Heights the device has no decoder for are listed greyed (checked above) and are not picked.
+        for (h in playable.reversed()) { pick("${h}p", h); FirstRun.shot("quality_applied_${h}p") }
         openQualityDialog()
         rule.onAllNodesWithTag("quality_Auto", true)[0].performClick()
         val after = System.currentTimeMillis() + 4_000
         rule.waitUntil(8_000) { System.currentTimeMillis() > after }
         assertTrue("player error after Auto: ${PlaybackDiagnostics.state.value.error}", PlaybackDiagnostics.state.value.error == null)
-        log("QUALITY_RESULT PASS heights=$heights applied=${heights.reversed()} backMisses=$backMisses")
+        log("QUALITY_RESULT PASS heights=$heights applied=${playable.reversed()} greyed=${greyed.keys} backMisses=$backMisses")
     }
 }
