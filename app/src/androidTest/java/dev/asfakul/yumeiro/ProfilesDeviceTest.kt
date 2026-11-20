@@ -103,9 +103,11 @@ class ProfilesDeviceTest {
         ProfileSession.chosen.value = false
         compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { WhoIsWatching(androidx.activity.compose.LocalActivity.current!!, onManage = null) } } }
         assertTrue("gate shown", waitTag("profile_gate"))
+        compose.waitForIdle(); FirstRun.shot("profiles_who_is_watching")
         assertTrue("both profiles", has("profile_pick_${Profiles.DEFAULT}") && has("profile_pick_$added"))
         compose.onNodeWithTag("profile_pick_${Profiles.DEFAULT}", true).performClick()
         assertTrue("pin pad", waitTag("pin_pad"))
+        FirstRun.shot("profiles_pin_pad")
         repeat(2) { n ->
             type("1111")
             compose.onNodeWithTag("pin_error", true).assertTextContains("Wrong PIN")
@@ -145,6 +147,7 @@ class ProfilesDeviceTest {
         type("2468")
         assertTrue("vault", waitTag("downloads_vault"))
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Secret Movie PR", true).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle(); FirstRun.shot("private_downloads_vault")
         log("PROFILES_RESULT vault=ok tv=$tv")
     }
 
@@ -155,6 +158,7 @@ class ProfilesDeviceTest {
         compose.onNodeWithTag("accent_ao", true).performScrollTo().performClick()
         compose.waitUntil(5_000) { ThemeSettings.accent.value == AccentTone.AO }
         assertEquals(AccentTone.AO, ThemeSettings.accent.value)
+        compose.waitForIdle(); FirstRun.shot("accent_ao")
         log("PROFILES_RESULT accent=ok tv=$tv")
     }
 }

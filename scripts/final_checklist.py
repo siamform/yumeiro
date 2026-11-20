@@ -7,7 +7,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 inv = open(f"{ROOT}/docs/INVENTORY.md").read().splitlines()
 tests_dir = f"{ROOT}/app/src/androidTest/java/dev/asfakul/yumeiro"
 classes = sorted(f[:-3] for f in os.listdir(tests_dir) if f.endswith(".kt") and "@Test" in open(f"{tests_dir}/{f}").read()
-                 and f != "ExampleInstrumentedTest.kt")
+                 and f not in ("ExampleInstrumentedTest.kt", "ReleaseShotsDeviceTest.kt"))  # release images only
 # Extra coverage the inventory text does not name (class -> row IDs).
 EXTRA = {
  "H1":["HomeNavigationDeviceTest","FeedPositionDeviceTest","HeroCarouselLifecycleDeviceTest","FeatureSmokeDeviceTest"],

@@ -87,6 +87,7 @@ class PinnedExtensionsDeviceTest {
         val shown = imeShown()
         log("TV keyboard after $where: shown=$shown")
         assertTrue("TV: the keyboard opened by itself over the filter sheet ($where)", !shown)
+        FirstRun.shot("tv_filter_sheet_no_keyboard_" + where.filter { it.isLetterOrDigit() }.take(20))
     }
 
     /** Extension rows in the filter sheet, top to bottom (without "All"). */

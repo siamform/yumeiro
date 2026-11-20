@@ -524,6 +524,8 @@ class LocalPlayerDeviceTest {
                 ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_MOVE, android.os.SystemClock.uptimeMillis()), true)
                 stepComposeClock()
             }
+            // Release image (handover step 6): the player while the finger holds it at 2x.
+            if (held == 2f) FirstRun.shot("p2x_held")
         } finally {
             ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_UP, android.os.SystemClock.uptimeMillis()), true)
         }
