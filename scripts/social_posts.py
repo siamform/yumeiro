@@ -3,6 +3,7 @@ import sys, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 SRC = sys.argv[1]; TV = sys.argv[2] if len(sys.argv) > 2 else None
 OUT = "docs/assets/social"
+VER = next(l.split("=", 1)[1].strip() for l in open("version.properties") if l.startswith("VERSION_NAME="))
 B = "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"; R = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
 CJK = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 GOLD = (242, 199, 92); INK = (246, 244, 250); MUTE = (178, 174, 190); BG1 = (24, 20, 34); BG2 = (52, 34, 46)
@@ -40,7 +41,7 @@ def tvframe(shot, w):
 
 def post(name, kicker, title, bullets, shot, tv=False, note="Real capture on the Android emulator, fresh install"):
     im = bg(); d = ImageDraw.Draw(im)
-    d.rounded_rectangle([60, 56, 330, 104], 24, fill=GOLD); d.text((84, 62), "Yumeiro 1.9.0", font=ImageFont.truetype(B, 28), fill=BG1)
+    d.rounded_rectangle([60, 56, 330, 104], 24, fill=GOLD); d.text((84, 62), f"Yumeiro {VER}", font=ImageFont.truetype(B, 28), fill=BG1)
     d.text((350, 64), kicker.upper(), font=ImageFont.truetype(B, 24), fill=GOLD)
     d.text((W - 150, 50), "夢色", font=ImageFont.truetype(CJK, 46), fill=(255, 255, 255, 60) if False else (90, 78, 104))
     tf = ImageFont.truetype(B, 58); y = 130

@@ -30,9 +30,10 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
-## What's new in 1.9.0
+## What's new in 2.0.0
 
-Yumeiro 1.9.0 is out: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
+Yumeiro 2.0.0 replaces 1.9.0: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
+It has every 1.9.0 feature and fixes the 1.9.0 crash when a video opens. If you installed 1.9.0, update now.
 Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md).
 
 | | |
@@ -46,20 +47,35 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER
 | **Manga offline** | Saved chapters open without the source; on-device translation in the reader. |
 | **Safer by design** | The app no longer carries Yumeiro's Last.fm shared secret. Built-in Last.fm sign-in stays off until Yumeiro Cloud (which will sign those calls) is live; your own Last.fm key still works. |
 
-<p align="center">
-  <img src="docs/assets/final/tv34-profiles-who-is-watching.png" width="380" alt="Who's watching? on Yumeiro TV" />
-  <img src="docs/assets/final/tv34-filter-sheet-no-keyboard.png" width="380" alt="TV filter sheet without the keyboard" />
-</p>
-<p align="center">
-  <img src="docs/assets/final/lowram-profiles-who-is-watching.png" width="180" alt="Who's watching? on a phone" />
-  <img src="docs/assets/final/phone-hold-for-2x.png" width="180" alt="Hold for 2x in the player" />
-  <img src="docs/assets/final/phone-telegram-channel.png" width="180" alt="A public Telegram channel" />
-  <img src="docs/assets/final/lowram-script-repos.png" width="180" alt="Vega script repository" />
-</p>
+<p align="center"><img src="docs/assets/social/00-changelog-card.png" width="600" alt="Yumeiro 2.0.0 changelog card" /></p>
 
-Screenshots from the CI emulators with test data. More: [docs/assets/final](docs/assets/final/README.md).
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/assets/social/02-video.png" width="260" alt="A film plays and resumes" /><br /><sub>A film plays and resumes</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/03-music.png" width="260" alt="Real music playback" /><br /><sub>Real music playback</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/01-extensions.png" width="260" alt="Installed extensions" /><br /><sub>Installed extensions</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/assets/social/04-whos-watching.png" width="260" alt="Who's watching?" /><br /><sub>Who's watching?</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/06-settings.png" width="260" alt="Settings by subject" /><br /><sub>Settings by subject</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/09-stats.png" width="260" alt="Your statistics" /><br /><sub>Your statistics</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/assets/social/08-telegram.png" width="260" alt="Public Telegram channels" /><br /><sub>Public Telegram channels</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/12-downloads.png" width="260" alt="Downloads and Private" /><br /><sub>Downloads and Private</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/10-sources.png" width="260" alt="Sources and script repos" /><br /><sub>Sources and script repos</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/assets/social/tv-video-controls.png" width="260" alt="TV: video controls" /><br /><sub>TV: video controls</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/tv-whos-watching.png" width="260" alt="TV: Who's watching?" /><br /><sub>TV: Who's watching?</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/social/tv-music-playing.png" width="260" alt="TV: music playing" /><br /><sub>TV: music playing</sub></td>
+  </tr>
+</table>
 
-### Where to find things in 1.9.0
+Real captures on CI emulators (Pixel 6 phone, Android TV 14) with a real extension, film and song from a fresh install.
+All images: [docs/assets/social](docs/assets/social/README.md).
+
+### Where to find things
 
 Settings is now organised by subject. Every page is also found by Settings search.
 
@@ -78,7 +94,7 @@ Settings is now organised by subject. Every page is also found by Settings searc
 
 ## Release status
 
-- **1.9.0 is the current release** (2026-11-20). Notes: [CHANGELOG.md](CHANGELOG.md).
+- **2.0.0 is the current release** (2026-11-20); it replaces 1.9.0, whose release build crashed when a video opened. Notes: [CHANGELOG.md](CHANGELOG.md).
 - **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
   pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);
   what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
