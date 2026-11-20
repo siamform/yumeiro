@@ -12,6 +12,8 @@ set -u
 P=dev.asfakul.yumeiro
 OLD=${OLD_APK:-old.apk}
 NEW=${NEW_APK:-new.apk}
+# TV builds start from the Leanback launcher; phones from the normal one.
+CAT=${LAUNCH_CAT:-android.intent.category.LAUNCHER}
 mkdir -p upgrade
 
 note() { echo "UPGRADE $*"; }
@@ -77,7 +79,7 @@ note "old version: $(adb shell dumpsys package $P | grep -m1 versionName | tr -d
 for PERM in POST_NOTIFICATIONS READ_MEDIA_VIDEO READ_MEDIA_AUDIO; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1 || true; done
 adb push upgrade-clip.mp4 /sdcard/Movies/upgrade-clip.mp4 > /dev/null
 adb shell content call --uri content://media --method scan_volume --arg external_primary > /dev/null 2>&1 || true
-adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
+adb shell monkey -p $P -c $CAT 1 > /dev/null 2>&1
 sleep 12; dump old-start
 settle_first_run 45
 dump old-tabs
@@ -109,7 +111,7 @@ note "old app played the clip: $PLAYED (saved position ${POS_BEFORE} ms)"
 R=$(adb install -r "$NEW" 2>&1 | tail -1); note "install new over old: $R"
 case "$R" in *Success*) ;; *) echo "UPGRADE_RESULT FAIL install: $R"; kill $LOGPID 2>/dev/null; exit 1;; esac
 note "new version: $(adb shell dumpsys package $P | grep -m1 versionName | tr -d ' ')"
-adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
+adb shell monkey -p $P -c $CAT 1 > /dev/null 2>&1
 sleep 20; dump new-start
 GUIDE_AGAIN=0; grep -qE 'text="(Skip|Skip for now)"' upgrade/ui-new-start.xml 2>/dev/null && GUIDE_AGAIN=1
 note "welcome guide shown again after upgrade: $GUIDE_AGAIN"
@@ -138,6 +140,11 @@ note "clip position kept and resumed: $CLIP_SEEN (before ${POS_BEFORE} ms, after
 kill $LOGPID 2>/dev/null || true
 FATAL=$(grep -cE "FATAL EXCEPTION|ANR in $P" upgrade/logcat.txt || true)
 note "FATAL/ANR lines in logcat: $FATAL"
+# FINAL-46 (run 44681019595): ART rejected an R8-built class of the new APK at install (dex2oat
+# "Verification error") and the player crashed with VerifyError when the clip was opened. Any
+# verifier rejection is a FAIL, even when no screen happened to load the class.
+VERIFY=$(grep -cE "dex2oat[0-9]*: Verification error|java\.lang\.VerifyError|Verifier rejected class" upgrade/logcat.txt || true)
+note "ART verifier rejections in logcat: $VERIFY"
 LOGLINES=$(wc -l < upgrade/logcat.txt 2>/dev/null || echo 0)
 note "logcat lines: $LOGLINES"
 python3 scripts/upgrade_compare.py upgrade/before.tar upgrade/after.tar | tee upgrade/compare.txt
@@ -149,8 +156,9 @@ V=PASS
 [ "${LOGLINES:-0}" -ge 100 ] || V=ERROR_NO_LOGCAT
 [ "$GUIDE_AGAIN" = 0 ] || V=FAIL
 [ "${FATAL:-0}" = 0 ] || V=FAIL
+[ "${VERIFY:-0}" = 0 ] || V=FAIL
 # Without the clip played in the old app, history/resume parity was not exercised: not a PASS.
 [ "$V" = PASS ] && [ "$PLAYED" = 0 ] && V=INCOMPLETE_NOT_PLAYED
 [ "$V" = PASS ] && [ "$CLIP_SEEN" = 0 ] && V=FAIL_NOT_RESUMED
-echo "UPGRADE_RESULT $V compare=$CMP pre_ok=$PRE_OK played=$PLAYED guide_again=$GUIDE_AGAIN resumed=$CLIP_SEEN pos=${POS_BEFORE}/${POS_AFTER}/${POS_RESUMED} fatal=$FATAL logcat=$LOGLINES"
+echo "UPGRADE_RESULT $V compare=$CMP pre_ok=$PRE_OK played=$PLAYED guide_again=$GUIDE_AGAIN resumed=$CLIP_SEEN pos=${POS_BEFORE}/${POS_AFTER}/${POS_RESUMED} fatal=$FATAL verify=$VERIFY logcat=$LOGLINES"
 [ "$V" = PASS ]

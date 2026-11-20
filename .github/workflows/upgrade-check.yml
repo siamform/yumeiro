@@ -12,6 +12,11 @@ on:
         description: "Published release tag to upgrade from"
         type: string
         required: true
+      tv:
+        description: "Upgrade the TV edition (published Yumeiro-TV-*.tv.apk → this TV build) on an Android TV emulator"
+        type: boolean
+        required: false
+        default: false
       new_apk_run:
         description: "ci.yml run whose yumeiro-review-apk artifact holds the phone APK to install (empty = build one here)"
         type: string
@@ -36,11 +41,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           FROM: ${{ inputs.from || 'v1.8.0' }}
+          TV: ${{ inputs.tv }}
         run: |
           mkdir -p rel
-          gh release download "$FROM" -R "$GITHUB_REPOSITORY" -D rel -p 'release-Yumeiro-*.apk' -p 'SHA256SUMS.txt'
+          if [ "$TV" = true ]; then PAT='Yumeiro-TV-*.tv.apk'; else PAT='release-Yumeiro-*.apk'; fi
+          gh release download "$FROM" -R "$GITHUB_REPOSITORY" -D rel -p "$PAT" -p 'SHA256SUMS.txt'
           (cd rel && sha256sum -c --ignore-missing SHA256SUMS.txt)
-          cp rel/release-Yumeiro-*.apk old.apk
+          cp rel/$PAT old.apk
 
       - name: Restore constant release keystore
         if: ${{ inputs.new_apk_run == '' }}
@@ -62,7 +69,17 @@ jobs:
           MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
-        run: ./gradlew --no-daemon --no-configuration-cache --no-build-cache assembleMobileRelease
+          # FINAL-46: the same build inputs as review-apk.yml / release.yml. Without these four groups R8
+          # folded the empty values and emitted a class ART rejected (run 44681019595).
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
+          YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}
+          YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}
+          YUMEIRO_FCM_APP_ID: ${{ secrets.YUMEIRO_FCM_APP_ID }}
+          MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
+        run: ./gradlew --no-daemon --no-configuration-cache --no-build-cache ${{ inputs.tv && 'assembleTvRelease' || 'assembleMobileRelease' }}
 
       - name: Remove keystore from the runner
         if: always()
@@ -77,17 +94,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ inputs.new_apk_run }}
+          TV: ${{ inputs.tv }}
         run: |
           gh run download "$RUN" -R "$GITHUB_REPOSITORY" -n yumeiro-review-apk -D review
           (cd review && sha256sum -c SHA256SUMS.txt)
-          cp "$(ls review/yumeiro-*-review.apk | grep -v -- '-tv-' | head -1)" new.apk
+          if [ "$TV" = true ]; then cp "$(ls review/yumeiro-tv-*-review.apk | head -1)" new.apk
+          else cp "$(ls review/yumeiro-*-review.apk | grep -v -- '-tv-' | head -1)" new.apk; fi
           echo "UPGRADE new.apk from review run $RUN sha256=$(sha256sum new.apk | cut -d' ' -f1)"
 
       - name: Same signing certificate on both APKs; versionCode goes up
         run: |
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           if [ ! -f new.apk ]; then
-            SRC=$(ls app/build/outputs/apk/mobile/release/*.apk | grep -v unsigned | head -1)
+            SRC=$(ls app/build/outputs/apk/${{ inputs.tv && 'tv' || 'mobile' }}/release/*.apk | grep -v unsigned | head -1)
             cp "$SRC" new.apk
           fi
           EXPECTED=$(tr -d '[:space:]' < .github/release-signing-cert.sha256)
@@ -110,18 +129,18 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
 
-      - name: Upgrade on emulator (api33, Pixel 3a, google_apis)
+      - name: Upgrade on emulator (phone api33 Pixel 3a google_apis, or TV api34 android-tv)
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: 33
-          target: google_apis
-          arch: x86_64
-          profile: pixel_3a
-          ram-size: 2048M
-          heap-size: 192M
+          api-level: ${{ inputs.tv && 34 || 33 }}
+          target: ${{ inputs.tv && 'android-tv' || 'google_apis' }}
+          arch: ${{ inputs.tv && 'x86' || 'x86_64' }}
+          profile: ${{ inputs.tv && 'tv_1080p' || 'pixel_3a' }}
+          ram-size: ${{ inputs.tv && '4096M' || '2048M' }}
+          heap-size: ${{ inputs.tv && '512M' || '192M' }}
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash scripts/upgrade-check.sh
+          script: LAUNCH_CAT=${{ inputs.tv && 'android.intent.category.LEANBACK_LAUNCHER' || 'android.intent.category.LAUNCHER' }} bash scripts/upgrade-check.sh
 
       - name: Remove the test APKs before upload
         if: always()

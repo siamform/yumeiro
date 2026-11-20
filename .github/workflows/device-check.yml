@@ -105,6 +105,7 @@ jobs:
     with:
       from: ${{ inputs.upgrade_from }}
       new_apk_run: ${{ inputs.upgrade_apk_run }}
+      tv: ${{ inputs.tv }}
     secrets: inherit
 
   emulator:
