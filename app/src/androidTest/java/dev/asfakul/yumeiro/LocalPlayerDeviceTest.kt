@@ -236,6 +236,9 @@ class LocalPlayerDeviceTest {
 
     @Test fun c_pipEntersPictureInPicture() {
         val pm = ctx.packageManager
+        // FINAL-25 (run 44659224203, tv-api24): the app offers PiP from Android 8 (PictureInPictureParams,
+        // VideoPlayerModal.isPipSupported); Android 7 TVs report the feature but get no PiP button by design.
+        org.junit.Assume.assumeTrue("no PiP before Android 8 (app design)", android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
         org.junit.Assume.assumeTrue("no PiP on this device", pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE))
         openClipFromDevice()
         loopClip()
@@ -377,6 +380,9 @@ class LocalPlayerDeviceTest {
     /** G3: when the system refuses picture-in-picture the user is told (app op forced to ignore). */
     @Test fun h_refusedPipSaysSo() {
         val pm = ctx.packageManager
+        // FINAL-25 (run 44659224203, tv-api24): the app offers PiP from Android 8 (PictureInPictureParams,
+        // VideoPlayerModal.isPipSupported); Android 7 TVs report the feature but get no PiP button by design.
+        org.junit.Assume.assumeTrue("no PiP before Android 8 (app design)", android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
         org.junit.Assume.assumeTrue("no PiP on this device", pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE))
         FirstRun.shell("appops set ${ctx.packageName} PICTURE_IN_PICTURE ignore")
         try {
