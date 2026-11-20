@@ -91,7 +91,7 @@ quality & playback · Settings → Music → Music & sound.
   Android 7–8 TV (OMT-59), Yumix "See all" loading a second page (OMT-60), a video right after installing over
   1.8.x and the TV keeping its data (OMT-61).
 
-### Known imperfect in this release candidate
+### Known imperfect in this release
 - YouTube can answer "Sign in to confirm you're not a bot" and refuse to play; the emulators in CI always get this,
   so YouTube playback, quality list and endless Music Home were not checked there (OMT-29).
 - On Android TV the system keeps asking for the notification permission after every "Don't allow"; the "Open

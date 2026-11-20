@@ -1,9 +1,10 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 06:54 UTC; owner said "Go release" 2026-11-20)
+## Resume here (updated 2026-11-20 07:18 UTC; owner: release before 14:00 Dhaka = 08:00 UTC)
 
-- **Now:** owner gave "go". FINAL-47 (Profiles / Telegram / Statistics hard to find) fixed in code, CI pending;
-  then new review APK, upgrade check, social shots, release, Worker, website, branches.
+- **Now:** FINAL-47/47b unit tests green in ci.yml 44691804753 (phone + TV unit). Pushing r15-stability → main to
+  publish v1.9.0 via release.yml; then release notes from CHANGELOG, social images (SocialShotsDeviceTest
+  44692254096), website, Worker, branch cleanup.
 - **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
   Handover steps 1-7 done; step 8 (one owner message) sent with this push; then wait for the owner.
 - **Review APK:** ci.yml 44675081410 on 8cef8a6 (app code = df4ba9d): unit, lint, gitleaks, review APK all
