@@ -1,6 +1,6 @@
-## Resume here (2026-11-20, after v2.0.0)
+## Resume here (2026-11-21, no release until the owner says)
 
-Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md. Owner: fix everything, then release 2.1.0. Fixed on r15-stability for 2.1.0: rows B-10..B-28 in docs/BUGS-AND-FIXES-2.0.0.md (FREEZE-1, PROF-1, T-1, FREEZE-2, F-18, F-02 split, Live TV country, NF-2b, PIN-1, F-19 security questions, per-profile pins, FREEZE-4 draw counter, PIN-2, GATE-1, RegexGuard, B-25 search-only loading, B-27 recorder-count leak, B-28 YouTube Music body off main). Last full green CI: 44797801824 (6fd31251). GATE-1 real-clock gate passes: device run 44795131763 (650 / 677 ms, limit 700). Open, owner decision: B-26 (starter extension builds a WebView on the main thread at load), discreet launcher icon, Telegram login. Needs a real phone: B-3 TeraBox link, a FREEZE-4 freeze report from a 2.1.0 build. Epics: per-profile extensions, Nuvio/SkyStream import, ABI splits (E3). Release 2.1.0 waits for the owner's go-ahead.
+Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md (bottom sections first). Owner 2026-11-21: no release; fix, implement and test everything. Done on r15-stability (CI 44827815442 green on 1e92bc33): B-26 starters removed, B-29 TeraBox full video via share API (needs a TeraBox sign-in, never the 30 s preview), B-30 DiskWala hand-off. Open next: B-31 built-in torrent engine, B-32 extensions that load nothing (HindiSubAnime), E1 Yumeiro master extension, F-02 Telegram full login (waiting for api_id/api_hash), discreet-icon yes/no, F-21 extension metadata rows, F-22 Upcoming filters. Earlier rows B-10..B-28 in docs/BUGS-AND-FIXES-2.0.0.md.
 
 # R15 status: every item in the master prompt, with its evidence
 
