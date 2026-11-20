@@ -83,6 +83,13 @@ abstract class StallWalk {
 
     /** Home → Videos → Yumix → Live TV → Home with the watchdog on; returns the longest main-thread wait. */
     protected fun walk(): Long {
+        // Run 44786829781: the starter extensions (installed on every first run) include a third-party
+        // one that builds a WebView on the main thread when it loads (com.phisher98 EnmaDecryptor:
+        // 1.3 s on api33-lowram) and opens a donation dialog. That stall is real but it is not
+        // Yumeiro's code and it is tracked on its own (B-26). The gate measures the app with 300
+        // providers, so no third-party code may run: mark the starters as done before onboarding ends.
+        ctx.getSharedPreferences("starter_extensions", android.content.Context.MODE_PRIVATE)
+            .edit().putBoolean("done_v1", true).commit()
         FirstRun.toTabs(rule)
         rule.waitUntil(30_000) { has("home_screen_root") }
 
@@ -101,7 +108,11 @@ abstract class StallWalk {
                     val waited = SystemClock.uptimeMillis() - sent
                     if (waited >= 300 + 250L * sampled && sampled < 8) {
                         sampled++
-                        val st = Looper.getMainLooper().thread.stackTrace.take(40).joinToString("\n    at ")
+                        // Top frames plus every app, extension, WebView and test-clock frame further down
+                        // (run 44786829781: the 40-frame cut hid who was composing).
+                        val all = Looper.getMainLooper().thread.stackTrace
+                        val keep = all.withIndex().filter { (i, f) -> i < 12 || KEEP.containsMatchIn(f.className) }
+                        val st = keep.joinToString("\n    at ") { (i, f) -> "#$i $f" }
                         log("STALL_SAMPLE ${waited} ms:\n    at $st")
                     }
                 }
@@ -131,5 +142,6 @@ abstract class StallWalk {
     companion object {
         const val BRIDGE = "gate1"
         const val MAX_STALL_MS = 700L
+        private val KEEP = Regex("^(dev\\.asfakul|com\\.|org\\.chromium\\.android_webview|androidx\\.compose\\.ui\\.test\\.(Main|Abstract|AndroidCompose))")
     }
 }
