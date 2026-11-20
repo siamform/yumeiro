@@ -99,3 +99,25 @@ extensions / repositories per profile are still shared (Epic).
 2. Keep fixing the MAJOR list; release 2.1.0 (version.properties 2.1.0 / 19, CHANGELOG, WhatsNew.shouldPost must accept 2.1.x) when the owner says.
 3. FREEZE-2/3/4, GATE-1, then PROF-1 (manga progress per profile) and S-1 (search debounce).
 4. Then the Next list in MAJOR-BUGS-AND-FEATURES-2.x.md.
+
+## Update 2026-11-21: GATE-1 (main-thread stall gate)
+
+What the runs showed (rows B-23, B-25, B-26 in docs/BUGS-AND-FIXES-2.0.0.md):
+
+- Compose-rule gate `MainThreadStallDeviceTest` (300 fake providers): 44782628451 2742/2884 ms (api36/api33),
+  2.0.0 code (ab/gate1-before) 44782633791 4347/4602 ms, 44784827103 2707/1712 ms, 44786829781 1651/1741 ms,
+  44789029823 3414/804 ms. Control walk without providers (`MainThreadStallControlDeviceTest`): 638/1160 ms
+  (44786829781) and 860/829 ms (44789029823). Limit 700 ms, never raised.
+- Stack samples (log tag YuGate1, `STALL_SAMPLE`): the long waits are inside
+  `androidx.compose.ui.test.AbstractMainTestClock.advanceTimeByFrame`: the Compose test rule runs the app's frames
+  from the test thread, several in one main-thread message. That is the harness, not what a user sees.
+- Real finding B-26: a starter extension (com.phisher98, `EnmaDecryptor.startInit`) creates a WebView on the main
+  thread when it loads (1.3 s on api33-lowram) and opens `DonationDialogFragment`. Starters install on every first
+  run, so every new user pays it. Owner decision: leave it out of the starter picks, or delay extension loading.
+  Gate tests now mark starters done so third-party code is not measured.
+- Real finding B-25 (fixed, YumixSearchOnlyTest): search-only extensions counted as "loading" for ever and the
+  search-only card measured every name in one unbounded Text.
+- New gate on the real frame clock: `GateOnePrepareDeviceTest` then `MainThreadStallRealClockDeviceTest`
+  (am start, no Compose rule, real `input tap`, same 700 ms limit). Run:
+  `gh workflow run device-check.yml --ref r15-stability -f test=dev.asfakul.yumeiro.GateOnePrepareDeviceTest,dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest`
+  Data is kept between classes when REPEAT=1 (scripts/device-check.sh clears only for N>1), which the pair relies on.

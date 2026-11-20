@@ -63,7 +63,7 @@ class MainThreadStallRealClockDeviceTest {
         SourceHub.publishVideo(StallWalk.BRIDGE, SourceHub.Ecosystem.JAVASCRIPT, (1..300).map { RealFake(it) })
         try {
             FirstRun.shell("am start -W -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
-            assertTrue("tab bar never showed", waitFor(30_000) { find("Home") != null })
+            if (!waitFor(30_000) { find("Home") != null }) throw AssertionError("tab bar never showed · on screen: ${texts()}")
             SystemClock.sleep(3_000) // first draw done; measuring starts below
 
             val worst = AtomicLong(0L)
@@ -116,7 +116,17 @@ class MainThreadStallRealClockDeviceTest {
         reading.set(true)
         try {
             val root: AccessibilityNodeInfo = inst.uiAutomation.rootInActiveWindow ?: return null
-            val nodes = root.findAccessibilityNodeInfosByText(text)
+            // Compose's node provider does not answer findAccessibilityNodeInfosByText (run 44791259898:
+            // "tab bar never showed" with MainActivity displayed); walk the tree like UiAutomator does.
+            val nodes = ArrayList<AccessibilityNodeInfo>()
+            val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+            var seen = 0
+            while (queue.isNotEmpty() && seen < 5_000) {
+                val n = queue.removeFirst(); seen++
+                val t = n.text?.toString().orEmpty(); val d = n.contentDescription?.toString().orEmpty()
+                if (t == text || d.startsWith(text) || (text.endsWith(":") && d.startsWith(text))) nodes.add(n)
+                for (i in 0 until n.childCount) n.getChild(i)?.let(queue::add)
+            }
             val screenH = inst.targetContext.resources.displayMetrics.heightPixels
             val menuRow = text != "Source:" && text != "Home" && text != "Videos"
             val hits = nodes.filter { n -> !menuRow || n.contentDescription?.startsWith("Source:") != true }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
@@ -128,8 +138,19 @@ class MainThreadStallRealClockDeviceTest {
         }
     }
 
+    private fun texts(): String = runCatching {
+        val root = inst.uiAutomation.rootInActiveWindow ?: return "no active window"
+        val out = ArrayList<String>(); val q = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+        while (q.isNotEmpty() && out.size < 40) {
+            val n = q.removeFirst()
+            (n.text ?: n.contentDescription)?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it.take(40)) }
+            for (i in 0 until n.childCount) n.getChild(i)?.let(q::add)
+        }
+        "${root.packageName}: " + out.joinToString(" | ")
+    }.getOrElse { "read failed: $it" }
+
     private fun tap(text: String) {
-        val r = find(text) ?: run { waitFor(10_000) { find(text) != null }; find(text) } ?: throw AssertionError("no '$text' on screen")
+        val r = find(text) ?: run { waitFor(10_000) { find(text) != null }; find(text) } ?: throw AssertionError("no '$text' on screen · ${texts()}")
         FirstRun.shell("input tap ${r.centerX()} ${r.centerY()}")
         log("tapped '$text' at ${r.centerX()},${r.centerY()}")
     }
