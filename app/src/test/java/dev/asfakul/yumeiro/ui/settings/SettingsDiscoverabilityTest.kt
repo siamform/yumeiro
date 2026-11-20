@@ -73,7 +73,9 @@ class SettingsDiscoverabilityTest {
     @Test fun `whats new note goes to updaters only`() {
         assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "1.9.0"))
         assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "1.9.0"))
-        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.0.0"))
+        assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.0.0"))
+        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "2.0.0"))
+        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.1.0"))
     }
 
     @Test fun `whats new names only real settings pages`() {

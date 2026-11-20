@@ -2,6 +2,23 @@
 
 All notable changes to Yumeiro.
 
+## v2.0.0: the 1.9.0 features, without the crash
+
+Replaces 1.9.0. Update from 1.9.0 or 1.8.x directly; nothing is lost (profiles, history, downloads and settings carry
+over). Everything listed under v1.9.0 below is in this release.
+
+### Fixed
+- Opening any video crashed 1.9.0 on release builds ("VerifyError: Verifier rejected class ok6"). The video player
+  had grown into one very large compiled method and the code shrinker (R8) produced code Android refuses to load. The
+  player screen is now split so each part stays small, and every release build is checked automatically: it fails if
+  any of our screens gets close to that size again (FINAL-49).
+- 1.9.0 wrote a crash report "Closed to free memory" when Android closed Yumeiro while it sat unused in the
+  background. That is normal Android behaviour, not a crash, and is no longer reported as one. Reports are still
+  written when memory runs out while you are using the app, playing or downloading (FINAL-50).
+- When Android asked the app to free memory, it logged the same request many times a second; now once per kind of
+  request every few seconds (FINAL-50).
+- The "where to find things" note in the Inbox is also shown to people updating straight from 1.8.x to 2.0.0.
+
 ## v1.9.0: yours, and fast
 
 Released 2026-11-20 (planned as v1.8.2; it adds features, so it ships as 1.9.0). The final test ran every feature

@@ -28,7 +28,9 @@ object WhatsNew {
         "Hold the video for 2x speed."
 
     fun shouldPost(firstInstall: Long, lastUpdate: Long, version: String): Boolean =
-        version.startsWith("1.9.") && lastUpdate > firstInstall
+        // 2.0.0 is the 1.9.0 feature set with the player crash fixed; most users skip 1.9.0, so the
+        // note is posted for 2.0.x too (same ID: anyone who saw it on 1.9.0 does not get it again).
+        (version.startsWith("1.9.") || version.startsWith("2.0.")) && lastUpdate > firstInstall
 
     /** Call off the main thread (it reads the inbox file). */
     fun postOnce(c: Context) {
