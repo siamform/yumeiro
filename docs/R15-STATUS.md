@@ -1,10 +1,15 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 07:18 UTC; owner: release before 14:00 Dhaka = 08:00 UTC)
+## Resume here (updated 2026-11-20 07:56 UTC)
 
-- **Now:** FINAL-47/47b unit tests green in ci.yml 44691804753 (phone + TV unit). Pushing r15-stability → main to
-  publish v1.9.0 via release.yml; then release notes from CHANGELOG, social images (SocialShotsDeviceTest
-  44692254096), website, Worker, branch cleanup.
+- **Now:** v1.9.0 publishing: release.yml 44694112925 built and tagged but the publish failed (FINAL-48, body over
+  GitHub's limit); tag deleted, notes script fixed, re-run 44697745652 in progress. After it: verify the release
+  certificate and APK names, run the upgrade check against the release APK (FINAL-46 / OMT-61).
+- **Done today:** Settings reorganised (FINAL-47/47b, CI 44691804753 green, device shots phone 44692254096 + TV
+  44694153514 18/18); Yumeiro Cloud deployed with migrations 0003–0005 (docs/SERVER.md); website changelog updated
+  (yumeiro-web d17546c); 66 obsolete branches deleted (docs/evidence/final/BRANCHES-OBSOLETE-2026-11-20.md); social
+  images in docs/assets/social.
+- **Still owed:** rotate the Last.fm shared secret before built-in Last.fm sign-in is enabled.
 - **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
   Handover steps 1-7 done; step 8 (one owner message) sent with this push; then wait for the owner.
 - **Review APK:** ci.yml 44675081410 on 8cef8a6 (app code = df4ba9d): unit, lint, gitleaks, review APK all
