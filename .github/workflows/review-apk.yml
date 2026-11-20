@@ -90,6 +90,13 @@ jobs:
           echo "commit $GITHUB_SHA ci_run $GITHUB_RUN_ID" >> review/INTEGRITY.txt
           (cd review && sha256sum *.apk > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt && cat SHA256SUMS.txt)
 
+      - name: Dex register budget (FINAL-49, ART verifier safety)
+        run: |
+          # R8 gave VideoPlayerModalContent invalid register types at 255/262 registers and ART
+          # rejected the class (the 1.9.0 player crashed on open). No method of ours may pass 224.
+          python3 -m pip install --quiet "androguard==4.1.4"
+          for F in review/*.apk; do python3 scripts/dex_register_budget.py "$F" 224; done
+
       - name: Upload review APKs (artifact only, not published)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

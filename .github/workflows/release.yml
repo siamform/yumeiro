@@ -163,6 +163,13 @@ jobs:
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Dex register budget (FINAL-49, ART verifier safety)
+        run: |
+          # R8 gave VideoPlayerModalContent invalid register types at 255/262 registers and ART
+          # rejected the class (the 1.9.0 player crashed on open). No method of ours may pass 224.
+          python3 -m pip install --quiet "androguard==4.1.4"
+          for F in dist/*.apk; do python3 scripts/dex_register_budget.py "$F" 224; done
+
       - name: Commit version bump
         id: commit
         if: steps.version.outputs.changed == 'true'

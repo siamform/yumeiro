@@ -1645,6 +1645,11 @@ private fun VideoPlayerModalContent(
             )
         }
     }
+    // FINAL-49: the player surface and its controls are a separate composable lambda, not inline in
+    // VideoPlayerModalContent. Inline, that one dex method needed 262 registers and R8 (AGP 9.5.1)
+    // gave it invalid register types: ART rejected the class and the 1.9.0 player crashed on open
+    // (upgrade check 44700731576). scripts/dex_register_budget.py now holds every method under 224.
+    val playerSurface: @Composable () -> Unit = {
     Box(
         modifier = (if (docked) Modifier.fillMaxWidth().aspectRatio(16f / 9f) else Modifier.fillMaxSize())
             .graphicsLayer {
@@ -2386,6 +2391,8 @@ private fun VideoPlayerModalContent(
         }
         }
     }
+    }
+    playerSurface()
     if (docked) {
         val dockHandle = remember(lease) {
             PlayerHandle(positionMs = { exoPlayer.currentPosition }, durationMs = { exoPlayer.duration.takeIf { it > 0 } ?: 0L }, seekTo = { exoPlayer.seekTo(it) }, pause = { exoPlayer.pause() }, selectAudio = { k -> selectAudioByKey(k) })
