@@ -633,24 +633,41 @@ fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag
             // FINAL-39 (run 44666813073, tv-api34): a sheet window on TV puts the first focus on its first
             // focusable, this field, and focus alone opened the full-screen TV keyboard over the sheet the
             // moment it opened (ImeTracker onShown with no key pressed); Back then only closed the keyboard.
-            // On TV the keyboard opens when OK / Enter is pressed on the field, as in the system search
-            // fields of Android TV; phones keep opening it on focus (a tap).
-            val tv = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
-            val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-            BasicTextField(
-                value = query, onValueChange = onQuery, singleLine = true,
-                textStyle = TextStyle(color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 13.sp), cursorBrush = SolidColor(p.accent),
-                keyboardOptions = if (tv) KeyboardOptions(showKeyboardOnFocus = false) else KeyboardOptions.Default,
-                modifier = Modifier.fillMaxWidth()
-                    .then(
-                        if (tv) Modifier.onPreviewKeyEvent { e ->
+            // On TV the keyboard opens when OK / Enter is pressed on the field (or on a tap); phones keep
+            // the old field and open it on focus. KeyboardOptions.showKeyboardOnFocus is honoured only by
+            // the TextFieldState BasicTextField (the value/onValueChange overload ignores it), so the TV
+            // branch uses that one and mirrors its text into [query]. ADR-051.
+            val textStyle = TextStyle(color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 13.sp)
+            if (dev.asfakul.yumeiro.ui.tv.LocalTvMode.current) {
+                val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+                val state = androidx.compose.foundation.text.input.rememberTextFieldState(query)
+                val latest = androidx.compose.runtime.rememberUpdatedState(onQuery)
+                val latestQuery = androidx.compose.runtime.rememberUpdatedState(query)
+                androidx.compose.runtime.LaunchedEffect(state) {
+                    androidx.compose.runtime.snapshotFlow { state.text.toString() }.collect { t -> if (t != latestQuery.value) latest.value(t) }
+                }
+                androidx.compose.runtime.LaunchedEffect(query) {
+                    if (state.text.toString() != query) state.edit { replace(0, length, query) }
+                }
+                BasicTextField(
+                    state = state, lineLimits = androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine,
+                    textStyle = textStyle, cursorBrush = SolidColor(p.accent),
+                    keyboardOptions = KeyboardOptions(showKeyboardOnFocus = false),
+                    modifier = Modifier.fillMaxWidth()
+                        .onPreviewKeyEvent { e ->
                             val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
                             if (ok && e.type == KeyEventType.KeyUp) keyboard?.show()
                             ok
-                        } else Modifier,
-                    )
-                    .testTag(tag),
-            )
+                        }
+                        .testTag(tag),
+                )
+            } else {
+                BasicTextField(
+                    value = query, onValueChange = onQuery, singleLine = true,
+                    textStyle = textStyle, cursorBrush = SolidColor(p.accent),
+                    modifier = Modifier.fillMaxWidth().testTag(tag),
+                )
+            }
         }
     }
 }

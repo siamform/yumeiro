@@ -1580,3 +1580,40 @@ the receiver's own decoding. Rollback: remove the `else` branch's gate line.
 
 Tests. Device: PlayerSwitchDeviceTest d on tv-api24 (fail-before 44662563096) and tv-api34 / phones (unchanged
 path on phones).
+
+### ADR-051: On TV, a search field opens the keyboard on OK, not on focus (FINAL-39)
+
+Status: accepted 2026-11-20 (final-test cycle, finding FINAL-39).
+
+Context. PinnedExtensionsDeviceTest on tv-api34 (runs 44662694767, 44666813073): opening "Show videos from" put the
+sheet window's first focus on its search field (`WatchSearchField`), and focus alone brought up the full-screen TV
+keyboard (ImeTracker `showSoftInput` / `onShown`, no key pressed). The first Back closed only the keyboard; the sheet
+stayed. On tv-api24 the sheet's last row left the screen while the test tapped it ("Failed to inject touch input",
+44660974031, 44667417908). Android's guidance describes the default (focus on a text field shows the keyboard, Back
+hides it, a second Back navigates: [Focus in text fields](https://developer.android.com/develop/ui/compose/touch-input/focus/focus-in-text-fields)),
+which is right when the user moves to the field and wrong when a sheet opens and the field merely gets first focus.
+
+Competitors. dreamDroid (Enigma2 client, Compose for TV) passes `showKeyboardOnFocus = touch || selected`: under the
+D-pad the keyboard opens when the field is selected with OK / Enter, so focus travels through a form without it
+([tv-focus-testing.md](https://github.com/sreichholf/dreamDroid/blob/main/docs/tv-focus-testing.md)). The Flutter
+`tv_textfield` package uses the same "Select / Enter to edit" model on Android TV and tvOS
+([pub.dev](https://pub.dev/packages/tv_textfield)). Android's Leanback-to-Compose guide warns that a bare field must
+still let D-pad CENTER attach the keyboard ([developer.android.com](https://developer.android.com/agents/skills/tv/leanback-to-compose-tv-migration/skill)).
+
+Options. (a) Move first focus away from the field in every sheet: rejected, each sheet needs its own focus requester
+and a field reached by D-pad would still open the keyboard on focus. (b) No search on TV: rejected, long extension
+lists need it. (c) Keyboard on OK / Enter / tap on TV: chosen.
+
+Decision. On the TV layout `WatchSearchField` uses the `TextFieldState` `BasicTextField` with
+`KeyboardOptions(showKeyboardOnFocus = false)` (the value/onValueChange overload ignores that option:
+[API reference](https://developer.android.com/reference/kotlin/androidx/compose/foundation/text/BasicTextField.composable))
+and shows the keyboard on OK / Enter KeyUp; its text is mirrored into the caller's `query`. Phones keep the old field.
+
+Side effects. On TV the field needs one OK press before typing; a hardware keyboard's Enter in the field opens the
+on-screen keyboard. Rollback: drop the TV branch in `WatchSearchField`.
+
+Terms. No access control, DRM or service terms are involved (local UI input only).
+
+Tests. Device: PinnedExtensionsDeviceTest asserts on the TV layout that the keyboard is down after the sheet opens
+(`dumpsys input_method` mInputShown); fail-before 44666813073 (logcat) and the a5bc4da chunk-12 TV runs (same no-op
+first attempt, see FINAL-39b); phones unchanged.
