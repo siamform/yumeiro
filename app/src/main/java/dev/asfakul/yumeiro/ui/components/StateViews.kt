@@ -137,6 +137,15 @@ object AppMessages {
         actionLabel: String?, action: (() -> Unit)?, quiet: Boolean,
     ) {
         if (text.isBlank()) return
+        // FINAL-42 (run 44669673771, tv-api34): the Tachiyomi "add repository" job posted its error from a
+        // worker thread. Writing the state there resumed the host's collector on that worker, which ran a
+        // Compose frame off the main thread (CalledFromWrongThreadException, slot table left broken, crash
+        // when the screen was destroyed). The check-then-set of [waiting] and [_current] below also raced
+        // between threads. All message state now changes on the main thread only.
+        if (Looper.myLooper() !== Looper.getMainLooper()) {
+            main.post { post(context, text, kind, actionLabel, action, quiet) }
+            return
+        }
         val duration = if (actionLabel != null || kind == Kind.ERROR) 4_500L else 2_600L
         if (hosts > 0 && quiet && _current.value != null) {
             waiting = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration, quiet = true)
@@ -149,6 +158,7 @@ object AppMessages {
             // Same text again (e.g. repeated taps) just restarts the timer instead of stacking.
             _current.value = Message(seq.incrementAndGet(), text.take(240), kind, actionLabel, action, duration, quiet = quiet)
         } else if (context != null) {
+            android.util.Log.i("YuMsg", "no message host; shown as a system toast: ${text.take(80)}")
             val app = context.applicationContext
             main.post { runCatching { Toast.makeText(app, text, if (duration > 3_000) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show() } }
         }
@@ -160,13 +170,17 @@ object AppMessages {
         show(context, text, Kind.ERROR, actionLabel, action)
 
     fun dismiss(id: Long) {
+        if (Looper.myLooper() !== Looper.getMainLooper()) { main.post { dismiss(id) }; return }
         if (_current.value?.id != id) return
         val next = waiting; waiting = null
         _current.value = next?.copy(id = seq.incrementAndGet())
     }
 
     /** Drops a waiting quiet message with this text (its reason went away before it could show). */
-    fun dropWaiting(text: String) { if (waiting?.text == text.take(240)) waiting = null }
+    fun dropWaiting(text: String) {
+        if (Looper.myLooper() !== Looper.getMainLooper()) { main.post { dropWaiting(text) }; return }
+        if (waiting?.text == text.take(240)) waiting = null
+    }
 }
 
 /** Renders [AppMessages] at the bottom of its parent box. Add once, near the app root. */
