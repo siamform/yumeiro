@@ -4,11 +4,15 @@ All notable changes to Yumeiro.
 
 ## v1.9.0: yours, and fast
 
-Release candidate for 1.9.0 (planned as v1.8.2; it adds features, so it ships as 1.9.0). It is waiting for the
-owner's review and is not published. The final test ran every feature once (fresh install; the second, warm-start
-pass was dropped on the owner's decision of 2026-11-20 to release in time) on a low-RAM phone, Android TV 14,
-Android TV 7 and a phone on Android 16 emulators; results per feature are in docs/MASTER-CHECKLIST-FINAL.md. What still needs your phones is listed at the end (full list:
-docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
+Released 2026-11-20 (planned as v1.8.2; it adds features, so it ships as 1.9.0). The final test ran every feature
+once on a fresh install (the warm-start second pass was dropped on the owner's decision of 2026-11-20) on a low-RAM
+phone, Android TV 14, Android TV 7 and a phone on Android 16 emulators; results per feature are in
+docs/MASTER-CHECKLIST-FINAL.md. What still needs real phones is listed at the end (full list: docs/UNVERIFIED-QUEUE.md
+and docs/OWNER-MANUAL-TESTS.md, which starts with the six mandatory tests for every tester).
+
+Where things are now: Settings → You → Profiles · Settings → You → Your statistics · Settings → Sources & accounts →
+Telegram & web sites · Settings → Downloads & library → Downloads (Private downloads) · Settings → Video → Video
+quality & playback · Settings → Music → Music & sound.
 
 ### Profiles and privacy
 - Settings reorganised by subject (FINAL-47): You (Profiles, Your statistics, Look & feel, Navigation bar), Video

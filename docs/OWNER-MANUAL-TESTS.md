@@ -109,6 +109,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-59 | FT-B1: smoothness on an Android 7–8 TV (main-thread checks need Android 9 on emulators) | Owner/community test (pending) |
 | OMT-60 | FT-B3: Yumix "See all" keeps paging while searching | Owner/community test (pending) |
 | OMT-61 | FINAL-46: video plays right after the upgrade; TV data kept | Owner test (pending) |
+| OMT-62 | FINAL-47/47b: Settings organised by subject (Profiles, Statistics, Telegram own pages) | Owner/community test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -126,6 +127,21 @@ The tests are in two tracks: the **Yumeiro users** checklist just below (short, 
 
 Short tasks for people helping to test. No computer or developer tools needed. Install the test build the
 owner sends you, then pick any task you can do.
+
+### Mandatory for every tester (do these first)
+
+These six cover what changed most in 1.9.0. Please do all of them before anything else, and report each one
+as Passed or Failed:
+
+1. **U-29** Settings are easy to find (new layout).
+2. **U-26** Profiles and locks.
+3. **U-3** YouTube videos play and change quality.
+4. **U-27** Private downloads.
+5. **U-24** Telegram channel (no login).
+6. **U-20** Your statistics (one day is enough for the first report).
+
+TV owners also: **U-7** TV remote. Updating from 1.8.1: also check that your history, favourites and
+downloads are still there after the update (Settings → Downloads & library).
 
 | # | Task (what you check) | You need | Steps | It passes if | Same as |
 |---|---|---|---|---|---|
@@ -147,15 +163,16 @@ owner sends you, then pick any task you can do.
 | U-17 | Volume boost | phone + headphones | 1. Play a video. 2. Swipe up on the right side past 100 %. | a warning appears once; sound gets louder up to 200 % without crackling | OMT-36 |
 | U-18 | Shorts | phone | 1. Videos → YouTube → open a Short. 2. Swipe up through 20 Shorts quickly. 3. Press Back. | each Short starts within about 2 s, no freeze, Back closes the Shorts player | OMT-37 |
 | U-19 | Kasumi theme | phone | 1. Settings → Appearance → Theme → Kasumi. 2. Use Home, Yumix and the player for 10 minutes. | bars look see-through, text is easy to read, nothing feels slower | OMT-38 |
-| U-20 | Your statistics | phone, three days of normal use | 1. Library → Statistics after each day. | each day you used Yumeiro is filled in; the streak counts the days | OMT-39 |
+| U-20 | Your statistics | phone, three days of normal use | 1. Settings → You → Your statistics after each day. | each day you used Yumeiro is filled in; the streak counts the days | OMT-39 |
 | U-21 | Upcoming | phone | 1. Yumix → Upcoming. 2. Open the Anime, Movies and Series tabs. | titles are grouped by day in your own time zone (Today, Tomorrow…) | OMT-40 |
 | U-22 | Search online on TV | Android TV + remote | 1. Home → search icon. 2. Type a show name, press Search. 3. Press "Search online for …". | the online search opens with your words and shows results | OMT-41 |
 | U-23 | Script repos (Vega) | phone and TV | 1. Sources → Script repos → Add. 2. Paste a Vega manifest.json link you trust. 3. Install one provider. 4. Open it from Home, play a title. | the provider's rows show on Home, a title opens and plays; Source status lists it as Vega | OMT-48 |
-| U-24 | Telegram channel | phone | 1. Sources → Universal add. 2. Paste a public t.me channel link with videos. 3. Open a video. | it plays without signing in | OMT-49 |
+| U-24 | Telegram channel | phone | 1. Settings → Sources & accounts → Telegram & web sites. 2. Type a public channel (for example @durov) or paste its t.me link, tap Add. 3. Open the channel, then a video. | it plays without signing in | OMT-49 |
 | U-25 | Manga translation | phone | 1. Open a manga chapter in another language. 2. Reader menu → Translate. | text bubbles show in your language; turning it off shows the original | OMT-51 |
-| U-26 | Profiles and locks | phone or TV | 1. Settings → Privacy → Profiles → add a second profile and give it a PIN. 2. Close Yumeiro and open it again. 3. Pick that profile, type a wrong PIN once, then the right one. | "Who's watching?" shows first; the wrong PIN is refused; the right one opens that profile with its own history | OMT-44 |
+| U-26 | Profiles and locks | phone or TV | 1. Settings → You → Profiles → add a second profile and give it a PIN. 2. Close Yumeiro and open it again. 3. Pick that profile, type a wrong PIN once, then the right one. | "Who's watching?" shows first; the wrong PIN is refused; the right one opens that profile with its own history | OMT-44 |
 | U-27 | Private downloads | phone | 1. Downloads → tap the eye on a finished video. 2. Open your Gallery. 3. Downloads → the lock at the top → unlock. | the video is gone from lists and the Gallery, and shows inside Private after unlocking | OMT-45 |
 | U-28 | Hold for 2x | phone | 1. Play any video. 2. Press and hold on the picture, then let go. | it plays at 2x while you hold and goes back to normal when you let go | OMT-46 |
+| U-29 | Settings are easy to find | phone or TV | 1. Open Settings. 2. Find Profiles, Your statistics, Telegram, Downloads, Video quality and Music & sound without searching. 3. Search "telegram", "profile", "subtitle". | each subject has its own page in the group you expect (You, Video, Music, Downloads & library, Sources & accounts, System, About); search finds each one | OMT-62 |
 | U-15 | General feedback | phone or TV | Use Yumeiro as you normally would for a day. | tell us anything confusing, slow or broken | OMT-9 |
 
 Report for each task: task number, Passed/Failed, one sentence, a screenshot if something looked wrong,
@@ -865,3 +882,18 @@ Listed here so they are not asked of you again:
 | Yumix offline pull to refresh | `YumixDeviceTest#offlineRefreshKeepsTheFeed` on both emulators | G4 |
 | Yumix "See all" paging while searching | `YumixDeviceTest#seeAllKeepsPagingWhileSearching` on both emulators | G4 |
 | Internet Archive kept after the 1.8.0 clean-up | `LegacyDefaultMigrationTest` (unit); a real upgrade from a 1.8.0 install would need the 1.8.0 APK on the emulator (planned in G12 release checks) | G4 / G12 |
+
+### OMT-62 — Settings organised by subject (FINAL-47, FINAL-47b)
+
+On a phone and on the TV, after updating from 1.8.1:
+
+1. Open Settings. The groups read You, Video, Music, Downloads & library, Sources & accounts, System, About.
+2. You → Profiles opens the profiles list (add, rename, PIN, 18+ per profile). It is no longer inside Privacy.
+3. You → Your statistics opens the week, streak and activity map.
+4. Sources & accounts → Telegram & web sites: type @durov, tap Add, open it; posts load without signing in.
+5. Video → Video quality & playback, Video → Subtitles & intros, Music → Music & sound each hold only their subject.
+6. Downloads & library → Downloads holds the Private downloads rows.
+7. The Inbox shows one "What's new in 1.9" note that names these pages (only after an update, not a fresh install).
+
+Passes if every step shows what it says, Back returns to Settings each time, and search finds each page.
+

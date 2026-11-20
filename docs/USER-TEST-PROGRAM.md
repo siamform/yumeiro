@@ -20,11 +20,11 @@ Short tasks such as:
 - Yumeiro works with your TV remote, behind a VPN, on a low-memory phone;
 - new in 1.9.0: profiles with a PIN, private downloads, hold for 2x, public Telegram channels and script repos.
 
-The build to test now is the **1.9.0 release candidate**. It is not the final release: a few things are known to be
+The build to test now is **Yumeiro 1.9.0**. A few things are known to be
 imperfect (for example YouTube sometimes asks "Sign in to confirm you're not a bot"); the list is in the
 [CHANGELOG](../CHANGELOG.md).
 
-The full list, with plain steps, is the **Yumeiro users** checklist at the top of
+Start with the six **mandatory** tasks (U-29, U-26, U-3, U-27, U-24, U-20). The full list, with plain steps, is the **Yumeiro users** checklist at the top of
 [OWNER-MANUAL-TESTS.md](OWNER-MANUAL-TESTS.md#yumeiro-users-checklist).
 
 ## How long it takes

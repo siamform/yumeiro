@@ -30,9 +30,9 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
-## What's new in 1.9.0 (release candidate)
+## What's new in 1.9.0
 
-The release candidate for 1.9.0, waiting for the owner's review; the latest published version is still 1.8.1.
+Yumeiro 1.9.0 is out: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
 Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md).
 
 | | |
@@ -59,15 +59,32 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER
 
 Screenshots from the CI emulators with test data. More: [docs/assets/final](docs/assets/final/README.md).
 
+### Where to find things in 1.9.0
+
+Settings is now organised by subject. Every page is also found by Settings search.
+
+| You want | Go to |
+|---|---|
+| Profiles, PINs, "Who's watching?", 18+ per profile | Settings → You → Profiles |
+| Your statistics (week, streak, activity map) | Settings → You → Your statistics |
+| Public Telegram channels (no login), saved web sites | Settings → Sources & accounts → Telegram & web sites |
+| Extensions, script repos (Vega, Nuvio, SkyStream), home servers | Settings → Sources & accounts → Sources |
+| Video quality, decoder, TorrServer | Settings → Video → Video quality & playback |
+| Subtitles, subtitle downloads, skip intros | Settings → Video → Subtitles & intros |
+| Music quality, equalizer, lyrics, Last.fm | Settings → Music → Music & sound |
+| Downloads and Private downloads | Settings → Downloads & library → Downloads |
+| App lock, incognito | Settings → System → Privacy |
+| Proxy, DNS fallback | Settings → System → Network |
+
 ## Release status
 
-- **1.9.0 is a release candidate**, built for the owner's review. It is not published yet; the newest published
-  version is 1.8.1 ([CHANGELOG.md](CHANGELOG.md) has both).
+- **1.9.0 is the current release** (2026-11-20). Notes: [CHANGELOG.md](CHANGELOG.md).
 - **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
-  pass from a fresh install each. The second pass with data kept was dropped by the owner's decision to release in
-  time. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md); what is not proven yet:
-  [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
-- **Known imperfect in this build:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV
+  pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);
+  what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
+- **Help test it:** start with the six mandatory tasks in the
+  [Yumeiro users checklist](docs/OWNER-MANUAL-TESTS.md#yumeiro-users-checklist).
+- **Known imperfect:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV
   keeps showing the notification dialog after every "Don't allow"; built-in Last.fm sign-in stays off until Yumeiro
   Cloud is live. Full list in the [CHANGELOG](CHANGELOG.md).
 - **Source status:** [yumeiro.click/status](https://yumeiro.click/status) · **Download:** [yumeiro.click/download](https://yumeiro.click/download)
