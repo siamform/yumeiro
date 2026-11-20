@@ -35,9 +35,11 @@ class SettingsSearchCoverageTest {
             "Send a test notification", "Reliable alerts (UnifiedPush)")
         put(Category.BACKGROUND, "Background checks", "Wi-Fi only")
         put(Category.NETWORK, "Get around blocked sites automatically", "Only when system DNS fails", "Automatic DNS fallback")
-        put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Hide the Private entry", "Clear watch history",
+        put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Clear watch history",
             "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications",
             "Clear cache", "All app permissions")
+        // FINAL-47: the Private downloads switch is on Privacy & security and on Profiles.
+        put("Hide the Private entry", setOf(Category.PRIVACY, Category.PROFILES))
         put(Category.BACKUP, "Back up automatically", "Save loaded pages on the phone", "Erase everything")
     }
 

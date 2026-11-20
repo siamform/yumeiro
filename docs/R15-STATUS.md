@@ -1,7 +1,9 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 06:07 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 06:54 UTC; owner said "Go release" 2026-11-20)
 
+- **Now:** owner gave "go". FINAL-47 (Profiles / Telegram / Statistics hard to find) fixed in code, CI pending;
+  then new review APK, upgrade check, social shots, release, Worker, website, branches.
 - **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
   Handover steps 1-7 done; step 8 (one owner message) sent with this push; then wait for the owner.
 - **Review APK:** ci.yml 44675081410 on 8cef8a6 (app code = df4ba9d): unit, lint, gitleaks, review APK all

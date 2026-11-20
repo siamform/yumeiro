@@ -11,6 +11,9 @@ Android TV 7 and a phone on Android 16 emulators; results per feature are in doc
 docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 
 ### Profiles and privacy
+- Easier to find (FINAL-47): Settings now has its own Profiles, Your statistics and Telegram & web sites pages, Settings
+  search finds profiles, statistics, Telegram, Vega and script repos, and after updating one Inbox note says where each new
+  feature is.
 - Profiles (up to 8) with "Who's watching?". Each profile has its own watch history, lists, YouTube history and 18+
   setting. A profile can be locked with a 4–8 digit PIN and/or the phone's fingerprint / screen lock. Upgrading
   changes nothing: your data becomes the first profile.

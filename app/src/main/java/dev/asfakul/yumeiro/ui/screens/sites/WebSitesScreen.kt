@@ -194,12 +194,12 @@ fun WebSitesScreen(onBack: () -> Unit) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
                         .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
                 ) {
-                    Text("Add website", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Add a website or Telegram channel", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = input, onValueChange = { input = it; error = null }, singleLine = true,
-                            placeholder = { Text("example.com") }, isError = error != null,
+                            placeholder = { Text("example.com or @channel") }, isError = error != null,
                             leadingIcon = { Icon(Icons.Default.Public, null, tint = p.textSecondary) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { add() }),

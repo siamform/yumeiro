@@ -68,6 +68,8 @@ object PrefsWarmup {
             for (p in all) runCatching { p.contains("") }
             // The inbox JSON file is read when Home draws its bell badge.
             runCatching { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(app) }
+            // FINAL-47: after an update, one Inbox note on where the new features are.
+            runCatching { dev.asfakul.yumeiro.notify.WhatsNew.postOnce(app) }
             // R16 (stress 43687396407 StrictMode): the page backdrop checks its photo file, Home
             // reads the bookmarks and downloads JSON files; all three ran on main at first draw.
             runCatching { dev.asfakul.yumeiro.ui.theme.BackdropSettings.init(app) }

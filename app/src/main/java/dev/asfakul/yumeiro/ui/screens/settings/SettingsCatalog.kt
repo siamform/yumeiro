@@ -45,6 +45,12 @@ object SettingsCatalog {
         NAVIGATION(Group.PERSONAL, "Navigation bar", "Choose the tabs and add up to two shortcuts",
             listOf("bottom bar", "tabs", "taskbar", "nav", "shortcut", "menu", "dock"),
             settings = listOf("Reset to default")),
+        // FINAL-47: Profiles and Statistics were only reachable from deep inside other pages.
+        PROFILES(Group.PERSONAL, "Profiles", "Who's watching? Own history and lists per person, a PIN or fingerprint, Private downloads",
+            listOf("profile", "kids", "family", "child", "pin", "user", "switch", "people", "private", "vault", "hidden downloads"),
+            settings = listOf("Add profile", "Hide the Private entry")),
+        STATS(Group.PERSONAL, "Your statistics", "Watch and listen totals, streaks and the activity map",
+            listOf("stats", "streak", "activity", "totals", "milestones", "insights", "wrapped", "top artists"), route = "stats"),
 
         PLAYER(Group.WATCH, "Player", "Background play, picture-in-picture, captions, Back button",
             listOf("video", "pip", "subtitles", "cc", "floating", "minimize", "background", "volume", "boost", "louder"),
@@ -63,7 +69,10 @@ object SettingsCatalog {
             settings = listOf("Rescan this device")),
 
         SOURCES(Group.SOURCES, "Sources", "Aniyomi, Mihon, Stremio, JavaScript and home servers, with how-to guides",
-            listOf("extensions", "repo", "repository", "addon", "jellyfin", "plex", "emby", "dlna", "smb", "webdav", "mangayomi"), route = "sources"),
+            listOf("extensions", "repo", "repository", "addon", "jellyfin", "plex", "emby", "dlna", "smb", "webdav", "mangayomi",
+                "script repos", "vega", "nuvio", "skystream", "cloudstream", "providers"), route = "sources"),
+        TELEGRAM(Group.SOURCES, "Telegram & web sites", "Public Telegram channels with no login, TeraBox and DiskWala links, your saved sites",
+            listOf("telegram", "t.me", "channel", "channels", "link", "websites", "sites", "browser", "web"), route = "websites"),
         SOURCE_STATUS(Group.SOURCES, "Source status", "See which installed sources respond right now",
             listOf("health", "broken", "working", "check"), route = "health"),
         TRACKING(Group.SOURCES, "Tracking", "AniList, MyAnimeList, Kitsu and Trakt, with setup guides",

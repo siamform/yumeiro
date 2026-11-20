@@ -130,15 +130,23 @@ fun PrivacyScreen(onBack: () -> Unit) {
                 }
             }
             if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS)) {
-                val stealth by dev.asfakul.yumeiro.online.download.PrivateDownloads.stealth.collectAsState()
-                androidx.compose.runtime.LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.download.PrivateDownloads.loadStealth(context) }
                 Section("Private downloads", "Hide a download from the Downloads list, the gallery and other apps. Open them in Downloads → Private with your phone's lock or the profile PIN.") {
-                    SettingsToggleRow("Hide the Private entry", if (stealth) "Open it by long-pressing the storage card in Downloads" else "Private is the lock at the top of Downloads", stealth,
-                        { dev.asfakul.yumeiro.online.download.PrivateDownloads.setStealth(context, it) }, "privacy_vault_stealth")
+                    PrivateDownloadsRows()
                 }
             }
         }
     }
+}
+
+/** The Private downloads switch; shown on Privacy & security and on Profiles (FINAL-47). */
+@Composable
+internal fun PrivateDownloadsRows() {
+    val context = LocalContext.current
+    if (!dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS)) return
+    val stealth by dev.asfakul.yumeiro.online.download.PrivateDownloads.stealth.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.download.PrivateDownloads.loadStealth(context) }
+    SettingsToggleRow("Hide the Private entry", if (stealth) "Open it by long-pressing the storage card in Downloads" else "Private is the lock at the top of Downloads", stealth,
+        { dev.asfakul.yumeiro.online.download.PrivateDownloads.setStealth(context, it) }, "privacy_vault_stealth")
 }
 
 // endregion

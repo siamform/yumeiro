@@ -1286,6 +1286,8 @@ fun MTPlayerApp(
                                     "together" -> Screen.WatchTogether.route
                                     "health" -> Screen.SourceHealth.route
                                     "youtube" -> Screen.YouTubeAccount.route
+                                    "stats" -> Screen.Stats.route
+                                    "websites" -> Screen.WebSites.route
                                     else -> Screen.Privacy.route
                                 })
                             },

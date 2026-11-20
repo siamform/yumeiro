@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Notifications
@@ -174,6 +176,8 @@ private val YtRed = Color(0xFFFF4E45)
 internal fun Category.look(): CategoryLook = when (this) {
     Category.APPEARANCE -> CategoryLook(Icons.Default.Palette, Rose)
     Category.NAVIGATION -> CategoryLook(Icons.Default.ViewWeek, Sky)
+    Category.PROFILES -> CategoryLook(Icons.Default.Groups, Violet)
+    Category.STATS -> CategoryLook(Icons.Default.Insights, Teal)
     Category.PLAYER -> CategoryLook(Icons.Default.PlayCircle, BrandGold)
     Category.AUDIO -> CategoryLook(Icons.Default.GraphicEq, BrandAmber)
     Category.ONLINE -> CategoryLook(Icons.Default.Videocam, BrandCoral)
@@ -182,6 +186,7 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.SOURCES -> CategoryLook(Icons.Default.Extension, Violet)
     Category.SOURCE_STATUS -> CategoryLook(Icons.Default.MonitorHeart, Mint)
     Category.TRACKING -> CategoryLook(Icons.Default.SyncAlt, Sky)
+    Category.TELEGRAM -> CategoryLook(Icons.Default.Public, Sky)
     Category.YOUTUBE -> CategoryLook(Icons.Default.AccountCircle, YtRed)
     Category.TOGETHER -> CategoryLook(Icons.Default.Groups, Rose)
     Category.NOTIFICATIONS -> CategoryLook(Icons.Default.Notifications, BrandGold)
@@ -198,7 +203,7 @@ internal fun Category.look(): CategoryLook = when (this) {
 
 /** The page's Japanese name, shown as a watermark on its banner. */
 internal fun Category.kana(): String = when (this) {
-    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PLAYER -> "映"; Category.AUDIO -> "音"
+    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PROFILES -> "人"; Category.STATS -> "数"; Category.TELEGRAM -> "電報"; Category.PLAYER -> "映"; Category.AUDIO -> "音"
     Category.ONLINE -> "網"; Category.DOWNLOADS -> "保存"; Category.LIBRARY -> "蔵"; Category.SOURCES -> "源"
     Category.SOURCE_STATUS -> "診"; Category.TRACKING -> "記録"; Category.YOUTUBE -> "動画"; Category.TOGETHER -> "共"
     Category.NOTIFICATIONS -> "通知"; Category.BACKGROUND -> "電池"; Category.NETWORK -> "接続"; Category.PRIVACY -> "鍵"
@@ -372,6 +377,13 @@ private fun CategoryPage(
                     item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
                 }
                 Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
+                Category.PROFILES -> {
+                    item("p") {
+                        GroupLabel("Profiles")
+                        SettingsCard { dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(context as? android.app.Activity) }
+                    }
+                    item("v") { GroupLabel("Private downloads"); SettingsCard { PrivateDownloadsRows() } }
+                }
                 Category.AUDIO -> {
                     item("qa") { GroupLabel("Video"); QualityAndAudioEntry() }
                     item("q") { GroupLabel("Quality"); AudioQualityCard() }

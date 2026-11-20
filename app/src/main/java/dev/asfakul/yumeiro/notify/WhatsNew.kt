@@ -1,0 +1,40 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro.notify
+
+import android.content.Context
+import android.util.Log
+
+/**
+ * FINAL-47: one Inbox note after updating to 1.9, saying where the new features live. The owner
+ * could not find Profiles, Telegram or Statistics after updating; they were in the build but not
+ * on any page he looked at. Only updaters get it (a fresh install has the setup tour instead).
+ */
+object WhatsNew {
+    private const val TAG = "WhatsNew"
+    const val ID = "whatsnew_1.9"
+
+    const val BODY = "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint. " +
+        "Private downloads: the lock at the top of Downloads, or Settings → Profiles. " +
+        "Statistics: Settings → Your statistics, or the Statistics card in Library music. " +
+        "Telegram channels (no login): Settings → Telegram & web sites, then type @channel or a t.me link. TeraBox and DiskWala links work there too. " +
+        "Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. " +
+        "DNS fallback and proxy: Settings → Network. " +
+        "Hold the video for 2x speed."
+
+    fun shouldPost(firstInstall: Long, lastUpdate: Long, version: String): Boolean =
+        version.startsWith("1.9.") && lastUpdate > firstInstall
+
+    /** Call off the main thread (it reads the inbox file). */
+    fun postOnce(c: Context) {
+        runCatching {
+            val pi = c.packageManager.getPackageInfo(c.packageName, 0)
+            if (!shouldPost(pi.firstInstallTime, pi.lastUpdateTime, pi.versionName.orEmpty())) return
+            val added = Inbox.add(c, Inbox.Item(ID, Inbox.Kind.NEWS, "New in ${pi.versionName}: where to find it", BODY, System.currentTimeMillis()))
+            if (added) Log.i(TAG, "posted")
+        }.onFailure { Log.w(TAG, "skipped: ${it.javaClass.simpleName}") }
+    }
+}
