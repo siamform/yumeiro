@@ -270,9 +270,36 @@ object ExtensionManager {
         val cloudstream = runCatching { APIHolder.allProviders.toList() }.getOrDefault(emptyList())
             .filter { it.sourcePlugin in files }
         // Aniyomi, Stremio, JavaScript and home-server sources join through the same MainAPI shape.
-        return (cloudstream + dev.asfakul.yumeiro.sources.SourceHub.providers())
-            .distinctBy { it.name }
+        val all = (cloudstream + dev.asfakul.yumeiro.sources.SourceHub.providers()).distinct()
+        // PIN-2: the same extension name from two repositories used to show once (distinctBy name). Now the
+        // one installed first keeps its name (its history, bookmarks, downloads and pins are under it) and
+        // the others get "Name · Repo", so both are listed and can be picked.
+        val ext = extensionLookup()
+        uniqueNames(all, { it.name }, { ext(it)?.installedAt ?: Long.MAX_VALUE }, { ext(it)?.repoName })
+            .forEach { (api, newName) -> runCatching { api.name = newName } }
+        return all.distinctBy { it.name }
             .also { ProviderOverrides.apply(it) }
+    }
+
+    /**
+     * PIN-2, pure: new names for items whose name is taken. Per name, the lowest [rank] (then list order)
+     * keeps it; each other gets "name · label" (or "name · 2", "name · 3" when the label is blank or taken).
+     */
+    internal fun <T> uniqueNames(items: List<T>, name: (T) -> String, rank: (T) -> Long, label: (T) -> String?): List<Pair<T, String>> {
+        val taken = items.map(name).toMutableSet()
+        val out = ArrayList<Pair<T, String>>()
+        items.withIndex().groupBy { name(it.value) }.values.filter { it.size > 1 }.forEach { group ->
+            val ordered = group.sortedWith(compareBy({ rank(it.value) }, { it.index }))
+            ordered.drop(1).forEach { (_, item) ->
+                val base = name(item)
+                var candidate = label(item)?.trim()?.takeIf { it.isNotEmpty() }?.let { "$base · $it" }
+                var n = 2
+                while (candidate == null || candidate in taken) { candidate = "$base · ${n++}" }
+                taken += candidate
+                out += item to candidate
+            }
+        }
+        return out
     }
 
     /** Called by [dev.asfakul.yumeiro.sources.SourceHub] when bridged sources change, so screens reload. */
