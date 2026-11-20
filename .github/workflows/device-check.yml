@@ -120,7 +120,7 @@ jobs:
         device: ${{ fromJSON(inputs.tv && inputs.tv_api == '34' && '[{"name":"tv-api34","api":34,"target":"android-tv","arch":"x86","profile":"tv_1080p","ram":"4096M","heap":"512M","flavor":"Tv"}]' || inputs.tv && '[{"name":"tv-api24","api":24,"target":"android-tv","arch":"x86","profile":"tv_1080p","ram":"2048M","heap":"256M","flavor":"Tv"}]' || inputs.minsdk && '[{"name":"api28","api":28,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"256M","flavor":"Mobile"}]' || inputs.phone == 'api29' && '[{"name":"api29","api":29,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"256M","flavor":"Mobile"}]' || inputs.phone == 'api33-lowram' && '[{"name":"api33-lowram","api":33,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"192M","flavor":"Mobile"}]' || inputs.phone == 'api36' && '[{"name":"api36","api":36,"target":"google_apis","arch":"x86_64","profile":"pixel_6","ram":"4096M","heap":"512M","flavor":"Mobile"}]' || '[{"name":"api33-lowram","api":33,"target":"google_apis","arch":"x86_64","profile":"pixel_3a","ram":"2048M","heap":"192M","flavor":"Mobile"},{"name":"api36","api":36,"target":"google_apis","arch":"x86_64","profile":"pixel_6","ram":"4096M","heap":"512M","flavor":"Mobile"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with: { distribution: temurin, java-version: "21.0.13" }
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Enable KVM
