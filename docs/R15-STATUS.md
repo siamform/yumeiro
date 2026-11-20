@@ -2,9 +2,9 @@
 
 ## Resume here (updated 2026-11-20 07:56 UTC)
 
-- **Now:** v1.9.0 publishing: release.yml 44694112925 built and tagged but the publish failed (FINAL-48, body over
-  GitHub's limit); tag deleted, notes script fixed, re-run 44697745652 in progress. After it: verify the release
-  certificate and APK names, run the upgrade check against the release APK (FINAL-46 / OMT-61).
+- **Now:** v1.9.0 published 2026-11-20 08:10 UTC by release.yml 44697745652 (first try 44694112925 failed on the
+  notes length, FINAL-48). Phone 4fceaece…a328, TV f7f6d42e…8aa3, both signed 2ecdfd04…413f6b, versionCode 17.
+  Upgrade check over v1.8.1 with the same app code (ci 44691804753) running: device-check 44700731576.
 - **Done today:** Settings reorganised (FINAL-47/47b, CI 44691804753 green, device shots phone 44692254096 + TV
   44694153514 18/18); Yumeiro Cloud deployed with migrations 0003–0005 (docs/SERVER.md); website changelog updated
   (yumeiro-web d17546c); 66 obsolete branches deleted (docs/evidence/final/BRANCHES-OBSOLETE-2026-11-20.md); social
