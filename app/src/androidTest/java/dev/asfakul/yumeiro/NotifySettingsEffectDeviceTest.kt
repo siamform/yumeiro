@@ -47,6 +47,18 @@ class NotifySettingsEffectDeviceTest {
         if (Build.VERSION.SDK_INT >= 33) runCatching {
             InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(ctx.packageName, "android.permission.POST_NOTIFICATIONS")
         }
+        // FINAL-41 (run 44666813073, tv-api34): the app's own DiscoveryWorker (scheduled at start on a fresh
+        // install) ran during case a, showed its notification and took the pacer's one-per-12-minutes slot
+        // ("NotifyPacer armed in 719 s" at 03:27:01.600), so the case's notification was queued, not shown.
+        // The pacer is right; the class needs no other notifier running. Its work is cancelled (the app
+        // schedules it again on the next start; P1 clears data before every class) and a running one is
+        // waited out.
+        val wm = androidx.work.WorkManager.getInstance(ctx)
+        val tag = dev.asfakul.yumeiro.notify.DiscoveryWorker::class.java.name
+        wm.cancelAllWorkByTag(tag)
+        val until = System.currentTimeMillis() + 30_000
+        while (System.currentTimeMillis() < until &&
+            runCatching { wm.getWorkInfosByTag(tag).get().any { it.state == androidx.work.WorkInfo.State.RUNNING } }.getOrDefault(false)) Thread.sleep(250)
         Key.entries.forEach { saved[it] = NotifySettings.get(ctx, it) }
         NotifySettings.set(ctx, Key.ENABLED, true)
         NotifySettings.set(ctx, Key.SOUND, true)

@@ -60,7 +60,9 @@ class PlaybackSessionDeviceTest {
         // asks for media and notifications at launch and Android's dialog covers MainActivity ("No compose
         // hierarchies found"). FirstRun.toTabs grants them, closes the dialog and gets past first run.
         FirstRun.toTabs(rule)
-        rule.waitUntil(30_000) { has("nav_tab_videos") || has("nav_tab_home") }
+        // FINAL-40 (runs 44662694767, 44666813073, tv-api34): the TV layout has the side rail (tv_nav_tab_*),
+        // not the phone bar, so this wait for nav_tab_* timed out after 30 s. FirstRun.hasNav knows both.
+        rule.waitUntil(30_000) { FirstRun.hasNav(rule, "nav_tab_videos") || FirstRun.hasNav(rule, "nav_tab_home") }
         val c0 = PlaybackSession.created; val r0 = PlaybackSession.reused
         note("start")
         play("https://storage.googleapis.com/exoplayer-test-media-1/mp4/frame-counter-one-hour.mp4", "Session A"); note("A playing")
