@@ -33,9 +33,15 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
-/** Settings → Online videos: 18+ content, intro skip and subtitle search. Trackers live in Settings → Tracking. */
+/** Which rows of the online-video settings to show (FINAL-47: each part lives on its own page). */
+enum class OnlinePart { ADULT, SKIP, SUBTITLES }
+
+/**
+ * 18+ content (Settings → Profiles, it is per profile), intro skip and subtitle search (both on
+ * Settings → Subtitles & intros). One composable so the dialogs and state stay in one place.
+ */
 @Composable
-fun OnlineSettingsCard() {
+fun OnlineSettingsCard(part: OnlinePart) {
     val context = LocalContext.current
     remember { OnlineSettings.init(context); true }
     val adult by OnlineSettings.adult.collectAsState()
@@ -98,25 +104,31 @@ fun OnlineSettingsCard() {
     }
 
     SettingsCard {
-        SettingsToggleRow("Show 18+ content", "Adult extensions and titles. Off by default.", adult, { on ->
-            if (!on) OnlineSettings.setAdult(context, false)
-            else if (dev.asfakul.yumeiro.profiles.Profiles.needsMainUnlock(context)) adultMainCheck = true
-            else confirmAdult = true
-        }, "setting_adult")
-        if (adult) {
-            val priv by OnlineSettings.adultPrivate.collectAsState()
-            SettingsToggleRow("Keep 18+ activity private", "18+ titles you watch are saved quietly: they never show in Home, feeds, suggestions or Continue watching. Find them with search", priv,
-                { OnlineSettings.setAdultPrivate(context, it) }, "setting_adult_private")
+        when (part) {
+            OnlinePart.ADULT -> {
+                SettingsToggleRow("Show 18+ content", "Adult extensions and titles, for the profile you are using. Off by default.", adult, { on ->
+                    if (!on) OnlineSettings.setAdult(context, false)
+                    else if (dev.asfakul.yumeiro.profiles.Profiles.needsMainUnlock(context)) adultMainCheck = true
+                    else confirmAdult = true
+                }, "setting_adult")
+                if (adult) {
+                    val priv by OnlineSettings.adultPrivate.collectAsState()
+                    SettingsToggleRow("Keep 18+ activity private", "18+ titles you watch are saved quietly: they never show in Home, feeds, suggestions or Continue watching. Find them with search", priv,
+                        { OnlineSettings.setAdultPrivate(context, it) }, "setting_adult_private")
+                }
+            }
+            OnlinePart.SKIP -> {
+                SettingsToggleRow("Skip intro & outro (anime)", "Shows a Skip button using AniSkip community times", skip, { OnlineSettings.setSkipIntro(context, it) }, "setting_skip_intro")
+                if (skip) SettingsToggleRow("Skip automatically", "Jump past intros and outros without asking", auto, { OnlineSettings.setAutoSkip(context, it) }, "setting_auto_skip")
+            }
+            OnlinePart.SUBTITLES -> {
+                ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
+                Text("Subtitle sites (all free, use any or all)", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
+                ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
+                ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
+            }
         }
-        HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        SettingsToggleRow("Skip intro & outro (anime)", "Shows a Skip button using AniSkip community times", skip, { OnlineSettings.setSkipIntro(context, it) }, "setting_skip_intro")
-        if (skip) SettingsToggleRow("Skip automatically", "Jump past intros and outros without asking", auto, { OnlineSettings.setAutoSkip(context, it) }, "setting_auto_skip")
-        HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
-        Text("Subtitle sites (all free, use any or all)", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-        ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
-        ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
-        ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
     }
 }
 

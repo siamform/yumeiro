@@ -32,7 +32,7 @@ object SubDL {
     internal fun sanitizeTitle(title: String): String = title.replace(RX_SUBDL_1, " ").replace(RX_SUBDL_2, " ").trim()
 
     fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String): List<SubtitleHit> {
-        val key = OnlineSettings.subdlKey.value.ifBlank { throw IllegalStateException("Add a free SubDL API key in Settings → Online videos") }
+        val key = OnlineSettings.subdlKey.value.ifBlank { throw IllegalStateException("Add a free SubDL API key in Settings → Subtitles & intros") }
         val url = API.toHttpUrl().newBuilder().apply {
             addQueryParameter("api_key", key)
             if (!imdbId.isNullOrBlank()) addQueryParameter("imdb_id", imdbId) else addQueryParameter("film_name", sanitizeTitle(title))

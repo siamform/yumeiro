@@ -195,7 +195,7 @@ class PlaybackRecovery(
     companion object {
         const val STABLE_RESET_MS = 30_000L
         /** The setting that helps: Settings › Audio quality & sound › Quality and audio › Video decoder. */
-        const val DECODER_TIP = "Set Video decoder to Software in Settings › Audio quality & sound › Quality and audio, or try another quality or source."
+        const val DECODER_TIP = "Set Video decoder to Software in Settings › Video quality & playback, or try another quality or source."
     }
 }
 

@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -179,8 +180,9 @@ internal fun Category.look(): CategoryLook = when (this) {
     Category.PROFILES -> CategoryLook(Icons.Default.Groups, Violet)
     Category.STATS -> CategoryLook(Icons.Default.Insights, Teal)
     Category.PLAYER -> CategoryLook(Icons.Default.PlayCircle, BrandGold)
-    Category.AUDIO -> CategoryLook(Icons.Default.GraphicEq, BrandAmber)
-    Category.ONLINE -> CategoryLook(Icons.Default.Videocam, BrandCoral)
+    Category.VIDEO_QUALITY -> CategoryLook(Icons.Default.Videocam, BrandCoral)
+    Category.SUBTITLES -> CategoryLook(Icons.Default.ClosedCaption, Sky)
+    Category.MUSIC -> CategoryLook(Icons.Default.GraphicEq, BrandAmber)
     Category.DOWNLOADS -> CategoryLook(Icons.Default.Download, Teal)
     Category.LIBRARY -> CategoryLook(Icons.Default.Folder, Mint)
     Category.SOURCES -> CategoryLook(Icons.Default.Extension, Violet)
@@ -203,8 +205,8 @@ internal fun Category.look(): CategoryLook = when (this) {
 
 /** The page's Japanese name, shown as a watermark on its banner. */
 internal fun Category.kana(): String = when (this) {
-    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PROFILES -> "人"; Category.STATS -> "数"; Category.TELEGRAM -> "電報"; Category.PLAYER -> "映"; Category.AUDIO -> "音"
-    Category.ONLINE -> "網"; Category.DOWNLOADS -> "保存"; Category.LIBRARY -> "蔵"; Category.SOURCES -> "源"
+    Category.APPEARANCE -> "彩"; Category.NAVIGATION -> "道"; Category.PROFILES -> "人"; Category.STATS -> "数"; Category.TELEGRAM -> "電報"; Category.PLAYER -> "映"; Category.VIDEO_QUALITY -> "画"; Category.SUBTITLES -> "字幕"; Category.MUSIC -> "音"
+    Category.DOWNLOADS -> "保存"; Category.LIBRARY -> "蔵"; Category.SOURCES -> "源"
     Category.SOURCE_STATUS -> "診"; Category.TRACKING -> "記録"; Category.YOUTUBE -> "動画"; Category.TOGETHER -> "共"
     Category.NOTIFICATIONS -> "通知"; Category.BACKGROUND -> "電池"; Category.NETWORK -> "接続"; Category.PRIVACY -> "鍵"
     Category.BACKUP -> "控"; Category.UPDATES -> "新"; Category.SETUP -> "始"; Category.GUIDE -> "案内"; Category.CRASHES -> "記録"; Category.ABOUT -> "夢色"
@@ -281,7 +283,7 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
                     }
                 }
                 // Support sits between the everyday groups and the account/system ones, where people scroll past it.
-                if (group == SettingsCatalog.Group.WATCH) item("support") { dev.asfakul.yumeiro.ui.screens.extras.SupportYumeiroCard(Modifier.padding(top = 6.dp)) }
+                if (group == SettingsCatalog.Group.DOWNLOADS) item("support") { dev.asfakul.yumeiro.ui.screens.extras.SupportYumeiroCard(Modifier.padding(top = 6.dp)) }
             }
             item("made_in") { MadeInBangladesh(Modifier.fillMaxWidth().padding(top = 8.dp)) }
         }
@@ -379,13 +381,25 @@ private fun CategoryPage(
                 Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
                 Category.PROFILES -> {
                     item("p") {
-                        GroupLabel("Profiles")
+                        GroupLabel("Who's watching")
                         SettingsCard { dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(context as? android.app.Activity) }
                     }
-                    item("v") { GroupLabel("Private downloads"); SettingsCard { PrivateDownloadsRows() } }
+                    item("adult") { GroupLabel("18+ content (this profile)"); OnlineSettingsCard(OnlinePart.ADULT) }
                 }
-                Category.AUDIO -> {
-                    item("qa") { GroupLabel("Video"); QualityAndAudioEntry() }
+                Category.PLAYER -> {
+                    item("c") { VideoPlayerSettingsCard() }
+                    item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
+                }
+                Category.VIDEO_QUALITY -> {
+                    item("q") { QualityAndAudioCard() }
+                    item("torrent") { GroupLabel("Torrent streaming"); TorrServerCard() }
+                }
+                Category.SUBTITLES -> {
+                    item("cc") { GroupLabel("Captions"); SubtitleDisplayCard() }
+                    item("search") { GroupLabel("Subtitle search"); OnlineSettingsCard(OnlinePart.SUBTITLES) }
+                    item("skip") { GroupLabel("Intros and outros"); OnlineSettingsCard(OnlinePart.SKIP) }
+                }
+                Category.MUSIC -> {
                     item("q") { GroupLabel("Quality"); AudioQualityCard() }
                     item("c") {
                         GroupLabel("Sound")
@@ -395,18 +409,19 @@ private fun CategoryPage(
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                         }
                     }
-                }
-                Category.ONLINE -> {
-                    item("c") { OnlineSettingsCard() }
-                    item("more") {
+                    item("lyrics") {
+                        GroupLabel("Lyrics and scrobbling")
                         SettingsCard {
-                            SettingsActionRow("Tracking", "AniList, MyAnimeList, Kitsu and Trakt sign-in and setup guides", "online_open_tracking") { onOpenPage("tracking") }
+                            LyricsOnlineRow()
                             SettingsDivider()
-                            SettingsActionRow("Sources", "Add extensions, add-ons and home servers", "online_open_sources") { onOpenPage("sources") }
+                            SettingsActionRow("Last.fm scrobbling", "Sign in to Last.fm in Tracking", "music_open_lastfm") { onOpenPage("tracking") }
                         }
                     }
                 }
-                Category.DOWNLOADS -> item("c") { DownloadSettingsCard() }
+                Category.DOWNLOADS -> {
+                    item("c") { DownloadSettingsCard() }
+                    item("v") { GroupLabel("Private downloads"); SettingsCard { PrivateDownloadsRows() } }
+                }
                 Category.LIBRARY -> item("c") {
                     SettingsCard {
                         SettingsActionRow("Rescan this device", "Look for new music and videos right now", "setting_manual_rescan") { onRescanClick() }
@@ -428,18 +443,9 @@ private fun CategoryPage(
                 Category.NETWORK -> {
                     item("c") { NetworkSettingsCard() }
                     if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.APP_PROXY)) item("proxy") { GroupLabel("Proxy"); ProxySettingsCard() }
-                    item("torrent") { GroupLabel("Torrent streaming"); TorrServerCard() }
                 }
                 Category.PRIVACY -> {
-                    item("lock") {
-                        GroupLabel("Lock & incognito")
-                        val incog by Privacy.incognito.collectAsState()
-                        val lock by Privacy.lockEnabled.collectAsState()
-                        SettingsCard {
-                            SettingsActionRow("App lock & incognito", "Fingerprint or screen lock, pause history, hide from recents", "settings_privacy",
-                                status = listOfNotNull(if (lock) "Locked" else null, if (incog) "Incognito" else null).joinToString(" · ").ifBlank { null }) { onOpenPage("privacy") }
-                        }
-                    }
+                    item("lock") { PrivacyLockSections() }
                     item("perm") { GroupLabel("Permissions"); PermissionsCard(onMediaGranted = onRescanClick) }
                     item("data") { GroupLabel("Clear data"); PrivacyDataCard(onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory) }
                 }

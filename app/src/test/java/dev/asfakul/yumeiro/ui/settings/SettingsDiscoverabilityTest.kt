@@ -25,7 +25,7 @@ class SettingsDiscoverabilityTest {
         assertEquals(Category.PROFILES, SettingsCatalog.search("profile").first())
         assertEquals(Category.PROFILES, SettingsCatalog.search("who's watching").first())
         assertTrue(Category.PROFILES in SettingsCatalog.search("kids"))
-        assertEquals(SettingsCatalog.Group.PERSONAL, Category.PROFILES.group)
+        assertEquals(SettingsCatalog.Group.YOU, Category.PROFILES.group)
     }
 
     @Test fun `statistics opens the stats screen`() {
@@ -46,6 +46,30 @@ class SettingsDiscoverabilityTest {
         assertTrue(Category.SOURCES in SettingsCatalog.search("nuvio"))
     }
 
+    @Test fun `each subject has its own page`() {
+        // Owner, 2026-11-20: profile things on Profiles, download things on Downloads, video and music apart.
+        assertTrue("Hide the Private entry" in Category.DOWNLOADS.settings)
+        assertTrue("Show 18+ content" in Category.PROFILES.settings)
+        assertFalse(Category.PRIVACY.settings.any { "Private entry" in it || "18+ content" in it })
+        assertEquals(SettingsCatalog.Group.VIDEO, Category.PLAYER.group)
+        assertEquals(SettingsCatalog.Group.VIDEO, Category.VIDEO_QUALITY.group)
+        assertEquals(SettingsCatalog.Group.VIDEO, Category.SUBTITLES.group)
+        assertEquals(SettingsCatalog.Group.MUSIC, Category.MUSIC.group)
+        assertTrue("Anime4K enhancement" in Category.VIDEO_QUALITY.settings)
+        assertFalse(Category.MUSIC.settings.any { "Anime4K" in it || "Default quality" in it })
+        assertTrue("Find lyrics online" in Category.MUSIC.settings)
+        assertTrue("Torrent streaming" in Category.VIDEO_QUALITY.settings)
+        assertEquals(Category.SUBTITLES, SettingsCatalog.search("subtitles").first())
+        assertEquals(Category.VIDEO_QUALITY, SettingsCatalog.search("video quality").first())
+        assertEquals(Category.MUSIC, SettingsCatalog.search("lyrics").first())
+    }
+
+    @Test fun `every setting name is on exactly one page`() {
+        val seen = Category.entries.flatMap { c -> c.settings.map { it to c } }.groupBy({ it.first }, { it.second })
+        val twice = seen.filterValues { it.size > 1 }
+        assertTrue("on more than one page: $twice", twice.isEmpty())
+    }
+
     @Test fun `whats new note goes to updaters only`() {
         assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "1.9.0"))
         assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "1.9.0"))
@@ -58,7 +82,7 @@ class SettingsDiscoverabilityTest {
         val named = Regex("""Settings → ([^.,;(]+?)(?=[.,;(]| then| or |$)""").findAll(WhatsNew.BODY).map { it.groupValues[1].trim() }.toList()
         assertTrue("note names no settings page", named.size >= 4)
         named.forEach { assertTrue("'$it' is not a Settings page", it in titles) }
-        listOf("Profiles", "Telegram", "Statistics", "Private downloads", "Script repos").forEach {
+        listOf("Profiles", "Telegram", "Statistics", "Private downloads", "Script repos", "Subtitles", "Video quality", "lyrics").forEach {
             assertTrue("note does not mention $it", WhatsNew.BODY.contains(it, ignoreCase = true))
         }
     }

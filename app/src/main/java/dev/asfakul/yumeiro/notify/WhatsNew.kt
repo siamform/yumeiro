@@ -17,12 +17,14 @@ object WhatsNew {
     private const val TAG = "WhatsNew"
     const val ID = "whatsnew_1.9"
 
-    const val BODY = "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint. " +
-        "Private downloads: the lock at the top of Downloads, or Settings → Profiles. " +
+    const val BODY = "Settings is now grouped by subject: You, Video, Music, Downloads & library, Sources & accounts, System. " +
+        "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint and their own 18+ switch. " +
+        "Private downloads: the lock at the top of Downloads, or Settings → Downloads. " +
         "Statistics: Settings → Your statistics, or the Statistics card in Library music. " +
         "Telegram channels (no login): Settings → Telegram & web sites, then type @channel or a t.me link. TeraBox and DiskWala links work there too. " +
         "Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. " +
-        "DNS fallback and proxy: Settings → Network. " +
+        "Video quality, Anime4K and torrents: Settings → Video quality & playback. Subtitles and skip intro: Settings → Subtitles & intros. " +
+        "Hi-Res audio, equalizer and lyrics: Settings → Music & sound. DNS fallback and proxy: Settings → Network. " +
         "Hold the video for 2x speed."
 
     fun shouldPost(firstInstall: Long, lastUpdate: Long, version: String): Boolean =

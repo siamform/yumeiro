@@ -22,14 +22,17 @@ class SettingsSearchCoverageTest {
     private val where: Map<String, Set<Category>> = buildMap {
         fun put(c: Category, vararg names: String) = names.forEach { put(it, setOf(c)) }
         put(Category.APPEARANCE, "Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents")
-        put(Category.PLAYER, "Background play", "Picture-in-picture", "Captions on by default", "Volume boost up to 200 %")
-        // The overlay switch is on the Player page and on the "Quality and audio" sheet.
-        put("Player info overlay", setOf(Category.PLAYER, Category.AUDIO))
-        put(Category.AUDIO, "Resume playback", "Anime4K enhancement", "Equalizer & sound effects", "Quality and audio")
-        put(Category.ONLINE, "Show 18+ content", "Keep 18+ activity private", "Skip intro & outro (anime)", "Skip automatically")
-        put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page")
+        // FINAL-47: one subject per page (Profiles, Video player, Video quality, Subtitles, Music, Downloads).
+        put(Category.PROFILES, "Add profile", "Show 18+ content", "Keep 18+ activity private")
+        put(Category.PLAYER, "Background play", "Picture-in-picture", "Volume boost up to 200 %", "Player info overlay", "Back button while a video plays")
+        put(Category.VIDEO_QUALITY, "Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer",
+            "Anime4K enhancement", "Default player", "Torrent streaming")
+        put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro (anime)", "Skip automatically")
+        put(Category.MUSIC, "Audio quality", "Equalizer & sound effects", "Find lyrics online")
+        put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page",
+            "Hide the Private entry")
         put(Category.LIBRARY, "Rescan this device")
-        put(Category.TRACKING, "Scrobble what I play", "Find lyrics online")
+        put(Category.TRACKING, "Scrobble what I play")
         put(Category.NOTIFICATIONS, "Show notifications", "New episodes", "New extensions", "New stream playlists",
             "Yumeiro news", "Service alerts", "Suggestions", "Yumeiro chime", "Instant alerts", "In-app reminders",
             "Send a test notification", "Reliable alerts (UnifiedPush)")
@@ -38,8 +41,6 @@ class SettingsSearchCoverageTest {
         put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Clear watch history",
             "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications",
             "Clear cache", "All app permissions")
-        // FINAL-47: the Private downloads switch is on Privacy & security and on Profiles.
-        put("Hide the Private entry", setOf(Category.PRIVACY, Category.PROFILES))
         put(Category.BACKUP, "Back up automatically", "Save loaded pages on the phone", "Erase everything")
     }
 
@@ -58,7 +59,7 @@ class SettingsSearchCoverageTest {
     }
 
     @Test fun `partial and case-insensitive names work`() {
-        assertEquals(Category.AUDIO, SettingsCatalog.search("anime4k").first())
+        assertEquals(Category.VIDEO_QUALITY, SettingsCatalog.search("anime4k").first())
         assertTrue(Category.APPEARANCE in SettingsCatalog.search("JAPANESE"))
         assertTrue(Category.TRACKING in SettingsCatalog.search("scrobble"))
         assertTrue(Category.BACKUP in SettingsCatalog.search("back up auto"))

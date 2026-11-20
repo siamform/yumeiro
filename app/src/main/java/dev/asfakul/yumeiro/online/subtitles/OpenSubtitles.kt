@@ -42,7 +42,7 @@ object OpenSubtitles {
     }.toSortedMap().toList()
 
     fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String): List<Result> {
-        val key = key().ifBlank { throw IllegalStateException("Add an OpenSubtitles API key in Settings → Online videos") }
+        val key = key().ifBlank { throw IllegalStateException("Add an OpenSubtitles API key in Settings → Subtitles & intros") }
         // The API 301-redirects any request whose parameters aren't sorted by name (and lowercase),
         // costing a round trip each search, so they are added in sorted order.
         val url = "$API/subtitles".toHttpUrl().newBuilder().apply {

@@ -768,7 +768,7 @@ fun MTPlayerApp(
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PLAYER -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PLAYER)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NAV_BAR -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.NAVIGATION)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NOTIFICATIONS -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.NOTIFICATIONS)
-                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PRIVACY -> navigateSub(Screen.Privacy.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PRIVACY -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PRIVACY)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.BACKUP -> navigateSub(Screen.Backup.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.YOUTUBE_ACCOUNT -> navigateSub(Screen.YouTubeAccount.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SETTINGS -> navigateSub(Screen.Settings.route)

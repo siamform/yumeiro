@@ -64,28 +64,6 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
-/** Round 13: Settings → Audio → "Quality and audio" (opens its own page). */
-@Composable
-fun QualityAndAudioEntry() {
-    var open by rememberSaveable { mutableStateOf(false) }
-    SettingsCard {
-        SettingsActionRow(
-            "Quality and audio",
-            "Default quality, Sub or Dub, speed, decoder, renderer, Anime4K, default player, player buttons and resume",
-            "settings_quality_audio",
-        ) { open = true }
-    }
-    if (open) Dialog(onDismissRequest = { open = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        val p = LocalMtPalette.current
-        Column(Modifier.fillMaxSize().background(p.background).pageBackground().statusBarsPadding().testTag("settings_page_quality_audio")) {
-            dev.asfakul.yumeiro.ui.components.SubPageHeader(title = "Quality and audio", onBack = { open = false }, subtitle = "Audio quality & sound", handleBack = false)
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item("q") { QualityAndAudioCard() }
-            }
-        }
-    }
-}
-
 @Composable
 private fun <T> ChoiceRow(title: String, tag: String, options: List<T>, selected: T, label: (T) -> String, detail: (T) -> String? = { null }, onPick: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }

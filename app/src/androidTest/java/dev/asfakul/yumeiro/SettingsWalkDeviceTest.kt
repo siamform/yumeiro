@@ -60,16 +60,18 @@ class SettingsWalkDeviceTest {
 
     private class Page(val name: String, val open: List<String>, val backs: Int)
     private val pages = listOf(
+        // FINAL-47: one subject per page (Profiles, Video player, Video quality, Subtitles, Music, Downloads).
+        Page("profiles", listOf("settings_cat_profiles"), 1),
         Page("appearance", listOf("settings_cat_appearance"), 1),
         Page("player", listOf("settings_cat_player"), 1),
-        Page("audio", listOf("settings_cat_audio"), 1),
-        Page("quality_audio", listOf("settings_cat_audio", "settings_quality_audio"), 2),
-        Page("online", listOf("settings_cat_online"), 1),
+        Page("video_quality", listOf("settings_cat_video_quality"), 1),
+        Page("subtitles", listOf("settings_cat_subtitles"), 1),
+        Page("music", listOf("settings_cat_music"), 1),
         Page("downloads", listOf("settings_cat_downloads"), 1),
         Page("notifications", listOf("settings_cat_notifications"), 1),
         Page("background", listOf("settings_cat_background"), 1),
         Page("network", listOf("settings_cat_network"), 1),
-        Page("privacy_lock", listOf("settings_cat_privacy", "settings_privacy"), 2),
+        Page("privacy", listOf("settings_cat_privacy"), 1),
         Page("tracking", listOf("settings_cat_tracking"), 1),
         Page("backup", listOf("settings_cat_backup"), 1),
     )

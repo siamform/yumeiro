@@ -770,7 +770,7 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
             )
         }
         if (!anyKey) item {
-            Text("Search OpenSubtitles, SubDL and SubSource: add any of their free API keys in Settings → Online videos.", color = ink.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+            Text("Search OpenSubtitles, SubDL and SubSource: add any of their free API keys in Settings → Subtitles & intros.", color = ink.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
         }
         val sites = outcome?.providers?.joinToString(", ") ?: hub.configured().joinToString(", ")
         if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text("Searching $sites (${lang.uppercase()})…", color = ink.copy(alpha = 0.6f), fontSize = 12.sp) } }

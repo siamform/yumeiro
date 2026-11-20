@@ -26,7 +26,7 @@ object SubSource {
 
     fun available(): Boolean = OnlineSettings.subsourceKey.value.isNotBlank()
 
-    private fun key(): String = OnlineSettings.subsourceKey.value.ifBlank { throw IllegalStateException("Add a free SubSource API key in Settings → Online videos") }
+    private fun key(): String = OnlineSettings.subsourceKey.value.ifBlank { throw IllegalStateException("Add a free SubSource API key in Settings → Subtitles & intros") }
 
     private const val KEY_HEADER = "X-API-Key"
     private const val DOMAIN = "subsource.net"

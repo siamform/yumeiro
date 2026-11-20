@@ -52,7 +52,7 @@ internal fun VaultUnlock(onDismiss: () -> Unit, onOpen: () -> Unit) {
     LaunchedEffect(Unit) {
         when {
             !device && !profile.hasPin -> {
-                AppMessages.error(context, "Set a screen lock on the phone, or a PIN for this profile (Settings → Privacy → Profiles), to use Private")
+                AppMessages.error(context, "Set a screen lock on the phone, or a PIN for this profile (Settings → Profiles), to use Private")
                 onDismiss()
             }
             device -> bio()

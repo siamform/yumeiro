@@ -95,50 +95,52 @@ private fun Section(title: String, hint: String? = null, content: @Composable ()
 
 // region Privacy
 
+/** Privacy → the Privacy screen (Home shortcut) and the Privacy & security page show the same lock rows. */
 @Composable
 fun PrivacyScreen(onBack: () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        SubPageHeader(title = "Privacy", onBack = onBack)
+        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("privacy")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
+            PrivacyLockSections()
+        }
+    }
+}
+
+/**
+ * Incognito, app lock and hide-in-recents. FINAL-47: Profiles and Private downloads used to be
+ * here too; they are now on Settings → Profiles and Settings → Downloads.
+ */
+@Composable
+internal fun PrivacyLockSections() {
     val context = LocalContext.current
     val activity = context as? Activity
     val incognito by Privacy.incognito.collectAsState()
     val lock by Privacy.lockEnabled.collectAsState()
     val after by Privacy.lockAfter.collectAsState()
     val hide by Privacy.hideInRecents.collectAsState()
-    Column(Modifier.fillMaxSize()) {
-        SubPageHeader(title = "Privacy", onBack = onBack)
-        Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("privacy")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
-            Section("Incognito mode", "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.") {
-                SettingsToggleRow("Incognito", if (incognito) "On — history is paused" else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
-            }
-            Section("App lock", "Ask for your fingerprint, face or screen lock when Yumeiro opens.") {
-                SettingsToggleRow("Lock Yumeiro", if (Privacy.canAuthenticate(context)) "Uses the device's own lock" else "Set a screen lock in Android settings first", lock, { on ->
-                    if (activity != null) Privacy.setLockEnabled(activity, on) { ok -> if (!ok && on) AppMessages.error(context, "App lock wasn't turned on") }
-                }, "privacy_lock")
-                if (lock) {
-                    val options = listOf(0 to "Every time", 60 to "After 1 minute", 300 to "After 5 minutes", 1800 to "After 30 minutes")
-                    Text("Lock again", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
-                        options.forEach { (sec, label) ->
-                            dev.asfakul.yumeiro.ui.components.FilterPill(label.removePrefix("After "), after == sec, { Privacy.setLockAfter(context, sec) })
-                        }
+    Column(Modifier.testTag("privacy_lock_sections")) {
+        Section("Incognito mode", "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.") {
+            SettingsToggleRow("Incognito", if (incognito) "On — history is paused" else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
+        }
+        Section("App lock", "Ask for your fingerprint, face or screen lock when Yumeiro opens.") {
+            SettingsToggleRow("Lock Yumeiro", if (Privacy.canAuthenticate(context)) "Uses the device's own lock" else "Set a screen lock in Android settings first", lock, { on ->
+                if (activity != null) Privacy.setLockEnabled(activity, on) { ok -> if (!ok && on) AppMessages.error(context, "App lock wasn't turned on") }
+            }, "privacy_lock")
+            if (lock) {
+                val options = listOf(0 to "Every time", 60 to "After 1 minute", 300 to "After 5 minutes", 1800 to "After 30 minutes")
+                Text("Lock again", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                    options.forEach { (sec, label) ->
+                        dev.asfakul.yumeiro.ui.components.FilterPill(label.removePrefix("After "), after == sec, { Privacy.setLockAfter(context, sec) })
                     }
-                    SettingsToggleRow("Hide content in recents", "Blank preview in the app switcher and no screenshots", hide, { on -> activity?.let { Privacy.setHideInRecents(it, on) } }, "privacy_hide_recents")
                 }
-            }
-            if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PROFILES)) {
-                Section("Profiles", "Everyone in the house gets their own history and lists. Lock a profile with a PIN or the phone's lock.") {
-                    dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(activity)
-                }
-            }
-            if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS)) {
-                Section("Private downloads", "Hide a download from the Downloads list, the gallery and other apps. Open them in Downloads → Private with your phone's lock or the profile PIN.") {
-                    PrivateDownloadsRows()
-                }
+                SettingsToggleRow("Hide content in recents", "Blank preview in the app switcher and no screenshots", hide, { on -> activity?.let { Privacy.setHideInRecents(it, on) } }, "privacy_hide_recents")
             }
         }
     }
 }
 
-/** The Private downloads switch; shown on Privacy & security and on Profiles (FINAL-47). */
+/** The Private downloads switch, on Settings → Downloads (FINAL-47; was inside Privacy). */
 @Composable
 internal fun PrivateDownloadsRows() {
     val context = LocalContext.current
@@ -147,6 +149,15 @@ internal fun PrivateDownloadsRows() {
     androidx.compose.runtime.LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.download.PrivateDownloads.loadStealth(context) }
     SettingsToggleRow("Hide the Private entry", if (stealth) "Open it by long-pressing the storage card in Downloads" else "Private is the lock at the top of Downloads", stealth,
         { dev.asfakul.yumeiro.online.download.PrivateDownloads.setStealth(context, it) }, "privacy_vault_stealth")
+}
+
+/** "Find lyrics online" (LRCLIB), on Settings → Music & sound (FINAL-47; was in Tracking). */
+@Composable
+internal fun LyricsOnlineRow() {
+    val context = LocalContext.current
+    remember { LrcLib.init(context); true }
+    val lyricsOnline by LrcLib.enabled.collectAsState()
+    SettingsToggleRow("Find lyrics online", "From LRCLIB, a free open lyrics library. Sends only the song's title, artist, album and length", lyricsOnline, { LrcLib.setEnabled(context, it) }, "lyrics_online_toggle")
 }
 
 // endregion
@@ -272,14 +283,6 @@ fun TrackingScreen(onBack: () -> Unit) {
                     }
                 }
                 GuideCard(SetupGuides.lastfm)
-                remember { LrcLib.init(context); true }
-                val lyricsOnline by LrcLib.enabled.collectAsState()
-                GlassGroup {
-                    Box(Modifier.padding(horizontal = 12.dp)) {
-                        SettingsToggleRow("Find lyrics online", "From LRCLIB, a free open lyrics library. Sends only the song's title, artist, album and length", lyricsOnline, { LrcLib.setEnabled(context, it) }, "lyrics_online_toggle")
-                    }
-                }
-
                 Text("Tokens and keys are encrypted with the Android Keystore and never leave the device except to talk to the tracker. They're not included in backups.",
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             }

@@ -214,29 +214,16 @@ private fun AccentToneSection(mode: ThemeMode) {
     }
 }
 
+/** Settings → Subtitles & intros: captions on by default and the subtitle look (FINAL-47: was on the Player page). */
 @Composable
-fun VideoPlayerSettingsCard() {
+fun SubtitleDisplayCard() {
     val context = LocalContext.current
     remember(context) { PlayerSettings.init(context); PlayerSettings }
-    val bg by PlayerSettings.backgroundPlay.collectAsState()
-    val pip by PlayerSettings.autoPip.collectAsState()
     val cc by PlayerSettings.captionsDefault.collectAsState()
     SettingsCard {
-        SettingsToggleRow("Background play", "Keep videos playing with the screen off or in other apps, with controls in the notification. Off: the video pauses when you leave the app", bg,
-            { PlayerSettings.setBackgroundPlay(context, it) }, "toggle_bg_play")
-        SettingsDivider()
-        SettingsToggleRow("Picture-in-picture", "Show the PiP button and shrink the video into a floating window when you leave the app. Off: PiP is disabled", pip,
-            { PlayerSettings.setAutoPip(context, it) }, "toggle_auto_pip")
-        SettingsDivider()
         SettingsToggleRow("Captions on by default", "Show embedded or loaded subtitles automatically (CC)", cc,
             { PlayerSettings.setCaptionsDefault(context, it) }, "toggle_cc_default")
         SettingsDivider()
-        if (!dev.asfakul.yumeiro.Edition.isTv) {
-            val boostOn by PlayerSettings.volumeBoost.collectAsState()
-            SettingsToggleRow("Volume boost up to 200 %", "Swipe up past full volume to make quiet videos louder. It resets for every video. Loud sound can damage your hearing and small speakers", boostOn,
-                { PlayerSettings.setVolumeBoost(context, it) }, "toggle_volume_boost")
-            SettingsDivider()
-        }
         var subStyleOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
@@ -248,7 +235,28 @@ fun VideoPlayerSettingsCard() {
             Text("Size, colour, outline or box, and height above the bottom. Also in the player's subtitle menu", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
         }
         if (subStyleOpen) dev.asfakul.yumeiro.ui.screens.video.SubtitleStyleDialog(onDismiss = { subStyleOpen = false })
+    }
+}
+
+@Composable
+fun VideoPlayerSettingsCard() {
+    val context = LocalContext.current
+    remember(context) { PlayerSettings.init(context); PlayerSettings }
+    val bg by PlayerSettings.backgroundPlay.collectAsState()
+    val pip by PlayerSettings.autoPip.collectAsState()
+    SettingsCard {
+        SettingsToggleRow("Background play", "Keep videos playing with the screen off or in other apps, with controls in the notification. Off: the video pauses when you leave the app", bg,
+            { PlayerSettings.setBackgroundPlay(context, it) }, "toggle_bg_play")
         SettingsDivider()
+        SettingsToggleRow("Picture-in-picture", "Show the PiP button and shrink the video into a floating window when you leave the app. Off: PiP is disabled", pip,
+            { PlayerSettings.setAutoPip(context, it) }, "toggle_auto_pip")
+        SettingsDivider()
+        if (!dev.asfakul.yumeiro.Edition.isTv) {
+            val boostOn by PlayerSettings.volumeBoost.collectAsState()
+            SettingsToggleRow("Volume boost up to 200 %", "Swipe up past full volume to make quiet videos louder. It resets for every video. Loud sound can damage your hearing and small speakers", boostOn,
+                { PlayerSettings.setVolumeBoost(context, it) }, "toggle_volume_boost")
+            SettingsDivider()
+        }
         val back by PlayerSettings.backAction.collectAsState()
         Text("Back button while a video plays", color = TextPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
         Text("You can also swipe down on the video to shrink it", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
