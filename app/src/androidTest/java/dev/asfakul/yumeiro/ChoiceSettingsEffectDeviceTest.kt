@@ -106,7 +106,9 @@ class ChoiceSettingsEffectDeviceTest {
 
     /** Videos → Device → (rescan) → the clip, until the first frame. Same path as PlayerExtrasSettingsEffectDeviceTest. */
     private fun openClip(firstFrame: Boolean = true) {
-        if (!hasText(title)) {
+        // FINAL-27: the clip title alone is not enough — Home's "Jump back in" row shows it too (below the
+        // fold, so a click there misses). Only skip the walk when the Videos → Device list is already up.
+        if (!(has("video_source_device") && hasText(title))) {
             wait("Videos tab") { FirstRun.hasNav(rule, "nav_tab_videos") } // TV: rail
             tap("nav_tab_videos")
             wait("video source switch", 20_000) { has("video_source_device") || has("video_source_switch") }
