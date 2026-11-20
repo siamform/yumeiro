@@ -21,6 +21,8 @@ REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
 # Final test (MASTER-CHECKLIST-FINAL): P1 = every class from cleared data and a cold start; P2 = the
 # same classes again with P1's data kept, the app killed and reopened (warm start, populated data).
 PASSES="${PASSES:-false}"; [ "$PASSES" = "true" ] && REPEAT=2
+# Owner 2026-11-20: final passes P1 only (fresh install, cold start) to save time.
+[ "$PASSES" = "true" ] && [ "${PASSES_ONCE:-false}" = "true" ] && REPEAT=1
 # FINAL-12 (api33-lowram, run 44617327290): the system launcher hung during boot ("ANR in
 # com.google.android.apps.nexuslauncher" before the first test) and kept window focus, so every
 # focus check saw the launcher, not Yumeiro. hide_error_dialogs hides the dialog but not the hang.
