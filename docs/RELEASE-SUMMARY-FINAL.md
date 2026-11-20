@@ -1,18 +1,62 @@
 # Release summary: Yumeiro 1.9.0 release candidate
 
-Status: in preparation. This is the release candidate for 1.9.0, tested on three targets across two passes each
-(when the final test completes), with the remaining items documented. It is not called stable.
+Status: release candidate for 1.9.0, waiting for the owner's review and "go". It is not called stable. Tested once
+per feature (P1: cleared data and a cold start before every class) on four emulator targets; the second, warm-start
+pass (P2) was dropped on the owner's decision of 2026-11-20 to release in time. Nothing is merged, published or
+deployed.
 
 ## What this release is
+
+Yumeiro 1.9.0 (version code 17), branch `r15-stability`, built and signed by CI as a review APK for the owner. It
+was planned as v1.8.2 and ships as 1.9.0 because it adds features (profiles, private downloads, script repos,
+Telegram and share-link playback, DNS fallback, own proxy). Phone and TV APKs come from the same commit.
+
 ## What changed since 1.8.1
+
+The user-facing list is CHANGELOG.md, section "v1.9.0: yours, and fast" (profiles and privacy, look and player,
+faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes in the app itself (not only tests):
+
+- FINAL-30 (ADR-050): Android TV boxes without an AC-3 / E-AC-3 decoder play those audio tracks through FFmpeg
+  instead of failing with DECODER_INIT_FAILED (tv-api24, pass-after 44664839512).
+- FINAL-17 / FINAL-18 / FINAL-20 / FINAL-13 / FINAL-16 (earlier in the window): full-disk WorkManager no longer
+  crashes, manga metadata refresh off the main thread, slow probes never read as a hang, an extension's quiet card
+  comes back after an app message, hold-for-2x while the finger is still.
+
 ## What was tested
+
+- Device tests: every androidTest class, P1 once, on api33-lowram (2 GB, 192 MB heap), api36 (Pixel 6),
+  tv-api34 and tv-api24, through `device-check.yml` (CI emulators; labels: emulator / TV emulator, no real
+  hardware). Results per feature with run IDs: docs/MASTER-CHECKLIST-FINAL.md; raw lines per run:
+  docs/evidence/final/<run>.txt; lane log: docs/evidence/final/lanes.log.
+- Unit tests, lint and the build: `ci.yml` on the review-APK commit (see Review APK).
+- Server: docs/SERVER-TEST-FINAL.md. Code audit (checks only): docs/CODE-AUDIT-FINAL.md.
+- Findings of the final test and their fixes: docs/HANDOVER-FINAL-LANES.md (FINAL-16c … FINAL-34), each with a
+  fail-before run and a pass-after run where one finished.
+
 ## What is queued
+
+- Owner tests that need real hardware, accounts, a home network or the Worker: docs/OWNER-MANUAL-TESTS.md
+  (OMT-14 … OMT-56) and the community programme docs/USER-TEST-PROGRAM.md.
+- The warm-start pass (P2) for every class (dropped for time, owner's decision).
+- Everything in docs/UNVERIFIED-QUEUE.md.
+
 ## Known to be imperfect
+
+- YouTube's "Sign in to confirm you're not a bot" wall on the CI network blocks YouTube watch and endless YouTube
+  Music checks there (MusicEndlessNetwork, YtChannelUi on tv-api24, PlayerSwitch c): Blocked, OMT-29 on a home
+  network.
+- TV-FP-1: FeedPositionDeviceTest live / YouTube on tv-api24 is a known test fault (same on old code
+  44438504785); the feature itself passes on tv-api34 and phones.
+- tv-api24 (Android 7 TV) cannot turn its Ethernet off, so network-drop checks are skipped there with that reason
+  (NetworkState, YmPagingNetwork); phones run them.
+- Phone with Layout = TV in portrait is not verified (FINAL-31: the BUG-5 TV checks need a landscape TV window).
+- LIC-1: NOTICE does not yet name the Google SDKs linked into the APK; owner's wording needed.
+- SEC-LFM and F-AIR need the Worker deploy that comes with "go"; until then built-in Last.fm sign-in waits.
 ## Security checks (§9)
 
 | Check | How | Result | Date |
 |---|---|---|---|
-| Secret scan, full history | gitleaks 8.28.0 (CI's pinned version and SHA-256), `git --log-opts=--all`, all 1087 commits, `.gitleaks.toml` | No leaks. Found 4 hits first: a fake test signature in two SEC-LFM test mocks (not a credential); mocks changed to a low-entropy fake, the two commits allow-listed by SHA and path only (a71cf85) | 2026-11-19 |
+| Secret scan, full history | gitleaks 8.28.0 (CI's pinned version and SHA-256), `git --log-opts=--all`, all 1172 commits (re-run 2026-11-20 03:17 UTC on 1a22844), `.gitleaks.toml` | No leaks. Found 4 hits first: a fake test signature in two SEC-LFM test mocks (not a credential); mocks changed to a low-entropy fake, the two commits allow-listed by SHA and path only (a71cf85) | 2026-11-20 |
 | Secret scan, working tree | gitleaks `dir` | 7 hits, all in the git-ignored `.env` and `secrets/firebase-admin.json` (local only, never committed: checked against every commit) | 2026-11-19 |
 | Secrets in the APK | `ApkSecretsTest` (BuildConfig fields) + string scan of the review APK | SEC-LFM: the Last.fm shared secret was in BuildConfig; removed (b57e155, ADR-048). Trakt client secret, TMDB key, Kitsu id/secret already out. Cloudflare token and Firebase service account are server-only. APK string scan: pending the review APK | 2026-11-19 |
 | Dependencies | Dependabot alerts (enabled), `npm audit` in server/ | 0 open Dependabot alerts (5 fixed earlier); npm audit 0 vulnerabilities | 2026-11-19 |

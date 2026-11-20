@@ -1,0 +1,7 @@
+44665524517 tv-api24 PushAlertsEffectDeviceTest P1 PASS tests=3 skipped=0 sha=87ea3a2
+44665524517 tv-api24 QualityListDeviceTest P1 PASS tests=1 skipped=0 sha=87ea3a2
+44665524517 tv-api24 QueuePersistenceDeviceTest P1 PASS tests=1 skipped=0 sha=87ea3a2
+44665524517 tv-api24 ReleaseFeaturesDeviceTest P1 PASS tests=5 skipped=0 sha=87ea3a2
+44665524517 tv-api24 RemotePlaylistMemoryDeviceTest P1 PASS tests=1 skipped=0 sha=87ea3a2
+44665524517 tv-api24 RestoreAfterClearDeviceTest P1 PASS tests=1 skipped=0 sha=87ea3a2
+44665524517 tv-api24 ResumeAcrossProcessDeviceTest P1 PASS tests=1 skipped=0 sha=87ea3a2

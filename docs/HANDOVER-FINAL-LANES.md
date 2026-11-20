@@ -56,6 +56,17 @@ file: `git log`, `docs/evidence/final/*.txt` and `docs/MASTER-CHECKLIST-FINAL.md
 | FINAL-24 | Library tests inserted songs without DATA on Android 7 (MediaProvider NPE); no WRITE_EXTERNAL_STORAGE after pm clear | 5cf0679, 5474bf3 | 44659196962 | tv24 07 re-run |
 | FINAL-25 | PiP tests expected a PiP button on Android 7; the app offers PiP from Android 8 by design | FINAL-25 commit | 44659224203 | tv24 08 re-run |
 | e13 tv24 | `ExtensionsDeviceTest.e13` got 4 of 5 seeded drama-feed failures on tv-api24 (4 requests, then the check ended) | under investigation; re-run queued (tv24 05) | 44658520448 | — |
+| FINAL-24c | Music tests inserted songs without DATA on Android 7 (four more classes) | 92e03d7 LegacyMedia.path() | 44660785480 | 44662157055 |
+| FINAL-27 | Player-settings tests tapped the clip in Home's "Jump back in" instead of Videos → Device | 03df604 | 44660692917 | 44663931586 (phone 13) |
+| FINAL-28 / 28b | Resume test: an extension's "has a message" card took the tap; closing it showed the next waiting card | d1567eb, FINAL-28b commit | 44660840151, 44663619588 | phone 14 re-run |
+| FINAL-23b / 29 | PlaybackSession started before the tabs (permission dialog after pm clear); notification wait too short on a busy low-RAM boot | 8007648 | 44661962064 | phone 12 re-run |
+| FINAL-30 | App: tv-api24 AC-3 rendition DECODER_INIT_FAILED (HLS audio group mapped to the platform renderer). ADR-050 | 9d339b8 | 44662563096 | 44664839512 (tv24 13) |
+| FINAL-31 | TvBug5Repro forced Layout=TV on portrait phones (first run on phones); now assumes a landscape window there | b975bb4 | 44662669318 | phone 17 re-run |
+| FINAL-32 | TV: Continue row below Spaces not composed (scroll to it); rail Home tag; QualityList greyed (unplayable) rows on tv-api24 | 87ea3a2 | 44662863280, 44662890080 | tv24 14 / tv34 14 re-runs |
+| FINAL-33 | YmPagingNetwork network drop impossible with TV Ethernet (written reason, as NetworkState) | adb0526 | 44664324623, 44664431589 | — (skip) |
+| FINAL-34 | TV tab taps hit off-screen phone-bar twins; SurfaceMode start race; Messages pill race; TV full-screen keyboard over a form | 1a22844 | 44660329194, 44662525331, 44663118888, 44663218206 | tv24 09/15/16, phone 16 re-runs |
+| FINAL-35 (open) | StabilityStress on tv-api24: Java heap 61 → 479 MB in 90 s after "tab back: page 2 → Home", Compose never idle, ANR at the next broadcast | under investigation; tv24 16 re-run for reproducibility | 44663218206 | — |
+| YT-WALL | YtChannelUi (tv-api24) watch page: YouTube "Sign in to confirm you're not a bot" (SignInConfirmNotBotException) on the CI network | Blocked: external (OMT-29) | 44664527460 | — |
 | TV-FP-1 | `FeedPositionDeviceTest` live/youtube on tv-api24 taps the phone tab (known test fault, same on old code 44438504785) | test rewrite queued (stability-v2) | 44658520448 | — |
 
 ## What is left for the release (in order)

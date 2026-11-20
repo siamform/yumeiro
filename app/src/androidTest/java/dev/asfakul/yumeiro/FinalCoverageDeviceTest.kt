@@ -115,6 +115,11 @@ class FinalCoverageDeviceTest {
     }
 
     @Test fun a_h9_welcomeGuideExploreTourAndBack() {
+        // FINAL-36 (run 44665104133, tv-api24): the class has no fixed method order, so an earlier method's
+        // start had already skipped the welcome (SKIPPED), and the test expected EXPLORED right after tapping
+        // Explore. The app records EXPLORED only when the tour reaches its last stop; leaving it early is
+        // SKIPPED (ExploreTour.finish, its KDoc). Start from a first-run state and check that design.
+        inst.runOnMainSync { SetupGuide.setOnboarding(ctx, SetupGuide.Onboarding.NONE) }
         inst.runOnMainSync { SetupGuide.show() }
         waitTag("setup_guide")
         waitTag("setup_explore")
@@ -124,11 +129,14 @@ class FinalCoverageDeviceTest {
         // "Explore" hands over to the tour; Back leaves it as a user would.
         val tour = runCatching { rule.waitUntil(10_000) { has("explore_tour") }; true }.getOrDefault(false)
         log("explore tour shown=$tour onboarding=${SetupGuide.onboarding.value}")
-        assertEquals(SetupGuide.Onboarding.EXPLORED, SetupGuide.onboarding.value)
-        assertFalse("the guide would open again on the next start", SetupGuide.shouldAutoShow(ctx))
+        assertTrue("Explore did not open the tour", tour)
+        assertEquals("no choice is recorded while the tour runs", SetupGuide.Onboarding.NONE, SetupGuide.onboarding.value)
         var backs = 0
         while (has("explore_tour") && backs < 6) { back(); SystemClock.sleep(800); backs++ }
         waitGone("explore_tour", 10_000)
+        // Left before the last stop: skipped, remembered, and the welcome does not come back on the next start.
+        assertEquals(SetupGuide.Onboarding.SKIPPED, SetupGuide.onboarding.value)
+        assertFalse("the guide would open again on the next start", SetupGuide.shouldAutoShow(ctx))
         assertTrue("tabs did not come back · ${FirstRun.onScreen(rule)}", FirstRun.hasNav(rule, "nav_tab_home"))
     }
 
