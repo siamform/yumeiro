@@ -272,7 +272,8 @@ fun OnlineHomeScreen(
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(context) }
     val bookmarks by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
     val channelNames = remember(providers) { providers.map { it.name } }
-    val loadingNames = providers.filter { homes[it.name] == null || homes[it.name] is ProviderHome.Loading }.map { it.name }.toSet()
+    val withHome = remember(providers) { providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.map { it.name } }
+    val loadingNames = YumixFeed.stillLoading(withHome) { n -> homes[n].let { it != null && it !is ProviderHome.Loading } }
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
@@ -534,7 +535,7 @@ fun OnlineHomeScreen(
                         }
                         val searchOnly = providers.filter { !runCatching { it.hasMainPage }.getOrDefault(false) }
                         if (searchOnly.isNotEmpty()) item("search_only") {
-                            SearchOnlyCard(searchOnly.joinToString(", ") { it.name }, onOpenSearch)
+                            SearchOnlyCard(YumixFeed.searchOnlyLabel(searchOnly.map { it.name }), onOpenSearch)
                         }
                         }
                     }
@@ -582,7 +583,7 @@ private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
             Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, null, tint = SpotifyGreen) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text("Search-only source — find titles with search", color = TextSecondary, fontSize = 12.sp)
             }
             TextButton(onClick = onSearch) { Text("Search", color = SpotifyGreen) }
