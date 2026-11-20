@@ -63,7 +63,7 @@ FREEZE-1 broke exactly this rule.
 | NF-3 | Extension pop-up / promo blocker | Verified (emulator) | ExtensionPopups 8/8, run 43825449454 | EXT-T1 open |
 | NBUG-15a–d | Live TV redesign (filter button, no file names, channels by category, first 50, search, pins) | Verified (emulator, phones + TV) | ledger: fail-before 44411680293, phones 44413808456, 44421879508 | Real-phone check; tied to FREEZE-3 (Live TV probes) |
 | F-02 split | Separate Telegram page and Websites page, with navigation shortcuts | Fixed in code, CI pending | Route `telegram` (Screen.Telegram), Settings entries Telegram and Websites, Telegram tile in Live TV tools, Telegram nav-bar shortcut; each page refuses the other kind (`SavedSites.wrongPage`, test `SavedSitesSplitTest`) | Real-phone check |
-| F-02 login | Telegram login (Hikari-style) | Owner decision | Owner decision "Telegram has no login" stands; public channels work without login (F-02 Pass 2/2, runs 44595993499, 44598214395) | If the owner changes the decision: TDLib on the device (Boost licence, [TDLib](https://github.com/tdlib/td)); the api_hash ends up in every APK ([Telegramedia](https://github.com/kernoeb/telegramedia)) or comes from a server at runtime ([Cablegram](https://github.com/seep-labs/cablegram-apps)); adds native libraries per ABI (needs E3) |
+| F-02 login | Telegram login (Hikari-style) | Owner decision changed 2026-11-21: build full login | Old "no login" decision replaced. TDLib, needs owner api_id/api_hash (secure form), pairs with E3; public channels work without login (F-02 Pass 2/2, runs 44595993499, 44598214395) | If the owner changes the decision: TDLib on the device (Boost licence, [TDLib](https://github.com/tdlib/td)); the api_hash ends up in every APK ([Telegramedia](https://github.com/kernoeb/telegramedia)) or comes from a server at runtime ([Cablegram](https://github.com/seep-labs/cablegram-apps)); adds native libraries per ABI (needs E3) |
 | F-20 | Vault: 3 security questions, `.nomedia`, app lock, incognito, discreet icon | Partial | `PrivateVault.kt`, `AppLockGate.kt`, incognito in 20 files; vault files are in app-private storage (no `.nomedia` needed, gallery apps can't see it) | Not built: security questions; discreet launcher icon needs **owner decision**: it moves the launcher entry to an `activity-alias`, and launchers drop the pinned Yumeiro icon once on update |
 | F-19 | Profile security questions instead of the screen-lock bypass; strict per-profile isolation incl. extensions / repos and Continue Manga | Partial / Broken | Per-profile today: YouTube history, online settings, online history, bookmarks, vault, private downloads (`Profiles.prefsName` users) | Not per profile: manga progress ("Continue reading" leaks across profiles, confirmed in code), extensions and repositories, Live TV pins. 2026-11-20: security questions built (B-19, ba87ce64), extension / Live TV pins per profile (B-20); manga progress per profile (PROF-1). Still shared: extensions and repositories |
 | F-10 | Themes: Blue, glass | Built, not tested | 354082ba, 7396955f; ADR-017 tint only | Device check; Blue theme presence to confirm on device |
@@ -84,6 +84,8 @@ FREEZE-1 broke exactly this rule.
 | F-14 | Live TV failover | Built, not tested | 6658998a | Limit parallel probes (FREEZE-3) |
 | F-15 | EPG Now / Next | Built, not tested | af0a5a14 | Device check |
 | Airing alerts | Push alerts for airing episodes | Partial | `airing` in 6 files | End-to-end notification check |
+| F-21 | Rich extension metadata on every extension row (Hikari style), owner request 2026-11-21 | Not built | None | Apply in three places: Extensions market / browser, Installed list, the "Show videos from" filter sheet. Each row: title + language code chip (`HDHub4u` `HI`); second line `12 sources • CloudStream • Nuvio • <repo name>` = exact source count, ecosystem tag (CloudStream, Nuvio, Vega, Stremio, Hikari/Yumeiro), repository name, one line with clean ellipsis. Purpose: tell apart same-name extensions from different repos or ecosystems. One shared composable used by all three lists; TV focus and font-scale 200 % checked; unit test for the label builder (count, tags, truncation); device screenshot test on phone + TV. |
+| F-22 | Upcoming page: filters + date-grouped sections, owner request 2026-11-21 | Not built (F-08 hub exists) | F-08 97895d02 | Filter bar with three filters: Country (JP, US, KR, IN, BD, …), Category (Movies, Series, Anime, Web Series, Drama), Extension (installed extensions, same F-21 row selector). Group items by date with headers `Today • Sat, Nov 21`, `Tomorrow • Sun, Nov 22`, then `Sat, Nov 21, 2026` (category prefix when one category is filtered, e.g. `Anime • Sun, Nov 22, 2026`); dates in the user's time zone. Each card shows air time, episode number, genre and country badges. Filters persist per profile. Tests: grouping/labels around midnight and time zones (unit), filter combinations (unit), device check phone + TV. |
 
 ## Part 3: bugs
 
@@ -119,7 +121,7 @@ FREEZE-1 broke exactly this rule.
 
 ## Owner decisions needed (not reopened)
 
-1. Telegram login: keep "no login" (decision) or allow TDLib login (size, api_hash, needs E3).
+1. Telegram login: decided 2026-11-21, full login (TDLib). Waiting for the owner's api_id / api_hash.
 2. Super-extension (E1) and a scheduled validation workflow (E2): the "no scheduled workflows" rule is for agent runs;
    a product schedule needs the owner's yes.
 3. Vega / Nuvio / SkyStream stay one registry; import (step 2–4) is a new release lane.
@@ -132,7 +134,10 @@ Now (2.0.1, stability only)
 3. S-1 search debounce (fires work per keystroke on the main path).
 4. Owner real-phone tests U-30 and the mandatory list, then release 2.0.1.
 
-Next (2.1)
+Next (2.1, owner 2026-11-21: no release until all is fixed and tested)
+- B-29 TeraBox full video (done in code), B-30 DiskWala hand-off (done in code), B-31 built-in torrent engine.
+- F-21 extension metadata rows, F-22 Upcoming filters + date sections.
+- E1 Yumeiro master extension (replaces the removed starters, B-26).
 - E4 engine (scheduler, SWR, quarantine, throttling) and FREEZE-3 thread cap.
 - E3 ABI splits + website detector.
 - F-18 manga chapters, F-20 / F-19 security questions, `.nomedia`, discreet icon.

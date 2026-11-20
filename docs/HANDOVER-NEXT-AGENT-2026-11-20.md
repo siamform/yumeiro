@@ -127,3 +127,31 @@ built its request JSON on the main thread (B-28, fixed 6fd31251, YtMusicOffMainT
 run 44795131763: api36 650 ms, api33-lowram 677 ms. That leaves little margin: if it goes red, read the
 `STALL_SAMPLE_REAL` stacks (log tag YuGate1) and fix what is on them. Do not raise the limit.
 B-27 (fixed): a released music screen could leave `MusicPlayHistory.screenRecorders` above 0 (fail-before 44793686032).
+
+## Update 2026-11-21 (2): owner decisions and the three test links
+
+Owner, 2026-11-21: no release for now; fix, implement and test everything first.
+
+1. Starters removed (B-26, 077fad69). "Use our master extension": the Yumeiro master extension is E1 in
+   MAJOR-BUGS-AND-FEATURES-2.x.md (one Yumeiro-owned provider, own repo, OTA manifest). Not built yet; until it is,
+   first run installs nothing and Get started lets the user pick.
+2. Discreet launcher icon: explained to the owner (switching the activity-alias makes Android drop the old
+   home-screen icon once; the user re-adds it). Waiting for the owner's yes/no.
+3. Telegram: full login is now wanted (replaces "no login"). Plan: TDLib; needs the owner's api_id/api_hash from
+   my.telegram.org through the secure credential form (never in chat or the repo). Native size pairs with E3.
+
+Links the owner gave (all measured from the sandbox, 2026-11-21):
+
+- TeraBox `https://1024terabox.com/s/1qkXqTvPA9GYY7sUY6dOGeA`: B-29 above. How to check by hand: GET
+  `https://www.terabox.app/wap/share/filelist?surl=<key without leading 1>` → jsToken in `fn%28%22<hex>%22%29`;
+  `api/shorturlinfo?app_id=250528&web=1&channel=dubox&clienttype=0&jsToken=…&shorturl=<key>&root=1`;
+  `share/streaming?...&type=M3U8_AUTO_480` (count #EXTINF: 3 = preview). Competitors (Hikari NetworkStream.kt,
+  terabox-gateway, TeraBridge) all need an `ndus` sign-in cookie; none gets the full video anonymously.
+- DiskWala `https://www.diskwala.com/app/6afdd044b61fd14efb3a5afd`: B-30 (web never plays; hand-off to the app).
+- Torrent hash `BF2063A5E9A69F14716288FCA7C2D6078BDA7369`: valid, 5.87 GB HEVC 10-bit + DD+5.1 MKV (FFmpeg audio
+  already ships). Plays today only through TorrServer; B-31 is the built-in engine.
+
+New owner feature requests 2026-11-21 (full spec in MAJOR-BUGS-AND-FEATURES-2.x.md): F-21 rich extension metadata
+rows (title + language chip, "N sources • ecosystem • repo") in the market, Installed list and "Show videos from"
+sheet; F-22 Upcoming page filters (country, category, extension) with date-grouped headers (Today / Tomorrow / full
+date) and air time, episode, genre, country badges on cards.
