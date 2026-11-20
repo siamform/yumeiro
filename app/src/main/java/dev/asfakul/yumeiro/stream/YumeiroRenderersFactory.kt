@@ -75,19 +75,38 @@ class YumeiroRenderersFactory(context: Context) : DefaultRenderersFactory(contex
                     out.add(0, OnlyFormats(ffmpeg, SURROUND))
                     out += io.github.anilbeesetti.nextlib.media3ext.ffdecoder.FfmpegAudioRenderer(eventHandler, eventListener, audioSink)
                 }
-                else -> out += ffmpeg
+                // FINAL-30 (run 44662563096, tv-api24): an HLS stream's audio renditions (AAC, AC-3,
+                // E-AC-3) form one track group, which goes to the platform renderer because it plays AAC.
+                // Picking AC-3 on a TV without an AC-3 decoder or passthrough then failed with
+                // DECODER_INIT_FAILED although FFmpeg can decode it. TVs keep passthrough: FFmpeg goes
+                // first only for the surround formats the platform renderer can't handle on this TV.
+                else -> {
+                    val platform = out.firstOrNull { it.trackType == androidx.media3.common.C.TRACK_TYPE_AUDIO }?.capabilities
+                    if (platform != null) out.add(0, OnlyFormats(ffmpeg, SURROUND, unlessHandledBy = platform))
+                    out += io.github.anilbeesetti.nextlib.media3ext.ffdecoder.FfmpegAudioRenderer(eventHandler, eventListener, audioSink)
+                }
             }
         }.onFailure { Log.w(TAG, "FFmpeg audio renderer unavailable", it) }
     }
 
-    /** A renderer that only offers to play [mimes]; for everything else it steps aside. */
-    private class OnlyFormats(renderer: Renderer, private val mimes: Set<String>) : androidx.media3.exoplayer.ForwardingRenderer(renderer) {
+    /**
+     * A renderer that only offers to play [mimes]; for everything else it steps aside. With
+     * [unlessHandledBy] it also steps aside for formats that renderer (the platform one) handles.
+     */
+    private class OnlyFormats(
+        renderer: Renderer, private val mimes: Set<String>,
+        private val unlessHandledBy: androidx.media3.exoplayer.RendererCapabilities? = null,
+    ) : androidx.media3.exoplayer.ForwardingRenderer(renderer) {
         private val inner = renderer.capabilities
         private val caps = object : androidx.media3.exoplayer.RendererCapabilities by inner {
             override fun supportsFormat(format: androidx.media3.common.Format): Int =
-                if (format.sampleMimeType in mimes) inner.supportsFormat(format)
+                if (format.sampleMimeType in mimes && !handledElsewhere(format)) inner.supportsFormat(format)
                 else androidx.media3.exoplayer.RendererCapabilities.create(androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE)
         }
+        private fun handledElsewhere(format: androidx.media3.common.Format): Boolean = unlessHandledBy?.let {
+            androidx.media3.exoplayer.RendererCapabilities.getFormatSupport(runCatching { it.supportsFormat(format) }.getOrDefault(0)) ==
+                androidx.media3.common.C.FORMAT_HANDLED
+        } ?: false
         override fun getCapabilities(): androidx.media3.exoplayer.RendererCapabilities = caps
     }
 

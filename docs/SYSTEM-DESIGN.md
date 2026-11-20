@@ -1548,3 +1548,35 @@ was lost is redone by its reconcile at the next start. Rollback: remove the `ins
 
 Tests. Unit `DiskFullGuardTest` (recognised case, main thread / our own database / other exceptions / OOM still
 forwarded, handler behaviour). Device: LowStorageDeviceTest on api33-lowram and the other targets in the next passes.
+
+### ADR-050: On TV, FFmpeg takes the surround formats the platform renderer can't handle (FINAL-30)
+
+Status: accepted 2026-11-20 (final-test cycle, finding FINAL-30).
+
+Context. PlayerSwitchDeviceTest.d_everyAudioRenditionIsAudible on tv-api24 (run 44662563096): Apple's bipbop HLS
+stream has AAC, AC-3 and E-AC-3 renditions in one audio track group. Media3 maps a whole group to one renderer
+before tracks are selected; the platform renderer won it because it plays AAC. Picking AC-3 then failed with
+`DECODER_INIT_FAILED` (`format_supported=NO_UNSUPPORTED_SUBTYPE`): the Android 7 TV image has neither an AC-3
+decoder nor passthrough, although the packaged FFmpeg decodes AC-3. Phones were fixed in round 13 (FFmpeg first for
+surround codecs, PCM-only sink); TVs kept FFmpeg last to keep passthrough to receivers and soundbars.
+
+Competitors. NextLib (anilbeesetti/nextlib, the FFmpeg build Yumeiro packages) documents that "renderer capability
+gating is needed because Media3 maps tracks before selecting them" and leaves runtime recovery to the app; Next
+Player uses it with `EXTENSION_RENDERER_MODE_PREFER`. Just Player (moneytoo/Player) lets the user pick the
+extension renderer priority (`decoderPriority`) instead of deciding per format.
+
+Options. (a) FFmpeg first on TV for every format (PREFER) — rejected: drops passthrough on TVs that have it.
+(b) A user setting only — rejected: users don't know why a track fails. (c) Capability gating — chosen.
+
+Decision. On TV (and the phone "Dolby Atmos" tier, which also keeps passthrough) `YumeiroRenderersFactory` puts an
+`OnlyFormats(ffmpeg, SURROUND, unlessHandledBy = platform)` renderer first: it offers a surround format only when
+the platform audio renderer does not report `FORMAT_HANDLED` for it (no decoder and no passthrough on this
+device). FFmpeg also stays last as the fallback, as before.
+
+Side effects. A TV whose platform renderer handles every surround format sees no change (the gate steps aside, the
+platform renderer keeps the group and passthrough). A TV that handles AC-3 but not E-AC-3 maps a mixed group to the
+gate, so AC-3 is decoded by FFmpeg to PCM there instead of passed through: sound instead of an error, without
+the receiver's own decoding. Rollback: remove the `else` branch's gate line.
+
+Tests. Device: PlayerSwitchDeviceTest d on tv-api24 (fail-before 44662563096) and tv-api34 / phones (unchanged
+path on phones).
