@@ -94,7 +94,7 @@ file: `git log`, `docs/evidence/final/*.txt` and `docs/MASTER-CHECKLIST-FINAL.md
    hash, SHA-256), docs/R15-STATUS.md "Resume here", CHANGELOG.
 6. Ask the owner for "go". Then: merge to main, release, Worker deploy (needed for SEC-LFM Last.fm signing and
    F-AIR), website push (`docs/website/yumeiro-web-v1.9.0.patch`), delete the 41 scratch branches listed in
-   `docs/evidence/final/branches-to-delete-2026-11-20.txt` (fail-before evidence branches; their CI runs stay).
+   `docs/evidence/final/BRANCHES-OBSOLETE-2026-11-20.md` (fail-before evidence branches; their CI runs stay).
 
 ## Done in this window
 

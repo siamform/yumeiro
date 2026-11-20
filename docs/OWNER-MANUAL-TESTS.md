@@ -11,7 +11,7 @@ in [`MANUAL-TESTS.md`](MANUAL-TESTS.md).
 
 Which build: the **1.9.0 release candidate review APK**, release-signed (artifact `yumeiro-review-apk` of the `ci.yml`
 run named in [`RELEASE-SUMMARY-FINAL.md`](RELEASE-SUMMARY-FINAL.md); check its SHA-256 against `SHA256SUMS.txt`).
-Back up 1.8.x first (Settings → Backup, storage & reset → Back up now), then install over it; your data stays. TV: `adb install -r` with the
+Back up 1.8.x first (Settings → Backup & restore → Back up now), then install over it; your data stays. TV: `adb install -r` with the
 `.tv.apk`. How to record logs: see "Which build to install" in `MANUAL-TESTS.md`
 (`adb logcat ... -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime`). How to report: Settings → Crash
 reports → Share, plus a GitHub issue with the test ID.

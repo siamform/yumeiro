@@ -1,4 +1,4 @@
-From 51317d5eda5dfeeeeed3618e2d83d0b628667010 Mon Sep 17 00:00:00 2001
+From aa82786c02a0044f834f0a00f8d03158efbe410f Mon Sep 17 00:00:00 2001
 From: Asfakul Siam <71690568+siamform@users.noreply.github.com>
 Date: Thu, 19 Nov 2026 21:43:34 +0000
 Subject: [PATCH] v1.9.0: changelog highlight
@@ -23,7 +23,7 @@ index ec0f20a..25ba61c 100644
  
  export default async function ChangelogPage() {
 diff --git a/lib/changelog.ts b/lib/changelog.ts
-index 070e210..a560224 100644
+index 070e210..68784b5 100644
 --- a/lib/changelog.ts
 +++ b/lib/changelog.ts
 @@ -4,29 +4,28 @@
@@ -64,8 +64,8 @@ index 070e210..a560224 100644
 -      { name: "Heat guard", text: "Yumeiro follows your phone's temperature and battery saver. It checks less often in the background, runs fewer extensions at once, pauses Anime4K when the phone is hot and stops collecting extra sources once enough are ready." },
 -      { name: "Crash reports on your phone", text: "Settings, Crash reports: read, share or delete reports of crashes and freezes. They stay on your phone and nothing is sent anywhere." },
 +      { name: "Start-up", text: "Setup, feed, extensions and catalog show at once; extensions load behind, pinned ones first. An extension update keeps the saved catalog." },
-+      { name: "Airing alerts", text: "Alerts also reach phones that use Firebase push." },
-+      { name: "Last.fm", text: "The app no longer carries Yumeiro's Last.fm shared secret; Yumeiro Cloud signs those calls. Your own Last.fm key keeps working." },
++      { name: "Airing alerts", text: "Alerts can also reach phones that use Firebase push, once the Yumeiro Cloud update is live." },
++      { name: "Last.fm", text: "The app no longer carries Yumeiro's Last.fm shared secret. Built-in Last.fm sign-in returns once Yumeiro Cloud signs those calls; your own Last.fm key keeps working." },
      ],
    },
  ];

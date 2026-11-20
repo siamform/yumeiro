@@ -7,4 +7,4 @@ owner's go for the 1.9.0 release (§11/§12 of the final-test prompt), because t
 otherwise announce a version that is not published.
 
 Apply after the go: `git am docs/website/yumeiro-web-v1.9.0.patch` in a clone of yumeiro-web, then open a PR.
-Checked: `tsc --noEmit` on `lib/changelog.ts` passes.
+Checked: `git apply --check` against yumeiro-web c9a73fc (v1.8.1 highlight) passes; 2026-11-20 the Airing alerts and Last.fm lines were reworded so they do not claim the Yumeiro Cloud update is live (string-only change).

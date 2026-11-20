@@ -33,13 +33,13 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
   docs/evidence/final/<run>.txt; lane log: docs/evidence/final/lanes.log.
 - Unit tests, lint and the build: `ci.yml` on the review-APK commit (see Review APK).
 - Server: docs/SERVER-TEST-FINAL.md. Code audit (checks only): docs/CODE-AUDIT-FINAL.md.
-- Findings of the final test and their fixes: docs/HANDOVER-FINAL-LANES.md (FINAL-16c … FINAL-41), each with a
+- Findings of the final test and their fixes: docs/HANDOVER-FINAL-LANES.md (FINAL-16c … FINAL-44), each with a
   fail-before run and a pass-after run where one finished.
 
 ## What is queued
 
 - Owner tests that need real hardware, accounts, a home network or the Worker: docs/OWNER-MANUAL-TESTS.md
-  (OMT-14 … OMT-56) and the community programme docs/USER-TEST-PROGRAM.md.
+  (OMT-14 … OMT-60) and the community programme docs/USER-TEST-PROGRAM.md.
 - The warm-start pass (P2) for every class (dropped for time, owner's decision).
 - Everything in docs/UNVERIFIED-QUEUE.md.
 
@@ -60,8 +60,11 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
   during feed paging; Compose never went idle and the next broadcast hit an ANR. The same class passed on the same
   app code in 44666637483 (peak heap 94 MB, no ANR) and earlier TV runs; a further tv-api24 run on the final head is
   listed in docs/HANDOVER-FINAL-LANES.md. No heap dump was captured, so the cause is not known. Owner check: OMT-57.
-- Android TV's permission dialog keeps asking after every "Don't allow" (no "don't ask again"); the app then says
-  "Tap again", which is right there; the "blocked → Open settings" path is verified on phones only (FINAL-39).
+- Android TV's permission dialog keeps asking after every "Don't allow" (no "don't ask again"), so the "blocked →
+  Open settings" path is verified on phones only. In three tv-api34 runs (44662694767, 44666813073, 44669616027) the
+  app's "Notifications not allowed. Tap again…" message was not seen within 10 s after the second "Don't allow"; in
+  the run with diagnostics (44672818277, after the FINAL-42 main-thread fix) it showed after each of 5 denials. The
+  cause of the three misses is not proven (FINAL-43, OMT-58).
 - CI: Gradle's configuration cache twice failed to store `processNavigationResources` state in "Build APKs" (runs
   44667182892, 44668053699; no test ran, both re-run). An infrastructure fault, not an app or test result.
 - The Timestamp lines in the bodies of 099689d, a5bc4da and d91f052 are 10–25 min ahead of the real commit time
