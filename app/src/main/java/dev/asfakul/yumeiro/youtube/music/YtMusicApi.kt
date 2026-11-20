@@ -108,10 +108,15 @@ object YtMusicApi {
 
     // ---- transport ---------------------------------------------------------------------------
 
-    private suspend fun cached(key: String, force: Boolean, load: suspend () -> YmPage): YmPage {
+    // B-28 (GATE-1 real clock, run 44793350371, api33-lowram): the request body was built on the
+    // caller's thread (Main from YtMusicBrowse); the first JSON build loads kotlinx.serialization's
+    // JsonElement classes, and the main thread waited 865 ms when Videos opened. The whole load,
+    // body included, now runs on IO; only the memory cache lookup stays on the caller's thread.
+    @androidx.annotation.VisibleForTesting
+    internal suspend fun cached(key: String, force: Boolean, load: suspend () -> YmPage): YmPage {
         val now = System.currentTimeMillis()
         if (!force) cache[key]?.takeIf { now - it.at < TTL }?.let { return it.page }
-        val page = load()
+        val page = withContext(Dispatchers.IO) { load() }
         cache[key] = Cached(now, page)
         return page
     }
