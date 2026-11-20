@@ -87,6 +87,14 @@ class MiniPlayerDeviceTest {
         rule.runOnUiThread { vm().closeNowPlaying() }
         rule.waitUntil(10_000) { has("mini_player_bar") && !has("now_playing_screen_root") }
         runCatching { rule.waitUntil(10_000) { state().isPlaying } }
+        // FINAL-21 (run 44643028088, api36 P2): the clips are 12 s long; on a loaded warm start Now Playing took
+        // ~30 s to open and close, so the queue had already played on to mini_t3 before the first check. That is
+        // the player doing its job. Start the queue again now the bar is up, so the steps below begin on mini_t1.
+        if (current() != "mini_t1") {
+            log("MINI_CASE a_restart current=${current()} (12 s clips played on while the page opened)")
+            rule.runOnUiThread { vm().playTrack(tracks[0], tracks); vm().closeNowPlaying() }
+            runCatching { rule.waitUntil(10_000) { current() == "mini_t1" && state().isPlaying && has("mini_player_bar") } }
+        }
         log("MINI_CASE a_shown current=${current()} playing=${state().isPlaying}")
         assertEquals("mini_t1", current())
         assertTrue("the queue did not start playing", state().isPlaying)
@@ -106,10 +114,24 @@ class MiniPlayerDeviceTest {
         // Both swipes now start and end inside the row, ~40 % of the width (> the 64 dp threshold).
         swipeBar(0.90f, 0.10f)
         waitTrack("mini_t3", "d_swipe_left")
+        // FINAL-21 (run 44643028088, api33-lowram P1): Previous (button or swipe right) restarts the song when it
+        // is more than 3 s in, like Media3's default and the Now Playing button. On the low-RAM emulator the
+        // left swipe took 6 s, so the right swipe restarted mini_t3. Rewind first so each step tests one thing,
+        // then check the restart rule on its own.
+        rule.runOnUiThread { vm().seekTo(0L) }
         swipeBar(0.10f, 0.90f)
         waitTrack("mini_t2", "e_swipe_right")
+        rule.runOnUiThread { vm().seekTo(0L) }
         rule.onNodeWithTag("mini_player_previous_button", true).performClick()
         waitTrack("mini_t1", "f_previous_button")
+        // Previous past 3 s restarts the same song.
+        rule.runOnUiThread { vm().seekTo(5_000L) }
+        runCatching { rule.waitUntil(5_000) { state().currentPositionMs >= 4_000L } }
+        rule.onNodeWithTag("mini_player_previous_button", true).performClick()
+        runCatching { rule.waitUntil(5_000) { state().currentPositionMs < 3_000L } }
+        log("MINI_CASE f2_previous_restarts current=${current()} pos=${state().currentPositionMs}")
+        assertEquals("f2_previous_restarts: wrong track", "mini_t1", current())
+        assertTrue("f2_previous_restarts: did not rewind (pos=${state().currentPositionMs})", state().currentPositionMs < 3_000L)
 
         // Accessibility custom action "Next track" (TalkBack users).
         val actions = rule.onNodeWithTag("mini_player_bar", true).fetchSemanticsNode().config.getOrNull(SemanticsActions.CustomActions).orEmpty()
