@@ -102,6 +102,14 @@ object StreamResolver {
 
     const val TELEGRAM_GROUP = "Telegram"
 
+    /** B-30: a DiskWala share is checked, then handed to the DiskWala app (its website never plays). */
+    internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient): Resolution {
+        val id = DiskWalaApi.shareId(route.pageUrl) ?: return Resolution.Failed("DiskWala link can't play", "This DiskWala link has no file in it. Copy the full share link.")
+        val info = DiskWalaApi.info(client, id)
+            ?: return Resolution.Failed("DiskWala file not found", "DiskWala doesn't know this file; it may have been removed.")
+        return Resolution.Handoff(route.pageUrl, "the DiskWala app", "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)}). ${DiskWalaApi.APP_ONLY}")
+    }
+
     /** TeraBox's sign-in page; the cookie it leaves in the web view is what [TeraBoxApi] reuses. */
     const val TERABOX_SIGN_IN = "https://www.terabox.app/wap/outlogin/login"
 
@@ -141,6 +149,7 @@ object StreamResolver {
             }
             is LinkHosts.Browser -> {
                 if (route.host == "TeraBox") return resolveTeraBox(request, route, client)
+                if (route.host == "DiskWala") return resolveDiskWala(route, client)
                 return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
             }
             is LinkHosts.Torrent -> {

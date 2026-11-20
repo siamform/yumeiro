@@ -176,7 +176,7 @@ object LinkHosts {
             "TeraBox only gives the video to its own web player. Yumeiro opens the share, starts that player and plays its stream here. " +
                 "If TeraBox asks you to sign in or solve a check, the page appears so you can do it once.", auto = true)
         if (DISKWALA.any { under(host, it) }) return Browser(u, "DiskWala",
-            "DiskWala loads the video in its own web player. Yumeiro opens the page, starts the player and plays its stream here.", auto = true)
+            "DiskWala only plays its files inside the DiskWala app; Yumeiro checks the link and opens it there.", auto = true)
         return null
     }
 
