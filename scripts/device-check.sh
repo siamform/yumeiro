@@ -144,7 +144,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     # process, checks counts, order, play time and Jump back in.
     P=dev.asfakul.yumeiro.debug
     adb shell pm clear $P > /dev/null 2>&1
-    for PERM in READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    for PERM in READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
     timeout 400 adb shell am instrument -w -r -e class "$C#a_emptyProfileLikeAddPlayThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
     sleep 2
     echo "YuEmptyProfileScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
@@ -155,7 +155,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     # ("Process crashed" by design); phase b, a new process, plays Home Continue and checks all five.
     P=dev.asfakul.yumeiro.debug
     adb shell pm clear $P > /dev/null 2>&1
-    for PERM in READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    for PERM in READ_MEDIA_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
     timeout 300 adb shell am instrument -w -r -e class "$C#a_queueFiveThenDie" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
     sleep 2
     echo "YuQueuePersistScript after phase a: pidof='$(adb shell pidof $P | tr -d '\r')' $(grep -c 'Process crashed' "inst-$C-a.txt") crash lines; failures in a: $(grep -c 'FAILURES' "inst-$C-a.txt")"
@@ -203,6 +203,15 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
       [ "$WAS" = "1" ] && adb shell pm grant $P android.permission.$PERM || true
       adb shell am force-stop $P
     done
+    # FINAL-23 (run 44659067541): the next class in the chunk (PlaybackSessionDeviceTest) found the
+    # notification permission off and Android's permission dialog over MainActivity ("No compose
+    # hierarchies found"). Hand the next class the state every class starts from: first run done,
+    # notifications and media allowed, no "asked before" flags.
+    for PERM in POST_NOTIFICATIONS READ_MEDIA_AUDIO READ_MEDIA_VIDEO; do
+      adb shell pm clear-permission-flags $P android.permission.$PERM user-set user-fixed > /dev/null 2>&1
+      adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1 || true
+    done
+    echo "YuPermScript restored for the next class: $(adb shell dumpsys package $P | grep -m1 'POST_NOTIFICATIONS: granted' | tr -d '\r')"
     if grep -q '^OK (' "inst-$C-a.txt"; then cp "inst-$C-b.txt" "inst-$C.txt"; else cat "inst-$C-a.txt" "inst-$C-b.txt" > "inst-$C.txt"; sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"; fi
   elif [ "$C" = "dev.asfakul.yumeiro.MusicAccessDeviceTest" ]; then
     # G6-SP1 (Android 13+): a song pushed by the shell (not owned by the app); phase a gets past
@@ -234,13 +243,13 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     # source back without restarting the app.
     P=dev.asfakul.yumeiro.debug
     adb shell pm clear $P > /dev/null 2>&1
-    for PERM in READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    for PERM in READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
     timeout 400 adb shell am instrument -w -r -e class "$C#a_installThenBackUp" -e phase a $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
     adb shell am force-stop $P
     adb exec-out run-as $P cat files/nbug7.zip > nbug7.zip 2>/dev/null
     echo "YuRestoreClearScript backup copied out: $(wc -c < nbug7.zip) bytes"
     adb shell pm clear $P 2>&1 | sed 's/^/YuRestoreClearScript pm clear: /'
-    for PERM in READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
+    for PERM in READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE POST_NOTIFICATIONS; do adb shell pm grant $P android.permission.$PERM > /dev/null 2>&1; done
     adb push nbug7.zip /data/local/tmp/nbug7.zip > /dev/null 2>&1
     adb shell "run-as $P mkdir -p files; cat /data/local/tmp/nbug7.zip | run-as $P sh -c 'cat > files/nbug7.zip'"
     echo "YuRestoreClearScript backup put back: $(adb shell run-as $P ls -l files/nbug7.zip 2>&1 | tr -d '\r')"
