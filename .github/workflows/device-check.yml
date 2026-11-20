@@ -59,6 +59,10 @@ on:
         type: boolean
         required: false
         default: false
+      lane:
+        description: "Final test: a lane name so several chunk runs of one device kind can run side by side"
+        required: false
+        default: ""
       once:
         description: "With passes: run P1 only (fresh install, cold start) - owner's call 2026-11-20 to save time"
         type: boolean
@@ -74,7 +78,7 @@ on:
 # GitHub's 400-character limit (43902887573 never started). Runs on the same device set queue
 # instead of cancelling each other, so no dispatched batch is dropped.
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && format('tv{0}', inputs.tv_api) || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}-${{ inputs.passes && 'passes' || 'single' }}-${{ inputs.once && 'once' || 'both' }}
+  group: device-check-${{ github.ref }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && format('tv{0}', inputs.tv_api) || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}-${{ inputs.passes && 'passes' || 'single' }}-${{ inputs.once && 'once' || 'both' }}-${{ inputs.lane || 'l0' }}
   cancel-in-progress: false
 
 permissions:
