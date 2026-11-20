@@ -119,11 +119,17 @@ class ResumeAcrossProcessDeviceTest {
             // FINAL-28 (run 44660840151, api36): an extension's "… has a message · Show" card sat over the
             // Jump back in row (screenshot resume_b_home) and took the tap, so the clip never opened. That
             // card is unrelated to resume; close it, as a user would, before tapping the row.
-            dev.asfakul.yumeiro.ui.components.AppMessages.current.value?.takeIf { it.text.endsWith("has a message") }?.let { m ->
-                log("RESUME_B closing the unrelated card '${m.text}' over the row")
-                rule.runOnUiThread { dev.asfakul.yumeiro.ui.components.AppMessages.dismiss(m.id) }
-                rule.waitForIdle()
+            // FINAL-28b (run 44663619588, api36): closing one card showed the next waiting one (AppMessages keeps
+            // one waiting quiet card), which took the tap again. Close each in turn (at most 5), then let the
+            // exit animation finish before the tap.
+            repeat(5) {
+                dev.asfakul.yumeiro.ui.components.AppMessages.current.value?.takeIf { it.text.endsWith("has a message") }?.let { m ->
+                    log("RESUME_B closing the unrelated card '${m.text}' over the row")
+                    rule.runOnUiThread { dev.asfakul.yumeiro.ui.components.AppMessages.dismiss(m.id) }
+                    rule.waitForIdle()
+                }
             }
+            Thread.sleep(600); rule.waitForIdle()
             tap("home_continue_video")
             wait("first frame after reopening", 45_000) { PlaybackDiagnostics.state.value.firstFrame }
             rule.runOnUiThread { PlaybackSession.playerForTest?.playWhenReady = false }

@@ -1,0 +1,10 @@
+44664349930 api33-lowram YtChannelUiDeviceTest P1 PASS tests=1 skipped=0 sha=8007648
+44664349930 api33-lowram YtDownloadPipelineDeviceTest P1 PASS tests=2 skipped=0 sha=8007648
+44664349930 api33-lowram YtQualityDeviceTest P1 SKIPPED tests=1 skipped=1 sha=8007648
+44664349930 api33-lowram YtQualityOfflineDeviceTest P1 PASS tests=1 skipped=0 sha=8007648
+44664349930 api33-lowram YumixDeviceTest P1 PASS tests=3 skipped=1 sha=8007648
+44664349930 api36 YtChannelUiDeviceTest P1 PASS tests=1 skipped=0 sha=8007648
+44664349930 api36 YtDownloadPipelineDeviceTest P1 PASS tests=2 skipped=0 sha=8007648
+44664349930 api36 YtQualityDeviceTest P1 SKIPPED tests=1 skipped=1 sha=8007648
+44664349930 api36 YtQualityOfflineDeviceTest P1 PASS tests=1 skipped=0 sha=8007648
+44664349930 api36 YumixDeviceTest P1 PASS tests=3 skipped=1 sha=8007648
