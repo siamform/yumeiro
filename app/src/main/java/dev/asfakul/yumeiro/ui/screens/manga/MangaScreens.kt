@@ -66,6 +66,8 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook as MenuBookM
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -566,9 +568,33 @@ private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef, lowRam
     PageBitmap(strips, strips.maxOf { it.width }, strips.sumOf { it.height }).also { pageCache.put(key, it) }
 }
 
-/** Reader: vertical (webtoon) or paged (manga), pinch to zoom, progress saved per chapter. */
+/**
+ * Reader: vertical (webtoon) or paged (manga), pinch to zoom, progress saved per chapter.
+ * F-18: previous / next chapter in the top bar, and a "Next chapter" card at the end of a chapter, so reading
+ * goes on without going back to the title page. Each chapter gets fresh reader state ([key]).
+ */
 @Composable
 fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit) {
+    var cur by rememberSaveable { mutableStateOf(chapterUrl to chapterName) }
+    var chapters by remember { mutableStateOf<List<MangaChapter>>(emptyList()) }
+    LaunchedEffect(providerId, mangaUrl) {
+        val p = SourceHub.manga(providerId) ?: return@LaunchedEffect
+        chapters = try { p.chapters(mangaUrl) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
+    }
+    val (prev, next) = remember(chapters, cur.first) { MangaChapterNav.neighbours(chapters, cur.first) }
+    androidx.compose.runtime.key(cur.first) {
+        MangaReaderChapter(
+            providerId, mangaUrl, mangaTitle, cur.first, cur.second, onBack,
+            prev = prev, next = next, onGo = { c -> cur = c.url to c.name },
+        )
+    }
+}
+
+@Composable
+private fun MangaReaderChapter(
+    providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit,
+    prev: MangaChapter?, next: MangaChapter?, onGo: (MangaChapter) -> Unit,
+) {
     val context = LocalContext.current
     val online = remember(providerId) { SourceHub.manga(providerId) }
     // F-13: a chapter saved on the phone reads from disk (no network, works with the source removed).
@@ -625,14 +651,18 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
                 ZoomBox(onTap = { chrome = !chrome }) {
                     LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
                         itemsIndexed(list, key = { i, _ -> i }) { _, p -> PageImage(provider!!, p, fillWidth = true, tl = tlUse) }
+                        if (next != null) item(key = "next_chapter") { NextChapterCard(next) { onGo(next) } }
                     }
                 }
             }
             else -> {
-                val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size }
-                LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { current = it } }
+                // F-18: one extra page after the last one offers the next chapter.
+                val extra = if (next != null) 1 else 0
+                val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size + extra }
+                LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { current = it.coerceAtMost(list.size - 1) } }
                 HorizontalPager(pager, modifier = Modifier.fillMaxSize(), reverseLayout = false, beyondViewportPageCount = 1) { i ->
-                    ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false, tl = tlUse) } }
+                    if (i >= list.size) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { next?.let { n -> NextChapterCard(n) { onGo(n) } } }
+                    else ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false, tl = tlUse) } }
                 }
             }
         }
@@ -642,6 +672,12 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
                 Column(Modifier.weight(1f)) {
                     Text(mangaTitle, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(chapterName, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                IconButton(onClick = { prev?.let(onGo) }, enabled = prev != null, modifier = Modifier.testTag("reader_prev")) {
+                    Icon(Icons.Default.SkipPrevious, "Previous chapter", tint = if (prev != null) Color.White else Color.White.copy(alpha = 0.3f))
+                }
+                IconButton(onClick = { next?.let(onGo) }, enabled = next != null, modifier = Modifier.testTag("reader_next")) {
+                    Icon(Icons.Default.SkipNext, "Next chapter", tint = if (next != null) Color.White else Color.White.copy(alpha = 0.3f))
                 }
                 if (tlAllowed) IconButton(onClick = { tlSheet = true }, modifier = Modifier.testTag("reader_translate")) {
                     Icon(Icons.Default.Translate, if (tl.on) "Translate pages: on" else "Translate pages: off", tint = if (tl.on) SpotifyGreen else Color.White)
@@ -664,6 +700,26 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
         }
         if (tlSheet) TranslateSheet(tl, onChange = { tl = it; MangaTranslate.save(context, it) }, onDismiss = { tlSheet = false })
         androidx.activity.compose.BackHandler(onBack = onBack)
+    }
+}
+
+/** F-18: end-of-chapter card that opens the next chapter. */
+@Composable
+private fun NextChapterCard(next: MangaChapter, onClick: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick).padding(20.dp).testTag("reader_next_card"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("End of chapter", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+        Spacer(Modifier.height(6.dp))
+        Text("Next: ${next.name}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.SkipNext, null, tint = SpotifyGreen)
+            Text("Read next chapter", color = SpotifyGreen, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
