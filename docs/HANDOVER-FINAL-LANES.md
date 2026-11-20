@@ -74,6 +74,9 @@ file: `git log`, `docs/evidence/final/*.txt` and `docs/MASTER-CHECKLIST-FINAL.md
 | FINAL-40 | PlaybackSession waited for phone-bar tags on TV | a5bc4da | 44662694767, 44666813073, 44667417908 | tv34 12 / tv24 12 re-runs |
 | FINAL-41 | NotifySettingsEffect: the app's own DiscoveryWorker took the notification pacer's slot during the case (pacer right); the class now cancels that work first | a5bc4da | 44666813073 | tv34 12 re-run |
 | INFRA | tv34 19 run 44667182892: Gradle configuration-cache write error in "Build APKs" after 22 s (no test ran); re-dispatched as 44668014172 (pass) | — | — | 44668014172 |
+| FINAL-42 | App: RetryActions c (tv-api34, 44669673771) crashed the process: the Tachiyomi "add repository" job posted its error from a worker thread; the message host collected on that thread, a Compose frame ran off main (CalledFromWrongThreadException), the slot table broke and destroy crashed (SlotWriter.moveSlotGapTo). AppMessages now changes state on the main thread only | df4ba9d | 44669673771; unit fail-before on tmp/final42-fail-before | head CI 44672545816; tv34 re-run |
+| FINAL-43 (open) | PermissionFlow b on tv-api34: no "Notifications" message within 10 s after the second "Don't allow" in 3/3 runs (result=6, rationale true). Cause not known; 4d125b3 adds YuPerm / PERM_SHOWN logs (no behaviour change) | diagnostics 4d125b3 | 44662694767, 44666813073, 44669616027 | tv34 re-run on 4d125b3 |
+| FINAL-35 (3rd run) | StabilityStress on tv-api24, d91f052: peak Java heap 95/512 MB, 0 ANR (44670841174). Still not reproduced; OMT-57 stays | — | — | 44670841174 |
 | TV-FP-1 | `FeedPositionDeviceTest` live/youtube on tv-api24 taps the phone tab (known test fault, same on old code 44438504785) | test rewrite queued (stability-v2) | 44658520448 | — |
 
 ## What is left for the release (in order)

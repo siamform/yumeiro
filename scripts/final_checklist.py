@@ -147,26 +147,84 @@ FINDINGS = {
     "MusicEndlessNetworkDeviceTest": "FINAL-34",
     "SurfaceModeDeviceTest": "FINAL-34",
     "MessagesDeviceTest": "FINAL-34",
-    "RetryActionsDeviceTest": "FINAL-34, FINAL-38",
     "StabilityStressDeviceTest": "FINAL-35",
     "FinalCoverageDeviceTest": "FINAL-36",
     "RtlLayoutDeviceTest": "FINAL-37",
+    "RetryActionsDeviceTest": "FINAL-34, FINAL-38, FINAL-42",
+    "PermissionFlowDeviceTest": "FINAL-39, FINAL-43",
+    "FeedPositionDeviceTest": "TV-FP-1",
+    "YtChannelUiDeviceTest": "YT-WALL (OMT-29)",
+    "YtQualityDeviceTest": "YT-WALL (OMT-29)",
 }
+# Written reasons for every class that was skipped, in whole or in part, on a device (assumption messages from the
+# logcat of the run named in the cell; collected 2026-11-20). kind "na": the feature or check does not exist on that
+# device by design, so the cell can still Pass; kind "blocked": the check could not run there; the cell says Blocked
+# and the item is in docs/UNVERIFIED-QUEUE.md (FT-*) with its owner test.
+TV = ("tv-api24", "tv-api34"); PH = ("api33-lowram", "api36"); ALL = TV + PH
+def _r(devs, classes, kind, code, why):
+    return {(c, d): (kind, code, why) for c in classes for d in devs}
+SKIP = {}
+SKIP.update(_r(("tv-api24",), ["AdultSearchFilterDeviceTest","InboxMainThreadDeviceTest","LibraryTabsMainThreadDeviceTest",
+    "MangaLibraryMainThreadDeviceTest","StorageMainThreadDeviceTest","UpdateMainThreadDeviceTest"], "blocked", "FT-B1",
+    "the main-thread checker needs StrictMode.penaltyListener (API 28); Android 7 TV cannot run it"))
+SKIP.update(_r(TV, ["AniSkipDeviceTest","NetworkStateDeviceTest","YmPagingNetworkDeviceTest"], "blocked", "FINAL-33",
+    "TV emulators are on emulated Ethernet, which a test cannot switch off (OMT-54)"))
+SKIP.update(_r(("tv-api24",), ["MusicModeNetworkDeviceTest"], "blocked", "FINAL-33",
+    "TV emulator Ethernet stays up, the app never sees the drop (OMT-54)"))
+SKIP.update(_r(TV, ["YumixDeviceTest"], "blocked", "FINAL-33",
+    "offline refresh: TV Ethernet stays up (OMT-54); see-all paging: the CI row had a single page (FT-B3)"))
+SKIP.update(_r(PH, ["YumixDeviceTest"], "blocked", "FT-B3",
+    "see-all paging: the row the CI machine got had a single page (30-40 titles), so a second page never loaded"))
+SKIP[("AppLockDeviceTest","tv-api24")] = ("blocked","FT-B2","b_: the test sets a device PIN with locksettings (API 26+) (OMT-55)")
+SKIP[("AppLockDeviceTest","tv-api34")] = ("blocked","FT-B2","b_: locksettings set-pin leaves the TV image without a secure lock (OMT-55)")
+SKIP.update(_r(ALL, ["YtQualityDeviceTest","PlayerSwitchDeviceTest","MusicEndlessNetworkDeviceTest"], "blocked", "YT-WALL",
+    "YouTube refuses CI addresses (bot wall, OMT-29)"))
+SKIP.update(_r(TV, ["YtChannelUiDeviceTest"], "blocked", "YT-WALL", "YouTube watch page never opens from CI (bot wall, OMT-29)"))
+SKIP[("FeedPositionDeviceTest","tv-api24")] = ("blocked","TV-FP-1","test fault: the test taps the phone nav bar, absent on TV")
+SKIP[("HeatGuardDeviceTest","tv-api24")] = ("na","","thermal status exists from Android 10; the guard is off below it")
+SKIP.update(_r(TV, ["LocalPlayerDeviceTest"], "na", "", "no PiP on TV images, no Cast sender, no fullscreen toggle on the TV player"))
+SKIP.update(_r(TV, ["PlayerExtrasSettingsEffectDeviceTest"], "na", "", "auto-PiP: the TV images have no picture-in-picture"))
+SKIP[("MoreSettingsEffectDeviceTest","tv-api24")] = ("na","","YouTube-to-phone uses MediaStore publishing (Android 10+)")
+SKIP[("MusicAccessDeviceTest","tv-api24")] = ("na","","the separate music permission exists from Android 13")
+SKIP[("PermissionFlowDeviceTest","tv-api24")] = ("na","","the notification permission exists from Android 13")
+SKIP[("RtlLayoutDeviceTest","tv-api24")] = ("na","","per-app language exists from Android 13 (API 33)")
+SKIP.update(_r(PH, ["TvBug5ReproDeviceTest"], "na", "", "TV-only checks (landscape TV window); Phone Layout = TV in portrait is FINAL-31, not verified"))
+SKIP.update(_r(ALL, ["MangaRetryDeviceTest"], "na", "",
+    "double Retry: Retry hides while the first retry loads, so a second tap cannot be made (the race is closed in the UI)"))
+SKIP[("MangaRetryDeviceTest","tv-api24")] = ("blocked","FT-B1","library load: needs StrictMode.penaltyListener (API 28); double Retry: Retry hides while loading")
+# Failures that are accepted Blocked cells (owner's list, sec. 2 of the handover), not findings to fix now.
+FAIL_BLOCK = {("FeedPositionDeviceTest","tv-api24"), ("YtChannelUiDeviceTest","tv-api24"), ("YtChannelUiDeviceTest","tv-api34")}
+P1_ONLY = "Not run (owner's decision 2026-11-20: P1 only)"
 def cell(cls, tgt, p):
     if not cls: return "Not a device feature (see note)"
-    got = [res.get((c, tgt, p)) for c in cls]
-    if all(g is None for g in got):
-        # §5: a "Not run" needs a written reason. The owner cut the final test to one pass (P1) on 2026-11-20.
-        return "Not run (owner's decision 2026-11-20: P1 only)" if p == "P2" else "Not run"
-    flat = [x for g in got if g for x in g]
-    bad = [x for x in flat if x[1] == "FAIL"]
-    skipped = [x for x in flat if x[1] == "SKIPPED"]
-    runs = sorted({x[2] for x in flat})
-    tvs = sorted({x[0] for x in flat}) if tgt == "tv" else []
-    missing = sum(1 for g in got if g is None) + (sum(1 for g in got if g and len({x[0] for x in g}) < 2) if tgt == "tv" else 0)
-    v = "Fail" if bad else ("Blocked" if skipped and len(skipped) == len(flat) else ("Pass" if not missing and not skipped else "Partial"))
-    part = sum(x[3] for x in flat if x[1] == "PASS")
-    return f"{v} ({len(flat)-len(bad)-len(skipped)}/{len(flat)}{', ' + str(len(skipped)) + ' skipped' if skipped else ''}{', ' + str(part) + ' test(s) skipped by an assumption' if part else ''}{' ' + '+'.join(tvs) if tvs else ''}; runs {', '.join(runs)})"
+    if p == "P2":
+        # The owner cut the final test to one pass on 2026-11-20 (§6). Earlier P2 runs on older code stay in evidence.
+        return P1_ONLY
+    devs = TV if tgt == "tv" else (tgt,)
+    fails, blocks, nas, notrun, runs, passed, total = [], [], [], [], set(), 0, 0
+    for c in cls:
+        for d in devs:
+            g = [x for x in (res.get((c, tgt, p)) or []) if x[0] == d]
+            total += 1
+            if not g: notrun.append(f"{c.replace('DeviceTest','')}@{d}"); continue
+            dev, v, run, sk = g[0]; runs.add(run); short = c.replace("DeviceTest", "")
+            k = SKIP.get((c, d))
+            if v == "FAIL":
+                if (c, d) in FAIL_BLOCK: blocks.append(f"{short}@{d} {k[1]}: {k[2]}")
+                else: fails.append(f"{short}@{d}")
+                continue
+            if v == "SKIPPED" or sk:
+                if not k: fails.append(f"{short}@{d} (skip without a written reason)"); continue
+                (blocks if k[0] == "blocked" else nas).append(f"{short}@{d}{' ' + k[1] if k[1] else ''}: {k[2]}")
+                if v == "PASS": passed += 1
+                continue
+            passed += 1
+    rs = ", ".join(sorted(runs))
+    if fails: return f"Fail ({passed}/{total}; failing: {'; '.join(fails)}; runs {rs})"
+    if notrun: return f"Not run ({'; '.join(notrun)}: run in progress or queued; runs so far {rs or 'none'})"
+    note = (f"; n/a: {'; '.join(nas)}" if nas else "")
+    if blocks: return f"Blocked ({'; '.join(blocks)}{note}; {passed}/{total} classes passed; runs {rs})"
+    return f"Pass ({passed}/{total}{note}; runs {rs})"
 out = ["# Master checklist, final test (1.9.0 release candidate)", "",
 "Single file that proves the release (master prompt \"THE FINAL TEST AND RELEASE PREPARATION\", 2026-11-20).",
 "Generated by `scripts/final_checklist.py` from docs/INVENTORY.md, SettingsCatalog.kt and every androidTest class;",
@@ -179,7 +237,9 @@ out = ["# Master checklist, final test (1.9.0 release candidate)", "",
 "TV = tv-api24 and tv-api34 (both must pass for a TV cell to say Pass). Labels: emulator / TV emulator; no real hardware.", "",
 f"States each row is checked for: {STATES}. Which of them a class exercises is in its KDoc; states that",
 "only real hardware, a personal account or a home network can show go to OWNER-MANUAL-TESTS.md (OMT-*).", "",
-"Status words: Pass / Fail / Partial (some classes not run yet) / Blocked (reason) / Not run.", "",
+"Status words: Pass (run IDs) / Fail (finding ID) / Blocked (written reason; queue item or owner test) / Not run (written reason).",
+"There is no Partial. A class skipped on a device for a written reason is either n/a there by design (the cell can still pass;",
+"the reason is in the cell) or Blocked (the reason and its FT-*/OMT item are in the cell and in docs/UNVERIFIED-QUEUE.md).", "",
 "| ID | Feature | Entry point | Options / code | Device classes | Low-RAM P1 | Low-RAM P2 | TV P1 | TV P2 | Phone P1 | Phone P2 | Finding |",
 "|---|---|---|---|---|---|---|---|---|---|---|---|"]
 for r in rows:
@@ -202,15 +262,14 @@ out += ["", "## Rows that are not device features (§5 written reasons)", "", "|
 out += [f"| {i} | {r} |" for i, r in NON_DEVICE]
 missing_reason = [r["id"] for r in rows if not r["classes"] and r["id"] not in dict(NON_DEVICE)]
 assert not missing_reason, f"rows without a device class or a written reason: {missing_reason}"
-# Written reasons for every skip (assumption messages from the inst files of the runs named).
-SKIP_REASONS = [
-    ("tv-api24", "AdultSearchFilterDeviceTest", "\"penaltyListener needs API 28\": the main-thread StrictMode check uses StrictMode.penaltyListener (API 28+); the same class runs fully on tv-api34 and the phones (see their cells)."),
-    ("tv-api24, tv-api34", "AniSkipDeviceTest", "\"no switchable network on this TV image\": both TV emulators are on emulated Ethernet, which `svc wifi/data` cannot switch off and a test (shell uid, no root) cannot take down. The offline path is shared code and passes on both phones; a real TV offline check is OMT-54."),
-    ("tv-api24", "AppLockDeviceTest", "b_pinOpensTheAppAndTheLockStaysOn: \"locksettings needs API 26\" (the test sets a device PIN with `locksettings`, missing on Android 7); a_ passes."),
-    ("tv-api34", "AppLockDeviceTest", "b_pinOpensTheAppAndTheLockStaysOn: \"could not set a PIN on this emulator\" (`locksettings set-pin` leaves the Android TV image without a secure lock); a_ passes; b_ passes on both phones; real TV: OMT-55."),
-]
-out += ["", "## Skips with written reasons (§5)", "", "| Device | Class | Reason |", "|---|---|---|"]
-out += [f"| {d} | {c.replace('DeviceTest','')} | {r} |" for d, c, r in SKIP_REASONS]
+# Every skip and accepted Blocked cell with its written reason (§5), from the SKIP table above.
+out += ["", "## Skips and Blocked cells with written reasons (§5)", "", "| Class | Devices | Kind | Code | Reason |", "|---|---|---|---|---|"]
+grp = {}
+for (c, d), (k, code, why) in SKIP.items(): grp.setdefault((c, k, code, why), []).append(d)
+for (c, k, code, why), ds in sorted(grp.items()):
+    out.append(f"| {c.replace('DeviceTest','')} | {', '.join(sorted(ds))} | {'n/a by design' if k == 'na' else 'Blocked'} | {code or '—'} | {why} |")
+out += ["", "P2 (second pass, warm start with data kept): not run in this final test, by the owner's decision of 2026-11-20",
+        "(P1 only, §6). P2 runs made earlier on older code stay in docs/evidence/final/ as history, not as results for this build."]
 open(f"{ROOT}/docs/MASTER-CHECKLIST-FINAL.md","w").write("\n".join(out) + "\n")
 json.dump(classes, open("/tmp/final_classes.json","w"))
 print(len(rows), len(classes), len(used), unused)

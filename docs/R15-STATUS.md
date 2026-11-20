@@ -1,6 +1,19 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-20 01:10 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 04:30 UTC; no PR / merge / deploy without the owner's "go")
+
+- **Task:** 1.9.0 release candidate handover (owner's resume handover, 2026-11-20). P1 only (owner's decision).
+- **Heads:** code df4ba9d (FINAL-42 fix) + 4d125b3 (FINAL-43 diagnostics); CI 44672545816 on 4d125b3 running.
+  CI 44669586493 (d91f052) cancelled as superseded (docs/evidence/final/CANCELLED-RUNS.md).
+- **Open:** FINAL-42 pass-after (RetryActions tv34/tv24/phones), FINAL-43 cause (PermissionFlow tv34 re-run
+  with YuPerm/PERM_SHOWN logs), UpscaleFreeze api33-lowram FAIL 44665076936 (re-run in phone 17), YmPaging tv34
+  re-run, tv34 chunk 09 (44671880872 running). FINAL-35 third run 44670841174: peak 95 MB, 0 ANR.
+- **Checklist:** no Partial; skips carry written reasons (n/a by design or Blocked FT-*/FINAL-33/YT-WALL/TV-FP-1);
+  P2 = "Not run (owner's decision 2026-11-20: P1 only)".
+- **Next three:** 1. finish the re-runs above and collect them; 2. head CI with `-f review_apk=true` on the final
+  code commit, then the APK scans (INTEGRITY, secrets, virus scan); 3. docs and the owner message.
+
+### Previous resume note — superseded (01:10 UTC 2026-11-20)
 
 - **Task:** final test and release preparation (master prompt "THE FINAL TEST AND RELEASE PREPARATION").
 - **Pre-conditions (§2):** check CI 44646120274 green on FINAL-16..20; head CI 44649769757 on 155bbdb running
