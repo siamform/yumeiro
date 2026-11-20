@@ -510,13 +510,13 @@ class LocalPlayerDeviceTest {
             val end = t0 + 1_500
             while (android.os.SystemClock.uptimeMillis() < end) {
                 ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_MOVE, android.os.SystemClock.uptimeMillis()), true)
-                android.os.SystemClock.sleep(100)
+                stepComposeClock()
             }
             val until = android.os.SystemClock.uptimeMillis() + 3_000
             while (android.os.SystemClock.uptimeMillis() < until && held != 2f) {
                 held = onPlayer { it.playbackParameters.speed } ?: -1f
                 ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_MOVE, android.os.SystemClock.uptimeMillis()), true)
-                android.os.SystemClock.sleep(100)
+                stepComposeClock()
             }
         } finally {
             ui.injectInputEvent(ev(android.view.MotionEvent.ACTION_UP, android.os.SystemClock.uptimeMillis()), true)
@@ -526,6 +526,17 @@ class LocalPlayerDeviceTest {
         log("P2X speed before=$before held=$held after=$after")
         assertEquals("speed while held", 2f, held)
         assertEquals("speed after release", before, after)
+    }
+
+    /**
+     * FINAL-16c (run 44659095131, YuGesture log: DOWN, then nothing until UP 4.5 s later, no "hold (timeout)"):
+     * the gesture's long-press timeout is a coroutine delay on the Compose test clock, and that clock only moves
+     * when the test thread lets Compose run. A plain SystemClock.sleep froze it, so the hold never fired in the
+     * test although it does on a phone (real clock). Move the test clock with the wall clock, 100 ms per step.
+     */
+    private fun stepComposeClock() {
+        android.os.SystemClock.sleep(100)
+        rule.mainClock.advanceTimeBy(100)
     }
 
     companion object { const val NAME = "yumeiro_test_clip.mp4" }
