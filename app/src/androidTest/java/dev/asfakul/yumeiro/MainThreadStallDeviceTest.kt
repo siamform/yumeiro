@@ -70,7 +70,17 @@ class MainThreadStallDeviceTest {
                 val sent = SystemClock.uptimeMillis()
                 val ran = AtomicLong(0L)
                 main.post { ran.set(SystemClock.uptimeMillis()) }
-                while (running.get() && ran.get() == 0L) Thread.sleep(10)
+                var sampled = 0
+                while (running.get() && ran.get() == 0L) {
+                    Thread.sleep(10)
+                    // While the main thread is stuck, log what it is doing (every 250 ms, at most 8 samples).
+                    val waited = SystemClock.uptimeMillis() - sent
+                    if (waited >= 300 + 250L * sampled && sampled < 8) {
+                        sampled++
+                        val st = Looper.getMainLooper().thread.stackTrace.take(40).joinToString("\n    at ")
+                        log("STALL_SAMPLE ${waited} ms:\n    at $st")
+                    }
+                }
                 if (ran.get() > 0L) {
                     val wait = ran.get() - sent
                     if (wait > worst.get()) { worst.set(wait); log("main thread waited ${wait} ms") }
