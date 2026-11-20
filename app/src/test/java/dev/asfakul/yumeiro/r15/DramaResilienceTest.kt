@@ -14,6 +14,7 @@ import dev.asfakul.yumeiro.sources.drama.DramaShow
 import dev.asfakul.yumeiro.sources.drama.DramaStreams
 import dev.asfakul.yumeiro.sources.drama.OnShortGate
 import dev.asfakul.yumeiro.sources.drama.YumeiroDramaProvider
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -169,6 +170,28 @@ class DramaResilienceTest {
         }
         val h = DramaHealth(reach = { true }, probeMs = 100)
         assertEquals(DramaHealth.State.UNKNOWN, h.check(slow, slow.platforms.first(), slow.shelf(slow.platforms.first(), 1)))
+    }
+
+    /**
+     * FINAL-20: the same, many times at once on a busy pool, where the probe's own timeout can race the
+     * block's return (CI 44643496869 saw DOWN once). Every verdict must stay UNKNOWN.
+     */
+    @Test fun probeBudgetIsInconclusiveUnderLoad() = runBlocking {
+        val verdicts = (1..200).map {
+            async(kotlinx.coroutines.Dispatchers.Default) {
+                val slow = object : DramaCatalog by Busy("x$it") {
+                    override suspend fun series(url: String): DramaSeries {
+                        // busy-spin a little before suspending, so the timeout often lands while the block runs
+                        val until = System.nanoTime() + 2_000_000L * (it % 7)
+                        while (System.nanoTime() < until) { /* spin */ }
+                        kotlinx.coroutines.delay(5_000); error("unreachable")
+                    }
+                }
+                DramaHealth(reach = { true }, probeMs = 5L + it % 9).check(slow, slow.platforms.first(), slow.shelf(slow.platforms.first(), 1))
+            }
+        }.map { it.await() }
+        val wrong = verdicts.withIndex().filter { it.value != DramaHealth.State.UNKNOWN }
+        assertTrue("probe budget read as a verdict in ${wrong.size} of 200: ${wrong.take(5)}", wrong.isEmpty())
     }
 
     /** R15: timeouts don't mark the host busy (a hung studio must not look like a busy host). */

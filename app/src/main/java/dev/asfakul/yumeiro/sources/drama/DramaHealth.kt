@@ -14,6 +14,7 @@ import okhttp3.Request
 import java.io.IOException
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -134,8 +135,18 @@ class DramaHealth(
                         // The series page answered but episode 1 never did within the whole budget:
                         // that is the studio hanging (ShortMax, 2026-11-14), not our queue.
                         var pageOk = false
+                        // FINAL-20 (CI 44643496869, probeBudgetIsInconclusive: DOWN instead of UNKNOWN): a plain
+                        // runCatching here also caught the probe's own timeout. kotlinx can hand that caught
+                        // value back from withTimeoutOrNull ("the timeout event is asynchronous ... may happen
+                        // right before the return"), so the budget running out read as the studio hanging and
+                        // hid it. A failure seen after our own budget ended is the budget, never the studio.
                         withTimeoutOrNull(probeMs) {
-                            runCatching { c.streams(c.series(sample.url).also { pageOk = true }, 1).let { it.sources.isNotEmpty() && reach(it) } }
+                            try {
+                                Result.success(c.streams(c.series(sample.url).also { pageOk = true }, 1).let { it.sources.isNotEmpty() && reach(it) })
+                            } catch (e: Throwable) {
+                                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                                Result.failure(e)
+                            }
                         } ?: Result.failure(if (pageOk) EpisodeHung() else ProbeBudget())
                     }
                 }.awaitAll()
