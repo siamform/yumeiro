@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -237,12 +238,20 @@ class RetryActionsDeviceTest {
         compose.setContent { Box(Modifier.fillMaxSize()) { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = {}); AppMessageHost() } }
         wait("tracking screen") { has("tracking_screen") }
         wait("Kitsu sign-in button") { has("tracker_kitsu_signin") }
+        // FINAL-38 (run 44666731015, tv-api24): on the landscape TV window the Kitsu card is below the fold of
+        // the tracking list, so a click on the unscrolled node hit nothing and the form never opened. Scroll the
+        // node into view first (a no-op where it is already visible); the form must still open from the tap.
+        runCatching { compose.onNodeWithTag("tracker_kitsu_signin", true).performScrollTo() }
+        compose.waitForIdle()
         compose.onNodeWithTag("tracker_kitsu_signin", true).performClick()
         wait("Kitsu form") { has("kitsu_email") }
+        runCatching { compose.onNodeWithTag("kitsu_email", true).performScrollTo() }
         compose.onNodeWithTag("kitsu_email", true).performTextInput("yumeiro-er19-test@example.invalid")
         compose.onNodeWithTag("kitsu_pass", true).performTextInput("not-a-real-password")
+        runCatching { androidx.test.espresso.Espresso.closeSoftKeyboard() }
         compose.waitForIdle()
         val confirm = compose.onAllNodesWithText("Sign in", useUnmergedTree = true)
+        runCatching { confirm[confirm.fetchSemanticsNodes().size - 1].performScrollTo() }
         confirm[confirm.fetchSemanticsNodes().size - 1].performClick()
         wait("e: reason shown inside the form", 45_000) { has("kitsu_error") }
         val err = compose.onAllNodesWithTag("kitsu_error", false).fetchSemanticsNodes().first()
