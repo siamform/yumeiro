@@ -54,6 +54,11 @@ class MusicPlayerManager(
      */
     private var attached: ExoPlayer? = null
     private var recorderReleased = false
+    // B-27: counted at most once, and never after release. A manager released before its deferred
+    // attach, then touched (a late seek or pause), attached and counted itself with no release left
+    // to undo it; screenRecorders stayed above 0 and the background watch stopped saving plays and
+    // Home Continue for the rest of the process.
+    private var recorderCounted = false
     private val player: ExoPlayer
         get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context))
 
@@ -204,7 +209,10 @@ class MusicPlayerManager(
         attached = p
         p.addListener(playerListener)
         // G5-PC1: while this listener records plays, the process-wide watch does not.
-        if (onTrackChanged != null) dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.incrementAndGet()
+        if (onTrackChanged != null && !recorderReleased && !recorderCounted) {
+            recorderCounted = true
+            dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.incrementAndGet()
+        }
         runCatching { p.addAnalyticsListener(analyticsListener) }
         refreshCodec()
         // If music is already playing (activity recreated), reconnect to the session now;
@@ -509,10 +517,10 @@ class MusicPlayerManager(
         attached?.let { p ->
             p.removeListener(playerListener)
             runCatching { p.removeAnalyticsListener(analyticsListener) }
-            if (onTrackChanged != null && !recorderReleased) {
-                recorderReleased = true
-                dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.decrementAndGet()
-            }
+        }
+        if (!recorderReleased) {
+            recorderReleased = true
+            if (recorderCounted) dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.decrementAndGet()
         }
         scope.cancel()
         controllerFuture?.let { future -> runCatching { MediaController.releaseFuture(future) } }
