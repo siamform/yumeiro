@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.ui.components.AppMessages
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.FixMethodOrder
@@ -121,6 +122,13 @@ class PermissionFlowDeviceTest {
         // tried; where Android never blocks, step 3 cannot happen and is skipped with that reason.
         var m2: AppMessages.Message? = null
         var blocked = false
+        // FINAL-43 (tv-api34 44662694767, 44666813073, 44669616027): after the second "Don't allow" no
+        // message with "Notifications" was found within 10 s. Record every message the app shows from
+        // here on, so the log tells whether none came, it was replaced, or it closed before the read.
+        val shownLog = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val recorder = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            AppMessages.current.collect { m -> shownLog += "${SystemClock.uptimeMillis()}:${m?.id}:${m?.text?.take(70)}" }
+        }
         for (round in 2..5) {
             FirstRun.tapVisible(rule, "perm_notifications")
             val b2 = denySystemDialog()
@@ -128,6 +136,7 @@ class PermissionFlowDeviceTest {
             rule.runOnUiThread { rationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(rule.activity, Manifest.permission.POST_NOTIFICATIONS) }
             m2 = awaitMessage("Notifications")
             log("PERM_CASE deny$round button=$b2 rationale=$rationale message='${m2?.text}' action=${m2?.actionLabel} inFront=${appInFront()}")
+            log("PERM_SHOWN deny$round ${synchronized(shownLog) { shownLog.toList() }.joinToString(" | ")}")
             FirstRun.shot("perm_deny$round")
             if (rationale) {
                 assertTrue("deny $round: Android will ask again, expected 'not allowed. Tap again…', got '${m2?.text}'", m2 != null && "Tap again" in m2.text)
@@ -139,6 +148,7 @@ class PermissionFlowDeviceTest {
             blocked = true
             break
         }
+        recorder.cancel()
         log("PERM_CASE blocked=$blocked")
         assumeTrue("Android on this device keeps asking after every 'Don't allow' (no don't-ask-again state), so the 'Open settings' step cannot occur", blocked)
 

@@ -94,6 +94,8 @@ object PermissionCenter {
      * otherwise as [explainDenied]. Before, the row did nothing in the "granted but off" case.
      */
     fun afterNotificationRequest(c: Context, granted: Boolean) {
+        // FINAL-43: one line per answer, so a missing message can be told apart from a missing answer.
+        android.util.Log.i("YuPerm", "notification request answered granted=$granted systemAllowed=${notificationsAllowed(c)} activity=${c.findActivity() != null}")
         when {
             granted && !notificationsAllowed(c) -> openNotificationSettings(c)
             !granted && Build.VERSION.SDK_INT >= 33 ->
