@@ -71,8 +71,18 @@ class MiniPlayerDeviceTest {
     private fun swipeBar(fromFrac: Float, toFrac: Float) {
         // Run 44062811776: fractions of the whole bar put 60 % on the Previous button (the buttons take the
         // right ~186 dp); the swipe now runs inside the draggable artwork + title row only.
+        // FINAL-44 (run 44671880872, tv-api34): on TV the side rail (zIndex 2) opens to 248 dp over the page
+        // while focus is in it, so a swipe that starts at 10 % of the row starts on the rail and the row never
+        // sees it (the left swipe, which starts at 90 %, worked). Keep both ends right of the rail's edge.
+        val area = rule.onAllNodesWithTag("mini_player_swipe_area", true).fetchSemanticsNodes().first().boundsInRoot
+        val railRight = runCatching { rule.onAllNodesWithTag("tv_nav_rail", true).fetchSemanticsNodes().first().boundsInRoot.right }.getOrDefault(0f)
+        val minX = (railRight - area.left + 24f).coerceAtLeast(0f)
+        Log.i("YuMiniTest", "MINI_SWIPE area=${area.left}..${area.right} railRight=$railRight minX=$minX")
         rule.onNodeWithTag("mini_player_swipe_area", true).performTouchInput {
-            swipe(Offset(width * fromFrac, centerY), Offset(width * toFrac, centerY), durationMillis = 300)
+            val span = width - minX
+            val from = if (minX > 0f) minX + span * fromFrac else width * fromFrac
+            val to = if (minX > 0f) minX + span * toFrac else width * toFrac
+            swipe(Offset(from, centerY), Offset(to, centerY), durationMillis = 300)
         }
         rule.waitForIdle()
     }

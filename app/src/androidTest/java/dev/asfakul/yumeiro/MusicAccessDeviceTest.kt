@@ -54,12 +54,14 @@ class MusicAccessDeviceTest {
     }
     private fun audioAllowed() = ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_MEDIA_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
     private fun dialogOnTop() = FirstRun.shell("dumpsys activity activities").lineSequence().any { FirstRun.isPermissionDialogLine(it) }
-    private fun tap(tag: String) = rule.onAllNodesWithTag(tag, true)[0].performClick()
+    // TV has no touch screen and the open rail floats over the page: use the click action there (FirstRun.clickTag).
+    private fun tap(tag: String) { if (has("tv_nav_rail")) FirstRun.clickTag(rule, tag) else rule.onAllNodesWithTag(tag, true)[0].performClick() }
 
     /** Music tab, On device mode (the tab may open Online when there is internet). */
     private fun openDeviceMusic() {
-        assertTrue("no Music tab", waitFor(30_000) { has("nav_tab_music") })
-        tap("nav_tab_music"); rule.waitForIdle(); SystemClock.sleep(1_000)
+        // FINAL-44 (run 44671880872, tv-api34): Yumeiro TV has a side rail (tv_nav_tab_music), not the phone bar.
+        assertTrue("no Music tab", waitFor(30_000) { FirstRun.hasNav(rule, "nav_tab_music") })
+        FirstRun.clickTag(rule, FirstRun.navTag(rule, "nav_tab_music")); rule.waitForIdle(); SystemClock.sleep(1_000)
         if (!has("music_screen_root")) {
             assertTrue("no music source switch", waitFor(10_000) { has("music_source_switch") })
             tap("music_source_switch"); rule.waitForIdle()

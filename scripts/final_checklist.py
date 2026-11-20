@@ -153,6 +153,8 @@ FINDINGS = {
     "RetryActionsDeviceTest": "FINAL-34, FINAL-38, FINAL-42",
     "PermissionFlowDeviceTest": "FINAL-39, FINAL-43",
     "FeedPositionDeviceTest": "TV-FP-1",
+    "MiniPlayerDeviceTest": "FINAL-44",
+    "MusicAccessDeviceTest": "FINAL-44",
     "YtChannelUiDeviceTest": "YT-WALL (OMT-29)",
     "YtQualityDeviceTest": "YT-WALL (OMT-29)",
 }

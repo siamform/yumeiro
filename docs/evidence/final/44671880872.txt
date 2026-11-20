@@ -1,0 +1,7 @@
+44671880872 tv-api34 MessagesDeviceTest P1 PASS tests=1 skipped=0 sha=9567e09
+44671880872 tv-api34 MiniPlayerDeviceTest P1 FAIL tests=? skipped=0 sha=9567e09
+44671880872 tv-api34 MoreSettingsEffectDeviceTest P1 PASS tests=4 skipped=0 sha=9567e09
+44671880872 tv-api34 MusicAccessDeviceTest P1 FAIL tests=? skipped=0 sha=9567e09
+44671880872 tv-api34 MusicAudioFocusDeviceTest P1 PASS tests=1 skipped=0 sha=9567e09
+44671880872 tv-api34 MusicEndlessNetworkDeviceTest P1 SKIPPED tests=1 skipped=1 sha=9567e09
+44671880872 tv-api34 MusicModeNetworkDeviceTest P1 SKIPPED tests=1 skipped=1 sha=9567e09
