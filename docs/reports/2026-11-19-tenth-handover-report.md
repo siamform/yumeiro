@@ -75,6 +75,15 @@ CI and device runs, in order (one heavy run at a time, at most two device workfl
 | 44626358644 | head CI 022a95f | success |
 | 44623469339 | chunk_06 phones | pass P1/P2 on api33-lowram and api36 |
 | 44627424706 | chunk_07 phones | all pass except LargeLibraryScan P1 api33-lowram 4999/5000 (FINAL-14 → 99f9288, compile 44630435344); re-run queued |
+| 44620669094 | chunk_04 tv-api24 | adb link hung after DownloadThroughput, cancelled at 110 min with 4 P1 passes (FINAL-15 → 3a965a3: adb_alive checks, bounded pulls); re-run queued |
+| 44630204932 | chunk_03 tv-api24 re-run | 7/7 pass P1/P2 (FINAL-10 pass-after on tv-api24) |
+| 44640073858 | chunk_08 phones | LocalPlayer k_ hold-for-2x stays 1.0 (FINAL-16 → e74f9f3); LowStorage lowram P1 SQLiteFullException in androidx.work (FINAL-17 → b84b934, DiskFullGuard swallows only SQLiteFullException from androidx.work off the main thread); MangaRetry disk reads on main (FINAL-18 → f22e462); re-run queued |
+| 44640840216 | chunk_03 tv-api34 re-run | Dialogs pass P1/P2 (FINAL-10 pass-after); CrashUi P1 tap during scroll (FINAL-19 → 12a0617); re-run queued |
+| 44643496869 | check branch `tmp/final16-18-check` | build + device-test compile success; unit 1471 tests, 1 failed: DramaResilienceTest.probeBudgetIsInconclusive DOWN≠UNKNOWN (FINAL-20 → 85ac068) |
+| 44646120274 | check branch `tmp/final16-20-check` | success: build, 1472 unit tests incl. probeBudgetIsInconclusiveUnderLoad, lint, gitleaks |
+| 44643028088 | chunk_09 phones | MiniPlayer timing assumptions (FINAL-21 → faa431d); MusicEndlessNetwork skipped on CI: YouTube sign-in wall (OMT-29, Blocked with reason); re-run queued |
+| 44643868312 | chunk_04 tv-api34 re-run | DramaPlayback P1/P2: player page never composed because FINAL-11's plain poll stopped the Compose test clock (FINAL-22 → 155bbdb); re-run queued |
+| 44646789738 | chunk_10 phones | 7/7 pass P1/P2 on api33-lowram and api36 |
 
 Final-test cycle findings so far: SEC-LFM (Last.fm secret in the APK, ADR-048, b57e155), AUD-ZIP (archive manifest read
 uncapped, 2e68bf9), FINAL-1..4 (1158c01), FINAL-5/6 (test fixes, device-verified in 44598214395/44598220085). Commit-body timestamps of 2026-11-19 19:15–19:45 were estimated ahead of the clock; the git

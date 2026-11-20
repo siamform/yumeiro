@@ -1,20 +1,24 @@
 # R15 status: every item in the master prompt, with its evidence
 
-## Resume here (updated 2026-11-19 22:50 UTC; no PR / merge / deploy without the owner's "go")
+## Resume here (updated 2026-11-20 01:10 UTC; no PR / merge / deploy without the owner's "go")
 
 - **Task:** final test and release preparation (master prompt "THE FINAL TEST AND RELEASE PREPARATION").
-- **Pre-conditions (§2):** head CI 44626358644 on 022a95f **success**; later commits are test/script/docs only
-  and are compile-checked; a final head CI runs with the review APK. Passes are recorded per chunk.
-- **New findings:** FINAL-10 Dialogs Privacy page wait (1199d74); FINAL-11 Drama timing poll (65a88d2);
-  FINAL-12 hung launcher/SystemUI recovery in device-check.sh (e9a7e89); FINAL-13 promo card re-queued after a
-  displacing message (022a95f, fail-before 44623909085); FINAL-14 LargeLibraryScan names missed rows and checks
-  MediaStore's own music list (99f9288, compile 44630435344). Device pass-afters queued.
-- **Device progress:** phones chunk_00..04, 06 pass; 05 (FINAL-12/13) and 07 (FINAL-14) re-runs queued;
-  tv-api34 00..02 pass, 03 (FINAL-10) and 04 (FINAL-11) re-runs queued; tv-api24 00..02 pass, 03 re-run
-  44630204932 queued, 04 running 44620669094. Workers: /tmp/worker.sh W1/W2, queue /tmp/queue.txt, log /tmp/lanes.log.
-- **Next three:** 1. collect each run (`scripts/final_collect.sh <run>`, `python3 scripts/final_checklist.py`);
-  2. bench (startup/jank) and Stability audit rows; 3. head CI with `-f review_apk=true`, APK scans, images, summary.
-- Report: docs/reports/2026-11-19-tenth-handover-report.md.
+- **Pre-conditions (§2):** check CI 44646120274 green on FINAL-16..20; head CI 44649769757 on 155bbdb running
+  (compiles FINAL-21/22). Passes are recorded per chunk.
+- **New findings since 22:50:** FINAL-15 adb hang guard (3a965a3); FINAL-16 hold-for-2x (e74f9f3); FINAL-17
+  WorkManager disk-full crash guard, ADR-049 (b84b934; fail-before branch `tmp/final17-fail-before` not yet run);
+  FINAL-18 manga meta off main (f22e462); FINAL-19 tap waits for stable bounds (12a0617); FINAL-20 DramaHealth
+  probe budget race (85ac068); FINAL-21 MiniPlayer test positions (faa431d); FINAL-22 DramaPlayback test Compose
+  clock (155bbdb, fixes my FINAL-11 change). Report table in docs/reports/2026-11-19-tenth-handover-report.md.
+- **Device progress:** phones 00..04, 06, 10 pass; 05, 07, 08, 09 re-runs queued. tv-api34 00..02 pass; 03, 04
+  re-runs queued; 05 running. tv-api24 00..03 pass; 04 re-run queued. Queue /tmp/queue.txt, log /tmp/lanes.log.
+- **Next three:** 1. collect each run (`scripts/final_collect.sh`, `python3 scripts/final_checklist.py`); 2. run
+  `tmp/final17-fail-before` when no heavy run is going; 3. bench (startup/jank), Stability rows, head CI with
+  `-f review_apk=true`, APK scans, images, summary.
+
+### Previous resume note — superseded (22:50 UTC 2026-11-19)
+
+- FINAL-10..14 found; phones 05/07 and tv-api34 03/04 re-runs queued; tv-api24 04 running.
 
 ### Previous resume note — superseded (20:40 UTC 2026-11-19)
 
