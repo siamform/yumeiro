@@ -154,6 +154,7 @@ FINDINGS = {
     "PermissionFlowDeviceTest": "FINAL-39, FINAL-43",
     "FeedPositionDeviceTest": "TV-FP-1",
     "MiniPlayerDeviceTest": "FINAL-44",
+    "UpscaleFreezeDeviceTest": "FINAL-45",
     "MusicAccessDeviceTest": "FINAL-44",
     "YtChannelUiDeviceTest": "YT-WALL (OMT-29)",
     "YtQualityDeviceTest": "YT-WALL (OMT-29)",

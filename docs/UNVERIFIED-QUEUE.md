@@ -32,6 +32,7 @@ and target. Codes match the checklist's "Skips and Blocked cells" table.
 | FINAL-31 | Phone with Layout = TV in portrait | the BUG-5 TV checks need a landscape TV window | user-assisted: OMT-4 on a phone set to Layout = TV | Not verified |
 | FINAL-35 | Memory on Android 7 TV under drama-feed paging (heap 61 → 479 MB once, 44663218206) | not reproduced in 44666637483 (peak 94 MB) or 44670841174 (peak 95 MB, 0 ANR); no heap dump | user-assisted: OMT-57 | Open, not reproduced |
 | FINAL-43 | Android TV notification permission: the blocked → "Open settings" step (PermissionFlow b on tv-api34) | Android TV 14 shows the system dialog again after every "Don't allow" (5 in a row in 44672818277), so the blocked state never comes; the "Tap again" message did show after each deny. The 3 earlier runs where no message showed within 10 s were not reproduced; their cause is not proven | user-assisted: OMT-58 | Blocked (Android TV behaviour) |
+| FINAL-45 | Player on a 2 GB phone: one 2.8 s main-thread stop while opening the More menu with upscaling on (UpscaleFreeze 7d, 44665076936) | the stop was inside a window-manager binder call (system side); not reproduced in 44673996183 (3/3) | user-assisted: OMT-3 / U-8 on a 2–3 GB phone | Open, not reproduced |
 | SEC-LFM / F-AIR | Built-in Last.fm sign-in and push airing alerts end to end | need the Worker deploy and a rotated Last.fm shared secret (owner's "go") | owner: Worker deploy, then OMT-10, OMT-52 | Waiting for owner |
 
 ## Agent findings and gaps
