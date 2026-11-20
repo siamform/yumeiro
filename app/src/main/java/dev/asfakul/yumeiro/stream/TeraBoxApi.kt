@@ -34,6 +34,13 @@ object TeraBoxApi {
     const val SIGN_IN_REASON = "TeraBox only gives the full video to signed-in accounts; without one it plays a 30-second preview, " +
         "so Yumeiro won't use that. Sign in to your free TeraBox account on this page once, then go back and play the link again."
 
+    /** Whether this device has any AV1 video decoder (Android 10+ ships one). Set in MTApplication. */
+    @Volatile var canPlayAv1: () -> Boolean = { true }
+
+    /** An AV1 original on a phone with no AV1 decoder plays TeraBox's H.264 transcode instead. */
+    fun preferTranscode(fileName: String): Boolean =
+        Regex("""(^|[^a-z0-9])av1([^a-z0-9]|$)""", RegexOption.IGNORE_CASE).containsMatchIn(fileName) && !runCatching { canPlayAv1() }.getOrDefault(false)
+
     sealed interface Result {
         /** [hls] = TeraBox's transcode playlist; otherwise the original file. */
         data class Ok(val streamUrl: String, val fileName: String, val cookie: String?, val userAgent: String, val hls: Boolean) : Result
@@ -115,7 +122,7 @@ object TeraBoxApi {
                 "&by=name&order=asc&num=1000&page=1&dir=&root=1",
         )?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
         val name = file.str("server_filename") ?: "TeraBox video"
-        if (list?.str("errno") == "0") {
+        if (list?.str("errno") == "0" && !preferTranscode(name)) {
             val dlink = (list["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
                 ?.firstOrNull { it.str("fs_id") == file.str("fs_id") }?.str("dlink")?.takeIf { it.startsWith("http") }
             if (dlink != null) return Result.Ok(dlink, name, cookie(), userAgent, hls = false)

@@ -56,6 +56,12 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.online.telegram.TelegramPlayback.install(this) }
         runCatching { dev.asfakul.yumeiro.stream.CloudRecapture.install(this) }
         // B-29: TeraBox's API reuses the sign-in the user made in the web view (read lazily, off the main thread).
+        dev.asfakul.yumeiro.stream.TeraBoxApi.canPlayAv1 = {
+            runCatching {
+                android.media.MediaCodecList(android.media.MediaCodecList.ALL_CODECS).codecInfos
+                    .any { !it.isEncoder && it.supportedTypes.any { t -> t.equals("video/av01", true) } }
+            }.getOrDefault(false)
+        }
         dev.asfakul.yumeiro.stream.TeraBoxApi.cookieSource = { url -> runCatching { android.webkit.CookieManager.getInstance().getCookie(url) }.getOrNull() }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }

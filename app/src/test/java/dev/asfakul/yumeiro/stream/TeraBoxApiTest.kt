@@ -29,7 +29,7 @@ class TeraBoxApiTest {
     private val page = "<script>try {eval(decodeURIComponent(`function%20fn%28a%29%7Bwindow.jsToken%20%3D%20a%7D%3Bfn%28%22" +
         "9AAAE649FB35525962C415468056DFCF0A38D9AE1EF4E49E%22%29`))} catch(e){}</script>"
     private val info = """{"errno":0,"randsk":"KYGxnFHIr6o4%2BicZ%3D","sign":"bffe60e9","timestamp":1795209634,"shareid":1000916905929,"uk":81366184102199,
-        |"list":[{"category":"1","dlink":"","fs_id":"993976246402096","isdir":"0","server_filename":"Ranabaali.2026.720p.mkv","size":"1002246543"}]}""".trimMargin()
+        |"list":[{"category":"1","dlink":"","fs_id":"993976246402096","isdir":"0","server_filename":"Ranabaali.2026.720p.NF.WEB-DL.HIN-TEL.AAC5.1.AV1-XDMovies.co.mkv","size":"1002246543"}]}""".trimMargin()
     private val preview = "#EXTM3U\n#EXT-X-TARGETDURATION:15\n#EXTINF:10,\nhttps://cdn/a\n#EXTINF:10,\nhttps://cdn/b\n#EXTINF:10,\nhttps://cdn/c\n#EXT-X-ENDLIST\n"
     private val full = "#EXTM3U\n" + (1..600).joinToString("") { "#EXTINF:10,\nhttps://cdn/$it\n" } + "#EXT-X-ENDLIST\n"
 
@@ -102,6 +102,18 @@ class TeraBoxApiTest {
         serve(list = """{"errno":105}""", stream = full)
         val ok = TeraBoxApi.resolve(OkHttpClient(), share)
         assertTrue("got $ok", ok is TeraBoxApi.Result.Ok && ok.hls)
+    }
+
+    @Test fun av1OriginalWithoutDecoderPlaysTheTranscode() {
+        TeraBoxApi.cookieSource = { "ndus=Ytest" }
+        TeraBoxApi.canPlayAv1 = { false }
+        try {
+            serve(list = """{"errno":0,"list":[{"fs_id":"993976246402096","dlink":"https://d.terabox.app/file/abc"}]}""", stream = full)
+            val r = TeraBoxApi.resolve(OkHttpClient(), share)
+            assertTrue("got $r", r is TeraBoxApi.Result.Ok && r.hls)
+            assertTrue(TeraBoxApi.preferTranscode("Ranabaali.2026.720p.NF.WEB-DL.HIN-TEL.AAC5.1.AV1-XDMovies.co.mkv"))
+            assertFalse(TeraBoxApi.preferTranscode("Movie.2026.x264.mkv"))
+        } finally { TeraBoxApi.canPlayAv1 = { true } }
     }
 
     @Test fun expiredSignInThatStillGetsThePreviewAsksToSignInAgain() {
