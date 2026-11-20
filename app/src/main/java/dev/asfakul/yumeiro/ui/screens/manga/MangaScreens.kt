@@ -424,7 +424,12 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
     val item = MangaItem(providerId, url, details?.title?.takeIf { it.isNotBlank() } ?: title,
         details?.cover?.takeIf { it.isNotBlank() } ?: entry?.cover ?: cover?.takeIf { it.isNotBlank() })
     // Saved before the details arrived (or saved from an older build without a cover): fill it in now.
-    LaunchedEffect(details, entry?.key) { details?.let { d -> MangaLibrary.refreshMeta(context, providerId, url, d.title, d.cover ?: cover) } }
+    // FINAL-18: refreshMeta loads the library file when it is not loaded yet; with a fast source the
+    // details arrived before the IO load above finished, so the file was read on the main thread
+    // (MangaRetryDeviceTest.libraryLoadIsOffMain, run 44640073858). It runs on IO now.
+    LaunchedEffect(details, entry?.key) {
+        details?.let { d -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.refreshMeta(context, providerId, url, d.title, d.cover ?: cover) } }
+    }
     val sorted = chapters?.let { if (newestFirst) it else it.reversed() }
 
     Column(Modifier.fillMaxSize().testTag("manga_detail")) {
