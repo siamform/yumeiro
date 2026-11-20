@@ -17,7 +17,9 @@ Trust the repo and run IDs over this text; every "Verified" needs a run ID.
 | B-7 | Upgrade check from v1.8.1 FAIL (run 44700731576): fatal=1, verify=3, resumed=0 | Critical (same as B-1) | eef90a2 | Phone PASS 44709239365. Deferred by owner: TV re-run with the fixed script, 1.9.0→2.0.0 upgrade check |
 | B-8 | Thread spike: 171 threads 30 s after start (mali 30, Dispatcher 24, OkHttp 20) | Watch | none | Open: measure on a real phone in 2.0.x |
 | B-9 | Built-in Last.fm sign-in off; shared secret must be rotated before it is enabled | Owner action | none | Open (owner): rotate, then `wrangler secret put LASTFM_SHARED_SECRET` |
-| B-10 / FREEZE-1 | 2.0.0 freeze on touch ("Input dispatching timed out"), Home doing N² 18+ checks on the main thread | Critical (community "crash on touch") | d072e4d8 | Fail-before CI 44764157290 (AdultApiCostTest failed on old code). Pass-after CI 44764168235: pending at handover. Not released |
+| B-10 / FREEZE-1 | 2.0.0 freeze on touch ("Input dispatching timed out"), Home doing N² 18+ checks on the main thread | Critical (community "crash on touch") | d072e4d8 | Fail-before CI 44764157290 (AdultApiCostTest failed on old code). Pass-after CI 44764168235 (Build, test & lint success). Not released (goes into 2.1.0) |
+| B-11 / PROF-1 | Continue reading / saved manga shared across profiles | High (privacy) | see git log PROF-1 | Fail-before CI 44771329328 (ab/prof1-before), pass-after CI 44771338763: pending |
+| B-12 / T-1 | Raw torrent info-hash rejected (Play Link) or dropped (Stremio) | Medium | see git log T-1 | Fail-before CI 44771332825 (ab/t1-before, helper missing), pass-after CI 44771338763: pending |
 
 ## B-1: video player VerifyError (the 1.9.0 crash)
 

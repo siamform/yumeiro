@@ -13,7 +13,7 @@ Trust the repo and run IDs over this text.
 | Built, not tested | Code is in 2.0.0, no device run proves it. Treat as "may not work". |
 | Broken | A real report or a failing check shows it does not work. Must be fixed first. |
 | Partial | Some of the requested behaviour exists; the rest is listed in "Missing". |
-| Not built | No code in the app for it (checked with a code search on 2026-11-20). |
+| Not built | No code in the app for it (checked with a code search on 2026-11-20; two rows were wrong in the first version and are corrected: S-1, PIN-1). Re-check with a wide search before building. |
 | Owner decision | Conflicts with a decision the owner already took. Not reopened here; the owner must say yes. |
 
 "Verified" items still need the owner's real-phone check (OWNER-MANUAL-TESTS.md), because the community reports
@@ -29,7 +29,7 @@ thread had used about 965 s of CPU (`utm=96515`).
 
 | ID | Problem | Root cause | Fix | Status |
 |---|---|---|---|---|
-| FREEZE-1 | Touch freezes the app ("not responding") while Home is under the player | The release dex maps the main-thread stack to `HomeScreen` → `AdultContent.loadedAdultApis` → `ExtensionManager.extensionOf` (loop over the plugin map). `isAdultApi` rebuilt the whole provider list on every call, and Home / Yumix call it once per provider while drawing: about N² work on the main thread each time, repeated at every extension-load step and every Most-played change | One 18+ map per extension change (`StampMemo` + `ExtensionManager.providerStamp`), one pass over plugins (`extensionLookup`), Home works the map out off the main thread | Fixed in this push; regression test `AdultApiCostTest` (fail-before branch `ab/freeze1-before`). Run IDs in BUGS-AND-FIXES-2.0.0.md B-10 |
+| FREEZE-1 | Touch freezes the app ("not responding") while Home is under the player | The release dex maps the main-thread stack to `HomeScreen` → `AdultContent.loadedAdultApis` → `ExtensionManager.extensionOf` (loop over the plugin map). `isAdultApi` rebuilt the whole provider list on every call, and Home / Yumix call it once per provider while drawing: about N² work on the main thread each time, repeated at every extension-load step and every Most-played change | One 18+ map per extension change (`StampMemo` + `ExtensionManager.providerStamp`), one pass over plugins (`extensionLookup`), Home works the map out off the main thread | Fixed d072e4d8. Fail-before CI 44764157290 (only AdultApiCostTest failed), pass-after CI 44764168235 (Build, test & lint green) |
 | FREEZE-2 | Other screens still do provider work while drawing | Same pattern in `OnlineHomeScreen`, `OnlineSearchScreen`, `OnlineHomePicks`, `HomeOnline` (`ExtensionManager.providers()` inside `remember`) | Now cheap (cached map), but `providers()` itself still rebuilds and re-applies overrides per call. Move provider lists to one `StateFlow` in `ExtensionManager`, built on a background thread; screens only collect it | Not built |
 | FREEZE-3 | 171 threads in the freeze dump, same number as B-8 | Many OkHttp connections (Live TV failover probes, extension feeds) and dispatcher workers at once | Cap parallel feed loads per screen (see Epic 4), share one OkHttp pool, stop probing hidden screens | Open (B-8) |
 | FREEZE-4 | Why Home recomputed so often while Live TV played | To confirm on a real phone: Most-played inputs (`PlayCounts`, MediaStore `recentVideos`) or extension generation bumps changing during playback | Add a debug counter of Home recompositions to the diagnostics screen; a device test that plays Live TV for 60 s and asserts Home recomposes ≤ N times | Not built |
@@ -92,16 +92,16 @@ FREEZE-1 broke exactly this rule.
 | CL-1 | Audit the `crash-log` branch | Done for the only file there (freeze report) → FREEZE-1 | crash-log c12d27f4 | Owner: keep uploading reports there |
 | X-1 | Nuvio / SkyStream / Vega import fails | Partial | Detection only (E14) | Import and run (F-05 step 2–4) |
 | B-3 | TeraBox stops at 30 s; slow cloud-link detection | Not fixed | — | Find the 30 s cap in `CloudRecapture` / resolver; resolve links in the background with a progress state |
-| T-1 | Raw torrent info-hash → magnet | Not built | Stremio skips torrent streams (`StremioProvider.kt:136`) | Build `magnet:?xt=urn:btih:<hash>` with trackers, hand to an external torrent app |
-| S-1 | Search hangs, every keystroke fires, feed shuffles | Not fixed | No debounce in `OnlineSearchScreen` | 300 ms debounce, cancel the previous search, stable order |
+| T-1 | Raw torrent info-hash → magnet | Fixed (B-12), CI pending | `LinkHosts.magnetFromHash`; Play Link accepts a bare hash; Stremio infoHash streams become MAGNET links with the add-on's trackers (download through TorrServer) | Real-phone check with TorrServer |
+| S-1 | Search hangs, every keystroke fires, feed shuffles | Guarded in code; hang not reproduced | `OnlineSearchScreen` already waits 450 ms after typing, cancels the old search (LaunchedEffect key), `OnlineRepository.search` runs sources with a permit limit and a timeout, results ranked stably (`SearchRanker`). Correction: the first version of this list said "no debounce"; that was wrong | Reproduce on a real phone with many extensions; FREEZE-1 removed per-provider work from this screen too |
 | PIP-1 | Back on the stream page should go to PiP | To check | `PipController.kt` | Device test |
-| PIN-1 | Pin cap 8, duplicate extension cap 2, remove the redundant pinned row | Not built | No pin limit in code | — |
+| PIN-1 | Pin cap 8, duplicate extension cap 2, remove the redundant pinned row | Partial | Pin cap 8 exists (`PinnedExtensions.MAX = 8`, toast when full; correction of the first version of this list) | Duplicate-extension cap 2 and the redundant pinned row: to do |
 | BUG-1 | Resume across entry points | Verified (emulator) | ResumePointsTest; device runs in CHECKLIST | Real-phone check |
 | BUG-2 | YouTube channels + quality selector | Verified (emulator) for channels; quality = BUG-4 | 44116513171 | Real YouTube is behind YT-WALL (P3 / P5 / M3 Blocked) |
 | BUG-3 | Download speed drops after 50 % | Blocked: owner (real phone, OMT-20) | 40ea96e, 3c85a72 | Real-phone run |
 | BUG-4 | Upscaling and quality mismatch | Verified (emulator); real YouTube Blocked: owner | Bug4QualityListTest | — |
 | EXT-P | External player integration + gallery downloads | Partial | F-07, NBUG-4b | Return position; gallery app view = OMT-17 |
-| PROF-1 | Continue Manga leaks across profiles | Broken (confirmed in code) | manga progress not under `Profiles.prefsName` | Scope manga progress per profile + migration test |
+| PROF-1 | Continue Manga leaks across profiles | Fixed (B-11), CI pending | `MangaLibrary` file now from `Profiles.file` (default profile keeps the old file) | Real-phone check with two profiles |
 | BUG-5 | TV UI | Verified (emulator) for NBUG-2a–e; TV-4 Built, not tested | runs in CHECKLIST | OMT-21 |
 | BUG-6 | Music player touches pass through | Verified (emulator) | 43914724044 | — |
 | BUG-7 | Player / IPTV freezes, missing downloads | Verified (emulator) except 7d (GPU, owner) | 43946324687 | Likely related to FREEZE-1 on real phones; re-test after the fix |

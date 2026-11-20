@@ -3,6 +3,12 @@
 Read this first, then `docs/MAJOR-BUGS-AND-FEATURES-2.x.md` (the must-do list) and `docs/BUGS-AND-FIXES-2.0.0.md`.
 Trust the repo and run IDs over any summary, including this one.
 
+## Owner decision 2026-11-20 (latest)
+
+No 2.0.1. Fix all the other bugs first, then release **2.1.0**. Work list: MAJOR-BUGS-AND-FEATURES-2.x.md.
+Done so far for 2.1.0: FREEZE-1 (d072e4d8, CI 44764168235 green), PROF-1 (B-11), T-1 (B-12); CI for the last two in
+BUGS-AND-FIXES-2.0.0.md.
+
 ## Where things stand
 
 - **v2.0.0 is published** (release.yml run 44710765718, tag v2.0.0). main and r15-stability were both at e47f450f
@@ -82,6 +88,6 @@ FREEZE-4 (find what keeps Home recomposing during Live TV playback), GATE-1 (ANR
 ## Next steps in order
 
 1. Confirm CI 44764168235; write B-10 run IDs; owner real-phone check (Live TV playing, touch Home, YouTube).
-2. Release 2.0.1 with FREEZE-1 only (owner said release crash fixes asap).
+2. Keep fixing the MAJOR list; release 2.1.0 (version.properties 2.1.0 / 19, CHANGELOG, WhatsNew.shouldPost must accept 2.1.x) when the owner says.
 3. FREEZE-2/3/4, GATE-1, then PROF-1 (manga progress per profile) and S-1 (search debounce).
 4. Then the Next list in MAJOR-BUGS-AND-FEATURES-2.x.md.
