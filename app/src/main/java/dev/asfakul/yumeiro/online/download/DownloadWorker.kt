@@ -163,9 +163,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val sorted = OnlineRepository.sortLinks(links)
         // Links that need a separate audio file can't be saved as one file; use them only as a last resort.
         // R15 forced download: a plain file first, then split video/audio, then DASH (ForceGrab).
-        val link = DownloadNaming.pickLink(sorted.filter { it.audioTracks.isEmpty() }, DownloadSettings.quality.value)
-            ?: DownloadNaming.pickLink(sorted, DownloadSettings.quality.value)
-            ?: DownloadNaming.pickLink(sorted, DownloadSettings.quality.value, allowDash = true)
+        val link = DownloadNaming.pickLink(sorted.filter { it.audioTracks.isEmpty() }, DownloadSettings.heightFor(item.maxHeight))
+            ?: DownloadNaming.pickLink(sorted, DownloadSettings.heightFor(item.maxHeight))
+            ?: DownloadNaming.pickLink(sorted, DownloadSettings.heightFor(item.maxHeight), allowDash = true)
             ?: torrents.firstOrNull()?.let { t -> OnlineLink("Torrent", "Torrent", t, null, -1, false, false, emptyMap()) }
             ?: throw NoLink(error ?: if (links.isEmpty()) "No sources found for this episode" else "No downloadable source")
         val ext = DownloadNaming.extensionFor(link)
@@ -192,7 +192,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         fun direct(url: String, headers: Map<String, String>, f: File, check: (Long) -> Unit = space, p: (Long, Long) -> Unit) =
             Segmented(client, ForceGrab.connections(lowEnd), check).let { s -> suspend { s.download(url, headers, f, p) } }
         return when {
-            item.isDash -> DashGrab(client, item.headers).download(item.url, part, DownloadSettings.quality.value, lowEnd, progress).also { if (it.webm) onContainer("webm") }.bytes
+            item.isDash -> DashGrab(client, item.headers).download(item.url, part, DownloadSettings.heightFor(item.maxHeight), lowEnd, progress).also { if (it.webm) onContainer("webm") }.bytes
             item.audioUrl != null -> {
                 val v = File(part.parentFile, part.name + ".v"); val a = File(part.parentFile, part.name + ".a")
                 var vb = 0L; var ab = 0L
@@ -207,7 +207,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     if (free in 0 until 2 * sum + DiskFull.MARGIN) throw DiskFull(2 * sum, free)
                 }
                 kotlinx.coroutines.coroutineScope {
-                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.quality.value).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v, trackSpace(0)) { d, _ -> vb = d; progress(vb + ab, -1) }() }
+                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.heightFor(item.maxHeight)).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v, trackSpace(0)) { d, _ -> vb = d; progress(vb + ab, -1) }() }
                     val aj = this.async { direct(item.audioUrl, item.headers, a, trackSpace(1)) { d, _ -> ab = d; progress(vb + ab, -1) }() }
                     vj.await(); aj.await()
                 }
@@ -218,7 +218,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             // G8-2: a variant with a separate audio rendition is saved as two tracks and joined here.
             item.isHls -> {
                 var container: String? = null
-                val n = HlsDownloader(client, item.headers, DownloadSettings.quality.value)
+                val n = HlsDownloader(client, item.headers, DownloadSettings.heightFor(item.maxHeight))
                     .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, onContainer = { container = it }, progress = progress)
                 // NF-2b-4: fMP4 and joined streams are MP4 already; a TS stream is remuxed to MP4 here, or kept as TS.
                 val c = container ?: run {

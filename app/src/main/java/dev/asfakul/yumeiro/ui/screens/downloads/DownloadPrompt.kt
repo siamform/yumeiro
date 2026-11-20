@@ -98,6 +98,11 @@ object DownloadPrompt {
         val quality: String,
         val sizeBytes: Long = 0,
         val defaultKeep: Boolean,
+        /**
+         * NF-2b: when set, the prompt offers Best / 1080p / 720p / 480p / 360p for this download and starts it
+         * with the picked height (-1 = the Settings value) instead of [start].
+         */
+        val startAt: ((keep: Boolean, maxHeight: Int) -> String?)? = null,
         /** Starts the download; returns an error text or null. */
         val start: (keep: Boolean) -> String?,
     )
@@ -114,9 +119,10 @@ object DownloadPrompt {
 
     internal fun dismiss() { _current.value = null }
 
-    internal fun run(context: Context, r: Request, keep: Boolean) {
+    internal fun run(context: Context, r: Request, keep: Boolean, maxHeight: Int = -1) {
         _current.value = null
-        val err = r.start(keep)
+        val pick = r.startAt
+        val err = if (pick != null) pick(keep, maxHeight) else r.start(keep)
         if (err != null) { AppMessages.error(context, err); return }
         val mode = if (keep) "Permanent" else "Offline"
         AppMessages.show(context, "Downloading ${r.what} · $mode", AppMessages.Kind.SUCCESS, "View downloads") { DownloadsNav.open() }
@@ -139,6 +145,7 @@ fun DownloadPromptHost() {
     val req = r ?: return
     var keep by remember(req) { mutableStateOf(req.defaultKeep) }
     var dontAsk by remember(req) { mutableStateOf(false) }
+    var height by remember(req) { mutableStateOf(DownloadSettings.quality.value) }
 
     TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
@@ -146,13 +153,18 @@ fun DownloadPromptHost() {
         modifier = Modifier.testTag("download_confirm"),
         icon = { Icon(Icons.Default.Download, null) },
         title = { Text("Download ${req.what}?", fontWeight = FontWeight.Bold) },
-        text = { DownloadConfirmBody(req, keep, { keep = it }, dontAsk, { dontAsk = it }) },
+        text = {
+            Column {
+                if (req.startAt != null) QualityPicker(height) { height = it }
+                DownloadConfirmBody(req, keep, { keep = it }, dontAsk, { dontAsk = it })
+            }
+        },
         confirmButton = {
             dev.asfakul.yumeiro.ui.components.DialogConfirmButton(
                 if (req.count > 1) "Download ${req.count}" else "Download",
                 onClick = {
                     if (dontAsk) DownloadSettings.setAskFirst(context, false)
-                    DownloadPrompt.run(context, req, keep)
+                    DownloadPrompt.run(context, req, keep, if (req.startAt != null) height else -1)
                 },
                 modifier = Modifier.testTag("download_confirm_start"),
             )
@@ -164,6 +176,22 @@ fun DownloadPromptHost() {
             }
         },
     )
+}
+
+/** NF-2b: quality for this download only (Settings → Downloads → Quality stays the default). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun QualityPicker(selected: Int, onPick: (Int) -> Unit) {
+    Column(Modifier.padding(bottom = 8.dp).testTag("download_quality")) {
+        Text("Quality for this download", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (h in DownloadSettings.QUALITY_CHOICES) FilterChip(
+                selected = selected == h, onClick = { onPick(h) },
+                label = { Text(if (h == 0) "Best" else "Up to ${h}p") },
+                modifier = Modifier.testTag("download_quality_$h"),
+            )
+        }
+    }
 }
 
 /** Body of the download confirmation (separate so it can be previewed and tested). */

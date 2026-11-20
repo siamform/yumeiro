@@ -94,6 +94,8 @@ object OnlineDownloads {
         val hidden: Boolean = false,
         /** DL-H / PR-1: the profile that hid it (only that profile sees and unhides it). */
         val profile: String = "0",
+        /** NF-2b: highest height picked for this download in the prompt (-1 = Settings → Downloads → Quality). */
+        val maxHeight: Int = -1,
     ) {
         val fraction: Float get() = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
         val active: Boolean get() = status == Status.QUEUED || status == Status.RUNNING
@@ -209,7 +211,7 @@ object OnlineDownloads {
      * Queues whole episodes of [detail] ([episodes]: index in watch order → episode). Links are
      * found when each download starts. Returns how many were added (already saved/queued skipped).
      */
-    fun enqueueEpisodes(context: Context, detail: OnlineDetail, version: String, episodes: List<Pair<Int, OnlineEpisode>>, keep: Boolean? = null): Int {
+    fun enqueueEpisodes(context: Context, detail: OnlineDetail, version: String, episodes: List<Pair<Int, OnlineEpisode>>, keep: Boolean? = null, maxHeight: Int = -1): Int {
         ensureLoaded(context); DownloadSettings.init(context)
         val folder = DownloadNaming.seriesFolder(detail.name, detail.api, version)
         val now = System.currentTimeMillis()
@@ -225,6 +227,7 @@ object OnlineDownloads {
                 createdAt = now + index, kind = Kind.EPISODE, folder = folder, version = version.ifBlank { null },
                 data = ep.data, order = index, keep = keep ?: DownloadSettings.keepByDefault.value,
                 baseName = DownloadNaming.episodeBase(ep.season, ep.episode, ep.name, index),
+                maxHeight = maxHeight,
             )
         }
         if (added.isEmpty()) return 0
@@ -436,7 +439,7 @@ object OnlineDownloads {
         .put("ytId", i.ytId).put("vItag", i.videoItag).put("aItag", i.audioItag).put("container", i.container)
         .put("keep", i.keep).put("finishedAt", i.finishedAt).put("quality", i.quality).put("publicUri", i.publicUri)
         .put("base", i.baseName).put("dash", i.isDash).put("audio", i.audioUrl)
-        .put("hidden", i.hidden).put("profile", i.profile)
+        .put("hidden", i.hidden).put("profile", i.profile).put("maxH", i.maxHeight)
 
     private fun from(o: JSONObject): Item? {
         fun map(k: String) = o.optJSONObject(k)?.let { h -> h.keys().asSequence().associateWith { h.optString(it) } }.orEmpty()
@@ -455,6 +458,7 @@ object OnlineDownloads {
             keep = o.optBoolean("keep"), finishedAt = o.optLong("finishedAt"), quality = str("quality"), publicUri = str("publicUri"), baseName = str("base"),
             isDash = o.optBoolean("dash"), audioUrl = str("audio"),
             hidden = o.optBoolean("hidden"), profile = o.optString("profile").ifBlank { "0" },
+            maxHeight = o.optInt("maxH", -1),
         )
     }
 

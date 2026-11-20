@@ -89,5 +89,8 @@ object DownloadSettings {
     fun setDownloader(context: Context, pkg: String) { init(context); _downloader.value = pkg; prefs?.edit()?.putString("downloader", pkg)?.apply() }
 
     fun autoDeleteLabel(days: Int) = when (days) { 0 -> "Never"; 1 -> "1 day"; else -> "$days days" }
+    /** NF-2b: the height a download uses: the one picked for it, else the Settings value. */
+    fun heightFor(picked: Int, setting: Int = quality.value): Int = if (picked in QUALITY_CHOICES) picked else setting
+
     fun qualityLabel(h: Int) = if (h == 0) "Best" else "${h}p"
 }

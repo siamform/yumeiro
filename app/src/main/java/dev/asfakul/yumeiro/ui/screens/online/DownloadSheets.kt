@@ -181,6 +181,8 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
         title = d.name, what = what, count = list.size,
         folder = DownloadNaming.seriesFolder(d.name, d.api, version), quality = DownloadSettings.qualityLabel(DownloadSettings.quality.value) + " (up to)",
         defaultKeep = DownloadSettings.keepByDefault.value,
+        // NF-2b: the prompt offers a quality for this download; -1 keeps the Settings value.
+        startAt = { keep, h -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, h) == 0) "Already downloaded or queued" else null },
     ) { keep -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep) == 0) "Already downloaded or queued" else null })
 }
 
