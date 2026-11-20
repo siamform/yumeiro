@@ -1,3 +1,7 @@
+## Resume here (2026-11-20, after v2.0.0)
+
+Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md. Open P0: FREEZE-1 fix d072e4d8 on r15-stability, pass-after CI 44764168235 pending, not released. Must-do list: docs/MAJOR-BUGS-AND-FEATURES-2.x.md.
+
 # R15 status: every item in the master prompt, with its evidence
 
 ## Resume here (updated 2026-11-20 08:35 UTC)
