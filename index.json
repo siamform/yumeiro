@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "generated": "2026-11-20T07:19:32Z",
+  "repo": "siamform/yumeiro",
+  "branch": "streams",
+  "playlists": [
+    {
+      "id": "mrgify_bdix",
+      "name": "Mrgify BDIX",
+      "category": "Bangladesh TV",
+      "description": "BDIX IPTV channels (Bangladesh)",
+      "repo": "abusaeeidx/Mrgify-BDIX-IPTV",
+      "source": "https://raw.githubusercontent.com/abusaeeidx/Mrgify-BDIX-IPTV/main/playlist.m3u",
+      "url": "https://raw.githubusercontent.com/siamform/yumeiro/streams/playlists/mrgify_bdix.m3u",
+      "updated": "2026-11-20T07:19:32Z",
+      "sha256": "f9c391039c915748a1801ea2cfd54c665f5c218357b67b61c46eb2889d5cd1e1",
+      "channels": 348,
+      "groups": 26,
+      "bytes": 100902,
+      "resolved": "https://raw.githubusercontent.com/abusaeeidx/Mrgify-BDIX-IPTV/main/playlist.m3u",
+      "contentType": "text/plain; charset=utf-8",
+      "checked": "2026-11-20T07:19:32Z",
+      "ok": true
+    }
+  ]
+}
