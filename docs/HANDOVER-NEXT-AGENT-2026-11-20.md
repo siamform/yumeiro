@@ -53,6 +53,14 @@ Still to do around it (see MAJOR list): FREEZE-2 (one provider StateFlow built o
 OnlineHomeScreen / OnlineSearchScreen / OnlineHomePicks / HomeOnline), FREEZE-3 (thread cap, B-8),
 FREEZE-4 (find what keeps Home recomposing during Live TV playback), GATE-1 (ANR device test).
 
+Update 2026-11-20 (later): FREEZE-2 fixed (B-13). FREEZE-4 now has a draw counter (B-21,
+`diagnostics/DrawCounter.kt`): each 30 s memory sample says `draws home=N yumix=N live=N`, and Freeze
+(ANR) reports carry that trail. Ask the owner for one freeze report from a 2.1.0 build, read the
+`draws` lines just before the freeze; the screen with hundreds of draws per 30 s is the one to fix.
+Note: PlaybackState position ticks are already split out of the app-wide state (MainViewModel), so
+music position is not the cause. F-19 security questions (B-19) and per-profile pins (B-20) are done;
+extensions / repositories per profile are still shared (Epic).
+
 ## How work is done in this repo (rules from the owner)
 
 - Author: `Asfakul Siam <71690568+siamform@users.noreply.github.com>`; every commit ends with

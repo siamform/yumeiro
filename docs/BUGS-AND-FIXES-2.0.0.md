@@ -26,6 +26,9 @@ Trust the repo and run IDs over this text; every "Verified" needs a run ID.
 | B-16 / Country | Live TV had no country filter | Low | 5a1c34f6 | Fail-before: compile (new API). Pass-after: next CI |
 | B-17 / NF-2b | No quality choice per download | Medium | 1f08eebe | Fail-before: compile (new API). Pass-after: next CI |
 | B-18 / PIN-1 | Extra pinned-extension row on the Yumix feed | Low | 74d608bd | Fail-before: PinnedExtensionsUiTest (row appears). Pass-after: next CI |
+| B-19 / F-19 | "Forgot PIN" accepted the phone's screen lock (a child who knows it could remove a parent's PIN) | High | ba87ce64 | Security questions (3, answers salted PBKDF2, same lockout as PIN); with questions set, Forgot asks them and never offers the screen lock. Also covers the Private vault (it opens with the profile PIN). Fail-before: compile (ProfileRecoveryTest, new API). Pass-after: next CI |
+| B-20 / F-19 isolation | Pinned extensions and Live TV playlist pins showed in every profile | Medium | 7c5896ee | Per-profile prefs via Profiles.prefsName. Fail-before: ProfilePinsTest (kid sees parent's pins). Pass-after: next CI. Extensions / repositories themselves are still shared (Epic, see MAJOR doc F-19) |
+| B-21 / FREEZE-4 | No record of how often Home redraws before a freeze | Diagnostic | 0fa711ce | DrawCounter in the 30 s memory trail; ANR reports now carry the trail. Root cause still needs one real-phone freeze report with this build. Fail-before: compile. Pass-after: next CI |
 
 ## B-1: video player VerifyError (the 1.9.0 crash)
 
