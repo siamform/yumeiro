@@ -81,13 +81,22 @@ adb push upgrade-clip.mp4 /sdcard/Movies/upgrade-clip.mp4 > /dev/null
 adb shell content call --uri content://media --method scan_volume --arg external_primary > /dev/null 2>&1 || true
 adb shell monkey -p $P -c $CAT 1 > /dev/null 2>&1
 sleep 12; dump old-start
+# FINAL-49 TV run 44709249640: on TV the old app's "Update available" dialog (v1.8.1 → the published
+# release) is taller than the screen, its buttons are off screen and tap_text found none, so the old
+# app never reached its welcome guide; the new app then showed the guide for the first time and it
+# read as "guide again". Back closes the dialog, as a remote user would do.
+for i in 1 2 3; do
+  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml upgrade/tap.xml > /dev/null 2>&1
+  grep -q 'text="Update available"' upgrade/tap.xml 2>/dev/null || break
+  adb shell input keyevent 4; sleep 3
+done
 settle_first_run 45
 dump old-tabs
 # Precondition (run 43869944264 lesson): the old app must be past its update dialog and welcome guide,
 # otherwise "guide again" after the upgrade means nothing. Report a harness error, not a product result.
 PRE_OK=1
 # Run 43878778019: an extension pop-up ("Maybe Later") covered the tabs and still read as ready.
-grep -qE 'text="(Skip|Skip for now|Remind me later|Maybe Later)"' upgrade/ui-old-tabs.xml 2>/dev/null && PRE_OK=0
+grep -qE 'text="(Skip|Skip for now|Remind me later|Maybe Later|Update available)"' upgrade/ui-old-tabs.xml 2>/dev/null && PRE_OK=0
 note "old app past update dialog and welcome guide: $PRE_OK"
 # A local clip through the app's own VIEW handler; the player records history and progress.
 adb shell am start -a android.intent.action.VIEW -d file:///sdcard/Movies/upgrade-clip.mp4 -t video/mp4 -p $P > /dev/null 2>&1
