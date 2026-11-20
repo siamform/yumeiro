@@ -45,12 +45,16 @@ class AppMessagesMainThreadTest {
         // Dispatchers.Unconfined resumes the collector on whichever thread wrote the state, as the
         // Compose test frame clock did in the failing run.
         val job = CoroutineScope(Dispatchers.Unconfined).launch {
-            AppMessages.current.drop(1).collect { m -> if (m != null) seen += "${Thread.currentThread().name}|${m.text}" }
+            AppMessages.current.drop(1).collect { m ->
+                // Compare the Thread object, not its name: with coroutine debug on, the name gets " @coroutine#N"
+                // appended (CI 44672545816 saw "SDK 34 Main Thread @coroutine#92" and the name check failed).
+                if (m != null) seen += "${if (Thread.currentThread() === mainThread) "main" else Thread.currentThread().name}|${m.text}"
+            }
         }
         thread(name = "worker-final42") { AppMessages.error(ctx, "Couldn't add the repository", "Retry") {} }.join()
         shadowOf(Looper.getMainLooper()).idle()
         job.cancel()
         assertTrue("FINAL-42: the message never arrived: $seen", seen.any { "Couldn't add the repository" in it })
-        assertTrue("FINAL-42: the message state changed off the main thread: $seen", seen.all { it.startsWith(mainThread.name + "|") })
+        assertTrue("FINAL-42: the message state changed off the main thread: $seen", seen.all { it.startsWith("main|") })
     }
 }

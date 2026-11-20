@@ -115,11 +115,7 @@ object AppMessages {
     private val _current = MutableStateFlow<Message?>(null)
     val current: StateFlow<Message?> = _current.asStateFlow()
     @Volatile internal var hosts = 0
-    // Looked up on each use, not cached: a Handler kept in this object outlives the main Looper it was made for
-    // when that Looper is replaced (Robolectric does so per test; CI 44672545816 AppMessagesMainThreadTest: the
-    // posted message went to a stale queue and never arrived). On a device there is one main Looper, so this is
-    // the same behaviour.
-    private val main: Handler get() = Handler(Looper.getMainLooper())
+    private val main by lazy { Handler(Looper.getMainLooper()) }
 
     /** G10 ER-29: a [quiet] message waiting for the one on screen to close (latest only). */
     @Volatile private var waiting: Message? = null
