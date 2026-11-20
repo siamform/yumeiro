@@ -11,3 +11,4 @@ Every run cancelled by the agent, with the reason (handover §8).
 | 44703382685 | CI | 574fdc8 | 2026-11-20 08:33 | superseded: owner asked for the fix to ship as 2.0.0; version bump, WhatsNew 2.0.x and CHANGELOG added on top, CI re-run on the new head |
 | 44710581956 | device-check (TV upgrade v1.8.1→2.0.0) | ed9fbe88 | 2026-11-20 09:26 | owner asked to stop re-runs and release the crash fix now; TV upgrade re-check deferred |
 | 44710594011 | device-check (phone upgrade v1.9.0→2.0.0) | ed9fbe88 | 2026-11-20 09:26 | owner asked to stop re-runs and release the crash fix now; deferred |
+| 44771338763 | CI | 23558a22 | 2026-11-20 16:20 | superseded: FREEZE-2 committed on top; one CI run on the new head (44771583525) covers FREEZE-1, PROF-1, T-1 and FREEZE-2 |
