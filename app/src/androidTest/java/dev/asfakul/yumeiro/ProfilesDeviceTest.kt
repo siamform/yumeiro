@@ -101,7 +101,7 @@ class ProfilesDeviceTest {
         added = Profiles.add(ctx, "Kid", AccentTone.SAKURA).id
         assertTrue(Profiles.setPin(ctx, Profiles.DEFAULT, "2468"))
         ProfileSession.chosen.value = false
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { WhoIsWatching(androidx.activity.compose.LocalActivity.current!!, onManage = null) } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { FirstRun.AppBackground { WhoIsWatching(androidx.activity.compose.LocalActivity.current!!, onManage = null) } } } }
         assertTrue("gate shown", waitTag("profile_gate"))
         compose.waitForIdle(); FirstRun.shot("profiles_who_is_watching")
         assertTrue("both profiles", has("profile_pick_${Profiles.DEFAULT}") && has("profile_pick_$added"))
