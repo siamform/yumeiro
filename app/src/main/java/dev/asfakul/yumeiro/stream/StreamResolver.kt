@@ -101,6 +101,7 @@ object StreamResolver {
     }
 
     const val TELEGRAM_GROUP = "Telegram"
+    const val TERABOX_SIGN_IN = "https://www.terabox.app/wap/outlogin/login"
 
     /**
      * @param thorough also probe URLs whose extension looks certain (`.m3u8` can be an IPTV list).

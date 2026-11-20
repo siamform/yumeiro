@@ -1,0 +1,135 @@
+package dev.asfakul.yumeiro.stream
+
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+/**
+ * B-29: TeraBox shares resolved through TeraBox's own share API, without the WebView finder.
+ *
+ * Measured on 2026-11-21 against a real share (1024terabox.com/s/1qkXq…, a 955 MB AV1 MKV):
+ *  - the page carries a `jsToken` (`fn("<hex>")` inside an encoded script);
+ *  - `api/shorturlinfo` with that token returns uk / shareid / sign / timestamp / randsk and the files;
+ *  - anonymous `share/list` is refused (errno 105) on every mirror, so no original-file link (dlink);
+ *  - anonymous `share/streaming` lists only 3 × 10 s segments + `#EXT-X-ENDLIST`: TeraBox's
+ *    30-second no-login preview. That is the "TeraBox stops at 30 s" bug (B-3).
+ *
+ * Competitors (Hikari NetworkStream.kt, terabox-gateway, TeraBridge) all solve it the same way: a
+ * TeraBox sign-in cookie (`ndus`). Yumeiro reuses the sign-in the user makes once in its own web
+ * view ([cookieSource]), lists the share with sekey + sign, and plays the original file (dlink),
+ * falling back to the full HLS transcode. A preview is never played: without a sign-in the result is
+ * [Result.NeedsSignIn].
+ */
+object TeraBoxApi {
+    @Volatile internal var base = "https://www.terabox.app"
+    private const val QS = "app_id=250528&web=1&channel=dubox&clienttype=0"
+
+    /** Cookies the user's WebView holds for [url] (a TeraBox sign-in lives here). Set in MTApplication. */
+    @Volatile var cookieSource: (String) -> String? = { null }
+
+    const val SIGN_IN_REASON = "TeraBox only gives the full video to signed-in accounts; without one it plays a 30-second preview, " +
+        "so Yumeiro won't use that. Sign in to your free TeraBox account on this page once, then go back and play the link again."
+
+    sealed interface Result {
+        /** [hls] = TeraBox's transcode playlist; otherwise the original file. */
+        data class Ok(val streamUrl: String, val fileName: String, val cookie: String?, val userAgent: String, val hls: Boolean) : Result
+        /** TeraBox only gives the full video to a signed-in account (anonymous = 30 s preview). */
+        data object NeedsSignIn : Result
+        data class Failed(val reason: String) : Result
+    }
+
+    /** `1qkXq…` from `…/s/1qkXq…` or `…?surl=qkXq…` (surl drops the leading "1"). */
+    fun shortUrl(url: String): String? {
+        val u = url.trim().toHttpUrlOrNull() ?: return null
+        val segs = u.pathSegments
+        val i = segs.indexOf("s")
+        if (i >= 0 && i + 1 < segs.size && segs[i + 1].isNotBlank()) return segs[i + 1]
+        u.queryParameter("surl")?.takeIf { it.isNotBlank() }?.let { return "1$it" }
+        return null
+    }
+
+    private val RX_TOKEN = Regex("""fn(?:%28|\()(?:%22|")([0-9A-Fa-f]{32,})(?:%22|")""")
+
+    fun jsToken(html: String): String? = RX_TOKEN.find(html)?.groupValues?.get(1)
+
+    /** Total length of a media playlist in seconds (sum of #EXTINF). */
+    fun playlistSeconds(m3u8: String): Double = m3u8.lineSequence()
+        .filter { it.startsWith("#EXTINF:") }
+        .sumOf { it.removePrefix("#EXTINF:").substringBefore(',').trim().toDoubleOrNull() ?: 0.0 }
+
+    /**
+     * True when the playlist is TeraBox's short no-login preview: a closed list of at most a minute
+     * for a file far larger than a minute of video could be (> 40 MB).
+     */
+    fun isPreview(m3u8: String, fileBytes: Long): Boolean =
+        "#EXT-X-ENDLIST" in m3u8 && playlistSeconds(m3u8) <= 60.0 && fileBytes > 40L * 1024 * 1024
+
+    private fun JsonObject.str(k: String): String? = (this[k])?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }
+
+    /** The desktop-client identity TeraBox answers API callers with (same as Hikari's reference client). */
+    const val DESKTOP_UA = "terabox;1.40.0.132;PC;PC-Windows;10.0.26100;WindowsTeraBox"
+
+    fun signedIn(cookie: String?): Boolean =
+        cookie?.split(';')?.any { it.substringBefore('=').trim().equals("ndus", true) && it.substringAfter('=', "").isNotBlank() } == true
+
+    /** sekey for share/list: the shorturlinfo `randsk`, URL-decoded. */
+    fun sekey(randsk: String?): String? = randsk?.takeIf { it.isNotBlank() }?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }
+
+    private fun q(s: String?) = java.net.URLEncoder.encode(s.orEmpty(), "UTF-8")
+
+    fun resolve(client: OkHttpClient, shareUrl: String, userAgent: String = DESKTOP_UA): Result {
+        val short = shortUrl(shareUrl) ?: return Result.Failed("Not a TeraBox share link")
+        val jar = linkedMapOf<String, String>()
+        listOf(base, "https://www.terabox.com", "https://www.1024terabox.com").mapNotNull { runCatching { cookieSource(it) }.getOrNull() }
+            .joinToString(";").split(';')?.forEach { c -> c.split('=', limit = 2).takeIf { it.size == 2 }?.let { jar[it[0].trim()] = it[1].trim() } }
+        fun cookie() = jar.entries.joinToString("; ") { "${it.key}=${it.value}" }.ifBlank { null }
+        fun get(url: String): String? {
+            val b = Request.Builder().url(url).header("User-Agent", userAgent).header("Referer", "$base/")
+            cookie()?.let { b.header("Cookie", it) }
+            return runCatching {
+                client.newCall(b.build()).execute().use { r ->
+                    r.headers("Set-Cookie").forEach { sc ->
+                        sc.substringBefore(';').split('=', limit = 2).takeIf { it.size == 2 }?.let { if (it[0] !in jar) jar[it[0]] = it[1] }
+                    }
+                    if (r.isSuccessful) r.body?.string() else null
+                }
+            }.getOrNull()
+        }
+        if (!signedIn(cookie())) return Result.NeedsSignIn
+        val page = get("$base/wap/share/filelist?surl=${short.removePrefix("1")}") ?: return Result.Failed("TeraBox page didn't load")
+        val token = jsToken(page) ?: return Result.Failed("TeraBox changed its page (no token)")
+        val info = get("$base/api/shorturlinfo?$QS&jsToken=$token&shorturl=$short&root=1")
+            ?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
+            ?: return Result.Failed("TeraBox didn't list the share")
+        if (info.str("errno") != "0") return Result.Failed("TeraBox refused the share (error ${info.str("errno")})")
+        val file = (info["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
+            ?.firstOrNull { it.str("category") == "1" && it.str("isdir") != "1" }
+            ?: return Result.Failed("This TeraBox share has no video file")
+        val list = get(
+            "$base/share/list?$QS&jsToken=$token&sekey=${q(sekey(info.str("randsk")))}&sign=${info.str("sign")}" +
+                "&timestamp=${info.str("timestamp")}&shareid=${info.str("shareid")}&uk=${info.str("uk")}&shorturl=$short" +
+                "&by=name&order=asc&num=1000&page=1&dir=&root=1",
+        )?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
+        val name = file.str("server_filename") ?: "TeraBox video"
+        if (list?.str("errno") == "0") {
+            val dlink = (list["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
+                ?.firstOrNull { it.str("fs_id") == file.str("fs_id") }?.str("dlink")?.takeIf { it.startsWith("http") }
+            if (dlink != null) return Result.Ok(dlink, name, cookie(), userAgent, hls = false)
+        }
+        val sq = "$QS&jsToken=$token&uk=${info.str("uk")}&shareid=${info.str("shareid")}&fid=${file.str("fs_id")}" +
+            "&sign=${info.str("sign")}&timestamp=${info.str("timestamp")}&esl=1&isplayer=1&ehps=1"
+        for (type in listOf("M3U8_AUTO_720", "M3U8_AUTO_480", "M3U8_FLV_264_480")) {
+            val url = "$base/share/streaming?$sq&type=$type"
+            val body = get(url) ?: continue
+            if (!body.trimStart().startsWith("#EXTM3U")) continue
+            // A sign-in that TeraBox no longer honours still gets the preview: never play it.
+            if (isPreview(body, file.str("size")?.toLongOrNull() ?: 0L)) return Result.NeedsSignIn
+            return Result.Ok(url, name, cookie(), userAgent, hls = true)
+        }
+        return Result.Failed("TeraBox has no stream for this file yet")
+    }
+}
