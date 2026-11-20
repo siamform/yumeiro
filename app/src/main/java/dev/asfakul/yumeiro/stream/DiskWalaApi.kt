@@ -28,8 +28,10 @@ object DiskWalaApi {
     data class FileInfo(val name: String, val bytes: Long, val type: String)
 
     /** `6afdd044…` from `…/app/6afdd044…`. */
+    private val RX_SHARE = Regex("""/app/([A-Za-z0-9]{8,})""")
+
     fun shareId(url: String): String? =
-        Regex("""/app/([A-Za-z0-9]{8,})""").find(url.substringBefore('?').substringBefore('#'))?.groupValues?.get(1)
+        RX_SHARE.find(url.substringBefore('?').substringBefore('#'))?.groupValues?.get(1)
 
     /** File facts, or null when DiskWala doesn't know the share (removed or mistyped). */
     fun info(client: OkHttpClient, id: String): FileInfo? = runCatching {

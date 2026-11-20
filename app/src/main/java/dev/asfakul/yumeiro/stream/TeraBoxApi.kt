@@ -38,8 +38,10 @@ object TeraBoxApi {
     @Volatile var canPlayAv1: () -> Boolean = { true }
 
     /** An AV1 original on a phone with no AV1 decoder plays TeraBox's H.264 transcode instead. */
+    private val RX_AV1 = Regex("""(^|[^a-z0-9])av1([^a-z0-9]|$)""", RegexOption.IGNORE_CASE)
+
     fun preferTranscode(fileName: String): Boolean =
-        Regex("""(^|[^a-z0-9])av1([^a-z0-9]|$)""", RegexOption.IGNORE_CASE).containsMatchIn(fileName) && !runCatching { canPlayAv1() }.getOrDefault(false)
+        RX_AV1.containsMatchIn(fileName) && !runCatching { canPlayAv1() }.getOrDefault(false)
 
     sealed interface Result {
         /** [hls] = TeraBox's transcode playlist; otherwise the original file. */
