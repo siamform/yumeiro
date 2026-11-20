@@ -1513,3 +1513,38 @@ in lastfm.test.ts with the cross-vectors.
 | Process-scoped stores grow with very long sessions | Bounded rows/items; cleared on "Clear caches"; `MemoryWatch` evidence |
 | Emulators don't reproduce every vendor decoder | Codec-aware ladder + ffmpeg fallback; crash export from real users |
 | Large playback refactor regresses a niche path | One migration step at a time, each with `PlayerSwitchDeviceTest` / `OnlinePlaybackDeviceTest` |
+
+### ADR-049: A full disk inside WorkManager's own threads is kept, not crashed (FINAL-17)
+
+Status: accepted 2026-11-20 (final-test cycle, finding FINAL-17).
+
+Context. LowStorageDeviceTest.b_fillsWhileWriting (api33-lowram, P1 of run 44640073858) fills the disk while a
+download writes. The app crashed: `SQLiteFullException` from `SystemIdInfoDao_Impl.removeSystemIdInfo` ←
+`SystemJobScheduler.cancel` ← `Schedulers.registerRescheduling`, on a WorkManager background thread, no app
+frame. The test contract says the app must not crash when storage is full. Google closed the reports as "WorkManager
+cannot do much" (issuetracker b/124579546, b/152202040); SQLite rolls the transaction back, so the database stays
+consistent and WorkManager reconciles its jobs at the next start.
+
+Competitors. SambaLite 2.4.0 (egdels/SambaLite) catches `SQLiteFullException` on WorkManager threads in its
+uncaught-exception handler and keeps running. ShizukuPlus (thejaustin/ShizukuPlus) sets a custom
+`Configuration.setTaskExecutor` that catches it inside WorkManager's task executor (it saw the error wrapped in an
+`IllegalStateException`).
+
+Options. (a) Leave it: the app dies whenever the disk fills during background work — rejected (the test contract,
+low-RAM / low-storage phones). (b) Custom task executor through `Configuration.Provider` — rejected for the release
+candidate: it moves WorkManager to on-demand init (removing the startup initializer), which changes the start path
+of every worker; the crash also came from a coroutine worker thread, not only from the task executor. (c) A guard in
+the default uncaught-exception chain that keeps exactly this case — chosen.
+
+Decision. `diagnostics/DiskFullGuard` (installed in `MTApplication.onCreate` after CrashLog and ExtensionGuard)
+keeps an exception only when it is, or is caused by, `SQLiteFullException`, a stack frame is in `androidx.work.`, it
+is not the main thread and not an out-of-memory error. It logs it and writes a "Handled" crash report; everything
+else goes to the previous handler and crashes as before. The download itself already reports "Storage full"
+(G10).
+
+Side effects. A worker thread of `CoroutineScheduler` reports through the handler and keeps running; WorkManager's
+`SerialExecutorImpl` schedules the next task in `finally`, so the queue continues. A WorkManager database write that
+was lost is redone by its reconcile at the next start. Rollback: remove the `install()` line.
+
+Tests. Unit `DiskFullGuardTest` (recognised case, main thread / our own database / other exceptions / OOM still
+forwarded, handler behaviour). Device: LowStorageDeviceTest on api33-lowram and the other targets in the next passes.

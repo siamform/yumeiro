@@ -41,6 +41,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         DeviceClass.init(this)
         // Must come first: a crashing extension must never take the whole app down.
         dev.asfakul.yumeiro.online.ExtensionGuard.install()
+        // FINAL-17 (ADR-049): a full disk inside WorkManager's own threads no longer takes the app down.
+        dev.asfakul.yumeiro.diagnostics.DiskFullGuard.install()
         dev.asfakul.yumeiro.security.Privacy.load(this)
         // Foreground/background tracking for seamless (Messenger-style) background updates.
         dev.asfakul.yumeiro.update.AppVisibility.install(this)
