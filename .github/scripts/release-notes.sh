@@ -29,13 +29,21 @@ done < <(git log "$range" --no-merges --format="%s%x1f%h%x1f%an")
 
 echo "## Yumeiro v$version"
 echo
-for s in "${order[@]}"; do
-  if [ -n "${bucket[$s]:-}" ]; then
-    echo "### $s"
-    printf '%s\n' "${bucket[$s]}"
-  fi
-done
-[ ${#bucket[@]} -eq 0 ] && { echo "- Maintenance release"; echo; }
+# The written notes for this version in CHANGELOG.md win over the commit list. v1.9.0 had 1,150 commits since
+# v1.8.1 and the commit list passed GitHub's 125,000-character limit for a release body (run 44694112925).
+notes="$(awk -v v="## v$version" 'index($0, v) == 1 { on = 1; next } on && /^## v/ { exit } on' CHANGELOG.md 2>/dev/null || true)"
+if [ -n "$notes" ]; then
+  printf '%s\n\n' "$notes"
+else
+  body=""
+  for s in "${order[@]}"; do
+    if [ -n "${bucket[$s]:-}" ]; then body+="### $s"$'\n'"${bucket[$s]}"$'\n'; fi
+  done
+  [ ${#bucket[@]} -eq 0 ] && body="- Maintenance release"$'\n'
+  # Never pass GitHub's limit: keep the first 100,000 characters and point at the full list.
+  if [ ${#body} -gt 100000 ]; then body="${body:0:100000}"$'\n\n'"… (list cut; full list in the compare link below)"$'\n'; fi
+  printf '%s\n' "$body"
+fi
 
 echo "---"
 echo "**Install:** \`$apk\` works on every device (phone, tablet, Android TV, Fire TV). Smaller downloads: \`*-arm64-v8a.apk\` for most phones and TVs from 2017 on, \`*-armeabi-v7a.apk\` for older 32-bit devices and many TV sticks. Android 7.0 (API 24) or newer is required. In-app updates pick the right one automatically."
