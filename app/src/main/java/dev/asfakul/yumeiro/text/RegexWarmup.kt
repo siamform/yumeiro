@@ -83,7 +83,6 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.online.ReleaseTags",
         "dev.asfakul.yumeiro.online.SearchRankerKt",
         "dev.asfakul.yumeiro.online.SourceFacts",
-        "dev.asfakul.yumeiro.online.StarterExtensions",
         "dev.asfakul.yumeiro.online.UrlFixKt",
         "dev.asfakul.yumeiro.online.anime.AnimeIdsKt",
         "dev.asfakul.yumeiro.online.download.DownloadNaming",

@@ -412,14 +412,9 @@ fun MTPlayerApp(
         // SPD-3 (ADR-038): a new user already waited for the welcome screen; returning users keep the pause
         // so the first frames stay smooth.
         kotlinx.coroutines.delay(dev.asfakul.yumeiro.online.StartupSpeed.firstChecksDelayMs(firstRunAtLaunch))
-        // First run: install one top-rated Movies, Anime and Sports extension so online video works right away.
-        if (dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) {
-            val starters = runCatching { dev.asfakul.yumeiro.online.StarterExtensions.ensure(context) }.getOrDefault(emptyList())
-            if (starters.isNotEmpty()) {
-                dev.asfakul.yumeiro.online.OnlineRepository.refreshAfterExtensionChange()
-                dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Ready to watch: ${starters.joinToString()} installed")
-            }
-        }
+        // Owner decision 2026-11-21: no third-party "starter" extensions are installed on first run
+        // (B-26: one ran a WebView on the main thread and showed a donation dialog). The Yumeiro
+        // master extension (E1) will be the only built-in source; until then Get started lets the user pick.
         backgroundUpdates()
         firstChecksDone = true
     }

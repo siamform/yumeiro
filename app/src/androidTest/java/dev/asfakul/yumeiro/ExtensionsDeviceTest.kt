@@ -317,19 +317,5 @@ class ExtensionsDeviceTest {
         log("E12_RESULT PASS")
     }
 
-    /** E9: a first run with nothing installed gets the starter picks; the next start does nothing. */
-    @Test fun e9_starterExtensionsOnFirstRun() = runBlocking<Unit> {
-        withTimeout(300_000) {
-            ExtensionManager.state.value.installed.forEach { ExtensionManager.uninstall(ctx, it.key) }
-            ctx.getSharedPreferences("starter_extensions", Context.MODE_PRIVATE).edit().clear().commit()
-            val names = dev.asfakul.yumeiro.online.StarterExtensions.ensure(ctx)
-            log("starters: $names")
-            assertTrue("starters installed", names.isNotEmpty())
-            assertEquals(names.size, ExtensionManager.state.value.installed.size)
-            assertEquals("second start installs nothing", emptyList<String>(), dev.asfakul.yumeiro.online.StarterExtensions.ensure(ctx))
-            log("E9_RESULT PASS ${names.size} starters")
-        }
-    }
-
     companion object { const val IA = "InternetArchiveProvider" }
 }
