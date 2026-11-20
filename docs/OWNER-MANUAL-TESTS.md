@@ -130,18 +130,19 @@ owner sends you, then pick any task you can do.
 
 ### Mandatory for every tester (do these first)
 
-These six cover what changed most in 1.9.0. Please do all of them before anything else, and report each one
-as Passed or Failed:
+These seven cover what changed most in 2.0.0 (and the 1.9.0 crash it fixes). Please do all of them before
+anything else, and report each one as Passed or Failed:
 
-1. **U-29** Settings are easy to find (new layout).
-2. **U-26** Profiles and locks.
-3. **U-3** YouTube videos play and change quality.
-4. **U-27** Private downloads.
-5. **U-24** Telegram channel (no login).
-6. **U-20** Your statistics (one day is enough for the first report).
+1. **U-30** Videos open without a crash (YouTube, Live TV, downloads, online episodes).
+2. **U-29** Settings are easy to find (new layout).
+3. **U-26** Profiles and locks.
+4. **U-3** YouTube videos play and change quality.
+5. **U-27** Private downloads.
+6. **U-24** Telegram channel (no login).
+7. **U-20** Your statistics (one day is enough for the first report).
 
 TV owners also: **U-7** TV remote. Updating from 1.8.1: also check that your history, favourites and
-downloads are still there after the update (Settings → Downloads & library).
+downloads are still there after the update (Settings → Downloads & library). Updating from 1.9.0: install 2.0.0 over it; nothing is lost.
 
 | # | Task (what you check) | You need | Steps | It passes if | Same as |
 |---|---|---|---|---|---|
@@ -172,6 +173,7 @@ downloads are still there after the update (Settings → Downloads & library).
 | U-26 | Profiles and locks | phone or TV | 1. Settings → You → Profiles → add a second profile and give it a PIN. 2. Close Yumeiro and open it again. 3. Pick that profile, type a wrong PIN once, then the right one. | "Who's watching?" shows first; the wrong PIN is refused; the right one opens that profile with its own history | OMT-44 |
 | U-27 | Private downloads | phone | 1. Downloads → tap the eye on a finished video. 2. Open your Gallery. 3. Downloads → the lock at the top → unlock. | the video is gone from lists and the Gallery, and shows inside Private after unlocking | OMT-45 |
 | U-28 | Hold for 2x | phone | 1. Play any video. 2. Press and hold on the picture, then let go. | it plays at 2x while you hold and goes back to normal when you let go | OMT-46 |
+| U-30 | Videos open without a crash | phone or TV with 2.0.0 | 1. Open a YouTube video, touch the picture, change quality. 2. Live TV → open 3 channels. 3. Downloads → play a finished video. 4. Open an online episode from Yumix. 5. Open the player, minimise it, open it again. | every video opens and plays; the app never closes by itself; no crash report appears in Settings → Help & about | OMT-61 |
 | U-29 | Settings are easy to find | phone or TV | 1. Open Settings. 2. Find Profiles, Your statistics, Telegram, Downloads, Video quality and Music & sound without searching. 3. Search "telegram", "profile", "subtitle". | each subject has its own page in the group you expect (You, Video, Music, Downloads & library, Sources & accounts, System, About); search finds each one | OMT-62 |
 | U-15 | General feedback | phone or TV | Use Yumeiro as you normally would for a day. | tell us anything confusing, slow or broken | OMT-9 |
 
