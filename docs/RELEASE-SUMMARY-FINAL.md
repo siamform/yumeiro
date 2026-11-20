@@ -39,7 +39,7 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
 ## What is queued
 
 - Owner tests that need real hardware, accounts, a home network or the Worker: docs/OWNER-MANUAL-TESTS.md
-  (OMT-14 … OMT-60) and the community programme docs/USER-TEST-PROGRAM.md.
+  (OMT-14 … OMT-61) and the community programme docs/USER-TEST-PROGRAM.md.
 - The warm-start pass (P2) for every class (dropped for time, owner's decision).
 - Everything in docs/UNVERIFIED-QUEUE.md.
 
@@ -65,25 +65,70 @@ faster start, Security (SEC-LFM), sources and network, fixes). Final-test fixes 
   app's "Notifications not allowed. Tap again…" message was not seen within 10 s after the second "Don't allow"; in
   the run with diagnostics (44672818277, after the FINAL-42 main-thread fix) it showed after each of 5 denials. The
   cause of the three misses is not proven (FINAL-43, OMT-58).
+- FINAL-46: a release build made without the Last.fm, LRCLIB, OpenSubtitles and FCM build values had a video
+  player that Android refused to load (VerifyError, crash on play). The review APKs were built with all values and
+  pass; why R8 does this was not reduced (queue FINAL-46b). Any rebuild must pass the upgrade check before it is
+  published. On TV the "your data is kept" comparison could not run on the emulator (OMT-61).
 - CI: Gradle's configuration cache twice failed to store `processNavigationResources` state in "Build APKs" (runs
   44667182892, 44668053699; no test ran, both re-run). An infrastructure fault, not an app or test result.
 - The Timestamp lines in the bodies of 099689d, a5bc4da and d91f052 are 10–25 min ahead of the real commit time
-  (the commit dates are right). b84b934's body says "disk-full IO", which is not what that commit fixed.
+  (the commit dates are right); 039ca61f says "06:1x UTC", the commit was made at 05:58 UTC. b84b934's body says "disk-full IO", which is not what that commit fixed.
 
 ## Security checks (§9)
 
 | Check | How | Result | Date |
 |---|---|---|---|
-| Secret scan, full history | gitleaks 8.28.0 (CI's pinned version and SHA-256), `git --log-opts=--all`, all 1172 commits (re-run 2026-11-20 03:17 UTC on 1a22844), `.gitleaks.toml` | No leaks. Found 4 hits first: a fake test signature in two SEC-LFM test mocks (not a credential); mocks changed to a low-entropy fake, the two commits allow-listed by SHA and path only (a71cf85) | 2026-11-20 |
+| Secret scan, full history | gitleaks 8.28.0 (CI's pinned version and SHA-256), full history, `.gitleaks.toml` | No leaks: CI job "Secret scan (gitleaks)" 136084973320 in run 44675081410 (1383 commits, fetch-depth 0, 2026-11-20 04:32 UTC); local re-run on 88e2208 with `--log-opts=--all` (1390 commits scanned, all refs) no leaks. `git log --all -S` for every pasted credential value: 0 commits. Earlier: 4 hits on a fake test signature in two SEC-LFM test mocks (not a credential), mocks changed and the two commits allow-listed by SHA and path only (a71cf85) | 2026-11-20 |
 | Secret scan, working tree | gitleaks `dir` | 7 hits, all in the git-ignored `.env` and `secrets/firebase-admin.json` (local only, never committed: checked against every commit) | 2026-11-19 |
-| Secrets in the APK | `ApkSecretsTest` (BuildConfig fields) + string scan of the review APK | SEC-LFM: the Last.fm shared secret was in BuildConfig; removed (b57e155, ADR-048). Trakt client secret, TMDB key, Kitsu id/secret already out. Cloudflare token and Firebase service account are server-only. APK string scan: pending the review APK | 2026-11-19 |
+| Secrets in the APK | `ApkSecretsTest` (BuildConfig fields) + byte scan of both review APKs (raw, inflated zip entries and dex) for every credential value | Not in either APK: Last.fm shared secret, Cloudflare API token, Firebase service-account key id, client e-mail, client id and private key, TMDB key. Present as designed (public client identifiers that every user's app sends): Trakt/Simkl client IDs, OpenSubtitles API key, Last.fm API key, LRCLIB app id, Firebase project id/number, app id and Android API key. SEC-LFM: the shared secret left BuildConfig in b57e155 (ADR-048) and is injected only into the Worker from CI | 2026-11-20 |
 | Dependencies | Dependabot alerts (enabled), `npm audit` in server/ | 0 open Dependabot alerts (5 fixed earlier); npm audit 0 vulnerabilities | 2026-11-19 |
 | Licences | NOTICE vs. `implementation(...)` list | LIC-1 (owner decision): NOTICE lists the vendored and open-source runtime libraries but not the Google SDKs linked into the APK: Firebase Messaging (Apache-2.0, pulls in Google Play services), Cast framework and ML Kit text recognition / translation (Google's own terms, closed binaries). GPL-3.0 projects that link closed Google SDKs usually state it; this needs the owner's choice of wording or a build without them | 2026-11-19 |
-| Virus scan | VirusTotal (or equivalent) on the review APK | pending the review APK | |
-| APK integrity | apksigner verify, cert, ABIs, R8 (X10-1) | pending the review APK | |
-| CI on the exact head | ci.yml | 44610265729 success on 6f11509; to repeat on the review-APK commit | 2026-11-20 |
+| Virus scan | ClamAV 1.5.4 (3,628,199 signatures, databases updated 2026-11-20) on both review APKs. VirusTotal was not used: uploading would make the unpublished APK available to third parties, and there is no API key | 0 infected (phone and TV) | 2026-11-20 |
+| APK integrity | apksigner verify in CI (INTEGRITY.txt in the artifact) + local androguard 4.1.4 | Signed with the release certificate SHA-256 2ecdfd04…413f6b = `.github/release-signing-cert.sha256` (CI gate + v2 and v3 blocks checked locally, both APKs). Phone: v3 verified (minSdk 28), TV: v2 + v3 (minSdk 24). versionCode 17, versionName 1.9.0, targetSdk 37. ABIs arm64-v8a, armeabi-v7a, x86, x86_64. R8 on: 6 dex files, mapping.txt for mobileRelease and tvRelease | 2026-11-20 |
+| CI on the review-APK commit | ci.yml `review_apk=true` | 44675081410 success on 8cef8a6: Build, unit tests & lint (job 136084973118), gitleaks (136084973320), review APK (136096382496) | 2026-11-20 |
 
 ## Review APK
+
+Built and signed by CI, not published (artifact only, kept 14 days).
+
+- CI run: [44675081410](https://github.com/siamform/yumeiro/actions/runs/44675081410) (ci.yml, `review_apk=true`), commit
+  8cef8a6. App code is the same as df4ba9d; commits after 8cef8a6 change only docs, images and device tests.
+- Artifact: `yumeiro-review-apk` (both APKs, SHA256SUMS.txt, INTEGRITY.txt).
+
+| APK | SHA-256 |
+|---|---|
+| yumeiro-1.9.0-8cef8a6-review.apk (phone, 131.6 MB) | d890e8ab1d950a24b18e1c926eb1326a687a6325b6ac4aa4868905c87852f877 |
+| yumeiro-tv-1.9.0-8cef8a6-review.apk (TV, 96.2 MB) | df3ec66c503b9cdc1ee9b39bcef0221b605cf4a3b5a6595f278b9b92d3d92204 |
+
+Install over 1.8.x (upgrade check from the published v1.8.1 to these exact APKs, downloaded from the artifact and
+checked against SHA256SUMS):
+
+- Phone, api33 emulator, [44683540047](https://github.com/siamform/yumeiro/actions/runs/44683540047): same
+  certificate on both, install over 1.8.1 Success, 0 files or preferences lost (4 values changed by the app itself:
+  FCM token app version, push fingerprint and sync time, updater check time), no welcome guide again, the clip
+  played in 1.8.1 resumed from 50.2 s, 0 FATAL/ANR, 0 ART verifier rejections.
+- TV, android-tv api34 emulator, [44684601986](https://github.com/siamform/yumeiro/actions/runs/44684601986):
+  install over TV 1.8.1 Success, the 1.9.0 player plays the clip, 0 FATAL/ANR, 0 verifier rejections. The data
+  comparison is Blocked: the TV emulator image gives no root, so its app data cannot be read (OMT-61).
+- FINAL-46: the first upgrade run (44681019595) built its own APK with fewer build values than the release and
+  that build's video player was rejected by ART (VerifyError); the check now uses the release inputs, fails on
+  any verifier rejection and can install the exact review APK. The review APKs are not affected (above).
+
+## Final findings and numbers
+
+- FINAL-42 (app, fixed in df4ba9d): app messages are changed on the main thread only (a worker-thread error broke a
+  Compose frame and crashed the process). Pass-after: tv-api34 RetryActions 5/5 (44672818277), phones (44673996183).
+  Fail-before on the old code: [44680944481](https://github.com/siamform/yumeiro/actions/runs/44680944481) (only AppMessagesMainThreadTest fails: "changed off the main thread").
+- FINAL-43: closed as Blocked (not reproduced after FINAL-42; TV dialog never offers "don't ask again"), OMT-58.
+- FINAL-44: test fault on tv-api34 (MiniPlayer swipe under the TV rail, MusicAccess TV tab tag), fixed in 0687e72,
+  Pass in 44674391443.
+- FINAL-45 (open, not reproduced): one 2.8 s binder stall in the window manager on api33-lowram (44665076936);
+  3/3 Pass in 44673996183.
+- FINAL-46: see Review APK (upgrade check harness fixed; review APKs clean on phone and TV).
+- FINAL-35, third run: tv-api24 StabilityStress peak heap 95/512 MB, no ANR (44670841174). Still not reproduced, OMT-57.
+- Checklist (docs/MASTER-CHECKLIST-FINAL.md): 0 Fail, 0 P1 cell Not run; every P1 cell is Pass with run IDs or
+  Blocked with a reason and a queue item; every P2 cell is "Not run (owner's decision 2026-11-20: P1 only)".
+
 ## Install and test guide for the owner
 
 The review APK is signed with the release certificate (checked in CI against

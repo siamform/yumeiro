@@ -196,7 +196,7 @@ Classes not mapped to a row (they still run in every pass): none.
 |---|---|
 | X1 | Architecture and layering: a code property, checked in docs/CODE-AUDIT-FINAL.md (Architecture row, AUD-ARCH-1/2). |
 | X7 | Security: secrets in the APK, storage, network, integrity: ApkSecretsTest in CI plus the review-APK string scan, gitleaks and the virus scan in docs/RELEASE-SUMMARY-FINAL.md; the integrity check itself runs on devices in FinalCoverage g_ (row N9). |
-| X10 | Build, CI, release, signing: proved by the CI runs on the head and the review APK checks (apksigner, ABIs, R8/X10-1) in docs/RELEASE-SUMMARY-FINAL.md. |
+| X10 | Build, CI, release, signing: proved by the CI runs on the head and the review APK checks (apksigner, ABIs, R8/X10-1) in docs/RELEASE-SUMMARY-FINAL.md (review CI 44675081410); upgrade over v1.8.1 with the exact review APKs: phone 44683540047 (0 lost, resumed, 0 verifier rejections), TV 44684601986 (installs, plays, 0 rejections; data compare Blocked: no root on the android-tv image, OMT-61); FINAL-46. |
 | X16 | Cloud Worker: server code, tested in docs/SERVER-TEST-FINAL.md (40/40 + Last.fm 5/5, failure cases); its device side is row I8/F-AIR (FcmAiringWake, ClosedAppAlert). |
 
 ## Skips and Blocked cells with written reasons (§5)

@@ -108,6 +108,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-58 | FINAL-43: notification permission on an Android 13+ TV after two "Don't allow" | Owner/community test (pending) |
 | OMT-59 | FT-B1: smoothness on an Android 7–8 TV (main-thread checks need Android 9 on emulators) | Owner/community test (pending) |
 | OMT-60 | FT-B3: Yumix "See all" keeps paging while searching | Owner/community test (pending) |
+| OMT-61 | FINAL-46: video plays right after the upgrade; TV data kept | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -119,7 +120,7 @@ Report with the GitHub issue form "Test report" (Issues → New issue; `.github/
 in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
 
 The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
-**owner (developer)** section after it (OMT-1…OMT-60, full detail; some need consoles, logs or decisions).
+**owner (developer)** section after it (OMT-1…OMT-61, full detail; some need consoles, logs or decisions).
 
 ## Yumeiro users checklist
 
@@ -840,6 +841,15 @@ the app version and your device. Don't send passwords or account details.
   bottom of the results, twice. **Pass:** more results keep loading at the bottom; nothing repeats or jumps.
   Why you: on the CI machines every row had a single page, so the second page never loaded. **Status:**
   Owner/community test (pending)
+
+### OMT-61 — 1.9.0 opens a video right after installing over 1.8.x, TV data kept (final test, FINAL-46)
+
+- **Steps:** on the phone and on the TV, after installing the review APK over 1.8.x: open one video you had
+  half-watched (Continue watching or History) and one new video. On the TV also check that your library,
+  extensions and settings are still there. **Pass:** both videos play (the half-watched one from where you
+  stopped) and nothing is missing. Why you: a test build made with different inputs crashed in the player
+  (FINAL-46); the exact review APKs passed on the emulators, but the TV emulator gives no root, so the TV data
+  comparison could not run. **Status:** Owner test (pending)
 
 ## Not owner tests (handled by the agent)
 

@@ -79,7 +79,8 @@ docs/UNVERIFIED-QUEUE.md and docs/OWNER-MANUAL-TESTS.md).
 - Final-test items the emulators can't do: skip-intro times after the TV was offline (OMT-54), app lock with a PIN
   on a TV (OMT-55), last-backup time after a restore restarts the app (OMT-56), memory on an Android 7 TV after long
   drama browsing (OMT-57), the TV notification question after two "Don't allow" (OMT-58), smoothness on an
-  Android 7–8 TV (OMT-59), Yumix "See all" loading a second page (OMT-60).
+  Android 7–8 TV (OMT-59), Yumix "See all" loading a second page (OMT-60), a video right after installing over
+  1.8.x and the TV keeping its data (OMT-61).
 
 ### Known imperfect in this release candidate
 - YouTube can answer "Sign in to confirm you're not a bot" and refuse to play; the emulators in CI always get this,
