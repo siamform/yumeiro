@@ -86,7 +86,6 @@ object ShortsWindow {
     fun opens(isShort: Boolean, queueSize: Int, tv: Boolean, enabled: Boolean): Boolean =
         enabled && !tv && isShort && queueSize >= 1
 
-    /** F-12: 9:16 (portrait or square) fills the screen; a landscape clip is fitted so nothing is cropped. */
     /** ADR-056: the top bar and title hide after this long of uninterrupted play. */
     const val CHROME_IDLE_MS = 3_500L
 
@@ -99,6 +98,8 @@ object ShortsWindow {
     /** A tap while the chrome is hidden only brings it back; with the chrome up it pauses or plays. */
     fun tap(chromeShown: Boolean): Tap = if (chromeShown) Tap.TOGGLE_PLAY else Tap.SHOW_CHROME
 
+    /** F-12: 9:16 (portrait or square) fills the screen; a landscape clip is fitted so nothing is cropped. */
+    @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // AspectRatioFrameLayout resize constants (Media3 pinned)
     fun resizeFor(width: Int, height: Int, fitLandscape: Boolean): Int =
         if (fitLandscape && width > 0 && height > 0 && width > height) AspectRatioFrameLayout.RESIZE_MODE_FIT
         else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
