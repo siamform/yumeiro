@@ -1759,3 +1759,19 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
 - Check: `scripts/check_abi_splits.py` (CI input `abi_splits`) fails unless each edition has five
   APKs, each split holds only its own lib/<abi>, the universal holds all four, and all share one
   versionCode.
+
+### ADR-055: Curated Live TV is built from the iptv-org database and probed on every sync (E2)
+
+- Context: big public playlists carry thousands of dead or geo-locked links. iptv-org's own
+  tooling checks links and drops broken ones; its data (channels, streams, blocklist, logos) is
+  public domain.
+- Decision: our own script `.github/scripts/curate_live.py` (no iptv-org code copied) picks about
+  20 channels per country from the iptv-org API, drops NSFW, closed and blocklisted (DMCA / NSFW)
+  channels and links that need special headers, ranks 24/7, not geo-blocked, https, higher quality
+  first, and keeps only links that answer with an HLS playlist (a master playlist's first variant
+  must answer too). One link per channel. Output: `curated/<cc>.m3u` + `curated/index.json` on the
+  streams branch, inside the existing stream-sync run. Kill switch: repository variable
+  `YUMEIRO_CURATED_LIVE` (off unless "true"); a country whose probe finds nothing keeps its last file.
+- Limits: the probe runs from a GitHub runner (US), so a link geo-locked outside the US can be kept
+  or dropped wrongly; the app still shows its normal error for a dead link. Countries live in
+  `.github/streams/curated.json`.
