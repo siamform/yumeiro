@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-22 01:10 +06, branch `r15-stability` head after commit "FE-4b: feed working set" (fadf8ded) + this docs commit.
+2026-11-22 01:45 +06, branch `r15-stability` head after commit "B31-SEEK5-T + FE-Q-CHK Pass".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,8 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21/22), newest first
+- B31-SEEK5-T: TorrentBlocksTest.primePutsTheStartBeforeTheEnd updated to the B31-SEEK5 contract (tail held until the start has bytes); the only failure of 44887743406.
+- FE-Q-CHK Pass 44888340063: an update does not reinstall extensions (26/26 files identical) and does not slow their load.
 - FE-4b: Yumix working set: only picked + pinned + fastest 24 (12 on 2 GB) fetch live; rest saved pages, join at the feed end (flag fe4_working_set).
 - FE-Q-CHK: UpdateFeedDeviceTest (install extensions, relaunch, `adb install -r` update, compare files / timings / dexopt).
 - FE-P-T: PauseWhilePlayingTest expectation fixed (gate has 3 permits; it asserted 4).
@@ -51,6 +53,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Device 44888340063 @ad503cc2 phones: UpdateFeedDeviceTest Pass (FE-Q1 no reinstall, FE-Q2 load unchanged after update).
 - Pass-after CI 44884554686 @346a581c (abi_splits=true): success, 338 test classes, 0 failures: F-22, E3, E2, E4, SPEED-1..4, SPEED-T1, B-31 notice / seek, B31-SEEK2, B31-SEEK3 / SEEK-T, FE-1, FE-2/2b, FE-7a/b. GateLaneTest passed there (T-GATE looks like runner timing; keep watching).
 - Fail-before verified: FE-2c 44885309121 (unresolved PriorityGate.Lane); branch deleted.
 - Device phones 44884969625 @7d77a583: SpeedDeviceTest Pass both (SPEED-T2 numbers in GOAL-TOP-OF-CLASS.md); BuiltinTorrentDeviceTest api36 Pass (first 64 KB 3668 ms, seek 3115 ms), api33-lowram Fail (first piece no block 16 s) -> B31-SEEK5.
@@ -79,9 +82,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- Pass-after CI 44887743406 on r15-stability @e5bb8f01 (abi_splits=true): covers FE-S1, FE-3, SPEED-T2, FE-P (+FE-P-T), FE-2c, FE-5, FE-S2, B31-SEEK4/5, FE-S3, FE-4a, FE-S4. Not FE-4b (fadf8ded is later): the r15 CI after it covers FE-4b. Do not dispatch an r15 CI while one runs (concurrency cancels).
+- Pass-after CI on r15-stability head (run ID in R15-STATUS line 3, abi_splits=true): covers FE-S1, FE-3, SPEED-T2, FE-P (+FE-P-T), FE-2c, FE-5, FE-S2, B31-SEEK4/5 (+B31-SEEK5-T), FE-S3, FE-4a, FE-S4, FE-4b. Previous 44887743406 @e5bb8f01: failure, only TorrentBlocksTest (B31-SEEK5-T, fixed), 346 classes. Do not dispatch an r15 CI while one runs.
 - Fail-before CI 44888534031 on ab/fe4b-before (expect compile failure: unresolved FeedWorkingSet). Then delete the branch.
-- Device 44888340063 @ad503cc2 phone=both: UpdateFeedDeviceTest (FE-Q1/Q2). Read UPDFEED lines in the job log / stress/updfeed/numbers.txt, dexopt-*.txt, ext-*.txt in artifact device-check-<dev>-1.
 - After a green r15 CI: BuiltinTorrentDeviceTest phone=both and TV tv_api=24 (B31-SEEK4/5); SpeedDeviceTest phone=both (FE-S3/S4/FE-4a numbers).
 
 ## Next steps, in order

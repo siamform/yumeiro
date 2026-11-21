@@ -60,8 +60,13 @@ class TorrentBlocksTest {
         val dir = tmp.newFolder()
         val f = TorrentFile(0, "movie.mkv", data.size.toLong(), 0)
         val meta = TorrentMeta("ef".repeat(20), "movie", pl, 3, listOf(f))
+        File(dir, f.path).writeBytes(data)
         val core = FakeCore(dir, meta)
-        TorrentSource(core, meta, f, readAhead = pl.toLong()).prime()
+        val src = TorrentSource(core, meta, f, readAhead = pl.toLong(), waitMs = 2_000)
+        src.prime()
+        // B31-SEEK5 (flag b31_target_first): until the start has bytes it is the only deadline; the end waits.
+        assertTrue("end asked before the start had bytes: ${core.deadlines.toList()}", core.deadlines.none { it.first == 2 })
+        core.arrive(0); src.read(0, ByteArray(10), 0, 10)
         val first = core.deadlines.first { it.first == 0 }.second
         val tail = core.deadlines.first { it.first == 2 }.second
         assertTrue("start deadline $first must be before the end's $tail", first < tail)
