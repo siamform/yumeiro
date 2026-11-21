@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-22 02:10 +06, branch `r15-stability` head after commit "E4-T: feed throttle on heat / low memory".
+2026-11-21 16:05 +06 (real clock; see TIME-FIX: earlier "2026-11-22" stamps were ahead), branch `r15-stability` head after commit "F-07-VIS + DEV-CHK-21 device tests".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -17,7 +17,10 @@ Owner rule 19:15: after every bug/feature, mark its status in the docs, verified
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
-## Done today (2026-11-21/22), newest first
+## Done today (2026-11-21), newest first
+- F-07-VIS: external players (VLC, mpv, MX, MX Pro, Just Player) were invisible on Android 11+ (manifest `<queries>` missing them); declared. Fail-before 44890380227 verified.
+- DEV-CHK-21: new device tests for rows with none: Nbug10FilterSearch, VolumeBoost (F-06), Nf1EpisodeStatus, Upcoming (F-08), F01DubTap.
+- CI-429: 44889594971 Blocked by Maven Central 429 before tests; superseded by 44890073919 Pass.
 - E4-T: background feed work 1 at a time when hot or short of memory, one less when warm (FeedThrottle, flag e4_throttle).
 - E4-GUIDE: no change (OnboardingGate holds only a first run with nothing installed; it is the extension pop-up blocker).
 - B31-SEEK5-T: TorrentBlocksTest.primePutsTheStartBeforeTheEnd updated to the B31-SEEK5 contract (tail held until the start has bytes); the only failure of 44887743406.
@@ -55,6 +58,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Pass-after CI 44890073919 @e2b87521 (abi_splits=true): success, 353 test classes, 0 failures: FE-S1, FE-S2, FE-S3, FE-S4, FE-3, FE-P (+FE-P-T), FE-2c, FE-4a, FE-4b, FE-5, E4-T, B31-SEEK4/5 (+B31-SEEK5-T) unit, SPEED-T2 compile; GateLaneTest (T-GATE) passed.
+- Fail-before verified: E4-T 44889828561 (unresolved FeedThrottle), F-07-VIS 44890380227 (only failure ExternalPlayersVisibilityTest); branches deleted.
 - Fail-before verified: FE-4b 44888534031 (unresolved FeedWorkingSet); branch deleted.
 - Device 44888340063 @ad503cc2 phones: UpdateFeedDeviceTest Pass (FE-Q1 no reinstall, FE-Q2 load unchanged after update).
 - Pass-after CI 44884554686 @346a581c (abi_splits=true): success, 338 test classes, 0 failures: F-22, E3, E2, E4, SPEED-1..4, SPEED-T1, B-31 notice / seek, B31-SEEK2, B31-SEEK3 / SEEK-T, FE-1, FE-2/2b, FE-7a/b. GateLaneTest passed there (T-GATE looks like runner timing; keep watching).
@@ -84,15 +89,15 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Fail-before verified: F-21 44878962117, B-31 speed 44879233183, F-22 44879571787, E3 44879928117 (branches deleted).
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
-## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- Fail-before CI 44889828561 on ab/e4t-before (expect compile failure: unresolved FeedThrottle). Then delete the branch.
-- Pass-after CI on r15-stability head (run ID in R15-STATUS line 3, abi_splits=true): covers FE-S1, FE-3, SPEED-T2, FE-P (+FE-P-T), FE-2c, FE-5, FE-S2, B31-SEEK4/5 (+B31-SEEK5-T), FE-S3, FE-4a, FE-S4, FE-4b (E4-T needs the r15 CI after 44889594971). Previous 44887743406 @e5bb8f01: failure, only TorrentBlocksTest (B31-SEEK5-T, fixed), 346 classes. Do not dispatch an r15 CI while one runs.
-- After a green r15 CI: BuiltinTorrentDeviceTest phone=both and TV tv_api=24 (B31-SEEK4/5); SpeedDeviceTest phone=both (FE-S3/S4/FE-4a numbers).
+## Pending runs (check each, record in the ledger, then delete any ab/ branch)
+- Device 44892710506 @e2b87521 phones both: BuiltinTorrentDeviceTest (B31-SEEK4/5) + SpeedDeviceTest (FE-S1/S3/S4/FE-4a numbers). Read `grep -a "I/B31\|I/SPEED"` in device-check-<dev>-1/logcat.txt.
+- Device 44892712537 @e2b87521 TV api24: BuiltinTorrentDeviceTest (B31-SEEK4 seek budget 5 s).
+- Pass-after CI for F-07-VIS + compile of the 5 new device tests: next r15-stability CI (run ID in R15-STATUS line 3).
 
 ## Next steps, in order
-1. Record the pending runs above (ledger row, FEED-ENGINE row, this file, R15 line 3).
-2. FEED-ENGINE remaining: FE-4 lazy code load (only if the device numbers show load cost matters; ext_first_usable is ~1 s now), FE-Q2 result -> fix if the update recompiles extensions on the main path, FE-5 device check, FE-S4 device check.
-3. E4 part 2: visible-rows scheduler, low-RAM / heat throttle, Explore guide delay.
-4. Device checks for every "Built, not tested" row (MAJOR-BUGS lines 51-115); docs/UNVERIFIED-QUEUE.md; G-rows in GOAL-TOP-OF-CLASS.md.
-5. E3 website ABI detector: Blocked (the website is not in this repo). E1 master extension: large, not started. F-22b.
+1. Record the pending runs above (ledger rows, FEED-ENGINE, MAJOR-BUGS, this file, R15 line 3).
+2. When the r15 CI is green: device run phone=both with Nbug10FilterSearchDeviceTest, VolumeBoostDeviceTest, Nf1EpisodeStatusDeviceTest, UpcomingDeviceTest, F01DubTapDeviceTest; TV api34 with VolumeBoost, Nf1EpisodeStatus, Upcoming. Max 2 device workflows at once.
+3. Re-run on this head the old device tests of the other "Built, not tested" rows: ReleaseFeatures (F-04/F-10/F-12/F-17/TV-4), PosterActions (F-09), FinalCoverage (F-14/F-15), MangaOffline (F-13), Nbug15Recents/Redesign, TelegramPublic/TelegramPlayback (F-02 public). Record each as Pass/Fail with run ID in MAJOR-BUGS.
+4. FEED-ENGINE remaining: FE-4 lazy code load (only if device numbers show load cost; ext_first_usable ~1 s), FE-5 / FE-S4 device checks. docs/UNVERIFIED-QUEUE.md; G-rows in GOAL-TOP-OF-CLASS.md.
+5. E3 website ABI detector: Blocked (website not in this repo). E1 master extension: large, not started. F-22b.
 6. Release only on the owner's explicit go.

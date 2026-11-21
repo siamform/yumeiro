@@ -68,6 +68,12 @@
         <package android:name="com.dv.adm" />
         <package android:name="com.dv.adm.pay" />
         <package android:name="com.dv.adm.old" />
+        <!-- F-07-VIS: external players (ExternalPlayers.App); invisible on Android 11+ without these. -->
+        <package android:name="org.videolan.vlc" />
+        <package android:name="is.xyz.mpv" />
+        <package android:name="com.mxtech.videoplayer.ad" />
+        <package android:name="com.mxtech.videoplayer.pro" />
+        <package android:name="com.brouken.player" />
     </queries>
 
     <application
