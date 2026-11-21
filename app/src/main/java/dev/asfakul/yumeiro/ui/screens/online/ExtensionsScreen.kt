@@ -489,10 +489,15 @@ private fun InstalledCard(
                 )
                 ExtensionIcon(ext.iconUrl)
                 Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(ext.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("v${ext.version} · ${ext.repoName}", color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // F-21: shared label — name + language chip, then "3 sources • CloudStream • Repo • v12".
+                val rich = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS) }
+                val label = remember(rich, ext.name, ext.language, ext.repoName, ext.version, info.loaded, info.providers.size) {
+                    if (!rich) dev.asfakul.yumeiro.online.ExtensionLabels.Label(ext.name, null, "v${ext.version} · ${ext.repoName}")
+                    else dev.asfakul.yumeiro.online.ExtensionLabels.build(
+                        ext.name, ext.language, info.providers.size.takeIf { info.loaded }, "CloudStream", ext.repoName, listOf("v${ext.version}"),
+                    )
                 }
+                ExtensionLabelText(label, titleColor = TextPrimary, lineColor = TextTertiary, modifier = Modifier.weight(1f))
                 if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
                 else if (!selecting) Switch(
                     checked = ext.enabled, onCheckedChange = onToggle,
@@ -530,7 +535,7 @@ private fun InstalledCard(
                 when {
                     !ext.enabled -> Pill("Off", TextTertiary)
                     info.error != null -> Pill("Error", ErrorColor)
-                    info.loaded -> Pill("${info.providers.size} source${if (info.providers.size == 1) "" else "s"}")
+                    info.loaded -> Pill(if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) "On" else "${info.providers.size} source${if (info.providers.size == 1) "" else "s"}")
                 }
                 if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else "Manual updates", TextSecondary)
                 if (update != null) Pill("Update v${update.version}", WarnColor)

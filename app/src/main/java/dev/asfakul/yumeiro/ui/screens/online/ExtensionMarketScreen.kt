@@ -366,6 +366,8 @@ private fun MarketCard(
     ext: RemoteExtension, installedVersion: Int?, hasUpdate: Boolean, busy: Boolean, showRank: Boolean,
     onInstall: () -> Unit, onManage: () -> Unit,
 ) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val rich = remember { dev.asfakul.yumeiro.FeatureFlags.on(ctx, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS) }
     Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("market_item_${ext.internalName}")) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -375,14 +377,16 @@ private fun MarketCard(
                 ExtensionIcon(ext.iconUrl?.replace("%size%", "128"))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(ext.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    // F-21: shared label. Source count is only known after install, so the market leaves it out.
+                    val label = remember(rich, ext.name, ext.language, ext.repoName, ext.version, ext.fileSize) {
+                        dev.asfakul.yumeiro.online.ExtensionLabels.build(
+                            ext.name, ext.language.takeIf { rich }, null, "CloudStream".takeIf { rich }, ext.repoName,
+                            listOfNotNull("v${ext.version}", ext.fileSize?.takeIf { it > 0 }?.let { formatSize(it) }),
+                        )
+                    }
+                    ExtensionLabelText(label, titleColor = TextPrimary, lineColor = TextTertiary) {
                         if (ext.verified) { Spacer(Modifier.width(4.dp)); Icon(Icons.Default.Verified, "Curated", tint = SpotifyGreen, modifier = Modifier.size(14.dp)) }
                     }
-                    Text(
-                        listOfNotNull("v${ext.version}", ext.repoName, ext.fileSize?.takeIf { it > 0 }?.let { formatSize(it) }).joinToString(" · "),
-                        color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
                     // FlowRow + single-line chunks: when the trailing button grows (e.g. "Installed"),
                     // whole chunks wrap to the next line instead of breaking text letter by letter.
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("market_stats_${ext.internalName}")) {
@@ -417,7 +421,8 @@ private fun MarketCard(
             Spacer(Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Pill(ext.statusLabel, when (ext.status) { 0 -> ErrorColor; 2, 3 -> WarnColor; else -> SpotifyGreen })
-                ext.language?.takeIf { it.isNotBlank() }?.let { Pill(it.uppercase(), TextSecondary) }
+                // F-21: the language is the chip next to the name now; keep a pill only when it isn't a code.
+                ext.language?.takeIf { it.isNotBlank() && (!rich || dev.asfakul.yumeiro.online.ExtensionLabels.langCode(it) == null) }?.let { Pill(it.uppercase(), TextSecondary) }
                 ext.categories.take(3).forEach { Pill(it, TextSecondary) }
                 if (ext.origin != "curated") OriginPill(ext.origin, ext.verified)
                 if (ext.apiVersion > OnlineRuntime.API_VERSION) Pill("Needs app update", ErrorColor)

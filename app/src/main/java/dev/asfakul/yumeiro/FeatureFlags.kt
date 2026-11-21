@@ -61,6 +61,8 @@ object FeatureFlags {
         APP_PROXY("nbug13_proxy", true),
         /** NBUG-6 (ADR-046): Settings → Network → "Automatic DNS fallback" (the user setting itself is Off by default). */
         DNS_FALLBACK("nbug6_dns_fallback", true),
+        /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */
+        EXTENSION_LABELS("f21_extension_labels", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }

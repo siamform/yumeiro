@@ -87,6 +87,8 @@ internal fun SourceFilterSheet(
     onTogglePin: ((String) -> Unit)? = null,
     texts: SourceFilterTexts = SourceFilterTexts.Extensions,
     label: ((String) -> String)? = null,
+    /** F-21: language chip and "3 sources • CloudStream • Repo" for each extension row; null = plain rows. */
+    details: ((String) -> dev.asfakul.yumeiro.online.ExtensionLabels.Label?)? = null,
 ) {
     val p = LocalMtPalette.current
     val t = texts
@@ -140,8 +142,9 @@ internal fun SourceFilterSheet(
                         SourceStatus.Failed -> t.failed
                         is SourceStatus.Ready -> t.ready(st.titles)
                     }
+                    val info = remember(n, details) { details?.invoke(n) }
                     FilterRow(
-                        n, nameOf(n), sub, selected == n, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed,
+                        n, nameOf(n), sub, selected == n, details = info, loading = status(n) == SourceStatus.Loading, failed = status(n) == SourceStatus.Failed,
                         pinned = n in pins, onTogglePin = onTogglePin?.let { tp -> { tp(n) } }, tagPrefix = t.tag,
                     ) { onPick(n) }
                 }
@@ -218,7 +221,8 @@ internal const val SECTION_SEARCH_CAP = 2000
 @Composable
 private fun FilterRow(
     name: String?, title: String, sub: String, sel: Boolean, loading: Boolean = false, failed: Boolean = false,
-    pinned: Boolean = false, onTogglePin: (() -> Unit)? = null, tagPrefix: String = "online_filter", onClick: () -> Unit,
+    pinned: Boolean = false, onTogglePin: (() -> Unit)? = null, tagPrefix: String = "online_filter",
+    details: dev.asfakul.yumeiro.online.ExtensionLabels.Label? = null, onClick: () -> Unit,
 ) {
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.14f) else Color.Transparent, label = "filter_bg")
@@ -231,7 +235,10 @@ private fun FilterRow(
     ) {
         ChannelAvatar(if (name == null) "All" else title, selected = sel, size = 40.dp, mix = name == null)
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
+        if (details != null) ExtensionLabelText(
+            details.copy(title = title), titleColor = p.textPrimary, lineColor = if (failed) WarnColor else p.textSecondary,
+            status = sub, titleWeight = if (sel) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.weight(1f),
+        ) else Column(Modifier.weight(1f)) {
             Text(title, color = p.textPrimary, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(sub, color = if (failed) WarnColor else p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }

@@ -121,6 +121,7 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 | No third-party starter extensions; use the Yumeiro master extension (E1) | 2026-11-21 |
 | Discreet launcher icon: dropped, do not build | 2026-11-21 |
 | Telegram: full login (TDLib), replaces the old "no login" decision | 2026-11-21 |
+| Build our own; reverse engineering is allowed to understand sites, plugins and formats (interoperability, diagnosis), e.g. B-32. Still not allowed: bypassing DRM, logins or paywalls, and copying closed or GPL-incompatible code (legal risk to the app) | 2026-11-21 |
 
 ---
 
