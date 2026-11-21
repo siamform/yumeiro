@@ -120,8 +120,12 @@ fun VideoPlayerTopBar(
     sleepLabel: String? = null,
     onSleepTimerClick: () -> Unit = {},
 ) {
+    // OL-7: the buttons get exactly the room they use, at the trailing edge; the title takes the rest.
+    val aligned = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_ALIGN)
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+    val buttonsMaxDp = TopBarFit.buttonsWidth(maxWidth.value, compact)
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = if (compact) 4.dp else 12.dp, vertical = if (compact) 0.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -194,7 +198,10 @@ fun VideoPlayerTopBar(
                     (c != dev.asfakul.yumeiro.player.VideoPrefs.Control.PIP || isPipSupported)
             }
         }
-        BoxWithConstraints(modifier = Modifier.weight(1.4f, fill = false)) {
+        BoxWithConstraints(
+            modifier = if (aligned) Modifier.widthIn(max = buttonsMaxDp.dp).testTag("video_top_buttons")
+            else Modifier.weight(1.4f, fill = false)
+        ) {
             val split = TopBarFit.split(visible, maxWidth.value, qualityLabel)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -394,6 +401,7 @@ fun VideoPlayerTopBar(
                 )
             }
         }
+    }
     }
 }
 

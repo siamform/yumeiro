@@ -38,6 +38,22 @@ internal object TopBarFit {
      * that does not fit goes to the menu, and so does every button after it, so the row reads in the
      * user's order and nothing jumps around when the quality label changes length.
      */
+    /** OL-7: the title keeps at least this much; the buttons may use the rest of the bar. */
+    const val TITLE_MIN_DP = 120f
+    const val TITLE_MIN_COMPACT_DP = 96f
+
+    /**
+     * OL-7: room for the buttons in a bar [totalDp] wide: minus the side padding, Back, the two 6 dp
+     * spacers and the title's minimum. Before, the buttons got a fixed 1.4 : 1 share whether they
+     * used it or not, so a gap sat left of Quality / Audio / More and the title was cut early.
+     */
+    fun buttonsWidth(totalDp: Float, compact: Boolean): Float {
+        val pad = if (compact) 8f else 24f
+        val back = 48f // Back is an IconButton: the 48 dp touch target wins over its 40/44 dp size
+        val title = if (compact) TITLE_MIN_COMPACT_DP else TITLE_MIN_DP
+        return (totalDp - pad - back - 12f - title).coerceAtLeast(BUTTON_DP)
+    }
+
     fun split(visible: List<Control>, availableDp: Float, qualityLabel: String?): Split {
         var left = availableDp - BUTTON_DP // the More button is always there
         val inline = ArrayList<Control>(visible.size)
