@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 18:05 +06, branch `r15-stability` head after commit "SPEED-T1: test uses newHomePageResponse" (see `git log -1`).
+2026-11-21 18:10 +06, branch `r15-stability` head after commit "docs: device re-runs with the right class name" (see `git log -1`).
 
 ## Owner rule 2026-11-21 17:15 +06
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
@@ -34,11 +34,12 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- Device 44881581791 (phones) + 44881606204 (TV api24) BuiltinTorrentDeviceTest @5c031c10 = B31-SEEK2 device check.
-- SpeedDeviceTest baseline: dispatch phones=both when a device slot frees (max two device runs).
+- Device 44882300017 (phones) + 44882301935 (TV api24) `dev.asfakul.yumeiro.BuiltinTorrentDeviceTest` = B31-SEEK2 device
+  check (44881581791 cancelled / 44881606204 no test ran: wrong class name, see CANCELLED-RUNS.md).
+- Pass-after CI 44882251682 (r15-stability, abi_splits=true): F-22, B-31 notice, E2, E3, B-31 seek, B31-SEEK2, E4,
+  SPEED-1/2, SPEED-3/4. Do not dispatch another r15-stability CI while it runs.
+- SpeedDeviceTest baseline (`dev.asfakul.yumeiro.SpeedDeviceTest`): dispatch phones=both when a device slot frees (max two device runs).
 - CI 44881403329 ab/speed34-before (expect compile fail: SearchJoin / loadOrder 5 args).
-- Next r15-stability CI (abi_splits=true, dispatched with this push; ID in the next push) = pass-after for F-22, B-31 notice,
-  E2, E3, B-31 seek, B31-SEEK2, E4, SPEED-1/2, SPEED-3/4.
 - CI 44881530280 ab/b31-seek2-before (expect compile fail: SEEK_GAP_MS unresolved).
 - B31-SEEK2 pass-after: next r15-stability CI. Device re-run BuiltinTorrentDeviceTest phones=both + TV api24 on head.
 
