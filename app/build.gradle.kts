@@ -426,6 +426,8 @@ dependencies {
 
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
+  // GATE-1-RENDER: composable names in system traces of debug builds (scripts/gate-trace.pbtxt).
+  debugImplementation(libs.androidx.compose.runtime.tracing)
 }
 
 // One NewPipeExtractor on the classpath: CloudStream depends on "com.github.teamnewpipe" (lowercase),
