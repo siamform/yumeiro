@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 18:25 +06, branch `r15-stability` head after commit "docs: fail-befores SPEED-3/4 and B31-SEEK2 verified".
+2026-11-21 18:45 +06, branch `r15-stability` head after commit "B31-SEEK3: torrent wait trace for device runs".
 
 ## Owner rule 2026-11-21 17:15 +06
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
@@ -24,6 +24,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Device 44882300017 / 44882301935 (B31-SEEK2): first 64 KB Pass 8724 / 4096 / 6106 ms; seek Fail 17353 / 7892 / 15941 ms
+  (finding B31-SEEK3: libtorrent fetches a piece's blocks from block 0; 4 MiB pieces; diagnosing with TorrentTrace).
 - Fail-before verified: E4 44880750191, SPEED-1/2 44881206020, SPEED-3/4 44881403329, B31-SEEK2 44881530280
   (branches deleted).
 - CI 44881247581 (@4a58cb22): failure, finding SPEED-T1 (test used an ERROR-level deprecated constructor); fixed.
@@ -35,11 +37,10 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- Device 44882300017 (phones) + 44882301935 (TV api24) `dev.asfakul.yumeiro.BuiltinTorrentDeviceTest` = B31-SEEK2 device
-  check (44881581791 cancelled / 44881606204 no test ran: wrong class name, see CANCELLED-RUNS.md).
+- B31-SEEK3 diagnostic device runs (BuiltinTorrentDeviceTest with TorrentTrace, tag B31): IDs in the next push.
 - Pass-after CI 44882251682 (r15-stability, abi_splits=true): F-22, B-31 notice, E2, E3, B-31 seek, B31-SEEK2, E4,
   SPEED-1/2, SPEED-3/4. Do not dispatch another r15-stability CI while it runs.
-- SpeedDeviceTest baseline (`dev.asfakul.yumeiro.SpeedDeviceTest`): dispatch phones=both when a device slot frees (max two device runs).
+- SpeedDeviceTest baseline: runs with the B31-SEEK3 phone run (same dispatch, both classes).
 - B31-SEEK2 pass-after: next r15-stability CI. Device re-run BuiltinTorrentDeviceTest phones=both + TV api24 on head.
 
 ## Next steps, in order

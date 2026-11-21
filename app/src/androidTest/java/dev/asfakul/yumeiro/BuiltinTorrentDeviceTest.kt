@@ -51,6 +51,8 @@ class BuiltinTorrentDeviceTest {
             assertTrue("engine played before the privacy notice was accepted", !TorrentStreams.enabled(ctx))
             dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, true)
             assertTrue(TorrentStreams.enabled(ctx))
+            // B31-SEEK3: every waiting read logs block progress, peers and rate once a second (tag B31).
+            dev.asfakul.yumeiro.stream.torrent.TorrentTrace.sink = { Log.i("B31", it) }
             val http = NetworkClient.get(ctx)
             withTimeout(240_000) { TorrentEngine.ensure(ctx, http) }
             val t0 = SystemClock.elapsedRealtime()
@@ -73,6 +75,7 @@ class BuiltinTorrentDeviceTest {
             assertEquals(65_536, got)
             assertTrue("seek took $seekMs ms (budget 5000)", seekMs <= 5_000)
         } finally {
+            dev.asfakul.yumeiro.stream.torrent.TorrentTrace.sink = null
             dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, false)
             FeatureFlags.set(ctx, FeatureFlags.Flag.BUILTIN_TORRENT, false)
         }

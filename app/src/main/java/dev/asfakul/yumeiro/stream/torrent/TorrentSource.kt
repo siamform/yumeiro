@@ -54,9 +54,15 @@ class TorrentSource(
         if (!core.have(meta.hash, piece)) {
             // B-31 speed: blocks of a partial piece are on disk before the piece is complete; read those.
             val inPiece = file.offset + position - piece.toLong() * meta.pieceLength
-            val deadline = System.currentTimeMillis() + waitMs
+            val started = System.currentTimeMillis()
+            val deadline = started + waitMs
+            var nextTrace = started
             synchronized(core.signal) {
                 while (!core.have(meta.hash, piece)) {
+                    TorrentTrace.sink?.let { sink ->
+                        val now = System.currentTimeMillis()
+                        if (now >= nextTrace) { nextTrace = now + 1_000; sink(waitLine(piece, inPiece, now - started)) }
+                    }
                     core.error(meta.hash)?.let { throw IOException("Torrent error: $it") }
                     val ready = TorrentPlan.readableInPiece(core.finishedBlocks(meta.hash, piece), inPiece, meta.pieceLength.toLong())
                     if (ready > 0) { upTo = position + ready; break }
@@ -66,9 +72,19 @@ class TorrentSource(
                     core.signal.wait(minOf(left, BLOCK_POLL_MS))
                 }
             }
+            TorrentTrace.sink?.invoke("piece $piece readable after ${System.currentTimeMillis() - started} ms (have=${core.have(meta.hash, piece)})")
         }
         val n = minOf(count.toLong(), upTo - position, length - position).toInt()
         return readFile(position, buffer, offset, n)
+    }
+
+    /** SPEED / B31-SEEK3 trace line: which block the read needs, how many blocks of the piece are in, peers, rate. */
+    private fun waitLine(piece: Int, inPiece: Long, waitedMs: Long): String {
+        val bits = core.finishedBlocks(meta.hash, piece)
+        val (peers, rate) = core.stats(meta.hash)
+        return "wait piece $piece block ${inPiece / TorrentPlan.BLOCK}/${meta.pieceLength / TorrentPlan.BLOCK} " +
+            "finished ${bits?.cardinality() ?: -1} firstGap ${bits?.nextClearBit(0) ?: -1} peers $peers rate ${rate / 1024} KiB/s " +
+            "after $waitedMs ms"
     }
 
     private fun focus(piece: Int) {
