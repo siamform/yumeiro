@@ -198,9 +198,9 @@ class MainThreadStallRealClockDeviceTest {
     private fun step(text: String, landed: () -> Boolean) {
         tap(text)
         if (waitFor(8_000, landed)) return
-        log("step '$text' did not land; tapping again · ${texts()}")
+        log("step '$text' did not land (pager page ${dev.asfakul.yumeiro.ui.screens.TabPagerProbe.page}, candidates [$lastCandidates]); tapping again · ${texts()}")
         tap(text)
-        if (!waitFor(10_000, landed)) throw AssertionError("tapping '$text' twice did not land · ${texts()}")
+        if (!waitFor(10_000, landed)) throw AssertionError("tapping '$text' twice did not land (pager page ${dev.asfakul.yumeiro.ui.screens.TabPagerProbe.page}, candidates [$lastCandidates]) · ${texts()}")
     }
 
     /** The Source pill's description, e.g. "Source: Yumix. Menu open". */

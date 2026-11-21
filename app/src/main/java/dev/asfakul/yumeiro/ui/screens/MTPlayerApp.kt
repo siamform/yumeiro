@@ -135,7 +135,7 @@ fun MTPlayerApp(
     val barItems = remember(navConfig) { dev.asfakul.yumeiro.ui.navigation.NavPrefs.barItems(navConfig) }
     val pageItemsNow by androidx.compose.runtime.rememberUpdatedState(pageItems)
     val tabPager = rememberPagerState { bottomNavItems.size }
-    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.settledPage }.collect { TabPagerProbe.page = it } }
+    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.settledPage }.collect { TabPagerProbe.page = it; android.util.Log.i("YuGateTab", "settled page $it") } }
     val tabScope = rememberCoroutineScope()
     // R15 (run 43650046635): the tab pager must never rest between two pages. With nothing
     // dragging or animating it, an offset left over (a fling cut short by a focus move) is settled
@@ -186,6 +186,7 @@ fun MTPlayerApp(
                 }
             }
             val page = pageItemsNow.indexOfFirst { it.route == route }
+            android.util.Log.i("YuGateTab", "navigateTop $route → page $page (now ${tabPager.currentPage})")
             if (page >= 0 && page != tabPager.currentPage) tabJump.value?.cancel()
             if (page >= 0 && page != tabPager.currentPage) tabJump.value = tabScope.launch {
                 // Neighbouring tab: the pager slides. Far tab (Home → Videos / Library, Spaces and
@@ -204,7 +205,7 @@ fun MTPlayerApp(
                     launch { tabShift.animateTo(0f, androidx.compose.animation.core.tween(320, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized)) }
                     tabFade.animateTo(1f, androidx.compose.animation.core.tween(240, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Standard))
                 }
-            }
+            }.also { j -> j.invokeOnCompletion { c -> android.util.Log.i("YuGateTab", "jump to $page ended (${c?.javaClass?.simpleName ?: "done"}), page ${tabPager.currentPage}") } }
         }
     }
     // A page that is already open further down the stack is brought back instead of stacked again:
