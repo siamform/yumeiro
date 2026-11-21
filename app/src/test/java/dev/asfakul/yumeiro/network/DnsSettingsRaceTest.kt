@@ -42,6 +42,27 @@ class DnsSettingsRaceTest {
         assertEquals(chosen, NetworkSettings.dns.value)
     }
 
+    /**
+     * CI-DNS-RACE-2 (fail in CI 44928288893): an init still running from app start (Robolectric starts the app's
+     * warm-ups) wrote the stored settings right after the next test's resetForTests, so that test's own init
+     * returned at once and its choice never applied. Forces the order: stray init reads, reset, stray init finishes.
+     */
+    @Test fun anInitFromBeforeAResetDoesNotWriteAfterIt() {
+        val app = RuntimeEnvironment.getApplication()
+        NetworkSettings.resetForTests()
+        val read = java.util.concurrent.CountDownLatch(1); val go = java.util.concurrent.CountDownLatch(1)
+        NetworkSettings.afterPrefsReadForTests = { read.countDown(); go.await(5, java.util.concurrent.TimeUnit.SECONDS) }
+        val stray = Thread { NetworkSettings.init(app) }.apply { start() }
+        assertEquals("stray init reached its read", true, read.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        NetworkSettings.afterPrefsReadForTests = null
+        NetworkSettings.resetForTests()
+        go.countDown(); stray.join(5_000)
+        val chosen = DnsConfig(fallback = true, auto = false)
+        NetworkSettings.afterPrefsReadForTests = { NetworkSettings.setForTests(chosen) }
+        NetworkSettings.init(app)
+        assertEquals(chosen, NetworkSettings.dns.value)
+    }
+
     @Test fun withNoWriteTheStoredSettingsLoad() {
         val app = RuntimeEnvironment.getApplication()
         NetworkSettings.resetForTests()

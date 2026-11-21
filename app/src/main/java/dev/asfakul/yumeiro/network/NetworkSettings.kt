@@ -110,9 +110,13 @@ object NetworkSettings {
     /** Test hook: runs after [init] read the prefs, before it writes. */
     @Volatile internal var afterPrefsReadForTests: (() -> Unit)? = null
 
+    /** CI-DNS-RACE-2: bumped by [resetForTests]; an init that started before a reset must not write after it. */
+    @Volatile private var generation = 0
+
     @Synchronized
     fun init(context: Context) {
         if (loaded) return
+        val gen = generation
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = DnsConfig(
             provider = enumOr(p.getString("dns_provider", null), DnsProvider.SYSTEM),
@@ -125,7 +129,7 @@ object NetworkSettings {
         afterPrefsReadForTests?.invoke()
         prefs = p
         SmartDns.restoreBypass(bypass)
-        synchronized(writeLock) { if (!loaded) { _dns.value = stored; loaded = true } }
+        synchronized(writeLock) { if (!loaded && gen == generation) { _dns.value = stored; loaded = true } }
     }
 
     fun setDns(context: Context, config: DnsConfig) {
@@ -142,7 +146,7 @@ object NetworkSettings {
 
     /** For tests. */
     internal fun setForTests(config: DnsConfig) { synchronized(writeLock) { _dns.value = config; loaded = true }; SmartDns.clearCache() }
-    internal fun resetForTests() { loaded = false; app = null; prefs = null; _dns.value = DnsConfig(); SmartDns.clearCache() }
+    internal fun resetForTests() { synchronized(writeLock) { generation++; loaded = false }; app = null; prefs = null; _dns.value = DnsConfig(); SmartDns.clearCache() }
 
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =
         runCatching { enumValueOf<T>(name ?: return default) }.getOrDefault(default)
