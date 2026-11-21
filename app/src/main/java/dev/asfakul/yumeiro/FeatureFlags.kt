@@ -77,6 +77,8 @@ object FeatureFlags {
         FE3_FIRST_ROW("fe3_first_row", true),
         /** FE-4: Yumix rebuilds its mix at most once per 300 ms frame (first update at once), not on every row answer. */
         FE4_FEED_FRAMES("fe4_feed_frames", true),
+        /** FE-4b: only the picked, pinned and fastest 24 (12 on 2 GB phones) extensions fetch live; the rest show saved pages and join on scroll. */
+        FE4_WORKING_SET("fe4_working_set", true),
         /** FE-S3: a site that failed a search in the last 2 minutes answers with that failure at once (Retry asks again). */
         FE_S3_FAIL_MEMORY("fe_s3_fail_memory", true),
         /** FE-S4: a site's search timeout follows its measured speed (8..25 s); Retry and unknown sites get 25 s. */

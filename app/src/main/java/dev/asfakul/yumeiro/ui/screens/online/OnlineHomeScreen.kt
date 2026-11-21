@@ -223,10 +223,38 @@ fun OnlineHomeScreen(
     // Fetches now run in the screen's scope and survive those restarts; a name is only fetched
     // again when forced (pull to refresh, Retry) or after it failed.
     val inflight = YumixMemory.inflight
-    /** Loads one extension's home; true when it brought titles that were not on screen yet. */
-    suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean): Boolean {
+    // FE-4b: only the working set fetches live; [waitingLive] are shown from their saved page (or not yet) until
+    // the feed is scrolled to its end and the set grows (FeedWorkingSet.grow).
+    val workingSetOn = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE4_WORKING_SET)
+    var workingLimit by rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.online.FeedWorkingSet.initial(dev.asfakul.yumeiro.DeviceClass.lowEnd)) }
+    val waitingLive = remember { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
+    /** R15 / FE-1: an old saved copy is on screen; fetch the live page and merge it in. */
+    fun refreshStale(api: com.lagradost.cloudstream3.MainAPI) {
         val name = api.name
-        if (!force && homes[name] is ProviderHome.Ready) return false
+        YumixMemory.scope.launch {
+            val live = slot(name) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
+            val cur = homes[name] as? ProviderHome.Ready
+            if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
+        }
+    }
+    /** Loads one extension's home; true when it brought titles that were not on screen yet. [live] false = saved page only. */
+    suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean, live: Boolean = true): Boolean {
+        val name = api.name
+        if (!live) {
+            // FE-4b: outside the working set: the saved page if there is one, no slot, no live refresh yet.
+            if (homes[name] !is ProviderHome.Ready) {
+                val saved = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
+                if (!saved.isNullOrEmpty()) homes[name] = ProviderHome.Ready(saved)
+            }
+            waitingLive[name] = true
+            return false
+        }
+        waitingLive.remove(name)
+        if (!force && homes[name] is ProviderHome.Ready) {
+            // FE-4b: shown from its saved page while outside the working set; now inside, refresh it live.
+            if (workingSetOn && OnlineRepository.takeStaleHome(name)) refreshStale(api)
+            return false
+        }
         inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { return runCatching { running.await() }.getOrDefault(false) } else running.cancel() }
         val job = YumixMemory.scope.async {
             if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
@@ -261,11 +289,7 @@ fun OnlineHomeScreen(
             homes[name] = if (rows != null) ProviderHome.Ready(rows)
                 else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension", diagnosis)
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
-            if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
-                val live = slot(name) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
-                val cur = homes[name] as? ProviderHome.Ready
-                if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
-            }
+            if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) refreshStale(api)
             YumixFeed.broughtNew(prev, fresh)
         }
         inflight[name] = job
@@ -280,8 +304,12 @@ fun OnlineHomeScreen(
         val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
             dev.asfakul.yumeiro.online.ExtensionSpeed.order(withHome, { it.name }, selected)
             else withHome.sortedBy { if (it.name == selected) 0 else 1 }
-        ordered.map { api -> async { runCatching { loadOne(api, force) }.getOrDefault(false) } }.awaitAll().count { it }
+        val liveNow = if (!workingSetOn) null else dev.asfakul.yumeiro.online.FeedWorkingSet.live(
+            ordered.map { it.name }, workingLimit, selected, dev.asfakul.yumeiro.online.PinnedExtensions.pins.value)
+        ordered.map { api -> async { runCatching { loadOne(api, force, live = liveNow == null || api.name in liveNow) }.getOrDefault(false) } }.awaitAll().count { it }
     }
+    // FE-4b: the working set grew (feed scrolled to its end): the next extensions go live.
+    LaunchedEffect(workingLimit) { if (workingSetOn && workingLimit > dev.asfakul.yumeiro.online.FeedWorkingSet.initial(dev.asfakul.yumeiro.DeviceClass.lowEnd)) loadAll(false) }
     val providerNames = remember(providers) { providers.map { it.name }.toSet() }
     LaunchedEffect(providerNames) {
         // The extension engine starts with no providers; don't wipe the kept home before it's ready.
@@ -291,6 +319,7 @@ fun OnlineHomeScreen(
             homes.keys.retainAll(providerNames)
         }
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
+        waitingLive.keys.retainAll(providerNames)
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)
     }
@@ -300,7 +329,7 @@ fun OnlineHomeScreen(
         if (!prioritized) return@LaunchedEffect
         pgate.bump(pick, dev.asfakul.yumeiro.online.PriorityGate.PICKED)
         val api = providers.firstOrNull { it.name == pick } ?: return@LaunchedEffect
-        if (homes[pick] !is ProviderHome.Ready && inflight[pick]?.isActive != true) runCatching { loadOne(api, false) }
+        if ((homes[pick] !is ProviderHome.Ready || waitingLive.containsKey(pick)) && inflight[pick]?.isActive != true) runCatching { loadOne(api, false) }
     }
 
     LaunchedEffect(Unit) { OnlineHistory.ensureLoaded(context) }
@@ -311,7 +340,8 @@ fun OnlineHomeScreen(
     val bookmarks by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
     val channelNames = remember(providers) { providers.map { it.name } }
     val withHome = remember(providers) { providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.map { it.name } }
-    val loadingNames = YumixFeed.stillLoading(withHome) { n -> homes[n].let { it != null && it !is ProviderHome.Loading } }
+    // FE-4b: extensions waiting outside the working set are not "loading" (they go live when the feed reaches its end).
+    val loadingNames = YumixFeed.stillLoading(withHome) { n -> waitingLive.containsKey(n) || homes[n].let { it != null && it !is ProviderHome.Loading } }
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
@@ -501,6 +531,8 @@ fun OnlineHomeScreen(
                         if (!nearEnd) return@LaunchedEffect
                         when {
                             !groupsDone && groupLimit < ready.size -> groupLimit += 3
+                            // FE-4b: every section shown; extensions outside the working set go live next.
+                            workingSetOn && waitingLive.isNotEmpty() -> workingLimit = dev.asfakul.yumeiro.online.FeedWorkingSet.grow(workingLimit, waitingLive.size)
                             exploreLimit < exploreItems.size -> exploreLimit += 30
                             !exploreBusy && exploreMore -> pageExplore()
                         }
