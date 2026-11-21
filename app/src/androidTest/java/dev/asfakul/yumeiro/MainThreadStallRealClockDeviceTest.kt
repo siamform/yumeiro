@@ -34,7 +34,11 @@ import java.util.concurrent.atomic.AtomicLong
  * providers, and walks Home → Videos → Yumix → Live TV → Home with real touches (`input tap`). The
  * watchdog posts to the main thread every 100 ms and fails over [MAX_STALL_MS]; waits that began while
  * the test itself was reading the screen (accessibility query) are not counted. Log tag YuGate1.
- * Run: test=dev.asfakul.yumeiro.GateOnePrepareDeviceTest,dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest
+ * GATE-1-ANR: the walk also opens YouTube, and [GateOneExitCheckDeviceTest] (a later class, so a later
+ * process) fails when Android recorded an ANR or crash of the app since [GateOnePrepareDeviceTest] ran
+ * (ApplicationExitInfo, API 30+). An ANR kills the process that had it, so its record can only be read
+ * from the next one.
+ * Run: test=dev.asfakul.yumeiro.GateOnePrepareDeviceTest,dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest,dev.asfakul.yumeiro.GateOneExitCheckDeviceTest
  */
 @RunWith(AndroidJUnit4::class)
 class GateOnePrepareDeviceTest {
@@ -44,6 +48,7 @@ class GateOnePrepareDeviceTest {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
         // No third-party starter extension may run in the gate (B-26 tracks that one on its own).
         ctx.getSharedPreferences("starter_extensions", android.content.Context.MODE_PRIVATE).edit().putBoolean("done_v1", true).commit()
+        GateOneExitCheckDeviceTest.markStart(ctx)
         FirstRun.toTabs(rule)
         Log.i("YuGate1", "GATE1_PREPARED first run answered")
     }
@@ -99,12 +104,20 @@ class MainThreadStallRealClockDeviceTest {
                 tap("Source:"); SystemClock.sleep(1_500)
                 tap("Yumix"); SystemClock.sleep(6_000)
                 tap("Source:"); SystemClock.sleep(1_500)
+                tap("YouTube"); SystemClock.sleep(6_000)
+                tap("Source:"); SystemClock.sleep(1_500)
                 tap("Live TV"); SystemClock.sleep(6_000)
                 tap("Home"); SystemClock.sleep(5_000)
             } finally {
                 running.set(false); dog.join(2_000)
             }
             log("GATE1_REAL worst main-thread wait ${worst.get()} ms with 300 providers, real frame clock (limit $MAX_STALL_MS)")
+            // GATE-1-ANR: a live "not responding" state of this process (the exit record only exists after it dies).
+            val am = ctx.getSystemService(android.app.ActivityManager::class.java)
+            val anr = am.processesInErrorState.orEmpty().filter { it.processName.startsWith(ctx.packageName) }
+                .map { "condition=${it.condition} ${it.processName}: ${it.shortMsg}" }
+            log("GATE1_ANR_STATE ${anr.size} ${anr.joinToString(" | ")}")
+            assertTrue("the app is in an error / not-responding state: ${anr.joinToString(" | ")}", anr.isEmpty())
             assertTrue("main thread stalled ${worst.get()} ms on the real frame clock (limit $MAX_STALL_MS ms)", worst.get() <= MAX_STALL_MS)
         } finally {
             SourceHub.remove(StallWalk.BRIDGE)
@@ -171,5 +184,47 @@ class MainThreadStallRealClockDeviceTest {
     companion object {
         const val MAX_STALL_MS = 700L
         private val KEEP = Regex("^(dev\\.asfakul|com\\.|org\\.chromium\\.android_webview|androidx\\.compose\\.ui\\.test\\.(Main|Abstract|AndroidCompose))")
+    }
+}
+
+/**
+ * GATE-1-ANR: fails when Android recorded an ANR (or a Java / native crash) of the app after
+ * [GateOnePrepareDeviceTest] started. Reads ActivityManager.getHistoricalProcessExitReasons (API 30+;
+ * older images skip by assumption). Normal ends of the earlier test processes (force-stop by the runner)
+ * are other reasons and do not count.
+ */
+@RunWith(AndroidJUnit4::class)
+class GateOneExitCheckDeviceTest {
+    @Test fun noAnrOrCrashSinceTheGateStarted() {
+        org.junit.Assume.assumeTrue("ApplicationExitInfo needs API 30", android.os.Build.VERSION.SDK_INT >= 30)
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val since = ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getLong(KEY, 0L)
+        assertTrue("run GateOnePrepareDeviceTest first (same filter)", since > 0L)
+        val bad = badExits(ctx, since)
+        bad.forEach { Log.i("YuGate1", "GATE1_EXIT $it") }
+        Log.i("YuGate1", "GATE1_EXITS ${bad.size} ANR / crash records since $since")
+        assertTrue("Android recorded ${bad.size} ANR / crash exits during the gate: ${bad.joinToString(" | ")}", bad.isEmpty())
+    }
+
+    companion object {
+        private const val PREFS = "yu_gate1"
+        private const val KEY = "since"
+
+        fun markStart(ctx: android.content.Context) {
+            ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putLong(KEY, System.currentTimeMillis()).commit()
+        }
+
+        @androidx.annotation.RequiresApi(30)
+        fun badExits(ctx: android.content.Context, since: Long): List<String> {
+            val am = ctx.getSystemService(android.app.ActivityManager::class.java)
+            val bad = setOf(
+                android.app.ApplicationExitInfo.REASON_ANR,
+                android.app.ApplicationExitInfo.REASON_CRASH,
+                android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,
+            )
+            return am.getHistoricalProcessExitReasons(ctx.packageName, 0, 0)
+                .filter { it.timestamp >= since && it.reason in bad }
+                .map { "reason=${it.reason} at ${it.timestamp} process=${it.processName} · ${it.description.orEmpty().take(160)}" }
+        }
     }
 }
