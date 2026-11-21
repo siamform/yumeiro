@@ -109,6 +109,12 @@ class MainThreadStallRealClockDeviceTest {
                     Thread.sleep(100)
                 }
             }, "yu-gate1-real").apply { start() }
+            // GATE-1-T11: the app's own watchdog (YuStall) also counts: a stall the test's screen reads overlap
+            // is still the app's unless the main thread was answering the read (a11y) or running the harness.
+            val appWorst = AtomicLong(0L); val appWorstKind = java.util.concurrent.atomic.AtomicReference("")
+            dev.asfakul.yumeiro.diagnostics.MainThreadWatchdog.stallListener = { ms, kind ->
+                if (kind != "harness" && kind != "a11y" && ms > appWorst.get()) { appWorst.set(ms); appWorstKind.set(kind) }
+            }
             try {
                 SystemClock.sleep(4_000) // Home
                 // GATE-1-ANR-T4: each step checks it landed and taps once more if the tap was lost
@@ -123,7 +129,10 @@ class MainThreadStallRealClockDeviceTest {
                 step("Home") { find("Source:") == null }; SystemClock.sleep(5_000)
             } finally {
                 running.set(false); dog.join(2_000)
+                SystemClock.sleep(1_500) // a stall still running ends and reports before the listener goes
+                dev.asfakul.yumeiro.diagnostics.MainThreadWatchdog.stallListener = null
             }
+            log("GATE1_APPSTALL worst app stall ${appWorst.get()} ms kind=${appWorstKind.get()} (YuStall, limit $MAX_STALL_MS)")
             log("GATE1_REAL worst main-thread wait ${worst.get()} ms with 300 providers, real frame clock (limit $MAX_STALL_MS)")
             // GATE-1-ANR: a live "not responding" state of this process (the exit record only exists after it dies).
             val am = ctx.getSystemService(android.app.ActivityManager::class.java)
@@ -132,6 +141,7 @@ class MainThreadStallRealClockDeviceTest {
             log("GATE1_ANR_STATE ${anr.size} ${anr.joinToString(" | ")}")
             assertTrue("the app is in an error / not-responding state: ${anr.joinToString(" | ")}", anr.isEmpty())
             assertTrue("main thread stalled ${worst.get()} ms on the real frame clock (limit $MAX_STALL_MS ms)", worst.get() <= MAX_STALL_MS)
+            assertTrue("the app's watchdog saw a ${appWorst.get()} ms ${appWorstKind.get()} stall during the walk (limit $MAX_STALL_MS ms)", appWorst.get() <= MAX_STALL_MS)
         } finally {
             SourceHub.remove(StallWalk.BRIDGE)
         }
