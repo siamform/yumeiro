@@ -67,6 +67,8 @@ object FeatureFlags {
         SOCIAL_LINKS("ol13_social_links", true),
         /** PIN-1-DUP: at most 2 installed copies of one extension name (from different repositories); a third install is refused with the names of the two copies. */
         DUPLICATE_CAP("pin1_duplicate_cap", true),
+        /** F-19-EXT: CloudStream extensions and repositories belong to the profile that added them (files stay shared); others neither see nor load them. */
+        PROFILE_EXTENSIONS("f19_profile_extensions", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

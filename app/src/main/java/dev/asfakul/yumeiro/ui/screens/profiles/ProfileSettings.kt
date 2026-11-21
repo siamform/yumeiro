@@ -52,6 +52,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import kotlinx.coroutines.launch
 
 /**
  * PR-1: Settings → Privacy → Profiles. Lists the profiles; tap one to rename it, pick its colour, set a
@@ -162,17 +163,21 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
             else { Profiles.setPin(context, p.id, pin); pinStep = 0; AppMessages.success(context, "PIN set for ${p.name}") }
         },
     )
+    val deleteScope = androidx.compose.runtime.rememberCoroutineScope()
     if (confirmDelete) TsukiDialog(
         tone = DialogTone.DANGER,
         onDismissRequest = { confirmDelete = false },
         title = { Text("Delete ${p.name}?") },
-        text = { Text("Its history, lists, favorites and private downloads are removed from this phone. This can't be undone.") },
+        text = { Text("Its history, lists, favorites, private downloads and the extensions only it added are removed from this phone. This can't be undone.") },
         confirmButton = { TextButton(onClick = {
             confirmDelete = false
             val wasCurrent = isCurrent
-            Profiles.remove(context, p.id)
-            onDismiss()
-            if (wasCurrent && activity != null) dev.asfakul.yumeiro.backup.Restart.now(activity)
+            // F-19-EXT: the removal writes files (profile data, extension owners): off the main thread.
+            deleteScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Profiles.remove(context, p.id) }
+                onDismiss()
+                if (wasCurrent && activity != null) dev.asfakul.yumeiro.backup.Restart.now(activity)
+            }
         }, modifier = Modifier.testTag("profile_delete_confirm")) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
     )

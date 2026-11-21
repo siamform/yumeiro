@@ -97,6 +97,10 @@ object ExtensionManager {
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(Snapshot())
+    /** F-19-EXT: entries and repositories other profiles have (kept on disk, never shown or loaded here). */
+    private var otherInstalled: List<InstalledExtension> = emptyList()
+    private var otherRepos: List<RepoRef> = emptyList()
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
     val state: StateFlow<Snapshot> = _state.asStateFlow()
 
     /** Plugins currently loaded, by installed key. */
@@ -537,6 +541,12 @@ object ExtensionManager {
             throw ExtensionException("${ext.name} can't run in this app: ${info.error ?: "unknown error"}")
         }
         if (previous != null && previous.fileName != file.name) deleteIfUnused(context, File(pluginDir(context), previous.fileName), previous.key)
+        // F-19-EXT: another profile's copy of the same entry is now this one (shared, newest file).
+        otherInstalled.firstOrNull { it.key == installed.key }?.let { theirs ->
+            otherInstalled = otherInstalled - theirs
+            if (theirs.fileName != file.name) deleteIfUnused(context, File(pluginDir(context), theirs.fileName), theirs.key, alsoOwner = true)
+        }
+        SCOPE.claim(context, SCOPE.EXTENSIONS, installed.key)
         removedDefaults.remove(installed.key)
         // The user added Internet Archive themselves: the 1.8.0 clean-up must not take it away.
         if (previous == null && installed.key == DEFAULT_KEY) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
@@ -556,7 +566,9 @@ object ExtensionManager {
         mutex.withLock {
             val ext = _state.value.installed.firstOrNull { it.key == key } ?: return@withLock
             unloadInternal(key)
-            deleteIfUnused(context, File(pluginDir(context), ext.fileName), key)
+            // F-19-EXT: another profile still has it: keep the file and the entry for that profile.
+            if (SCOPE.release(context, SCOPE.EXTENSIONS, key)) otherInstalled = otherInstalled.filterNot { it.key == key } + ext
+            else deleteIfUnused(context, File(pluginDir(context), ext.fileName), key)
             if (key == DEFAULT_KEY) removedDefaults.add(key)
             _state.update { s -> s.copy(installed = s.installed.filterNot { it.key == key }, runtime = s.runtime - key, generation = s.generation + 1) }
             writeState(context)
@@ -602,6 +614,8 @@ object ExtensionManager {
             _state.update { s ->
                 s.copy(repos = s.repos.filterNot { it.url.equals(url, true) } + RepoRef(url, repo.name, System.currentTimeMillis()))
             }
+            otherRepos = otherRepos.filterNot { it.url.equals(url, true) }
+            SCOPE.claim(context, SCOPE.REPOSITORIES, url)
             writeState(context)
         }
         ExtensionSources.invalidate(url)
@@ -611,7 +625,9 @@ object ExtensionManager {
     suspend fun removeRepository(context: Context, url: String) = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         mutex.withLock {
+            val ref = _state.value.repos.firstOrNull { it.url == url }
             _state.update { s -> s.copy(repos = s.repos.filterNot { it.url == url }) }
+            if (ref != null && SCOPE.release(context, SCOPE.REPOSITORIES, url)) otherRepos = otherRepos.filterNot { it.url == url } + ref
             writeState(context)
         }
     }
@@ -839,15 +855,15 @@ object ExtensionManager {
     private fun deleteFile(f: File) { runCatching { f.setWritable(true); f.delete() } }
 
     /** G9-7: deletes [f] unless another installed entry than [ownerKey] still uses it (older installs shared names). */
-    private fun deleteIfUnused(context: Context, f: File, ownerKey: String) {
+    private fun deleteIfUnused(context: Context, f: File, ownerKey: String, alsoOwner: Boolean = false) {
         if (f.name.isBlank() || f.parentFile != pluginDir(context)) return
-        val used = _state.value.installed.any { it.key != ownerKey && it.fileName == f.name }
+        val used = (_state.value.installed + otherInstalled).any { (alsoOwner || it.key != ownerKey) && it.fileName == f.name }
         if (!used) deleteFile(f)
     }
 
     /** Removes files no installed extension points to (failed updates, crashes mid-install). */
     private fun cleanupFiles(context: Context) {
-        val keep = _state.value.installed.map { it.fileName }.toSet()
+        val keep = (_state.value.installed + otherInstalled).map { it.fileName }.toSet()
         pluginDir(context).listFiles()?.forEach { f -> if (f.name !in keep) deleteFile(f) }
     }
 
@@ -873,15 +889,20 @@ object ExtensionManager {
         }.orEmpty()
         removedDefaults = o.optJSONArray("removedDefaults").strings().toMutableSet()
         if (!legacyDefaultMigrationDue(removedDefaults, installed.map { it.key })) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
-        _state.update { it.copy(installed = installed.distinctBy { e -> e.key }, repos = repos, lastSync = o.optLong("lastSync")) }
+        val (mine, others) = SCOPE.split(context, SCOPE.EXTENSIONS, installed.distinctBy { e -> e.key }) { it.key }
+        val (myRepos, theirRepos) = SCOPE.split(context, SCOPE.REPOSITORIES, repos) { it.url }
+        otherInstalled = others; otherRepos = theirRepos
+        _state.update { it.copy(installed = mine, repos = myRepos, lastSync = o.optLong("lastSync")) }
+        // F-19-EXT: entries of a removed profile were dropped; write so they do not come back as "no record".
+        if (mine.size + others.size < installed.distinctBy { e -> e.key }.size || myRepos.size + theirRepos.size < repos.size) writeState(context)
     }
 
     private fun writeState(context: Context) {
         val s = _state.value
         val o = JSONObject()
             .put("version", STATE_VERSION)
-            .put("installed", JSONArray().apply { s.installed.forEach { put(it.toJson()) } })
-            .put("repos", JSONArray().apply { s.repos.forEach { put(JSONObject().put("url", it.url).put("name", it.name).put("addedAt", it.addedAt)) } })
+            .put("installed", JSONArray().apply { (s.installed + otherInstalled.filter { o -> s.installed.none { it.key == o.key } }).forEach { put(it.toJson()) } })
+            .put("repos", JSONArray().apply { (s.repos + otherRepos.filter { o -> s.repos.none { it.url == o.url } }).forEach { put(JSONObject().put("url", it.url).put("name", it.name).put("addedAt", it.addedAt)) } })
             .put("removedDefaults", JSONArray(removedDefaults.toList()))
             .put("lastSync", s.lastSync)
         val f = stateFile(context)
@@ -898,6 +919,8 @@ object ExtensionManager {
         synchronized(plugins) { plugins.keys.toList().forEach { unloadInternal(it) } }
         removedDefaults.clear()
         started = false
+        otherInstalled = emptyList(); otherRepos = emptyList()
+        dev.asfakul.yumeiro.profiles.ProfileScope.resetMemoryForTests()
         _state.value = Snapshot()
     }
 

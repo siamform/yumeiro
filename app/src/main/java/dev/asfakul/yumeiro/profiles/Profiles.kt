@@ -235,6 +235,7 @@ object Profiles {
         runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, id) }
         File(root(context), id).deleteRecursively()
         SCOPED_PREFS.forEach { name -> runCatching { context.applicationContext.deleteSharedPreferences("$name@p$id") } }
+        runCatching { ProfileScope.dropProfile(context, id) } // F-19-EXT: its own extensions / repositories go with it
         _all.value = _all.value.filterNot { it.id == id }
         if (_current.value == id) _current.value = DEFAULT
         save(context) { putString("current", _current.value) }
