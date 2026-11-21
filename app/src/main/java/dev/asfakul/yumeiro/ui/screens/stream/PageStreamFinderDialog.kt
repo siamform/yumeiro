@@ -246,6 +246,11 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
     var v = e.target; if (!v || v.tagName !== 'VIDEO') return;
     try { MTFinder.onTitle(title(v)); } catch(x) {}
   }, true);
+  // The hook often lands after the first video already started loading: name it now.
+  try {
+    var v0 = document.querySelector('video');
+    if (v0) { var s0 = v0.currentSrc || v0.src; if (s0) window.__mtSrc = s0; MTFinder.onTitle(title(v0)); }
+  } catch(x) {}
 })();
 """
 
