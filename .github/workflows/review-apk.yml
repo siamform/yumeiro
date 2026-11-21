@@ -46,6 +46,8 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
+          YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
           YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
           YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}
           YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}

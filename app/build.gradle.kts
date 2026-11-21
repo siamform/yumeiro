@@ -148,6 +148,10 @@ android {
     // SEC-LFM (ADR-048): no Last.fm shared secret in the APK; Yumeiro Cloud signs the built-in key's calls.
     buildConfigField("String", "LRCLIB_APP_ID", "\"${optionalKey("lrclibAppId", "LRCLIB_APP_ID")}\"")
     buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
+    // F-02 login (owner decision 2026-11-21): Telegram app id / hash for TDLib sign-in. Repo secrets
+    // YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH; blank = Telegram sign-in hidden. Never committed.
+    buildConfigField("String", "TG_API_ID", "\"${optionalKey("tgApiId", "YUMEIRO_TG_API_ID")}\"")
+    buildConfigField("String", "TG_API_HASH", "\"${optionalKey("tgApiHash", "YUMEIRO_TG_API_HASH")}\"")
     // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.
     buildConfigField("String", "CLOUD_HOST", "\"${(providers.gradleProperty("cloudHost").orNull ?: System.getenv("YUMEIRO_CLOUD_HOST") ?: "api.yumeiro.click").let(::buildConfigSafe)}\"")
 
