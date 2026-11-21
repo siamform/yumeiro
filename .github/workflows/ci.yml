@@ -14,6 +14,10 @@ on:
         description: "Final test §11: after build, tests, lint and the secret scan pass, build the signed review APKs (artifact only, never published)"
         type: boolean
         default: false
+      abi_splits:
+        description: "E3 / ADR-054: also build with -Pyumeiro.abiSplits=true and check the per-processor APKs"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -47,6 +51,15 @@ jobs:
       # 1.7.0: two apps, Yumeiro (phone, flavor "mobile") and Yumeiro TV (flavor "tv").
       - name: Assemble debug APKs (phone and TV)
         run: ./gradlew assembleMobileDebug assembleTvDebug
+
+      # E3 / ADR-054 (dispatch input abi_splits): per-processor APKs plus the universal one.
+      - name: ABI-split APKs check
+        if: ${{ inputs.abi_splits }}
+        run: |
+          rm -rf app/build/outputs/apk/mobile/debug app/build/outputs/apk/tv/debug
+          ./gradlew assembleMobileDebug assembleTvDebug -Pyumeiro.abiSplits=true
+          export AAPT2="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt2"
+          python3 scripts/check_abi_splits.py app/build/outputs/apk/mobile/debug app/build/outputs/apk/tv/debug
 
       # Device tests are only built by the slow emulator workflow; compile them here so an
       # androidTest compile error (device run 43884803041) fails in minutes, not after a queue.

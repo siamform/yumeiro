@@ -104,6 +104,9 @@ fun fcmClient(pkg: String, suffix: String): Pair<String, String> {
 
 fun buildConfigSafe(value: String): String = value.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' || it == '.' }
 
+val yumeiroAbis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+val abiSplits = providers.gradleProperty("yumeiro.abiSplits").orNull == "true"
+
 android {
   namespace = "dev.asfakul.yumeiro"
   compileSdk { version = release(37) }
@@ -117,8 +120,9 @@ android {
     targetSdk = 37 // Android 17
     versionCode = appVersionCode
     versionName = appVersionName
-    // Round 13: one universal APK with native code for every Android processor.
-    ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64") }
+    // Round 13: one universal APK with native code for every Android processor. With E3 ABI splits
+    // on (-Pyumeiro.abiSplits=true) the processors come from splits.abi instead (AGP rejects both).
+    if (!abiSplits) ndk { abiFilters += yumeiroAbis }
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -249,8 +253,21 @@ android {
     isCoreLibraryDesugaringEnabled = true
   }
 
-  // Round 13: no per-processor APKs any more. Each edition ships as ONE universal APK (phone and
-  // TV) with native libraries for arm64-v8a, armeabi-v7a, x86 and x86_64 (see ndk.abiFilters).
+  // Round 13: each edition ships as ONE universal APK (phone and TV) with native libraries for
+  // arm64-v8a, armeabi-v7a, x86 and x86_64 (see ndk.abiFilters).
+  // E3 (kill switch: Gradle property yumeiro.abiSplits, off by default): also build one smaller
+  // APK per processor next to the universal one. ADR-054: every APK keeps the SAME versionCode
+  // (we sideload, Play's unique-code rule does not apply), so the switch can be turned off again
+  // without stranding anyone on a higher code; the updater picks the device's processor file
+  // first and the universal file otherwise (GitHubReleaseClient.parseRelease).
+  splits {
+    abi {
+      isEnable = abiSplits
+      reset()
+      include(*yumeiroAbis.toTypedArray())
+      isUniversalApk = true
+    }
+  }
 
   buildFeatures {
     compose = true

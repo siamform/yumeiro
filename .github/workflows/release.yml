@@ -113,7 +113,8 @@ jobs:
           # public APK can be extracted, and public releases need no token at all.
           MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
         # --no-build-cache: the signed artifact is always built from source, never from cache entries.
-        run: ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease testMobileDebugUnitTest
+        # E3 / ADR-054: repository variable YUMEIRO_ABI_SPLITS=true adds per-processor APKs (off by default).
+        run: ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease testMobileDebugUnitTest ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }}
 
       - name: Remove keystore from the runner
         if: always()
@@ -131,7 +132,9 @@ jobs:
           TV_OUT=app/build/outputs/apk/tv/release
           # Round 13: one universal APK per edition (no per-processor splits). It keeps the old
           # single-APK name, so older in-app updaters still pick it.
-          SRC=$(ls $OUT/*.apk 2>/dev/null | grep -v unsigned | head -1)
+          # E3 / ADR-054: with ABI splits on, the universal file is the one named "-universal-".
+          pick() { ls $1/*.apk 2>/dev/null | grep -v unsigned | grep -- '-universal-' | head -1 || true; }
+          SRC=$(pick $OUT); [ -n "$SRC" ] || SRC=$(ls $OUT/*.apk 2>/dev/null | grep -v unsigned | head -1)
           if [ -z "$SRC" ]; then echo "::error::No signed APK produced"; exit 1; fi
           EXPECTED=$(tr -d '[:space:]' < .github/release-signing-cert.sha256)
           V="${{ steps.version.outputs.version_name }}"
@@ -150,7 +153,7 @@ jobs:
           }
           check "$SRC"; cp "$SRC" "dist/$NAME"
           # Yumeiro TV: its own file, ending in ".tv.apk" so phone updaters never pick it.
-          TV_SRC=$(ls $TV_OUT/*.apk 2>/dev/null | grep -v unsigned | head -1)
+          TV_SRC=$(pick $TV_OUT); [ -n "$TV_SRC" ] || TV_SRC=$(ls $TV_OUT/*.apk 2>/dev/null | grep -v unsigned | head -1)
           if [ -z "$TV_SRC" ]; then echo "::error::No signed TV APK produced"; exit 1; fi
           check "$TV_SRC"; cp "$TV_SRC" "dist/${APP_NAME}-TV-v${V}.tv.apk"
           # Every build must carry native code for all four processors.
@@ -160,6 +163,17 @@ jobs:
                 || { echo "::error::$F has no lib/$ABI"; exit 1; }
             done
           done
+          # E3 / ADR-054: per-processor files, named the way GitHubReleaseClient.abiOf reads them.
+          if [ "${{ vars.YUMEIRO_ABI_SPLITS }}" = "true" ]; then
+            for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+              P=$(ls $OUT/*-$ABI-*.apk 2>/dev/null | grep -v unsigned | head -1)
+              T=$(ls $TV_OUT/*-$ABI-*.apk 2>/dev/null | grep -v unsigned | head -1)
+              [ -n "$P" ] && [ -n "$T" ] || { echo "::error::missing $ABI split"; exit 1; }
+              check "$P"; cp "$P" "dist/${APP_NAME}-v${V}-${ABI}.apk"
+              check "$T"; cp "$T" "dist/${APP_NAME}-TV-v${V}-${ABI}.tv.apk"
+            done
+            AAPT2="$BT/aapt2" python3 scripts/check_abi_splits.py "$OUT" "$TV_OUT"
+          fi
           SHA=$(sha256sum "dist/$NAME" | awk '{print $1}')
           (cd dist && sha256sum *.apk > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"

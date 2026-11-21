@@ -1740,3 +1740,22 @@ Tests. Unit: TorrentPlanTest (hash, `so=`, trackers, file pick, pieces, deadline
 TorrentSourceTest (waits for the piece, stops at its end, seek moves the window, timeout / error),
 TorrentCacheTest (eviction never removes the playing torrent). Device (next): engine download + load on api36,
 api33-lowram and TV api24; test hash first frame and seek times against the bars; memory on api33-lowram.
+
+### ADR-054: ABI-split APKs share one versionCode, behind a Gradle switch (E3)
+
+- Context: the universal APK carries native code for four processors (TDLib, libtorrent, media
+  libraries), so most phones download libraries they never load. Android's guide gives each ABI
+  APK its own versionCode, but that rule exists for Google Play; we sideload and our updater
+  compares the release's versionCode marker with the installed code.
+- Decision: `splits.abi` builds arm64-v8a, armeabi-v7a, x86 and x86_64 APKs plus the universal
+  APK, all with the SAME versionCode. Off by default; on with `-Pyumeiro.abiSplits=true`
+  (release.yml reads the repository variable `YUMEIRO_ABI_SPLITS`). File names follow the updater's
+  existing rules: `Yumeiro-v<V>-<abi>.apk`, `Yumeiro-TV-v<V>-<abi>.tv.apk`; the universal file
+  keeps `release-Yumeiro-v<V>.apk` / `Yumeiro-TV-v<V>.tv.apk`.
+- Why one code: per-ABI codes (base*10+n) would make the release marker smaller than the installed
+  code and turning splits off later would strand users on a higher code. One code keeps the switch
+  reversible. A universal install moves to its processor's file on the next update (the updater
+  prefers the device's ABI), no same-version reinstall needed.
+- Check: `scripts/check_abi_splits.py` (CI input `abi_splits`) fails unless each edition has five
+  APKs, each split holds only its own lib/<abi>, the universal holds all four, and all share one
+  versionCode.
