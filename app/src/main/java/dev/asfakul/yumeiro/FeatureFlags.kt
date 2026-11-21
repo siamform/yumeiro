@@ -31,6 +31,10 @@ object FeatureFlags {
         SHORTS_ONE_VIEW("f12_one_view", true),
         /** F12-HIST: YouTube history writes (first read from disk, JSON encode) run on a background lane, not on the main thread. */
         HISTORY_OFF_MAIN("f12_history_off_main", true),
+        /** F-12 (ADR-056): a 9:16 video in the normal player switches to vertical mode (full screen, cropped to fill, swipe up / down for the queue). Acts only while f12_vertical_shorts is on. */
+        VERTICAL_MODE("f12_vertical_mode", true),
+        /** F-12 (ADR-056): the Shorts player's top bar and title hide after 3.5 s of play; a tap brings them back. Acts only while f12_vertical_shorts is on. */
+        SHORTS_AUTOHIDE("f12_shorts_autohide", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

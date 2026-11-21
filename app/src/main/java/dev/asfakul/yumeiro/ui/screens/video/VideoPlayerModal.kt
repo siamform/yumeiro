@@ -1108,6 +1108,38 @@ private fun VideoPlayerModalContent(
         }
     }
 
+    // F-12 (ADR-056): vertical mode. A tall video on a phone goes full screen in portrait, cropped
+    // to fill, with swipe up / down in the centre for the queue. Leaving it (Back or the fullscreen
+    // button) returns to the normal layout, and the player stays out of it for this session.
+    val verticalModeOn = remember(context) {
+        dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_VERTICAL) &&
+            dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.VERTICAL_MODE)
+    }
+    var verticalMode by remember { mutableStateOf(false) }
+    var verticalLeft by remember { mutableStateOf(false) }
+    val portraitVideo = activeVideoFormat?.let { VerticalMode.isPortrait(it.width, it.height, it.rotationDegrees, it.pixelWidthHeightRatio) } == true
+    LaunchedEffect(portraitVideo, minimized, isInPipMode, verticalModeOn) {
+        if (VerticalMode.autoEnter(verticalModeOn, tvPlayer, isTablet, minimized, isInPipMode, portraitVideo, verticalLeft, verticalMode)) {
+            verticalMode = true
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            isFullscreen = true
+            if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.i("YuF12V", "vertical mode on ${activeVideoFormat?.width}x${activeVideoFormat?.height}")
+        } else if (verticalMode && activeVideoFormat != null && !portraitVideo) {
+            // The next item in the queue is a normal (landscape) video: back to the normal layout.
+            verticalMode = false
+            if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            isFullscreen = false
+        }
+    }
+    LaunchedEffect(isFullscreen) {
+        if (!isFullscreen && verticalMode) {
+            verticalMode = false
+            verticalLeft = true
+            if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.i("YuF12V", "vertical mode off (left by the user)")
+        }
+    }
+
     // Behave like a real player: keep the screen awake while a video plays or is about to resume
     // after buffering, and let it sleep again once paused, ended or closed.
     val hostView = androidx.compose.ui.platform.LocalView.current
@@ -1502,6 +1534,8 @@ private fun VideoPlayerModalContent(
         }
     }
     BackHandler(enabled = !minimized) {
+        // F-12 (ADR-056): Back in vertical mode returns to the normal player, which keeps playing.
+        if (verticalMode && !isScreenLocked) { isFullscreen = false; return@BackHandler }
         // R17: one Back leaves on touch screens; a remote steps (controls → fullscreen → leave).
         val backStep = PlayerBackRule.step(
             keyDriven = keyDriven, controlsVisible = isControlsVisible, locked = isScreenLocked, ended = isEnded,
@@ -1667,6 +1701,7 @@ private fun VideoPlayerModalContent(
             .focusable()
             .testTag("video_player_root")
     ) {
+        if (verticalMode) Box(Modifier.size(1.dp).testTag("video_vertical_mode"))
         // Video Surface via Media3 PlayerView
         AndroidView(
             factory = { ctx ->
@@ -1713,11 +1748,17 @@ private fun VideoPlayerModalContent(
                 // Swipe down from the centre: leave fullscreen, or shrink to the floating player.
                 onSwipeDown = when {
                     isScreenLocked -> null
+                    verticalMode -> when (VerticalMode.swipeDown(hasPreviousVideo, isScreenLocked)) {
+                        VerticalMode.Swipe.PREVIOUS -> ({ onPreviousVideo() })
+                        VerticalMode.Swipe.LEAVE -> ({ isFullscreen = false })
+                        else -> null
+                    }
                     isFullscreen -> ({ isFullscreen = false })
                     onMinimize != null -> ({ isControlsVisible = false; onMinimize() })
                     else -> null
                 },
-                onSwipeDownProgress = { swipeDownPx = it },
+                onSwipeDownProgress = { if (!verticalMode) swipeDownPx = it },
+                onSwipeUp = if (verticalMode && VerticalMode.swipeUp(nextVideo != null, isScreenLocked) == VerticalMode.Swipe.NEXT) ({ onNextVideo() }) else null,
                 // YouTube style: touch and hold the video, then slide down → picture-in-picture
                 // (the in-app floating player where system PiP isn't available).
                 onHoldSwipeDown = when {
