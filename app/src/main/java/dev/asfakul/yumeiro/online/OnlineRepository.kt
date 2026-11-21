@@ -227,17 +227,8 @@ object OnlineRepository {
 
     /** Home rows of [api] (its main page). Cached for a while unless [force]. */
     suspend fun home(api: MainAPI, force: Boolean = false): List<OnlineRow> = withContext(ExtensionGuard.dispatcher + ExtensionGuard.coroutineHandler) {
-        homeCache[api.name]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
-        // Round 12: saved on the phone too, so reopening Yumix doesn't ask every extension again.
+        if (!force) cachedHomeNow(api)?.let { return@withContext it }
         val diskKey = diskKey(api, "home")
-        if (!force) dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)?.takeIf { it.isNotEmpty() }?.let { rows ->
-            homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
-            // R15: a saved page is shown at once, but it may be hours old. The caller refreshes it
-            // in the background (stale-while-revalidate) instead of leaving the old copy up.
-            val age = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L
-            if (age > CACHE_MS || System.currentTimeMillis() - age < staleBefore) diskServed.add(api.name)
-            return@withContext rows
-        }
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
         // E4: every live fetch is timed; failures count towards quarantine (ExtensionSpeed).
         // A fetch cancelled by a newer one (Retry, leaving the screen) is not the extension's fault.
@@ -252,6 +243,26 @@ object OnlineRepository {
         }
         if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) ExtensionSpeed.record(api.name, System.currentTimeMillis() - started, ok = live.isNotEmpty())
         live
+    }
+
+    /**
+     * SPEED-1: the home rows of [api] from memory or the phone, without asking the extension; null when there are
+     * none. Runs on Dispatchers.IO, not the extension pool, so a saved page never waits behind live fetches (the
+     * Yumix gate of three and the 8-thread extension pool used to queue cached pages behind slow sites).
+     */
+    suspend fun cachedHome(api: MainAPI): List<OnlineRow>? = withContext(Dispatchers.IO) { cachedHomeNow(api) }
+
+    private fun cachedHomeNow(api: MainAPI): List<OnlineRow>? {
+        homeCache[api.name]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }
+        // Round 12: saved on the phone too, so reopening Yumix doesn't ask every extension again.
+        val diskKey = diskKey(api, "home")
+        val rows = dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)?.takeIf { it.isNotEmpty() } ?: return null
+        homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
+        // R15: a saved page is shown at once, but it may be hours old. The caller refreshes it
+        // in the background (stale-while-revalidate) instead of leaving the old copy up.
+        val age = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L
+        if (age > CACHE_MS || System.currentTimeMillis() - age < staleBefore) diskServed.add(api.name)
+        return rows
     }
 
     private suspend fun homeLive(api: MainAPI, diskKey: String): List<OnlineRow> {
@@ -347,14 +358,22 @@ object OnlineRepository {
     fun search(query: String, apis: List<MainAPI>): Flow<SearchUpdate> = channelFlow {
         val q = query.trim()
         if (q.isEmpty()) return@channelFlow
-        for (api in apis) {
+        val speed = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)
+        // SPEED-2: fastest measured searchers take the permits first; quarantined ones go last.
+        val ordered = if (speed) ExtensionSpeed.order(apis, { it.name }, null, { ExtensionSpeed.stat(searchKey(it)) }, System.currentTimeMillis()) else apis
+        for (api in ordered) {
             launch {
+                // SPEED-2: a saved answer is sent at once, without waiting for a permit behind slow live searches.
+                cachedSearch(api, q)?.let { send(SearchUpdate(api.name, it)); return@launch }
                 val update = parallel.withPermit {
+                    val started = System.currentTimeMillis()
                     runCatching {
                         withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(SEARCH_TIMEOUT) { searchOne(api, q) } }
                     }.fold(
-                        { SearchUpdate(api.name, it) },
+                        { if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = true)
+                          SearchUpdate(api.name, it) },
                         { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
+                          if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = false)
                           SearchUpdate(api.name, emptyList(), OnlineErrors.friendly(it)) },
                     )
                 }
@@ -365,15 +384,23 @@ object OnlineRepository {
 
     private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
 
-    private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+    private fun searchKey(api: String) = "search|$api"
+
+    /** SPEED-2: this query's results for [api] from memory or the phone (fresh enough), or null. Disk read: call off main. */
+    fun cachedSearch(api: MainAPI, q: String): List<OnlineItem>? {
         val key = "${api.name}|${q.lowercase()}"
         searchCache[key]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_CACHE_MS }?.let { return it.value }
         val dk = diskKey(api, "search", q.lowercase())
-        dev.asfakul.yumeiro.cache.DataCache.read("search", dk, maxAgeMs = minOf(dev.asfakul.yumeiro.cache.DataCache.Settings.freshMs, SEARCH_DISK_MS))
-            ?.let(dev.asfakul.yumeiro.cache.OnlineCodec::items)?.takeIf { it.isNotEmpty() }?.let { saved ->
+        return dev.asfakul.yumeiro.cache.DataCache.read("search", dk, maxAgeMs = minOf(dev.asfakul.yumeiro.cache.DataCache.Settings.freshMs, SEARCH_DISK_MS))
+            ?.let(dev.asfakul.yumeiro.cache.OnlineCodec::items)?.takeIf { it.isNotEmpty() }?.also { saved ->
                 searchCache[key] = Timed(System.currentTimeMillis(), saved)
-                return saved
             }
+    }
+
+    private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+        cachedSearch(api, q)?.let { return it }
+        val key = "${api.name}|${q.lowercase()}"
+        val dk = diskKey(api, "search", q.lowercase())
         val results = try {
             api.search(q, 1)?.items
         } catch (e: NotImplementedError) { null } ?: api.search(q).orEmpty()

@@ -5,9 +5,10 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 16:35 +06, branch `r15-stability` head after commit "docs: live handover" (see `git log -1`).
+2026-11-21 16:50 +06, branch `r15-stability` head after commit "docs: live handover" (see `git log -1`).
 
 ## Done today (2026-11-21), newest first
+- SPEED-1/2: cached homes and searches skip the permit queue; Home and search fastest-first (ledger row SPEED-1 / SPEED-2).
 - E4 part 1 `b640f68d`: ExtensionSpeed (fastest-first Yumix home order, quarantine 3 fails / 6 h), flag `e4_speed_order`.
 - B-31 seek fix `e451b783`: abandoned window's deadlines dropped on seek (finding B31-SEEK from device 44879268223).
 - E2 `18917728`: `.github/scripts/curate_live.py` curated probed Live TV (ADR-055), switch repo var `YUMEIRO_CURATED_LIVE`.
@@ -23,6 +24,7 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 - CI 44879288541 r15-stability @2b286d6c: pass-after for B-32, F-21, B-31 speed.
 - CI 44880384185 ab/e2-before (expect "Data script tests" fail: no curate_live module).
 - CI 44880511385 ab/b31-seek-before (expect compile fail: dropDeadlines overrides nothing).
+- CI 44881206020 ab/speed12-before (expect compile fail: cachedHome unresolved).
 - CI 44880750191 ab/e4-before (expect compile fail: ExtensionSpeed unresolved).
 - Device 44880554878 BuiltinTorrentDeviceTest both phones @e451b783 (seek fix + notice gate).
 - Device 44880575223 BuiltinTorrentDeviceTest TV api24 @e451b783.

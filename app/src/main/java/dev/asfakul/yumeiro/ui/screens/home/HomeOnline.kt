@@ -98,9 +98,13 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
         dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
             val gate = Semaphore(3)
             supervisorScope {
-                providers.map { api ->
+                // E4 / SPEED-1: fastest extensions first; saved pages skip the gate entirely.
+                val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
+                    dev.asfakul.yumeiro.online.ExtensionSpeed.order(providers, { it.name }, null) else providers
+                ordered.map { api ->
                     launch {
-                        val rows = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
+                        val cached = runCatching { OnlineRepository.cachedHome(api) }.getOrNull()
+                        val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
                         if (g == feed.gen) {
                             // A failed refresh never wipes rows that are already shown.
                             val fresh = rows.orEmpty().filter { it.items.isNotEmpty() }

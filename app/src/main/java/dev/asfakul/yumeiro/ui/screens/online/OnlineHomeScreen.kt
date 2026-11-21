@@ -222,7 +222,9 @@ fun OnlineHomeScreen(
         inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { return runCatching { running.await() }.getOrDefault(false) } else running.cancel() }
         val job = YumixMemory.scope.async {
             if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
-            val result = gate.withPermit {
+            // SPEED-1: a saved page shows at once; only live fetches wait for one of the three slots.
+            val cached = if (force) null else runCatching { OnlineRepository.cachedHome(api) }.getOrNull()
+            val result = if (cached != null) Result.success(cached) else gate.withPermit {
                 runCatching { OnlineRepository.home(api, force) }
             }
             // R16 G4: a fetch cancelled by a newer one (Retry, pull to refresh) used to fall
