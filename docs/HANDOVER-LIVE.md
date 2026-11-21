@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 17:15 +06, branch `r15-stability`, commit "CI-DNS-RACE".
+2026-11-21 17:26 +06, branch `r15-stability`, commit "DEV-CHK-21-T test fixes".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- DEV-CHK-21-T: device tests fixed after run 44896550636 / 44896552485 (Java stub player; Nf1 scroll + on-screen rows; Nbug10 match check + keyboard time). SpeedDeviceTest logs 3 more live searches for FE-S4.
 - CI-DNS-RACE: Nbug6 flake traced to NetworkSettings.init overwriting a setting saved during load; fixed with a write lock and test hook.
 - FE-T1: 2 GB phone feed half-shown 56.8 s (was 4.4 s): startup trims with 800 MB free throttled the feed to one lane. Fixed (FeedThrottle.confirmed). Rerun SpeedDeviceTest lowram after the r15 CI.
 - F-07-RES: "Choose each time" hand-off now asks for the result (MX / Just return the position only when asked). Device round trip ExternalPlayerDeviceTest + StubPlayerActivity (androidTest manifest).
@@ -62,6 +63,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- CI 44896530640 @33c65f8d Pass (356 classes, 0 failures): pass-after FE-T1 and CI-DNS-RACE. CI 44894227826 @49c4c60b Pass: pass-after F-07-VIS, F-07-RES. Fail-before CI-DNS-RACE 44895869754 verified.
+- Device 44896550636 / 44896552485: Pass VolumeBoost (F-06) and Upcoming (F-08) on lowram, api36, tv-api34; F01DubTap (F-01/F-16) both phones; SpeedDeviceTest both phones (FE-T1 fixed: lowram feed half 5151 ms).
 - Fail-before F-07-RES 44894173529 (theGenericChooserGetsTheWidelyReadExtras failed as expected) and FE-T1 44894340441 (compile); both branches deleted.
 - Phones 44892710506 @e2b87521: BuiltinTorrentDeviceTest Pass both (lowram first 2844 / seek 1129 ms: B31-SEEK5 Pass); SpeedDeviceTest Pass all budgets (GOAL run 3), lowram feed regression = FE-T1.
 - Device TV api24 44892712537 @e2b87521: BuiltinTorrentDeviceTest Pass (first 64 KB 8696 ms, seek 3148 ms; was 10370 ms): B31-SEEK4 Pass.
@@ -97,8 +100,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete any ab/ branch)
-- Fail-before CI-DNS-RACE 44895869754 on ab/dnsrace-before (expect compile fail: afterPrefsReadForTests); then delete branch + worktree /tmp/wt-dns.
-- r15 CI 44894227826 @49c4c60b running (F-07-RES pass-after); FE-T1 and CI-DNS-RACE commits are after it, so dispatch one more r15 CI (abi_splits=true) when it ends.
+- Device rerun (phones both): ExternalPlayerDeviceTest, Nbug10FilterSearchDeviceTest, Nf1EpisodeStatusDeviceTest, SpeedDeviceTest; TV api34: Nf1EpisodeStatusDeviceTest. IDs in R15 line 3.
 - Pass-after CI for F-07-VIS, F-07-RES + compile of the 6 new device tests: next r15-stability CI (run ID in R15-STATUS line 3).
 
 ## Next steps, in order

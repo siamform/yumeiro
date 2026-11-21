@@ -101,6 +101,18 @@ class SpeedDeviceTest {
             assertTrue("search ($pass) got no result from ${searchApis.size} extensions", first >= 0)
         }
 
+        // 3b. FE-S4 (adaptive search timeout): three more live searches with new words. A site that never answered
+        //     is quarantined after 3 failures in a row and then waited on for 8 s, not 25 s; measured sites get 4x their
+        //     own time. Logged per pass so the effect shows (live4 is the first pass where quarantine can apply).
+        for ((n, q) in listOf(2 to "night", 3 to "king", 4 to "dragon")) {
+            val s0 = System.currentTimeMillis()
+            var answered = 0; var withItems = 0
+            withTimeoutOrNull(90_000) {
+                OnlineRepository.search(q, searchApis).take(searchApis.size).collect { u -> answered++; if (u.items.isNotEmpty()) withItems++ }
+            }
+            log("search_all_answered_live$n", System.currentTimeMillis() - s0, "answered=$answered withItems=$withItems")
+        }
+
         // 4. FEED-ENGINE FE-RC1: the Yumix pattern. Every extension home through the same three priority slots, with
         //    first rows handed over (FE-3). Logs when the first extension shows, half of them, and all of them.
         val gate = dev.asfakul.yumeiro.online.PriorityGate(3)

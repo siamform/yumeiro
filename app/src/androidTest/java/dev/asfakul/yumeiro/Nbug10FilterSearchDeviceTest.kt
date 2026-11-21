@@ -119,7 +119,11 @@ class Nbug10FilterSearchDeviceTest {
 
         rule.onAllNodesWithTag("online_filter_search", true)[0].performClick()
         rule.onAllNodesWithTag("online_filter_search", true)[0].performTextInput(query)
-        val kb = runCatching { rule.waitUntil(10_000) { imeShown() && keyboardTop() < rule.activity.window.decorView.height }; true }.getOrDefault(false)
+        // The system keyboard's own start-up is not ours: on the 2 GB emulator the trimmed keyboard process showed
+        // 14 s after the tap (run 44896550636, onStartInputView 11:04:24). Wait for it and log how long it took.
+        val k0 = System.currentTimeMillis()
+        val kb = runCatching { rule.waitUntil(45_000) { imeShown() && keyboardTop() < rule.activity.window.decorView.height }; true }.getOrDefault(false)
+        log("NBUG10_IME shown=$kb after ${System.currentTimeMillis() - k0} ms")
         assertTrue("the soft keyboard did not open on the search box", kb)
         rule.waitForIdle(); Thread.sleep(800); rule.waitForIdle() // sheet settles above the keyboard
         val top = keyboardTop()
@@ -128,7 +132,11 @@ class Nbug10FilterSearchDeviceTest {
         FirstRun.shot("nbug10_search_keyboard")
         log("NBUG10_RESULT keyboardTop=$top rows=${shown.map { "${it.first}@${it.second.toInt()}-${it.third.toInt()}" }} readable=${readable.size} want=$want")
         assertTrue("only ${readable.size} of ${expectedNames.size} matches are above the keyboard (want $want): $shown, keyboard top $top", readable.size >= want)
-        assertTrue("rows shown are not the matches: ${shown.map { it.first }} vs $expectedNames", shown.map { it.first }.all { it in expectedNames })
+        // Every row shown must match the query. (The sheet is a lazy list: [all] holds only the rows drawn before the
+        // search, so matches below the fold, e.g. AnimePahe in run 44896550636, are not in [expectedNames].)
+        val notMatching = shown.map { it.first }.filter { filterExtensionNames(listOf(it), query).isEmpty() }
+        assertTrue("rows shown that do not match '$query': $notMatching of ${shown.map { it.first }}", notMatching.isEmpty())
+        assertTrue("matches seen before the search are missing: ${expectedNames - shown.map { it.first }.toSet()}", shown.map { it.first }.containsAll(expectedNames.take(want)))
     }
 
     private companion object { const val WANT = 6 }

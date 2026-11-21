@@ -92,21 +92,31 @@ class Nf1EpisodeStatusDeviceTest {
         log("title ${d.name} version '$version' e1=${e1.episode} e2=${e2.episode} e3=${e3.episode} seen=$seen")
 
         rule.setContent { MTPlayerTheme { OnlineDetailScreen(d.api, d.url, onBack = {}, onOpenTitle = {}, onOpenExtensions = {}) } }
-        rule.waitUntil(60_000) { rule.onAllNodesWithTag("online_episode_layout", true).fetchSemanticsNodes().isNotEmpty() }
-        rule.onAllNodesWithTag("online_detail_list", true)[0].performScrollToNode(hasTestTag("online_episode_layout"))
-        rule.onAllNodesWithTag("online_episode_layout", true)[0].performClick()
-        // Bring the first episode row to the top of the list (header, poster and plot come first).
+        // The layout button sits in a lazy item below the poster and plot: on a TV (landscape) it is not composed until
+        // the list scrolls to it (device run 44896552485 waited 60 s for it on tv-api34).
+        rule.waitUntil(60_000) { rule.onAllNodesWithTag("online_detail_list", true).fetchSemanticsNodes().isNotEmpty() }
         val list = rule.onAllNodesWithTag("online_detail_list", true)[0]
-        list.performScrollToNode(hasTestTag("online_episode"))
+        rule.waitUntil(60_000) { runCatching { list.performScrollToNode(hasTestTag("online_episode_layout")) }.isSuccess }
+        rule.onAllNodesWithTag("online_episode_layout", true)[0].performClick()
+        rule.waitForIdle()
+        // List layout: the status labels are in the list rows only; bring the first episode row to the top.
+        rule.waitUntil(20_000) { runCatching { list.performScrollToNode(hasTestTag("online_episode_status")) }.isSuccess }
         rule.waitForIdle()
         val listTop = list.fetchSemanticsNode().boundsInRoot.top
-        val epTop = rule.onAllNodesWithTag("online_episode", true).fetchSemanticsNodes().minOf { it.boundsInRoot.top }
+        val epTop = rule.onAllNodesWithTag("online_episode", true).fetchSemanticsNodes().filter { it.layoutInfo.isPlaced }.minOf { it.boundsInRoot.top }
         list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, epTop - listTop) }
         rule.waitForIdle()
-        rule.waitUntil(10_000) { rule.onAllNodesWithTag("online_episode_status", true).fetchSemanticsNodes().size >= 3 }
-        val labels = rule.onAllNodesWithTag("online_episode_status", true).fetchSemanticsNodes()
-            .sortedBy { it.positionInRoot.y }
-            .map { n -> n.config.getOrElse(SemanticsProperties.Text) { emptyList() }.joinToString { it.text } }
+        // Only rows placed inside the list's window: a lazy list also keeps composed rows for reuse / prefetch that are
+        // not on screen (run 44896550636 api36 read one such "Fresh" first).
+        fun onScreenLabels(): List<String> {
+            val b = list.fetchSemanticsNode().boundsInRoot
+            return rule.onAllNodesWithTag("online_episode_status", true).fetchSemanticsNodes()
+                .filter { it.layoutInfo.isPlaced && it.boundsInRoot.top >= b.top - 1f && it.boundsInRoot.bottom <= b.bottom + 1f }
+                .sortedBy { it.boundsInRoot.top }
+                .map { n -> n.config.getOrElse(SemanticsProperties.Text) { emptyList() }.joinToString { it.text } }
+        }
+        rule.waitUntil(10_000) { onScreenLabels().size >= 3 }
+        val labels = onScreenLabels()
         log("NF1_RESULT labels=$labels")
         assertTrue("first row is not Watched: $labels", labels.getOrNull(0) == "Watched")
         assertTrue("second row is not '6 min left': $labels", labels.getOrNull(1) == "6 min left")
