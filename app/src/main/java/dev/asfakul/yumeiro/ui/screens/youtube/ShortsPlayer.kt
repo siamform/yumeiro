@@ -87,6 +87,18 @@ object ShortsWindow {
         enabled && !tv && isShort && queueSize >= 1
 
     /** F-12: 9:16 (portrait or square) fills the screen; a landscape clip is fitted so nothing is cropped. */
+    /** ADR-056: the top bar and title hide after this long of uninterrupted play. */
+    const val CHROME_IDLE_MS = 3_500L
+
+    /** Whether the chrome may hide now: only while playing, never while buffering, paused or on an error. */
+    fun chromeMayHide(autohide: Boolean, playing: Boolean, buffering: Boolean, error: Boolean): Boolean =
+        autohide && playing && !buffering && !error
+
+    enum class Tap { SHOW_CHROME, TOGGLE_PLAY }
+
+    /** A tap while the chrome is hidden only brings it back; with the chrome up it pauses or plays. */
+    fun tap(chromeShown: Boolean): Tap = if (chromeShown) Tap.TOGGLE_PLAY else Tap.SHOW_CHROME
+
     fun resizeFor(width: Int, height: Int, fitLandscape: Boolean): Int =
         if (fitLandscape && width > 0 && height > 0 && width > height) AspectRatioFrameLayout.RESIZE_MODE_FIT
         else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
@@ -131,6 +143,9 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     val resize = remember { mutableStateMapOf<String, Int>() }
     val oneView = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_ONE_VIEW) }
     val fitLandscape = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_VERTICAL) }
+    val autohide = remember(context) { fitLandscape && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_AUTOHIDE) }
+    var chrome by remember { mutableStateOf(true) }
+    var touched by remember { mutableStateOf(0) }
 
     fun resolve(i: Int) {
         val item = items.getOrNull(i) ?: return
@@ -157,6 +172,15 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     }
     val current = items.getOrNull(pager.settledPage)
     val currentReq = current?.let { resolved[it.id] }
+    // ADR-056: a new page shows its title again; idle play hides the chrome after 3.5 s.
+    LaunchedEffect(pager.settledPage) { chrome = true }
+    val currentError = current?.let { failed[it.id] } != null
+    LaunchedEffect(chrome, playing, buffering, currentError, touched, pager.settledPage) {
+        if (chrome && ShortsWindow.chromeMayHide(autohide, playing, buffering, currentError)) {
+            kotlinx.coroutines.delay(ShortsWindow.CHROME_IDLE_MS)
+            chrome = false
+        } else if (!chrome && !ShortsWindow.chromeMayHide(autohide, playing, buffering, currentError)) chrome = true
+    }
     LaunchedEffect(current?.id, currentReq) {
         val item = current ?: return@LaunchedEffect
         val req = currentReq ?: return@LaunchedEffect
@@ -254,6 +278,8 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                     Modifier.fillMaxSize().testTag("shorts_touch").pointerInput(item.id) {
                         detectTapGestures(
                             onTap = {
+                                touched++
+                                if (ShortsWindow.tap(chrome) == ShortsWindow.Tap.SHOW_CHROME) { chrome = true; return@detectTapGestures }
                                 val p = lease?.player ?: return@detectTapGestures
                                 if (p.isPlaying) { p.pause(); playing = false } else { p.play(); playing = true }
                             },
@@ -278,14 +304,14 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                     page == pager.settledPage && (resolved[item.id] == null || buffering) ->
                         CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = Color.White)
                     page == pager.settledPage && !playing ->
-                        Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.Center).size(64.dp))
+                        Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.Center).size(64.dp).testTag("shorts_paused"))
                 }
                 if (fast && page == pager.settledPage) {
                     Text("2x", color = Color.White, modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp)
                         .background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp).testTag("shorts_fast"))
                 }
-                Column(
-                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                if (chrome) Column(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().testTag("shorts_title")
                         .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
                         .safeDrawingPadding().padding(16.dp)
                 ) {
@@ -294,7 +320,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        if (chrome) Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(4.dp).testTag("shorts_chrome"), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose, modifier = Modifier.testTag("shorts_close")) { Icon(Icons.Default.ArrowBack, "Close Shorts", tint = Color.White) }
             TextButton(
                 onClick = { current?.let { lease?.player?.pause(); onFullPlayer(it) } },

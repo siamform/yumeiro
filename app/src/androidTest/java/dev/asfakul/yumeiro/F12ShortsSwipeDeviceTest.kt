@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
@@ -123,7 +124,64 @@ class F12ShortsSwipeDeviceTest {
         assertTrue("page 2 first frame $ms2 ms > $budget ms", ms2 != null && ms2 <= budget)
         assertTrue("page 1 (back) first frame $ms1 ms > $budget ms", ms1 != null && ms1 <= budget)
 
+        // ADR-056: the top bar may have hidden while the pages played; a tap brings it back.
+        if (!has("shorts_close")) compose.onAllNodesWithTag("shorts_player", true).onFirst().performTouchInput { click(center) }
+        assertTrue("no close button after a tap", waitTag("shorts_close", 5_000))
         compose.onAllNodesWithTag("shorts_close", true).onFirst().performClick()
         compose.waitUntil(5_000) { closed }
+    }
+
+    /**
+     * ADR-056: the top bar and title hide after 3.5 s of play. A tap while hidden only shows them
+     * (the Short keeps playing); a tap with them up pauses, and paused they stay up. Back closes.
+     * Old code: the chrome never hides.
+     */
+    @Test fun chromeHidesWhenIdleAndATapBringsItBack() {
+        assumeFalse("Shorts player is phones only (ADR-018)", Edition.isTv)
+        val clip = inst.context.assets.open("yumeiro_portrait_clip.mp4").use { it.readBytes() }
+        val items = (0..1).map { i ->
+            File(ctx.cacheDir, "f12_chrome_$i.mp4").writeBytes(clip)
+            YtItem("f12chrome0$i", "https://www.youtube.com/shorts/f12chrome0$i", "Chrome Short $i", "Yumeiro test")
+        }
+        ShortsWindow.testResolver = { item ->
+            StreamRequest(url = Uri.fromFile(File(ctx.cacheDir, "f12_chrome_${items.indexOf(item)}.mp4")).toString(), title = item.title)
+        }
+        FeatureFlags.set(ctx, FeatureFlags.Flag.SHORTS_VERTICAL, true)
+        var closed = false
+        compose.setContent {
+            MTPlayerTheme {
+                var open by remember { mutableStateOf(true) }
+                Box(Modifier.fillMaxSize()) {
+                    if (open) ShortsPlayerDialog(items, 0, onDismiss = { open = false; closed = true }, onFullPlayer = {})
+                }
+            }
+        }
+        assertTrue("page 0 never showed a frame", waitTag("shorts_frame_0"))
+        assertTrue("chrome not shown at start", has("shorts_chrome") && has("shorts_title"))
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        val hid = runCatching { compose.waitUntil(8_000) { !has("shorts_chrome") }; true }.getOrDefault(false)
+        val hideMs = android.os.SystemClock.elapsedRealtime() - t0
+        log("F12_CHROME hid=$hid after=${hideMs}ms")
+        assertTrue("chrome did not hide while playing", hid)
+        assertTrue("title did not hide with the top bar", !has("shorts_title"))
+        assertTrue("chrome hid too early ($hideMs ms)", hideMs >= 2_500)
+        FirstRun.shot("f12_chrome_hidden")
+
+        val touch = compose.onAllNodesWithTag("shorts_player", true).onFirst()
+        touch.performTouchInput { click(center) }
+        assertTrue("a tap did not bring the chrome back", waitTag("shorts_chrome", 3_000))
+        compose.waitForIdle()
+        Thread.sleep(600)
+        assertTrue("the first tap (chrome hidden) paused the Short", !has("shorts_paused"))
+
+        touch.performTouchInput { click(center) }
+        assertTrue("a tap with the chrome up did not pause", waitTag("shorts_paused", 3_000))
+        Thread.sleep(4_500)
+        assertTrue("chrome hid while paused", has("shorts_chrome"))
+        FirstRun.shot("f12_chrome_paused")
+
+        FirstRun.shell("input keyevent 4")
+        compose.waitUntil(5_000) { closed }
+        log("F12_CHROME_RESULT pass hideMs=$hideMs")
     }
 }

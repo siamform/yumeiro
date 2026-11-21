@@ -1775,3 +1775,41 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
 - Limits: the probe runs from a GitHub runner (US), so a link geo-locked outside the US can be kept
   or dropped wrongly; the app still shows its normal error for a dead link. Countries live in
   `.github/streams/curated.json`.
+
+### ADR-056: Vertical mode in the normal player, and Shorts chrome that hides when idle (F-12)
+
+- Context: F-12 asked for 9:16 content that does not come from YouTube to open vertically, with
+  swipe up for the next item, controls that hide when idle and return on tap, and Back to the
+  normal player. Research: the YouTube app fills the screen for a vertical video and enters
+  vertical full screen with a swipe up ([YouTube Help](https://support.google.com/youtube/answer/6375112?hl=en&co=GENIE.Platform=Android));
+  YouTube Shorts uses tap to pause, hold the edge for 2x, and a Clear screen mode
+  ([YouTube Help thread](https://support.google.com/youtube/thread/445002770));
+  local swipe players (Swiply, [Google Play](https://play.google.com/store/apps/details?id=com.shyamsavroop.swiply&hl=en))
+  swipe up / down through a folder and keep left = brightness, right = volume; the Media3
+  short-form demo ([androidx/media](https://github.com/androidx/media/tree/1.11.1/demos/shortform))
+  uses a player pool and DefaultPreloadManager (more memory, rejected in ADR-018). No code copied.
+- Decision, normal player (`VerticalMode`, `DragRule`): on a phone (not TV, not a tablet, not
+  floating or PiP), a video whose shown height is at least 1.5 x its width (rotation and pixel
+  ratio counted; 9:16 yes, 3:4 no) switches the player to vertical mode once: full screen in
+  portrait (`PlayerOrientationRule` already asks USER_PORTRAIT for a vertical video) and cropped to
+  fill (ZOOM). In vertical mode a centre-third swipe up plays the next queue item and a swipe down
+  the previous one (down with no previous item leaves vertical mode); the side thirds stay
+  brightness and volume, horizontal drags stay seek, hold stays 2x. The normal controls keep their
+  3.5 s auto-hide. Back, the fullscreen button or a swipe down on the first item leave vertical
+  mode: the same item keeps playing in the normal layout (FIT), and the player does not switch
+  back by itself in that session. A landscape next item also returns to the normal layout.
+- Decision, Shorts player (`ShortsWindow.chromeMayHide`, `tap`): the top bar and the title hide
+  after 3.5 s of uninterrupted play and stay up while paused, buffering or on an error. A tap
+  while hidden only shows them (the Short keeps playing); a tap with them up pauses or plays. A new
+  page shows its title again. Back from the Shorts player closes it (to the shelf), and its
+  "Full player" button still opens the normal player.
+- Preloading: the Shorts pager resolves links ahead (2 ahead and 1 behind; 1 ahead on low-end) in
+  `ShortsWindow.prefetch` and keeps one shared player and one video view (ADR-018, F12-VIEW). That
+  is the lightweight preload; media bytes are not fetched ahead (no DefaultPreloadManager, no
+  disk cache), to keep memory low on 2 GB phones. The normal player's queue already gives the next
+  item at once (local files, extension episodes).
+- Flags: `f12_vertical_mode` and `f12_shorts_autohide` (kill switches, on) act only while
+  `f12_vertical_shorts` is on; that one stays off until F-12 is Verified.
+- Tests: `F12VerticalModeTest` (unit), `F12VerticalModeDeviceTest` and
+  `F12ShortsSwipeDeviceTest#chromeHidesWhenIdleAndATapBringsItBack` (device; TV: vertical mode
+  must never start).
