@@ -48,7 +48,9 @@ class EpisodeRangeDownloadTest {
         // A season list that starts at E13 (positions 0.., numbers 13..24).
         val season = (13..24).map { ep(it) }.withIndex().map { IndexedValue(it.index + 12, it.value) }
         assertEquals(13..24, EpisodeScope.bounds(season))
-        assertEquals(listOf(14, 15), EpisodeScope.range(season, 14, 15).map { it.first })
+        val picked = EpisodeScope.range(season, 14, 15)
+        assertEquals("by episode number, not position", listOf(14, 15), picked.map { it.second.episode })
+        assertEquals("indices point into the full list (E14 sits at 13)", listOf(13, 14), picked.map { it.first })
         // No numbers from the source: 1-based place in the list.
         val bare = listOf(ep(null), ep(null), ep(null)).withIndex().toList()
         assertEquals(2, EpisodeScope.range(bare, 2, 3).size)
