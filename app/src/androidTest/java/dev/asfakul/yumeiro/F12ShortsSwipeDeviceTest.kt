@@ -41,7 +41,8 @@ import java.io.File
  * F-12 swipe (ADR-018, phones only): three local 9:16-player pages. Swipe up plays the next Short, swipe down
  * the previous one, ten fast swipes settle on one page that plays, and every page uses the one shared player.
  * First frame after a page settles: budget 600 ms on api36, 1200 ms on the 2 GB phone (proposal section 6).
- * Old code (pager not swipeable): page 1 never shows a frame. Log tag YuF12.
+ * Old code (pager not swipeable): page 1 never shows a frame. F12-VIEW old code: a new video view per page.
+ * Log tag YuF12.
  */
 @RunWith(AndroidJUnit4::class)
 class F12ShortsSwipeDeviceTest {
@@ -68,7 +69,7 @@ class F12ShortsSwipeDeviceTest {
             val i = items.indexOf(item)
             StreamRequest(url = Uri.fromFile(File(ctx.cacheDir, "f12_short_$i.mp4")).toString(), title = item.title)
         }
-        ShortsWindow.playersUsed.clear(); ShortsWindow.firstFrameMs.clear(); ShortsWindow.lastResize = -1
+        ShortsWindow.playersUsed.clear(); ShortsWindow.firstFrameMs.clear(); ShortsWindow.lastResize = -1; ShortsWindow.viewsCreated.set(0)
         FeatureFlags.set(ctx, FeatureFlags.Flag.SHORTS_VERTICAL, true)
         val (cw, ch) = android.media.MediaMetadataRetriever().run {
             try {
@@ -114,9 +115,11 @@ class F12ShortsSwipeDeviceTest {
         compose.waitForIdle()
         val settled = runCatching { compose.waitUntil(20_000) { ShortsWindow.firstFrameMs.isNotEmpty() }; true }.getOrDefault(false)
         val budget = if (DeviceClass.lowEnd) 1200L else 600L
-        log("F12_RESULT frameMs page1=$ms1up page2=$ms2 page1back=$ms1 budget=$budget players=${ShortsWindow.playersUsed.size} afterFastSwipes=$settled lowEnd=${DeviceClass.lowEnd}")
+        log("F12_RESULT frameMs page1=$ms1up page2=$ms2 page1back=$ms1 budget=$budget players=${ShortsWindow.playersUsed.size} views=${ShortsWindow.viewsCreated.get()} afterFastSwipes=$settled lowEnd=${DeviceClass.lowEnd}")
         assertTrue("after 10 fast swipes no page played", settled)
         assertEquals("one shared player for every page", 1, ShortsWindow.playersUsed.size)
+        // F12-VIEW: one video view for the whole pager; a view per page stalled the main thread on every swipe.
+        assertEquals("one video view for every page", 1, ShortsWindow.viewsCreated.get())
         assertTrue("page 2 first frame $ms2 ms > $budget ms", ms2 != null && ms2 <= budget)
         assertTrue("page 1 (back) first frame $ms1 ms > $budget ms", ms1 != null && ms1 <= budget)
 

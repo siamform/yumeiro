@@ -27,6 +27,8 @@ object FeatureFlags {
         SHORTS_PLAYER("f12_shorts_player", true),
         /** F-12: YouTube's own Short mark (vertical, up to 3 min) also opens the Shorts player; landscape clips there are fitted, not cropped. Off until verified. */
         SHORTS_VERTICAL("f12_vertical_shorts", false),
+        /** F12-VIEW: the Shorts pager keeps one video view under the pages (moved with the page on screen) instead of inflating one per page. */
+        SHORTS_ONE_VIEW("f12_one_view", true),
         /** F12-HIST: YouTube history writes (first read from disk, JSON encode) run on a background lane, not on the main thread. */
         HISTORY_OFF_MAIN("f12_history_off_main", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */

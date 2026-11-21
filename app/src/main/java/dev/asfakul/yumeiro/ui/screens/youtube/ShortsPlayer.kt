@@ -42,6 +42,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -97,6 +98,8 @@ object ShortsWindow {
     internal val firstFrameMs = java.util.concurrent.ConcurrentHashMap<String, Long>()
     /** Identity of every player used by the pager since the last reset; one entry = one shared player. */
     @Volatile internal var lastResize: Int = -1
+    /** F12-VIEW evidence: video views inflated since the last reset (1 with the shared view, one per page without). */
+    internal val viewsCreated = java.util.concurrent.atomic.AtomicInteger()
     internal val playersUsed: MutableSet<Int> = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
 }
 
@@ -126,6 +129,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     var settledAt by remember { mutableStateOf(0L) }
     val framed = remember { mutableStateMapOf<String, Boolean>() }
     val resize = remember { mutableStateMapOf<String, Int>() }
+    val oneView = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_ONE_VIEW) }
     val fitLandscape = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_VERTICAL) }
 
     fun resolve(i: Int) {
@@ -203,30 +207,47 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         onDispose { owner.lifecycle.removeObserver(obs) }
     }
 
+    // One video view for the whole pager (F12-VIEW): the same view and surface for every Short, so a swipe never
+    // inflates a PlayerView or builds a new TextureView (a 700+ ms main-thread stall on api36, run 44910278641).
+    @Composable
+    fun VideoView(item: YtItem, page: Int, modifier: Modifier) {
+        AndroidView(
+            factory = { ctx ->
+                ShortsWindow.viewsCreated.incrementAndGet()
+                (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
+                    useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                }
+            },
+            update = { v ->
+                if (v.player !== lease?.player) v.player = lease?.player
+                val m = resize[item.id] ?: AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                if (v.resizeMode != m) v.resizeMode = m
+            },
+            onRelease = { v -> v.player = null },
+            modifier = modifier.testTag(if (framed[item.id] == true) "shorts_frame_$page" else "shorts_video_$page"),
+        )
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black).testTag("shorts_player")) {
+        val settledItem = items.getOrNull(pager.settledPage)
+        if (oneView && lease != null && settledItem != null && resolved[settledItem.id] != null) {
+            // Under the pages; follows the settled page while the user drags (TextureView follows Compose transforms).
+            VideoView(settledItem, pager.settledPage, Modifier.fillMaxSize().graphicsLayer {
+                translationY = (pager.settledPage - (pager.currentPage + pager.currentPageOffsetFraction)) * size.height
+            })
+        }
         VerticalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 0, key = { items[it].id }) { page ->
             val item = items[page]
             Box(Modifier.fillMaxSize().testTag("shorts_page_$page")) {
                 val onScreen = page == pager.settledPage && lease != null && resolved[item.id] != null
-                if (onScreen) {
-                    AndroidView(
-                        factory = { ctx ->
-                            (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
-                                useController = false
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                            }
-                        },
-                        update = { v ->
-                            if (v.player !== lease?.player) v.player = lease?.player
-                            val m = resize[item.id] ?: AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                            if (v.resizeMode != m) v.resizeMode = m
-                        },
-                        onRelease = { v -> v.player = null },
-                        modifier = Modifier.fillMaxSize().testTag(if (framed[item.id] == true) "shorts_frame_$page" else "shorts_video_$page"),
-                    )
-                } else {
-                    dev.asfakul.yumeiro.ui.screens.online.PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
+                when {
+                    // The shared view below shows through once this Short has its first frame; the poster covers
+                    // the previous Short's last frame until then.
+                    oneView && onScreen && framed[item.id] == true -> Unit
+                    !oneView && onScreen -> VideoView(item, page, Modifier.fillMaxSize())
+                    else -> dev.asfakul.yumeiro.ui.screens.online.PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
                 }
                 // Tap: pause / play. Hold: 2x while held.
                 Box(
