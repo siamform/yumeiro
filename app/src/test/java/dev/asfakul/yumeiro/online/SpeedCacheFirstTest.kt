@@ -5,13 +5,13 @@
  */
 package dev.asfakul.yumeiro.online
 
-import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.MainAPI
 import com.lagradost.cloudstream3.MainPageRequest
 import com.lagradost.cloudstream3.SearchResponse
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.mainPageOf
+import com.lagradost.cloudstream3.newHomePageResponse
 import com.lagradost.cloudstream3.newMovieSearchResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -43,7 +43,7 @@ class SpeedCacheFirstTest {
         private fun item(): SearchResponse = newMovieSearchResponse("Title $name", "$mainUrl/t/${name.hashCode()}", TvType.Movie)
         override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
             homeCalls.incrementAndGet(); delay(slowMs)
-            return HomePageResponse(listOf(HomePageList("Popular", listOf(item()))))
+            return newHomePageResponse("Popular", listOf(item()))
         }
         override suspend fun search(query: String): List<SearchResponse> {
             searchCalls.incrementAndGet(); delay(slowMs)
