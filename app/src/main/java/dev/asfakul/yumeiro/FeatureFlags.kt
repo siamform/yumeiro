@@ -59,6 +59,8 @@ object FeatureFlags {
         PLAYLIST_DOWNLOAD("ol12_playlist_download", true),
         /** OL-5: download popup offers quality / audio track / subtitles when the source has them; picked subtitles are saved next to the file and load in the player. */
         DOWNLOAD_TRACKS("ol5_download_tracks", true),
+        /** OL-6: redesigned download popup (bottom sheet on phones, dialog on TV / wide screens). */
+        DOWNLOAD_SHEET("ol6_download_sheet", true),
         /** OL-7-EDGE: player top bar uses the 4 dp Material app-bar side padding, so More ends at the edge like other apps. */
         PLAYER_TOPBAR_EDGE("ol7_player_topbar_edge", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */

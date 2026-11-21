@@ -159,6 +159,16 @@ fun DownloadPromptHost() {
     val offer = req.offer?.takeIf { it.hasChoices }
     var audio by remember(req) { mutableStateOf<String?>(null) }
     var subs by remember(req) { mutableStateOf(dev.asfakul.yumeiro.online.download.DownloadTracks.SUBS_NONE) }
+    val start = {
+        if (dontAsk) DownloadSettings.setAskFirst(context, false)
+        DownloadPrompt.run(context, req, keep, if (req.startAt != null || req.startWith != null) height else -1,
+            dev.asfakul.yumeiro.online.download.DownloadTracks.Pick(maxHeight = if (req.startAt != null || req.startWith != null || offer != null) height else -1, audio = audio, subtitles = subs))
+    }
+    // OL-6: the redesigned popup (bottom sheet on phones, dialog on TV / wide screens).
+    if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_SHEET)) {
+        DownloadSheetHost(req, offer, height, { height = it }, audio, { audio = it }, subs, { subs = it }, keep, { keep = it }, dontAsk, { dontAsk = it }, start)
+        return
+    }
 
     TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
@@ -178,11 +188,7 @@ fun DownloadPromptHost() {
         confirmButton = {
             dev.asfakul.yumeiro.ui.components.DialogConfirmButton(
                 if (req.count > 1) "Download ${req.count}" else "Download",
-                onClick = {
-                    if (dontAsk) DownloadSettings.setAskFirst(context, false)
-                    DownloadPrompt.run(context, req, keep, if (req.startAt != null || req.startWith != null) height else -1,
-                        dev.asfakul.yumeiro.online.download.DownloadTracks.Pick(maxHeight = if (req.startAt != null || req.startWith != null || offer != null) height else -1, audio = audio, subtitles = subs))
-                },
+                onClick = { start() },
                 modifier = Modifier.testTag("download_confirm_start"),
             )
         },
@@ -198,7 +204,7 @@ fun DownloadPromptHost() {
 /** OL-5: one row of choice chips (quality heights, audio tracks, subtitles). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> TrackChips(title: String, tag: String, options: List<Pair<T, String>>, selected: T, onPick: (T) -> Unit) {
+internal fun <T> TrackChips(title: String, tag: String, options: List<Pair<T, String>>, selected: T, onPick: (T) -> Unit) {
     Column(Modifier.padding(bottom = 8.dp).testTag(tag)) {
         Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -225,7 +231,7 @@ internal fun TrackPicker(
 /** NF-2b: quality for this download only (Settings → Downloads → Quality stays the default). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun QualityPicker(selected: Int, onPick: (Int) -> Unit) {
+internal fun QualityPicker(selected: Int, onPick: (Int) -> Unit) {
     Column(Modifier.padding(bottom = 8.dp).testTag("download_quality")) {
         Text("Quality for this download", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
