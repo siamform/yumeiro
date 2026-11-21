@@ -5,7 +5,8 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 20:58 +06, branch `r15-stability` @7eb17931 + this docs commit. F-12 rest built (F12-MODE, F12-CHROME), F12-LINT fixed; F12-HIST + F12-VIEW Pass.
+2026-11-21 21:55 +06, branch `r15-stability` @8a3e74a4 + this docs commit. F-12 vertical mode + chrome device Pass on phones and TV;
+NBUG-13-PORT found by CI and fixed; flag f12_vertical_shorts still off until CI 44918012619 is green.
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -25,6 +26,14 @@ Commits: owner is author and committer, one `Co-authored-by: Perplexity` trailer
 code, commits or docs; only in the gitignored `secrets/` folder on the working machine.
 
 ## Done today (2026-11-21), newest first
+- NBUG-13-PORT (8a3e74a4): CI 44914717596 failed AppProxyTest (the random free port held the digits 407, and the proxy
+  error text checked "407" before the error type, so an unreachable proxy read as "wants a login"). Fixed, flag
+  nbug13_reach_first, new fixed-port test. Fail-before CI 44917972192 and pass-after CI 44918012619 running.
+- F12-MODE + F12-CHROME device Pass: phones 44916676685 (vertical on, queue swipe, Back to the normal player with the
+  same clip playing; chrome hides at 3.5 s, tap shows, tap pauses), TV 44916693769 (never enters / skips). Fail-before
+  device 44913945589 valid (branch ab/f12mode-before deleted). First pass-after 44913948025 failed on the tests, fixed:
+  F12-TEST-CLING (bf534934, Android's one-time full-screen notice took Back) and F12-TEST-CLOCK (c3ec754d, the hide
+  timer follows the compose test clock). Diagnosis run 44915399473 on diag/f12back (deleted).
 - F12-MODE (a2222bf5): vertical mode in the normal player for 9:16 non-YouTube videos (ADR-056): full screen portrait,
   centre swipe up / down through the queue, Back to the normal layout. F12-CHROME (215fb53d): Shorts top bar + title
   hide after 3.5 s of play, a tap brings them back. F12-LINT (7eb17931): Media3 opt-in on ShortsWindow.resizeFor (lint
@@ -91,6 +100,7 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- 44916676685 phones Pass F12VerticalModeDeviceTest + F12ShortsSwipeDeviceTest (3 tests) @c3ec754d; 44916693769 TV Pass (entered=false, chrome test skips).
 - 44912687672 phones Pass F12ShortsSwipeDeviceTest + ReleaseFeaturesDeviceTest @8c304d4f; 44912689981 TV skip / 5 Pass; unit 44912685131 Pass (lint Fail = F12-LINT).
 - 44904481596 F-07 phones Pass; 44904447255 old-row tests phones Pass; CI 44903723798 Pass.
 - CI 44901991356 @6196d665 Pass (357 / 1675 / 0). NF-1 Pass 44903495726 (phones) / 44903498117 (tv-api34).
@@ -134,15 +144,13 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs
-- Fail-before `ab/f12mode-before` @c8d6eaa7: CI 44913232245 done = valid (unit compile: unresolved VerticalMode / DragRule).
-  Device 44913945589 (phones, F12VerticalModeDeviceTest + F12ShortsSwipeDeviceTest): expect vertical mode never on and
-  the Shorts chrome never hiding. Delete the branch after recording.
-- Pass-after `r15-stability` @7eb17931: device 44913948025 (phones, same two classes), CI 44914717596 (review_apk=true:
-  F12VerticalModeTest unit + F12-LINT lint).
-- Still to dispatch after those: TV tv-api34 on r15 for F12VerticalModeDeviceTest (TV must never enter vertical mode).
+- Fail-before `ab/nbug13port-before` (test only on @c3ec754d): CI 44917972192 (review_apk=false). Expect only
+  AppProxyTest.anUnreachableProxyIsNeverReadAsALoginAnswer to fail. Then delete the branch (worktree /tmp/fbwt).
+- Pass-after `r15-stability` @8a3e74a4: CI 44918012619 (review_apk=true): F12VerticalModeTest, phone + TV lint (F12-LINT),
+  NBUG-13-PORT.
 
 ## Next steps, in order
-1. Record the pending runs above (ledger rows F12-MODE, F12-CHROME, F12-LINT; must-do F-12). If all Pass incl. TV:
+1. Record the pending runs above (ledger rows NBUG-13-PORT, F12-MODE unit, F12-LINT; must-do F-12). If CI is green:
    flip f12_vertical_shorts default to true (one commit, ledger F-12-FLAG), update CHECKLIST-FEATURES-BUGS.md F-12
    row, UNVERIFIED-QUEUE.md F-12 row (still "Queued") and OMT-37, then CI + device phones/TV on the flipped head.
    If a run fails: diagnose from logcat (tags YuF12, YuF12V), fix, never relax a budget or assertion.
