@@ -410,7 +410,17 @@ fun OnlineHomeScreen(
                 } },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                val ready = providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } }
+                // FE-4: the mix is rebuilt per frame (first update at once, then at most every 300 ms), not per row answer.
+                val framed = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE4_FEED_FRAMES) }
+                val readyNow0 = { providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
+                val ready = if (!framed) readyNow0() else {
+                    val r by androidx.compose.runtime.produceState(readyNow0(), providers) {
+                        with(dev.asfakul.yumeiro.online.FeedFrames) {
+                            androidx.compose.runtime.snapshotFlow { readyNow0() }.atMostEvery().collect { value = it }
+                        }
+                    }
+                    r
+                }
                 // Round 8: "All" ⇄ extension page used to be a bare if/else (one-frame cut). It now
                 // slides in the direction of the tapped channel and Back returns to "All".
                 androidx.activity.compose.BackHandler(enabled = selected != null) { selected = null }
