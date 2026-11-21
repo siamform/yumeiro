@@ -33,7 +33,8 @@ import java.util.concurrent.atomic.AtomicLong
  * starts MainActivity with `am start` and no Compose rule (real Choreographer frames), publishes 300
  * providers, and walks Home → Videos → Yumix → Live TV → Home with real touches (`input tap`). The
  * watchdog posts to the main thread every 100 ms and fails over [MAX_STALL_MS]; waits that began while
- * the test itself was reading the screen (accessibility query) are not counted. Log tag YuGate1.
+ * the test itself was reading the screen (accessibility query) are not counted, and a wait that a read
+ * started during counts up to the read's start. Log tag YuGate1.
  * GATE-1-ANR: the walk also opens YouTube, and [GateOneExitCheckDeviceTest] (a later class, so a later
  * process) fails when Android recorded an ANR or crash of the app since [GateOnePrepareDeviceTest] ran
  * (ApplicationExitInfo, API 30+). An ANR kills the process that had it, so its record can only be read
@@ -81,8 +82,10 @@ class MainThreadStallRealClockDeviceTest {
                     val ran = AtomicLong(0L)
                     main.post { ran.set(SystemClock.uptimeMillis()) }
                     var sampled = 0
+                    var readAt = 0L // when a screen read was first seen during this wait (10 ms steps)
                     while (running.get() && ran.get() == 0L) {
                         Thread.sleep(10)
+                        if (readAt == 0L && reading.get()) readAt = SystemClock.uptimeMillis()
                         val waited = SystemClock.uptimeMillis() - sent
                         if (waited >= 300 + 250L * sampled && sampled < 8) {
                             sampled++
@@ -93,7 +96,15 @@ class MainThreadStallRealClockDeviceTest {
                     }
                     if (ran.get() > 0L) {
                         val wait = ran.get() - sent
-                        if (!readingAtSend && !reading.get() && wait > worst.get()) { worst.set(wait); log("real main thread waited $wait ms") }
+                        // GATE-1-T10: a stall that began before the test read the screen counts up to the moment the
+                        // read began (run 44951712024: a 1375 ms render stall after the Source tap was not counted
+                        // because a read started 1.1 s into it).
+                        val counted = when {
+                            readingAtSend -> 0L
+                            readAt > 0L -> minOf(wait, readAt - sent)
+                            else -> wait
+                        }
+                        if (counted > worst.get()) { worst.set(counted); log("real main thread waited $counted ms (of $wait)") }
                     }
                     Thread.sleep(100)
                 }
