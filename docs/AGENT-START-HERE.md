@@ -59,13 +59,13 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
   export GIT_COMMITTER_NAME="Asfakul Siam" GIT_COMMITTER_EMAIL="71690568+siamform@users.noreply.github.com"
   ```
 - Every commit message ends with exactly one trailer line: `Co-authored-by: Perplexity <noreply@perplexity.ai>`
-  (owner re-approved 2026-11-21 21:00 +06: "approved, use co-author"; the platform requires it). Author and committer
+  (owner re-approved 2026-11-21 19:52 +06: "approved, use co-author"; the platform requires it). Author and committer
   stay the owner; no other attribution line (no "Generated with" / "Made by") in commits, branches or docs.
   Check each commit with `git log -1 --format=fuller` before pushing.
 - PR descriptions and GitHub comments end with the "Created with Perplexity" footer line linking the agent's task
   (never in replies to the owner).
 - Never force-push. Run `gh` from inside the repo directory.
-- Credentials (owner 2026-11-21 21:00 +06): never in code, commits, pushes, logs or docs. They live only in the
+- Credentials (owner 2026-11-21 19:52 +06): never in code, commits, pushes, logs or docs. They live only in the
   gitignored `secrets/` folder on the working machine (`secrets/yumeiro.env.local`, `secrets/firebase-admin.json`);
   the build reads them through `optionalKey(prop, env)` from the environment, never from a literal.
 
@@ -99,8 +99,9 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
   pass them in release.yml, review-apk.yml, upgrade-check.yml.
 - Rotate the Last.fm shared secret before built-in Last.fm sign-in is enabled for users. Do not set
   LASTFM_SHARED_SECRET on the Worker.
-- If the owner pastes a secret in chat, store it only as a repo secret (`gh secret set NAME -R siamform/yumeiro`
-  reading from stdin), never in a file in the repo, and say so.
+- If the owner pastes a secret in chat: never put it in code or git. Owner 2026-11-21 19:52 +06: keep it only in the
+  gitignored `secrets/` folder on the working machine (or as a repo secret via `gh secret set NAME -R
+  siamform/yumeiro` from stdin when CI needs it), and say so.
 
 ### Talking to the owner
 - Short, plain answers. Explain technical choices in everyday words (he asked for this). No release talk unless he
@@ -119,7 +120,7 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 | Jackson 2.18.11 phone / 2.13.5 TV | before 2.0.0 |
 | NBUG-6: sequential DNS fallback | before 2.0.0 |
 | Vega / Nuvio / SkyStream stay one registry | before 2.0.0 |
-| `Co-authored-by: Perplexity` trailer, owner as author and committer (re-approved by the owner 2026-11-21 21:00 +06) | before 2.0.0, 2026-11-21 |
+| `Co-authored-by: Perplexity` trailer, owner as author and committer (re-approved by the owner 2026-11-21 19:52 +06) | before 2.0.0, 2026-11-21 |
 | No 2.0.1; fix everything, then 2.1.0 | 2026-11-20 |
 | No release for now; fix, implement and test all first | 2026-11-21 |
 | Credentials never in code or git; only in the gitignored `secrets/` folder | 2026-11-21 |
