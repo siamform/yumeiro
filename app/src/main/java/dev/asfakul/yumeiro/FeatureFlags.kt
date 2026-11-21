@@ -75,6 +75,8 @@ object FeatureFlags {
         SHADER_PREWARM("gate1_shader_prewarm", true),
         /** GATE-1-RENDER-2: the Yumix feed opens with its sections added one per frame, top to bottom (a list reopened scrolled down shows all at once). */
         FEED_STAGED_REVEAL("gate1_feed_staged_reveal", true),
+        /** GATE-1-RENDER-4: posters load through AsyncImage in the same composition (no SubcomposeAsyncImage per poster). */
+        POSTER_PLAIN_IMAGE("gate1_poster_plain_image", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */
