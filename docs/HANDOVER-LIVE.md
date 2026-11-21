@@ -52,6 +52,9 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Fail-before verified: FE-2c 44885309121 (unresolved PriorityGate.Lane); branch deleted.
 - Device phones 44884969625 @7d77a583: SpeedDeviceTest Pass both (SPEED-T2 numbers in GOAL-TOP-OF-CLASS.md); BuiltinTorrentDeviceTest api36 Pass (first 64 KB 3668 ms, seek 3115 ms), api33-lowram Fail (first piece no block 16 s) -> B31-SEEK5.
 - Device TV api24 44884971496 @7d77a583: BuiltinTorrentDeviceTest first 64 KB 3774 ms Pass, seek 10370 ms Fail -> B31-SEEK4 (fixed, unverified).
+- Fail-before verified: B31-SEEK4+5 44886201772 (3 TorrentSourceTest assertions); branch deleted.
+- Fail-before verified: FE-S4 44886794506 (unresolved searchTimeoutMs); branch deleted.
+- Fail-before verified: FE-4a 44886560580 (unresolved FeedFrames / atMostEvery); branch deleted.
 - Fail-before verified: FE-S2 44885736016 (SearchRankOffMainTest names OnlineSearchScreen / YtMusicBrowse / YouTubeScreens), FE-S3 44886384973 (no retry parameter); branches deleted. Finding FE-P-T: PauseWhilePlayingTest expected 4 on a 3-permit gate (test fixed).
 - Fail-before verified: FE-S1 44884613831 (assertion "asked the extension again"), FE-5 44885480520 (unresolved FeedWarm); branches deleted. Same run 44884613831: GateLaneTest.tapStartsAtOnce failed (351 ms > 300): finding T-GATE, watch pass-after.
 - Fail-before verified: FE-3 44884810399 (compile: home has no onRows), FE-P 44885100184 (unresolved PlayingNow); branches deleted.
@@ -74,7 +77,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
 - Pass-after CI on r15-stability head (abi_splits=true, run ID in R15-STATUS line 3): covers FE-S1, FE-3, SPEED-T2, FE-P (+FE-P-T), FE-2c, FE-5, FE-S2, B31-SEEK4/5, FE-S3, FE-4a, FE-S4. 44886605109 was cancelled (could not be green, FE-P-T). Do not dispatch an r15 CI while it runs.
-- Fail-before CIs: FE-S4 44886794506 (ab/fes4-before, expect compile failure: unresolved searchTimeoutMs), FE-4a 44886560580 (ab/fe4-before, expect compile failure: unresolved FeedFrames / atMostEvery), B31-SEEK4+5 44886201772 (ab/b31seek45b-before, cut from 2206f81d~1; expect TorrentSourceTest failures: seekDropsTheTailDeadlinesFromOpen "tail deadlines kept", targetPieceDownloadsAloneUntilItHasBytes "only the first piece wanted", primeAsksForHeadAndTail... deadlines list). Check, record, delete each branch.
+- Fail-before CIs: none pending.
 - Device runs on 7d77a583 done: phones 44884969625 (lowram torrent Fail -> B31-SEEK5), TV 44884971496 (Fail -> B31-SEEK4).
 - After the next r15 CI is green: BuiltinTorrentDeviceTest phone=both and TV tv_api=24 again for B31-SEEK4 / B31-SEEK5.
 - After 44884554686 passes: device (if the above are green, not needed again) BuiltinTorrentDeviceTest + SpeedDeviceTest phone=both, and TV tv_api=24 BuiltinTorrentDeviceTest.
