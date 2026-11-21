@@ -51,12 +51,14 @@ class TdEngineTest {
     }
 
     @Test fun goodDownloadIsInstalledReadOnly() {
-        var seen = 0L
+        val seen = mutableListOf<Long>()
         val dest = File(tmp.newFolder(), "libtdjsonjava.so")
         TdEngine.install(ByteArrayInputStream(gz), pin(), dest) { seen += it }
         assertArrayEquals(so, dest.readBytes())
         assertFalse(dest.canWrite())
-        assertEquals(gz.size.toLong(), seen)
+        // Running totals, rising, ending at the whole download (the bar reaches 100 %).
+        assertEquals(seen.sorted(), seen)
+        assertEquals(gz.size.toLong(), seen.last())
     }
 
     @Test fun wrongLibraryHashIsDeleted() = expectRejected(gz, pin(soSha = "0".repeat(64)))

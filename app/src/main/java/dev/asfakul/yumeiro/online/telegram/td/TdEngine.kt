@@ -114,7 +114,7 @@ object TdEngine {
      * Streams [gz] into [dest] through gunzip, hashing both sides on the way. Only a file whose two hashes match the
      * pin is renamed into place (read-only); anything else is deleted and [SecurityException] is thrown.
      */
-    internal fun install(gz: InputStream, pin: Pin, dest: File, progress: (Long) -> Unit = {}) {
+    internal fun install(gz: InputStream, pin: Pin, dest: File, progress: (Long) -> Unit = {}) { // progress = bytes read so far
         val tmp = File(dest.parentFile, dest.name + ".part")
         tmp.delete()
         val gzDigest = MessageDigest.getInstance("SHA-256")
@@ -138,6 +138,7 @@ object TdEngine {
             // Drain anything the gzip reader left so the gzip hash covers the whole download.
             val rest = ByteArray(8 * 1024)
             while (counted.read(rest, 0, rest.size) >= 0) Unit
+            counted.finish()
             unzip.close()
             val gzHex = hex(gzDigest.digest())
             val soHex = hex(soDigest.digest())
@@ -177,6 +178,8 @@ object TdEngine {
             done += n
             if (done - lastReport >= 256 * 1024) { lastReport = done; progress(done) }
         }
+        /** The last total, so the bar reaches 100 % before "Ready". */
+        fun finish() { if (done != lastReport) { lastReport = done; progress(done) } }
         override fun close() = inner.close()
     }
 }
