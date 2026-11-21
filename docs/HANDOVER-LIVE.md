@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 18:32 +06, branch `r15-stability`, commit "DEV-CHK-21-T4: F-07 test grants start-up permissions".
+2026-11-21 19:01 +06, branch `r15-stability`, commit "F-07 / old rows device Pass, E1 design".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -13,11 +13,15 @@ on screen > background); reserve cache; instant open; feed ~10 min after install
 extensions reinstall after an update; YouTube and online music slow too. Plan FE-1..FE-7 in that doc.
 Owner rule 19:15: after every bug/feature, mark its status in the docs, verified (run ID) or not.
 
+## Owner rule 2026-11-21 19:01 +06
+Partial is not acceptable: every bug and feature must be done AND verified (run IDs). Write the docs every push so the next agent resumes exactly. E1 master extension: research and design in docs/E1-MASTER-EXTENSION.md (owner brief quoted there).
+
 ## Owner rule 2026-11-21 17:15 +06
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- Device Pass on this head (phones): F-07 ExternalPlayerDeviceTest 44904481596 (MX + chooser, Watched(66000, 60000)); ReleaseFeatures / PosterActions / FinalCoverage / MangaOffline 44904447255 (F-04, F-09 phone part, F-13, F-14, F-15, F-17; F-10 glass part; F-12 retry part). CI 44903723798 @b8381ce0 Pass (357 / 1675 / 0). E1 research + design written.
 - NF-1 device Pass on all 3 targets (44903495726 / 44903498117). r15 CI 44901991356 @6196d665 Pass (357 classes, 1675 cases, 0 failures): pass-after NBUG10-IME, third green for CI-DNS-RACE. F-07 lowram MX round trip Pass; F07-T4 test fix (media permission dialog).
 - NBUG-10 device Pass 44901993315 (both phones, with the NBUG10-IME fix). Fail-befores valid: NBUG10-IME 44901948952, NF-2b 44901952882, F-02 split 44901941945, Country 44901945428, F-18 44899238590 (branches deleted). NF1-T3 and F07-T3 test faults fixed (app rows were right; F-07 result blocked by the permission dialog in the test).
 - r15 CI 44899160113 @ff056fb7 Pass (356 classes, 1673 cases, 0 failures): second green for CI-DNS-RACE. DEV-CHK-21-C2: Nf1 rewrite did not compile; the runs on it are invalid; fixed and re-run.
@@ -68,6 +72,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- 44904481596 F-07 phones Pass; 44904447255 old-row tests phones Pass; CI 44903723798 Pass.
 - CI 44901991356 @6196d665 Pass (357 / 1675 / 0). NF-1 Pass 44903495726 (phones) / 44903498117 (tv-api34).
 - 44901993315 phones: Nbug10FilterSearchDeviceTest Pass (api33-lowram, api36).
 - CI 44899160113 @ff056fb7: Pass, 356 classes, 1673 cases, 0 failures.
@@ -109,13 +114,11 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete any ab/ branch)
-- r15 CI 44903723798 (DEV-CHK-21-T3 head). Parse reports. Do not dispatch another r15 CI while it runs.
-- Device of this push (IDs in R15 line 3): phones ExternalPlayerDeviceTest; phones old-row reruns ReleaseFeatures, PosterActions, FinalCoverage, MangaOffline.
+- TV api34 44906652590: ReleaseFeatures, PosterActions (F-09 Menu key), FinalCoverage, MangaOffline, Nf1.
+- Phones 44906655104: Profiles, LocalPlayer, Nbug15Recents, Nbug15Redesign, TelegramPublic, TelegramPlayback.
 
 ## Next steps, in order
-1. Record pending runs. F07-T2: read the F07 log lines (STUB got ..., result pending=...) to find where the result is lost.
-2. NBUG10-IME: find why the server hides the IME 2 s after show (HIDE_UNSPECIFIED_WINDOW) in the filter sheet; fix + test.
-3. Redo fail-befores from HEAD (AB-INVALID-1): NF-2b DownloadQualityPickTest (1f08eebe), F-02 split SavedSitesSplitTest (e3536d8d), F-18 MangaChapterNavTest (08ff6e58), Country LiveCountryTest (5a1c34f6): new branch from HEAD, git revert --no-commit <feature> keeping the test; delete old ab/*-before branches and /tmp/wt-* worktrees.
-4. Re-run old device tests on this head: ReleaseFeatures, PosterActions, FinalCoverage, MangaOffline, Profiles, LocalPlayer, Nbug15Recents/Redesign, TelegramPublic/TelegramPlayback (old Pass IDs in MASTER-CHECKLIST-FINAL.md).
-5. UNVERIFIED-QUEUE.md, GOAL G-rows, FE-4 (Not run: ext_first_usable 21..275 ms), FE-5, E1, F-22b, E3 Blocked (website not in repo), PIN-1 no test.
-6. Release only on the owner's explicit go.
+1. Record 44906652590 / 44906655104 (MAJOR-BUGS status cells, BUGS, this file, R15 line 3).
+2. Still open after that, in order: F-10 Blue theme device test (write it), F-12 swipe between shorts + 9:16 auto-open (build + test), NF-2b / F-02 split / F-18 / Country device tests (write them), F-02 login (flag off: owner TDLib keys), E2 / E3 / E4 verification, F-03 / F-05 / F-19 / F-20 / airing alerts / X-1 / EXT-P (make each complete + verified), PIN-1 test, GATE-1 ANR test, FREEZE rows, C5 / C6.
+3. E1 master extension: docs/E1-MASTER-EXTENSION.md; start E1-A only on the owner's go (open questions in section 6).
+4. Release only on the owner's explicit go.
