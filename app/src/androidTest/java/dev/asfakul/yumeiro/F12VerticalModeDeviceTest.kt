@@ -66,7 +66,16 @@ class F12VerticalModeDeviceTest {
     private fun playingUri(): String? = onPlayer { it.currentMediaItem?.localConfiguration?.uri?.toString() }
     private fun vm() = ViewModelProvider(rule.activity)[MainViewModel::class.java]
 
+    private var clingSetting: String? = null
+
     @Before fun setUp() {
+        // F12-TEST-CLING: the first immersive full screen of an app shows Android's one-time
+        // "Viewing full screen" window (ImmersiveModeConfirmation), which takes focus and the Back
+        // key (run 44915399473: its back callback was set and the key never reached the app; the
+        // app's own dispatcher left vertical mode at once). A user dismisses it once per install;
+        // the test marks it seen so Back reaches the player, and restores the value afterwards.
+        clingSetting = FirstRun.shell("settings get secure immersive_mode_confirmations").trim()
+        FirstRun.shell("settings put secure immersive_mode_confirmations confirmed")
         listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.POST_NOTIFICATIONS")
             .forEach { runCatching { inst.uiAutomation.grantRuntimePermission(ctx.packageName, it) } }
         FeatureFlags.set(ctx, FeatureFlags.Flag.SHORTS_VERTICAL, true)
@@ -77,6 +86,7 @@ class F12VerticalModeDeviceTest {
     }
 
     @After fun tearDown() {
+        clingSetting?.let { v -> if (v.isEmpty() || v == "null") FirstRun.shell("settings delete secure immersive_mode_confirmations") else FirstRun.shell("settings put secure immersive_mode_confirmations $v") }
         runCatching { rule.runOnUiThread { PlaybackSession.releaseNow() } }
         clips.forEachIndexed { i, u -> TestClip.remove(ctx, u, names[i]) }
         FeatureFlags.set(ctx, FeatureFlags.Flag.SHORTS_VERTICAL, FeatureFlags.Flag.SHORTS_VERTICAL.default)
@@ -170,6 +180,7 @@ class F12VerticalModeDeviceTest {
         onPlayer { it.play() }
         Thread.sleep(800)
         val posBefore = onPlayer { it.currentPosition } ?: 0L
+        log("focus before Back: ${FirstRun.shell("dumpsys window").lines().filter { it.contains("mCurrentFocus") }.joinToString(" | ").trim()}")
         back()
         wait("Back left vertical mode", 5_000) { !has("video_vertical_mode") }
         assertTrue("Back closed the player instead of leaving vertical mode", has("video_player_root"))
