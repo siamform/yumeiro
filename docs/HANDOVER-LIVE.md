@@ -5,13 +5,21 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 18:45 +06, branch `r15-stability` head after commit "B31-SEEK3: torrent wait trace for device runs".
+2026-11-21 19:25 +06, branch `r15-stability` head after commit "docs: FE-1 handover".
+
+## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
+Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
+on screen > background); reserve cache; instant open; feed ~10 min after install/update must be fixed; check whether
+extensions reinstall after an update; YouTube and online music slow too. Plan FE-1..FE-7 in that doc.
+Owner rule 19:15: after every bug/feature, mark its status in the docs, verified (run ID) or not.
 
 ## Owner rule 2026-11-21 17:15 +06
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-1 `f37b4224`: `OnlineRepository.feedHome` shows any-age saved homes at once in Yumix and Home, live refresh behind.
+- FEED-ENGINE doc docs/FEED-ENGINE-2.1.md (requirement, root causes FE-RC1..4, design, plan).
 - SPEED-T: device test `SpeedDeviceTest` (extension relaunch load, Home first row, search first result; tag SPEED).
 - B31-SEEK2: request_queue_time 1, seek target alone at 0 ms, read-ahead from 500 ms (research: libtorrent_flutter, VortX).
 - SPEED-3/4: extensions load fastest-first; search starts with loaded extensions and late ones join (no restart).
@@ -37,13 +45,17 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- B31-SEEK3 diagnostic device runs (BuiltinTorrentDeviceTest with TorrentTrace, tag B31): IDs in the next push.
+- FE-1 fail-before CI 44883755874 (ab/fe1-before; expect unresolved feedHome), then delete the branch.
+- B31-SEEK3 diagnostic device runs: 44883372732 (phones=both, BuiltinTorrentDeviceTest + SpeedDeviceTest = SPEED baseline)
+  and 44883375160 (TV api24, BuiltinTorrentDeviceTest). Read logcat tags B31 and SPEED.
 - Pass-after CI 44882251682 (r15-stability, abi_splits=true): F-22, B-31 notice, E2, E3, B-31 seek, B31-SEEK2, E4,
   SPEED-1/2, SPEED-3/4. Do not dispatch another r15-stability CI while it runs.
 - SpeedDeviceTest baseline: runs with the B31-SEEK3 phone run (same dispatch, both classes).
 - B31-SEEK2 pass-after: next r15-stability CI. Device re-run BuiltinTorrentDeviceTest phones=both + TV api24 on head.
 
 ## Next steps, in order
+- FEED-ENGINE first: FE-1 pass-after (next r15 CI after 44882251682), then FE-2 row-level priority scheduler,
+  FE-Q1/Q2 upgrade device check, FE-3..FE-7 (docs/FEED-ENGINE-2.1.md section 5).
 0. SpeedDeviceTest baseline -> budgets in GOAL-TOP-OF-CLASS.md -> fixes (parallel extension load like CloudStream amap / Mihon
    async, but keep provider ownership exact; drop the double disk read in OnlineRepository.searchOne on a miss).
 1. Speed work (owner mandatory): feed loading, extension loading (start-up of the extension engine), search
