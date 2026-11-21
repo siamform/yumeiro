@@ -24,6 +24,7 @@ import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.asfakul.yumeiro.player.PlaybackSession
 import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.ui.screens.youtube.ShortsPlayerDialog
 import dev.asfakul.yumeiro.ui.screens.youtube.ShortsWindow
@@ -158,13 +159,25 @@ class F12ShortsSwipeDeviceTest {
         }
         assertTrue("page 0 never showed a frame", waitTag("shorts_frame_0"))
         assertTrue("chrome not shown at start", has("shorts_chrome") && has("shorts_title"))
-        val t0 = android.os.SystemClock.elapsedRealtime()
-        val hid = runCatching { compose.waitUntil(8_000) { !has("shorts_chrome") }; true }.getOrDefault(false)
-        val hideMs = android.os.SystemClock.elapsedRealtime() - t0
-        log("F12_CHROME hid=$hid after=${hideMs}ms")
+        // F12-TEST-CLOCK: the hide timer is a LaunchedEffect delay, and effects in a compose test
+        // run on the test clock (run 44915399473: chrome=true, playing, not buffering at 20.05 s,
+        // no restart, still shown 8 s of real time later). So the clock is driven by hand: first
+        // wait in real time until the Short really plays, then step the test clock.
+        val playingNow = runCatching { compose.waitUntil(20_000) { var p = false; inst.runOnMainSync { p = PlaybackSession.playerForTest?.isPlaying == true }; p }; true }.getOrDefault(false)
+        assertTrue("page 0 never started playing", playingNow)
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeBy(2_500)
+        val early = !has("shorts_chrome")
+        compose.mainClock.advanceTimeBy(ShortsWindow.CHROME_IDLE_MS - 2_500 + 500)
+        val hid = !has("shorts_chrome")
+        val titleHid = !has("shorts_title")
+        compose.mainClock.autoAdvance = true
+        val hideMs = ShortsWindow.CHROME_IDLE_MS
+        log("F12_CHROME hid=$hid early=$early titleHid=$titleHid idleMs=$hideMs")
+        assertTrue("chrome hid too early (before 2500 ms of play)", !early)
         assertTrue("chrome did not hide while playing", hid)
-        assertTrue("title did not hide with the top bar", !has("shorts_title"))
-        assertTrue("chrome hid too early ($hideMs ms)", hideMs >= 2_500)
+        assertTrue("title did not hide with the top bar", titleHid)
         FirstRun.shot("f12_chrome_hidden")
 
         val touch = compose.onAllNodesWithTag("shorts_player", true).onFirst()
@@ -176,8 +189,12 @@ class F12ShortsSwipeDeviceTest {
 
         touch.performTouchInput { click(center) }
         assertTrue("a tap with the chrome up did not pause", waitTag("shorts_paused", 3_000))
-        Thread.sleep(4_500)
-        assertTrue("chrome hid while paused", has("shorts_chrome"))
+        // Paused: well past the idle time on the test clock, the chrome stays.
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeBy(ShortsWindow.CHROME_IDLE_MS + 1_000)
+        val shownWhilePaused = has("shorts_chrome")
+        compose.mainClock.autoAdvance = true
+        assertTrue("chrome hid while paused", shownWhilePaused)
         FirstRun.shot("f12_chrome_paused")
 
         FirstRun.shell("input keyevent 4")
