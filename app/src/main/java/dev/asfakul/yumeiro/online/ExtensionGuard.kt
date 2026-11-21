@@ -50,7 +50,9 @@ object ExtensionGuard {
 
     /** Bounded pool for extension network/parse work so 20 extensions can't starve the app's IO pool. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val dispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(8)
+    val dispatcher: CoroutineDispatcher =
+        if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_BG_PRIORITY)) ExtensionThreads.dispatcher
+        else Dispatchers.IO.limitedParallelism(ExtensionThreads.SIZE)
 
     /** Logs instead of crashing when an extension coroutine fails. */
     val coroutineHandler = CoroutineExceptionHandler { _, t ->

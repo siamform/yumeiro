@@ -77,6 +77,8 @@ object FeatureFlags {
         FEED_STAGED_REVEAL("gate1_feed_staged_reveal", true),
         /** GATE-1-RENDER-4: posters load through AsyncImage in the same composition (no SubcomposeAsyncImage per poster). */
         POSTER_PLAIN_IMAGE("gate1_poster_plain_image", true),
+        /** GATE-1-RENDER-5: extension work runs on 8 own threads at THREAD_PRIORITY_BACKGROUND (not normal-priority IO threads). */
+        EXTENSION_BG_PRIORITY("gate1_extension_bg_priority", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */
