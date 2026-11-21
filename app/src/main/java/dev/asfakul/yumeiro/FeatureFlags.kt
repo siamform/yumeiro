@@ -65,6 +65,8 @@ object FeatureFlags {
         PLAYER_TOPBAR_EDGE("ol7_player_topbar_edge", true),
         /** OL-13: About shows every official Yumeiro account (Discord, Facebook, Instagram, X, TikTok, Reddit) and the developer's Facebook / Instagram / Telegram. */
         SOCIAL_LINKS("ol13_social_links", true),
+        /** PIN-1-DUP: at most 2 installed copies of one extension name (from different repositories); a third install is refused with the names of the two copies. */
+        DUPLICATE_CAP("pin1_duplicate_cap", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

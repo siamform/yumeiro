@@ -345,12 +345,35 @@ object ExtensionManager {
 
     // region install / remove
 
+    /** PIN-1-DUP: most installed copies of one extension name (each from a different repository). */
+    const val MAX_SAME_NAME = 2
+
+    /**
+     * PIN-1-DUP, pure: the message to show when installing [name] as [key] would make a third copy of that
+     * name, else null. Updating or reinstalling a copy that is already there ([key] matches) is always allowed.
+     * Names compare without case and surrounding spaces, as the user reads them.
+     */
+    internal fun duplicateCapMessage(installed: List<InstalledExtension>, name: String, key: String): String? {
+        if (installed.any { it.key == key }) return null
+        val norm = name.trim().lowercase()
+        val same = installed.filter { it.name.trim().lowercase() == norm }
+        if (same.size < MAX_SAME_NAME) return null
+        val from = same.joinToString(" and ") { it.repoName.ifBlank { "Added manually" } }
+        return "$name is already installed $MAX_SAME_NAME times (from $from). Remove one first"
+    }
+
+    private fun checkDuplicateCap(name: String, key: String) {
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DUPLICATE_CAP)) return
+        duplicateCapMessage(_state.value.installed, name, key)?.let { throw ExtensionException(it) }
+    }
+
     /** Downloads and installs (or updates) [remote]. Throws [ExtensionException] with a friendly message. */
     suspend fun install(
         context: Context, remote: RemoteExtension, review: ExtensionReview.Mode = ExtensionReview.Mode.ALWAYS,
     ): InstalledExtension = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         if (remote.apiVersion > OnlineRuntime.API_VERSION) throw ExtensionException("${remote.name} needs a newer app version")
+        checkDuplicateCap(remote.name, remote.key)
         markBusy(remote.key, true)
         try {
             val bytes = downloadFirst(listOfNotNull(remote.url, remote.sourceUrl).distinct())
@@ -414,6 +437,7 @@ object ExtensionManager {
             .replace(RX_EXTENSIONMANAGER_1, "_").take(80)
         val name = manifest.name ?: internal
         val repoUrl = "manual:$internal"
+        checkDuplicateCap(name, RemoteExtension.keyOf(repoUrl, internal))
         val isUpdate = _state.value.installed.any { it.key == RemoteExtension.keyOf(repoUrl, internal) }
         gate(review, name, manifest.version, if (source == "file") "a file on this phone" else source, isUpdate, bytes)
         return mutex.withLock {
