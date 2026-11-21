@@ -25,6 +25,8 @@ object FeatureFlags {
         UPCOMING("f08_upcoming", true),
         /** F-12: vertical Shorts player (swipe up / down) from the YouTube Shorts shelf; phones only. */
         SHORTS_PLAYER("f12_shorts_player", true),
+        /** F-12: YouTube's own Short mark (vertical, up to 3 min) also opens the Shorts player; landscape clips there are fitted, not cropped. Off until verified. */
+        SHORTS_VERTICAL("f12_vertical_shorts", false),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

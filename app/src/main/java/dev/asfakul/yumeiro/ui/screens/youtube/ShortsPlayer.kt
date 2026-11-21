@@ -85,12 +85,18 @@ object ShortsWindow {
     fun opens(isShort: Boolean, queueSize: Int, tv: Boolean, enabled: Boolean): Boolean =
         enabled && !tv && isShort && queueSize >= 1
 
+    /** F-12: 9:16 (portrait or square) fills the screen; a landscape clip is fitted so nothing is cropped. */
+    fun resizeFor(width: Int, height: Int, fitLandscape: Boolean): Int =
+        if (fitLandscape && width > 0 && height > 0 && width > height) AspectRatioFrameLayout.RESIZE_MODE_FIT
+        else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+
     /** Device tests only: resolve a Short to a local clip instead of YouTube. Null in the app. */
     @Volatile internal var testResolver: (suspend (YtItem) -> StreamRequest)? = null
 
     /** F-12 evidence: ms from a page settling to its first rendered frame, per Short id (last 32). */
     internal val firstFrameMs = java.util.concurrent.ConcurrentHashMap<String, Long>()
     /** Identity of every player used by the pager since the last reset; one entry = one shared player. */
+    @Volatile internal var lastResize: Int = -1
     internal val playersUsed: MutableSet<Int> = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
 }
 
@@ -119,6 +125,8 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     var fast by remember { mutableStateOf(false) }
     var settledAt by remember { mutableStateOf(0L) }
     val framed = remember { mutableStateMapOf<String, Boolean>() }
+    val resize = remember { mutableStateMapOf<String, Int>() }
+    val fitLandscape = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_VERTICAL) }
 
     fun resolve(i: Int) {
         val item = items.getOrNull(i) ?: return
@@ -167,6 +175,11 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE }
             override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) buffering = false }
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                val id = currentNow.value?.id ?: return
+                resize[id] = ShortsWindow.resizeFor(videoSize.width, videoSize.height, fitLandscape)
+                ShortsWindow.lastResize = resize[id]!!
+            }
             override fun onRenderedFirstFrame() {
                 val id = currentNow.value?.id ?: return
                 if (ShortsWindow.firstFrameMs.size > 32) ShortsWindow.firstFrameMs.clear()
@@ -204,7 +217,11 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                                 layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                             }
                         },
-                        update = { v -> if (v.player !== lease?.player) v.player = lease?.player },
+                        update = { v ->
+                            if (v.player !== lease?.player) v.player = lease?.player
+                            val m = resize[item.id] ?: AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            if (v.resizeMode != m) v.resizeMode = m
+                        },
                         onRelease = { v -> v.player = null },
                         modifier = Modifier.fillMaxSize().testTag(if (framed[item.id] == true) "shorts_frame_$page" else "shorts_video_$page"),
                     )

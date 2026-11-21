@@ -52,7 +52,10 @@ class F12ShortsSwipeDeviceTest {
     private fun waitTag(tag: String, ms: Long = 20_000) = runCatching { compose.waitUntil(ms) { has(tag) }; true }.getOrDefault(false)
     private fun log(s: String) = Log.i("YuF12", s)
 
-    @After fun tearDown() { ShortsWindow.testResolver = null }
+    @After fun tearDown() {
+        ShortsWindow.testResolver = null
+        FeatureFlags.set(ctx, FeatureFlags.Flag.SHORTS_VERTICAL, FeatureFlags.Flag.SHORTS_VERTICAL.default)
+    }
 
     @Test fun swipeUpAndDownPlaysEachShortInTheOneSharedPlayer() {
         assumeFalse("Shorts player is phones only (ADR-018)", Edition.isTv)
@@ -65,7 +68,15 @@ class F12ShortsSwipeDeviceTest {
             val i = items.indexOf(item)
             StreamRequest(url = Uri.fromFile(File(ctx.cacheDir, "f12_short_$i.mp4")).toString(), title = item.title)
         }
-        ShortsWindow.playersUsed.clear(); ShortsWindow.firstFrameMs.clear()
+        ShortsWindow.playersUsed.clear(); ShortsWindow.firstFrameMs.clear(); ShortsWindow.lastResize = -1
+        FeatureFlags.set(ctx, FeatureFlags.Flag.SHORTS_VERTICAL, true)
+        val (cw, ch) = android.media.MediaMetadataRetriever().run {
+            try {
+                setDataSource(File(ctx.cacheDir, "f12_short_0.mp4").path)
+                (extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0) to
+                    (extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0)
+            } finally { release() }
+        }
         var closed = false
         compose.setContent {
             MTPlayerTheme {
@@ -77,6 +88,10 @@ class F12ShortsSwipeDeviceTest {
         }
         assertTrue("no shorts_player", waitTag("shorts_player"))
         assertTrue("page 0 never showed a frame", waitTag("shorts_frame_0"))
+        val wantResize = ShortsWindow.resizeFor(cw, ch, fitLandscape = true)
+        runCatching { compose.waitUntil(5_000) { ShortsWindow.lastResize == wantResize } }
+        log("F12 clip=${cw}x$ch resize=${ShortsWindow.lastResize} want=$wantResize (0 FIT, 4 ZOOM)")
+        assertEquals("resize mode for a ${cw}x$ch clip", wantResize, ShortsWindow.lastResize)
 
         fun swipe(up: Boolean) = compose.onAllNodesWithTag("shorts_player", true).onFirst().performTouchInput { if (up) swipeUp() else swipeDown() }
         // A first frame is recorded only by the player after the new page's media is set (never a stale one).
