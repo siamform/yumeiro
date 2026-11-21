@@ -402,6 +402,10 @@ fun OnlineHomeScreen(
             onDismiss = { showFilter = false },
         )
 
+        // GATE-1-VIDEOS-LOWRAM: the strip above shows in the page's first frame, the feed one frame later
+        // (api33-lowram composed both in one 790 ms message, run 44939433464).
+        val feedNextFrame = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.TAB_NEXT_FRAME) }
+        dev.asfakul.yumeiro.ui.components.NextFramePage(feedNextFrame) {
         when {
             !engine.ready && providers.isEmpty() -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
             engine.installed.isEmpty() && providers.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
@@ -640,6 +644,7 @@ fun OnlineHomeScreen(
                 }
                 }
             }
+        }
         }
     }
 }
