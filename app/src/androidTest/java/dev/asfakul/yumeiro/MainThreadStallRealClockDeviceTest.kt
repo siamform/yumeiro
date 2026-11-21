@@ -126,6 +126,8 @@ class MainThreadStallRealClockDeviceTest {
         }
     }
 
+    @Volatile private var lastCandidates = ""
+
     /** Reads the screen through accessibility; the watchdog does not count waits that overlap it. */
     private fun find(text: String): Rect? {
         reading.set(true)
@@ -149,6 +151,7 @@ class MainThreadStallRealClockDeviceTest {
             val menuRow = text != "Source:" && text != "Home" && text != "Videos"
             // A menu row is never the pill itself nor the pill's own label (an ancestor says "Source: …";
             // run 44939433464 tapped the label at the pill's x/y and closed the menu).
+            lastCandidates = nodes.joinToString("; ") { n -> val b = Rect().also { n.getBoundsInScreen(it) }; "'${(n.contentDescription ?: n.text)?.toString()?.take(30)}' $b vis=${n.isVisibleToUser} pill=${underPill(n)}" } + " screenH=$screenH"
             val hits = nodes.filter { n -> !menuRow || !underPill(n) }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
             // Bottom-bar labels ("Home", "Videos") and menu rows: the lowest match is the tab, a menu row is unique.
             return if (text == "Home" || text == "Videos") hits.maxByOrNull { it.top } else hits.firstOrNull()
@@ -221,7 +224,7 @@ class MainThreadStallRealClockDeviceTest {
     private fun pillSays(label: String): Boolean = pillDesc().let { it != null && it.startsWith("Source: $label.") && !it.endsWith("Menu open") }
 
     private fun tap(text: String) {
-        val r = find(text) ?: run { waitFor(10_000) { find(text) != null }; find(text) } ?: throw AssertionError("no '$text' on screen · ${texts()}")
+        val r = find(text) ?: run { waitFor(10_000) { find(text) != null }; find(text) } ?: throw AssertionError("no '$text' on screen · candidates [$lastCandidates] · ${texts()}")
         FirstRun.shell("input tap ${r.centerX()} ${r.centerY()}")
         log("tapped '$text' at ${r.centerX()},${r.centerY()}")
     }
