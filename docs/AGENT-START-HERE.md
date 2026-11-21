@@ -183,6 +183,9 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
    screens without a real account; the owner checks a real sign-in.
 2. **B-31 built-in torrent engine**: e.g. libtorrent4j; magnet/hash → metadata → choose the largest video file →
    sequential pieces → local HTTP server with Range → Yumeiro player. TorrServer stays optional. Test hash
+   Owner add 2026-11-21: always ready (one engine + one loopback server for the app's life, no per-link setup), any
+   torrent link plays, and faster download / start / seek where possible (priority pieces, DHT/PEX/LSD, extra trackers,
+   resume data). F-02 owner add: Telegram videos AND audio, private and public channels and groups, play and download.
    `BF2063A5E9A69F14716288FCA7C2D6078BDA7369` (5.87 GB HEVC 10-bit + DD+5.1 MKV; FFmpeg audio already ships).
 3. **B-32** extensions that load nothing ("HindiSubAnime didn't load: Nothing came back from this extension"):
    investigation order is in the ledger row.
