@@ -68,6 +68,19 @@ object ExtensionSpeed {
             { it.index },
         )).map { it.value }
 
+    /**
+     * FE-S4 (SpeedDeviceTest 44884969625: every live search waited 25 s for its slowest sites): the time a search of
+     * this site may take. Measured sites get 4x their average (8..25 s); a quarantined site (3 failures in a row)
+     * 8 s; unknown sites and Retry the full [maxMs]. A cut site shows "didn't answer" with Retry, which waits [maxMs].
+     */
+    fun searchTimeoutMs(s: Stat?, retry: Boolean, now: Long, maxMs: Long = 25_000L): Long = when {
+        retry || s == null -> maxMs
+        quarantined(s, now) -> MIN_SEARCH_MS
+        s.avgMs > 0 -> (s.avgMs * 4).coerceIn(MIN_SEARCH_MS, maxMs)
+        else -> maxMs
+    }
+    const val MIN_SEARCH_MS = 8_000L
+
     fun <T> order(items: List<T>, name: (T) -> String, selected: String?): List<T> =
         order(items, name, selected, ::stat, System.currentTimeMillis())
 

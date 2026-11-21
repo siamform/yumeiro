@@ -404,6 +404,7 @@ object OnlineRepository {
         val q = query.trim()
         if (q.isEmpty()) return@channelFlow
         val failMemory = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S3_FAIL_MEMORY)
+        val adaptive = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S4_ADAPTIVE_TIMEOUT)
         val speed = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)
         // SPEED-2: fastest measured searchers take the permits first; quarantined ones go last.
         val ordered = if (speed) ExtensionSpeed.order(apis, { it.name }, null, { ExtensionSpeed.stat(searchKey(it)) }, System.currentTimeMillis()) else apis
@@ -419,7 +420,9 @@ object OnlineRepository {
                 val update = parallel.withPermit {
                     val started = System.currentTimeMillis()
                     runCatching {
-                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(SEARCH_TIMEOUT) { searchOne(api, q) } }
+                        // FE-S4: measured sites get a timeout from their own speed; Retry and unknown sites the full 25 s.
+                        val limit = if (speed && adaptive) ExtensionSpeed.searchTimeoutMs(ExtensionSpeed.stat(searchKey(api.name)), retry, started, SEARCH_TIMEOUT) else SEARCH_TIMEOUT
+                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(limit) { searchOne(api, q) } }
                     }.fold(
                         { if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = true)
                           searchFails.remove(failKey)

@@ -79,6 +79,8 @@ object FeatureFlags {
         FE4_FEED_FRAMES("fe4_feed_frames", true),
         /** FE-S3: a site that failed a search in the last 2 minutes answers with that failure at once (Retry asks again). */
         FE_S3_FAIL_MEMORY("fe_s3_fail_memory", true),
+        /** FE-S4: a site's search timeout follows its measured speed (8..25 s); Retry and unknown sites get 25 s. */
+        FE_S4_ADAPTIVE_TIMEOUT("fe_s4_adaptive_timeout", true),
         /** FE-P: while a video or song plays, Yumix background fetches run one at a time (picked / on screen unchanged). */
         FE_PAUSE_WHILE_PLAYING("fe_pause_while_playing", true),
         /** FE-2c: the shared extension-call limit (6) serves search, scroll pages and picked work before background rows. */
