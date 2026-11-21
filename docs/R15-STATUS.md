@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 03:05 +06): read docs/HANDOVER-LIVE.md first (rewritten with every push; it holds the exact next step). Now: GATE-1-RENDER (lowram gate, trace run 44949137965) and the GATE-1-ANR detector check 44948378220, then F-05 / X-1.
+Resume here (2026-11-22 05:09 +0600): read docs/HANDOVER-LIVE.md first (rewritten with every push; it holds the exact next step). Now: close the GATE-1-RENDER-4b fail-before 44958935625 and the r15 review_apk CI pass-after; GATE-1 is Fail on the emulator (GATE-1-EMU, OMT-72 real phone); then F-05 / X-1.
 
 # R15 status: every item in the master prompt, with its evidence
 

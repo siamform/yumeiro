@@ -994,3 +994,12 @@ Settings → About on a real phone with Facebook, Instagram, X, TikTok, Reddit, 
 3. Developer: Website, GitHub, Facebook (siam1p), Instagram (asfakul_siam), Telegram (@siamorwho); each opens the right profile.
 
 Passes if every button lands on the right account.
+
+### OMT-72 — No freeze when switching sources (GATE-1)
+
+On a real phone (a low-RAM one if you have it), with many extensions installed:
+
+1. Open the app, tap Videos, then Source → Yumix → Source → YouTube → Source → Live TV → Home.
+2. Do it twice: once right after installing / updating, once after a normal start.
+
+Passes if no tap leaves the screen stuck for about a second or more, and Android never shows "Yumeiro isn't responding".
