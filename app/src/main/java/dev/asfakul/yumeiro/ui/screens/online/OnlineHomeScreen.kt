@@ -240,7 +240,9 @@ fun OnlineHomeScreen(
                 if (isActive) YumixFeed.homeAfterFetch(before?.rows, soFar)?.let { homes[name] = ProviderHome.Ready(it) }
             }
             val result = if (cached != null) Result.success(cached) else slot(name) {
-                runCatching { OnlineRepository.home(api, force, onRows) }
+                // FE-2c: its row calls keep the lane in the shared extension-call limit too.
+                val lane = if (name == selected) dev.asfakul.yumeiro.online.PriorityGate.PICKED else dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND
+                runCatching { kotlinx.coroutines.withContext(dev.asfakul.yumeiro.online.PriorityGate.Lane(lane)) { OnlineRepository.home(api, force, onRows) } }
             }
             // R16 G4: a fetch cancelled by a newer one (Retry, pull to refresh) used to fall
             // through here with the CancellationException as its "error" and briefly put

@@ -97,6 +97,14 @@ class PriorityGate(
         return out
     }
 
+    /**
+     * FE-2c: the lane of the extension calls made inside this coroutine (search = PICKED, scroll pages = VISIBLE,
+     * feed rows = the Yumix lane of their extension). Read by HeatGuard's shared extension-call gate.
+     */
+    class Lane(val priority: Int) : kotlin.coroutines.AbstractCoroutineContextElement(Lane) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<Lane>
+    }
+
     companion object {
         const val PLAYING = 0
         const val PICKED = 1

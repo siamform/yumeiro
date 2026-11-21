@@ -382,9 +382,10 @@ object OnlineRepository {
     /** One page of a home row ("See all"), [page] starting at 1. */
     suspend fun page(api: MainAPI, pageName: String, pageData: String, page: Int): OnlinePage = withContext(Dispatchers.IO) {
         val req = api.mainPage.firstOrNull { it.name == pageName && it.data == pageData } ?: api.mainPage.firstOrNull { it.data == pageData }
-        val resp = parallel.withPermit {
+        // FE-2c: the next page under the finger goes before background feed rows.
+        val resp = withContext(PriorityGate.Lane(PriorityGate.VISIBLE)) { parallel.withPermit {
             ExtensionCall.bounded(homeTimeoutMs) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
-        } ?: return@withContext OnlinePage(emptyList(), false)
+        } } ?: return@withContext OnlinePage(emptyList(), false)
         val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name, feed = true) } }.distinctBy { it.url }
         OnlinePage(items, resp.hasNext && items.isNotEmpty())
     }
@@ -421,7 +422,7 @@ object OnlineRepository {
                 send(update)
             }
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(Dispatchers.IO + PriorityGate.Lane(PriorityGate.PICKED)) // FE-2c: the user is waiting for a search.
 
     private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
 

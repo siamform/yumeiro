@@ -105,7 +105,10 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
                     launch {
                         // FE-1: an old saved page shows at once too, then is refreshed live behind it.
                         val cached = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
-                        val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
+                        // FE-2c: Home is on screen, so its first fetch is VISIBLE; the stale refresh below stays background.
+                        val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching {
+                            kotlinx.coroutines.withContext(dev.asfakul.yumeiro.online.PriorityGate.Lane(dev.asfakul.yumeiro.online.PriorityGate.VISIBLE)) { OnlineRepository.home(api) }
+                        }.getOrNull() } }
                         if (g == feed.gen) {
                             // A failed refresh never wipes rows that are already shown.
                             val fresh = rows.orEmpty().filter { it.items.isNotEmpty() }

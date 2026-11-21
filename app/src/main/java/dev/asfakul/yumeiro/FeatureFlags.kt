@@ -75,6 +75,8 @@ object FeatureFlags {
         FE3_FIRST_ROW("fe3_first_row", true),
         /** FE-P: while a video or song plays, Yumix background fetches run one at a time (picked / on screen unchanged). */
         FE_PAUSE_WHILE_PLAYING("fe_pause_while_playing", true),
+        /** FE-2c: the shared extension-call limit (6) serves search, scroll pages and picked work before background rows. */
+        FE_CALL_LANES("fe2c_call_lanes", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }
