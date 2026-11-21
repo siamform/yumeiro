@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 16:35 +06, branch `r15-stability` head after commit "F-07-RES + DEV-CHK-21-C".
+2026-11-21 16:52 +06, branch `r15-stability`, commit "FE-T1".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-T1: 2 GB phone feed half-shown 56.8 s (was 4.4 s): startup trims with 800 MB free throttled the feed to one lane. Fixed (FeedThrottle.confirmed). Rerun SpeedDeviceTest lowram after the r15 CI.
 - F-07-RES: "Choose each time" hand-off now asks for the result (MX / Just return the position only when asked). Device round trip ExternalPlayerDeviceTest + StubPlayerActivity (androidTest manifest).
 - DEV-CHK-21-C: CI 44892857421 failed at device-test compile (wrong YumeiroDrama import in Nf1 test); fixed.
 - F-07-VIS: external players (VLC, mpv, MX, MX Pro, Just Player) were invisible on Android 11+ (manifest `<queries>` missing them); declared. Fail-before 44890380227 verified.
@@ -60,6 +61,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Phones 44892710506 @e2b87521: BuiltinTorrentDeviceTest Pass both (lowram first 2844 / seek 1129 ms: B31-SEEK5 Pass); SpeedDeviceTest Pass all budgets (GOAL run 3), lowram feed regression = FE-T1.
 - Device TV api24 44892712537 @e2b87521: BuiltinTorrentDeviceTest Pass (first 64 KB 8696 ms, seek 3148 ms; was 10370 ms): B31-SEEK4 Pass.
 - Pass-after CI 44890073919 @e2b87521 (abi_splits=true): success, 353 test classes, 0 failures: FE-S1, FE-S2, FE-S3, FE-S4, FE-3, FE-P (+FE-P-T), FE-2c, FE-4a, FE-4b, FE-5, E4-T, B31-SEEK4/5 (+B31-SEEK5-T) unit, SPEED-T2 compile; GateLaneTest (T-GATE) passed.
 - Fail-before verified: E4-T 44889828561 (unresolved FeedThrottle), F-07-VIS 44890380227 (only failure ExternalPlayersVisibilityTest); branches deleted.
@@ -93,13 +95,14 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete any ab/ branch)
-- Device 44892710506 @e2b87521 phones both: BuiltinTorrentDeviceTest (B31-SEEK4/5) + SpeedDeviceTest (FE-S1/S3/S4/FE-4a numbers). Read `grep -a "I/B31\|I/SPEED"` in device-check-<dev>-1/logcat.txt.
+- Fail-before FE-T1 44894340441 on ab/fet1-before (expect compile fail: unresolved FeedThrottle.confirmed); then delete branch + worktree /tmp/wt-t1.
+- r15 CI 44894227826 @49c4c60b running (F-07-RES pass-after); FE-T1 commit is after it, so dispatch one more r15 CI when it ends.
 - Fail-before F-07-RES 44894173529 on ab/f07res-before (expect only F07ExternalPlayersTest.theGenericChooserGetsTheWidelyReadExtras); then delete branch + worktree /tmp/wt-res.
 - Pass-after CI for F-07-VIS, F-07-RES + compile of the 6 new device tests: next r15-stability CI (run ID in R15-STATUS line 3).
 
 ## Next steps, in order
 1. Record the pending runs above (ledger rows, FEED-ENGINE, MAJOR-BUGS, this file, R15 line 3).
-2. When the r15 CI is green: device run phone=both with ExternalPlayerDeviceTest, Nbug10FilterSearchDeviceTest, VolumeBoostDeviceTest, Nf1EpisodeStatusDeviceTest, UpcomingDeviceTest, F01DubTapDeviceTest; TV api34 with VolumeBoost, Nf1EpisodeStatus, Upcoming. Max 2 device workflows at once.
+2. When the r15 CI (with FE-T1) is green: SpeedDeviceTest phone=api33-lowram; device run phone=both with ExternalPlayerDeviceTest, Nbug10FilterSearchDeviceTest, VolumeBoostDeviceTest, Nf1EpisodeStatusDeviceTest, UpcomingDeviceTest, F01DubTapDeviceTest; TV api34 with VolumeBoost, Nf1EpisodeStatus, Upcoming. Max 2 device workflows at once.
 3. Re-run on this head the old device tests of the other "Built, not tested" rows: ReleaseFeatures (F-04/F-10/F-12/F-17/TV-4), PosterActions (F-09), FinalCoverage (F-14/F-15), MangaOffline (F-13), Nbug15Recents/Redesign, TelegramPublic/TelegramPlayback (F-02 public). Record each as Pass/Fail with run ID in MAJOR-BUGS.
 4. FEED-ENGINE remaining: FE-4 lazy code load (only if device numbers show load cost; ext_first_usable ~1 s), FE-5 / FE-S4 device checks. docs/UNVERIFIED-QUEUE.md; G-rows in GOAL-TOP-OF-CLASS.md.
 5. E3 website ABI detector: Blocked (website not in this repo). E1 master extension: large, not started. F-22b.

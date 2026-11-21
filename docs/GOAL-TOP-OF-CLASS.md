@@ -108,6 +108,23 @@ claiming it), Building (this cycle), Missing.
 | youtube_shelf_live / saved | 723 / 1 ms | 1277 / 1 ms | saved ≤ 100 ms | Pass (44884969625) |
 | ytmusic_home_live / saved | 367 / 15 ms | 346 / 44 ms | saved ≤ 100 ms | Pass (44884969625) |
 
+### Run 3: device run 44892710506 @ r15-stability e2b87521 (20 extensions, 26 providers), both phones Pass
+
+| Measure (tag SPEED) | api33-lowram (2 GB) | api36 | Budget (never raised) | Result |
+|---|---|---|---|---|
+| ext_first_usable | 809 ms | 391 ms | ≤ 2500 ms on 2 GB | Pass (44892710506) |
+| ext_all_loaded | 1254 ms | 836 ms | ≤ 3000 ms on 2 GB | Pass (44892710506) |
+| home_first_row_live / cached | 3195 / 1 ms | 321 / 2 ms | ≤ 5000 / ≤ 100 ms | Pass (44892710506) |
+| search_first_result_live / cached | 138 / 1 ms | 55 / 1 ms | ≤ 3000 / ≤ 100 ms | Pass (44892710506) |
+| search_all_answered_cached | 2 ms | 3 ms | none yet | FE-S1 + FE-S3 shown on both phones (was 15161 ms lowram) |
+| search_all_answered_live | 25018 ms | 25409 ms | none yet | first search, no measured speeds yet (FE-S4 needs a second search): Not run |
+| feed_first_extension_shown | 20 ms | 42 ms | ≤ 3000 ms | Pass (44892710506) |
+| feed_half_shown | 56847 ms | 5175 ms | none yet | lowram regression: Fail (finding FE-T1, fixed, rerun pending) |
+| feed_all_done | 75557 ms | 26939 ms | none yet | lowram: Fail (finding FE-T1) |
+| youtube_shelf_live / saved | 1194 / 1 ms | 1342 / 1 ms | saved ≤ 100 ms | Pass (44892710506) |
+| ytmusic_home_live / saved | 304 / 5 ms | 303 / 36 ms | saved ≤ 100 ms | Pass (44892710506) |
+| torrent first 64 KB / seek (BuiltinTorrentDeviceTest) | 2844 / 1129 ms | 3061 / 1776 ms | 15 s / 5 s | Pass (44892710506); TV api24 8696 / 3148 ms Pass (44892712537) |
+
 Not yet measured: feed with 50+ installed, after an app update (FE-Q1/Q2).
 
 ## How it happens

@@ -14,7 +14,7 @@ import dev.asfakul.yumeiro.player.HeatGuard
  * here; only the background lane. Before, the 3 background home slots and 6 background calls ran at full width on a
  * hot phone (HeatGuard only narrowed the total) and right after Android asked the app to free memory.
  *
- * Limits: playing, HOT, or memory low (onTrimMemory RUNNING_LOW or worse, onLowMemory; kept [MEMORY_LOW_MS]) = 1;
+ * Limits: playing, HOT, or memory low (onTrimMemory RUNNING_LOW or worse confirmed by [confirmed], onLowMemory; kept [MEMORY_LOW_MS]) = 1;
  * WARM (moderate heat or battery saver) = normal - 1 (at least 1); else normal.
  */
 object FeedThrottle {
@@ -30,6 +30,40 @@ object FeedThrottle {
      * are routine (the app was just hidden, or the system is fine) and do not throttle.
      */
     fun isPressure(level: Int): Boolean = level in 10..15 || level >= 60
+
+    /**
+     * FE-T1 (SpeedDeviceTest 44892710506, api33-lowram): a 2 GB phone gets RUNNING_CRITICAL / RUNNING_LOW trims right at
+     * start with 800 MB free and an 8 MB heap (the level follows the count of cached apps, not our memory), so the
+     * level alone threw the whole feed onto one lane (feed_half_shown 4.4 s -> 56.8 s). A trim level now throttles
+     * only when memory is really short: our heap is at least [HEAP_TIGHT] full, or Android says the system is low.
+     * Pure.
+     */
+    fun confirmed(level: Int, heapUsed: Long, heapMax: Long, systemLow: Boolean): Boolean =
+        isPressure(level) && (systemLow || (heapMax > 0 && heapUsed.toDouble() / heapMax >= HEAP_TIGHT))
+
+    const val HEAP_TIGHT = 0.75
+
+    private val checker by lazy { java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "yu-feedthrottle").apply { isDaemon = true; priority = Thread.MIN_PRIORITY } } }
+
+    /**
+     * Called from Application.onTrimMemory on the main thread. Heap numbers are read here (no I/O); the system check
+     * (a binder call) runs on a background thread.
+     */
+    fun onTrim(context: android.content.Context, level: Int) {
+        if (!isPressure(level)) return
+        val rt = Runtime.getRuntime()
+        val used = rt.totalMemory() - rt.freeMemory()
+        val max = rt.maxMemory()
+        if (confirmed(level, used, max, systemLow = false)) { memoryLow(); return }
+        val app = context.applicationContext
+        runCatching {
+            checker.execute {
+                val am = app.getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                val mi = android.app.ActivityManager.MemoryInfo().also { m -> runCatching { am?.getMemoryInfo(m) } }
+                if (confirmed(level, used, max, mi.lowMemory)) memoryLow()
+            }
+        }
+    }
 
     fun isMemoryLow(now: Long = System.currentTimeMillis()): Boolean = now < memoryLowUntil
 
