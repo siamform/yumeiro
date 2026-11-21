@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -779,7 +780,8 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
 internal fun PlaylistDownloadButton(p: dev.asfakul.yumeiro.online.download.PlaylistDownload.Progress, fetching: Boolean, onClick: () -> Unit) {
     val status = playlistDownloadStatus(p, fetching)
     Box(
-        Modifier.size(44.dp).clip(CircleShape).background(GlassFill)
+        // OL-12-TOUCH: 44 dp circle, 48 dp touch area (TouchTargetTest).
+        Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(GlassFill)
             .clickable(enabled = !fetching && !p.allDone, onClickLabel = "Download playlist", onClick = onClick)
             .semantics { contentDescription = "Download playlist" + if (status.isNotBlank()) ". $status" else "" }
             .testTag("ytmusic_download_all"),
