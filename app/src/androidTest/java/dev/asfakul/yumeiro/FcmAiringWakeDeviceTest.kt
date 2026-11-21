@@ -43,14 +43,18 @@ class FcmAiringWakeDeviceTest {
         ctx.getSharedPreferences("background_work", Context.MODE_PRIVATE).edit().remove("push_wake_at").commit()
         wm.cancelUniqueWork("push_catch_up_episodes").result.get()
         wm.pruneWork().result.get()
-        val inboxBefore = Inbox.items.value.size
+        // AIR-T1 (run 44939449545, api33-lowram): the inbox was still loading from disk when the size was read
+        // (0, then the 5 stored items). Load it first and compare ids: only what the wake could post counts.
+        Inbox.ensureLoaded(ctx)
+        val before = Inbox.items.value.map { it.id }.toSet()
         FcmPush.handle(ctx, mapOf("y" to "1", "kind" to "wake"), null, null, System.currentTimeMillis())
         val until = System.currentTimeMillis() + 10_000
         var s = states("push_catch_up_episodes")
         while (s.isEmpty() && System.currentTimeMillis() < until) { Thread.sleep(250); s = states("push_catch_up_episodes") }
         log("AIR_CASE wake -> push_catch_up_episodes=$s")
         assertTrue("episode check not enqueued after an FCM airing wake: $s", s.isNotEmpty())
-        assertEquals("the wake itself must not post an inbox item", inboxBefore, Inbox.items.value.size)
+        val posted = Inbox.items.value.filter { it.id !in before && (it.id.startsWith("fcm-") || it.kind == Inbox.Kind.EPISODE || it.kind == Inbox.Kind.ALERT) }
+        assertEquals("the wake itself must not post an inbox item: ${posted.map { it.id }}", emptyList<String>(), posted.map { it.id })
         log("AIR_RESULT PASS")
     }
 }
