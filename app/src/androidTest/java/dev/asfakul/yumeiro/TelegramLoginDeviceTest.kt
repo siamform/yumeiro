@@ -6,7 +6,6 @@ import dev.asfakul.yumeiro.network.NetworkClient
 import dev.asfakul.yumeiro.online.telegram.td.TdEngine
 import dev.asfakul.yumeiro.online.telegram.td.TgAccounts
 import dev.asfakul.yumeiro.online.telegram.td.TgAuthState
-import dev.asfakul.yumeiro.online.telegram.td.TgLibrary
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -19,9 +18,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * F-02 / ADR-052 on a real device: the pinned TDLib engine downloads, passes its hash check and loads; then a full
- * sign-in on Telegram's test servers (number 99966 2 XXXX, code 22222: Telegram's documented test accounts, no SMS,
- * no real account), the chat list loads, and log-out works.
+ * F-02 / ADR-052 on a real device: the pinned TDLib engine downloads, passes its hash check and loads; then the
+ * sign-in round trip on Telegram's test servers (see [phoneReachesCodeScreenAndTelegramChecksTheCode]).
  */
 @RunWith(AndroidJUnit4::class)
 class TelegramLoginDeviceTest {
@@ -44,7 +42,15 @@ class TelegramLoginDeviceTest {
         assertTrue(TdEngine.ensure(ctx, NetworkClient.get(ctx)))
     }
 
-    @Test fun signInOnTestServersListsChatsAndLogsOut(): Unit = runBlocking {
+    /**
+     * The sign-in round trip on Telegram's test servers: number accepted, code screen shown, the code is sent and
+     * Telegram's answer comes back as plain words while the code screen stays open for another try.
+     *
+     * A full automated sign-in is not possible any more: Telegram switched off the public 99966 test accounts, so
+     * 22222 is always PHONE_CODE_INVALID (tdlib/td#3083, #3370; device run 44878617517 saw exactly that). The full
+     * sign-in, chat list and log-out are owner manual test OMT-63 with a real account.
+     */
+    @Test fun phoneReachesCodeScreenAndTelegramChecksTheCode(): Unit = runBlocking {
         FeatureFlags.set(ctx, FeatureFlags.Flag.TELEGRAM_LOGIN, true)
         assertTrue("Telegram api_id missing from this build", BuildConfig.TG_API_ID.toIntOrNull() != null)
         assertTrue("Telegram api_hash missing from this build", BuildConfig.TG_API_HASH.isNotBlank())
@@ -68,25 +74,17 @@ class TelegramLoginDeviceTest {
         if (st is TgAuthState.Ready) { s.logOut(); st = withTimeout(60_000) { s.state.first { it is TgAuthState.WaitPhone } } }
         assertEquals(TgAuthState.WaitPhone, st)
         val phone = "+999662" + (1000..9999).random()
-        assertTrue("phone: " + s.error.value, s.submitPhone(phone))
+        assertTrue("phone: " + s.error.value + " seen=" + seen, s.submitPhone(phone))
         st = withTimeout(60_000) { s.state.first { it is TgAuthState.WaitCode || it is TgAuthState.WaitRegistration } }
-        if (st is TgAuthState.WaitCode) {
-            val ok = s.submitCode("22222")
-            android.util.Log.i("F02", "after code: ok=$ok seen=$seen")
-            assertTrue("code: " + s.error.value + " seen=" + seen, ok)
-            st = withTimeout(60_000) { s.state.first { it !is TgAuthState.WaitCode } }
-        }
-        if (st is TgAuthState.WaitRegistration) {
-            assertTrue("register: " + s.error.value, s.register("Yumeiro", "Test"))
-            st = withTimeout(60_000) { s.state.first { it !is TgAuthState.WaitRegistration } }
-        }
-        assertEquals("error: " + s.error.value + " seen=" + seen, TgAuthState.Ready, st)
+        assertTrue("expected the code screen, got $st seen=$seen", st is TgAuthState.WaitCode)
+        val ok = s.submitCode("22222")
+        android.util.Log.i("F02", "after code: ok=$ok seen=$seen")
+        // Telegram answered (no hang, no crash, no busy left on), in words a person understands.
+        val err = s.error.value
+        assertTrue("no answer from Telegram for the code; seen=$seen", ok || err != null)
+        if (!ok) assertTrue("raw or empty error \"$err\"; seen=$seen", err != null && err.isNotBlank() && !err.contains("_"))
+        assertEquals("busy stayed on; seen=$seen", false, s.busy.value)
+        if (!ok) assertTrue("code screen closed after a refused code: ${s.state.value}", s.state.value is TgAuthState.WaitCode)
         watch.cancel()
-
-        val chats = withTimeout(60_000) { TgLibrary(s.client).chats() }
-        android.util.Log.i("F02", "test account chats: " + chats.size)
-
-        assertTrue("logout: " + s.error.value, s.logOut())
-        withTimeout(60_000) { s.state.first { it is TgAuthState.Closed || it is TgAuthState.WaitPhone || it is TgAuthState.LoggingOut } }
     }
 }

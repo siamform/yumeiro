@@ -100,7 +100,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-50 | F-03: a TeraBox / DiskWala share link | Owner/community test (pending) |
 | OMT-51 | F-11: manga auto-translation on a real chapter | Owner/community test (pending) |
 | OMT-52 | F-AIR: airing alert on a Firebase phone (after the Worker deploy) | Owner/community test (pending) |
-| OMT-63 | F-02 login: your own Telegram account, private chats, video + audio play and download | Owner/community test (pending; flag f02_telegram_login off until it passes) |
+| OMT-63 | F-02 login: your own Telegram account, private chats, video + audio play and download | Owner/community test (pending; flag f02_telegram_login off until it passes). This is the only full sign-in check: Telegram switched off its public test accounts (tdlib/td#3083), so CI can only test up to Telegram checking the code |
 | OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
 | OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
