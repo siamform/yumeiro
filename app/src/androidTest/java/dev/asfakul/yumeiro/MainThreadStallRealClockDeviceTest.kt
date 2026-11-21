@@ -131,11 +131,14 @@ class MainThreadStallRealClockDeviceTest {
     private fun find(text: String): Rect? {
         reading.set(true)
         try {
-            val root: AccessibilityNodeInfo = inst.uiAutomation.rootInActiveWindow ?: return null
+            // GATE-1-ANR-T2: the source menu is a popup window; rootInActiveWindow can stay on the main window
+            // (run 44937327148: "no 'YouTube' on screen" with the menu open). Search every window's tree.
+            val roots = allRoots().ifEmpty { listOfNotNull(inst.uiAutomation.rootInActiveWindow) }
+            if (roots.isEmpty()) return null
             // Compose's node provider does not answer findAccessibilityNodeInfosByText (run 44791259898:
             // "tab bar never showed" with MainActivity displayed); walk the tree like UiAutomator does.
             val nodes = ArrayList<AccessibilityNodeInfo>()
-            val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+            val queue = ArrayDeque<AccessibilityNodeInfo>().apply { addAll(roots) }
             var seen = 0
             while (queue.isNotEmpty() && seen < 5_000) {
                 val n = queue.removeFirst(); seen++
@@ -145,7 +148,8 @@ class MainThreadStallRealClockDeviceTest {
             }
             val screenH = inst.targetContext.resources.displayMetrics.heightPixels
             val menuRow = text != "Source:" && text != "Home" && text != "Videos"
-            val hits = nodes.filter { n -> !menuRow || n.contentDescription?.startsWith("Source:") != true }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
+            // A menu row is never the pill itself nor the pill's own label (its parent says "Source: …").
+            val hits = nodes.filter { n -> !menuRow || (n.contentDescription?.startsWith("Source:") != true && n.parent?.contentDescription?.startsWith("Source:") != true) }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
             // Bottom-bar labels ("Home", "Videos") and menu rows: the lowest match is the tab, a menu row is unique.
             return if (text == "Home" || text == "Videos") hits.maxByOrNull { it.top } else hits.firstOrNull()
         } finally {
@@ -154,10 +158,21 @@ class MainThreadStallRealClockDeviceTest {
         }
     }
 
+    /** Roots of every window on screen, top-most first (popups, then the app). */
+    private fun allRoots(): List<AccessibilityNodeInfo> = runCatching {
+        val ua = inst.uiAutomation
+        val info = ua.serviceInfo
+        if (info != null && (info.flags and android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS) == 0) {
+            info.flags = info.flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            ua.serviceInfo = info
+        }
+        ua.windows.sortedByDescending { it.layer }.mapNotNull { it.root }
+    }.getOrDefault(emptyList())
+
     private fun texts(): String = runCatching {
         val root = inst.uiAutomation.rootInActiveWindow ?: return "no active window"
-        val out = ArrayList<String>(); val q = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
-        while (q.isNotEmpty() && out.size < 40) {
+        val out = ArrayList<String>(); val q = ArrayDeque<AccessibilityNodeInfo>().apply { addAll(allRoots().ifEmpty { listOf(root) }) }
+        while (q.isNotEmpty() && out.size < 60) {
             val n = q.removeFirst()
             (n.text ?: n.contentDescription)?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it.take(40)) }
             for (i in 0 until n.childCount) n.getChild(i)?.let(q::add)
