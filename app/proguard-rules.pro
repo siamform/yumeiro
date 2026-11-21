@@ -174,3 +174,8 @@
 -keep class io.github.anilbeesetti.nextlib.media3ext.ffdecoder.** { *; }
 -keep class androidx.media3.decoder.SimpleDecoderOutputBuffer { *; }
 -keep class androidx.media3.decoder.DecoderInputBuffer { *; }
+
+# ---- F-02 / ADR-052: TDLib (Telegram login) ----
+# libtdjsonjava.so's JNI_OnLoad registers its natives against these classes by name.
+-keep class org.drinkless.tdlib.JsonClient { *; }
+-keep interface org.drinkless.tdlib.JsonClient$LogMessageHandler { *; }

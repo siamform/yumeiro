@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -110,6 +112,14 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         if (err != null) error = err else { input = ""; error = null }
     }
 
+    // F-02 (ADR-052): the signed-in account opens in place, like a channel.
+    var account by rememberSaveable { mutableStateOf(false) }
+    val accountEnabled = remember(telegramPage) { telegramPage && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(context) }
+    if (account && accountEnabled) {
+        TelegramAccountScreen(onBack = { account = false }, onPlay = { req -> IncomingMedia.open(context, req) })
+        return
+    }
+
     // F-02 (ADR-042): a saved public Telegram channel opens its video posts, not the page browser.
     val tgChannel = open?.let { site -> dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(site.url) }
         ?.takeIf { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC) }
@@ -195,6 +205,18 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 140.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (accountEnabled) item("tg_account_card") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                        .clickable { account = true }.heightIn(min = 56.dp).padding(16.dp).testTag("tg_account_card"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                        Text("Sign in to watch videos from your chats, groups and private channels", color = p.textSecondary, fontSize = 12.sp)
+                    }
+                }
+            }
             item("add") {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
