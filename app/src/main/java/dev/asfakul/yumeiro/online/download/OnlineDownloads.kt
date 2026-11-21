@@ -242,9 +242,34 @@ object OnlineDownloads {
         ensureLoaded(context); DownloadSettings.init(context)
         val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
         get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
+        val item = ytItem(ytId, title, channel, thumbnail, music, choice, keep)
+        update { list -> listOf(item) + list.filterNot { it.id == id } }
+        start(context, id)
+        return null
+    }
+
+    /**
+     * OL-12: queues every song of a playlist as best audio in one go (one list write), skipping
+     * songs already saved or downloading. Returns how many were queued.
+     */
+    fun enqueueYouTubeBatch(context: Context, tracks: List<PlaylistDownload.Track>, keep: Boolean): Int {
+        ensureLoaded(context); DownloadSettings.init(context)
+        val now = System.currentTimeMillis()
+        val added = PlaylistDownload.toQueue(tracks, _items.value).mapIndexed { i, t ->
+            ytItem(t.id, t.title, t.channel, t.thumbnail, true, YtDownloadOptions.AUTO_AUDIO_CHOICE, keep).copy(createdAt = now + i)
+        }
+        if (added.isEmpty()) return 0
+        val ids = added.map { it.id }.toSet()
+        update { list -> added + list.filterNot { it.id in ids } }
+        added.forEach { start(context, it.id) }
+        return added.size
+    }
+
+    private fun ytItem(ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice, keep: Boolean): Item {
+        val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
         val base = DownloadNaming.clean(title.ifBlank { ytId }, 90)
         val suffix = if (choice.audioOnly) "" else " (" + choice.label + ")"
-        val item = Item(
+        return Item(
             id = id, title = title.ifBlank { ytId }, api = "YouTube", titleUrl = "https://www.youtube.com/watch?v=$ytId",
             episodeLabel = channel?.takeIf { it.isNotBlank() }, posterUrl = thumbnail, posterHeaders = emptyMap(),
             url = "", isHls = false, headers = emptyMap(), fileName = base + suffix + "-" + id + "." + choice.container,
@@ -253,9 +278,6 @@ object OnlineDownloads {
             ytId = ytId, videoItag = choice.videoItag, audioItag = choice.audioItag, container = choice.container,
             quality = choice.label, keep = keep,
         )
-        update { list -> listOf(item) + list.filterNot { it.id == id } }
-        start(context, id)
-        return null
     }
 
     fun setKeep(context: Context, id: String, keep: Boolean) { ensureLoaded(context); set(id) { it.copy(keep = keep) } }

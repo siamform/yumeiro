@@ -67,7 +67,11 @@ object YtDownloads {
         val info = YouTube.info(context, id, force = true)
         val streams = info.videoOnlyStreams + info.videoStreams
         val video = if (item.videoItag > 0) streams.firstOrNull { it.itag == item.videoItag } ?: throw IOException("This quality is no longer offered — pick another") else null
-        val audio = if (item.audioItag > 0) info.audioStreams.firstOrNull { it.itag == item.audioItag } ?: throw IOException("This audio quality is no longer offered — pick another") else null
+        // OL-12: playlist batches pick the best audio now, so long queues never hold a stale format.
+        val audioItag = if (item.audioItag == YtDownloadOptions.AUTO_AUDIO)
+            YtDownloadOptions.bestAudio(options(info))?.audioItag ?: throw IOException("No audio offered for this song")
+        else item.audioItag
+        val audio = if (audioItag > 0) info.audioStreams.firstOrNull { it.itag == audioItag } ?: throw IOException("This audio quality is no longer offered — pick another") else null
         val parts = listOfNotNull(video, audio)
         if (parts.isEmpty()) throw IOException("Nothing to download")
         val sizes = parts.map { sizeOf(it) }

@@ -55,6 +55,8 @@ object FeatureFlags {
         NAV_MORE_DESTINATIONS("ol10_nav_more_destinations", true),
         /** OL-11: episode download sheet also offers "This episode only" and an "Episode range" (from N to M). */
         EPISODE_RANGE_DOWNLOAD("ol11_episode_range_download", true),
+        /** OL-12: Online Music playlist / album pages have a "Download playlist" button (all songs, one batch, live progress). */
+        PLAYLIST_DOWNLOAD("ol12_playlist_download", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */
