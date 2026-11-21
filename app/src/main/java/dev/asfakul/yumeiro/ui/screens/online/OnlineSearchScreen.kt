@@ -156,7 +156,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 started += step.start
                 batch.forEach { results[it.name] = ProviderResult.Searching }
                 launch {
-                    OnlineRepository.search(q, batch).collect { u ->
+                    OnlineRepository.search(q, batch, retry = attempt > 0).collect { u ->
                         if (u.api !in started) return@collect
                         results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
                             else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })

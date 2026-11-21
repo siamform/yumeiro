@@ -75,6 +75,8 @@ object FeatureFlags {
         B31_TARGET_FIRST("b31_target_first", true),
         /** FE-3: an extension shows on Yumix as soon as its first home row answers (the rest fill in). */
         FE3_FIRST_ROW("fe3_first_row", true),
+        /** FE-S3: a site that failed a search in the last 2 minutes answers with that failure at once (Retry asks again). */
+        FE_S3_FAIL_MEMORY("fe_s3_fail_memory", true),
         /** FE-P: while a video or song plays, Yumix background fetches run one at a time (picked / on screen unchanged). */
         FE_PAUSE_WHILE_PLAYING("fe_pause_while_playing", true),
         /** FE-2c: the shared extension-call limit (6) serves search, scroll pages and picked work before background rows. */

@@ -400,9 +400,10 @@ object OnlineRepository {
     data class SearchUpdate(val api: String, val items: List<OnlineItem>, val error: String? = null)
 
     /** Searches every provider in parallel; emits each provider's results as soon as they arrive. */
-    fun search(query: String, apis: List<MainAPI>): Flow<SearchUpdate> = channelFlow {
+    fun search(query: String, apis: List<MainAPI>, retry: Boolean = false): Flow<SearchUpdate> = channelFlow {
         val q = query.trim()
         if (q.isEmpty()) return@channelFlow
+        val failMemory = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S3_FAIL_MEMORY)
         val speed = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)
         // SPEED-2: fastest measured searchers take the permits first; quarantined ones go last.
         val ordered = if (speed) ExtensionSpeed.order(apis, { it.name }, null, { ExtensionSpeed.stat(searchKey(it)) }, System.currentTimeMillis()) else apis
@@ -410,16 +411,24 @@ object OnlineRepository {
             launch {
                 // SPEED-2: a saved answer is sent at once, without waiting for a permit behind slow live searches.
                 cachedSearch(api, q)?.let { send(SearchUpdate(api.name, it)); return@launch }
+                // FE-S3 (lowram run 44884969625: a repeated search waited 15 s for a site that had just timed out): a site
+                // that failed this query in the last 2 minutes answers with that failure at once; Retry asks again.
+                val failKey = "${api.name}|${q.lowercase()}"
+                if (failMemory && !retry) searchFails[failKey]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_FAIL_MS }
+                    ?.let { send(SearchUpdate(api.name, emptyList(), it.value)); return@launch }
                 val update = parallel.withPermit {
                     val started = System.currentTimeMillis()
                     runCatching {
                         withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(SEARCH_TIMEOUT) { searchOne(api, q) } }
                     }.fold(
                         { if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = true)
+                          searchFails.remove(failKey)
                           SearchUpdate(api.name, it) },
                         { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
                           if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = false)
-                          SearchUpdate(api.name, emptyList(), OnlineErrors.friendly(it)) },
+                          val msg = OnlineErrors.friendly(it)
+                          if (failMemory) { if (searchFails.size > 256) searchFails.clear(); searchFails[failKey] = Timed(System.currentTimeMillis(), msg) }
+                          SearchUpdate(api.name, emptyList(), msg) },
                     )
                 }
                 send(update)
@@ -428,6 +437,9 @@ object OnlineRepository {
     }.flowOn(Dispatchers.IO + PriorityGate.Lane(PriorityGate.PICKED)) // FE-2c: the user is waiting for a search.
 
     private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
+    /** FE-S3: memory only, 2 minutes: a site that just failed a query is not asked again until Retry. */
+    private val searchFails = ConcurrentHashMap<String, Timed<String>>()
+    private const val SEARCH_FAIL_MS = 2 * 60_000L
 
     private fun searchKey(api: String) = "search|$api"
 
