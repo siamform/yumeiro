@@ -174,7 +174,7 @@ class DownloadTracksTest {
                 startAt = { _, _ -> null }, offer = DownloadTracks.Offer(subtitlesLater = true), startWith = { _, p -> got = p; null },
             ) { null })
         }
-        rule.onNodeWithText("Save all the source has").assertIsDisplayed()
+        rule.onNodeWithText("Save all the source has").performScrollTo().assertIsDisplayed()
         rule.onNodeWithTag("download_track_subs_1").performScrollTo().performClick()
         rule.onNodeWithTag("download_confirm_start").performClick()
         rule.waitForIdle()
