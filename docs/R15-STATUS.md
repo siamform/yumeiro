@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-21 23:05 +06): read docs/HANDOVER-LIVE.md first (rewritten with every push; it holds the exact next step). Now: record OL pending runs, then OL-6, then Part 8 step 2.
+Resume here (2026-11-22 00:36 +06): read docs/HANDOVER-LIVE.md first (rewritten with every push; it holds the exact next step). Now: close OL-6 / OL-13 / F-02 TV pending runs, then Part 8 step 5.
 
 # R15 status: every item in the master prompt, with its evidence
 

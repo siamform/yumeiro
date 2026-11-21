@@ -5,13 +5,48 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 23:05 +06, branch `r15-stability` @91667cdd (OL-5) + this docs commit. F-12 Verified (flag on). Owner list OL-1..OL-12:
-all built except OL-6 (downloader modal redesign, next). Unit pass-after CI 44926431107 @95108c0c running; a new r15
-CI for OL-11 / OL-12 / OL-5 is dispatched only after it ends (same concurrency group cancels it).
+2026-11-22 00:36 +06, branch `r15-stability` @ddfb93a9 (OL-6-REVEAL-2) + this docs commit. Owner list OL-1..OL-13: OL-1..5 and
+OL-7..12 Verified; OL-6 waits only on ol6_whereAndTipsAreFoldedAway (second fix ddfb93a9); OL-13 social links built
+(1ce6d8ca), everything for it pending.
+
+## Pending runs (check each, then update the ledger rows that say PENDING)
+- r15 CI 44936285767 @ddfb93a9 (review_apk): pass-after for OL-6-REVEAL-2 / OL-6 and OL-13. Expect 0 failures.
+- ab/ol13-before CI 44936197438: expect only ol/SocialLinksTest (3) to fail (stub has empty lists, old cards).
+  Then delete ab/ol13-before (worktree /tmp/fb_ol13, remote, local).
+- Device TV api34 44936347387 @ddfb93a9: TelegramLoginDeviceTest (F-02 login on TV) + SocialLinksDeviceTest.
+- Device phones 44936349725 @ddfb93a9: SocialLinksDeviceTest + PopupQualityDeviceTest (OL-6 case b re-check).
+- OL-13 device fail-before not run yet: after the two above, run SocialLinksDeviceTest on ab/ol13-before (api36).
+- Results: `gh run download <id> -D /tmp/dv_<id>`, files `*/stress/inst-dev.asfakul.yumeiro.<Test>.txt`.
+
+## Next step (Part 8)
+1. Close the pending rows above (ledger OL-6, OL-6-REVEAL, OL-13, F-02 login TV).
+2. Part 8 step 4 rest: E4 device evidence (SpeedDeviceTest Pass 44899145489 covers the E4 flags; mark E4 rows).
+3. Part 8 step 5: F-03, F-05, F-19, F-20, airing alerts, X-1, EXT-P, PIN-1, GATE-1 ANR, FREEZE, C5, C6.
+4. Then FEED-ENGINE-2.1.md leftovers, then UNVERIFIED-QUEUE / INVENTORY. E1 only on the owner's go.
+
+## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- OL-13 (1ce6d8ca): About › Community shows Discord, Facebook, Instagram, X, TikTok, Reddit (@officialyumeiro) as an
+  icon row; About › Developer adds Facebook siam1p, Instagram asfakul_siam, Telegram @siamorwho. Simple Icons (CC0)
+  marks; README Community section. Flag ol13_social_links. Manual: OMT-71.
+- OL-6-REVEAL (27bdae38, not enough) + OL-6-REVEAL-2 (ddfb93a9): "Where it goes and tips" scrolls into view when
+  opened. OL-5-T2 (b2e0e3a3): subtitle test scrolls first. Both from r15 CI 44929819988.
+- CI-DNS-RACE-2 (c1fb5652): a NetworkSettings.init from before a test reset no longer writes after it; fail-before
+  44930913875 valid, pass-after 44932398355. CI-DNS-RACE flake closed.
+- E2-DRY (0f5f9fd1): stream-sync dry_run input; run 44932539992 Pass (23 countries, nothing published).
+- E3 fail-before 44879928117 confirmed valid. F-02 login lowram device Pass 44933818039.
+- Device fail-befores valid: OL-4 44931006317, OL-9 44931008815, OL-10 44931866056, OL-6 44932939164, OL-5-HEIGHT
+  44933186744 (redone on current code; 44932248504 on the old branch failed for another reason). All ab/ol* branches
+  deleted except ab/ol13-before.
+- Device Pass @71efd02d: phones 44929260054, TV 44929262746 (PopupQuality, F02Split, F18MangaChapters, LiveCountry,
+  StreamWatchDownload) -> NF-2b, F-02 split, F-18, Country filter device Verified.
+- r15 CI 44929819988 @197d8df1: 1712 tests, 2 fails (OL-6-REVEAL, OL-5-T2) -> OL-5, OL-7-EDGE, OL-11, OL-12 Verified.
+
+## Owner rule 2026-11-22 (session 3)
+Owner added OL-13 (social links) 2026-11-22 and repeated: partial or fake success is not acceptable.
 
 ## Owner rule 2026-11-21 (session 3)
 "Continue, fix and feature all; partial or fake success is not acceptable; if a bug or feature needs a manual test,
-list it, I will do it later." Manual tests go to docs/OWNER-MANUAL-TESTS.md (OMT-64..OMT-69 added for OL items, F-12).
+list it, I will do it later." Manual tests go to docs/OWNER-MANUAL-TESTS.md (OMT-64..OMT-71 for OL items, F-12).
 Secrets: never in code; only the gitignored secrets/ folder. SEC-1 (Last.fm shared secret) and UPG-1 rotation are the
 owner's, he said not to worry about them.
 

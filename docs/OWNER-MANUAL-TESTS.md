@@ -111,6 +111,14 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-60 | FT-B3: Yumix "See all" keeps paging while searching | Owner/community test (pending) |
 | OMT-61 | FINAL-46: video plays right after the upgrade; TV data kept | Owner test (pending) |
 | OMT-62 | FINAL-47/47b: Settings organised by subject (Profiles, Statistics, Telegram own pages) | Owner/community test (pending) |
+| OMT-64 | OL-1 / OL-3 / OL-8: website tab stays open, only the current stream, banner hides | Owner test (pending) |
+| OMT-65 | OL-2 / OL-4 / OL-5: website stream panel and download popup with tracks | Owner test (pending) |
+| OMT-66 | OL-7: player top bar on a real phone and TV | Owner test (pending) |
+| OMT-67 | OL-11 / OL-5: episode range and Sub / Dub download on a real extension | Owner test (pending) |
+| OMT-68 | OL-12: a whole YT Music playlist downloads | Owner test (pending) |
+| OMT-69 | F-12: vertical Shorts on a real phone | Owner test (pending) |
+| OMT-70 | OL-6: the new download popup on a real phone and TV | Owner test (pending) |
+| OMT-71 | OL-13: every social button opens the right account in its app | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -965,3 +973,24 @@ Passes if all songs land in Downloads and play in airplane mode.
 ### OMT-69 — Vertical Shorts on a real phone (F-12)
 
 Play a 9:16 clip that is not from YouTube on a real phone: it goes full screen portrait; swipe up / down changes clip; Back returns to the normal player and the clip keeps playing. (Same as OMT-37, now with the flag on by default.)
+
+### OMT-70 — New download popup (OL-6)
+
+On a real phone (small screen if you have one) and the TV, start any download that asks first (an episode, a website video, a YouTube video):
+
+1. Phone: a bottom sheet slides up; TV: a centred dialog the remote can move through.
+2. One line at the top says the quality, the size and the free space. Offline copy / Permanent is one switch with one line under it.
+3. "Where it goes and tips" is folded; tap it: the text opens and the sheet scrolls so you can read it.
+4. The Download button stays on screen the whole time, even with many quality / audio / subtitle chips.
+
+Passes if every step does what it says and nothing is cut off.
+
+### OMT-71 — Social links (OL-13)
+
+Settings → About on a real phone with Facebook, Instagram, X, TikTok, Reddit, Discord and Telegram installed (any you have):
+
+1. Community: Telegram channel, Telegram group, then a row Discord · Facebook · Instagram · X · TikTok · Reddit, then Website and GitHub.
+2. Each button opens @officialyumeiro (Discord: the Yumeiro server invite) in its app, or in the browser if the app is missing.
+3. Developer: Website, GitHub, Facebook (siam1p), Instagram (asfakul_siam), Telegram (@siamorwho); each opens the right profile.
+
+Passes if every button lands on the right account.
