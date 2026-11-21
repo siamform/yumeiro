@@ -6,7 +6,6 @@
 package dev.asfakul.yumeiro.ui.components
 
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -32,9 +31,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 /**
  * GATE-1-RENDER: compiles the GPU programs the app's first screens need while nothing else is drawing.
@@ -47,8 +44,8 @@ import kotlinx.coroutines.withContext
  *
  * A short while after start (no input expected yet), a tiny canvas under the app draws one group of
  * those primitives per frame (circles filled / stroked / arcs, rects solid and gradient, rounded rects,
- * a rounded clip, a small image) and then leaves; a tiny bitmap is copied to a hardware bitmap on a
- * background thread first. Each compile then happens alone in an idle frame instead of inside the
+ * a rounded clip, a small image) and then leaves. (A hardware-bitmap copy to warm the upload thread was
+ * dropped: trace 44950383602 shows its GPU context is recreated after idle, so it saved nothing.) Each compile then happens alone in an idle frame instead of inside the
  * first tap. The canvas is 8 dp, drawn first (every page paints its own background over it) and has
  * no semantics. [enabled] is fixed for the life of the call site (flag SHADER_PREWARM).
  */
@@ -61,16 +58,6 @@ object ShaderPrewarm {
     /** Steps drawn so far in this process (tests and logs). */
     @Volatile var stepsDrawn = 0
         internal set
-
-    /** Creates the bitmap upload thread's GPU context now (API 26+). Background thread only. */
-    fun warmUploader() {
-        if (Build.VERSION.SDK_INT < 26) return
-        runCatching {
-            val src = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
-            src.copy(Bitmap.Config.HARDWARE, false)?.recycle()
-            src.recycle()
-        }
-    }
 
     internal fun DrawScope.drawStep(step: Int, image: ImageBitmap?) {
         val c = Color(0x08FFFFFF) // almost transparent: the colour is a uniform, the GPU program is the same
@@ -102,7 +89,6 @@ fun ShaderPrewarmHost(enabled: Boolean, startDelayMs: Long = ShaderPrewarm.START
     val image = remember { runCatching { Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888).asImageBitmap() }.getOrNull() }
     LaunchedEffect(Unit) {
         delay(startDelayMs)
-        withContext(Dispatchers.IO) { ShaderPrewarm.warmUploader() }
         for (i in 0 until ShaderPrewarm.STEPS) {
             step = i
             withFrameNanos { }
