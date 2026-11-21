@@ -18,25 +18,17 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,8 +60,6 @@ import dev.asfakul.yumeiro.stream.StreamFormat
 import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.stream.StreamSniffer
 import dev.asfakul.yumeiro.ui.theme.DarkSurface
-import dev.asfakul.yumeiro.ui.theme.GlassFill
-import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
@@ -137,6 +127,9 @@ class PageStreamCapture {
 
     fun all(): List<CapturedStream> = seen.values.sortedBy { rank(it.kind) }
 
+    /** OL-2 Rescan: forgets every capture so the page's streams are offered again from scratch. DRM info stays. */
+    fun reset() { seen.clear() }
+
     private fun rank(k: MediaKind) = when (k) {
         MediaKind.HLS, MediaKind.DASH, MediaKind.SMOOTH -> 0
         MediaKind.VIDEO -> 1
@@ -197,6 +190,25 @@ class PageStreamCapture {
     } catch(e) {}
   }
   scan(); setInterval(scan, 1500);
+})();
+"""
+
+        /**
+         * OL-2 Rescan: reports what the page's players play now (their current source) and the media files
+         * and manifests the page already fetched (Resource Timing), so a cleared list fills again without a reload.
+         */
+        const val RESCAN_JS = """
+(function(){
+  try {
+    document.querySelectorAll('video,audio,source').forEach(function(v){
+      var s = v.currentSrc || v.src;
+      if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
+    });
+    (performance.getEntriesByType('resource') || []).forEach(function(e){
+      var n = String(e.name || ''); var l = n.toLowerCase().split('?')[0];
+      if (/\.(m3u8|mpd|mp4|webm|mkv|m4v|mov)$/.test(l)) MTFinder.onMedia(n);
+    });
+  } catch(e) {}
 })();
 """
 
@@ -271,6 +283,7 @@ fun PageStreamFinderDialog(
     var currentUrl by remember { mutableStateOf(pageUrl) }
     var drmNote by remember { mutableStateOf<String?>(null) }
     var showHint by remember { mutableStateOf(true) }
+    var panel by remember { mutableStateOf(StreamPanel.OPEN) }
     // OL-8: a later note (sign in, auto gave up) shows the banner again; it hides by itself after 3 s.
     androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -422,32 +435,16 @@ fun PageStreamFinderDialog(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                Surface(color = DarkSurface, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            if (found.isEmpty()) "No stream detected yet — start the video on the page." else "Detected streams",
-                            color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                        )
-                        drmNote?.let { Text(it, color = TextTertiary, fontSize = 11.sp) }
-                        LazyColumn(Modifier.heightIn(max = 180.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(found, key = { it.url }) { c ->
-                                Row(
-                                    Modifier.fillMaxWidth().background(GlassFill, RoundedCornerShape(12.dp)).clickable { play(c) }.padding(10.dp).testTag("page_finder_stream"),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(c.label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                        Text(c.url, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Box(Modifier.size(34.dp).background(SpotifyGreen, RoundedCornerShape(17.dp)), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.PlayArrow, "Play", tint = OnAccent, modifier = Modifier.size(20.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                DetectedStreamsPanel(
+                    found = found, drmNote = drmNote, state = panel, onState = { panel = it },
+                    onRescan = {
+                        // OL-2: start over: forget what was seen, then ask the page for what it plays now.
+                        synchronized(capture) { capture.reset() }
+                        found.clear()
+                        webViewRef?.evaluateJavascript(PageStreamCapture.RESCAN_JS, null)
+                    },
+                    onPlay = { play(it) },
+                )
             }
         }
     }
