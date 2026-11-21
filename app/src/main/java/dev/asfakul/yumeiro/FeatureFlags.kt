@@ -49,6 +49,8 @@ object FeatureFlags {
         STREAM_DOWNLOAD_PROMPT("ol4_stream_download_prompt", true),
         /** OL-7: player top bar: Quality / Audio / More sit flush at the trailing edge, the title takes the rest (no gap left of the buttons). */
         PLAYER_TOPBAR_ALIGN("ol7_player_topbar_align", true),
+        /** OL-9: Home Spaces "See more" also has Telegram, Profiles, Your stats, Airing soon, Reading and Inbox. */
+        HOME_SPACES_MORE("ol9_home_spaces_more", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

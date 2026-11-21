@@ -749,6 +749,13 @@ fun MTPlayerApp(
                                         navigateSub(Screen.Settings.route)
                                     }
                                     when (sc) {
+                                        // OL-9: the newer pages.
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PROFILES -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PROFILES)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.STATS -> navigateSub(Screen.Stats.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.MY_LIST -> navigateSub(Screen.OnlineLibrary.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.HISTORY -> navigateSub(Screen.OnlineHistory.route)
