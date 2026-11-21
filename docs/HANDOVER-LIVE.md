@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-22 00:00 +06, branch `r15-stability` head after commit "FE-P-T: PauseWhilePlayingTest expectation".
+2026-11-22 01:10 +06, branch `r15-stability` head after commit "FE-4b: feed working set" (fadf8ded) + this docs commit.
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -17,7 +17,10 @@ Owner rule 19:15: after every bug/feature, mark its status in the docs, verified
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
-## Done today (2026-11-21), newest first
+## Done today (2026-11-21/22), newest first
+- FE-4b: Yumix working set: only picked + pinned + fastest 24 (12 on 2 GB) fetch live; rest saved pages, join at the feed end (flag fe4_working_set).
+- FE-Q-CHK: UpdateFeedDeviceTest (install extensions, relaunch, `adb install -r` update, compare files / timings / dexopt).
+- FE-P-T: PauseWhilePlayingTest expectation fixed (gate has 3 permits; it asserted 4).
 - FE-S4: a site's search timeout follows its measured speed (8..25 s), quarantined 8 s, Retry 25 s (flag fe_s4_adaptive_timeout).
 - FE-4a: Yumix rebuilds its mix at most every 300 ms (first update at once), not on every row answer (flag fe4_feed_frames).
 - FE-S3: a site that failed a search in the last 2 min answers with that failure at once; Retry asks again (flag fe_s3_fail_memory).
@@ -76,20 +79,15 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- Pass-after CI on r15-stability head (abi_splits=true, run ID in R15-STATUS line 3): covers FE-S1, FE-3, SPEED-T2, FE-P (+FE-P-T), FE-2c, FE-5, FE-S2, B31-SEEK4/5, FE-S3, FE-4a, FE-S4. 44886605109 was cancelled (could not be green, FE-P-T). Do not dispatch an r15 CI while it runs.
-- Fail-before CIs: none pending.
-- Device runs on 7d77a583 done: phones 44884969625 (lowram torrent Fail -> B31-SEEK5), TV 44884971496 (Fail -> B31-SEEK4).
-- After the next r15 CI is green: BuiltinTorrentDeviceTest phone=both and TV tv_api=24 again for B31-SEEK4 / B31-SEEK5.
-- After 44884554686 passes: device (if the above are green, not needed again) BuiltinTorrentDeviceTest + SpeedDeviceTest phone=both, and TV tv_api=24 BuiltinTorrentDeviceTest.
+- Pass-after CI 44887743406 on r15-stability @e5bb8f01 (abi_splits=true): covers FE-S1, FE-3, SPEED-T2, FE-P (+FE-P-T), FE-2c, FE-5, FE-S2, B31-SEEK4/5, FE-S3, FE-4a, FE-S4. Not FE-4b (fadf8ded is later): the r15 CI after it covers FE-4b. Do not dispatch an r15 CI while one runs (concurrency cancels).
+- Fail-before CI 44888534031 on ab/fe4b-before (expect compile failure: unresolved FeedWorkingSet). Then delete the branch.
+- Device 44888340063 @ad503cc2 phone=both: UpdateFeedDeviceTest (FE-Q1/Q2). Read UPDFEED lines in the job log / stress/updfeed/numbers.txt, dexopt-*.txt, ext-*.txt in artifact device-check-<dev>-1.
+- After a green r15 CI: BuiltinTorrentDeviceTest phone=both and TV tv_api=24 (B31-SEEK4/5); SpeedDeviceTest phone=both (FE-S3/S4/FE-4a numbers).
 
 ## Next steps, in order
-- FEED-ENGINE first: FE-1 pass-after (next r15 CI after 44882251682), then FE-2 row-level priority scheduler,
-  FE-Q1/Q2 upgrade device check, FE-3..FE-7 (docs/FEED-ENGINE-2.1.md section 5).
-0. SpeedDeviceTest baseline -> budgets in GOAL-TOP-OF-CLASS.md -> fixes (parallel extension load like CloudStream amap / Mihon
-   async, but keep provider ownership exact; drop the double disk read in OnlineRepository.searchOne on a miss).
-1. Speed work (owner mandatory): feed loading, extension loading (start-up of the extension engine), search
-   (ordering by ExtensionSpeed, per-extension timeout, results streamed as they arrive). Measure first, fix, test.
-2. E4 part 2: visible-rows scheduler, low-RAM / heat throttle, Explore guide delay.
-3. Device checks for every "Built, not tested" row; UNVERIFIED-QUEUE / INVENTORY; G-rows in GOAL-TOP-OF-CLASS.md.
-4. E3 website ABI detector: Blocked (the website is not in this repo). E1 master extension: large, not started.
-5. Release only on the owner's explicit go.
+1. Record the pending runs above (ledger row, FEED-ENGINE row, this file, R15 line 3).
+2. FEED-ENGINE remaining: FE-4 lazy code load (only if the device numbers show load cost matters; ext_first_usable is ~1 s now), FE-Q2 result -> fix if the update recompiles extensions on the main path, FE-5 device check, FE-S4 device check.
+3. E4 part 2: visible-rows scheduler, low-RAM / heat throttle, Explore guide delay.
+4. Device checks for every "Built, not tested" row (MAJOR-BUGS lines 51-115); docs/UNVERIFIED-QUEUE.md; G-rows in GOAL-TOP-OF-CLASS.md.
+5. E3 website ABI detector: Blocked (the website is not in this repo). E1 master extension: large, not started. F-22b.
+6. Release only on the owner's explicit go.
