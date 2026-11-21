@@ -41,6 +41,8 @@ object FeatureFlags {
         PAGE_HINT_AUTOHIDE("ol8_hint_autohide", true),
         /** OL-2: the website "Detected streams" panel has Rescan, Collapse (down arrow) and Close; a closed panel leaves a small "Streams" pill. */
         STREAM_PANEL_CONTROLS("ol2_stream_panel_controls", true),
+        /** OL-3: the website stream panel lists only the video playing now (cleared when the page switches video or page) and shows its title. */
+        STREAM_CURRENT_ONLY("ol3_stream_current_only", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

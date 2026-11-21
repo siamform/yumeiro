@@ -92,6 +92,8 @@ internal fun DetectedStreamsPanel(
     onRescan: () -> Unit,
     onPlay: (CapturedStream) -> Unit,
     modifier: Modifier = Modifier,
+    /** OL-3: title of the video playing now (null = not shown). */
+    nowTitle: String? = null,
 ) {
     val controls = FeatureFlags.isOn(FeatureFlags.Flag.STREAM_PANEL_CONTROLS)
     val shown = if (controls) state else StreamPanel.OPEN
@@ -111,10 +113,16 @@ internal fun DetectedStreamsPanel(
     Surface(color = DarkSurface, modifier = modifier.fillMaxWidth().testTag("page_finder_streams_panel")) {
         Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (found.isEmpty()) "No stream detected yet — start the video on the page." else "Detected streams",
-                    color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f),
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (found.isEmpty()) "No stream detected yet — start the video on the page." else "Detected streams",
+                        color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    )
+                    // OL-3: which video these streams belong to.
+                    if (found.isNotEmpty() && !nowTitle.isNullOrBlank()) {
+                        Text("Now playing: $nowTitle", color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("page_finder_now_title"))
+                    }
+                }
                 if (controls) {
                     IconButton(onClick = onRescan, modifier = Modifier.testTag("page_finder_streams_reload")) { Icon(Icons.Default.Refresh, "Rescan streams", tint = TextSecondary) }
                     if (shown == StreamPanel.OPEN) {

@@ -92,11 +92,17 @@ data class CapturedStream(
     val kind: MediaKind,
     val label: String,
     val headers: Map<String, String>,
+    /** OL-3: title of the video this stream belongs to (the page's video title, og:title or page title). */
+    val title: String = "",
 )
 
 /** Captures streams a page's own player requests. Pure logic (no WebView) so it can be unit tested. */
-class PageStreamCapture {
+class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_000_000L }) {
     private val seen = LinkedHashMap<String, CapturedStream>()
+    /** OL-3: when each capture was first seen, so a video switch keeps only what the new video asked for. */
+    private val seenAt = HashMap<String, Long>()
+    /** OL-3: title of the video playing now; new captures take it. */
+    var mediaTitle: String = ""; private set
     var licenseUrl: String? = null; private set
     var drmSystem: String? = null
 
@@ -120,15 +126,39 @@ class PageStreamCapture {
         }
         val key = lower.substringBefore('#')
         if (key in seen) return null
-        val c = CapturedStream(url, sniff.kind, sniff.label, headers)
+        val c = CapturedStream(url, sniff.kind, sniff.label, headers, mediaTitle)
         seen[key] = c
+        seenAt[key] = clock()
         return c
     }
 
     fun all(): List<CapturedStream> = seen.values.sortedBy { rank(it.kind) }
 
     /** OL-2 Rescan: forgets every capture so the page's streams are offered again from scratch. DRM info stays. */
-    fun reset() { seen.clear() }
+    fun reset() { seen.clear(); seenAt.clear() }
+
+    /**
+     * OL-3: the page switched to another video (a new `<video>` source, a new page or an in-page
+     * navigation). Captures older than [NEW_MEDIA_GRACE_MS] belong to the old video and are dropped; the
+     * newest ones stay because the new video's manifest is often requested just before the switch is seen.
+     * @return true when the list changed.
+     */
+    fun newMedia(title: String?): Boolean {
+        val now = clock()
+        val old = seenAt.filterValues { now - it > NEW_MEDIA_GRACE_MS }.keys
+        old.forEach { seen.remove(it); seenAt.remove(it) }
+        val titled = title?.trim()?.takeIf { it.isNotEmpty() }?.let { retitle(it) } ?: false
+        return old.isNotEmpty() || titled
+    }
+
+    /** OL-3: the video playing now is called [title]; every capture of it shows that title. @return true when anything changed. */
+    fun retitle(title: String): Boolean {
+        val t = title.trim().take(MAX_TITLE)
+        if (t.isEmpty() || (t == mediaTitle && seen.values.all { it.title == t })) return false
+        mediaTitle = t
+        for (k in seen.keys.toList()) seen[k] = seen.getValue(k).copy(title = t)
+        return true
+    }
 
     private fun rank(k: MediaKind) = when (k) {
         MediaKind.HLS, MediaKind.DASH, MediaKind.SMOOTH -> 0
@@ -170,6 +200,9 @@ class PageStreamCapture {
         /** More than any real page offers (qualities × audio tracks × mirrors). */
         const val MAX_CAPTURES = 64
         const val MAX_URL = 8_192
+        const val MAX_TITLE = 200
+        /** OL-3: on a video switch, captures newer than this stay (the new video's own manifest). */
+        const val NEW_MEDIA_GRACE_MS = 1_500L
         private val LICENSE_HINTS = listOf("license", "licence", "widevine", "drm", "/wv", "getkey")
         private val SEGMENT_EXT = listOf(".ts", ".m4s", ".aac", ".mp4", ".m4a", ".m4v", ".cmfv", ".cmfa")
 
@@ -190,6 +223,28 @@ class PageStreamCapture {
     } catch(e) {}
   }
   scan(); setInterval(scan, 1500);
+  // OL-3: which video plays now. A new source on a video element means the page switched video.
+  function title(v){
+    try {
+      var t = v && (v.getAttribute('title') || v.getAttribute('aria-label'));
+      if (t) return String(t);
+      var m = document.querySelector('meta[property="og:title"]');
+      return String((m && m.content) || document.title || '');
+    } catch(e) { return ''; }
+  }
+  document.addEventListener('loadstart', function(e){
+    var v = e.target; if (!v || v.tagName !== 'VIDEO') return;
+    var s = v.currentSrc || v.src || '';
+    window.__mtLoadAt = performance.now();
+    try {
+      if (window.__mtSrc && s && s !== window.__mtSrc) MTFinder.onNewMedia(title(v)); else MTFinder.onTitle(title(v));
+    } catch(x) {}
+    if (s) window.__mtSrc = s;
+  }, true);
+  document.addEventListener('playing', function(e){
+    var v = e.target; if (!v || v.tagName !== 'VIDEO') return;
+    try { MTFinder.onTitle(title(v)); } catch(x) {}
+  }, true);
 })();
 """
 
@@ -204,7 +259,9 @@ class PageStreamCapture {
       var s = v.currentSrc || v.src;
       if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
     });
+    var since = (window.__mtLoadAt || 0) - 2000; // OL-3: only what the video playing now fetched
     (performance.getEntriesByType('resource') || []).forEach(function(e){
+      if (e.startTime < since) return;
       var n = String(e.name || ''); var l = n.toLowerCase().split('?')[0];
       if (/\.(m3u8|mpd|mp4|webm|mkv|m4v|mov)$/.test(l)) MTFinder.onMedia(n);
     });
@@ -289,6 +346,19 @@ fun PageStreamFinderDialog(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val main = remember { Handler(Looper.getMainLooper()) }
 
+    fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
+
+    /** OL-3: the page switched video or page: keep only the new video's streams. */
+    fun switched(title: String?) {
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_CURRENT_ONLY)) return
+        if (synchronized(capture) { capture.newMedia(title) }) refresh()
+    }
+
+    fun titled(title: String) {
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_CURRENT_ONLY)) return
+        if (synchronized(capture) { capture.retitle(title) }) refresh()
+    }
+
     fun record(url: String, method: String, headers: Map<String, String>) {
         synchronized(capture) { capture.onRequest(url, method, headers) }?.let { c ->
             main.post { if (found.none { it.url == c.url }) { found.clear(); found.addAll(synchronized(capture) { capture.all() }) } }
@@ -302,7 +372,7 @@ fun PageStreamFinderDialog(
         val wv = webViewRef
         val request = synchronized(capture) {
             capture.toRequest(
-                c, currentUrl, pageTitle.ifBlank { base?.title.orEmpty() },
+                c, currentUrl, c.title.ifBlank { pageTitle.ifBlank { base?.title.orEmpty() } },
                 userAgent = wv?.settings?.userAgentString,
                 cookie = runCatching { CookieManager.getInstance().getCookie(c.url) }.getOrNull(),
                 base = base,
@@ -383,6 +453,8 @@ fun PageStreamFinderDialog(
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 addJavascriptInterface(object {
                                     @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
+                                    @JavascriptInterface fun onNewMedia(title: String) = switched(title)
+                                    @JavascriptInterface fun onTitle(title: String) = titled(title)
                                     @JavascriptInterface fun onDrm(system: String) {
                                         val system = dev.asfakul.yumeiro.online.web.pageDrmSystemName(system)
                                         synchronized(capture) { capture.drmSystem = system }
@@ -407,7 +479,15 @@ fun PageStreamFinderDialog(
                                         request?.let { record(it.url.toString(), it.method ?: "GET", it.requestHeaders.orEmpty()) }
                                         return null // the page loads normally; we only observe
                                     }
+                                    override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                        // OL-3: an in-page navigation (single-page sites) to another address is another video.
+                                        if (url != null && !isReload && url.substringBefore('#') != currentUrl.substringBefore('#')) {
+                                            currentUrl = url
+                                            switched(null)
+                                        }
+                                    }
                                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                        if (url != null && url.substringBefore('#') != currentUrl.substringBefore('#')) switched(null)
                                         url?.let { currentUrl = it }
                                         if (autoActive && url != null && PageStreamCapture.needsUser(url)) {
                                             autoActive = false
@@ -436,7 +516,8 @@ fun PageStreamFinderDialog(
                     )
                 }
                 DetectedStreamsPanel(
-                    found = found, drmNote = drmNote, state = panel, onState = { panel = it },
+                    found = found, drmNote = drmNote, state = panel,
+                    nowTitle = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_CURRENT_ONLY)) found.firstOrNull { it.title.isNotBlank() }?.title ?: pageTitle else null, onState = { panel = it },
                     onRescan = {
                         // OL-2: start over: forget what was seen, then ask the page for what it plays now.
                         synchronized(capture) { capture.reset() }
