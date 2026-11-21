@@ -346,12 +346,23 @@ fun PageStreamFinderDialog(
     var played by remember(pageUrl) { mutableStateOf(false) }
     val found = keep?.found ?: remember(pageUrl) { mutableStateListOf<CapturedStream>() }
     // OL-1: a kept page keeps its title, address, progress and notes too (the WebView's callbacks write them).
-    var progress by (keep?.progress ?: remember { mutableIntStateOf(0) })
-    var pageTitle by (keep?.pageTitle ?: remember { mutableStateOf("") })
-    var currentUrl by (keep?.currentUrl ?: remember { mutableStateOf(pageUrl) })
-    var drmNote by (keep?.drmNote ?: remember { mutableStateOf<String?>(null) })
+    // Own states are always remembered (same slots every composition); a kept page's states win.
+    val ownProgress = remember { mutableIntStateOf(0) }
+    val ownTitle = remember { mutableStateOf("") }
+    val ownUrl = remember { mutableStateOf(pageUrl) }
+    val ownDrm = remember { mutableStateOf<String?>(null) }
+    val ownPanel = remember { mutableStateOf(StreamPanel.OPEN) }
+    val progressState: androidx.compose.runtime.MutableIntState = keep?.progress ?: ownProgress
+    val titleState: androidx.compose.runtime.MutableState<String> = keep?.pageTitle ?: ownTitle
+    val urlState: androidx.compose.runtime.MutableState<String> = keep?.currentUrl ?: ownUrl
+    val drmState: androidx.compose.runtime.MutableState<String?> = keep?.drmNote ?: ownDrm
+    val panelState: androidx.compose.runtime.MutableState<StreamPanel> = keep?.panel ?: ownPanel
+    var progress by progressState
+    var pageTitle by titleState
+    var currentUrl by urlState
+    var drmNote by drmState
     var showHint by remember { mutableStateOf(true) }
-    var panel by (keep?.panel ?: remember { mutableStateOf(StreamPanel.OPEN) })
+    var panel by panelState
     // OL-8: a later note (sign in, auto gave up) shows the banner again; it hides by itself after 3 s.
     androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
