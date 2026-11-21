@@ -50,11 +50,15 @@ object StreamDownload {
     }
 
     /** Queues [req] (already resolved/playable). [sourceUrl] is what the user opened (page or link). */
-    fun enqueue(context: Context, req: StreamRequest, sourceUrl: String = req.url, keep: Boolean? = null): Outcome {
+    fun enqueue(
+        context: Context, req: StreamRequest, sourceUrl: String = req.url, keep: Boolean? = null,
+        /** OL-5: quality / audio / subtitles picked in the popup, and the subtitle files the page offered. */
+        pick: dev.asfakul.yumeiro.online.download.DownloadTracks.Pick? = null, subs: List<Pair<String, String>> = emptyList(),
+    ): Outcome {
         refusal(req)?.let { return Outcome.Refused(it) }
         val link = linkFor(req, sourceUrl)
         val title = link.name
-        val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", sourceUrl, null, req.logoUrl, emptyMap(), link, keep = keep)
+        val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", sourceUrl, null, req.logoUrl, emptyMap(), link, keep = keep, pick = pick, subs = subs)
         return if (err != null) Outcome.Refused(err) else Outcome.Queued(title)
     }
 }

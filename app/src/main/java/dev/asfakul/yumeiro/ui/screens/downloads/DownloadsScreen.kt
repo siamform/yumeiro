@@ -365,16 +365,32 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
 
 /** G8 D8 (R17): finding the file (mkdirs + exists) ran on the main thread on every tap. */
 private suspend fun play(context: android.content.Context, d: OnlineDownloads.Item, onPlayVideo: (VideoItem) -> Unit) {
+    var sidecars = emptyList<dev.asfakul.yumeiro.stream.StreamSubtitle>()
     val uri = withContext(Dispatchers.IO) {
         val f = if (d.fileName.isNotBlank()) OnlineDownloads.fileOf(context, d) else null
         when {
-            f != null && f.exists() -> android.net.Uri.fromFile(f).toString()
+            f != null && f.exists() -> android.net.Uri.fromFile(f).toString().also {
+                // OL-5: subtitles saved with the download play with it, offline.
+                if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_TRACKS)) sidecars = subtitleSidecars(f)
+            }
             d.publicUri != null -> d.publicUri
             else -> null
         }
     }
+    if (uri != null && sidecars.isNotEmpty()) dev.asfakul.yumeiro.stream.StreamRepository.register(
+        dev.asfakul.yumeiro.stream.StreamRequest(url = uri, title = listOfNotNull(d.title, d.episodeLabel).joinToString(" · "), subtitles = sidecars))
     if (uri != null) onPlayVideo(VideoItem(id = "download:${d.id}", title = listOfNotNull(d.title, d.episodeLabel).joinToString(" · "), durationMs = 0L, uri = uri, resolution = d.quality.orEmpty(), folderName = d.folder.ifBlank { "Downloads" }, sizeBytes = d.bytes))
     else AppMessages.error(context, "The file was removed")
+}
+
+/** OL-5: subtitle files saved next to [video] ("Ep 1.English.vtt"), for the player. Call off the main thread. */
+internal fun subtitleSidecars(video: java.io.File): List<dev.asfakul.yumeiro.stream.StreamSubtitle> {
+    val T = dev.asfakul.yumeiro.online.download.DownloadTracks
+    val names = video.parentFile?.list()?.toList().orEmpty()
+    return T.sidecarsOf(video.name, names).map { (name, label) ->
+        val f = java.io.File(video.parentFile, name)
+        dev.asfakul.yumeiro.stream.StreamSubtitle(url = android.net.Uri.fromFile(f).toString(), label = label, mimeType = T.subtitleMime(name))
+    }
 }
 
 private fun deleteLine(d: OnlineDownloads.Item, days: Int): String? {

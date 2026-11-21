@@ -8,6 +8,15 @@ package dev.asfakul.yumeiro.ui.screens.downloads
 import android.content.Context
 import dev.asfakul.yumeiro.FeatureFlags
 import dev.asfakul.yumeiro.online.download.DownloadGroups
+import dev.asfakul.yumeiro.online.download.DownloadTracks
+import dev.asfakul.yumeiro.online.download.HlsDownloader
+import dev.asfakul.yumeiro.online.download.OnlineDownloads
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import dev.asfakul.yumeiro.online.download.DownloadSettings
 import dev.asfakul.yumeiro.stream.StreamDownload
 import dev.asfakul.yumeiro.stream.StreamFormat
@@ -39,6 +48,44 @@ object StreamDownloadAsk {
             return
         }
         DownloadSettings.init(context)
+        // OL-5: quality / audio / subtitle choices. An HLS master is read first (off the main thread, 6 s cap).
+        val tracksOn = FeatureFlags.on(context, FeatureFlags.Flag.DOWNLOAD_TRACKS)
+        val named = if (tracksOn) namedSubs(req) else emptyList()
+        if (tracksOn && req.resolvedFormat() == StreamFormat.HLS) {
+            scope.launch {
+                val master = withContext(Dispatchers.IO) { withTimeoutOrNull(6_000) { runCatching { probe(context, req, sourceUrl) }.getOrNull() } }
+                show(context, req, sourceUrl, offerFor(master, named), named)
+            }
+        } else show(context, req, sourceUrl, if (tracksOn) offerFor(null, named) else null, named)
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** OL-5: subtitle files the page / source offered with the stream (label to URL). Pure. */
+    fun namedSubs(req: StreamRequest): List<Pair<String, String>> =
+        req.subtitles.map { (it.label.ifBlank { it.language.orEmpty() }.ifBlank { "Subtitles" }) to it.url }.distinctBy { it.second }
+
+    /** OL-5: what the popup offers for [master] (may be null) plus the page's own subtitles. Pure. */
+    fun offerFor(master: DownloadTracks.Master?, named: List<Pair<String, String>>): DownloadTracks.Offer? {
+        val o = master?.let(DownloadTracks::offerOf) ?: DownloadTracks.Offer()
+        return o.copy(subtitles = (o.subtitles + named.map { it.first }).distinct()).takeIf { it.hasChoices }
+    }
+
+    private fun probe(context: Context, req: StreamRequest, sourceUrl: String): DownloadTracks.Master? {
+        val link = StreamDownload.linkFor(req, sourceUrl)
+        val text = HlsDownloader(
+            // The blocking call itself gives up after 6 s, so the popup never waits longer.
+            dev.asfakul.yumeiro.network.NetworkClient.get(context).newBuilder().callTimeout(6, java.util.concurrent.TimeUnit.SECONDS).build(),
+            OnlineDownloads.headersFor(link),
+        ).text(req.url)
+        return DownloadTracks.parseMaster(text, req.url)
+    }
+
+    private fun show(context: Context, req: StreamRequest, sourceUrl: String, offer: DownloadTracks.Offer?, named: List<Pair<String, String>>) {
+        fun enqueue(keep: Boolean, pick: DownloadTracks.Pick?) = when (val o = StreamDownload.enqueue(context, req, sourceUrl, keep, pick, named)) {
+            is StreamDownload.Outcome.Refused -> o.message
+            is StreamDownload.Outcome.Queued -> null
+        }
         DownloadPrompt.ask(context, DownloadPrompt.Request(
             type = DownloadPrompt.Type.LINK,
             title = StreamDownload.titleFor(req, sourceUrl),
@@ -46,11 +93,8 @@ object StreamDownloadAsk {
             folder = DownloadGroups.LOOSE,
             quality = qualityText(req),
             defaultKeep = DownloadSettings.keepByDefault.value,
-        ) { keep ->
-            when (val o = StreamDownload.enqueue(context, req, sourceUrl, keep)) {
-                is StreamDownload.Outcome.Refused -> o.message
-                is StreamDownload.Outcome.Queued -> null
-            }
-        })
+            offer = offer,
+            startWith = if (offer != null) { keep, pick -> enqueue(keep, pick) } else null,
+        ) { keep -> enqueue(keep, null) })
     }
 }

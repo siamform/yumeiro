@@ -108,6 +108,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             if (OnlineDownloads.get(id) == null) { OnlineDownloads.removeFiles(named); OnlineDownloads.removeFiles(out); return Result.success() }
             if (!part.renameTo(out)) { out.delete(); part.copyTo(out, overwrite = true); part.delete() }
             OnlineDownloads.removeSideFiles(part) // G8-3: the resume records stay until the file is in place
+            // OL-5: subtitles picked in the popup, saved next to the file (never fails the download).
+            if (dev.asfakul.yumeiro.FeatureFlags.on(applicationContext, dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_TRACKS))
+                runCatching { SubtitleSaver.save(client, OnlineDownloads.get(id) ?: item, out) }
             YtDownloads.afterDownload(applicationContext, item, out)
             OnlineDownloads.finished(id, bytes)
             done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) "Saved · Permanent · tap to open Downloads" else "Saved · Offline · tap to open Downloads")
@@ -142,6 +145,10 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         }
     }
 
+    /** OL-5: audio track picked in the popup, when the flag is on. */
+    private fun OnlineDownloads.Item.audioWantOf(): String? =
+        audioPref.takeIf { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_TRACKS) }
+
     /** Finds a fresh link for a queued episode and names its file. */
     private suspend fun resolveEpisode(item: OnlineDownloads.Item): OnlineDownloads.Item {
         val data = item.data ?: throw NoLink("Episode data missing")
@@ -149,6 +156,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val provider = ExtensionManager.provider(item.api) ?: throw NoLink("Extension \"${item.api}\" isn't installed")
         val links = ArrayList<OnlineLink>()
         val torrents = ArrayList<String>()
+        val subs = ArrayList<Pair<String, String>>()
         var error: String? = null
         withTimeoutOrNull(LINK_TIMEOUT_MS) {
             OnlineRepository.links(provider, data).collect { ev ->
@@ -156,6 +164,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     is LinkEvent.Link -> links += ev.link
                     is LinkEvent.Skipped -> ev.url?.let { torrents += it }
                     is LinkEvent.Done -> if (!ev.ok) error = ev.error
+                    // OL-5: kept so the subtitles picked in the popup can be saved next to the file.
+                    is LinkEvent.Subtitle -> subs += ev.subtitle.language to ev.subtitle.url
                     else -> Unit
                 }
             }
@@ -174,7 +184,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val name = if (item.fileName.isNotBlank() && DownloadNaming.sameFile(item.fileName, ext, link.isHls)) item.fileName else "$base.$ext"
         OnlineDownloads.resolved(item.id) {
             it.copy(url = link.url, isHls = link.isHls, headers = OnlineDownloads.headersFor(link), fileName = name, quality = link.qualityLabel.ifBlank { null },
-                isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first)
+                isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first,
+                subs = subs.distinctBy { s -> s.second }.take(40).ifEmpty { it.subs })
         }
         return OnlineDownloads.get(item.id) ?: throw NoLink("Removed")
     }
@@ -207,7 +218,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     if (free in 0 until 2 * sum + DiskFull.MARGIN) throw DiskFull(2 * sum, free)
                 }
                 kotlinx.coroutines.coroutineScope {
-                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.heightFor(item.maxHeight)).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v, trackSpace(0)) { d, _ -> vb = d; progress(vb + ab, -1) }() }
+                    val vj = this.async { if (item.isHls) HlsDownloader(client, item.headers, DownloadSettings.heightFor(item.maxHeight), item.audioWantOf()).download(item.url, v) { d, _ -> vb = d; progress(vb + ab, -1) } else direct(item.url, item.headers, v, trackSpace(0)) { d, _ -> vb = d; progress(vb + ab, -1) }() }
                     val aj = this.async { direct(item.audioUrl, item.headers, a, trackSpace(1)) { d, _ -> ab = d; progress(vb + ab, -1) }() }
                     vj.await(); aj.await()
                 }
@@ -218,7 +229,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             // G8-2: a variant with a separate audio rendition is saved as two tracks and joined here.
             item.isHls -> {
                 var container: String? = null
-                val n = HlsDownloader(client, item.headers, DownloadSettings.heightFor(item.maxHeight))
+                val n = HlsDownloader(client, item.headers, DownloadSettings.heightFor(item.maxHeight), item.audioWantOf())
                     .download(item.url, part, join = { v, a, o -> MediaMux.merge(v, a, o, webm = false) }, onContainer = { container = it }, progress = progress)
                 // NF-2b-4: fMP4 and joined streams are MP4 already; a TS stream is remuxed to MP4 here, or kept as TS.
                 val c = container ?: run {

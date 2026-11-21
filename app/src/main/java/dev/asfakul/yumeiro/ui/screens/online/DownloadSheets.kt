@@ -7,6 +7,8 @@ package dev.asfakul.yumeiro.ui.screens.online
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,7 +101,7 @@ internal fun EpisodeDownloadIcon(d: OnlineDetail, version: String, index: Int, e
 
 /** "Download" button on a title page: opens the episode download sheet. */
 @Composable
-internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>, seasonTitle: String?, modifier: Modifier = Modifier, current: Int? = null) {
+internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>, seasonTitle: String?, modifier: Modifier = Modifier, current: Int? = null, onVersion: ((String) -> Unit)? = null) {
     val all by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     var open by remember { mutableStateOf(false) }
     val folder = remember(d, version) { DownloadNaming.seriesFolder(d.name, d.api, version) }
@@ -113,14 +115,14 @@ internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List
             color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1,
         )
     }
-    if (open) EpisodeDownloadSheet(d, version, ordered, season, seasonTitle, folder, current) { open = false }
+    if (open) EpisodeDownloadSheet(d, version, ordered, season, seasonTitle, folder, current, onVersion) { open = false }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EpisodeDownloadSheet(
     d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>,
-    seasonTitle: String?, folder: String, current: Int?, onDismiss: () -> Unit,
+    seasonTitle: String?, folder: String, current: Int?, onVersion: ((String) -> Unit)?, onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val p = LocalMtPalette.current
@@ -146,6 +148,13 @@ private fun EpisodeDownloadSheet(
                 "Quality: ${DownloadSettings.qualityLabel(quality)} · Auto-delete: ${DownloadSettings.autoDeleteLabel(autoDelete)} · change in Settings → Downloads",
                 color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
             )
+            // OL-5: Sub / Dub (the source's versions) picked right here; the lists below follow it.
+            if (onVersion != null && d.versions.size > 1 && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_TRACKS)) {
+                Text("Version", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp, bottom = 10.dp).testTag("download_version"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    d.versions.forEachIndexed { i, v -> OnlineChip(v.ifBlank { "Default" }, v == version, { onVersion(v) }, Modifier.testTag("download_version_$i")) }
+                }
+            }
             if (ordered.isEmpty()) {
                 val movie = d.playData
                 if (movie != null) SheetOption(Icons.Default.Movie, "Download movie", d.name) {
@@ -225,6 +234,7 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
 /** Asks where/how (see [DownloadPrompt]) before queuing [list] of [d]. */
 internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, version: String, list: List<Pair<Int, OnlineEpisode>>, what: String, movie: Boolean = false) {
     DownloadSettings.init(context)
+    val tracks = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_TRACKS)
     DownloadPrompt.ask(context, DownloadPrompt.Request(
         type = if (movie) DownloadPrompt.Type.MOVIE else DownloadPrompt.Type.EPISODES,
         title = d.name, what = what, count = list.size,
@@ -232,6 +242,9 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
         defaultKeep = DownloadSettings.keepByDefault.value,
         // NF-2b: the prompt offers a quality for this download; -1 keeps the Settings value.
         startAt = { keep, h -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, h) == 0) "Already downloaded or queued" else null },
+        // OL-5: extensions name their subtitles only when each episode's link is fetched, so the popup offers "save all".
+        offer = if (tracks) dev.asfakul.yumeiro.online.download.DownloadTracks.Offer(subtitlesLater = true) else null,
+        startWith = if (tracks) { keep, pick -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, pick.maxHeight, pick.subtitles) == 0) "Already downloaded or queued" else null } else null,
     ) { keep -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep) == 0) "Already downloaded or queued" else null })
 }
 
