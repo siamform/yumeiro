@@ -78,6 +78,7 @@ class MainThreadStallRealClockDeviceTest {
             val dog = Thread({
                 while (running.get()) {
                     val readingAtSend = reading.get()
+                    val sched0 = mainSched()
                     val sent = SystemClock.uptimeMillis()
                     val ran = AtomicLong(0L)
                     main.post { ran.set(SystemClock.uptimeMillis()) }
@@ -96,6 +97,8 @@ class MainThreadStallRealClockDeviceTest {
                     }
                     if (ran.get() > 0L) {
                         val wait = ran.get() - sent
+                        // GATE-1-TRACE-4: was the main thread running (our work) or waiting for a CPU (starved)?
+                        if (wait >= 300) { val s1 = mainSched(); if (sched0 != null && s1 != null) log("STALL_SCHED wait=$wait ms main cpu=${(s1[0] - sched0[0]) / 1_000_000} ms runqueue=${(s1[1] - sched0[1]) / 1_000_000} ms reading=$readingAtSend") }
                         // GATE-1-T10: a stall that began before the test read the screen counts up to the moment the
                         // read began (run 44951712024: a 1375 ms render stall after the Source tap was not counted
                         // because a read started 1.1 s into it).
@@ -146,6 +149,12 @@ class MainThreadStallRealClockDeviceTest {
             SourceHub.remove(StallWalk.BRIDGE)
         }
     }
+
+    /** The main thread's /proc schedstat: [ns on a CPU, ns waiting for a CPU]; null when unreadable. */
+    private fun mainSched(): LongArray? = runCatching {
+        val pid = android.os.Process.myPid()
+        java.io.File("/proc/$pid/task/$pid/schedstat").readText().trim().split(" ").let { longArrayOf(it[0].toLong(), it[1].toLong()) }
+    }.getOrNull()
 
     @Volatile private var lastCandidates = ""
 
