@@ -143,6 +143,7 @@ class MainThreadStallRealClockDeviceTest {
             var seen = 0
             while (queue.isNotEmpty() && seen < 5_000) {
                 val n = queue.removeFirst(); seen++
+                if (!live(n)) continue
                 val t = n.text?.toString().orEmpty(); val d = n.contentDescription?.toString().orEmpty()
                 if (t == text || d.startsWith(text) || (text.endsWith(":") && d.startsWith(text))) nodes.add(n)
                 for (i in 0 until n.childCount) n.getChild(i)?.let(queue::add)
@@ -151,7 +152,8 @@ class MainThreadStallRealClockDeviceTest {
             val menuRow = text != "Source:" && text != "Home" && text != "Videos"
             // A menu row is never the pill itself nor the pill's own label (an ancestor says "Source: …";
             // run 44939433464 tapped the label at the pill's x/y and closed the menu).
-            lastCandidates = nodes.joinToString("; ") { n -> val b = Rect().also { n.getBoundsInScreen(it) }; "'${(n.contentDescription ?: n.text)?.toString()?.take(30)}' $b vis=${n.isVisibleToUser} pill=${underPill(n)}" } + " screenH=$screenH"
+            lastCandidates = nodes.joinToString("; ") { n -> val b = Rect().also { n.getBoundsInScreen(it) }; "'${(n.contentDescription ?: n.text)?.toString()?.take(30)}' $b vis=${n.isVisibleToUser} pill=${underPill(n)}" } +
+                " screenH=$screenH seen=$seen windows=${windowsInfo()}"
             val hits = nodes.filter { n -> !menuRow || !underPill(n) }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
             // Bottom-bar labels ("Home", "Videos") and menu rows: the lowest match is the tab, a menu row is unique.
             return if (text == "Home" || text == "Videos") hits.maxByOrNull { it.top } else hits.firstOrNull()
@@ -161,6 +163,13 @@ class MainThreadStallRealClockDeviceTest {
         }
     }
 
+    /** API 33 has no UiAutomation.clearCache: re-read the node from the app; a node that is gone is skipped. */
+    private fun live(n: AccessibilityNodeInfo): Boolean = android.os.Build.VERSION.SDK_INT >= 34 || n.refresh()
+
+    private fun windowsInfo(): String = runCatching {
+        inst.uiAutomation.windows.joinToString(",") { w -> val b = Rect().also { w.getBoundsInScreen(it) }; "${w.title}/${w.root?.packageName}/t${w.type}/L${w.layer}/$b/a${w.isActive}/f${w.isFocused}" }
+    }.getOrElse { "ERR $it" }
+
     /** Roots of every window on screen, top-most first (popups, then the app). */
     private fun allRoots(): List<AccessibilityNodeInfo> = runCatching {
         val ua = inst.uiAutomation
@@ -169,6 +178,10 @@ class MainThreadStallRealClockDeviceTest {
             info.flags = info.flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             ua.serviceInfo = info
         }
+        // GATE-1-ANR-T7: the accessibility cache kept page 0's nodes after the pager settled on Videos
+        // (run 44943971093: TabPagerProbe.page 2 while the read tree still listed Home for 18 s).
+        // Read the live tree: clear the cache (API 34+), otherwise refresh every node as it is read.
+        if (android.os.Build.VERSION.SDK_INT >= 34) ua.clearCache()
         // Only the app's own windows: the system navigation bar also has a "Home" button.
         ua.windows.sortedByDescending { it.layer }.mapNotNull { it.root }.filter { it.packageName?.toString() == inst.targetContext.packageName }
     }.getOrDefault(emptyList())
@@ -188,6 +201,7 @@ class MainThreadStallRealClockDeviceTest {
         val out = ArrayList<String>(); val q = ArrayDeque<AccessibilityNodeInfo>().apply { addAll(allRoots().ifEmpty { listOf(root) }) }
         while (q.isNotEmpty() && out.size < 60) {
             val n = q.removeFirst()
+            if (!live(n)) continue
             (n.text ?: n.contentDescription)?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it.take(40)) }
             for (i in 0 until n.childCount) n.getChild(i)?.let(q::add)
         }
@@ -198,9 +212,13 @@ class MainThreadStallRealClockDeviceTest {
     private fun step(text: String, landed: () -> Boolean) {
         tap(text)
         if (waitFor(8_000, landed)) return
+        FirstRun.shot("gate1-miss-${text.trim(':')}-1")
         log("step '$text' did not land (pager page ${dev.asfakul.yumeiro.ui.screens.TabPagerProbe.page}, candidates [$lastCandidates]); tapping again · ${texts()}")
         tap(text)
-        if (!waitFor(10_000, landed)) throw AssertionError("tapping '$text' twice did not land (pager page ${dev.asfakul.yumeiro.ui.screens.TabPagerProbe.page}, candidates [$lastCandidates]) · ${texts()}")
+        if (!waitFor(10_000, landed)) {
+            FirstRun.shot("gate1-miss-${text.trim(':')}-2")
+            throw AssertionError("tapping '$text' twice did not land (pager page ${dev.asfakul.yumeiro.ui.screens.TabPagerProbe.page}, candidates [$lastCandidates]) · ${texts()}")
+        }
     }
 
     /** The Source pill's description, e.g. "Source: Yumix. Menu open". */
@@ -211,6 +229,7 @@ class MainThreadStallRealClockDeviceTest {
             var seen = 0
             while (q.isNotEmpty() && seen < 5_000) {
                 val n = q.removeFirst(); seen++
+                if (!live(n)) continue
                 n.contentDescription?.toString()?.takeIf { it.startsWith("Source:") }?.let { return it }
                 for (i in 0 until n.childCount) n.getChild(i)?.let(q::add)
             }
