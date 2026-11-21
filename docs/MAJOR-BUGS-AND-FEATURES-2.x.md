@@ -119,6 +119,25 @@ FREEZE-1 broke exactly this rule.
 | NBUG-16 | Auto-update sync loop | Verified (CI + emulator + TV emulator) | NB16-1…7, ADR-025 | Real-phone check over a few days |
 | C5 / C6 | Remaining audit items | Open | owner list | Track here as they are taken |
 
+## Part 3b: owner list 2026-11-21 21:44 +06 (Website, downloader, player, Home, navigation)
+
+Owner's words kept short. Every row is mandatory, follows the fix procedure (research with URLs in the ledger,
+fail-before on `ab/<id>-before`, pass-after with run IDs, a flag in FeatureFlags.kt) and is "done" only when
+Verified. Status "Not checked" = not yet compared with the code; re-check with a wide code search first.
+
+| ID | Bug / feature | Status | Evidence | Missing (must do) |
+|---|---|---|---|---|
+| OL-1 | Website tab state and auto-close: the Website WebView is not a persistent tab (cannot be minimized); playing a page's video in Yumeiro's player, or downloading and tapping "View Download", closes the website page | Not checked | owner 2026-11-21 | Keep the website tab open and kept in the background (page, scroll, history); let the user minimize it and return to it |
+| OL-2 | Website detected-stream bar has no controls | Not checked | owner 2026-11-21 | Close, Reload and a down arrow to collapse / minimize the panel |
+| OL-3 | Website detected streams do not follow the page: playing a second video keeps the first video's stream listed next to the new one | Not checked | owner 2026-11-21 | Show only the stream of the video playing now, with its title |
+| OL-4 | Website downloads start at once, without the Offline vs Permanent storage popup | Not checked | owner 2026-11-21 | Same popup as every other download, every time |
+| OL-5 | Downloader popup shows quality only for YouTube | Not checked | owner 2026-11-21 (relates NF-2b) | Quality whenever the source has more than one; audio / sub / dub track choice and subtitle options whenever available |
+| OL-6 | Downloader modal is not user-friendly (repeated user reports) | Not checked | owner 2026-11-21 | Redesign the downloader modal (research other apps' download sheets first) |
+| OL-7 | Player top-right Quality, Audio and 3-dot buttons misaligned, large empty space on the left | Not checked | owner 2026-11-21 | Reposition with a UI retouch (phone and TV, portrait and landscape) |
+| OL-8 | Website helper banner ("Browsing (site). Press play on any video ... Tap to hide") never closes by itself | Not checked | owner 2026-11-21 | Auto-dismiss after 3 s; tap to hide stays |
+| OL-9 | Home "Space" section has few shortcuts | Not checked | owner 2026-11-21 | More shortcuts: new features, Telegram (TG), Profile and other key sections |
+| OL-10 | Navigation customization lacks newer destinations | Not checked | owner 2026-11-21 | Add Telegram (TG) and the other new / core sections to the navigation settings |
+
 ## Owner decisions needed (not reopened)
 
 1. Telegram login: decided 2026-11-21, full login (TDLib). api_id / api_hash received 2026-11-21 and stored as repo secrets YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH (BuildConfig TG_API_ID / TG_API_HASH). Never write the values in the repo.
@@ -136,6 +155,7 @@ Now (done; owner 2026-11-20 "no 2.0.1": these ship in 2.1.0)
 4. Owner real-phone tests U-30 and the mandatory list, then release 2.0.1.
 
 Next (2.1, owner 2026-11-21: no release until all is fixed and tested)
+- Owner list OL-1..OL-10 (Part 3b, added 2026-11-21 21:44 +06): taken right after F-12 is closed (flag flip + its runs), before Part 8 step 2.
 - F-02 Telegram full login (TDLib, ADR-052): app code Built, not tested (flag off) 2026-11-21; engine pins and device tests next.
 - B-29 TeraBox full video (done in code), B-30 DiskWala hand-off (done in code), B-31 built-in torrent engine.
 - Owner goal 2026-11-21: Yumeiro at the top of its class (CloudStream, Hikari, Aniyomi, Nuvio). Matrix, bars and the G-01..G-10 gap rows (debrid, skip credits, seek previews, sync, MDBList, FCast, ...) in docs/GOAL-TOP-OF-CLASS.md; they follow the owner's order of work.

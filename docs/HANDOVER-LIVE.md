@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 21:55 +06, branch `r15-stability` @8a3e74a4 + this docs commit. F-12 vertical mode + chrome device Pass on phones and TV;
+2026-11-21 21:44 +06, branch `r15-stability` @8a3e74a4 + this docs commit. F-12 vertical mode + chrome device Pass on phones and TV;
 NBUG-13-PORT found by CI and fixed; flag f12_vertical_shorts still off until CI 44918012619 is green.
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
@@ -154,8 +154,13 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
    flip f12_vertical_shorts default to true (one commit, ledger F-12-FLAG), update CHECKLIST-FEATURES-BUGS.md F-12
    row, UNVERIFIED-QUEUE.md F-12 row (still "Queued") and OMT-37, then CI + device phones/TV on the flipped head.
    If a run fails: diagnose from logcat (tags YuF12, YuF12V), fix, never relax a budget or assertion.
-2. Part 8 step 2: device tests for NF-2b, F-02 split pages, F-18 and Country (fail-befores already valid; write the
+2. Owner list OL-1..OL-10 (docs/MAJOR-BUGS-AND-FEATURES-2.x.md Part 3b, added 2026-11-21 21:44 +06): Website tab kept
+   open / minimizable, stream bar Close / Reload / collapse, only the playing stream with its title, Offline vs Permanent
+   popup on website downloads, quality + audio / sub / dub + subtitles in every download popup, downloader redesign,
+   player top-right buttons, website banner auto-hide 3 s, more Home Space shortcuts (TG, Profile, ...), more
+   navigation destinations. Check each against the code first, then the fix procedure.
+3. Part 8 step 2: device tests for NF-2b, F-02 split pages, F-18 and Country (fail-befores already valid; write the
    tests). Then step 3 F-02 Telegram TDLib login, step 4 E2 / E3 / E4 verification, step 5 F-03 / F-05 / F-19 / F-20 /
    airing alerts / X-1 / EXT-P / PIN-1 / GATE-1 ANR / FREEZE / C5 / C6, step 6 FEED-ENGINE-2.1.md leftovers.
-3. E1 master extension: docs/E1-MASTER-EXTENSION.md; start E1-A only on the owner's go (open questions in section 6).
-4. Release only on the owner's explicit go.
+4. E1 master extension: docs/E1-MASTER-EXTENSION.md; start E1-A only on the owner's go (open questions in section 6).
+5. Release only on the owner's explicit go.
