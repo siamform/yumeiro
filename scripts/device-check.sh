@@ -17,6 +17,8 @@ FLAVOR="${FLAVOR:-Mobile}"
 # R15: one class at a time with its own time limit, so one hung test (run 43612391254
 # spent 70 min in one) can't hide every other result; results go into the job log.
 SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r'); case "$SDK" in ''|*[!0-9]*) SDK=99;; esac
+# GATE-1-ANR-T8: emulators scale the 5 s input-ANR timeout by ro.hw_timeout_multiplier; log it.
+echo "YuGateEnv hw_timeout_multiplier='$(adb shell getprop ro.hw_timeout_multiplier | tr -d '\r')' sdk=$SDK"
 REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
 # Final test (MASTER-CHECKLIST-FINAL): P1 = every class from cleared data and a cold start; P2 = the
 # same classes again with P1's data kept, the app killed and reopened (warm start, populated data).
@@ -310,6 +312,9 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   awk '/^INSTRUMENTATION_STATUS: stack=/{p=1} /^INSTRUMENTATION_STATUS: (test|class|current|id|numtests|stream)=|^INSTRUMENTATION_STATUS_CODE/{p=0} p' "inst-$C.txt" | grep -vE "^\s+at (org\.junit|java\.lang\.reflect|jdk\.internal|androidx\.test\.internal)" | head -80
   grep -qE "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2|Process crashed" "inst-$C.txt" && echo "TESTS_FAILED" > failed.txt
   grep -qE "^OK \(" "inst-$C.txt" || echo "TESTS_FAILED" > failed.txt
+  # GATE-1-ANR-T8: an input ANR under instrumentation never reaches ApplicationExitInfo or
+  # processesInErrorState; AMS ends the run with shortMsg=keyDispatchingTimedOut (AMS.inputDispatchingTimedOut).
+  grep -qE "shortMsg=(keyDispatchingTimedOut|Process crashed)|longMsg=Input dispatching timed out" "inst-$C.txt" && { echo "GATE_ANR_INPUT in $C: $(grep -hE 'shortMsg=|longMsg=' "inst-$C.txt" | head -2 | tr '\n' ' ')"; echo "TESTS_FAILED" > failed.txt; }
   if grep -qE "^OK \(" "inst-$C.txt" && [ $RC -ne 124 ]; then V=PASS; else V=FAIL; fi
   PL=""; [ "$PASSES" = "true" ] && PL=" pass=P$N"
   # Ignored tests (status -3) and assumption failures (status -4, e.g. "needs API 26") are skips; the final
