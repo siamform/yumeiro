@@ -126,12 +126,14 @@ class Nf1EpisodeStatusDeviceTest {
         rule.waitUntil(10_000) { visibleRows().count { it.second != null } >= 3 }
         var onScreen = visibleRows()
         log("NF1_RESULT rows=$onScreen e1='${e1.label}' e2='${e2.label}' e3='${e3.label}'")
+        // A row's first text is the short label ("E1"); OnlineEpisode.label is "E1 · Episode 1" (NF1-T3, run 44901993315).
+        fun shortOf(e: OnlineEpisode) = e.label.substringBefore(" · ")
         fun statusOf(e: OnlineEpisode): String? {
-            if (onScreen.none { it.first == e.label }) {
-                rule.onAllNodesWithTag("online_detail_list", true)[0].performScrollToNode(hasText(e.label))
+            if (onScreen.none { it.first == shortOf(e) }) {
+                rule.onAllNodesWithTag("online_detail_list", true)[0].performScrollToNode(hasText(shortOf(e)))
                 rule.waitForIdle(); onScreen = visibleRows()
             }
-            return onScreen.firstOrNull { it.first == e.label }?.second
+            return onScreen.firstOrNull { it.first == shortOf(e) }?.second
         }
         assertEquals("e1 '${e1.label}' row: $onScreen", "Watched", statusOf(e1))
         assertEquals("e2 '${e2.label}' row: $onScreen", "6 min left", statusOf(e2))

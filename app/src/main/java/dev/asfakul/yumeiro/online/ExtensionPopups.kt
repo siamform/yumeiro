@@ -170,7 +170,7 @@ object ExtensionPopups {
         _held.value = (_held.value.filterNot { it.extKey == extKey } + h).takeLast(10)
         if (!functional) markCard(extKey, System.currentTimeMillis()) // the promotional rate limit only
         if (deferredCard) deferred[extKey] = h else card(h)
-        Log.i(TAG, "held a promotional window from $extName (${if (deferredCard) "card after playback" else "card shown"})")
+        Log.i(TAG, "held a ${if (functional) "functional" else "promotional"} window from $extName (${if (deferredCard) "card after playback" else "card shown"})")
         return h
     }
 

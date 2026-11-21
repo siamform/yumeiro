@@ -17,6 +17,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import android.os.Build
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -33,7 +36,21 @@ import java.util.concurrent.atomic.AtomicReference
 @RunWith(AndroidJUnit4::class)
 class ExternalPlayerDeviceTest {
     @get:Rule val hang = HangDumpRule()
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    /**
+     * F07-T3 (device run 44901993315): the app asks for POST_NOTIFICATIONS at start; the system dialog paused
+     * MainActivity (12:13:16.232) and it never resumed, so the stub's result was never delivered to it. The
+     * permission is granted before the activity starts, as in TvBug5ReproDeviceTest.
+     */
+    @get:Rule(order = 0) val grant = TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val inst = InstrumentationRegistry.getInstrumentation()
+                if (Build.VERSION.SDK_INT >= 33) runCatching { inst.uiAutomation.grantRuntimePermission(inst.targetContext.packageName, "android.permission.POST_NOTIFICATIONS") }
+                base.evaluate()
+            }
+        }
+    }
+    @get:Rule(order = 1) val rule = createAndroidComposeRule<MainActivity>()
     private fun log(s: String) = Log.i("F07", s)
     private val stub get() = ComponentName(InstrumentationRegistry.getInstrumentation().context.packageName, StubPlayerActivity::class.java.name)
     private val headers = mapOf("Referer" to "https://site.example/", "User-Agent" to "UA/1")
