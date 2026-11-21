@@ -94,6 +94,29 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
       adb pull /data/misc/perfetto-traces/home-$T.pftrace stress/trace/ > /dev/null 2>&1 || echo "HOME_TRACE no trace $T: $(cat stress/trace/perfetto-$T.txt | head -3)"
     done
     ls -la stress/trace | sed 's/^/HOME_TRACE file /'
+  elif [ "$C" = "dev.asfakul.yumeiro.UpdateFeedDeviceTest" ]; then
+    # FE-Q1 / FE-Q2: a installs extensions and saves homes; b = relaunch; c = after an in-place update
+    # (`adb install -r` of the same debug APK: new code path, data kept, like a store update).
+    P=dev.asfakul.yumeiro.debug
+    timeout 600 adb shell am instrument -w -r -e class "$C#a_installAndSaveHomes" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    adb shell am force-stop $P; sleep 2
+    timeout 400 adb shell am instrument -w -r -e class "$C#b_relaunchBeforeUpdate" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1
+    adb shell am force-stop $P; sleep 2
+    mkdir -p stress/updfeed
+    adb shell run-as $P ls -laR files/extensions > stress/updfeed/ext-before.txt 2>&1 || true
+    adb shell dumpsys package dexopt > stress/updfeed/dexopt-before.txt 2>&1 || true
+    APK=$(ls app/build/outputs/apk/${FLAVOR,,}/debug/*.apk 2>/dev/null | grep -v -- '-androidTest' | head -1)
+    echo "UPDFEED_SCRIPT update: $(adb install -r "$APK" 2>&1 | tail -1) ($APK)"
+    sleep 3
+    adb shell run-as $P ls -laR files/extensions > stress/updfeed/ext-after-install.txt 2>&1 || true
+    adb shell dumpsys package dexopt > stress/updfeed/dexopt-after-install.txt 2>&1 || true
+    timeout 400 adb shell am instrument -w -r -e class "$C#c_afterUpdate" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-c.txt" 2>&1; RC=$?
+    adb shell run-as $P ls -laR files/extensions > stress/updfeed/ext-after.txt 2>&1 || true
+    adb shell dumpsys package dexopt > stress/updfeed/dexopt-after.txt 2>&1 || true
+    grep -a "UPDFEED" logcat.txt | sed 's/^.*UPDFEED/UPDFEED/' | tee stress/updfeed/numbers.txt
+    cat "inst-$C-a.txt" "inst-$C-b.txt" "inst-$C-c.txt" > "inst-$C.txt"
+    # All three phases must report OK.
+    [ "$(grep -c '^OK (' "inst-$C.txt")" -eq 3 ] || sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"
   elif [ "$C" = "dev.asfakul.yumeiro.ClosedAppAlertDeviceTest" ]; then
     # G12 X5: queue (phase a), then Home, kill, deep Doze, wait for the alarm to post it, then check (phase b).
     P=dev.asfakul.yumeiro.debug
