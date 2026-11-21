@@ -227,10 +227,8 @@ fun androidx.compose.foundation.layout.BoxScope.StreamPlayerOverlay(controlsVisi
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
         ) {
             dev.asfakul.yumeiro.ui.screens.online.PlayerChip(Icons.Default.Download, "Download", "stream_watch_download") {
-                when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, base, base.pageUrl ?: currentUrl)) {
-                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, o.message)
-                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
-                }
+                // OL-4: the same Offline / Permanent popup as every other download.
+                dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, base, base.pageUrl ?: currentUrl)
             }
         }
     }
@@ -335,10 +333,8 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                     // BUG-7 7a: links and website videos can be saved from the player, as on the Play link page.
                     if (base != null && dev.asfakul.yumeiro.stream.StreamDownload.canSave(base)) {
                         WatchAction(Icons.Default.Download, "Download", "stream_watch_download") {
-                            when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, base, base.pageUrl ?: currentUrl)) {
-                                is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, o.message)
-                                is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
-                            }
+                            // OL-4: the same Offline / Permanent popup as every other download.
+                            dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, base, base.pageUrl ?: currentUrl)
                         }
                     }
                     WatchAction(Icons.AutoMirrored.Filled.OpenInNew, "Other player", "stream_watch_external") {

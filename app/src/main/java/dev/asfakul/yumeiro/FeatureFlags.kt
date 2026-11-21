@@ -45,6 +45,8 @@ object FeatureFlags {
         STREAM_CURRENT_ONLY("ol3_stream_current_only", true),
         /** OL-1: a website stays open in the background (playing its video, Downloads, Minimize, Back) and comes back as it was. */
         WEBSITE_TAB("ol1_website_tab", true),
+        /** OL-4: website, link and Telegram downloads show the same Offline / Permanent download popup as every other download. */
+        STREAM_DOWNLOAD_PROMPT("ol4_stream_download_prompt", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

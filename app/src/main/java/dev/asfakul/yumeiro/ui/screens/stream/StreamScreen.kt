@@ -326,10 +326,8 @@ fun StreamScreen(
             val r = runCatching { StreamResolver.resolve(context, currentRequest(), thorough = true) }.getOrNull()
             loading = false
             when (r) {
-                is Resolution.Playable -> when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, r.request, u)) {
-                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> error = o.message
-                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
-                }
+                // OL-4: the same Offline / Permanent popup as every other download.
+                is Resolution.Playable -> dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, r.request, u) { error = it }
                 is Resolution.NeedsBrowser -> pageFinder = r
                 is Resolution.Handoff -> { handoff = r; error = r.reason }
                 is Resolution.Playlist -> error = "This is a playlist. Open it and download a single channel or file."

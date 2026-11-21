@@ -50,11 +50,11 @@ object StreamDownload {
     }
 
     /** Queues [req] (already resolved/playable). [sourceUrl] is what the user opened (page or link). */
-    fun enqueue(context: Context, req: StreamRequest, sourceUrl: String = req.url): Outcome {
+    fun enqueue(context: Context, req: StreamRequest, sourceUrl: String = req.url, keep: Boolean? = null): Outcome {
         refusal(req)?.let { return Outcome.Refused(it) }
         val link = linkFor(req, sourceUrl)
         val title = link.name
-        val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", sourceUrl, null, req.logoUrl, emptyMap(), link)
+        val err = dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueue(context, title, "Network", sourceUrl, null, req.logoUrl, emptyMap(), link, keep = keep)
         return if (err != null) Outcome.Refused(err) else Outcome.Queued(title)
     }
 }

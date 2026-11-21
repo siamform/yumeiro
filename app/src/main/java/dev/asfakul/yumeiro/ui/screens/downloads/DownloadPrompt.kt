@@ -84,7 +84,7 @@ object DownloadsNav {
  * "Don't ask again" turns it off (Settings → Downloads turns it back on).
  */
 object DownloadPrompt {
-    enum class Type { EPISODES, MOVIE, CURRENT, YT_VIDEO, YT_AUDIO }
+    enum class Type { EPISODES, MOVIE, CURRENT, YT_VIDEO, YT_AUDIO, /** OL-4: a website, link or Telegram video. */ LINK }
 
     data class Request(
         val type: Type,
@@ -278,6 +278,7 @@ internal fun tipsFor(type: DownloadPrompt.Type): List<String> = buildList {
         }
         DownloadPrompt.Type.YT_VIDEO -> add("HD video and its sound download separately and are joined on your phone.")
         DownloadPrompt.Type.YT_AUDIO -> add("Audio only is the smallest download and plays like any song.")
+        DownloadPrompt.Type.LINK -> add("Saved as one video file. Streams (HLS, DASH) are fetched piece by piece and joined on your phone.")
     }
     add("Uses mobile data when Wi-Fi is off. Quality and parallel downloads are in Settings → Downloads.")
 }

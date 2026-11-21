@@ -415,10 +415,8 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
                     }
                     IconButton(onClick = {
                         val req = StreamRequest(url = TgAccounts.downloadUrl(s, v), title = title, format = StreamFormat.PROGRESSIVE)
-                        when (val r = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, req, sourceUrl = "https://t.me/c/${chat.id}/${v.messageId}")) {
-                            is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Downloading ${r.title}")
-                            is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> dev.asfakul.yumeiro.ui.components.AppMessages.info(context, r.message)
-                        }
+                        // OL-4: the same Offline / Permanent popup as every other download.
+                        dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, req, sourceUrl = "https://t.me/c/${chat.id}/${v.messageId}") { dev.asfakul.yumeiro.ui.components.AppMessages.info(context, it) }
                     }, modifier = Modifier.size(48.dp).testTag("tg_download_${v.messageId}")) {
                         Icon(Icons.Default.Download, "Download $title", tint = p.textSecondary)
                     }
