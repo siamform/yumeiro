@@ -292,8 +292,8 @@ private fun TierRow(t: AudioQuality.Tier, selected: Boolean, onClick: () -> Unit
 
 
 /**
- * TorrServer address for magnet / .torrent links (Live TV › Play a link). Yumeiro has no torrent
- * engine; TorrServer (github.com/YouROK/TorrServer) runs on the phone or the local network.
+ * Torrent links: the built-in engine switch (B-31, behind its flag and a privacy notice) and the TorrServer
+ * address (github.com/YouROK/TorrServer, on the phone or the local network) used as the fallback.
  */
 @Composable
 internal fun TorrServerCard() {
@@ -302,6 +302,43 @@ internal fun TorrServerCard() {
     val saved by dev.asfakul.yumeiro.stream.TorrentSettings.server.collectAsState()
     var text by androidx.compose.runtime.saveable.rememberSaveable(saved) { mutableStateOf(saved) }
     var error by remember { mutableStateOf<String?>(null) }
+    // B-31: the built-in engine (flag + engine for this phone); the privacy notice must be accepted first.
+    val offered = remember(context) { dev.asfakul.yumeiro.stream.torrent.TorrentStreams.offered(context) }
+    if (offered) {
+        val accepted by dev.asfakul.yumeiro.stream.TorrentSettings.engineAccepted.collectAsState()
+        var asking by remember { mutableStateOf(false) }
+        SettingsCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Built-in torrent engine", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(
+                        if (accepted) "Magnet and .torrent links play in Yumeiro. TorrServer below is only a fallback."
+                        else "Play magnet and .torrent links in Yumeiro, no TorrServer needed.",
+                        color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp,
+                    )
+                }
+                androidx.compose.material3.Switch(
+                    checked = accepted,
+                    onCheckedChange = { on -> if (on) asking = true else dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(context, false) },
+                    colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
+                    modifier = Modifier.testTag("torrent_engine_switch"),
+                )
+            }
+        }
+        if (asking) androidx.compose.material3.AlertDialog(
+            onDismissRequest = { asking = false },
+            title = { Text("Before you turn it on") },
+            text = { Text(dev.asfakul.yumeiro.stream.torrent.TorrentStreams.PRIVACY_NOTICE, modifier = Modifier.testTag("torrent_engine_notice")) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(context, true); asking = false },
+                    modifier = Modifier.testTag("torrent_engine_accept"),
+                ) { Text("I understand, turn on", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { asking = false }) { Text("Not now") } },
+        )
+        Spacer(Modifier.height(10.dp))
+    }
     SettingsCard {
         Text("TorrServer address", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         Text(

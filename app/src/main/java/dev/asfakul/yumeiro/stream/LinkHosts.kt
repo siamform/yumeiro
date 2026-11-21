@@ -200,12 +200,22 @@ object TorrentSettings {
     private const val PREFS = "yu_torrent"
     private val _server = MutableStateFlow("")
     val server: StateFlow<String> = _server.asStateFlow()
+    private val _engineAccepted = MutableStateFlow(false)
+    /** B-31: the user read the built-in engine's privacy notice and turned it on (Settings → Torrent links). */
+    val engineAccepted: StateFlow<Boolean> = _engineAccepted.asStateFlow()
     @Volatile private var loaded = false
 
     fun init(context: Context) {
         if (loaded) return
         loaded = true
-        _server.value = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("server", "").orEmpty()
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        _server.value = p.getString("server", "").orEmpty()
+        _engineAccepted.value = p.getBoolean("engine_accepted", false)
+    }
+
+    fun setEngineAccepted(context: Context, on: Boolean) {
+        _engineAccepted.value = on
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("engine_accepted", on).apply()
     }
 
     /** Keeps only http(s) host[:port] addresses; returns false when [value] isn't one. */

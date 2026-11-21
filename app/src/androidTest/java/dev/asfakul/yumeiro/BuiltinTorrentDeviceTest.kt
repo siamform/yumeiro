@@ -45,6 +45,11 @@ class BuiltinTorrentDeviceTest {
     @Test fun testHashStreamsWithoutTorrServer(): Unit = runBlocking {
         FeatureFlags.set(ctx, FeatureFlags.Flag.BUILTIN_TORRENT, true)
         try {
+            // The privacy notice gates the engine: off until accepted, on after.
+            dev.asfakul.yumeiro.stream.TorrentSettings.init(ctx)
+            dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, false)
+            assertTrue("engine played before the privacy notice was accepted", !TorrentStreams.enabled(ctx))
+            dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, true)
             assertTrue(TorrentStreams.enabled(ctx))
             val http = NetworkClient.get(ctx)
             withTimeout(240_000) { TorrentEngine.ensure(ctx, http) }
@@ -68,6 +73,7 @@ class BuiltinTorrentDeviceTest {
             assertEquals(65_536, got)
             assertTrue("seek took $seekMs ms (budget 5000)", seekMs <= 5_000)
         } finally {
+            dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, false)
             FeatureFlags.set(ctx, FeatureFlags.Flag.BUILTIN_TORRENT, false)
         }
     }

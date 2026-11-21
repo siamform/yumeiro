@@ -43,7 +43,24 @@ object TorrentStreams {
 
     class Opened(val url: String, val name: String, val size: Long, val hash: String)
 
-    fun enabled(context: Context): Boolean = FeatureFlags.on(context, FeatureFlags.Flag.BUILTIN_TORRENT) && TorrentEngine.available()
+    /** Built-in engine plays only when the flag is on, an engine exists for this ABI and the user accepted the notice. */
+    fun enabled(context: Context): Boolean {
+        dev.asfakul.yumeiro.stream.TorrentSettings.init(context.applicationContext)
+        return allowed(offered(context), dev.asfakul.yumeiro.stream.TorrentSettings.engineAccepted.value)
+    }
+
+    /** The Settings switch is shown (flag on and an engine for this phone). */
+    fun offered(context: Context): Boolean = FeatureFlags.on(context, FeatureFlags.Flag.BUILTIN_TORRENT) && TorrentEngine.available()
+
+    /** Pure: until the privacy notice is accepted, torrents keep going to TorrServer or another app. */
+    fun allowed(offered: Boolean, accepted: Boolean): Boolean = offered && accepted
+
+    /** The notice shown before the engine turns on (peers see the IP; pieces are shared while playing). */
+    const val PRIVACY_NOTICE =
+        "Torrents are shared between the people who have them. While a torrent plays, other people sharing it can see " +
+            "your IP address, and Yumeiro sends them the parts you already have. Downloading or sharing some files is " +
+            "illegal in some countries. Use a VPN if your network or country restricts torrents. Pieces are kept in the " +
+            "app's cache and removed when it is full."
 
     fun cacheBudget(lowEnd: Boolean): Long = if (lowEnd) 2L shl 30 else 4L shl 30
 
