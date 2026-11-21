@@ -110,9 +110,11 @@ class MainThreadStallRealClockDeviceTest {
                 step("Source:") { menuOpen() }; SystemClock.sleep(1_500)
                 step("Live TV") { pillSays("Live TV") }; SystemClock.sleep(6_000)
                 step("Home") { find("Source:") == null }; SystemClock.sleep(5_000)
-                // DETECTOR CHECK (ab/gate1anr-before only): block the main thread 60 s while two inputs wait (scaled timeout).
-                main.post { log("GATE1_FORCED_BLOCK start"); SystemClock.sleep(60_000) }
-                SystemClock.sleep(500); FirstRun.shell("input tap 20 300"); SystemClock.sleep(1_500); FirstRun.shell("input tap 40 320"); SystemClock.sleep(64_000)
+                // DETECTOR CHECK (ab/gate1anr-before only): the app's main thread crashes after the walk;
+                // GateOneExitCheckDeviceTest (next process) must find the crash record. Input ANRs cannot be forced
+                // on these emulators under instrumentation (44947215310 12 s, 44948378220 60 s: no input timeout).
+                main.post { log("GATE1_FORCED_CRASH"); throw IllegalStateException("GATE1_FORCED_CRASH detector check") }
+                SystemClock.sleep(10_000)
             } finally {
                 running.set(false); dog.join(2_000)
             }
