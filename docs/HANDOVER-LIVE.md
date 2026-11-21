@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 19:45 +06, branch `r15-stability` head after commit "FE-7a/b: saved YouTube shelves and Music Home".
+2026-11-21 20:05 +06, branch `r15-stability` head after commit "FE-2: priority gate and dead-site budget".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-2: Yumix PriorityGate (picked extension first, flag fe2_priority_gate); dead site asked one batch (25 s, was 75 s).
 - FE-7a/b: YouTube shelves and YouTube Music Home saved on the phone and shown at once (were memory-only).
 - FE-1 `f37b4224`: `OnlineRepository.feedHome` shows any-age saved homes at once in Yumix and Home, live refresh behind.
 - FEED-ENGINE doc docs/FEED-ENGINE-2.1.md (requirement, root causes FE-RC1..4, design, plan).
@@ -46,6 +47,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
+- FE-2 fail-before CI 44884208915 (ab/fe2-before; expect unresolved PriorityGate / homeTimeoutMs), then delete.
 - FE-7a/b fail-before CI 44883994031 (ab/fe7-before; expect unresolved savedFeed / savedBrowse), then delete.
 - FE-1 fail-before CI 44883755874 (ab/fe1-before; expect unresolved feedHome), then delete the branch.
 - B31-SEEK3 diagnostic device runs: 44883372732 (phones=both, BuiltinTorrentDeviceTest + SpeedDeviceTest = SPEED baseline)

@@ -208,6 +208,12 @@ fun OnlineHomeScreen(
     // over its rows). Loading every extension at full parallelism is what starved the device and
     // crashed "For you" with many extensions enabled.
     val gate = remember { Semaphore(3) }
+    // FE-2: same three slots, served by priority. The picked extension moves to the front even after loading began.
+    val pgate = remember { dev.asfakul.yumeiro.online.PriorityGate(3) }
+    val prioritized = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_PRIORITY_GATE)
+    suspend fun <T> slot(name: String, block: suspend () -> T): T =
+        if (prioritized) pgate.run(name, if (name == selected) dev.asfakul.yumeiro.online.PriorityGate.PICKED else dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND, block)
+        else gate.withPermit { block() }
 
     // One fetch per extension at a time. Extensions finish loading one by one at start-up, and
     // every new engine snapshot used to restart the whole feed effect: in-flight homes were
@@ -225,7 +231,7 @@ fun OnlineHomeScreen(
             // SPEED-1: a saved page shows at once; only live fetches wait for one of the three slots.
             // FE-1: an old saved page too (refreshed live below via takeStaleHome).
             val cached = if (force) null else runCatching { OnlineRepository.feedHome(api) }.getOrNull()
-            val result = if (cached != null) Result.success(cached) else gate.withPermit {
+            val result = if (cached != null) Result.success(cached) else slot(name) {
                 runCatching { OnlineRepository.home(api, force) }
             }
             // R16 G4: a fetch cancelled by a newer one (Retry, pull to refresh) used to fall
@@ -245,7 +251,7 @@ fun OnlineHomeScreen(
                 else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension", diagnosis)
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
             if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
-                val live = gate.withPermit { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
+                val live = slot(name) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
                 val cur = homes[name] as? ProviderHome.Ready
                 if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
             }
@@ -276,6 +282,14 @@ fun OnlineHomeScreen(
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)
+    }
+    // FE-2: picking an extension moves its waiting fetch to the front; one that failed or never started loads now.
+    LaunchedEffect(selected) {
+        val pick = selected ?: return@LaunchedEffect
+        if (!prioritized) return@LaunchedEffect
+        pgate.bump(pick, dev.asfakul.yumeiro.online.PriorityGate.PICKED)
+        val api = providers.firstOrNull { it.name == pick } ?: return@LaunchedEffect
+        if (homes[pick] !is ProviderHome.Ready && inflight[pick]?.isActive != true) runCatching { loadOne(api, false) }
     }
 
     LaunchedEffect(Unit) { OnlineHistory.ensureLoaded(context) }

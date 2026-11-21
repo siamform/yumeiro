@@ -67,6 +67,8 @@ object FeatureFlags {
         UPCOMING_SECTIONS("f22_upcoming_sections", true),
         /** E4: Yumix loads extension homes fastest-first (measured on this phone); failing ones are quarantined last. */
         E4_SPEED_ORDER("e4_speed_order", true),
+        /** FE-2 (docs/FEED-ENGINE-2.1.md): Yumix queue by priority; the extension picked in "Show videos from" jumps it. */
+        FE_PRIORITY_GATE("fe2_priority_gate", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }

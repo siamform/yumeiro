@@ -86,7 +86,7 @@ installed (device), 1000+ simulated (unit).
 |---|---|---|
 | SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Built; baseline device run pending |
 | FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 pending; pass-after pending |
-| FE-2 | Row-level priority scheduler with lanes and caps (fixes FE-RC1) | Not run |
+| FE-2 / FE-2b | Priority gate (picked jumps the queue, flag fe2_priority_gate) + dead-site budget (one batch when rows time out) | Built; fail-before 44884208915 pending; pass-after pending. Still to do: row-level lanes, VISIBLE lane from scroll position |
 | FE-3 | First row shows the extension | Not run |
 | FE-4 | Working set + lazy extension code load (fixes FE-RC3, 1000+) | Not run |
 | FE-5 | Reserve engine: scroll prefetch + background warm-up | Not run |

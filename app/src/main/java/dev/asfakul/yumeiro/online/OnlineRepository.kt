@@ -180,7 +180,9 @@ sealed interface LinkEvent {
  */
 object OnlineRepository {
     private const val TAG = "Online"
-    private const val HOME_TIMEOUT = 25_000L
+    private const val HOME_TIMEOUT_MS = 25_000L
+    /** One home row call's limit; also the budget for asking more batches (FE-2b). Changed only by tests. */
+    @androidx.annotation.VisibleForTesting @Volatile internal var homeTimeoutMs = HOME_TIMEOUT_MS
     private const val SEARCH_TIMEOUT = 25_000L
     private const val LOAD_TIMEOUT = 35_000L
     private const val LINKS_TIMEOUT = 75_000L
@@ -286,7 +288,11 @@ object OnlineRepository {
         val failures = java.util.Collections.synchronizedList(mutableListOf<Throwable>())
         var asked = 0
         var batch = 0
-        while (batch < MAX_PAGE_BATCHES && rows.size < ROWS_PER_PROVIDER) {
+        // FE-2b (docs/FEED-ENGINE-2.1.md FE-RC1): more batches only while this home is still within one row timeout.
+        // Before, a dead site (every row timing out) was asked three batches in a row, 25 s each, and held one of
+        // Yumix's three slots for 75 s; quickly failing rows (a busy studio answering an error) still get batch 2 and 3.
+        val started = System.currentTimeMillis()
+        while (batch < MAX_PAGE_BATCHES && rows.size < ROWS_PER_PROVIDER && (batch == 0 || System.currentTimeMillis() - started < homeTimeoutMs)) {
             val pages = allPages.drop(batch * ROWS_PER_PROVIDER).take(ROWS_PER_PROVIDER)
             if (pages.isEmpty()) break
             asked += pages.size
@@ -316,7 +322,7 @@ object OnlineRepository {
                 async {
                     parallel.withPermit {
                         runCatching {
-                            ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
+                            ExtensionCall.bounded(homeTimeoutMs) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
                         }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { page to it }
                     }
                 }
@@ -353,7 +359,7 @@ object OnlineRepository {
     suspend fun page(api: MainAPI, pageName: String, pageData: String, page: Int): OnlinePage = withContext(Dispatchers.IO) {
         val req = api.mainPage.firstOrNull { it.name == pageName && it.data == pageData } ?: api.mainPage.firstOrNull { it.data == pageData }
         val resp = parallel.withPermit {
-            ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
+            ExtensionCall.bounded(homeTimeoutMs) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
         } ?: return@withContext OnlinePage(emptyList(), false)
         val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name, feed = true) } }.distinctBy { it.url }
         OnlinePage(items, resp.hasNext && items.isNotEmpty())
