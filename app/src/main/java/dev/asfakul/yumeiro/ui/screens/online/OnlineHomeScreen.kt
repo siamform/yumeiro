@@ -255,7 +255,11 @@ fun OnlineHomeScreen(
     /** Returns how many extensions answered with titles that were not shown yet. */
     suspend fun loadAll(force: Boolean): Int = supervisorScope {
         // The selected channel (if any) goes first so its page fills before the rest of the mix.
-        val ordered = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.sortedBy { if (it.name == selected) 0 else 1 }
+        val withHome = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }
+        // E4: then the fastest measured on this phone; quarantined (failing) extensions wait for the rest.
+        val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
+            dev.asfakul.yumeiro.online.ExtensionSpeed.order(withHome, { it.name }, selected)
+            else withHome.sortedBy { if (it.name == selected) 0 else 1 }
         ordered.map { api -> async { runCatching { loadOne(api, force) }.getOrDefault(false) } }.awaitAll().count { it }
     }
     val providerNames = remember(providers) { providers.map { it.name }.toSet() }

@@ -239,6 +239,22 @@ object OnlineRepository {
             return@withContext rows
         }
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
+        // E4: every live fetch is timed; failures count towards quarantine (ExtensionSpeed).
+        // A fetch cancelled by a newer one (Retry, leaving the screen) is not the extension's fault.
+        val started = System.currentTimeMillis()
+        val live = try {
+            homeLive(api, diskKey)
+        } catch (c: kotlinx.coroutines.CancellationException) {
+            throw c
+        } catch (t: Throwable) {
+            if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) ExtensionSpeed.record(api.name, System.currentTimeMillis() - started, ok = false)
+            throw t
+        }
+        if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) ExtensionSpeed.record(api.name, System.currentTimeMillis() - started, ok = live.isNotEmpty())
+        live
+    }
+
+    private suspend fun homeLive(api: MainAPI, diskKey: String): List<OnlineRow> {
         val allPages = runCatching { api.mainPage }.getOrDefault(emptyList())
         // R15: the first ROWS_PER_PROVIDER pages are asked; when they come back empty or broken
         // (a studio that is down, a row that timed out) the next pages are asked too, up to
@@ -268,7 +284,7 @@ object OnlineRepository {
             homeCache[api.name] = Timed(System.currentTimeMillis(), result)
             dev.asfakul.yumeiro.cache.DataCache.write("home", diskKey, dev.asfakul.yumeiro.cache.OnlineCodec.rows(result))
         }
-        result
+        return result
     }
 
     private suspend fun homeBatch(api: MainAPI, pages: List<com.lagradost.cloudstream3.MainPageData>, failures: MutableList<Throwable>? = null): List<OnlineRow> {

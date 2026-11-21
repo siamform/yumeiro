@@ -65,6 +65,8 @@ object FeatureFlags {
         EXTENSION_LABELS("f21_extension_labels", true),
         /** F-22: Upcoming date headers ("Today • Sat, Nov 21"), air times, date-only days kept, category kept per profile. */
         UPCOMING_SECTIONS("f22_upcoming_sections", true),
+        /** E4: Yumix loads extension homes fastest-first (measured on this phone); failing ones are quarantined last. */
+        E4_SPEED_ORDER("e4_speed_order", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }
@@ -75,6 +77,9 @@ object FeatureFlags {
         val c = cache ?: load(context).also { cache = it }
         return c[flag.key] ?: flag.default
     }
+
+    /** Without a context: the loaded value, or the default before anything read the flags. */
+    fun isOn(flag: Flag): Boolean = cache?.get(flag.key) ?: flag.default
 
     private fun load(context: Context): Map<String, Boolean> = runCatching {
         val p = context.applicationContext.getSharedPreferences("feature_flags", Context.MODE_PRIVATE)
