@@ -37,7 +37,7 @@ object BackgroundWork {
     const val FEED_HOURS = 2L
     const val EPISODE_HOURS = 4L
     /** Bump when periods/constraints change so existing installs pick up the new schedule. */
-    private const val SCHEDULE_VERSION = 2
+    private const val SCHEDULE_VERSION = 3 // 3: FE-5 feed warm-up added
     private const val CATCH_UP = "background_catch_up"
     private const val CATCH_UP_EPISODES = "background_catch_up_episodes"
     private const val CATCH_UP_GAP_MS = 15L * 60 * 1000
@@ -56,6 +56,7 @@ object BackgroundWork {
         if (!NotifySettings.get(c, NotifySettings.Key.BACKGROUND)) {
             wm.cancelUniqueWork(DiscoveryWorker.WORK)
             wm.cancelUniqueWork(NewEpisodesWorker.WORK)
+            wm.cancelUniqueWork(dev.asfakul.yumeiro.online.FeedWarm.WORK)
             return
         }
         val prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -68,6 +69,13 @@ object BackgroundWork {
             wm.enqueueUniquePeriodicWork(NewEpisodesWorker.WORK, effective,
                 PeriodicWorkRequestBuilder<NewEpisodesWorker>(EPISODE_HOURS, TimeUnit.HOURS).setConstraints(k)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES).build())
+            // FE-5: reserve cache. Wi-Fi (unmetered) and battery not low only, every 6 h; kill switch fe5_feed_warm.
+            if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE5_FEED_WARM)) {
+                val warm = Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).setRequiresBatteryNotLow(true).build()
+                wm.enqueueUniquePeriodicWork(dev.asfakul.yumeiro.online.FeedWarm.WORK, effective,
+                    PeriodicWorkRequestBuilder<dev.asfakul.yumeiro.online.FeedWarmWorker>(dev.asfakul.yumeiro.online.FeedWarm.PERIOD_HOURS, TimeUnit.HOURS)
+                        .setConstraints(warm).build())
+            } else wm.cancelUniqueWork(dev.asfakul.yumeiro.online.FeedWarm.WORK)
             prefs.edit().putInt("schedule_version", SCHEDULE_VERSION).apply()
         }
     }

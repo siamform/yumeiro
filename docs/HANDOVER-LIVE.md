@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 22:00 +06, branch `r15-stability` head after commit "FE-2c: extension calls served by lane".
+2026-11-21 22:15 +06, branch `r15-stability` head after commit "FE-5: background warm-up of saved homes".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-5: FeedWarmWorker refreshes the working set's saved homes every 6 h on Wi-Fi (reserve cache, flag fe5_feed_warm).
 - FE-2c: HeatGuard's shared limit of 6 extension calls is a PriorityGate: search, scroll pages, picked before background rows.
 - FE-P: Yumix background fetches run one at a time while something plays (PlayingNow + PriorityGate backgroundLimit).
 - SPEED-T2: SpeedDeviceTest measures the Yumix pattern (20 extensions, 3 slots) and YouTube / YT Music cold start.
@@ -41,7 +42,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
-- Fail-before verified: FE-1 44883755874 (unresolved feedHome), FE-7a/b 44883994031 (unresolved savedFeed / savedBrowse); branches deleted.
+- Fail-before verified: FE-1 44883755874 (unresolved feedHome), FE-7a/b 44883994031 (unresolved savedFeed / savedBrowse), FE-2 44884208915 (PriorityGate / homeTimeoutMs), B31-SEEK3 44884447258 (windowPriorities / streamWindow); branches deleted.
 - Device 44883372732 (phones) / 44883375160 (TV) @2dba1982: SpeedDeviceTest Pass both phones (baseline in GOAL-TOP-OF-CLASS.md);
   BuiltinTorrentDeviceTest Fail: lowram first 64 KB 5022 ms Pass, seek 9956 ms Fail; api36 first 64 KB 15137 ms Fail;
   TV first 64 KB 6860 ms Pass, seek 19713 ms Fail -> B31-SEEK3 (diagnosed from TorrentTrace).
@@ -61,10 +62,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
 - Pass-after CI 44884554686 on r15-stability @346a581c (abi_splits=true): covers every row "Pass-after: next r15-stability CI"
   up to B31-SEEK3. FE-S1 and FE-3 (later commit) need the CI after it. Do not dispatch an r15 CI while it runs.
-- Fail-before CIs: FE-2 44884208915
-  (ab/fe2-before, PriorityGate / homeTimeoutMs), B31-SEEK3 44884447258 (ab/seek3-before, windowPriorities / streamWindow),
-  FE-S1 44884613831 (ab/fes1-before, expect an assertion failure "asked the extension again"), FE-3 44884810399
-  (ab/fe3-before, expect compile failure: no onRows parameter on home), FE-P 44885100184 (ab/fep-before, expect unresolved PlayingNow), FE-2c 44885309121 (ab/fe2c-before, expect unresolved PriorityGate.Lane). Check, record, delete each branch.
+- Fail-before CIs: FE-S1 44884613831 (ab/fes1-before, expect an assertion failure "asked the extension again"), FE-3 44884810399
+  (ab/fe3-before, expect compile failure: no onRows parameter on home), FE-P 44885100184 (ab/fep-before, expect unresolved PlayingNow), FE-2c 44885309121 (ab/fe2c-before, expect unresolved PriorityGate.Lane), FE-5 44885480520 (ab/fe5-before, expect unresolved FeedWarm). Check, record, delete each branch.
 - Device checks already dispatched on 7d77a583: phones 44884969625 (BuiltinTorrentDeviceTest + SpeedDeviceTest with SPEED-T2), TV api24 44884971496.
 - After 44884554686 passes: device (if the above are green, not needed again) BuiltinTorrentDeviceTest + SpeedDeviceTest phone=both, and TV tv_api=24 BuiltinTorrentDeviceTest.
 

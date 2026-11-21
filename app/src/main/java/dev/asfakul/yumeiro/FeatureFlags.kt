@@ -77,6 +77,8 @@ object FeatureFlags {
         FE_PAUSE_WHILE_PLAYING("fe_pause_while_playing", true),
         /** FE-2c: the shared extension-call limit (6) serves search, scroll pages and picked work before background rows. */
         FE_CALL_LANES("fe2c_call_lanes", true),
+        /** FE-5: on Wi-Fi with a healthy battery, the working set's home pages are refreshed every 6 h (reserve cache). */
+        FE5_FEED_WARM("fe5_feed_warm", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }

@@ -87,12 +87,12 @@ installed (device), 1000+ simulated (unit).
 | SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Pass: baseline run 44883372732 (numbers in GOAL-TOP-OF-CLASS.md) |
 | SPEED-T2 | SpeedDeviceTest grows: 20 extensions (was 6), the Yumix pattern (every home through 3 priority slots with FE-3 first rows: first / half / all shown), YouTube shelf and YouTube Music Home cold start (live, then saved) | Built; device run pending (with the next device check) |
 | FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 verified; pass-after pending (44884554686) |
-| FE-2 / FE-2b | Priority gate (picked jumps the queue, flag fe2_priority_gate) + dead-site budget (one batch when rows time out) | Built; fail-before 44884208915 pending; pass-after pending. Row-level lanes done in FE-2c (scroll pages = VISIBLE) |
+| FE-2 / FE-2b | Priority gate (picked jumps the queue, flag fe2_priority_gate) + dead-site budget (one batch when rows time out) | Built; fail-before 44884208915 verified; pass-after pending (44884554686). Row-level lanes done in FE-2c (scroll pages = VISIBLE) |
 | FE-3 | First row shows the extension | Built (flag fe3_first_row); fail-before 44884810399 pending; pass-after pending |
 | FE-P | Background feed steps back to one job while a video or song plays (flag fe_pause_while_playing) | Built; fail-before 44885100184 pending; pass-after pending |
 | FE-2c | Row-level lanes: the shared extension-call limit (6) serves search / scroll pages / picked before background rows (flag fe2c_call_lanes) | Built; fail-before 44885309121 pending; pass-after pending |
 | FE-4 | Working set + lazy extension code load (fixes FE-RC3, 1000+) | Not run |
-| FE-5 | Reserve engine: scroll prefetch + background warm-up | Not run |
+| FE-5 | Reserve engine: scroll prefetch + background warm-up | Background warm-up built (FeedWarmWorker, flag fe5_feed_warm); fail-before 44885480520 pending; pass-after pending; device Not run. Scroll prefetch: Yumix already pages Explore near the end (nearEnd, 6 items), now on the VISIBLE lane (FE-2c) |
 | FE-6 | Search / stream sources on the scheduler; FE-S1: save empty search answers too (cached search took 15.1 s, run 44883372732) | FE-S1 built; fail-before 44884613831 pending; pass-after pending. Rest of FE-6 not run |
 | FE-7a/b | YouTube shelves + YouTube Music Home saved and shown at once | Built; fail-before 44883994031 verified; pass-after pending (44884554686) |
 | FE-Q1/Q2 | Device check across a real app update: reinstall? recompile? feed time | Not run |

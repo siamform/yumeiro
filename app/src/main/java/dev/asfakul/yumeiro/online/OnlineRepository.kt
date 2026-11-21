@@ -365,6 +365,9 @@ object OnlineRepository {
             }.onFailure { Log.w(TAG, "home rows ${api.name}/${page.name}", it) }.getOrDefault(emptyList())
         }.filter { it.items.isNotEmpty() }
 
+    /** FE-5: age of [api]'s saved home page in ms, or null when none is saved. Disk metadata: call off main. */
+    fun homeAgeMs(api: MainAPI): Long? = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey(api, "home"))
+
     private val diskServed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /** True once after [home] answered [api] from an old saved copy (the caller should refresh it). */
