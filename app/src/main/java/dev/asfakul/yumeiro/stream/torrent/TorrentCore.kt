@@ -33,4 +33,12 @@ interface TorrentCore {
     fun saveResume(hash: String, to: File)
     fun pause(hash: String)
     fun resume(hash: String)
+    /**
+     * B-31 speed: 16 KiB blocks of [piece] already written to disk (bit i = block i), from the last download-queue
+     * report; null when unknown. Lets a reader return the start of a piece before the whole piece (often 4-16 MB)
+     * is in, which is what made the first bytes and seeks slow.
+     */
+    fun finishedBlocks(hash: String, piece: Int): java.util.BitSet? = null
+    /** Asks the session for a fresh download-queue report; [signal] is notified when it lands. */
+    fun askBlocks(hash: String) {}
 }

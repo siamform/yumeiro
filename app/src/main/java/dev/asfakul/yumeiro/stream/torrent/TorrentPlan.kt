@@ -125,6 +125,21 @@ object TorrentPlan {
         return ((first until minOf(last + 1, first + n)) + (maxOf(first, last - n + 1)..last)).distinct()
     }
 
+    /** libtorrent's block size. */
+    const val BLOCK = 16 * 1024L
+
+    /**
+     * B-31 speed, pure: bytes readable from offset [inPiece] of a partial piece whose finished blocks are
+     * [finished] (contiguous finished blocks from there, capped at [pieceLength]); 0 = wait.
+     */
+    fun readableInPiece(finished: java.util.BitSet?, inPiece: Long, pieceLength: Long): Long {
+        if (finished == null || inPiece < 0 || inPiece >= pieceLength) return 0
+        val b0 = (inPiece / BLOCK).toInt()
+        if (!finished[b0]) return 0
+        val end = finished.nextClearBit(b0).toLong() * BLOCK
+        return minOf(end, pieceLength) - inPiece
+    }
+
     /** Is [position] still inside the window last asked for (no need to send new deadlines)? */
     fun insideWindow(piece: Int, windowStart: Int, windowEnd: Int): Boolean =
         windowStart >= 0 && piece >= windowStart && piece <= windowStart + (windowEnd - windowStart) / 2

@@ -19,6 +19,7 @@ import org.libtorrent4j.TorrentInfo
 import org.libtorrent4j.Vectors
 import org.libtorrent4j.alerts.Alert
 import org.libtorrent4j.alerts.AlertType
+import org.libtorrent4j.alerts.PieceInfoAlert
 import org.libtorrent4j.alerts.SaveResumeDataAlert
 import org.libtorrent4j.alerts.TorrentAlert
 import org.libtorrent4j.alerts.TorrentErrorAlert
@@ -38,17 +39,21 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
     private val sm = SessionManager(false)
     private val errors = ConcurrentHashMap<String, String>()
     private val resumeTargets = ConcurrentHashMap<String, File>()
+    /** B-31 speed: finished blocks per partial piece, per torrent, from the last piece_info_alert. */
+    private val blockMaps = ConcurrentHashMap<String, Map<Int, java.util.BitSet>>()
 
     init {
         sm.addListener(object : AlertListener {
             override fun types(): IntArray = intArrayOf(
                 AlertType.ADD_TORRENT.swig(), AlertType.METADATA_RECEIVED.swig(), AlertType.PIECE_FINISHED.swig(),
                 AlertType.TORRENT_ERROR.swig(), AlertType.SAVE_RESUME_DATA.swig(), AlertType.METADATA_FAILED.swig(),
+                AlertType.PIECE_INFO.swig(),
             )
 
             override fun alert(alert: Alert<*>) {
                 val hash = runCatching { (alert as? TorrentAlert<*>)?.handle()?.infoHash()?.toHex() }.getOrNull()
                 when (alert) {
+                    is PieceInfoAlert -> if (hash != null) runCatching { blockMaps[hash] = finishedMap(alert) }
                     is TorrentErrorAlert -> if (hash != null) errors[hash] = alert.error().message
                     is SaveResumeDataAlert -> if (hash != null) resumeTargets.remove(hash)?.let { f ->
                         runCatching {
@@ -70,6 +75,19 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
             .maxQueuedDiskBytes(if (lowEnd) 4 shl 20 else 16 shl 20)
         sp.setEnableDht(true)
         sp.setEnableLsd(true)
+        // B-31 speed (device run 44877648670: first bytes 13.9 / 19.9 s, seek 5.3 s): reach peers sooner and
+        // give up on slow ones sooner, so time-critical pieces go to the fast peers.
+        fun int(t: org.libtorrent4j.swig.settings_pack.int_types, v: Int) { sp.setInteger(t.swigValue(), v) }
+        fun bool(t: org.libtorrent4j.swig.settings_pack.bool_types, v: Boolean) { sp.setBoolean(t.swigValue(), v) }
+        int(org.libtorrent4j.swig.settings_pack.int_types.connection_speed, if (lowEnd) 60 else 150)
+        int(org.libtorrent4j.swig.settings_pack.int_types.torrent_connect_boost, if (lowEnd) 40 else 80)
+        int(org.libtorrent4j.swig.settings_pack.int_types.peer_connect_timeout, 7)
+        int(org.libtorrent4j.swig.settings_pack.int_types.request_timeout, 10)
+        int(org.libtorrent4j.swig.settings_pack.int_types.piece_timeout, 10)
+        bool(org.libtorrent4j.swig.settings_pack.bool_types.announce_to_all_trackers, true)
+        bool(org.libtorrent4j.swig.settings_pack.bool_types.announce_to_all_tiers, true)
+        bool(org.libtorrent4j.swig.settings_pack.bool_types.strict_end_game_mode, false)
+        bool(org.libtorrent4j.swig.settings_pack.bool_types.smooth_connects, false)
         sm.start(SessionParams(sp))
     }
 
@@ -142,6 +160,31 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
         val h = handle(hash) ?: return
         resumeTargets[hash] = to
         h.saveResumeData(TorrentHandle.SAVE_INFO_DICT)
+    }
+
+    override fun finishedBlocks(hash: String, piece: Int): java.util.BitSet? = blockMaps[hash]?.get(piece)
+
+    override fun askBlocks(hash: String) { runCatching { handle(hash)?.swig()?.post_download_queue() } }
+
+    /**
+     * piece_info_alert lays the blocks of every partial piece one after another, `blocks_per_piece` slots each
+     * (libtorrent torrent::get_download_queue). State 3 = finished (written to disk).
+     */
+    private fun finishedMap(a: PieceInfoAlert): Map<Int, java.util.BitSet> {
+        val pieces = a.pieceInfo
+        val blocks = a.blockData
+        if (pieces.isEmpty()) return emptyMap()
+        val perPiece = blocks.size / pieces.size
+        val out = HashMap<Int, java.util.BitSet>(pieces.size)
+        pieces.forEachIndexed { k, p ->
+            val bits = java.util.BitSet(p.blocksInPiece())
+            for (b in 0 until p.blocksInPiece()) {
+                val at = k * perPiece + b
+                if (at < blocks.size && blocks[at].state() == org.libtorrent4j.BlockInfo.BlockState.FINISHED) bits.set(b)
+            }
+            out[p.pieceIndex()] = bits
+        }
+        return out
     }
 
     override fun pause(hash: String) { handle(hash)?.pause() }

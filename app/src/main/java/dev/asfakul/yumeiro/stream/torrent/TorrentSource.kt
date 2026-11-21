@@ -36,9 +36,11 @@ class TorrentSource(
 
     /** First and last pieces at once (container headers / index), and the start of the file. */
     fun prime() {
-        val head = TorrentPlan.headTail(file, meta.pieceLength).map { it to 0 }
-        core.setDeadlines(meta.hash, head)
-        focus(TorrentPlan.firstPiece(file, meta.pieceLength))
+        // B-31 speed: the start first (deadline 0 via focus), the end right after it, so they don't split peers.
+        val first = TorrentPlan.firstPiece(file, meta.pieceLength)
+        val tail = TorrentPlan.headTail(file, meta.pieceLength).filter { it != first }.map { it to TAIL_DEADLINE_MS }
+        focus(first)
+        core.setDeadlines(meta.hash, tail)
     }
 
     override fun read(position: Long, buffer: ByteArray, offset: Int, count: Int): Int {
@@ -46,20 +48,26 @@ class TorrentSource(
         touched()
         val piece = TorrentPlan.pieceAt(file, position, meta.pieceLength)
         if (!TorrentPlan.insideWindow(piece, windowStart, windowEnd)) focus(piece)
+        // Up to the end of this piece (the next one may not be here yet).
+        val pieceEnd = (piece + 1).toLong() * meta.pieceLength - file.offset
+        var upTo = pieceEnd
         if (!core.have(meta.hash, piece)) {
+            // B-31 speed: blocks of a partial piece are on disk before the piece is complete; read those.
+            val inPiece = file.offset + position - piece.toLong() * meta.pieceLength
             val deadline = System.currentTimeMillis() + waitMs
             synchronized(core.signal) {
                 while (!core.have(meta.hash, piece)) {
                     core.error(meta.hash)?.let { throw IOException("Torrent error: $it") }
+                    val ready = TorrentPlan.readableInPiece(core.finishedBlocks(meta.hash, piece), inPiece, meta.pieceLength.toLong())
+                    if (ready > 0) { upTo = position + ready; break }
                     val left = deadline - System.currentTimeMillis()
                     if (left <= 0) throw IOException("No peer sent this part in time")
-                    core.signal.wait(minOf(left, 1_000))
+                    core.askBlocks(meta.hash)
+                    core.signal.wait(minOf(left, BLOCK_POLL_MS))
                 }
             }
         }
-        // Up to the end of this piece (the next one may not be here yet).
-        val pieceEnd = (piece + 1).toLong() * meta.pieceLength - file.offset
-        val n = minOf(count.toLong(), pieceEnd - position, length - position).toInt()
+        val n = minOf(count.toLong(), upTo - position, length - position).toInt()
         return readFile(position, buffer, offset, n)
     }
 
@@ -78,6 +86,12 @@ class TorrentSource(
         val n = r.read(buffer, offset, count)
         if (n < 0) throw IOException("Torrent file is shorter than expected")
         n
+    }
+
+    private companion object {
+        /** While a piece is partial, how often a fresh block report is asked for (only while a read waits). */
+        const val BLOCK_POLL_MS = 150L
+        const val TAIL_DEADLINE_MS = 400
     }
 
     fun close() { synchronized(guard) { runCatching { raf?.close() }; raf = null } }
