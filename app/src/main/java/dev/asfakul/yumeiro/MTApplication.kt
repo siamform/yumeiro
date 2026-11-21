@@ -108,11 +108,14 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, level) }
         // A closed player kept for its short reopen grace goes at once when memory is tight.
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) runCatching { dev.asfakul.yumeiro.player.PlaybackSession.releaseIfDetached() }
+        // E4 part 2: background feed work steps back to one job for a minute when memory is short (FeedThrottle).
+        if (dev.asfakul.yumeiro.online.FeedThrottle.isPressure(level)) dev.asfakul.yumeiro.online.FeedThrottle.memoryLow()
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) }
+        dev.asfakul.yumeiro.online.FeedThrottle.memoryLow()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)

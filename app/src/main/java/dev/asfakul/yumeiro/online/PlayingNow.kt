@@ -23,9 +23,15 @@ object PlayingNow {
     fun video(on: Boolean) { video = on; publish() }
     fun music(on: Boolean) { music = on; publish() }
 
-    /** Background feed jobs allowed at once: 1 while something plays, else [normal]. */
-    fun backgroundLimit(normal: Int): Int =
-        if (_active.value && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_PAUSE_WHILE_PLAYING)) 1 else normal
+    /**
+     * Background feed jobs allowed at once: 1 while something plays, else [normal]. E4 part 2 ([FeedThrottle], flag
+     * e4_throttle): also 1 when the phone is hot or short of memory, and one less when warm.
+     */
+    fun backgroundLimit(normal: Int): Int {
+        val playing = _active.value && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_PAUSE_WHILE_PLAYING)
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_THROTTLE)) return if (playing) 1 else normal
+        return FeedThrottle.limit(normal, playing, dev.asfakul.yumeiro.player.HeatGuard.level.value, FeedThrottle.isMemoryLow())
+    }
 
     private fun publish() { _active.value = video || music }
 }

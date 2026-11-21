@@ -79,6 +79,8 @@ object FeatureFlags {
         FE4_FEED_FRAMES("fe4_feed_frames", true),
         /** FE-4b: only the picked, pinned and fastest 24 (12 on 2 GB phones) extensions fetch live; the rest show saved pages and join on scroll. */
         FE4_WORKING_SET("fe4_working_set", true),
+        /** E4 part 2: background feed work runs 1 at a time when hot or short of memory, one less when warm (FeedThrottle). */
+        E4_THROTTLE("e4_throttle", true),
         /** FE-S3: a site that failed a search in the last 2 minutes answers with that failure at once (Retry asks again). */
         FE_S3_FAIL_MEMORY("fe_s3_fail_memory", true),
         /** FE-S4: a site's search timeout follows its measured speed (8..25 s); Retry and unknown sites get 25 s. */
