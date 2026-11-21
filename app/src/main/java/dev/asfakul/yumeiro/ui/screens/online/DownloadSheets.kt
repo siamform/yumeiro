@@ -59,6 +59,7 @@ import dev.asfakul.yumeiro.online.OnlineDetail
 import dev.asfakul.yumeiro.online.OnlineEpisode
 import dev.asfakul.yumeiro.online.download.DownloadNaming
 import dev.asfakul.yumeiro.online.download.DownloadSettings
+import dev.asfakul.yumeiro.online.download.EpisodeScope
 import dev.asfakul.yumeiro.online.download.OnlineDownloads
 import dev.asfakul.yumeiro.online.download.YtDownloadOptions
 import dev.asfakul.yumeiro.online.download.YtDownloads
@@ -98,7 +99,7 @@ internal fun EpisodeDownloadIcon(d: OnlineDetail, version: String, index: Int, e
 
 /** "Download" button on a title page: opens the episode download sheet. */
 @Composable
-internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>, seasonTitle: String?, modifier: Modifier = Modifier) {
+internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>, seasonTitle: String?, modifier: Modifier = Modifier, current: Int? = null) {
     val all by dev.asfakul.yumeiro.online.download.PrivateDownloads.visibleState()
     var open by remember { mutableStateOf(false) }
     val folder = remember(d, version) { DownloadNaming.seriesFolder(d.name, d.api, version) }
@@ -112,14 +113,14 @@ internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List
             color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1,
         )
     }
-    if (open) EpisodeDownloadSheet(d, version, ordered, season, seasonTitle, folder) { open = false }
+    if (open) EpisodeDownloadSheet(d, version, ordered, season, seasonTitle, folder, current) { open = false }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EpisodeDownloadSheet(
     d: OnlineDetail, version: String, ordered: List<OnlineEpisode>, season: List<IndexedValue<OnlineEpisode>>,
-    seasonTitle: String?, folder: String, onDismiss: () -> Unit,
+    seasonTitle: String?, folder: String, current: Int?, onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val p = LocalMtPalette.current
@@ -151,6 +152,14 @@ private fun EpisodeDownloadSheet(
                     queue(listOf(0 to OnlineEpisode(movie, d.name, null, null, d.posterUrl, null, d.durationMin)), "title")
                 } else Text("Nothing to download here.", color = TextTertiary)
             } else {
+                val scopes = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EPISODE_RANGE_DOWNLOAD)
+                // OL-11: "This episode only" = the episode Play / Continue opens.
+                if (scopes) ordered.getOrNull(current ?: -1)?.let { cur ->
+                    val one = EpisodeScope.single(ordered, current, have)
+                    SheetOption(Icons.Default.Download, "This episode only", if (one == null) "${cur.label} · already saved or queued" else cur.label, enabled = one != null, tag = "episode_scope_this") {
+                        one?.let { queue(listOf(it), "episodes") }
+                    }
+                }
                 val seasonLeft = season.filter { it.value.data !in have }
                 val allLeft = ordered.withIndex().filter { it.value.data !in have }
                 if (seasonTitle != null && season.size != ordered.size) {
@@ -161,6 +170,8 @@ private fun EpisodeDownloadSheet(
                 SheetOption(Icons.Default.Download, "All episodes", "${allLeft.size} of ${ordered.size} left", enabled = allLeft.isNotEmpty()) {
                     queue(allLeft.map { it.index to it.value }, "episodes")
                 }
+                // OL-11: a from–to range over the season shown (all episodes when there is one season).
+                if (scopes) EpisodeRangePicker(season, have) { picked -> queue(picked, "episodes") }
                 if (allLeft.size > 5) SheetOption(Icons.Default.Download, "Next 5 episodes", "Starting from the first one not saved") {
                     queue(allLeft.take(5).map { it.index to it.value }, "episodes")
                 }
@@ -171,6 +182,44 @@ private fun EpisodeDownloadSheet(
             )
         }
     }
+}
+
+/**
+ * OL-11: "Episode range" row. Collapsed it is one option; open it shows From / To boxes
+ * (pre-filled with the first and last episode number) and a live "Download N episodes" button.
+ * Saved / queued episodes in the range are skipped and the count says so.
+ */
+@Composable
+internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: Set<String>, onPick: (List<Pair<Int, OnlineEpisode>>) -> Unit) {
+    val b = EpisodeScope.bounds(list) ?: return
+    var open by remember(list) { mutableStateOf(false) }
+    var fromText by remember(list) { mutableStateOf(b.first.toString()) }
+    var toText by remember(list) { mutableStateOf(b.last.toString()) }
+    SheetOption(Icons.Default.Download, "Episode range", "Pick from and to (E${b.first}–E${b.last})", tag = "episode_scope_range") { open = !open }
+    if (!open) return
+    val from = EpisodeScope.parse(fromText); val to = EpisodeScope.parse(toText)
+    val inRange = if (from != null && to != null) EpisodeScope.range(list, from, to) else emptyList()
+    val picked = inRange.filter { it.second.data !in have }
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val kb = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+        androidx.compose.material3.OutlinedTextField(fromText, { fromText = it.filter(Char::isDigit).take(6) }, label = { Text("From") }, singleLine = true, keyboardOptions = kb, modifier = Modifier.weight(1f).testTag("episode_range_from"))
+        Text("to", color = TextSecondary)
+        androidx.compose.material3.OutlinedTextField(toText, { toText = it.filter(Char::isDigit).take(6) }, label = { Text("To") }, singleLine = true, keyboardOptions = kb, modifier = Modifier.weight(1f).testTag("episode_range_to"))
+    }
+    val skipped = inRange.size - picked.size
+    Text(
+        when {
+            from == null || to == null -> "Type both episode numbers"
+            inRange.isEmpty() -> "No episodes between E${minOf(from, to)} and E${maxOf(from, to)}"
+            skipped > 0 -> "${picked.size} to download · $skipped already saved or queued"
+            else -> "${picked.size} episodes"
+        },
+        color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp).testTag("episode_range_count"),
+    )
+    androidx.compose.material3.Button(
+        onClick = { onPick(picked) }, enabled = picked.isNotEmpty(), shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag("episode_range_start"),
+    ) { Text(if (picked.size == 1) "Download 1 episode" else "Download ${picked.size} episodes", fontWeight = FontWeight.SemiBold) }
 }
 
 /** Asks where/how (see [DownloadPrompt]) before queuing [list] of [d]. */
@@ -187,10 +236,10 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
 }
 
 @Composable
-private fun SheetOption(icon: ImageVector, title: String, subtitle: String, enabled: Boolean = true, onClick: () -> Unit) {
+private fun SheetOption(icon: ImageVector, title: String, subtitle: String, enabled: Boolean = true, tag: String? = null, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp), color = GlassFill,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).clickable(enabled = enabled, onClick = onClick),
+        modifier = Modifier.fillMaxWidth().then(if (tag != null) Modifier.testTag(tag) else Modifier).padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).clickable(enabled = enabled, onClick = onClick),
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = if (enabled) SpotifyGreen else TextTertiary)
