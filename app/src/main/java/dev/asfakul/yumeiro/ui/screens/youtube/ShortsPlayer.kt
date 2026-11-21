@@ -84,6 +84,14 @@ object ShortsWindow {
     /** The Shorts player opens for a Short on phones when the feature is on; TV keeps the normal player. */
     fun opens(isShort: Boolean, queueSize: Int, tv: Boolean, enabled: Boolean): Boolean =
         enabled && !tv && isShort && queueSize >= 1
+
+    /** Device tests only: resolve a Short to a local clip instead of YouTube. Null in the app. */
+    @Volatile internal var testResolver: (suspend (YtItem) -> StreamRequest)? = null
+
+    /** F-12 evidence: ms from a page settling to its first rendered frame, per Short id (last 32). */
+    internal val firstFrameMs = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Identity of every player used by the pager since the last reset; one entry = one shared player. */
+    internal val playersUsed: MutableSet<Int> = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
 }
 
 /** Full-screen vertical pager over [items]; swipe up / down for the next / previous Short. */
@@ -109,13 +117,15 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     var playing by remember { mutableStateOf(true) }
     var buffering by remember { mutableStateOf(true) }
     var fast by remember { mutableStateOf(false) }
+    var settledAt by remember { mutableStateOf(0L) }
+    val framed = remember { mutableStateMapOf<String, Boolean>() }
 
     fun resolve(i: Int) {
         val item = items.getOrNull(i) ?: return
         if (item.id in resolved || item.id in inFlight) return
         inFlight += item.id
         scope.launch {
-            runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, item.id, height) }
+            runCatching { ShortsWindow.testResolver?.invoke(item) ?: dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, item.id, height) }
                 .onSuccess { resolved[item.id] = it; failed.remove(item.id) }
                 .onFailure { e -> if (e !is kotlinx.coroutines.CancellationException) failed[item.id] = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e) }
             inFlight -= item.id
@@ -125,6 +135,8 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     // The page on screen plays in the one shared player (ADR-006); neighbours only get their links.
     LaunchedEffect(pager) {
         snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
+            settledAt = android.os.SystemClock.elapsedRealtime()
+            items.getOrNull(page)?.let { framed.remove(it.id) }
             resolve(page)
             ShortsWindow.prefetch(page, items.size, lowEnd).forEach { resolve(it) }
             val keep = ShortsWindow.keep(page, items.size, lowEnd).mapNotNull { items.getOrNull(it)?.id }.toSet()
@@ -138,6 +150,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         val req = currentReq ?: return@LaunchedEffect
         val l = dev.asfakul.yumeiro.player.PlaybackSession.acquire(context, "yt:${item.id}", req.url)
         lease = l
+        ShortsWindow.playersUsed += System.identityHashCode(l.player)
         buffering = true
         dev.asfakul.yumeiro.stream.StreamRepository.register(req)
         dev.asfakul.yumeiro.stream.StreamMediaFactory.setMedia(l.player, req.url, title = item.title)
@@ -148,13 +161,20 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         playing = true
         dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
     }
+    val currentNow = androidx.compose.runtime.rememberUpdatedState(current)
     DisposableEffect(lease) {
         val l = lease ?: return@DisposableEffect onDispose { }
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE }
             override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) buffering = false }
+            override fun onRenderedFirstFrame() {
+                val id = currentNow.value?.id ?: return
+                if (ShortsWindow.firstFrameMs.size > 32) ShortsWindow.firstFrameMs.clear()
+                ShortsWindow.firstFrameMs[id] = android.os.SystemClock.elapsedRealtime() - settledAt
+                framed[id] = true
+            }
             override fun onPlayerError(error: PlaybackException) {
-                current?.let { failed[it.id] = "This Short couldn't play." }
+                currentNow.value?.let { failed[it.id] = "This Short couldn't play." }
             }
         }
         l.addListener(listener)
@@ -186,7 +206,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                         },
                         update = { v -> if (v.player !== lease?.player) v.player = lease?.player },
                         onRelease = { v -> v.player = null },
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testTag(if (framed[item.id] == true) "shorts_frame_$page" else "shorts_video_$page"),
                     )
                 } else {
                     dev.asfakul.yumeiro.ui.screens.online.PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
