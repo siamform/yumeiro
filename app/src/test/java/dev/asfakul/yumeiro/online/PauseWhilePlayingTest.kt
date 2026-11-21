@@ -35,7 +35,10 @@ class PauseWhilePlayingTest {
         settle()
         assertEquals("picked runs at once", 2, running.get())
         PlayingNow.video(false); gate.poke(); settle()
-        assertEquals("all back after playback", 4, running.get())
+        // FE-P-T (run 44885736016): the gate has 3 permits, so after playback the picked job + 2 background jobs run
+        // and the third background job waits (the old expectation of 4 could never hold).
+        assertEquals("every permit back in use after playback", 3, running.get())
+        assertEquals("one background job still waits for a permit", 1, gate.waitingCount())
         hold.complete(Unit); (bg + picked).forEach { it.join() }
         assertEquals(0, gate.waitingCount())
     }
