@@ -6,6 +6,7 @@
 package dev.asfakul.yumeiro.network
 
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,6 +24,18 @@ import org.robolectric.annotation.Config
 @Config(sdk = [36])
 class DnsSettingsRaceTest {
     @After fun tearDown() { NetworkSettings.afterPrefsReadForTests = null; NetworkSettings.resetForTests() }
+
+    /**
+     * CI-DNS-RACE-3 (fail in CI 44936197438, with the CI-DNS-RACE-2 fix in): Robolectric starts the app for
+     * each test, and its PrefsWarmup thread ("yu-prefs") calls NetworkSettings.init. When that init ran
+     * between the test's reset and its own init, it loaded the settings first and the test's init returned at
+     * once (the stray never reached its read). Each test now waits for the app's start-up warm-up to finish
+     * before it resets, so only the test's own threads call init.
+     */
+    @Before fun waitForAppWarmup() {
+        Thread.getAllStackTraces().keys.filter { it.name == "yu-prefs" && it !== Thread.currentThread() }.forEach { it.join(10_000) }
+        assertEquals("app warm-up finished", emptyList<String>(), Thread.getAllStackTraces().keys.filter { it.name == "yu-prefs" && it.isAlive }.map { it.name })
+    }
 
     @Test fun aSettingSavedWhileTheStoredOnesLoadIsKept() {
         val app = RuntimeEnvironment.getApplication()
