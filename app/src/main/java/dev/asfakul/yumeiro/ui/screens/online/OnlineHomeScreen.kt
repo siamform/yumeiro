@@ -209,7 +209,9 @@ fun OnlineHomeScreen(
     // crashed "For you" with many extensions enabled.
     val gate = remember { Semaphore(3) }
     // FE-2: same three slots, served by priority. The picked extension moves to the front even after loading began.
-    val pgate = remember { dev.asfakul.yumeiro.online.PriorityGate(3) }
+    val pgate = remember { dev.asfakul.yumeiro.online.PriorityGate(3) { dev.asfakul.yumeiro.online.PlayingNow.backgroundLimit(3) } }
+    // FE-P: when playback stops, waiting background fetches get their slots back.
+    LaunchedEffect(pgate) { dev.asfakul.yumeiro.online.PlayingNow.active.collect { pgate.poke() } }
     val prioritized = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_PRIORITY_GATE)
     suspend fun <T> slot(name: String, block: suspend () -> T): T =
         if (prioritized) pgate.run(name, if (name == selected) dev.asfakul.yumeiro.online.PriorityGate.PICKED else dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND, block)

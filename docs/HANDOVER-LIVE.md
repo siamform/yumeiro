@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 21:15 +06, branch `r15-stability` head after commit "FE-S1 + FE-3: empty search answers kept, first home row shows the extension".
+2026-11-21 21:45 +06, branch `r15-stability` head after commit "FE-P: background feed steps back while playing".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,8 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-P: Yumix background fetches run one at a time while something plays (PlayingNow + PriorityGate backgroundLimit).
+- SPEED-T2: SpeedDeviceTest measures the Yumix pattern (20 extensions, 3 slots) and YouTube / YT Music cold start.
 - FE-3: Yumix shows an extension at its first home row (`home(api, force, onRows)`, flag fe3_first_row).
 - FE-S1: empty search answers kept (memory 10 min / phone 1 h), second disk read on a miss removed.
 - FE-Q1 code reading: no reinstall loop after update; compiled `oat` folder is not deleted (device check still Not run).
@@ -61,8 +63,9 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Fail-before CIs: FE-7a/b 44883994031 (ab/fe7-before, expect unresolved savedFeed / savedBrowse), FE-2 44884208915
   (ab/fe2-before, PriorityGate / homeTimeoutMs), B31-SEEK3 44884447258 (ab/seek3-before, windowPriorities / streamWindow),
   FE-S1 44884613831 (ab/fes1-before, expect an assertion failure "asked the extension again"), FE-3 44884810399
-  (ab/fe3-before, expect compile failure: no onRows parameter on home). Check, record, delete each branch.
-- After 44884554686 passes: device BuiltinTorrentDeviceTest + SpeedDeviceTest phone=both, and TV tv_api=24 BuiltinTorrentDeviceTest.
+  (ab/fe3-before, expect compile failure: no onRows parameter on home), FE-P 44885100184 (ab/fep-before, expect unresolved PlayingNow). Check, record, delete each branch.
+- Device checks already dispatched on 7d77a583: phones 44884969625 (BuiltinTorrentDeviceTest + SpeedDeviceTest with SPEED-T2), TV api24 44884971496.
+- After 44884554686 passes: device (if the above are green, not needed again) BuiltinTorrentDeviceTest + SpeedDeviceTest phone=both, and TV tv_api=24 BuiltinTorrentDeviceTest.
 
 ## Next steps, in order
 - FEED-ENGINE first: FE-1 pass-after (next r15 CI after 44882251682), then FE-2 row-level priority scheduler,

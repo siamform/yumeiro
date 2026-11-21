@@ -116,7 +116,7 @@ object PlaybackSession {
     private fun releaseInTwoSteps() {
         val cur = current ?: return
         current = null
-        dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop()
+        dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop(); dev.asfakul.yumeiro.online.PlayingNow.video(false)
         cur.revoke()
         currentUri = null
         val p = cur.player
@@ -166,7 +166,7 @@ object PlaybackSession {
                 reused++
                 return Lease(key, p, resumed = false).also { current = it }
             }
-            dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop()
+            dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop(); dev.asfakul.yumeiro.online.PlayingNow.video(false)
             runCatching { p.release() }
             current = null
         }
@@ -176,7 +176,10 @@ object PlaybackSession {
         val app = context.applicationContext
         runCatching {
             p.addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) { dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.playing(app, isPlaying) }
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.playing(app, isPlaying)
+                    dev.asfakul.yumeiro.online.PlayingNow.video(isPlaying) // FE-P
+                }
             })
         }
         defaults = p.trackSelectionParameters
@@ -202,7 +205,7 @@ object PlaybackSession {
         main.removeCallbacks(releaseLater)
         val cur = current ?: return
         current = null
-        dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop()
+        dev.asfakul.yumeiro.stats.ActivityLog.VideoClock.stop(); dev.asfakul.yumeiro.online.PlayingNow.video(false)
         cur.revoke()
         timedRelease(cur.player)
         currentUri = null

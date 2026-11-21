@@ -73,6 +73,8 @@ object FeatureFlags {
         B31_STREAM_WINDOW("b31_stream_window", true),
         /** FE-3: an extension shows on Yumix as soon as its first home row answers (the rest fill in). */
         FE3_FIRST_ROW("fe3_first_row", true),
+        /** FE-P: while a video or song plays, Yumix background fetches run one at a time (picked / on screen unchanged). */
+        FE_PAUSE_WHILE_PLAYING("fe_pause_while_playing", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }

@@ -124,6 +124,7 @@ class MusicPlayerManager(
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playbackState.update { it.copy(isPlaying = isPlaying) }
+            dev.asfakul.yumeiro.online.PlayingNow.music(isPlaying) // FE-P
             if (isPlaying) {
                 startProgressTracker()
             } else {
