@@ -1,4 +1,5 @@
 # GATE-1: Perfetto config for the whole gate walk (about 100 s). Used by scripts/device-check.sh.
+# atrace only: with sched events the 96 MB ring held the last 20 s (run 44947167817), not the walk.
 buffers { size_kb: 98304 fill_policy: RING_BUFFER }
 buffers { size_kb: 4096 fill_policy: RING_BUFFER }
 data_sources {
@@ -6,8 +7,6 @@ data_sources {
     name: "linux.ftrace"
     target_buffer: 0
     ftrace_config {
-      ftrace_events: "sched/sched_switch"
-      ftrace_events: "sched/sched_wakeup"
       atrace_categories: "gfx"
       atrace_categories: "view"
       atrace_categories: "am"
