@@ -103,12 +103,18 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
                     dev.asfakul.yumeiro.online.ExtensionSpeed.order(providers, { it.name }, null) else providers
                 ordered.map { api ->
                     launch {
-                        val cached = runCatching { OnlineRepository.cachedHome(api) }.getOrNull()
+                        // FE-1: an old saved page shows at once too, then is refreshed live behind it.
+                        val cached = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
                         val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
                         if (g == feed.gen) {
                             // A failed refresh never wipes rows that are already shown.
                             val fresh = rows.orEmpty().filter { it.items.isNotEmpty() }
                             if (fresh.isNotEmpty() || feed.homes[api.name].isNullOrEmpty()) feed.put(api.name, fresh)
+                        }
+                        if (cached != null && OnlineRepository.takeStaleHome(api.name)) {
+                            val live = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() } }
+                                ?.filter { it.items.isNotEmpty() }
+                            if (g == feed.gen && !live.isNullOrEmpty()) feed.put(api.name, live)
                         }
                     }
                 }.joinAll()

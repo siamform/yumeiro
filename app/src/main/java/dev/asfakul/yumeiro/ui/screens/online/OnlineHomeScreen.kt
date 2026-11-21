@@ -223,7 +223,8 @@ fun OnlineHomeScreen(
         val job = YumixMemory.scope.async {
             if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
             // SPEED-1: a saved page shows at once; only live fetches wait for one of the three slots.
-            val cached = if (force) null else runCatching { OnlineRepository.cachedHome(api) }.getOrNull()
+            // FE-1: an old saved page too (refreshed live below via takeStaleHome).
+            val cached = if (force) null else runCatching { OnlineRepository.feedHome(api) }.getOrNull()
             val result = if (cached != null) Result.success(cached) else gate.withPermit {
                 runCatching { OnlineRepository.home(api, force) }
             }

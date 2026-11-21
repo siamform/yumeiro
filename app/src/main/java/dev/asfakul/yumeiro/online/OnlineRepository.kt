@@ -252,6 +252,17 @@ object OnlineRepository {
      */
     suspend fun cachedHome(api: MainAPI): List<OnlineRow>? = withContext(Dispatchers.IO) { cachedHomeNow(api) }
 
+    /**
+     * FE-1 (docs/FEED-ENGINE-2.1.md, FE-RC2): what a feed shows at once for [api]. The fresh copy when there is one,
+     * else the last saved page of any age up to keepDays, marked stale so the caller refreshes it live behind it
+     * ([takeStaleHome]). Before, a saved page older than 6 h counted as nothing, so after a night away or an app
+     * update every extension went back through the live queue of three (minutes of skeletons with pages on disk).
+     * Disk read: Dispatchers.IO. The stale copy is not put in the memory cache, so [home] still fetches live.
+     */
+    suspend fun feedHome(api: MainAPI): List<OnlineRow>? = withContext(Dispatchers.IO) {
+        cachedHomeNow(api) ?: savedHome(api)?.filter { it.items.isNotEmpty() }?.takeIf { it.isNotEmpty() }?.also { diskServed.add(api.name) }
+    }
+
     private fun cachedHomeNow(api: MainAPI): List<OnlineRow>? {
         homeCache[api.name]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }
         // Round 12: saved on the phone too, so reopening Yumix doesn't ask every extension again.

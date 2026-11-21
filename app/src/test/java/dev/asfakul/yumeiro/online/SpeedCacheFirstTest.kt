@@ -61,6 +61,24 @@ class SpeedCacheFirstTest {
         assertEquals(calls, api.homeCalls.get())
     }
 
+    /** FE-1 (docs/FEED-ENGINE-2.1.md FE-RC2): a 7 h old saved home shows at once and is marked for a live refresh. */
+    @Test fun oldSavedHomeShowsAtOnceAndIsMarkedStale() = runBlocking {
+        val api = Fake("YuFe1 home ${System.nanoTime()}")
+        assertTrue(OnlineRepository.home(api, force = true).isNotEmpty())
+        val calls = api.homeCalls.get()
+        val file = dev.asfakul.yumeiro.cache.DataCache.fileFor("home", "home|${api.name}|${api.mainUrl}|")
+        assertTrue("saved home file missing", file != null && file.isFile)
+        assertTrue(file!!.setLastModified(System.currentTimeMillis() - 7 * 3_600_000L))
+        OnlineRepository.refreshAfterExtensionChange()
+        dev.asfakul.yumeiro.cache.DataCache.clearMemory()
+        OnlineRepository.takeStaleHome(api.name)
+        assertNull("6 h fresh window unchanged", OnlineRepository.cachedHome(api))
+        val shown = OnlineRepository.feedHome(api)
+        assertTrue("old saved home not shown", !shown.isNullOrEmpty())
+        assertEquals(calls, api.homeCalls.get())
+        assertTrue("old saved home not marked for refresh", OnlineRepository.takeStaleHome(api.name))
+    }
+
     @Test fun cachedSearchIsSentAtOnceWhileSlowSearchesHoldEveryPermit() = runBlocking {
         val q = "speed ${System.nanoTime()}"
         val fast = Fake("YuSpeed2 cached ${System.nanoTime()}")
