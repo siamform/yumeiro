@@ -26,13 +26,13 @@ import org.junit.runner.RunWith
 class TelegramLoginDeviceTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
 
-    @After fun tearDown() = runBlocking {
+    @After fun tearDown(): Unit = runBlocking {
         TgAccounts.closeAll()
         TgAccounts.useTestDc = false
         FeatureFlags.set(ctx, FeatureFlags.Flag.TELEGRAM_LOGIN, false)
     }
 
-    @Test fun engineDownloadsChecksAndLoads() = runBlocking {
+    @Test fun engineDownloadsChecksAndLoads(): Unit = runBlocking {
         assertTrue("this build has no engine pin for " + android.os.Build.SUPPORTED_ABIS.toList(), TdEngine.available())
         val t0 = System.nanoTime()
         assertTrue("engine: " + TdEngine.state.value, withTimeout(180_000) { TdEngine.ensure(ctx, NetworkClient.get(ctx)) })
@@ -43,7 +43,7 @@ class TelegramLoginDeviceTest {
         assertTrue(TdEngine.ensure(ctx, NetworkClient.get(ctx)))
     }
 
-    @Test fun signInOnTestServersListsChatsAndLogsOut() = runBlocking {
+    @Test fun signInOnTestServersListsChatsAndLogsOut(): Unit = runBlocking {
         FeatureFlags.set(ctx, FeatureFlags.Flag.TELEGRAM_LOGIN, true)
         assertTrue("Telegram keys missing from this build, or no engine pin", TgAccounts.enabled(ctx))
         TgAccounts.useTestDc = true
