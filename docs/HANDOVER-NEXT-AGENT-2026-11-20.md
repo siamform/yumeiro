@@ -1,6 +1,6 @@
 # Handover for the next agent (2026-11-20, after v2.0.0)
 
-Read this first, then `docs/MAJOR-BUGS-AND-FEATURES-2.x.md` (the must-do list) and `docs/BUGS-AND-FIXES-2.0.0.md`.
+Start with docs/AGENT-START-HERE.md (universal rules and resume prompt). Then read this, then `docs/MAJOR-BUGS-AND-FEATURES-2.x.md` (the must-do list) and `docs/BUGS-AND-FIXES-2.0.0.md`.
 Trust the repo and run IDs over any summary, including this one.
 
 ## Owner decision 2026-11-20 (latest)
@@ -135,10 +135,9 @@ Owner, 2026-11-21: no release for now; fix, implement and test everything first.
 1. Starters removed (B-26, 077fad69). "Use our master extension": the Yumeiro master extension is E1 in
    MAJOR-BUGS-AND-FEATURES-2.x.md (one Yumeiro-owned provider, own repo, OTA manifest). Not built yet; until it is,
    first run installs nothing and Get started lets the user pick.
-2. Discreet launcher icon: explained to the owner (switching the activity-alias makes Android drop the old
-   home-screen icon once; the user re-adds it). Waiting for the owner's yes/no.
-3. Telegram: full login is now wanted (replaces "no login"). Plan: TDLib; needs the owner's api_id/api_hash from
-   my.telegram.org through the secure credential form (never in chat or the repo). Native size pairs with E3.
+2. Discreet launcher icon: DROPPED by the owner 2026-11-21 after the explanation. Do not build it.
+3. Telegram: full login is now wanted (replaces "no login"). Plan: TDLib; api_id/api_hash received 2026-11-21, stored as repo
+   secrets YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH and wired to BuildConfig TG_API_ID / TG_API_HASH (never in the repo). Native size pairs with E3.
 
 Links the owner gave (all measured from the sandbox, 2026-11-21):
 

@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Read docs/HANDOVER-NEXT-AGENT-2026-11-20.md (bottom sections first). Owner 2026-11-21: no release; fix, implement and test everything. Done on r15-stability (CI 44827815442 green on 1e92bc33): B-26 starters removed, B-29 TeraBox full video via share API (needs a TeraBox sign-in, never the 30 s preview), B-30 DiskWala hand-off. Open next: B-31 built-in torrent engine, B-32 extensions that load nothing (HindiSubAnime), E1 Yumeiro master extension, F-02 Telegram full login (waiting for api_id/api_hash), discreet-icon yes/no, F-21 extension metadata rows, F-22 Upcoming filters. Earlier rows B-10..B-28 in docs/BUGS-AND-FIXES-2.0.0.md.
+Read docs/AGENT-START-HERE.md first (rules, resume prompt, next steps), then docs/HANDOVER-NEXT-AGENT-2026-11-20.md (bottom sections). Discreet icon dropped; Telegram credentials stored as repo secrets. Owner 2026-11-21: no release; fix, implement and test everything. Done on r15-stability (CI 44827815442 green on 1e92bc33): B-26 starters removed, B-29 TeraBox full video via share API (needs a TeraBox sign-in, never the 30 s preview), B-30 DiskWala hand-off. Open next: B-31 built-in torrent engine, B-32 extensions that load nothing (HindiSubAnime), E1 Yumeiro master extension, F-02 Telegram full login (waiting for api_id/api_hash), discreet-icon yes/no, F-21 extension metadata rows, F-22 Upcoming filters. Earlier rows B-10..B-28 in docs/BUGS-AND-FIXES-2.0.0.md.
 
 # R15 status: every item in the master prompt, with its evidence
 
