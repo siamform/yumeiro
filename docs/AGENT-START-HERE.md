@@ -164,6 +164,10 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 
 ## 6. State on 2026-11-21
 
+- Live state, pending runs and the next step: docs/HANDOVER-LIVE.md (owner rule 2026-11-21: rewrite it with every
+  push; every listed bug and feature must be done and verified; mandatory focus: feed, extension loading, load
+  speed, search speed).
+
 - Branch `r15-stability`, green CI 44827815442 on 1e92bc33 (all jobs including the signed review APK).
 - Fixed since v2.0.0 (ledger rows B-10..B-30): freezes FREEZE-1/2/4, PROF-1, T-1, F-18, F-19, PIN-1/2, GATE-1,
   RegexGuard, B-25 search-only, B-27 recorder leak, B-28 YouTube Music on main, B-26 starters removed,
