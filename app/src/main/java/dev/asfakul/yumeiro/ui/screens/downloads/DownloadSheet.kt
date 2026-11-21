@@ -21,6 +21,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
@@ -150,6 +153,9 @@ internal fun DownloadSheetContent(
     val free by rememberFreeBytes(context, req)
     val phonePath by rememberStoragePath(context, req.folder)
     var details by rememberSaveable { mutableStateOf(false) }
+    // OL-6-REVEAL: the details open at the bottom of the scroll area; keep them in view while they unfold.
+    val reveal = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val yt = req.type == DownloadPrompt.Type.YT_VIDEO || req.type == DownloadPrompt.Type.YT_AUDIO
     val pickQuality = req.startAt != null || req.startWith != null
 
@@ -211,7 +217,11 @@ internal fun DownloadSheetContent(
                 Icon(if (details) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (details) "Hide details" else "Show details", tint = p.textTertiary)
             }
             AnimatedVisibility(details) {
-                Column(Modifier.testTag("download_details_body")) {
+                Column(
+                    Modifier.bringIntoViewRequester(reveal)
+                        .onSizeChanged { if (details) scope.launch { reveal.bringIntoView() } }
+                        .testTag("download_details_body"),
+                ) {
                     DetailLine(Icons.Default.Folder, "Downloads → ${req.folder}")
                     DetailLine(Icons.Default.PhoneAndroid,
                         if (yt && toPhone) "Phone: ${if (req.type == DownloadPrompt.Type.YT_AUDIO) "Music" else "Movies"}/Yumeiro (your gallery sees it)"
