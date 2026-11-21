@@ -58,10 +58,20 @@ class StagedList(private val scope: LazyListScope, private val limit: Int) {
     val declared: Int get() = n
 
     fun item(key: Any? = null, contentType: Any? = null, content: @Composable LazyItemScope.() -> Unit) {
-        if (n++ < limit) scope.item(key, contentType, content)
+        val name = "feed:" + (key ?: n).toString().take(40)
+        if (n++ < limit) scope.item(key, contentType) { traced(name) { content() } }
     }
 
     fun <T> items(items: List<T>, key: ((T) -> Any)? = null, contentType: (T) -> Any? = { null }, itemContent: @Composable LazyItemScope.(T) -> Unit) {
-        if (n++ < limit) scope.items(items.size, if (key != null) { i: Int -> key(items[i]) } else null, { i -> contentType(items[i]) }) { i -> itemContent(items[i]) }
+        val name = "feed:items#$n"
+        if (n++ < limit) scope.items(items.size, if (key != null) { i: Int -> key(items[i]) } else null, { i -> contentType(items[i]) }) { i -> traced(name) { itemContent(items[i]) } }
     }
+}
+
+/** GATE-1-TRACE-3: names each feed section in system traces (atrace), so a slow frame says which section it built. */
+@Composable
+private inline fun traced(name: String, content: @Composable () -> Unit) {
+    val on = android.os.Build.VERSION.SDK_INT >= 29 && android.os.Trace.isEnabled()
+    if (on) android.os.Trace.beginSection(name)
+    try { content() } finally { if (on) android.os.Trace.endSection() }
 }
