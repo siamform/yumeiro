@@ -17,20 +17,18 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Pass-after CI 44879288541 (@2b286d6c): B-32 EmptyHomeTest, F-21 ExtensionLabelsTest, B-31 TorrentBlocksTest.
+- Fail-before verified: E2 44880384185, B-31 seek 44880511385 (branches deleted).
 - Fail-before verified: F-21 44878962117, B-31 speed 44879233183, F-22 44879571787, E3 44879928117 (branches deleted).
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- CI 44879288541 r15-stability @2b286d6c: pass-after for B-32, F-21, B-31 speed.
-- CI 44880384185 ab/e2-before (expect "Data script tests" fail: no curate_live module).
-- CI 44880511385 ab/b31-seek-before (expect compile fail: dropDeadlines overrides nothing).
 - CI 44881206020 ab/speed12-before (expect compile fail: cachedHome unresolved).
 - CI 44880750191 ab/e4-before (expect compile fail: ExtensionSpeed unresolved).
 - Device 44880554878 BuiltinTorrentDeviceTest both phones @e451b783 (seek fix + notice gate).
 - Device 44880575223 BuiltinTorrentDeviceTest TV api24 @e451b783.
-- NEXT CI to dispatch on r15-stability when 44879288541 ends (only one per ref, it cancels the running one):
-  `gh workflow run ci.yml --ref r15-stability -f review_apk=false -f abi_splits=true` = pass-after for F-22,
-  notice, E2, E3, B-31 seek, E4 and anything committed later.
+- CI 44881247581 r15-stability @4a58cb22 with abi_splits=true: pass-after for F-22, B-31 notice, E2, E3, B-31 seek,
+  E4, SPEED-1/2. Do not dispatch another r15-stability CI while it runs (it would cancel it).
 
 ## Next steps, in order
 1. Speed work (owner mandatory): feed loading, extension loading (start-up of the extension engine), search
