@@ -100,25 +100,36 @@ object NetworkSettings {
     /** Loads the settings if [attach] was called and nothing loaded them yet. Disk read: off main. */
     fun ensureLoaded() { if (!loaded) app?.let { init(it) } }
 
+    /**
+     * CI-DNS-RACE (unit run 44894173529, Nbug6FallbackTest): [init] read the prefs and then wrote [dns] without
+     * looking again, so a setting saved while the prefs were being read (PrefsWarmup / StreamResolver load them on a
+     * background thread) was overwritten with the old stored one. Writes now go through [writeLock] (no disk inside):
+     * the stored value applies only if nothing was set meanwhile.
+     */
+    private val writeLock = Any()
+    /** Test hook: runs after [init] read the prefs, before it writes. */
+    @Volatile internal var afterPrefsReadForTests: (() -> Unit)? = null
+
     @Synchronized
     fun init(context: Context) {
         if (loaded) return
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        _dns.value = DnsConfig(
+        val stored = DnsConfig(
             provider = enumOr(p.getString("dns_provider", null), DnsProvider.SYSTEM),
             transport = enumOr(p.getString("dns_transport", null), DnsTransport.DOH),
             mode = enumOr(p.getString("dns_mode", null), DnsMode.FALLBACK),
             auto = p.getBoolean("dns_auto", true),
             fallback = p.getBoolean("dns_fallback_auto", false),
         )
+        val bypass = p.getStringSet(BYPASS_KEY, emptySet()).orEmpty()
+        afterPrefsReadForTests?.invoke()
         prefs = p
-        SmartDns.restoreBypass(p.getStringSet(BYPASS_KEY, emptySet()).orEmpty())
-        loaded = true
+        SmartDns.restoreBypass(bypass)
+        synchronized(writeLock) { if (!loaded) { _dns.value = stored; loaded = true } }
     }
 
     fun setDns(context: Context, config: DnsConfig) {
-        _dns.value = config
-        loaded = true
+        synchronized(writeLock) { _dns.value = config; loaded = true }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("dns_provider", config.provider.name)
             .putString("dns_transport", config.transport.name)
@@ -130,7 +141,7 @@ object NetworkSettings {
     }
 
     /** For tests. */
-    internal fun setForTests(config: DnsConfig) { _dns.value = config; loaded = true; SmartDns.clearCache() }
+    internal fun setForTests(config: DnsConfig) { synchronized(writeLock) { _dns.value = config; loaded = true }; SmartDns.clearCache() }
     internal fun resetForTests() { loaded = false; app = null; prefs = null; _dns.value = DnsConfig(); SmartDns.clearCache() }
 
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =

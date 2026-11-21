@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 16:52 +06, branch `r15-stability`, commit "FE-T1".
+2026-11-21 17:15 +06, branch `r15-stability`, commit "CI-DNS-RACE".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- CI-DNS-RACE: Nbug6 flake traced to NetworkSettings.init overwriting a setting saved during load; fixed with a write lock and test hook.
 - FE-T1: 2 GB phone feed half-shown 56.8 s (was 4.4 s): startup trims with 800 MB free throttled the feed to one lane. Fixed (FeedThrottle.confirmed). Rerun SpeedDeviceTest lowram after the r15 CI.
 - F-07-RES: "Choose each time" hand-off now asks for the result (MX / Just return the position only when asked). Device round trip ExternalPlayerDeviceTest + StubPlayerActivity (androidTest manifest).
 - DEV-CHK-21-C: CI 44892857421 failed at device-test compile (wrong YumeiroDrama import in Nf1 test); fixed.
@@ -61,6 +62,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Fail-before F-07-RES 44894173529 (theGenericChooserGetsTheWidelyReadExtras failed as expected) and FE-T1 44894340441 (compile); both branches deleted.
 - Phones 44892710506 @e2b87521: BuiltinTorrentDeviceTest Pass both (lowram first 2844 / seek 1129 ms: B31-SEEK5 Pass); SpeedDeviceTest Pass all budgets (GOAL run 3), lowram feed regression = FE-T1.
 - Device TV api24 44892712537 @e2b87521: BuiltinTorrentDeviceTest Pass (first 64 KB 8696 ms, seek 3148 ms; was 10370 ms): B31-SEEK4 Pass.
 - Pass-after CI 44890073919 @e2b87521 (abi_splits=true): success, 353 test classes, 0 failures: FE-S1, FE-S2, FE-S3, FE-S4, FE-3, FE-P (+FE-P-T), FE-2c, FE-4a, FE-4b, FE-5, E4-T, B31-SEEK4/5 (+B31-SEEK5-T) unit, SPEED-T2 compile; GateLaneTest (T-GATE) passed.
@@ -95,9 +97,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete any ab/ branch)
-- Fail-before FE-T1 44894340441 on ab/fet1-before (expect compile fail: unresolved FeedThrottle.confirmed); then delete branch + worktree /tmp/wt-t1.
-- r15 CI 44894227826 @49c4c60b running (F-07-RES pass-after); FE-T1 commit is after it, so dispatch one more r15 CI when it ends.
-- Fail-before F-07-RES 44894173529 on ab/f07res-before (expect only F07ExternalPlayersTest.theGenericChooserGetsTheWidelyReadExtras); then delete branch + worktree /tmp/wt-res.
+- Fail-before CI-DNS-RACE 44895869754 on ab/dnsrace-before (expect compile fail: afterPrefsReadForTests); then delete branch + worktree /tmp/wt-dns.
+- r15 CI 44894227826 @49c4c60b running (F-07-RES pass-after); FE-T1 and CI-DNS-RACE commits are after it, so dispatch one more r15 CI (abi_splits=true) when it ends.
 - Pass-after CI for F-07-VIS, F-07-RES + compile of the 6 new device tests: next r15-stability CI (run ID in R15-STATUS line 3).
 
 ## Next steps, in order
