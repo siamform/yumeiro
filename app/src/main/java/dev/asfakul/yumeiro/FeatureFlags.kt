@@ -37,6 +37,8 @@ object FeatureFlags {
         SHORTS_AUTOHIDE("f12_shorts_autohide", true),
         /** NBUG-13-PORT: a proxy that can't be reached is reported as unreachable even when its port or address holds the digits 407 (was "wants a login"). */
         PROXY_REACH_FIRST("nbug13_reach_first", true),
+        /** OL-8: the website helper banner hides by itself 3 s after it shows (tap still hides it at once). */
+        PAGE_HINT_AUTOHIDE("ol8_hint_autohide", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

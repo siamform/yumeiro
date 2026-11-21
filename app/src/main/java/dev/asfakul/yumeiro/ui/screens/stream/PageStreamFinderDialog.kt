@@ -271,6 +271,8 @@ fun PageStreamFinderDialog(
     var currentUrl by remember { mutableStateOf(pageUrl) }
     var drmNote by remember { mutableStateOf<String?>(null) }
     var showHint by remember { mutableStateOf(true) }
+    // OL-8: a later note (sign in, auto gave up) shows the banner again; it hides by itself after 3 s.
+    androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val main = remember { Handler(Looper.getMainLooper()) }
 
@@ -346,14 +348,7 @@ fun PageStreamFinderDialog(
                     IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
-                if (showHint && !autoActive) {
-                    Surface(color = GlassFill, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { showHint = false }.testTag("page_finder_hint")) {
-                        Text(
-                            (autoNote ?: reason) + "\n\nStart playback on the page; detected streams appear below. Tap to hide.",
-                            color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(10.dp),
-                        )
-                    }
-                }
+                if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
