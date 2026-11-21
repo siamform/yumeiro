@@ -94,6 +94,17 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
       adb pull /data/misc/perfetto-traces/home-$T.pftrace stress/trace/ > /dev/null 2>&1 || echo "HOME_TRACE no trace $T: $(cat stress/trace/perfetto-$T.txt | head -3)"
     done
     ls -la stress/trace | sed 's/^/HOME_TRACE file /'
+  elif [ "$C" = "dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest" ]; then
+    # GATE-1: the walk runs under a Perfetto trace (main + RenderThread + HWUI) so a long frame can be read.
+    P=dev.asfakul.yumeiro.debug
+    mkdir -p stress/trace
+    adb shell rm -f /data/misc/perfetto-traces/gate.pftrace > /dev/null 2>&1
+    adb shell "perfetto --txt -c - -o /data/misc/perfetto-traces/gate.pftrace --background" < scripts/gate-trace.pbtxt > stress/trace/perfetto-gate.txt 2>&1 || true
+    sleep 2
+    timeout 600 adb shell am instrument -w -r -e class "$C" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+    adb shell killall -INT perfetto > /dev/null 2>&1 || true
+    sleep 4
+    adb pull /data/misc/perfetto-traces/gate.pftrace stress/trace/ > /dev/null 2>&1 || echo "GATE_TRACE no trace: $(head -3 stress/trace/perfetto-gate.txt)"
   elif [ "$C" = "dev.asfakul.yumeiro.UpdateFeedDeviceTest" ]; then
     # FE-Q1 / FE-Q2: a installs extensions and saves homes; b = relaunch; c = after an in-place update
     # (`adb install -r` of the same debug APK: new code path, data kept, like a store update).
