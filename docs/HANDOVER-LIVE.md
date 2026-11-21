@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 17:49 +06, branch `r15-stability`, commit "NBUG10-IME: hold extension windows while typing".
+2026-11-21 18:03 +06, branch `r15-stability`, commit "DEV-CHK-21-C2: Nf1 test compile fix".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- r15 CI 44899160113 @ff056fb7 Pass (356 classes, 1673 cases, 0 failures): second green for CI-DNS-RACE. DEV-CHK-21-C2: Nf1 rewrite did not compile; the runs on it are invalid; fixed and re-run.
 - NBUG10-IME root cause found and fixed (flag EXT_HOLD_WHILE_TYPING): AnimePahe's Cloudflare-check window opened on its own and took the keyboard focus; now held behind a card while the user types. Fail-before 44900885102. F-18 fail-before 44899238590 is valid (main compiled). Fail-before redos from HEAD: 44900731236 (NF-2b), 44900735170 (F-02 split), 44900738482 (Country).
 - 17:48 Recorded 44899145489 / 44899147205: Nf1 phones Pass, Speed both Pass (FE-S4 device Pass, live 1453..25101 ms), Nbug10 api36 Pass / lowram Fail (NBUG10-IME open), TvBug5 TV Pass, Nf1 TV Fail (NF1-T2, test rewritten to read rows by label), ExternalPlayer both Fail (F07-T2, logging added). Fail-befores 44899230268 / 44899234331 / 44899243747 / 44899238590 invalid (AB-INVALID-1).
 - DEV-CHK-21-T: device tests fixed after run 44896550636 / 44896552485 (Java stub player; Nf1 scroll + on-screen rows; Nbug10 match check + keyboard time). SpeedDeviceTest logs 3 more live searches for FE-S4.
@@ -65,6 +66,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- CI 44899160113 @ff056fb7: Pass, 356 classes, 1673 cases, 0 failures.
 - 44899145489 phones: Nf1 Pass (both), SpeedDeviceTest Pass (both), Nbug10 Pass api36. 44899147205 tv-api34: TvBug5Repro Pass.
 - CI 44896530640 @33c65f8d Pass (356 classes, 0 failures): pass-after FE-T1 and CI-DNS-RACE. CI 44894227826 @49c4c60b Pass: pass-after F-07-VIS, F-07-RES. Fail-before CI-DNS-RACE 44895869754 verified.
 - Device 44896550636 / 44896552485: Pass VolumeBoost (F-06) and Upcoming (F-08) on lowram, api36, tv-api34; F01DubTap (F-01/F-16) both phones; SpeedDeviceTest both phones (FE-T1 fixed: lowram feed half 5151 ms).
@@ -103,9 +105,9 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete any ab/ branch)
-- r15 CI 44899160113 (DEV-CHK-21-T head): parse reports; second green for CI-DNS-RACE. Then dispatch r15 CI for this head (pass-after NBUG10-IME).
-- Device 44900658789 (phones: ExternalPlayer, Nbug10, Nf1) / 44900661431 (tv-api34: Nf1). Nbug10 here is BEFORE the IME fix.
-- Fail-befores: 44900885102 ab/imehold-before, 44900731236 ab/nf2bq2-before, 44900735170 ab/f02split2-before, 44900738482 ab/country2-before. Record, then delete branch + /tmp/wt-* worktree.
+- r15 CI on this head (ID in R15 line 3): pass-after for NBUG10-IME (ExtHoldWhileTypingTest) and the Nf1 compile.
+- Device reruns on this head (IDs in R15 line 3): phones ExternalPlayer + Nbug10 + Nf1; tv-api34 Nf1.
+- Fail-befores: ab/f02split2 44901941945, ab/country2 44901945428, ab/imehold 44901948952, ab/nf2bq2 44901952882. Record, then delete branch + /tmp/wt-* worktree.
 
 ## Next steps, in order
 1. Record pending runs. F07-T2: read the F07 log lines (STUB got ..., result pending=...) to find where the result is lost.

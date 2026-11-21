@@ -124,18 +124,18 @@ class Nf1EpisodeStatusDeviceTest {
                 }
         }
         rule.waitUntil(10_000) { visibleRows().count { it.second != null } >= 3 }
-        var rows = visibleRows()
-        log("NF1_RESULT rows=$rows e1='${e1.label}' e2='${e2.label}' e3='${e3.label}'")
+        var onScreen = visibleRows()
+        log("NF1_RESULT rows=$onScreen e1='${e1.label}' e2='${e2.label}' e3='${e3.label}'")
         fun statusOf(e: OnlineEpisode): String? {
-            if (rows.none { it.first == e.label }) {
+            if (onScreen.none { it.first == e.label }) {
                 rule.onAllNodesWithTag("online_detail_list", true)[0].performScrollToNode(hasText(e.label))
-                rule.waitForIdle(); rows = visibleRows()
+                rule.waitForIdle(); onScreen = visibleRows()
             }
-            return rows.firstOrNull { it.first == e.label }?.second
+            return onScreen.firstOrNull { it.first == e.label }?.second
         }
-        assertEquals("e1 '${e1.label}' row: $rows", "Watched", statusOf(e1))
-        assertEquals("e2 '${e2.label}' row: $rows", "6 min left", statusOf(e2))
-        assertEquals("e3 '${e3.label}' row: $rows", "Fresh", statusOf(e3))
+        assertEquals("e1 '${e1.label}' row: $onScreen", "Watched", statusOf(e1))
+        assertEquals("e2 '${e2.label}' row: $onScreen", "6 min left", statusOf(e2))
+        assertEquals("e3 '${e3.label}' row: $onScreen", "Fresh", statusOf(e3))
         // The visit raised the stored count to the newest episode, so the next visit has no Fresh rows for these.
         rule.waitUntil(5_000) { (EpisodeStatus.Seen.get(ctx, d.api, d.url, version) ?: 0) >= EpisodeStatus.highest(eps)!! }
         log("NF1_RESULT PASS")
