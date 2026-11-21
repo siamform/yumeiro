@@ -167,7 +167,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         l.player.prepare()
         l.player.playWhenReady = true
         playing = true
-        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
+        dev.asfakul.yumeiro.youtube.YtHistory.record(context, item)
     }
     val currentNow = androidx.compose.runtime.rememberUpdatedState(current)
     DisposableEffect(lease) {

@@ -56,7 +56,7 @@ object YouTubePlayback {
             runCatching { YouTubeStreams.videoRequest(context, item.id, maxHeight) }
                 .onSuccess { req ->
                     YtWatch.onResolved(item.id)
-                    YtHistory.add(context, item)
+                    YtHistory.record(context, item)
                     dev.asfakul.yumeiro.data.PlayCounts.record(context, dev.asfakul.yumeiro.data.PlayCounts.Kind.YOUTUBE, item.id, item.title, item.channel, item.thumbnail)
                     IncomingMedia.open(context, req.copy(logoUrl = req.logoUrl ?: item.thumbnail), id = "yt:${item.id}", folder = GROUP)
                 }

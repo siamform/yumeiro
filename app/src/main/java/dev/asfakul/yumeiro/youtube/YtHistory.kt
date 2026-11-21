@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.youtube
 
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
@@ -29,6 +30,21 @@ object YtHistory {
             _items.value = runCatching { decode(raw) }.getOrDefault(emptyList())
         }
         return _items.value
+    }
+
+    /** F12-HIST: one background lane for history writes, so taps stay in order and never read the disk on main. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val lane = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+
+    /**
+     * F12-HIST: what screens call. The first [add] reads the saved list from disk and every add encodes JSON;
+     * on the main thread that froze a Shorts swipe (StrictMode DiskReadViolation, device run 44910278641).
+     * Flag f12_history_off_main (kill switch: off = the old in-place add).
+     */
+    fun record(context: Context, item: YtItem) {
+        val app = context.applicationContext
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.HISTORY_OFF_MAIN)) { add(app, item); return }
+        lane.launch { runCatching { add(app, item) } }
     }
 
     fun add(context: Context, item: YtItem) {

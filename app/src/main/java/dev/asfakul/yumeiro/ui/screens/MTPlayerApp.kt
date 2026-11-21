@@ -795,7 +795,7 @@ fun MTPlayerApp(
                                 },
                                 onPlayYouTube = { item, list ->
                                     if (item.music) {
-                                        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
+                                        dev.asfakul.yumeiro.youtube.YtHistory.record(context, item)
                                         val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                         viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                     } else {
@@ -819,7 +819,7 @@ fun MTPlayerApp(
                                     currentTrackId = playbackState.currentTrack?.id,
                                     onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                                     onPlayOnline = { item, list ->
-                                        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
+                                        dev.asfakul.yumeiro.youtube.YtHistory.record(context, item.copy(music = true))
                                         val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                         viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                     },
@@ -830,7 +830,7 @@ fun MTPlayerApp(
                                 Column(Modifier.fillMaxSize()) {
                                 if (!isOnline) dev.asfakul.yumeiro.ui.components.OfflineNotice("YouTube Music", tag = "offline_notice_music")
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
-                                    dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
+                                    dev.asfakul.yumeiro.youtube.YtHistory.record(context, item.copy(music = true))
                                     val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                     viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                 })
