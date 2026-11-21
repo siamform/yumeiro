@@ -47,8 +47,8 @@ internal object TopBarFit {
      * spacers and the title's minimum. Before, the buttons got a fixed 1.4 : 1 share whether they
      * used it or not, so a gap sat left of Quality / Audio / More and the title was cut early.
      */
-    fun buttonsWidth(totalDp: Float, compact: Boolean): Float {
-        val pad = if (compact) 8f else 24f
+    fun buttonsWidth(totalDp: Float, compact: Boolean, edgeDp: Float = if (compact) 4f else 12f): Float {
+        val pad = 2 * edgeDp
         val back = 48f // Back is an IconButton: the 48 dp touch target wins over its 40/44 dp size
         val title = if (compact) TITLE_MIN_COMPACT_DP else TITLE_MIN_DP
         return (totalDp - pad - back - 12f - title).coerceAtLeast(BUTTON_DP)

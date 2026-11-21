@@ -122,12 +122,15 @@ fun VideoPlayerTopBar(
 ) {
     // OL-7: the buttons get exactly the room they use, at the trailing edge; the title takes the rest.
     val aligned = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_ALIGN)
+    // OL-7-EDGE: icon buttons already carry a 4 dp inset (40 dp inside their 48 dp touch target), so the bar
+    // uses Material 3's 4 dp app-bar side padding; with 12 dp the More icon sat 16 dp (icon 25 dp) from the edge.
+    val edgeDp = if (compact || (aligned && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_EDGE))) 4f else 12f
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-    val buttonsMaxDp = TopBarFit.buttonsWidth(maxWidth.value, compact)
+    val buttonsMaxDp = TopBarFit.buttonsWidth(maxWidth.value, compact, edgeDp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (compact) 4.dp else 12.dp, vertical = if (compact) 0.dp else 10.dp),
+            .padding(horizontal = edgeDp.dp, vertical = if (compact) 0.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Back
