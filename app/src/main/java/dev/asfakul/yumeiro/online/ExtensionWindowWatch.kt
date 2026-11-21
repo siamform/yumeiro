@@ -90,6 +90,8 @@ object ExtensionWindowWatch {
         val action = ExtensionPopups.decide(
             kind, ExtensionPopups.mode.value, ExtensionPopups.playerOnScreen,
             ExtensionPopups.rateOk(ExtensionPopups.lastCard(key), System.currentTimeMillis()),
+            userTyping = kind == ExtensionPopups.Kind.FUNCTIONAL &&
+                dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EXT_HOLD_WHILE_TYPING) && appTyping(root),
         )
         Log.i(TAG, "window from $name: $kind -> $action texts=${snap.texts.take(3)}")
         when (action) {
@@ -97,9 +99,20 @@ object ExtensionWindowWatch {
             ExtensionPopups.Action.DROP -> conceal(root, lp)
             ExtensionPopups.Action.HOLD_AND_CARD, ExtensionPopups.Action.HOLD_DEFERRED -> {
                 conceal(root, lp)
-                ExtensionPopups.hold(key, name, snap, root, deferredCard = action == ExtensionPopups.Action.HOLD_DEFERRED)
+                ExtensionPopups.hold(key, name, snap, root, deferredCard = action == ExtensionPopups.Action.HOLD_DEFERRED,
+                    functional = kind == ExtensionPopups.Kind.FUNCTIONAL)
             }
         }
+    }
+
+    /**
+     * True when another root window of ours (the app's, a sheet's) has the keyboard up or an editor in focus.
+     * Main thread, a few field reads per window; no disk, network or regex.
+     */
+    private fun appTyping(newWindow: View): Boolean = roots().any { r ->
+        if (r === newWindow || !r.isAttachedToWindow) return@any false
+        val imeUp = Build.VERSION.SDK_INT >= 30 && r.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true
+        imeUp || (r.hasWindowFocus() && r.findFocus()?.onCheckIsTextEditor() == true)
     }
 
     private fun conceal(root: View, lp: WindowManager.LayoutParams) {

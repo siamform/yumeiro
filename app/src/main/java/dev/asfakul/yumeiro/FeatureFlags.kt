@@ -93,6 +93,8 @@ object FeatureFlags {
         FE5_FEED_WARM("fe5_feed_warm", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
+        /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */
+        EXT_HOLD_WHILE_TYPING("ext_hold_while_typing", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null
