@@ -93,7 +93,8 @@ import kotlinx.coroutines.sync.withPermit
 private sealed interface ProviderHome {
     data object Loading : ProviderHome
     data class Ready(val rows: List<OnlineRow>) : ProviderHome
-    data class Failed(val message: String) : ProviderHome
+    /** [fix]: B-32 diagnosis of an empty home (browser check, moved site, out-of-date extension…). */
+    data class Failed(val message: String, val fix: dev.asfakul.yumeiro.online.EmptyHome.Diagnosis? = null) : ProviderHome
 }
 
 /**
@@ -232,8 +233,13 @@ fun OnlineHomeScreen(
             val fresh = result.getOrNull()
             // A failed or empty answer keeps what is on screen (see YumixFeed.homeAfterFetch).
             val rows = YumixFeed.homeAfterFetch(prev, fresh)
+            // B-32: an empty answer with no error used to say only "Nothing came back from this
+            // extension"; the site is checked once and the real reason is shown.
+            val diagnosis = if (rows == null && result.exceptionOrNull() == null && runCatching { api.hasMainPage }.getOrDefault(false))
+                dev.asfakul.yumeiro.online.EmptyHome.probe(api, dev.asfakul.yumeiro.network.NetworkClient.get()) else null
+            if (!isActive) return@async false
             homes[name] = if (rows != null) ProviderHome.Ready(rows)
-                else ProviderHome.Failed(result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension")
+                else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension", diagnosis)
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
             if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
                 val live = gate.withPermit { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
@@ -548,6 +554,7 @@ fun OnlineHomeScreen(
                         rows = (h as? ProviderHome.Ready)?.rows,
                         loading = h == null || h is ProviderHome.Loading,
                         error = (h as? ProviderHome.Failed)?.message,
+                        errorFix = (h as? ProviderHome.Failed)?.fix,
                         listState = listState,
                         strip = { ActiveFilterBar(name, onChange = { showFilter = true }, onClear = { selected = null }) },
                         onSearch = onOpenSearch,

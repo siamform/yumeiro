@@ -95,7 +95,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                 if (api.hasMainPage) {
                     val rows = OnlineRepository.home(api, force = true)
                     val n = rows.sumOf { it.items.size }
-                    if (n > 0) Health(true, System.currentTimeMillis() - t0, "$n titles on home") else Health(false, System.currentTimeMillis() - t0, "Home page is empty")
+                    if (n > 0) Health(true, System.currentTimeMillis() - t0, "$n titles on home") else Health(false, System.currentTimeMillis() - t0, dev.asfakul.yumeiro.online.EmptyHome.probe(api, dev.asfakul.yumeiro.network.NetworkClient.get()).message) // B-32
                 } else {
                     val r = dev.asfakul.yumeiro.online.ExtensionCall.bounded(25_000) { api.search("the", 1) }?.items.orEmpty()
                     if (r.isNotEmpty()) Health(true, System.currentTimeMillis() - t0, "${r.size} search results") else Health(false, System.currentTimeMillis() - t0, "Search returned nothing")
