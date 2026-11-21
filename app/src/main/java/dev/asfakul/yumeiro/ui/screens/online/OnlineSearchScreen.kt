@@ -73,6 +73,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private sealed interface ProviderResult {
     data object Searching : ProviderResult
@@ -99,8 +100,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     // 18+ off: adult-only extensions that are still installed (18+ was on earlier) are not searched,
     // and NSFW-typed items from mixed sources are dropped. With 18+ on (private or not) search finds them.
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
-    val providers = remember(engine.generation, engine.ready, adultOn) {
-        if (!engine.ready) emptyList()
+    // SPEED-4: search starts with the extensions loaded so far (engine.usable), like Yumix; before it waited for
+    // every installed extension to load (engine.ready).
+    val providers = remember(engine.generation, engine.usable, adultOn) {
+        if (!engine.usable) emptyList()
         else ExtensionManager.providers().filter { adultOn || !dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }
     }
 
@@ -128,7 +131,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     // Keyed on the *names* of the sources: a new engine snapshot (another extension finished
     // loading) used to clear the results mid-search and start over.
     val providerNames = remember(providers) { providers.map { it.name }.sorted() }
-    LaunchedEffect(submitted, providerNames, attempt) {
+    // SPEED-4: the search is keyed on the words only. Extensions that finish loading during a search join it
+    // (SearchJoin.plan); before, every newly loaded extension cancelled the whole search and started it again.
+    val latestProviders = androidx.compose.runtime.rememberUpdatedState(providers)
+    LaunchedEffect(submitted, attempt, providerNames.isEmpty()) {
         val key = "$submitted|" + providerNames.joinToString(",")
         // Retry always asks again; otherwise a finished search for the same words is reused.
         if (attempt == 0 && submitted.isNotBlank() && OnlineSearchMemory.key == key && OnlineSearchMemory.results.values.none { it is ProviderResult.Searching }) {
@@ -137,14 +143,30 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         }
         results.clear()
         if (submitted.isBlank() || providers.isEmpty()) return@LaunchedEffect
-        providers.forEach { results[it.name] = ProviderResult.Searching }
         SearchHistory.add(context, submitted); history.clear(); history.addAll(SearchHistory.load(context))
-        OnlineRepository.search(submitted, providers).collect { u ->
-            results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
-                else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
+        val q = submitted
+        val started = mutableSetOf<String>()
+        kotlinx.coroutines.coroutineScope {
+            androidx.compose.runtime.snapshotFlow { latestProviders.value }.collect { now ->
+                val step = dev.asfakul.yumeiro.online.SearchJoin.plan(started, now.map { it.name })
+                step.drop.forEach { results.remove(it); started.remove(it) }
+                val batch = now.filter { it.name in step.start }
+                if (batch.isEmpty()) return@collect
+                started += step.start
+                batch.forEach { results[it.name] = ProviderResult.Searching }
+                launch {
+                    OnlineRepository.search(q, batch).collect { u ->
+                        if (u.api !in started) return@collect
+                        results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
+                            else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
+                        if (results.values.none { it is ProviderResult.Searching }) {
+                            OnlineSearchMemory.key = "$q|" + results.keys.sorted().joinToString(",")
+                            OnlineSearchMemory.results = results.toMap()
+                        }
+                    }
+                }
+            }
         }
-        OnlineSearchMemory.key = key
-        OnlineSearchMemory.results = results.toMap()
     }
 
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {

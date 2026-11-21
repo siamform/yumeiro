@@ -5,9 +5,10 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 16:50 +06, branch `r15-stability` head after commit "docs: live handover" (see `git log -1`).
+2026-11-21 17:05 +06, branch `r15-stability` head after commit "docs: live handover" (see `git log -1`).
 
 ## Done today (2026-11-21), newest first
+- SPEED-3/4: extensions load fastest-first; search starts with loaded extensions and late ones join (no restart).
 - SPEED-1/2: cached homes and searches skip the permit queue; Home and search fastest-first (ledger row SPEED-1 / SPEED-2).
 - E4 part 1 `b640f68d`: ExtensionSpeed (fastest-first Yumix home order, quarantine 3 fails / 6 h), flag `e4_speed_order`.
 - B-31 seek fix `e451b783`: abandoned window's deadlines dropped on seek (finding B31-SEEK from device 44879268223).
@@ -23,6 +24,8 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
+- CI 44881403329 ab/speed34-before (expect compile fail: SearchJoin / loadOrder 5 args).
+- NOT yet covered by a pass-after: SPEED-3/4 (commit after 4a58cb22). Dispatch r15-stability CI when 44881247581 ends.
 - CI 44881206020 ab/speed12-before (expect compile fail: cachedHome unresolved).
 - CI 44880750191 ab/e4-before (expect compile fail: ExtensionSpeed unresolved).
 - Device 44880554878 BuiltinTorrentDeviceTest both phones @e451b783 (seek fix + notice gate).

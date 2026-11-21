@@ -50,4 +50,11 @@ class ExtensionSpeedTest {
         assertEquals(listOf("C", "A", "B", "D"), ExtensionSpeed.order(names, { it }, "C", { null }, now))
         assertEquals(names, ExtensionSpeed.order(names, { it }, null, { null }, now))
     }
+
+    /** SPEED-3: extensions load pinned first, then fastest-first, quarantined last. */
+    @Test fun startupLoadOrderIsPinnedThenFastestThenQuarantined() {
+        val stats = mapOf("Fast" to Stat(700, 0, 0), "Slow" to Stat(12_000, 0, 0), "Dead" to Stat(300, 4, now - 10))
+        val got = StartupSpeed.loadOrder(listOf("Slow", "Dead", "Pin", "New", "Fast"), { it }, listOf("Pin"), { stats[it] }, now)
+        assertEquals(listOf("Pin", "Fast", "New", "Slow", "Dead"), got)
+    }
 }

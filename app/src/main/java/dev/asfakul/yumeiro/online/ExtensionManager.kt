@@ -216,7 +216,10 @@ object ExtensionManager {
             // SPD-1 (ADR-038): the feed used to wait here for every extension. Each one is published as soon
             // as it is loaded (pinned first), and the next files are opened while the current one loads.
             val pins = runCatching { PinnedExtensions.init(context); PinnedExtensions.pins.value }.getOrDefault(emptyList())
-            val order = StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
+            val order = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) {
+                runCatching { ExtensionSpeed.init(context) }
+                StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins, ExtensionSpeed::stat, System.currentTimeMillis())
+            } else StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
             StartupSpeed.loadProgressively(
                 order,
                 ahead = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 2 else 4,
