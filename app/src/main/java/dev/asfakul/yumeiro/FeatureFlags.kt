@@ -73,6 +73,8 @@ object FeatureFlags {
         TAB_NEXT_FRAME("gate1_tab_next_frame", true),
         /** GATE-1-RENDER: a short while after start, a tiny canvas under the app draws the first screens' primitives one group per frame, so their GPU programs compile before the first tap. */
         SHADER_PREWARM("gate1_shader_prewarm", true),
+        /** GATE-1-RENDER-2: the Yumix feed opens with its sections added one per frame, top to bottom (a list reopened scrolled down shows all at once). */
+        FEED_STAGED_REVEAL("gate1_feed_staged_reveal", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

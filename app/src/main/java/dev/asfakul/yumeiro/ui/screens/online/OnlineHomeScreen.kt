@@ -530,7 +530,9 @@ fun OnlineHomeScreen(
                             }
                         }
                     }
-                    val nearEnd by remember { derivedStateOf { val info = listState.layoutInfo; val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0; info.totalItemsCount > 0 && last >= info.totalItemsCount - 6 } }
+                    val stagedOn = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FEED_STAGED_REVEAL) }
+                    val staged = dev.asfakul.yumeiro.ui.components.rememberStagedCount(stagedOn, listState)
+                    val nearEnd by remember { derivedStateOf { val info = listState.layoutInfo; val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0; info.totalItemsCount > 0 && last >= info.totalItemsCount - 6 && staged.intValue == dev.asfakul.yumeiro.ui.components.StagedReveal.ALL } }
                     LaunchedEffect(nearEnd, groups.size, ready.size, exploreItems.size, exploreBusy) {
                         if (!nearEnd) return@LaunchedEffect
                         when {
@@ -548,44 +550,46 @@ fun OnlineHomeScreen(
                     val exploreSnap = exploreItems.toList()
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
+                    // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
-                        if (cats.isNotEmpty()) item("categories") {
+                        val st = dev.asfakul.yumeiro.ui.components.StagedList(this, staged.intValue)
+                        if (cats.isNotEmpty()) st.item("categories") {
                             CategoryBar(cats, cat, onPick = { cat = it })
                         }
                         if (catItems != null) {
-                            items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
+                            st.items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
                         } else {
-                        if (banner.first.isNotEmpty() || resume != null) item("hero") {
+                        if (banner.first.isNotEmpty() || resume != null) st.item("hero") {
                             HeroCarousel(banner.first, onPlay = openItem, onInfo = openInfo, resume = resume, onResume = { onOpenTitle(it.toItem()) }, newKeys = banner.second)
-                        } else if (loadingNames.isNotEmpty()) item("hero_skel") {
+                        } else if (loadingNames.isNotEmpty()) st.item("hero_skel") {
                             dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), RoundedCornerShape(24.dp))
                         }
-                        if (continueItems.isNotEmpty()) item("continue") {
+                        if (continueItems.isNotEmpty()) st.item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
                         }
                         val saved = bookmarks.filter { b -> providers.any { it.name == b.api } }.distinctBy { it.api + "|" + it.url }
                         // F-09: My List holds listed titles; Favorites get their own shelf (a Favorite can be in both).
                         val mine = saved.filter { it.listed }
                         val favorites = saved.filter { it.favorite }
-                        if (mine.isNotEmpty()) item("mylist") {
+                        if (mine.isNotEmpty()) st.item("mylist") {
                             PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
-                        if (favorites.isNotEmpty()) item("favorites") {
+                        if (favorites.isNotEmpty()) st.item("favorites") {
                             PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         // F-08: one compact entry to the release calendar (kill switch FeatureFlags.UPCOMING).
-                        if (onOpenUpcoming != null && upcomingOn) item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
-                        if (picks.isNotEmpty()) item("feed_label") {
+                        if (onOpenUpcoming != null && upcomingOn) st.item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
+                        if (picks.isNotEmpty()) st.item("feed_label") {
                             PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
-                        if (latest.isNotEmpty()) item("latest") {
+                        if (latest.isNotEmpty()) st.item("latest") {
                             PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         groups.forEach { g ->
                             // Round 2, order 4: no "extension name + View" header between sections; the
                             // shelf's small subtitle says which extension it is from.
                             g.rows.forEachIndexed { i, row ->
-                                item("grp_${g.name}_${i}_${row.title}", contentType = "shelf") {
+                                st.item("grp_${g.name}_${i}_${row.title}", contentType = "shelf") {
                                     PosterShelf(
                                         row.title, subtitle = g.name, items = row.items, horizontal = row.horizontal,
                                         onClick = openInfo, onSeeAll = if (row.pageData != null) ({ onOpenRow(row) }) else ({ selected = g.name }),
@@ -594,33 +598,33 @@ fun OnlineHomeScreen(
                             }
                         }
                         if (groupsDone && exploreSnap.isNotEmpty()) {
-                            item("explore_h") {
+                            st.item("explore_h") {
                                 dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} extensions", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
                             }
-                            items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
+                            st.items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
                                 val wide = r.first().second
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("explore_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     r.forEach { (item, _) -> dev.asfakul.yumeiro.ui.feed.FeedSlot("ex_" + r.first().first.key) { PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) } }
                                     repeat((if (wide) 2 else 3) - r.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
-                            if (exploreBusy || exploreLimit < exploreSnap.size) item("explore_more") { PosterGridSkeleton(1) }
-                            else if (!exploreMore) item("explore_end") {
+                            if (exploreBusy || exploreLimit < exploreSnap.size) st.item("explore_more") { PosterGridSkeleton(1) }
+                            else if (!exploreMore) st.item("explore_end") {
                                 Text("You've reached the end. Pull down to refresh.", color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
                             }
                         }
-                        if (loadingNames.isNotEmpty()) item("feed_loading") {
+                        if (loadingNames.isNotEmpty()) st.item("feed_loading") {
                             Column { SectionHeader("Loading ${loadingNames.size} more extension${if (loadingNames.size == 1) "" else "s"}…"); PosterGridSkeleton() }
                         }
                         val failed = providers.filter { homes[it.name] is ProviderHome.Failed }
-                        if (failed.isNotEmpty()) item("feed_failed") {
+                        if (failed.isNotEmpty()) st.item("feed_failed") {
                             ProviderProblem(
                                 if (failed.size == 1) failed[0].name else "${failed.size} extensions didn't load",
                                 failed.joinToString(" · ") { it.name }.take(160),
                             ) { scope.launch { supervisorScope { failed.forEach { api -> launch { loadOne(api, true) } } } } }
                         }
                         val searchOnly = providers.filter { !runCatching { it.hasMainPage }.getOrDefault(false) }
-                        if (searchOnly.isNotEmpty()) item("search_only") {
+                        if (searchOnly.isNotEmpty()) st.item("search_only") {
                             SearchOnlyCard(YumixFeed.searchOnlyLabel(searchOnly.map { it.name }), onOpenSearch)
                         }
                         }
