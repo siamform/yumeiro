@@ -686,6 +686,7 @@ fun MTPlayerApp(
             ) {
                 // No tab swipes under the full-screen video or Now Playing.
                 val tabSwipeEnabled = (activePlayingVideo == null || videoMinimized) && !isNowPlayingExpanded
+                val nextFramePages = remember { dev.asfakul.yumeiro.ui.components.NextFramePages(dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.TAB_NEXT_FRAME)) }
                 val tabPage: @Composable (Int) -> Unit = { page ->
                     when (pageItems[page].route) {
                         Screen.Home.route -> {
@@ -1060,7 +1061,11 @@ fun MTPlayerApp(
                                             else if (focusedTabPage.intValue == page) focusedTabPage.intValue = -1
                                         },
                                     propagateMinConstraints = true,
-                                ) { tabPage(page) } else tabPage(page)
+                                ) { tabPage(page) } else {
+                                    // GATE-1-VIDEOS-LOWRAM: the jump frame composes the page, its content comes a frame later.
+                                    val waitFrame = remember { nextFramePages.deferNext() }
+                                    dev.asfakul.yumeiro.ui.components.NextFramePage(waitFrame) { tabPage(page) }
+                                }
                             }
                             val railPad = if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
