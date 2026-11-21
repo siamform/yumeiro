@@ -100,14 +100,16 @@ class MainThreadStallRealClockDeviceTest {
             }, "yu-gate1-real").apply { start() }
             try {
                 SystemClock.sleep(4_000) // Home
-                tap("Videos"); SystemClock.sleep(6_000)
-                tap("Source:"); SystemClock.sleep(1_500)
-                tap("Yumix"); SystemClock.sleep(6_000)
-                tap("Source:"); SystemClock.sleep(1_500)
-                tap("YouTube"); SystemClock.sleep(6_000)
-                tap("Source:"); SystemClock.sleep(1_500)
-                tap("Live TV"); SystemClock.sleep(6_000)
-                tap("Home"); SystemClock.sleep(5_000)
+                // GATE-1-ANR-T4: each step checks it landed and taps once more if the tap was lost
+                // (44940680034: Videos tapped during a 1.5 s wait, Home stayed on screen).
+                step("Videos") { find("Source:") != null }; SystemClock.sleep(6_000)
+                step("Source:") { menuOpen() }; SystemClock.sleep(1_500)
+                step("Yumix") { pillSays("Yumix") }; SystemClock.sleep(6_000)
+                step("Source:") { menuOpen() }; SystemClock.sleep(1_500)
+                step("YouTube") { pillSays("YouTube") }; SystemClock.sleep(6_000)
+                step("Source:") { menuOpen() }; SystemClock.sleep(1_500)
+                step("Live TV") { pillSays("Live TV") }; SystemClock.sleep(6_000)
+                step("Home") { find("Source:") == null }; SystemClock.sleep(5_000)
                 // DETECTOR CHECK (ab/gate1anr-before only): block the main thread 12 s while an input waits.
                 main.post { log("GATE1_FORCED_BLOCK start"); SystemClock.sleep(12_000) }
                 SystemClock.sleep(500); FirstRun.shell("input tap 20 300"); SystemClock.sleep(16_000)
@@ -191,6 +193,35 @@ class MainThreadStallRealClockDeviceTest {
         }
         "${root.packageName}: " + out.joinToString(" | ")
     }.getOrElse { "read failed: $it" }
+
+    /** Taps [text]; when [landed] is not true within 8 s, taps once more and waits 10 s. */
+    private fun step(text: String, landed: () -> Boolean) {
+        tap(text)
+        if (waitFor(8_000, landed)) return
+        log("step '$text' did not land; tapping again · ${texts()}")
+        tap(text)
+        if (!waitFor(10_000, landed)) throw AssertionError("tapping '$text' twice did not land · ${texts()}")
+    }
+
+    /** The Source pill's description, e.g. "Source: Yumix. Menu open". */
+    private fun pillDesc(): String? {
+        reading.set(true)
+        try {
+            val q = ArrayDeque<AccessibilityNodeInfo>().apply { addAll(allRoots().ifEmpty { listOfNotNull(inst.uiAutomation.rootInActiveWindow) }) }
+            var seen = 0
+            while (q.isNotEmpty() && seen < 5_000) {
+                val n = q.removeFirst(); seen++
+                n.contentDescription?.toString()?.takeIf { it.startsWith("Source:") }?.let { return it }
+                for (i in 0 until n.childCount) n.getChild(i)?.let(q::add)
+            }
+            return null
+        } finally {
+            SystemClock.sleep(300)
+            reading.set(false)
+        }
+    }
+    private fun menuOpen(): Boolean = pillDesc()?.endsWith("Menu open") == true
+    private fun pillSays(label: String): Boolean = pillDesc().let { it != null && it.startsWith("Source: $label.") && !it.endsWith("Menu open") }
 
     private fun tap(text: String) {
         val r = find(text) ?: run { waitFor(10_000) { find(text) != null }; find(text) } ?: throw AssertionError("no '$text' on screen · ${texts()}")
