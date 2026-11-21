@@ -100,6 +100,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-50 | F-03: a TeraBox / DiskWala share link | Owner/community test (pending) |
 | OMT-51 | F-11: manga auto-translation on a real chapter | Owner/community test (pending) |
 | OMT-52 | F-AIR: airing alert on a Firebase phone (after the Worker deploy) | Owner/community test (pending) |
+| OMT-63 | F-02 login: your own Telegram account, private chats, video + audio play and download | Owner/community test (pending; flag f02_telegram_login off until it passes) |
 | OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
 | OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
@@ -898,4 +899,18 @@ On a phone and on the TV, after updating from 1.8.1:
 7. The Inbox shows one "What's new in 1.9" note that names these pages (only after an update, not a fresh install).
 
 Passes if every step shows what it says, Back returns to Settings each time, and search finds each page.
+
+### OMT-63 — Your own Telegram account (F-02 login)
+
+On a phone with a debug build that has the Telegram keys, and the flag `f02_telegram_login` turned on (no menu for flags: `adb shell run-as dev.asfakul.yumeiro` and set `f02_telegram_login` to true in shared_prefs/feature_flags.xml, or ask the agent for a build with it on):
+
+1. Sources & accounts → Telegram & web sites → "Your Telegram account". The first time, a bar shows "Downloading Telegram support" and reaches 100 %.
+2. Type your number (paste works), tap Next. Type the code Telegram sends to your other device. If you have a cloud password, type it.
+3. Your chats appear: a private channel you joined, a group, and a public channel. The search box filters them.
+4. Open each one. Videos and audio files (music, voice notes) are listed; search finds a file by name.
+5. Tap a video: it plays in Yumeiro's player and seeking forward works. Tap an audio file: it plays.
+6. Tap Download on one video and one audio file. Both appear in Downloads and play with the phone in airplane mode.
+7. Close and reopen the app: you are still signed in. Log out from the account screen: you are back at the phone step.
+
+Passes if every step does what it says. Note: a download started from Telegram can't resume after the app is closed; start it again from the chat.
 

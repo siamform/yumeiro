@@ -37,7 +37,7 @@ object TgAccounts {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     /** Device tests sign in on Telegram's test servers (no real account, no SMS). */
     @Volatile internal var useTestDc = false
-    val server: LocalStreamServer by lazy { LocalStreamServer() }
+    val server: LocalStreamServer get() = LocalStreamServer.shared
 
     /** Shown at all: keys in this build, flag on, an engine published for this ABI. */
     fun enabled(context: Context): Boolean =

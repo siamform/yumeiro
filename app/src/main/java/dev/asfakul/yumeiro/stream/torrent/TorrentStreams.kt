@@ -1,0 +1,145 @@
+/*
+ * Yumeiro — Copyright (C) 2026 siamform
+ * Licensed under the GNU General Public License v3.0 or later. See LICENSE and TRADEMARKS.md.
+ * Do not remove or alter this notice.
+ */
+package dev.asfakul.yumeiro.stream.torrent
+
+import android.content.Context
+import dev.asfakul.yumeiro.DeviceClass
+import dev.asfakul.yumeiro.FeatureFlags
+import dev.asfakul.yumeiro.stream.local.LocalStreamServer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
+import java.io.IOException
+import java.net.URLEncoder
+
+/**
+ * B-31 / ADR-053: the built-in torrent player path. One engine and one loopback server for the app's life (no
+ * TorrServer, no per-link setup): [open] turns any magnet, bare info-hash or .torrent URL into a local
+ * `http://127.0.0.1:<port>/s/<token>/<name>` URL that Yumeiro's player, external players and downloads read like
+ * a web file. Only the chosen file downloads; it waits for at most [META_WAIT_MS] for a magnet's metadata.
+ * Pieces stay in the app's cache (oldest torrents removed above [cacheBudget]) with resume data, so a replay starts
+ * from what is already here. A torrent nobody read for [IDLE_MS] is paused (no seeding in the background).
+ */
+object TorrentStreams {
+    const val META_WAIT_MS = 90_000L
+    const val IDLE_MS = 120_000L
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var core: TorrentCore? = null
+    private val active = HashMap<String, TorrentSource>()
+    private val idleJobs = HashMap<String, Job>()
+    val server: LocalStreamServer get() = LocalStreamServer.shared
+    /** Tests swap the core so no native code runs on the JVM. */
+    @Volatile internal var coreFactory: (Boolean) -> TorrentCore = { LtCore(it) }
+
+    class Opened(val url: String, val name: String, val size: Long, val hash: String)
+
+    fun enabled(context: Context): Boolean = FeatureFlags.on(context, FeatureFlags.Flag.BUILTIN_TORRENT) && TorrentEngine.available()
+
+    fun cacheBudget(lowEnd: Boolean): Long = if (lowEnd) 2L shl 30 else 4L shl 30
+
+    /** Plain words for the player's error card; never the raw link. */
+    class TorrentFailure(message: String) : IOException(message)
+
+    suspend fun open(context: Context, link: String, title: String?, http: OkHttpClient): Opened = withContext(Dispatchers.IO) {
+        val app = context.applicationContext
+        if (!TorrentEngine.ensure(app, http)) throw TorrentFailure((TorrentEngine.state.value as? TorrentEngine.State.Failed)?.message ?: "The torrent engine didn't start.")
+        val lowEnd = DeviceClass.lowEnd
+        val c = core ?: synchronized(this@TorrentStreams) { core ?: coreFactory(lowEnd).also { core = it } }
+        val root = File(app.cacheDir, "torrents")
+        val known = TorrentPlan.infoHash(link)
+        val magnet = known?.let { h -> if (link.trim().startsWith("magnet:?", true)) link.trim() else "magnet:?xt=urn:btih:$h" }
+        val hash = when {
+            known != null && magnet != null -> {
+                val resume = File(root, "$known.resume")
+                (if (resume.isFile) runCatching { c.addResume(resume.readBytes(), root) }.getOrNull() else null)
+                    ?: c.addMagnet(TorrentPlan.withTrackers(magnet), root)
+            }
+            link.trim().startsWith("http", true) -> {
+                val bytes = http.newCall(Request.Builder().url(link.trim()).build()).execute().use { r ->
+                    if (!r.isSuccessful) throw TorrentFailure("The .torrent file didn't download (HTTP ${r.code}).")
+                    val body = r.body
+                    if (body.contentLength() > MAX_TORRENT_FILE) throw TorrentFailure("That .torrent file is too large.")
+                    body.byteStream().readNBytesCompat(MAX_TORRENT_FILE + 1).also { if (it.size > MAX_TORRENT_FILE) throw TorrentFailure("That .torrent file is too large.") }
+                }
+                runCatching { c.addTorrentFile(bytes, root) }.getOrElse { throw TorrentFailure("That isn't a valid .torrent file.") }
+            }
+            else -> throw TorrentFailure("That isn't a torrent link.")
+        }
+        synchronized(this@TorrentStreams) { active.keys.filter { it != hash }.forEach { pauseNow(c, it, root) } }
+        c.resume(hash)
+        val meta = awaitMeta(c, hash)
+        val file = TorrentPlan.pickFile(meta.files, TorrentPlan.selectOnly(link), title) ?: throw TorrentFailure("This torrent has no playable file.")
+        c.onlyFile(hash, file.index, meta.files.size)
+        val source = TorrentSource(c, meta, file, TorrentPlan.readAheadBytes(lowEnd)) { touch(c, hash, root) }
+        source.prime()
+        synchronized(this@TorrentStreams) { active.put(hash, source)?.close() }
+        touch(c, hash, root)
+        scope.launch { evict(root, keep = hash, budget = cacheBudget(lowEnd)) }
+        val name = file.path.substringAfterLast('/')
+        Opened(server.publish(source) + "/" + URLEncoder.encode(name, "UTF-8").replace("+", "%20"), name, file.size, hash)
+    }
+
+    private fun awaitMeta(c: TorrentCore, hash: String): TorrentMeta {
+        val deadline = System.currentTimeMillis() + META_WAIT_MS
+        synchronized(c.signal) {
+            while (true) {
+                c.meta(hash)?.let { return it }
+                c.error(hash)?.let { throw TorrentFailure("The torrent failed: $it") }
+                val left = deadline - System.currentTimeMillis()
+                if (left <= 0) throw TorrentFailure(
+                    if (c.stats(hash).first == 0) "No peers found for this torrent. It may have no seeders right now." else "Peers were found but didn't send the torrent's file list in time.",
+                )
+                c.signal.wait(minOf(left, 1_000))
+            }
+        }
+    }
+
+    private fun touch(c: TorrentCore, hash: String, root: File) {
+        synchronized(this) {
+            if (idleJobs[hash]?.isActive == true && System.nanoTime() - (lastTouch[hash] ?: 0L) < 5_000_000_000L) return
+            lastTouch[hash] = System.nanoTime()
+            idleJobs.remove(hash)?.cancel()
+            idleJobs[hash] = scope.launch { delay(IDLE_MS); synchronized(this@TorrentStreams) { pauseNow(c, hash, root) } }
+        }
+    }
+    private val lastTouch = HashMap<String, Long>()
+
+    private fun pauseNow(c: TorrentCore, hash: String, root: File) {
+        c.saveResume(hash, File(root, "$hash.resume"))
+        c.pause(hash)
+        idleJobs.remove(hash)?.cancel()
+        active.remove(hash)?.close()
+    }
+
+    /** Drops the oldest torrents (pieces + resume data) until the cache is under [budget]; never [keep]. */
+    internal fun evict(root: File, keep: String, budget: Long) {
+        val dirs = root.listFiles { f -> f.isDirectory && f.name != keep }.orEmpty().toList()
+        var total = dirs.sumOf { size(it) } + size(File(root, keep))
+        for (d in dirs.sortedBy { it.lastModified() }) {
+            if (total <= budget) break
+            total -= size(d)
+            d.deleteRecursively(); File(root, d.name + ".resume").delete()
+        }
+    }
+
+    private fun size(f: File): Long = if (!f.exists()) 0 else f.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+
+    private const val MAX_TORRENT_FILE = 8 * 1024 * 1024
+
+    private fun java.io.InputStream.readNBytesCompat(limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val b = ByteArray(16 * 1024)
+        while (out.size() < limit) { val n = read(b, 0, minOf(b.size, limit - out.size())); if (n < 0) break; out.write(b, 0, n) }
+        return out.toByteArray()
+    }
+}

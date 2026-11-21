@@ -1672,3 +1672,71 @@ Tests. Unit: `TgAuthTest` (every authorization state, wrong code, wrong password
 death resume), `TdEngineTest` (hash mismatch is never loaded, partial download is discarded). Device: the screens
 without an account; engine download + load + `getOption version` on api36, api33-lowram and TV; sign-in on Telegram's
 test servers (`use_test_dc`, test numbers 99966XYYYY) where the test environment allows it. Real account: owner list.
+
+### ADR-053: Built-in torrent engine: libtorrent (libtorrent4j), native part fetched once and pinned (B-31)
+
+Status: accepted 2026-11-21. Built, not tested on a device; the flag `BUILTIN_TORRENT` (`b31_builtin_torrent`) stays
+off until the device tests and the bars below pass.
+
+Context. Torrents play only through a TorrServer the user runs and types in (Settings › Network); with no server the
+link is handed to another app. The owner wants (2026-11-21): no TorrServer, one engine and one loopback server ready
+for the app's life, every magnet / info-hash / .torrent link plays, and faster download, start and seek where
+possible. Test hash BF2063A5E9A69F14716288FCA7C2D6078BDA7369. Bars (GOAL-TOP-OF-CLASS): first frame <= 15 s, seek <= 5 s
+on a healthy swarm; 2 GB phone and TV budgets.
+
+Competitors (read 2026-11-21).
+- CloudStream: streams torrents through TorrServer (YouROK/TorrServer, GPL-3.0, a Go program), downloaded on first use
+  after the user agrees, run on 127.0.0.1; its desktop port does the same with a pinned release checked by SHA-256
+  ([weaponlions/cloudstream#20](https://github.com/weaponlions/cloudstream/pull/20),
+  [recloudstream/cloudstream#3262](https://github.com/recloudstream/cloudstream/pull/3262)).
+- LibreTorrent (GPL-3.0): a full client on libtorrent4j; 4.1.1 went back to libtorrent4j 2.1.0-38 because -39 needs
+  Android 9 ([LibreTorrent 4.1.1](https://github.com/proninyaroslav/libretorrent/releases/tag/4.1.1)).
+- TorrServer itself: HTTP API, cache sized to the device; a separate process with its own port and settings.
+
+Options.
+(a) Bundle TorrServer's Go binary and run it as a child process: rejected. A second runtime (~20 MB per ABI), a
+    process Android may kill separately, its own HTTP API between us and the pieces, and GPL-3.0 code we would
+    have to keep in step; no piece-level control from the player.
+(b) libtorrent4j in the APK (Maven `libtorrent4j-android-<abi>` jars): works, but adds ~24 MB of native code to the
+    universal APK for everyone.
+(c) libtorrent4j's Java part (833 KB, pure Java) in the APK; the native library (~6 MB download, 14-17 MB on disk)
+    for the phone's ABI fetched once from Maven Central's own `libtorrent4j-android-<abi>` jar, both the jar and the
+    `.so` checked against SHA-256 values pinned in `TorrentEngine.PINS`, stored read-only in no-backup storage and
+    loaded through libtorrent4j's `libtorrent4j.jni.path` property: chosen. Same pattern as TDLib (ADR-052), no
+    hosting of our own, nothing unverified is ever loaded.
+
+Decision.
+- Versions: phone 2.1.0-39 (Android 9+, phone minSdk 28; OpenSSL 3.5.5, boost 1.90); TV 2.1.0-38 (Android 7, TV
+  minSdk 24), forced on `tv*Classpath` in app/build.gradle.kts. The pin set is chosen by the Java jar's own
+  `LibTorrent.libtorrent4jVersion()`, so a build can never load the other version's `.so`.
+- One `LtCore` (libtorrent session) for the app's life, started on the first torrent; DHT, LSD, PEX on; torrents
+  not auto-managed (libtorrent's queue never pauses the one playing); 80 connections and a 4 MB disk queue on a
+  low-end device (DeviceClass.lowEnd), 200 / 16 MB otherwise.
+- One loopback server (`LocalStreamServer.shared`, also used by Telegram): `TorrentStreams.open` returns
+  `http://127.0.0.1:<port>/s/<128-bit token>/<file name>`; Yumeiro's player, external players and downloads read it
+  like a web file with Range requests.
+- Speed: only the chosen file downloads (other files of a pack set to "don't download"); 12 open public trackers are
+  added to every magnet (private torrents never announce elsewhere); when a file opens, its first and last ~2 MB get
+  deadline 0 (MP4 `moov`, MKV cues); every read outside the current window sends deadlines for the read piece (0 ms)
+  and the read-ahead after it (+120 ms per piece; 24 MB on low-end, 64 MB otherwise), so libtorrent asks the fastest
+  peers first and a seek waits only for the pieces it needs. Reads sleep on the session's alert signal (piece
+  finished), never a timer.
+- File choice: BEP 53 `so=` (Stremio add-ons' `fileIdx` is now passed as `so=`), else the video whose name has the
+  title's SxxEyy, else the largest non-sample video, else the largest audio, else the largest file.
+- Cache: `cacheDir/torrents/<hash>` with resume data (`<hash>.resume`, info dictionary included), so a replay starts
+  from what is on disk with no metadata wait and no re-check. Oldest torrents are removed above 2 GB (low-end) / 4 GB;
+  the playing one never. A torrent nobody read for 2 minutes is paused and its resume data saved (no background
+  seeding); opening another torrent pauses the previous one.
+- Fallback: when the engine can't start or the torrent fails and a TorrServer address is set, TorrServer is used as
+  before; with no address the player shows the plain error ("No peers found for this torrent...").
+- Before the flag turns on (not built yet): a one-time notice on the first torrent ("Torrents share pieces with other
+  people, who can see your IP address. Use a VPN or proxy if that matters to you.") with Continue / Cancel, as
+  CloudStream asks before its first torrent session; the answer is kept per profile.
+- Licences: libtorrent4j MIT, libtorrent BSD-3 (docs/licenses/). The native library also contains Boost (BSL-1.0)
+  and OpenSSL (Apache-2.0), both permissive. No DRM, no auth bypass, nothing copied from GPL code.
+
+Tests. Unit: TorrentPlanTest (hash, `so=`, trackers, file pick, pieces, deadlines, window), TorrentEngineTest
+(install: both hashes and sizes, read-only, bad pins deleted; pins for both versions and all four ABIs),
+TorrentSourceTest (waits for the piece, stops at its end, seek moves the window, timeout / error),
+TorrentCacheTest (eviction never removes the playing torrent). Device (next): engine download + load on api36,
+api33-lowram and TV api24; test hash first frame and seek times against the bars; memory on api33-lowram.

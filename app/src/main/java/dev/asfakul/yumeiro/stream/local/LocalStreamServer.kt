@@ -145,6 +145,8 @@ class LocalStreamServer(private val maxConnections: Int = 6) {
     internal class Req(val method: String, val path: String, val range: String?)
 
     companion object {
+        /** B-31 owner add: one loopback server for the app's life, shared by Telegram and torrents. */
+        val shared: LocalStreamServer by lazy { LocalStreamServer(maxConnections = 8) }
         internal val INVALID = -1L to -1L
 
         /** Reads the request head (up to the blank line), at most 16 KB. */

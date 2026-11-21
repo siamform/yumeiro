@@ -379,6 +379,7 @@ dependencies {
   implementation(libs.rxjava)
   implementation(libs.nanohttpd)
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.libtorrent4j) // B-31 (ADR-053) Java part; TV pinned to 2.1.0-38 below
   implementation(libs.kotlinx.serialization.json.okio)
   implementation(libs.kotlinx.serialization.protobuf)
   // Mangayomi-style JavaScript sources
@@ -416,6 +417,17 @@ configurations.configureEach {
   resolutionStrategy.dependencySubstitution {
     substitute(module("com.github.teamnewpipe:NewPipeExtractor"))
       .using(module("com.github.TeamNewPipe:NewPipeExtractor:${libs.versions.newpipeExtractor.get()}"))
+  }
+}
+
+// B-31 (ADR-053): libtorrent4j 2.1.0-39 needs Android 9; the TV build (Android 7) uses 2.1.0-38. The native part
+// is fetched at runtime and its pin set follows LibTorrent.libtorrent4jVersion(), so each build loads its own .so.
+configurations.matching { it.name.startsWith("tv") && it.name.endsWith("Classpath") }.configureEach {
+  resolutionStrategy.eachDependency {
+    if (requested.group == "org.libtorrent4j") {
+      useVersion(libs.versions.libtorrent4jTv.get())
+      because("libtorrent4j 2.1.0-39 raised minSdk to 28; the TV build runs on Android 7")
+    }
   }
 }
 

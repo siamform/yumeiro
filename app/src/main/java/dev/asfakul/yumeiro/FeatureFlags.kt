@@ -48,6 +48,11 @@ object FeatureFlags {
          * device tests pass; also hidden when the build has no Telegram api_id or no engine for the phone's ABI.
          */
         TELEGRAM_LOGIN("f02_telegram_login", false),
+        /**
+         * B-31 (ADR-053): built-in torrent engine (libtorrent): magnets, info-hashes and .torrent links play without
+         * TorrServer. Off until the device tests pass; also hidden when no engine is pinned for the phone's ABI.
+         */
+        BUILTIN_TORRENT("b31_builtin_torrent", false),
         /** F-03 (ADR-042): an expired TeraBox / DiskWala stream is found again on its page and resumes at the same place. */
         CLOUD_CAPTURE_V2("cloud_capture_v2", true),
         /** F-11 (ADR-044): "Translate pages" in the manga reader (on-device OCR + translation). */

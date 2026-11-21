@@ -69,6 +69,20 @@ object StreamResolver {
             if (req != null) return@withContext Resolution.Playable(req, Sniff(MediaKind.VIDEO, "YouTube", "extractor"))
         }
         TorrentSettings.init(context.applicationContext)
+        // B-31 (ADR-053): the built-in engine plays torrents itself; TorrServer (if set) is the fallback.
+        val torrent = LinkHosts.classify(request.url) as? LinkHosts.Torrent
+        if (torrent != null && dev.asfakul.yumeiro.stream.torrent.TorrentStreams.enabled(context)) {
+            val opened = try {
+                dev.asfakul.yumeiro.stream.torrent.TorrentStreams.open(context, torrent.link, request.title, NetworkClient.get(context))
+            } catch (e: java.io.IOException) {
+                if (TorrentSettings.server.value.isBlank()) return@withContext Resolution.Failed("Torrent can't play", e.message ?: "The torrent didn't start.")
+                null
+            }
+            if (opened != null) return@withContext Resolution.Playable(
+                request.copy(url = opened.url, title = request.title.ifBlank { opened.name }, format = StreamFormat.PROGRESSIVE, pageUrl = request.pageUrl ?: torrent.link),
+                Sniff(MediaKind.VIDEO, "Torrent", "engine"),
+            )
+        }
         dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
         val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).

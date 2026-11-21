@@ -140,6 +140,7 @@ Next (2.1, owner 2026-11-21: no release until all is fixed and tested)
 - B-29 TeraBox full video (done in code), B-30 DiskWala hand-off (done in code), B-31 built-in torrent engine.
 - Owner goal 2026-11-21: Yumeiro at the top of its class (CloudStream, Hikari, Aniyomi, Nuvio). Matrix, bars and the G-01..G-10 gap rows (debrid, skip credits, seek previews, sync, MDBList, FCast, ...) in docs/GOAL-TOP-OF-CLASS.md; they follow the owner's order of work.
 - B-31 owner add 2026-11-21: the built-in engine is always ready (one engine and one loopback server for the app's life, no per-link setup, no TorrServer); every magnet, info-hash or .torrent link plays; and it should speed up download, playback start and seeking where possible (sequential + priority pieces around the play position, DHT/PEX/LSD and extra public trackers, peer and connection limits sized for a 2 GB phone and TV, resume data so a replay starts from cached pieces). Test hash BF2063A5E9A69F14716288FCA7C2D6078BDA7369.
+- B-31 status 2026-11-21: Built, not tested (ADR-053, flag `b31_builtin_torrent` off). Next: CI on head; device test with the test hash on api36, api33-lowram, TV api24 (first frame <= 15 s, seek <= 5 s, memory on 2 GB); then OMT for a real pack and a .torrent URL.
 - B-32 extensions that load nothing ("Nothing came back from this extension", e.g. HindiSubAnime): find the real cause and say it.
 - F-21 extension metadata rows, F-22 Upcoming filters + date sections.
 - E1 Yumeiro master extension (replaces the removed starters, B-26).

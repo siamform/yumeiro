@@ -79,7 +79,7 @@ object LinkHosts {
      * characters, optionally "urn:btih:" in front) as a magnet link, with an optional display name and trackers;
      * null for anything else (a URL, a magnet that is already one, plain text).
      */
-    fun magnetFromHash(text: String, name: String? = null, trackers: List<String> = emptyList()): String? {
+    fun magnetFromHash(text: String, name: String? = null, trackers: List<String> = emptyList(), fileIndex: Int? = null): String? {
         val raw = text.trim().let { if (it.startsWith("urn:btih:", ignoreCase = true)) it.substring(9) else it }
         if (!RX_BTIH_HEX.matches(raw) && !RX_BTIH_B32.matches(raw)) return null
         val hash = if (raw.length == 40) raw.lowercase() else raw.uppercase()
@@ -88,6 +88,8 @@ object LinkHosts {
             append("magnet:?xt=urn:btih:").append(hash)
             name?.trim()?.takeIf { it.isNotEmpty() }?.let { append("&dn=").append(enc(it.take(200))) }
             trackers.map { it.trim() }.filter { it.isNotEmpty() }.distinct().forEach { append("&tr=").append(enc(it)) }
+            // B-31: BEP 53 "select only", so a pack plays the episode the add-on chose (Stremio fileIdx).
+            fileIndex?.takeIf { it >= 0 }?.let { append("&so=").append(it) }
         }
     }
 

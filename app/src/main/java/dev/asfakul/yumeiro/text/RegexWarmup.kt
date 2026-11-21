@@ -123,6 +123,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.KvsPlayer",
         "dev.asfakul.yumeiro.stream.LinkHostsKt",
         "dev.asfakul.yumeiro.stream.LinkHosts", // T-1 info-hash patterns
+        "dev.asfakul.yumeiro.stream.torrent.TorrentPlan", // B-31 info-hash, episode in file names
         "dev.asfakul.yumeiro.stream.LiveCountry", // Live TV country filter
         "dev.asfakul.yumeiro.profiles.Profiles", // F-19 answer normalising
         "dev.asfakul.yumeiro.stream.M3uParser",

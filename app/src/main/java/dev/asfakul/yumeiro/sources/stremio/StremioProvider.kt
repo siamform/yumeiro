@@ -139,7 +139,7 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
                     val url = s.str("url") ?: s.str("infoHash")?.let { h ->
                         val trackers = (s["sources"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content }
                             .filter { it.startsWith("tracker:") }.map { it.removePrefix("tracker:") }
-                        dev.asfakul.yumeiro.stream.LinkHosts.magnetFromHash(h, s.str("title")?.substringBefore('\n'), trackers)
+                        dev.asfakul.yumeiro.stream.LinkHosts.magnetFromHash(h, s.str("title")?.substringBefore('\n'), trackers, (s["fileIdx"] as? JsonPrimitive)?.content?.toIntOrNull())
                     } ?: continue
                     val label = listOfNotNull(s.str("name"), s.str("title") ?: s.str("description")).joinToString(" · ").replace("\n", " ").ifBlank { a.name }
                     val headers = ((s["behaviorHints"] as? JsonObject)?.get("proxyHeaders") as? JsonObject)?.get("request")
