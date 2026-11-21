@@ -115,6 +115,14 @@ class DownloadTracksTest {
         assertTrue(joined.contains("Hi") && joined.contains("There"))
     }
 
+    @Test fun ol5_anyHeightTheStreamOffersIsKept() {
+        assertEquals("540p from a real playlist", 540, DownloadSettings.heightForPick(540, setting = 1080))
+        assertEquals(1440, DownloadSettings.heightForPick(1440, setting = 720))
+        assertEquals("Best", 0, DownloadSettings.heightForPick(0, setting = 480))
+        assertEquals("not picked = Settings", 1080, DownloadSettings.heightForPick(-1, setting = 1080))
+        assertEquals("nonsense = Settings", 480, DownloadSettings.heightForPick(99_999, setting = 480))
+    }
+
     @Test fun ol5_choicesAreSavedWithTheDownload() {
         val i = OnlineDownloads.Item(
             id = "x", title = "T", api = "Link", titleUrl = "", episodeLabel = null, posterUrl = null, posterHeaders = emptyMap(),
