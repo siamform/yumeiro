@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 18:10 +06, branch `r15-stability` head after commit "docs: device re-runs with the right class name" (see `git log -1`).
+2026-11-21 18:25 +06, branch `r15-stability` head after commit "docs: fail-befores SPEED-3/4 and B31-SEEK2 verified".
 
 ## Owner rule 2026-11-21 17:15 +06
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
@@ -24,7 +24,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
-- Fail-before verified: E4 44880750191, SPEED-1/2 44881206020 (branches deleted).
+- Fail-before verified: E4 44880750191, SPEED-1/2 44881206020, SPEED-3/4 44881403329, B31-SEEK2 44881530280
+  (branches deleted).
 - CI 44881247581 (@4a58cb22): failure, finding SPEED-T1 (test used an ERROR-level deprecated constructor); fixed.
 - Device 44880554878 (@e451b783, phones): notice gate Pass, first 64 KB Pass 8033 / 3192 ms, seek Fail 7566 / 10744 ms
   (B31-SEEK2). TV 44880575223 (api24): first 64 KB 5238 ms Pass, seek 12732 ms Fail (B31-SEEK2).
@@ -39,8 +40,6 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Pass-after CI 44882251682 (r15-stability, abi_splits=true): F-22, B-31 notice, E2, E3, B-31 seek, B31-SEEK2, E4,
   SPEED-1/2, SPEED-3/4. Do not dispatch another r15-stability CI while it runs.
 - SpeedDeviceTest baseline (`dev.asfakul.yumeiro.SpeedDeviceTest`): dispatch phones=both when a device slot frees (max two device runs).
-- CI 44881403329 ab/speed34-before (expect compile fail: SearchJoin / loadOrder 5 args).
-- CI 44881530280 ab/b31-seek2-before (expect compile fail: SEEK_GAP_MS unresolved).
 - B31-SEEK2 pass-after: next r15-stability CI. Device re-run BuiltinTorrentDeviceTest phones=both + TV api24 on head.
 
 ## Next steps, in order
