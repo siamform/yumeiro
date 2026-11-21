@@ -154,6 +154,44 @@ class TgAuthTest {
         } finally { scope.cancel() }
     }
 
+    // F-02 (device run 44876643230): real TDLib sends "waiting for code" before its "ok" to the phone request.
+    // A code typed in that gap must go through, not be dropped as a double tap with no error.
+    @Test fun codeRightAfterTheCodeScreenAppearsIsNotDropped() = runBlocking {
+        val gate = CountDownLatch(1)
+        val td = FakeTd { req ->
+            when (req.type()) {
+                "getOption" -> listOf(FakeTd.auth("authorizationStateWaitTdlibParameters"))
+                "setTdlibParameters" -> listOf(FakeTd.ok(req), FakeTd.auth("authorizationStateWaitPhoneNumber"))
+                "setAuthenticationPhoneNumber" -> {
+                    push(1, FakeTd.auth("authorizationStateWaitCode") {
+                        put("code_info", tdObject("authenticationCodeInfo") {
+                            put("phone_number", req.str("phone_number")); put("type", tdObject("authenticationCodeTypeSms") { put("length", 5) })
+                        })
+                    })
+                    gate.await(5, TimeUnit.SECONDS)
+                    listOf(FakeTd.ok(req))
+                }
+                "checkAuthenticationCode" -> listOf(FakeTd.ok(req), FakeTd.auth("authorizationStateReady"))
+                else -> listOf(FakeTd.ok(req))
+            }
+        }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        try {
+            val s = TgSession(TdHub(td, 0.05).newClient(), params(), scope)
+            withTimeout(5_000) { s.state.first { it == TgAuthState.WaitPhone } }
+            val phone = async(Dispatchers.IO) { s.submitPhone("+9996612345") }
+            withTimeout(5_000) { s.state.first { it is TgAuthState.WaitCode } }
+            assertTrue(s.busy.value) // the phone answer has not come yet
+            val code = async(Dispatchers.IO) { s.submitCode("22222") }
+            Thread.sleep(200)
+            gate.countDown()
+            assertTrue(phone.await())
+            assertTrue("code: " + s.error.value, code.await())
+            withTimeout(5_000) { s.state.first { it == TgAuthState.Ready } }
+            assertEquals(1, td.sentTypes().count { it == "checkAuthenticationCode" })
+        } finally { scope.cancel() }
+    }
+
     @Test fun changeNumberAndBack() = runBlocking {
         val td = script()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

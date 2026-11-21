@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -96,7 +98,7 @@ class TgSession(val client: TdClient, private val params: TgParams, private val 
     suspend fun submitPhone(input: String): Boolean {
         val phone = TgAuth.normalizePhone(input)
             ?: return fail("That phone number isn't valid. Include the country code, like +880…")
-        return act {
+        return act("phone") {
             client.call("setAuthenticationPhoneNumber") {
                 put("phone_number", phone)
                 put("settings", tdObject("phoneNumberAuthenticationSettings") {
@@ -112,26 +114,26 @@ class TgSession(val client: TdClient, private val params: TgParams, private val 
     suspend fun submitCode(input: String): Boolean {
         val code = TgAuth.normalizeCode(input)
         if (code.isEmpty()) return fail("Type the code Telegram sent you.")
-        return act { client.call("checkAuthenticationCode") { put("code", code) } }
+        return act("code") { client.call("checkAuthenticationCode") { put("code", code) } }
     }
 
-    suspend fun resendCode(): Boolean = act {
+    suspend fun resendCode(): Boolean = act("resend") {
         client.call("resendAuthenticationCode") { put("reason", tdObject("resendCodeReasonUserRequest")) }
     }
 
     suspend fun submitPassword(password: String): Boolean {
         if (password.isEmpty()) return fail("Type your Telegram password (two-step verification).")
-        return act { client.call("checkAuthenticationPassword") { put("password", password) } }
+        return act("password") { client.call("checkAuthenticationPassword") { put("password", password) } }
     }
 
     suspend fun register(firstName: String, lastName: String): Boolean {
         if (firstName.isBlank()) return fail("Type a first name.")
-        return act {
+        return act("register") {
             client.call("registerUser") { put("first_name", firstName.trim()); put("last_name", lastName.trim()); put("disable_notification", true) }
         }
     }
 
-    suspend fun logOut(): Boolean = act { client.call("logOut", timeoutMs = 60_000) }
+    suspend fun logOut(): Boolean = act("logout") { client.call("logOut", timeoutMs = 60_000) }
 
     /** Closes TDLib (screen gone for good, profile switch). The account stays signed in on disk. */
     fun close() {
@@ -141,19 +143,32 @@ class TgSession(val client: TdClient, private val params: TgParams, private val 
 
     private fun fail(text: String): Boolean { _error.value = text; return false }
 
-    private suspend fun act(block: suspend () -> Unit): Boolean {
-        if (!_busy.compareAndSet(false, true)) return false
-        _error.value = null
-        return try {
-            block(); true
-        } catch (e: TimeoutCancellationException) {
-            _error.value = TgAuth.errorText(e); false
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            _error.value = TgAuth.errorText(e); false
-        } finally {
-            _busy.value = false
+    private val gate = Mutex()
+    @Volatile private var running: String? = null
+
+    /**
+     * One request at a time. A second tap on the same step while it runs is ignored (double tap). Another
+     * step waits its turn: TDLib shows the next step before it answers the last request (device run
+     * 44876643230), so a code typed in that gap must not be dropped.
+     */
+    private suspend fun act(kind: String, block: suspend () -> Unit): Boolean {
+        if (running == kind) return false
+        return gate.withLock {
+            running = kind
+            _busy.value = true
+            _error.value = null
+            try {
+                block(); true
+            } catch (e: TimeoutCancellationException) {
+                _error.value = TgAuth.errorText(e); false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _error.value = TgAuth.errorText(e); false
+            } finally {
+                running = null
+                _busy.value = false
+            }
         }
     }
 }
