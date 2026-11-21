@@ -8,6 +8,7 @@ import dev.asfakul.yumeiro.online.telegram.td.TgAccounts
 import dev.asfakul.yumeiro.online.telegram.td.TgAuthState
 import dev.asfakul.yumeiro.online.telegram.td.TgLibrary
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.put
@@ -56,6 +57,13 @@ class TelegramLoginDeviceTest {
         val version = s.client.call("getOption") { put("name", "version") }["value"]?.toString()
         android.util.Log.i("F02", "tdlib version $version")
 
+        // Every state and error seen, for the failure message (no phone numbers or codes in it).
+        val seen = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val watch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            launch { s.state.collect { seen += "state=" + it.javaClass.simpleName } }
+            launch { s.error.collect { seen += "error=" + it } }
+            launch { s.busy.collect { seen += "busy=" + it } }
+        }
         var st = withTimeout(60_000) { s.state.first { it !is TgAuthState.Starting } }
         if (st is TgAuthState.Ready) { s.logOut(); st = withTimeout(60_000) { s.state.first { it is TgAuthState.WaitPhone } } }
         assertEquals(TgAuthState.WaitPhone, st)
@@ -63,14 +71,17 @@ class TelegramLoginDeviceTest {
         assertTrue("phone: " + s.error.value, s.submitPhone(phone))
         st = withTimeout(60_000) { s.state.first { it is TgAuthState.WaitCode || it is TgAuthState.WaitRegistration } }
         if (st is TgAuthState.WaitCode) {
-            assertTrue("code: " + s.error.value, s.submitCode("22222"))
+            val ok = s.submitCode("22222")
+            android.util.Log.i("F02", "after code: ok=$ok seen=$seen")
+            assertTrue("code: " + s.error.value + " seen=" + seen, ok)
             st = withTimeout(60_000) { s.state.first { it !is TgAuthState.WaitCode } }
         }
         if (st is TgAuthState.WaitRegistration) {
             assertTrue("register: " + s.error.value, s.register("Yumeiro", "Test"))
             st = withTimeout(60_000) { s.state.first { it !is TgAuthState.WaitRegistration } }
         }
-        assertEquals("error: " + s.error.value, TgAuthState.Ready, st)
+        assertEquals("error: " + s.error.value + " seen=" + seen, TgAuthState.Ready, st)
+        watch.cancel()
 
         val chats = withTimeout(60_000) { TgLibrary(s.client).chats() }
         android.util.Log.i("F02", "test account chats: " + chats.size)
