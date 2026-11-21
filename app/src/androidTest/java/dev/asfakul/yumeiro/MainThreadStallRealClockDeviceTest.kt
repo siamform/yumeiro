@@ -110,9 +110,9 @@ class MainThreadStallRealClockDeviceTest {
                 step("Source:") { menuOpen() }; SystemClock.sleep(1_500)
                 step("Live TV") { pillSays("Live TV") }; SystemClock.sleep(6_000)
                 step("Home") { find("Source:") == null }; SystemClock.sleep(5_000)
-                // DETECTOR CHECK (ab/gate1anr-before only): block the main thread 12 s while an input waits.
-                main.post { log("GATE1_FORCED_BLOCK start"); SystemClock.sleep(12_000) }
-                SystemClock.sleep(500); FirstRun.shell("input tap 20 300"); SystemClock.sleep(16_000)
+                // DETECTOR CHECK (ab/gate1anr-before only): block the main thread 60 s while two inputs wait (scaled timeout).
+                main.post { log("GATE1_FORCED_BLOCK start"); SystemClock.sleep(60_000) }
+                SystemClock.sleep(500); FirstRun.shell("input tap 20 300"); SystemClock.sleep(1_500); FirstRun.shell("input tap 40 320"); SystemClock.sleep(64_000)
             } finally {
                 running.set(false); dog.join(2_000)
             }
