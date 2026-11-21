@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -21,6 +22,7 @@ import dev.asfakul.yumeiro.online.EpisodeStatus
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.OnboardingGate
 import dev.asfakul.yumeiro.online.OnlineDetail
+import dev.asfakul.yumeiro.online.OnlineEpisode
 import dev.asfakul.yumeiro.online.OnlineHistory
 import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.online.OnlineSession
@@ -28,6 +30,7 @@ import dev.asfakul.yumeiro.sources.drama.YumeiroDrama
 import dev.asfakul.yumeiro.ui.screens.online.OnlineDetailScreen
 import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -106,21 +109,33 @@ class Nf1EpisodeStatusDeviceTest {
         val epTop = rule.onAllNodesWithTag("online_episode", true).fetchSemanticsNodes().filter { it.layoutInfo.isPlaced }.minOf { it.boundsInRoot.top }
         list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, epTop - listTop) }
         rule.waitForIdle()
-        // Only rows placed inside the list's window: a lazy list also keeps composed rows for reuse / prefetch that are
-        // not on screen (run 44896550636 api36 read one such "Fresh" first).
-        fun onScreenLabels(): List<String> {
-            val b = list.fetchSemanticsNode().boundsInRoot
-            return rule.onAllNodesWithTag("online_episode_status", true).fetchSemanticsNodes()
-                .filter { it.layoutInfo.isPlaced && it.boundsInRoot.top >= b.top - 1f && it.boundsInRoot.bottom <= b.bottom + 1f }
+        // Read each row the user sees (merged text: episode label, then status), placed inside the list's window, and
+        // find the three episodes by their label. By position alone the runs 44896550636 (api36) and 44899147205
+        // (tv-api34) read a "Fresh" row above e1, so the row order on screen is logged too.
+        val statuses = setOf("Watched", "Fresh")
+        fun visibleRows(): List<Pair<String, String?>> {
+            val bb = list.fetchSemanticsNode().boundsInRoot
+            return rule.onAllNodesWithTag("online_episode").fetchSemanticsNodes()
+                .filter { it.layoutInfo.isPlaced && it.boundsInRoot.bottom > bb.top && it.boundsInRoot.top < bb.bottom }
                 .sortedBy { it.boundsInRoot.top }
-                .map { n -> n.config.getOrElse(SemanticsProperties.Text) { emptyList() }.joinToString { it.text } }
+                .map { n ->
+                    val texts = n.config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text }
+                    (texts.firstOrNull() ?: "?") to texts.firstOrNull { it in statuses || it.endsWith(" min left") }
+                }
         }
-        rule.waitUntil(10_000) { onScreenLabels().size >= 3 }
-        val labels = onScreenLabels()
-        log("NF1_RESULT labels=$labels")
-        assertTrue("first row is not Watched: $labels", labels.getOrNull(0) == "Watched")
-        assertTrue("second row is not '6 min left': $labels", labels.getOrNull(1) == "6 min left")
-        assertTrue("third row is not Fresh: $labels", labels.getOrNull(2) == "Fresh")
+        rule.waitUntil(10_000) { visibleRows().count { it.second != null } >= 3 }
+        var rows = visibleRows()
+        log("NF1_RESULT rows=$rows e1='${e1.label}' e2='${e2.label}' e3='${e3.label}'")
+        fun statusOf(e: OnlineEpisode): String? {
+            if (rows.none { it.first == e.label }) {
+                rule.onAllNodesWithTag("online_detail_list", true)[0].performScrollToNode(hasText(e.label))
+                rule.waitForIdle(); rows = visibleRows()
+            }
+            return rows.firstOrNull { it.first == e.label }?.second
+        }
+        assertEquals("e1 '${e1.label}' row: $rows", "Watched", statusOf(e1))
+        assertEquals("e2 '${e2.label}' row: $rows", "6 min left", statusOf(e2))
+        assertEquals("e3 '${e3.label}' row: $rows", "Fresh", statusOf(e3))
         // The visit raised the stored count to the newest episode, so the next visit has no Fresh rows for these.
         rule.waitUntil(5_000) { (EpisodeStatus.Seen.get(ctx, d.api, d.url, version) ?: 0) >= EpisodeStatus.highest(eps)!! }
         log("NF1_RESULT PASS")

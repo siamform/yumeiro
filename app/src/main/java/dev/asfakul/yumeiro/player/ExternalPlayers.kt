@@ -125,6 +125,8 @@ object ExternalPlayerHost {
     }
 
     fun onResult(data: Intent?) {
+        // Keys only: the extras never hold secrets on the way back, but headers did on the way out.
+        android.util.Log.i("F07", "result pending=${pending != null} keys=${data?.extras?.keySet()}")
         val cb = pending ?: return
         pending = null
         ExternalPlayers.result(ExternalPlayers.bundleToMap(data?.extras))?.let { w -> runCatching { cb(w) } }

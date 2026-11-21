@@ -8,6 +8,7 @@ package dev.asfakul.yumeiro;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 /**
  * F-07 device check: a stand-in external player that follows MX Player's published intent API
@@ -32,7 +33,9 @@ public class StubPlayerActivity extends Activity {
                 if ("Referer".equals(headers[k])) { referer = headers[k + 1]; break; }
             }
         }
-        if (i.getBooleanExtra("return_result", false) && start >= 0) {
+        boolean ask = i.getBooleanExtra("return_result", false);
+        Log.i("F07", "STUB got position=" + start + " return_result=" + ask + " referer=" + (referer != null) + " keys=" + (i.getExtras() == null ? "none" : i.getExtras().keySet()));
+        if (ask && start >= 0) {
             setResult(RESULT_OK, new Intent("com.mxtech.intent.result.VIEW")
                 .putExtra("position", start + 5_000)
                 .putExtra("duration", "https://site.example/".equals(referer) ? 60_000 : 1)
