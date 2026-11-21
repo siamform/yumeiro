@@ -37,6 +37,8 @@ class TorrentSource(
     @Volatile private var windowEnd = -1
     /** B31-SEEK3: container head / tail stay wanted at a low priority. */
     private val keep = TorrentPlan.headTail(file, meta.pieceLength)
+    /** B31-SEEK4: tail pieces that got a deadline in [prime] and have not lost it yet. */
+    @Volatile private var tailAsked: List<Int> = emptyList()
 
     /** First and last pieces at once (container headers / index), and the start of the file. */
     fun prime() {
@@ -44,6 +46,7 @@ class TorrentSource(
         val first = TorrentPlan.firstPiece(file, meta.pieceLength)
         val tail = TorrentPlan.headTail(file, meta.pieceLength).filter { it != first }.map { it to TAIL_DEADLINE_MS }
         focus(first)
+        tailAsked = tail.map { it.first }
         core.setDeadlines(meta.hash, tail)
     }
 
@@ -96,8 +99,12 @@ class TorrentSource(
         val d = TorrentPlan.deadlines(piece, last, meta.pieceLength, readAhead, if (seek) TorrentPlan.SEEK_GAP_MS else 0)
         val newEnd = d.lastOrNull()?.first ?: piece
         // B-31 seek: the abandoned window's deadlines are overdue now and would be fetched first.
+        // B31-SEEK4 (TV device run 44884971496): the tail deadlines from prime() are older than the seek target's, so
+        // libtorrent's time-critical picker served the 4 MB tail first and no block of the target came for 9 s. They
+        // go with the old window; the tail stays wanted at priority 2, and a read at the tail focuses it again.
         if (windowStart >= 0) {
-            val old = (windowStart..windowEnd).filter { it < piece || it > newEnd }
+            val old = ((windowStart..windowEnd) + tailAsked).distinct().filter { it < piece || it > newEnd }
+            tailAsked = emptyList()
             if (old.isNotEmpty()) core.dropDeadlines(meta.hash, old)
         }
         windowStart = piece; windowEnd = newEnd

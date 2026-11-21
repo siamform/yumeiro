@@ -318,18 +318,20 @@ private fun YtBrowse(
     LaunchedEffect(query) {
         if (query.isBlank() || query == submitted) { suggestions = emptyList(); return@LaunchedEffect }
         // Instant local typeahead first (recent searches + what you played), then YouTube's own suggestions.
-        val local = dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(
+        // FE-S2: folding (regex) and the saved recent searches stay off the main thread.
+        val topicsNow = topics; val mineNow = mine
+        val local = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(
             query,
             dev.asfakul.yumeiro.ui.components.RecentSearches.asSuggestions(context, recentScope) +
-                topics.map { dev.asfakul.yumeiro.ui.components.Suggestion(it, SuggestionKind.RECENT, "Your topic") } +
-                mine.take(80).map { dev.asfakul.yumeiro.ui.components.Suggestion(it.title, SuggestionKind.YOUTUBE, if (music) "Listened" else "Watched") },
+                topicsNow.map { dev.asfakul.yumeiro.ui.components.Suggestion(it, SuggestionKind.RECENT, "Your topic") } +
+                mineNow.take(80).map { dev.asfakul.yumeiro.ui.components.Suggestion(it.title, SuggestionKind.YOUTUBE, if (music) "Listened" else "Watched") },
             limit = 3,
-        )
+        ) }
         suggestions = local
         delay(200)
         val remote = runCatching { YouTube.suggestions(context, query) }.getOrDefault(emptyList())
             .map { dev.asfakul.yumeiro.ui.components.Suggestion(it, SuggestionKind.QUERY) }
-        suggestions = (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8)
+        suggestions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8) }
     }
     /** R15: a new search drops every answer of the previous one (it used to overwrite the new list). */
     fun startResults(text: String) {

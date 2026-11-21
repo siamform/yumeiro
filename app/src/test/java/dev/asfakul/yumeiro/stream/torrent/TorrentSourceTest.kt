@@ -121,6 +121,30 @@ class TorrentSourceTest {
         assertEquals(listOf("drop", "window", "deadlines"), core.events)
     }
 
+    /**
+     * B31-SEEK4 (TV device run 44884971496, seek 10370 ms): the tail deadlines set at open were never dropped, so they
+     * stayed ahead of the seek target in libtorrent's deadline order. A seek must drop them too.
+     */
+    @Test fun seekDropsTheTailDeadlinesFromOpen() {
+        val dir = tmp.newFolder()
+        val mb = 1 shl 20
+        val f = TorrentFile(0, "Movie.mkv", 20L * mb, 0)
+        java.io.RandomAccessFile(File(dir, f.path), "rw").use { it.setLength(f.size) }
+        val meta = TorrentMeta("cd".repeat(20), "Movie", mb, 20, listOf(f))
+        val core = FakeCore(dir, meta)
+        val src = TorrentSource(core, meta, f, readAhead = 4L * mb, waitMs = 3_000)
+        src.prime() // head window 0..3, tail 18 / 19 with a deadline
+        assertTrue(core.deadlines.map { it.first }.containsAll(listOf(18, 19)))
+        core.arrive(10)
+        src.read(10L * mb + 5, ByteArray(10), 0, 10) // seek to the middle
+        assertTrue("tail deadlines kept: ${core.dropped}", core.dropped.containsAll(listOf(18, 19)))
+        assertEquals(listOf(0, 1, 2, 3, 18, 19), core.dropped.sorted())
+        // A later read at the tail (MKV cues) gets its deadline back.
+        core.deadlines.clear(); core.arrive(19)
+        src.read(19L * mb + 5, ByteArray(10), 0, 10)
+        assertEquals(19 to 0, core.deadlines.first())
+    }
+
     @Test fun timeoutAndErrorBecomeIOException() {
         val (core, src, _) = setup()
         val start = System.currentTimeMillis()

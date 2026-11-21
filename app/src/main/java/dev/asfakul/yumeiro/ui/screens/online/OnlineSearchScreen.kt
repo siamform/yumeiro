@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.OnlineItem
+import kotlinx.coroutines.flow.collectLatest
 import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.ui.components.StateMessage
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
@@ -190,20 +191,35 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
 
         val searching = results.values.count { it is ProviderResult.Searching }
         // Ranked by match quality across every Hue (stable while results stream in), unique keys.
-        val done = results.entries.mapNotNull { (n, r) -> (r as? ProviderResult.Done)?.let { n to it.items } }.toMap()
         val order = remember(providers) { providers.map { it.name } }
-        val all = remember(submitted, done, order) {
-            dev.asfakul.yumeiro.online.SearchRanker.rank(submitted, done, order).map { it.item }
+        // FE-S2 (docs/FEED-ENGINE-2.1.md FE-6): the ranking (Unicode normalize + regex per title, every result of every
+        // extension) ran in composition on the main thread, again on each extension's answer. It now runs on
+        // Dispatchers.Default; a newer answer replaces an older ranking (collectLatest).
+        val ranked by androidx.compose.runtime.produceState(0 to emptyList<OnlineItem>(), submitted, order) {
+            androidx.compose.runtime.snapshotFlow {
+                results.entries.mapNotNull { (n, r) -> (r as? ProviderResult.Done)?.let { n to it.items } }.toMap()
+            }.collectLatest { done ->
+                value = done.size to kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    dev.asfakul.yumeiro.online.SearchRanker.rank(submitted, done, order).map { it.item }
+                }
+            }
         }
+        val all = ranked.second
+        // Answers that arrived but are not ranked yet: never say "No results" in that gap.
+        val rankingBehind = ranked.first != results.values.count { it is ProviderResult.Done }
         // Typeahead: recent searches, My List, watched titles, titles seen while browsing and the live results.
-        val suggestions = remember(text, history.toList(), bookmarks, watched, all.size) {
-            if (text.isBlank()) emptyList() else {
-                        fun S(t: String, k: SuggestionKind, d: String?) = dev.asfakul.yumeiro.ui.components.Suggestion(t, k, d)
+        // FE-S2: the typeahead folds ~400 titles with regexes; it used to do that in composition on every keystroke.
+        val historyNow = history.toList()
+        val suggestions by androidx.compose.runtime.produceState(emptyList<dev.asfakul.yumeiro.ui.components.Suggestion>(), text, historyNow, bookmarks, watched, all.size) {
+            if (text.isBlank()) { value = emptyList(); return@produceState }
+            val liveTitles = all.take(60)
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                fun S(t: String, k: SuggestionKind, d: String?) = dev.asfakul.yumeiro.ui.components.Suggestion(t, k, d)
                 val c = buildList {
-                    history.forEach { add(S(it, SuggestionKind.RECENT, null)) }
+                    historyNow.forEach { add(S(it, SuggestionKind.RECENT, null)) }
                     bookmarks.forEach { add(S(it.name, SuggestionKind.TITLE, (if (it.listed) "My List" else "Favorites") + " · ${it.api}")) }
                     watched.forEach { add(S(it.name, SuggestionKind.TITLE, "Watched · ${it.api}")) }
-                    all.take(60).forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
+                    liveTitles.forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
                     OnlineRepository.previews.values.take(300).forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
                 }
                 dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(text, c, limit = 6)
@@ -261,9 +277,9 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 val shown = if (filter == null) all else all.filter { it.api == filter }
                 val failed = (results[filter] as? ProviderResult.Failed)?.message
                 when {
-                    shown.isEmpty() && (searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
+                    shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
                         Column(Modifier.fillMaxWidth()) {
-                            Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                            if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
                             PosterGridSkeleton(rows = 3)
                         }
                     failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,

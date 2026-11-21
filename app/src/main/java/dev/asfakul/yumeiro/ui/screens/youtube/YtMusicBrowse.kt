@@ -316,14 +316,16 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
     }
     LaunchedEffect(query) {
         if (query.isBlank() || query == submitted) { suggestions = emptyList(); return@LaunchedEffect }
-        val local = dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(
+        // FE-S2: folding (regex) and the saved recent searches stay off the main thread.
+        val local = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(
             query, dev.asfakul.yumeiro.ui.components.RecentSearches.asSuggestions(context, "ytmusic"), limit = 3,
-        )
+        ) }
         suggestions = local
         delay(200)
         val remote = runCatching { YouTube.suggestions(context, query) }.getOrDefault(emptyList())
             .map { dev.asfakul.yumeiro.ui.components.Suggestion(it, dev.asfakul.yumeiro.ui.components.Suggestion.Kind.QUERY) }
-        suggestions = (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8)
+        suggestions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8) }
     }
 
     val open: (YmBrowse) -> Unit = { stack.add(it) }
