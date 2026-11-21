@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
@@ -216,12 +217,23 @@ internal fun DownloadSheetContent(
                 Text("Where it goes and tips", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 Icon(if (details) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (details) "Hide details" else "Show details", tint = p.textTertiary)
             }
-            AnimatedVisibility(details) {
-                Column(
-                    Modifier.bringIntoViewRequester(reveal)
-                        .onSizeChanged { if (details) scope.launch { reveal.bringIntoView() } }
-                        .testTag("download_details_body"),
-                ) {
+            // The requester sits on the AnimatedVisibility itself: its height grows every frame while it unfolds
+            // (the inner column has its full size from the first frame), so the scroll follows to the end.
+            val unfold = remember { androidx.compose.animation.core.MutableTransitionState(details) }
+            // Once fully open, one last scroll so the whole text is in view even if no size change came after.
+            androidx.compose.runtime.LaunchedEffect(details) {
+                unfold.targetState = details
+                if (details) {
+                    androidx.compose.runtime.snapshotFlow { unfold.isIdle && unfold.currentState }.first { it }
+                    reveal.bringIntoView()
+                }
+            }
+            AnimatedVisibility(
+                visibleState = unfold,
+                modifier = Modifier.bringIntoViewRequester(reveal)
+                    .onSizeChanged { if (details && it.height > 0) scope.launch { reveal.bringIntoView() } },
+            ) {
+                Column(Modifier.testTag("download_details_body")) {
                     DetailLine(Icons.Default.Folder, "Downloads → ${req.folder}")
                     DetailLine(Icons.Default.PhoneAndroid,
                         if (yt && toPhone) "Phone: ${if (req.type == DownloadPrompt.Type.YT_AUDIO) "Music" else "Movies"}/Yumeiro (your gallery sees it)"
