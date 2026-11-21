@@ -85,6 +85,7 @@ installed (device), 1000+ simulated (unit).
 | Step | What | Status |
 |---|---|---|
 | SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Pass: baseline run 44883372732 (numbers in GOAL-TOP-OF-CLASS.md) |
+| SPEED-T2 | SpeedDeviceTest grows: 20 extensions (was 6), the Yumix pattern (every home through 3 priority slots with FE-3 first rows: first / half / all shown), YouTube shelf and YouTube Music Home cold start (live, then saved) | Built; device run pending (with the next device check) |
 | FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 verified; pass-after pending (44884554686) |
 | FE-2 / FE-2b | Priority gate (picked jumps the queue, flag fe2_priority_gate) + dead-site budget (one batch when rows time out) | Built; fail-before 44884208915 pending; pass-after pending. Still to do: row-level lanes, VISIBLE lane from scroll position |
 | FE-3 | First row shows the extension | Built (flag fe3_first_row); fail-before 44884810399 pending; pass-after pending |

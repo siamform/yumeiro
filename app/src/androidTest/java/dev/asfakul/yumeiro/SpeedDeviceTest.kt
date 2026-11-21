@@ -100,6 +100,46 @@ class SpeedDeviceTest {
             log("search_all_answered_$pass", System.currentTimeMillis() - s0, "answered=$answered withItems=$withItems")
             assertTrue("search ($pass) got no result from ${searchApis.size} extensions", first >= 0)
         }
+
+        // 4. FEED-ENGINE FE-RC1: the Yumix pattern. Every extension home through the same three priority slots, with
+        //    first rows handed over (FE-3). Logs when the first extension shows, half of them, and all of them.
+        val gate = dev.asfakul.yumeiro.online.PriorityGate(3)
+        val feedApis = ExtensionManager.providers().filter { runCatching { it.hasMainPage }.getOrDefault(false) }
+        val f0 = System.currentTimeMillis()
+        val shownAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+        withTimeoutOrNull(600_000) {
+            kotlinx.coroutines.coroutineScope {
+                feedApis.map { api ->
+                    async {
+                        gate.run(api.name, dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND) {
+                            runCatching {
+                                OnlineRepository.home(api, force = true) { rows -> if (rows.isNotEmpty()) shownAt.putIfAbsent(api.name, System.currentTimeMillis() - f0) }
+                            }.getOrNull()
+                        }
+                    }
+                }.awaitAll()
+            }
+        }
+        val done = System.currentTimeMillis() - f0
+        val times = shownAt.values.sorted()
+        log("feed_first_extension_shown", times.firstOrNull() ?: -1, "apis=${feedApis.size} shown=${times.size}")
+        log("feed_half_shown", times.getOrNull((feedApis.size - 1) / 2) ?: -1)
+        log("feed_all_done", done, "shown=${times.size}")
+
+        // 5. FE-7: YouTube and YouTube Music cold start (memory cache dropped; saved copy, then live).
+        val yt = dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, "lofi music", "Lofi", "Test", music = false)
+        val y0 = System.currentTimeMillis()
+        val ytLive = withTimeoutOrNull(60_000) { runCatching { dev.asfakul.yumeiro.youtube.YouTube.feed(ctx, yt, force = true) }.getOrNull() }
+        log("youtube_shelf_live", System.currentTimeMillis() - y0, "items=${ytLive?.items?.size ?: -1}")
+        val y1 = System.currentTimeMillis()
+        val ytSaved = dev.asfakul.yumeiro.youtube.YouTube.savedFeed(yt)
+        log("youtube_shelf_saved", System.currentTimeMillis() - y1, "items=${ytSaved?.size ?: -1}")
+        val m0 = System.currentTimeMillis()
+        val ymLive = withTimeoutOrNull(60_000) { runCatching { dev.asfakul.yumeiro.youtube.music.YtMusicApi.home(ctx, force = true) }.getOrNull() }
+        log("ytmusic_home_live", System.currentTimeMillis() - m0, "shelves=${ymLive?.shelves?.size ?: -1}")
+        val m1 = System.currentTimeMillis()
+        val ymSaved = dev.asfakul.yumeiro.youtube.music.YtMusicApi.savedBrowse(dev.asfakul.yumeiro.youtube.music.YmBrowse(dev.asfakul.yumeiro.youtube.music.YtMusicApi.HOME))
+        log("ytmusic_home_saved", System.currentTimeMillis() - m1, "shelves=${ymSaved?.shelves?.size ?: -1}")
     }
 
     /** ms to the first non-empty home from [apis] (all in parallel, like Home), and how many answered with rows. */
@@ -121,7 +161,7 @@ class SpeedDeviceTest {
     }
 
     private companion object {
-        const val WANT = 6
+        const val WANT = 20
         const val QUERY = "love"
     }
 }
