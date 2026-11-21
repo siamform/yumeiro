@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.online.download.DownloadSettings
 import dev.asfakul.yumeiro.online.download.DownloadTracks
@@ -74,7 +75,10 @@ class DownloadSheetTest {
     @Test fun ol6_whereAndTipsAreFoldedAway() {
         open { _, _ -> }
         assertTrue("tips are hidden at first", rule.onAllNodesWithText("Downloads keep going", substring = true).fetchSemanticsNodes().isEmpty())
-        rule.onNodeWithTag("download_details").performClick()
+        // OL-6-T: with 12 subtitle tracks the row sits below the fold of the sheet's middle scroll; its
+        // visible bounds are empty, so a bare performClick tapped (0, 0), the scrim, and closed the sheet
+        // (diag run 44942919019). A person scrolls to the row first, so the test does too.
+        rule.onNodeWithTag("download_details").performScrollTo().performClick()
         rule.waitForIdle()
         rule.onNodeWithTag("download_details_body").assertIsDisplayed()
     }
