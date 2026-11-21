@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 20:03 +06, branch `r15-stability`, F12-HIST + F12-VIEW built (note: the handover #3 commit aad61d9 wrote 21:00 / 21:10 +06 by mistake; the real time was 19:54 +06).
+2026-11-21 20:58 +06, branch `r15-stability` @7eb17931 + this docs commit. F-12 rest built (F12-MODE, F12-CHROME), F12-LINT fixed; F12-HIST + F12-VIEW Pass.
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -25,6 +25,13 @@ Commits: owner is author and committer, one `Co-authored-by: Perplexity` trailer
 code, commits or docs; only in the gitignored `secrets/` folder on the working machine.
 
 ## Done today (2026-11-21), newest first
+- F12-MODE (a2222bf5): vertical mode in the normal player for 9:16 non-YouTube videos (ADR-056): full screen portrait,
+  centre swipe up / down through the queue, Back to the normal layout. F12-CHROME (215fb53d): Shorts top bar + title
+  hide after 3.5 s of play, a tap brings them back. F12-LINT (7eb17931): Media3 opt-in on ShortsWindow.resizeFor (lint
+  errors in CI 44911548689 and 44912685131). New asset yumeiro_portrait_clip.mp4 (180x320). Built, not tested.
+- F12-HIST + F12-VIEW Pass: unit CI 44912685131 @8c304d4f (failed only on lint), device phones 44912687672 (swipe +
+  ReleaseFeatures Pass, api36 inside budget now), TV 44912689981 (swipe skips by design). Fail-befores valid
+  44911548689 (unit) and 44911557702 (device, views 14 vs 1); branch ab/f12view-before deleted.
 - F12-HIST (3d4d780c): YouTube history written on one IO lane (was main thread on every Shorts settle / Music tap).
   F12-VIEW (93c73933): one PlayerView for the whole Shorts pager. Both from pass-after 44910278641 (api36 Fail
   1384 / 1372 ms > 1200; lowram Pass). F-12 fail-befores valid: 44910420105 (unit), 44910276470 (device). Built, not tested.
@@ -84,6 +91,7 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- 44912687672 phones Pass F12ShortsSwipeDeviceTest + ReleaseFeaturesDeviceTest @8c304d4f; 44912689981 TV skip / 5 Pass; unit 44912685131 Pass (lint Fail = F12-LINT).
 - 44904481596 F-07 phones Pass; 44904447255 old-row tests phones Pass; CI 44903723798 Pass.
 - CI 44901991356 @6196d665 Pass (357 / 1675 / 0). NF-1 Pass 44903495726 (phones) / 44903498117 (tv-api34).
 - 44901993315 phones: Nbug10FilterSearchDeviceTest Pass (api33-lowram, api36).
@@ -126,15 +134,20 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs
-- CI 44911548689 and Device 44911557702 on `ab/f12view-before`: fail-before for F12HistoryOffMainTest and
-  F12ShortsSwipeDeviceTest `viewsCreated == 1`. Delete the branch after recording.
-- CI 44910280605 `r15-stability` @0288e8d (unit regression on the pre-f8acd0c head; not a pass-after for f8acd0c).
+- Fail-before `ab/f12mode-before` @c8d6eaa7: CI 44913232245 done = valid (unit compile: unresolved VerticalMode / DragRule).
+  Device 44913945589 (phones, F12VerticalModeDeviceTest + F12ShortsSwipeDeviceTest): expect vertical mode never on and
+  the Shorts chrome never hiding. Delete the branch after recording.
+- Pass-after `r15-stability` @7eb17931: device 44913948025 (phones, same two classes), CI 44914717596 (review_apk=true:
+  F12VerticalModeTest unit + F12-LINT lint).
+- Still to dispatch after those: TV tv-api34 on r15 for F12VerticalModeDeviceTest (TV must never enter vertical mode).
 
 ## Next steps, in order
-1. Record the pending runs. When 44910280605 is done: CI on r15 HEAD (review_apk=true) = pass-after for
-   F12VerticalShortsTest + F12HistoryOffMainTest; device F12ShortsSwipeDeviceTest on phones (and TV: it must skip).
-   Then build the rest of F-12 (non-YouTube 9:16 auto-open, idle-hide controls, Back to the normal player, next
-   preload), test, and flip f12_vertical_shorts only when Verified.
-2. Still open after that, in order: F-12 swipe between shorts + 9:16 auto-open (build + test), NF-2b / F-02 split / F-18 / Country device tests (write them), F-02 login (flag off: owner TDLib keys), E2 / E3 / E4 verification, F-03 / F-05 / F-19 / F-20 / airing alerts / X-1 / EXT-P (make each complete + verified), PIN-1 test, GATE-1 ANR test, FREEZE rows, C5 / C6.
+1. Record the pending runs above (ledger rows F12-MODE, F12-CHROME, F12-LINT; must-do F-12). If all Pass incl. TV:
+   flip f12_vertical_shorts default to true (one commit, ledger F-12-FLAG), update CHECKLIST-FEATURES-BUGS.md F-12
+   row, UNVERIFIED-QUEUE.md F-12 row (still "Queued") and OMT-37, then CI + device phones/TV on the flipped head.
+   If a run fails: diagnose from logcat (tags YuF12, YuF12V), fix, never relax a budget or assertion.
+2. Part 8 step 2: device tests for NF-2b, F-02 split pages, F-18 and Country (fail-befores already valid; write the
+   tests). Then step 3 F-02 Telegram TDLib login, step 4 E2 / E3 / E4 verification, step 5 F-03 / F-05 / F-19 / F-20 /
+   airing alerts / X-1 / EXT-P / PIN-1 / GATE-1 ANR / FREEZE / C5 / C6, step 6 FEED-ENGINE-2.1.md leftovers.
 3. E1 master extension: docs/E1-MASTER-EXTENSION.md; start E1-A only on the owner's go (open questions in section 6).
 4. Release only on the owner's explicit go.
