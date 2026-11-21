@@ -914,3 +914,54 @@ On a phone with a debug build that has the Telegram keys, and the flag `f02_tele
 
 Passes if every step does what it says. Note: a download started from Telegram can't resume after the app is closed; start it again from the chat.
 
+### OMT-64 — Website tab stays open (OL-1, OL-3, OL-8)
+
+On a phone and on the TV, on a real site you are signed in to:
+
+1. Websites → open the site, sign in, open a video page. The helper banner hides by itself after about 3 s.
+2. Play the video in Yumeiro's player, then close the player: the same page is back, still signed in, same scroll.
+3. Start a download from the page, tap "View downloads" in the message, then Back: the page is still there.
+4. Tap the down arrow (Minimize). The Websites page shows an "Open tab" card; Resume brings the page back as it was.
+5. TV: Back on the first page hides the tab (it does not close it); the "Open tab" card resumes it.
+6. Play a second video on the same page: the stream list shows only the new one, named "Now playing: <its title>".
+
+Passes if every step does what it says.
+
+### OMT-65 — Website stream panel and download popup (OL-2, OL-4, OL-5)
+
+On a real site that plays HLS with more than one audio track or subtitles (for example an anime site with Sub / Dub):
+
+1. The stream panel has Rescan, a down arrow (collapse) and Close. Close leaves a small "Streams · n" pill that reopens it.
+2. Tap Download on a stream: the popup asks Offline copy or Permanent, every time.
+3. The popup shows Quality chips with the stream's real sizes, an Audio track row and a Subtitles row.
+4. Pick a non-default audio track and one subtitle, download. Open it from Downloads in airplane mode: that audio plays and the subtitle is in the captions menu.
+
+Passes if every step does what it says. A site with only one track shows no Audio row (nothing to choose).
+
+### OMT-66 — Player top bar (OL-7)
+
+On a real phone (portrait and landscape) and the TV, play any video: Quality, Audio and the 3-dot buttons sit at the right edge, the title fills the rest, no big empty gap.
+
+### OMT-67 — Episode range and Sub/Dub download (OL-11, OL-5)
+
+On a real extension title with 80+ episodes and Sub / Dub versions:
+
+1. Download → the sheet shows "Version" chips (Sub / Dub); pick Dub, the lists below follow it.
+2. "Episode range": From 50 To 80 → "Download 31 episodes" (fewer if some are saved). Start, pick Permanent.
+3. Downloads shows 50..80 queued in order, in the Dub folder; the quality picked applies to all.
+4. "This episode only" saves just the episode Play / Continue opens.
+5. With Subtitles "Save all the source has", a finished episode plays offline with its subtitles in the captions menu.
+
+### OMT-68 — Download a whole YT Music playlist (OL-12)
+
+On a real YouTube Music playlist with 100+ songs:
+
+1. Online Music → open the playlist. A round Download button sits next to Play / Shuffle (not on artist pages).
+2. Tap it, pick Offline copy. Every song is queued (not only the rows on screen); the ring and "Downloading · n of N done" move.
+3. Tap again when done: nothing is downloaded twice. Repeat with Permanent on another playlist.
+
+Passes if all songs land in Downloads and play in airplane mode.
+
+### OMT-69 — Vertical Shorts on a real phone (F-12)
+
+Play a 9:16 clip that is not from YouTube on a real phone: it goes full screen portrait; swipe up / down changes clip; Back returns to the normal player and the clip keeps playing. (Same as OMT-37, now with the flag on by default.)

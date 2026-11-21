@@ -5,8 +5,15 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 21:44 +06, branch `r15-stability` @8a3e74a4 + this docs commit. F-12 vertical mode + chrome device Pass on phones and TV;
-NBUG-13-PORT found by CI and fixed; flag f12_vertical_shorts still off until CI 44918012619 is green.
+2026-11-21 23:05 +06, branch `r15-stability` @91667cdd (OL-5) + this docs commit. F-12 Verified (flag on). Owner list OL-1..OL-12:
+all built except OL-6 (downloader modal redesign, next). Unit pass-after CI 44926431107 @95108c0c running; a new r15
+CI for OL-11 / OL-12 / OL-5 is dispatched only after it ends (same concurrency group cancels it).
+
+## Owner rule 2026-11-21 (session 3)
+"Continue, fix and feature all; partial or fake success is not acceptable; if a bug or feature needs a manual test,
+list it, I will do it later." Manual tests go to docs/OWNER-MANUAL-TESTS.md (OMT-64..OMT-69 added for OL items, F-12).
+Secrets: never in code; only the gitignored secrets/ folder. SEC-1 (Last.fm shared secret) and UPG-1 rotation are the
+owner's, he said not to worry about them.
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -26,6 +33,19 @@ Commits: owner is author and committer, one `Co-authored-by: Perplexity` trailer
 code, commits or docs; only in the gitignored `secrets/` folder on the working machine.
 
 ## Done today (2026-11-21), newest first
+- OL-5 (91667cdd): download popup chips for real HLS heights, audio track and subtitles (website HLS master read off
+  the main thread, 6 s call timeout); episodes: "Save all the source has" + Sub/Dub chips in the sheet; picked audio
+  joined; subtitles saved as "<video>.<label>.vtt|srt" (SubtitleSaver) and loaded by the player from Downloads.
+  Flag ol5_download_tracks. Fail-before CI 44927927381 (ab/ol5-before, empty stubs) running.
+- OL-12 (5357dce2) Download playlist on Online Music; OL-11 (fc474be6) This episode only + Episode range. Fail-befores
+  44927039015 / 44926724501 running.
+- OL-8 02dbbfbb, OL-2 1346cedb, OL-3 4fe266a4 + 2d27529a, OL-1 ae938183 + 95108c0c (build fix), OL-4 f08c8c38,
+  OL-7 acf7f590, OL-9 123de693, OL-10 91ee246c. Valid fail-befores: OL-8 44922989207, OL-2 44923147788, OL-3
+  44923308227, OL-1 44923702849 + device 44926511600 ("no kept WebView"). Device api36 Pass 44926513936 @95108c0c
+  (WebsiteTab, StreamWatchDownload with the popup, MoreDestinations OL-9 / OL-10); lowram job of that run failed
+  before tests (emulator package zip corrupt on the runner, infra) and was re-dispatched.
+- F-12-FLAG (7e93879f): f12_vertical_shorts on. Fail-before 44922624531 valid, CI 44922673093, phones 44922675456,
+  TV 44922677658 all Pass: F-12 Verified. NBUG-13-PORT Pass (44917972192 valid, 44918012619 green).
 - NBUG-13-PORT (8a3e74a4): CI 44914717596 failed AppProxyTest (the random free port held the digits 407, and the proxy
   error text checked "407" before the error type, so an unreachable proxy read as "wants a login"). Fixed, flag
   nbug13_reach_first, new fixed-port test. Fail-before CI 44917972192 and pass-after CI 44918012619 running.
@@ -144,21 +164,25 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs
-- Fail-before `ab/nbug13port-before` (test only on @c3ec754d): CI 44917972192 (review_apk=false). Expect only
-  AppProxyTest.anUnreachableProxyIsNeverReadAsALoginAnswer to fail. Then delete the branch (worktree /tmp/fbwt).
-- Pass-after `r15-stability` @8a3e74a4: CI 44918012619 (review_apk=true): F12VerticalModeTest, phone + TV lint (F12-LINT),
-  NBUG-13-PORT.
+- r15 unit pass-after CI 44926431107 @95108c0c (OL-8, OL-2, OL-3, OL-1, OL-4, OL-7, OL-9, OL-10 unit + compile + lint).
+  When it ends: `gh workflow run ci.yml --ref r15-stability -f review_apk=true` for OL-11, OL-12, OL-5 (head 91667cdd+).
+- Fail-before CIs (each must fail only on its new test): ab/ol4-before 44926496585 (StreamDownloadAskTest),
+  ab/ol7-before 44926463969 (PlayerTopBarAlignTest), ab/ol9-before 44926469201 (HomeSpacesMoreTest), ab/ol10-before
+  44926473786 (NavMoreDestinationsTest), ab/ol11-before 44926724501 (EpisodeRangeDownloadTest), ab/ol12-before
+  44927039015 (PlaylistDownloadTest), ab/ol5-before 44927927381 (DownloadTracksTest). Read with
+  `gh run download <id> -D /tmp/fb_<id>` + TEST-*.xml; no XML = compile error (`--log-failed | grep "e: "`).
+- Device: r15 lowram 44927936416 and TV api34 44927947420 (WebsiteTabDeviceTest, StreamWatchDownloadDeviceTest,
+  MoreDestinationsDeviceTest; logcat tags YuOlTab, YuWatchDownload, YuOlDest).
+- Still to dispatch: device fail-befores ab/ol4-before (StreamWatchDownloadDeviceTest), ab/ol9-before + ab/ol10-before
+  (MoreDestinationsDeviceTest), api36 is enough. Max 2 device workflows at once.
+- Branch cleanup after each valid fail-before: `git worktree remove --force /tmp/fb_X; git push origin --delete
+  ab/X-before; git branch -D ab/X-before` (ol8, ol2, ol3, ol1 are valid already).
+- Ledger rows hold PENDING-UNIT / PENDING-FB / PENDING-DEV / PENDING-NEXT markers: replace each with the run result.
 
 ## Next steps, in order
-1. Record the pending runs above (ledger rows NBUG-13-PORT, F12-MODE unit, F12-LINT; must-do F-12). If CI is green:
-   flip f12_vertical_shorts default to true (one commit, ledger F-12-FLAG), update CHECKLIST-FEATURES-BUGS.md F-12
-   row, UNVERIFIED-QUEUE.md F-12 row (still "Queued") and OMT-37, then CI + device phones/TV on the flipped head.
-   If a run fails: diagnose from logcat (tags YuF12, YuF12V), fix, never relax a budget or assertion.
-2. Owner list OL-1..OL-10 (docs/MAJOR-BUGS-AND-FEATURES-2.x.md Part 3b, added 2026-11-21 21:44 +06): Website tab kept
-   open / minimizable, stream bar Close / Reload / collapse, only the playing stream with its title, Offline vs Permanent
-   popup on website downloads, quality + audio / sub / dub + subtitles in every download popup, downloader redesign,
-   player top-right buttons, website banner auto-hide 3 s, more Home Space shortcuts (TG, Profile, ...), more
-   navigation destinations. Check each against the code first, then the fix procedure.
+1. Record the pending runs above (ledger + must-do Part 3b statuses). A failing test on new code = its own finding
+   with its own fail-before; never relax an assertion or budget.
+2. OL-6 downloader modal redesign (research other apps' download sheets first; build behind a flag; test + fail-before).
 3. Part 8 step 2: device tests for NF-2b, F-02 split pages, F-18 and Country (fail-befores already valid; write the
    tests). Then step 3 F-02 Telegram TDLib login, step 4 E2 / E3 / E4 verification, step 5 F-03 / F-05 / F-19 / F-20 /
    airing alerts / X-1 / EXT-P / PIN-1 / GATE-1 ANR / FREEZE / C5 / C6, step 6 FEED-ENGINE-2.1.md leftovers.

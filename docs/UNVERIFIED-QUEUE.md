@@ -160,7 +160,7 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | F-09 | Watch Later + Favorite on posters | G5 | FEATURE-F-09 | stability-v2 | Queued |
 | F-10 | Glassmorphism theme (ADR-017 proposed) | G9 | FEATURE-F-10 | stability-v2 | Queued |
 | F-11 | Manga auto-translation (ADR-044) | G7 | FEATURE-F-11 | 1.9.0 (OMT-51) | Built (tenth cycle); emulator verified when device runs pass, owner verification pending |
-| F-12 | Vertical video player (ADR-018 proposed) | G3 | FEATURE-F-12 | stability-v2 | Queued |
+| F-12 | Vertical video player (ADR-018 proposed) | G3 | FEATURE-F-12 | stability-v2 | Verified: CI 44922673093, phones 44922675456, TV 44922677658 (F-12-FLAG 7e93879f); OMT-37 for a real phone |
 | F-13 | Offline manga chapters | G7 | to write | stability-v2 | Device test written (MangaOfflineDeviceTest); pass-after target: final passes chunk_19 / mapped chunks, this cycle |
 | F-14 | Automatic Live TV failover | G7 | to write | stability-v2 | Device test written (FinalCoverageDeviceTest j_f14); pass-after target: final passes chunk_19 / mapped chunks, this cycle |
 | F-15 | Live TV EPG / TV guide | G7 | to write | stability-v2 | Device test written (FinalCoverageDeviceTest k_f15); pass-after target: final passes chunk_19 / mapped chunks, this cycle |
