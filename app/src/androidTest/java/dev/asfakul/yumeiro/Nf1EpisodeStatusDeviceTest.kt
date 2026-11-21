@@ -24,7 +24,7 @@ import dev.asfakul.yumeiro.online.OnlineDetail
 import dev.asfakul.yumeiro.online.OnlineHistory
 import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.online.OnlineSession
-import dev.asfakul.yumeiro.online.YumeiroDrama
+import dev.asfakul.yumeiro.sources.drama.YumeiroDrama
 import dev.asfakul.yumeiro.ui.screens.online.OnlineDetailScreen
 import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
 import kotlinx.coroutines.runBlocking

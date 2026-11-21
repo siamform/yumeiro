@@ -64,7 +64,9 @@ object ExternalPlayers {
                     out["subs.name"] = subs.map { it.name }.toTypedArray()
                     picked?.let { out["subs.enable"] = listOf(it.url) }
                 }
-                if (app != null) out["return_result"] = true
+                // F-07-RES: also for the chooser ("Choose each time"): MX / Just Player return the position only when
+                // asked, and the user may pick them there. Other players ignore the extra.
+                out["return_result"] = true
             }
         }
         return out
