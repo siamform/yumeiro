@@ -118,18 +118,36 @@ object EcosystemRegistry {
     private fun ensureLoaded(context: Context) = synchronized(lock) {
         if (loaded) return@synchronized
         val saved = SafeJsonFile.read(file(context)) { t -> decode(RepoFormats.json.parseToJsonElement(t) as JsonObject) }.value ?: State()
-        _state.value = State((saved.repos + _state.value.repos).distinctBy { it.url }, (saved.installed + _state.value.installed).distinctBy { it.key })
+        // F-19-EXT-2: this profile's repos and plugins only; the others' are written back; a removed
+        // profile's are dropped with their code and storage.
+        val (myRepos, theirRepos, goneRepos) = SCOPE.splitAll(context, SCOPE.SCRIPT_REPOS, saved.repos.distinctBy { it.url }) { it.url }
+        val (mine, theirs, gone) = SCOPE.splitAll(context, SCOPE.SCRIPT_PLUGINS, saved.installed.distinctBy { it.key }) { it.key }
+        otherState = State(theirRepos, theirs)
+        gone.forEach { p -> dirOf(context, p).deleteRecursively(); context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply() }
+        _state.value = State((myRepos + _state.value.repos).distinctBy { it.url }, (mine + _state.value.installed).distinctBy { it.key })
         loaded = true
+        if (goneRepos.isNotEmpty() || gone.isNotEmpty()) SafeJsonFile.write(file(context), encode(merged()).toString())
     }
 
     private fun change(context: Context, f: (State) -> State) = synchronized(lock) {
         ensureLoaded(context)
         _state.value = f(_state.value)
-        SafeJsonFile.write(file(context), encode(_state.value).toString())
+        SafeJsonFile.write(file(context), encode(merged()).toString())
+    }
+
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
+    /** F-19-EXT-2: other profiles' repos and plugins (on disk, never shown or loaded here). */
+    private var otherState = State()
+
+    /** This profile's lists plus the other profiles' (what the file holds). */
+    private fun merged(): State {
+        val s = _state.value
+        return State(s.repos + otherState.repos.filter { o -> s.repos.none { it.url == o.url } },
+            s.installed + otherState.installed.filter { o -> s.installed.none { it.key == o.key } })
     }
 
     @androidx.annotation.VisibleForTesting
-    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); _problems.value = emptyMap() }
+    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); otherState = State(); _problems.value = emptyMap() }
 
     // region repositories
 
@@ -148,12 +166,22 @@ object EcosystemRegistry {
                 ?: error("This is a ${parsed.ecosystem.label} repository. Yumeiro recognises it, but can't run ${parsed.ecosystem.label} plugins in this version yet. Nothing was added.")
             require(FeatureFlags.on(context, adapter.flag)) { "${parsed.ecosystem.label} sources are switched off in this version" }
             require(parsed.plugins.isNotEmpty()) { "That repository has no ${parsed.ecosystem.label} plugins" }
-            change(context) { s -> s.copy(repos = s.repos.filterNot { it.url == url } + Repo(url, parsed.ecosystem, parsed.name, System.currentTimeMillis())) }
+            change(context) { s ->
+                otherState = otherState.copy(repos = otherState.repos.filterNot { it.url == url })
+                s.copy(repos = s.repos.filterNot { it.url == url } + Repo(url, parsed.ecosystem, parsed.name, System.currentTimeMillis()))
+            }
+            SCOPE.claim(context, SCOPE.SCRIPT_REPOS, url)
             parsed
         }
     }
 
-    fun removeRepo(context: Context, url: String) { change(context) { s -> s.copy(repos = s.repos.filterNot { it.url == url }) } }
+    fun removeRepo(context: Context, url: String) {
+        val kept = SCOPE.release(context, SCOPE.SCRIPT_REPOS, url)
+        change(context) { s ->
+            if (kept) s.repos.firstOrNull { it.url == url }?.let { r -> otherState = otherState.copy(repos = otherState.repos.filterNot { it.url == url } + r) }
+            s.copy(repos = s.repos.filterNot { it.url == url })
+        }
+    }
 
     /** Every plugin offered by the saved repositories that has a runtime, newest manifest first. */
     suspend fun available(context: Context): List<Pair<Repo, PluginEntry>> = withContext(Dispatchers.IO) {
@@ -196,7 +224,11 @@ object EcosystemRegistry {
             val prepared = base.copy(hashes = hashes)
             val extra = runCatching { adapter.prepare(context, prepared, dir) }.getOrDefault(JsonObject(emptyMap()))
             val done = prepared.copy(extra = extra)
-            change(context) { s -> s.copy(installed = s.installed.filterNot { it.key == done.key } + done) }
+            change(context) { s ->
+                otherState = otherState.copy(installed = otherState.installed.filterNot { it.key == done.key })
+                s.copy(installed = s.installed.filterNot { it.key == done.key } + done)
+            }
+            SCOPE.claim(context, SCOPE.SCRIPT_PLUGINS, done.key)
             publish(context)
             done
         }
@@ -204,9 +236,16 @@ object EcosystemRegistry {
 
     fun uninstall(context: Context, key: String) {
         val p = _state.value.installed.firstOrNull { it.key == key } ?: return
-        dirOf(context, p).deleteRecursively()
-        context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply()
-        change(context) { s -> s.copy(installed = s.installed.filterNot { it.key == key }) }
+        // F-19-EXT-2: another profile still has it: keep its code and storage for that profile.
+        val kept = SCOPE.release(context, SCOPE.SCRIPT_PLUGINS, key)
+        if (!kept) {
+            dirOf(context, p).deleteRecursively()
+            context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply()
+        }
+        change(context) { s ->
+            if (kept) otherState = otherState.copy(installed = otherState.installed.filterNot { it.key == key } + p)
+            s.copy(installed = s.installed.filterNot { it.key == key })
+        }
         publish(context)
     }
 

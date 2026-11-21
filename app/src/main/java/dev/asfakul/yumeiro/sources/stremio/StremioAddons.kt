@@ -92,6 +92,7 @@ object StremioAddons {
      * The file is read and written through SafeJsonFile (atomic write, bad copy kept as .bad).
      */
     private val lock = Any()
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
     @Volatile private var urls: List<String>? = null
 
     private fun savedUrls(context: Context): List<String> = synchronized(lock) {
@@ -116,7 +117,9 @@ object StremioAddons {
         started = true
         appContext = context.applicationContext
         scope.launch {
-            val saved = savedUrls(appContext)
+            // F-19-EXT-2: only this profile's add-ons are loaded; a removed profile's are dropped.
+            val (saved, _, gone) = SCOPE.splitAll(appContext, SCOPE.STREMIO, savedUrls(appContext)) { it }
+            if (gone.isNotEmpty()) changeUrls(appContext) { it - gone.toSet() }
             val loaded = saved.mapNotNull { u -> runCatching { fetchManifest(appContext, u) }.onFailure { Log.w(TAG, u, it) }.getOrNull() }
             // Keep add-ons added meanwhile; drop ones removed meanwhile. Unloaded links stay saved.
             val keep = savedUrls(appContext).toSet()
@@ -139,6 +142,7 @@ object StremioAddons {
             if (!started) start(context)
             val addon = fetchManifest(context, normalize(raw))
             changeUrls(context) { it - addon.manifestUrl + addon.manifestUrl }
+            SCOPE.claim(context, SCOPE.STREMIO, addon.manifestUrl)
             _addons.update { cur -> cur.filterNot { it.manifestUrl == addon.manifestUrl } + addon }
             publish()
             addon
@@ -146,7 +150,8 @@ object StremioAddons {
     }
 
     fun remove(context: Context, manifestUrl: String) {
-        changeUrls(context) { it - manifestUrl }
+        // F-19-EXT-2: another profile still has it: keep the saved link for that profile.
+        if (!SCOPE.release(context, SCOPE.STREMIO, manifestUrl)) changeUrls(context) { it - manifestUrl }
         _addons.update { cur -> cur.filterNot { it.manifestUrl == manifestUrl } }
         publish()
     }

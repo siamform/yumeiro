@@ -27,6 +27,14 @@ import java.io.File
 object ProfileScope {
     const val EXTENSIONS = "cs_ext"
     const val REPOSITORIES = "cs_repo"
+    // F-19-EXT-2: the other source ecosystems, same rules.
+    const val STREMIO = "stremio"
+    const val JS_REPOS = "js_repo"
+    const val JS_SOURCES = "js_src"
+    const val SCRIPT_REPOS = "eco_repo"
+    const val SCRIPT_PLUGINS = "eco_ext"
+    const val TACHI_REPOS = "tachi_repo"
+    const val TACHI_EXTENSIONS = "tachi_ext"
     private const val FILE = "profile_scope.json"
 
     /** Pure ownership table of one store. Owners per key; [init] = the first-use seed has run. */
@@ -117,6 +125,13 @@ object ProfileScope {
         val gone = items.map(key).filter { t.orphan(it) }
         if (gone.isNotEmpty()) t = update(context, store) { tb -> gone.fold(tb) { acc, k -> acc.forget(k) } }
         return items.filter { key(it) !in gone }.partition { t.visible(key(it), me) }
+    }
+
+    /** [split] plus the items of a removed profile (third): the caller deletes them and their files. */
+    fun <T> splitAll(context: Context, store: String, items: List<T>, key: (T) -> String): Triple<List<T>, List<T>, List<T>> {
+        val (mine, others) = split(context, store, items, key)
+        val kept = (mine + others).map(key).toHashSet()
+        return Triple(mine, others, items.filter { key(it) !in kept })
     }
 
     fun claim(context: Context, store: String, key: String) {
