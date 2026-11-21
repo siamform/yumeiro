@@ -17,7 +17,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import android.os.Build
 import org.junit.rules.TestRule
 import org.junit.runners.model.Statement
 import org.junit.runner.RunWith
@@ -45,7 +44,9 @@ class ExternalPlayerDeviceTest {
         object : Statement() {
             override fun evaluate() {
                 val inst = InstrumentationRegistry.getInstrumentation()
-                if (Build.VERSION.SDK_INT >= 33) runCatching { inst.uiAutomation.grantRuntimePermission(inst.targetContext.packageName, "android.permission.POST_NOTIFICATIONS") }
+                // F07-T4 (run 44903495726): the start-up request also asks for the media permissions; grant them all.
+                listOf("android.permission.POST_NOTIFICATIONS", "android.permission.READ_MEDIA_VIDEO", "android.permission.READ_MEDIA_AUDIO", "android.permission.READ_EXTERNAL_STORAGE")
+                    .forEach { runCatching { inst.uiAutomation.grantRuntimePermission(inst.targetContext.packageName, it) } }
                 base.evaluate()
             }
         }

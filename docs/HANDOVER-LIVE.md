@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 18:21 +06, branch `r15-stability`, commit "DEV-CHK-21-T3: Nf1 label match, F-07 permission".
+2026-11-21 18:32 +06, branch `r15-stability`, commit "DEV-CHK-21-T4: F-07 test grants start-up permissions".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- NF-1 device Pass on all 3 targets (44903495726 / 44903498117). r15 CI 44901991356 @6196d665 Pass (357 classes, 1675 cases, 0 failures): pass-after NBUG10-IME, third green for CI-DNS-RACE. F-07 lowram MX round trip Pass; F07-T4 test fix (media permission dialog).
 - NBUG-10 device Pass 44901993315 (both phones, with the NBUG10-IME fix). Fail-befores valid: NBUG10-IME 44901948952, NF-2b 44901952882, F-02 split 44901941945, Country 44901945428, F-18 44899238590 (branches deleted). NF1-T3 and F07-T3 test faults fixed (app rows were right; F-07 result blocked by the permission dialog in the test).
 - r15 CI 44899160113 @ff056fb7 Pass (356 classes, 1673 cases, 0 failures): second green for CI-DNS-RACE. DEV-CHK-21-C2: Nf1 rewrite did not compile; the runs on it are invalid; fixed and re-run.
 - NBUG10-IME root cause found and fixed (flag EXT_HOLD_WHILE_TYPING): AnimePahe's Cloudflare-check window opened on its own and took the keyboard focus; now held behind a card while the user types. Fail-before 44900885102. F-18 fail-before 44899238590 is valid (main compiled). Fail-before redos from HEAD: 44900731236 (NF-2b), 44900735170 (F-02 split), 44900738482 (Country).
@@ -67,6 +68,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- CI 44901991356 @6196d665 Pass (357 / 1675 / 0). NF-1 Pass 44903495726 (phones) / 44903498117 (tv-api34).
 - 44901993315 phones: Nbug10FilterSearchDeviceTest Pass (api33-lowram, api36).
 - CI 44899160113 @ff056fb7: Pass, 356 classes, 1673 cases, 0 failures.
 - 44899145489 phones: Nf1 Pass (both), SpeedDeviceTest Pass (both), Nbug10 Pass api36. 44899147205 tv-api34: TvBug5Repro Pass.
@@ -107,8 +109,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete any ab/ branch)
-- r15 CI 44901991356 (DEV-CHK-21-C2 head): pass-after NBUG10-IME + androidTest compile. Parse reports. Do not dispatch another r15 CI while it runs.
-- Device reruns of this push (IDs in R15 line 3): phones ExternalPlayer + Nf1; tv-api34 Nf1.
+- r15 CI 44903723798 (DEV-CHK-21-T3 head). Parse reports. Do not dispatch another r15 CI while it runs.
+- Device of this push (IDs in R15 line 3): phones ExternalPlayerDeviceTest; phones old-row reruns ReleaseFeatures, PosterActions, FinalCoverage, MangaOffline.
 
 ## Next steps, in order
 1. Record pending runs. F07-T2: read the F07 log lines (STUB got ..., result pending=...) to find where the result is lost.
