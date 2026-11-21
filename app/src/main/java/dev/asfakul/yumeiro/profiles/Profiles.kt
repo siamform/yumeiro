@@ -341,7 +341,7 @@ object Profiles {
     }
 
     /** Preference files that are kept per profile (removed with the profile). */
-    val SCOPED_PREFS = listOf("yt_history", "online_settings", "private_vault", "pinned_extensions", "pinned_playlists")
+    val SCOPED_PREFS = listOf("yt_history", "online_settings", "private_vault", "pinned_extensions", "pinned_playlists", "upcoming")
 
     private fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")
 

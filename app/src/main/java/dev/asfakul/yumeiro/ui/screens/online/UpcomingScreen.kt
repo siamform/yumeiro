@@ -69,15 +69,28 @@ internal object OnlineSearchPending {
 @Composable
 fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     val context = LocalContext.current
+    val sections = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.UPCOMING_SECTIONS) }
     var kindName by rememberSaveable { mutableStateOf(Upcoming.Kind.SERIES.name) }
+    var kindLoaded by rememberSaveable { mutableStateOf(!sections) }
     val kind = Upcoming.Kind.valueOf(kindName)
+    // F-22: the last category is kept per profile (read and written off the main thread).
+    LaunchedEffect(Unit) {
+        if (!kindLoaded) {
+            withContext(Dispatchers.IO) { UpcomingPrefs.kind(context) }?.let { kindName = it.name }
+            kindLoaded = true
+        }
+    }
+    LaunchedEffect(kindName, kindLoaded) {
+        if (sections && kindLoaded) withContext(Dispatchers.IO) { UpcomingPrefs.setKind(context, kind) }
+    }
     val zone = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(zone) }
     var list by remember(kind) { mutableStateOf<List<Upcoming.Entry>?>(null) }
     var failed by remember(kind) { mutableStateOf(false) }
     var loading by remember(kind) { mutableStateOf(true) }
     var retry by remember { mutableStateOf(0) }
-    LaunchedEffect(kind, retry) {
+    LaunchedEffect(kind, retry, kindLoaded) {
+        if (!kindLoaded) return@LaunchedEffect
         loading = true; failed = false
         val cached = withContext(Dispatchers.IO) { Upcoming.cached(context, kind, today) }
         if (cached != null) list = cached
@@ -112,10 +125,10 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 }
                 days.forEach { (day, entries) ->
                     item("h_$day") {
-                        Text(Upcoming.dayLabel(day, today), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp,
+                        Text(if (sections) Upcoming.dayHeader(day, today, kind) else Upcoming.dayLabel(day, today), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp).semantics { heading() })
                     }
-                    items(entries, key = { "e_${it.simklId}_${it.day}_${it.season}" }) { e -> UpcomingRow(e) { onSearch(e.title) } }
+                    items(entries, key = { "e_${it.simklId}_${it.day}_${it.season}" }) { e -> UpcomingRow(e, showTime = sections) { onSearch(e.title) } }
                 }
                 item("credit") {
                     Text("Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
@@ -127,7 +140,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
 }
 
 @Composable
-private fun UpcomingRow(e: Upcoming.Entry, onClick: () -> Unit) {
+private fun UpcomingRow(e: Upcoming.Entry, showTime: Boolean = false, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(GlassFill)
             .clickable(onClick = onClick).padding(8.dp).testTag("upcoming_entry"),
@@ -137,7 +150,18 @@ private fun UpcomingRow(e: Upcoming.Entry, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(e.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            e.episodeLabel?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
+            // F-22: air time and episode on one line ("20:00 • S2 E4"); the time only when the calendar has one.
+            val sub = listOfNotNull(Upcoming.timeLabel(e).takeIf { showTime }, e.episodeLabel).joinToString(" • ")
+            if (sub.isNotEmpty()) Text(sub, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("upcoming_entry_sub"))
         }
     }
+}
+
+/** F-22: the Upcoming category of the current profile. Disk: call on Dispatchers.IO. */
+internal object UpcomingPrefs {
+    private fun prefs(c: android.content.Context) = c.applicationContext.getSharedPreferences(
+        dev.asfakul.yumeiro.profiles.Profiles.prefsName(c, "upcoming"), android.content.Context.MODE_PRIVATE)
+    fun kind(c: android.content.Context): Upcoming.Kind? =
+        prefs(c).getString("kind", null)?.let { n -> Upcoming.Kind.entries.firstOrNull { it.name == n } }
+    fun setKind(c: android.content.Context, k: Upcoming.Kind) { prefs(c).edit().putString("kind", k.name).apply() }
 }
