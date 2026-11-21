@@ -34,6 +34,8 @@ data class TgVideo(
     val date: Long,
     val caption: String,
     val thumbFileId: Int,
+    /** Music, voice note or audio file (owner add 2026-11-21): plays in the same player, no picture. */
+    val audio: Boolean = false,
 )
 
 /** One page of a chat's videos and where the next page starts (0 = no more). */
@@ -60,7 +62,7 @@ class TgLibrary(private val client: TdClient) {
 
     /**
      * Videos of [chatId], newest first. No [query]: the chat's history; with a query: Telegram's search in that
-     * chat. Both kinds of video post are kept, everything else is skipped. [from] is the previous page's `next`.
+     * chat. Videos, video files, music, voice notes and audio files are kept; everything else is skipped. [from] is the previous page's `next`.
      */
     suspend fun videos(chatId: Long, query: String = "", from: Long = 0, pageSize: Int = 50): TgVideoPage {
         val q = query.trim()
@@ -101,6 +103,8 @@ class TgLibrary(private val client: TdClient) {
             return TgChat(o.long("id"), o.str("title").ifBlank { "Untitled" }, kind, o.obj("photo")?.obj("small")?.int("id") ?: 0)
         }
 
+        private val AUDIO_EXT = setOf("mp3", "m4a", "aac", "flac", "ogg", "oga", "opus", "wav", "wma", "alac", "ape")
+
         private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "mov", "avi", "m4v", "ts", "3gp", "flv", "wmv", "mpg", "mpeg")
 
         private fun fileOf(m: JsonObject): JsonObject? {
@@ -108,6 +112,8 @@ class TgLibrary(private val client: TdClient) {
             return when (c.type()) {
                 "messageVideo" -> c.obj("video")?.obj("video")
                 "messageDocument" -> c.obj("document")?.obj("document")
+                "messageAudio" -> c.obj("audio")?.obj("audio")
+                "messageVoiceNote" -> c.obj("voice_note")?.obj("voice")
                 else -> null
             }
         }
@@ -134,13 +140,37 @@ class TgLibrary(private val client: TdClient) {
                     val name = d.str("file_name")
                     val mime = d.str("mime_type")
                     val ext = name.substringAfterLast('.', "").lowercase()
-                    if (!mime.startsWith("video/") && ext !in VIDEO_EXT) return null
+                    val isAudio = mime.startsWith("audio/") || (!mime.startsWith("video/") && ext in AUDIO_EXT)
+                    if (!isAudio && !mime.startsWith("video/") && ext !in VIDEO_EXT) return null
                     TgVideo(
                         chatId = m.long("chat_id"), messageId = m.long("id"), fileId = f.int("id"),
                         name = name.ifBlank { "Video" }, mimeType = mime.ifBlank { mimeFor(ext) },
                         size = f.long("size").takeIf { it > 0 } ?: f.long("expected_size"),
                         durationSec = 0, width = 0, height = 0, date = m.long("date"), caption = caption,
-                        thumbFileId = d.obj("thumbnail")?.obj("file")?.int("id") ?: 0,
+                        thumbFileId = d.obj("thumbnail")?.obj("file")?.int("id") ?: 0, audio = isAudio,
+                    )
+                }
+                "messageAudio" -> {
+                    val a = c.obj("audio") ?: return null
+                    val f = a.obj("audio") ?: return null
+                    val title = listOf(a.str("performer"), a.str("title")).filter { it.isNotBlank() }.joinToString(" – ")
+                    TgVideo(
+                        chatId = m.long("chat_id"), messageId = m.long("id"), fileId = f.int("id"),
+                        name = title.ifBlank { a.str("file_name") }.ifBlank { "Audio" }, mimeType = a.str("mime_type").ifBlank { "audio/mpeg" },
+                        size = f.long("size").takeIf { it > 0 } ?: f.long("expected_size"),
+                        durationSec = a.int("duration"), width = 0, height = 0, date = m.long("date"), caption = caption,
+                        thumbFileId = a.obj("album_cover_thumbnail")?.obj("file")?.int("id") ?: 0, audio = true,
+                    )
+                }
+                "messageVoiceNote" -> {
+                    val vn = c.obj("voice_note") ?: return null
+                    val f = vn.obj("voice") ?: return null
+                    TgVideo(
+                        chatId = m.long("chat_id"), messageId = m.long("id"), fileId = f.int("id"),
+                        name = "Voice message", mimeType = vn.str("mime_type").ifBlank { "audio/ogg" },
+                        size = f.long("size").takeIf { it > 0 } ?: f.long("expected_size"),
+                        durationSec = vn.int("duration"), width = 0, height = 0, date = m.long("date"), caption = caption,
+                        thumbFileId = 0, audio = true,
                     )
                 }
                 else -> null
@@ -154,6 +184,11 @@ class TgLibrary(private val client: TdClient) {
             "avi" -> "video/x-msvideo"
             "ts" -> "video/mp2t"
             "3gp" -> "video/3gpp"
+            "mp3" -> "audio/mpeg"
+            "m4a", "aac", "alac" -> "audio/mp4"
+            "flac" -> "audio/flac"
+            "ogg", "oga", "opus" -> "audio/ogg"
+            "wav" -> "audio/wav"
             else -> "video/mp4"
         }
     }

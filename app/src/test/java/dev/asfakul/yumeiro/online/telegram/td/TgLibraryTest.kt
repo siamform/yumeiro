@@ -66,6 +66,25 @@ class TgLibraryTest {
         assertEquals("video/x-matroska", TgLibrary.parseVideo(noMime)!!.mimeType)
     }
 
+    @Test fun parsesAudio() {
+        val music = TgLibrary.parseVideo(message(tdObject("messageAudio") {
+            put("audio", tdObject("audio") { put("duration", 215); put("performer", "Aimer"); put("title", "Kataomoi"); put("mime_type", "audio/flac"); put("audio", file(50, 30_000_000)) })
+        }))!!
+        assertEquals(true, music.audio); assertEquals("Aimer – Kataomoi", music.name); assertEquals("audio/flac", music.mimeType); assertEquals(215, music.durationSec)
+        val voice = TgLibrary.parseVideo(message(tdObject("messageVoiceNote") {
+            put("voice_note", tdObject("voiceNote") { put("duration", 9); put("mime_type", "audio/ogg"); put("voice", file(51, 40_000)) })
+        }))!!
+        assertEquals(true, voice.audio); assertEquals(51, voice.fileId)
+        val doc = TgLibrary.parseVideo(message(tdObject("messageDocument") {
+            put("document", tdObject("document") { put("file_name", "OST 01.opus"); put("document", file(52, 5_000_000)) })
+        }))!!
+        assertEquals(true, doc.audio); assertEquals("audio/ogg", doc.mimeType)
+        val mkv = TgLibrary.parseVideo(message(tdObject("messageDocument") {
+            put("document", tdObject("document") { put("file_name", "a.mkv"); put("mime_type", "video/x-matroska"); put("document", file(53, 10)) })
+        }))!!
+        assertEquals(false, mkv.audio)
+    }
+
     @Test fun skipsEverythingElse() {
         assertNull(TgLibrary.parseVideo(message(tdObject("messageText"))))
         assertNull(TgLibrary.parseVideo(message(tdObject("messageDocument") {

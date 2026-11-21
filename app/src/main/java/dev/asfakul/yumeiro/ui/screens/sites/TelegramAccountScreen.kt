@@ -361,7 +361,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
                     val known = videos.map { it.messageId }.toHashSet()
                     videos.addAll(page.videos.filter { it.messageId !in known })
                     next = page.next
-                    if (videos.isEmpty() && page.next == 0L) error = if (q.isNotBlank()) "No videos match \"$q\" in this chat." else "No videos in this chat."
+                    if (videos.isEmpty() && page.next == 0L) error = if (q.isNotBlank()) "No videos or audio match \"$q\" in this chat." else "No videos or audio in this chat."
                 }
                 .onFailure { if (it !is kotlinx.coroutines.CancellationException) error = TgAuth.errorText(it) }
             loading = false
@@ -383,7 +383,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
     BackHandler { if (query.isNotEmpty()) { input = ""; search("") } else onBack() }
 
     Column(Modifier.fillMaxSize().testTag("tg_chat_videos")) {
-        SubPageHeader(title = chat.title.ifBlank { "Chat" }, subtitle = "Videos", onBack = onBack)
+        SubPageHeader(title = chat.title.ifBlank { "Chat" }, subtitle = "Videos and audio", onBack = onBack)
         OutlinedTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
             label = { Text("Search this chat") },
@@ -416,13 +416,14 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
             if (loading) item("loading") {
                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
             } else if (next != 0L) item("more") {
-                TextButton(onClick = { pages = 0; load(next) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("tg_videos_more")) { Text("Older videos") }
+                TextButton(onClick = { pages = 0; load(next) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("tg_videos_more")) { Text("Older") }
             }
         }
     }
 }
 
 internal fun videoInfo(v: TgVideo): String = buildList {
+    if (v.audio) add("Audio")
     if (v.durationSec > 0) add("%d:%02d".format(v.durationSec / 60, v.durationSec % 60))
     if (v.height > 0) add("${v.height}p")
     if (v.size > 0) add(if (v.size >= 1_000_000_000) "%.1f GB".format(v.size / 1e9) else "${v.size / 1_000_000} MB")

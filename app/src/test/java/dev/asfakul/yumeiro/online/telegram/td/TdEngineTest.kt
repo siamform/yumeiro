@@ -23,6 +23,7 @@ import java.util.zip.GZIPOutputStream
 /** F-02 / ADR-052: the downloaded engine is only installed when both pinned hashes and the size match. */
 class TdEngineTest {
     @get:Rule val tmp = TemporaryFolder()
+    private val hex = Regex("[0-9a-f]{64}")
 
     private val so = ByteArray(300_000) { (it * 31 % 251).toByte() }
     private val gz = ByteArrayOutputStream().also { GZIPOutputStream(it).use { z -> z.write(so) } }.toByteArray()
@@ -75,6 +76,16 @@ class TdEngineTest {
         assertEquals("arm64-v8a", TdEngine.pick(listOf("arm64-v8a", "armeabi-v7a"), pins)?.abi)
         assertEquals("x86_64", TdEngine.pick(listOf("x86_64", "x86"), pins)?.abi)
         assertNull(TdEngine.pick(listOf("mips"), pins))
+    }
+
+    @Test fun publishedPinsAreWellFormed() {
+        assertEquals(40, TdEngine.BIN_COMMIT.length)
+        assertEquals(setOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86"), TdEngine.PINS.map { it.abi }.toSet())
+        for (p in TdEngine.PINS) {
+            assertTrue(p.abi, hex.matches(p.soSha256) && hex.matches(p.gzSha256))
+            // Under 12 MB to download, under 32 MB on disk: the 2 GB phone budget in ADR-052.
+            assertTrue(p.abi, p.gzBytes in 1..12_000_000 && p.soBytes in p.gzBytes..32_000_000)
+        }
     }
 
     @Test fun sha256OfFile() {

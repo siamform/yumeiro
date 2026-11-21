@@ -213,7 +213,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text("Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
-                        Text("Sign in to watch videos from your chats, groups and private channels", color = p.textSecondary, fontSize = 12.sp)
+                        Text("Sign in to play videos and audio from your chats, groups and channels", color = p.textSecondary, fontSize = 12.sp)
                     }
                 }
             }

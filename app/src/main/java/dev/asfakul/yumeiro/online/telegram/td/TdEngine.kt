@@ -34,13 +34,18 @@ object TdEngine {
     /** tdlib/td commit the library was built from (TDLib 1.8.70). */
     const val TD_COMMIT = "03220f6b3043c6fd7785fbf0901d63f19ad19974"
 
-    /** Commit of the `tdlib-bin` branch that holds the files below. Blank until the build is published. */
-    const val BIN_COMMIT = ""
+    /** Commit of the `tdlib-bin` branch that holds the files below (built by tdlib-build.yml run 44871959357). */
+    const val BIN_COMMIT = "010f8192ddb0aa9f593eff628c934f6d62b330a8"
 
     class Pin(val abi: String, val soSha256: String, val gzSha256: String, val gzBytes: Long, val soBytes: Long)
 
     /** Filled from tdlib-build.yml's SHA256 / SIZES files (ledger row F-02 login has the run ID). */
-    val PINS: List<Pin> = emptyList()
+    val PINS: List<Pin> = listOf(
+        Pin("arm64-v8a", "df2dc2ea2f8f83395f0950f8c152a0244e7c20c33c137e3875dc90646e21078f", "302d9ba90d83625a1e962d42b71fcf7a67fdecc2c3d56ecd0d3e9a2a6ddb7e53", 9517585, 19037912),
+        Pin("armeabi-v7a", "fcbb87f3bc3aaff925435a8c1f1c0dd09f057fc0ea999094c2f46e3c32edeecd", "959382c6916420698a80eb0c25c15ecf0075787f4f06167bac9d590198ffd15e", 8582731, 15923976),
+        Pin("x86_64", "0b49ed935bec930a59be6eee761b900200182682228693a5431dfae429e6900d", "8e5cc7306040fd6b530d68664dc82d967a59e2898dcac59f6c583475b3293cb8", 9024381, 22276816),
+        Pin("x86", "7a691046280b528a34fbf998fb6b02e1b57c7b2888df0ea13310ee2178ecfeb2", "a1cd916b79e6db1de625f548ccb693301ccdd383091713966095c84618a2021d", 9689272, 24056816),
+    )
 
     sealed interface State {
         data object Idle : State
