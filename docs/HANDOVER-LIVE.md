@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 19:41 +06, branch `r15-stability`, commit "F-10 Blue verified, F-07 TV Pass".
+2026-11-21 21:10 +06, branch `r15-stability`, handover #3 (new agent took over after the cut-off at f8acd0c).
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -20,7 +20,14 @@ Partial is not acceptable: every bug and feature must be done AND verified (run 
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
+## Owner rule 2026-11-21 21:00 +06
+Commits: owner is author and committer, one `Co-authored-by: Perplexity` trailer (re-approved). Credentials: never in
+code, commits or docs; only in the gitignored `secrets/` folder on the working machine.
+
 ## Done today (2026-11-21), newest first
+- F-12 vertical Shorts: BUILT, NOT TESTED (0288e8d test, f8acd0c feat; flag f12_vertical_shorts default off). Swipe on
+  one shared player + YouTube-marked Shorts up to 3 min open the Shorts player. Not built yet: 9:16 auto-open for
+  non-YouTube content, swipe-up preload, idle-hide controls, Back to the normal player.
 - F-10 Verified phones + TV (new F10BlueThemeDeviceTest; fail-before 44908264228, pass 44909154883 / 44909158248). F-07 TV Pass 44908157533. NBUG-10 TV: test skips by design (FINAL-39).
 - TV Pass 44906652590 (F-04 / F-09 Menu key / F-13 / F-14 / F-15 / F-17 / NF-1 now Verified phones + TV). Phones re-check Pass 44906655104.
 - Device Pass on this head (phones): F-07 ExternalPlayerDeviceTest 44904481596 (MX + chooser, Watched(66000, 60000)); ReleaseFeatures / PosterActions / FinalCoverage / MangaOffline 44904447255 (F-04, F-09 phone part, F-13, F-14, F-15, F-17; F-10 glass part; F-12 retry part). CI 44903723798 @b8381ce0 Pass (357 / 1675 / 0). E1 research + design written.
@@ -116,10 +123,14 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs
-None.
+- CI 44910420105 `ab/f12vert-before` @5f3ac744: F12VerticalShortsTest fail-before.
+- Device 44910276470 `ab/f12swipe-before` @f56774cc: F12ShortsSwipeDeviceTest fail-before.
+- CI 44910280605 and Device 44910278641 `r15-stability` @0288e8d (one commit before HEAD f8acd0c: not a pass-after
+  for f8acd0c; the F-12 pass-after needs CI + device on HEAD).
 
 ## Next steps, in order
-1. Done: 44906652590 / 44906655104 recorded (BUGS DEV-CHK-21-T6).
+1. Record the 4 pending runs. Then CI + F12ShortsSwipeDeviceTest pass-after on HEAD (phones + TV); then build the
+   rest of F-12 (list above), test, and flip f12_vertical_shorts only when Verified.
 2. Still open after that, in order: F-12 swipe between shorts + 9:16 auto-open (build + test), NF-2b / F-02 split / F-18 / Country device tests (write them), F-02 login (flag off: owner TDLib keys), E2 / E3 / E4 verification, F-03 / F-05 / F-19 / F-20 / airing alerts / X-1 / EXT-P (make each complete + verified), PIN-1 test, GATE-1 ANR test, FREEZE rows, C5 / C6.
 3. E1 master extension: docs/E1-MASTER-EXTENSION.md; start E1-A only on the owner's go (open questions in section 6).
 4. Release only on the owner's explicit go.

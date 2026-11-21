@@ -59,11 +59,15 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
   export GIT_COMMITTER_NAME="Asfakul Siam" GIT_COMMITTER_EMAIL="71690568+siamform@users.noreply.github.com"
   ```
 - Every commit message ends with exactly one trailer line: `Co-authored-by: Perplexity <noreply@perplexity.ai>`
-  (owner confirmed 2026-11-21: "oky use co author"; the platform requires it). Author and committer stay the owner.
+  (owner re-approved 2026-11-21 21:00 +06: "approved, use co-author"; the platform requires it). Author and committer
+  stay the owner; no other attribution line (no "Generated with" / "Made by") in commits, branches or docs.
   Check each commit with `git log -1 --format=fuller` before pushing.
 - PR descriptions and GitHub comments end with the "Created with Perplexity" footer line linking the agent's task
   (never in replies to the owner).
 - Never force-push. Run `gh` from inside the repo directory.
+- Credentials (owner 2026-11-21 21:00 +06): never in code, commits, pushes, logs or docs. They live only in the
+  gitignored `secrets/` folder on the working machine (`secrets/yumeiro.env.local`, `secrets/firebase-admin.json`);
+  the build reads them through `optionalKey(prop, env)` from the environment, never from a literal.
 
 ### CI and devices
 - No JDK locally: compile and test only through CI.
@@ -115,9 +119,10 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 | Jackson 2.18.11 phone / 2.13.5 TV | before 2.0.0 |
 | NBUG-6: sequential DNS fallback | before 2.0.0 |
 | Vega / Nuvio / SkyStream stay one registry | before 2.0.0 |
-| `Co-authored-by: Perplexity` trailer, owner as author and committer (re-confirmed by the owner 2026-11-21) | before 2.0.0, 2026-11-21 |
+| `Co-authored-by: Perplexity` trailer, owner as author and committer (re-approved by the owner 2026-11-21 21:00 +06) | before 2.0.0, 2026-11-21 |
 | No 2.0.1; fix everything, then 2.1.0 | 2026-11-20 |
 | No release for now; fix, implement and test all first | 2026-11-21 |
+| Credentials never in code or git; only in the gitignored `secrets/` folder | 2026-11-21 |
 | No third-party starter extensions; use the Yumeiro master extension (E1) | 2026-11-21 |
 | Discreet launcher icon: dropped, do not build | 2026-11-21 |
 | Telegram: full login (TDLib), replaces the old "no login" decision | 2026-11-21 |
