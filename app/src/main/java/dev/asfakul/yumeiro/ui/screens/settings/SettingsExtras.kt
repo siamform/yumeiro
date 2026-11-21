@@ -279,6 +279,7 @@ fun VideoPlayerSettingsCard() {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DeveloperCard() {
     val context = LocalContext.current
@@ -321,9 +322,13 @@ fun DeveloperCard() {
         Spacer(Modifier.height(12.dp))
         // Developer links only. Support and the Telegram community each have one card below,
         // so nothing on the About page is shown twice.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        val more = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SOCIAL_LINKS) }
+        // Wraps on narrow phones (5 links with OL-13).
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             DevLink(Icons.Default.Language, null, "Website", "dev_website") { open(DeveloperInfo.WEBSITE) }
             DevLink(null, R.drawable.ic_brand_github, "GitHub", "dev_github") { open(DeveloperInfo.GITHUB) }
+            // OL-13: the developer's own Facebook, Instagram and Telegram.
+            if (more) dev.asfakul.yumeiro.notify.SocialLinks.developer.forEach { l -> DevLink(null, l.icon, l.label + " " + l.handle, "dev_" + l.id) { open(l.url) } }
         }
         Spacer(Modifier.height(12.dp))
         Text(

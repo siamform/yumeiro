@@ -442,6 +442,24 @@ Pull requests are welcome. Branch from `main`, use [Conventional Commits](https:
 and make sure CI passes — merging to `main` ships a release automatically. Security issues: please use
 [private reporting](https://github.com/siamform/yumeiro/security/advisories/new).
 
+## Community
+
+Yumeiro is **@officialyumeiro** everywhere:
+[Website](https://yumeiro.click) ·
+[Telegram channel](https://t.me/yumeiroofficial) ·
+[Discord](https://discord.gg/eqkNymUAMJ) ·
+[Facebook](https://www.facebook.com/officialyumeiro) ·
+[Instagram](https://www.instagram.com/officialyumeiro) ·
+[X (Twitter)](https://x.com/officialyumeiro) ·
+[TikTok](https://www.tiktok.com/@officialyumeiro) ·
+[Reddit](https://www.reddit.com/user/officialyumeiro)
+
+Developer, Asfakul Siam:
+[Facebook](https://www.facebook.com/siam1p) ·
+[Instagram](https://www.instagram.com/asfakul_siam) ·
+[Telegram](https://t.me/siamorwho) ·
+[GitHub](https://github.com/siamform)
+
 ## Support the project
 
 If Yumeiro replaced a few apps on your phone, **[give it a star](https://github.com/siamform/yumeiro/stargazers)** —

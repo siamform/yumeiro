@@ -63,6 +63,8 @@ object FeatureFlags {
         DOWNLOAD_SHEET("ol6_download_sheet", true),
         /** OL-7-EDGE: player top bar uses the 4 dp Material app-bar side padding, so More ends at the edge like other apps. */
         PLAYER_TOPBAR_EDGE("ol7_player_topbar_edge", true),
+        /** OL-13: About shows every official Yumeiro account (Discord, Facebook, Instagram, X, TikTok, Reddit) and the developer's Facebook / Instagram / Telegram. */
+        SOCIAL_LINKS("ol13_social_links", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

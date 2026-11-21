@@ -363,8 +363,11 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
 @Composable
 fun SocialMediaCard() {
     val context = LocalContext.current
+    val more = androidx.compose.runtime.remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SOCIAL_LINKS) }
     SettingsCard {
-        Text("Yumeiro has its own website (yumeiro.click) and community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
+        Text(
+            if (more) "Yumeiro has its own website (yumeiro.click), a Telegram channel and group, a Discord server, and is @${dev.asfakul.yumeiro.notify.SocialLinks.HANDLE} everywhere else."
+            else "Yumeiro has its own website (yumeiro.click) and community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
         Reminders.Social.entries.forEachIndexed { i, s ->
             if (i > 0) SettingsDivider()
@@ -372,6 +375,11 @@ fun SocialMediaCard() {
                 if (Links.open(context, s.url)) Reminders.recordFollow(context, s)
                 else AppMessages.error(context, "Couldn't open ${s.label}")
             }
+        }
+        if (more) {
+            // OL-13: one tap per account, icon + name, like Mihon's About row (wraps on small phones, D-pad on TV).
+            SettingsDivider()
+            SocialLinkRow(dev.asfakul.yumeiro.notify.SocialLinks.yumeiro, "social_")
         }
         SettingsDivider()
         SettingsActionRow("Website", "Downloads, news and guides · yumeiro.click", "social_website") {
@@ -381,6 +389,31 @@ fun SocialMediaCard() {
         SettingsActionRow("Star on GitHub", "github.com/siamform/yumeiro", "social_github") {
             if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context)
             else AppMessages.error(context, "Couldn't open GitHub")
+        }
+    }
+}
+
+/** OL-13: a wrapping row of account buttons (brand icon over its name). [prefix] + id is each button's test tag. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun SocialLinkRow(links: List<dev.asfakul.yumeiro.notify.SocialLinks.Link>, prefix: String) {
+    val context = LocalContext.current
+    androidx.compose.foundation.layout.FlowRow(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+    ) {
+        links.forEach { l ->
+            Column(
+                Modifier.width(72.dp).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClickLabel = "Open ${l.label}") { Links.open(context, l.url) }
+                    .padding(vertical = 6.dp).testTag(prefix + l.id),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(androidx.compose.ui.res.painterResource(l.icon), null, tint = TextPrimary, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.height(4.dp))
+                Text(l.label.substringBefore(" ("), color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+            }
         }
     }
 }
