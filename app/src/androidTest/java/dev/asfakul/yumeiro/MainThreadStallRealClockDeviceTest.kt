@@ -148,8 +148,9 @@ class MainThreadStallRealClockDeviceTest {
             }
             val screenH = inst.targetContext.resources.displayMetrics.heightPixels
             val menuRow = text != "Source:" && text != "Home" && text != "Videos"
-            // A menu row is never the pill itself nor the pill's own label (its parent says "Source: …").
-            val hits = nodes.filter { n -> !menuRow || (n.contentDescription?.startsWith("Source:") != true && n.parent?.contentDescription?.startsWith("Source:") != true) }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
+            // A menu row is never the pill itself nor the pill's own label (an ancestor says "Source: …";
+            // run 44939433464 tapped the label at the pill's x/y and closed the menu).
+            val hits = nodes.filter { n -> !menuRow || !underPill(n) }.mapNotNull { n -> Rect().also { n.getBoundsInScreen(it) }.takeIf { it.width() > 1 && it.height() > 1 && it.top >= 0 && it.bottom <= screenH + 1 } }
             // Bottom-bar labels ("Home", "Videos") and menu rows: the lowest match is the tab, a menu row is unique.
             return if (text == "Home" || text == "Videos") hits.maxByOrNull { it.top } else hits.firstOrNull()
         } finally {
@@ -166,8 +167,19 @@ class MainThreadStallRealClockDeviceTest {
             info.flags = info.flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             ua.serviceInfo = info
         }
-        ua.windows.sortedByDescending { it.layer }.mapNotNull { it.root }
+        // Only the app's own windows: the system navigation bar also has a "Home" button.
+        ua.windows.sortedByDescending { it.layer }.mapNotNull { it.root }.filter { it.packageName?.toString() == inst.targetContext.packageName }
     }.getOrDefault(emptyList())
+
+    private fun underPill(n: AccessibilityNodeInfo): Boolean {
+        var cur: AccessibilityNodeInfo? = n
+        repeat(6) {
+            val c = cur ?: return false
+            if (c.contentDescription?.startsWith("Source:") == true) return true
+            cur = c.parent
+        }
+        return false
+    }
 
     private fun texts(): String = runCatching {
         val root = inst.uiAutomation.rootInActiveWindow ?: return "no active window"
