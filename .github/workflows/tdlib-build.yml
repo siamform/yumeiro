@@ -1,0 +1,57 @@
+# F-02 / ADR-052: build TDLib (JSON-from-Java interface) for the four Android ABIs from a pinned TDLib commit.
+# Manual only (no schedule). The artifacts are committed to the `tdlib-bin` branch by hand and their SHA-256 values
+# pinned in TdEngine.kt; the app never loads a file whose hash differs.
+name: TDLib build
+# Also runs on a push to the branch `tdlib/build` (a workflow_dispatch workflow must exist on main first, and main
+# is the release branch; see AGENT-START-HERE).
+on:
+  push:
+    branches: [tdlib/build]
+  workflow_dispatch:
+    inputs:
+      td_commit:
+        description: tdlib/td commit to build
+        default: 03220f6b3043c6fd7785fbf0901d63f19ad19974
+permissions:
+  contents: read
+concurrency:
+  group: tdlib-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq gperf php-cli ninja-build >/dev/null
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" "cmake;3.22.1" >/dev/null
+      - name: TDLib source
+        env:
+          TD_COMMIT: ${{ inputs.td_commit || '03220f6b3043c6fd7785fbf0901d63f19ad19974' }}
+        run: |
+          git init -q td && cd td && git remote add origin https://github.com/tdlib/td.git
+          git fetch -q --depth 1 origin "$TD_COMMIT" && git checkout -q FETCH_HEAD
+          git log -1 --format='%H %cI'
+      - name: Build ${{ matrix.abi }}
+        env:
+          TD_COMMIT: ${{ inputs.td_commit || '03220f6b3043c6fd7785fbf0901d63f19ad19974' }}
+        run: |
+          export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.2.13676358"
+          export PATH="$ANDROID_HOME/cmake/3.22.1/bin:$PATH"
+          scripts/tdlib/build-abi.sh td "${{ matrix.abi }}" out
+          echo "$TD_COMMIT" > out/${{ matrix.abi }}/TD_COMMIT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tdlib-${{ matrix.abi }}
+          path: |
+            out/${{ matrix.abi }}/libtdjsonjava.so.gz
+            out/${{ matrix.abi }}/SHA256
+            out/${{ matrix.abi }}/SIZES
+            out/${{ matrix.abi }}/TD_COMMIT
+          retention-days: 30
