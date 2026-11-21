@@ -83,4 +83,10 @@ class F12VerticalModeTest {
         assertEquals("f12_vertical_mode", FeatureFlags.Flag.VERTICAL_MODE.key)
         assertEquals("f12_shorts_autohide", FeatureFlags.Flag.SHORTS_AUTOHIDE.key)
     }
+
+    /** F-12-FLAG: F-12 is on for everyone once Verified (device 44916676685 / 44916693769, CI 44918012619). */
+    @Test fun f12IsOnByDefault() {
+        assertTrue("f12_vertical_shorts must be on by default", FeatureFlags.Flag.SHORTS_VERTICAL.default)
+        assertEquals("f12_vertical_shorts", FeatureFlags.Flag.SHORTS_VERTICAL.key)
+    }
 }
