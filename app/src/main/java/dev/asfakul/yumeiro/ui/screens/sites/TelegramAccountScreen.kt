@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -340,6 +341,7 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
 @Composable
 private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
     val p = LocalMtPalette.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val videos = remember(chat.id) { mutableStateListOf<TgVideo>() }
     var next by remember(chat.id) { mutableStateOf(0L) }
@@ -398,16 +400,28 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(videos, key = { it.messageId }) { v ->
-                Column(
+                val title = v.caption.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: v.name.ifBlank { chat.title }
+                Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
                         .clickable {
-                            val url = TgAccounts.streamUrl(s, v)
-                            onPlay(StreamRequest(url = url, title = v.caption.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: v.name.ifBlank { chat.title }, format = StreamFormat.PROGRESSIVE))
+                            onPlay(StreamRequest(url = TgAccounts.streamUrl(s, v), title = title, format = StreamFormat.PROGRESSIVE))
                         }
-                        .heightIn(min = 56.dp).padding(14.dp).testTag("tg_video_${v.messageId}"),
+                        .heightIn(min = 56.dp).padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("tg_video_${v.messageId}"),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(v.caption.lineSequence().firstOrNull()?.ifBlank { null } ?: v.name.ifBlank { "Video" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(videoInfo(v), color = p.textSecondary, fontSize = 12.sp)
+                    Column(Modifier.weight(1f)) {
+                        Text(v.caption.lineSequence().firstOrNull()?.ifBlank { null } ?: v.name.ifBlank { if (v.audio) "Audio" else "Video" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(videoInfo(v), color = p.textSecondary, fontSize = 12.sp)
+                    }
+                    IconButton(onClick = {
+                        val req = StreamRequest(url = TgAccounts.downloadUrl(s, v), title = title, format = StreamFormat.PROGRESSIVE)
+                        when (val r = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, req, sourceUrl = "https://t.me/c/${chat.id}/${v.messageId}")) {
+                            is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Downloading ${r.title}")
+                            is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> dev.asfakul.yumeiro.ui.components.AppMessages.info(context, r.message)
+                        }
+                    }, modifier = Modifier.size(48.dp).testTag("tg_download_${v.messageId}")) {
+                        Icon(Icons.Default.Download, "Download $title", tint = p.textSecondary)
+                    }
                 }
             }
             error?.let { e -> item("error") {

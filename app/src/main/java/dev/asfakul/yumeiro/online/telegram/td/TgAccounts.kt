@@ -104,4 +104,36 @@ object TgAccounts {
     }
 
     private val published = ArrayDeque<Pair<String, TdFileSource>>()
+    private val downloads = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * A link for Yumeiro's downloader (owner add 2026-11-21: Telegram downloads). It stays published for the app's
+     * life, apart from the play links, so playing other videos never cuts a download. After an app restart the old
+     * link is gone and the download asks to be started again from the chat.
+     */
+    fun downloadUrl(session: TgSession, video: TgVideo): String {
+        val key = "${session.client.id}:${video.fileId}"
+        return downloads.getOrPut(key) { server.publish(TdFileSource(session.client, video.fileId, video.size, video.mimeType)) } +
+            "/" + fileName(video)
+    }
+
+    /** "name.ext" for a download link, safe in a URL path; the extension decides the saved file's type. */
+    internal fun fileName(video: TgVideo): String {
+        val ext = video.name.substringAfterLast('.', "").lowercase().takeIf { it.length in 2..4 && it.all(Char::isLetterOrDigit) }
+            ?: extFor(video.mimeType)
+        val base = video.name.substringBeforeLast('.').filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(60).ifEmpty { "telegram" }
+        return "$base.$ext"
+    }
+
+    internal fun extFor(mime: String): String = when (mime.lowercase()) {
+        "video/x-matroska" -> "mkv"
+        "video/webm" -> "webm"
+        "video/quicktime" -> "mov"
+        "audio/mpeg" -> "mp3"
+        "audio/mp4", "audio/x-m4a", "audio/aac" -> "m4a"
+        "audio/flac", "audio/x-flac" -> "flac"
+        "audio/ogg", "audio/opus" -> "ogg"
+        "audio/wav", "audio/x-wav" -> "wav"
+        else -> "mp4"
+    }
 }

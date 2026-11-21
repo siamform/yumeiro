@@ -116,6 +116,15 @@ class LocalStreamServerTest {
         assertEquals(404, request(url).status)
     }
 
+    @Test fun fileNameAfterTokenIsIgnored() {
+        val url = server.publish(src)
+        val r = request("$url/Show%20-%2001.mkv", range = "bytes=0-9")
+        assertEquals(206, r.status)
+        assertArrayEquals(data.copyOfRange(0, 10), r.body)
+        server.unpublish("$url/Show.mkv")
+        assertEquals(404, request(url).status)
+    }
+
     @Test fun otherMethodsAre405() {
         assertEquals(405, request(server.publish(src), method = "POST").status)
     }

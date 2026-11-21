@@ -69,7 +69,7 @@ class LocalStreamServer(private val maxConnections: Int = 6) {
         return "http://127.0.0.1:$port/s/$token"
     }
 
-    fun unpublish(url: String) { sources.remove(url.substringAfterLast("/s/", "")) }
+    fun unpublish(url: String) { sources.remove(url.substringAfter("/s/", "").substringBefore('/')) }
 
     @Synchronized
     fun stop() {
@@ -97,7 +97,8 @@ class LocalStreamServer(private val maxConnections: Int = 6) {
         val head = readHead(input) ?: return
         val req = parseRequest(head) ?: return respond(out, 400, "Bad Request")
         if (req.method != "GET" && req.method != "HEAD") return respond(out, 405, "Method Not Allowed")
-        val token = req.path.substringAfter("/s/", "").substringBefore('?')
+        // `/s/<token>` or `/s/<token>/<file name>` (the name only tells downloaders the file type).
+        val token = req.path.substringAfter("/s/", "").substringBefore('?').substringBefore('/')
         val src = sources[token] ?: return respond(out, 404, "Not Found")
         val total = src.length
         val range = parseRange(req.range, total)

@@ -49,6 +49,8 @@ object DownloadNaming {
         // it .ts only when the remux is off or fails.
         link.isHls -> "mp4"
         link.container in setOf("mp4", "mkv", "webm", "m4v", "mov", "avi") -> link.container!!
+        // F-02 Telegram audio downloads keep their own type.
+        link.container in setOf("mp3", "m4a", "flac", "ogg", "opus", "wav") -> link.container!!
         else -> "mp4"
     }
 
