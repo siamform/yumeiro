@@ -228,7 +228,7 @@ object OnlineRepository {
     // region home
 
     /** Home rows of [api] (its main page). Cached for a while unless [force]. */
-    suspend fun home(api: MainAPI, force: Boolean = false): List<OnlineRow> = withContext(ExtensionGuard.dispatcher + ExtensionGuard.coroutineHandler) {
+    suspend fun home(api: MainAPI, force: Boolean = false, onRows: ((List<OnlineRow>) -> Unit)? = null): List<OnlineRow> = withContext(ExtensionGuard.dispatcher + ExtensionGuard.coroutineHandler) {
         if (!force) cachedHomeNow(api)?.let { return@withContext it }
         val diskKey = diskKey(api, "home")
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
@@ -236,7 +236,7 @@ object OnlineRepository {
         // A fetch cancelled by a newer one (Retry, leaving the screen) is not the extension's fault.
         val started = System.currentTimeMillis()
         val live = try {
-            homeLive(api, diskKey)
+            homeLive(api, diskKey, onRows)
         } catch (c: kotlinx.coroutines.CancellationException) {
             throw c
         } catch (t: Throwable) {
@@ -278,7 +278,12 @@ object OnlineRepository {
         return rows
     }
 
-    private suspend fun homeLive(api: MainAPI, diskKey: String): List<OnlineRow> {
+    /**
+     * [onRows] (FE-3, docs/FEED-ENGINE-2.1.md): called with the rows so far each time one row answers, so a screen can
+     * show the extension at its first row. Before, the whole batch waited for its slowest row (up to 25 s) even
+     * when the other rows were back in under a second. Called on the extension pool; may run concurrently.
+     */
+    private suspend fun homeLive(api: MainAPI, diskKey: String, onRows: ((List<OnlineRow>) -> Unit)? = null): List<OnlineRow> {
         val allPages = runCatching { api.mainPage }.getOrDefault(emptyList())
         // R15: the first ROWS_PER_PROVIDER pages are asked; when they come back empty or broken
         // (a studio that is down, a row that timed out) the next pages are asked too, up to
@@ -296,10 +301,11 @@ object OnlineRepository {
             val pages = allPages.drop(batch * ROWS_PER_PROVIDER).take(ROWS_PER_PROVIDER)
             if (pages.isEmpty()) break
             asked += pages.size
-            rows += homeBatch(api, pages, failures)
+            val before = rows.toList()
+            rows += homeBatch(api, pages, failures, onRows?.let { cb -> { soFar: List<OnlineRow> -> cb(shownRows(before + soFar)) } })
             batch++
         }
-        val result = rows.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
+        val result = shownRows(rows)
         // G7-L1: when every page threw (QuickIPTV's sites sending a web page instead of a playlist),
         // the section said "Nothing came back from this extension" and Source Health "Home page is
         // empty". The first page error is passed on so both can show the reason.
@@ -315,19 +321,38 @@ object OnlineRepository {
         return result
     }
 
-    private suspend fun homeBatch(api: MainAPI, pages: List<com.lagradost.cloudstream3.MainPageData>, failures: MutableList<Throwable>? = null): List<OnlineRow> {
+    private fun shownRows(rows: List<OnlineRow>): List<OnlineRow> =
+        rows.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
+
+    private suspend fun homeBatch(
+        api: MainAPI,
+        pages: List<com.lagradost.cloudstream3.MainPageData>,
+        failures: MutableList<Throwable>? = null,
+        onRows: ((List<OnlineRow>) -> Unit)? = null,
+    ): List<OnlineRow> {
+        // FE-3: rows answered so far, by page position, handed to [onRows] as each one lands (page order kept).
+        val landed = java.util.TreeMap<Int, List<OnlineRow>>()
         // supervisorScope: one broken row (or one extension bug) never cancels the others.
         return supervisorScope {
-            pages.map { page ->
+            pages.mapIndexed { i, page ->
                 async {
                     parallel.withPermit {
                         runCatching {
                             ExtensionCall.bounded(homeTimeoutMs) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
-                        }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { page to it }
+                        }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { pageRows(api, page, it) }
+                    }?.also { rows ->
+                        if (onRows != null && rows.isNotEmpty()) {
+                            val soFar = synchronized(landed) { landed[i] = rows; landed.values.flatten() }
+                            runCatching { onRows(soFar) }
+                        }
                     }
                 }
             }.mapNotNull { runCatching { it.await() }.getOrNull() }
-        }.flatMap { (page, resp) ->
+        }.flatten()
+    }
+
+    private fun pageRows(api: MainAPI, page: com.lagradost.cloudstream3.MainPageData, resp: com.lagradost.cloudstream3.HomePageResponse): List<OnlineRow> =
+        run {
             // Extension objects can break Kotlin's null-safety (reflection / Java), so mapping is guarded too.
             runCatching {
                 resp.items.orEmpty().map { r ->
@@ -339,7 +364,6 @@ object OnlineRepository {
                 }
             }.onFailure { Log.w(TAG, "home rows ${api.name}/${page.name}", it) }.getOrDefault(emptyList())
         }.filter { it.items.isNotEmpty() }
-    }
 
     private val diskServed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
@@ -409,24 +433,25 @@ object OnlineRepository {
         searchCache[key]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_CACHE_MS }?.let { return it.value }
         val dk = diskKey(api, "search", q.lowercase())
         return dev.asfakul.yumeiro.cache.DataCache.read("search", dk, maxAgeMs = minOf(dev.asfakul.yumeiro.cache.DataCache.Settings.freshMs, SEARCH_DISK_MS))
-            ?.let(dev.asfakul.yumeiro.cache.OnlineCodec::items)?.takeIf { it.isNotEmpty() }?.also { saved ->
+            // FE-S1: an empty answer is saved too (a site that has nothing for this query), so it isn't asked again.
+            ?.let { raw -> runCatching { dev.asfakul.yumeiro.cache.OnlineCodec.items(raw) }.getOrNull() }?.also { saved ->
                 searchCache[key] = Timed(System.currentTimeMillis(), saved)
             }
     }
 
+    /** Live search of [api]; the caller already checked [cachedSearch] (FE-S1: the second disk read on a miss is gone). */
     private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
-        cachedSearch(api, q)?.let { return it }
         val key = "${api.name}|${q.lowercase()}"
         val dk = diskKey(api, "search", q.lowercase())
         val results = try {
             api.search(q, 1)?.items
         } catch (e: NotImplementedError) { null } ?: api.search(q).orEmpty()
         val items = results.mapNotNull { runCatching { it.toItem(api.name) }.getOrNull() }.distinctBy { it.url }
-        if (items.isNotEmpty()) {
-            if (searchCache.size > 64) searchCache.clear()
-            searchCache[key] = Timed(System.currentTimeMillis(), items)
-            dev.asfakul.yumeiro.cache.DataCache.write("search", dk, dev.asfakul.yumeiro.cache.OnlineCodec.items(items))
-        }
+        // FE-S1 (SpeedDeviceTest run 44883372732: a repeated search took 15.1 s): empty answers are kept as well
+        // (memory 10 min, phone 1 h like any search); errors and timeouts are not, so Retry still asks again.
+        if (searchCache.size > 64) searchCache.clear()
+        searchCache[key] = Timed(System.currentTimeMillis(), items)
+        dev.asfakul.yumeiro.cache.DataCache.write("search", dk, dev.asfakul.yumeiro.cache.OnlineCodec.items(items))
         return items
     }
 

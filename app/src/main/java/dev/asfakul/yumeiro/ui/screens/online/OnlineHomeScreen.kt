@@ -231,14 +231,21 @@ fun OnlineHomeScreen(
             // SPEED-1: a saved page shows at once; only live fetches wait for one of the three slots.
             // FE-1: an old saved page too (refreshed live below via takeStaleHome).
             val cached = if (force) null else runCatching { OnlineRepository.feedHome(api) }.getOrNull()
+            // FE-3: the extension shows at its first row; the slower rows fill in as they answer.
+            val firstRows = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE3_FIRST_ROW)
+            val before = homes[name] as? ProviderHome.Ready
+            val onRows: ((List<OnlineRow>) -> Unit)? = if (!firstRows) null else { soFar ->
+                if (isActive) YumixFeed.homeAfterFetch(before?.rows, soFar)?.let { homes[name] = ProviderHome.Ready(it) }
+            }
             val result = if (cached != null) Result.success(cached) else slot(name) {
-                runCatching { OnlineRepository.home(api, force) }
+                runCatching { OnlineRepository.home(api, force, onRows) }
             }
             // R16 G4: a fetch cancelled by a newer one (Retry, pull to refresh) used to fall
             // through here with the CancellationException as its "error" and briefly put
             // "Couldn't load" over the newer fetch's loading state. The newer fetch owns the section.
             if (!isActive) return@async false
-            val prev = (homes[name] as? ProviderHome.Ready)?.rows
+            // FE-3: rows shown early by onRows are part of this fetch, so compare with what was there before it.
+            val prev = if (firstRows) before?.rows else (homes[name] as? ProviderHome.Ready)?.rows
             val fresh = result.getOrNull()
             // A failed or empty answer keeps what is on screen (see YumixFeed.homeAfterFetch).
             val rows = YumixFeed.homeAfterFetch(prev, fresh)

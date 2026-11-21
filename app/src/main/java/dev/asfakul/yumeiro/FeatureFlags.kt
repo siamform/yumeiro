@@ -71,6 +71,8 @@ object FeatureFlags {
         FE_PRIORITY_GATE("fe2_priority_gate", true),
         /** B31-SEEK3: the built-in torrent engine downloads only the playback window (piece priorities). */
         B31_STREAM_WINDOW("b31_stream_window", true),
+        /** FE-3: an extension shows on Yumix as soon as its first home row answers (the rest fill in). */
+        FE3_FIRST_ROW("fe3_first_row", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }

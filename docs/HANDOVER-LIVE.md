@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 20:30 +06, branch `r15-stability` head after commit "B31-SEEK3: download only the stream window".
+2026-11-21 21:15 +06, branch `r15-stability` head after commit "FE-S1 + FE-3: empty search answers kept, first home row shows the extension".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,9 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-3: Yumix shows an extension at its first home row (`home(api, force, onRows)`, flag fe3_first_row).
+- FE-S1: empty search answers kept (memory 10 min / phone 1 h), second disk read on a miss removed.
+- FE-Q1 code reading: no reinstall loop after update; compiled `oat` folder is not deleted (device check still Not run).
 - B31-SEEK3: torrent engine downloads only the playback window (flag b31_stream_window); B31-SEEK-T insideWindow at file end.
 - FE-2: Yumix PriorityGate (picked extension first, flag fe2_priority_gate); dead site asked one batch (25 s, was 75 s).
 - FE-7a/b: YouTube shelves and YouTube Music Home saved on the phone and shown at once (were memory-only).
@@ -35,6 +38,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Fail-before verified: FE-1 44883755874 (unresolved feedHome; branch deleted).
 - Device 44883372732 (phones) / 44883375160 (TV) @2dba1982: SpeedDeviceTest Pass both phones (baseline in GOAL-TOP-OF-CLASS.md);
   BuiltinTorrentDeviceTest Fail: lowram first 64 KB 5022 ms Pass, seek 9956 ms Fail; api36 first 64 KB 15137 ms Fail;
   TV first 64 KB 6860 ms Pass, seek 19713 ms Fail -> B31-SEEK3 (diagnosed from TorrentTrace).
@@ -52,13 +56,13 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
-- FE-2 fail-before CI 44884208915 (ab/fe2-before; expect unresolved PriorityGate / homeTimeoutMs), then delete.
-- FE-7a/b fail-before CI 44883994031 (ab/fe7-before; expect unresolved savedFeed / savedBrowse), then delete.
-- FE-1 fail-before CI 44883755874 (ab/fe1-before; expect unresolved feedHome), then delete the branch.
-- B31-SEEK3 fail-before CI 44884447258 (ab/seek3-before), then delete.
-- Next r15-stability CI (after the fail-befores): pass-after for everything listed in the ledger as "Pass-after: next r15-stability CI".
-- SpeedDeviceTest baseline: runs with the B31-SEEK3 phone run (same dispatch, both classes).
-- B31-SEEK2 pass-after: next r15-stability CI. Device re-run BuiltinTorrentDeviceTest phones=both + TV api24 on head.
+- Pass-after CI 44884554686 on r15-stability @346a581c (abi_splits=true): covers every row "Pass-after: next r15-stability CI"
+  up to B31-SEEK3. FE-S1 and FE-3 (later commit) need the CI after it. Do not dispatch an r15 CI while it runs.
+- Fail-before CIs: FE-7a/b 44883994031 (ab/fe7-before, expect unresolved savedFeed / savedBrowse), FE-2 44884208915
+  (ab/fe2-before, PriorityGate / homeTimeoutMs), B31-SEEK3 44884447258 (ab/seek3-before, windowPriorities / streamWindow),
+  FE-S1 44884613831 (ab/fes1-before, expect an assertion failure "asked the extension again"), FE-3 44884810399
+  (ab/fe3-before, expect compile failure: no onRows parameter on home). Check, record, delete each branch.
+- After 44884554686 passes: device BuiltinTorrentDeviceTest + SpeedDeviceTest phone=both, and TV tv_api=24 BuiltinTorrentDeviceTest.
 
 ## Next steps, in order
 - FEED-ENGINE first: FE-1 pass-after (next r15 CI after 44882251682), then FE-2 row-level priority scheduler,

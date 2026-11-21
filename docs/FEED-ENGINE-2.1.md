@@ -48,7 +48,7 @@ Read this before touching Yumix, Home, YouTube, online music, search or stream-s
 | FE-RC2 | Saved home pages count only when younger than 6 h (`cachedHomeNow` uses `DataCache.read` default `freshMs`). `savedHome` (any age) is unused. | After > 6 h away, or an update installed later, every extension goes live again through the queue: no instant feed although pages are on disk. |
 | FE-RC3 | Every enabled extension's code is loaded at start, one `load()` at a time, before its home can be asked. | Start-up cost grows with the number installed; 1000+ = minutes and memory pressure. |
 | FE-RC4 | Fresh install: nothing saved yet, so the first feed is only as fast as the queue (FE-RC1). | Cold feed waits for whole homes, not first rows. |
-| FE-Q1 | Reinstall after update: code reading shows no loop (version / sha rules above). | To verify on a device across a real app update (upgrade-check.yml). |
+| FE-Q1 | Reinstall after update: code reading shows no loop (version / sha rules above); `repairMissing` only downloads when a file is missing, and `cleanupFiles` deletes plain files only (`File.delete` fails on the non-empty `oat` folder, so compiled code is kept). | To verify on a device across a real app update (upgrade-check.yml). |
 | FE-Q2 | After an app update ART may re-verify / recompile every extension's code (CloudStream deletes oat folders after an update on purpose). | To measure: extension load time before vs after an update. |
 | FE-Q3 | YouTube shelves and YouTube Music Home were cached in memory only (20 min): every cold start = skeletons + every shelf live (YouTube 2 at a time). | Fixed by FE-7a / FE-7b (saved on the phone, shown at once). |
 
@@ -85,11 +85,11 @@ installed (device), 1000+ simulated (unit).
 | Step | What | Status |
 |---|---|---|
 | SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Pass: baseline run 44883372732 (numbers in GOAL-TOP-OF-CLASS.md) |
-| FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 pending; pass-after pending |
+| FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 verified; pass-after pending (44884554686) |
 | FE-2 / FE-2b | Priority gate (picked jumps the queue, flag fe2_priority_gate) + dead-site budget (one batch when rows time out) | Built; fail-before 44884208915 pending; pass-after pending. Still to do: row-level lanes, VISIBLE lane from scroll position |
-| FE-3 | First row shows the extension | Not run |
+| FE-3 | First row shows the extension | Built (flag fe3_first_row); fail-before 44884810399 pending; pass-after pending |
 | FE-4 | Working set + lazy extension code load (fixes FE-RC3, 1000+) | Not run |
 | FE-5 | Reserve engine: scroll prefetch + background warm-up | Not run |
-| FE-6 | Search / stream sources on the scheduler; FE-S1: save empty search answers too (cached search took 15.1 s, run 44883372732) | Not run |
+| FE-6 | Search / stream sources on the scheduler; FE-S1: save empty search answers too (cached search took 15.1 s, run 44883372732) | FE-S1 built; fail-before 44884613831 pending; pass-after pending. Rest of FE-6 not run |
 | FE-7a/b | YouTube shelves + YouTube Music Home saved and shown at once | Built; fail-before 44883994031 pending; pass-after pending |
 | FE-Q1/Q2 | Device check across a real app update: reinstall? recompile? feed time | Not run |
