@@ -143,6 +143,11 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
         for ((p, ms) in deadlines) if (!h.havePiece(p)) h.setPieceDeadline(p, ms)
     }
 
+    override fun dropDeadlines(hash: String, pieces: List<Int>) {
+        val h = handle(hash) ?: return
+        for (p in pieces) runCatching { if (!h.havePiece(p)) h.resetPieceDeadline(p) }
+    }
+
     override fun onlyFile(hash: String, fileIndex: Int, fileCount: Int) {
         val h = handle(hash) ?: return
         h.prioritizeFiles(Array(fileCount) { if (it == fileIndex) Priority.DEFAULT else Priority.IGNORE })

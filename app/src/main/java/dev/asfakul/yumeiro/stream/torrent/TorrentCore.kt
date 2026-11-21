@@ -41,4 +41,10 @@ interface TorrentCore {
     fun finishedBlocks(hash: String, piece: Int): java.util.BitSet? = null
     /** Asks the session for a fresh download-queue report; [signal] is notified when it lands. */
     fun askBlocks(hash: String) {}
+    /**
+     * B-31 seek: takes the deadlines off [pieces] (an abandoned read-ahead window). Without this the old window's
+     * deadlines are already overdue after a seek, so libtorrent fetches them before the piece the player now waits for
+     * (device run 44879268223: seek read timed out on both phones).
+     */
+    fun dropDeadlines(hash: String, pieces: List<Int>) {}
 }

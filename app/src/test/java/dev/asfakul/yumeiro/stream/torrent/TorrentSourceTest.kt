@@ -32,6 +32,8 @@ class FakeCore(private val dir: File, private val meta: TorrentMeta) : TorrentCo
     override fun saveResume(hash: String, to: File) {}
     override fun pause(hash: String) { paused = true }
     override fun resume(hash: String) { paused = false }
+    val dropped: MutableList<Int> = Collections.synchronizedList(ArrayList())
+    override fun dropDeadlines(hash: String, pieces: List<Int>) { dropped += pieces }
 }
 
 class TorrentSourceTest {
@@ -72,6 +74,19 @@ class TorrentSourceTest {
         assertEquals(100, src.read(pos, buf, 0, 100))
         assertArrayEquals(data.copyOfRange(pos.toInt(), pos.toInt() + 100), buf)
         assertEquals(4 to 0, core.deadlines.first()) // the seek target is the most urgent
+    }
+
+    /** B-31 seek (device run 44879268223): the abandoned window must lose its overdue deadlines. */
+    @Test fun seekDropsTheOldWindowDeadlinesButKeepsTheNewOne() {
+        val (core, src, _) = setup()
+        src.prime() // window 0..3
+        core.arrive(4)
+        src.read(4L * pl - 1000 + 10, ByteArray(10), 0, 10) // seek into piece 4
+        assertEquals(listOf(0, 1, 2, 3), core.dropped.sorted())
+        core.dropped.clear()
+        core.arrive(5)
+        src.read(5L * pl - 1000, ByteArray(10), 0, 10) // still inside the window: nothing dropped
+        assertTrue(core.dropped.isEmpty())
     }
 
     @Test fun timeoutAndErrorBecomeIOException() {
