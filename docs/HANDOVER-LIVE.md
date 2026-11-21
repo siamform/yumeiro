@@ -5,13 +5,14 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 17:20 +06, branch `r15-stability` head after commit "B-31: seek target first (B31-SEEK2)" (see `git log -1`).
+2026-11-21 17:40 +06, branch `r15-stability` head after commit "SPEED-T: device speed test" (see `git log -1`).
 
 ## Owner rule 2026-11-21 17:15 +06
 No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- SPEED-T: device test `SpeedDeviceTest` (extension relaunch load, Home first row, search first result; tag SPEED).
 - B31-SEEK2: request_queue_time 1, seek target alone at 0 ms, read-ahead from 500 ms (research: libtorrent_flutter, VortX).
 - SPEED-3/4: extensions load fastest-first; search starts with loaded extensions and late ones join (no restart).
 - SPEED-1/2: cached homes and searches skip the permit queue; Home and search fastest-first (ledger row SPEED-1 / SPEED-2).
@@ -31,6 +32,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
+- Device 44881581791 (phones) + 44881606204 (TV api24) BuiltinTorrentDeviceTest @5c031c10 = B31-SEEK2 device check.
+- SpeedDeviceTest baseline: dispatch phones=both when a device slot frees (max two device runs).
 - CI 44881403329 ab/speed34-before (expect compile fail: SearchJoin / loadOrder 5 args).
 - NOT yet covered by a pass-after: SPEED-3/4 (commit after 4a58cb22). Dispatch r15-stability CI when 44881247581 ends.
 - CI 44881206020 ab/speed12-before (expect compile fail: cachedHome unresolved).
@@ -41,6 +44,8 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
   E4, SPEED-1/2. Do not dispatch another r15-stability CI while it runs (it would cancel it).
 
 ## Next steps, in order
+0. SpeedDeviceTest baseline -> budgets in GOAL-TOP-OF-CLASS.md -> fixes (parallel extension load like CloudStream amap / Mihon
+   async, but keep provider ownership exact; drop the double disk read in OnlineRepository.searchOne on a miss).
 1. Speed work (owner mandatory): feed loading, extension loading (start-up of the extension engine), search
    (ordering by ExtensionSpeed, per-extension timeout, results streamed as they arrive). Measure first, fix, test.
 2. E4 part 2: visible-rows scheduler, low-RAM / heat throttle, Explore guide delay.

@@ -709,6 +709,17 @@ object ExtensionManager {
     private fun providersOf(filename: String?): List<String> =
         APIHolder.allProviders.toList().filter { it.sourcePlugin == filename }.map { it.name }
 
+    /**
+     * SPEED-T (device speed test only): unloads every plugin and marks the engine not loaded, so the next
+     * [ensureLoaded] times a relaunch (code already compiled on disk) inside one test process.
+     */
+    internal suspend fun unloadAllForSpeedTest() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            synchronized(plugins) { plugins.keys.toList() }.forEach { unloadInternal(it) }
+            _state.update { it.copy(ready = false, partial = false, runtime = emptyMap(), generation = it.generation + 1) }
+        }
+    }
+
     private fun unloadInternal(key: String) {
         val plugin = synchronized(plugins) { plugins.remove(key) } ?: return
         // R16 G4: one line per unload, with the caller, so a section that leaves Yumix can be traced.
