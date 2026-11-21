@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "23 22 */3 * *" # every 3 days, 04:23 Asia/Dhaka
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "E2 check: curate and probe Live TV, upload the result as an artifact, publish nothing"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -50,13 +55,22 @@ jobs:
       # E2 / ADR-055: curated, probed Live TV per country (out/curated/). Off until the
       # repository variable YUMEIRO_CURATED_LIVE is "true" (kill switch: unset it).
       - name: Curate and probe Live TV
-        if: ${{ vars.YUMEIRO_CURATED_LIVE == 'true' }}
+        if: ${{ vars.YUMEIRO_CURATED_LIVE == 'true' || inputs.dry_run }}
         run: |
           python3 -m unittest discover -s .github/scripts -p 'test_curate_live.py'
           python3 .github/scripts/curate_live.py out
 
+      - name: Upload curated lists (dry run)
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: curated-live
+          path: out/curated
+          if-no-files-found: error
+
       - name: Check for changes
         id: diff
+        if: ${{ !inputs.dry_run }}
         run: |
           # 0 changed, 1 unchanged, anything else is an error and fails the job (NBUG-16 NB16-1:
           # errors used to read as "unchanged", so a catalog with new files was never published).
