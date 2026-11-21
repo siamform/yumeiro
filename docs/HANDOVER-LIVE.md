@@ -5,9 +5,14 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 17:05 +06, branch `r15-stability` head after commit "docs: live handover" (see `git log -1`).
+2026-11-21 17:20 +06, branch `r15-stability` head after commit "B-31: seek target first (B31-SEEK2)" (see `git log -1`).
+
+## Owner rule 2026-11-21 17:15 +06
+No hurry, nothing unverified. Before each fix: research how competitors handle the case (cite URLs in the ledger),
+then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- B31-SEEK2: request_queue_time 1, seek target alone at 0 ms, read-ahead from 500 ms (research: libtorrent_flutter, VortX).
 - SPEED-3/4: extensions load fastest-first; search starts with loaded extensions and late ones join (no restart).
 - SPEED-1/2: cached homes and searches skip the permit queue; Home and search fastest-first (ledger row SPEED-1 / SPEED-2).
 - E4 part 1 `b640f68d`: ExtensionSpeed (fastest-first Yumix home order, quarantine 3 fails / 6 h), flag `e4_speed_order`.
@@ -18,6 +23,8 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 - F-22 `706dee41`, F-02 round trip `e0c4e7b8`, B-31 speed `2b286d6c`, F-21 `60e8d6df`, B-32 earlier.
 
 ## Verified (run IDs)
+- Device 44880554878 (@e451b783, phones): notice gate Pass, first 64 KB Pass 8033 / 3192 ms, seek Fail 7566 / 10744 ms
+  (B31-SEEK2). TV 44880575223 (api24): first 64 KB 5238 ms Pass, seek 12732 ms Fail (B31-SEEK2).
 - Pass-after CI 44879288541 (@2b286d6c): B-32 EmptyHomeTest, F-21 ExtensionLabelsTest, B-31 TorrentBlocksTest.
 - Fail-before verified: E2 44880384185, B-31 seek 44880511385 (branches deleted).
 - Fail-before verified: F-21 44878962117, B-31 speed 44879233183, F-22 44879571787, E3 44879928117 (branches deleted).
@@ -28,8 +35,8 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 - NOT yet covered by a pass-after: SPEED-3/4 (commit after 4a58cb22). Dispatch r15-stability CI when 44881247581 ends.
 - CI 44881206020 ab/speed12-before (expect compile fail: cachedHome unresolved).
 - CI 44880750191 ab/e4-before (expect compile fail: ExtensionSpeed unresolved).
-- Device 44880554878 BuiltinTorrentDeviceTest both phones @e451b783 (seek fix + notice gate).
-- Device 44880575223 BuiltinTorrentDeviceTest TV api24 @e451b783.
+- CI 44881530280 ab/b31-seek2-before (expect compile fail: SEEK_GAP_MS unresolved).
+- B31-SEEK2 pass-after: next r15-stability CI. Device re-run BuiltinTorrentDeviceTest phones=both + TV api24 on head.
 - CI 44881247581 r15-stability @4a58cb22 with abi_splits=true: pass-after for F-22, B-31 notice, E2, E3, B-31 seek,
   E4, SPEED-1/2. Do not dispatch another r15-stability CI while it runs (it would cancel it).
 

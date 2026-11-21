@@ -89,6 +89,18 @@ class TorrentSourceTest {
         assertTrue(core.dropped.isEmpty())
     }
 
+    /** B31-SEEK2 (device run 44880554878): after a seek the target piece is alone at the front of the queue. */
+    @Test fun seekPutsTheTargetAloneAtTheFront() {
+        val (core, src, _) = setup()
+        src.prime()
+        assertEquals(1 to 120, core.deadlines.first { it.first == 1 }) // playback start: no gap
+        core.deadlines.clear()
+        core.arrive(4)
+        src.read(4L * pl - 1000 + 10, ByteArray(10), 0, 10)
+        assertEquals(4 to 0, core.deadlines[0])
+        assertEquals(5 to TorrentPlan.SEEK_GAP_MS + 120, core.deadlines[1])
+    }
+
     @Test fun timeoutAndErrorBecomeIOException() {
         val (core, src, _) = setup()
         val start = System.currentTimeMillis()

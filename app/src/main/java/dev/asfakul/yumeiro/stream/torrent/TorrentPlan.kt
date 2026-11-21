@@ -109,11 +109,16 @@ object TorrentPlan {
      * [readAhead] bytes (at least 4 pieces), never past the file's last piece. libtorrent asks the fastest peers
      * for the earliest deadlines, so playback start and seeks wait for the few pieces they need, not the swarm.
      */
-    fun deadlines(piece: Int, lastPiece: Int, pieceLength: Int, readAhead: Long): List<Pair<Int, Int>> {
+    fun deadlines(piece: Int, lastPiece: Int, pieceLength: Int, readAhead: Long, seekGapMs: Int = 0): List<Pair<Int, Int>> {
         val count = maxOf(4L, readAhead / pieceLength.coerceAtLeast(1)).toInt()
         val end = minOf(lastPiece, piece + count - 1)
-        return (piece..end).mapIndexed { i, p -> p to i * 120 }
+        // B31-SEEK2: after a seek the target piece is alone at the front; the read-ahead starts [seekGapMs] later so
+        // the peers' first requests all go to the piece the player waits for.
+        return (piece..end).mapIndexed { i, p -> p to if (i == 0) 0 else seekGapMs + i * 120 }
     }
+
+    /** B31-SEEK2: read-ahead offset after a seek (see [deadlines]). */
+    const val SEEK_GAP_MS = 500
 
     /**
      * Pieces asked for at once when a file opens: the first and last ~2 MB (MP4 `moov` and MKV cues often sit at

@@ -72,7 +72,8 @@ class TorrentSource(
     }
 
     private fun focus(piece: Int) {
-        val d = TorrentPlan.deadlines(piece, last, meta.pieceLength, readAhead)
+        val seek = windowStart >= 0
+        val d = TorrentPlan.deadlines(piece, last, meta.pieceLength, readAhead, if (seek) TorrentPlan.SEEK_GAP_MS else 0)
         val newEnd = d.lastOrNull()?.first ?: piece
         // B-31 seek: the abandoned window's deadlines are overdue now and would be fetched first.
         if (windowStart >= 0) {

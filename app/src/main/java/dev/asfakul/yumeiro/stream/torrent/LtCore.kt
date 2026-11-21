@@ -88,6 +88,10 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
         bool(org.libtorrent4j.swig.settings_pack.bool_types.announce_to_all_tiers, true)
         bool(org.libtorrent4j.swig.settings_pack.bool_types.strict_end_game_mode, false)
         bool(org.libtorrent4j.swig.settings_pack.bool_types.smooth_connects, false)
+        // B31-SEEK2 (device run 44880554878: seek 7.6 / 10.7 s, TV 12.7 s; budget 5 s): each peer's request queue
+        // held ~3 s of data (default request_queue_time 3), and a seek's requests waited behind it. 1 s keeps peers
+        // busy but lets a new time-critical piece reach the front sooner.
+        int(org.libtorrent4j.swig.settings_pack.int_types.request_queue_time, 1)
         sm.start(SessionParams(sp))
     }
 
