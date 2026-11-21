@@ -71,6 +71,8 @@ object FeatureFlags {
         PROFILE_EXTENSIONS("f19_profile_extensions", true),
         /** GATE-1-VIDEOS-LOWRAM: a tab page opened after start composes its content one frame after the page (the jump frame stays short; phones only). */
         TAB_NEXT_FRAME("gate1_tab_next_frame", true),
+        /** GATE-1-RENDER: a short while after start, a tiny canvas under the app draws the first screens' primitives one group per frame, so their GPU programs compile before the first tap. */
+        SHADER_PREWARM("gate1_shader_prewarm", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

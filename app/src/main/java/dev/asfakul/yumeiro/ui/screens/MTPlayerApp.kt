@@ -658,6 +658,8 @@ fun MTPlayerApp(
                 }
     }
     Box(modifier = Modifier.fillMaxSize().pageBackground()) {
+        // GATE-1-RENDER: first-use GPU programs compile in idle frames, drawn under every page.
+        dev.asfakul.yumeiro.ui.components.ShaderPrewarmHost(remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SHADER_PREWARM) })
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
