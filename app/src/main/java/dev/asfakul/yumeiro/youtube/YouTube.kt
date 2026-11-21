@@ -151,11 +151,30 @@ object YouTube {
         }
         if (page == null && result.items.isNotEmpty()) {
             listCache[key] = Timed(System.currentTimeMillis(), result.items)
+            rememberFeed(feed, result.items)
             if (result.next != null) pageTokens[key] = result.next else pageTokens.remove(key)
         }
         result
     }
     private val pageTokens = ConcurrentHashMap<String, Page>()
+
+    /**
+     * FE-7a (docs/FEED-ENGINE-2.1.md): the first page of every shelf is saved on the phone, so the next cold start
+     * shows it at once (any age up to keepDays) while the live copy loads. Before, shelves lived only in memory for
+     * 20 min: every app start showed skeletons and fetched every shelf live, two at a time.
+     */
+    internal fun rememberFeed(feed: YtFeed, items: List<YtItem>) {
+        if (items.isEmpty()) return
+        runCatching { dev.asfakul.yumeiro.cache.DataCache.write(FEED_NS, feed.id, YtHistory.encode(items.take(60))) }
+    }
+
+    /** The saved first page of [feed] (any age up to keepDays), or null. Disk read on Dispatchers.IO. */
+    suspend fun savedFeed(feed: YtFeed): List<YtItem>? = withContext(Dispatchers.IO) {
+        runCatching {
+            dev.asfakul.yumeiro.cache.DataCache.read(FEED_NS, feed.id, maxAgeMs = dev.asfakul.yumeiro.cache.DataCache.Settings.keepDays * 86_400_000L)
+        }.getOrNull()?.let(YtHistory::decode)?.takeIf { it.isNotEmpty() }
+    }
+    private const val FEED_NS = "ytfeed"
 
     private fun fallbackSearch(shelf: YtShelf): List<YtItem> {
         val q = shelf.query ?: shelf.title

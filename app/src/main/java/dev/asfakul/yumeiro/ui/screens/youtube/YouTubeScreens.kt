@@ -293,6 +293,10 @@ private fun YtBrowse(
             // Stale-while-revalidate: cards already on screen stay while the new copy loads.
             if (cur !is Load.Ready) shelves[f.id] = Load.Loading
             dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
+                // FE-7a: the copy saved on the phone shows at once (no skeleton), then the live one replaces it.
+                if (shelves[f.id] !is Load.Ready) YouTube.savedFeed(f)?.let { saved ->
+                    if (g == store.shelfGen && shelves[f.id] !is Load.Ready) shelves[f.id] = Load.Ready(saved)
+                }
                 val r = gate.withPermit {
                     runCatching { YouTube.feed(app, f, force = force) }.fold(
                         { if (it.items.isEmpty()) Load.Failed("Nothing here right now.") else Load.Ready(it.items) },

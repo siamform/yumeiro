@@ -201,6 +201,13 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 CHIP_EXPLORE -> YmBrowse(YtMusicApi.EXPLORE)
                 else -> chips.firstOrNull { it.browse.params == forChip }?.browse ?: YmBrowse(YtMusicApi.HOME)
             }
+            // FE-7b: the page saved on the phone shows at once (no skeleton) while the live one loads.
+            if (!force && home.page == null) YtMusicApi.savedBrowse(target)?.let { saved ->
+                if (g == YmStore.homeGen && home.page == null) {
+                    if (target.browseId == YtMusicApi.HOME && saved.chips.isNotEmpty() && forChip == CHIP_HOME) chips = saved.chips
+                    home = YmState(saved, loading = false)
+                }
+            }
             val r = runCatching { YtMusicApi.browse(app, target, force) }
             if (g != YmStore.homeGen) return@launch
             home = r.fold(

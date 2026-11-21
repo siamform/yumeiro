@@ -67,8 +67,36 @@ object YtMusicApi {
             post(context, "browse", body {
                 put("browseId", target.browseId)
                 target.params?.let { put("params", it) }
-            })
+            }, saveAs = savedKey(target))
         }
+
+    /**
+     * FE-7b (docs/FEED-ENGINE-2.1.md): Home / Explore (and their chips) as last answered, saved on the phone and
+     * keyed by the account state, so a cold start shows them at once while the live page loads. Before, pages
+     * lived only in memory and every start waited for YouTube Music. A saved page from before the last account
+     * change is never shown ([invalidate]). Disk read and parse on Dispatchers.IO.
+     */
+    suspend fun savedBrowse(target: YmBrowse): YmPage? = withContext(Dispatchers.IO) {
+        val key = savedKey(target) ?: return@withContext null
+        val age = dev.asfakul.yumeiro.cache.DataCache.ageOf(SAVED_NS, key) ?: return@withContext null
+        if (System.currentTimeMillis() - age <= savedAfter) return@withContext null
+        val text = dev.asfakul.yumeiro.cache.DataCache.read(SAVED_NS, key, maxAgeMs = dev.asfakul.yumeiro.cache.DataCache.Settings.keepDays * 86_400_000L)
+            ?: return@withContext null
+        runCatching { YmParser.parse(text) }.getOrNull()?.takeIf { it.shelves.isNotEmpty() }
+    }
+
+    internal fun savedKey(target: YmBrowse): String? {
+        if (target.browseId != HOME && target.browseId != EXPLORE) return null
+        val s = YtAccount.state.value
+        return "${target.browseId}|${target.params}|${s.signedIn}:${s.mode.name}"
+    }
+
+    /** Test hook: what [post] saves for a live Home answer. */
+    @androidx.annotation.VisibleForTesting
+    internal fun saveForTests(target: YmBrowse, text: String) { savedKey(target)?.let { dev.asfakul.yumeiro.cache.DataCache.write(SAVED_NS, it, text) } }
+
+    @Volatile private var savedAfter = 0L
+    private const val SAVED_NS = "ymhome"
 
     suspend fun home(context: Context, chip: YmChip? = null, force: Boolean = false): YmPage =
         browse(context, chip?.browse ?: YmBrowse(HOME), force)
@@ -92,7 +120,12 @@ object YtMusicApi {
      * changes (sign in, sign out, mode), so a signed-out phone never keeps showing the previous
      * account's own Home for the rest of the cache time.
      */
-    fun invalidate() { cache.clear(); visitor = null }
+    fun invalidate() {
+        cache.clear(); visitor = null
+        // FE-7b: saved Home pages of the previous account state are never shown again.
+        savedAfter = System.currentTimeMillis()
+        runCatching { dev.asfakul.yumeiro.cache.DataCache.dropNamespace(SAVED_NS) }
+    }
 
     @androidx.annotation.VisibleForTesting
     internal fun cachedCount(): Int = cache.size
@@ -133,7 +166,7 @@ object YtMusicApi {
         extra()
     }
 
-    private suspend fun post(context: Context, endpoint: String, body: kotlinx.serialization.json.JsonObject): YmPage =
+    private suspend fun post(context: Context, endpoint: String, body: kotlinx.serialization.json.JsonObject, saveAs: String? = null): YmPage =
         withContext(Dispatchers.IO) {
             val url = "$BASE$endpoint?prettyPrint=false"
             val req = Request.Builder().url(url)
@@ -151,7 +184,9 @@ object YtMusicApi {
                 val text = r.body.string()
                 if (!text.trimStart().startsWith("{")) throw IOException("YouTube Music is busy right now")
                 if (visitor == null) visitor = visitorRx.find(text.take(4000))?.groupValues?.get(1)
-                YmParser.parse(text)
+                YmParser.parse(text).also { p ->
+                    if (saveAs != null && p.shelves.isNotEmpty()) dev.asfakul.yumeiro.cache.DataCache.write(SAVED_NS, saveAs, text)
+                }
             }
         }
 }

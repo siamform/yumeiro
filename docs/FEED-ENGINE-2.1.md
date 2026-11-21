@@ -50,7 +50,7 @@ Read this before touching Yumix, Home, YouTube, online music, search or stream-s
 | FE-RC4 | Fresh install: nothing saved yet, so the first feed is only as fast as the queue (FE-RC1). | Cold feed waits for whole homes, not first rows. |
 | FE-Q1 | Reinstall after update: code reading shows no loop (version / sha rules above). | To verify on a device across a real app update (upgrade-check.yml). |
 | FE-Q2 | After an app update ART may re-verify / recompile every extension's code (CloudStream deletes oat folders after an update on purpose). | To measure: extension load time before vs after an update. |
-| FE-Q3 | YouTube and online music slow loads. | Not investigated yet. |
+| FE-Q3 | YouTube shelves and YouTube Music Home were cached in memory only (20 min): every cold start = skeletons + every shelf live (YouTube 2 at a time). | Fixed by FE-7a / FE-7b (saved on the phone, shown at once). |
 
 ## 4. Design: Yumeiro feed engine (own build)
 
@@ -85,11 +85,11 @@ installed (device), 1000+ simulated (unit).
 | Step | What | Status |
 |---|---|---|
 | SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Built; baseline device run pending |
-| FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Not run (next) |
+| FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 pending; pass-after pending |
 | FE-2 | Row-level priority scheduler with lanes and caps (fixes FE-RC1) | Not run |
 | FE-3 | First row shows the extension | Not run |
 | FE-4 | Working set + lazy extension code load (fixes FE-RC3, 1000+) | Not run |
 | FE-5 | Reserve engine: scroll prefetch + background warm-up | Not run |
 | FE-6 | Search / stream sources on the scheduler | Not run |
-| FE-7 | YouTube and online music slow loads | Not run (not investigated) |
+| FE-7a/b | YouTube shelves + YouTube Music Home saved and shown at once | Built; fail-before 44883994031 pending; pass-after pending |
 | FE-Q1/Q2 | Device check across a real app update: reinstall? recompile? feed time | Not run |

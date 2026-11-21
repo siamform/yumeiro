@@ -5,7 +5,7 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-21 19:25 +06, branch `r15-stability` head after commit "docs: FE-1 handover".
+2026-11-21 19:45 +06, branch `r15-stability` head after commit "FE-7a/b: saved YouTube shelves and Music Home".
 
 ## Owner top priority 2026-11-21 19:00 +06 (read docs/FEED-ENGINE-2.1.md)
 Feed engine: Yumeiro loads all extensions like YouTube channels; must handle 1000+; priority (playing > picked >
@@ -18,6 +18,7 @@ No hurry, nothing unverified. Before each fix: research how competitors handle t
 then build Yumeiro's own better version. All bugs mandatory; features one by one. 2.1.0 must be the most stable build.
 
 ## Done today (2026-11-21), newest first
+- FE-7a/b: YouTube shelves and YouTube Music Home saved on the phone and shown at once (were memory-only).
 - FE-1 `f37b4224`: `OnlineRepository.feedHome` shows any-age saved homes at once in Yumix and Home, live refresh behind.
 - FEED-ENGINE doc docs/FEED-ENGINE-2.1.md (requirement, root causes FE-RC1..4, design, plan).
 - SPEED-T: device test `SpeedDeviceTest` (extension relaunch load, Home first row, search first result; tag SPEED).
@@ -45,6 +46,7 @@ then build Yumeiro's own better version. All bugs mandatory; features one by one
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
 ## Pending runs (check each, record in the ledger, then delete the ab/ branch)
+- FE-7a/b fail-before CI 44883994031 (ab/fe7-before; expect unresolved savedFeed / savedBrowse), then delete.
 - FE-1 fail-before CI 44883755874 (ab/fe1-before; expect unresolved feedHome), then delete the branch.
 - B31-SEEK3 diagnostic device runs: 44883372732 (phones=both, BuiltinTorrentDeviceTest + SpeedDeviceTest = SPEED baseline)
   and 44883375160 (TV api24, BuiltinTorrentDeviceTest). Read logcat tags B31 and SPEED.
