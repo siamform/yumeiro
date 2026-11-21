@@ -152,6 +152,12 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
         for (p in pieces) runCatching { if (!h.havePiece(p)) h.resetPieceDeadline(p) }
     }
 
+    override fun streamWindow(hash: String, priorities: ByteArray) {
+        val h = handle(hash) ?: return
+        val levels = Priority.values()
+        runCatching { h.prioritizePieces(Array(priorities.size) { levels[priorities[it].toInt().coerceIn(0, 7)] }) }
+    }
+
     override fun onlyFile(hash: String, fileIndex: Int, fileCount: Int) {
         val h = handle(hash) ?: return
         h.prioritizeFiles(Array(fileCount) { if (it == fileIndex) Priority.DEFAULT else Priority.IGNORE })

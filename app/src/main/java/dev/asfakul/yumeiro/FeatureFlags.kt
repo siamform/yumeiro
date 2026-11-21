@@ -69,6 +69,8 @@ object FeatureFlags {
         E4_SPEED_ORDER("e4_speed_order", true),
         /** FE-2 (docs/FEED-ENGINE-2.1.md): Yumix queue by priority; the extension picked in "Show videos from" jumps it. */
         FE_PRIORITY_GATE("fe2_priority_gate", true),
+        /** B31-SEEK3: the built-in torrent engine downloads only the playback window (piece priorities). */
+        B31_STREAM_WINDOW("b31_stream_window", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
     }

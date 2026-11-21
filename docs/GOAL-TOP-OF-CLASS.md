@@ -77,6 +77,21 @@ claiming it), Building (this cycle), Missing.
 - Built-in DNS-over-HTTPS fallback and unblocking (NBUG-6), ad / pop-up shield in the page browser.
 - Built-in torrent engine AND Telegram login AND every extension family in one app: no competitor has all three.
 
+## Speed baseline and budgets (SpeedDeviceTest, device run 44883372732 @ r15-stability 2dba1982, 6 market extensions)
+
+| Measure (tag SPEED) | api33-lowram (2 GB) | api36 | Budget (never raised) |
+|---|---|---|---|
+| ext_first_usable | 1754 ms | 701 ms | ≤ 2500 ms on 2 GB |
+| ext_all_loaded (6 extensions, 10 providers) | 2109 ms | 827 ms | ≤ 3000 ms on 2 GB |
+| home_first_row_live | 3480 ms | 776 ms | ≤ 5000 ms |
+| home_first_row_cached | 5 ms | 2 ms | ≤ 100 ms |
+| search_first_result_live | 270 ms | 361 ms | ≤ 3000 ms |
+| search_all_answered_live | 25725 ms | 25364 ms | none yet (bounded by the 25 s search timeout of slow extensions; target: finish the fan-out early, FE-6) |
+| search_first_result_cached | 4 ms | 2 ms | ≤ 100 ms |
+| search_all_answered_cached | 15116 ms | 15111 ms | Fail finding FE-S1: extensions with an empty answer are not saved, so a "cached" search still waits for them live (FE-6) |
+
+Not yet measured: feed with 50+ installed, after an app update (FE-Q1/Q2), YouTube / YouTube Music cold start (FE-7).
+
 ## How it happens
 
 The owner's order stays: F-02 → B-31 → B-32 → E1 → F-21 / F-22 → E2-E4 → Built-not-tested device checks →

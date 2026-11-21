@@ -117,6 +117,23 @@ object TorrentPlan {
         return (piece..end).mapIndexed { i, p -> p to if (i == 0) 0 else seekGapMs + i * 120 }
     }
 
+    /**
+     * B31-SEEK3 (device runs 44883372732 / 44883375160): piece priorities for a stream window. Before, the whole file
+     * kept libtorrent's default priority 4, so rarest-first pieces anywhere in a 5.8 GB file filled every peer's
+     * request queue; libtorrent's time-critical picker skips peers with too many outstanding requests
+     * (https://libtorrent.org/streaming.html), and after a seek no block of the target piece arrived for 7 s at
+     * 2 MB/s (17 s on TV). Now only the window is wanted: the target 7, the next piece 6, the rest of the window 5,
+     * [keep] (container head / tail) 2, everything else 0. Same gradient idea as libtorrent_flutter (NOW 7 / NEXT 6 /
+     * READAHEAD 5 / SKIP 0, https://pub.dev/packages/libtorrent_flutter/versions/1.9.9/changelog) and TorrServer's
+     * reader tiers; our own code. One byte per piece of the torrent.
+     */
+    fun windowPriorities(numPieces: Int, window: List<Int>, keep: Collection<Int>): ByteArray {
+        val p = ByteArray(numPieces.coerceAtLeast(0))
+        for (k in keep) if (k in p.indices) p[k] = 2
+        window.forEachIndexed { i, w -> if (w in p.indices) p[w] = when (i) { 0 -> 7; 1 -> 6; else -> 5 } }
+        return p
+    }
+
     /** B31-SEEK2: read-ahead offset after a seek (see [deadlines]). */
     const val SEEK_GAP_MS = 500
 
@@ -146,8 +163,11 @@ object TorrentPlan {
     }
 
     /** Is [position] still inside the window last asked for (no need to send new deadlines)? */
-    fun insideWindow(piece: Int, windowStart: Int, windowEnd: Int): Boolean =
-        windowStart >= 0 && piece >= windowStart && piece <= windowStart + (windowEnd - windowStart) / 2
+    fun insideWindow(piece: Int, windowStart: Int, windowEnd: Int, lastPiece: Int = Int.MAX_VALUE): Boolean =
+        windowStart >= 0 && piece >= windowStart &&
+            // B31-SEEK-T (CI 44882251682): a window cut short by the file's end already holds everything left, so
+            // reading on inside it must not re-focus (that dropped the deadlines of the piece being played).
+            (piece <= windowStart + (windowEnd - windowStart) / 2 || (windowEnd >= lastPiece && piece <= windowEnd))
 
     private fun isSample(path: String): Boolean = path.substringAfterLast('/').contains("sample", true)
     private fun ext(path: String): String = path.substringAfterLast('/').substringAfterLast('.', "").lowercase()

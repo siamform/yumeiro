@@ -76,4 +76,11 @@ class TorrentPlanTest {
         if (bits > 0) sb.append(a[(buf shl (5 - bits)) and 31])
         return sb.toString()
     }
+
+    /** B31-SEEK3: only the stream window is wanted (target 7, next 6, rest 5), head / tail low, the rest skipped. */
+    @Test fun windowPrioritiesKeepOnlyTheWindow() {
+        val p = TorrentPlan.windowPriorities(10, listOf(4, 5, 6), listOf(0, 9))
+        assertEquals(listOf(2, 0, 0, 0, 7, 6, 5, 0, 0, 2), p.map { it.toInt() })
+        assertEquals(listOf(7), TorrentPlan.windowPriorities(1, listOf(0, 3), listOf(5)).map { it.toInt() })
+    }
 }

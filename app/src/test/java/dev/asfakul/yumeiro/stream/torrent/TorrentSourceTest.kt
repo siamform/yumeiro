@@ -24,7 +24,7 @@ class FakeCore(private val dir: File, private val meta: TorrentMeta) : TorrentCo
     override fun addResume(resume: ByteArray, root: File): String? = meta.hash
     override fun meta(hash: String) = meta
     override fun have(hash: String, piece: Int) = piece in have
-    override fun setDeadlines(hash: String, deadlines: List<Pair<Int, Int>>) { this.deadlines += deadlines }
+    override fun setDeadlines(hash: String, deadlines: List<Pair<Int, Int>>) { this.deadlines += deadlines; events += "deadlines" }
     override fun onlyFile(hash: String, fileIndex: Int, fileCount: Int) {}
     override fun savePath(hash: String) = dir.absolutePath
     override fun error(hash: String) = err
@@ -33,7 +33,10 @@ class FakeCore(private val dir: File, private val meta: TorrentMeta) : TorrentCo
     override fun pause(hash: String) { paused = true }
     override fun resume(hash: String) { paused = false }
     val dropped: MutableList<Int> = Collections.synchronizedList(ArrayList())
-    override fun dropDeadlines(hash: String, pieces: List<Int>) { dropped += pieces }
+    override fun dropDeadlines(hash: String, pieces: List<Int>) { dropped += pieces; events += "drop" }
+    val windows: MutableList<ByteArray> = Collections.synchronizedList(ArrayList())
+    val events: MutableList<String> = Collections.synchronizedList(ArrayList())
+    override fun streamWindow(hash: String, priorities: ByteArray) { windows += priorities; events += "window" }
 }
 
 class TorrentSourceTest {
@@ -99,6 +102,23 @@ class TorrentSourceTest {
         src.read(4L * pl - 1000 + 10, ByteArray(10), 0, 10)
         assertEquals(4 to 0, core.deadlines[0])
         assertEquals(5 to TorrentPlan.SEEK_GAP_MS + 120, core.deadlines[1])
+    }
+
+    /**
+     * B31-SEEK3 (device 44883372732 / 44883375160): after a seek no block of the target piece came for 7 s / 17 s
+     * while the swarm sent 2 MB/s elsewhere. Only the new window may be downloaded, written before its deadlines.
+     */
+    @Test fun seekDownloadsOnlyTheNewWindow() {
+        val (core, src, _) = setup()
+        src.prime()
+        core.arrive(4)
+        core.events.clear(); core.windows.clear()
+        src.read(4L * pl - 1000 + 10, ByteArray(10), 0, 10)
+        val p = core.windows.single()
+        assertEquals(7, p[4].toInt()); assertEquals(6, p[5].toInt())
+        assertEquals(0, p[6].toInt()) // not this file
+        assertEquals(2, p[1].toInt()) // container head / tail kept low
+        assertEquals(listOf("drop", "window", "deadlines"), core.events)
     }
 
     @Test fun timeoutAndErrorBecomeIOException() {

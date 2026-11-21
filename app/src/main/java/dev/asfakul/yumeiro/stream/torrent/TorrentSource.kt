@@ -25,6 +25,8 @@ class TorrentSource(
     private val waitMs: Long = 60_000,
     /** Called on every read, so the stream manager knows the torrent is in use. */
     private val touched: () -> Unit = {},
+    /** B31-SEEK3 kill switch (flag b31_stream_window). */
+    private val window: Boolean = true,
 ) : ByteSource {
     override val length: Long = file.size
     override val mimeType: String = TorrentPlan.mimeFor(file.path)
@@ -33,6 +35,8 @@ class TorrentSource(
     private var raf: RandomAccessFile? = null
     @Volatile private var windowStart = -1
     @Volatile private var windowEnd = -1
+    /** B31-SEEK3: container head / tail stay wanted at a low priority. */
+    private val keep = TorrentPlan.headTail(file, meta.pieceLength)
 
     /** First and last pieces at once (container headers / index), and the start of the file. */
     fun prime() {
@@ -47,7 +51,7 @@ class TorrentSource(
         if (position >= length) return -1
         touched()
         val piece = TorrentPlan.pieceAt(file, position, meta.pieceLength)
-        if (!TorrentPlan.insideWindow(piece, windowStart, windowEnd)) focus(piece)
+        if (!TorrentPlan.insideWindow(piece, windowStart, windowEnd, last)) focus(piece)
         // Up to the end of this piece (the next one may not be here yet).
         val pieceEnd = (piece + 1).toLong() * meta.pieceLength - file.offset
         var upTo = pieceEnd
@@ -97,6 +101,9 @@ class TorrentSource(
             if (old.isNotEmpty()) core.dropDeadlines(meta.hash, old)
         }
         windowStart = piece; windowEnd = newEnd
+        // B31-SEEK3: only the window is downloaded; priorities are written after the old deadlines are dropped and
+        // before the new ones, so a reset never demotes the new window (libtorrent leaves reset pieces at 1).
+        if (window) core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, d.map { it.first }, keep))
         core.setDeadlines(meta.hash, d)
     }
 

@@ -84,12 +84,12 @@ installed (device), 1000+ simulated (unit).
 
 | Step | What | Status |
 |---|---|---|
-| SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Built; baseline device run pending |
+| SPEED-T | Device speed test (extension load, Home first row live/cached, search) | Pass: baseline run 44883372732 (numbers in GOAL-TOP-OF-CLASS.md) |
 | FE-1 | Show any-age saved homes at once + background refresh (fixes FE-RC2) | Built; fail-before 44883755874 pending; pass-after pending |
 | FE-2 / FE-2b | Priority gate (picked jumps the queue, flag fe2_priority_gate) + dead-site budget (one batch when rows time out) | Built; fail-before 44884208915 pending; pass-after pending. Still to do: row-level lanes, VISIBLE lane from scroll position |
 | FE-3 | First row shows the extension | Not run |
 | FE-4 | Working set + lazy extension code load (fixes FE-RC3, 1000+) | Not run |
 | FE-5 | Reserve engine: scroll prefetch + background warm-up | Not run |
-| FE-6 | Search / stream sources on the scheduler | Not run |
+| FE-6 | Search / stream sources on the scheduler; FE-S1: save empty search answers too (cached search took 15.1 s, run 44883372732) | Not run |
 | FE-7a/b | YouTube shelves + YouTube Music Home saved and shown at once | Built; fail-before 44883994031 pending; pass-after pending |
 | FE-Q1/Q2 | Device check across a real app update: reinstall? recompile? feed time | Not run |
