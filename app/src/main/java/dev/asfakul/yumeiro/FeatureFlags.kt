@@ -51,6 +51,8 @@ object FeatureFlags {
         PLAYER_TOPBAR_ALIGN("ol7_player_topbar_align", true),
         /** OL-9: Home Spaces "See more" also has Telegram, Profiles, Your stats, Airing soon, Reading and Inbox. */
         HOME_SPACES_MORE("ol9_home_spaces_more", true),
+        /** OL-10: Settings -> Navigation bar can also pin Profiles, Your statistics, Airing soon, Reading and Tracking. */
+        NAV_MORE_DESTINATIONS("ol10_nav_more_destinations", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

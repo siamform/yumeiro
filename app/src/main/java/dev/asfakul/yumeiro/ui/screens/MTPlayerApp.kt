@@ -615,6 +615,15 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WATCH_TOGETHER -> navigateSub(Screen.WatchTogether.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS -> navigateSub(Screen.Settings.route)
+            // OL-10: the newer pages.
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.PROFILES -> {
+                dev.asfakul.yumeiro.ui.screens.settings.SettingsLaunch.request(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PROFILES)
+                navigateSub(Screen.Settings.route)
+            }
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.STATS -> navigateSub(Screen.Stats.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TRACKING -> navigateSub(Screen.Tracking.route)
         }
     }
     val tabBottomBar: @Composable () -> Unit = {

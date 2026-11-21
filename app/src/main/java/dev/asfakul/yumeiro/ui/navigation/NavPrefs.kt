@@ -46,6 +46,16 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material.icons.outlined.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,7 +78,7 @@ object NavPrefs {
     const val SHORTCUT_PREFIX = "shortcut:"
 
     /** A shortcut the user can pin to the bar; tapping it opens that page. */
-    enum class Shortcut(val id: String, val label: String, val detail: String, val item: BottomNavItem) {
+    enum class Shortcut(val id: String, val label: String, val detail: String, val item: BottomNavItem, val newer: Boolean = false) {
         MANGA("manga", "Manga", "Your reading list and manga sources", nav("manga", "Manga", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook)),
         LIVE("live", "Live TV", "Channels and your playlists", nav("live", "Live", Icons.Filled.LiveTv, Icons.Outlined.LiveTv)),
         DOWNLOADS("downloads", "Downloads", "Everything saved for offline", nav("downloads", "Saved", Icons.Filled.Download, Icons.Outlined.Download)),
@@ -90,8 +100,21 @@ object NavPrefs {
         WATCH_TOGETHER("watch_together", "Watch together", "Watch in sync with friends", nav("watch_together", "Together", Icons.Filled.Groups, Icons.Outlined.Groups)),
         INBOX("inbox", "Inbox", "News and messages from Yumeiro", nav("inbox", "Inbox", Icons.Filled.Inbox, Icons.Outlined.Inbox)),
         SETTINGS("settings", "Settings", "Every option in one place", nav("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)),
+        // OL-10 (owner): the newer pages can be pinned too (shown only with NAV_MORE_DESTINATIONS).
+        PROFILES("profiles", "Profiles", "Who's watching, PIN, 18+ per person", nav("profiles", "Profiles", Icons.Filled.AccountCircle, Icons.Outlined.AccountCircle), newer = true),
+        STATS("stats", "Your statistics", "Streaks, totals and the activity map", nav("stats", "Stats", Icons.Filled.Insights, Icons.Outlined.Insights), newer = true),
+        UPCOMING("upcoming", "Airing soon", "New episodes of what you follow", nav("upcoming", "Airing", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth), newer = true),
+        READING("reading", "Reading", "Manga and books you read", nav("reading", "Reading", Icons.Filled.AutoStories, Icons.Outlined.AutoStories), newer = true),
+        TRACKING("tracking", "Tracking", "AniList and MyAnimeList sync", nav("tracking", "Tracking", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges), newer = true),
         ;
-        companion object { fun of(id: String?): Shortcut? = entries.firstOrNull { it.id == id } }
+        companion object {
+            fun of(id: String?): Shortcut? = entries.firstOrNull { it.id == id }
+            /** OL-10: what Settings -> Navigation bar offers (the newer ones only with their flags on). */
+            fun offered(): List<Shortcut> = entries.filter { s ->
+                !s.newer || (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.NAV_MORE_DESTINATIONS) &&
+                    (s != STATS || dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PROFILE_STATS)))
+            }
+        }
     }
 
     data class Config(

@@ -112,7 +112,7 @@ fun NavigationBarSettingsCard() {
             Text("Pin up to ${NavPrefs.MAX_SHORTCUTS} pages you open every day.", color = TextSecondary, fontSize = 13.sp)
             Spacer(Modifier.height(12.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                NavPrefs.Shortcut.entries.forEach { s ->
+                NavPrefs.Shortcut.offered().forEach { s ->
                     val on = s in cfg.shortcuts
                     SelectChip(
                         label = s.label, selected = on, tag = "nav_settings_shortcut_${s.id}",

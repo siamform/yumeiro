@@ -11,6 +11,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.asfakul.yumeiro.ui.navigation.NavPrefs
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -19,7 +21,8 @@ import org.junit.runner.RunWith
 
 /**
  * OL-9 (owner): Home Spaces "See more" opens the newer pages (Telegram, Profiles, Your stats,
- * Airing soon, Reading). Lines: OL_DEST home=<card> shown=… ok=….
+ * Airing soon, Reading). OL-10 (owner): Settings -> Navigation bar can pin them too, and the
+ * pinned button opens the page. Lines: OL_DEST home=<card> ok=… / OL_DEST nav=<id> ok=….
  */
 @RunWith(AndroidJUnit4::class)
 class MoreDestinationsDeviceTest {
@@ -60,5 +63,28 @@ class MoreDestinationsDeviceTest {
             if (shown) back()
         }
         assertTrue("OL-9: Home Spaces did not open: $failed", failed.isEmpty())
+    }
+
+    @Test fun ol10_navBarPinsAndOpensTheNewerPages() {
+        val cases = listOf("profiles" to "settings_page_profiles", "stats" to "stats_screen", "upcoming" to "upcoming_screen", "reading" to "reading_library", "tracking" to "tracking_screen")
+        val failed = ArrayList<String>()
+        for ((id, page) in cases) {
+            val s = NavPrefs.Shortcut.of(id)
+            log("OL_DEST nav=$id known=${s != null}")
+            assertNotNull("OL-10: Navigation bar cannot pin '$id'", s)
+            try {
+                inst.runOnMainSync { NavPrefs.setShortcut(ctx, s!!, true) }
+                home()
+                val pinned = waitFor("nav_shortcut_$id")
+                val ok = pinned && runCatching { FirstRun.tapVisible(rule, "nav_shortcut_$id", 10_000); true }.getOrDefault(false) && waitFor(page)
+                FirstRun.shot("ol10_$id")
+                log("OL_DEST nav=$id pinned=$pinned ok=$ok")
+                if (!ok) failed += "$id -> $page"
+                back()
+            } finally {
+                inst.runOnMainSync { NavPrefs.setShortcut(ctx, s!!, false) }
+            }
+        }
+        assertTrue("OL-10: pinned buttons did not open: $failed", failed.isEmpty())
     }
 }
