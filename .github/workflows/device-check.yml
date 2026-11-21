@@ -136,6 +136,10 @@ jobs:
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
+          # F-02: scripts/device-check.sh runs `gradlew install...` again, which rebuilds BuildConfig; without the
+          # keys here the installed build had none (device run 44875721952). Never echoed.
+          YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
+          YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
           TEST_FILTER: ${{ github.event.inputs.test || (inputs.tv && 'dev.asfakul.yumeiro.HomeNavigationDeviceTest,dev.asfakul.yumeiro.BackNavigationDeviceTest,dev.asfakul.yumeiro.StabilityStressDeviceTest' || '') }}
           FLAVOR: ${{ matrix.device.flavor }}
           REPEAT: ${{ github.event.inputs.repeat || '1' }}

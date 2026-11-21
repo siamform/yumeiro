@@ -45,7 +45,11 @@ class TelegramLoginDeviceTest {
 
     @Test fun signInOnTestServersListsChatsAndLogsOut(): Unit = runBlocking {
         FeatureFlags.set(ctx, FeatureFlags.Flag.TELEGRAM_LOGIN, true)
-        assertTrue("Telegram keys missing from this build, or no engine pin", TgAccounts.enabled(ctx))
+        assertTrue("Telegram api_id missing from this build", BuildConfig.TG_API_ID.toIntOrNull() != null)
+        assertTrue("Telegram api_hash missing from this build", BuildConfig.TG_API_HASH.isNotBlank())
+        assertTrue("flag f02_telegram_login did not turn on", FeatureFlags.on(ctx, FeatureFlags.Flag.TELEGRAM_LOGIN))
+        assertTrue("no engine pin for " + android.os.Build.SUPPORTED_ABIS.toList(), TdEngine.available())
+        assertTrue(TgAccounts.enabled(ctx))
         TgAccounts.useTestDc = true
         val s = withTimeout(180_000) { TgAccounts.session(ctx) }
         requireNotNull(s) { "session did not start: " + TdEngine.state.value }
