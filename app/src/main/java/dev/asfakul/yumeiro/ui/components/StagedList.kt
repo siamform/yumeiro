@@ -73,5 +73,6 @@ class StagedList(private val scope: LazyListScope, private val limit: Int) {
 private inline fun traced(name: String, content: @Composable () -> Unit) {
     val on = android.os.Build.VERSION.SDK_INT >= 29 && android.os.Trace.isEnabled()
     if (on) android.os.Trace.beginSection(name)
-    try { content() } finally { if (on) android.os.Trace.endSection() }
+    content() // no try/finally: Compose does not allow it around composable calls (a throw ends the app anyway)
+    if (on) android.os.Trace.endSection()
 }
