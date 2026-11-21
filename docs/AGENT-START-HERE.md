@@ -58,7 +58,9 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
   export GIT_AUTHOR_NAME="Asfakul Siam" GIT_AUTHOR_EMAIL="71690568+siamform@users.noreply.github.com"
   export GIT_COMMITTER_NAME="Asfakul Siam" GIT_COMMITTER_EMAIL="71690568+siamform@users.noreply.github.com"
   ```
-- Every commit message ends with exactly one trailer line: `Co-authored-by: Perplexity <noreply@perplexity.ai>`.
+- Every commit message ends with exactly one trailer line: `Co-authored-by: Perplexity <noreply@perplexity.ai>`
+  (owner confirmed 2026-11-21: "oky use co author"; the platform requires it). Author and committer stay the owner.
+  Check each commit with `git log -1 --format=fuller` before pushing.
 - PR descriptions and GitHub comments end with the "Created with Perplexity" footer line linking the agent's task
   (never in replies to the owner).
 - Never force-push. Run `gh` from inside the repo directory.
@@ -83,7 +85,12 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 - Never print or commit a secret. gitleaks must stay green.
 - Repo secrets (names only): ANILIST_CLIENT_ID, MAL_CLIENT_ID, TRAKT_CLIENT_ID, SIMKL_CLIENT_ID, KITSU_*,
   LASTFM_API_KEY, LASTFM_SHARED_SECRET, LRCLIB_APP_ID, OPENSUBTITLES_API_KEY, TMDB_API_KEY, MT_KEYSTORE_* /
-  MT_KEY_* (signing), YUMEIRO_FCM_*, DATA_BRANCH_DEPLOY_KEY, YUMEIRO_TG_API_ID, YUMEIRO_TG_API_HASH.
+  MT_KEY_* (signing), YUMEIRO_FCM_*, DATA_BRANCH_DEPLOY_KEY, YUMEIRO_TG_API_ID, YUMEIRO_TG_API_HASH,
+  CLOUDFLARE_API_TOKEN, FIREBASE_SERVICE_ACCOUNT_JSON (both added 2026-11-21). Not provided yet: TRAKT_CLIENT_SECRET.
+- Checked 2026-11-21 from the sandbox (values never printed): Cloudflare token `active`; TMDB, Last.fm, Trakt,
+  OpenSubtitles answer 200; Simkl answers 200 with the `simkl-api-key` header (its `/search` needs a user token, the
+  app does not call it: Upcoming reads `data.simkl.in`); the Firebase service account gets an OAuth token and an FCM
+  `validate_only` send returns 200 (no message sent).
 - Build reads keys through `optionalKey(prop, env)` in `app/build.gradle.kts`; blank = feature hidden. Workflows
   pass them in release.yml, review-apk.yml, upgrade-check.yml.
 - Rotate the Last.fm shared secret before built-in Last.fm sign-in is enabled for users. Do not set
@@ -108,7 +115,7 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 | Jackson 2.18.11 phone / 2.13.5 TV | before 2.0.0 |
 | NBUG-6: sequential DNS fallback | before 2.0.0 |
 | Vega / Nuvio / SkyStream stay one registry | before 2.0.0 |
-| `Co-authored-by: Perplexity` trailer, owner as author | before 2.0.0 |
+| `Co-authored-by: Perplexity` trailer, owner as author and committer (re-confirmed by the owner 2026-11-21) | before 2.0.0, 2026-11-21 |
 | No 2.0.1; fix everything, then 2.1.0 | 2026-11-20 |
 | No release for now; fix, implement and test all first | 2026-11-21 |
 | No third-party starter extensions; use the Yumeiro master extension (E1) | 2026-11-21 |
@@ -162,6 +169,7 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
   B-29 TeraBox full video (share API + the user's TeraBox sign-in; never the 30 s preview; AV1 → H.264 transcode on
   phones without an AV1 decoder), B-30 DiskWala hand-off to the DiskWala app.
 - Telegram credentials: repo secrets YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH, BuildConfig TG_API_ID / TG_API_HASH.
+- 2026-11-21 (new agent): F-02 Telegram full login started, design ADR-052 in SYSTEM-DESIGN.md.
 - Blocked: B-29 signed-in path on a real TeraBox account (needs an owner test account).
 
 ---

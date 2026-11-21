@@ -63,8 +63,8 @@ FREEZE-1 broke exactly this rule.
 | NF-3 | Extension pop-up / promo blocker | Verified (emulator) | ExtensionPopups 8/8, run 43825449454 | EXT-T1 open |
 | NBUG-15a–d | Live TV redesign (filter button, no file names, channels by category, first 50, search, pins) | Verified (emulator, phones + TV) | ledger: fail-before 44411680293, phones 44413808456, 44421879508 | Real-phone check; tied to FREEZE-3 (Live TV probes) |
 | F-02 split | Separate Telegram page and Websites page, with navigation shortcuts | Fixed in code, CI pending | Route `telegram` (Screen.Telegram), Settings entries Telegram and Websites, Telegram tile in Live TV tools, Telegram nav-bar shortcut; each page refuses the other kind (`SavedSites.wrongPage`, test `SavedSitesSplitTest`) | Real-phone check |
-| F-02 login | Telegram login (Hikari-style) | Owner decision changed 2026-11-21: build full login | Old "no login" decision replaced. TDLib, needs owner api_id/api_hash (secure form), pairs with E3; public channels work without login (F-02 Pass 2/2, runs 44595993499, 44598214395) | If the owner changes the decision: TDLib on the device (Boost licence, [TDLib](https://github.com/tdlib/td)); the api_hash ends up in every APK ([Telegramedia](https://github.com/kernoeb/telegramedia)) or comes from a server at runtime ([Cablegram](https://github.com/seep-labs/cablegram-apps)); adds native libraries per ABI (needs E3) |
-| F-20 | Vault: 3 security questions, `.nomedia`, app lock, incognito (discreet icon dropped by the owner 2026-11-21) | Partial | `PrivateVault.kt`, `AppLockGate.kt`, incognito in 20 files; vault files are in app-private storage (no `.nomedia` needed, gallery apps can't see it) | Not built: security questions; discreet launcher icon needs **owner decision**: it moves the launcher entry to an `activity-alias`, and launchers drop the pinned Yumeiro icon once on update |
+| F-02 login | Telegram full login (TDLib): phone, code, 2FA password; chats and channels; search inside a chat; play videos in Yumeiro's player | In progress (2026-11-21) | Owner decision 2026-11-21: full login. Design ADR-052 (SYSTEM-DESIGN.md). api_id/api_hash are repo secrets YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH. Public channels keep working without login (F-02 Pass 2/2, runs 44595993499, 44598214395) | TDLib build workflow, engine download + SHA-256 check, auth state machine + unit tests (fake client), screens, TDLib file streaming into the player, device test on Telegram's test servers, owner real-account check (OMT entry) |
+| F-20 | Vault: 3 security questions, `.nomedia`, app lock, incognito (discreet icon dropped by the owner 2026-11-21) | Partial | `PrivateVault.kt`, `AppLockGate.kt`, incognito in 20 files; vault files are in app-private storage (no `.nomedia` needed, gallery apps can't see it) | Not built: security questions. Discreet launcher icon: dropped by the owner 2026-11-21, do not build |
 | F-19 | Profile security questions instead of the screen-lock bypass; strict per-profile isolation incl. extensions / repos and Continue Manga | Partial / Broken | Per-profile today: YouTube history, online settings, online history, bookmarks, vault, private downloads (`Profiles.prefsName` users) | Not per profile: manga progress ("Continue reading" leaks across profiles, confirmed in code), extensions and repositories, Live TV pins. 2026-11-20: security questions built (B-19, ba87ce64), extension / Live TV pins per profile (B-20); manga progress per profile (PROF-1). Still shared: extensions and repositories |
 | F-10 | Themes: Blue, glass | Built, not tested | 354082ba, 7396955f; ADR-017 tint only | Device check; Blue theme presence to confirm on device |
 | 2x | Hold for 2× speed | Built (26 files mention it) | — | Device check |
@@ -129,13 +129,14 @@ FREEZE-1 broke exactly this rule.
 
 ## Order of work (Now / Next / Later)
 
-Now (2.0.1, stability only)
+Now (done; owner 2026-11-20 "no 2.0.1": these ship in 2.1.0)
 1. FREEZE-1 (this push), FREEZE-2, FREEZE-4 counter, GATE-1 ANR test.
 2. PROF-1 manga progress per profile (privacy leak).
 3. S-1 search debounce (fires work per keystroke on the main path).
 4. Owner real-phone tests U-30 and the mandatory list, then release 2.0.1.
 
 Next (2.1, owner 2026-11-21: no release until all is fixed and tested)
+- F-02 Telegram full login (TDLib, ADR-052): in progress 2026-11-21.
 - B-29 TeraBox full video (done in code), B-30 DiskWala hand-off (done in code), B-31 built-in torrent engine.
 - B-32 extensions that load nothing ("Nothing came back from this extension", e.g. HindiSubAnime): find the real cause and say it.
 - F-21 extension metadata rows, F-22 Upcoming filters + date sections.
@@ -146,8 +147,8 @@ Next (2.1, owner 2026-11-21: no release until all is fixed and tested)
 - PIN-1, T-1 magnet, B-3 TeraBox 30 s, NF-2b quality picker, F-07 position return.
 
 Later (2.2+)
-- E1 super-extension, E2 curated Live TV per country, F-11 OCR translation, F-05 import steps, Telegram login if
-  the owner decides so.
+- E2 curated Live TV per country, F-11 OCR translation, F-05 import steps. (Telegram login moved to Next: owner
+  decided full login 2026-11-21. E1 moved to Next: owner 2026-11-21.)
 
 ## Acceptance for every item
 

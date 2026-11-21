@@ -1617,3 +1617,58 @@ Terms. No access control, DRM or service terms are involved (local UI input only
 Tests. Device: PinnedExtensionsDeviceTest asserts on the TV layout that the keyboard is down after the sheet opens
 (`dumpsys input_method` mInputShown); fail-before 44666813073 (logcat) and the a5bc4da chunk-12 TV runs (same no-op
 first attempt, see FINAL-39b); phones unchanged.
+
+### ADR-052: Telegram full login runs on TDLib we build ourselves, downloaded on first sign-in (F-02 login)
+
+Status: accepted 2026-11-21 (owner decision 2026-11-21: full login replaces "no login"). Built step by step; the
+flag `TELEGRAM_LOGIN` stays off until the device tests below pass.
+
+Context. Public channels already work without login (ADR-042, F-02 Pass 2/2). The owner wants phone + code + 2FA
+sign-in, the chat and channel list, search inside a chat, and video playback in Yumeiro's player. The only
+supported way to be a full Telegram client on Android is TDLib (Boost licence, [tdlib/td](https://github.com/tdlib/td)).
+The universal APK is already 125 MB (v2.0.0 assets) and 2 GB phones are the target.
+
+Competitors (read 2026-11-21).
+- Hikari (`codegeasse1/hikari` @ 5d97a309, `app/src/main/jniLibs/README.md`, `telegram/Td.kt`, `telegram/TdStream.kt`):
+  copies `libtdjni.so` and OpenSSL out of the Telegram X 0.29 APK and the 5 MB generated `TdApi.java` (about 2000
+  classes, all kept from R8); arm ABIs only (no x86_64, so it cannot run on x86_64 emulators); database encryption key
+  empty; the player data source polls TDLib on a timer for the bytes it waits for. APKs 57-60 MB per ABI.
+- Telegram X bundle (`TGX-Android/tdlib`): its README says it is not meant for other projects and may hold unstable
+  changes.
+- TDLib's own Android example (`example/android`, build-tdlib.sh): builds Java, JSON or JSON-from-Java interfaces for
+  arm64-v8a, armeabi-v7a, x86_64, x86, statically linked OpenSSL, `-flto=thin -Oz`.
+
+Options.
+(a) Copy another app's prebuilt binary: rejected (not meant for reuse, cannot be rebuilt or audited, no x86_64).
+(b) Build TDLib in every CI run: rejected (about an hour per ABI on every build).
+(c) Build TDLib once per pinned TDLib commit in our own workflow, keep the binaries on a `tdlib-bin` branch, and
+    bundle them in the APK: works, but adds roughly 30-40 MB to the universal APK for everyone, Telegram user or not.
+(d) Same build as (c), but the app downloads only its own ABI's library the first time the user opens Telegram
+    sign-in, checks it against a SHA-256 pinned in the app source, and loads it with `System.load`: chosen.
+
+Decision.
+- `tdlib-build.yml` (workflow_dispatch only) builds TDLib at td commit `03220f6b` (TDLib 1.8.70, the commit Telegram X
+  ships) with the JSON-from-Java interface (`libtdjsonjava.so`, 4 natives), `c++_static`, API level 24 (TV minSdk),
+  16 KB page alignment, for all four ABIs. The output (gzip, SHA-256) is committed to the orphan branch `tdlib-bin`;
+  the app pins that commit and each file's SHA-256 in `TdEngine.kt`. A bad or changed file is never loaded.
+- JSON interface instead of the Java one: one 70-line binding class (`org.drinkless.tdlib.JsonClient`, Boost) instead
+  of 2000 kept classes; Yumeiro parses only the objects it uses with kotlinx.serialization, off the main thread.
+- One receive thread per client; responses are matched by `@extra`; updates go to a `SharedFlow`. File downloads
+  wake readers on `updateFile` (no timer polling). Playback uses a Media3 `DataSource` that asks TDLib for the bytes
+  at the read position with priority 32 and reads the partly written file.
+- Sign-in is a pure state machine (`TgAuth`) over TDLib's `authorizationState*`, unit tested with a fake transport.
+- Each Yumeiro profile gets its own TDLib database folder (F-19 isolation). The database encryption key is random
+  per profile and wrapped with an Android Keystore key.
+- Hidden when `BuildConfig.TG_API_ID` is blank or the flag is off. Public channels (ADR-042) are unchanged.
+
+Side effects. First sign-in needs about 9-12 MB of download (one ABI, gzip). If GitHub raw is blocked, sign-in shows
+a clear error and public channels keep working. The api_hash is in every APK (true for every third-party Telegram
+client). Rollback: flag off; delete `noBackupFilesDir/tdlib`.
+
+Terms. Uses Telegram's official client library with the owner's own api_id under Telegram's API terms; no DRM,
+paywall or authentication bypass. TDLib is Boost-licensed (notice in docs/licenses).
+
+Tests. Unit: `TgAuthTest` (every authorization state, wrong code, wrong password, flood wait, Back / cancel, process
+death resume), `TdEngineTest` (hash mismatch is never loaded, partial download is discarded). Device: the screens
+without an account; engine download + load + `getOption version` on api36, api33-lowram and TV; sign-in on Telegram's
+test servers (`use_test_dc`, test numbers 99966XYYYY) where the test environment allows it. Real account: owner list.
