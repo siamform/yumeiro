@@ -314,7 +314,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   grep -qE "^OK \(" "inst-$C.txt" || echo "TESTS_FAILED" > failed.txt
   # GATE-1-ANR-T8: an input ANR under instrumentation never reaches ApplicationExitInfo or
   # processesInErrorState; AMS ends the run with shortMsg=keyDispatchingTimedOut (AMS.inputDispatchingTimedOut).
-  grep -qE "shortMsg=(keyDispatchingTimedOut|Process crashed)|longMsg=Input dispatching timed out" "inst-$C.txt" && { echo "GATE_ANR_INPUT in $C: $(grep -hE 'shortMsg=|longMsg=' "inst-$C.txt" | head -2 | tr '\n' ' ')"; echo "TESTS_FAILED" > failed.txt; }
+  grep -qE "shortMsg=(keyDispatchingTimedOut|Process crashed)|longMsg=Input dispatching timed out" "inst-$C.txt" && { echo "GATE_ANR_OR_CRASH in $C: $(grep -hE 'shortMsg=|longMsg=' "inst-$C.txt" | head -2 | tr '\n' ' ')"; echo "TESTS_FAILED" > failed.txt; }
   if grep -qE "^OK \(" "inst-$C.txt" && [ $RC -ne 124 ]; then V=PASS; else V=FAIL; fi
   PL=""; [ "$PASSES" = "true" ] && PL=" pass=P$N"
   # Ignored tests (status -3) and assumption failures (status -4, e.g. "needs API 26") are skips; the final
