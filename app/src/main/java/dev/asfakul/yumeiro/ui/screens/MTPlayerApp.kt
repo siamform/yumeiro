@@ -1435,7 +1435,13 @@ fun MTPlayerApp(
         // Full-screen Video Player Modal
         // Media opened from the Stream tab or from other apps ("Open with" / "Share")
         val incoming by IncomingMedia.pending.collectAsStateWithLifecycle()
-        LaunchedEffect(activePlayingVideo == null) { if (activePlayingVideo == null) videoMinimized = false }
+        LaunchedEffect(activePlayingVideo == null) {
+            if (activePlayingVideo == null) {
+                videoMinimized = false
+                // OL-1: a website tab hidden by playing one of its videos comes back when the player closes.
+                dev.asfakul.yumeiro.ui.screens.sites.WebsiteTab.onPlayerClosed()
+            }
+        }
         LaunchedEffect(incoming) {
             incoming?.let { viewModel.playVideo(it); IncomingMedia.consume() }
         }

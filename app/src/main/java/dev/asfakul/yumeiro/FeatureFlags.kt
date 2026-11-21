@@ -43,6 +43,8 @@ object FeatureFlags {
         STREAM_PANEL_CONTROLS("ol2_stream_panel_controls", true),
         /** OL-3: the website stream panel lists only the video playing now (cleared when the page switches video or page) and shows its title. */
         STREAM_CURRENT_ONLY("ol3_stream_current_only", true),
+        /** OL-1: a website stays open in the background (playing its video, Downloads, Minimize, Back) and comes back as it was. */
+        WEBSITE_TAB("ol1_website_tab", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
         /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */

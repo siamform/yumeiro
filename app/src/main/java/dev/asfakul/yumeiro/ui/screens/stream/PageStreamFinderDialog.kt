@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -327,20 +328,25 @@ fun PageStreamFinderDialog(
     onDismiss: () -> Unit,
     /** Start the page's player by itself and play the first stream (known file hosts). */
     auto: Boolean = false,
+    /** OL-1: keep the page alive in [keep] (website tabs): the WebView is reused and never destroyed here. */
+    keep: PageKeep? = null,
+    /** OL-1: hides the page and keeps it (Minimize button; Back at the first page). Null = no minimize. */
+    onMinimize: (() -> Unit)? = null,
 ) {
-    val capture = remember(pageUrl) { PageStreamCapture() }
+    val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
     var autoActive by remember(pageUrl) { mutableStateOf(auto) }
     var autoStep by remember(pageUrl) { mutableStateOf("Opening the link") }
     var autoNote by remember(pageUrl) { mutableStateOf<String?>(null) }
     var played by remember(pageUrl) { mutableStateOf(false) }
-    val found = remember(pageUrl) { mutableStateListOf<CapturedStream>() }
-    var progress by remember { mutableIntStateOf(0) }
-    var pageTitle by remember { mutableStateOf("") }
-    var currentUrl by remember { mutableStateOf(pageUrl) }
-    var drmNote by remember { mutableStateOf<String?>(null) }
+    val found = keep?.found ?: remember(pageUrl) { mutableStateListOf<CapturedStream>() }
+    // OL-1: a kept page keeps its title, address, progress and notes too (the WebView's callbacks write them).
+    var progress by (keep?.progress ?: remember { mutableIntStateOf(0) })
+    var pageTitle by (keep?.pageTitle ?: remember { mutableStateOf("") })
+    var currentUrl by (keep?.currentUrl ?: remember { mutableStateOf(pageUrl) })
+    var drmNote by (keep?.drmNote ?: remember { mutableStateOf<String?>(null) })
     var showHint by remember { mutableStateOf(true) }
-    var panel by remember { mutableStateOf(StreamPanel.OPEN) }
+    var panel by (keep?.panel ?: remember { mutableStateOf(StreamPanel.OPEN) })
     // OL-8: a later note (sign in, auto gave up) shows the banner again; it hides by itself after 3 s.
     androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -410,15 +416,16 @@ fun PageStreamFinderDialog(
         }
     }
 
-    DisposableEffect(pageUrl) {
+    DisposableEffect(pageUrl, keep) {
         onDispose {
-            webViewRef?.apply { stopLoading(); onPause(); destroy() }
+            // OL-1: a kept page only leaves the screen; its owner releases it.
+            if (keep == null) webViewRef?.apply { stopLoading(); onPause(); destroy() }
             webViewRef = null
         }
     }
 
-    // Back walks the page history first (browsing a saved website), then closes.
-    Dialog(onDismissRequest = { val wv = webViewRef; if (wv != null && wv.canGoBack()) wv.goBack() else onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    // Back walks the page history first (browsing a saved website), then minimizes (kept tab) or closes.
+    Dialog(onDismissRequest = { val wv = webViewRef; if (wv != null && wv.canGoBack()) wv.goBack() else (onMinimize ?: onDismiss)() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         dev.asfakul.yumeiro.ui.screens.online.FullScreenDialogBars()
         Surface(color = DarkSurface, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -428,6 +435,7 @@ fun PageStreamFinderDialog(
                         Text(pageTitle.ifBlank { "Find stream" }, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = TextSecondary) }
                     IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
@@ -436,8 +444,17 @@ fun PageStreamFinderDialog(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
+                            // OL-1: a kept page comes back as it was (no reload).
+                            keep?.webView?.let { kept ->
+                                (kept.parent as? android.view.ViewGroup)?.removeView(kept)
+                                keep.adopt(ctx)
+                                kept.onResume()
+                                webViewRef = kept
+                                return@AndroidView kept
+                            }
                             // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
-                            val page = WebView(ctx)
+                            val page = if (keep != null) WebView(android.content.MutableContextWrapper(ctx)) else WebView(ctx)
+                            keep?.webView = page
                             page.settings.allowFileAccess = false
                             page.settings.allowContentAccess = false
                             with(page) {
@@ -503,7 +520,8 @@ fun PageStreamFinderDialog(
                                     base?.referer?.let { put("Referer", it) }
                                     base?.headers?.let { putAll(it) }
                                 }
-                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, pageUrl, headers)
+                                // OL-1: a kept tab that gave its page back on low memory reopens where it was.
+                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, if (keep != null) currentUrl else pageUrl, headers)
                             }
                             page
                         },

@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
@@ -132,6 +133,21 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         return
     }
 
+    // OL-1: websites open in the kept tab: playing a video, Downloads, Minimize or Back hide it, never close it.
+    val tabs = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
+    val tab by WebsiteTab.tab.collectAsState()
+    tab?.takeIf { tabs && it.visible }?.let { t ->
+        PageStreamFinderDialog(
+            pageUrl = t.keep.pageUrl,
+            reason = "Browsing ${t.name}. Press play on any video; Yumeiro plays the stream in its own player.",
+            base = null,
+            keep = t.keep,
+            onMinimize = { WebsiteTab.minimize(byPlay = false) },
+            onPlay = { req -> WebsiteTab.minimize(byPlay = true); IncomingMedia.open(context, req.copy(title = req.title.ifBlank { t.name })) },
+            onDismiss = { WebsiteTab.close() },
+        )
+    }
+
     open?.let { site ->
         PageStreamFinderDialog(
             pageUrl = site.url,
@@ -205,6 +221,25 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 140.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            // OL-1: the website kept in the background, one tap from where it was.
+            tab?.takeIf { tabs && !it.visible }?.let { t ->
+                item("website_tab_card") {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                            .clickable { WebsiteTab.resume() }.heightIn(min = 56.dp).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("website_tab_card"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.keep.title.ifBlank { t.keep.address }, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text("Resume") }
+                        IconButton(onClick = { WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, "Close tab", tint = p.textSecondary) }
+                    }
+                }
+            }
             if (accountEnabled) item("tg_account_card") {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
@@ -271,7 +306,12 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 }
             } else items(shown, key = { it.url }) { site ->
                 SiteRow(
-                    site, onOpen = { open = site }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) },
+                    site, onOpen = {
+                        // OL-1: Telegram channels keep their own screen; every other site opens in the kept tab.
+                        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(site.url) != null &&
+                            dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
+                        if (tabs && !tg) WebsiteTab.open(context, site.url, site.name) else open = site
+                    }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) },
                     onPin = { SavedSites.setPinned(context, site.url, !site.pinned) },
                     onMove = if (query.isBlank()) ({ up -> SavedSites.moveSite(context, site.url, up) }) else null,
                     modifier = Modifier.animateItem(),
