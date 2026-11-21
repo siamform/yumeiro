@@ -5,26 +5,37 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-22 00:36 +06, branch `r15-stability` @ddfb93a9 (OL-6-REVEAL-2) + this docs commit. Owner list OL-1..OL-13: OL-1..5 and
-OL-7..12 Verified; OL-6 waits only on ol6_whereAndTipsAreFoldedAway (second fix ddfb93a9); OL-13 social links built
-(1ce6d8ca), everything for it pending.
+2026-11-22 03:05 +06, branch `r15-stability` @17a02248 (GATE-1-RENDER tracing) + this docs commit. OL-1..OL-13 all
+Verified (OL-6 closed by OL-6-T 6222a201, CI 44944975133 1753 tests 0 failed). Part 8 step 5: PIN-1, F-19, F-20,
+F-03, EXT-P, FREEZE-2 Verified; FREEZE-3/4 not reproducible on emulators (OMT); airing alerts client Verified, end to
+end Blocked (owner go for the Worker); C5/C6 Blocked (no definition, owner asked). Open: GATE-1 on api33-lowram
+(GATE-1-RENDER) and the GATE-1-ANR detector check; then F-05 / X-1.
 
-## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44936285767 @ddfb93a9 (review_apk): pass-after for OL-6-REVEAL-2 / OL-6 and OL-13. Expect 0 failures.
-- ab/ol13-before CI 44936197438: expect only ol/SocialLinksTest (3) to fail (stub has empty lists, old cards).
-  Then delete ab/ol13-before (worktree /tmp/fb_ol13, remote, local).
-- Device TV api34 44936347387 @ddfb93a9: TelegramLoginDeviceTest (F-02 login on TV) + SocialLinksDeviceTest.
-- Device phones 44936349725 @ddfb93a9: SocialLinksDeviceTest + PopupQualityDeviceTest (OL-6 case b re-check).
-- OL-13 device fail-before not run yet: after the two above, run SocialLinksDeviceTest on ab/ol13-before (api36).
-- Results: `gh run download <id> -D /tmp/dv_<id>`, files `*/stress/inst-dev.asfakul.yumeiro.<Test>.txt`.
+## Pending runs (check each, then update the ledger rows that say pending)
+- Device 44949137965 (r15 @17a02248, api33-lowram, gate trio): Perfetto trace with composable names. Download, then
+  `python3` + `perfetto.trace_processor`: app pid from logcat-key (YuGate1 lines), main tid = pid, find the
+  Choreographer#doFrame > 300 ms after the 'Yumix' tap and list depth<=12 slices > 5 ms (script idea: /tmp/tp5.py in
+  the old sandbox: slices joined thread_track/thread/process, filtered by pid and time). Fix the heaviest composable
+  behind a flag (ideas: stage shelves one per frame on DeviceClass.lowEnd; first-use class verification = debug build).
+- Device 44948378220 (ab/gate1anr-before, api36): detector re-check, 60 s main-thread block + two taps. Expect
+  GATE_ANR_INPUT in the job log or the class without "OK (" (instrumentation ended by AMS). If valid: delete
+  ab/gate1anr-before (worktree /tmp/fb_gate1anr, remote, local) and mark GATE-1-ANR Pass with that run + the next
+  r15 gate run. If no ANR again: check YuGateEnv hw_timeout_multiplier in the job log and block longer than 5 s x it.
+- Next review_apk CI on r15 is the pass-after for CI-MAVEN-404 (865bce1e). Dispatch it after the GATE-1-RENDER fix.
 
 ## Next step (Part 8)
-1. Close the pending rows above (ledger OL-6, OL-6-REVEAL, OL-13, F-02 login TV).
-2. Part 8 step 4 rest: E4 device evidence (SpeedDeviceTest Pass 44899145489 covers the E4 flags; mark E4 rows).
-3. Part 8 step 5: F-03, F-05, F-19, F-20, airing alerts, X-1, EXT-P, PIN-1, GATE-1 ANR, FREEZE, C5, C6.
-4. Then FEED-ENGINE-2.1.md leftovers, then UNVERIFIED-QUEUE / INVENTORY. E1 only on the owner's go.
+1. GATE-1-RENDER fix + pass-after gate run on both phones (limit stays 700 ms).
+2. Close GATE-1-ANR (above).
+3. F-05 / X-1: Nuvio / SkyStream / Vega import and run (detection exists, E14).
+4. FEED-ENGINE-2.1.md leftovers, then UNVERIFIED-QUEUE / INVENTORY. E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- GATE-1-RENDER (17a02248) debug-only Compose composition tracing; GATE-1-TRACE-2 (8c8eec69) atrace-only gate trace
+  (52 s, whole walk); CI-MAVEN-404 (865bce1e) review APK retries once on a Maven Central miss; GATE-1-ANR-T8
+  (768a5698) the harness fails a class on an input ANR under instrumentation (AMS ends the run, no exit record).
+- GATE-1-ANR T2..T7 walk fixes (popup window, pill label, landed checks, live accessibility tree): walk completes.
+- PIN-1-DUP, F-19-EXT, F-19-EXT-2, CI-DNS-RACE-3, OL-6-T: pass-after CI 44944975133 (unit 1753 / 0 failed).
+- FREEZE-4 guard test 7e31dcfe Pass 44937485728; AIR-T1 1e358ea8 Pass 44942929078; OL-13 device Pass.
 - OL-13 (1ce6d8ca): About › Community shows Discord, Facebook, Instagram, X, TikTok, Reddit (@officialyumeiro) as an
   icon row; About › Developer adds Facebook siam1p, Instagram asfakul_siam, Telegram @siamorwho. Simple Icons (CC0)
   marks; README Community section. Flag ol13_social_links. Manual: OMT-71.
