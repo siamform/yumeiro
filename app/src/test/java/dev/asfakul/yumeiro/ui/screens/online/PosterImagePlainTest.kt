@@ -42,4 +42,21 @@ class PosterImagePlainTest {
         rule.onNodeWithTag(PosterImageMode.FALLBACK_TAG).assertWidthIsEqualTo(90.dp).assertHeightIsEqualTo(135.dp)
         rule.onNodeWithTag(PosterImageMode.LOADING_TAG).assertDoesNotExist()
     }
+
+    @Test fun blankUrlShowsTheFallbackWithoutAShimmer() {
+        rule.setContent { PosterImage("  ", emptyMap(), Modifier.size(90.dp, 135.dp)) }
+        rule.waitForIdle()
+        rule.onNodeWithTag(PosterImageMode.FALLBACK_TAG).assertWidthIsEqualTo(90.dp).assertHeightIsEqualTo(135.dp)
+        rule.onNodeWithTag(PosterImageMode.LOADING_TAG).assertDoesNotExist()
+    }
+
+    /** GATE-1-RENDER-4b: a reset (Empty) or a late Loading never puts the shimmer back over the fallback. */
+    @Test fun failedPhaseStaysFailed() {
+        val err = coil.compose.AsyncImagePainter.State.Error(null, coil.request.ErrorResult(null, coil.request.ImageRequest.Builder(androidx.test.core.app.ApplicationProvider.getApplicationContext()).build(), Throwable()))
+        val f = PosterImageMode.next(PosterImageMode.LOADING, err)
+        org.junit.Assert.assertEquals(PosterImageMode.FAILED, f)
+        org.junit.Assert.assertEquals(PosterImageMode.FAILED, PosterImageMode.next(f, coil.compose.AsyncImagePainter.State.Loading(null)))
+        org.junit.Assert.assertEquals(PosterImageMode.FAILED, PosterImageMode.next(f, coil.compose.AsyncImagePainter.State.Empty))
+        org.junit.Assert.assertEquals(PosterImageMode.LOADING, PosterImageMode.next(PosterImageMode.LOADING, coil.compose.AsyncImagePainter.State.Empty))
+    }
 }
