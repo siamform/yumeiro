@@ -69,6 +69,8 @@ class TorrentSourceTest {
         val (core, src, f) = setup()
         src.prime()
         val last = TorrentPlan.lastPiece(f, pl)
+        assertEquals(listOf(0 to 0), core.deadlines.toList()) // B31-SEEK5: the first piece alone until it has bytes
+        core.arrive(0); src.read(0, ByteArray(10), 0, 10)
         assertTrue(core.deadlines.map { it.first }.containsAll(listOf(0, last)))
         core.deadlines.clear()
         core.arrive(4)
@@ -96,6 +98,7 @@ class TorrentSourceTest {
     @Test fun seekPutsTheTargetAloneAtTheFront() {
         val (core, src, _) = setup()
         src.prime()
+        core.arrive(0); src.read(0, ByteArray(10), 0, 10)
         assertEquals(1 to 120, core.deadlines.first { it.first == 1 }) // playback start: no gap
         core.deadlines.clear()
         core.arrive(4)
@@ -133,7 +136,8 @@ class TorrentSourceTest {
         val meta = TorrentMeta("cd".repeat(20), "Movie", mb, 20, listOf(f))
         val core = FakeCore(dir, meta)
         val src = TorrentSource(core, meta, f, readAhead = 4L * mb, waitMs = 3_000)
-        src.prime() // head window 0..3, tail 18 / 19 with a deadline
+        src.prime() // head window 0..3, tail 18 / 19 with a deadline once the first piece has bytes
+        core.arrive(0); src.read(0, ByteArray(10), 0, 10)
         assertTrue(core.deadlines.map { it.first }.containsAll(listOf(18, 19)))
         core.arrive(10)
         src.read(10L * mb + 5, ByteArray(10), 0, 10) // seek to the middle
@@ -143,6 +147,41 @@ class TorrentSourceTest {
         core.deadlines.clear(); core.arrive(19)
         src.read(19L * mb + 5, ByteArray(10), 0, 10)
         assertEquals(19 to 0, core.deadlines.first())
+    }
+
+    /**
+     * B31-SEEK5 (lowram run 44884969625: no block of the first piece for 16 s while 0.4-0.9 MB/s went elsewhere):
+     * while the player waits for a piece with no bytes, that piece is the only one wanted and the only deadline;
+     * the read-ahead window and the tail follow once it has bytes. Same at a seek.
+     */
+    @Test fun targetPieceDownloadsAloneUntilItHasBytes() {
+        val dir = tmp.newFolder()
+        val mb = 1 shl 20
+        val f = TorrentFile(0, "Movie.mkv", 20L * mb, 0)
+        java.io.RandomAccessFile(File(dir, f.path), "rw").use { it.setLength(f.size) }
+        val meta = TorrentMeta("ef".repeat(20), "Movie", mb, 20, listOf(f))
+        val core = FakeCore(dir, meta)
+        val src = TorrentSource(core, meta, f, readAhead = 4L * mb, waitMs = 3_000)
+        src.prime()
+        val w0 = core.windows.last()
+        assertEquals(7, w0[0].toInt())
+        assertTrue("only the first piece wanted: ${w0.toList()}", (1 until 20).all { w0[it].toInt() == 0 })
+        assertEquals(listOf(0 to 0), core.deadlines.toList())
+        core.arrive(0); src.read(0, ByteArray(10), 0, 10)
+        val w1 = core.windows.last()
+        assertEquals(6, w1[1].toInt()); assertEquals(5, w1[3].toInt()); assertEquals(2, w1[19].toInt())
+        assertTrue(core.deadlines.containsAll(listOf(1 to 120, 19 to 400)))
+        // Seek to piece 10: while the read waits, only piece 10.
+        core.deadlines.clear()
+        var during: ByteArray? = null; var duringDeadlines: List<Pair<Int, Int>> = emptyList()
+        val t = Thread { Thread.sleep(200); during = core.windows.last(); duringDeadlines = core.deadlines.toList(); core.arrive(10) }.apply { start() }
+        src.read(10L * mb + 5, ByteArray(10), 0, 10)
+        t.join()
+        val w2 = during!!
+        assertEquals(7, w2[10].toInt())
+        assertTrue("only the seek target wanted: ${w2.toList()}", (0 until 20).filter { it != 10 }.all { w2[it].toInt() == 0 })
+        assertEquals(listOf(10 to 0), duringDeadlines)
+        assertEquals(6, core.windows.last()[11].toInt()) // window open after the bytes came
     }
 
     @Test fun timeoutAndErrorBecomeIOException() {

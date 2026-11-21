@@ -90,7 +90,25 @@ claiming it), Building (this cycle), Missing.
 | search_first_result_cached | 4 ms | 2 ms | ≤ 100 ms |
 | search_all_answered_cached | 15116 ms | 15111 ms | Fail finding FE-S1: extensions with an empty answer are not saved, so a "cached" search still waits for them live (FE-6) |
 
-Not yet measured: feed with 50+ installed, after an app update (FE-Q1/Q2), YouTube / YouTube Music cold start (FE-7).
+### Run 2: device run 44884969625 @ r15-stability 7d77a583 (SPEED-T2: 20 market extensions, 26 providers), both phones Pass
+
+| Measure (tag SPEED) | api33-lowram (2 GB) | api36 | Budget (never raised) | Result |
+|---|---|---|---|---|
+| ext_first_usable | 946 ms | 1077 ms | ≤ 2500 ms on 2 GB | Pass (44884969625) |
+| ext_all_loaded (20 extensions, 26 providers) | 2010 ms | 2446 ms | ≤ 3000 ms on 2 GB | Pass (44884969625) |
+| home_first_row_live | 1162 ms | 1908 ms | ≤ 5000 ms | Pass (44884969625) |
+| home_first_row_cached | 1 ms | 1 ms | ≤ 100 ms | Pass (44884969625) |
+| search_first_result_live | 128 ms | 119 ms | ≤ 3000 ms | Pass (44884969625) |
+| search_all_answered_live | 25105 ms | 25099 ms | none yet (25 s search timeout, FE-6 early finish) | Not run (no budget yet) |
+| search_first_result_cached | 6 ms | 1 ms | ≤ 100 ms | Pass (44884969625) |
+| search_all_answered_cached | 15161 ms | 2 ms | none yet | api36 FE-S1 effect shown; lowram: an extension that timed out live (errors are not saved) is asked again: finding FE-S3 |
+| feed_first_extension_shown (Yumix pattern, 3 slots) | 192 ms | 59 ms | ≤ 3000 ms | Pass (44884969625) |
+| feed_half_shown | 4423 ms | 5703 ms | none yet | measured |
+| feed_all_done (22 of 26 shown) | 24559 ms | 22007 ms | none yet (bounded by the 25 s home timeout of dead sites) | measured |
+| youtube_shelf_live / saved | 723 / 1 ms | 1277 / 1 ms | saved ≤ 100 ms | Pass (44884969625) |
+| ytmusic_home_live / saved | 367 / 15 ms | 346 / 44 ms | saved ≤ 100 ms | Pass (44884969625) |
+
+Not yet measured: feed with 50+ installed, after an app update (FE-Q1/Q2).
 
 ## How it happens
 

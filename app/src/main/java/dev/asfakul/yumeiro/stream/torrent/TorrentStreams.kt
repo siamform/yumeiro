@@ -98,7 +98,8 @@ object TorrentStreams {
         val file = TorrentPlan.pickFile(meta.files, TorrentPlan.selectOnly(link), title) ?: throw TorrentFailure("This torrent has no playable file.")
         c.onlyFile(hash, file.index, meta.files.size)
         val source = TorrentSource(c, meta, file, TorrentPlan.readAheadBytes(lowEnd), touched = { touch(c, hash, root) },
-            window = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.B31_STREAM_WINDOW))
+            window = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.B31_STREAM_WINDOW),
+            targetFirst = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.B31_TARGET_FIRST))
         source.prime()
         synchronized(this@TorrentStreams) { active.put(hash, source)?.close() }
         touch(c, hash, root)

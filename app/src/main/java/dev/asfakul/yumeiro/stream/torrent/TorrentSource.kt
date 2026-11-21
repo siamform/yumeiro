@@ -27,6 +27,8 @@ class TorrentSource(
     private val touched: () -> Unit = {},
     /** B31-SEEK3 kill switch (flag b31_stream_window). */
     private val window: Boolean = true,
+    /** B31-SEEK5 kill switch (flag b31_target_first). */
+    private val targetFirst: Boolean = true,
 ) : ByteSource {
     override val length: Long = file.size
     override val mimeType: String = TorrentPlan.mimeFor(file.path)
@@ -39,22 +41,29 @@ class TorrentSource(
     private val keep = TorrentPlan.headTail(file, meta.pieceLength)
     /** B31-SEEK4: tail pieces that got a deadline in [prime] and have not lost it yet. */
     @Volatile private var tailAsked: List<Int> = emptyList()
+    /** B31-SEEK5: the window (and tail) held back until the target piece has its first bytes; null = open. */
+    private var held: Held? = null
+    private val plan = Any()
+    private class Held(val window: List<Int>, val deadlines: List<Pair<Int, Int>>)
 
     /** First and last pieces at once (container headers / index), and the start of the file. */
     fun prime() {
         // B-31 speed: the start first (deadline 0 via focus), the end right after it, so they don't split peers.
         val first = TorrentPlan.firstPiece(file, meta.pieceLength)
         val tail = TorrentPlan.headTail(file, meta.pieceLength).filter { it != first }.map { it to TAIL_DEADLINE_MS }
-        focus(first)
-        tailAsked = tail.map { it.first }
-        core.setDeadlines(meta.hash, tail)
+        synchronized(plan) {
+            focus(first)
+            tailAsked = tail.map { it.first }
+            val h = held
+            if (h != null) held = Held(h.window, h.deadlines + tail) else core.setDeadlines(meta.hash, tail)
+        }
     }
 
     override fun read(position: Long, buffer: ByteArray, offset: Int, count: Int): Int {
         if (position >= length) return -1
         touched()
         val piece = TorrentPlan.pieceAt(file, position, meta.pieceLength)
-        if (!TorrentPlan.insideWindow(piece, windowStart, windowEnd, last)) focus(piece)
+        if (!TorrentPlan.insideWindow(piece, windowStart, windowEnd, last)) synchronized(plan) { focus(piece) }
         // Up to the end of this piece (the next one may not be here yet).
         val pieceEnd = (piece + 1).toLong() * meta.pieceLength - file.offset
         var upTo = pieceEnd
@@ -81,6 +90,7 @@ class TorrentSource(
             }
             TorrentTrace.sink?.invoke("piece $piece readable after ${System.currentTimeMillis() - started} ms (have=${core.have(meta.hash, piece)})")
         }
+        open()
         val n = minOf(count.toLong(), upTo - position, length - position).toInt()
         return readFile(position, buffer, offset, n)
     }
@@ -110,8 +120,26 @@ class TorrentSource(
         windowStart = piece; windowEnd = newEnd
         // B31-SEEK3: only the window is downloaded; priorities are written after the old deadlines are dropped and
         // before the new ones, so a reset never demotes the new window (libtorrent leaves reset pieces at 1).
+        // B31-SEEK5 (lowram run 44884969625: no block of the first piece for 16 s while 0.4-0.9 MB/s went to the tail
+        // and read-ahead): until the target piece has its first bytes it is the only piece wanted and the only
+        // deadline, so every peer's free request slot goes to it; then [open] lets the window and tail in.
+        held = null
+        if (targetFirst && window && d.size > 1 && !core.have(meta.hash, piece)) {
+            core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, listOf(piece), emptyList()))
+            core.setDeadlines(meta.hash, d.take(1))
+            held = Held(d.map { it.first }, d.drop(1))
+            return
+        }
         if (window) core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, d.map { it.first }, keep))
         core.setDeadlines(meta.hash, d)
+    }
+
+    /** B31-SEEK5: the target piece has bytes; the held window and tail may download now. */
+    private fun open() = synchronized(plan) {
+        val h = held ?: return@synchronized
+        held = null
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, h.window, keep))
+        core.setDeadlines(meta.hash, h.deadlines)
     }
 
     private fun readFile(position: Long, buffer: ByteArray, offset: Int, count: Int): Int = synchronized(guard) {

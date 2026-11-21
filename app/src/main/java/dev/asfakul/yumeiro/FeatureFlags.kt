@@ -71,6 +71,8 @@ object FeatureFlags {
         FE_PRIORITY_GATE("fe2_priority_gate", true),
         /** B31-SEEK3: the built-in torrent engine downloads only the playback window (piece priorities). */
         B31_STREAM_WINDOW("b31_stream_window", true),
+        /** B31-SEEK5: until the piece the player waits for has bytes, only that piece downloads (window and tail after). */
+        B31_TARGET_FIRST("b31_target_first", true),
         /** FE-3: an extension shows on Yumix as soon as its first home row answers (the rest fill in). */
         FE3_FIRST_ROW("fe3_first_row", true),
         /** FE-P: while a video or song plays, Yumix background fetches run one at a time (picked / on screen unchanged). */
