@@ -53,7 +53,16 @@ jobs:
           YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}
           YUMEIRO_FCM_APP_ID: ${{ secrets.YUMEIRO_FCM_APP_ID }}
           MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
-        run: ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease
+        # CI-MAVEN-404: run 44944975133 got "Could not find org.libtorrent4j:libtorrent4j:2.1.0-39" from
+        # Maven Central although the artifact is published (HTTP 200 minutes later). Retry once, only for a
+        # dependency-resolution failure, with --refresh-dependencies (Gradle caches the miss).
+        run: |
+          set -o pipefail
+          ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease 2>&1 | tee build1.log && exit 0
+          grep -qE "Could not (find|resolve|GET|HEAD) " build1.log || exit 1
+          echo "::warning::dependency resolution failed once; retrying with --refresh-dependencies"
+          sleep 30
+          ./gradlew --no-configuration-cache --no-build-cache --refresh-dependencies assembleMobileRelease assembleTvRelease
 
       - name: Remove keystore from the runner
         if: always()
