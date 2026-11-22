@@ -6,29 +6,33 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 09:00 +0600, branch `r15-stability`. This push: F-05-N (ADR-057) Nuvio scrapers as stream-only add-ons,
-behind `scripts_nuvio` + `f05_stream_addons` (both OFF until the device run passes). New files: online/StreamAddons.kt,
-sources/ecosystem/NuvioAdapter.kt (NuvioAdapter + NuvioStreams), sources/ecosystem/ScriptCrypto.kt; crypto-js shim and
-`__invokePositional` in assets/js/provider_runtime.js; ScriptRuntime.call got `invoker` + `globals`; RuntimeAdapter.build
-returns MainAPI?; OnlineSession.resolve uses StreamAddons.withAddons; UniversalAdd routes Nuvio repos when the flag is on.
-- GATE-1-MUSIC-START fail-before 44975150437: Fail as expected (aColdStartBuildsNoPlayerUntilACommand), branch deleted.
+2026-11-22 09:15 +0600, branch `r15-stability`. This push: GATE-1-MUSIC-START-2. r15 CI 44976838656 failed 1 of 1758:
+AppNavigationCrashTest.darkThemeRenders :185 (now-playing never opened after the first song tap). Cause: with MUSIC-START
+the first playTrack builds the player; attach() then ran restoreExistingState() on the empty player and cleared the
+track/queue just set. Fix (MusicPlayerManager.attach fromCommand): a command-built empty player keeps the command state.
+New test PlayerBuiltOnFirstUseTest.theFirstSongTapOnAColdStartKeepsTheTrack.
+Earlier push 06200fc3: F-05-N (ADR-057) Nuvio scrapers as stream-only add-ons, behind `scripts_nuvio` +
+`f05_stream_addons` (both OFF until the device run passes): online/StreamAddons.kt, sources/ecosystem/NuvioAdapter.kt,
+sources/ecosystem/ScriptCrypto.kt, crypto-js shim in assets/js/provider_runtime.js.
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44976838656 (review_apk=true @e0ea47d6): pass-after GATE-1-MUSIC-START + first GateOneFtlSuite compile.
-  Do NOT dispatch ci.yml on r15-stability until it ends (a new dispatch cancels it).
+- CI 44979435737 (ab/musicstart2-before, review_apk=false): fail-before MUSIC-START-2. Expect exactly
+  PlayerBuiltOnFirstUseTest.theFirstSongTapOnAColdStartKeepsTheTrack to fail. Then
+  `git push origin --delete ab/musicstart2-before; git worktree remove --force /tmp/fb_ms2; git worktree prune`.
 - CI 44977804955 (ab/f05n-before, review_apk=false): fail-before F-05-N. Expect f05/StreamAddonsMergeTest,
   f05/NuvioAdapterTest, f05/ScriptCryptoTest and EcosystemRegistryTest#vegaRunsAndTheOthersAreRecognisedOnly to fail
-  (compile must pass). Then `git push origin --delete ab/f05n-before; git worktree remove --force /tmp/fb_nuvio; git worktree prune`.
-- After 44976838656: r15 CI review_apk=true on the F-05-N commit (pass-after), then device runs:
+  (compile must pass; gitleaks fails there on an old test literal, renamed on r15). Then
+  `git push origin --delete ab/f05n-before; git worktree remove --force /tmp/fb_nuvio; git worktree prune`.
+- r15 CI review_apk=true on this commit: pass-after MUSIC-START, MUSIC-START-2 and F-05-N. Then device runs:
   `-f test=dev.asfakul.yumeiro.NuvioProviderDeviceTest,dev.asfakul.yumeiro.VegaProviderDeviceTest` and the GATE-1 trio
   (GateOnePrepareDeviceTest, MainThreadStallRealClockDeviceTest, GateOneExitCheckDeviceTest; no getOrCreatePlayer YuStall).
 - When NuvioProviderDeviceTest passes: flip both flags to true in FeatureFlags.kt (own commit, own CI) and add an OMT row
   (add a real Nuvio repo, play a movie, see "Nuvio · <scraper>" sources).
 
 ## Next step
-1. Close the pending runs above (rows GATE-1-MUSIC-START, F-05-N).
+1. Close the pending runs above (rows GATE-1-MUSIC-START, GATE-1-MUSIC-START-2, F-05-N).
 2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
 3. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
@@ -38,7 +42,8 @@ returns MainAPI?; OnlineSession.resolve uses StreamAddons.withAddons; UniversalA
    then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
-- 2026-11-22 09:00: F-05-N Nuvio (this push), docs digest 45aac76a.
+- 2026-11-22 09:15: GATE-1-MUSIC-START-2 (this push).
+- 2026-11-22 09:00: F-05-N Nuvio 06200fc3, docs digest 45aac76a.
 - 2026-11-22 morning: RENDER-5b 0270f069, FF-LOAD 8cb89e9b, GATE-1-AB b847caa0, GATE-1-FTL 76a6e521, MUSIC-START 9da67d0c.
 - GATE-1 (newest first): RENDER-4b f30cd6c5 poster phase fix; TRACE-4 1ee95cc3; T11 345d2572; RENDER-5 935875ed;
   RENDER-4 posters; TRACE-3/3b; T10 a4cc1379; RENDER-3 4b303e0d; RENDER-2 62102ae5; RENDER a8f33c0e. Gate runs

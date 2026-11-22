@@ -11,6 +11,8 @@ import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.FeatureFlags
 import dev.asfakul.yumeiro.service.PlaybackService
 import org.junit.After
+import dev.asfakul.yumeiro.data.model.AudioTrack
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -68,6 +70,20 @@ class PlayerBuiltOnFirstUseTest {
         PlaybackService.getOrCreatePlayer(ctx)
         idle()
         assertFalse(m.isAttached)
+    }
+
+    /** GATE-1-MUSIC-START-2: the first song tap on a cold start builds the player and keeps the track. */
+    @Test fun theFirstSongTapOnAColdStartKeepsTheTrack() {
+        val m = MusicPlayerManager(ctx)
+        idle()
+        val songs = (1..3).map { AudioTrack("c$it", "Song $it", "Artist", "Album", 200_000, "file:///nope/c$it.mp3") }
+        m.playTrack(songs[1], songs)
+        assertTrue(m.isAttached)
+        val state = m.playbackState.value
+        assertEquals("the now-playing track was cleared by the player build", "c2", state.currentTrack?.id)
+        assertEquals(songs.map { it.id }, state.queue.map { it.id })
+        assertEquals(1, state.currentQueueIndex)
+        m.release()
     }
 
     @Test fun theFlagIsOnByDefault() = assertTrue(flag.default)

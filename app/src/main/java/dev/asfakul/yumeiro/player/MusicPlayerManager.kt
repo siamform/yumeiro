@@ -60,7 +60,7 @@ class MusicPlayerManager(
     // Home Continue for the rest of the process.
     private var recorderCounted = false
     private val player: ExoPlayer
-        get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context))
+        get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context), fromCommand = true)
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -209,7 +209,13 @@ class MusicPlayerManager(
     /** GATE-1-MUSIC-START: the player was built elsewhere (headset Play); attach so this screen shows it. */
     private val onPlayerBuilt: (ExoPlayer) -> Unit = { p -> if (attached == null && !recorderReleased) attach(p) }
 
-    private fun attach(p: ExoPlayer): ExoPlayer {
+    /**
+     * GATE-1-MUSIC-START-2: [fromCommand] is true when a music command (playTrack) builds the player.
+     * The command has already set the new track and queue; restoring an empty player's state then
+     * cleared them, so the first song tap after a cold start showed no now-playing screen
+     * (AppNavigationCrashTest.darkThemeRenders, CI 44976838656). An empty player has nothing to restore.
+     */
+    private fun attach(p: ExoPlayer, fromCommand: Boolean = false): ExoPlayer {
         PlaybackService.stopWhenBuilt(onPlayerBuilt)
         attached = p
         p.addListener(playerListener)
@@ -224,7 +230,9 @@ class MusicPlayerManager(
         // otherwise connect lazily on first playback.
         if (p.mediaItemCount > 0) connectSession()
         // Restore playback state if player was already playing in background
-        restoreExistingState()
+        val keepCommandState = fromCommand && p.mediaItemCount == 0 &&
+            dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.MUSIC_PLAYER_ON_USE)
+        if (!keepCommandState) restoreExistingState()
         return p
     }
 
