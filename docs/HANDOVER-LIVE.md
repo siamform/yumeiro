@@ -6,13 +6,13 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 12:30 +0600, branch `r15-stability`. OWNER RELEASE-DAY ORDER: read docs/RELEASE-DAY-PLAN.md (universal hard
-rules + today's checklist A-D: finish fixes, website yumeiro-web, changelog / manual tests / README / mockups / zip,
-then a CI-built soft-test APK shared in chat; no merge / tag / release / deploy until the owner approves).
-This push: GATE-1-FEED-LATE (StagedLate in StagedList.kt, flag gate1_feed_staged_late on, StagedLateTest; fail-before
-44990181586 valid, branch deleted) + SkyStreamAdapterTest temp-file prefix fix + ledger closes: F-05-N-ON Pass
-44987368473; GATE-1-PREPARE-COLD prepare stall now 1325 ms framework-only (gate 44987227363); F-05-S fail-before
-44988073278 valid, first r15 CI 44989934475 Blocked (Maven fetch) + 2 test-bug fails (fixed here).
+2026-11-22 12:19 +0600, branch `r15-stability`. OWNER RELEASE-DAY ORDER: read docs/RELEASE-DAY-PLAN.md (universal hard
+rules + today's checklist A-D; no merge / tag / release / deploy until the owner approves).
+This push: release kit pieces. docs/assets/release-2.1/ (22 mockups by scripts/release_kit_210.py; real shots from
+runs 44929260054, 44926513936, 44912687672, sources in its README.md), README hero + 4 posts at the 2.1 marker,
+docs/release-2.1/SOCIAL-CAPTIONS.md, scripts/release_pdf_210.py (changelog PDF with image proof, 31 pages; proof
+shots are copied from those runs' artifacts, names in PROOF). Earlier this day: GATE-1-FEED-LATE, CHANGELOG v2.1.0,
+CHANGELOG-FULL, MANUAL-TESTS-2.1, README forensic, website branch yumeiro-web r16-v210 (fc979c4, PR not opened).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
 - r15 CI (review_apk=false) for this push: pass-after for F-05-S and GATE-1-FEED-LATE. Run ID in the progress log of
@@ -21,6 +21,8 @@ This push: GATE-1-FEED-LATE (StagedLate in StagedList.kt, flag gate1_feed_staged
 - Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before).
 
 ## Next step
+0. Release kit: zip = PDF + CHANGELOG.md + CHANGELOG-FULL.md + MANUAL-TESTS-2.1.md + SOCIAL-CAPTIONS.md + the
+   mockups. Then dispatch ci.yml review_apk=true on r15-stability (only after the current CI ends), share the APK.
 1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05) and GATE-1-PREPARE-COLD (if the stall repeats on a quiet CPU,
    trace the first frame: Crossfade MTBottomBar.kt:148 via MTPlayerApp.kt:650, then HardwareRenderer.nSetStopped).
 2. F-05-S: fail-before result, r15 CI (fix compile errors if any; this code was written without a compiler), device

@@ -33,6 +33,13 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 ## What's new in 2.1.0
 
 <!-- RELEASE-2.1-IMAGES -->
+<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.1.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
+<p align="center">
+<img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" alt="No more freezes" width="200">
+<img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" alt="A friendlier downloader" width="200">
+<img src="docs/assets/release-2.1/post-03-shortcuts-1080x1350.png" alt="More Home shortcuts" width="200">
+<img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" alt="Telegram has its own page" width="200">
+</p>
 
 Yumeiro 2.1.0 is in testing (soft-test build); 2.0.0 stays the current release until it ships. Full notes:
 [CHANGELOG.md](CHANGELOG.md), with every test run: [docs/release-2.1/CHANGELOG-FULL.md](docs/release-2.1/CHANGELOG-FULL.md).
