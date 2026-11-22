@@ -123,7 +123,7 @@ class E1CatalogTest {
         assertTrue(p.loadLinks("catalog:movie:2", false, {}) { links += it })
         assertEquals(listOf("https://cdn.example/Parasite#play"), links.map { it.url })
         assertEquals(listOf("Source A"), links.map { it.source })
-        assertEquals(listOf("parasite"), a.searched.take(1))
+        assertEquals("searched by the clean title", listOf("Parasite"), a.searched.take(1))
         // E1-D: the source that answered is asked first next time.
         assertEquals("Source A", YumeiroCatalog.Ranking.order(listOf(b, c, a)).first().name)
     }

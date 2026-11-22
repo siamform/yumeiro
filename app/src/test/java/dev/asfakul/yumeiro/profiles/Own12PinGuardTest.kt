@@ -30,7 +30,10 @@ import org.robolectric.annotation.Config
  * Remove PIN / security-question rows ran at once, and saving a first PIN closed the flow.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], qualifiers = "w411dp-h891dp-xxhdpi") // a phone: the pad's bottom row (0, OK) is off the 470 dp default screen
+// A tall phone: the pad's bottom row (0, OK) is off the 470 dp default screen. 320 dp wide, not 411: Robolectric never
+// idles with a text field in a dialog on a screen wider than 320 dp (robolectric/robolectric#8460), which hung the
+// security-questions step (CI 45051586296). The device test Own12PinGuardDeviceTest checks it on real screens.
+@Config(sdk = [34], qualifiers = "w320dp-h891dp-xxhdpi")
 class Own12PinGuardTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
     private val ctx get() = rule.activity

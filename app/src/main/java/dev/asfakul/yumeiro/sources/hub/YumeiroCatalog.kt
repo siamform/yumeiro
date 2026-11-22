@@ -99,7 +99,7 @@ object YumeiroCatalog {
         return Ref(kind, id, season, episode)
     }
 
-    /** Words a source search can use: lower case letters, digits and spaces only, at most 8 words. */
+    /** Words a source search can use: letters, digits and spaces only (case kept), at most 8 words. */
     fun query(title: String): String = buildString {
         for (c in title) append(if (c.isLetterOrDigit()) c else ' ')
     }.trim().split(' ').filter { it.isNotEmpty() }.take(8).joinToString(" ")

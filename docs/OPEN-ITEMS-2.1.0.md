@@ -40,7 +40,7 @@ Every row was read. Rows marked Verified / Done / Pass with run IDs stay closed 
 | FREEZE-4 | To confirm on a real phone | Home recomposition counter | Owner test |
 | BUG-3 | Blocked: owner | Download speed on a real phone | Owner test (OMT-20) |
 | PIP-1, S-1, NBUG-8 | Built / guarded | Code and unit guards in place, not reproduced on emulators | Owner test (real phone) |
-| C6 "Skeleton or universal loader" | Not run (code read only) | No device test; check in the review APK screenshots | Owner test (look at the review APK) |
+| C6 "Skeleton or universal loader" | Was code read only | C6LoaderTest draws the real skeleton for each kind of tap and checks only the right one shows | Unit UI test, CI pending |
 | C6 "Extension bar hides on scroll" | Owner feel test | | Owner test (OMT-9) |
 | EXT-T1, ST-7, X2-1, X13-6 | Blocked: owner | 30 emulator runs cannot reproduce EXT-T1; ST-7 and X2-1 need real hardware; X13-6 is the owner's decision | Owner test / decision (OMT-26, OMT-12, OMT-23) |
 

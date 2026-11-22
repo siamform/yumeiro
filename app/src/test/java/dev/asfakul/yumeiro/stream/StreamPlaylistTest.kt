@@ -127,7 +127,8 @@ class StreamPlaylistTest {
     @Test fun aBrokenIndexIsNotOverwrittenWithDefaults() = runBlocking {
         // R16 (G7): an unreadable playlists.json used to be replaced at once by the defaults.
         val dir = java.io.File(context.filesDir, "streams").apply { mkdirs() }
-        val good = org.json.JSONObject().put("version", 2).put("playlists", org.json.JSONArray()
+        // A current file (store v3, E2-ALL), so no newer default is added on load.
+        val good = org.json.JSONObject().put("version", 3).put("playlists", org.json.JSONArray()
             .put(org.json.JSONObject().put("id", "l_mine").put("name", "Mine").put("default", false))).toString()
         java.io.File(dir, "playlists.json").writeText(good.take(good.length / 2)) // torn write
         java.io.File(dir, "playlists.json.tmp").writeText(good)                   // the finished copy
@@ -158,7 +159,7 @@ class StreamPlaylistTest {
         // Migration is persisted (runs once).
         PlaylistStore.resetForTests(); PlaylistStore.init(context)
         assertEquals(ids, PlaylistStore.playlists.value.map { it.id }.toSet())
-        assertEquals(2, org.json.JSONObject(java.io.File(dir, "playlists.json").readText()).getInt("version"))
+        assertEquals(3, org.json.JSONObject(java.io.File(dir, "playlists.json").readText()).getInt("version"))
     }
 
     @Test fun marketFieldsSurviveJsonRoundTrip() {

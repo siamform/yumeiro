@@ -27,13 +27,16 @@ class NavGuard(private val pushWindowMs: Long = PUSH_WINDOW_MS, private val popW
     fun allowPush(route: String, now: Long, top: String? = null): Boolean {
         if (route == lastRoute && now - lastPushAt < pushWindowMs && top == pushedTop) return false
         lastRoute = route; lastPushAt = now; pushedTop = null
+        // A page opened after the last pop: the next pop is for that page, not a double tap on the old one
+        // (CI 45051586296: Back, open Downloads again, Back within 350 ms left the page open).
+        lastPopAt = Long.MIN_VALUE / 2
         return true
     }
 
     /** The back stack entry id the last allowed push opened. */
     fun pushed(top: String?) { pushedTop = top }
 
-    /** True when this button pop should run. A second pop within [popWindowMs] of the last one is a double tap. */
+    /** True when this pop should run. A second pop within [popWindowMs] of the last one, with no page opened between, is a double tap. */
     fun allowPop(now: Long): Boolean {
         if (now - lastPopAt < popWindowMs) return false
         lastPopAt = now; lastRoute = null

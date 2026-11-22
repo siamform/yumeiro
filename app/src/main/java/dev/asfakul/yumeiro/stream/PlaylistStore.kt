@@ -149,7 +149,9 @@ object PlaylistStore {
     private const val MAX_BYTES = 40 * 1024 * 1024
     private const val MAX_INDEX_BYTES = 1L * 1024 * 1024
     const val STALE_MS = 2 * 60 * 60 * 1000L
-    private const val STORE_VERSION = 2
+    private const val STORE_VERSION = 3
+    /** E2-ALL: the store version a default first shipped in. It reaches a user whose file is older, once. */
+    private val ADDED_IN = mapOf(DefaultPlaylists.YUMEIRO_LIVE to 3)
 
     private val mutex = Mutex()
     private val _playlists = MutableStateFlow<List<StreamPlaylist>>(emptyList())
@@ -195,7 +197,11 @@ object PlaylistStore {
         runCatching { d.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") && System.currentTimeMillis() - f.lastModified() > 3_600_000 }?.forEach { it.delete() } }
         val migrated = saved != null && saved.optInt("version", 1) < STORE_VERSION && migrateDefaults(context)
         // E2-ALL: a default added in a later version (Yumeiro Live) reaches existing users once, unless they deleted it.
-        val newDefaults = if (saved == null) emptyList() else DefaultPlaylists.all.filter { d -> d.id !in deletedDefaults && _playlists.value.none { it.id == d.id } }
+        // Only defaults newer than the file: a current file without a default (a recovered copy, an old list) stays as it is.
+        val from = saved?.optInt("version", 1) ?: STORE_VERSION
+        val newDefaults = if (saved == null) emptyList() else DefaultPlaylists.all.filter { d ->
+            (ADDED_IN[d.id] ?: 1) > from && d.id !in deletedDefaults && _playlists.value.none { it.id == d.id }
+        }
         if (newDefaults.isNotEmpty()) _playlists.value = newDefaults + _playlists.value
         // G7 LT-2: loadedDir was set before this write, so a failed write (disk full, folder not
         // writable) left the store "loaded" and the page's Retry never tried again.

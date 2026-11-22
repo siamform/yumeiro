@@ -268,7 +268,7 @@ device or CI run proves it; "Unit" = unit tests only; "owner" = needs a real pho
 | Player info overlay | P12 | LocalPlayerDeviceTest a 43708220122 | Pass (43708220122) |
 | Quality and audio settings (defaults, decoder, renderer, Anime4K, GPU tier, default player, reorderable controls, resume) | P13, S27, P16 | SE-5 / SE-6 switches and choice rows 43974089878; qa_gpu_tier OMT-16 | Pass (43974089878); GPU tier: owner OMT-16 |
 | PiP rules | P10 | LocalPlayerDeviceTest a,c 43708220122; SurfaceModeDeviceTest | Pass (43708220122) |
-| Skeleton or universal loader by video type | P1, Y1 | code read only | Not run (no device test; screenshot check in the review APK) |
+| Skeleton or universal loader by video type | P1, Y1 | C6LoaderTest (2.1.0): the real skeleton drawn for each tap (media link, new source, page source, series, changed source) | Unit UI test, CI pending |
 | Yumeiro Drama | P4, Y4 | DramaPlaybackDeviceTest 43701056608; DramaHealthTest | Pass (43701056608) |
 | Jump back in syncs on app open | H2, G5-PC2 | h2 43693532355 / 43696246671; G5-PC2 fail-before 44200206502 | Pass (43696246671) |
 | Extension bar hides on scroll down | Y3 | code read, no bug | Blocked: owner feel test OMT-9 |
