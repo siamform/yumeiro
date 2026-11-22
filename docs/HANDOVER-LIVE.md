@@ -6,6 +6,10 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 ~01:45 +06: Yumeiro Live published (stream-sync 45043596127: 7086 channels). CI 45044232383 gitleaks
+failed on streams-branch live/state.json (third-party links as keys): keys now hashed (state v2), path allowed.
+B5 Vega: already runs (ADR-047). Next: wait CI 45044232383 build, then B6 upgrade check with its APK.
+
 2026-11-23 ~01:30 +06: E1 Worker hub deployed (api.yumeiro.click/v1/hub/*). App catalog part + fan-out coded
 (YumeiroCatalog.kt, E1CatalogTest). CI dispatched on release-2.2.0 to catch compile errors. Next: B5 Vega research, B6.
 

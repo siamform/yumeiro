@@ -79,6 +79,18 @@ def update_state(state, results, now):
     return new
 
 
+def key(url):
+    """State keys are hashes: some third-party stream links carry their own tokens, and the
+    state file should not repeat them (they are only in the playlist itself)."""
+    return hashlib.sha256(url.encode("utf-8")).hexdigest()[:20]
+
+
+def by_url(saved, urls):
+    """Saved state (hash keys; version-1 files used plain links) -> link-keyed state."""
+    saved = {(key(k) if k.startswith("http") else k): v for k, v in saved.items()}
+    return {u: saved[key(u)] for u in urls if key(u) in saved}
+
+
 def shippable(entry):
     return bool(entry and entry.get("passed")) and entry.get("fails", 0) < STRIKES
 
@@ -154,7 +166,7 @@ def main(argv):
             results = dict(zip(urls, pool.map(cl.alive, urls)))
     else:
         results = {u: True for u in urls}
-    state = update_state(state, results, now)
+    state = update_state(by_url(state, urls), results, now)
     chosen = pick(cands, state)
     passed = sum(1 for ok in results.values() if ok)
     removed = sum(1 for e in state.values() if e.get("passed") and e["fails"] >= STRIKES)
@@ -166,7 +178,7 @@ def main(argv):
     with open(os.path.join(out, "playlists", f"{ID}.m3u"), "w", encoding="utf-8") as f:
         f.write(body)
     with open(state_path, "w", encoding="utf-8") as f:
-        json.dump({"version": 1, "checked": now, "streams": state}, f, separators=(",", ":"))
+        json.dump({"version": 2, "checked": now, "streams": {key(u): e for u, e in state.items()}}, f, separators=(",", ":"))
     report = {"checked": now, "channels": len(cands), "probed": len(urls), "alive": passed,
               "shipped": len(chosen), "removed": removed}
     with open(os.path.join(out, "live", "report.json"), "w", encoding="utf-8") as f:

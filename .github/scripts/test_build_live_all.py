@@ -80,5 +80,13 @@ class BuildLiveAllTest(unittest.TestCase):
             self.assertIn("streams", json.load(open(os.path.join(out, "live", "state.json"))))
 
 
+    def test_state_keys_hide_links(self):
+        url = "https://x.example/live.m3u8?token=abc123"
+        st = la.update_state({}, {url: True}, "t0")
+        saved = {la.key(u): e for u, e in st.items()}
+        self.assertNotIn("abc123", json.dumps(saved))
+        self.assertEqual(la.by_url(saved, [url]), st)
+        self.assertEqual(la.by_url(st, [url]), st)  # version-1 file keyed by link still loads
+
 if __name__ == "__main__":
     unittest.main()
