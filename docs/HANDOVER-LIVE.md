@@ -5,29 +5,40 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-22 05:09 +0600, branch `r15-stability` @f30cd6c5 (GATE-1-RENDER-4b) + this docs commit. GATE-1 work this session: RENDER-1..5
-and 4b (shader prewarm, staged Yumix reveal, plain posters, background-priority extension threads), T10 / T11 (the
-gate counts waits right after taps and the app's own YuStall watchdog), TRACE-3 / -4 (feed:<key> sections,
-STALL_SCHED cpu / runqueue). Gate still Fail on the emulator; finding GATE-1-EMU (ledger): software GPU costs about
-190 ms per frame in eglSwapBuffers, swangle is worse (median frame 991 ms). Limit stays 700 ms; real-phone check
-OMT-72. C5/C6 Blocked (only source is a row an earlier agent added in c2966bde, "Remaining audit items", no
-definition; owner asked again 2026-11-22).
+2026-11-22 ~08:15 +0600, branch `r15-stability` (new agent, 2.1.0 cycle). Code since b553505: 0270f069 GATE-1-RENDER-5b,
+8cb89e9b FF-LOAD, b847caa0 GATE-1-AB, GATE-1-FTL commit, then this docs commit.
+- Closed: GATE-1-RENDER-4 and -4b Pass (PosterImagePlainTest 4/4 in r15 CI 44960387093; 4b fail-before 44958935625
+  valid, branch ab/posterplain2-before deleted), GATE-1-T10 / T11 unit Pass (StallKindA11yTest 3/3 in 44960387093).
+- 44960387093 failed only ExtensionThreadsTest -> GATE-1-RENDER-5b (pool thread priority set once; Robolectric reset
+  showed it; real gap = extension code changing its thread priority). Fixed: priority set before every task.
+- New finding FF-LOAD: `FeatureFlags.isOn` ignored the saved flag file at start (48 calls, every GATE-1 fix), so kill
+  switches did not work. Fixed (attach + warm-up load + lazy ExtensionGuard.dispatcher).
+- GATE-1-AB: `-f gate1_baseline=true` on device-check runs the gate walk with the five GATE-1 fix flags off.
+- GATE-1-FTL: Test Lab workflow ftl-gate.yml and own-device workflow gate-usb.yml ready; Test Lab is Blocked on the
+  owner (service account gets 403; enable 2 APIs + Editor role: docs/GATE-1-REAL-DEVICE.md). Asked 2026-11-22.
+- C5 / C6 now defined (owner prompt 2026-11-22), written into MAJOR-BUGS-AND-FEATURES-2.x.md.
+- Credentials from the owner's 2026-11-22 message: saved only in gitignored `secrets/` (firebase-admin.json); the repo
+  secrets already existed (names in AGENT-START-HERE.md). Nothing committed.
 
-## Pending runs (check each, then update the ledger rows that say pending)
-- CI 44958935625 (ab/posterplain2-before, review_apk=false): fail-before for GATE-1-RENDER-4b. Expect
-  PosterImagePlainTest failedPhaseStaysFailed (+ maybe blankUrl / missingImage) to fail, all else ok (`/tmp/ana.sh`
-  idea: download the unit-test results and list failures). Then delete worktree /tmp/fb_poster2, local and remote
-  branch ab/posterplain2-before, and fill the run into the GATE-1-RENDER-4b row.
-- Next r15 CI with review_apk=true (dispatched with this push): pass-after for PosterImagePlainTest (RENDER-4, 4b),
-  ExtensionThreadsTest (RENDER-5; fail-before 44956359334 failed extensionWorkRunsAtBackgroundPriority as expected,
-  branch deleted), StallKindA11yTest (T11).
+## Pending runs (check each, then update the ledger rows that say PENDING)
+- CI 44972335021 (ab/extprio2-before, review_apk=false): fail-before GATE-1-RENDER-5b. Expect
+  ExtensionThreadsTest.aTaskThatRaisesItsPriorityDoesNotKeepTheThreadRaised (and maybe extensionWorkRunsAtBackgroundPriority)
+  to fail, nothing else. Then `git push origin --delete ab/extprio2-before`.
+- CI 44972664395 (ab/ffload-before): fail-before FF-LOAD. Expect FeatureFlagsLoadTest aFlagSavedOffIsOffWithoutAContext,
+  isOnFollowsEachSet, warmLoadsTheSavedFile, theAppAttachesAtStart, firstFrameWarmupIncludesTheFlagFile to fail.
+  Then delete ab/ffload-before.
+- CI 44972695324 (r15-stability @b847caa0, review_apk=true): pass-after RENDER-5b and FF-LOAD (whole unit suite, lint,
+  review APK). A failure elsewhere = check whether FF-LOAD changed what a test read (isOn now follows saved prefs).
+- Device 44972697126 (gate, current) and 44972699116 (gate, baseline, both phones): GATE-1-AB emulator numbers. Read
+  GATE1_VARIANT, the worst counted wait and GATE1_APPSTALL per phone from the job log; write both into GATE-1-AB.
 
-## Next step (Part 8)
-1. Close the pending runs above (ledger rows GATE-1-RENDER-4 / -4b / -5 / T10 / T11).
-2. GATE-1: no more app-side changes planned; per-frame software-GPU cost dominates (GATE-1-EMU). Only reopen if the
-   owner answers OMT-72 with a freeze, or chooses another way to run the gate. Never raise the 700 ms limit.
+## Next step
+1. Close the pending runs above (ledger rows GATE-1-RENDER-5b, FF-LOAD, GATE-1-AB).
+2. GATE-1: when the owner says the Test Lab access is on, `gh workflow run ftl-gate.yml --ref r15-stability` (uses 4 of
+   5 free physical runs a day) and record it in GATE-1 / GATE-1-EMU / GATE-1-FTL. Never raise the 700 ms limit.
 3. F-05 / X-1: Nuvio / SkyStream / Vega import and run (detection exists, E14).
-4. FEED-ENGINE-2.1.md leftovers, then UNVERIFIED-QUEUE / INVENTORY. E1 only on the owner's go.
+4. FEED-ENGINE-2.1.md leftovers, then C5, C6 (MAJOR list section), then UNVERIFIED-QUEUE / INVENTORY. E1 only on the
+   owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
 - GATE-1 (newest first): RENDER-4b f30cd6c5 poster phase fix; TRACE-4 1ee95cc3; T11 345d2572; RENDER-5 935875ed;

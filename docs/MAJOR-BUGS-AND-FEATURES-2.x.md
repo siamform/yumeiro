@@ -117,7 +117,7 @@ FREEZE-1 broke exactly this rule.
 | NBUG-12 / 13 | Access denied loop; proxy | Proxy Pass (NBUG-13 runs 44593053433, 44593085810, 44600322143); loop guarded | MASTER-CHECKLIST-FINAL | OMT-32 |
 | NBUG-14 | IPTV logos | Verified | b212379 | — |
 | NBUG-16 | Auto-update sync loop | Verified (CI + emulator + TV emulator) | NB16-1…7, ADR-025 | Real-phone check over a few days |
-| C5 / C6 | Remaining audit items | Blocked: no definition in the docs or the owner list; asked the owner | owner list | Track here as they are taken |
+| C5 / C6 | Remaining audit items (C5) and original rounds 1-3 (C6) | Defined by the owner 2026-11-22: see section "C5 / C6 (owner definition 2026-11-22)" below. Each item: map to a ledger row, then Pass (run ID) / fix / reason | owner prompt 2026-11-22 | Not run: mapping starts after GATE-1 and F-05 |
 
 ## Part 3b: owner list 2026-11-21 21:44 +06 (Website, downloader, player, Home, navigation)
 
@@ -181,3 +181,33 @@ Later (2.2+)
 
 Root cause written, regression test that fails before and passes after, commit body Cause / Fix / Tests / Evidence /
 Timestamp / Ledger, run ID in the ledger, and an owner real-phone check for anything users touch.
+
+## C5 / C6 (owner definition 2026-11-22)
+
+Owner, 2026-11-22: earlier agents could not find C5 / C6; they are defined here. Each item is mapped to a
+ledger row and verified, fixed, or listed with a reason. A row already Pass only gets its run ID linked.
+
+### C5: open items from the audits
+ER-28-TV34, X13-6, NB15-OB2 (the "Drag handle" label read out on TV sheets), NB11-OB1, NB12-5b, NB14-OB1,
+NB15D-OB1, NB16-6, NB16-7, TV-FP-1, EXT-T1, ST-7, ST-17. Player design items: a video sleep timer; a "More"
+button for the portrait player's top control row; one Back press leaves the player on phones (the steps stay
+on TV); SRT to WebVTT conversion for Cast.
+
+### C6: original rounds 1 to 3
+- Player: some videos with no audio; source rotation, including rotating again when a manually chosen source
+  is dead; no blank captcha page; missing episode thumbnails; 10 sources at a time with "Load more"; silent
+  background source gathering so playback starts at once; choosing an audio language only changes the audio
+  track; a quality selector on every video (own engine if the stream has none); no freeze or "not
+  responding"; the YouTube resolution switcher does not hang; time shows 00:00, not "--:--"; Player info
+  overlay; "Quality and audio" settings (default quality, default audio, default speed, decoder, renderer,
+  Anime4K, GPU tier, default player, reorderable controls, resume playback); PiP rules; skeleton or universal
+  loader by video type; Yumeiro Drama.
+- Home and Yumix: "Jump back in" syncs on app open; the extension bar hides on scroll down; search inside
+  "show videos from"; no extension header between sections; drama on by default; pin favourite extensions;
+  the feed is never replaced by cached rows while scrolling.
+- Library, music, manga: no fake liked songs, playlists or play time; music defaults to Online when online and
+  On-device when offline; infinite online music feed; redesigned manga page.
+- System: backup and restore; notifications work with the app closed and not all at once; custom theme image
+  from the gallery; smooth scrolling on low-end devices and a non-hanging extension market; device heating;
+  crash log saved as a file; universal APK with all ABIs and one app for TV; no OOM and no ANR; forced
+  download for sources that block downloads.
