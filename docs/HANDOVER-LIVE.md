@@ -5,42 +5,35 @@ what was just done, what runs are pending, and the exact next step. Every bug an
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
 
 ## Last updated
-2026-11-22 ~08:15 +0600, branch `r15-stability` (new agent, 2.1.0 cycle). Code since b553505: 0270f069 GATE-1-RENDER-5b,
-8cb89e9b FF-LOAD, b847caa0 GATE-1-AB, GATE-1-FTL commit, then this docs commit.
-- Closed: GATE-1-RENDER-4 and -4b Pass (PosterImagePlainTest 4/4 in r15 CI 44960387093; 4b fail-before 44958935625
-  valid, branch ab/posterplain2-before deleted), GATE-1-T10 / T11 unit Pass (StallKindA11yTest 3/3 in 44960387093).
-- 44960387093 failed only ExtensionThreadsTest -> GATE-1-RENDER-5b (pool thread priority set once; Robolectric reset
-  showed it; real gap = extension code changing its thread priority). Fixed: priority set before every task.
-- New finding FF-LOAD: `FeatureFlags.isOn` ignored the saved flag file at start (48 calls, every GATE-1 fix), so kill
-  switches did not work. Fixed (attach + warm-up load + lazy ExtensionGuard.dispatcher).
-- GATE-1-AB: `-f gate1_baseline=true` on device-check runs the gate walk with the five GATE-1 fix flags off.
-- GATE-1-FTL: Test Lab workflow ftl-gate.yml and own-device workflow gate-usb.yml ready; Test Lab is Blocked on the
-  owner (service account gets 403; enable 2 APIs + Editor role: docs/GATE-1-REAL-DEVICE.md). Asked 2026-11-22.
-- C5 / C6 now defined (owner prompt 2026-11-22), written into MAJOR-BUGS-AND-FEATURES-2.x.md.
-- Credentials from the owner's 2026-11-22 message: saved only in gitignored `secrets/` (firebase-admin.json); the repo
-  secrets already existed (names in AGENT-START-HERE.md). Nothing committed.
+2026-11-22 ~09:15 +0600, branch `r15-stability`. Newest code: 9da67d0c GATE-1-MUSIC-START (music player built on the
+first music command, flag gate1_music_player_on_use), then this docs commit.
+- Closed: GATE-1-RENDER-5b Pass and FF-LOAD Pass (fail-befores 44972335021 / 44972664395 valid, both branches
+  deleted; pass-after r15 CI 44972695324 build, test & lint green).
+- GATE-1-AB emulator, 2 pairs: fixes on pass 3 of 4 phone runs (449 / 472 / 463 / 557 ms counted; one lowram run had a
+  1349 ms Videos list first frame, finding GATE-1-VIDEOS-COMPOSE), fixes off pass 1 of 4 (977 / 968 / 1861 / 614).
+- GATE-1-MUSIC-START: YuStall showed 1.6-3.9 s main-thread ExoPlayer build right after start on lowram (not in the
+  gate window). Fixed behind a flag; PlaybackService.whenBuilt keeps a headset-started player visible.
+- Test Lab still Blocked on the owner (enable 2 APIs + Editor role, docs/GATE-1-REAL-DEVICE.md).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- CI 44972335021 (ab/extprio2-before, review_apk=false): fail-before GATE-1-RENDER-5b. Expect
-  ExtensionThreadsTest.aTaskThatRaisesItsPriorityDoesNotKeepTheThreadRaised (and maybe extensionWorkRunsAtBackgroundPriority)
-  to fail, nothing else. Then `git push origin --delete ab/extprio2-before`.
-- CI 44972664395 (ab/ffload-before): fail-before FF-LOAD. Expect FeatureFlagsLoadTest aFlagSavedOffIsOffWithoutAContext,
-  isOnFollowsEachSet, warmLoadsTheSavedFile, theAppAttachesAtStart, firstFrameWarmupIncludesTheFlagFile to fail.
-  Then delete ab/ffload-before.
-- CI 44972695324 (r15-stability @b847caa0, review_apk=true): pass-after RENDER-5b and FF-LOAD (whole unit suite, lint,
-  review APK). A failure elsewhere = check whether FF-LOAD changed what a test read (isOn now follows saved prefs).
-- Device 44972697126 (gate, current) and 44972699116 (gate, baseline, both phones): GATE-1-AB emulator numbers. Read
-  GATE1_VARIANT, the worst counted wait and GATE1_APPSTALL per phone from the job log; write both into GATE-1-AB.
+- CI 44975150437 (ab/musicstart-before, review_apk=false): fail-before GATE-1-MUSIC-START. Expect
+  PlayerBuiltOnFirstUseTest.aColdStartBuildsNoPlayerUntilACommand to fail (old code builds on the next message);
+  the other 3 may pass. Then `git push origin --delete ab/musicstart-before`, `git worktree remove /tmp/fb_music`.
+- r15 CI for 9da67d0c+docs (dispatch with review_apk=true after 44972695324's review APK job finishes, so it is not
+  cancelled): pass-after GATE-1-MUSIC-START (PlayerBuiltOnFirstUseTest, PlayerBuiltAfterFirstFrameTest, music tests)
+  and first compile of GateOneFtlSuite. Then device-check gate (current) to confirm no getOrCreatePlayer YuStall.
 
 ## Next step
-1. Close the pending runs above (ledger rows GATE-1-RENDER-5b, FF-LOAD, GATE-1-AB).
-2. GATE-1: when the owner says the Test Lab access is on, `gh workflow run ftl-gate.yml --ref r15-stability` (uses 4 of
-   5 free physical runs a day) and record it in GATE-1 / GATE-1-EMU / GATE-1-FTL. Never raise the 700 ms limit.
-3. F-05 / X-1: Nuvio / SkyStream / Vega import and run (detection exists, E14).
-4. FEED-ENGINE-2.1.md leftovers, then C5, C6 (MAJOR list section), then UNVERIFIED-QUEUE / INVENTORY. E1 only on the
+1. Close the pending runs above (ledger row GATE-1-MUSIC-START).
+2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
+3. GATE-1: when the owner says Test Lab access is on, `gh workflow run ftl-gate.yml --ref r15-stability` and record it.
+   Never raise the 700 ms limit.
+4. F-05 / X-1: Nuvio / SkyStream / Vega import and run (detection exists, E14).
+5. FEED-ENGINE-2.1.md leftovers, then C5, C6 (MAJOR list section), then UNVERIFIED-QUEUE / INVENTORY. E1 only on the
    owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- 2026-11-22 morning: RENDER-5b 0270f069, FF-LOAD 8cb89e9b, GATE-1-AB b847caa0, GATE-1-FTL 76a6e521, MUSIC-START 9da67d0c.
 - GATE-1 (newest first): RENDER-4b f30cd6c5 poster phase fix; TRACE-4 1ee95cc3; T11 345d2572; RENDER-5 935875ed;
   RENDER-4 posters; TRACE-3/3b; T10 a4cc1379; RENDER-3 4b303e0d; RENDER-2 62102ae5; RENDER a8f33c0e. Gate runs
   44951712024, 44953724011, 44955115811, 44956362034, 44957621376 (swiftshader), 44958850831 (swangle): all Fail.
