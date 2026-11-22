@@ -191,6 +191,11 @@ object FeatureFlags {
          * off, and with only one audio choice). Before, DL-ONE started the best video at once in those cases.
          */
         YT_AUDIO_CHOICE("own11_yt_audio_choice", true),
+        /**
+         * OWN-12: changing or removing a profile's PIN or security questions asks for the current PIN first,
+         * and setting a first PIN goes on to the security questions (for "Forgot?").
+         */
+        PIN_GUARD("own12_pin_guard", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null
