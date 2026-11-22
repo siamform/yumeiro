@@ -2,7 +2,7 @@
 
 All notable changes to Yumeiro.
 
-## v2.1.0: faster feeds, more sources, no freezes (soft-test build, not released yet)
+## v2.2.0: faster feeds, more sources, no freezes (not released yet; 2.1.0 was never released, its work is in 2.2.0)
 
 Follows 2.0.0. Update straight from 2.0.0, 1.9.0 or 1.8.x; profiles, history, downloads and settings carry over.
 Every item below was checked with an automatic test (unit tests in CI and/or emulator runs on a low-RAM phone, a

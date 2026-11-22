@@ -6,6 +6,9 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-22 ~22:30 +06: owner order: release 2.2.0 tomorrow, everything in, one branch `release-2.2.0`,
+batch testing. Plan and live status: docs/MASTER-PLAN-2.2.0.md (read it first).
+
 2026-11-22 ~23:00 +0600, branch `r15-stability`. Release ON HOLD until every OWN item is done and CI is green.
 Owner message 6 adds OWN-18 (download popup: size, quality, sub / dub on every popup) and OWN-19 (full-screen
 player: only the main buttons, the rest in More). Both coded in this push (DownloadSize.kt, DownloadSheet size line +
