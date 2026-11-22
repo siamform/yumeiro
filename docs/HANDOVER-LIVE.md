@@ -17,7 +17,7 @@ Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (
 ## Pending runs
 - Baseline 45024851633 ended Fail (AUD-FLAKE-1, ScrobbleFlushMockedTest stray request; watch in final CI).
 - Fail-befores (each must fail ONLY in its new test; then delete the branch): 45027077707 ab/own7-before (redo),
-  45025907314 ab/own4-before, 45025909528 ab/own10-before, 45027534810 ab/own5-before (redo). First own7 / own5
+  45027534810 ab/own5-before (redo). Done + branches deleted: own4 45025907314 valid, own10 45025909528 valid. First own7 / own5
   runs invalid: the OWN-7 test did not compile (AUD-T7-1, fixed aa590039).
 - r15 pass-after CI review_apk=true 45027652884 on 51c507ba (release prep f90b4999: 2.1.0 / 19, What's new 2.1.x). 45027577900 cancelled (logged).
 - Device on 51c507ba: phones default suite 45027685406, tv-api24 default 45027687692. Still to dispatch: tv-api34, gate trio, stress repeat 10 lowram, upgrade-check (v2.0.0, v1.9.0, v1.8.x).
