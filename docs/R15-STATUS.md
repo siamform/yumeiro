@@ -1,6 +1,6 @@
 ## Resume here (2026-11-23, 2.1.0 released)
 
-Resume here: 2.1.0 is out (release run 45080181866). Branch r18-live-ext: Live TV, then extensions. See docs/HANDOVER-LIVE.md.
+Resume here: 2.1.0 is out (45080181866). Branch r18-live-ext: e13 (onshort.net slot queue, see HANDOVER), then Live TV checks.
 
 # R15 status: every item in the master prompt, with its evidence
 

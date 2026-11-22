@@ -38,6 +38,16 @@ Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current prof
 the test's wait does not let the splash LaunchedEffect run (it polls with Thread.sleep). Check both: the gate
 composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
+## Live TV / extensions, first runs (2026-11-23 ~06:00 +06)
+- 45083382288 LiveCountryDeviceTest + HeaderStreamDeviceTest: Pass on both phones.
+- 45083384193 ExtensionsDeviceTest 6/7, PinnedExtensionsDeviceTest 1/1, F21ExtensionLabelDeviceTest 1/1 Pass on both phones;
+  e13 failed on both ("five feeds failed", only 3 of 5 seeded shelves asked): the real onshort.net timed out from CI.
+- e13 change (503 for the rest of onshort.net inside the test) did NOT help: 45084925615 still fails on both. Logcat: the
+  drama shelves from app start-up hold the one onshort.net background slot ("waited 25 s for a slot ... held by
+  platform/dramawave") with 20 s real timeouts, and no request reached the test's interceptor (they use a client made
+  before the swap). Next: seed at the gate or swap the client before the drama source starts; and look at the app side:
+  one slow host makes every drama shelf wait 20-25 s in line (feed speed, owner focus).
+
 ## Pending runs
 - None.
 
