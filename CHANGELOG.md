@@ -45,6 +45,9 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 
 ### New
 - Nuvio scraper repositories run: their streams join the sources list of any opened title (F-05).
+- SkyStream repositories can be added and their plugins run: rows, search and playback (F-05-S).
+- Stremio add-ons that only give streams now add their links to any title from other sources; torrent results are
+  marked "Torrent" (F-05-STREMIO).
 - Downloader popup, redesigned: Offline / Permanent switch, real quality, audio language and subtitle choices for
   any stream, download one episode or a range, and a whole online-music playlist (OL-5, OL-6, OL-11, OL-12, NF-2b).
 - Websites: one website tab stays open while a stream plays; the stream bar can be rescanned, collapsed or closed; it
@@ -53,14 +56,15 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - Vertical swipe player for Shorts and for any portrait video (F-12).
 - Live TV: country filter, and a curated list of about 20 working channels per country (Country, E2).
 - Separate Telegram page (F-02).
-- Upcoming grouped by date (F-22). Episode status on episode rows: Watched, minutes left, Fresh (NF-1).
+- Upcoming grouped by date, and Series by country (US, GB, JP, KR, IN and more, or Streaming) with a genre filter
+  and country / genre badges, from TVmaze (F-22, F-22-C). Episode status on episode rows: Watched, minutes left, Fresh (NF-1).
 - More Home shortcuts and more pages you can put on the navigation bar (OL-9, OL-10).
 - About: Yumeiro on Discord, Facebook, Instagram, X, TikTok and Reddit, plus the developer's links (OL-13).
 - Smaller downloads per phone type (ABI split APKs) are ready in the build; the universal APK stays (E3).
 
 ### Still being checked (off or not proven yet)
 - Telegram sign-in (private channels and chats) is built but off until it is tested on a real phone (F-02 login).
-- SkyStream plugins and the built-in torrent engine are built but off until their device checks pass.
+- The built-in torrent engine is built but off until its device checks pass.
 - Real-phone checks the emulators cannot do (GPU frame times, real YouTube quality, download speed on a real
   network) are in the manual test list.
 

@@ -6,35 +6,33 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 12:19 +0600, branch `r15-stability`. OWNER RELEASE-DAY ORDER: read docs/RELEASE-DAY-PLAN.md (universal hard
-rules + today's checklist A-D; no merge / tag / release / deploy until the owner approves).
-This push: release kit pieces. docs/assets/release-2.1/ (22 mockups by scripts/release_kit_210.py; real shots from
-runs 44929260054, 44926513936, 44912687672, sources in its README.md), README hero + 4 posts at the 2.1 marker,
-docs/release-2.1/SOCIAL-CAPTIONS.md, scripts/release_pdf_210.py (changelog PDF with image proof, 31 pages; proof
-shots are copied from those runs' artifacts, names in PROOF). Earlier this day: GATE-1-FEED-LATE, CHANGELOG v2.1.0,
-CHANGELOG-FULL, MANUAL-TESTS-2.1, README forensic, website branch yumeiro-web r16-v210 (fc979c4, PR not opened).
+2026-11-22 12:49 +0600, branch `r15-stability`. OWNER ORDER (latest, 2026-11-22): fix and build the open bugs and features
+FIRST; the release kit, website, docs and review APK come LAST. Rules: docs/RELEASE-DAY-PLAN.md. No merge / tag /
+release / deploy until the owner approves.
+This push: F-05-S-ON b5c61f85 (SkyStream on), F-21 device test 7c1ffce3, F-05-STREMIO 5f60ccea (stream-only Stremio
+add-ons, flag f05_stremio_streams), F-22-C 2b6338b1 (Upcoming Series by country + genre from TVmaze, flag
+f22_country_genre), C5 and C6 mapped in MAJOR (sections "C5 mapping", "C6 mapping"), OMT-75 / OMT-76, CHANGELOG
+v2.1.0 + CHANGELOG-FULL + SOCIAL-CAPTIONS updated.
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI (review_apk=false) for this push: pass-after for F-05-S and GATE-1-FEED-LATE. Run ID in the progress log of
-  RELEASE-DAY-PLAN.md.
-- Device: SkyStreamProviderDeviceTest,VegaProviderDeviceTest,NuvioProviderDeviceTest; gate trio on api33-lowram.
+- r15 CI (review_apk=false) for this push: pass-after for F-05-S-ON, F-05-STREMIO, F-22-C. Run ID: see
+  RELEASE-DAY-PLAN.md progress log / `gh run list --workflow ci.yml --branch r15-stability -L1`.
+- Fail-before F-22-C: ab/f22c-before 44994603153 (valid = compiles, only F22CountryGenreTest fails). Then delete
+  the branch (`git push origin --delete ab/f22c-before`; worktree /tmp/abf22).
+- Device phones 44994337536 @7c1ffce3: F21ExtensionLabelDeviceTest (F-21 device check) + C5 re-check
+  (LocalPlayer, Nbug11/12/14/15). TV api34 44994339669: SheetFocusTvDeviceTest (NB15-OB2 / ER-28).
 - Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before).
 
 ## Next step
-0. Release kit: zip = PDF + CHANGELOG.md + CHANGELOG-FULL.md + MANUAL-TESTS-2.1.md + SOCIAL-CAPTIONS.md + the
-   mockups. Then dispatch ci.yml review_apk=true on r15-stability (only after the current CI ends), share the APK.
-1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05) and GATE-1-PREPARE-COLD (if the stall repeats on a quiet CPU,
-   trace the first frame: Crossfade MTBottomBar.kt:148 via MTPlayerApp.kt:650, then HardwareRenderer.nSetStopped).
-2. F-05-S: fail-before result, r15 CI (fix compile errors if any; this code was written without a compiler), device
-   run; when the device test passes flip `scripts_skystream` to true in its own commit (like F-05-N-ON), then OMT-74.
-3. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
-4. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
-   Never raise the 700 ms limit.
-5. F-05 rest: Stremio stream-only add-ons on the StreamAddons seam.
-6. B31-FRAME device test (real player first frame + seek on the test hash), FEED-ENGINE leftovers, C5, C6, other rows,
-   then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
+1. Record the runs above (ledger F-05-S-ON, F-05-STREMIO, F-22-C, F-21; MAJOR C5 table "re-check" cells).
+2. Device check for F-22-C (Upcoming country chips) if a slot frees: none written yet; OMT-76 covers real data.
+3. Open rows: GATE-1-VIDEOS-COMPOSE (Perfetto trace of the Videos tap on lowram), B31-FRAME device test, F-09 taps
+   (owner says taps do not work: device check), TV-FP-1 test rewrite, ST-17. E1 only on the owner's go.
+4. LAST: ci.yml review_apk=true on r15 (only when no r15 CI runs), download `yumeiro-review-apk`, SHA256, share
+   the APK; rebuild the kit zip / PDF (changelog changed); re-share both living docs; short final reply.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- 2026-11-22 12:49: F-05-S-ON, F-21 device test, F-05-STREMIO, F-22-C, C5 / C6 mapping (this push).
 - 2026-11-22 11:10: F-05-S SkyStream adapter (this push, flag off, CI + device pending).
 - 2026-11-22 11:00: GATE-1-PREPARE-COLD harness e109bece.
 - 2026-11-22 10:55: F-05-N-ON (this push); GATE-1-QUIET closed (664 / 559 ms Pass).

@@ -121,6 +121,10 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-70 | OL-6: the new download popup on a real phone and TV | Owner test (pending) |
 | OMT-71 | OL-13: every social button opens the right account in its app | Owner test (pending) |
 | OMT-72 | GATE-1: no freeze when switching sources on a real (low-RAM) phone | Owner test (pending) |
+| OMT-73 | F-05-N-ON: Nuvio sources on a title | Owner test (pending) |
+| OMT-74 | F-05-S: SkyStream plugins | Owner test (pending) |
+| OMT-75 | F-05-STREMIO: a Stremio stream add-on gives links | Owner test (pending) |
+| OMT-76 | F-22-C: Upcoming by country and genre | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1028,3 +1032,22 @@ Only after the agent turns `scripts_skystream` on (it says so in the handover).
 3. Search something, open a title, press Play.
 
 Passes if the repo is added with its plugin count, the source shows rows (Trending first), search finds titles, and a title plays. A plugin that needs a captcha shows that message instead of hanging.
+
+### OMT-75 — Stremio stream add-on (F-05-STREMIO)
+
+1. Sources → Add, paste the manifest URL of a Stremio add-on you trust that gives streams (its manifest lists
+   "stream" in resources), for example a public HTTP-link add-on.
+2. Open any movie or series episode that has an IMDb id (most TMDB/IMDb titles) and open the sources list.
+3. Press one link marked "Stremio · <add-on name>".
+
+Passes if the add-on's links appear with quality, a direct link plays, and a torrent-only result shows as
+"Torrent" (skipped) instead of failing. Yumeiro never logs in or unlocks paid content for an add-on.
+
+### OMT-76 — Upcoming by country and genre (F-22-C)
+
+1. Online → Upcoming → Series.
+2. Tap JP, then KR, then Streaming; on each, tap a genre chip (e.g. Drama, Anime).
+3. Close the app, open Upcoming again.
+
+Passes if each country lists only its shows with a "JP • Anime, Fantasy"-style badge and local air times, the
+genre chip narrows the list, the credit line says TVmaze, and the last country and genre are kept after reopening.

@@ -75,7 +75,7 @@ FREEZE-1 broke exactly this rule.
 | F-17 | Profile statistics | Verified (emulator, phones + TV): ReleaseFeaturesDeviceTest.statsPageShowsTheMapAndTheSelectedDay Pass on api33-lowram and api36, run 44904447255 @a7bbd80e, 2026-11-21 19:00 +06. TV Pass: tv-api34 run 44906652590 @a7bbd80e, 2026-11-21 19:17 +06 | `StatsScreen.kt`, `StatsMath.kt`; ReleaseFeaturesDeviceTest PASS 44500142144 | Real-phone check |
 | F-03 | TeraBox / DiskWala | Verified (unit): TeraBox B-29 44820338741, DiskWala B-30 44827815442; signed-in TeraBox = OMT | Public share links (CloudRecapture, LinkHosts) | Login path needs account cookies (ADR-037); 30 s cut-off is a bug (fixed as B-29) |
 | F-04 | User WebView site list | Verified (emulator, phones + TV): ReleaseFeaturesDeviceTest.siteListSearchFilters Pass on api33-lowram and api36, run 44904447255 @a7bbd80e, 2026-11-21 19:00 +06. TV Pass: tv-api34 run 44906652590 @a7bbd80e, 2026-11-21 19:17 +06 | 49b28a38 | Device check |
-| F-05 | Nuvio / SkyStream / Vega repositories | Partial | Step 1 detected (E14 Pass 2/2); Vega runs (ADR-047, device 44593053433 / 44593085810 / 44600322143); Nuvio runs (F-05-N, ADR-057): device 44982374518 3 of 4, error-text bug F-05-N-ERR fixed, device 44985807462 Nuvio 4/4 + Vega 3/3 on api36 + api33-lowram; flags scripts_nuvio + f05_stream_addons on (F-05-N-ON, CI pending); manual OMT-73; SkyStream (F-05-S, ADR-058): fail-before 44988073278, pass-after r15 CI 44992235866, device 44992834769 SkyStream 3/3 on both phones, flag scripts_skystream on (F-05-S-ON b5c61f85); OMT-74 | Stremio stream-only add-ons on the add-on seam (F-05-STREMIO, in progress) |
+| F-05 | Nuvio / SkyStream / Vega repositories | Partial | Step 1 detected (E14 Pass 2/2); Vega runs (ADR-047, device 44593053433 / 44593085810 / 44600322143); Nuvio runs (F-05-N, ADR-057): device 44982374518 3 of 4, error-text bug F-05-N-ERR fixed, device 44985807462 Nuvio 4/4 + Vega 3/3 on api36 + api33-lowram; flags scripts_nuvio + f05_stream_addons on (F-05-N-ON, CI pending); manual OMT-73; SkyStream (F-05-S, ADR-058): fail-before 44988073278, pass-after r15 CI 44992235866, device 44992834769 SkyStream 3/3 on both phones, flag scripts_skystream on (F-05-S-ON b5c61f85); OMT-74 | Stremio stream-only add-ons built (F-05-STREMIO 5f60ccea, flag f05_stremio_streams on): fail-before 44993805121 valid; pass-after r15 CI pending; OMT-75 |
 | F-06 | Volume boost 200 % | Verified (emulator): VolumeBoostDeviceTest Pass on api33-lowram, api36, tv-api34 (44896550636, 44896552485) | 84861229 | Device check Device run 44896550636 @33c65f8d (phones) / 44896552485 (tv-api34), 2026-11-21 17:26 +06: VolumeBoostDeviceTest Pass on api33-lowram, api36 and tv-api34 (44896550636, 44896552485). Status Pass (44896550636). |
 | F-07 | External player | Verified (emulator, phones + TV): ExternalPlayerDeviceTest Pass on api33-lowram and api36, run 44904481596 @a7bbd80e, 2026-11-21 19:00 +06: Watched(66000, 60000) for MX and for Choose each time (position and Referer header both made the round trip). Unit Pass (fail-befores 44890380227, 44894173529; pass-after 44894227826). Earlier fails were test faults F07-T..T4. TV Pass: tv-api34 44908157533 (2 tests), 2026-11-21 19:41 +06 | 7713c6e8; position return is built (`ExternalPlayers.result` reads `position` / `extra_position` with `return_result`). Correction: the first version said "not built" | Real-phone check with MX / VLC / mpv Device run 44896550636 @33c65f8d (phones) / 44896552485 (tv-api34), 2026-11-21 17:26 +06: ExternalPlayerDeviceTest Fail on both phones (finding F07-T: the stub player in the test APK crashed, NoClassDefFoundError kotlin/collections/ArraysKt, the test APK has no Kotlin runtime in its own process; Yumeiro did start it with the right extras). Stub rewritten in Java, rerun pending. Pass-after CI for F-07-VIS + F-07-RES: 44894227826 Pass (349 classes, 0 failures). |
 | F-09 | Watch Later + Favourite on posters | Verified (emulator, phones + TV): PosterActionsDeviceTest (long-press Favourite) on api33-lowram and api36, run 44904447255 @a7bbd80e, 2026-11-21 19:00 +06. TV (Menu key -> Watch Later) TV Pass: tv-api34 run 44906652590 @a7bbd80e, 2026-11-21 19:17 +06 | 26032196 | Owner reports taps not working; device check |
@@ -85,7 +85,7 @@ FREEZE-1 broke exactly this rule.
 | F-15 | EPG Now / Next | Verified (emulator, phones + TV): FinalCoverageDeviceTest.k_f15 (Now / Next from XMLTV) Pass on api33-lowram and api36, run 44904447255 @a7bbd80e, 2026-11-21 19:00 +06. TV Pass: tv-api34 run 44906652590 @a7bbd80e, 2026-11-21 19:17 +06 | af0a5a14 | Device check |
 | Airing alerts | Push alerts for airing episodes | Client Verified: unit + device 44939449545 / 44942929078 (AIR-T1). Worker deployed 2026-11-20 (SERVER.md, migrations 0003-0005; /v1/health ok 2026-11-22). End to end on a real phone: owner test OMT-52 | `airing` in 6 files | End-to-end notification check |
 | F-21 | Rich extension metadata on every extension row (Hikari style), owner request 2026-11-21 | Built. Unit Pass (ExtensionLabelsTest: fail-before 44878962117, pass-after green in 44896530640); device screenshot check phone + TV Not run | F-21 commit on r15-stability | Flag `f21_extension_labels` (on, kill switch). Apply in three places: Extensions market / browser, Installed list, the "Show videos from" filter sheet. Each row: title + language code chip (`HDHub4u` `HI`); second line `12 sources • CloudStream • Nuvio • <repo name>` = exact source count, ecosystem tag (CloudStream, Nuvio, Vega, Stremio, Hikari/Yumeiro), repository name, one line with clean ellipsis. Purpose: tell apart same-name extensions from different repos or ecosystems. One shared composable used by all three lists; TV focus and font-scale 200 % checked; unit test for the label builder (count, tags, truncation); device screenshot test on phone + TV. |
-| F-22 | Upcoming page: filters + date-grouped sections, owner request 2026-11-21 | Part built. Unit Pass (F22UpcomingSectionsTest: fail-before 44879571787, pass-after 44884554686, green in 44896530640); filters Blocked (Simkl calendar has no country / genre / source data) | F-08 97895d02 | Filter bar with three filters: Country (JP, US, KR, IN, BD, …), Category (Movies, Series, Anime, Web Series, Drama), Extension (installed extensions, same F-21 row selector). Group items by date with headers `Today • Sat, Nov 21`, `Tomorrow • Sun, Nov 22`, then `Sat, Nov 21, 2026` (category prefix when one category is filtered, e.g. `Anime • Sun, Nov 22, 2026`); dates in the user's time zone. Each card shows air time, episode number, genre and country badges. Filters persist per profile. Tests: grouping/labels around midnight and time zones (unit), filter combinations (unit), device check phone + TV. |
+| F-22 | Upcoming page: filters + date-grouped sections, owner request 2026-11-21 | Part built. Unit Pass (F22UpcomingSectionsTest: fail-before 44879571787, pass-after 44884554686, green in 44896530640); filters: Category = Series / Movies / Anime chips (built); Country + Genre built as F-22-C from TVmaze (Simkl has neither, re-checked 2026-11-22), fail-before 44994603153 + pass-after PENDING, OMT-76; Extension filter Blocked (a calendar entry is not tied to an installed extension) | F-08 97895d02 | Filter bar with three filters: Country (JP, US, KR, IN, BD, …), Category (Movies, Series, Anime, Web Series, Drama), Extension (installed extensions, same F-21 row selector). Group items by date with headers `Today • Sat, Nov 21`, `Tomorrow • Sun, Nov 22`, then `Sat, Nov 21, 2026` (category prefix when one category is filtered, e.g. `Anime • Sun, Nov 22, 2026`); dates in the user's time zone. Each card shows air time, episode number, genre and country badges. Filters persist per profile. Tests: grouping/labels around midnight and time zones (unit), filter combinations (unit), device check phone + TV. |
 
 ## Part 3: bugs
 
@@ -117,7 +117,7 @@ FREEZE-1 broke exactly this rule.
 | NBUG-12 / 13 | Access denied loop; proxy | Proxy Pass (NBUG-13 runs 44593053433, 44593085810, 44600322143); loop guarded | MASTER-CHECKLIST-FINAL | OMT-32 |
 | NBUG-14 | IPTV logos | Verified | b212379 | — |
 | NBUG-16 | Auto-update sync loop | Verified (CI + emulator + TV emulator) | NB16-1…7, ADR-025 | Real-phone check over a few days |
-| C5 / C6 | Remaining audit items (C5) and original rounds 1-3 (C6) | Defined by the owner 2026-11-22: see section "C5 / C6 (owner definition 2026-11-22)" below. Each item: map to a ledger row, then Pass (run ID) / fix / reason | owner prompt 2026-11-22 | Not run: mapping starts after GATE-1 and F-05 |
+| C5 / C6 | Remaining audit items (C5) and original rounds 1-3 (C6) | Defined by the owner 2026-11-22: see section "C5 / C6 (owner definition 2026-11-22)" below. Each item: map to a ledger row, then Pass (run ID) / fix / reason | owner prompt 2026-11-22 | C5 and C6 mapped (sections "C5 mapping", "C6 mapping"); open: ST-17, TV-FP-1, skeleton loader check; owner: X2-1, OMT-9, OMT-12; current-code re-check 44994337536 / 44994339669 pending |
 
 ## Part 3b: owner list 2026-11-21 21:44 +06 (Website, downloader, player, Home, navigation)
 
@@ -194,6 +194,30 @@ NB15D-OB1, NB16-6, NB16-7, TV-FP-1, EXT-T1, ST-7, ST-17. Player design items: a 
 button for the portrait player's top control row; one Back press leaves the player on phones (the steps stay
 on TV); SRT to WebVTT conversion for Cast.
 
+#### C5 mapping (2026-11-22)
+
+Earlier evidence is in docs/DONE-LEDGER.md (line numbers as of today). Current-code re-check: device phones
+44994337536 (LocalPlayer, Nbug11/12/14/15, F21) and TV api34 44994339669 (SheetFocusTv), both at 7c1ffce3.
+
+| Item | Ledger | Earlier evidence | Status |
+|---|---|---|---|
+| PL-16 portrait More | DONE-LEDGER 203, 435 | 3ce721d; device 43747147539, 43748560619 (LocalPlayer 9/9, both phones) | Pass (43748560619); re-check 44994337536 |
+| PL-17 video sleep timer | DONE-LEDGER 204, 435 | 3ce721d; device 43748560619 | Pass (43748560619); re-check 44994337536 |
+| PL-18 one Back leaves the player on phones | DONE-LEDGER 205, 435 | c832bc2; device 43748560619 | Pass (43748560619); re-check 44994337536 |
+| PL-19 SRT to WebVTT for Cast | DONE-LEDGER 199, 435 | 23390e6, SrtToVttTest; device 43748560619 | Pass (43748560619; SrtToVttTest in r15 CI 44992235866) |
+| NB15-OB2 / ER-28 ("Drag handle" read on TV sheets) | DONE-LEDGER 660 | fix 2564ef48; fail-before 44445709090 / 44445734996; pass-after 44448997376 / 44449003874 | Pass (44449003874); re-check TV 44994339669 |
+| ER-28-TV34 | DONE-LEDGER 660 | old code did not show the bug on tv-api34 (44445713091) | Not run: cannot reproduce on old code by design; fix covers it (TV re-check 44994339669) |
+| X13-6 phone Jackson 2.19.4 | DONE-LEDGER 131, 583 | owner decision (OMT-23, ADR-035): phone keeps the version | Blocked: owner decision (OMT-23) |
+| NB11-OB1 | CHECKLIST 42 | 8c6ca928, WsFBugBatch1Test, unit pass-after 44610265729 | Pass (44610265729); re-check 44994337536 |
+| NB14-OB1 | CHECKLIST 45 | 4c8076b0, OMT-42, unit pass-after 44610265729 | Pass (44610265729); real logos OMT-42 |
+| NB15D-OB1 | CHECKLIST 46 | 414f6c8c, unit pass-after 44610265729 | Pass (44610265729); re-check 44994337536 |
+| NB12-5b | DONE-LEDGER 646 | unit-tested (BackgroundUpdatesTest family); no device hook | Pass unit (r15 CI 44992235866); real site: owner |
+| NB16-6, NB16-7 | DONE-LEDGER 647 | 2b06fb2, dc44432; BackgroundUpdatesTest | Pass unit (r15 CI 44992235866); background timing on a real phone: owner |
+| TV-FP-1 | DONE-LEDGER 669 | FeedPosition youtube on TV fails on a test fault (layout assumption), not an app bug | Fail (TV-FP-1: test rewrite queued) |
+| EXT-T1 | CHECKLIST 93 | 30 emulator runs, cannot reproduce | Blocked: owner phone test OMT-26 |
+| ST-7 | CHECKLIST 92 | jank only on software-rendered emulators | Blocked: owner real phone OMT-12 |
+| ST-17 | CHECKLIST 73, DONE-LEDGER 179 | 1 spin in 40 stress runs; 44145301927 20/20 clean | Fail (ST-17 open, logged per campaign) |
+
 ### C6: original rounds 1 to 3
 - Player: some videos with no audio; source rotation, including rotating again when a manually chosen source
   is dead; no blank captcha page; missing episode thumbnails; 10 sources at a time with "Load more"; silent
@@ -212,3 +236,46 @@ on TV); SRT to WebVTT conversion for Cast.
   from the gallery; smooth scrolling on low-end devices and a non-hanging extension market; device heating;
   crash log saved as a file; universal APK with all ABIs and one app for TV; no OOM and no ANR; forced
   download for sources that block downloads.
+
+#### C6 mapping (2026-11-22)
+
+Mapped to docs/INVENTORY.md rows (its Covered-by column holds the run IDs) and docs/DONE-LEDGER.md. "Pass" = a
+device or CI run proves it; "Unit" = unit tests only; "owner" = needs a real phone or TV (OMT).
+
+| C6 item | Inventory / ledger | Evidence | Status |
+|---|---|---|---|
+| No audio on some videos | P6, Round 13 (60cffac) | LocalPlayerDeviceTest a 43708220122 | Pass (43708220122) |
+| Source rotation, a dead manual pick rotates again, Load more (10 at a time) | P9 | OnlinePlaybackDeviceTest d_ 43701056608 | Pass (43701056608) |
+| No blank captcha page | NBUG-12 (DONE-LEDGER 646), BrowserCheck | NB12 fixes; device fail-before 44394971017, pass-after in the ledger row | Pass (ledger NBUG-12); real sites: owner |
+| Missing episode thumbnails | Y7, EpisodeStills | OnlineExtrasTest, EpisodeCarouselTest | Unit |
+| Silent background source gathering, playback starts at once | P2, Round 13 (a7a3bc2) | OnlinePlaybackDeviceTest 43701056608 | Pass (43701056608) |
+| Audio language changes only the audio track | P6 | LocalPlayerDeviceTest a 43708220122 | Pass (43708220122) |
+| Quality selector on every video (own engine when none) | P5 | QualityListDeviceTest, PlayerSwitchDeviceTest 43701056608; OL-5 popup 44929260054 | Pass (43701056608) |
+| No freeze or "not responding" | X3, GATE-1 | gate trio 44992836781 (lowram) | Pass (44992836781); real phone OMT-72 |
+| YouTube resolution switcher does not hang | P3, P5 | PlayerSwitchDeviceTest c_ 43701056608 | Pass (43701056608) |
+| Time shows 00:00, not --:-- | P12 | LocalPlayerDeviceTest a 43708220122 | Pass (43708220122) |
+| Player info overlay | P12 | LocalPlayerDeviceTest a 43708220122 | Pass (43708220122) |
+| Quality and audio settings (defaults, decoder, renderer, Anime4K, GPU tier, default player, reorderable controls, resume) | P13, S27, P16 | SE-5 / SE-6 switches and choice rows 43974089878; qa_gpu_tier OMT-16 | Pass (43974089878); GPU tier: owner OMT-16 |
+| PiP rules | P10 | LocalPlayerDeviceTest a,c 43708220122; SurfaceModeDeviceTest | Pass (43708220122) |
+| Skeleton or universal loader by video type | P1, Y1 | code read only | Not run (no device test; screenshot check in the review APK) |
+| Yumeiro Drama | P4, Y4 | DramaPlaybackDeviceTest 43701056608; DramaHealthTest | Pass (43701056608) |
+| Jump back in syncs on app open | H2, G5-PC2 | h2 43693532355 / 43696246671; G5-PC2 fail-before 44200206502 | Pass (43696246671) |
+| Extension bar hides on scroll down | Y3 | code read, no bug | Blocked: owner feel test OMT-9 |
+| Search inside "Show videos from" | Y5, NBUG-10 / G15-1 | PinnedExtensionsDeviceTest 43705847970; G15-1 tv-api34 44480266808, phones 44487432724 | Pass (44487432724) |
+| No extension header between sections | Y1 | Yumix feed unit tests | Unit |
+| Drama on by default | Y4 | every Yumix device run opens on drama | Pass (43701056608) |
+| Pin favourite extensions | E5 | PinnedExtensionsDeviceTest 43671202859, 43705847970 | Pass (43705847970) |
+| Feed never replaced by cached rows while scrolling | H1, FEED-1, GATE-1-FEED-LATE | FeedPositionDeviceTest 43683520404 / 43687398312; r15 CI 44992235866 | Pass (44992235866) |
+| No fake liked songs, playlists or play time | L6, L7, L9, G5-EP | LibraryDeviceTest#a 43738288853; LibraryEmptyProfileDeviceTest 44201835648 | Pass (44201835648) |
+| Music Online when online, On-device when offline | M2 | inventory M2 | Unit; real network switch: owner |
+| Infinite online music feed | M3 | FEED-1 append-only feed (device), Round13LogicTest, LivePagedTest | Pass (inventory M3) |
+| Redesigned manga page | T1, T2, G7-MR1, G7-MB1 | MangaTallPageDeviceTest 44239024442; MangaDuplicateDeviceTest 44245826911 | Pass (44245826911); reading: owner OMT-11 |
+| Backup and restore | S25, NBUG-7 | BK-1 device; SE-1 restore CI 43877618176 | Pass (43877618176) |
+| Notifications with the app closed, not all at once | X5, X5-2 (NotifyPacer), NOTIFY-1 | ClosedAppAlertDeviceTest; ledger X5-1, X5-2 | Pass (ledger X5-1 / X5-2) |
+| Custom theme image from the gallery | S26 | BackdropImportDeviceTest (SE-2, SE-4) | Pass (ledger SE-2 / SE-4) |
+| Smooth scrolling on low-end, extension market does not hang | X3, ST-7, E1 | ExtensionsDeviceTest 43704211410; ST-7 jank only on software emulators | Pass market (43704211410); scrolling: owner OMT-12 |
+| Device heating | X4, P19 | HeatGuardDeviceTest; LocalPlayerDeviceTest d 43708220122 | Pass (43708220122) |
+| Crash log saved as a file | X6 | CrashUiDeviceTest (X6-1, CR-1) | Pass (ledger X6-1) |
+| Universal APK with all ABIs, one app for TV | X10-1, X9 | release build review (DONE-LEDGER 116); the TV runs use the same APK | Pass (r15 CI review-APK lane) |
+| No OOM, no ANR | X2, X3, ST-17 | ST-2, ST-18 emulator; gate trio 44992836781 | Pass on emulator (ST-2, ST-18, 44992836781); Fail ST-17 (1 spin in 40 stress runs); X2-1 (baseline profile gain on real hardware) Blocked: owner OMT-12 |
+| Forced download for sources that block downloads | D2 | DL-1 device, DL-9 CI, DL-10 emulator | Pass (ledger DL-1 / DL-10) |

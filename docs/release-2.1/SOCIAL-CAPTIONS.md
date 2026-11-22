@@ -1,7 +1,7 @@
 # Yumeiro 2.1.0 social captions
 
 Ready to copy. Images: `docs/assets/release-2.1/` (same names in the release kit zip). Every claim matches CHANGELOG.md
-v2.1.0. Rules: do not promise Telegram sign-in, SkyStream or the built-in torrent engine (built, still off); do not
+v2.1.0. Rules: do not promise Telegram sign-in or the built-in torrent engine (built, still off); do not
 promise DRM content. Before the release is out say "test build" / "coming soon"; on launch day swap in
 "Out now: yumeiro.click/download". Hashtags are optional; keep at most five.
 
@@ -18,12 +18,12 @@ Image: `post-01-no-freeze-1080x1350.png` or `changelog-card-1080x1350.png` (Face
 - A friendlier downloader. Offline or Permanent in one switch, real quality, audio and subtitle choices for any
   stream, one episode or a range, and whole music playlists.
 - Websites stay open while a stream plays, and the stream bar follows the video playing now.
-- More sources: Nuvio scraper repositories add their streams to any title. TeraBox plays the full file when you are
+- More sources: Nuvio scraper repositories, SkyStream plugins and stream-only Stremio add-ons add their links to any title. TeraBox plays the full file when you are
   signed in; DiskWala links hand off to the DiskWala app.
 - Your profiles, really yours: extensions, repositories, pins and reading are per profile; "Forgot PIN" uses
   security questions.
 - Also: vertical player for Shorts and portrait videos, Live TV by country, a separate Telegram page, Upcoming by
-  date, episode status, more Home shortcuts and nav-bar pages.
+  date and by country with genres, episode status, more Home shortcuts and nav-bar pages.
 
 Free and open source (GPL-3.0). No account, no ads, no tracking. Made in Bangladesh.
 Test build now; out soon at yumeiro.click/download
