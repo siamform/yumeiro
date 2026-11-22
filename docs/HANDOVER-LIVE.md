@@ -10,6 +10,9 @@ Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DI
 Fixed in 4c62fe3b (tests isolated; test JVM 3 GB, fork every 150 classes). New CI 45051586296 running.
 Device: Own12PinGuardDeviceTest OK both phones (45051247401); NF1 not checked (onshort.net down, 45049508477).
 Website branch is r17-v210 in siamform/yumeiro-web.
+2026-11-23 ~00:50 +06: CI 45051586296 finished: 1914 tests, 5 failed, no OOM. All 5 fixed in 3a18b985 (2 real bugs:
+NavGuard dropped Back on a page opened right after a Back; PlaylistStore re-added removed defaults to current files;
+3 test faults, see commit). Each class passed locally (Robolectric). C6LoaderTest added. New CI 45057299595.
 
 ## OWN-15 finding
 Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
@@ -18,7 +21,7 @@ the test's wait does not let the splash LaunchedEffect run (it polls with Thread
 composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
 ## Pending runs
-- CI 45051586296 on 4c62fe3b.
+- CI 45057299595 on 3a18b985.
 
 ## Next step
 1. CI green; then upgrade-check.yml (from v2.0.0, new_apk_run = that CI).

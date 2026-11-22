@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here: release 2.1.0. Wait CI 45051586296 (unit test + heap fix); then upgrade check; release. See docs/MASTER-PLAN-2.2.0.md.
+Resume here: release 2.1.0. Wait CI 45057299595 (5 fixes from 45051586296); then upgrade check; release. See docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 
