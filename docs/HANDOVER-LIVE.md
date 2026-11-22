@@ -6,32 +6,39 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 08:40 +0600, branch `r15-stability`. Newest code: 9da67d0c GATE-1-MUSIC-START. This push is docs only:
-DOCS-READ-DIGEST plus stale-text fixes (ledger row DOCS-READ) and a new open row B31-FRAME (torrent goal bar is a
-decoded first frame, the device test only measures the first 64 KB).
-- r15 CI 44972695324: review APK job success (build, test & lint green earlier).
+2026-11-22 09:00 +0600, branch `r15-stability`. This push: F-05-N (ADR-057) Nuvio scrapers as stream-only add-ons,
+behind `scripts_nuvio` + `f05_stream_addons` (both OFF until the device run passes). New files: online/StreamAddons.kt,
+sources/ecosystem/NuvioAdapter.kt (NuvioAdapter + NuvioStreams), sources/ecosystem/ScriptCrypto.kt; crypto-js shim and
+`__invokePositional` in assets/js/provider_runtime.js; ScriptRuntime.call got `invoker` + `globals`; RuntimeAdapter.build
+returns MainAPI?; OnlineSession.resolve uses StreamAddons.withAddons; UniversalAdd routes Nuvio repos when the flag is on.
+- GATE-1-MUSIC-START fail-before 44975150437: Fail as expected (aColdStartBuildsNoPlayerUntilACommand), branch deleted.
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- CI 44975150437 (ab/musicstart-before, review_apk=false): fail-before GATE-1-MUSIC-START. Expect
-  PlayerBuiltOnFirstUseTest.aColdStartBuildsNoPlayerUntilACommand to fail. Then `git push origin --delete
-  ab/musicstart-before`, `git worktree remove --force /tmp/fb_music; git worktree prune`.
-- r15 CI 44976838656 (dispatched 2026-11-22 08:35 +06, review_apk=true, @e0ea47d6): pass-after GATE-1-MUSIC-START and
-  first compile of GateOneFtlSuite. Then device gate (GateOnePrepareDeviceTest, MainThreadStallRealClockDeviceTest,
-  GateOneExitCheckDeviceTest) to confirm no getOrCreatePlayer YuStall.
+- r15 CI 44976838656 (review_apk=true @e0ea47d6): pass-after GATE-1-MUSIC-START + first GateOneFtlSuite compile.
+  Do NOT dispatch ci.yml on r15-stability until it ends (a new dispatch cancels it).
+- CI 44977804955 (ab/f05n-before, review_apk=false): fail-before F-05-N. Expect f05/StreamAddonsMergeTest,
+  f05/NuvioAdapterTest, f05/ScriptCryptoTest and EcosystemRegistryTest#vegaRunsAndTheOthersAreRecognisedOnly to fail
+  (compile must pass). Then `git push origin --delete ab/f05n-before; git worktree remove --force /tmp/fb_nuvio; git worktree prune`.
+- After 44976838656: r15 CI review_apk=true on the F-05-N commit (pass-after), then device runs:
+  `-f test=dev.asfakul.yumeiro.NuvioProviderDeviceTest,dev.asfakul.yumeiro.VegaProviderDeviceTest` and the GATE-1 trio
+  (GateOnePrepareDeviceTest, MainThreadStallRealClockDeviceTest, GateOneExitCheckDeviceTest; no getOrCreatePlayer YuStall).
+- When NuvioProviderDeviceTest passes: flip both flags to true in FeatureFlags.kt (own commit, own CI) and add an OMT row
+  (add a real Nuvio repo, play a movie, see "Nuvio · <scraper>" sources).
 
 ## Next step
-1. Close the pending runs above (ledger row GATE-1-MUSIC-START).
+1. Close the pending runs above (rows GATE-1-MUSIC-START, F-05-N).
 2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
 3. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
-4. F-05 / X-1: Nuvio then SkyStream stream-only adapters on one stream-merge seam (ADR-057 to write first), keyed by
-   tmdb/imdb + season/episode so E1 Layer B can reuse it.
+4. F-05 next: SkyStream adapter on the same seam (plugin.js globals getHome/search/load/loadStreams(cb), .sky zip,
+   manifest.baseUrl, loadExtractor; v2.9.0 ignores the manifest plugins list), then Stremio stream-only add-ons.
 5. B31-FRAME device test (real player first frame + seek on the test hash), FEED-ENGINE leftovers, C5, C6, other rows,
    then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- 2026-11-22 09:00: F-05-N Nuvio (this push), docs digest 45aac76a.
 - 2026-11-22 morning: RENDER-5b 0270f069, FF-LOAD 8cb89e9b, GATE-1-AB b847caa0, GATE-1-FTL 76a6e521, MUSIC-START 9da67d0c.
 - GATE-1 (newest first): RENDER-4b f30cd6c5 poster phase fix; TRACE-4 1ee95cc3; T11 345d2572; RENDER-5 935875ed;
   RENDER-4 posters; TRACE-3/3b; T10 a4cc1379; RENDER-3 4b303e0d; RENDER-2 62102ae5; RENDER a8f33c0e. Gate runs

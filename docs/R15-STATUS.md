@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22): read docs/HANDOVER-LIVE.md, then docs/DOCS-READ-DIGEST.md.
+Resume here (2026-11-22 09:00 +06): read docs/HANDOVER-LIVE.md (F-05-N Nuvio built, runs pending), then DOCS-READ-DIGEST.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

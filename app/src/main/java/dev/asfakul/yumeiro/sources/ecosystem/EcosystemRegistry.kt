@@ -44,7 +44,8 @@ interface RuntimeAdapter {
     fun required(p: PluginEntry): Set<String>
     /** Runs once after download (for example to read home rows); the result is saved with the plugin. */
     suspend fun prepare(context: Context, plugin: EcosystemRegistry.Installed, dir: File): JsonObject = JsonObject(emptyMap())
-    fun build(context: Context, plugin: EcosystemRegistry.Installed, dir: File, displayName: String): MainAPI
+    /** The catalog source, or null for a stream-only ecosystem (Nuvio, ADR-057) that publishes none. */
+    fun build(context: Context, plugin: EcosystemRegistry.Installed, dir: File, displayName: String): MainAPI?
 }
 
 /**
@@ -63,8 +64,8 @@ object EcosystemRegistry {
     const val MAX_FILE_BYTES = 2L * 1024 * 1024
     const val MAX_TOTAL_BYTES = 50L * 1024 * 1024
 
-    /** Ecosystems that can run in this version. Nuvio and SkyStream are recognised, not run (ADR-047). */
-    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter).associateBy { it.ecosystem }
+    /** Ecosystems that can run in this version (Vega ADR-047, Nuvio ADR-057). SkyStream is recognised, not run. */
+    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter, NuvioAdapter).associateBy { it.ecosystem }
 
     /** Script ecosystems the registry knows the format of. */
     val known = setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO, SourceHub.Ecosystem.SKYSTREAM)
@@ -222,7 +223,9 @@ object EcosystemRegistry {
                 require(staging.renameTo(dir)) { "Couldn't save the plugin" }
             } finally { staging.deleteRecursively() }
             val prepared = base.copy(hashes = hashes)
-            val extra = runCatching { adapter.prepare(context, prepared, dir) }.getOrDefault(JsonObject(emptyMap()))
+            val prepExtra = runCatching { adapter.prepare(context, prepared, dir) }.getOrDefault(JsonObject(emptyMap()))
+            // F-05-N: the media types the manifest declares, for stream-only adapters that filter by them.
+            val extra = if (entry.types.isEmpty()) prepExtra else JsonObject(prepExtra + ("types" to JsonArray(entry.types.map(::JsonPrimitive))))
             val done = prepared.copy(extra = extra)
             change(context) { s ->
                 otherState = otherState.copy(installed = otherState.installed.filterNot { it.key == done.key })
@@ -268,6 +271,7 @@ object EcosystemRegistry {
                 _state.value.installed.filter { it.ecosystem == eco }.mapNotNull { p ->
                     runCatching {
                         check(intact(c, p)) { "code changed on disk" }
+                        if (eco == SourceHub.Ecosystem.NUVIO) NuvioAdapter.problemOf(p)?.let { problems[p.key] = it }
                         adapter.build(c, p, dirOf(c, p), SourceHub.uniqueName(p.name, p.lang, taken).also(taken::add))
                     }.onFailure { problems[p.key] = it.message ?: it.javaClass.simpleName; Log.w(TAG, "${p.key}: ${it.message}") }.getOrNull()
                 }

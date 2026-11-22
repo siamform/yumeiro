@@ -1813,3 +1813,57 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
 - Tests: `F12VerticalModeTest` (unit), `F12VerticalModeDeviceTest` and
   `F12ShortsSwipeDeviceTest#chromeHidesWhenIdleAndATapBringsItBack` (device; TV: vertical mode
   must never start).
+
+### ADR-057: Nuvio scrapers run as stream-only add-ons whose links join the opened title's list (F-05-N)
+
+- Context: F-05 asked for Nuvio, SkyStream and Vega repositories. Vega runs since ADR-047. Nuvio
+  "local scrapers" are a different shape: one JavaScript file per scraper exporting
+  `getStreams(tmdbId, mediaType, season, episode)` that answers `[{name, title, url, quality,
+  size?, headers?}]`, with no catalog ([tapframe/nuvio-providers](https://github.com/tapframe/nuvio-providers)).
+  Nuvio itself merges those streams with its add-ons' streams in one source list
+  ([Nuvio Wiki, Plugins](https://nuvio.wiki/integrations/plugins)). Its runtime is QuickJS
+  (quickjs-kt), a fresh context per call, `require` limited to cheerio and crypto-js, 60 s per
+  scraper, up to 10 at once, plus `SCRAPER_ID` / `SCRAPER_SETTINGS` globals
+  ([runtime notes in a community repo](https://github.com/Apirss/my-gowaru-nuvio-providers/blob/main/DOCUMENTATION.md),
+  [nuvio-bdix-plugin README](https://github.com/Riaz-404/nuvio-bdix-plugin)). Other ports either
+  bundle crypto-js 4.2.0 (Nuvio, [StremioK](https://github.com/Kepler75/StremioK/blob/main/docs/PLUGINS.md))
+  or write a native layer that leaves TripleDES out ([NuvioTVOS](https://github.com/vatax3/NuvioTVOS)).
+  Read for the ledger: 92 scraper bundles in four community repos; 90 need no Node.js built-in,
+  crypto-js is used for enc.Utf8 / Base64 / Hex, AES CBC / Pkcs7, TripleDES, SHA256, MD5,
+  HmacSHA256, HmacMD5, lib.WordArray.create and lib.CipherParams.create. No Nuvio code is used.
+- Decision, seam (`online/StreamAddons.kt`): a `StreamAddon` is asked with a `StreamRequest`
+  (TMDB id, IMDb id, "movie" / "tv", season, episode, title, year) built from the opened title's
+  `OnlineDetail` ids and the current episode; titles with no id, and live channels, ask nothing.
+  `StreamAddons.merge` runs the opened source's `links` flow and every active add-on side by side,
+  forwards Link / Subtitle / Skipped as they come, swallows the inner Done events and sends one
+  Done after all of them: ok when any link came in, else the opened source's error (an add-on's
+  only when the source had none). A throwing add-on ends only itself; GatherCap collecting less
+  cancels all of them. `OnlineSession.resolve` is the only caller (downloads keep the source's own
+  links). Add-on links carry `source = "Nuvio · <scraper>"` as their badge and `raw = null`, so no
+  extension interceptor is registered for them. SkyStream and Stremio stream-only add-ons and E1
+  Layer B plug into the same seam.
+- Decision, adapter (`NuvioAdapter`, `NuvioStreams`): `RuntimeAdapter.build` may return null, and
+  Nuvio's does, so no catalog source is published. A Nuvio repo goes through the same registry as
+  Vega (caps 1 MB manifest, 2 MB a file, 50 MB total, SHA-256 per file, checked before each run).
+  Each installed scraper whose `supportedTypes` fit runs in its own `ScriptRuntime.call` with the
+  new `__invokePositional` (a JSON array spread as arguments) and `SCRAPER_ID` / `SCRAPER_SETTINGS`
+  set; the shared gate keeps 4 at once (2 on low-end phones and TV), the call budget stays 25 s,
+  memory 48 / 32 MB, 30 requests, SRC-2. Streams with DRM data are dropped, torrents become
+  Skipped with their link, non-web links are ignored; quality is read without a regex. A scraper
+  whose code asks for a Node.js built-in is installed but reported in Script repos ("may find
+  nothing"), because bundles often reach those only on paths that never run.
+- Decision, crypto-js: not bundled. `provider_runtime.js` has a shim with crypto-js 4's shapes
+  (WordArray with words / sigBytes, enc.Hex / Latin1 / Utf8 / Base64 / Base64url, AES and
+  TripleDES with CBC / ECB and Pkcs7 / NoPadding / ZeroPadding / AnsiX923, OpenSSL "Salted__"
+  passphrases, MD5, SHA1 / 224 / 256 / 384 / 512 and their HMACs, EvpKDF, `.default` for esbuild
+  interop). The bytes go to the host as hex (`crypto_*` channels) and `ScriptCrypto` does the work
+  with javax.crypto, so there is no third-party crypto code and no pure-JS AES on a slow phone.
+  Also added: `Promise.allSettled` / `Promise.any` when missing, `TextEncoder` / `TextDecoder`.
+  The shim was checked against crypto-js 4.2.0 on 16 cases (docs/evidence/f05n/).
+- No repositories are built in and no TMDB key is shipped; community scrapers carry their own.
+  The empty result says "No scrapers returned a stream".
+- Flags: `scripts_nuvio` (repos, install, run) and `f05_stream_addons` (the merge), both off
+  until NuvioProviderDeviceTest passes on a device; then both flip on.
+- Tests: `f05/StreamAddonsMergeTest`, `f05/NuvioAdapterTest`, `f05/ScriptCryptoTest` (unit) and
+  `NuvioProviderDeviceTest` (real QuickJS: crypto-js answers equal crypto-js's own, cheerio,
+  DRM dropped, season / episode passed, a crashing scraper ends only itself, merged list).

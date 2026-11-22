@@ -149,6 +149,13 @@ object FeatureFlags {
         FE5_FEED_WARM("fe5_feed_warm", true),
         /** Vega step 4 (ADR-047): run Vega providers from a user-added repository (Sources → Script repos). */
         SCRIPTS_VEGA("scripts_vega", true),
+        /**
+         * F-05-N (ADR-057): Nuvio scrapers from a user-added repository; their streams join a title's
+         * sources. Off until NuvioProviderDeviceTest passes on a device.
+         */
+        SCRIPTS_NUVIO("scripts_nuvio", false),
+        /** F-05-N (ADR-057): stream-only add-ons (Nuvio now) are asked for extra links when a title plays. Off with SCRIPTS_NUVIO. */
+        STREAM_ADDONS("f05_stream_addons", false),
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */
         EXT_HOLD_WHILE_TYPING("ext_hold_while_typing", true),
     }

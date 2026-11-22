@@ -81,6 +81,12 @@ internal class ScriptHost(
         "kv_delete" -> kv.delete(a.s(0)).toString()
         "kv_keys" -> JsonArray(kv.keys().map(::JsonPrimitive)).toString()
         "kv_clear" -> { kv.clear(); "" }
+        // F-05-N (ADR-057): crypto-js shim, hex in / hex out (ScriptCrypto). A bad key or padding
+        // answers "" and the shim throws, like crypto-js's own errors.
+        "crypto_hash" -> ScriptCrypto.hash(a.s(0), a.s(1))
+        "crypto_hmac" -> ScriptCrypto.hmac(a.s(0), a.s(1), a.s(2))
+        "crypto_cipher" -> ScriptCrypto.cipher(a.s(0) == "enc", a.s(1), a.s(2), a.s(3), a.s(4), a.s(5), a.s(6))
+        "crypto_evpkdf" -> ScriptCrypto.evpKdf(a.s(0), a.s(1), a.s(2).toIntOrNull() ?: 32, a.s(3).toIntOrNull() ?: 16)
         else -> { Log.w(TAG, "$tag: unsupported channel $ch"); "" }
     }
 

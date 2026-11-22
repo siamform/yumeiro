@@ -24,8 +24,8 @@ import kotlinx.serialization.json.JsonElement
 import java.io.File
 
 /**
- * ADR-047: the one script runtime every JavaScript ecosystem adapter shares (Vega now; Nuvio and
- * SkyStream plug into the same call when their adapters ship). Rules from proposal F-05 §4:
+ * ADR-047: the one script runtime every JavaScript ecosystem adapter shares (Vega, Nuvio since
+ * ADR-057; SkyStream plugs into the same call when its adapter ships). Rules from proposal F-05 §4:
  * - a fresh QuickJS per call, closed afterwards, so nothing leaks between titles or providers;
  * - memory 48 MB (32 MB on low-end phones and TV), stack 1 MB, evaluation limit per evaluate and
  *   a whole-call budget;
@@ -65,7 +65,19 @@ object ScriptRuntime {
      * the JSON result. [storeName] keys the provider's own small key/value store.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun call(context: Context, storeName: String, modules: List<Module>, entry: String, fn: String, argsJson: String): JsonElement {
+    suspend fun call(
+        context: Context,
+        storeName: String,
+        modules: List<Module>,
+        entry: String,
+        fn: String,
+        argsJson: String,
+        /** F-05-N (ADR-057): `__invoke` passes one args object (Vega); `__invokePositional` spreads a JSON array (Nuvio). */
+        invoker: String = "__invoke",
+        /** F-05-N: globals set before the modules load, name to JSON value (e.g. `SCRAPER_ID`). */
+        globals: Map<String, String> = emptyMap(),
+    ): JsonElement {
+        require(invoker == "__invoke" || invoker == "__invokePositional") { "Unknown invoker" }
         val app = context.applicationContext
         return gate(app).withPermit {
             withTimeout(CALL_BUDGET_MS) {
@@ -90,13 +102,17 @@ object ScriptRuntime {
                         q.defineBinding("__error", FunctionBinding<Any?> { args -> failure = args.getOrNull(0)?.toString() ?: "error"; null })
                         q.evaluationTimeoutMillis = left()
                         q.evaluate<Any?>(runtime(app), "provider_runtime.js", false)
+                        if (globals.isNotEmpty()) {
+                            val set = globals.entries.joinToString("\n") { (k, v) -> "globalThis[${quote(k)}] = JSON.parse(${quote(v)});" }
+                            q.evaluate<Any?>(set, "globals.js", false)
+                        }
                         for (m in modules) {
                             val code = m.file.readText()
                             q.evaluationTimeoutMillis = left()
                             q.evaluate<Any?>("__defineModule(${quote(m.name)}, function (module, exports, require) {\n$code\n});", "${m.name}.js", false)
                         }
                         q.evaluationTimeoutMillis = left()
-                        q.evaluate<Any?>("__invoke(${quote(entry)}, ${quote(fn)}, ${quote(argsJson)})", "call.js", false)
+                        q.evaluate<Any?>("$invoker(${quote(entry)}, ${quote(fn)}, ${quote(argsJson)})", "call.js", false)
                         var spins = 0
                         while (result == null && failure == null && spins++ < MAX_SPINS) {
                             if (System.currentTimeMillis() >= deadline) throw ScriptException(STOPPED)

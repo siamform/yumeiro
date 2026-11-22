@@ -270,7 +270,8 @@ object OnlineSession {
             // Round 2 (heat): 300 ms instead of 150 ms, slower again when the phone is warm.
             val ticker = launch { while (true) { delay(dev.asfakul.yumeiro.player.HeatGuard.interval(300)); startIfReady(false); if (pendingPublish && started) publish(false) } }
             val ok = withTimeoutOrNull(FIRST_LINK_TIMEOUT_MS + 60_000L) {
-                OnlineRepository.links(provider, data).transformWhile { ev ->
+                // F-05-N (ADR-057): stream-only add-ons (Nuvio scrapers) join with their own links when on.
+                StreamAddons.withAddons(context, start.detail, start.episode, OnlineRepository.links(provider, data)).transformWhile { ev ->
                     emit(ev)
                     // Round 2 (heat): once a video plays and enough backups are in, stop asking the
                     // extension for more mirrors (each one is more network, parsing and battery).
