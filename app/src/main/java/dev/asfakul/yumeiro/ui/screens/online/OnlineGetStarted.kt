@@ -158,6 +158,7 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
                     }
                 }
                 if (category == "Short drama" || category == "Asian drama") item("builtin_drama") { DramaBuiltinCard() }
+                if (category == "Movies" || category == "TV") item("builtin_classics") { ClassicsBuiltinCard() }
                 items(picks, key = { "pick_" + it.key }) { ext ->
                     val on = ext.key in chosen
                     val installed = extState.installed.any { it.key == ext.key }

@@ -53,15 +53,43 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 internal fun DramaBuiltinCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val on by YumeiroDrama.enabled.collectAsState()
+    BuiltinSourceCard(
+        name = YumeiroDrama.NAME, glyph = "劇", kind = "Built in · Short drama · no install", on = on, tag = "market_builtin_drama",
+        about = "Vertical short dramas from DramaBox, ShortMax, NetShort, DramaWave, GoodShort and FlexTV in one place — shelves per studio, search across all of them, every episode in order.",
+        note = "Reads a public drama index · no account · never bypasses paywalls or DRM",
+        modifier = modifier,
+    ) { YumeiroDrama.setEnabled(context, !on) }
+}
+
+/** OWN-9: Yumeiro Classics — the official built-in movie source (Internet Archive public domain). */
+@Composable
+internal fun ClassicsBuiltinCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val on by dev.asfakul.yumeiro.sources.classics.YumeiroClassics.enabled.collectAsState()
+    BuiltinSourceCard(
+        name = dev.asfakul.yumeiro.sources.classics.YumeiroClassics.NAME, glyph = "映", kind = "Official · Movies, cartoons, TV · no install", on = on,
+        tag = "market_builtin_classics",
+        about = "Thousands of classic films, film noir, sci-fi, silent films, cartoons and old TV shows that are free to watch and download, from the Internet Archive.",
+        note = "Public domain and freely licensed only · no account · no 18+",
+        modifier = modifier,
+    ) { dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(context, !on) }
+}
+
+@Composable
+private fun BuiltinSourceCard(
+    name: String, glyph: String, kind: String, on: Boolean, tag: String, about: String, note: String,
+    modifier: Modifier = Modifier, setOn: () -> Unit,
+) {
+    val context = LocalContext.current
     fun toggle() {
-        YumeiroDrama.setEnabled(context, !on)
+        setOn()
         OnlineRepository.clearCaches()
-        if (!on) AppMessages.show(context, "Yumeiro Drama is on — find it in Yumix", AppMessages.Kind.SUCCESS)
-        else AppMessages.show(context, "Yumeiro Drama turned off", AppMessages.Kind.INFO)
+        if (!on) AppMessages.show(context, "$name is on — find it in Yumix", AppMessages.Kind.SUCCESS)
+        else AppMessages.show(context, "$name turned off", AppMessages.Kind.INFO)
     }
     Surface(
         shape = RoundedCornerShape(20.dp), color = GlassFill,
-        modifier = modifier.fillMaxWidth().border(1.dp, SpotifyGreen.copy(alpha = if (on) 0.55f else 0.25f), RoundedCornerShape(20.dp)).testTag("market_builtin_drama"),
+        modifier = modifier.fillMaxWidth().border(1.dp, SpotifyGreen.copy(alpha = if (on) 0.55f else 0.25f), RoundedCornerShape(20.dp)).testTag(tag),
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -69,31 +97,28 @@ internal fun DramaBuiltinCard(modifier: Modifier = Modifier) {
                     Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
                         .background(Brush.linearGradient(listOf(SpotifyGreen, SpotifyGreen.copy(alpha = 0.45f)))),
                     contentAlignment = Alignment.Center,
-                ) { Text("劇", color = OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) }
+                ) { Text(glyph, color = OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(YumeiroDrama.NAME, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
-                    Text("Built in · Short drama · no install", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+                    Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+                    Text(kind, color = TextTertiary, fontSize = 11.sp, maxLines = 1)
                 }
-                AnimatedContent(on, label = "drama_toggle") { enabled ->
-                    if (enabled) OutlinedButton(onClick = ::toggle, shape = RoundedCornerShape(18.dp), modifier = Modifier.testTag("market_builtin_drama_toggle")) {
+                AnimatedContent(on, label = "${tag}_toggle") { enabled ->
+                    if (enabled) OutlinedButton(onClick = ::toggle, shape = RoundedCornerShape(18.dp), modifier = Modifier.testTag("${tag}_toggle")) {
                         Icon(Icons.Default.Check, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("On", color = TextPrimary, fontWeight = FontWeight.Bold)
                     } else Button(
                         onClick = ::toggle, shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                        modifier = Modifier.testTag("market_builtin_drama_toggle"),
+                        modifier = Modifier.testTag("${tag}_toggle"),
                     ) { Text("Turn on", fontWeight = FontWeight.Bold) }
                 }
             }
             Spacer(Modifier.padding(top = 8.dp))
-            Text(
-                "Vertical short dramas from DramaBox, ShortMax, NetShort, DramaWave, GoodShort and FlexTV in one place — shelves per studio, search across all of them, every episode in order.",
-                color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp,
-            )
+            Text(about, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
             Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Reads a public drama index · no account · never bypasses paywalls or DRM", color = TextTertiary, fontSize = 10.sp, lineHeight = 13.sp)
+                Text(note, color = TextTertiary, fontSize = 10.sp, lineHeight = 13.sp)
             }
         }
     }

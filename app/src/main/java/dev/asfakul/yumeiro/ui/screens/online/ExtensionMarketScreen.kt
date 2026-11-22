@@ -267,6 +267,12 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     if (tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
                         (query.isBlank() || "yumeiro drama short dramabox reelshort shortmax".contains(query.trim(), true))
                     ) item("builtin_drama") { DramaBuiltinCard() }
+                    // OWN-9: the official Yumeiro Classics source, in Discover (All / Movies) and in Installed (with Drama).
+                    if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS) && repoFilter == null &&
+                        ((tab == MarketTab.DISCOVER && (category == "All" || category == "Movies")) || tab == MarketTab.INSTALLED) &&
+                        (query.isBlank() || "yumeiro classics movies public domain archive film noir cartoons".contains(query.trim(), true))
+                    ) item("builtin_classics") { ClassicsBuiltinCard() }
+                    if (tab == MarketTab.INSTALLED && repoFilter == null && query.isBlank()) item("builtin_drama_installed") { DramaBuiltinCard() }
                     items(visible, key = { it.key }, contentType = { "market_card" }) { ext ->
                         MarketCard(
                             ext = ext,

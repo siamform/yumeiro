@@ -22,5 +22,6 @@ object Bridges {
         dev.asfakul.yumeiro.sources.js.JsSources.start(app)
         dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.start(app)
         dev.asfakul.yumeiro.sources.drama.YumeiroDrama.start(app)
+        dev.asfakul.yumeiro.sources.classics.YumeiroClassics.start(app)
     }
 }

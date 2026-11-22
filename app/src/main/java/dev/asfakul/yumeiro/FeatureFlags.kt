@@ -121,6 +121,9 @@ object FeatureFlags {
         DNS_FALLBACK("nbug6_dns_fallback", true),
         /** OWN-7 / OWN-2 (owner list, 2.1.0): a fresh install or an update with no saved DNS choice uses Cloudflare DNS-over-HTTPS (system DNS stays the safety net). Off: System DNS + auto bypass, as in 2.0.0. */
         CLOUDFLARE_DEFAULT_DNS("own7_cloudflare_default", true),
+
+        /** OWN-9: the official built-in "Yumeiro Classics" source (Internet Archive public domain), on for fresh installs. */
+        OFFICIAL_CLASSICS("own9_official_classics", true),
         /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */
         EXTENSION_LABELS("f21_extension_labels", true),
         /** F-22: Upcoming date headers ("Today • Sat, Nov 21"), air times, date-only days kept, category kept per profile. */

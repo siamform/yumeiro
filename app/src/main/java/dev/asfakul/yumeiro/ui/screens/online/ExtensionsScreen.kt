@@ -277,6 +277,12 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                         }
                     }
                 }
+                // OWN-9: the official built-in sources are listed with the installed ones (they were only in the market).
+                item("official_header") {
+                    Text("Official · built in", color = TextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp).testTag("extensions_official"))
+                }
+                if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS)) item("builtin_classics") { ClassicsBuiltinCard() }
+                item("builtin_drama_installed") { DramaBuiltinCard() }
                 item("more_sources") {
                     Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_more_sources"),
                         onClick = onOpenSources) {
