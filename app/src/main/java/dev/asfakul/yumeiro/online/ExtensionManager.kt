@@ -313,6 +313,8 @@ object ExtensionManager {
     fun bumpGeneration() = _state.update { it.copy(generation = it.generation + 1) }
 
     fun provider(name: String): MainAPI? = providers().firstOrNull { it.name == name }
+        // OWN-13: titles saved under "Yumeiro Drama" / "Yumeiro Classics" open with the one "Yumeiro" source.
+        ?: dev.asfakul.yumeiro.sources.hub.YumeiroHub.aliasOf(name)?.let { alias -> providers().firstOrNull { it.name == alias } }
 
     /**
      * FREEZE-1: changes whenever [providers] can change: engine state, bridged sources, loaded CloudStream

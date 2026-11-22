@@ -48,9 +48,31 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
+/**
+ * OWN-13: the one built-in source, "Yumeiro" (short dramas + public-domain films, documentaries, cartoons, TV and
+ * films by country). One card, one switch, nothing to install.
+ */
+@Composable
+internal fun YumeiroHubCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val on by dev.asfakul.yumeiro.sources.hub.YumeiroHub.enabled.collectAsState()
+    BuiltinSourceCard(
+        name = dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME, glyph = "夢", kind = "Official · all in one · no install", on = on, tag = "market_builtin_yumeiro",
+        about = "Everything Yumeiro brings by itself in one source: short dramas from DramaBox, ShortMax, NetShort and more, plus classic films, " +
+            "film noir, sci-fi, silent films, documentaries, cartoons, old TV and films by country (India, France, Germany, Italy, Japan, Russia and more) " +
+            "that are free to watch. One home, one search, one switch.",
+        note = "Legal sources only: public drama index and the Internet Archive · no account · never bypasses paywalls or DRM · no 18+",
+        modifier = modifier,
+    ) { dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(context, !on) }
+}
+
+/** OWN-13: the official source cards for a list; with the hub on, one "Yumeiro" card stands for both parts. */
+internal fun officialHub(): Boolean = dev.asfakul.yumeiro.sources.hub.YumeiroHub.on()
+
 /** Yumeiro Drama — the built-in short-drama source. One tap on, one tap off; no install. */
 @Composable
 internal fun DramaBuiltinCard(modifier: Modifier = Modifier) {
+    if (officialHub()) { YumeiroHubCard(modifier); return }
     val context = LocalContext.current
     val on by YumeiroDrama.enabled.collectAsState()
     BuiltinSourceCard(
@@ -64,6 +86,7 @@ internal fun DramaBuiltinCard(modifier: Modifier = Modifier) {
 /** OWN-9: Yumeiro Classics — the official built-in movie source (Internet Archive public domain). */
 @Composable
 internal fun ClassicsBuiltinCard(modifier: Modifier = Modifier) {
+    if (officialHub()) { YumeiroHubCard(modifier); return }
     val context = LocalContext.current
     val on by dev.asfakul.yumeiro.sources.classics.YumeiroClassics.enabled.collectAsState()
     BuiltinSourceCard(

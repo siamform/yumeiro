@@ -337,7 +337,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                 item("official_header") {
                     Text("Official · built in", color = TextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp).testTag("extensions_official"))
                 }
-                if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS)) item("builtin_classics") { ClassicsBuiltinCard() }
+                if (!officialHub() && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS)) item("builtin_classics") { ClassicsBuiltinCard() }
                 item("builtin_drama_installed") { DramaBuiltinCard() }
                 item("repos_header") {
                     Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {

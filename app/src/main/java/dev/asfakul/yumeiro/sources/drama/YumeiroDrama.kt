@@ -77,6 +77,12 @@ object YumeiroDrama {
     }
 
     private fun publish(on: Boolean) {
+        // OWN-13: one built-in source, "Yumeiro", holds this part (kill switch: own13_yumeiro_hub).
+        if (dev.asfakul.yumeiro.sources.hub.YumeiroHub.on()) {
+            SourceHub.remove(BRIDGE)
+            dev.asfakul.yumeiro.sources.hub.YumeiroHub.setDrama(if (on) YumeiroDramaProvider(catalogs, health) else null)
+            return
+        }
         if (on) SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.YUMEIRO, listOf(YumeiroDramaProvider(catalogs, health)))
         else SourceHub.remove(BRIDGE)
     }

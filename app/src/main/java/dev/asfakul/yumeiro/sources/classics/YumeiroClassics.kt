@@ -51,7 +51,11 @@ object YumeiroClassics {
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
 
     fun start(context: Context) {
-        if (!FeatureFlags.on(context, FeatureFlags.Flag.OFFICIAL_CLASSICS)) { SourceHub.remove(BRIDGE); return }
+        if (!FeatureFlags.on(context, FeatureFlags.Flag.OFFICIAL_CLASSICS)) {
+            SourceHub.remove(BRIDGE)
+            if (dev.asfakul.yumeiro.sources.hub.YumeiroHub.on()) dev.asfakul.yumeiro.sources.hub.YumeiroHub.setClassics(null)
+            return
+        }
         val on = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("enabled", true)
         _enabled.value = on
         publish(on)
@@ -64,6 +68,12 @@ object YumeiroClassics {
     }
 
     private fun publish(on: Boolean) {
+        // OWN-13: one built-in source, "Yumeiro", holds this part.
+        if (dev.asfakul.yumeiro.sources.hub.YumeiroHub.on()) {
+            SourceHub.remove(BRIDGE)
+            dev.asfakul.yumeiro.sources.hub.YumeiroHub.setClassics(if (on) YumeiroClassicsProvider() else null)
+            return
+        }
         if (on) SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.YUMEIRO, listOf(YumeiroClassicsProvider()))
         else SourceHub.remove(BRIDGE)
     }
@@ -83,14 +93,15 @@ class YumeiroClassicsProvider(
     override val mainPage: List<MainPageData> = SHELVES.map { (title, collection) -> MainPageData(title, collection) }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val docs = query("collection:${request.data}", page)
+        // OWN-13: a shelf is a collection id, or a whole query (films by language, documentaries).
+        val docs = query(if (':' in request.data) request.data else "collection:${request.data}", page)
         return newHomePageResponse(request.name, docs.map { it.toResult() }, docs.size >= ROWS)
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val words = cleanQuery(query)
         if (words.isBlank()) return newSearchResponseList(emptyList(), false)
-        val docs = query("title:($words) AND collection:(${SHELVES.joinToString(" OR ") { it.second }})", page)
+        val docs = query("title:($words) AND collection:(${SEARCH_COLLECTIONS.joinToString(" OR ")})", page)
         return newSearchResponseList(docs.map { it.toResult() }, docs.size >= ROWS)
     }
 
@@ -157,7 +168,20 @@ class YumeiroClassicsProvider(
             "Silent films" to "silent_films",
             "Cartoons and animation" to "animationandcartoons",
             "Classic TV" to "classic_tv",
+            // OWN-13: more legal shelves, checked on archive.org 2026-11-22 (counts in docs/OPEN-ITEMS-2.1.0.md).
+            "Documentaries and newsreels" to "collection:(prelinger)",
+            "Classic cartoons" to "classic_cartoons",
+            "Indian classics (Hindi)" to "collection:(feature_films) AND language:(Hindi)",
+            "French classics" to "collection:(feature_films) AND language:(French)",
+            "German classics" to "collection:(feature_films) AND language:(German)",
+            "Italian classics" to "collection:(feature_films) AND language:(Italian)",
+            "Russian classics" to "collection:(feature_films) AND language:(Russian)",
+            "Japanese classics" to "collection:(feature_films) AND language:(Japanese)",
+            "Spanish-language classics" to "collection:(feature_films) AND language:(Spanish)",
+            "Chinese classics" to "collection:(feature_films) AND language:(Chinese)",
         )
+        /** Collections search looks in (every shelf's collection). */
+        val SEARCH_COLLECTIONS = listOf("feature_films", "Film_Noir", "SciFi_Horror", "Comedy_Films", "silent_films", "animationandcartoons", "classic_tv", "prelinger", "classic_cartoons")
         private val ADULT_WORDS = listOf("sex", "sexy", "nude", "nudity", "nudist", "erotic", "erotica", "adult", "porn", "xxx", "stag", "burlesque", "exploitation", "striptease")
         private val ADULT_Q = ADULT_WORDS.joinToString(" OR ")
         private val RX_ADULT = Regex("""\b(${ADULT_WORDS.joinToString("|")})\b""", RegexOption.IGNORE_CASE)
