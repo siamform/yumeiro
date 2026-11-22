@@ -206,7 +206,11 @@ class MusicPlayerManager(
         }
     }
 
+    /** GATE-1-MUSIC-START: the player was built elsewhere (headset Play); attach so this screen shows it. */
+    private val onPlayerBuilt: (ExoPlayer) -> Unit = { p -> if (attached == null && !recorderReleased) attach(p) }
+
     private fun attach(p: ExoPlayer): ExoPlayer {
+        PlaybackService.stopWhenBuilt(onPlayerBuilt)
         attached = p
         p.addListener(playerListener)
         // G5-PC1: while this listener records plays, the process-wide watch does not.
@@ -230,7 +234,12 @@ class MusicPlayerManager(
     init {
         // An existing player (music playing in the background, activity recreated) is attached
         // now so the now-playing bar is right on the first frame; it costs no player build.
+        // GATE-1-MUSIC-START: with no player alive nothing plays, so the build waits for the first
+        // command ([player]); the deferred build still blocked the main thread 1.6-3.9 s right after
+        // start on api33-lowram (device-check 44973946688 / 44973948479, getOrCreatePlayer:60).
         if (PlaybackService.sharedPlayer != null) attach(PlaybackService.getOrCreatePlayer(context))
+        else if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.MUSIC_PLAYER_ON_USE))
+            PlaybackService.whenBuilt(onPlayerBuilt)
         else scope.launch { if (attached == null) attach(PlaybackService.getOrCreatePlayer(context)) }
         // Last.fm scrobbling is watched by the shared player (BackgroundPlaybackWatch), so it keeps
         // working after this screen-scoped manager is released. Queued listens are sent now.
@@ -513,6 +522,7 @@ class MusicPlayerManager(
     }
 
     fun release() {
+        PlaybackService.stopWhenBuilt(onPlayerBuilt)
         stopProgressTracker()
         // Not attached yet: nothing to detach, and no reason to build the player now.
         attached?.let { p ->

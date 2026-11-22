@@ -8,11 +8,13 @@ package dev.asfakul.yumeiro.player
 import android.content.Context
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
+import dev.asfakul.yumeiro.FeatureFlags
 import dev.asfakul.yumeiro.service.PlaybackService
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,7 +34,13 @@ class PlayerBuiltAfterFirstFrameTest {
 
     @Before fun coldProcess() = PlaybackService.forgetSharedPlayerForTest()
 
+    // GATE-1-MUSIC-START: these cases are the flag-off path (build on the next main-loop message);
+    // PlayerBuiltOnFirstUseTest covers the flag-on path.
+    private fun deferredBuild() = FeatureFlags.set(ctx, FeatureFlags.Flag.MUSIC_PLAYER_ON_USE, false)
+    @After fun restore() = FeatureFlags.set(ctx, FeatureFlags.Flag.MUSIC_PLAYER_ON_USE, FeatureFlags.Flag.MUSIC_PLAYER_ON_USE.default)
+
     @Test fun coldStartDefersTheBuild() {
+        deferredBuild()
         val m = MusicPlayerManager(ctx)
         assertNull("the player was built inside the constructor (first frame)", PlaybackService.sharedPlayer)
         assertFalse(m.isAttached)
@@ -59,6 +67,7 @@ class PlayerBuiltAfterFirstFrameTest {
     }
 
     @Test fun releaseBeforeTheBuildBuildsNothing() {
+        deferredBuild()
         val m = MusicPlayerManager(ctx)
         m.release()
         shadowOf(Looper.getMainLooper()).idle()
