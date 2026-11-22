@@ -30,10 +30,10 @@ the sandbox. Read this file, then `docs/HANDOVER-LIVE.md`, then `docs/AGENT-STAR
 ## Today's work, in order (tick each with evidence; next agent continues at the first unticked line)
 
 ### A. Finish open fixes and features (ledger `docs/BUGS-AND-FIXES-2.0.0.md`, list `docs/MAJOR-BUGS-AND-FEATURES-2.x.md`)
-- [ ] F-05-S SkyStream: r15 CI pass-after (first attempt 44989934475: 45 Robolectric Maven-fetch errors = Blocked,
+- [x] (15:15; pass-after 44992235866, device 44992834769, flag on b5c61f85, CI 44995462689) F-05-S SkyStream: r15 CI pass-after (first attempt 44989934475: 45 Robolectric Maven-fetch errors = Blocked,
       plus 2 real test bugs: `File.createTempFile("p", ...)` prefix too short, fixed), device
       SkyStreamProviderDeviceTest, then flip `scripts_skystream` on in its own commit.
-- [ ] GATE-1-FEED-LATE (late feed sections join one per frame): fail-before 44990181586 valid (2 of 3 fail), r15 CI,
+- [x] (15:15; pass-after 44992235866, gate trio 44992836781 + 44998691028) GATE-1-FEED-LATE (late feed sections join one per frame): fail-before 44990181586 valid (2 of 3 fail), r15 CI,
       then gate trio on api33-lowram.
 - [ ] Other open rows in MAJOR (C5, C6, B-8, B-9, F-02, B-29, F-03, F-19, F-20, airing alerts, PIN-1, FREEZE,
       FEED-ENGINE leftovers, Stremio stream-only add-ons). Anything that cannot be proven today is listed as

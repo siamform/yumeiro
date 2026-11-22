@@ -169,6 +169,8 @@ object FeatureFlags {
         F09_FEED_ACTIONS("f09_feed_actions", true),
         /** DL-ONE: YouTube downloads use the one shared download popup (Quality = heights, Audio track = audio only). */
         DL_ONE_SHEET("dl_one_sheet", true),
+        /** TV-FP-1: a far tab jump snaps with a priority a focus bring-into-view cannot interrupt, then re-checks the page. */
+        TAB_JUMP_HOLD("tab_jump_hold", true),
         /**
          * F-05-S (ADR-058): SkyStream plugins (.sky) from a user-added repository run as normal sources. On since
          * F-05-S-ON: SkyStreamProviderDeviceTest 3/3 on api36 + api33-lowram (device 44992834769).

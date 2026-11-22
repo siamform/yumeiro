@@ -176,7 +176,13 @@ fun MTPlayerApp(
     // Home tab look dead.
     // The running tab jump (slide or fade-through), so Back can cancel it instead of racing it.
     val tabJump = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    val navigateTop: (String) -> Unit = remember(navController, tabPager, tabFade, tabShift) {
+    // TV-FP-1: user drags on the tab pager (a retry never fights the user's own swipe).
+    val tabJumpHold = remember { dev.asfakul.yumeiro.FeatureFlags.on(navContext, dev.asfakul.yumeiro.FeatureFlags.Flag.TAB_JUMP_HOLD) }
+    val tabDrags = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(tabPager) {
+        tabPager.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) tabDrags.intValue++ }
+    }
+    val navigateTop: (String) -> Unit = remember(navController, tabPager, tabFade, tabShift, tabJumpHold) {
         { route ->
             runCatching {
                 if (navController.currentDestination?.route != Screen.Home.route &&
@@ -200,12 +206,37 @@ fun MTPlayerApp(
                     tabPager.animateScrollToPage(page, animationSpec = androidx.compose.animation.core.tween(360, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized))
                 } else {
                     tabFade.animateTo(0f, androidx.compose.animation.core.tween(110, easing = dev.asfakul.yumeiro.ui.components.YuMotion.EmphasizedAccelerate))
-                    tabPager.scrollToPage(page)
+                    if (tabJumpHold) {
+                        // TV-FP-1: a focus bring-into-view (Default priority) cannot interrupt this snap.
+                        tabPager.scroll(androidx.compose.foundation.MutatePriority.PreventUserInput) { with(tabPager) { updateCurrentPage(page) } }
+                    } else {
+                        tabPager.scrollToPage(page)
+                    }
                     tabShift.snapTo(dir)
                     launch { tabShift.animateTo(0f, androidx.compose.animation.core.tween(320, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized)) }
                     tabFade.animateTo(1f, androidx.compose.animation.core.tween(240, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Standard))
                 }
             }.also { j -> j.invokeOnCompletion { c -> android.util.Log.i("YuGateTab", "jump to $page ended (${c?.javaClass?.simpleName ?: "done"}), page ${tabPager.currentPage}") } }
+            if (tabJumpHold && page >= 0 && page != tabPager.currentPage) {
+                // TV-FP-1: after the jump, check the page; a jump pulled off its target (not by the user) snaps again.
+                val dragsAtStart = tabDrags.intValue
+                val jump = tabJump.value
+                tabScope.launch {
+                    jump?.join()
+                    // A far jump cut off mid-fade must not leave the page invisible or shifted.
+                    if (tabJump.value === jump && jump?.isCancelled == true) { tabFade.snapTo(1f); tabShift.snapTo(0f) }
+                    var retries = 0
+                    while (true) {
+                        kotlinx.coroutines.delay(300)
+                        if (tabJump.value !== jump) break // a newer jump took over
+                        val dragged = tabDrags.intValue != dragsAtStart
+                        if (!dev.asfakul.yumeiro.ui.navigation.TabJump.needsRetry(page, tabPager.currentPage, dragged, retries)) break
+                        retries++
+                        android.util.Log.i("YuGateTab", "jump to $page landed on ${tabPager.currentPage}: snap again ($retries)")
+                        runCatching { tabPager.scroll(androidx.compose.foundation.MutatePriority.PreventUserInput) { with(tabPager) { updateCurrentPage(page) } } }
+                    }
+                }
+            }
         }
     }
     // A page that is already open further down the stack is brought back instead of stacked again:
