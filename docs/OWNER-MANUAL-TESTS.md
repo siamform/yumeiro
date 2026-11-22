@@ -127,6 +127,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-76 | F-22-C: Upcoming by country and genre | Owner test (pending) |
 | OMT-77 | F-09-FEED: Watch later / Favorite from Yumix, Top 10, Continue watching | Owner test (pending) |
 | OMT-78 | TV-FP-1: Home → Live TV card on an older Android TV | Owner test (pending) |
+| OMT-79 | B31-FRAME: built-in torrent first frame and seek on a real phone | Owner test (pending, needs a test build with the engine on) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1069,3 +1070,13 @@ the small mark on the poster and in Library, and a normal tap still opens the ti
 2. Move to the "Live TV" card with the D-pad and press OK.
 
 Passes if the Live TV channel grid opens (not the Music page). If Music opens, note the TV model and Android version.
+
+### OMT-79 — Built-in torrent: first frame and seek on a real phone (B31-FRAME)
+
+The emulator cannot decode the test file (HEVC 10-bit), so this needs a real phone. Needs a test build with the
+built-in torrent engine on (flag b31_builtin_torrent; it is off in the release).
+
+1. Play magnet:?xt=urn:btih:BF2063A5E9A69F14716288FCA7C2D6078BDA7369 with a stopwatch.
+2. When the picture shows, drag the seek bar to the middle.
+
+Passes if the first picture shows within 15 s and the picture plays again within 5 s after the seek.
