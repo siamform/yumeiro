@@ -272,10 +272,9 @@ class FeedPositionDeviceTest {
     }
 
     // Each feed is opened through Home's own shortcut cards, as a user does.
-    // TV-FP-1 (tv-api24 44995889578): a touch tap on the rail leaves focus there; the rail opens over Home and
-    // takes the next touch, so "Live TV" landed on Music. A TV has no touch screen: on TV the card's own click
-    // action runs, as the remote's OK would (FirstRun.clickTag). Phones keep the real touch tap.
-    private fun fromHome(card: String) { tap("nav_tab_home"); FirstRun.clickTag(rule, card); idle(600) }
+    // TV-FP-1: a TV-only click (FirstRun.clickTag) was tried in 44997306578 and made it worse (yumix / music
+    // could not find their off-screen card; live still ended on Music), so the real touch tap stays.
+    private fun fromHome(card: String) { tap("nav_tab_home"); tap(card) }
 
     @Test fun home() = run("home") { tap("nav_tab_home") }
     @Test fun yumix() = run("yumix") { fromHome("quick_card_hues") }

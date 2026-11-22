@@ -126,6 +126,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-75 | F-05-STREMIO: a Stremio stream add-on gives links | Owner test (pending) |
 | OMT-76 | F-22-C: Upcoming by country and genre | Owner test (pending) |
 | OMT-77 | F-09-FEED: Watch later / Favorite from Yumix, Top 10, Continue watching | Owner test (pending) |
+| OMT-78 | TV-FP-1: Home → Live TV card on an older Android TV | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1061,3 +1062,10 @@ genre chip narrows the list, the credit line says TVmaze, and the last country a
 
 Passes if every long press (phone) and Menu press (TV) opens the Watch later / Favorite sheet, the choice shows
 the small mark on the poster and in Library, and a normal tap still opens the title (no sheet).
+
+### OMT-78 — Home → Live TV on an older Android TV (TV-FP-1)
+
+1. On an Android TV box (Android 7 to 9 if you have one, else any TV), open Home.
+2. Move to the "Live TV" card with the D-pad and press OK.
+
+Passes if the Live TV channel grid opens (not the Music page). If Music opens, note the TV model and Android version.
