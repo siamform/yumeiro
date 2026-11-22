@@ -6,19 +6,18 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 ~21:40 +0600, branch `r15-stability`, code head 7719e54e. RELEASE AUDIT, owner order 3 ("stop the CI per
+2026-11-22 ~20:30 +0600, branch `r15-stability`, code head 385e293a. RELEASE AUDIT, owner order 3 ("stop the CI per
 fix; fix all by groups; CI once; remove debug code; final CI; release"). The owner authorized the release.
-Just done (one commit per group): bc768506 OWN-1/OWN-6 (NavGuard, fast title open, load de-dup), 4c64bf4e OWN-8
-(batch subtitle language), 9704ae29 OWN-3 (own Telegram API ID / hash, flag f02_telegram_login on), b44d5237 OWN-10
-(TeraBox share origin, browserid, one fresh retry), 8d0e7cda debug logs removed, 7719e54e OWN-9 (Yumeiro Classics
-official source; Extensions "Official · built in"). Docs: audit §2/§5/§6, CHANGELOG, OMT-89..92, CANCELLED-RUNS.
+Groups done: bc768506 OWN-1/OWN-6, 4c64bf4e OWN-8, 9704ae29 OWN-3, b44d5237 OWN-10, 8d0e7cda debug logs removed,
+7719e54e OWN-9 (Yumeiro Classics), 385e293a OWN-9 section moved after the installed list (keeps the empty state on
+the first screen). CI 45032539983 on 7719e54e cancelled (logged in CANCELLED-RUNS).
 
 ## Pending runs
-- The one batch CI: ci.yml review_apk=true 45032539983 on 7719e54e. If it fails: fix, push, rerun once.
-- Earlier runs are recorded in docs/RELEASE-AUDIT-2.1.0.md §5.
+- Batch CI: ci.yml review_apk=true 45032831510 on 385e293a. If it fails: fix, push, rerun once.
+- Device: device-check phones default 45032861815 on 385e293a (parallel, extra coverage).
 
 ## Next step
-1. Record 45032539983. Green -> regenerate CHANGELOG-FULL, kit zip + PDF, audit §10/§11, delete ab/* branches.
+1. Record 45032831510 + 45032861815. Green -> CHANGELOG-FULL, kit zip + PDF, audit §10/§11, delete ab/* branches.
 2. PR r15-stability -> main (docs/evidence/final/PR-2.1.0.md), merge commit; watch release.yml; check the APK sha256.
 3. Owner message: fixed list, run IDs, OMT-83..92, release link.
 
