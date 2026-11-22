@@ -6,19 +6,26 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 19:20 +0600, branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
-docs/RELEASE-AUDIT-2.1.0.md first: owner list OWN-1..OWN-10 (2026-11-22 evening, "hurry, fix all and prepare
-release") with root causes and plan, findings register, run table.
+2026-11-22 19:12 +0600 (13:12 UTC), branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
+docs/RELEASE-AUDIT-2.1.0.md first (owner list OWN-1..OWN-10, findings, runs).
+Just done (4 fix commits, not yet verified by CI): 78a667f6 OWN-7/OWN-2 Cloudflare DoH default DNS (flag
+own7_cloudflare_default); a4dd5ddf OWN-4 Add repository dialogs accept every format; 179d9e30 OWN-10 TeraBox human
+check opens the share page; a5d8d0d3 OWN-5 Extensions page lists Vega/Nuvio/SkyStream sources + Manage. DiskWala
+measured: its website refuses to play ("Download the app"), handoff stays. Correction AUD-TB-1 (TeraBox 400210 was a bad
+measurement; anonymous step works).
 
 ## Pending runs
-- 45024851633 CI review_apk=true on dd4ae197 (baseline before audit fixes), started 12:56 UTC. Wait with
-  `gh run watch 45024851633 --interval 120`.
+- 45024851633 CI review_apk=true on dd4ae197 (baseline), started 12:56 UTC.
+- Fail-befores (each must fail ONLY in its new test; then delete the branch): 45025542939 ab/own7-before,
+  45025907314 ab/own4-before, 45025909528 ab/own10-before, 45026045898 ab/own5-before.
+  Wait with `gh run watch <id> --interval 120`.
 
 ## Next step
-1. Fixes in progress (each: test, ab/<id>-before fail-before, one commit, flag): OWN-7/OWN-2 Cloudflare DNS default,
-   OWN-4 market add box accepts every format, OWN-10 TeraBox human check. Then OWN-1, OWN-5, OWN-6, OWN-8, OWN-3.
-2. After the fixes: one r15 CI review_apk=true, then device suites (api36 + api33-lowram, tv-api24, tv-api34), gate
-   trio, stress repeat 10, upgrade-check. Never merge / release / deploy without the owner's go.
+1. Record the fail-befores; delete each ab/own*-before branch after it is recorded (local + origin).
+2. Investigate OWN-1 (transitions), OWN-6 (Yumix -> details -> player speed), OWN-8 (extension episode download
+   tracks), OWN-3 (Telegram sign-in flag); fix only blockers or small safe items, queue the rest.
+3. Then one r15 CI review_apk=true (pass-after for all OWN fixes), device suites, gate trio, stress, upgrade-check.
+   Never merge / release / deploy without the owner's go.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
 ## Last updated (pre-audit, 14:12, stale)

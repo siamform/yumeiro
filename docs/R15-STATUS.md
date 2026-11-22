@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 19:20 +06): release audit in progress; read docs/RELEASE-AUDIT-2.1.0.md then docs/HANDOVER-LIVE.md.
+Resume here (2026-11-22 19:12 +06): release audit; 4 OWN fixes committed, fail-befores running; read docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 
