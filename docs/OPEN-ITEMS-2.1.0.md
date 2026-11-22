@@ -10,12 +10,12 @@ only "built" is listed here with what is missing. Words used:
 - **Owner test**: the agent part is done; only a real phone, a real account or the owner's own judgement can close it.
 - **Not in 2.1.0**: not built in this release, with the reason. The owner can say "build it now".
 
-## 1. The owner's chat list (OWN-1..17)
+## 1. The owner's chat list (OWN-1..19)
 
 | ID | Item | Status |
 |---|---|---|
 | OWN-1..12 | First two owner lists (nav guard, fast title open, Telegram keys, OWN-8 batch subtitles, Classics, YouTube audio, PIN reset, ...) | Done: rows, commits and runs in docs/RELEASE-AUDIT-2.1.0.md section 2 |
-| OWN-13 | One built-in "Yumeiro" source, all in one, no install | Coded, CI pending (34f2a2ba, CI 45040526941). One card, one switch, one home, one search; drama + films, documentaries, cartoons, TV, films by country. Rest of E1 (below) is Not in 2.1.0 |
+| OWN-13 | One built-in "Yumeiro" source, all in one, no install | Coded, CI pending (CI 45041431667 on d0c5a1d2). One card, one switch, one home, one search; drama + films, documentaries, cartoons, TV, films by country. Rest of E1 (below) is Not in 2.1.0 |
 | OWN-14 | Page close / Back not like the open animation | Coded, CI pending (d8ae2c3b): one shared enter/exit pair, same duration both ways; Inbox / Support and Settings now close the way they open |
 | OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | REPRODUCED on device 45039700220 (api33 + api36): after the PIN on the current profile the logo stays over 15 s (test a fails "the logo to go"; test b passes). Root cause being fixed. Device test written (ProfileColdStartDeviceTest, run 45039700220). Result and fix: docs/RELEASE-AUDIT-2.1.0.md row OWN-15 |
 | OWN-16 | Yumix > Upcoming: hard-coded filters, no search, filter should be an icon, dynamic list | Coded, CI pending (d8ae2c3b): search box, filter icon with a sheet, every filter list built from the data (genres, channel countries, days), schedule country from the phone first |
@@ -61,9 +61,10 @@ Every row was read. Rows marked Verified / Done / Pass with run IDs stay closed 
 
 ## 4. What the agent still runs before the release
 
-1. CI 45040526941 on 34f2a2ba (OWN-13/14/16 code and unit tests).
+1. CI 45041431667 on d0c5a1d2 (OWN-13/14/16/18/19 code and unit tests; 45040526941 was cancelled, logged).
 2. Device runs: ProfileColdStartDeviceTest (OWN-15), F22CountryDeviceTest + UpcomingDeviceTest (OWN-16),
-   DramaPlaybackDeviceTest (OWN-13: drama through the one source), HomeNavigationDeviceTest (OWN-14 motion).
+   DramaPlaybackDeviceTest (OWN-13: drama through the one source), HomeNavigationDeviceTest (OWN-14 motion),
+   PopupQualityDeviceTest (OWN-18), LocalPlayerDeviceTest (OWN-19).
 3. Fix any failure, then the release steps in docs/HANDOVER-LIVE.md.
 
 Legal scope stays the same for every item: no piracy sites, no DRM or paywall bypass, no 18+ sources added by Yumeiro.
