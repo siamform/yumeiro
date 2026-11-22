@@ -99,6 +99,9 @@ object OnlineSession {
     private val _opening = MutableStateFlow<OnlineItem?>(null)
     /** A tapped title whose details are loading (before playback or the episode list). */
     val opening: StateFlow<OnlineItem?> = _opening.asStateFlow()
+    private val _handoff = MutableStateFlow(false)
+    /** OWN-1: the title page is already pushed under the loading layer; Back belongs to the page. */
+    val handoff: StateFlow<Boolean> = _handoff.asStateFlow()
 
     /**
      * Tap on a poster: movies and live streams start playing straight away; series (or anything
@@ -130,7 +133,8 @@ object OnlineSession {
                 // layer vanished first, the feed flashed, then the page came in: it looked like a page closing.
                 if (detail != null) OpeningKinds.learn(app, item, opensPage = true)
                 onShowTitle(item)
-                kotlinx.coroutines.delay(OpenFlow.HANDOFF_MS)
+                _handoff.value = true
+                try { kotlinx.coroutines.delay(OpenFlow.HANDOFF_MS) } finally { _handoff.value = false }
                 if (_opening.value == item) _opening.value = null
                 return@launch
             }
@@ -157,7 +161,7 @@ object OnlineSession {
     private fun defaultAudioKey(): String =
         if (dev.asfakul.yumeiro.player.VideoPrefs.audio.value == dev.asfakul.yumeiro.player.VideoPrefs.AudioDefault.DUB) AudioLanguages.DUB_OTHER else AudioLanguages.ORIG
 
-    fun cancelOpening() { _opening.value = null; job?.cancel() }
+    fun cancelOpening() { _opening.value = null; _handoff.value = false; job?.cancel() }
 
     fun titleFor(d: OnlineDetail, e: OnlineEpisode?): String = buildString {
         append(d.name)

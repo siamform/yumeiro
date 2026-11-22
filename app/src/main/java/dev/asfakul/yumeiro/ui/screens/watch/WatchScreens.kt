@@ -111,9 +111,10 @@ fun WatchScaffold(
     onBack: () -> Unit,
     screen: @Composable BoxScope.() -> Unit,
     tag: String = "watch_scaffold",
+    backEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    BackHandler(onBack = onBack)
+    BackHandler(enabled = backEnabled, onBack = onBack)
     // This page is drawn inside the dark player layer; only the 16:9 video area stays dark. The
     // app bar and details use the user's theme (as the docked watch page does), so a light theme
     // no longer flashes a dark page while a stream is being found.

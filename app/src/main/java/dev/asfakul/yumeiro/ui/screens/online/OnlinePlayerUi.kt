@@ -376,6 +376,7 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
 fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: String) -> Unit, onOpenItem: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = {}) {
     val s by OnlineSession.state.collectAsState()
     val opening by OnlineSession.opening.collectAsState()
+    val handoff by OnlineSession.handoff.collectAsState()
     opening?.let { item ->
         val ctx = LocalContext.current
         // Round 13: the skeleton follows what's coming (direct video, film, series, or a title page).
@@ -384,6 +385,9 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
         dev.asfakul.yumeiro.ui.screens.watch.WatchScaffold(
             backdrop = item.posterUrl, backdropHeaders = item.posterHeaders,
             onBack = { OnlineSession.cancelOpening() }, tag = "online_opening",
+            // OWN-1: during the hand-off the title page is already pushed; a Back must close that page (it used
+            // to only hide this layer, leaving the page open: HomeNavigationDeviceTest h2, device run 45032861815).
+            backEnabled = !handoff,
             screen = {
                 when (kind) {
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.MOVIE -> WatchScreenStatus("Opening the film…", onCancel = { OnlineSession.cancelOpening() }, overline = "映画 · MOVIE")
