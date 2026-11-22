@@ -78,7 +78,9 @@ class SettingsDiscoverabilityTest {
         assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "1.9.0"))
         assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.0.0"))
         assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "2.0.0"))
-        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.1.0"))
+        assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.1.0"))
+        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "2.1.0"))
+        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.2.0"))
     }
 
     @Test fun `whats new names only real settings pages`() {

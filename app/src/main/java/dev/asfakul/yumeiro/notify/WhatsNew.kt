@@ -30,7 +30,8 @@ object WhatsNew {
     fun shouldPost(firstInstall: Long, lastUpdate: Long, version: String): Boolean =
         // 2.0.0 is the 1.9.0 feature set with the player crash fixed; most users skip 1.9.0, so the
         // note is posted for 2.0.x too (same ID: anyone who saw it on 1.9.0 does not get it again).
-        (version.startsWith("1.9.") || version.startsWith("2.0.")) && lastUpdate > firstInstall
+        // 2.1.x: same note for people who update straight from 1.8.x (release checklist W8).
+        (version.startsWith("1.9.") || version.startsWith("2.0.") || version.startsWith("2.1.")) && lastUpdate > firstInstall
 
     /** Call off the main thread (it reads the inbox file). */
     fun postOnce(c: Context) {
