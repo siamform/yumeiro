@@ -45,6 +45,12 @@ Full step lists for older tests: docs/OWNER-MANUAL-TESTS.md (same IDs).
 | OMT-4 | Android TV with the remote | |
 | OMT-59 | Smoothness on an Android 7–8 TV (final test, main-thread checks) | |
 | OMT-71 | Social links (OL-13) | |
+| OMT-75 | F-05-STREMIO: a Stremio stream add-on gives links | |
+| OMT-76 | F-22-C: Upcoming by country and genre | |
+| OMT-77 | F-09-FEED: Watch later / Favorite from Yumix, Top 10, Continue watching | |
+| OMT-78 | TV-FP-1: Home → Live TV card on an older Android TV | |
+| OMT-79 | B31-FRAME: built-in torrent first frame and seek on a real phone | |
+| OMT-80 | DL-ONE: the same download popup everywhere | |
 | OMT-9 | Usability feedback | |
 
 ## 1. Install and first start (everyone)
@@ -376,3 +382,55 @@ Passes if every button lands on the right account.
 - **Status:** Pending
 
 ---
+
+### OMT-75 — Stremio stream add-on (F-05-STREMIO)
+
+1. Sources → Add, paste the manifest URL of a Stremio add-on you trust that gives streams (its manifest lists
+   "stream" in resources), for example a public HTTP-link add-on.
+2. Open any movie or series episode that has an IMDb id (most TMDB/IMDb titles) and open the sources list.
+3. Press one link marked "Stremio · <add-on name>".
+
+Passes if the add-on's links appear with quality, a direct link plays, and a torrent-only result shows as
+"Torrent" (skipped) instead of failing. Yumeiro never logs in or unlocks paid content for an add-on.
+
+### OMT-76 — Upcoming by country and genre (F-22-C)
+
+1. Online → Upcoming → Series.
+2. Tap JP, then KR, then Streaming; on each, tap a genre chip (e.g. Drama, Anime).
+3. Close the app, open Upcoming again.
+
+Passes if each country lists only its shows with a "JP • Anime, Fantasy"-style badge and local air times, the
+genre chip narrows the list, the credit line says TVmaze, and the last country and genre are kept after reopening.
+
+### OMT-77 — Watch later / Favorite from every poster row (F-09-FEED)
+
+1. Phone: Online home. Long-press a Yumix feed card, a Top 10 poster and a Continue watching card.
+2. Each time pick Favorite (or Watch later). Then tap the same card once.
+3. TV: focus each of those cards with the D-pad and press Menu.
+
+Passes if every long press (phone) and Menu press (TV) opens the Watch later / Favorite sheet, the choice shows
+the small mark on the poster and in Library, and a normal tap still opens the title (no sheet).
+
+### OMT-78 — Home → Live TV on an older Android TV (TV-FP-1)
+
+1. On an Android TV box (Android 7 to 9 if you have one, else any TV), open Home.
+2. Move to the "Live TV" card with the D-pad and press OK.
+
+Passes if the Live TV channel grid opens (not the Music page). If Music opens, note the TV model and Android version.
+
+### OMT-79 — Built-in torrent: first frame and seek on a real phone (B31-FRAME)
+
+The emulator cannot decode the test file (HEVC 10-bit), so this needs a real phone. Needs a test build with the
+built-in torrent engine on (flag b31_builtin_torrent; it is off in the release).
+
+1. Play magnet:?xt=urn:btih:BF2063A5E9A69F14716288FCA7C2D6078BDA7369 with a stopwatch.
+2. When the picture shows, drag the seek bar to the middle.
+
+Passes if the first picture shows within 15 s and the picture plays again within 5 s after the seek.
+
+### OMT-80 — The same download popup everywhere (DL-ONE)
+
+1. Download from the player (Download button), from an episode list, from a website link, from Telegram, from a YouTube video, from a YouTube song and from a YT Music playlist.
+2. Each time the same popup opens (Quality, Audio track, folder) and the file lands in Downloads.
+3. YouTube: no separate quality list appears first; "Audio only" saves just the sound.
+4. Note: a plain file link inside an in-app web page is not caught yet (DL-WEB).

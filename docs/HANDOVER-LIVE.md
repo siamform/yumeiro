@@ -8,7 +8,7 @@ Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DI
 ## Last updated
 2026-11-22 14:12 +0600, branch `r15-stability`. Owner order 2026-11-22 ~14:00: share the preview APK (owner has one
 hour to test), then on his approval: PR r15-stability -> main, merge, release 2.1.0. Same download popup everywhere
-(DL-ONE). Yumeiro's own all-in-one extension (E1 Yumeiro Hub) and all-in-one Live TV (E2 Yumeiro Live): docs now,
+(DL-ONE). Yumeiro's own all-in-one extension (E1 Yumeiro Hub) and all-in-one Live TV (E2-ALL Yumeiro Live, on top of the built E2): docs now,
 build after 2.1.0 (target 2.2.0), plan docs/E1-E2-YUMEIRO-HUB-AND-LIVE.md.
 This push: DL-ONE (YouTube used its own quality list first; now the shared DownloadPrompt popup, YtOneSheet, flag
 dl_one_sheet, test YtOneSheetTest, OMT-80). Finding DL-WEB: no WebView download listener (plain file links in

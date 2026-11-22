@@ -1,4 +1,4 @@
-# E1 + E2: Yumeiro's own all-in-one extension ("Yumeiro Hub") and all-in-one Live TV ("Yumeiro Live")
+# E1 + E2-ALL: Yumeiro's own all-in-one extension ("Yumeiro Hub") and all-in-one Live TV ("Yumeiro Live")
 
 Owner order 2026-11-22 (Dhaka), recorded as written: Yumeiro's own extension and Live TV playlist must be all in one,
 "like Vega, SkyStream, CloudStream, Hikari and all other mega extensions (leave 18+)". It must cover everything for
@@ -8,9 +8,9 @@ ready experience on first open. Same for Live TV: auto update, country based, st
 automatically. Use GitHub Actions and the Cloudflare server, stay inside the free limits, and never get banned or
 blocked.
 
-The base design is docs/E1-MASTER-EXTENSION.md (2026-11-21). This file adds the owner's answers, E2 (Live TV),
-the free-limit budget and the order of work. Status today: **not built**. This work does not go into the
-2.1.0 production release. The owner gave the 2.1.0 preview one hour; E1 and E2 are multi-step features, and each
+The base design is docs/E1-MASTER-EXTENSION.md (2026-11-21). This file adds the owner's answers, E2-ALL (Live TV, built on E2),
+the free-limit budget and the order of work. Status today: E1 **not built**; Live TV has E2 built (curated per country, dead links dropped), E2-ALL not built. This work does not go into the
+2.1.0 production release. The owner gave the 2.1.0 preview one hour; E1 and E2-ALL are multi-step features, and each
 step needs its own fail-before, pass-after and device runs. Target: 2.2.0.
 
 ## Owner decisions taken from the 2026-11-22 order (these answer E1 section 6)
@@ -46,18 +46,21 @@ step needs its own fail-before, pass-after and device runs. Target: 2.2.0.
 | E1-D | Ranking and health (speed, success, quality, language) fed into ExtensionSpeed | `hub_ranking` | unit + device |
 | E1-E | Default install + first-open ready experience (Hub preinstalled, Home rows filled from the Hub catalog) | `hub_default` | fresh install device test, no extension needed for a full Home |
 
-## E2: Yumeiro Live, all-in-one Live TV
+## E2-ALL: Yumeiro Live, all-in-one Live TV (on top of E2)
 
-Yumeiro already has: the Playlist Market builder (`.github/workflows/playlist-market.yml`, every 3 days: repairs
+Already built (MAJOR row E2): a curated, auto-validated Live TV list of about 20 channels per country (23 countries),
+curated and probed in GitHub Actions, dead links dropped (dry run 44932539992, unit tests 44884554686), plus a
+country filter on Live TV. Its first publish to the streams branch waits for the owner's go. Yumeiro also has: the
+Playlist Market builder (`.github/workflows/playlist-market.yml`, every 3 days: repairs
 headers, #EXTINF lines, duplicates and bad URLs, validates and health-samples each list), the default playlist
-mirror (`stream-sync.yml`, Mrgify BDIX) and the in-app Sync button. E2 joins them into one default playlist.
+mirror (`stream-sync.yml`, Mrgify BDIX) and the in-app Sync button. E2-ALL joins them into one default playlist.
 
 | Step | What | Flag | Verification |
 |---|---|---|---|
-| E2-A | Builder job merges the market lists and iptv-org's public index (https://github.com/iptv-org/iptv, main list `https://iptv-org.github.io/iptv/index.m3u`) into one "Yumeiro Live" list, grouped by country and category, adult groups dropped, duplicates merged by tvg-id / normalized name | `live_all_in_one` | builder unit tests on fixtures; run ID |
-| E2-B | Stream checker in the job: HEAD / first-segment probe per stream with a short timeout, low concurrency; a stream that fails 3 runs in a row is removed (dead-stream remover); it comes back if it passes again | `live_checker` | job log with pass / fail counts; fixture tests |
-| E2-C | App: Yumeiro Live preinstalled, auto-update by sha256 (the market's update path), country picker on Live TV, "checked N hours ago" line | `live_default` | device api33-lowram, api36, tv-api24 / 34 |
-| E2-D | On-device fallback: a channel that fails to play is reported once (count only, no user data) to the Worker so the next build re-checks it first | `live_report` | unit + Worker test |
+| E2-ALL-A | Builder job merges the market lists and iptv-org's public index (https://github.com/iptv-org/iptv, main list `https://iptv-org.github.io/iptv/index.m3u`) into one "Yumeiro Live" list, grouped by country and category, adult groups dropped, duplicates merged by tvg-id / normalized name | `live_all_in_one` | builder unit tests on fixtures; run ID |
+| E2-ALL-B | Stream checker in the job: HEAD / first-segment probe per stream with a short timeout, low concurrency; a stream that fails 3 runs in a row is removed (dead-stream remover); it comes back if it passes again | `live_checker` | job log with pass / fail counts; fixture tests |
+| E2-ALL-C | App: Yumeiro Live preinstalled, auto-update by sha256 (the market's update path), country picker on Live TV, "checked N hours ago" line | `live_default` | device api33-lowram, api36, tv-api24 / 34 |
+| E2-ALL-D | On-device fallback: a channel that fails to play is reported once (count only, no user data) to the Worker so the next build re-checks it first | `live_report` | unit + Worker test |
 
 ## Free-limit budget (so nothing hits a limit, is banned or is blocked)
 
@@ -77,6 +80,6 @@ mirror (`stream-sync.yml`, Mrgify BDIX) and the in-app Sync button. E2 joins the
 
 ## Order of work after 2.1.0 ships
 
-E2-A, E2-B (Live first: it reuses the existing market builder, smallest risk), then E1-A, E1-B, E1-E, then E1-C1,
+E2 first publish (owner go), E2-ALL-A, E2-ALL-B (Live first: it reuses the existing builders, smallest risk), then E1-A, E1-B, E1-E, then E1-C1,
 E1-C2, E1-D. Each step follows the rules: research with cited URLs, flag, fail-before branch, pass-after CI, device
 runs, ledger row, OMT entry.
