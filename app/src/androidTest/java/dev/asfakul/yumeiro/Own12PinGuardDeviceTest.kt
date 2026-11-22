@@ -52,6 +52,8 @@ class Own12PinGuardDeviceTest {
         assertTrue("flag own12_pin_guard is on", FeatureFlags.isOn(FeatureFlags.Flag.PIN_GUARD))
         val p = Profiles.add(ctx, "Own12 test", AccentTone.entries.first()); added = p.id
         assertTrue("PIN set", Profiles.setPin(ctx, p.id, "4826"))
+        // Run 45048938663: a permission popup (api36) and the setup guide (lowram) were on top; settle first run.
+        FirstRun.toTabs(rule)
         FirstRun.touchMode()
         FirstRun.tapVisible(rule, "topbar_settings_action")
         waitTag("Settings", "settings_home")
@@ -59,7 +61,7 @@ class Own12PinGuardDeviceTest {
         FirstRun.tapVisible(rule, "settings_cat_profiles")
         waitTag("Profiles page", "profiles_settings")
         FirstRun.scrollTo(rule, "profile_row_${p.id}")
-        FirstRun.tapVisible(rule, "profile_row_${p.id}")
+        repeat(3) { if (!has("pin_pad")) { FirstRun.tapVisible(rule, "profile_row_${p.id}"); runCatching { rule.waitUntil(5_000) { has("pin_pad") } } } }
         typePin("4826") // unlock to edit (another profile)
         waitTag("edit dialog", "profile_pin_remove")
         FirstRun.tapVisible(rule, "profile_pin_remove")
