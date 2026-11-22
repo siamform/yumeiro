@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here: release is 2.1.0 (owner). Wait CI 45047538777 + phone 45047541362; fix; final CI; upgrade check; release. See docs/MASTER-PLAN-2.2.0.md.
+Resume here: release 2.1.0. Wait CI 45051586296 (unit test + heap fix); then upgrade check; release. See docs/MASTER-PLAN-2.2.0.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

@@ -19,7 +19,7 @@ Words: Pass (run ID) = a test passed in that run. Unit = unit test in CI. Device
 | OWN-9 | Official Yumeiro source, none installed | Yumeiro Classics + Drama, now one source (OWN-13) | Unit Own13YumeiroHubTest | Pass in CI |
 | OWN-10 | TeraBox / DiskWala | Share origin, retry, human check page | Unit TeraBoxApiTest | Code done; signed-in play needs a TeraBox account (owner) |
 | OWN-11 | YouTube audio-only download | Popup always offers Video / Audio only | Unit Own11YtAudioChoiceTest | Pass in CI (OMT-87 on a phone) |
-| OWN-12 | PIN reset questions; Remove PIN asks for current PIN | flag own12_pin_guard | Unit Own12PinGuardTest; device Own12PinGuardDeviceTest (run 45048938663) | See run |
+| OWN-12 | PIN reset questions; Remove PIN asks for current PIN | flag own12_pin_guard | Unit Own12PinGuardTest; device Own12PinGuardDeviceTest (run 45051247401) | Pass, both phones (api36 + api33 low-RAM) |
 | OWN-13 | One all-in-one Yumeiro source | YumeiroHub, flag own13_yumeiro_hub | Unit Own13YumeiroHubTest, E1CatalogTest; device DramaPlaybackDeviceTest (45048938663) | See run |
 | OWN-14 | Close animation like open | One enter/exit pair | Unit Own14PageMotionTest; device HomeNavigationDeviceTest pass 45045030577 | Pass |
 | OWN-15 | Locked profile cold start stuck on logo | Skip second logo, safe decide/open | Unit Own15GateLogoTest; device ProfileColdStartDeviceTest pass 45045030577 (both phones) | Pass |
@@ -34,3 +34,9 @@ Not in 2.1.0, with reason:
 - Extensions (OWN-4, OWN-5 device checks, ExtensionsDeviceTest e13 "five feeds") and Live TV m3u8: after the
   release, owner order 2026-11-23.
 - TV runs: after the release, owner order 2026-11-23.
+
+
+## Later runs (2026-11-23)
+
+- 45051247401: Own12PinGuardDeviceTest OK on api36 and api33 low-RAM (after the first-run settle fix).
+- 45049508477: Nf1EpisodeStatusDeviceTest skipped on api36 (onshort.net unreachable from CI); the low-RAM leg failed to build (Maven download error, not our code). NF1 on device: Not checked (onshort.net down). Unit tests cover it.

@@ -6,43 +6,10 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-23 ~23:25 +06: owner: the release is 2.1.0 (not 2.2.0). version.properties 2.1.0 (20); CHANGELOG, README,
-PR text (docs/evidence/final/PR-2.1.0.md) switched. Website branch r17-v220 in siamform/yumeiro-web: processor
-check on /download (lib/cpu.ts, components/CpuCheck.tsx, scripts/cpu.test.mts) + 2.1.0 notes; next build passes.
-Final CI must run again on this version (45047538777 was dispatched on 2.2.0 naming).
-
-2026-11-23 ~23:10 +06: owner order: all secrets set as GitHub secrets (14, from .secrets/env; Firebase mapped to
-YUMEIRO_FCM_*). Leave TV for now. Order: bugs (OWN-1..19, then older lists), release 2.2.0, then Live TV and
-extensions. Updater + ARM check in 2.2.0 (ProcessorCheck, Settings > Updates). README, CHANGELOG, website for 2.2.0.
-Fixed from device 45045030577: Upcoming offline note above the list; test touch mode (PL18); NF1 skips catalog parts.
-Running: CI 45047538777 (abi_splits), phone device 45047541362 (Nf1, Upcoming, LocalPlayer, Extensions, B31Frame).
-
-2026-11-23 ~02:10 +06: CI 45044232383 assemble passed. Device phone 45045030577, TV 45045033098 running.
-CHANGELOG 2.2.0 has OWN-13..19, E1, E2-ALL. PR text docs/evidence/final/PR-2.2.0.md. Next: read results, fix failures only.
-
-2026-11-23 ~01:45 +06: Yumeiro Live published (stream-sync 45043596127: 7086 channels). CI 45044232383 gitleaks
-failed on streams-branch live/state.json (third-party links as keys): keys now hashed (state v2), path allowed.
-B5 Vega: already runs (ADR-047). Next: wait CI 45044232383 build, then B6 upgrade check with its APK.
-
-2026-11-23 ~01:30 +06: E1 Worker hub deployed (api.yumeiro.click/v1/hub/*). App catalog part + fan-out coded
-(YumeiroCatalog.kt, E1CatalogTest). CI dispatched on release-2.2.0 to catch compile errors. Next: B5 Vega research, B6.
-
-2026-11-23 ~00:20 +06: B3 E2-ALL coded (build_live_all.py + app default yumeiro_live). stream-sync dispatched on
-release-2.2.0 to publish the first Yumeiro Live list. Next: E2-ALL-D report, then B4 E1.
-
-2026-11-22 ~23:50 +06 (release-2.2.0): OWN-15 fix committed (skip second logo after PIN, safe decide/open).
-Last.fm Worker secrets set (sign endpoint live). CI 45041431667 failed only on Robolectric jar download; CI now caches
-those jars. Next: B3 E2-ALL, then B4 E1, B5, B6, then one B7 test pass. See docs/MASTER-PLAN-2.2.0.md.
-
-2026-11-22 ~22:30 +06: owner order: release 2.2.0 tomorrow, everything in, one branch `release-2.2.0`,
-batch testing. Plan and live status: docs/MASTER-PLAN-2.2.0.md (read it first).
-
-2026-11-22 ~23:00 +0600, branch `r15-stability`. Release ON HOLD until every OWN item is done and CI is green.
-Owner message 6 adds OWN-18 (download popup: size, quality, sub / dub on every popup) and OWN-19 (full-screen
-player: only the main buttons, the rest in More). Both coded in this push (DownloadSize.kt, DownloadSheet size line +
-facts chips, TopBarFit.essentials, OnlinePlayerUi PlayerActions + More chip, flag own19_player_essentials), tests
-own/Own18DownloadSizeTest + own/Own19PlayerEssentialsTest. Earlier: 34f2a2ba OWN-13, d8ae2c3b OWN-14 + OWN-16,
-b53c609a OWN-15 test. OWN-17 list: docs/OPEN-ITEMS-2.1.0.md.
+2026-11-23 ~00:30 +06: CI 45047538777 hit the 40 min limit (3 unit test faults + test JVM out of its 512 MB heap).
+Fixed in 4c62fe3b (tests isolated; test JVM 3 GB, fork every 150 classes). New CI 45051586296 running.
+Device: Own12PinGuardDeviceTest OK both phones (45051247401); NF1 not checked (onshort.net down, 45049508477).
+Website branch is r17-v210 in siamform/yumeiro-web.
 
 ## OWN-15 finding
 Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
@@ -51,14 +18,12 @@ the test's wait does not let the splash LaunchedEffect run (it polls with Thread
 composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
 ## Pending runs
-- CI 45040526941 on 34f2a2ba (old head; covers OWN-13/14/16). New CI needed on this head.
+- CI 45051586296 on 4c62fe3b.
 
 ## Next step
-1. OWN-15 root cause + fix; rerun ProfileColdStartDeviceTest.
-2. CI on the head; fix failures. Device: PopupQualityDeviceTest, LocalPlayerDeviceTest, F22CountryDeviceTest,
-   UpcomingDeviceTest, DramaPlaybackDeviceTest, HomeNavigationDeviceTest (max two at once).
-3. Release steps: CHANGELOG-FULL, kit zip + PDF, audit 5/10/11, PR body (OWN-13..19), PR -> main merge commit,
-   release.yml, APK sha256 check, delete ab/* branches, owner message.
+1. CI green; then upgrade-check.yml (from v2.0.0, new_apk_run = that CI).
+2. CHANGELOG final, PR from docs/evidence/final/PR-2.1.0.md (release-2.2.0 -> main, merge commit), release.yml tag v2.1.0,
+   sha256 check, merge yumeiro-web r17-v210, delete old branches, owner message.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
 ## Last updated (pre-audit, 14:12, stale)
