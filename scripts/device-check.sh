@@ -61,6 +61,34 @@ adb_alive() {
   echo "HARNESS adb lost before $C (run $N): stopping; the remaining classes are not run"
   ADB_LOST=1; return 1
 }
+# GATE-1-QUIET (gate 44982381315, api33-lowram): during the walk Google Maps'
+# server_recovery_process crash-looped (about 25 restarts in 20 s), Google apps were killed for package
+# changes (background updates) and Play Services ran 154k getResources calls (1.8k on api36). The main
+# thread then waited 997 ms of a 1520 ms stall in the run queue. The gate measures Yumeiro, so before
+# the walk: stop a crash-looping Maps, then wait (max 240 s) until the CPU is below 40 % busy for 3
+# samples in a row. Everything is logged as GATE_QUIET lines; the 700 ms limit is unchanged.
+cpu_busy() {
+  local a b; a=$(timeout 10 adb shell head -1 /proc/stat < /dev/null | tr -d '\r'); sleep 5
+  b=$(timeout 10 adb shell head -1 /proc/stat < /dev/null | tr -d '\r')
+  echo "$a|$b" | awk -F'|' '{ split($1,x," "); split($2,y," "); ti=0; tb=0;
+    for (i=2;i<=NF+20;i++) if (x[i]!="") { d=y[i]-x[i]; ti+=d; if (i!=5 && i!=6) tb+=d }
+    if (ti>0) printf "%d", 100*tb/ti; else print 100 }'
+}
+gate_quiet() {
+  local deaths; deaths=$(grep -cE "server_recovery_process \(pid [0-9]+\) has died" logcat.txt 2>/dev/null)
+  if [ "${deaths:-0}" -ge 5 ]; then
+    echo "GATE_QUIET maps server_recovery_process died $deaths times: force-stop com.google.android.apps.maps"
+    timeout 20 adb shell am force-stop com.google.android.apps.maps < /dev/null > /dev/null 2>&1 || true
+  fi
+  local t0 calm busy; t0=$(date +%s); calm=0
+  while [ $(( $(date +%s) - t0 )) -lt 240 ]; do
+    busy=$(cpu_busy); echo "GATE_QUIET cpu busy ${busy}% at $(( $(date +%s) - t0 )) s"
+    if [ "${busy:-100}" -lt 40 ]; then calm=$((calm + 1)); else calm=0; fi
+    [ "$calm" -ge 3 ] && break
+  done
+  echo "GATE_QUIET settled=$([ "$calm" -ge 3 ] && echo yes || echo no) after $(( $(date +%s) - t0 )) s"
+  timeout 20 adb shell top -b -n 1 -m 8 < /dev/null 2>/dev/null | tr -d '\r' | head -16 | sed 's/^/GATE_QUIET top /'
+}
 for N in $(seq 1 "$REPEAT"); do
 for C in $(echo "$FILTER" | tr ',' ' '); do
   adb_alive || break 2
@@ -102,10 +130,15 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     # GATE-1: the walk runs under a Perfetto trace (main + RenderThread + HWUI) so a long frame can be read.
     P=dev.asfakul.yumeiro.debug
     mkdir -p stress/trace
+    gate_quiet
     adb shell rm -f /data/misc/perfetto-traces/gate.pftrace > /dev/null 2>&1
     adb shell "perfetto --txt -c - -o /data/misc/perfetto-traces/gate.pftrace --background" < scripts/gate-trace.pbtxt > stress/trace/perfetto-gate.txt 2>&1 || true
     sleep 2
+    # GATE-1-QUIET: who else used the CPU during the walk, every 5 s (the trace ring can lose the start).
+    ( while :; do echo "== $(date -u +%H:%M:%S)"; timeout 10 adb shell top -b -n 1 -m 8 < /dev/null 2>/dev/null | tr -d '\r' | head -16; sleep 5; done ) > stress/trace/top.txt 2>&1 &
+    TOP_PID=$!
     timeout 600 adb shell am instrument -w -r -e class "$C" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+    kill $TOP_PID > /dev/null 2>&1 || true
     adb shell killall -INT perfetto > /dev/null 2>&1 || true
     sleep 4
     adb pull /data/misc/perfetto-traces/gate.pftrace stress/trace/ > /dev/null 2>&1 || echo "GATE_TRACE no trace: $(head -3 stress/trace/perfetto-gate.txt)"

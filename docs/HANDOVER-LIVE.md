@@ -6,32 +6,29 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 10:05 +0600, branch `r15-stability`. This push: F-05-N-ERR. Device 44982374518: Vega 3/3 Pass on both
-phones; Nuvio 3 of 4 Pass (crypto-js + cheerio fixture works), aCrashingScraperEndsOnlyItselfAndTheListMerges Fail: a
-thrown JS error arrived as a bare frame "at getStreams (scraper.js:2:67)" (QuickJS stack has no message line). Fix,
-flag `f05_script_error_message` (on): provider_runtime.js G.__errText ("Error: message" then stack, both invokers),
-ScriptRuntime passes __ERR_MESSAGE, NuvioAdapter.reasonOf shows the first non-frame line. Tests in f05/NuvioAdapterTest.
-Earlier today: f46c3f22 GATE-1-MUSIC-START-2 (first song tap on a cold start kept its track); 06200fc3 F-05-N Nuvio
-(flags `scripts_nuvio` + `f05_stream_addons` OFF until the Nuvio device test passes).
+2026-11-22 10:30 +0600, branch `r15-stability`. This push: GATE-1-QUIET (harness only). Gate trio 44982381315:
+MUSIC-START confirmed (no getOrCreatePlayer YuStall on either phone); api36 Pass; api33-lowram Fail 3055 ms after
+Videos › Source, but the main thread was waiting for CPU (cpu 317 / run queue 997 of 1520 ms) while Google Maps
+crash-looped, Google apps updated and Play Services ran 154k getResources (1.8k on api36). scripts/device-check.sh
+gate_quiet (stop crash-looping Maps, wait max 240 s for CPU < 40 %, GATE_QUIET lines) + top every 5 s
+(stress/trace/top.txt); gate-trace.pbtxt drops `res`. Limit stays 700 ms.
+Earlier today: 2ab4f33f F-05-N-ERR (script errors show the message), f46c3f22 GATE-1-MUSIC-START-2, 06200fc3 F-05-N.
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44979533703 (review_apk=true @f46c3f22): Build, test & lint Pass = pass-after MUSIC-START, MUSIC-START-2,
-  F-05-N. Gitleaks first failed (live ab/f05n-before at checkout), rerun Pass; review APK was still running. Do NOT
-  dispatch ci.yml on r15-stability until it ends (a new dispatch cancels it); then dispatch review_apk=true for F-05-N-ERR.
-- CI 44983223105 (ab/f05nerr-before): expect NuvioAdapterTest.aFailedScraperShowsItsMessageNotAStackFrame and
-  theRuntimeReportsTheErrorMessage to fail, compile ok. Then delete branch + `git worktree remove --force /tmp/fb_err`.
-- Device 44982381315 (queued, same group): GATE-1 trio; check no YuStall names PlaybackService.getOrCreatePlayer.
-- After the F-05-N-ERR pass-after CI: device rerun NuvioProviderDeviceTest (+ VegaProviderDeviceTest, error text changed).
+- r15 CI 44983288674 (review_apk=true @2ab4f33f): pass-after F-05-N-ERR. Do NOT dispatch ci.yml on r15 until it ends.
+- Gate trio rerun with GATE-1-QUIET (dispatched with this push): read GATE_QUIET lines, stress/trace/top.txt and the
+  trace around the Videos › Source step. If lowram still fails with the CPU quiet, the stall is ours: name it.
+- After 44983288674: device rerun NuvioProviderDeviceTest + VegaProviderDeviceTest; if all pass, flip scripts_nuvio +
+  f05_stream_addons (own commit, own CI) and add the OMT row.
+- Fail-befores done: MUSIC-START-2 44979435737, F-05-N 44977804955, F-05-N-ERR 44983223105 (branches deleted).
 - CI gitleaks scans every live branch: never leave an ab/ branch with a secret-looking literal alive during other runs.
 - Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before). They do
   not trip gitleaks; check their ledger rows before deleting.
-- When NuvioProviderDeviceTest passes: flip both flags to true in FeatureFlags.kt (own commit, own CI) and add an OMT row
-  (add a real Nuvio repo, play a movie, see "Nuvio · <scraper>" sources).
 
 ## Next step
-1. Close the pending runs above (rows GATE-1-MUSIC-START, GATE-1-MUSIC-START-2, F-05-N, F-05-N-ERR).
+1. Close the pending runs above (rows GATE-1-MUSIC-START-2, GATE-1-QUIET, F-05-N, F-05-N-ERR).
 2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
 3. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
@@ -41,7 +38,8 @@ Earlier today: f46c3f22 GATE-1-MUSIC-START-2 (first song tap on a cold start kep
    then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
-- 2026-11-22 10:05: F-05-N-ERR (this push).
+- 2026-11-22 10:30: GATE-1-QUIET (this push).
+- 2026-11-22 10:05: F-05-N-ERR 2ab4f33f.
 - 2026-11-22 09:15: GATE-1-MUSIC-START-2 f46c3f22.
 - 2026-11-22 09:00: F-05-N Nuvio 06200fc3, docs digest 45aac76a.
 - 2026-11-22 morning: RENDER-5b 0270f069, FF-LOAD 8cb89e9b, GATE-1-AB b847caa0, GATE-1-FTL 76a6e521, MUSIC-START 9da67d0c.

@@ -1,5 +1,6 @@
 # GATE-1: Perfetto config for the whole gate walk (about 100 s). Used by scripts/device-check.sh.
-# atrace only: with sched events the 96 MB ring held the last 20 s (run 44947167817), not the walk.
+# GATE-1-QUIET: no "res" category (53 % of the 866k slices in 44982381315 were Play Services
+# resource loads, and the 96 MB ring lost the Videos stall). atrace only: with sched events the 96 MB ring held the last 20 s (run 44947167817), not the walk.
 buffers { size_kb: 98304 fill_policy: RING_BUFFER }
 buffers { size_kb: 4096 fill_policy: RING_BUFFER }
 data_sources {
@@ -13,7 +14,6 @@ data_sources {
       atrace_categories: "wm"
       atrace_categories: "dalvik"
       atrace_categories: "input"
-      atrace_categories: "res"
       atrace_categories: "binder_driver"
       atrace_apps: "dev.asfakul.yumeiro.debug"
     }
