@@ -15,7 +15,7 @@ dl_one_sheet, test YtOneSheetTest, OMT-80). Finding DL-WEB: no WebView download 
 in-app web pages are not caught), not fixed in 2.1.0. F-09-FEED pass-after Pass 44997677870.
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44997677870 @bdcbd8e1 review_apk=true: Build, test & lint Pass; when Review APK ends, download artifact
+- r15 CI 44997677870 @bdcbd8e1: Build, test & lint Pass; Review APK FAILED the dex register budget (225 > 224) = DEX-REG-1, fixed in the next commit; new r15 CI review_apk=true = pass-after for DEX-REG-1 + DL-ONE and the preview APK.
   yumeiro-review-apk = preview #1 (no DL-ONE). Then dispatch r15 CI review_apk=true for DL-ONE pass-after = preview #2.
 - Fail-before DL-ONE: ab/dlone-before 45001258208 (valid = compiles, only YtOneSheetTest fails); worktree /tmp/abdl;
   delete branch + worktree after.

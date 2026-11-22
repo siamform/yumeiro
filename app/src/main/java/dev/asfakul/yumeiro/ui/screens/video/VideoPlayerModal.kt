@@ -308,18 +308,17 @@ private fun VideoPlayerModalContent(
     var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     remember(context) { dev.asfakul.yumeiro.player.SubtitleStyleSettings.init(context); 0 }
     val subtitleStyle by dev.asfakul.yumeiro.player.SubtitleStyleSettings.style.collectAsState()
-    var showSubtitleStyleDialog by remember { mutableStateOf(false) }
+    // DEX-REG-1: the player's chrome and dialog flags live in one remembered holder, not 24 locals, so
+    // VideoPlayerModalContent stays under the 224-register budget (FINAL-49; it reached 225 in CI 44997677870).
+    val chrome = remember { PlayerChromeState() }
     // Pinch-to-zoom of the picture only (subtitles and controls stay put). Resets per video.
     var videoZoom by remember(video.id) { mutableStateOf(dev.asfakul.yumeiro.player.VideoZoom.State()) }
-    var zoomHintVisible by remember { mutableStateOf(false) }
-    var zoomHintJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var playerAreaSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     var currentSpeed by remember { mutableFloatStateOf(dev.asfakul.yumeiro.player.VideoPrefs.speed.value) }
     // P-2X: touch-and-hold 2x (restored on release) and the 1x / 2x quick toggle.
     val holdSpeed = remember { dev.asfakul.yumeiro.player.HoldSpeed() }
     var holdBoost by remember { mutableStateOf(false) }
     var isScreenLocked by remember { mutableStateOf(false) }
-    var isLockedUnlockPillVisible by remember { mutableStateOf(false) }
     // The player opens in the normal (portrait) layout with system bars visible. Only the
     // fullscreen button switches to landscape + immersive mode.
     // BUG-5 TV-5: TV layout always plays full screen (PlayerOrientationRule).
@@ -346,28 +345,17 @@ private fun VideoPlayerModalContent(
     var subtitleDelayMs by remember(video.id) { mutableLongStateOf(0L) }
 
     // HUD States
-    var isBrightnessHUDVisible by remember { mutableStateOf(false) }
     var currentBrightness by remember {
         val initialWin = activity?.window?.attributes?.screenBrightness ?: -1.0f
         mutableFloatStateOf(if (initialWin > 0f) initialWin else 0.5f)
     }
 
-    var isVolumeHUDVisible by remember { mutableStateOf(false) }
     var currentVolumeLevel by remember {
         mutableIntStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC))
     }
 
-    var isScrubHUDVisible by remember { mutableStateOf(false) }
-    var scrubTargetTimeMs by remember { mutableLongStateOf(0L) }
-    var scrubDeltaMs by remember { mutableLongStateOf(0L) }
-    var scrubStartTimeMs by remember { mutableLongStateOf(0L) }
 
-    var isDoubleTapRewindVisible by remember { mutableStateOf(false) }
-    var isDoubleTapForwardVisible by remember { mutableStateOf(false) }
-    var doubleTapHideJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    var toastMessage by remember { mutableStateOf("") }
-    var isToastVisible by remember { mutableStateOf(false) }
 
     // Playback finished: play button becomes Replay and the next video starts after a countdown.
     var isEnded by remember(video.id) { mutableStateOf(false) }
@@ -376,26 +364,20 @@ private fun VideoPlayerModalContent(
     var showResumePill by remember(video.id) { mutableStateOf(video.playbackPositionMs > 5000L) }
 
     // Dialog sheets
-    var showSpeedDialog by remember { mutableStateOf(false) }
-    var showAspectRatioDialog by remember { mutableStateOf(false) }
-    var showAudioTrackDialog by remember { mutableStateOf(false) }
-    var showSubtitleDialog by remember { mutableStateOf(false) }
-    var showVideoInfoDialog by remember { mutableStateOf(false) }
 
     val isPipSupported = remember {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
 
-    var toastJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun showToast(msg: String) {
-        toastMessage = msg
-        isToastVisible = true
+        chrome.toastMessage = msg
+        chrome.isToastVisible = true
         // One timer: an older toast's timer must not hide a newer message early.
-        toastJob?.cancel()
-        toastJob = coroutineScope.launch {
+        chrome.toastJob?.cancel()
+        chrome.toastJob = coroutineScope.launch {
             delay(2200L)
-            isToastVisible = false
+            chrome.isToastVisible = false
         }
     }
 
@@ -417,7 +399,6 @@ private fun VideoPlayerModalContent(
             }
         )
     }
-    var showOnlineSubtitleDialog by remember { mutableStateOf(false) }
     // Extensions keep finding subtitles after the video starts; offer those in the captions menu.
     var lateSubs by remember(video.id) { mutableStateOf<List<dev.asfakul.yumeiro.online.OnlineSubtitle>>(emptyList()) }
     LaunchedEffect(video.id) {
@@ -450,7 +431,6 @@ private fun VideoPlayerModalContent(
     var onlineQuickRetries by remember(video.id) { mutableStateOf(0) }
     var qualityList by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
     var selectedQuality by remember(video.id) { mutableStateOf<QualityOption?>(null) }
-    var showQualityDialog by remember { mutableStateOf(false) }
     // Round 13: qualities built by the engine when the stream itself has one rendition.
     var altQualities by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
     /** Round 2: engine-rendered level in use (null = the source's own picture). */
@@ -497,7 +477,6 @@ private fun VideoPlayerModalContent(
     // R17 (G3 proposal): video sleep timer, shared with the next episode (VideoSleepTimer).
     val sleepState by dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.collectAsState()
     val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, "End of this video")
-    var showSleepSheet by remember { mutableStateOf(false) }
     // F-06: every video starts without boost, and closing the player frees the effect.
     DisposableEffect(exoPlayer, video.id) {
         dev.asfakul.yumeiro.player.VolumeBoost.reset()
@@ -1471,7 +1450,7 @@ private fun VideoPlayerModalContent(
     }
 
     // Auto-hide controls timer (3.5 seconds)
-    val isAnyDialogOpen = showSleepSheet || showQualityDialog || showSpeedDialog || showAspectRatioDialog || showAudioTrackDialog || showSubtitleDialog || showSubtitleStyleDialog || showVideoInfoDialog || playerError != null
+    val isAnyDialogOpen = chrome.showSleepSheet || chrome.showQualityDialog || chrome.showSpeedDialog || chrome.showAspectRatioDialog || chrome.showAudioTrackDialog || chrome.showSubtitleDialog || chrome.showSubtitleStyleDialog || chrome.showVideoInfoDialog || playerError != null
     // Remote / keyboard (TV, Fire TV, Bluetooth keyboards): every key press keeps the controls up
     // a little longer, so walking along the buttons never races the auto-hide.
     val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
@@ -1546,10 +1525,10 @@ private fun VideoPlayerModalContent(
             PlayerBackRule.Step.HIDE_CONTROLS -> isControlsVisible = false
             PlayerBackRule.Step.EXIT_FULLSCREEN -> isFullscreen = false
             PlayerBackRule.Step.SHOW_UNLOCK -> {
-                isLockedUnlockPillVisible = true
+                chrome.isLockedUnlockPillVisible = true
                 coroutineScope.launch {
                     delay(3000L)
-                    isLockedUnlockPillVisible = false
+                    chrome.isLockedUnlockPillVisible = false
                 }
             }
             PlayerBackRule.Step.LEAVE -> leavePlayer()
@@ -1589,14 +1568,14 @@ private fun VideoPlayerModalContent(
     }
     fun keyRewind() {
         seekPlayer(dev.asfakul.yumeiro.player.SeekMath.rewind(exoPlayer.currentPosition, SEEK_STEP_MS))
-        isDoubleTapForwardVisible = false; isDoubleTapRewindVisible = true
-        doubleTapHideJob?.cancel(); doubleTapHideJob = coroutineScope.launch { delay(700L); isDoubleTapRewindVisible = false }
+        chrome.isDoubleTapForwardVisible = false; chrome.isDoubleTapRewindVisible = true
+        chrome.doubleTapHideJob?.cancel(); chrome.doubleTapHideJob = coroutineScope.launch { delay(700L); chrome.isDoubleTapRewindVisible = false }
     }
     fun keyForward() {
         seekPlayer(dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
             dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs)))
-        isDoubleTapRewindVisible = false; isDoubleTapForwardVisible = true
-        doubleTapHideJob?.cancel(); doubleTapHideJob = coroutineScope.launch { delay(700L); isDoubleTapForwardVisible = false }
+        chrome.isDoubleTapRewindVisible = false; chrome.isDoubleTapForwardVisible = true
+        chrome.doubleTapHideJob?.cancel(); chrome.doubleTapHideJob = coroutineScope.launch { delay(700L); chrome.isDoubleTapForwardVisible = false }
     }
     fun keyPlayPause() { if (isEnded) replayFromStart() else if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }
     val onPlayerKey: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = handler@{ e ->
@@ -1618,8 +1597,8 @@ private fun VideoPlayerModalContent(
             k == K.DirectionRight || k == K.DirectionUp || k == K.DirectionDown
         if (!dpad) return@handler false
         if (isScreenLocked) {
-            isLockedUnlockPillVisible = true
-            coroutineScope.launch { delay(3000L); isLockedUnlockPillVisible = false }
+            chrome.isLockedUnlockPillVisible = true
+            coroutineScope.launch { delay(3000L); chrome.isLockedUnlockPillVisible = false }
             return@handler false // let focus reach the unlock button
         }
         keyTick++
@@ -1784,15 +1763,15 @@ private fun VideoPlayerModalContent(
                 onPinch = if (isScreenLocked || docked) null else ({ zoomBy, pan ->
                     videoZoom = dev.asfakul.yumeiro.player.VideoZoom.step(videoZoom, zoomBy, pan.x, pan.y,
                         playerAreaSize.width.toFloat(), playerAreaSize.height.toFloat())
-                    zoomHintJob?.cancel()
-                    zoomHintVisible = true
+                    chrome.zoomHintJob?.cancel()
+                    chrome.zoomHintVisible = true
                 }),
                 onPinchEnd = {
                     val before = videoZoom.zoomed
                     videoZoom = dev.asfakul.yumeiro.player.VideoZoom.settle(videoZoom)
                     if (before && !videoZoom.zoomed) haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                    zoomHintJob?.cancel()
-                    zoomHintJob = coroutineScope.launch { delay(900L); zoomHintVisible = false }
+                    chrome.zoomHintJob?.cancel()
+                    chrome.zoomHintJob = coroutineScope.launch { delay(900L); chrome.zoomHintVisible = false }
                 },
                 isScreenLocked = isScreenLocked,
                 onSingleTap = {
@@ -1800,46 +1779,46 @@ private fun VideoPlayerModalContent(
                 },
                 onDoubleTapLeft = {
                     seekPlayer((exoPlayer.currentPosition - SEEK_STEP_MS).coerceAtLeast(0L))
-                    isDoubleTapForwardVisible = false
-                    isDoubleTapRewindVisible = true
-                    doubleTapHideJob?.cancel()
-                    doubleTapHideJob = coroutineScope.launch {
+                    chrome.isDoubleTapForwardVisible = false
+                    chrome.isDoubleTapRewindVisible = true
+                    chrome.doubleTapHideJob?.cancel()
+                    chrome.doubleTapHideJob = coroutineScope.launch {
                         delay(700L)
-                        isDoubleTapRewindVisible = false
+                        chrome.isDoubleTapRewindVisible = false
                     }
                 },
                 onDoubleTapRight = {
                     val target = dev.asfakul.yumeiro.player.SeekMath.forward(exoPlayer.currentPosition, SEEK_STEP_MS,
                         dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
                     seekPlayer(target)
-                    isDoubleTapRewindVisible = false
-                    isDoubleTapForwardVisible = true
-                    doubleTapHideJob?.cancel()
-                    doubleTapHideJob = coroutineScope.launch {
+                    chrome.isDoubleTapRewindVisible = false
+                    chrome.isDoubleTapForwardVisible = true
+                    chrome.doubleTapHideJob?.cancel()
+                    chrome.doubleTapHideJob = coroutineScope.launch {
                         delay(700L)
-                        isDoubleTapForwardVisible = false
+                        chrome.isDoubleTapForwardVisible = false
                     }
                 },
                 onDoubleTapCenter = {
                     if (isPlaying) exoPlayer.pause() else exoPlayer.play()
                 },
                 onScrubStart = {
-                    scrubStartTimeMs = exoPlayer.currentPosition
-                    scrubTargetTimeMs = scrubStartTimeMs
-                    scrubDeltaMs = 0L
-                    isScrubHUDVisible = true
+                    chrome.scrubStartTimeMs = exoPlayer.currentPosition
+                    chrome.scrubTargetTimeMs = chrome.scrubStartTimeMs
+                    chrome.scrubDeltaMs = 0L
+                    chrome.isScrubHUDVisible = true
                 },
                 onScrubDelta = { deltaX ->
                     // 1 pixel = ~120ms of scrub
                     val deltaMs = (deltaX * 120f).toLong()
-                    val newDelta = scrubDeltaMs + deltaMs
-                    val newTarget = dev.asfakul.yumeiro.player.SeekMath.clamp(scrubStartTimeMs + newDelta,
+                    val newDelta = chrome.scrubDeltaMs + deltaMs
+                    val newTarget = dev.asfakul.yumeiro.player.SeekMath.clamp(chrome.scrubStartTimeMs + newDelta,
                         dev.asfakul.yumeiro.player.SeekMath.known(exoPlayer.duration, durationMs))
-                    scrubDeltaMs = newTarget - scrubStartTimeMs
-                    scrubTargetTimeMs = newTarget
+                    chrome.scrubDeltaMs = newTarget - chrome.scrubStartTimeMs
+                    chrome.scrubTargetTimeMs = newTarget
                 },
                 onScrubCommit = {
-                    seekPlayer(scrubTargetTimeMs)
+                    seekPlayer(chrome.scrubTargetTimeMs)
                 },
                 onBrightnessDelta = { delta ->
                     val newBrightness = (currentBrightness + delta).coerceIn(0.02f, 1.0f)
@@ -1847,7 +1826,7 @@ private fun VideoPlayerModalContent(
                     activity?.window?.attributes = activity?.window?.attributes?.apply {
                         screenBrightness = newBrightness
                     }
-                    isBrightnessHUDVisible = true
+                    chrome.isBrightnessHUDVisible = true
                 },
                 onVolumeDelta = { delta ->
                     if (!volumeAccumulator.active) {
@@ -1865,22 +1844,22 @@ private fun VideoPlayerModalContent(
                         boostLevel = b
                         dev.asfakul.yumeiro.player.VolumeBoost.set(exoPlayer.audioSessionId, b)
                     }
-                    isVolumeHUDVisible = true
+                    chrome.isVolumeHUDVisible = true
                 },
                 onGestureEnd = {
                     volumeAccumulator.end()
                     coroutineScope.launch {
                         delay(900L)
-                        isBrightnessHUDVisible = false
-                        isVolumeHUDVisible = false
-                        isScrubHUDVisible = false
+                        chrome.isBrightnessHUDVisible = false
+                        chrome.isVolumeHUDVisible = false
+                        chrome.isScrubHUDVisible = false
                     }
                 },
                 onLockedTap = {
-                    isLockedUnlockPillVisible = true
+                    chrome.isLockedUnlockPillVisible = true
                     coroutineScope.launch {
                         delay(3000L)
-                        isLockedUnlockPillVisible = false
+                        chrome.isLockedUnlockPillVisible = false
                     }
                 }
             )
@@ -1906,7 +1885,7 @@ private fun VideoPlayerModalContent(
         // Pinch-to-zoom: live percentage while pinching, and a reset pill while zoomed.
         if (!hideChrome && !docked) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = zoomHintVisible,
+                visible = chrome.zoomHintVisible,
                 enter = fadeIn(), exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
             ) {
@@ -1918,7 +1897,7 @@ private fun VideoPlayerModalContent(
                 )
             }
             androidx.compose.animation.AnimatedVisibility(
-                visible = videoZoom.zoomed && isControlsVisible && !isScreenLocked && !zoomHintVisible,
+                visible = videoZoom.zoomed && isControlsVisible && !isScreenLocked && !chrome.zoomHintVisible,
                 enter = fadeIn(), exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
             ) {
@@ -1946,7 +1925,7 @@ private fun VideoPlayerModalContent(
         // On-screen HUD Overlays
         BrightnessHUD(
             brightness = currentBrightness,
-            isVisible = isBrightnessHUDVisible,
+            isVisible = chrome.isBrightnessHUDVisible,
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(start = 20.dp, top = 28.dp, bottom = 28.dp)
@@ -1957,7 +1936,7 @@ private fun VideoPlayerModalContent(
         VolumeHUD(
             volumeLevel = currentVolumeLevel,
             maxVolume = maxVolume,
-            isVisible = isVolumeHUDVisible,
+            isVisible = chrome.isVolumeHUDVisible,
             boost = if (currentVolumeLevel >= maxVolume) boostLevel else 0f,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -1967,16 +1946,16 @@ private fun VideoPlayerModalContent(
         )
 
         ScrubSeekHUD(
-            targetTimeMs = scrubTargetTimeMs,
+            targetTimeMs = chrome.scrubTargetTimeMs,
             durationMs = durationMs,
-            deltaMs = scrubDeltaMs,
-            isVisible = isScrubHUDVisible,
+            deltaMs = chrome.scrubDeltaMs,
+            isVisible = chrome.isScrubHUDVisible,
             modifier = Modifier.align(Alignment.Center)
         )
 
         DoubleTapFeedback(
             isForward = false,
-            isVisible = isDoubleTapRewindVisible,
+            isVisible = chrome.isDoubleTapRewindVisible,
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(start = 64.dp)
@@ -1984,7 +1963,7 @@ private fun VideoPlayerModalContent(
 
         DoubleTapFeedback(
             isForward = true,
-            isVisible = isDoubleTapForwardVisible,
+            isVisible = chrome.isDoubleTapForwardVisible,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 64.dp)
@@ -1992,8 +1971,8 @@ private fun VideoPlayerModalContent(
 
         // App-wide rule: messages sit at the bottom, never the top. Lifted above the seek bar.
         ToastHUD(
-            message = toastMessage,
-            isVisible = isToastVisible,
+            message = chrome.toastMessage,
+            isVisible = chrome.isToastVisible,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
@@ -2002,10 +1981,10 @@ private fun VideoPlayerModalContent(
 
         // Locked Unlock Button
         LockedFloatingUnlockButton(
-            isVisible = isScreenLocked && isLockedUnlockPillVisible,
+            isVisible = isScreenLocked && chrome.isLockedUnlockPillVisible,
             onUnlock = {
                 isScreenLocked = false
-                isLockedUnlockPillVisible = false
+                chrome.isLockedUnlockPillVisible = false
                 isControlsVisible = true
                 showToast("Screen unlocked")
             },
@@ -2040,9 +2019,9 @@ private fun VideoPlayerModalContent(
                     currentSpeed = currentSpeed,
                     isPipSupported = isPipSupported && autoPipEnabled,
                     onBackClick = onClose,
-                    onAudioTrackClick = { showAudioTrackDialog = true },
-                    onSubtitleClick = { showSubtitleDialog = true },
-                    onSpeedClick = { showSpeedDialog = true },
+                    onAudioTrackClick = { chrome.showAudioTrackDialog = true },
+                    onSubtitleClick = { chrome.showSubtitleDialog = true },
+                    onSpeedClick = { chrome.showSpeedDialog = true },
                     onSpeedLongClick = {
                         val next = dev.asfakul.yumeiro.player.HoldSpeed.toggle(currentSpeed)
                         currentSpeed = next
@@ -2052,7 +2031,7 @@ private fun VideoPlayerModalContent(
                     },
                     captionsOn = !isSubtitlesDisabled,
                     onCaptionsToggle = { setCaptionsEnabled(isSubtitlesDisabled) },
-                    onAspectRatioClick = { showAspectRatioDialog = true },
+                    onAspectRatioClick = { chrome.showAspectRatioDialog = true },
                     onPipClick = {
                         isControlsVisible = false
                         val w = activeVideoFormat?.width?.takeIf { it > 0 } ?: video.width
@@ -2061,7 +2040,7 @@ private fun VideoPlayerModalContent(
                         val ok = activity?.let { PipController.enter(it, w, h, isPlaying) } == true
                         if (!ok) dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "Picture-in-picture isn't available right now")
                     },
-                    onInfoClick = { showVideoInfoDialog = true },
+                    onInfoClick = { chrome.showVideoInfoDialog = true },
                     // Round 13: every video has a quality button (tracks, engine-built or the one it has).
                     qualityLabel = run {
                         val h = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } }
@@ -2072,20 +2051,20 @@ private fun VideoPlayerModalContent(
                             else -> null
                         }
                     },
-                    onQualityClick = { showQualityDialog = true },
+                    onQualityClick = { chrome.showQualityDialog = true },
                     onLockClick = {
                         isScreenLocked = true
                         isControlsVisible = false
-                        isLockedUnlockPillVisible = true
+                        chrome.isLockedUnlockPillVisible = true
                         coroutineScope.launch {
                             delay(3000L)
-                            isLockedUnlockPillVisible = false
+                            chrome.isLockedUnlockPillVisible = false
                         }
                     },
                     modifier = Modifier.align(Alignment.TopCenter),
                     compact = docked,
                     sleepLabel = sleepLabel,
-                    onSleepTimerClick = { showSleepSheet = true },
+                    onSleepTimerClick = { chrome.showSleepSheet = true },
                 )
 
                 // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
@@ -2241,7 +2220,7 @@ private fun VideoPlayerModalContent(
         // Round 9: the pickers follow the user's theme (light or dark) instead of a fixed dark
         // sheet, so the player's popups match the rest of the app.
         dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
-        if (showQualityDialog && qualityList.size <= 1) {
+        if (chrome.showQualityDialog && qualityList.size <= 1) {
             val h = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } }
             val only = h?.let { listOf(QualityOption(dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(it)), -1, -1, it, activeVideoFormat?.bitrate ?: 0, note = "The quality this stream has")) }.orEmpty()
             QualityDialog(
@@ -2265,10 +2244,10 @@ private fun VideoPlayerModalContent(
                     }
                     switchToAlt(alt, pos)
                 },
-                onDismiss = { showQualityDialog = false },
+                onDismiss = { chrome.showQualityDialog = false },
             )
         }
-        if (showQualityDialog && qualityList.size > 1) {
+        if (chrome.showQualityDialog && qualityList.size > 1) {
             // R15: the stream's ladder + the downloader's / other sources' heights it lacks, so the
             // list matches the download sheet (Video, YouTube and Yumix alike).
             val extras = dev.asfakul.yumeiro.player.QualityEngine.extraHeights(qualityList.filter { it.playable }.map { it.height }, altQualities.mapNotNull { it.alt })
@@ -2292,12 +2271,12 @@ private fun VideoPlayerModalContent(
                     selectedQuality = if (group != null) option else null
                     showToast("Quality: ${selectedQuality?.label ?: "Auto"}")
                 },
-                onDismiss = { showQualityDialog = false },
+                onDismiss = { chrome.showQualityDialog = false },
             )
         }
 
         // Dialogs & Modals
-        if (showSleepSheet) {
+        if (chrome.showSleepSheet) {
             val t = dev.asfakul.yumeiro.player.VideoSleepTimer.timer
             dev.asfakul.yumeiro.ui.screens.player.SleepTimerSheet(
                 state = sleepState,
@@ -2305,13 +2284,13 @@ private fun VideoPlayerModalContent(
                 onEndOfTrack = t::endOfTrack,
                 onExtend = t::extend,
                 onCancel = t::cancel,
-                onDismiss = { showSleepSheet = false },
+                onDismiss = { chrome.showSleepSheet = false },
                 subject = "Video",
                 endLabel = "End of this video",
                 endIcon = androidx.compose.material.icons.Icons.Default.Movie,
             )
         }
-        if (showSpeedDialog) {
+        if (chrome.showSpeedDialog) {
             PlaybackSpeedDialog(
                 currentSpeed = currentSpeed,
                 onSpeedSelect = { speed ->
@@ -2319,11 +2298,11 @@ private fun VideoPlayerModalContent(
                     exoPlayer.playbackParameters = PlaybackParameters(speed)
                     showToast("Speed: ${speed}x")
                 },
-                onDismiss = { showSpeedDialog = false }
+                onDismiss = { chrome.showSpeedDialog = false }
             )
         }
 
-        if (showAspectRatioDialog) {
+        if (chrome.showAspectRatioDialog) {
             AspectRatioDialog(
                 currentResizeMode = resizeMode,
                 onResizeModeSelect = { mode, label ->
@@ -2331,19 +2310,19 @@ private fun VideoPlayerModalContent(
                     videoZoom = dev.asfakul.yumeiro.player.VideoZoom.State()
                     showToast("Aspect: $label")
                 },
-                onDismiss = { showAspectRatioDialog = false }
+                onDismiss = { chrome.showAspectRatioDialog = false }
             )
         }
 
-        if (showAudioTrackDialog) {
+        if (chrome.showAudioTrackDialog) {
             AudioTrackDialog(
                 audioTracks = audioTracksList,
                 onSelectTrack = { groupIndex, trackIndex -> switchAudio(groupIndex, trackIndex) },
-                onDismiss = { showAudioTrackDialog = false }
+                onDismiss = { chrome.showAudioTrackDialog = false }
             )
         }
 
-        if (showSubtitleDialog) {
+        if (chrome.showSubtitleDialog) {
             SubtitleOptionsDialog(
                 subtitleTracks = subtitleTracksList,
                 isSubtitlesDisabled = isSubtitlesDisabled,
@@ -2355,8 +2334,8 @@ private fun VideoPlayerModalContent(
                     )
                 },
                 onSearchOnline = {
-                    showSubtitleDialog = false
-                    showOnlineSubtitleDialog = true
+                    chrome.showSubtitleDialog = false
+                    chrome.showOnlineSubtitleDialog = true
                 },
                 onSelectInternalTrack = { groupIndex, trackIndex ->
                     isSubtitlesDisabled = false
@@ -2392,34 +2371,34 @@ private fun VideoPlayerModalContent(
                     applySubtitleDelay(newDelayMs)
                     showToast("Subtitle delay: ${if (newDelayMs >= 0) "+$newDelayMs" else "$newDelayMs"} ms")
                 },
-                onOpenStyle = { showSubtitleDialog = false; showSubtitleStyleDialog = true },
-                onDismiss = { showSubtitleDialog = false }
+                onOpenStyle = { chrome.showSubtitleDialog = false; chrome.showSubtitleStyleDialog = true },
+                onDismiss = { chrome.showSubtitleDialog = false }
             )
         }
 
-        if (showSubtitleStyleDialog) {
-            SubtitleStyleDialog(onDismiss = { showSubtitleStyleDialog = false })
+        if (chrome.showSubtitleStyleDialog) {
+            SubtitleStyleDialog(onDismiss = { chrome.showSubtitleStyleDialog = false })
         }
 
-        if (showOnlineSubtitleDialog) {
+        if (chrome.showOnlineSubtitleDialog) {
             OnlineSubtitleDialog(
                 videoTitle = video.title,
                 videoUri = video.uri,
                 onLoaded = { sub ->
-                    showOnlineSubtitleDialog = false
+                    chrome.showOnlineSubtitleDialog = false
                     addExternalSubtitle(sub.uri, sub.mimeType, sub.language, sub.label)
                     showToast("Subtitle loaded: ${sub.label}")
                 },
-                onDismiss = { showOnlineSubtitleDialog = false }
+                onDismiss = { chrome.showOnlineSubtitleDialog = false }
             )
         }
 
-        if (showVideoInfoDialog) {
+        if (chrome.showVideoInfoDialog) {
             VideoInfoDialog(
                 video = video,
                 videoFormat = activeVideoFormat,
                 audioFormat = activeAudioFormat,
-                onDismiss = { showVideoInfoDialog = false },
+                onDismiss = { chrome.showVideoInfoDialog = false },
                 health = if (isNetworkStream) ({ healthMonitor.snapshot() }) else null,
                 dnsSource = { host ->
                     when (SmartDns.lastSourceFor(host)) {
@@ -2553,4 +2532,32 @@ internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, heigh
             player.trackSelectionParameters = p
         }
     }
+}
+
+/** DEX-REG-1: chrome / HUD / dialog flags of the video player, one remembered object (same snapshot state as before). */
+internal class PlayerChromeState {
+    var showSpeedDialog by mutableStateOf(false)
+    var showAspectRatioDialog by mutableStateOf(false)
+    var showAudioTrackDialog by mutableStateOf(false)
+    var showSubtitleDialog by mutableStateOf(false)
+    var showVideoInfoDialog by mutableStateOf(false)
+    var showSubtitleStyleDialog by mutableStateOf(false)
+    var showOnlineSubtitleDialog by mutableStateOf(false)
+    var showQualityDialog by mutableStateOf(false)
+    var showSleepSheet by mutableStateOf(false)
+    var isScrubHUDVisible by mutableStateOf(false)
+    var scrubTargetTimeMs by mutableLongStateOf(0L)
+    var scrubDeltaMs by mutableLongStateOf(0L)
+    var scrubStartTimeMs by mutableLongStateOf(0L)
+    var isDoubleTapRewindVisible by mutableStateOf(false)
+    var isDoubleTapForwardVisible by mutableStateOf(false)
+    var doubleTapHideJob by mutableStateOf<kotlinx.coroutines.Job?>(null)
+    var toastMessage by mutableStateOf("")
+    var isToastVisible by mutableStateOf(false)
+    var toastJob by mutableStateOf<kotlinx.coroutines.Job?>(null)
+    var isBrightnessHUDVisible by mutableStateOf(false)
+    var isVolumeHUDVisible by mutableStateOf(false)
+    var zoomHintVisible by mutableStateOf(false)
+    var zoomHintJob by mutableStateOf<kotlinx.coroutines.Job?>(null)
+    var isLockedUnlockPillVisible by mutableStateOf(false)
 }
