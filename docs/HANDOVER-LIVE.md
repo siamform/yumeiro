@@ -6,18 +6,20 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 ~20:30 +0600, branch `r15-stability`, code head 385e293a. RELEASE AUDIT, owner order 3 ("stop the CI per
-fix; fix all by groups; CI once; remove debug code; final CI; release"). The owner authorized the release.
+2026-11-22 ~21:20 +0600, branch `r15-stability`, code head 39ca1e6b. RELEASE AUDIT,
+owner order 3 ("fix all by groups; CI once; remove debug code; final CI; release"). The owner authorized the release.
 Groups done: bc768506 OWN-1/OWN-6, 4c64bf4e OWN-8, 9704ae29 OWN-3, b44d5237 OWN-10, 8d0e7cda debug logs removed,
-7719e54e OWN-9 (Yumeiro Classics), 385e293a OWN-9 section moved after the installed list (keeps the empty state on
-the first screen). CI 45032539983 on 7719e54e cancelled (logged in CANCELLED-RUNS).
+7719e54e + 385e293a OWN-9 (Yumeiro Classics). CI history: 45032539983 cancelled (head replaced, logged);
+45032831510 Blocked (Maven 404 libtorrent4j / errorprone, build failed in 21 s); 45033016908 Fail: 5 tests
+(Own12 x2: OK key off Robolectric's small screen; Own9: %20 vs +; OnlinePagesTest: Classics on by default;
+AppNavigationCrashTest: NavGuard dropped Downloads -> system Back -> Downloads = real bug, fixed).
 
 ## Pending runs
-- Batch CI: ci.yml review_apk=true 45032831510 on 385e293a. If it fails: fix, push, rerun once.
-- Device: device-check phones default 45032861815 on 385e293a (parallel, extra coverage).
+- CI ci.yml review_apk=true 45035791400 on the fix head. If it fails: fix, push, rerun once.
+- Device: device-check phones default 45032861815 on 385e293a (parallel coverage; the fix after it is NavGuard + tests).
 
 ## Next step
-1. Record 45032831510 + 45032861815. Green -> CHANGELOG-FULL, kit zip + PDF, audit §10/§11, delete ab/* branches.
+1. Record both. Green -> CHANGELOG-FULL, kit zip + PDF, audit §5/§10/§11, ledger, delete ab/* branches.
 2. PR r15-stability -> main (docs/evidence/final/PR-2.1.0.md), merge commit; watch release.yml; check the APK sha256.
 3. Owner message: fixed list, run IDs, OMT-83..92, release link.
 
