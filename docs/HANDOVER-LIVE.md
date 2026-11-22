@@ -16,7 +16,10 @@ in-app web pages are not caught), not fixed in 2.1.0. F-09-FEED pass-after Pass 
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
 - r15 CI 44997677870 @bdcbd8e1: Build, test & lint Pass; Review APK FAILED the dex register budget (225 > 224) = DEX-REG-1, fixed in the next commit; new r15 CI review_apk=true = pass-after for DEX-REG-1 + DL-ONE and the preview APK.
-  That run is 45002048828 @DEX-REG-1 commit: download artifact yumeiro-review-apk, sha256, share = preview APK.
+  That run is 45002048828 @657cc01f: SUCCESS (DL-ONE + DEX-REG-1 pass-after). Preview APK shared to the owner:
+  yumeiro-2.0.0-657cc01-review.apk sha256 b1f25b71a3564bca927162ebb828d157d30fd2119ae28e75c84cafd72f227933;
+  TV yumeiro-tv-2.0.0-657cc01-review.apk sha256 74549d95c034ee6d2771ead294c1189405d1c9b9b4ff0865f6ba7c3a17191eea.
+  Next: owner soft test, then on his go: PR r15-stability -> main, merge, release 2.1.0.
 - Fail-before DL-ONE: ab/dlone-before 45001258208 VALID (only the 5 YtOneSheetTest cases failed); branch + worktree deleted.
 - ST-17 stress 44998769417 (StabilityStressDeviceTest repeat 10, lowram @baa8c855): record.
 - Open: TV-FP-1 Fail (OMT-78), B31-FRAME Blocked emulator (OMT-79), owner items SEC-1, UPG-1.

@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 14:12 +06): read docs/RELEASE-DAY-PLAN.md, then docs/HANDOVER-LIVE.md. DL-ONE pushed; preview APK from 44997677870 next; E1/E2 plan docs/E1-E2-YUMEIRO-HUB-AND-LIVE.md (2.2.0).
+Resume here (2026-11-22 15:06 +06): preview APK 45002048828 @657cc01f shared; waiting for the owner's soft test and go (PR, merge, release). Read docs/RELEASE-DAY-PLAN.md, then docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

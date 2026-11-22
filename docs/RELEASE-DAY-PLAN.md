@@ -59,10 +59,11 @@ the sandbox. Read this file, then `docs/HANDOVER-LIVE.md`, then `docs/AGENT-STAR
       `SOCIAL-CAPTIONS.md` (captions for each network).
 
 ### D. Soft-test APK
-- [ ] Build the phone APK in CI from `r15-stability` (review APK job, signed, not published), download it, share it in
+- [x] (15:06, 45002048828 @657cc01f) Build the phone APK in CI from `r15-stability` (review APK job, signed, not published), download it, share it in
       the chat. The owner installs it, tests, then decides: approve PR / merge / release, or continue.
 
 ## Progress log (newest first; one line per finished step)
+- 2026-11-22 15:06: D done: preview APK from r15 CI 45002048828 @657cc01f (all jobs green) shared to the owner; DL-ONE and DEX-REG-1 pass-after Pass.
 - 2026-11-22 14:20: rule 7 (queue first) added. DEX-REG-1 (preview APK build failed the 224-register check) fixed as a blocker of queued item D; DL-WEB only queued.
 - 2026-11-22 14:12: DL-ONE (one download popup, YouTube too) pushed, fail-before 45001258208; E1/E2 all-in-one plan written; F-09-FEED pass-after Pass 44997677870.
 - 12:07: runs for 31ea68be: r15 CI 44992235866, device Sky/Vega/Nuvio 44992237525, gate trio lowram 44992239107.
