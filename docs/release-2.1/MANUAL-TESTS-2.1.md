@@ -53,6 +53,10 @@ Full step lists for older tests: docs/OWNER-MANUAL-TESTS.md (same IDs).
 | OMT-80 | DL-ONE: the same download popup everywhere | |
 | OMT-81 | DL-WEB: a file link inside a website opens the download popup | |
 | OMT-82 | ST-17-BACK: one Back leaves a vertical video | |
+| OMT-83 | OWN-2 / OWN-7: fresh install, skip the tour, online works; Cloudflare DNS by default | |
+| OMT-84 | OWN-10: TeraBox link signed in plays; a human check opens the TeraBox page | |
+| OMT-85 | OWN-1: screen recording of a page that closes by itself (My List / Reading / Yumix -> player) | |
+| OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the Extension market box, script sources on Extensions | |
 | OMT-9 | Usability feedback | |
 
 ## 1. Install and first start (everyone)
@@ -450,3 +454,39 @@ Passes if the first picture shows within 15 s and the picture plays again within
 2. Press Back once: the normal player layout comes back (the video keeps playing).
 3. Press Back again: you leave the player as usual. Back never does nothing.
 4. Repeat after swiping up to the next episode a few times.
+
+### OMT-83 — Online works after skipping the tour; Cloudflare DNS by default (OWN-2, OWN-7)
+
+1. Uninstall Yumeiro (or clear its data). Install the review APK. On the welcome screen tap "Skip for now".
+2. Add one extension or repository (Extensions -> Add repository), open Yumix and Search: rows and results load.
+3. Settings -> Network -> DNS shows Cloudflare (DNS over HTTPS), mode Always.
+4. Repeat on your home Wi-Fi and on mobile data. Also update over 2.0.0 (install the APK over it): your old DNS
+   choice stays as it was. If you never picked one in 2.0.0, it now shows Cloudflare.
+5. A Jellyfin / Plex / SMB server on your Wi-Fi with a .local or one-word name still connects.
+
+Passes if online works without the tour on both networks. If it still fails: Settings -> About -> Send feedback,
+and say which network.
+
+### OMT-84 — TeraBox (OWN-10)
+
+1. Sign in to TeraBox in Yumeiro (the TeraBox sign-in page opens from a TeraBox link).
+2. Paste a TeraBox share link (Telegram post or Sources -> Add anything): the full file plays.
+3. If TeraBox asks for a human check, Yumeiro opens the TeraBox page in its browser: do the check there, then
+   come back; the link plays.
+4. DiskWala: the link opens the DiskWala app (its website itself does not play files).
+
+### OMT-85 — Page closes by itself (OWN-1)
+
+Not fixed in 2.1.0 (not reproduced). When it happens, record the screen (Android quick settings -> Screen record)
+and send the clip: which page, what you tapped, how fast. That decides the fix for 2.1.1.
+
+### OMT-86 — Download choices, Vega link, script sources (OWN-8, OWN-4, OWN-5)
+
+1. Player -> Download on a website / HLS stream: the popup lists the real qualities, audio tracks and subtitles.
+2. A title with Sub and Dub -> download icon on the episodes: pick Sub or Dub in the sheet, quality "up to", and
+   subtitles None or "Save all the source has"; the files land with the picked version.
+3. Extension market -> Add repository: paste a Vega providers link, a SkyStream repo link, or a Stremio manifest
+   link: it is added (before 2.1.0 this box only took CloudStream repositories).
+4. Extensions page: a card "Vega sources: N installed" (or Nuvio / SkyStream) lists them; Manage opens Sources ->
+   Script repos.
+

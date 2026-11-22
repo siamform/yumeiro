@@ -131,6 +131,10 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-80 | DL-ONE: the same download popup everywhere | Owner test (pending) |
 | OMT-81 | DL-WEB: a file link inside a website opens the download popup | Owner test (pending) |
 | OMT-82 | ST-17-BACK: one Back leaves a vertical video | Owner test (pending) |
+| OMT-83 | OWN-2 / OWN-7: fresh install, skip the tour, online works; Cloudflare DNS by default | Owner test (pending) |
+| OMT-84 | OWN-10: TeraBox signed-in playback; human check opens the TeraBox page | Owner test (pending, needs a TeraBox account) |
+| OMT-85 | OWN-1: screen recording of a page that closes by itself | Owner evidence (pending; fix in 2.1.1) |
+| OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the market box, script sources card | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).

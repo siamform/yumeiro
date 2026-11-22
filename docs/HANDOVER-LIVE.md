@@ -19,13 +19,14 @@ Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (
 - Fail-befores (each must fail ONLY in its new test; then delete the branch): 45027077707 ab/own7-before (redo),
   45025907314 ab/own4-before, 45025909528 ab/own10-before, 45027534810 ab/own5-before (redo). First own7 / own5
   runs invalid: the OWN-7 test did not compile (AUD-T7-1, fixed aa590039).
-- r15 pass-after CI review_apk=true on the release-prep head: see the audit doc run table (45027577900 cancelled, logged).
+- r15 pass-after CI review_apk=true 45027652884 on 51c507ba (release prep f90b4999: 2.1.0 / 19, What's new 2.1.x). 45027577900 cancelled (logged).
+- Device on 51c507ba: phones default suite 45027685406, tv-api24 default 45027687692. Still to dispatch: tv-api34, gate trio, stress repeat 10 lowram, upgrade-check (v2.0.0, v1.9.0, v1.8.x).
   Wait with `gh run watch <id> --interval 120`.
 
 ## Next step
 1. Record the fail-befores + baseline; delete each ab/own*-before branch after it is recorded (local + origin).
 2. Dispatch r15 CI review_apk=true (pass-after for all OWN fixes), then device suites, gate trio, stress, upgrade-check.
-3. Queue OWN-1, OWN-6, OWN-3, OWN-8 (owner test), OWN-9 with reasons; finish W3/W4/W5/W8 in the audit doc.
+3. Queued in UNVERIFIED-QUEUE (Q-OWN-*), MAJOR Queue row, OMT-83..86 added. Finish W5/W8/Not checked/GO in the audit doc.
    Never merge / release / deploy without the owner's go.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)

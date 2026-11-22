@@ -181,3 +181,16 @@ Each is described step by step in `docs/OWNER-MANUAL-TESTS.md`.
 | L5 | Final sweep | stability-v2 deep | Queued |
 
 Count: 27 agent findings/gaps (NB15-OB2 resolved, kept for the record; ER-28-TV34 and TV-A11Y-1 added 2026-11-19) + 18 earlier items (NBUG-8 fixed in unit, OMT-34 pending) + 34 owner tests + 19 features + 2 release-scope = 100 rows.
+
+## 2.1.0 release audit (2026-11-22): queued to 2.1.1 (owner rule 7, code freeze)
+
+| ID | What | Why not in 2.1.0 | Next step | Status |
+|---|---|---|---|---|
+| Q-OWN-1 | Page transitions: a page closes by itself (My List / Reading / Yumix -> details -> player) | Not reproduced; two likely causes (double Back during the 340 ms push, `popSub` MTPlayerApp.kt:254; reusable-route pop in `navigateSub` MTPlayerApp.kt:245-253). A pop guard could drop pops the app makes itself | Owner screen recording (OMT-85), then a device test that reproduces it, fail-before, fix | Queued 2.1.1 |
+| Q-OWN-6 | Yumix -> details -> player slow | `OnlineSession.open` (OnlineSession.kt:107-124) waits for the extension's full load before showing the page; changing it touches every extension's open path | SpeedDeviceTest "tap -> details first frame" number first, then open the page shell at once | Queued 2.1.1 |
+| Q-OWN-3 | Telegram sign-in with the user's own API ID / API hash (like Hikari) | New feature; sign-in (flag f02_telegram_login) is off and Blocked in CI (no test accounts) | Owner decision; OMT-63 on a real phone | Queued 2.1.1 (owner decision) |
+| Q-OWN-8 | Pick one subtitle language for an episode batch (today: None or all) | New feature | Design with the download popup | Queued 2.1.1 |
+| Q-OWN-9 | Official Yumeiro extension (E1 Yumeiro Hub) | Not built (2.2.0 plan, docs/E1-E2-YUMEIRO-HUB-AND-LIVE.md) | E1 on the owner's go | Queued 2.2.0 |
+| Q-AUD-FLAKE-1 | ScrobbleFlushMockedTest stray request (baseline 45024851633) | Test isolation, not a product bug | Count only track.scrobble requests in the mock; prove with repeat | Queued 2.1.1 |
+| Q-AUD-AB-1 | 8 old ab/*-before branches on origin | Deleting is not reversible | Delete after the owner's go | Queued (owner go) |
+
