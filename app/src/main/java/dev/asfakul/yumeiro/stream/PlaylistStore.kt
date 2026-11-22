@@ -54,6 +54,8 @@ data class StreamPlaylist(
     val autoUpdate: Boolean = true,
     /** GitHub repository the playlist comes from ("owner/name"). */
     val repo: String? = null,
+    /** E2-ALL-C: when the mirror last checked every stream of this list (index.json "checked"); 0 = unknown. */
+    val checked: Long = 0L,
 ) {
     val isLocal: Boolean get() = url == null
     val isMarket: Boolean get() = marketId != null
@@ -64,6 +66,7 @@ data class StreamPlaylist(
         put("default", isDefault); put("enabled", enabled); put("count", channelCount); put("updated", lastUpdated)
         lastError?.let { put("error", it) }; put("edited", userEdited)
         marketId?.let { put("market", it) }; marketSha?.let { put("marketSha", it) }; put("auto", autoUpdate); repo?.let { put("repo", it) }
+        if (checked > 0) put("checked", checked)
     }
 
     companion object {
@@ -84,6 +87,7 @@ data class StreamPlaylist(
             marketSha = o.optString("marketSha").ifBlank { null },
             autoUpdate = o.optBoolean("auto", true),
             repo = o.optString("repo").ifBlank { null },
+            checked = o.optLong("checked"),
         )
     }
 }
@@ -433,6 +437,10 @@ object PlaylistStore {
 
     // region Sync
 
+    /** index.json "checked" (ISO time) -> epoch ms; 0 when missing or not a time. */
+    internal fun checkedAt(s: String?): Long =
+        runCatching { java.time.Instant.parse(s!!.trim()).toEpochMilli() }.getOrDefault(0L)
+
     data class SyncResult(val updated: Int, val failed: Int, val added: Int)
 
     /**
@@ -455,12 +463,13 @@ object PlaylistStore {
                 // Defaults may only point at the official mirror; the upstream fallback must be HTTPS.
                 val url = e.optString("url").trim().takeIf { TrustedSources.isOfficialCatalogUrl(it) } ?: continue
                 val source = e.optString("source").trim().takeIf { it.startsWith("https://") }
+                val checked = checkedAt(e.optString("checked"))
                 val existing = get(id)
                 if (existing == null) {
                     _playlists.value = _playlists.value + StreamPlaylist(
                         id = id, name = e.optString("name").ifBlank { id }, url = url, fallbackUrl = source,
                         category = e.optString("category").ifBlank { null }, description = e.optString("description").ifBlank { null },
-                        isDefault = true, channelCount = e.optInt("channels"),
+                        isDefault = true, channelCount = e.optInt("channels"), checked = checked,
                     )
                     added++
                 } else if (existing.isDefault && !existing.userEdited) {
@@ -469,6 +478,7 @@ object PlaylistStore {
                             name = e.optString("name").ifBlank { it.name }, url = url, fallbackUrl = source ?: it.fallbackUrl,
                             category = e.optString("category").ifBlank { it.category },
                             description = e.optString("description").ifBlank { it.description },
+                            checked = checked.takeIf { c -> c > 0 } ?: it.checked,
                         )
                     }
                 }

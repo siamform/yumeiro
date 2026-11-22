@@ -36,3 +36,20 @@ and the live progress list. Every agent reads it first, then docs/HANDOVER-LIVE.
   firebase-adminsdk-fbsvc@yumeiro-ab29e.iam.gserviceaccount.com the role "Firebase Test Lab Admin". Not a blocker.
 - Trakt login needs TRAKT_CLIENT_SECRET (not given). Trakt sign-in stays as it is until then.
 - Real-phone tests listed in docs/OPEN-ITEMS-2.1.0.md (not blockers).
+
+## B9: still to build before any release (owner, 2026-11-23: "fix all bugs, all new features, then release")
+
+Release prep (B8) waits until every row here is Done or the owner moves it. The changelog and PR text written
+earlier are drafts only; nothing was merged or tagged.
+
+| Step | What | Status |
+|---|---|---|
+| B9-1 | E2-ALL-D: a Live channel that fails to play is reported once (count only) to the Worker; the next Yumeiro Live build checks it first | Not in 2.2.0: owner said skip (2026-11-22 22:46, no new production D1 table). Worker code removed, version 62bc0746 deployed without it |
+| B9-2 | E2-ALL-C rest: "checked N hours ago" line on Yumeiro Live; country picker check | Coded, run pending: Live TV card says "checked Nh ago" from index.json "checked" (StreamPlaylist.checked, test StreamPlaylistTest.checkedTimeFromTheIndexSurvivesJsonRoundTrip); "Defaults update daily". Country picker already there (Country filter) |
+| B9-3 | E2 curated per-country Live lists published and shown in the app | To do |
+| B9-4 | E1-C1: recipe engine + own legal recipes (Internet Archive first), so Hub titles can play with no source installed | To do |
+| B9-5 | E1-C2: signed recipe bundle pulled by the app (on the streams branch, no new repo) | To do |
+| B9-6 | Built-in torrent engine (b31_builtin_torrent) on, after its device checks | To do |
+| B9-7 | E3 smaller APKs per processor (yumeiro.abiSplits) on in release.yml | To do |
+| B9-8 | Every failure from CI 45044232383, device 45045030577, TV 45045033098 | Waiting on runs |
+| Owner only | Trakt client secret; Firebase Test Lab role (OMT-22); real-phone tests (OMT list) | Needs owner |

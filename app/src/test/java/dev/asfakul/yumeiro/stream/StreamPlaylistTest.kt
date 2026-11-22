@@ -168,6 +168,17 @@ class StreamPlaylistTest {
         assertTrue(StreamPlaylist.fromJson(org.json.JSONObject().put("id", "a").put("name", "A")).autoUpdate)
     }
 
+    /** E2-ALL-C: the mirror's "checked" time is kept, so the card can say "checked 3h ago". */
+    @Test fun checkedTimeFromTheIndexSurvivesJsonRoundTrip() {
+        val t = PlaylistStore.checkedAt("2026-11-22T16:23:55Z")
+        assertEquals(1795364635000L, t)
+        assertEquals(0L, PlaylistStore.checkedAt("yesterday"))
+        assertEquals(0L, PlaylistStore.checkedAt(null))
+        val p = StreamPlaylist(id = DefaultPlaylists.YUMEIRO_LIVE, name = "Yumeiro Live", url = "https://m/l.m3u", checked = t)
+        assertEquals(t, StreamPlaylist.fromJson(p.toJson()).checked)
+        assertEquals(0L, StreamPlaylist.fromJson(org.json.JSONObject().put("id", "a").put("name", "A")).checked)
+    }
+
     @Test fun localPlaylistCrudAndPersistence() = runBlocking {
         PlaylistStore.init(context)
         val p = PlaylistStore.createLocal(context, "Favourites")

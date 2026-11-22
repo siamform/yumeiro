@@ -152,7 +152,12 @@ internal fun PlaylistCard(
                 val count = if (playlist.channelCount > 0) "${playlist.channelCount} streams" else if (playlist.isLocal) "Empty" else "Tap to load"
                 val parts = listOfNotNull(
                     playlist.category, count,
-                    when { playlist.isLocal -> "on this device"; playlist.lastUpdated > 0 -> relativeTime(playlist.lastUpdated); else -> null },
+                    when {
+                        playlist.isLocal -> "on this device"
+                        playlist.checked > 0 -> "checked ${relativeTime(playlist.checked)}"
+                        playlist.lastUpdated > 0 -> relativeTime(playlist.lastUpdated)
+                        else -> null
+                    },
                 )
                 Text(parts.joinToString(" · "), color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 playlist.lastError?.takeIf { playlist.enabled }?.let {
@@ -208,7 +213,7 @@ internal fun PlaylistsHeader(
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Default updates every 3 days", color = TextTertiary, fontSize = 11.sp)
+                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Defaults update daily", color = TextTertiary, fontSize = 11.sp)
             }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, "More playlist actions", tint = TextSecondary) }
