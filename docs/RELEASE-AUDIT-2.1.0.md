@@ -66,7 +66,14 @@ open
 | 45028981973 | CI review_apk=true (pass-after OWN-11/12) | r15 dfa5e334 | 14:0x | **Blocked** (Maven: 46 Robolectric failures from MavenArtifactFetcher IOException; not code; gitleaks Pass) |
 | 45027687692 | device-check tv-api24 | r15 51c507ba | 13:4x | **Pass** |
 | 45027685406 | device-check phones | r15 51c507ba | 13:4x | cancelled on the owner's order ("stop this CI"); logged |
-| 45032539983 | CI review_apk=true, the one batch run (OWN-1/3/6/8/9/10 + debug logs removed) | r15 7719e54e | 15:xx | running |
+| 45032539983 | CI review_apk=true, the first batch run (OWN-1/3/6/8/9/10 + debug logs removed) | r15 7719e54e | 14:1x | cancelled (head replaced by 385e293a); logged |
+| 45032831510 | CI review_apk=true | r15 385e293a | 14:26 | **Blocked** (Maven 404: libtorrent4j 2.1.0-39, error_prone_annotations 2.30.0; build failed in 21 s) |
+| 45033016908 | CI review_apk=true (rerun) | r15 fc433b21 | 14:30 | **Fail**: 1865 unit tests, 5 failed: Own12PinGuardTest x2 (pad's OK key off Robolectric's 470 dp screen), Own9YumeiroClassicsTest (%20 vs +), OnlinePagesTest (Classics on by default), AppNavigationCrashTest.quickNavigationThenHomeDoesNotCrash (**real NavGuard bug**: same page after a system Back was dropped). Fixed 39ca1e6b |
+| 45032861815 | device-check phones default | r15 385e293a | 14:26 | **Fail**: HomeNavigationDeviceTest.h2 on api33-lowram (**real OWN-1 bug**: Back during the 450 ms title hand-off only hid the loading layer; fixed 8ff0e0d9); ExtensionsDeviceTest.e13 on api36 (precondition not met: 4 of 5 seeded drama-feed timeouts, external onshort.net; EXT-T1 test); DramaPlaybackDeviceTest on api36 (studios refused / timed out: external). CrashUiDeviceTest-a crashes on purpose |
+| 45035791400 | CI review_apk=true | r15 ada9cff6 | 15:0x | cancelled (8ff0e0d9 changes app code); logged |
+| 45037617014 | CI review_apk=true, final candidate | r15 8ff0e0d9 | 15:4x | running |
+| 45037619473 | device-check HomeNavigationDeviceTest (pass-after h2) | r15 8ff0e0d9 | 15:4x | running |
+| 45037636802 | device-check ExtensionsDeviceTest (e13 rerun) | r15 8ff0e0d9 | 15:4x | running |
 
 ## 6. Flags (W3)
 

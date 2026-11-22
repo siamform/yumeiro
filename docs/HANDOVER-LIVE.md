@@ -15,8 +15,9 @@ Groups done: bc768506 OWN-1/OWN-6, 4c64bf4e OWN-8, 9704ae29 OWN-3, b44d5237 OWN-
 AppNavigationCrashTest: NavGuard dropped Downloads -> system Back -> Downloads = real bug, fixed).
 
 ## Pending runs
-- CI ci.yml review_apk=true 45035791400 on the fix head. If it fails: fix, push, rerun once.
-- Device: device-check phones default 45032861815 on 385e293a (parallel coverage; the fix after it is NavGuard + tests).
+- CI ci.yml review_apk=true 45037617014 on 8ff0e0d9 (adds the OWN-1 hand-off Back fix found by device run 45032861815).
+- Device: HomeNavigationDeviceTest 45037619473, ExtensionsDeviceTest 45037636802 (both on 8ff0e0d9).
+- Full run list: docs/RELEASE-AUDIT-2.1.0.md §5.
 
 ## Next step
 1. Record both. Green -> CHANGELOG-FULL, kit zip + PDF, audit §5/§10/§11, ledger, delete ab/* branches.
