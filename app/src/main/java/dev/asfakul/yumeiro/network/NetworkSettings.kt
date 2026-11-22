@@ -118,7 +118,7 @@ object NetworkSettings {
         if (loaded) return
         val gen = generation
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val stored = DnsConfig(
+        val stored = if (!p.contains("dns_provider")) freshDefault(context) else DnsConfig(
             provider = enumOr(p.getString("dns_provider", null), DnsProvider.SYSTEM),
             transport = enumOr(p.getString("dns_transport", null), DnsTransport.DOH),
             mode = enumOr(p.getString("dns_mode", null), DnsMode.FALLBACK),
@@ -131,6 +131,19 @@ object NetworkSettings {
         SmartDns.restoreBypass(bypass)
         synchronized(writeLock) { if (!loaded && gen == generation) { _dns.value = stored; loaded = true } }
     }
+
+    /**
+     * OWN-7 / OWN-2: the settings used when the user never saved a DNS choice (fresh install, or an update from a
+     * version where they kept the default). Before, that was System DNS + auto bypass, and on networks whose DNS
+     * blocks or hijacks the sources' hosts in a way the bypass does not notice, online features failed until the
+     * user picked a resolver in Settings → Network (the setup guide's "Set up DNS" step). Now Cloudflare
+     * DNS-over-HTTPS answers, system DNS is the safety net when Cloudflare can't be reached, and LAN names still
+     * use system DNS. A saved choice (any [setDns]) is always kept. Kill switch: [FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS].
+     */
+    internal fun freshDefault(context: Context): DnsConfig =
+        if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS))
+            DnsConfig(provider = DnsProvider.CLOUDFLARE, transport = DnsTransport.DOH, mode = DnsMode.ALWAYS)
+        else DnsConfig()
 
     fun setDns(context: Context, config: DnsConfig) {
         synchronized(writeLock) { _dns.value = config; loaded = true }

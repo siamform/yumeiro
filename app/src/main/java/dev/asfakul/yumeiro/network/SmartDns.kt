@@ -71,6 +71,8 @@ object SmartDns : Dns {
             config.auto -> autoLookup(host)
             else -> systemLookup(host)
         }
+        // OWN-7: LAN names (media servers, routers) are unknown to public resolvers: system DNS answers them.
+        if (isLocalName(host)) return systemLookup(host)
         return when (config.mode) {
             DnsMode.ALWAYS -> try {
                 alternativeLookup(host, config)

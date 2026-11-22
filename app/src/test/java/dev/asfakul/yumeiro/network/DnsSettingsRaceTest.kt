@@ -80,6 +80,7 @@ class DnsSettingsRaceTest {
         val app = RuntimeEnvironment.getApplication()
         NetworkSettings.resetForTests()
         NetworkSettings.init(app)
-        assertEquals(DnsConfig(), NetworkSettings.dns.value)
+        // OWN-7: with nothing stored the fresh-install default applies (Cloudflare DoH; see Own7CloudflareDefaultTest).
+        assertEquals(NetworkSettings.freshDefault(app), NetworkSettings.dns.value)
     }
 }
