@@ -65,7 +65,7 @@ class Own7CloudflareDefaultTest {
 
     @Test fun publicNamesGoToCloudflareLanNamesAndOutagesToSystem() {
         val systemCalls = AtomicInteger(); val dohCalls = AtomicInteger()
-        val addr = InetAddress.getByAddress(byteArrayOf(93, 184, 216.toByte(), 34))
+        val addr = InetAddress.getByAddress(byteArrayOf(93, 184.toByte(), 216.toByte(), 34))
         SmartDns.system = Dns { systemCalls.incrementAndGet(); listOf(addr) }
         var dohUp = true
         SmartDns.alternativeOverride = { _, cfg ->
