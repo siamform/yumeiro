@@ -63,8 +63,20 @@ object FirstRun {
      * restore touch mode; tests of touch-only rules set it first.
      */
     fun touchMode() {
-        runCatching { androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().setInTouchMode(true) }
-        runCatching { androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync() }
+        val ins = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        runCatching { ins.setInTouchMode(true) }
+        // Device 45045030577 (api36 PL18): Compose keeps its own input mode, and an earlier key event left it on
+        // Keyboard while the window was already in touch mode, so Back was read as a remote. A finger down that is
+        // cancelled at once (no click) puts Compose in touch mode the way a real touch does.
+        runCatching {
+            val t = android.os.SystemClock.uptimeMillis()
+            for (action in intArrayOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_CANCEL)) {
+                val e = android.view.MotionEvent.obtain(t, android.os.SystemClock.uptimeMillis(), action, 2f, 2f, 0)
+                e.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+                ins.sendPointerSync(e); e.recycle()
+            }
+        }
+        runCatching { ins.waitForIdleSync() }
     }
 
     /** TV emulators have an Ethernet link (eth0) next to Wi-Fi; `svc wifi/data disable` can't take it

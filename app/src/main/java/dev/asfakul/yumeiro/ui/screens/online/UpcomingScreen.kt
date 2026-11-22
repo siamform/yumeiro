@@ -192,10 +192,11 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
             }
             days.isEmpty() && list.orEmpty().isNotEmpty() -> Text(if (query.isNotBlank()) "Nothing matches \"${query.trim()}\"." else "Nothing matches these filters.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_no_match"))
             days.isEmpty() -> Text("Nothing listed for the next two weeks.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_empty"))
-            else -> LazyColumn(Modifier.fillMaxSize().testTag("upcoming_list"), contentPadding = PaddingValues(bottom = 24.dp)) {
-                if (failed) item("offline") {
-                    Text("Offline — showing the last saved calendar.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("upcoming_stale"))
-                }
+            // Device 45045030577 (api33-lowram): the offline note was the list's first row, so after a scroll it sat
+            // off screen. It stays above the list now.
+            else -> Column(Modifier.fillMaxSize()) {
+                if (failed) Text("Offline — showing the last saved calendar.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("upcoming_stale"))
+                LazyColumn(Modifier.fillMaxSize().testTag("upcoming_list"), contentPadding = PaddingValues(bottom = 24.dp)) {
                 days.forEach { (day, entries) ->
                     item("h_$day") {
                         Text(if (sections) Upcoming.dayHeader(day, today, kind) else Upcoming.dayLabel(day, today), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp,
@@ -207,6 +208,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     Text(if (source != null) "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources." else "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
                         modifier = Modifier.padding(16.dp).navigationBarsPadding())
                 }
+            }
             }
         }
     }

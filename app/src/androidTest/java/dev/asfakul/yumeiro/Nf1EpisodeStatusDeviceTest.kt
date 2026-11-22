@@ -68,7 +68,10 @@ class Nf1EpisodeStatusDeviceTest {
         val rows = runBlocking { OnlineRepository.home(api!!, force = true) }
         var detail: OnlineDetail? = null
         val tried = ArrayList<String>()
-        for (item in rows.flatMap { it.items }.distinctBy { it.url }.take(8)) {
+        // E1 (2026-11-23): the one Yumeiro source now opens with the Hub catalog shelves (mostly films, whose
+        // episodes come from other sources), so the drama series are picked from the drama part's rows.
+        val catalog = "${dev.asfakul.yumeiro.sources.hub.YumeiroCatalog.PART}:"
+        for (item in rows.flatMap { it.items }.filterNot { catalog in it.url }.distinctBy { it.url }.take(8)) {
             val d = runCatching { runBlocking { OnlineRepository.load(api!!, item.url) } }.getOrNull()
             val n = d?.let { dd -> OnlineSession.labelledEpisodes(dd, OnlineSession.defaultVersion(dd.versions)).count { it.first.episode != null } } ?: -1
             tried += "${item.name}=$n"
