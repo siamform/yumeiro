@@ -96,11 +96,14 @@ import kotlinx.coroutines.launch
 
 /** Videos → Online → Extensions: installed extensions, their updates and the user's repositories. */
 @Composable
-fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources: () -> Unit = {}) {
+fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources: () -> Unit = {}, onOpenScriptRepos: () -> Unit = onOpenSources) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine by ExtensionManager.state.collectAsState()
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
+    // OWN-5: Vega / Nuvio / SkyStream script sources were only visible under Sources → Script repos.
+    val scripts by dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.state.collectAsState()
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.start(context.applicationContext) } }
 
     var available by remember { mutableStateOf<List<RemoteExtension>>(emptyList()) }
     var checking by remember { mutableStateOf(false) }
@@ -284,6 +287,25 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                                 Text("More sources", color = TextPrimary, fontWeight = FontWeight.SemiBold)
                                 Text("Aniyomi, Mihon manga, Stremio add-ons, JavaScript sources and home servers", color = TextTertiary, fontSize = 12.sp)
                             }
+                        }
+                    }
+                }
+                if (scripts.repos.isNotEmpty() || scripts.installed.isNotEmpty()) item("script_sources") {
+                    // OWN-5: installed script sources (Vega, Nuvio, SkyStream) with a direct Manage shortcut.
+                    val names = scripts.installed.map { it.name }
+                    val kinds = (scripts.installed.map { it.ecosystem.label } + scripts.repos.map { it.ecosystem.label }).distinct().joinToString(", ")
+                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_script_sources"),
+                        onClick = onOpenScriptRepos) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Extension, null, tint = SpotifyGreen)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("$kinds sources: ${names.size} installed", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(if (names.isEmpty()) "${scripts.repos.size} repositor${if (scripts.repos.size == 1) "y" else "ies"} added. Tap to install providers"
+                                    else names.take(4).joinToString(", ") + if (names.size > 4) " and ${names.size - 4} more" else "",
+                                    color = TextTertiary, fontSize = 12.sp, maxLines = 2)
+                            }
+                            Text("Manage", color = SpotifyGreen, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("extensions_script_manage"))
                         }
                     }
                 }

@@ -150,6 +150,10 @@ object EcosystemRegistry {
     @androidx.annotation.VisibleForTesting
     internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); otherState = State(); _problems.value = emptyMap() }
 
+    /** OWN-5 test hook: a loaded state without disk or network (start() then does nothing). */
+    @androidx.annotation.VisibleForTesting
+    internal fun setStateForTests(s: State) = synchronized(lock) { started = true; loaded = true; _state.value = s }
+
     // region repositories
 
     /** Reads [url] and returns what it is, without saving anything (Universal add uses this to route). */

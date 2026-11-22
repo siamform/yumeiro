@@ -1183,7 +1183,7 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.Extensions.route) {
                         OpaquePage {
-                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) }, onOpenSources = { navigateSub(Screen.SourcesHub.route()) })
+                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) }, onOpenSources = { navigateSub(Screen.SourcesHub.route()) }, onOpenScriptRepos = { navigateSub(Screen.SourcesHub.route(5)) })
                         }
                     }
                     page(subPad, Screen.ExtensionMarket.route) {
