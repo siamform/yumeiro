@@ -28,6 +28,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         if (dev.asfakul.yumeiro.backup.Restart.isRestartProcess(this)) return
         // Round 12: a staged restore / reset is applied before anything reads a setting or file.
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
+        // FF-LOAD: flags read without a context load the saved file (not the defaults); no disk read here.
+        FeatureFlags.attach(this)
         // G12 X11-2: the first network request loads the user's DNS settings (not the defaults).
         dev.asfakul.yumeiro.network.NetworkSettings.attach(this)
         // NBUG-13 (ADR-045): proxy settings load with the first request; WebView set-up only when it is on, at idle.

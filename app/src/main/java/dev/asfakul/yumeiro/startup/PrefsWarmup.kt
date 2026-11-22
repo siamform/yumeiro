@@ -53,6 +53,7 @@ object PrefsWarmup {
         "reliability_guide",      // ReliabilityGuide
         "reminders",              // Reminders
         "mt_network",             // NetworkSettings (G12 X11-2; Settings and the first request read it)
+        "feature_flags",          // FeatureFlags (FF-LOAD: isOn reads the saved file, first frame included)
     )
 
     fun start(context: Context) {
@@ -66,6 +67,8 @@ object PrefsWarmup {
             val all = FIRST_FRAME.mapNotNull { runCatching { app.getSharedPreferences(it, Context.MODE_PRIVATE) }.getOrNull() }
             // contains() waits for the load, so any parse cost lands here, not on the main thread.
             for (p in all) runCatching { p.contains("") }
+            // FF-LOAD: the flag map is built here so the first isOn on the main thread finds it ready.
+            runCatching { dev.asfakul.yumeiro.FeatureFlags.warm(app) }
             // The inbox JSON file is read when Home draws its bell badge.
             runCatching { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(app) }
             // FINAL-47: after an update, one Inbox note on where the new features are.

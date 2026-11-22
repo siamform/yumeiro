@@ -153,13 +153,34 @@ object FeatureFlags {
 
     @Volatile private var cache: Map<String, Boolean>? = null
 
+    /**
+     * FF-LOAD: the application context, kept so [isOn] can load the flag file itself. Before this, [isOn]
+     * returned the built-in default until some other code had called [on] with a context, so a flag
+     * switched off in feature_flags.xml could still run (48 [isOn] calls, among them all five GATE-1 fixes).
+     */
+    @Volatile private var app: Context? = null
+
+    /** Called first thing in MTApplication.onCreate: stores the context, reads nothing. */
+    fun attach(context: Context) {
+        app = context.applicationContext
+    }
+
+    /** Loads the flag file now (PrefsWarmup calls this on its background thread at start). */
+    fun warm(context: Context) {
+        if (cache == null) cache = load(context)
+    }
+
     fun on(context: Context, flag: Flag): Boolean {
         val c = cache ?: load(context).also { cache = it }
         return c[flag.key] ?: flag.default
     }
 
-    /** Without a context: the loaded value, or the default before anything read the flags. */
-    fun isOn(flag: Flag): Boolean = cache?.get(flag.key) ?: flag.default
+    /** Without a context: the saved value (loaded on first use once [attach] ran), else the default. */
+    fun isOn(flag: Flag): Boolean {
+        cache?.let { return it[flag.key] ?: flag.default }
+        val c = app ?: return flag.default
+        return on(c, flag)
+    }
 
     private fun load(context: Context): Map<String, Boolean> = runCatching {
         val p = context.applicationContext.getSharedPreferences("feature_flags", Context.MODE_PRIVATE)
