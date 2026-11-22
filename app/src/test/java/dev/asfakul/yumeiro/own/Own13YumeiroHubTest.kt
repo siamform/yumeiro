@@ -50,9 +50,9 @@ class Own13YumeiroHubTest {
         override val mainPage = listOf(MainPageData("$name shelf", "$key-shelf"))
         override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
             asked += "home:${request.data}"
-            return newHomePageResponse(request.name, hits.map { newMovieSearchResponse(it, it, TvType.Movie) })
+            return newHomePageResponse(request.name, hits.map { newMovieSearchResponse(it, it, TvType.Movie, fix = false) })
         }
-        override suspend fun search(query: String, page: Int): SearchResponseList = newSearchResponseList(hits.map { newMovieSearchResponse(it, it, TvType.Movie) }, false)
+        override suspend fun search(query: String, page: Int): SearchResponseList = newSearchResponseList(hits.map { newMovieSearchResponse(it, it, TvType.Movie, fix = false) }, false)
         override suspend fun load(url: String): LoadResponse { asked += "load:$url"; return newMovieLoadResponse(url, url, TvType.Movie, url) }
         override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean { asked += "links:$data"; return true }
     }

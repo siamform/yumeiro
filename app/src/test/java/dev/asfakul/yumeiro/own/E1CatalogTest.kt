@@ -118,7 +118,7 @@ class E1CatalogTest {
         val a = Src("Source A", mapOf("Parasite" to 2019, "Parasite 2" to 2030))
         val b = Src("Source B", mapOf("Parasite" to 1982)) // same name, other film: year too far
         val c = Src("Source C", mapOf("Okja" to 2017))
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(a, b, c) }, base = "")
+        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(a, b, c) }, base = "", builtins = { emptyList() })
         val links = mutableListOf<ExtractorLink>()
         assertTrue(p.loadLinks("catalog:movie:2", false, {}) { links += it })
         assertEquals(listOf("https://cdn.example/Parasite#play"), links.map { it.url })
@@ -130,7 +130,7 @@ class E1CatalogTest {
 
     @Test fun seriesEpisodesResolveBySeasonAndEpisode() = runBlocking {
         val a = Src("Source A", mapOf("S:Queen of Tears" to 2024))
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(a) }, base = "")
+        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(a) }, base = "", builtins = { emptyList() })
         val links = mutableListOf<ExtractorLink>()
         assertTrue(p.loadLinks("https://yumeiro.click/catalog:tv:1:1:5", false, {}) { links += it })
         assertEquals(listOf("https://cdn.example/Queen of Tears#1x5"), links.map { it.url })
@@ -139,7 +139,7 @@ class E1CatalogTest {
     @Test fun aSlowSourceDoesNotBlockTheOthersAndNoSourceMeansNoLinks() = runBlocking {
         val slow = Src("Slow", mapOf("Parasite" to 2019), slow = true)
         val a = Src("Source A", mapOf("Parasite" to 2019))
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(slow, a) }, base = "")
+        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(slow, a) }, base = "", builtins = { emptyList() })
         val links = mutableListOf<ExtractorLink>()
         val t = System.currentTimeMillis()
         assertTrue(p.loadLinks("catalog:movie:2", false, {}) { links += it })

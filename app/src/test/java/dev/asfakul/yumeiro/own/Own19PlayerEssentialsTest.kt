@@ -36,7 +36,7 @@ import org.robolectric.annotation.Config
  * row keeps Episodes and Next plus More. Nothing is removed: every other control is in More.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [36], qualifiers = "w891dp-h411dp-land-xxhdpi")
 class Own19PlayerEssentialsTest {
     @get:Rule val rule = createComposeRule()
 

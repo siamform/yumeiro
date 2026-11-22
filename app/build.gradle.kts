@@ -281,6 +281,10 @@ android {
       // -Pyumeiro.lowMemTests=true to cap the heap and recycle the test JVM.
       if (providers.gradleProperty("yumeiro.lowMemTests").orNull == "true") {
         all { it.maxHeapSize = "1600m"; it.setForkEvery(25) }
+      } else {
+        // 2.1.0: with about 400 test classes one JVM on Gradle's default 512 MB heap ran out of memory
+        // (CI 45047538777: OutOfMemoryError, then a hang). Give it room and start a fresh JVM now and then.
+        all { it.maxHeapSize = "3g"; it.setForkEvery(150) }
       }
       // Live network tests (Yumeiro Drama tap-to-play): -Pyumeiro.live=true.
       if (providers.gradleProperty("yumeiro.live").orNull == "true") {
