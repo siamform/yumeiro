@@ -21,14 +21,14 @@ with a reason. Status is updated in this table as work lands.
 
 | ID | Owner item | Root cause found (file) | Blocker? | Plan / status |
 |---|---|---|---|---|
-| OWN-1 | Page transitions on My List / Reading and across Yumix -> details -> player close or cut off | open (investigating nav code) | Investigating | open |
+| OWN-1 | Page transitions on My List / Reading and across Yumix -> details -> player close or cut off | **Not reproduced** in the audit (no device here; no device test shows it). Code reading, two likely causes: (a) `popSub` (MTPlayerApp.kt:254) has no guard while a 340 ms push animation runs, so a fast double Back pops two pages; (b) `navigateSub` for reusable routes (SubNav.reusable, MTPlayerApp.kt:245-253) pops back to an existing My List / Reading entry, which closes every page above it (looks like "the page closed by itself"). A guard on pops could also drop pops the app makes itself (player close, deep links): too risky to add in the code freeze without a repro | No (no crash / data loss; not reproduced) | **Queued 2.1.1** (UNVERIFIED-QUEUE Q-OWN-1). Owner: a short screen recording of one case decides which cause it is (OMT-85) |
 | OWN-2 | Online features stop working after skipping the tour, a fresh install or an update | Code reading: OnboardingGate releases correctly after Skip (MTPlayerApp.kt:1672-1681, SetupGuide.kt:216). The one setting that differs between "did the setup" and "skipped / fresh / never touched": DNS. The checklist step "Set up DNS" (SetupGuide.kt:85) is the only place a user picks a resolver; skipped = System DNS + auto bypass (NetworkSettings.kt `DnsConfig()`). On networks whose DNS hijacks or blocks hosts in ways the bypass does not notice, sources fail. An update keeps the old default too (no `dns_provider` key saved). Second cause on fresh installs: no source installed at all (OWN-9). **Probable** root cause: not reproducible in CI (runners are not on a blocking network) | Yes (core flow) | **Fixed with OWN-7** (78a667f6). Owner home-network test OMT-83 decides whether it is the whole cause |
-| OWN-3 | Telegram sign-in with API ID, API hash and phone code, like Hikari | Already built (F-02 login, TDLib, ADR-052) behind flag `f02_telegram_login` = **off**; it uses the build's own api_id (repo secrets). Hikari lets the user type their own api_id / api_hash (my.telegram.org). Full sign-in is Blocked in CI (Telegram has no public test accounts, tdlib/td#3083); OMT-63 | No (feature, flag off) | open: decide flag + own-key option |
+| OWN-3 | Telegram sign-in with API ID, API hash and phone code, like Hikari | Already built (F-02 login, TDLib, ADR-052) behind flag `f02_telegram_login` = **off**; it uses the build's own api_id (repo secrets). Hikari lets the user type their own api_id / api_hash (my.telegram.org). Full sign-in is Blocked in CI (Telegram has no public test accounts, tdlib/td#3083); OMT-63 | No (feature, flag off) | **Stays off in 2.1.0**, not announced. "Type your own API ID / hash" is a new feature: queued 2.1.1 (Q-OWN-3), owner decision. Public channels without sign-in work (F-02 split, device Pass 44929260054) |
 | OWN-4 | Vega, SkyStream and other single source links not accepted in the Extension Market add box | **Found**: Extension Market "Add repository" (ExtensionMarketScreen.kt:315-327) and Extensions "Add repository" (ExtensionsScreen.kt:360-369) called `ExtensionManager.addRepository` (CloudStream only). `UniversalAdd.add` (every format) was used only by "Install from link" / "Add anything" | Announced-feature gap | **Fixed** a4dd5ddf: both dialogs try CloudStream first, then the universal detection (`UniversalAdd.addFromRepoDialog`). Test Own4RepoDialogTest; fail-before ab/own4-before CI 45025907314 (pending). A single `.sky` file stays "recognised, can't run yet" (unchanged, honest message) |
 | OWN-5 | Vega and other managed repos: no installed status, not in the installed list, no shortcut | **Found**: EcosystemRegistry (Vega / Nuvio / SkyStream) sources were never part of the Extensions list; only Sources -> Script repos (tab 5) showed them | No (usability) but small and testable | **Fixed** a5d8d0d3: Extensions page card "<ecosystems> sources: N installed" with names and Manage -> Sources -> Script repos. Test Own5ScriptSourcesListTest; fail-before ab/own5-before CI 45026045898 (pending) |
-| OWN-6 | Yumix -> details -> player is slow (feed itself fast) | open | No (perf) | open |
+| OWN-6 | Yumix -> details -> player is slow (feed itself fast) | Code reading: `OnlineSession.open` (online/OnlineSession.kt:107-124) waits for the full `OnlineRepository.load` (the extension's load call: network) before it navigates, so the tap shows nothing until the source answers; then the player waits for `loadLinks`. Improvement = open the page at once with the card data and fill it in (the way CloudStream / Hikari show the details shell first). It changes the open path of every extension and needs before / after numbers on a device | No (perf, works) | **Queued 2.1.1** (Q-OWN-6) with a measurement first (SpeedDeviceTest gets a "tap -> details first frame" number). Not changed in the freeze |
 | OWN-7 | Cloudflare as the default network | DNS default was System (NetworkSettings.kt DnsConfig) | Part of OWN-2 | **Fixed** 78a667f6: no saved choice -> Cloudflare DNS-over-HTTPS, mode Always; system DNS is the safety net when Cloudflare is unreachable; LAN names (.local, .lan, no dot) stay on system DNS; saved choices kept. Flag `own7_cloudflare_default` (on). Test Own7CloudflareDefaultTest (4); DnsSettingsRaceTest fresh-prefs line follows the new default (spec change, not weaker). Fail-before ab/own7-before CI 45025542939 (pending) |
-| OWN-8 | Downloader: pick quality, subtitles, audio (sub / dub) before download; same in the player | OL-5 / DL-ONE already offer HLS heights, audio and subtitles in the download popup for website / HLS links; open: check the extension episode path | No | open |
+| OWN-8 | Downloader: pick quality, subtitles, audio (sub / dub) before download; same in the player | Checked in code: the one download popup (DownloadSheets.kt, DL-ONE) offers real HLS heights, audio track and subtitles for website / HLS / player downloads (flag `ol5_download_tracks`, on); the episodes download sheet has Sub / Dub chips (DownloadSheets.kt:151), quality "up to" (:241) and subtitles None / "Save all the source has" (DownloadPrompt.kt:226-228). Choosing one subtitle language per episode batch is not offered (all are saved) | No (built) | Nothing to fix now. Owner test OMT-86 (player download popup: quality, audio, subtitles; episode range from a Sub / Dub title). Per-language subtitle pick for batches: queued 2.1.1 (Q-OWN-8) |
 | OWN-9 | Official Yumeiro extension, none installed by default | **Confirmed**: no official extension exists. Owner decision 2026-11-21 "no third-party starter extensions; use the Yumeiro master extension (E1)". E1 (Yumeiro Hub) is **not built**, planned 2.2.0 (docs/E1-E2-YUMEIRO-HUB-AND-LIVE.md). A fresh install has zero sources; the empty Home shows Get started (B-32) | No code fix possible in 2.1.0 without building E1 (new feature, freeze) | Known issue in 2.1.0 notes; E1 stays 2.2.0 |
 | OWN-10 | TeraBox and "Linkwala" (read as DiskWala) not working; check how Hikari does it | **TeraBox, correction**: the 400210 "need verify_v2" seen first (12:59 UTC) came from a request that did not follow the share page redirect, so it had no jsToken: not a valid measurement. Re-measured 13:06 UTC with Yumeiro's exact request (redirect followed, jsToken, app_id params): `shorturlinfo` errno 0 in 4 of 4 tries; a bare request without the token gets 460030 "dragdrop" (slider check). So the anonymous step works; the signed-in steps (`share/list` dlink, `share/streaming`) need a TeraBox account: **Not checked (no TeraBox account in the audit)**. Hikari differs: share origin instead of terabox.app, a `browserid` cookie, one fresh-session retry on a verify answer. **DiskWala**: the share page in headless Chromium (13:0x UTC, XHR log) shows "Download the app to access this file", makes no file API call and has no video element; `temp_info` gives name and size only. Hikari's WebView fetch hook would capture nothing on today's page | TeraBox: maybe (announced link type) | TeraBox: **fixed the dead end** 179d9e30: errno 400210 / 460030 / 400141 open the share page in the app's browser for the user's own check (never solved by the app), then retry. Test in TeraBoxApiTest; fail-before ab/own10-before CI 45025909528 (pending). Whether TeraBox plays for a signed-in account: owner test OMT-84. DiskWala: unchanged, handoff to the DiskWala app is the only working path (the website itself refuses to play) |
 
@@ -56,6 +56,120 @@ open
 | 45025909528 | CI fail-before OWN-10 | ab/own10-before | 13:08 | running (must fail only in TeraBoxApiTest.ownTen...) |
 | 45026045898 | CI fail-before OWN-5 | ab/own5-before | 13:10 | running (must fail only in Own5ScriptSourcesListTest) |
 
-## 6. Flags (W3), 7. Security (W4), 8. Upgrade (W5), 9. Release checklist (W8), 10. Not checked, 11. GO / NO-GO
+## 6. Flags (W3)
+
+Read from app/src/main/java/dev/asfakul/yumeiro/FeatureFlags.kt at the audit head (78 flags; 2.0.0 had 19, so 59 are
+new). Flags are local prefs only (no remote switch): a flag can be turned off only by a new build or by `adb` on a
+debug/support build. So "behind a flag" means "built-in default"; the release kill switch is the next build.
+Two flags are **off**: `f02_telegram_login` (Telegram sign-in) and `b31_builtin_torrent` (built-in torrent engine).
+Both are listed only under "Still being checked" in CHANGELOG.md (checked: no "New" line announces them).
+Build-time switches, not app flags: E2 curated Live TV (repo variable YUMEIRO_CURATED_LIVE, not set: off) and E3 ABI
+split APKs (YUMEIRO_ABI_SPLITS, not set: off). Both now only in "Still being checked" (AUD-CLAIM-1/2).
+
+<details><summary>All 78 flags</summary>
+
+| # | Enum | Key | Default | New in 2.1.0 |
+|---|---|---|---|---|
+| 1 | POSTER_ACTIONS | `f09_poster_actions` | true | no |
+| 2 | YUMIX_TAG_SECTIONS | `f16_tag_sections` | true | no |
+| 3 | EPISODE_STATUS | `nf1_episode_status` | true | no |
+| 4 | UPCOMING | `f08_upcoming` | true | no |
+| 5 | SHORTS_PLAYER | `f12_shorts_player` | true | no |
+| 6 | SHORTS_VERTICAL | `f12_vertical_shorts` | true | yes |
+| 7 | SHORTS_ONE_VIEW | `f12_one_view` | true | yes |
+| 8 | HISTORY_OFF_MAIN | `f12_history_off_main` | true | yes |
+| 9 | VERTICAL_MODE | `f12_vertical_mode` | true | yes |
+| 10 | SHORTS_AUTOHIDE | `f12_shorts_autohide` | true | yes |
+| 11 | PROXY_REACH_FIRST | `nbug13_reach_first` | true | yes |
+| 12 | PAGE_HINT_AUTOHIDE | `ol8_hint_autohide` | true | yes |
+| 13 | STREAM_PANEL_CONTROLS | `ol2_stream_panel_controls` | true | yes |
+| 14 | STREAM_CURRENT_ONLY | `ol3_stream_current_only` | true | yes |
+| 15 | WEBSITE_TAB | `ol1_website_tab` | true | yes |
+| 16 | STREAM_DOWNLOAD_PROMPT | `ol4_stream_download_prompt` | true | yes |
+| 17 | PLAYER_TOPBAR_ALIGN | `ol7_player_topbar_align` | true | yes |
+| 18 | HOME_SPACES_MORE | `ol9_home_spaces_more` | true | yes |
+| 19 | NAV_MORE_DESTINATIONS | `ol10_nav_more_destinations` | true | yes |
+| 20 | EPISODE_RANGE_DOWNLOAD | `ol11_episode_range_download` | true | yes |
+| 21 | PLAYLIST_DOWNLOAD | `ol12_playlist_download` | true | yes |
+| 22 | DOWNLOAD_TRACKS | `ol5_download_tracks` | true | yes |
+| 23 | DOWNLOAD_SHEET | `ol6_download_sheet` | true | yes |
+| 24 | PLAYER_TOPBAR_EDGE | `ol7_player_topbar_edge` | true | yes |
+| 25 | SOCIAL_LINKS | `ol13_social_links` | true | yes |
+| 26 | DUPLICATE_CAP | `pin1_duplicate_cap` | true | yes |
+| 27 | PROFILE_EXTENSIONS | `f19_profile_extensions` | true | yes |
+| 28 | TAB_NEXT_FRAME | `gate1_tab_next_frame` | true | yes |
+| 29 | SHADER_PREWARM | `gate1_shader_prewarm` | true | yes |
+| 30 | FEED_STAGED_REVEAL | `gate1_feed_staged_reveal` | true | yes |
+| 31 | FEED_STAGED_LATE | `gate1_feed_staged_late` | true | yes |
+| 32 | POSTER_PLAIN_IMAGE | `gate1_poster_plain_image` | true | yes |
+| 33 | EXTENSION_BG_PRIORITY | `gate1_extension_bg_priority` | true | yes |
+| 34 | MUSIC_PLAYER_ON_USE | `gate1_music_player_on_use` | true | yes |
+| 35 | PROFILE_STATS | `f17_profile_stats` | true | no |
+| 36 | GLASS_THEME | `f10_glass_theme` | true | no |
+| 37 | TV4_ONLINE_SEARCH | `tv4_online_search` | true | no |
+| 38 | LIVE_FAILOVER | `f14_live_failover` | true | no |
+| 39 | LIVE_GUIDE | `f15_live_guide` | true | no |
+| 40 | OFFLINE_MANGA | `f13_offline_manga` | true | no |
+| 41 | PROFILES | `f18_profiles` | true | no |
+| 42 | PRIVATE_DOWNLOADS | `f18_private_downloads` | true | no |
+| 43 | TELEGRAM_PUBLIC | `telegram_public` | true | no |
+| 44 | TELEGRAM_LOGIN | `f02_telegram_login` | false | yes |
+| 45 | BUILTIN_TORRENT | `b31_builtin_torrent` | false | yes |
+| 46 | CLOUD_CAPTURE_V2 | `cloud_capture_v2` | true | no |
+| 47 | MANGA_TRANSLATE | `f11_manga_translate` | true | no |
+| 48 | APP_PROXY | `nbug13_proxy` | true | no |
+| 49 | DNS_FALLBACK | `nbug6_dns_fallback` | true | no |
+| 50 | CLOUDFLARE_DEFAULT_DNS | `own7_cloudflare_default` | true | yes |
+| 51 | EXTENSION_LABELS | `f21_extension_labels` | true | yes |
+| 52 | UPCOMING_SECTIONS | `f22_upcoming_sections` | true | yes |
+| 53 | E4_SPEED_ORDER | `e4_speed_order` | true | yes |
+| 54 | FE_PRIORITY_GATE | `fe2_priority_gate` | true | yes |
+| 55 | B31_STREAM_WINDOW | `b31_stream_window` | true | yes |
+| 56 | B31_TARGET_FIRST | `b31_target_first` | true | yes |
+| 57 | FE3_FIRST_ROW | `fe3_first_row` | true | yes |
+| 58 | FE4_FEED_FRAMES | `fe4_feed_frames` | true | yes |
+| 59 | FE4_WORKING_SET | `fe4_working_set` | true | yes |
+| 60 | E4_THROTTLE | `e4_throttle` | true | yes |
+| 61 | FE_S3_FAIL_MEMORY | `fe_s3_fail_memory` | true | yes |
+| 62 | FE_S4_ADAPTIVE_TIMEOUT | `fe_s4_adaptive_timeout` | true | yes |
+| 63 | FE_PAUSE_WHILE_PLAYING | `fe_pause_while_playing` | true | yes |
+| 64 | FE_CALL_LANES | `fe2c_call_lanes` | true | yes |
+| 65 | FE5_FEED_WARM | `fe5_feed_warm` | true | yes |
+| 66 | SCRIPTS_VEGA | `scripts_vega` | true | no |
+| 67 | SCRIPTS_NUVIO | `scripts_nuvio` | true | yes |
+| 68 | STREAM_ADDONS | `f05_stream_addons` | true | yes |
+| 69 | F05_STREMIO_STREAMS | `f05_stremio_streams` | true | yes |
+| 70 | F22_COUNTRY_GENRE | `f22_country_genre` | true | yes |
+| 71 | F09_FEED_ACTIONS | `f09_feed_actions` | true | yes |
+| 72 | DL_ONE_SHEET | `dl_one_sheet` | true | yes |
+| 73 | TAB_JUMP_HOLD | `tab_jump_hold` | true | yes |
+| 74 | WEB_DOWNLOAD_LISTENER | `web_download_listener` | true | yes |
+| 75 | VERTICAL_BACK_LEAVES | `vertical_back_leaves` | true | yes |
+| 76 | SCRIPTS_SKYSTREAM | `scripts_skystream` | true | yes |
+| 77 | SCRIPT_ERROR_MESSAGE | `f05_script_error_message` | true | yes |
+| 78 | EXT_HOLD_WHILE_TYPING | `ext_hold_while_typing` | true | yes |
+
+</details>
+
+## 7. Security (W4)
+
+| Check | Result | Evidence |
+|---|---|---|
+| gitleaks on the pre-audit head | Pass | CI 45024851633 job "Secret scan (gitleaks)" success |
+| gitleaks on the final head | open (final CI) | |
+| Manifest changes 2.0.0 -> 2.1.0 | Only 5 `<queries>` package names for external players (F-07-VIS). No new permission, no new exported component, `allowBackup=false` unchanged | `git diff e47f450f HEAD -- app/src/main/AndroidManifest.xml` |
+| Network security config | Unchanged since 2.0.0: system CAs + ISRG Root X1 only (no user CAs); cleartext off for account / token / update hosts; cleartext allowed for user stream URLs (IPTV needs it, documented) | res/xml/network_security_config.xml |
+| New code: trust-all TLS, hostname verifier, world-readable files, file access in WebView, new JS interfaces | None found in the 2.1.0 diff | `git diff e47f450f HEAD -- app/src/main` + rg for those APIs |
+| Telegram api_id / api_hash | Read from secrets at build time into BuildConfig (TG_API_ID / TG_API_HASH), never in the repo. Note: a Telegram client's api_hash always ships inside the app (Telegram's own clients do the same); it identifies the app, it is not a server key. Feature is off in 2.1.0 | app/build.gradle.kts optionalKey(...) |
+| Telegram session key | Stored sealed with Android Keystore (SecretBox.seal / open) | telegram code, SecretBox |
+| APK secret search (review APK) | open (after the final CI's review APK) | |
+| SEC-1 (Last.fm shared secret), UPG-1 (rotation) | Owner's items, not checked by the auditor (owner rule) | |
+
+MASVS short list (L1): STORAGE (no backup, Keystore-sealed tokens) OK by code reading; CRYPTO (no custom crypto in the
+diff except Keystore AES-GCM wrapper) OK by code reading; NETWORK (see above) OK; PLATFORM (no new exported
+components / JS bridges) OK; CODE (R8 on release, no debuggable flag in release) Not checked on the release APK yet;
+RESILIENCE: out of scope (open-source app).
+
+## 8. Upgrade (W5), 9. Release checklist (W8), 10. Not checked, 11. GO / NO-GO
 
 open

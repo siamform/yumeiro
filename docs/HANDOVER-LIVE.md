@@ -6,11 +6,12 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 19:20 +0600 (13:20 UTC), branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
+2026-11-22 19:35 +0600 (13:35 UTC), branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
 docs/RELEASE-AUDIT-2.1.0.md first (owner list OWN-1..OWN-10, findings, runs).
 Just done: db1634a8 AUD-CLAIM-1/2 (curated Live TV lists E2 were never published -> removed from CHANGELOG.md, README,
 image script and post-05 / square-05; ABI split APKs E3 are off -> moved to "Still being checked"). Website PR #5
 (siamform/yumeiro-web r16-v210) 63e3e78 same text fix (no deploy). Per-commit table docs/evidence/final/PER-COMMIT-2.1.0.md.
+Audit doc now has OWN-1/3/6/8 triage (queued, reasons), flags table W3 and security W4 (gitleaks final + APK search open).
 Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (not yet verified by CI).
 
 ## Pending runs
