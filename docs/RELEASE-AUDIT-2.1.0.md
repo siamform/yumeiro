@@ -174,6 +174,43 @@ diff except Keystore AES-GCM wrapper) OK by code reading; NETWORK (see above) OK
 components / JS bridges) OK; CODE (R8 on release, no debuggable flag in release) Not checked on the release APK yet;
 RESILIENCE: out of scope (open-source app).
 
-## 8. Upgrade (W5), 9. Release checklist (W8), 10. Not checked, 11. GO / NO-GO
+## 8. Upgrade (W5)
+
+| From | Phone | TV | Run |
+|---|---|---|---|
+| v2.0.0 | open | open | upgrade-check.yml with the final review APK |
+| v1.9.0 | open | open | |
+| v1.8.x | open | open | |
+
+Code reading for the upgrade path of this audit's changes: OWN-7 changes the DNS default only when `dns_provider` is
+missing in prefs (NetworkSettings.init); a saved choice from 2.0.0 is kept (Own7CloudflareDefaultTest
+aSavedChoiceIsKept). version 2.1.0 / 19 > 2.0.0 / 18, same signing certificate check in release.yml.
+
+## 9. Release checklist (W8): prepared, NOT executed
+
+Nothing below is done until the owner says "go".
+
+1. Version: done on the branch in f90b4999 (VERSION_NAME 2.1.0, VERSION_CODE 19). release.yml runs
+   compute-version.sh: 2.1.0 is above the v2.0.0 tag, so it is used as is; code = max(19, 18 + 1) = 19; `changed=false`,
+   so there is **no second bump commit** (double bump avoided).
+2. What's new note: shouldPost now true for 2.1.x after an update (same note ID, nobody sees it twice);
+   SettingsDiscoverabilityTest updated in the same commit.
+3. PR r15-stability -> main: text prepared in docs/evidence/final/PR-2.1.0.md. main is an ancestor of r15-stability
+   (0 commits behind), so the merge has no conflicts. main is not branch-protected.
+4. Merge: one merge commit (not squash, keeps the per-commit history the audit checked). One push to main.
+5. That push starts: release.yml (signed APKs, tag v2.1.0, GitHub release, SHA256SUMS checked in the job) and
+   stream-sync.yml (2 changed files under its paths: .github/streams/curated.json, the workflow; it refreshes the public Live TV data branch as its 3-day schedule
+   does; curated lists stay off because YUMEIRO_CURATED_LIVE is not set). No other workflow has changed paths.
+6. After the release job: download the release APK, compare its sha256 with SHA256SUMS.txt and with the signing
+   certificate in .github/release-signing-cert.sha256 (the job checks it too).
+7. Website (siamform/yumeiro-web PR #5) and the Cloudflare Worker (server/, manual `wrangler deploy`): separate
+   owner steps; nothing is deployed by the merge. Worker: `git diff origin/main r15-stability -- server/` is empty, so 2.1.0
+   needs no Worker deploy.
+8. Rollback: if 2.1.0 is bad, do not delete the tag; publish 2.1.1 from main with the fix (VERSION_CODE 20), because
+   phones that took 19 cannot go back to 18. The in-app updater reads the latest release, so a new release replaces it.
+   Mark the 2.1.0 release as pre-release on GitHub to stop new downloads while 2.1.1 is built.
+9. After "go" and the release: delete leftover branches ab/*-before (AUD-AB-1), close the audit.
+
+## 10. Not checked, 11. GO / NO-GO
 
 open

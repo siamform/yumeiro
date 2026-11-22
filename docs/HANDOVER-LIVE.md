@@ -26,7 +26,7 @@ Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (
 ## Next step
 1. Record the fail-befores + baseline; delete each ab/own*-before branch after it is recorded (local + origin).
 2. Dispatch r15 CI review_apk=true (pass-after for all OWN fixes), then device suites, gate trio, stress, upgrade-check.
-3. Queued in UNVERIFIED-QUEUE (Q-OWN-*), MAJOR Queue row, OMT-83..86 added. Finish W5/W8/Not checked/GO in the audit doc.
+3. Queue + OMT-83..86 done; W8 release checklist and PR text (docs/evidence/final/PR-2.1.0.md) prepared. Left: W5 upgrade runs, Not checked list, GO / NO-GO, CHANGELOG OWN lines after pass-after, CHANGELOG-FULL regen, kit zip.
    Never merge / release / deploy without the owner's go.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
