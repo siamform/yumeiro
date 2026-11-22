@@ -109,6 +109,15 @@ object DownloadPrompt {
         val startWith: ((keep: Boolean, pick: dev.asfakul.yumeiro.online.download.DownloadTracks.Pick) -> String?)? = null,
         /** OWN-11: show the popup even with "Ask before download" off (a YouTube video: Video or Audio only). */
         val alwaysAsk: Boolean = false,
+        /**
+         * OWN-18: finds the size for the picked quality (max height, <= 0 = best) when [sizeBytes] is not known.
+         * Blocking network allowed: the popup runs it off the main thread with a timeout.
+         */
+        val sizeFor: ((maxHeight: Int) -> dev.asfakul.yumeiro.online.download.DownloadSize.Size?)? = null,
+        /** OWN-18: what else the user should see before saving: "Sub", "Dub", "Hindi audio", "HLS stream", source name. */
+        val facts: List<String> = emptyList(),
+        /** OWN-18: why there is no size (a batch whose links are fetched only when each item starts). */
+        val sizeNote: String? = null,
         /** Starts the download; returns an error text or null. */
         val start: (keep: Boolean) -> String?,
     )

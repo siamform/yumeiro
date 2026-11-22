@@ -94,6 +94,16 @@ object StreamDownloadAsk {
             quality = qualityText(req),
             defaultKeep = DownloadSettings.keepByDefault.value,
             offer = offer,
+            // OWN-18: size for the picked quality, subtitles and format.
+            facts = listOfNotNull(
+                when (req.resolvedFormat()) { StreamFormat.HLS -> "HLS stream"; StreamFormat.DASH -> "DASH stream"; else -> "Video file" },
+                named.size.takeIf { it > 0 }?.let { "$it subtitle ${if (it == 1) "file" else "files"}" },
+            ),
+            sizeFor = { h ->
+                val link = StreamDownload.linkFor(req, sourceUrl)
+                dev.asfakul.yumeiro.online.download.DownloadSize.probe(dev.asfakul.yumeiro.network.NetworkClient.get(context), req.url,
+                    OnlineDownloads.headersFor(link), req.resolvedFormat() == StreamFormat.HLS, req.resolvedFormat() == StreamFormat.DASH, h)
+            },
             startWith = if (offer != null) { keep, pick -> enqueue(keep, pick) } else null,
         ) { keep -> enqueue(keep, null) })
     }

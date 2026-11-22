@@ -126,6 +126,8 @@ object FeatureFlags {
         OFFICIAL_CLASSICS("own9_official_classics", true),
         /** OWN-13: Yumeiro Drama and Yumeiro Classics shown and used as one built-in source, "Yumeiro" (all in one, no install). Off: two separate sources as in OWN-9. */
         YUMEIRO_HUB("own13_yumeiro_hub", true),
+        /** OWN-19: full-screen player shows only the main buttons (3 in the user's order + More); the rest are in More. */
+        PLAYER_ESSENTIALS("own19_player_essentials", true),
         /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */
         EXTENSION_LABELS("f21_extension_labels", true),
         /** F-22: Upcoming date headers ("Today • Sat, Nov 21"), air times, date-only days kept, category kept per profile. */

@@ -98,6 +98,29 @@ object DownloadSheet {
     }
 
     fun startLabel(count: Int): String = if (count > 1) "Download $count" else "Download"
+
+    /** OWN-18: how long the popup waits for a size before saying it is not known. */
+    const val PROBE_MS = 8_000L
+
+    sealed interface SizeState {
+        data object Checking : SizeState
+        data object Unknown : SizeState
+        data class Known(val size: dev.asfakul.yumeiro.online.download.DownloadSize.Size) : SizeState
+    }
+
+    /** OWN-18: "Size: 340 MB · 12 GB free", "Size: checking…", or why it is not known. Pure. */
+    fun sizeLine(state: SizeState, freeBytes: Long, note: String?): String {
+        val free = if (freeBytes > 0) " · ${DownloadPrompt.sizeText(freeBytes)} free" else ""
+        return when (state) {
+            is SizeState.Known -> "Size: ${dev.asfakul.yumeiro.online.download.DownloadSize.label(state.size)}$free"
+            SizeState.Checking -> "Size: checking…$free"
+            SizeState.Unknown -> "Size: ${note ?: "the server doesn't say; shown in Downloads once it starts"}$free"
+        }
+    }
+
+    /** OWN-18: the chips: quality first, then the request's facts, no blanks or repeats. Pure. */
+    fun facts(quality: String, more: List<String>): List<String> =
+        (listOf(quality) + more).map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
 }
 
 /** OL-6 host: picks the container and wires the buttons. State lives in [DownloadPromptHost]. */
@@ -173,8 +196,26 @@ internal fun DownloadSheetContent(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text(DownloadSheet.summary("Quality: ${req.quality}", req.sizeBytes, free), color = p.textTertiary, fontSize = 12.sp, modifier = Modifier.testTag("download_summary"))
-        if (req.sizeBytes > 0 && free in 1 until req.sizeBytes)
+        // OWN-18: the size for the picked quality, found off the main thread when the source didn't give it.
+        val probed by androidx.compose.runtime.produceState<DownloadSheet.SizeState>(
+            if (req.sizeBytes > 0) DownloadSheet.SizeState.Known(dev.asfakul.yumeiro.online.download.DownloadSize.Size(req.sizeBytes, exact = true))
+            else if (req.sizeFor != null) DownloadSheet.SizeState.Checking else DownloadSheet.SizeState.Unknown,
+            req, height,
+        ) {
+            val probe = req.sizeFor
+            if (req.sizeBytes > 0 || probe == null) return@produceState
+            value = DownloadSheet.SizeState.Checking
+            val got = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                kotlinx.coroutines.withTimeoutOrNull(DownloadSheet.PROBE_MS) { runCatching { probe(height) }.getOrNull() }
+            }
+            value = if (got != null && got.bytes > 0) DownloadSheet.SizeState.Known(got) else DownloadSheet.SizeState.Unknown
+        }
+        val sizeBytes = (probed as? DownloadSheet.SizeState.Known)?.size?.bytes ?: 0L
+        Column(Modifier.fillMaxWidth().testTag("download_summary")) {
+            DownloadFacts(DownloadSheet.facts(req.quality, req.facts))
+            Text(DownloadSheet.sizeLine(probed, free, req.sizeNote), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp).testTag("download_size"))
+        }
+        if (sizeBytes > 0 && free in 1 until sizeBytes)
             Text("Not enough free space for this download.", color = if (p.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp).testTag("download_space_warning"))
 
         // Middle part scrolls on its own so the Download button never leaves the screen.
@@ -261,6 +302,23 @@ internal fun DownloadSheetContent(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = { DownloadPrompt.dismiss(); DownloadsNav.open() }, modifier = Modifier.testTag("download_sheet_settings")) { Text("Download settings") }
             TextButton(onClick = { DownloadPrompt.dismiss() }, modifier = Modifier.testTag("download_sheet_cancel")) { Text("Cancel") }
+        }
+    }
+}
+
+/** OWN-18: quality, sub / dub, language, format and source as small chips under the title. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun DownloadFacts(facts: List<String>) {
+    if (facts.isEmpty()) return
+    val p = LocalMtPalette.current
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth().testTag("download_facts"),
+    ) {
+        facts.forEach { f ->
+            Text(f, color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                modifier = Modifier.background(p.accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
         }
     }
 }

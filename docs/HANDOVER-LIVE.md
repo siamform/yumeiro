@@ -6,23 +6,28 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 ~22:10 +0600, branch `r15-stability`, code head 34f2a2ba. Owner message 5 HOLDS the release and adds
-OWN-13..17 (audit section 2). Done: b53c609a OWN-15 device test (ProfileColdStartDeviceTest + Restart.testHook),
-d8ae2c3b OWN-14 page motion symmetric + OWN-16 Upcoming search / filter icon / dynamic lists, 34f2a2ba OWN-13 one
-built-in "Yumeiro" source (sources/hub/YumeiroHub.kt, flag own13_yumeiro_hub; old names alias in
-ExtensionManager.provider). OWN-17 cross-check: docs/OPEN-ITEMS-2.1.0.md. CI 45037617014 cancelled (logged).
-Already Pass on 8ff0e0d9: HomeNavigationDeviceTest 45037619473, ExtensionsDeviceTest 45037636802.
+2026-11-22 ~23:00 +0600, branch `r15-stability`. Release ON HOLD until every OWN item is done and CI is green.
+Owner message 6 adds OWN-18 (download popup: size, quality, sub / dub on every popup) and OWN-19 (full-screen
+player: only the main buttons, the rest in More). Both coded in this push (DownloadSize.kt, DownloadSheet size line +
+facts chips, TopBarFit.essentials, OnlinePlayerUi PlayerActions + More chip, flag own19_player_essentials), tests
+own/Own18DownloadSizeTest + own/Own19PlayerEssentialsTest. Earlier: 34f2a2ba OWN-13, d8ae2c3b OWN-14 + OWN-16,
+b53c609a OWN-15 test. OWN-17 list: docs/OPEN-ITEMS-2.1.0.md.
+
+## OWN-15 finding
+Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
+"the logo to go" (splash_screen_root still there 15 s after the gate closed). Test b passes. So the bug is real or
+the test's wait does not let the splash LaunchedEffect run (it polls with Thread.sleep). Check both: the gate
+composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
 ## Pending runs
-- CI ci.yml review_apk=true 45040526941 on 34f2a2ba.
-- Device ProfileColdStartDeviceTest 45039700220 (on b53c609a). If it fails: read log tag YuOwn15 + filesDir/crash.
+- CI 45040526941 on 34f2a2ba (old head; covers OWN-13/14/16). New CI needed on this head.
 
 ## Next step
-1. Read CI 45040526941; fix failures (likely new tests Own13/Own14/Own16). Then device runs: F22CountryDeviceTest,
+1. OWN-15 root cause + fix; rerun ProfileColdStartDeviceTest.
+2. CI on the head; fix failures. Device: PopupQualityDeviceTest, LocalPlayerDeviceTest, F22CountryDeviceTest,
    UpcomingDeviceTest, DramaPlaybackDeviceTest, HomeNavigationDeviceTest (max two at once).
-2. OWN-15: fix per the device result; update audit rows OWN-13..17 and docs/OPEN-ITEMS-2.1.0.md.
-3. Release steps unchanged: CHANGELOG-FULL, kit zip + PDF, audit section 10/11, PR body (add OWN-13..17),
-   PR r15-stability -> main merge commit, release.yml, APK sha256 check, delete ab/* branches, owner message.
+3. Release steps: CHANGELOG-FULL, kit zip + PDF, audit 5/10/11, PR body (OWN-13..19), PR -> main merge commit,
+   release.yml, APK sha256 check, delete ab/* branches, owner message.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
 ## Last updated (pre-audit, 14:12, stale)

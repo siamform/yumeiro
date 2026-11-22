@@ -54,6 +54,18 @@ internal object TopBarFit {
         return (totalDp - pad - back - 12f - title).coerceAtLeast(BUTTON_DP)
     }
 
+    /**
+     * OWN-19 (owner 2026-11-22: "in full screen there are lots of buttons, it doesn't look good; show only the
+     * necessary ones and move the others into the 3-dot menu"): at most this many controls stay on the bar, the first
+     * ones in the user's order (Settings -> Player controls; default Quality, Audio, Subtitles). YouTube, Netflix
+     * and MX Player keep two to four controls on the full-screen bar and put the rest behind one menu.
+     */
+    const val ESSENTIAL_MAX = 3
+
+    /** OWN-19: [split] with only the first [max] inline; the rest go to the front of the menu, in order. Pure. */
+    fun essentials(split: Split, max: Int = ESSENTIAL_MAX): Split =
+        if (split.inline.size <= max) split else Split(split.inline.take(max), split.inline.drop(max) + split.overflow)
+
     fun split(visible: List<Control>, availableDp: Float, qualityLabel: String?): Split {
         var left = availableDp - BUTTON_DP // the More button is always there
         val inline = ArrayList<Control>(visible.size)

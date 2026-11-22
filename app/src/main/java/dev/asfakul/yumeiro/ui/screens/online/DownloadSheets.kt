@@ -240,6 +240,9 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
         title = d.name, what = what, count = list.size,
         folder = DownloadNaming.seriesFolder(d.name, d.api, version), quality = DownloadSettings.qualityLabel(DownloadSettings.quality.value) + " (up to)",
         defaultKeep = DownloadSettings.keepByDefault.value,
+        // OWN-18: each episode's link (and so its size) is fetched only when it starts; say so instead of a made-up number.
+        facts = listOfNotNull(version.trim().takeIf { it.isNotEmpty() && !it.equals("default", true) }, if (movie) "Movie" else "${list.size} ${if (list.size == 1) "episode" else "episodes"}", "Source: ${d.api}"),
+        sizeNote = if (list.size > 1) "each episode's size shows in Downloads when it starts" else "shown in Downloads when it starts (the source gives its link then)",
         // NF-2b: the prompt offers a quality for this download; -1 keeps the Settings value.
         startAt = { keep, h -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, h) == 0) "Already downloaded or queued" else null },
         // OL-5: extensions name their subtitles only when each episode's link is fetched, so the popup offers "save all".
@@ -316,7 +319,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
                                     type = if (c.audioOnly) DownloadPrompt.Type.YT_AUDIO else DownloadPrompt.Type.YT_VIDEO,
                                     title = item.title, what = if (c.audioOnly) "audio (${c.label.removePrefix("Audio ")})" else "${c.label} video", count = 1,
                                     folder = OnlineDownloads.youTubeFolder(c.audioOnly, item.music), quality = c.label + (c.detail.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-                                    sizeBytes = c.sizeBytes, defaultKeep = true,
+                                    sizeBytes = c.sizeBytes, defaultKeep = true, facts = listOf("YouTube", if (c.audioOnly) "Audio only" else "Video + audio"),
                                 ) { keep -> OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, c, keep) })
                             }
                         }
@@ -346,9 +349,13 @@ internal fun askYouTubeInSharedPopup(context: android.content.Context, item: YtI
         title = item.title, what = if (item.music) "this song" else "this video", count = 1,
         folder = OnlineDownloads.youTubeFolder(best.audioOnly, item.music),
         quality = best.label + (best.detail.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-        sizeBytes = best.sizeBytes, defaultKeep = true,
+        defaultKeep = true,
         offer = one.offer(choices, item.music),
         alwaysAsk = one.alwaysAsk(choices, item.music),
+        // OWN-18: the size follows the picked quality.
+        sizeFor = { h -> one.choose(choices, item.music, dev.asfakul.yumeiro.online.download.DownloadTracks.Pick(maxHeight = h))?.sizeBytes?.takeIf { it > 0 }
+            ?.let { dev.asfakul.yumeiro.online.download.DownloadSize.Size(it, exact = true) } },
+        facts = listOf("YouTube", if (best.audioOnly) "Audio only" else "Video + audio"),
         startWith = { keep, pick ->
             val c = one.choose(choices, item.music, pick)
             if (c == null) "No downloadable formats for this video"

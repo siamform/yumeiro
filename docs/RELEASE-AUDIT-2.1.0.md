@@ -13,7 +13,7 @@ every result below has a run ID or file the auditor checked, or it says "Not che
 - version.properties: 2.0.0 / 18 (needs 2.1.0 / 19 at release; see section 9).
 - No local JDK or KVM in the audit sandbox: compile, unit and device tests only through CI.
 
-## 2. Owner list 2026-11-22 evening (OWN-1 .. OWN-17), triage
+## 2. Owner list 2026-11-22 evening (OWN-1 .. OWN-19), triage
 
 The owner sent ten items with "hurry, fix all and prepare release". Blockers (Part 5 definition) are fixed now with the
 standard method; the rest are fixed now only if small, safe and testable before the final gate, else queued for 2.1.1
@@ -38,6 +38,8 @@ with a reason. Status is updated in this table as work lands.
 | OWN-15 | Owner 2026-11-22 (4th): locked profile, app swiped from recents, 2-3 h later: unlock -> force close, then stuck on the Yumeiro logo | **In progress** (process death + profile unlock path) | Yes (crash) | open |
 | OWN-16 | Owner 2026-11-22 (4th): Yumix > Upcoming: filters hard-coded, design poor, no search; filter should be an icon, list dynamic (= F-22 rest) | **In progress** | Owner order | open |
 | OWN-17 | Owner 2026-11-22 (4th): cross-check MAJOR-BUGS-AND-FEATURES-2.x.md + NEW-BUGS-FEATURES-2026-11-18.md; partial / fake / not done is never acceptable; new list of open items | docs/OPEN-ITEMS-2.1.0.md | Owner order | open |
+| OWN-18 | Owner 2026-11-22 (6th): "in the download modal it never shows the file size ... every download modal should show quality, size, sub / dub and all needed info", mainly from the player page | Was: size only when the source gave it (YouTube); the player page, episodes and links showed none | Owner order | **Coded, CI pending**: online/download/DownloadSize.kt finds the size for the picked quality off the main thread (8 s cap): HEAD, then Range bytes=0-0, HLS master + media playlist (exact with BYTERANGE, else bandwidth x duration, marked "about"), DASH duration x bandwidth. Every popup shows chips (quality, Sub / Dub, format, audio tracks, source) and a size line; a batch says honestly why there is no total. Research: NewPipe reads Content-Length before listing streams; yt-dlp filesize_approx = bitrate x duration (ideas only, no code). Test own/Own18DownloadSizeTest |
+| OWN-19 | Owner 2026-11-22 (6th): "in full screen there are lots of buttons, not good; show only necessary buttons and move others into the 3-dot menu" | Was: top bar showed every control that fit (8 in landscape) plus a second row of 7 chips | Owner order | **Coded, CI pending**: flag `own19_player_essentials`. Top bar keeps the first 3 controls in the user's order (default Quality, Audio, Subtitles) + More; Speed, Aspect, PiP, Info, Lock move to More (TopBarFit.essentials). Online row keeps Episodes + Next; Source, Subtitles, Sub/Dub switch, Cast, Download go under a More chip (old tags kept). Research: YouTube, Netflix, MX Player keep 2-4 icons + one menu. Test own/Own19PlayerEssentialsTest |
 
 ## 3. Per-commit table (W2)
 
@@ -180,6 +182,7 @@ split APKs (YUMEIRO_ABI_SPLITS, not set: off). Both now only in "Still being che
 | 83 | NAV_GUARD | `own1_nav_guard` | true | yes (owner list 2026-11-22) |
 | 84 | BATCH_SUB_LANGUAGE | `own8_batch_sub_language` | true | yes (owner list 2026-11-22) |
 | 85 | YUMEIRO_HUB | `own13_yumeiro_hub` | true | yes (owner list 2026-11-22) |
+| 86 | PLAYER_ESSENTIALS | `own19_player_essentials` | true | yes (owner list 2026-11-22, OWN-19) |
 
 </details>
 

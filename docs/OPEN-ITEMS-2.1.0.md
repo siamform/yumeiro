@@ -17,9 +17,11 @@ only "built" is listed here with what is missing. Words used:
 | OWN-1..12 | First two owner lists (nav guard, fast title open, Telegram keys, OWN-8 batch subtitles, Classics, YouTube audio, PIN reset, ...) | Done: rows, commits and runs in docs/RELEASE-AUDIT-2.1.0.md section 2 |
 | OWN-13 | One built-in "Yumeiro" source, all in one, no install | Coded, CI pending (34f2a2ba, CI 45040526941). One card, one switch, one home, one search; drama + films, documentaries, cartoons, TV, films by country. Rest of E1 (below) is Not in 2.1.0 |
 | OWN-14 | Page close / Back not like the open animation | Coded, CI pending (d8ae2c3b): one shared enter/exit pair, same duration both ways; Inbox / Support and Settings now close the way they open |
-| OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | Device test written (ProfileColdStartDeviceTest, run 45039700220). Result and fix: docs/RELEASE-AUDIT-2.1.0.md row OWN-15 |
+| OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | REPRODUCED on device 45039700220 (api33 + api36): after the PIN on the current profile the logo stays over 15 s (test a fails "the logo to go"; test b passes). Root cause being fixed. Device test written (ProfileColdStartDeviceTest, run 45039700220). Result and fix: docs/RELEASE-AUDIT-2.1.0.md row OWN-15 |
 | OWN-16 | Yumix > Upcoming: hard-coded filters, no search, filter should be an icon, dynamic list | Coded, CI pending (d8ae2c3b): search box, filter icon with a sheet, every filter list built from the data (genres, channel countries, days), schedule country from the phone first |
 | OWN-17 | This cross-check | This file |
+| OWN-18 | Download popup: size, quality, sub / dub and other facts on every popup | Coded, CI pending (Own18DownloadSizeTest); device check PopupQualityDeviceTest next |
+| OWN-19 | Full-screen player: only the main buttons, the rest in the 3-dot menu | Coded, CI pending (Own19PlayerEssentialsTest); device check LocalPlayerDeviceTest next |
 
 ## 2. MAJOR-BUGS-AND-FEATURES-2.x.md
 

@@ -751,6 +751,9 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
                 what = if (left.size == 1) "1 song" else "${left.size} songs" + if (left.size < tracks.size) " (${tracks.size - left.size} already saved)" else "",
                 count = left.size, folder = dev.asfakul.yumeiro.online.download.OnlineDownloads.youTubeFolder(true, true),
                 quality = "Best audio (M4A when offered)", defaultKeep = true,
+                // OWN-18: songs x their length at 128 kbps (YouTube Music's usual best audio).
+                sizeFor = { _ -> dev.asfakul.yumeiro.online.download.DownloadSize.songsEstimate(all.filter { s -> left.any { it.id == s.videoId } }.map { it.durationSec }) },
+                facts = listOf("YouTube Music", "Audio only"),
             ) { keep -> if (dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueueYouTubeBatch(context, left, keep) == 0) "Already downloaded or queued" else null })
         }
     }

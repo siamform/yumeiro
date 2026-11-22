@@ -205,7 +205,9 @@ fun VideoPlayerTopBar(
             modifier = if (aligned) Modifier.widthIn(max = buttonsMaxDp.dp).testTag("video_top_buttons")
             else Modifier.weight(1.4f, fill = false)
         ) {
-            val split = TopBarFit.split(visible, maxWidth.value, qualityLabel)
+            val fit = TopBarFit.split(visible, maxWidth.value, qualityLabel)
+            // OWN-19: the full-screen bar keeps only the main buttons; the docked bar is already small.
+            val split = if (!compact && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_ESSENTIALS)) TopBarFit.essentials(fit) else fit
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(TopBarFit.GAP_DP.dp)
