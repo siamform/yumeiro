@@ -106,6 +106,9 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   fi
   recover_system_anr
   echo "::group::$C (run $N/$REPEAT)"
+  # GATE-1-PREPARE-COLD: the first start after install is measured on a settled CPU too, so a stall there
+  # (4-6 s while Play Services ran in 44984838999 / 44985820433) can be told apart from CPU starvation.
+  [ "$C" = "dev.asfakul.yumeiro.GateOnePrepareDeviceTest" ] && gate_quiet
   L0=$(wc -l < logcat.txt)
   if [ "$C" = "dev.asfakul.yumeiro.HomeTraceDeviceTest" ]; then
     # ST-18: prepare (guide answered), then three traced cold starts to Home.

@@ -11,12 +11,14 @@ after device 44985807462: NuvioProviderDeviceTest 4/4 + VegaProviderDeviceTest 3
 Tests changed on purpose for the flip (NuvioAdapterTest defaults, EcosystemRegistryTest Nuvio repos added). OMT-73.
 GATE-1-QUIET (cd0b256a) closed on the emulator: lowram Pass twice, 44984838999 worst 664 ms, 44985820433 worst 559 ms,
 app stall 0 ms. New finding GATE-1-PREPARE-COLD: the first start after install (prepare step, before the settle)
-stalls 4-6 s on lowram while the CPU is 90 % busy; not counted by the gate, open.
+stalls 4-6 s on lowram while the CPU is 90 % busy; not counted by the gate. Harness now settles before the prepare
+step too; gate trio rerun dispatched with this push.
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
 - r15 CI for F-05-N-ON (dispatched after this push, review_apk=false): pass-after for the flip.
+- Gate trio on api33-lowram (dispatched after this push): GATE-1-PREPARE-COLD, read the prepare YuStall after GATE_QUIET.
 - r15 CI 44983288674 (@2ab4f33f): Build, test & lint Pass, gitleaks Pass; review APK result: see ledger F-05-N-ERR.
 - Fail-befores done: MUSIC-START-2 44979435737, F-05-N 44977804955, F-05-N-ERR 44983223105 (branches deleted).
 - CI gitleaks scans every live branch: never leave an ab/ branch with a secret-looking literal alive during other runs.
@@ -25,7 +27,7 @@ stalls 4-6 s on lowram while the CPU is 90 % busy; not counted by the gate, open
 
 ## Next step
 1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05).
-2. GATE-1-PREPARE-COLD: run gate_quiet before GateOnePrepareDeviceTest too, measure; trace if it repeats quietly.
+2. GATE-1-PREPARE-COLD: read the rerun; if the prepare stall repeats on a quiet CPU, trace the first frame and fix.
 3. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
 4. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
