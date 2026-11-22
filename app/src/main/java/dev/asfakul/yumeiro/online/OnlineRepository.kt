@@ -478,7 +478,32 @@ object OnlineRepository {
 
     // region details
 
-    suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail = withContext(Dispatchers.IO) {
+    /**
+     * OWN-6: one extension `load` per title at a time. The tap (OnlineSession.open) and the title page both asked
+     * the extension for the same details at once, so the page waited for a second, slower network call.
+     */
+    private val loadsInFlight = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<OnlineDetail>>()
+    private val loadScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail {
+        if (force || !dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN)) return loadOnce(api, url, force)
+        val key = "${api.name}|$url"
+        detailCache[key]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }
+        val running = loadsInFlight[key]
+        if (running != null && running.isActive) { Log.i(TAG_OWN, "load joins the running call for $key"); return running.await() } // OWN-DBG
+        val d = loadScope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { loadOnce(api, url, false) }
+        val prev = loadsInFlight.putIfAbsent(key, d)
+        if (prev != null && prev.isActive) { d.cancel(); return prev.await() }
+        if (prev != null) loadsInFlight[key] = d
+        d.invokeOnCompletion { loadsInFlight.remove(key, d) }
+        d.start()
+        return d.await()
+    }
+
+    internal fun loadsRunning(): Int = loadsInFlight.size
+    private const val TAG_OWN = "YuOwn" // OWN-DBG
+
+    private suspend fun loadOnce(api: MainAPI, url: String, force: Boolean): OnlineDetail = withContext(Dispatchers.IO) {
         val key = "${api.name}|$url"
         detailCache[key]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
         val dk = diskKey(api, "detail", url)

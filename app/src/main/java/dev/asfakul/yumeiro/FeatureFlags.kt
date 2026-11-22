@@ -196,6 +196,15 @@ object FeatureFlags {
          * and setting a first PIN goes on to the security questions (for "Forgot?").
          */
         PIN_GUARD("own12_pin_guard", true),
+        /**
+         * OWN-6 / OWN-1: a tapped title opens its page at once when the source is known to open one, the page slides in
+         * under the loading layer otherwise, and one extension `load` serves the tap and the page.
+         */
+        FAST_TITLE_OPEN("own6_fast_title_open", true),
+        /** OWN-1: a double tap does not open the same page twice, and a double tap on a Back button does not close two pages. */
+        NAV_GUARD("own1_nav_guard", true),
+        /** OWN-8: an episode batch download can save one subtitle language (Settings language or English), not only none or all. */
+        BATCH_SUB_LANGUAGE("own8_batch_sub_language", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

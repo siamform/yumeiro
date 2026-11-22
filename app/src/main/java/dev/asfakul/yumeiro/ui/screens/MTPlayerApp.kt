@@ -242,9 +242,13 @@ fun MTPlayerApp(
     // A page that is already open further down the stack is brought back instead of stacked again:
     // Extensions → Market → "Manage" used to push a second Extensions page (and so on), so Back
     // kept re-opening Extensions as if it had been tapped again.
+    val navGuard = remember(navController) { dev.asfakul.yumeiro.ui.navigation.NavGuard() }
+    val navGuardOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.NAV_GUARD) }
     val navigateSub: (String) -> Unit = remember(navController) {
         { route ->
-            runCatching {
+            if (navGuardOn && !navGuard.allowPush(route, android.os.SystemClock.uptimeMillis())) {
+                android.util.Log.i("YuNav", "push $route dropped (double tap)") // OWN-DBG
+            } else runCatching {
                 if (!(dev.asfakul.yumeiro.ui.navigation.SubNav.reusable(route) && navController.popBackStack(route, inclusive = false))) {
                     navController.navigate(route) { launchSingleTop = true }
                 }
@@ -252,7 +256,12 @@ fun MTPlayerApp(
         }
     }
     val popSub: () -> Unit = remember(navController) {
-        { if (navController.previousBackStackEntry != null) navController.popBackStack() }
+        {
+            if (navController.previousBackStackEntry != null) {
+                if (navGuardOn && !navGuard.allowPop(android.os.SystemClock.uptimeMillis())) android.util.Log.i("YuNav", "pop dropped (double tap)") // OWN-DBG
+                else navController.popBackStack()
+            }
+        }
     }
     // Tap on an online title: movies play straight away; series open their episode list.
     val openOnline: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = remember(navigateSub) {

@@ -107,13 +107,36 @@ object OnlineSession {
     fun open(context: Context, item: OnlineItem, onShowTitle: (OnlineItem) -> Unit) {
         val app = context.applicationContext
         job?.cancel()
+        // OWN-6: a source known to open a title page goes there at once; the page shows the card while the
+        // details load (CloudStream / Hikari open the details shell first too).
+        if (OpenFlow.pageFirst(dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN), OpeningKinds.opensPage(app, item))) {
+            _opening.value = null
+            Log.i(TAG, "open ${item.name}: title page first") // OWN-DBG
+            onShowTitle(item)
+            job = scope.launch {
+                val provider = kotlinx.coroutines.withContext(Dispatchers.Default) { ExtensionManager.provider(item.api) }
+                val detail = provider?.let { p -> runCatching { OnlineRepository.load(p, item.url) }.getOrNull() }
+                if (detail != null) OpeningKinds.learn(app, item, opensPage = !OpenFlow.direct(detail))
+            }
+            return
+        }
         _opening.value = item
         job = scope.launch {
             val provider = kotlinx.coroutines.withContext(Dispatchers.Default) { ExtensionManager.provider(item.api) }
             val detail = provider?.let { p -> runCatching { OnlineRepository.load(p, item.url) }.onFailure { Log.w(TAG, "open ${item.name}", it) }.getOrNull() }
             if (_opening.value != item) return@launch
+            val direct = detail != null && OpenFlow.direct(detail)
+            if (!direct && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN)) {
+                // OWN-1: the page slides in under the loading layer, which goes only after the slide. Before, the
+                // layer vanished first, the feed flashed, then the page came in: it looked like a page closing.
+                if (detail != null) OpeningKinds.learn(app, item, opensPage = true)
+                Log.i(TAG, "open ${item.name}: page under the loading layer") // OWN-DBG
+                onShowTitle(item)
+                kotlinx.coroutines.delay(OpenFlow.HANDOFF_MS)
+                if (_opening.value == item) _opening.value = null
+                return@launch
+            }
             _opening.value = null
-            val direct = detail != null && detail.episodes.values.all { it.isEmpty() } && detail.playData != null && detail.unsupportedReason == null
             // Round 13: remembered so the next tap on this source shows the right skeleton.
             if (detail != null) OpeningKinds.learn(app, item, opensPage = !direct)
             when {
