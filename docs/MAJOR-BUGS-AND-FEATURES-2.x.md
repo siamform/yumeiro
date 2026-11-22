@@ -142,6 +142,13 @@ Verified. Status "Not checked" = not yet compared with the code; re-check with a
 | OL-12 | Online Music playlist / album page has Play and Shuffle but no Download (YtMusicBrowse.DetailHeader) | Verified: fail-before 44927039015 valid; pass-after r15 CI 44929819988 (OL-12-TOUCH 197d8df1) (ledger OL-12, OL-12-TOUCH) | owner 2026-11-21 | "Download playlist" button in the header next to Play / Shuffle: queues every track, same Offline vault / Permanent choice as other downloads, live progress |
 | OL-13 | Social update: About lacks Yumeiro's Facebook / Instagram / X / TikTok / Reddit (@officialyumeiro), Discord, and the developer's Facebook / Instagram / Telegram | Built 1ce6d8ca (flag ol13_social_links). Fail-before 44936197438, r15 CI 44936285767, Pass: device phones 44936349725 / TV 44936347387 | owner 2026-11-22 | Telegram https://t.me/yumeiroofficial, Discord https://discord.gg/eqkNymUAMJ, website yumeiro.click; developer facebook.com/siam1p, instagram asfakul_siam, Telegram @siamorwho |
 
+## Queue: new findings (owner rule 7: not started until the queued items are done)
+
+| ID | Finding | Status |
+|---|---|---|
+| DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Queued (found 2026-11-22 14:05 +06 during the DL-ONE audit) |
+| DEX-REG-1 | Preview build failed the 224-register check (VideoPlayerModalContent 225) | Fixed as a blocker of item D (preview APK); pass-after 45002048828 pending |
+
 ## Owner decisions needed (not reopened)
 
 1. Telegram login: decided 2026-11-21, full login (TDLib). api_id / api_hash received 2026-11-21 and stored as repo secrets YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH (BuildConfig TG_API_ID / TG_API_HASH). Never write the values in the repo.

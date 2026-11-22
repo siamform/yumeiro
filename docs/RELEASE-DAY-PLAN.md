@@ -22,6 +22,10 @@ the sandbox. Read this file, then `docs/HANDOVER-LIVE.md`, then `docs/AGENT-STAR
    never copy another app's look or code.
 6. No merge to main, release, tag or production deploy until the owner explicitly approves after his soft test.
    The website (`siamform/yumeiro-web`) is changed on a branch / PR only, not deployed, until he approves.
+7. Queue first (owner 2026-11-22 14:20 +06): finish the items already in the queue before anything new. A new bug or
+   finding is written into the queue (ledger row + MAJOR "Queue" list) and NOT fixed until the queued items are done,
+   then work goes on in queue order. Exception only for a break that stops a queued item itself (e.g. the preview APK
+   build failing), and it is logged as such.
 
 ## Today's work, in order (tick each with evidence; next agent continues at the first unticked line)
 
@@ -59,6 +63,7 @@ the sandbox. Read this file, then `docs/HANDOVER-LIVE.md`, then `docs/AGENT-STAR
       the chat. The owner installs it, tests, then decides: approve PR / merge / release, or continue.
 
 ## Progress log (newest first; one line per finished step)
+- 2026-11-22 14:20: rule 7 (queue first) added. DEX-REG-1 (preview APK build failed the 224-register check) fixed as a blocker of queued item D; DL-WEB only queued.
 - 2026-11-22 14:12: DL-ONE (one download popup, YouTube too) pushed, fail-before 45001258208; E1/E2 all-in-one plan written; F-09-FEED pass-after Pass 44997677870.
 - 12:07: runs for 31ea68be: r15 CI 44992235866, device Sky/Vega/Nuvio 44992237525, gate trio lowram 44992239107.
 - 2026-11-22 12:56: F-09-FEED (owner: poster taps for Watch later / Favorite) pushed; fail-before 44995800916 running.

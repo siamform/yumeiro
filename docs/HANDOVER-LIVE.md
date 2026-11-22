@@ -16,7 +16,7 @@ in-app web pages are not caught), not fixed in 2.1.0. F-09-FEED pass-after Pass 
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
 - r15 CI 44997677870 @bdcbd8e1: Build, test & lint Pass; Review APK FAILED the dex register budget (225 > 224) = DEX-REG-1, fixed in the next commit; new r15 CI review_apk=true = pass-after for DEX-REG-1 + DL-ONE and the preview APK.
-  yumeiro-review-apk = preview #1 (no DL-ONE). Then dispatch r15 CI review_apk=true for DL-ONE pass-after = preview #2.
+  That run is 45002048828 @DEX-REG-1 commit: download artifact yumeiro-review-apk, sha256, share = preview APK.
 - Fail-before DL-ONE: ab/dlone-before 45001258208 (valid = compiles, only YtOneSheetTest fails); worktree /tmp/abdl;
   delete branch + worktree after.
 - ST-17 stress 44998769417 (StabilityStressDeviceTest repeat 10, lowram @baa8c855): record.
@@ -222,7 +222,7 @@ code, commits or docs; only in the gitignored `secrets/` folder on the working m
 - Fail-before verified: F-21 44878962117, B-31 speed 44879233183, F-22 44879571787, E3 44879928117 (branches deleted).
 - Device Pass: F-02 round trip 44879417411 (api36). B-31 first 64 KB Pass 44879268223 (2632 / 5783 ms), seek Fail B31-SEEK.
 
-## Pending runs
+## Older pending runs (history, all ended)
 - r15 unit pass-after CI 44926431107 @95108c0c (OL-8, OL-2, OL-3, OL-1, OL-4, OL-7, OL-9, OL-10 unit + compile + lint).
   When it ends: `gh workflow run ci.yml --ref r15-stability -f review_apk=true` for OL-11, OL-12, OL-5 (head 91667cdd+).
 - Fail-before CIs (each must fail only on its new test): ab/ol4-before 44926496585 (StreamDownloadAskTest),
