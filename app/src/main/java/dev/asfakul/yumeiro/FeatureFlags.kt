@@ -158,8 +158,11 @@ object FeatureFlags {
         SCRIPTS_NUVIO("scripts_nuvio", true),
         /** F-05-N (ADR-057): stream-only add-ons (Nuvio now) are asked for extra links when a title plays. On with SCRIPTS_NUVIO (F-05-N-ON). */
         STREAM_ADDONS("f05_stream_addons", true),
-        /** F-05-S (ADR-058): SkyStream plugins (.sky) from a user-added repository run as normal sources. Off until SkyStreamProviderDeviceTest passes on device. */
-        SCRIPTS_SKYSTREAM("scripts_skystream", false),
+        /**
+         * F-05-S (ADR-058): SkyStream plugins (.sky) from a user-added repository run as normal sources. On since
+         * F-05-S-ON: SkyStreamProviderDeviceTest 3/3 on api36 + api33-lowram (device 44992834769).
+         */
+        SCRIPTS_SKYSTREAM("scripts_skystream", true),
         /** F-05-N-ERR: a script error is reported as "Error: message" (then the stack), not a bare stack line. */
         SCRIPT_ERROR_MESSAGE("f05_script_error_message", true),
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */

@@ -46,11 +46,12 @@ class SkyStreamAdapterTest {
         return f
     }
 
-    @Test fun theAdapterIsRegisteredBehindItsOwnFlagWhichIsOff() {
+    @Test fun theAdapterIsRegisteredBehindItsOwnFlagWhichIsOn() {
         assertTrue(SourceHub.Ecosystem.SKYSTREAM in EcosystemRegistry.adapters.keys)
         assertEquals(FeatureFlags.Flag.SCRIPTS_SKYSTREAM, SkyStreamAdapter.flag)
-        assertFalse(FeatureFlags.Flag.SCRIPTS_SKYSTREAM.default)
-        assertTrue("SkyStream repos stay refused while scripts_skystream is off", UniversalAdd.Kind.SKYSTREAM_REPO.notYet)
+        // F-05-S-ON: on since SkyStreamProviderDeviceTest passed on both phones (device 44992834769).
+        assertTrue(FeatureFlags.Flag.SCRIPTS_SKYSTREAM.default)
+        assertFalse("SkyStream repos are added now (scripts_skystream on)", UniversalAdd.Kind.SKYSTREAM_REPO.notYet)
         assertTrue("a lone .sky file is recognised only", UniversalAdd.Kind.SKY_PLUGIN.notYet)
         assertEquals(setOf(SkyStreamRepoParser.SKY_FILE), SkyStreamAdapter.required(RepoFormats.parse("""[{"display_name":"X","value":"x","version":"1"}]""", "https://v.example/m.json")!!.plugins.single()))
     }
