@@ -63,4 +63,9 @@ if [[ -n "${LASTFM_API_KEY:-}" && -n "${LASTFM_SHARED_SECRET:-}" ]]; then
   printf '%s' "$LASTFM_SHARED_SECRET" | npx wrangler secret put LASTFM_SHARED_SECRET >/dev/null
   echo "Last.fm signing secrets set."
 fi
+# E1-A: the Yumeiro Hub catalog reads TMDB with this token on the Worker only (never in the APK).
+if [[ -n "${TMDB_API_KEY:-}" ]]; then
+  printf '%s' "$TMDB_API_KEY" | npx wrangler secret put TMDB_TOKEN >/dev/null
+  echo "TMDB token set."
+fi
 echo "Deployed. Watch: npx wrangler tail yumeiro-cloud --format pretty (look for 'wake' queue sends after the next */10 cron)."

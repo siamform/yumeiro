@@ -6,6 +6,9 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 ~01:30 +06: E1 Worker hub deployed (api.yumeiro.click/v1/hub/*). App catalog part + fan-out coded
+(YumeiroCatalog.kt, E1CatalogTest). CI dispatched on release-2.2.0 to catch compile errors. Next: B5 Vega research, B6.
+
 2026-11-23 ~00:20 +06: B3 E2-ALL coded (build_live_all.py + app default yumeiro_live). stream-sync dispatched on
 release-2.2.0 to publish the first Yumeiro Live list. Next: E2-ALL-D report, then B4 E1.
 
