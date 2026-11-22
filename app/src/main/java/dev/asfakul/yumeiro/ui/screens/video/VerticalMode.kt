@@ -45,4 +45,19 @@ internal object VerticalMode {
         hasPrevious -> Swipe.PREVIOUS
         else -> Swipe.LEAVE
     }
+
+    /** The player's vertical-mode state that Back changes. */
+    data class State(val vertical: Boolean, val fullscreen: Boolean, val userLeft: Boolean)
+
+    /**
+     * ST-17-BACK: Back in vertical mode leaves vertical mode itself, not only full screen. Before, Back
+     * only set fullscreen = false and relied on the fullscreen effect to clear vertical mode; when the
+     * player was already out of full screen but still vertical (stress run 44998769417, run 7: docked
+     * watch page with video_vertical_mode, 4 Backs in 14 s), Back changed nothing and was swallowed
+     * every time. Now one Back always ends vertical mode. [holdBack] off = the old behaviour.
+     */
+    fun afterBack(s: State, holdBack: Boolean = true): State =
+        if (!s.vertical) s
+        else if (holdBack) State(vertical = false, fullscreen = false, userLeft = true)
+        else s.copy(fullscreen = false)
 }

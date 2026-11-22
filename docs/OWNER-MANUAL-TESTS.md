@@ -130,6 +130,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-79 | B31-FRAME: built-in torrent first frame and seek on a real phone | Owner test (pending, needs a test build with the engine on) |
 | OMT-80 | DL-ONE: the same download popup everywhere | Owner test (pending) |
 | OMT-81 | DL-WEB: a file link inside a website opens the download popup | Owner test (pending) |
+| OMT-82 | ST-17-BACK: one Back leaves a vertical video | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1096,3 +1097,10 @@ Passes if the first picture shows within 15 s and the picture plays again within
 2. The usual download popup opens with the file's real name; pick Offline or Permanent and the file lands in Downloads.
 3. A site that signs you in (cookies) still downloads: the popup uses the page's cookies and address.
 4. A link the page builds itself (blob:) shows "This page makes the file itself ..." instead of doing nothing.
+
+### OMT-82 — One Back leaves a vertical video (ST-17-BACK)
+
+1. Open a short drama or any portrait video (for example a ReelShort title from Yumix) so the player goes vertical.
+2. Press Back once: the normal player layout comes back (the video keeps playing).
+3. Press Back again: you leave the player as usual. Back never does nothing.
+4. Repeat after swiping up to the next episode a few times.

@@ -20,6 +20,9 @@ in-app web pages are not caught), not fixed in 2.1.0. F-09-FEED pass-after Pass 
 - DL-WEB fix (web_download_listener, WebDownloads, WebDownloadsTest 6): fail-before ab/dlweb-before 45006640065 (valid = only
   WebDownloadsTest fails, all 6; worktree /tmp/abdw, delete after). OMT-81. Add DL-WEB to CHANGELOG.md only after the pass-after.
 - Website PR #5 (r16-v210) a7c193a: changelog text matches 2.1.0 (one downloader, Stremio / SkyStream, Upcoming by country). Kit zip rebuilt 15:13.
+- ST-17 stress 44998769417: 0 spins, 9/10 Pass, run 7 Fail -> ST-17-BACK fixed (vertical_back_leaves, VerticalBackTest 5); fail-before
+  ab/st17back-before 45006886661 (valid = 4 of 5 fail; worktree /tmp/absb). Then rerun the stress: device-check StabilityStressDeviceTest
+  -f phone=api33-lowram -f repeat=10 on r15. r15 CI 45006709166 cancelled (logged); new r15 CI covers TV-FP-1 + DL-WEB + ST-17-BACK.
 - Queue order now (owner rule 7): TV-FP-1, ST-17 (44998769417 running), B31-FRAME (Blocked emulator), then website (B),
   README mockups + kit zip (C), then DL-WEB, then E2 first publish (owner go), E2-ALL, E1 (2.2.0).
 - r15 CI 44997677870 @bdcbd8e1: Build, test & lint Pass; Review APK FAILED the dex register budget (225 > 224) = DEX-REG-1, fixed in the next commit; new r15 CI review_apk=true = pass-after for DEX-REG-1 + DL-ONE and the preview APK.

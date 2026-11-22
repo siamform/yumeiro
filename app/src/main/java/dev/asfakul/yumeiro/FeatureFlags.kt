@@ -173,6 +173,8 @@ object FeatureFlags {
         TAB_JUMP_HOLD("tab_jump_hold", true),
         /** DL-WEB: a file link inside an in-app web page opens the shared download popup (WebView DownloadListener). */
         WEB_DOWNLOAD_LISTENER("web_download_listener", true),
+        /** ST-17-BACK: Back in vertical mode always leaves vertical mode (it was swallowed when full screen was already off). */
+        VERTICAL_BACK_LEAVES("vertical_back_leaves", true),
         /**
          * F-05-S (ADR-058): SkyStream plugins (.sky) from a user-added repository run as normal sources. On since
          * F-05-S-ON: SkyStreamProviderDeviceTest 3/3 on api36 + api33-lowram (device 44992834769).

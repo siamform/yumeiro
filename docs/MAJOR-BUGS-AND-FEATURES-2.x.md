@@ -147,6 +147,7 @@ Verified. Status "Not checked" = not yet compared with the code; re-check with a
 | ID | Finding | Status |
 |---|---|---|
 | DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Fixed, checks running: flag web_download_listener, WebDownloadsTest (6); fail-before 45006640065 pending; OMT-81 |
+| ST-17-BACK | Back did nothing on a vertical (portrait) video once full screen was already off: 4 Backs in 14 s, the stress test could not return to the tabs (44998769417 run 7). Fixed under rule 7 exception: it blocks the queued item ST-17 itself | Fixed, checks running: flag vertical_back_leaves, VerticalBackTest (5); fail-before 45006886661 pending; OMT-82 |
 | DEX-REG-1 | Preview build failed the 224-register check (VideoPlayerModalContent 225) | Fixed as a blocker of item D (preview APK); Pass 45002048828 (194 / 195 regs) |
 
 ## Owner decisions needed (not reopened)
@@ -224,7 +225,7 @@ Earlier evidence is in docs/DONE-LEDGER.md (line numbers as of today). Current-c
 | TV-FP-1 | DONE-LEDGER 669 | FeedPosition on TV: youtube now passes on tv-api24 (44995889578); live still ends on Music on tv-api24 (touch and semantic click, 44997306578) | Fail (TV-FP-1: 5 of 6; owner check OMT-78) |
 | EXT-T1 | CHECKLIST 93 | 30 emulator runs, cannot reproduce | Blocked: owner phone test OMT-26 |
 | ST-7 | CHECKLIST 92 | jank only on software-rendered emulators | Blocked: owner real phone OMT-12 |
-| ST-17 | CHECKLIST 73, DONE-LEDGER 179 | 1 spin in 40 stress runs; 44145301927 20/20 clean | Fail (ST-17 open, logged per campaign) |
+| ST-17 | CHECKLIST 73, DONE-LEDGER 179 | 1 spin in 40 stress runs; 44145301927 20/20 clean; 44998769417 (lowram, repeat 10 @baa8c855): 0 compose spins in all 10, 9 of 10 Pass, run 7 Fail = Back swallowed on a vertical video (ST-17-BACK) | Fail (44998769417 run 7, finding ST-17-BACK: fixed, checks running) |
 
 ### C6: original rounds 1 to 3
 - Player: some videos with no audio; source rotation, including rotating again when a manually chosen source

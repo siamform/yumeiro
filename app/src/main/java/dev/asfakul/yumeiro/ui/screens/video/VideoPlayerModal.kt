@@ -1514,7 +1514,17 @@ private fun VideoPlayerModalContent(
     }
     BackHandler(enabled = !minimized) {
         // F-12 (ADR-056): Back in vertical mode returns to the normal player, which keeps playing.
-        if (verticalMode && !isScreenLocked) { isFullscreen = false; return@BackHandler }
+        if (verticalMode && !isScreenLocked) {
+            // ST-17-BACK: one Back always leaves vertical mode, also when full screen was already off.
+            val next = VerticalMode.afterBack(
+                VerticalMode.State(verticalMode, isFullscreen, verticalLeft),
+                holdBack = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.VERTICAL_BACK_LEAVES),
+            )
+            if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.i("YuBack", "vertical back fullscreen=$isFullscreen -> vertical=${next.vertical}")
+            if (!next.vertical && resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            verticalMode = next.vertical; verticalLeft = next.userLeft; isFullscreen = next.fullscreen
+            return@BackHandler
+        }
         // R17: one Back leaves on touch screens; a remote steps (controls → fullscreen → leave).
         val backStep = PlayerBackRule.step(
             keyDriven = keyDriven, controlsVisible = isControlsVisible, locked = isScreenLocked, ended = isEnded,
