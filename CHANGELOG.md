@@ -38,7 +38,9 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - Online sources no longer fail after skipping the tour, on a fresh install or after an update: Cloudflare DNS is the
   default network when you never picked one; your own choice is kept (OWN-2, OWN-7).
 - A fast double tap no longer opens a page twice or closes two pages; Yumix -> details no longer flashes the feed
-  between the loading card and the page (OWN-1).
+  between the loading card and the page. Back on a page opened right after a Back now always closes it (OWN-1).
+- Live TV: a channel list you removed is no longer added back after an update or a repair; Yumeiro Live is added
+  once, only when you update from a version without it (E2-ALL).
 - Opening a title from Yumix is faster: for sources that have a title page, the page opens at once and fills in
   (OWN-6).
 - YouTube downloads always offer "Video" or "Audio only" again (OWN-11).

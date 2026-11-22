@@ -15,13 +15,13 @@ only "built" is listed here with what is missing. Words used:
 | ID | Item | Status |
 |---|---|---|
 | OWN-1..12 | First two owner lists (nav guard, fast title open, Telegram keys, OWN-8 batch subtitles, Classics, YouTube audio, PIN reset, ...) | Done: rows, commits and runs in docs/RELEASE-AUDIT-2.1.0.md section 2 |
-| OWN-13 | One built-in "Yumeiro" source, all in one, no install | Coded, CI pending (CI 45041431667 on d0c5a1d2). One card, one switch, one home, one search; drama + films, documentaries, cartoons, TV, films by country. Rest of E1 (below) is Not in 2.1.0 |
-| OWN-14 | Page close / Back not like the open animation | Coded, CI pending (d8ae2c3b): one shared enter/exit pair, same duration both ways; Inbox / Support and Settings now close the way they open |
-| OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | Coded, run pending (release-2.2.0): second logo skipped after the PIN gate, decide()/open() no longer crash. Device ProfileColdStartDeviceTest rerun in B7 |
-| OWN-16 | Yumix > Upcoming: hard-coded filters, no search, filter should be an icon, dynamic list | Coded, CI pending (d8ae2c3b): search box, filter icon with a sheet, every filter list built from the data (genres, channel countries, days), schedule country from the phone first |
+| OWN-13 | One built-in "Yumeiro" source, all in one, no install | Pass: Own13YumeiroHubTest 7/7, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed). One card, one switch, one home, one search; drama + films, documentaries, cartoons, TV, films by country. Rest of E1 (below) is Not in 2.1.0 |
+| OWN-14 | Page close / Back not like the open animation | Pass: Own14PageMotionTest 2/2, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed): one shared enter/exit pair, same duration both ways; Inbox / Support and Settings now close the way they open |
+| OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | Pass: Own15GateLogoTest 3/3 (45057299595); device ProfileColdStartDeviceTest pass both phones (45045030577): second logo skipped after the PIN gate, decide()/open() no longer crash |
+| OWN-16 | Yumix > Upcoming: hard-coded filters, no search, filter should be an icon, dynamic list | Pass: Own16UpcomingFilterTest 5/5, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed): search box, filter icon with a sheet, every filter list built from the data (genres, channel countries, days), schedule country from the phone first |
 | OWN-17 | This cross-check | This file |
-| OWN-18 | Download popup: size, quality, sub / dub and other facts on every popup | Coded, CI pending (Own18DownloadSizeTest); device check PopupQualityDeviceTest next |
-| OWN-19 | Full-screen player: only the main buttons, the rest in the 3-dot menu | Coded, CI pending (Own19PlayerEssentialsTest); device check LocalPlayerDeviceTest next |
+| OWN-18 | Download popup: size, quality, sub / dub and other facts on every popup | Pass: Own18DownloadSizeTest 10/10, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed). Device check PopupQualityDeviceTest: Not checked (time) |
+| OWN-19 | Full-screen player: only the main buttons, the rest in the 3-dot menu | Pass: Own19PlayerEssentialsTest 4/4, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed); device LocalPlayerDeviceTest 12/12 (45048938663) |
 
 ## 2. MAJOR-BUGS-AND-FEATURES-2.x.md
 
@@ -29,18 +29,18 @@ Every row was read. Rows marked Verified / Done / Pass with run IDs stay closed 
 
 | ID | What the list says | Cross-check result | Status |
 |---|---|---|---|
-| E1 Yumeiro Hub | Built for 2.2.0 | Worker /v1/hub/* deployed (version 08594cef); app catalog part + link fan-out over installed sources (YumeiroCatalog.kt, E1CatalogTest). E1-C recipes: Not in 2.2.0 (time) | CI pending (45044232383) |
+| E1 Yumeiro Hub | Built for 2.2.0 | Worker /v1/hub/* deployed (version 08594cef); app catalog part + link fan-out over installed sources (YumeiroCatalog.kt, E1CatalogTest). E1-C recipes: Not in 2.2.0 (time) | Pass: E1CatalogTest 10/10, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed) |
 | E2-ALL Yumeiro Live | Not built beyond E2 | E2 (curated per-country lists, dead links dropped in CI) is built and CI-tested. The merged default list and the in-app default need the first publish of E2 to the streams branch, which is the owner's go | Not in 2.1.0 (needs owner go to publish) |
 | F-05 Nuvio / SkyStream / Vega | "Partial" | Re-read: all three import and run (device 44985807462, 44992834769), Stremio stream add-ons pass 44995462689. "Partial" is out of date: what is left is real repos on a real phone (OMT-73/74/75) | Owner test |
 | F-11 Manga translation | Built behind a flag | Device test MangaTranslate exists; real OCR quality and APK size need a real phone | Owner test |
-| F-22 Upcoming filters | Part built | Rest done as OWN-16. The "Extension" filter cannot exist: a calendar entry is not tied to an installed extension (no data links them) | Coded, CI pending (with OWN-16) |
+| F-22 Upcoming filters | Part built | Rest done as OWN-16. The "Extension" filter cannot exist: a calendar entry is not tied to an installed extension (no data links them) | Pass: F22UpcomingSectionsTest 5/5, Own16UpcomingFilterTest 5/5, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed) |
 | F-02 login | Built | Code screen reached on Telegram's test servers (44879417411, 44933818039). Telegram closed public test accounts (tdlib/td#3083), so a full sign-in needs a real account | Owner test (OMT-63) |
 | UPG-1 | Not run (owner deferred) | TV upgrade and 1.9.0 to 2.0.0 upgrade check | Not in 2.1.0 (owner deferred) |
 | SEC-1 | Done 2026-11-22 | Last.fm key + secret set as Worker secrets; built-in sign-in is on | Done |
 | FREEZE-4 | To confirm on a real phone | Home recomposition counter | Owner test |
 | BUG-3 | Blocked: owner | Download speed on a real phone | Owner test (OMT-20) |
 | PIP-1, S-1, NBUG-8 | Built / guarded | Code and unit guards in place, not reproduced on emulators | Owner test (real phone) |
-| C6 "Skeleton or universal loader" | Was code read only | C6LoaderTest draws the real skeleton for each kind of tap and checks only the right one shows | Unit UI test, CI pending |
+| C6 "Skeleton or universal loader" | Was code read only | C6LoaderTest draws the real skeleton for each kind of tap and checks only the right one shows | Pass: C6LoaderTest, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed) |
 | C6 "Extension bar hides on scroll" | Owner feel test | | Owner test (OMT-9) |
 | EXT-T1, ST-7, X2-1, X13-6 | Blocked: owner | 30 emulator runs cannot reproduce EXT-T1; ST-7 and X2-1 need real hardware; X13-6 is the owner's decision | Owner test / decision (OMT-26, OMT-12, OMT-23) |
 

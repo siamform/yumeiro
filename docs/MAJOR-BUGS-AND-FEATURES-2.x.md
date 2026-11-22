@@ -149,7 +149,7 @@ Verified. Status "Not checked" = not yet compared with the code; re-check with a
 | DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Pass (fail-before 45006640065, pass-after 45008845576); flag web_download_listener; OMT-81 |
 | ST-17-BACK | Back did nothing on a vertical (portrait) video once full screen was already off: 4 Backs in 14 s, the stress test could not return to the tabs (44998769417 run 7). Fixed under rule 7 exception: it blocks the queued item ST-17 itself | Pass (fail-before 45006886661, pass-after 45008845576, stress 45006967759 10 of 10); flag vertical_back_leaves; OMT-82 |
 | OWN-1..OWN-12 | Owner list 2026-11-22 evening, audited in docs/RELEASE-AUDIT-2.1.0.md section 2 (rows, commits, runs) | All 12 fixed in 2.1.0 (owner order 3: "fix all of them by groups"): OWN-1/6 NavGuard + fast title open + hand-off Back (bc768506, 39ca1e6b, 8ff0e0d9), OWN-2/7 Cloudflare DoH default (78a667f6), OWN-3 own Telegram API ID / hash, login on (9704ae29), OWN-4 market add box takes every link type (a4dd5ddf), OWN-5 script sources on Extensions (a5d8d0d3), OWN-8 one subtitle language for batch downloads (4c64bf4e), OWN-9 official built-in Yumeiro Classics + Drama shown on Extensions (7719e54e, 385e293a), OWN-10 TeraBox share origin / fresh browserid / retry (179d9e30, b44d5237), OWN-11 YouTube audio-only, OWN-12 PIN guard + recovery questions. Final CI: see audit §5. Owner tests OMT-83..92 |
-| OWN-13..OWN-19 | Owner list 2026-11-22 (messages 5 and 6), audited in docs/RELEASE-AUDIT-2.1.0.md section 2 and docs/OPEN-ITEMS-2.1.0.md | 13, 14, 16, 18, 19 coded, CI pending; 15 reproduced on device, fix in progress; 17 = docs/OPEN-ITEMS-2.1.0.md |
+| OWN-13..OWN-19 | Owner list 2026-11-22 (messages 5 and 6), audited in docs/RELEASE-AUDIT-2.1.0.md section 2 and docs/OPEN-ITEMS-2.1.0.md | 13, 14, 15, 16, 18, 19 unit Pass in CI 45057299595 (3a18b985, 1944 unit tests, 0 failed); 17 = docs/OPEN-ITEMS-2.1.0.md |
 | DEX-REG-1 | Preview build failed the 224-register check (VideoPlayerModalContent 225) | Fixed as a blocker of item D (preview APK); Pass 45002048828 (194 / 195 regs) |
 
 ## Owner decisions needed (not reopened)
@@ -268,7 +268,7 @@ device or CI run proves it; "Unit" = unit tests only; "owner" = needs a real pho
 | Player info overlay | P12 | LocalPlayerDeviceTest a 43708220122 | Pass (43708220122) |
 | Quality and audio settings (defaults, decoder, renderer, Anime4K, GPU tier, default player, reorderable controls, resume) | P13, S27, P16 | SE-5 / SE-6 switches and choice rows 43974089878; qa_gpu_tier OMT-16 | Pass (43974089878); GPU tier: owner OMT-16 |
 | PiP rules | P10 | LocalPlayerDeviceTest a,c 43708220122; SurfaceModeDeviceTest | Pass (43708220122) |
-| Skeleton or universal loader by video type | P1, Y1 | C6LoaderTest (2.1.0): the real skeleton drawn for each tap (media link, new source, page source, series, changed source) | Unit UI test, CI pending |
+| Skeleton or universal loader by video type | P1, Y1 | C6LoaderTest (2.1.0): the real skeleton drawn for each tap (media link, new source, page source, series, changed source) | Pass: C6LoaderTest, CI 45057299595 (3a18b985, 1944 unit tests, 0 failed) |
 | Yumeiro Drama | P4, Y4 | DramaPlaybackDeviceTest 43701056608; DramaHealthTest | Pass (43701056608) |
 | Jump back in syncs on app open | H2, G5-PC2 | h2 43693532355 / 43696246671; G5-PC2 fail-before 44200206502 | Pass (43696246671) |
 | Extension bar hides on scroll down | Y3 | code read, no bug | Blocked: owner feel test OMT-9 |

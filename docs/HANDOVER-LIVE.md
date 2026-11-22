@@ -13,6 +13,8 @@ Website branch is r17-v210 in siamform/yumeiro-web.
 2026-11-23 ~00:50 +06: CI 45051586296 finished: 1914 tests, 5 failed, no OOM. All 5 fixed in 3a18b985 (2 real bugs:
 NavGuard dropped Back on a page opened right after a Back; PlaylistStore re-added removed defaults to current files;
 3 test faults, see commit). Each class passed locally (Robolectric). C6LoaderTest added. New CI 45057299595.
+2026-11-23 ~01:45 +06: CI 45057299595 green (1944 unit tests, 0 failed, 11 opt-in skipped; APKs built). Upgrade
+checks from v2.0.0: phone 45061470350 (review APK of 45057299595), TV 45061494331. Docs: proof/open items updated.
 
 ## OWN-15 finding
 Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
@@ -21,7 +23,7 @@ the test's wait does not let the splash LaunchedEffect run (it polls with Thread
 composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
 ## Pending runs
-- CI 45057299595 on 3a18b985.
+- Upgrade phone 45061470350, TV 45061494331.
 
 ## Next step
 1. CI green; then upgrade-check.yml (from v2.0.0, new_apk_run = that CI).

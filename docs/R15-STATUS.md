@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here: release 2.1.0. Wait CI 45057299595 (5 fixes from 45051586296); then upgrade check; release. See docs/HANDOVER-LIVE.md.
+Resume here: release 2.1.0. CI 45057299595 green. Wait upgrade checks 45061470350 (phone) / 45061494331 (TV); then PR, merge, release. See docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

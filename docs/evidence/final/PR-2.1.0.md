@@ -17,8 +17,11 @@ Yumeiro 2.1.0: stability, one downloader, more sources, Yumeiro Hub, Yumeiro Liv
 - E1 Yumeiro Hub: catalog shelves from Yumeiro Cloud (/v1/hub/*, already deployed); play goes through the user's
   installed sources. E1-C recipes are not in 2.1.0.
 - E2-ALL Yumeiro Live: daily checked all-country Live TV list on the streams branch, second default playlist.
-- Off in this release (not announced as new): built-in torrent engine, curated per-country Live TV lists,
-  per-processor APKs.
+- Per-processor APKs are on (repo variable YUMEIRO_ABI_SPLITS=true): universal + arm64-v8a + armeabi-v7a (+ x86).
+- Off in this release (not announced as new): built-in torrent engine (seek 7.8 s / 13 s vs 5 s budget, run
+  45047541362), curated per-country Live TV lists.
+- Not checked (reason): NF1 and DramaPlaybackDeviceTest on device (onshort.net unreachable from CI, run 45049508477);
+  Firebase Test Lab (403, APIs not enabled); real-phone tests in docs/release-2.1/MANUAL-TESTS-2.1.md.
 - Owner tests: docs/release-2.1/MANUAL-TESTS-2.1.md.
 
 Merge with a merge commit (one push to main). That push runs release.yml (tag v2.1.0, signed APKs) and
