@@ -89,6 +89,16 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
     var startFailed by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }
     val engine by TdEngine.state.collectAsState()
+    // OWN-3: the user's own API ID / hash (my.telegram.org), asked first when the build has none.
+    var keysForm by remember { mutableStateOf(dev.asfakul.yumeiro.online.telegram.td.TgAccounts.needsKeys(context)) }
+    val keyScope = rememberCoroutineScope()
+    if (keysForm) {
+        TelegramKeysStep(
+            onBack = { if (dev.asfakul.yumeiro.online.telegram.td.TgAccounts.needsKeys(context)) onBack() else keysForm = false },
+            onSaved = { keyScope.launch { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.keysChanged(context); session = null; keysForm = false; attempt++ } },
+        )
+        return
+    }
 
     LaunchedEffect(attempt) {
         startFailed = null
@@ -125,7 +135,7 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
         val editingPhone by s.editingPhone.collectAsState()
         when {
             state is TgAuthState.Ready -> TelegramLibrary(s, onBack, onPlay)
-            state is TgAuthState.WaitPhone -> PhoneStep(s, onBack)
+            state is TgAuthState.WaitPhone -> PhoneStep(s, onBack, onOwnKeys = { keysForm = true })
             editingPhone && state is TgAuthState.WaitCode -> PhoneStep(s, onBack = { s.cancelPhoneEdit() })
             else -> {
                 val title = "Sign in to Telegram"
@@ -175,7 +185,7 @@ private fun SubmitButton(label: String, s: TgSession, enabled: Boolean, tag: Str
 }
 
 @Composable
-private fun PhoneStep(s: TgSession, onBack: () -> Unit) {
+private fun PhoneStep(s: TgSession, onBack: () -> Unit, onOwnKeys: (() -> Unit)? = null) {
     val p = LocalMtPalette.current
     var phone by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -196,6 +206,9 @@ private fun PhoneStep(s: TgSession, onBack: () -> Unit) {
             "Yumeiro signs in with Telegram's official library. Your messages are not sent anywhere else; the login is saved encrypted for this profile only.",
             color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp),
         )
+        if (onOwnKeys != null) TextButton(onClick = onOwnKeys, modifier = Modifier.padding(top = 4.dp).testTag("tg_own_keys")) {
+            Text(if (dev.asfakul.yumeiro.online.telegram.td.TgKeys.hasOwn(LocalContext.current)) "Change your API ID and hash" else "Use your own API ID and hash")
+        }
     }
     BackHandler { onBack() }
 }
@@ -440,3 +453,61 @@ internal fun videoInfo(v: TgVideo): String = buildList {
     if (v.height > 0) add("${v.height}p")
     if (v.size > 0) add(if (v.size >= 1_000_000_000) "%.1f GB".format(v.size / 1e9) else "${v.size / 1_000_000} MB")
 }.joinToString(" · ")
+
+/**
+ * OWN-3: the user's own Telegram API ID and API hash (my.telegram.org -> API development tools), like Hikari.
+ * Saving them signs every profile out of Telegram on this phone (the old login belongs to the old keys).
+ */
+@Composable
+private fun TelegramKeysStep(onBack: () -> Unit, onSaved: () -> Unit) {
+    val context = LocalContext.current
+    val p = LocalMtPalette.current
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    var id by rememberSaveable { mutableStateOf("") }
+    var hash by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val hasOwn = remember { dev.asfakul.yumeiro.online.telegram.td.TgKeys.hasOwn(context) }
+    val hasBuild = remember { dev.asfakul.yumeiro.online.telegram.td.TgKeys.build() != null }
+    Column(Modifier.fillMaxSize().background(p.background).testTag("tg_keys")) {
+        SubPageHeader(title = "Telegram API keys", subtitle = "From my.telegram.org", onBack = onBack)
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text(
+                "Telegram asks every app for its own keys. Get yours in a minute: sign in at my.telegram.org, open " +
+                    "\"API development tools\", create an app (any name), then copy the App api_id and App api_hash here.",
+                color = p.textSecondary, fontSize = 13.sp,
+            )
+            TextButton(onClick = { runCatching { uri.openUri("https://my.telegram.org/apps") } }, modifier = Modifier.testTag("tg_keys_site")) { Text("Open my.telegram.org") }
+            OutlinedTextField(
+                value = id, onValueChange = { id = it.filter { c -> c.isDigit() }.take(10); error = null }, singleLine = true,
+                label = { Text("API ID") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("tg_keys_id"),
+            )
+            OutlinedTextField(
+                value = hash, onValueChange = { hash = it.trim().take(32); error = null }, singleLine = true,
+                label = { Text("API hash") },
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("tg_keys_hash"),
+            )
+            error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp).testTag("tg_keys_error")) }
+            Button(
+                onClick = {
+                    val e = dev.asfakul.yumeiro.online.telegram.td.TgKeys.save(context, id, hash)
+                    if (e != null) error = e else onSaved()
+                },
+                enabled = id.isNotEmpty() && hash.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 12.dp).testTag("tg_keys_save"),
+            ) { Text("Save and sign in") }
+            if (hasOwn && hasBuild) TextButton(onClick = {
+                dev.asfakul.yumeiro.online.telegram.td.TgKeys.clear(context); onSaved()
+            }, modifier = Modifier.testTag("tg_keys_reset")) { Text("Use Yumeiro's keys again") }
+            Text(
+                "The hash is kept encrypted on this phone and never leaves it except to Telegram. Saving new keys signs " +
+                    "every profile out of Telegram on this phone.",
+                color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp),
+            )
+        }
+    }
+    BackHandler { onBack() }
+}

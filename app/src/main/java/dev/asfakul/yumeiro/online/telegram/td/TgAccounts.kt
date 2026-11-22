@@ -39,10 +39,23 @@ object TgAccounts {
     @Volatile internal var useTestDc = false
     val server: LocalStreamServer get() = LocalStreamServer.shared
 
-    /** Shown at all: keys in this build, flag on, an engine published for this ABI. */
+    /**
+     * Shown at all: flag on and an engine published for this ABI. OWN-3: keys are no longer needed to show it; without
+     * the build's keys the screen asks for the user's own (TgKeys).
+     */
     fun enabled(context: Context): Boolean =
-        BuildConfig.TG_API_ID.toIntOrNull() != null && BuildConfig.TG_API_HASH.isNotBlank() &&
-            FeatureFlags.on(context, FeatureFlags.Flag.TELEGRAM_LOGIN) && TdEngine.available()
+        FeatureFlags.on(context, FeatureFlags.Flag.TELEGRAM_LOGIN) && TdEngine.available()
+
+    /** OWN-3: sign-in needs keys first (no build keys and none typed). */
+    fun needsKeys(context: Context): Boolean = TgKeys.effective(context) == null
+
+    /** OWN-3: new keys: close TDLib and drop every profile's local Telegram data (it belongs to the old keys). */
+    suspend fun keysChanged(context: Context) = withContext(Dispatchers.IO) {
+        closeAll()
+        val app = context.applicationContext
+        File(app.noBackupFilesDir, "tg").deleteRecursively()
+        File(app.cacheDir, "tg").deleteRecursively()
+    }
 
     /** The open profile's session, starting TDLib (and downloading it the first time). Null when it can't start. */
     suspend fun session(context: Context): TgSession? = withContext(Dispatchers.IO) {
@@ -53,10 +66,11 @@ object TgAccounts {
             session?.let { if (sessionProfile == profile && !it.client.closed) return@withLock it }
             session?.close()
             session = null
+            val keys = TgKeys.effective(app) ?: return@withLock null
             val key = databaseKey(app, profile) ?: return@withLock null
             val root = File(app.noBackupFilesDir, "tg/" + safe(profile) + if (useTestDc) "-test" else "")
             val params = TgParams(
-                apiId = BuildConfig.TG_API_ID.toInt(), apiHash = BuildConfig.TG_API_HASH,
+                apiId = keys.apiId, apiHash = keys.apiHash,
                 databaseDir = File(root, "db").absolutePath,
                 filesDir = File(app.cacheDir, "tg/" + safe(profile) + if (useTestDc) "-test" else "").absolutePath,
                 encryptionKey = key, useTestDc = useTestDc,

@@ -102,10 +102,10 @@ object FeatureFlags {
         /** F-02 (ADR-042): public Telegram channels and post links, read from Telegram's web preview (no login). */
         TELEGRAM_PUBLIC("telegram_public", true),
         /**
-         * F-02 login (ADR-052): sign in to Telegram (TDLib), chats, search in a chat, play videos. Off until the
-         * device tests pass; also hidden when the build has no Telegram api_id or no engine for the phone's ABI.
+         * F-02 login (ADR-052): sign in to Telegram (TDLib), chats, search in a chat, play videos. Hidden when there is
+         * no engine for the phone's ABI. OWN-3 (owner 2026-11-22): on; the user can sign in with their own API ID / hash.
          */
-        TELEGRAM_LOGIN("f02_telegram_login", false),
+        TELEGRAM_LOGIN("f02_telegram_login", true),
         /**
          * B-31 (ADR-053): built-in torrent engine (libtorrent): magnets, info-hashes and .torrent links play without
          * TorrServer. Off until the device tests pass; also hidden when no engine is pinned for the phone's ABI.
