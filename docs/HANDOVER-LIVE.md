@@ -15,6 +15,9 @@ NavGuard dropped Back on a page opened right after a Back; PlaylistStore re-adde
 3 test faults, see commit). Each class passed locally (Robolectric). C6LoaderTest added. New CI 45057299595.
 2026-11-23 ~01:45 +06: CI 45057299595 green (1944 unit tests, 0 failed, 11 opt-in skipped; APKs built). Upgrade
 checks from v2.0.0: phone 45061470350 (review APK of 45057299595), TV 45061494331. Docs: proof/open items updated.
+Phone upgrade 45061470350 FAILED on one value: playlists.json version 2 -> 3 (my bump in 3a18b985; it also
+re-ran the v1->v2 migration). Fixed in the next commit: version stays 2, new offeredDefaults list. New CI 45062571312;
+phone upgrade again after it.
 
 ## OWN-15 finding
 Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
@@ -23,7 +26,7 @@ the test's wait does not let the splash LaunchedEffect run (it polls with Thread
 composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
 ## Pending runs
-- Upgrade phone 45061470350, TV 45061494331.
+- CI 45062571312 (offeredDefaults fix); TV upgrade 45061494331 (built on the older commit). Then phone upgrade again.
 
 ## Next step
 1. CI green; then upgrade-check.yml (from v2.0.0, new_apk_run = that CI).
