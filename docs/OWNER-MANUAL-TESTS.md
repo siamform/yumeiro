@@ -135,6 +135,8 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-84 | OWN-10: TeraBox signed-in playback; human check opens the TeraBox page | Owner test (pending, needs a TeraBox account) |
 | OMT-85 | OWN-1: screen recording of a page that closes by itself | Owner evidence (pending; fix in 2.1.1) |
 | OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the market box, script sources card | Owner test (pending) |
+| OMT-87 | OWN-11: YouTube audio-only download (also with "Ask before download" off) | Owner test (pending) |
+| OMT-88 | OWN-12: profile PIN asks current PIN to change / remove; first PIN leads to security questions | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).

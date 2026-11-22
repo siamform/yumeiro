@@ -57,6 +57,8 @@ Full step lists for older tests: docs/OWNER-MANUAL-TESTS.md (same IDs).
 | OMT-84 | OWN-10: TeraBox link signed in plays; a human check opens the TeraBox page | |
 | OMT-85 | OWN-1: screen recording of a page that closes by itself (My List / Reading / Yumix -> player) | |
 | OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the Extension market box, script sources on Extensions | |
+| OMT-87 | OWN-11: YouTube video -> Download offers "Save as: Video / Audio only", also with "Ask before download" off | |
+| OMT-88 | OWN-12: profile PIN: first PIN leads to security questions; Change / Remove PIN asks the current PIN | |
 | OMT-9 | Usability feedback | |
 
 ## 1. Install and first start (everyone)
@@ -490,3 +492,17 @@ and send the clip: which page, what you tapped, how fast. That decides the fix f
 4. Extensions page: a card "Vega sources: N installed" (or Nuvio / SkyStream) lists them; Manage opens Sources ->
    Script repos.
 
+### OMT-87 — YouTube audio-only download (OWN-11), phone and TV
+
+1. Settings -> Downloads: turn "Ask before download" off.
+2. YouTube -> any video -> Download: the popup still opens with "Save as": Video, Audio only · N kbps.
+3. Pick Audio only -> Start: the Downloads list shows an audio file (m4a / webm) in the YouTube audio folder; it plays.
+4. Pick Video -> Start: the video downloads as before. A song (YouTube Music) still saves audio without this row.
+
+### OMT-88 — Profile PIN guard (OWN-12), phone and TV
+
+1. Settings -> Privacy -> Profiles -> your profile -> Set a PIN: type it twice. The security questions open next
+   (Cancel skips them).
+2. Open the profile again -> Remove PIN: the PIN pad asks for the current PIN. A wrong PIN says "Wrong PIN" and
+   keeps it; the right PIN removes it. "Forgot?" answers the security questions.
+3. Change PIN and Remove security questions ask for the current PIN the same way. TV: all of it by D-pad / number keys.

@@ -6,27 +6,26 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 19:35 +0600 (13:35 UTC), branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
-docs/RELEASE-AUDIT-2.1.0.md first (owner list OWN-1..OWN-10, findings, runs).
-Just done: db1634a8 AUD-CLAIM-1/2 (curated Live TV lists E2 were never published -> removed from CHANGELOG.md, README,
-image script and post-05 / square-05; ABI split APKs E3 are off -> moved to "Still being checked"). Website PR #5
-(siamform/yumeiro-web r16-v210) 63e3e78 same text fix (no deploy). Per-commit table docs/evidence/final/PER-COMMIT-2.1.0.md.
-Audit doc now has OWN-1/3/6/8 triage (queued, reasons), flags table W3 and security W4 (gitleaks final + APK search open).
-Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (not yet verified by CI).
+2026-11-22 20:10 +0600 (14:10 UTC), branch `r15-stability`, head dfa5e334. RELEASE AUDIT IN PROGRESS. Read
+docs/RELEASE-AUDIT-2.1.0.md first (owner list OWN-1..OWN-12, findings, runs).
+Just done: owner added OWN-11 (no audio-only option for a YouTube video download) and OWN-12 (profile PIN: no current
+PIN to change / remove, no security questions after a first PIN) and ordered them fixed. Commits OWN-11 (flag
+own11_yt_audio_choice, Own11YtAudioChoiceTest) and OWN-12 (flag own12_pin_guard, Own12PinGuardTest). OMT-87, OMT-88.
+Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5, db1634a8 AUD-CLAIM-1/2, f90b4999 release prep.
 
 ## Pending runs
-- Baseline 45024851633 ended Fail (AUD-FLAKE-1, ScrobbleFlushMockedTest stray request; watch in final CI).
-- Fail-befores (each must fail ONLY in its new test; then delete the branch): 45027077707 ab/own7-before (redo),
-  45027534810 ab/own5-before (redo). Done + branches deleted: own4 45025907314 valid, own10 45025909528 valid. First own7 / own5
-  runs invalid: the OWN-7 test did not compile (AUD-T7-1, fixed aa590039).
-- r15 pass-after CI review_apk=true 45027652884 on 51c507ba (release prep f90b4999: 2.1.0 / 19, What's new 2.1.x). 45027577900 cancelled (logged).
-- Device on 51c507ba: phones default suite 45027685406, tv-api24 default 45027687692. Still to dispatch: tv-api34, gate trio, stress repeat 10 lowram, upgrade-check (v2.0.0, v1.9.0, v1.8.x).
+- Fail-befores (each must fail ONLY in its new tests; then delete the branch local + origin):
+  45027077707 ab/own7-before, 45027534810 ab/own5-before, 45028979680 ab/own1112-before (fix with both flags off;
+  must fail only in Own11YtAudioChoiceTest + Own12PinGuardTest). Done + deleted: own4 45025907314, own10 45025909528.
+- r15 pass-after CI review_apk=true 45028981973 on dfa5e334 (all OWN fixes). 45027652884 cancelled by it (logged).
+- Device on 51c507ba (stale, before OWN-11/12): phones 45027685406, tv-api24 45027687692; rerun on dfa5e334 after they end.
+  Still to dispatch: tv-api34, gate trio, stress repeat 10 lowram, upgrade-check (v2.0.0, v1.9.0, v1.8.x).
   Wait with `gh run watch <id> --interval 120`.
 
 ## Next step
-1. Record the fail-befores + baseline; delete each ab/own*-before branch after it is recorded (local + origin).
-2. Dispatch r15 CI review_apk=true (pass-after for all OWN fixes), then device suites, gate trio, stress, upgrade-check.
-3. Queue + OMT-83..86 done; W8 release checklist and PR text (docs/evidence/final/PR-2.1.0.md) prepared. Left: W5 upgrade runs, Not checked list, GO / NO-GO, CHANGELOG OWN lines after pass-after, CHANGELOG-FULL regen, kit zip.
+1. Record the three fail-befores; delete ab/own7-before, ab/own5-before, ab/own1112-before (local + origin, worktrees /tmp/ab7 /tmp/ab5 /tmp/ab1112).
+2. Record pass-after 45028981973; device suites on dfa5e334 (phones, tv-api24, tv-api34), gate trio, stress, upgrade-check.
+3. Then CHANGELOG OWN lines, CHANGELOG-FULL regen, kit zip, Not checked, GO / NO-GO, owner message.
    Never merge / release / deploy without the owner's go.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
