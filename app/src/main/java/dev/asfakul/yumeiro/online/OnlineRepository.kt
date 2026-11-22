@@ -490,7 +490,7 @@ object OnlineRepository {
         val key = "${api.name}|$url"
         detailCache[key]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }
         val running = loadsInFlight[key]
-        if (running != null && running.isActive) { Log.i(TAG_OWN, "load joins the running call for $key"); return running.await() } // OWN-DBG
+        if (running != null && running.isActive) return running.await()
         val d = loadScope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { loadOnce(api, url, false) }
         val prev = loadsInFlight.putIfAbsent(key, d)
         if (prev != null && prev.isActive) { d.cancel(); return prev.await() }
@@ -501,7 +501,6 @@ object OnlineRepository {
     }
 
     internal fun loadsRunning(): Int = loadsInFlight.size
-    private const val TAG_OWN = "YuOwn" // OWN-DBG
 
     private suspend fun loadOnce(api: MainAPI, url: String, force: Boolean): OnlineDetail = withContext(Dispatchers.IO) {
         val key = "${api.name}|$url"

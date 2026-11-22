@@ -246,9 +246,8 @@ fun MTPlayerApp(
     val navGuardOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.NAV_GUARD) }
     val navigateSub: (String) -> Unit = remember(navController) {
         { route ->
-            if (navGuardOn && !navGuard.allowPush(route, android.os.SystemClock.uptimeMillis())) {
-                android.util.Log.i("YuNav", "push $route dropped (double tap)") // OWN-DBG
-            } else runCatching {
+            // OWN-1: a second tap on the same route within the guard window is dropped.
+            if (!navGuardOn || navGuard.allowPush(route, android.os.SystemClock.uptimeMillis())) runCatching {
                 if (!(dev.asfakul.yumeiro.ui.navigation.SubNav.reusable(route) && navController.popBackStack(route, inclusive = false))) {
                     navController.navigate(route) { launchSingleTop = true }
                 }
@@ -258,8 +257,7 @@ fun MTPlayerApp(
     val popSub: () -> Unit = remember(navController) {
         {
             if (navController.previousBackStackEntry != null) {
-                if (navGuardOn && !navGuard.allowPop(android.os.SystemClock.uptimeMillis())) android.util.Log.i("YuNav", "pop dropped (double tap)") // OWN-DBG
-                else navController.popBackStack()
+                if (!navGuardOn || navGuard.allowPop(android.os.SystemClock.uptimeMillis())) navController.popBackStack()
             }
         }
     }

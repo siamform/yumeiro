@@ -111,7 +111,6 @@ object OnlineSession {
         // details load (CloudStream / Hikari open the details shell first too).
         if (OpenFlow.pageFirst(dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN), OpeningKinds.opensPage(app, item))) {
             _opening.value = null
-            Log.i(TAG, "open ${item.name}: title page first") // OWN-DBG
             onShowTitle(item)
             job = scope.launch {
                 val provider = kotlinx.coroutines.withContext(Dispatchers.Default) { ExtensionManager.provider(item.api) }
@@ -130,7 +129,6 @@ object OnlineSession {
                 // OWN-1: the page slides in under the loading layer, which goes only after the slide. Before, the
                 // layer vanished first, the feed flashed, then the page came in: it looked like a page closing.
                 if (detail != null) OpeningKinds.learn(app, item, opensPage = true)
-                Log.i(TAG, "open ${item.name}: page under the loading layer") // OWN-DBG
                 onShowTitle(item)
                 kotlinx.coroutines.delay(OpenFlow.HANDOFF_MS)
                 if (_opening.value == item) _opening.value = null
