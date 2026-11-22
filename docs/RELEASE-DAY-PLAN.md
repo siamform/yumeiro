@@ -63,6 +63,7 @@ the sandbox. Read this file, then `docs/HANDOVER-LIVE.md`, then `docs/AGENT-STAR
       the chat. The owner installs it, tests, then decides: approve PR / merge / release, or continue.
 
 ## Progress log (newest first; one line per finished step)
+- (16:50) Queue done on the agent side: TV-FP-1 Pass (45006388286 tv-api24, 45008159007 tv-api34), DL-WEB Pass, ST-17-BACK Pass, ST-17 Pass (45006967759 10/10); CI 45008845576 @2d79e048 green; review APKs shared (phone sha256 5fd12973..., TV 02d03d3e...). Website PR #5 changelog updated (a7c193a), kit rebuilt. Waiting for the owner.
 - 2026-11-22 15:06: D done: preview APK from r15 CI 45002048828 @657cc01f (all jobs green) shared to the owner; DL-ONE and DEX-REG-1 pass-after Pass.
 - 2026-11-22 14:20: rule 7 (queue first) added. DEX-REG-1 (preview APK build failed the 224-register check) fixed as a blocker of queued item D; DL-WEB only queued.
 - 2026-11-22 14:12: DL-ONE (one download popup, YouTube too) pushed, fail-before 45001258208; E1/E2 all-in-one plan written; F-09-FEED pass-after Pass 44997677870.

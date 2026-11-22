@@ -15,6 +15,9 @@ dl_one_sheet, test YtOneSheetTest, OMT-80). Finding DL-WEB: no WebView download 
 in-app web pages are not caught), not fixed in 2.1.0. F-09-FEED pass-after Pass 44997677870.
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
+- NONE pending on the agent side (17:2x). All passed: CI 45008845576 @2d79e048 (review APK, DEX budget OK), stress 45006967759 10/10,
+  tv-api24 45006388286, tv-api34 45008159007. Review APKs shared: preview/yumeiro-2.1.0-review-2d79e04-{phone,tv}.apk.
+  Next: the owner's test, then on his explicit go only: PR r15-stability -> main, merge, release 2.1.0 (bump version 2.0.0/18 first).
 - r15 CI pass-after 45008845576 (review_apk=true) covers TV-FP-1 + DL-WEB + ST-17-BACK. Device: tv-api34 FeedPosition 45008159007,
   stress lowram repeat 10 45006967759 (@a8f1ef0f, has the ST-17-BACK fix). Fail-befores done: 45006341391, 45006640065, 45006886661 (all valid, branches deleted).
 - TV-FP-1 fix (tab_jump_hold, TabJump): fail-before ab/tvfp1-before 45006341391 (valid = only TabJumpTest fails; worktree /tmp/abtj,

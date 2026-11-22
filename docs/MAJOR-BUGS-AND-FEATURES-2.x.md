@@ -146,8 +146,8 @@ Verified. Status "Not checked" = not yet compared with the code; re-check with a
 
 | ID | Finding | Status |
 |---|---|---|
-| DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Fixed, checks running: flag web_download_listener, WebDownloadsTest (6); fail-before 45006640065 valid (6 of 6); OMT-81 |
-| ST-17-BACK | Back did nothing on a vertical (portrait) video once full screen was already off: 4 Backs in 14 s, the stress test could not return to the tabs (44998769417 run 7). Fixed under rule 7 exception: it blocks the queued item ST-17 itself | Fixed, checks running: flag vertical_back_leaves, VerticalBackTest (5); fail-before 45006886661 valid (4 of 5); OMT-82 |
+| DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Pass (fail-before 45006640065, pass-after 45008845576); flag web_download_listener; OMT-81 |
+| ST-17-BACK | Back did nothing on a vertical (portrait) video once full screen was already off: 4 Backs in 14 s, the stress test could not return to the tabs (44998769417 run 7). Fixed under rule 7 exception: it blocks the queued item ST-17 itself | Pass (fail-before 45006886661, pass-after 45008845576, stress 45006967759 10 of 10); flag vertical_back_leaves; OMT-82 |
 | DEX-REG-1 | Preview build failed the 224-register check (VideoPlayerModalContent 225) | Fixed as a blocker of item D (preview APK); Pass 45002048828 (194 / 195 regs) |
 
 ## Owner decisions needed (not reopened)
@@ -222,10 +222,10 @@ Earlier evidence is in docs/DONE-LEDGER.md (line numbers as of today). Current-c
 | NB15D-OB1 | CHECKLIST 46 | 414f6c8c, unit pass-after 44610265729 | Pass (44610265729); re-check Pass 44994337536 (current code 7c1ffce3) |
 | NB12-5b | DONE-LEDGER 646 | unit-tested (BackgroundUpdatesTest family); no device hook | Pass unit (r15 CI 44992235866); real site: owner |
 | NB16-6, NB16-7 | DONE-LEDGER 647 | 2b06fb2, dc44432; BackgroundUpdatesTest | Pass unit (r15 CI 44992235866); background timing on a real phone: owner |
-| TV-FP-1 | DONE-LEDGER 669 | FeedPosition on TV: youtube now passes on tv-api24 (44995889578); live still ends on Music on tv-api24 (touch and semantic click, 44997306578) | Fail (TV-FP-1: 5 of 6; owner check OMT-78) |
+| TV-FP-1 | DONE-LEDGER 669 | Fixed (tab_jump_hold): FeedPositionDeviceTest 6 of 6 on tv-api24 45006388286 and tv-api34 45008159007; fail-before 45006341391; pass-after 45008845576 | Pass (45006388286, 45008159007, 45008845576); owner check OMT-78 |
 | EXT-T1 | CHECKLIST 93 | 30 emulator runs, cannot reproduce | Blocked: owner phone test OMT-26 |
 | ST-7 | CHECKLIST 92 | jank only on software-rendered emulators | Blocked: owner real phone OMT-12 |
-| ST-17 | CHECKLIST 73, DONE-LEDGER 179 | 1 spin in 40 stress runs; 44145301927 20/20 clean; 44998769417 (lowram, repeat 10 @baa8c855): 0 compose spins in all 10, 9 of 10 Pass, run 7 Fail = Back swallowed on a vertical video (ST-17-BACK) | Fail (44998769417 run 7, finding ST-17-BACK: fixed, checks running) |
+| ST-17 | CHECKLIST 73, DONE-LEDGER 179 | 1 spin in 40 stress runs; 44145301927 20/20 clean; 44998769417 (lowram, repeat 10 @baa8c855): 0 compose spins in all 10, 9 of 10 Pass, run 7 Fail = Back swallowed on a vertical video (ST-17-BACK) | Pass (45006967759: 10 of 10, 0 compose spins, after the ST-17-BACK fix; before 44998769417 9 of 10) |
 
 ### C6: original rounds 1 to 3
 - Player: some videos with no audio; source rotation, including rotating again when a manually chosen source
@@ -286,5 +286,5 @@ device or CI run proves it; "Unit" = unit tests only; "owner" = needs a real pho
 | Device heating | X4, P19 | HeatGuardDeviceTest; LocalPlayerDeviceTest d 43708220122 | Pass (43708220122) |
 | Crash log saved as a file | X6 | CrashUiDeviceTest (X6-1, CR-1) | Pass (ledger X6-1) |
 | Universal APK with all ABIs, one app for TV | X10-1, X9 | release build review (DONE-LEDGER 116); the TV runs use the same APK | Pass (r15 CI review-APK lane) |
-| No OOM, no ANR | X2, X3, ST-17 | ST-2, ST-18 emulator; gate trio 44992836781 | Pass on emulator (ST-2, ST-18, 44992836781); Fail ST-17 (1 spin in 40 stress runs); X2-1 (baseline profile gain on real hardware) Blocked: owner OMT-12 |
+| No OOM, no ANR | X2, X3, ST-17 | ST-2, ST-18 emulator; gate trio 44992836781 | Pass on emulator (ST-2, ST-18, 44992836781); ST-17 Pass 45006967759 (10 of 10, 0 spins); X2-1 (baseline profile gain on real hardware) Blocked: owner OMT-12 |
 | Forced download for sources that block downloads | D2 | DL-1 device, DL-9 CI, DL-10 emulator | Pass (ledger DL-1 / DL-10) |

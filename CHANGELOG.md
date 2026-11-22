@@ -10,6 +10,8 @@ recent phone and Android TV). Things that still need a real phone are listed und
 docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/release-2.1/CHANGELOG-FULL.md.
 
 ### Fixed
+- Android TV 7: opening Live TV from Home no longer ends on Music (TV-FP-1).
+- Back on a portrait (vertical) video always works; it could do nothing once full screen was off (ST-17-BACK).
 - 2.0.0 could freeze when you touched the screen while Home sat under the player ("not responding"). Home no longer
   re-checks every extension for 18+ on each draw, and other screens no longer rebuild the provider list (FREEZE-1, 2).
 - A new automatic check walks Home, Videos, Live TV and YouTube on a low-RAM phone and fails on any frame over
@@ -54,6 +56,7 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
   songs and YT Music playlists too ("Audio only" saves just the sound) (DL-ONE).
 - Watch later and Favourite by long press (or the Menu key on TV) on every poster, also on Yumix feed cards, Top 10
   and Continue watching (F-09-FEED).
+- A file link tapped inside a website opens the same download popup, with the file's real name (DL-WEB).
 - Websites: one website tab stays open while a stream plays; the stream bar can be rescanned, collapsed or closed; it
   lists only the video playing now; downloads ask Offline / Permanent first; the helper note hides after 3 s
   (OL-1 to OL-4, OL-8).
