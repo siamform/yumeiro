@@ -19,8 +19,12 @@ object YtOneSheet {
     fun offer(choices: List<YtDownloadOptions.Choice>, music: Boolean): DownloadTracks.Offer {
         val heights = if (music) emptyList() else choices.filter { !it.audioOnly && it.height > 0 }.map { it.height }.distinct().sortedDescending()
         val audios = choices.filter { it.audioOnly && it.audioItag > 0 }.map(::audioLabel).distinct()
-        return DownloadTracks.Offer(heights = heights, audios = audios)
+        val audioOnly = !music && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.YT_AUDIO_CHOICE)
+        return DownloadTracks.Offer(heights = heights, audios = audios, audioOnly = audioOnly)
     }
+
+    /** OWN-11: a YouTube video with an audio-only choice always shows the popup, also with "Ask before download" off. */
+    fun alwaysAsk(choices: List<YtDownloadOptions.Choice>, music: Boolean): Boolean = offer(choices, music).let { it.audioOnly && it.audios.isNotEmpty() }
 
     /** The choice the popup's [pick] means; null when there is nothing to save. */
     fun choose(choices: List<YtDownloadOptions.Choice>, music: Boolean, pick: DownloadTracks.Pick): YtDownloadOptions.Choice? {

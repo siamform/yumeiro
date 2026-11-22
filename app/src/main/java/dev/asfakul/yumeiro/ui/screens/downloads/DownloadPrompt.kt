@@ -107,9 +107,14 @@ object DownloadPrompt {
         val offer: dev.asfakul.yumeiro.online.download.DownloadTracks.Offer? = null,
         /** OL-5: starts with everything picked in the popup; used instead of [startAt] / [start] when set. */
         val startWith: ((keep: Boolean, pick: dev.asfakul.yumeiro.online.download.DownloadTracks.Pick) -> String?)? = null,
+        /** OWN-11: show the popup even with "Ask before download" off (a YouTube video: Video or Audio only). */
+        val alwaysAsk: Boolean = false,
         /** Starts the download; returns an error text or null. */
         val start: (keep: Boolean) -> String?,
     )
+
+    /** Whether [ask] shows the popup (true) or starts at once. */
+    internal fun shows(askFirst: Boolean, request: Request, hosts: Int): Boolean = (askFirst || request.alwaysAsk) && hosts > 0
 
     private val _current = MutableStateFlow<Request?>(null)
     val current: StateFlow<Request?> = _current.asStateFlow()
@@ -117,7 +122,7 @@ object DownloadPrompt {
 
     fun ask(context: Context, request: Request) {
         DownloadSettings.init(context)
-        if (DownloadSettings.askFirst.value && hosts > 0) _current.value = request
+        if (shows(DownloadSettings.askFirst.value, request, hosts)) _current.value = request
         else run(context, request, request.defaultKeep)
     }
 
@@ -222,7 +227,7 @@ internal fun TrackPicker(
     audio: String?, onAudio: (String?) -> Unit, subs: String, onSubs: (String) -> Unit,
 ) {
     val T = dev.asfakul.yumeiro.online.download.DownloadTracks
-    if (offer.audios.size > 1) TrackChips("Audio track", "download_track_audio", listOf<Pair<String?, String>>(null to "Default") + offer.audios.map { it to it }, audio, onAudio)
+    T.audioRow(offer)?.let { (title, chips) -> TrackChips(title, "download_track_audio", chips, audio, onAudio) }
     if (offer.subtitles.isNotEmpty()) TrackChips("Subtitles", "download_track_subs",
         listOf(T.SUBS_NONE to "None") + offer.subtitles.map { it to it } + if (offer.subtitles.size > 1) listOf(T.SUBS_ALL to "All") else emptyList(), subs, onSubs)
     else if (offer.subtitlesLater) TrackChips("Subtitles", "download_track_subs", listOf(T.SUBS_NONE to "None", T.SUBS_ALL to "Save all the source has"), subs, onSubs)

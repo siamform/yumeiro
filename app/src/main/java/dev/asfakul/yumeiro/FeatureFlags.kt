@@ -186,6 +186,11 @@ object FeatureFlags {
         SCRIPT_ERROR_MESSAGE("f05_script_error_message", true),
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */
         EXT_HOLD_WHILE_TYPING("ext_hold_while_typing", true),
+        /**
+         * OWN-11: a YouTube video download always offers "Video" or "Audio only" (also with "Ask before download"
+         * off, and with only one audio choice). Before, DL-ONE started the best video at once in those cases.
+         */
+        YT_AUDIO_CHOICE("own11_yt_audio_choice", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

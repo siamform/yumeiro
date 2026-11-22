@@ -343,6 +343,7 @@ internal fun askYouTubeInSharedPopup(context: android.content.Context, item: YtI
         quality = best.label + (best.detail.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
         sizeBytes = best.sizeBytes, defaultKeep = true,
         offer = one.offer(choices, item.music),
+        alwaysAsk = one.alwaysAsk(choices, item.music),
         startWith = { keep, pick ->
             val c = one.choose(choices, item.music, pick)
             if (c == null) "No downloadable formats for this video"

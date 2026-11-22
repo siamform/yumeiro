@@ -37,8 +37,20 @@ object DownloadTracks {
         val audios: List<String> = emptyList(),
         val subtitles: List<String> = emptyList(),
         val subtitlesLater: Boolean = false,
+        /** OWN-11: [audios] are audio-only downloads offered next to the video (YouTube), so even one is a choice. */
+        val audioOnly: Boolean = false,
     ) {
-        val hasChoices: Boolean get() = heights.size > 1 || audios.size > 1 || subtitles.isNotEmpty() || subtitlesLater
+        val hasChoices: Boolean get() = heights.size > 1 || audios.size > 1 || (audioOnly && audios.isNotEmpty()) || subtitles.isNotEmpty() || subtitlesLater
+    }
+
+    /**
+     * The popup's audio row: its title and chips (value null = the default), or null for no row.
+     * OWN-11: for a YouTube video it reads "Save as: Video / Audio only · …" and shows with a single audio choice.
+     */
+    fun audioRow(offer: Offer): Pair<String, List<Pair<String?, String>>>? = when {
+        offer.audioOnly && offer.audios.isNotEmpty() -> "Save as" to (listOf<Pair<String?, String>>(null to "Video") + offer.audios.map { it to it })
+        offer.audios.size > 1 -> "Audio track" to (listOf<Pair<String?, String>>(null to "Default") + offer.audios.map { it to it })
+        else -> null
     }
 
     fun offerOf(m: Master): Offer = Offer(
