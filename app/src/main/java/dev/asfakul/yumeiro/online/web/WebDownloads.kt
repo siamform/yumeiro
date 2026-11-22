@@ -57,7 +57,9 @@ object WebDownloads {
             runCatching { java.net.URLDecoder.decode(v.substringAfter("''").replace("+", "%2B"), "UTF-8") }.getOrNull()
         }
         val plain = Holder.PLAIN.find(cd)?.let { m -> m.groupValues[1].ifEmpty { m.groupValues[2] } }
-        val fromUrl = url.substringBefore('#').substringBefore('?').trimEnd('/').substringAfterLast('/')
+        // Only the path names a file: "https://x.org/" has none (its host is not a file name).
+        val path = url.substringBefore('#').substringBefore('?').substringAfter("://", "").substringAfter('/', "")
+        val fromUrl = path.trimEnd('/').substringAfterLast('/')
             .let { runCatching { java.net.URLDecoder.decode(it.replace("+", "%2B"), "UTF-8") }.getOrDefault(it) }
         val name = listOf(star, plain, fromUrl).firstOrNull { !it.isNullOrBlank() }.orEmpty()
         val clean = name.map { c -> if (c == '/' || c == '\\' || c.code < 0x20) '_' else c }.joinToString("").trim().trim('.')
