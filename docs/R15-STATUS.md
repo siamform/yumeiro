@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here: read docs/HANDOVER-LIVE.md (rewritten with every push: state, pending runs, exact next step).
+Resume here (2026-11-22): read docs/HANDOVER-LIVE.md, then docs/DOCS-READ-DIGEST.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

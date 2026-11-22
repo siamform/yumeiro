@@ -173,6 +173,7 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
 - Owner top priority 2026-11-21 19:00 +06: docs/FEED-ENGINE-2.1.md (feed engine for 1000+ extensions, priority loading,
   instant cached feed, 10 min feed after install/update, reinstall-after-update check). Read it before feed/search work.
 - Owner rule 2026-11-21 19:15 +06: after every bug or feature, mark its status in the docs as verified (run ID) or not.
+- What every older doc says, in one place (owner order 2026-11-22: read every doc): docs/DOCS-READ-DIGEST.md.
 - Live state, pending runs and the next step: docs/HANDOVER-LIVE.md (owner rule 2026-11-21: rewrite it with every
   push; every listed bug and feature must be done and verified; mandatory focus: feed, extension loading, load
   speed, search speed).

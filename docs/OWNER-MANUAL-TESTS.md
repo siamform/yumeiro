@@ -9,8 +9,9 @@ The file has two sections: **Yumeiro users checklist** (anyone can run these on 
 (developer) tests** (need the owner's accounts, consoles or adb). The detailed step-by-step scripts (Y, P, T, F) are
 in [`MANUAL-TESTS.md`](MANUAL-TESTS.md).
 
-Which build: the **1.9.0 release candidate review APK**, release-signed (artifact `yumeiro-review-apk` of the `ci.yml`
-run named in [`RELEASE-SUMMARY-FINAL.md`](RELEASE-SUMMARY-FINAL.md); check its SHA-256 against `SHA256SUMS.txt`).
+Which build: the newest **review APK of `r15-stability`** (2.x), release-signed (artifact `yumeiro-review-apk` of the
+latest green `ci.yml` run named in [`HANDOVER-LIVE.md`](HANDOVER-LIVE.md); check its SHA-256 against `SHA256SUMS.txt`).
+Older tests below that name the 1.9.0 release candidate were written for that build; run them on the newest one.
 Back up 1.8.x first (Settings → Backup & restore → Back up now), then install over it; your data stays. TV: `adb install -r` with the
 TV APK (`yumeiro-tv-1.9.0-…-review.apk`). How to record logs: see "Which build to install" in `MANUAL-TESTS.md`
 (`adb logcat ... -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime`). How to report: Settings → Crash
@@ -69,7 +70,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-19 | A real YouTube download (video + audio) on your home network (G8 D6) | Pending |
 | OMT-20 | BUG-3 download speed per 10 % band on your phone (eighth cycle rule) | Blocked: owner |
 | OMT-21 | BUG-5 / TV-4: choose how TV search should work (G7 proposal 3) | Decided (agent) |
-| OMT-22 | X3-TL: give the service account the Firebase Test Lab role | Blocked: owner (console) |
+| OMT-22 | X3-TL: enable the Cloud Testing API and Cloud Tool Results API, and give the service account the Editor role (FTL answered 403, 2026-11-22) | Blocked: owner (console) |
 | OMT-23 | X13-6: phone Jackson 2.19.4 → 2.18.11 | Decided (agent) |
 | OMT-24 | Vega: what do you mean by "Vega"? | Decided (agent) |
 | OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Decided (agent) |
@@ -119,6 +120,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-69 | F-12: vertical Shorts on a real phone | Owner test (pending) |
 | OMT-70 | OL-6: the new download popup on a real phone and TV | Owner test (pending) |
 | OMT-71 | OL-13: every social button opens the right account in its app | Owner test (pending) |
+| OMT-72 | GATE-1: no freeze when switching sources on a real (low-RAM) phone | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -563,7 +565,12 @@ the app version and your device. Don't send passwords or account details.
 - **Why:** real-device cloud runs would turn some owner tests into agent tests. The service account mints a
   token, but Test Lab answers 403 (ledger X3-TL, 2026-11-16).
 - **Instructions:** Google Cloud console → IAM → the service account → add role "Firebase Test Lab Admin"
-  (`roles/cloudtestservice.testAdmin`); APIs → enable "Cloud Testing API" and "Cloud Tool Results API".
+  (`roles/cloudtestservice.testAdmin`) or "Editor"; APIs → enable "Cloud Testing API" and "Cloud Tool Results API".
+  Links (project yumeiro-ab29e): [Cloud Testing API](https://console.cloud.google.com/apis/library/testing.googleapis.com?project=yumeiro-ab29e),
+  [Cloud Tool Results API](https://console.cloud.google.com/apis/library/toolresults.googleapis.com?project=yumeiro-ab29e),
+  [IAM](https://console.cloud.google.com/iam-admin/iam?project=yumeiro-ab29e) for
+  firebase-adminsdk-fbsvc@yumeiro-ab29e.iam.gserviceaccount.com. Re-checked 2026-11-22: still 403. After it, the
+  agent runs `gh workflow run ftl-gate.yml --ref r15-stability` (GATE-1 on real phones).
 - **What to send back:** "done" (no keys in chat). **Status:** Blocked: owner.
 
 ---

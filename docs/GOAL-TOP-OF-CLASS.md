@@ -123,7 +123,7 @@ claiming it), Building (this cycle), Missing.
 | feed_all_done | 75557 ms | 26939 ms | none yet | lowram: Fail (finding FE-T1) |
 | youtube_shelf_live / saved | 1194 / 1 ms | 1342 / 1 ms | saved ≤ 100 ms | Pass (44892710506) |
 | ytmusic_home_live / saved | 304 / 5 ms | 303 / 36 ms | saved ≤ 100 ms | Pass (44892710506) |
-| torrent first 64 KB / seek (BuiltinTorrentDeviceTest) | 2844 / 1129 ms | 3061 / 1776 ms | 15 s / 5 s | Pass (44892710506); TV api24 8696 / 3148 ms Pass (44892712537) |
+| torrent first 64 KB / seek (BuiltinTorrentDeviceTest; NOT the first-frame bar, see B31-FRAME) | 2844 / 1129 ms | 3061 / 1776 ms | 15 s / 5 s | Pass (44892710506); TV api24 8696 / 3148 ms Pass (44892712537) |
 
 ### Run 4: device run 44896550636 @ r15-stability 33c65f8d (after FE-T1), both phones Pass
 
@@ -132,7 +132,7 @@ claiming it), Building (this cycle), Missing.
 | ext_first_usable / ext_all_loaded | 275 / 589 ms | 21 / 660 ms | Pass (44896550636) |
 | home_first_row_live / cached | 367 / 1 ms | 922 / 1 ms | Pass (44896550636) |
 | search_first_result_live / cached | 97 / 1 ms | 138 / 2 ms | Pass (44896550636) |
-| search_all_answered_live / cached | 25248 / 2 ms | 20535 / 10 ms | live: first search, Not run for FE-S4 (next run logs 3 more live searches) |
+| search_all_answered_live / cached | 25248 / 2 ms | 20535 / 10 ms | live: first search. FE-S4: run 44899145489 logged 3 more live searches (1453..25101 ms) but nothing asserts a budget, so FE-S4 device stays Not run |
 | feed_first_extension_shown | 153 ms | 108 ms | Pass (44896550636) |
 | feed_half_shown | 5151 ms (run 3: 56847) | 4400 ms | FE-T1 fixed: Pass (44896550636) |
 | feed_all_done | 27142 ms (run 3: 75557) | 16710 ms | measured |

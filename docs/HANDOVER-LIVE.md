@@ -3,34 +3,33 @@
 Owner rule 2026-11-21 16:30 +06: agents can run out of limit at any time, so this file is rewritten with every push:
 what was just done, what runs are pending, and the exact next step. Every bug and feature on the lists must be done
 AND verified. Mandatory focus now: feed loading, extension loading, load speed, search speed.
+Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 ~09:15 +0600, branch `r15-stability`. Newest code: 9da67d0c GATE-1-MUSIC-START (music player built on the
-first music command, flag gate1_music_player_on_use), then this docs commit.
-- Closed: GATE-1-RENDER-5b Pass and FF-LOAD Pass (fail-befores 44972335021 / 44972664395 valid, both branches
-  deleted; pass-after r15 CI 44972695324 build, test & lint green).
-- GATE-1-AB emulator, 2 pairs: fixes on pass 3 of 4 phone runs (449 / 472 / 463 / 557 ms counted; one lowram run had a
-  1349 ms Videos list first frame, finding GATE-1-VIDEOS-COMPOSE), fixes off pass 1 of 4 (977 / 968 / 1861 / 614).
-- GATE-1-MUSIC-START: YuStall showed 1.6-3.9 s main-thread ExoPlayer build right after start on lowram (not in the
-  gate window). Fixed behind a flag; PlaybackService.whenBuilt keeps a headset-started player visible.
-- Test Lab still Blocked on the owner (enable 2 APIs + Editor role, docs/GATE-1-REAL-DEVICE.md).
+2026-11-22 08:40 +0600, branch `r15-stability`. Newest code: 9da67d0c GATE-1-MUSIC-START. This push is docs only:
+DOCS-READ-DIGEST plus stale-text fixes (ledger row DOCS-READ) and a new open row B31-FRAME (torrent goal bar is a
+decoded first frame, the device test only measures the first 64 KB).
+- r15 CI 44972695324: review APK job success (build, test & lint green earlier).
+- Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
+- Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
 - CI 44975150437 (ab/musicstart-before, review_apk=false): fail-before GATE-1-MUSIC-START. Expect
-  PlayerBuiltOnFirstUseTest.aColdStartBuildsNoPlayerUntilACommand to fail (old code builds on the next message);
-  the other 3 may pass. Then `git push origin --delete ab/musicstart-before`, `git worktree remove /tmp/fb_music`.
-- r15 CI for 9da67d0c+docs (dispatch with review_apk=true after 44972695324's review APK job finishes, so it is not
-  cancelled): pass-after GATE-1-MUSIC-START (PlayerBuiltOnFirstUseTest, PlayerBuiltAfterFirstFrameTest, music tests)
-  and first compile of GateOneFtlSuite. Then device-check gate (current) to confirm no getOrCreatePlayer YuStall.
+  PlayerBuiltOnFirstUseTest.aColdStartBuildsNoPlayerUntilACommand to fail. Then `git push origin --delete
+  ab/musicstart-before`, `git worktree remove --force /tmp/fb_music; git worktree prune`.
+- r15 CI 44976838656 (dispatched 2026-11-22 08:35 +06, review_apk=true, @e0ea47d6): pass-after GATE-1-MUSIC-START and
+  first compile of GateOneFtlSuite. Then device gate (GateOnePrepareDeviceTest, MainThreadStallRealClockDeviceTest,
+  GateOneExitCheckDeviceTest) to confirm no getOrCreatePlayer YuStall.
 
 ## Next step
 1. Close the pending runs above (ledger row GATE-1-MUSIC-START).
 2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
-3. GATE-1: when the owner says Test Lab access is on, `gh workflow run ftl-gate.yml --ref r15-stability` and record it.
+3. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
-4. F-05 / X-1: Nuvio / SkyStream / Vega import and run (detection exists, E14).
-5. FEED-ENGINE-2.1.md leftovers, then C5, C6 (MAJOR list section), then UNVERIFIED-QUEUE / INVENTORY. E1 only on the
-   owner's go.
+4. F-05 / X-1: Nuvio then SkyStream stream-only adapters on one stream-merge seam (ADR-057 to write first), keyed by
+   tmdb/imdb + season/episode so E1 Layer B can reuse it.
+5. B31-FRAME device test (real player first frame + seek on the test hash), FEED-ENGINE leftovers, C5, C6, other rows,
+   then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
 - 2026-11-22 morning: RENDER-5b 0270f069, FF-LOAD 8cb89e9b, GATE-1-AB b847caa0, GATE-1-FTL 76a6e521, MUSIC-START 9da67d0c.
