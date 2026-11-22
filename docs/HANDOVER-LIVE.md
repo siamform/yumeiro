@@ -6,23 +6,23 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 ~21:20 +0600, branch `r15-stability`, code head 39ca1e6b. RELEASE AUDIT,
-owner order 3 ("fix all by groups; CI once; remove debug code; final CI; release"). The owner authorized the release.
-Groups done: bc768506 OWN-1/OWN-6, 4c64bf4e OWN-8, 9704ae29 OWN-3, b44d5237 OWN-10, 8d0e7cda debug logs removed,
-7719e54e + 385e293a OWN-9 (Yumeiro Classics). CI history: 45032539983 cancelled (head replaced, logged);
-45032831510 Blocked (Maven 404 libtorrent4j / errorprone, build failed in 21 s); 45033016908 Fail: 5 tests
-(Own12 x2: OK key off Robolectric's small screen; Own9: %20 vs +; OnlinePagesTest: Classics on by default;
-AppNavigationCrashTest: NavGuard dropped Downloads -> system Back -> Downloads = real bug, fixed).
+2026-11-22 ~22:10 +0600, branch `r15-stability`, code head 34f2a2ba. Owner message 5 HOLDS the release and adds
+OWN-13..17 (audit section 2). Done: b53c609a OWN-15 device test (ProfileColdStartDeviceTest + Restart.testHook),
+d8ae2c3b OWN-14 page motion symmetric + OWN-16 Upcoming search / filter icon / dynamic lists, 34f2a2ba OWN-13 one
+built-in "Yumeiro" source (sources/hub/YumeiroHub.kt, flag own13_yumeiro_hub; old names alias in
+ExtensionManager.provider). OWN-17 cross-check: docs/OPEN-ITEMS-2.1.0.md. CI 45037617014 cancelled (logged).
+Already Pass on 8ff0e0d9: HomeNavigationDeviceTest 45037619473, ExtensionsDeviceTest 45037636802.
 
 ## Pending runs
-- CI ci.yml review_apk=true 45037617014 on 8ff0e0d9 (adds the OWN-1 hand-off Back fix found by device run 45032861815).
-- Device: HomeNavigationDeviceTest 45037619473, ExtensionsDeviceTest 45037636802 (both on 8ff0e0d9).
-- Full run list: docs/RELEASE-AUDIT-2.1.0.md §5.
+- CI ci.yml review_apk=true 45040526941 on 34f2a2ba.
+- Device ProfileColdStartDeviceTest 45039700220 (on b53c609a). If it fails: read log tag YuOwn15 + filesDir/crash.
 
 ## Next step
-1. Record both. Green -> CHANGELOG-FULL, kit zip + PDF, audit §5/§10/§11, ledger, delete ab/* branches.
-2. PR r15-stability -> main (docs/evidence/final/PR-2.1.0.md), merge commit; watch release.yml; check the APK sha256.
-3. Owner message: fixed list, run IDs, OMT-83..92, release link.
+1. Read CI 45040526941; fix failures (likely new tests Own13/Own14/Own16). Then device runs: F22CountryDeviceTest,
+   UpcomingDeviceTest, DramaPlaybackDeviceTest, HomeNavigationDeviceTest (max two at once).
+2. OWN-15: fix per the device result; update audit rows OWN-13..17 and docs/OPEN-ITEMS-2.1.0.md.
+3. Release steps unchanged: CHANGELOG-FULL, kit zip + PDF, audit section 10/11, PR body (add OWN-13..17),
+   PR r15-stability -> main merge commit, release.yml, APK sha256 check, delete ab/* branches, owner message.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
 ## Last updated (pre-audit, 14:12, stale)

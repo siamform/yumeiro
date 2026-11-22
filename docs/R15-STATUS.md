@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 21:45 +06): OWN-1..12 coded; CI 45037617014 + device 45037619473/45037636802 on 8ff0e0d9; then release. Read docs/HANDOVER-LIVE.md.
+Resume here (2026-11-22 22:10 +06): release on hold for OWN-13..17; CI 45040526941 + device 45039700220 pending. Read docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 
