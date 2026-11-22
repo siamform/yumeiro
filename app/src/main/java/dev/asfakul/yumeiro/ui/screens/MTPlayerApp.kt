@@ -1052,7 +1052,7 @@ fun MTPlayerApp(
                     // page below, which drifts a little to the left; Back reverses it. Switching
                     // tabs happens inside the pager, so it never runs these.
                     // Round 8: shared push / pop motion (PageMotion). 420 ms emphasized push with the page
-                    // underneath drifting and dimming a little; Back is quicker (320 ms).
+                    // underneath drifting and dimming a little; Back is the same motion reversed (OWN-14).
                     enterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.push(reducedMotionOn) },
                     exitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.pushExit(reducedMotionOn) },
                     popEnterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popEnter(reducedMotionOn) },
@@ -1404,7 +1404,7 @@ fun MTPlayerApp(
         AnimatedVisibility(
             visible = isNowPlayingExpanded && playbackState.currentTrack != null,
             enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)),
-            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(240, easing = FastOutSlowInEasing))
+            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)) // OWN-14: as long as the way in
         ) {
             NowPlayingScreen(
                 playbackState = playbackState,
@@ -1646,8 +1646,9 @@ fun MTPlayerApp(
         // Notification inbox / Support page, opened from the bell, a notification, a reminder or Settings.
         AnimatedVisibility(
             visible = appPage != null,
-            enter = slideInVertically(initialOffsetY = { it / 6 }, animationSpec = tween(NAV_ANIM_MS)) + fadeIn(tween(NAV_ANIM_MS)),
-            exit = fadeOut(tween(160)),
+            // OWN-14: closes the way it opened (it used to rise in and then just blink out).
+            enter = dev.asfakul.yumeiro.ui.components.PageMotion.pageRiseIn(reducedMotionOn, NAV_ANIM_MS),
+            exit = dev.asfakul.yumeiro.ui.components.PageMotion.pageRiseOut(reducedMotionOn, NAV_ANIM_MS),
         ) {
             val closePage = { dev.asfakul.yumeiro.ui.screens.extras.AppPages.close() }
             when (appPage) {

@@ -10,11 +10,6 @@ import androidx.compose.material.icons.filled.BugReport
 import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -143,13 +138,12 @@ fun SettingsScreen(
         }
     }
 
+    val reducedSettingsMotion = dev.asfakul.yumeiro.ui.components.reducedMotion()
     Box(modifier.fillMaxSize().testTag("settings_screen_root")) {
         AnimatedContent(
             targetState = open,
-            transitionSpec = {
-                if (targetState != null) (slideInHorizontally { it / 4 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 8 } + fadeOut())
-                else (slideInHorizontally { -it / 8 } + fadeIn()) togetherWith (slideOutHorizontally { it / 4 } + fadeOut())
-            },
+            // OWN-14: a category opens and closes like every other page (the NavHost push and its mirror).
+            transitionSpec = { dev.asfakul.yumeiro.ui.components.PageMotion.pushOrPop(this, forward = targetState != null, reduced = reducedSettingsMotion).using(null) },
             label = "settings_page",
         ) { page ->
             if (page == null) SettingsHome(onBack = onBackClick, onOpen = ::go)

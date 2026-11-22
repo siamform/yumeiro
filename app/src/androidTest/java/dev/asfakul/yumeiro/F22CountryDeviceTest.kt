@@ -54,6 +54,8 @@ class F22CountryDeviceTest {
         rule.setContent { MTPlayerTheme { UpcomingScreen(onBack = {}, onSearch = {}) } }
         rule.waitUntil(5_000) { count("upcoming_kind_series") > 0 }
         rule.onAllNodesWithTag("upcoming_kind_series", true)[0].performClick()
+        // OWN-16: the country and genre choices are in the filter sheet behind the filter icon.
+        rule.onAllNodesWithTag("upcoming_filter_button", true)[0].performClick()
         rule.waitUntil(5_000) { count("upcoming_country_jp") > 0 }
         val t0 = System.currentTimeMillis()
         rule.onAllNodesWithTag("upcoming_country_jp", true)[0].performClick()

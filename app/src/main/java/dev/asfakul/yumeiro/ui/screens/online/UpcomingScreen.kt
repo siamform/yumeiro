@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.upcoming.TvmazeSchedule
+import dev.asfakul.yumeiro.online.upcoming.UpcomingFilter
 import dev.asfakul.yumeiro.online.upcoming.Upcoming
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -119,9 +120,19 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
         }
         loading = false
     }
-    val genres = remember(list) { if (byCountry) TvmazeSchedule.genresOf(list.orEmpty()) else emptyList() }
-    val shown = remember(list, genre, genres) { if (genre != null && genre in genres) TvmazeSchedule.filterGenre(list.orEmpty(), genre) else list.orEmpty() }
+    // OWN-16: search and filters built from the loaded list (genres, channel countries, days), behind a filter icon.
+    var query by rememberSaveable { mutableStateOf("") }
+    var channel by rememberSaveable { mutableStateOf<String?>(null) }
+    var dayText by rememberSaveable { mutableStateOf<String?>(null) }
+    var filterOpen by rememberSaveable { mutableStateOf(false) }
+    val options = remember(list) { UpcomingFilter.options(list.orEmpty()) }
+    val choice = UpcomingFilter.Choice(query, genre, channel, dayText?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
+    val shown = remember(list, choice) { UpcomingFilter.apply(list.orEmpty(), choice) }
+    val active = UpcomingFilter.activeCount(choice, options)
     val days = remember(shown) { shown.groupBy { it.day }.toList() }
+    val scheduleCountries = remember(options) {
+        UpcomingFilter.scheduleCountries(java.util.Locale.getDefault().country, TvmazeSchedule.COUNTRIES, options.countries, TvmazeSchedule.STREAMING)
+    }
     Column(Modifier.fillMaxSize().testTag("upcoming_screen")) {
         SubPageHeader(title = "Upcoming", subtitle = "Next two weeks · ${kind.label}", onBack = onBack)
         Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -129,18 +140,46 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 OnlineChip(k.label, k == kind, { kindName = k.name }, Modifier.testTag("upcoming_kind_${k.name.lowercase()}"))
             }
         }
-        if (byCountry && kind == Upcoming.Kind.SERIES) {
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp).testTag("upcoming_countries"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 2.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            dev.asfakul.yumeiro.ui.components.YuSearchField(query, { query = it }, "Search ${kind.label.lowercase()} in the next two weeks", "upcoming_search", Modifier.weight(1f))
+            dev.asfakul.yumeiro.ui.components.FilterIconButton(active + (if (byCountry && kind == Upcoming.Kind.SERIES && country != null) 1 else 0), { filterOpen = true }, "upcoming_filter_button")
+        }
+        // What is on, at a glance; a tap removes it.
+        val on = listOfNotNull(
+            country?.takeIf { byCountry && kind == Upcoming.Kind.SERIES }?.let { c -> "Schedule: ${TvmazeSchedule.label(c)}" to { country = null } },
+            UpcomingFilter.valid(choice, options).genre?.let { g -> g to { genre = null } },
+            UpcomingFilter.valid(choice, options).country?.let { c -> "Channel: $c" to { channel = null } },
+            UpcomingFilter.valid(choice, options).day?.let { d -> Upcoming.dayLabel(d, today) to { dayText = null } },
+        )
+        if (on.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp).testTag("upcoming_active_filters"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            on.forEach { (label, clear) -> OnlineChip("$label  ✕", true, clear, Modifier.testTag("upcoming_active_filter")) }
+        }
+        if (filterOpen) dev.asfakul.yumeiro.ui.components.FilterSheet(
+            onDismiss = { filterOpen = false },
+            onReset = { genre = null; channel = null; dayText = null; if (byCountry) country = null },
+            resultCount = shown.size,
+            tag = "upcoming_filter_sheet",
+        ) {
+            if (byCountry && kind == Upcoming.Kind.SERIES) dev.asfakul.yumeiro.ui.components.FilterGroup("Schedule", tag = "upcoming_countries") {
                 OnlineChip("All countries", country == null, { country = null }, Modifier.testTag("upcoming_country_all"))
-                (TvmazeSchedule.COUNTRIES + TvmazeSchedule.STREAMING).forEach { c ->
+                scheduleCountries.forEach { c ->
                     OnlineChip(TvmazeSchedule.label(c), c == country, { country = c }, Modifier.testTag("upcoming_country_${c.lowercase()}"))
                 }
             }
-        }
-        if (genres.isNotEmpty()) {
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp).testTag("upcoming_genres"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OnlineChip("All genres", genre == null || genre !in genres, { genre = null }, Modifier.testTag("upcoming_genre_all"))
-                genres.forEach { g -> OnlineChip(g, g == genre, { genre = g }, Modifier.testTag("upcoming_genre_${g.lowercase()}")) }
+            if (options.genres.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterGroup("Genre", tag = "upcoming_genres") {
+                OnlineChip("All genres", UpcomingFilter.valid(choice, options).genre == null, { genre = null }, Modifier.testTag("upcoming_genre_all"))
+                options.genres.forEach { g -> OnlineChip(g, g.equals(genre, ignoreCase = true), { genre = g }, Modifier.testTag("upcoming_genre_${g.lowercase()}")) }
+            }
+            if (options.countries.size > 1) dev.asfakul.yumeiro.ui.components.FilterGroup("Channel country") {
+                OnlineChip("All", UpcomingFilter.valid(choice, options).country == null, { channel = null }, Modifier.testTag("upcoming_channel_all"))
+                options.countries.forEach { c -> OnlineChip(c, c == channel, { channel = c }, Modifier.testTag("upcoming_channel_${c.lowercase()}")) }
+            }
+            if (options.days.size > 1) dev.asfakul.yumeiro.ui.components.FilterGroup("Day") {
+                OnlineChip("Any day", UpcomingFilter.valid(choice, options).day == null, { dayText = null }, Modifier.testTag("upcoming_day_all"))
+                options.days.forEach { d -> OnlineChip(Upcoming.dayLabel(d, today), d.toString() == dayText, { dayText = d.toString() }, Modifier.testTag("upcoming_day_$d")) }
+            }
+            if (!(byCountry && kind == Upcoming.Kind.SERIES) && options.genres.isEmpty() && options.countries.size <= 1 && options.days.size <= 1) {
+                Text("Nothing to filter in this list yet.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_filter_none"))
             }
         }
         when {
@@ -151,6 +190,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 Text("Couldn't load the calendar. Check your connection.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.testTag("upcoming_error"))
                 TextButton(onClick = { retry++ }, modifier = Modifier.testTag("upcoming_retry")) { Text("Try again", color = SpotifyGreen) }
             }
+            days.isEmpty() && list.orEmpty().isNotEmpty() -> Text(if (query.isNotBlank()) "Nothing matches \"${query.trim()}\"." else "Nothing matches these filters.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_no_match"))
             days.isEmpty() -> Text("Nothing listed for the next two weeks.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_empty"))
             else -> LazyColumn(Modifier.fillMaxSize().testTag("upcoming_list"), contentPadding = PaddingValues(bottom = 24.dp)) {
                 if (failed) item("offline") {
@@ -199,7 +239,7 @@ internal object UpcomingPrefs {
     fun kind(c: android.content.Context): Upcoming.Kind? =
         prefs(c).getString("kind", null)?.let { n -> Upcoming.Kind.entries.firstOrNull { it.name == n } }
     fun setKind(c: android.content.Context, k: Upcoming.Kind) { prefs(c).edit().putString("kind", k.name).apply() }
-    fun country(c: android.content.Context): String? = prefs(c).getString("country", null)?.takeIf { it in TvmazeSchedule.COUNTRIES || it == TvmazeSchedule.STREAMING }
+    fun country(c: android.content.Context): String? = prefs(c).getString("country", null)?.takeIf { it == TvmazeSchedule.STREAMING || (it.length == 2 && it.all { ch -> ch in 'A'..'Z' }) }
     fun setCountry(c: android.content.Context, v: String?) { prefs(c).edit().putString("country", v).apply() }
     fun genre(c: android.content.Context): String? = prefs(c).getString("genre", null)
     fun setGenre(c: android.content.Context, v: String?) { prefs(c).edit().putString("genre", v).apply() }

@@ -206,9 +206,9 @@ fun FilterSheet(
 /** One labelled group of choices inside a [FilterSheet]. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FilterGroup(title: String, content: @Composable () -> Unit) {
+fun FilterGroup(title: String, tag: String? = null, content: @Composable () -> Unit) {
     val p = LocalMtPalette.current
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = if (tag != null) Modifier.testTag(tag) else Modifier) {
         Text(title.uppercase(), style = OverlineStyle, color = p.textTertiary)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
     }
