@@ -15,9 +15,11 @@ Audit doc now has OWN-1/3/6/8 triage (queued, reasons), flags table W3 and secur
 Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (not yet verified by CI).
 
 ## Pending runs
-- 45024851633 CI review_apk=true on dd4ae197 (baseline), started 12:56 UTC.
-- Fail-befores (each must fail ONLY in its new test; then delete the branch): 45025542939 ab/own7-before,
-  45025907314 ab/own4-before, 45025909528 ab/own10-before, 45026045898 ab/own5-before.
+- Baseline 45024851633 ended Fail (AUD-FLAKE-1, ScrobbleFlushMockedTest stray request; watch in final CI).
+- Fail-befores (each must fail ONLY in its new test; then delete the branch): 45027077707 ab/own7-before (redo),
+  45025907314 ab/own4-before, 45025909528 ab/own10-before, 45027534810 ab/own5-before (redo). First own7 / own5
+  runs invalid: the OWN-7 test did not compile (AUD-T7-1, fixed aa590039).
+- r15 pass-after CI review_apk=true: dispatched after this push (ID in the audit doc run table).
   Wait with `gh run watch <id> --interval 120`.
 
 ## Next step

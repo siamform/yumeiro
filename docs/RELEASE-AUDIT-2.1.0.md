@@ -42,6 +42,8 @@ open
 |---|---|---|---|---|---|---|
 | AUD-CLAIM-1 | High (false claim) | Yes (false changelog / README / image claim) | CHANGELOG.md:64, README.md:56, scripts/release_kit_210.py:184, post-05 / square-05 images, yumeiro-web lib/changelog.ts:38 | "A curated list of about 20 working channels per country (E2)" is announced, but the curated lists were never published (origin/streams has no curated/ files; repo variable YUMEIRO_CURATED_LIVE not set; CHANGELOG-FULL E2 row: "In-app part Blocked: needs the first publish") | Fixed: wording now "country filter in big playlists"; E2 listed under "Still being checked"; both images repainted; website PR #5 text fixed in the same step | `git ls-tree origin/streams` (no curated/), CHANGELOG-FULL.md:227, :292 |
 | AUD-CLAIM-2 | Medium | Yes (claim) | CHANGELOG.md "New" | "Smaller downloads per phone type (ABI split APKs) are ready" listed as new, but the switch (repo variable YUMEIRO_ABI_SPLITS) is off, so users get only the universal APK | Moved to "Still being checked" as "built, switched off" | release.yml:116-117, build.gradle.kts:108 |
+| AUD-T7-1 | Medium (process) | No | app/src/test/.../network/Own7CloudflareDefaultTest.kt:60 | Auditor's own new test did not compile (`byteArrayOf(93, 184, ...)`: 184 is not a Byte). Found by fail-before 45025542939; it also broke fail-before 45026045898 (own5 branch is based on the OWN-7 commit) | Fixed aa590039 (r15), da7fa9c7 (ab/own7-before), 5cf606cf (ab/own5-before); both fail-befores re-run: 45027077707, 45027534810 | run logs "e: ...Own7CloudflareDefaultTest.kt:60:61" |
+| AUD-FLAKE-1 | Low | No (test isolation) | app/src/test/.../scrobble/ScrobbleFlushMockedTest.kt:134 | Baseline CI 45024851633 on dd4ae197: 1830 tests, 1 failed: `listensOlderThan14DaysAreDroppedUnsent` expected `[[T2, T3]]` but got `[[T2, T3], []]`: one extra request without `track[i]` fields reached the test's mock client (the mock counts every request except /v1/lastfm/sign). Same test passed in earlier CIs (8/8 in 44227662448 and every later green run). The product rule (14-day cutoff, Scrobbler.kt:111-112) held: T2, T3 sent, T0, T1 dropped. Most likely a stray background call from another component sharing NetworkClient during the test | Not changed (code freeze; changing the test's counting would need its own review). Watch in the final CI; if it repeats, it is a finding with its own fix | reports artifact of 45024851633, TEST-...ScrobbleFlushMockedTest.xml |
 | AUD-TB-1 | Low | No | this file, OWN-10 first version | Auditor's own wrong measurement (no redirect follow) reported as TeraBox needing a human check | Corrected above with the re-measurement | curl logs 13:06 UTC |
 | AUD-AB-1 | Low | No | origin ab/*-before | 8 old fail-before branches still on origin (b27, b29, b30, freeze1, freeze2, gate1, prof1, t1) although the method says delete after | Delete after the owner's go (deleting is not reversible; listed in the checklist) | `git branch -r` |
 | AUD-DOC-1 | Low | No | brief / HANDOVER-LIVE.md | "44 commits" counted from b553505; base..HEAD is 243. HANDOVER-LIVE header 14:12 vs progress log 16:50, stale "Pending runs" lines | Docs fixed in this audit | `git rev-list --count e47f450f..dd4ae197` = 243 |
@@ -50,11 +52,13 @@ open
 
 | Run | Workflow | Commit | Started (UTC) | Result |
 |---|---|---|---|---|
-| 45024851633 | CI review_apk=true (baseline on the pre-audit head) | dd4ae197 | 12:56 | running (gitleaks Pass) |
-| 45025542939 | CI fail-before OWN-7 | ab/own7-before cab29234 | 13:04 | running (must fail only in Own7CloudflareDefaultTest) |
+| 45024851633 | CI review_apk=true (baseline on the pre-audit head) | dd4ae197 | 12:56 | **Fail**: unit 1830 / 1 failed (AUD-FLAKE-1); gitleaks Pass; review APK skipped |
+| 45025542939 | CI fail-before OWN-7 | ab/own7-before cab29234 | 13:04 | **Invalid**: test did not compile (AUD-T7-1) |
+| 45027077707 | CI fail-before OWN-7 (redo) | ab/own7-before da7fa9c7 | 13:2x | running |
 | 45025907314 | CI fail-before OWN-4 | ab/own4-before | 13:08 | running (must fail only in Own4RepoDialogTest) |
 | 45025909528 | CI fail-before OWN-10 | ab/own10-before | 13:08 | running (must fail only in TeraBoxApiTest.ownTen...) |
-| 45026045898 | CI fail-before OWN-5 | ab/own5-before | 13:10 | running (must fail only in Own5ScriptSourcesListTest) |
+| 45026045898 | CI fail-before OWN-5 | ab/own5-before 1c8085fa | 13:10 | **Invalid**: OWN-7 test did not compile (AUD-T7-1) |
+| 45027534810 | CI fail-before OWN-5 (redo) | ab/own5-before 5cf606cf | 13:3x | running |
 
 ## 6. Flags (W3)
 
