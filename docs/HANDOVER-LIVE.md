@@ -6,23 +6,21 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 12:56 +0600, branch `r15-stability`. OWNER ORDER (latest, 2026-11-22): fix and build the open bugs and features
-FIRST; the release kit, website, docs and review APK come LAST. Rules: docs/RELEASE-DAY-PLAN.md. No merge / tag /
-release / deploy until the owner approves.
-This push: F-09-FEED (owner: Watch later / Favorite taps did not work). Cause: only PosterCard had the long press;
-Yumix FeedCard, TopTenRow, ContinueRow had a plain click. Fix: Modifier.posterPress in PosterActions.kt (long press +
-Menu key) on all three, sheet + mark, flag f09_feed_actions. Test F09FeedActionsTest. OMT-77. Ledger row F-09-FEED.
-Earlier: F-05-S-ON, F-21 device test, F-05-STREMIO, F-22-C (2b6338b1), F22CountryDeviceTest 2a210e65.
+2026-11-22 14:12 +0600, branch `r15-stability`. Owner order 2026-11-22 ~14:00: share the preview APK (owner has one
+hour to test), then on his approval: PR r15-stability -> main, merge, release 2.1.0. Same download popup everywhere
+(DL-ONE). Yumeiro's own all-in-one extension (E1 Yumeiro Hub) and all-in-one Live TV (E2 Yumeiro Live): docs now,
+build after 2.1.0 (target 2.2.0), plan docs/E1-E2-YUMEIRO-HUB-AND-LIVE.md.
+This push: DL-ONE (YouTube used its own quality list first; now the shared DownloadPrompt popup, YtOneSheet, flag
+dl_one_sheet, test YtOneSheetTest, OMT-80). Finding DL-WEB: no WebView download listener (plain file links in
+in-app web pages are not caught), not fixed in 2.1.0. F-09-FEED pass-after Pass 44997677870.
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44995462689 @c2560e07: pass-after for F-05-S-ON, F-05-STREMIO, F-22-C. After it ends, dispatch r15 CI again
-  for F-09-FEED pass-after (do NOT dispatch while it runs: that cancels it).
-- Fail-before F-22-C: ab/f22c-before 44994603153 (valid = compiles, only F22CountryGenreTest fails); worktree /tmp/abf22.
-- Fail-before F-09-FEED: ab/f09feed-before 44995800916 (valid = compiles, only F09FeedActionsTest fails); worktree
-  /tmp/abf09. Delete each ab branch after recording.
-- Device phones 44995560569 @2a210e65: F22CountryDeviceTest + UpcomingDeviceTest (F-22-C).
-- Done, record in docs: device 44994337536 Pass (F21ExtensionLabelDeviceTest api36 + api33-lowram; C5 LocalPlayer,
-  Nbug11/12/14/15), TV api34 44994339669 Pass (SheetFocusTvDeviceTest).
+- r15 CI 44997677870 @bdcbd8e1 review_apk=true: Build, test & lint Pass; when Review APK ends, download artifact
+  yumeiro-review-apk = preview #1 (no DL-ONE). Then dispatch r15 CI review_apk=true for DL-ONE pass-after = preview #2.
+- Fail-before DL-ONE: ab/dlone-before 45001258208 (valid = compiles, only YtOneSheetTest fails); worktree /tmp/abdl;
+  delete branch + worktree after.
+- ST-17 stress 44998769417 (StabilityStressDeviceTest repeat 10, lowram @baa8c855): record.
+- Open: TV-FP-1 Fail (OMT-78), B31-FRAME Blocked emulator (OMT-79), owner items SEC-1, UPG-1.
 
 ## Next step
 1. Record the runs above (ledger F-05-S-ON, F-05-STREMIO, F-22-C, F-21, F-09-FEED; MAJOR C5 table "re-check" cells).

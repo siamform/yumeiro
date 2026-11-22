@@ -128,6 +128,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-77 | F-09-FEED: Watch later / Favorite from Yumix, Top 10, Continue watching | Owner test (pending) |
 | OMT-78 | TV-FP-1: Home → Live TV card on an older Android TV | Owner test (pending) |
 | OMT-79 | B31-FRAME: built-in torrent first frame and seek on a real phone | Owner test (pending, needs a test build with the engine on) |
+| OMT-80 | DL-ONE: the same download popup everywhere | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1080,3 +1081,10 @@ built-in torrent engine on (flag b31_builtin_torrent; it is off in the release).
 2. When the picture shows, drag the seek bar to the middle.
 
 Passes if the first picture shows within 15 s and the picture plays again within 5 s after the seek.
+
+### OMT-80 — The same download popup everywhere (DL-ONE)
+
+1. Download from the player (Download button), from an episode list, from a website link, from Telegram, from a YouTube video, from a YouTube song and from a YT Music playlist.
+2. Each time the same popup opens (Quality, Audio track, folder) and the file lands in Downloads.
+3. YouTube: no separate quality list appears first; "Audio only" saves just the sound.
+4. Note: a plain file link inside an in-app web page is not caught yet (DL-WEB).

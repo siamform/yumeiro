@@ -279,6 +279,13 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
             .onSuccess { choices = it; if (it.isEmpty()) error = "No downloadable formats for this video" }
             .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't load qualities.") }
     }
+    // DL-ONE: with the qualities known, hand over to the one shared download popup (same as every other source).
+    val oneSheet = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DL_ONE_SHEET) }
+    LaunchedEffect(choices, oneSheet) {
+        val list = choices
+        if (oneSheet && !list.isNullOrEmpty()) { onDismiss(); askYouTubeInSharedPopup(context, item, list) }
+    }
+    if (oneSheet && !choices.isNullOrEmpty()) return
     var audioTab by remember(item.id) { mutableStateOf(item.music) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("yt_download_sheet")) {
@@ -323,4 +330,23 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+/** DL-ONE: a YouTube video or song in the shared download popup: Quality = video heights, Audio track = audio only. */
+internal fun askYouTubeInSharedPopup(context: android.content.Context, item: YtItem, choices: List<dev.asfakul.yumeiro.online.download.YtDownloadOptions.Choice>) {
+    val one = dev.asfakul.yumeiro.online.download.YtOneSheet
+    val best = one.choose(choices, item.music, dev.asfakul.yumeiro.online.download.DownloadTracks.Pick()) ?: return
+    DownloadPrompt.ask(context, DownloadPrompt.Request(
+        type = if (best.audioOnly) DownloadPrompt.Type.YT_AUDIO else DownloadPrompt.Type.YT_VIDEO,
+        title = item.title, what = if (item.music) "this song" else "this video", count = 1,
+        folder = OnlineDownloads.youTubeFolder(best.audioOnly, item.music),
+        quality = best.label + (best.detail.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+        sizeBytes = best.sizeBytes, defaultKeep = true,
+        offer = one.offer(choices, item.music),
+        startWith = { keep, pick ->
+            val c = one.choose(choices, item.music, pick)
+            if (c == null) "No downloadable formats for this video"
+            else OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, c, keep)
+        },
+    ) { keep -> OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, best, keep) })
 }

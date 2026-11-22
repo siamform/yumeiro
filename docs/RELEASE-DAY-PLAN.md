@@ -59,6 +59,7 @@ the sandbox. Read this file, then `docs/HANDOVER-LIVE.md`, then `docs/AGENT-STAR
       the chat. The owner installs it, tests, then decides: approve PR / merge / release, or continue.
 
 ## Progress log (newest first; one line per finished step)
+- 2026-11-22 14:12: DL-ONE (one download popup, YouTube too) pushed, fail-before 45001258208; E1/E2 all-in-one plan written; F-09-FEED pass-after Pass 44997677870.
 - 12:07: runs for 31ea68be: r15 CI 44992235866, device Sky/Vega/Nuvio 44992237525, gate trio lowram 44992239107.
 - 2026-11-22 12:56: F-09-FEED (owner: poster taps for Watch later / Favorite) pushed; fail-before 44995800916 running.
 - 2026-11-22 12:49: F-05-S-ON, F-21 device test, F-05-STREMIO, F-22-C, C5 / C6 mapping pushed; r15 CI dispatched for their pass-after.
