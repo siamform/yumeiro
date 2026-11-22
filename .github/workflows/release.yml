@@ -115,7 +115,11 @@ jobs:
           MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
         # --no-build-cache: the signed artifact is always built from source, never from cache entries.
         # E3 / ADR-054: repository variable YUMEIRO_ABI_SPLITS=true adds per-processor APKs (off by default).
-        run: ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease testMobileDebugUnitTest ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }}
+        # 2.1.0 (run 45075918561): one Gradle call compiled mobile debug + release and TV at once and the Kotlin
+        # daemon ran out of memory (GC overhead). Same tasks, two calls: release APKs first, then the unit tests.
+        run: |
+          ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }}
+          ./gradlew --no-configuration-cache --no-build-cache testMobileDebugUnitTest ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }}
 
       - name: Remove keystore from the runner
         if: always()
