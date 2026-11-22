@@ -42,7 +42,17 @@ class B31FrameDeviceTest {
     private val testHash = "BF2063A5E9A69F14716288FCA7C2D6078BDA7369"
     private fun log(s: String) = Log.i("B31F", s)
 
-    @Test fun firstFrameAndSeekInThePlayer(): Unit = runBlocking {
+    /** The owner's test hash (10-bit HEVC: the emulator decoder c2.goldfish.hevc.decoder cannot decode it). */
+    @Test fun firstFrameAndSeekInThePlayer() = check("magnet:?xt=urn:btih:$testHash", "owner")
+
+    /**
+     * B9-6 (2026-11-23): the same bar on Sintel, the Blender Foundation's open film (CC BY 3.0, H.264, which the
+     * emulator decodes), from WebTorrent's public demo torrent with its web seed. Budgets unchanged.
+     */
+    @Test fun firstFrameAndSeekOnAnOpenFilm() = check(SINTEL, "sintel")
+
+    private fun check(magnet: String, tag: String): Unit = runBlocking {
+        log("B31F_CASE $tag")
         FeatureFlags.set(ctx, FeatureFlags.Flag.BUILTIN_TORRENT, true)
         dev.asfakul.yumeiro.stream.TorrentSettings.init(ctx)
         dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, true)
@@ -54,7 +64,7 @@ class B31FrameDeviceTest {
             val http = NetworkClient.get(ctx)
             withTimeout(240_000) { TorrentEngine.ensure(ctx, http) }
             val t0 = SystemClock.elapsedRealtime()
-            val opened = withTimeout(120_000) { TorrentStreams.open(ctx, "magnet:?xt=urn:btih:$testHash", null, http) }
+            val opened = withTimeout(120_000) { TorrentStreams.open(ctx, magnet, null, http) }
             log("opened ${opened.name} (${opened.size} B) in ${SystemClock.elapsedRealtime() - t0} ms")
 
             val firstFrameAt = AtomicLong(0)
@@ -112,5 +122,11 @@ class B31FrameDeviceTest {
             dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(ctx, false)
             FeatureFlags.set(ctx, FeatureFlags.Flag.BUILTIN_TORRENT, false)
         }
+    }
+
+    private companion object {
+        const val SINTEL = "magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel" +
+            "&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=udp%3A%2F%2Fexplodie.org%3A6969" +
+            "&ws=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2F&xs=https%3A%2F%2Fwebtorrent.io%2Ftorrents%2Fsintel.torrent"
     }
 }

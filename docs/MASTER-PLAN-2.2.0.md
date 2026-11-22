@@ -49,7 +49,7 @@ earlier are drafts only; nothing was merged or tagged.
 | B9-3 | E2 curated per-country Live lists published and shown in the app | Covered by Yumeiro Live: same iptv-org data and the same probe, every country, with the Country filter. A second set of per-country lists would repeat the same channels. Owner can still ask for them (repo var YUMEIRO_CURATED_LIVE=true publishes curated/) |
 | B9-4 | E1-C1: recipe engine + own legal recipes (Internet Archive first), so Hub titles can play with no source installed | Coded, run pending: the Hub asks Yumeiro's own Internet Archive part (Classics) first, exact title + year + type only (flag hub_archive; test E1CatalogTest.withNoSourceInstalledTheArchivePartPlaysAnExactMatch). Other sites: no legal free full-film source with a public API found beyond the Archive |
 | B9-5 | E1-C2: signed recipe bundle pulled by the app (on the streams branch, no new repo) | Not built: the only own resolver (Archive) is in the app, so a bundle would be empty. It makes sense once there are more legal site recipes |
-| B9-6 | Built-in torrent engine (b31_builtin_torrent) on, after its device checks | To do |
-| B9-7 | E3 smaller APKs per processor (yumeiro.abiSplits) on in release.yml | To do |
+| B9-6 | Built-in torrent engine (b31_builtin_torrent) on, after its device checks | Test added: B31FrameDeviceTest.firstFrameAndSeekOnAnOpenFilm (Sintel, CC BY, H.264, web seed; same 15 s / 5 s budgets). Run next; flag goes on only if it passes on api36 and api33-lowram |
+| B9-7 | E3 smaller APKs per processor (yumeiro.abiSplits) on in release.yml | Switched on 2026-11-23: repo variable YUMEIRO_ABI_SPLITS=true (earlier CI pass 44884554686). Final CI runs with abi_splits=true |
 | B9-8 | Every failure from CI 45044232383, device 45045030577, TV 45045033098 | Waiting on runs |
 | Owner only | Trakt client secret; Firebase Test Lab role (OMT-22); real-phone tests (OMT list) | Needs owner |
