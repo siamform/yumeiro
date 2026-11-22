@@ -159,6 +159,11 @@ object FeatureFlags {
         /** F-05-N (ADR-057): stream-only add-ons (Nuvio now) are asked for extra links when a title plays. On with SCRIPTS_NUVIO (F-05-N-ON). */
         STREAM_ADDONS("f05_stream_addons", true),
         /**
+         * F-05-STREMIO: Stremio add-ons with no catalog (stream-only) give links to any title with an IMDb id,
+         * from any source, through the F-05-N add-on seam. Before, they were asked only for Stremio catalog titles.
+         */
+        F05_STREMIO_STREAMS("f05_stremio_streams", true),
+        /**
          * F-05-S (ADR-058): SkyStream plugins (.sky) from a user-added repository run as normal sources. On since
          * F-05-S-ON: SkyStreamProviderDeviceTest 3/3 on api36 + api33-lowram (device 44992834769).
          */

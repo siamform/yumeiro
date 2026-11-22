@@ -48,7 +48,11 @@ object StreamAddons {
     private const val TAG = "StreamAddons"
 
     /** Registered add-ons. Each one checks its own flag in [StreamAddon.enabled]. */
-    @Volatile var registered: List<StreamAddon> = listOf(dev.asfakul.yumeiro.sources.ecosystem.NuvioStreams)
+    @Volatile var registered: List<StreamAddon> = listOf(
+        dev.asfakul.yumeiro.sources.ecosystem.NuvioStreams,
+        // F-05-STREMIO: stream-only Stremio add-ons.
+        dev.asfakul.yumeiro.sources.stremio.StremioStreams,
+    )
         @androidx.annotation.VisibleForTesting internal set
 
     /**
