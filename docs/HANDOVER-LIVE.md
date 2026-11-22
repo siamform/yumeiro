@@ -6,6 +6,12 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 ~23:10 +06: owner order: all secrets set as GitHub secrets (14, from .secrets/env; Firebase mapped to
+YUMEIRO_FCM_*). Leave TV for now. Order: bugs (OWN-1..19, then older lists), release 2.2.0, then Live TV and
+extensions. Updater + ARM check in 2.2.0 (ProcessorCheck, Settings > Updates). README, CHANGELOG, website for 2.2.0.
+Fixed from device 45045030577: Upcoming offline note above the list; test touch mode (PL18); NF1 skips catalog parts.
+Running: CI 45047538777 (abi_splits), phone device 45047541362 (Nf1, Upcoming, LocalPlayer, Extensions, B31Frame).
+
 2026-11-23 ~02:10 +06: CI 45044232383 assemble passed. Device phone 45045030577, TV 45045033098 running.
 CHANGELOG 2.2.0 has OWN-13..19, E1, E2-ALL. PR text docs/evidence/final/PR-2.2.0.md. Next: read results, fix failures only.
 

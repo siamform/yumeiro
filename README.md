@@ -30,10 +30,10 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
-## What's new in 2.1.0
+## What's new in 2.2.0
 
 <!-- RELEASE-2.1-IMAGES -->
-<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.1.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
+<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.2.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
 <p align="center">
 <img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" alt="No more freezes" width="200">
 <img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" alt="A friendlier downloader" width="200">
@@ -41,9 +41,8 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 <img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" alt="Telegram has its own page" width="200">
 </p>
 
-Yumeiro 2.1.0 is in testing (soft-test build); 2.0.0 stays the current release until it ships. Full notes:
-[CHANGELOG.md](CHANGELOG.md), with every test run: [docs/release-2.1/CHANGELOG-FULL.md](docs/release-2.1/CHANGELOG-FULL.md).
-Help test it: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
+Yumeiro 2.2.0 follows 2.0.0 (2.1.0 was a test build and never shipped; all its work is in 2.2.0). Full notes:
+[CHANGELOG.md](CHANGELOG.md). Things that still need a real phone: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
 
 | | |
 |---|---|
@@ -55,6 +54,10 @@ Help test it: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TES
 | **Vertical player** | Swipe through Shorts and any portrait video. |
 | **Live TV by country** | Country filter in big playlists. |
 | **Your profiles, really yours** | Extensions, repositories, pins and reading are per profile; "Forgot PIN" uses security questions. |
+| **Yumeiro, all in one** | One built-in source for drama, films, documentaries, cartoons and TV, with no install; public-domain classics from the Internet Archive play with no source at all. |
+| **Yumeiro Live** | One checked Live TV list from iptv-org, dead links removed every day, with a Country filter and "checked N hours ago". |
+| **Smaller downloads** | Per-processor APKs (arm64-v8a, armeabi-v7a) next to the universal one; Settings → Updates shows your processor and the exact update file. |
+| **Upcoming you can search** | Search, a filter icon, and filters built from the calendar itself. |
 
 ## What's new in 2.0.0
 
@@ -121,8 +124,8 @@ Settings is now organised by subject. Every page is also found by Settings searc
 
 ## Release status
 
-- **2.1.0 is in testing** (soft-test build; notes in [CHANGELOG.md](CHANGELOG.md)).
-- **2.0.0 is the current release** (2026-11-20); it replaces 1.9.0, whose release build crashed when a video opened. Notes: [CHANGELOG.md](CHANGELOG.md).
+- **2.2.0 is the current release**; it replaces 2.0.0 (2.1.0 was a test build and was never released). Notes: [CHANGELOG.md](CHANGELOG.md).
+- **2.0.0** (2026-11-20) replaced 1.9.0, whose release build crashed when a video opened.
 - **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
   pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);
   what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
@@ -345,12 +348,13 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 ## Install
 
 1. Pick your APK on **[the download page](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)):
-   `release-Yumeiro-vX.Y.Z.apk` for phones and tablets, `Yumeiro-TV-vX.Y.Z.tv.apk` for TVs. Both are universal and
-   run on every processor.
+   `Yumeiro-vX.Y.Z-arm64-v8a.apk` for most phones (64-bit), `Yumeiro-vX.Y.Z-armeabi-v7a.apk` for older 32-bit phones,
+   or the universal `release-Yumeiro-vX.Y.Z.apk` if you are not sure. TVs: `Yumeiro-TV-vX.Y.Z-<processor>.tv.apk` or
+   the universal `Yumeiro-TV-vX.Y.Z.tv.apk`. The download page checks your processor for you.
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
-Phones and tablets: Android 9 or newer, `release-Yumeiro-v<version>.apk`. Android TV, Google TV and Fire TV: Android 7.0 or newer, `Yumeiro-TV-v<version>.tv.apk`. Each is one universal APK that runs on every processor (arm64-v8a, armeabi-v7a, x86, x86_64).
+Phones and tablets: Android 9 or newer, `release-Yumeiro-v<version>.apk`. Android TV, Google TV and Fire TV: Android 7.0 or newer, `Yumeiro-TV-v<version>.tv.apk`. The universal APK runs on every processor (arm64-v8a, armeabi-v7a, x86, x86_64); the per-processor APKs are smaller. The updater always takes the file that fits your phone (Settings → Updates shows which).
 
 ## Verify a release
 

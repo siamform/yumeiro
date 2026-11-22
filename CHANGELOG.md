@@ -51,6 +51,13 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - A locked profile no longer force-closes or stays on the logo when you unlock it hours after the app was swiped
   away (OWN-15).
 - Closing a page now uses the same motion as opening it, on every page (OWN-14).
+- Upcoming: the "Offline, showing the last saved calendar" note stays above the list, so it is seen after a scroll.
+
+### New: smaller downloads and an ARM check
+- Each release now has per-processor APKs (arm64-v8a, armeabi-v7a) next to the universal one, for phones and TV.
+- Settings → Updates shows the phone's processor, the installed build (one processor or universal) and the exact
+  file and size the next update downloads. The updater always picks the file for your processor; a universal install
+  moves to the smaller file on the next update.
 
 ### Faster
 - Yumix and Home show the saved feed at once, even after a night away or an update, and refresh behind it (FE-1).

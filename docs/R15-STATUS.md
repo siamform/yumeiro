@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here: B7 runs CI 45044232383, device 45045030577, TV 45045033098 (release-2.2.0); then B6 upgrade check + B8 release. See docs/MASTER-PLAN-2.2.0.md.
+Resume here: CI 45047538777 + phone device 45047541362 (release-2.2.0, no TV per owner); then B6 upgrade check + B8 release. See docs/MASTER-PLAN-2.2.0.md.
 
 # R15 status: every item in the master prompt, with its evidence
 
