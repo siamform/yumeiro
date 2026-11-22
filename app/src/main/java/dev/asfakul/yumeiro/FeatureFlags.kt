@@ -156,6 +156,8 @@ object FeatureFlags {
         SCRIPTS_NUVIO("scripts_nuvio", false),
         /** F-05-N (ADR-057): stream-only add-ons (Nuvio now) are asked for extra links when a title plays. Off with SCRIPTS_NUVIO. */
         STREAM_ADDONS("f05_stream_addons", false),
+        /** F-05-N-ERR: a script error is reported as "Error: message" (then the stack), not a bare stack line. */
+        SCRIPT_ERROR_MESSAGE("f05_script_error_message", true),
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */
         EXT_HOLD_WHILE_TYPING("ext_hold_while_typing", true),
     }

@@ -645,7 +645,16 @@
         return v;
       })
       .then(function (v) { __result(JSON.stringify(v === undefined ? null : v)); },
-        function (e) { __error(String((e && (e.stack || e.message)) || e)); });
+        function (e) { __error(G.__errText(e)); });
+  };
+
+  // F-05-N-ERR: QuickJS `stack` has only the "at ..." lines, not V8's "Error: message" head, so a
+  // thrown Error was reported as a bare stack line. With __ERR_MESSAGE the message leads.
+  G.__errText = function (e) {
+    if (!e) return String(e);
+    if (G.__ERR_MESSAGE !== true) return String(e.stack || e.message || e);
+    var head = e.message !== undefined ? ((e.name || "Error") + ": " + e.message) : String(e);
+    return e.stack ? head + "\n" + e.stack : head;
   };
 
   // F-05-N (ADR-057): Nuvio's `getStreams(tmdbId, mediaType, season, episode)` takes positional
@@ -660,7 +669,7 @@
         return target.apply(null, Array.isArray(args) ? args : [args]);
       })
       .then(function (v) { __result(JSON.stringify(v === undefined ? null : v)); },
-        function (e) { __error(String((e && (e.stack || e.message)) || e)); });
+        function (e) { __error(G.__errText(e)); });
   };
 
   G.__providerContext = {

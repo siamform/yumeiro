@@ -96,4 +96,21 @@ class NuvioAdapterTest {
         assertFalse("off until the device test passes", NuvioAdapter.flag.default)
         assertFalse(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_ADDONS.default)
     }
+
+    /** F-05-N-ERR (device 44982374518): QuickJS stacks have no message line; the reason shows the message. */
+    @Test fun aFailedScraperShowsItsMessageNotAStackFrame() {
+        assertEquals("Broken: Error: site changed",
+            NuvioAdapter.reasonOf("Broken", "Error: site changed\n    at getStreams (scraper.js:2:67)\n"))
+        assertEquals("only a frame is still shown", "Broken: at getStreams (scraper.js:2:67)",
+            NuvioAdapter.reasonOf("Broken", "    at getStreams (scraper.js:2:67)\n"))
+        assertEquals("Films: timeout", NuvioAdapter.reasonOf("Films", "timeout"))
+    }
+
+    /** F-05-N-ERR: both script invokers report errors through __errText, which puts the message first. */
+    @Test fun theRuntimeReportsTheErrorMessage() {
+        val js = listOf(java.io.File("src/main/assets/js/provider_runtime.js"), java.io.File("app/src/main/assets/js/provider_runtime.js")).first { it.isFile }.readText()
+        assertEquals(2, js.split("__error(G.__errText(e))").size - 1)
+        assertTrue(js.contains("(e.name || \"Error\") + \": \" + e.message"))
+        assertTrue(dev.asfakul.yumeiro.FeatureFlags.Flag.SCRIPT_ERROR_MESSAGE.default)
+    }
 }

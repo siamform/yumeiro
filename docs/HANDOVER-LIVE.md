@@ -6,28 +6,32 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 09:40 +0600, branch `r15-stability`. This push: fail-before results. Previous push f46c3f22: GATE-1-MUSIC-START-2. r15 CI 44976838656 failed 1 of 1758:
-AppNavigationCrashTest.darkThemeRenders :185 (now-playing never opened after the first song tap). Cause: with MUSIC-START
-the first playTrack builds the player; attach() then ran restoreExistingState() on the empty player and cleared the
-track/queue just set. Fix (MusicPlayerManager.attach fromCommand): a command-built empty player keeps the command state.
-New test PlayerBuiltOnFirstUseTest.theFirstSongTapOnAColdStartKeepsTheTrack.
-Earlier push 06200fc3: F-05-N (ADR-057) Nuvio scrapers as stream-only add-ons, behind `scripts_nuvio` +
-`f05_stream_addons` (both OFF until the device run passes): online/StreamAddons.kt, sources/ecosystem/NuvioAdapter.kt,
-sources/ecosystem/ScriptCrypto.kt, crypto-js shim in assets/js/provider_runtime.js.
+2026-11-22 10:05 +0600, branch `r15-stability`. This push: F-05-N-ERR. Device 44982374518: Vega 3/3 Pass on both
+phones; Nuvio 3 of 4 Pass (crypto-js + cheerio fixture works), aCrashingScraperEndsOnlyItselfAndTheListMerges Fail: a
+thrown JS error arrived as a bare frame "at getStreams (scraper.js:2:67)" (QuickJS stack has no message line). Fix,
+flag `f05_script_error_message` (on): provider_runtime.js G.__errText ("Error: message" then stack, both invokers),
+ScriptRuntime passes __ERR_MESSAGE, NuvioAdapter.reasonOf shows the first non-frame line. Tests in f05/NuvioAdapterTest.
+Earlier today: f46c3f22 GATE-1-MUSIC-START-2 (first song tap on a cold start kept its track); 06200fc3 F-05-N Nuvio
+(flags `scripts_nuvio` + `f05_stream_addons` OFF until the Nuvio device test passes).
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- Fail-befores done: MUSIC-START-2 44979435737 and F-05-N 44977804955 both Fail as expected, branches deleted.
-  Note: CI gitleaks scans every live branch, so a live ab/ branch with an old test literal fails other runs' scan.
-- r15 CI 44979533703 (review_apk=true @f46c3f22): pass-after MUSIC-START, MUSIC-START-2 and F-05-N. Then device runs:
-  `-f test=dev.asfakul.yumeiro.NuvioProviderDeviceTest,dev.asfakul.yumeiro.VegaProviderDeviceTest` and the GATE-1 trio
-  (GateOnePrepareDeviceTest, MainThreadStallRealClockDeviceTest, GateOneExitCheckDeviceTest; no getOrCreatePlayer YuStall).
+- r15 CI 44979533703 (review_apk=true @f46c3f22): Build, test & lint Pass = pass-after MUSIC-START, MUSIC-START-2,
+  F-05-N. Gitleaks first failed (live ab/f05n-before at checkout), rerun Pass; review APK was still running. Do NOT
+  dispatch ci.yml on r15-stability until it ends (a new dispatch cancels it); then dispatch review_apk=true for F-05-N-ERR.
+- CI 44983223105 (ab/f05nerr-before): expect NuvioAdapterTest.aFailedScraperShowsItsMessageNotAStackFrame and
+  theRuntimeReportsTheErrorMessage to fail, compile ok. Then delete branch + `git worktree remove --force /tmp/fb_err`.
+- Device 44982381315 (queued, same group): GATE-1 trio; check no YuStall names PlaybackService.getOrCreatePlayer.
+- After the F-05-N-ERR pass-after CI: device rerun NuvioProviderDeviceTest (+ VegaProviderDeviceTest, error text changed).
+- CI gitleaks scans every live branch: never leave an ab/ branch with a secret-looking literal alive during other runs.
+- Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before). They do
+  not trip gitleaks; check their ledger rows before deleting.
 - When NuvioProviderDeviceTest passes: flip both flags to true in FeatureFlags.kt (own commit, own CI) and add an OMT row
   (add a real Nuvio repo, play a movie, see "Nuvio · <scraper>" sources).
 
 ## Next step
-1. Close the pending runs above (rows GATE-1-MUSIC-START, GATE-1-MUSIC-START-2, F-05-N).
+1. Close the pending runs above (rows GATE-1-MUSIC-START, GATE-1-MUSIC-START-2, F-05-N, F-05-N-ERR).
 2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
 3. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
@@ -37,7 +41,8 @@ sources/ecosystem/ScriptCrypto.kt, crypto-js shim in assets/js/provider_runtime.
    then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
-- 2026-11-22 09:15: GATE-1-MUSIC-START-2 (this push).
+- 2026-11-22 10:05: F-05-N-ERR (this push).
+- 2026-11-22 09:15: GATE-1-MUSIC-START-2 f46c3f22.
 - 2026-11-22 09:00: F-05-N Nuvio 06200fc3, docs digest 45aac76a.
 - 2026-11-22 morning: RENDER-5b 0270f069, FF-LOAD 8cb89e9b, GATE-1-AB b847caa0, GATE-1-FTL 76a6e521, MUSIC-START 9da67d0c.
 - GATE-1 (newest first): RENDER-4b f30cd6c5 poster phase fix; TRACE-4 1ee95cc3; T11 345d2572; RENDER-5 935875ed;

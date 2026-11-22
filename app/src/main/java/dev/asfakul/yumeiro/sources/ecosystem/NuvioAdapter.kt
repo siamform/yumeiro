@@ -90,6 +90,16 @@ object NuvioAdapter : RuntimeAdapter {
     }
 
     /** The problem line for the Script repos tab, or null. */
+    /**
+     * F-05-N-ERR: the line shown for a scraper that failed: its first non-blank, non-stack line
+     * ("Broken: Error: site changed"), not the "at getStreams (scraper.js:2:67)" frame.
+     */
+    fun reasonOf(name: String, message: String): String {
+        val lines = message.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+        val line = lines.firstOrNull { !it.startsWith("at ") } ?: lines.firstOrNull() ?: message
+        return "$name: $line"
+    }
+
     fun problemOf(p: EcosystemRegistry.Installed): String? {
         val needs = (p.extra["needs"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
         return if (needs.isEmpty()) null else "Uses Node.js parts Yumeiro can't run (${needs.joinToString()}); it may find nothing"
@@ -221,7 +231,7 @@ object NuvioStreams : StreamAddon {
                     throw e
                 } catch (e: Throwable) {
                     Log.w(TAG, "${p.name}: ${e.message}")
-                    send(LinkEvent.Skipped("${p.name}: ${e.message ?: e.javaClass.simpleName}"))
+                    send(LinkEvent.Skipped(NuvioAdapter.reasonOf(p.name, e.message ?: e.javaClass.simpleName)))
                 }
             }
         }

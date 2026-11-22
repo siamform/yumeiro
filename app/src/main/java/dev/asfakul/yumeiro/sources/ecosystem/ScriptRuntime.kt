@@ -102,8 +102,11 @@ object ScriptRuntime {
                         q.defineBinding("__error", FunctionBinding<Any?> { args -> failure = args.getOrNull(0)?.toString() ?: "error"; null })
                         q.evaluationTimeoutMillis = left()
                         q.evaluate<Any?>(runtime(app), "provider_runtime.js", false)
-                        if (globals.isNotEmpty()) {
-                            val set = globals.entries.joinToString("\n") { (k, v) -> "globalThis[${quote(k)}] = JSON.parse(${quote(v)});" }
+                        // F-05-N-ERR: thrown errors are reported with their message first.
+                        val all = globals + ("__ERR_MESSAGE" to dev.asfakul.yumeiro.FeatureFlags.isOn(
+                            dev.asfakul.yumeiro.FeatureFlags.Flag.SCRIPT_ERROR_MESSAGE).toString())
+                        if (all.isNotEmpty()) {
+                            val set = all.entries.joinToString("\n") { (k, v) -> "globalThis[${quote(k)}] = JSON.parse(${quote(v)});" }
                             q.evaluate<Any?>(set, "globals.js", false)
                         }
                         for (m in modules) {
