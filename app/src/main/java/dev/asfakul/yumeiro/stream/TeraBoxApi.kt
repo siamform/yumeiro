@@ -49,7 +49,19 @@ object TeraBoxApi {
         /** TeraBox only gives the full video to a signed-in account (anonymous = 30 s preview). */
         data object NeedsSignIn : Result
         data class Failed(val reason: String) : Result
+        /**
+         * OWN-10: TeraBox wants a human check first (errno 400210 "need verify_v2", 460030 "dragdrop" slider, both
+         * seen on 2026-11-22). The user opens the share page in the app's browser and does the check themselves; the
+         * cookies it leaves are reused on the next try. Yumeiro never solves or skips the check.
+         */
+        data object NeedsVerify : Result
     }
+
+    /** OWN-10: answers that mean "do TeraBox's human check on its page first". */
+    internal val VERIFY_ERRNOS = setOf("400210", "460030", "400141")
+
+    const val VERIFY_REASON = "TeraBox wants you to confirm you're a person before it lists this file. " +
+        "Do TeraBox's check on this page, then go back and play the link again."
 
     /** `1qkXq…` from `…/s/1qkXq…` or `…?surl=qkXq…` (surl drops the leading "1"). */
     fun shortUrl(url: String): String? {
@@ -114,6 +126,7 @@ object TeraBoxApi {
         val info = get("$base/api/shorturlinfo?$QS&jsToken=$token&shorturl=$short&root=1")
             ?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
             ?: return Result.Failed("TeraBox didn't list the share")
+        if (info.str("errno") in VERIFY_ERRNOS) return Result.NeedsVerify
         if (info.str("errno") != "0") return Result.Failed("TeraBox refused the share (error ${info.str("errno")})")
         val file = (info["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
             ?.firstOrNull { it.str("category") == "1" && it.str("isdir") != "1" }
@@ -124,6 +137,7 @@ object TeraBoxApi {
                 "&by=name&order=asc&num=1000&page=1&dir=&root=1",
         )?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
         val name = file.str("server_filename") ?: "TeraBox video"
+        if (list?.str("errno") in VERIFY_ERRNOS) return Result.NeedsVerify
         if (list?.str("errno") == "0" && !preferTranscode(name)) {
             val dlink = (list["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
                 ?.firstOrNull { it.str("fs_id") == file.str("fs_id") }?.str("dlink")?.takeIf { it.startsWith("http") }

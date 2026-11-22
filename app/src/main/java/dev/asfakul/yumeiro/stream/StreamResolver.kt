@@ -147,6 +147,8 @@ object StreamResolver {
             )
             TeraBoxApi.Result.NeedsSignIn -> Resolution.NeedsBrowser(TERABOX_SIGN_IN, TeraBoxApi.SIGN_IN_REASON, request, auto = false)
             is TeraBoxApi.Result.Failed -> Resolution.Failed("TeraBox link can't play", r.reason + ".")
+            // OWN-10: the user does TeraBox's own check on the share page; nothing is captured automatically.
+            TeraBoxApi.Result.NeedsVerify -> Resolution.NeedsBrowser(route.pageUrl, TeraBoxApi.VERIFY_REASON, request, auto = false)
         }
 
     /**

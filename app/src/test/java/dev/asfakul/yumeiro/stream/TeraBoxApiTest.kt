@@ -121,4 +121,34 @@ class TeraBoxApiTest {
         serve(list = """{"errno":105}""", stream = preview)
         assertEquals(TeraBoxApi.Result.NeedsSignIn, TeraBoxApi.resolve(OkHttpClient(), share))
     }
+
+    /**
+     * OWN-10 (owner list, 2.1.0: "Terabox is not working"): on 2026-11-22 TeraBox answered shorturlinfo with
+     * errno 400210 "need verify_v2" and 460030 "dragdrop" (its human check). Before, that ended in "TeraBox refused
+     * the share (error 400210)" with no way forward; now the share page opens in the app's browser so the user can
+     * do the check, and nothing is auto-captured.
+     */
+    @Test fun ownTenAHumanCheckOpensTheSharePageForTheUser() {
+        TeraBoxApi.cookieSource = { "ndus=Ytest; browserid=b" }
+        for (errno in listOf("400210", "460030")) {
+            runCatching { server.close() }
+            val s = MockWebServer()
+            s.dispatcher = object : Dispatcher() {
+                override fun dispatch(request: RecordedRequest): MockResponse = when (request.url.encodedPath) {
+                    "/wap/share/filelist" -> MockResponse.Builder().body(page).build()
+                    "/api/shorturlinfo" -> MockResponse.Builder().body("""{"errno":$errno,"errmsg":"need verify_v2"}""").build()
+                    else -> MockResponse.Builder().code(404).build()
+                }
+            }
+            s.start()
+            try {
+                TeraBoxApi.base = s.url("/").toString().trimEnd('/')
+                val r = StreamResolver.resolveBlocking(StreamRequest(share), "ua", OkHttpClient())
+                assertTrue("errno $errno: got $r", r is Resolution.NeedsBrowser)
+                r as Resolution.NeedsBrowser
+                assertTrue("the user's own check happens on the share page: ${r.pageUrl}", "1qkXqTvPA9GYY7sUY6dOGeA" in r.pageUrl && r.pageUrl != StreamResolver.TERABOX_SIGN_IN)
+                assertFalse("nothing is captured automatically", r.auto)
+            } finally { s.close() }
+        }
+    }
 }
