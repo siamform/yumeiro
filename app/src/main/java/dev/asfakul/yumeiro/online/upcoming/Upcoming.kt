@@ -50,6 +50,9 @@ object Upcoming {
         val simklId: Long,
         /** F-22: air time in the phone's zone; null when the calendar only gives a date. */
         val time: java.time.LocalTime? = null,
+        /** F-22-C: ISO country of the channel and the show's genres (TVmaze lists only; Simkl has neither). */
+        val country: String? = null,
+        val genres: List<String> = emptyList(),
     ) {
         val episodeLabel: String? get() = firstEpisode?.let { f ->
             val eps = if (lastEpisode != null && lastEpisode != f) "E$f–$lastEpisode" else "E$f"
@@ -195,6 +198,8 @@ object Upcoming {
                 put("s", kotlinx.serialization.json.JsonPrimitive(e.season)); put("a", kotlinx.serialization.json.JsonPrimitive(e.firstEpisode))
                 put("b", kotlinx.serialization.json.JsonPrimitive(e.lastEpisode)); put("i", kotlinx.serialization.json.JsonPrimitive(e.simklId))
                 put("h", kotlinx.serialization.json.JsonPrimitive(e.time?.toString()))
+                if (e.country != null) put("c", kotlinx.serialization.json.JsonPrimitive(e.country))
+                if (e.genres.isNotEmpty()) put("g", kotlinx.serialization.json.JsonArray(e.genres.map { kotlinx.serialization.json.JsonPrimitive(it) }))
             })
         }
     }.toString()
@@ -210,6 +215,8 @@ object Upcoming {
                     season = o["s"]?.jsonPrimitive?.intOrNull, firstEpisode = o["a"]?.jsonPrimitive?.intOrNull,
                     lastEpisode = o["b"]?.jsonPrimitive?.intOrNull, simklId = o["i"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
                     time = o["h"]?.jsonPrimitive?.contentOrNull?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() },
+                    country = o["c"]?.jsonPrimitive?.contentOrNull,
+                    genres = (o["g"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty(),
                 )
             }.getOrNull()
         }.toList()

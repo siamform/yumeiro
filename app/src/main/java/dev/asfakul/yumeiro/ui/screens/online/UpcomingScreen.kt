@@ -7,6 +7,8 @@ package dev.asfakul.yumeiro.ui.screens.online
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.asfakul.yumeiro.online.upcoming.TvmazeSchedule
 import dev.asfakul.yumeiro.online.upcoming.Upcoming
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -74,40 +77,70 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     var kindLoaded by rememberSaveable { mutableStateOf(!sections) }
     val kind = Upcoming.Kind.valueOf(kindName)
     // F-22: the last category is kept per profile (read and written off the main thread).
+    // F-22-C: Series by country (TVmaze) and a genre filter; null = all countries (Simkl) / all genres.
+    val byCountry = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.F22_COUNTRY_GENRE) }
+    var country by rememberSaveable { mutableStateOf<String?>(null) }
+    var genre by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         if (!kindLoaded) {
-            withContext(Dispatchers.IO) { UpcomingPrefs.kind(context) }?.let { kindName = it.name }
+            withContext(Dispatchers.IO) {
+                val k = UpcomingPrefs.kind(context)
+                val c = if (byCountry) UpcomingPrefs.country(context) else null
+                val g = if (byCountry) UpcomingPrefs.genre(context) else null
+                Triple(k, c, g)
+            }.let { (k, c, g) -> k?.let { kindName = it.name }; country = c; genre = g }
             kindLoaded = true
         }
     }
-    LaunchedEffect(kindName, kindLoaded) {
-        if (sections && kindLoaded) withContext(Dispatchers.IO) { UpcomingPrefs.setKind(context, kind) }
+    LaunchedEffect(kindName, country, genre, kindLoaded) {
+        if (sections && kindLoaded) withContext(Dispatchers.IO) {
+            UpcomingPrefs.setKind(context, kind)
+            if (byCountry) { UpcomingPrefs.setCountry(context, country); UpcomingPrefs.setGenre(context, genre) }
+        }
     }
+    val source = if (byCountry && kind == Upcoming.Kind.SERIES) country else null
     val zone = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(zone) }
-    var list by remember(kind) { mutableStateOf<List<Upcoming.Entry>?>(null) }
-    var failed by remember(kind) { mutableStateOf(false) }
-    var loading by remember(kind) { mutableStateOf(true) }
+    var list by remember(kind, source) { mutableStateOf<List<Upcoming.Entry>?>(null) }
+    var failed by remember(kind, source) { mutableStateOf(false) }
+    var loading by remember(kind, source) { mutableStateOf(true) }
     var retry by remember { mutableStateOf(0) }
-    LaunchedEffect(kind, retry, kindLoaded) {
+    LaunchedEffect(kind, source, retry, kindLoaded) {
         if (!kindLoaded) return@LaunchedEffect
         loading = true; failed = false
-        val cached = withContext(Dispatchers.IO) { Upcoming.cached(context, kind, today) }
+        val cached = withContext(Dispatchers.IO) { if (source != null) TvmazeSchedule.cached(context, source, today) else Upcoming.cached(context, kind, today) }
         if (cached != null) list = cached
-        if (cached == null || retry > 0 || !withContext(Dispatchers.IO) { Upcoming.isFresh(context, kind) }) {
+        if (cached == null || retry > 0 || !withContext(Dispatchers.IO) { if (source != null) TvmazeSchedule.isFresh(context, source) else Upcoming.isFresh(context, kind) }) {
             val fresh = withContext(Dispatchers.IO) {
-                runCatching { Upcoming.refresh(context, dev.asfakul.yumeiro.network.NetworkClient.get(context), kind, today, zone) }.getOrNull()
+                val client = dev.asfakul.yumeiro.network.NetworkClient.get(context)
+                runCatching { if (source != null) TvmazeSchedule.refresh(context, client, source, today, zone) else Upcoming.refresh(context, client, kind, today, zone) }.getOrNull()
             }
             if (fresh != null) list = fresh else failed = true
         }
         loading = false
     }
-    val days = remember(list) { list.orEmpty().groupBy { it.day }.toList() }
+    val genres = remember(list) { if (byCountry) TvmazeSchedule.genresOf(list.orEmpty()) else emptyList() }
+    val shown = remember(list, genre, genres) { if (genre != null && genre in genres) TvmazeSchedule.filterGenre(list.orEmpty(), genre) else list.orEmpty() }
+    val days = remember(shown) { shown.groupBy { it.day }.toList() }
     Column(Modifier.fillMaxSize().testTag("upcoming_screen")) {
         SubPageHeader(title = "Upcoming", subtitle = "Next two weeks · ${kind.label}", onBack = onBack)
         Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Upcoming.Kind.entries.forEach { k ->
                 OnlineChip(k.label, k == kind, { kindName = k.name }, Modifier.testTag("upcoming_kind_${k.name.lowercase()}"))
+            }
+        }
+        if (byCountry && kind == Upcoming.Kind.SERIES) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp).testTag("upcoming_countries"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OnlineChip("All countries", country == null, { country = null }, Modifier.testTag("upcoming_country_all"))
+                (TvmazeSchedule.COUNTRIES + TvmazeSchedule.STREAMING).forEach { c ->
+                    OnlineChip(TvmazeSchedule.label(c), c == country, { country = c }, Modifier.testTag("upcoming_country_${c.lowercase()}"))
+                }
+            }
+        }
+        if (genres.isNotEmpty()) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp).testTag("upcoming_genres"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OnlineChip("All genres", genre == null || genre !in genres, { genre = null }, Modifier.testTag("upcoming_genre_all"))
+                genres.forEach { g -> OnlineChip(g, g == genre, { genre = g }, Modifier.testTag("upcoming_genre_${g.lowercase()}")) }
             }
         }
         when {
@@ -131,7 +164,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     items(entries, key = { "e_${it.simklId}_${it.day}_${it.season}" }) { e -> UpcomingRow(e, showTime = sections) { onSearch(e.title) } }
                 }
                 item("credit") {
-                    Text("Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
+                    Text(if (source != null) "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources." else "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
                         modifier = Modifier.padding(16.dp).navigationBarsPadding())
                 }
             }
@@ -153,6 +186,8 @@ private fun UpcomingRow(e: Upcoming.Entry, showTime: Boolean = false, onClick: (
             // F-22: air time and episode on one line ("20:00 • S2 E4"); the time only when the calendar has one.
             val sub = listOfNotNull(Upcoming.timeLabel(e).takeIf { showTime }, e.episodeLabel).joinToString(" • ")
             if (sub.isNotEmpty()) Text(sub, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("upcoming_entry_sub"))
+            // F-22-C: country and genre badges ("JP • Anime, Fantasy") when the schedule has them.
+            TvmazeSchedule.badge(e)?.let { Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("upcoming_entry_badge")) }
         }
     }
 }
@@ -164,4 +199,8 @@ internal object UpcomingPrefs {
     fun kind(c: android.content.Context): Upcoming.Kind? =
         prefs(c).getString("kind", null)?.let { n -> Upcoming.Kind.entries.firstOrNull { it.name == n } }
     fun setKind(c: android.content.Context, k: Upcoming.Kind) { prefs(c).edit().putString("kind", k.name).apply() }
+    fun country(c: android.content.Context): String? = prefs(c).getString("country", null)?.takeIf { it in TvmazeSchedule.COUNTRIES || it == TvmazeSchedule.STREAMING }
+    fun setCountry(c: android.content.Context, v: String?) { prefs(c).edit().putString("country", v).apply() }
+    fun genre(c: android.content.Context): String? = prefs(c).getString("genre", null)
+    fun setGenre(c: android.content.Context, v: String?) { prefs(c).edit().putString("genre", v).apply() }
 }

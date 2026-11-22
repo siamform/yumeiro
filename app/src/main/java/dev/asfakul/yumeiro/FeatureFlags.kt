@@ -163,6 +163,8 @@ object FeatureFlags {
          * from any source, through the F-05-N add-on seam. Before, they were asked only for Stremio catalog titles.
          */
         F05_STREMIO_STREAMS("f05_stremio_streams", true),
+        /** F-22-C: Upcoming Series by country (TVmaze schedule) with a genre filter and badges. */
+        F22_COUNTRY_GENRE("f22_country_genre", true),
         /**
          * F-05-S (ADR-058): SkyStream plugins (.sky) from a user-added repository run as normal sources. On since
          * F-05-S-ON: SkyStreamProviderDeviceTest 3/3 on api36 + api33-lowram (device 44992834769).
