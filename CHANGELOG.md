@@ -2,6 +2,68 @@
 
 All notable changes to Yumeiro.
 
+## v2.1.0: faster feeds, more sources, no freezes (soft-test build, not released yet)
+
+Follows 2.0.0. Update straight from 2.0.0, 1.9.0 or 1.8.x; profiles, history, downloads and settings carry over.
+Every item below was checked with an automatic test (unit tests in CI and/or emulator runs on a low-RAM phone, a
+recent phone and Android TV). Things that still need a real phone are listed under "Still being checked" and in
+docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/release-2.1/CHANGELOG-FULL.md.
+
+### Fixed
+- 2.0.0 could freeze when you touched the screen while Home sat under the player ("not responding"). Home no longer
+  re-checks every extension for 18+ on each draw, and other screens no longer rebuild the provider list (FREEZE-1, 2).
+- A new automatic check walks Home, Videos, Live TV and YouTube on a low-RAM phone and fails on any frame over
+  700 ms or any "not responding"; the slow frames it found are fixed: the Yumix opening, the Videos tab, the hero
+  poster, first music start, and feed sections that arrive late now appear one per frame (GATE-1).
+- TeraBox videos stopped at 0:30 (TeraBox's no-login preview). Yumeiro now plays the original file or the full stream
+  when you are signed in to TeraBox in the web view, and asks you to sign in instead of playing a preview. DiskWala
+  links no longer wait on a web page for ever: Yumeiro checks the share and hands it to the DiskWala app
+  (B-29, B-30).
+- Raw torrent info-hashes are accepted in Play Link and from Stremio add-ons (T-1).
+- Continue reading and saved manga were shared by all profiles; extensions, repositories, pins and Live TV pins are
+  now per profile too (PROF-1, F-19).
+- "Forgot PIN" no longer accepts the phone's screen lock; profiles use security questions instead (B-19).
+- The pinned-extension row that repeated on Yumix is gone; the same extension can no longer be installed many times
+  from different repositories (PIN-1).
+- Same-name extensions from two repositories now both show, each with its repository and ecosystem (PIN-2, F-21).
+- When an extension "didn't load: nothing came back", Yumeiro now opens its site and says why: browser check, block,
+  moved address (with "Use new address"), site error, no connection, or "the extension is probably out of date"
+  (B-32).
+- Movies and date-only episodes in Upcoming showed one day early west of New York (F-22).
+- The proxy check called some unreachable proxies "wants a login" (NBUG-13).
+- The filter sheet keyboard closed or showed late (NBUG-10).
+- The player's top-right buttons now sit at the edge (OL-7).
+
+### Faster
+- Yumix and Home show the saved feed at once, even after a night away or an update, and refresh behind it (FE-1).
+- With many extensions, only the ones you pick, pin and the fastest ones load live; the rest show their saved page
+  (FE-4). Pages are refreshed in the background on Wi-Fi every 6 hours (FE-5).
+- Fastest extensions first, slow or dead sites set aside, fewer background loads on low-RAM or hot phones (E4).
+- Repeated searches answer from memory; a site with a known speed gets a timeout that fits it, so one slow site
+  holds a search less (FE-S).
+- YouTube and online music shelves load sooner (FE-7).
+
+### New
+- Nuvio scraper repositories run: their streams join the sources list of any opened title (F-05).
+- Downloader popup, redesigned: Offline / Permanent switch, real quality, audio language and subtitle choices for
+  any stream, download one episode or a range, and a whole online-music playlist (OL-5, OL-6, OL-11, OL-12, NF-2b).
+- Websites: one website tab stays open while a stream plays; the stream bar can be rescanned, collapsed or closed; it
+  lists only the video playing now; downloads ask Offline / Permanent first; the helper note hides after 3 s
+  (OL-1 to OL-4, OL-8).
+- Vertical swipe player for Shorts and for any portrait video (F-12).
+- Live TV: country filter, and a curated list of about 20 working channels per country (Country, E2).
+- Separate Telegram page (F-02).
+- Upcoming grouped by date (F-22). Episode status on episode rows: Watched, minutes left, Fresh (NF-1).
+- More Home shortcuts and more pages you can put on the navigation bar (OL-9, OL-10).
+- About: Yumeiro on Discord, Facebook, Instagram, X, TikTok and Reddit, plus the developer's links (OL-13).
+- Smaller downloads per phone type (ABI split APKs) are ready in the build; the universal APK stays (E3).
+
+### Still being checked (off or not proven yet)
+- Telegram sign-in (private channels and chats) is built but off until it is tested on a real phone (F-02 login).
+- SkyStream plugins and the built-in torrent engine are built but off until their device checks pass.
+- Real-phone checks the emulators cannot do (GPU frame times, real YouTube quality, download speed on a real
+  network) are in the manual test list.
+
 ## v2.0.0: the 1.9.0 features, without the crash
 
 Replaces 1.9.0. Update from 1.9.0 or 1.8.x directly; nothing is lost (profiles, history, downloads and settings carry

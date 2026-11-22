@@ -30,6 +30,25 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
+## What's new in 2.1.0
+
+<!-- RELEASE-2.1-IMAGES -->
+
+Yumeiro 2.1.0 is in testing (soft-test build); 2.0.0 stays the current release until it ships. Full notes:
+[CHANGELOG.md](CHANGELOG.md), with every test run: [docs/release-2.1/CHANGELOG-FULL.md](docs/release-2.1/CHANGELOG-FULL.md).
+Help test it: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
+
+| | |
+|---|---|
+| **No more freezes** | The touch freeze of 2.0.0 is fixed, and a new automatic check fails the build on any frame over 700 ms on a low-RAM phone. |
+| **Feeds at once** | Yumix and Home show the saved feed straight away, even after a night away or an update, and refresh behind it; fastest extensions first, dead sites set aside. |
+| **A friendlier downloader** | Offline / Permanent switch, real quality, audio and subtitle choices for any stream, one episode or a range, whole music playlists. |
+| **Websites that stay open** | One website tab stays open while a stream plays; the stream bar follows the video playing now. |
+| **More sources** | Nuvio scraper repositories add their streams to any title; TeraBox plays full files when you are signed in; DiskWala hands off to its app. |
+| **Vertical player** | Swipe through Shorts and any portrait video. |
+| **Live TV by country** | Country filter and a curated list of working channels. |
+| **Your profiles, really yours** | Extensions, repositories, pins and reading are per profile; "Forgot PIN" uses security questions. |
+
 ## What's new in 2.0.0
 
 Yumeiro 2.0.0 replaces 1.9.0: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
@@ -83,7 +102,8 @@ Settings is now organised by subject. Every page is also found by Settings searc
 |---|---|
 | Profiles, PINs, "Who's watching?", 18+ per profile | Settings → You → Profiles |
 | Your statistics (week, streak, activity map) | Settings → You → Your statistics |
-| Public Telegram channels (no login), saved web sites | Settings → Sources & accounts → Telegram & web sites |
+| Public Telegram channels (no login) | Settings → Sources & accounts → Telegram |
+| Saved web sites | Settings → Sources & accounts → Websites |
 | Extensions, script repos (Vega, Nuvio, SkyStream), home servers | Settings → Sources & accounts → Sources |
 | Video quality, decoder, TorrServer | Settings → Video → Video quality & playback |
 | Subtitles, subtitle downloads, skip intros | Settings → Video → Subtitles & intros |
@@ -94,6 +114,7 @@ Settings is now organised by subject. Every page is also found by Settings searc
 
 ## Release status
 
+- **2.1.0 is in testing** (soft-test build; notes in [CHANGELOG.md](CHANGELOG.md)).
 - **2.0.0 is the current release** (2026-11-20); it replaces 1.9.0, whose release build crashed when a video opened. Notes: [CHANGELOG.md](CHANGELOG.md).
 - **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
   pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);
@@ -130,8 +151,8 @@ like a crowd of new users would. Full notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Android TV, Google TV and Fire TV
 
-Yumeiro installs on TV boxes and sticks from the same APKs (use `armeabi-v7a` for most Fire TV Sticks, `arm64-v8a`
-for newer Google TV devices, or the universal APK if unsure). On a TV it switches to TV mode on its own:
+Yumeiro installs on TV boxes and sticks with the TV APK (`Yumeiro-TV-v<version>.tv.apk`, universal, Android 7.0 or
+newer). On a TV it switches to TV mode on its own:
 
 - **Left navigation rail** instead of the bottom dock. Icon-only until focused, then it shows labels. D-pad Left from the left edge of any page opens it.
 - **Every button shows where you are**: a visible focus ring and lift on everything clickable, so the remote reaches every option.
@@ -305,7 +326,7 @@ How Yumeiro compares with the apps it learns from. All of them are great at thei
 | Crash guard for broken extensions | ✓ | – | – | partial | n/a | – | n/a |
 | Public source status page | [✓](https://yumeiro.click/status) | – | – | – | – | – | – |
 
-Yumeiro does not ship torrent streaming. Stremio add-ons that only return torrents are listed but their torrent streams are skipped.
+Torrent links (magnet links, raw info-hashes and Stremio torrent add-ons) play through your own TorrServer (Settings → Video → Video quality & playback). A built-in torrent engine is in testing and off by default.
 
 ## For extension authors
 
@@ -317,8 +338,8 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 ## Install
 
 1. Pick your APK on **[the download page](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)):
-   `Yumeiro-vX.Y.Z-arm64-v8a.apk` (most phones from 2017 on, newer TVs), `Yumeiro-vX.Y.Z-armeabi-v7a.apk` (older
-   32-bit phones, most Fire TV Sticks) or `release-Yumeiro-vX.Y.Z.apk` (universal, runs everywhere).
+   `release-Yumeiro-vX.Y.Z.apk` for phones and tablets, `Yumeiro-TV-vX.Y.Z.tv.apk` for TVs. Both are universal and
+   run on every processor.
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
@@ -447,6 +468,7 @@ and make sure CI passes — merging to `main` ships a release automatically. Sec
 Yumeiro is **@officialyumeiro** everywhere:
 [Website](https://yumeiro.click) ·
 [Telegram channel](https://t.me/yumeiroofficial) ·
+[Telegram group](https://t.me/chatyumeiroofficial) ·
 [Discord](https://discord.gg/eqkNymUAMJ) ·
 [Facebook](https://www.facebook.com/officialyumeiro) ·
 [Instagram](https://www.instagram.com/officialyumeiro) ·
