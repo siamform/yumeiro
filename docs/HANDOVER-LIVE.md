@@ -18,6 +18,10 @@ checks from v2.0.0: phone 45061470350 (review APK of 45057299595), TV 4506149433
 Phone upgrade 45061470350 FAILED on one value: playlists.json version 2 -> 3 (my bump in 3a18b985; it also
 re-ran the v1->v2 migration). Fixed in the next commit: version stays 2, new offeredDefaults list. New CI 45062571312;
 phone upgrade again after it.
+2026-11-23 ~04:00 +06: CI 45062571312 green (1944 unit tests, 0 failed). Phone upgrade v2.0.0 -> 2.1.0 with that review
+APK: PASS 45067511656 (0 lost, clip resumed, fatal 0, verifier 0). TV upgrade 45061494331: install over 2.0.0 Success,
+FATAL 0, verifier 0; data compare and resume Not checked (android-tv image has no root, as in 44684601986).
+Next: PR release-2.2.0 -> main, merge commit, release.yml v2.1.0.
 
 ## OWN-15 finding
 Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
@@ -26,7 +30,7 @@ the test's wait does not let the splash LaunchedEffect run (it polls with Thread
 composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
 
 ## Pending runs
-- CI 45062571312 (offeredDefaults fix); TV upgrade 45061494331 (built on the older commit). Then phone upgrade again.
+- None. Next: PR and release.
 
 ## Next step
 1. CI green; then upgrade-check.yml (from v2.0.0, new_apk_run = that CI).

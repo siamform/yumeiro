@@ -41,3 +41,5 @@ Not in 2.1.0, with reason:
 - 45051247401: Own12PinGuardDeviceTest OK on api36 and api33 low-RAM (after the first-run settle fix).
 - 45049508477: Nf1EpisodeStatusDeviceTest skipped on api36 (onshort.net unreachable from CI); the low-RAM leg failed to build (Maven download error, not our code). NF1 on device: Not checked (onshort.net down). Unit tests cover it.
 - 45057299595 (3a18b985): full CI green. 415 test classes, 1944 unit tests, 0 failed, 11 skipped (opt-in live-network and screenshot tests). Every Own* class passed.
+- 45062571312 (38a9f6f5, Live TV store keeps version 2): CI green, 1944 unit tests, 0 failed.
+- Upgrade v2.0.0 -> 2.1.0: phone PASS 45067511656 (0 lost, resumed, fatal 0, verifier 0); 45061470350 had failed on playlists.json version 2 -> 3 (fixed in 38a9f6f5). TV 45061494331: install Success, fatal 0, verifier 0; data compare Not checked (no root on the android-tv image).

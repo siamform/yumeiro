@@ -22,6 +22,9 @@ Yumeiro 2.1.0: stability, one downloader, more sources, Yumeiro Hub, Yumeiro Liv
   45047541362), curated per-country Live TV lists.
 - Not checked (reason): NF1 and DramaPlaybackDeviceTest on device (onshort.net unreachable from CI, run 45049508477);
   Firebase Test Lab (403, APIs not enabled); real-phone tests in docs/release-2.1/MANUAL-TESTS-2.1.md.
+- Proof: CI 45062571312 green (1944 unit tests, 0 failed, 11 opt-in skipped; signed review APKs). Upgrade from
+  v2.0.0: phone PASS 45067511656; TV 45061494331 install / no crash / no verifier error (data compare Not checked:
+  no root on the android-tv image).
 - Owner tests: docs/release-2.1/MANUAL-TESTS-2.1.md.
 
 Merge with a merge commit (one push to main). That push runs release.yml (tag v2.1.0, signed APKs) and

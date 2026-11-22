@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here: release 2.1.0. Wait CI 45062571312; then phone upgrade check again (45061470350 failed on playlists.json version, fixed); then PR, merge, release.
+Resume here: release 2.1.0. CI 45062571312 green, phone upgrade 45067511656 PASS. Open PR to main, merge, watch release.yml.
 
 # R15 status: every item in the master prompt, with its evidence
 
