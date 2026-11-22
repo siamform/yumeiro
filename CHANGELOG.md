@@ -48,6 +48,9 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
   check it opens the share page so you can do it yourself (OWN-10).
 - Vega, SkyStream and other single-source links work in the market's add box; Vega / Nuvio / SkyStream sources show
   in Extensions with their installed count and a Manage shortcut (OWN-4, OWN-5).
+- A locked profile no longer force-closes or stays on the logo when you unlock it hours after the app was swiped
+  away (OWN-15).
+- Closing a page now uses the same motion as opening it, on every page (OWN-14).
 
 ### Faster
 - Yumix and Home show the saved feed at once, even after a night away or an update, and refresh behind it (FE-1).
@@ -86,6 +89,16 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - Telegram sign-in: sign in to your own account to watch private channels and chats; you can use your own API ID and
   API hash from my.telegram.org (OWN-3, F-02 login).
 - Episode batch downloads can pick a subtitle language (your Online subtitle language or English) (OWN-8).
+- One built-in "Yumeiro" source, all in one, no install: drama, films, documentaries, cartoons, classic TV and films
+  by country, with one switch, one home and one search (OWN-13).
+- Yumeiro Hub: the Yumeiro source now also shows big catalog shelves (trending, anime, Korean, Chinese and Japanese
+  drama, Hindi, Telugu, Tamil, Bangla and more) from Yumeiro Cloud. Press play and Yumeiro asks your installed
+  sources for that title and plays the best match; sources that worked before are asked first (E1).
+- Yumeiro Live: a second default Live TV list with every public channel that passed a check today (about 7,000).
+  It is checked again every day; a channel that fails 3 days in a row is removed (E2-ALL).
+- Upcoming: search box, filter icon, and filter lists built from the real data (genres, countries, days) (OWN-16).
+- Every download popup shows size, quality, audio (sub / dub) and subtitles when the source gives them (OWN-18).
+- Full-screen player shows only the main buttons; the rest are in the 3-dot menu (OWN-19).
 
 ### Still being checked (off or not proven yet)
 - Telegram sign-in with a real account: CI can test it only up to Telegram's code check (Telegram has no public test
@@ -94,7 +107,8 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - Smaller downloads per phone type (ABI split APKs, E3) are built but switched off for this release; the universal
   APK is the download.
 - Curated Live TV lists per country (E2) are built on the server side but not published yet, so they are not in the
-  app.
+  app. Yumeiro Live (all countries) is in.
+- Yumeiro Hub plays only through sources you installed; with none installed, a catalog title has no links.
 - Real-phone checks the emulators cannot do (GPU frame times, real YouTube quality, download speed on a real
   network) are in the manual test list.
 

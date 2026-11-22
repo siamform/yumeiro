@@ -29,7 +29,7 @@ Every row was read. Rows marked Verified / Done / Pass with run IDs stay closed 
 
 | ID | What the list says | Cross-check result | Status |
 |---|---|---|---|
-| E1 Yumeiro Hub | Not built, plan for 2.2.0 | The in-app part (one built-in source, no install) is OWN-13. Not built: the catalog Worker on yumeiro.click, the daily index job, and using installed extensions as extra link resolvers (plan docs/E1-E2-YUMEIRO-HUB-AND-LIVE.md, steps E1-A..E1-E). These need a server and a schedule, which need the owner's yes | Not in 2.1.0 (needs owner yes for server + schedule) |
+| E1 Yumeiro Hub | Built for 2.2.0 | Worker /v1/hub/* deployed (version 08594cef); app catalog part + link fan-out over installed sources (YumeiroCatalog.kt, E1CatalogTest). E1-C recipes: Not in 2.2.0 (time) | CI pending (45044232383) |
 | E2-ALL Yumeiro Live | Not built beyond E2 | E2 (curated per-country lists, dead links dropped in CI) is built and CI-tested. The merged default list and the in-app default need the first publish of E2 to the streams branch, which is the owner's go | Not in 2.1.0 (needs owner go to publish) |
 | F-05 Nuvio / SkyStream / Vega | "Partial" | Re-read: all three import and run (device 44985807462, 44992834769), Stremio stream add-ons pass 44995462689. "Partial" is out of date: what is left is real repos on a real phone (OMT-73/74/75) | Owner test |
 | F-11 Manga translation | Built behind a flag | Device test MangaTranslate exists; real OCR quality and APK size need a real phone | Owner test |

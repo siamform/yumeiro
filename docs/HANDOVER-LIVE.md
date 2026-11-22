@@ -6,6 +6,9 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 ~02:10 +06: CI 45044232383 assemble passed. Device phone 45045030577, TV 45045033098 running.
+CHANGELOG 2.2.0 has OWN-13..19, E1, E2-ALL. PR text docs/evidence/final/PR-2.2.0.md. Next: read results, fix failures only.
+
 2026-11-23 ~01:45 +06: Yumeiro Live published (stream-sync 45043596127: 7086 channels). CI 45044232383 gitleaks
 failed on streams-branch live/state.json (third-party links as keys): keys now hashed (state v2), path allowed.
 B5 Vega: already runs (ADR-047). Next: wait CI 45044232383 build, then B6 upgrade check with its APK.
