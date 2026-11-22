@@ -151,4 +151,51 @@ class TeraBoxApiTest {
             } finally { s.close() }
         }
     }
+
+    /** OWN-10 (2): Hikari-like session handling: the share's own origin, a browserid cookie, one fresh retry. */
+    @Test fun ownTenUsesTheShareOriginAndABrowserId() {
+        assertEquals("https://1024terabox.com", TeraBoxApi.originFor(share))
+        assertEquals("https://www.terabox.app", TeraBoxApi.originFor("https://example.com/s/1abc"))
+        assertEquals(64, TeraBoxApi.freshBrowserId().length)
+        TeraBoxApi.cookieSource = { "ndus=Ytest" }
+        val seen = serve(list = """{"errno":0,"list":[{"fs_id":"993976246402096","dlink":"https://d.terabox.app/file/abc"}]}""")
+        TeraBoxApi.canPlayAv1 = { true }
+        val r = TeraBoxApi.resolve(OkHttpClient(), share)
+        assertTrue("got $r", r is TeraBoxApi.Result.Ok)
+        val api = seen.first { it.url.encodedPath == "/api/shorturlinfo" }
+        assertTrue("browserid sent: ${api.headers["Cookie"]}", api.headers["Cookie"]!!.contains("browserid="))
+    }
+
+    @Test fun ownTenRetriesOnceWithAFreshSessionAfterAVerifyAnswer() {
+        TeraBoxApi.cookieSource = { "ndus=Ytest" }
+        var infoCalls = 0
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.url.encodedPath) {
+                "/wap/share/filelist" -> MockResponse.Builder().body(page).build()
+                "/api/shorturlinfo" -> MockResponse.Builder().body(if (++infoCalls == 1) """{"errno":400210}""" else info).build()
+                "/share/list" -> MockResponse.Builder().body("""{"errno":0,"list":[{"fs_id":"993976246402096","dlink":"https://d.terabox.app/file/ok"}]}""").build()
+                else -> MockResponse.Builder().code(404).build()
+            }
+        }
+        server.start()
+        TeraBoxApi.base = server.url("/").toString().trimEnd('/')
+        val r = TeraBoxApi.resolve(OkHttpClient(), share)
+        assertTrue("got $r", r is TeraBoxApi.Result.Ok)
+        assertEquals(2, infoCalls)
+    }
+
+    @Test fun ownTenLockedShareSaysSo() {
+        TeraBoxApi.cookieSource = { "ndus=Ytest" }
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.url.encodedPath) {
+                "/wap/share/filelist" -> MockResponse.Builder().body(page).build()
+                "/api/shorturlinfo" -> MockResponse.Builder().body("""{"errno":-9}""").build()
+                else -> MockResponse.Builder().code(404).build()
+            }
+        }
+        server.start()
+        TeraBoxApi.base = server.url("/").toString().trimEnd('/')
+        val r = TeraBoxApi.resolve(OkHttpClient(), share)
+        assertTrue("got $r", r is TeraBoxApi.Result.Failed && "extraction code" in r.reason)
+    }
 }

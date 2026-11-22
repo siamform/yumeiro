@@ -25,7 +25,34 @@ import okhttp3.Request
  * [Result.NeedsSignIn].
  */
 object TeraBoxApi {
-    @Volatile internal var base = "https://www.terabox.app"
+    internal const val DEFAULT_BASE = "https://www.terabox.app"
+    /** API origin override (tests, mirror switch). Left at [DEFAULT_BASE], the share link's own origin is used (OWN-10). */
+    @Volatile internal var base = DEFAULT_BASE
+
+    /** TeraBox-family hosts that serve the same share API on their own origin. */
+    private val BOX_HOSTS = listOf("terabox", "1024tera", "4funbox", "mirrobox", "nephobox", "momerybox", "tibibox", "teraboxapp", "freeterabox", "teraboxlink", "terasharelink")
+
+    /**
+     * OWN-10: the origin the API calls go to. A share on 1024terabox.com is listed by 1024terabox.com: its cookies and
+     * verify state belong there, and terabox.app answered such shares with a human check more often (2026-11-22).
+     */
+    fun originFor(shareUrl: String): String {
+        if (base != DEFAULT_BASE) return base
+        val u = shareUrl.trim().toHttpUrlOrNull() ?: return base
+        val h = u.host.lowercase()
+        return if (BOX_HOSTS.any { h.contains(it) }) "https://" + h else base
+    }
+
+    /** OWN-10: a per-session `browserid` cookie, as TeraBox's own clients send (random; hex works on API 24 TVs). */
+    fun freshBrowserId(): String {
+        val b = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
+        return b.joinToString("") { "%02x".format(it) }
+    }
+
+    /** OWN-10: the share needs an extraction code (password); Yumeiro can't play it without one. */
+    fun locked(info: JsonObject): Boolean =
+        listOf("need_password", "needpassword", "need_pwd", "is_encrypt").any { k -> info.str(k).let { it == "1" || it == "true" } } ||
+            info.str("errno") in setOf("-9", "-12")
     private const val QS = "app_id=250528&web=1&channel=dubox&clienttype=0"
 
     /** Cookies the user's WebView holds for [url] (a TeraBox sign-in lives here). Set in MTApplication. */
@@ -48,7 +75,8 @@ object TeraBoxApi {
         data class Ok(val streamUrl: String, val fileName: String, val cookie: String?, val userAgent: String, val hls: Boolean) : Result
         /** TeraBox only gives the full video to a signed-in account (anonymous = 30 s preview). */
         data object NeedsSignIn : Result
-        data class Failed(val reason: String) : Result
+        /** [retry] = worth one more try with a fresh session (OWN-10). */
+        data class Failed(val reason: String, val retry: Boolean = false) : Result
         /**
          * OWN-10: TeraBox wants a human check first (errno 400210 "need verify_v2", 460030 "dragdrop" slider, both
          * seen on 2026-11-22). The user opens the share page in the app's browser and does the check themselves; the
@@ -104,12 +132,25 @@ object TeraBoxApi {
 
     fun resolve(client: OkHttpClient, shareUrl: String, userAgent: String = DESKTOP_UA): Result {
         val short = shortUrl(shareUrl) ?: return Result.Failed("Not a TeraBox share link")
+        val origin = originFor(shareUrl)
+        val first = attempt(client, shareUrl, short, origin, userAgent)
+        // OWN-10: a "verify" or refused list is often just a stale session: read the page again once with a fresh
+        // session (only the user's saved sign-in, a new browserid). Never more than one retry, never solving a check.
+        if (first !is Result.NeedsVerify && !(first is Result.Failed && first.retry)) return first
+        runCatching { android.util.Log.i(TAG, "retry with a fresh session after ${first::class.simpleName}") }
+        val second = attempt(client, shareUrl, short, origin, userAgent)
+        return if (second is Result.Failed && second.retry && first is Result.NeedsVerify) first else second
+    }
+
+    private const val TAG = "TeraBox"
+
+    private fun attempt(client: OkHttpClient, shareUrl: String, short: String, origin: String, userAgent: String): Result {
         val jar = linkedMapOf<String, String>()
-        listOf(base, "https://www.terabox.com", "https://www.1024terabox.com").mapNotNull { runCatching { cookieSource(it) }.getOrNull() }
-            .joinToString(";").split(';')?.forEach { c -> c.split('=', limit = 2).takeIf { it.size == 2 }?.let { jar[it[0].trim()] = it[1].trim() } }
+        listOf(origin, base, "https://www.terabox.com", "https://www.1024terabox.com").distinct().mapNotNull { runCatching { cookieSource(it) }.getOrNull() }
+            .joinToString(";").split(';').forEach { c -> c.split('=', limit = 2).takeIf { it.size == 2 }?.let { jar.putIfAbsent(it[0].trim(), it[1].trim()) } }
         fun cookie() = jar.entries.joinToString("; ") { "${it.key}=${it.value}" }.ifBlank { null }
-        fun get(url: String): String? {
-            val b = Request.Builder().url(url).header("User-Agent", userAgent).header("Referer", "$base/")
+        fun get(url: String, referer: String = "$origin/"): String? {
+            val b = Request.Builder().url(url).header("User-Agent", userAgent).header("Referer", referer)
             cookie()?.let { b.header("Cookie", it) }
             return runCatching {
                 client.newCall(b.build()).execute().use { r ->
@@ -120,33 +161,43 @@ object TeraBoxApi {
                 }
             }.getOrNull()
         }
+        fun json(body: String?) = body?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
         if (!signedIn(cookie())) return Result.NeedsSignIn
-        val page = get("$base/wap/share/filelist?surl=${short.removePrefix("1")}") ?: return Result.Failed("TeraBox page didn't load")
-        val token = jsToken(page) ?: return Result.Failed("TeraBox changed its page (no token)")
-        val info = get("$base/api/shorturlinfo?$QS&jsToken=$token&shorturl=$short&root=1")
-            ?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
-            ?: return Result.Failed("TeraBox didn't list the share")
+        val page = get("$origin/wap/share/filelist?surl=${short.removePrefix("1")}")
+        var token = page?.let { jsToken(it) }
+        if (token == null) token = get("$origin/main")?.let { jsToken(it) }
+        if (token == null) return Result.Failed(if (page == null) "TeraBox page didn't load" else "TeraBox changed its page (no token)", retry = page == null)
+        if (jar.keys.none { it.equals("browserid", true) }) jar["browserid"] = freshBrowserId()
+        val info = json(get("$origin/api/shorturlinfo?$QS&jsToken=$token&shorturl=$short&root=1", referer = shareUrl))
+            ?: return Result.Failed("TeraBox didn't list the share", retry = true)
         if (info.str("errno") in VERIFY_ERRNOS) return Result.NeedsVerify
-        if (info.str("errno") != "0") return Result.Failed("TeraBox refused the share (error ${info.str("errno")})")
+        if (locked(info)) return Result.Failed("This TeraBox share needs an extraction code; open it on TeraBox's page instead")
+        if (info.str("errno") != "0") return Result.Failed("TeraBox refused the share (error ${info.str("errno")})", retry = true)
         val file = (info["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
             ?.firstOrNull { it.str("category") == "1" && it.str("isdir") != "1" }
             ?: return Result.Failed("This TeraBox share has no video file")
-        val list = get(
-            "$base/share/list?$QS&jsToken=$token&sekey=${q(sekey(info.str("randsk")))}&sign=${info.str("sign")}" +
-                "&timestamp=${info.str("timestamp")}&shareid=${info.str("shareid")}&uk=${info.str("uk")}&shorturl=$short" +
-                "&by=name&order=asc&num=1000&page=1&dir=&root=1",
-        )?.let { runCatching { Json.parseToJsonElement(it) as JsonObject }.getOrNull() }
         val name = file.str("server_filename") ?: "TeraBox video"
+        // OWN-10: some shares carry the original-file link in shorturlinfo itself; no list call is needed then.
+        file.str("dlink")?.takeIf { it.startsWith("http") && !preferTranscode(name) }?.let { return Result.Ok(it, name, cookie(), userAgent, hls = false) }
+        val listQuery = "share/list?$QS&jsToken=$token&sekey=${q(sekey(info.str("randsk")))}&sign=${info.str("sign")}" +
+            "&timestamp=${info.str("timestamp")}&shareid=${info.str("shareid")}&uk=${info.str("uk")}&shorturl=$short" +
+            "&by=name&order=asc&num=1000&page=1&dir=&root=1"
+        var list = json(get("$origin/$listQuery", referer = shareUrl))
+        if (list?.str("errno") != "0" && origin != base && list?.str("errno") !in VERIFY_ERRNOS) {
+            // OWN-10: the main site sometimes lists a mirror's share the mirror refused.
+            json(get("https://www.terabox.com/$listQuery", referer = shareUrl))?.takeIf { it.str("errno") == "0" }?.let { list = it }
+        }
         if (list?.str("errno") in VERIFY_ERRNOS) return Result.NeedsVerify
-        if (list?.str("errno") == "0" && !preferTranscode(name)) {
-            val dlink = (list["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
+        val listed = list
+        if (listed?.str("errno") == "0" && !preferTranscode(name)) {
+            val dlink = (listed["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
                 ?.firstOrNull { it.str("fs_id") == file.str("fs_id") }?.str("dlink")?.takeIf { it.startsWith("http") }
             if (dlink != null) return Result.Ok(dlink, name, cookie(), userAgent, hls = false)
         }
         val sq = "$QS&jsToken=$token&uk=${info.str("uk")}&shareid=${info.str("shareid")}&fid=${file.str("fs_id")}" +
             "&sign=${info.str("sign")}&timestamp=${info.str("timestamp")}&esl=1&isplayer=1&ehps=1"
         for (type in listOf("M3U8_AUTO_720", "M3U8_AUTO_480", "M3U8_FLV_264_480")) {
-            val url = "$base/share/streaming?$sq&type=$type"
+            val url = "$origin/share/streaming?$sq&type=$type"
             val body = get(url) ?: continue
             if (!body.trimStart().startsWith("#EXTM3U")) continue
             // A sign-in that TeraBox no longer honours still gets the preview: never play it.
