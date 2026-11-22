@@ -6,37 +6,43 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 10:55 +0600, branch `r15-stability`. This push: F-05-N-ON (scripts_nuvio + f05_stream_addons default on)
-after device 44985807462: NuvioProviderDeviceTest 4/4 + VegaProviderDeviceTest 3/3 on api36 and api33-lowram.
-Tests changed on purpose for the flip (NuvioAdapterTest defaults, EcosystemRegistryTest Nuvio repos added). OMT-73.
-GATE-1-QUIET (cd0b256a) closed on the emulator: lowram Pass twice, 44984838999 worst 664 ms, 44985820433 worst 559 ms,
-app stall 0 ms. New finding GATE-1-PREPARE-COLD: the first start after install (prepare step, before the settle)
-stalls 4-6 s on lowram while the CPU is 90 % busy; not counted by the gate. Harness now settles before the prepare
-step too; gate trio rerun dispatched with this push.
+2026-11-22 11:10 +0600, branch `r15-stability`. This push: F-05-S SkyStream adapter (ADR-058), behind
+`scripts_skystream` (default OFF until SkyStreamProviderDeviceTest passes on device). New: SkyStreamAdapter.kt
+(+ SkyStreamProvider), assets/js/sky_runtime.js, ScriptHost sky_unpack / sky_extract, ScriptRuntime raw modules +
+preludes + __invokeSky, registry pluginLists / mega-repo expansion, UniversalAdd routing. Tests: SkyStreamAdapterTest
+(10 unit), SkyStreamProviderDeviceTest (3 device), EcosystemRegistryTest adapters set now includes SKYSTREAM (deliberate).
+ADR-058 in SYSTEM-DESIGN.md. OMT-74. No local JDK: this code has NOT compiled yet; the r15 CI is the first compile.
+- F-05-N-ON (be0efc55) and GATE-1-PREPARE-COLD harness (e109bece) were the previous pushes.
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI for F-05-N-ON (dispatched after this push, review_apk=false): pass-after for the flip.
-- Gate trio on api33-lowram (dispatched after this push): GATE-1-PREPARE-COLD, read the prepare YuStall after GATE_QUIET.
-- r15 CI 44983288674 (@2ab4f33f): Build, test & lint Pass, gitleaks Pass; review APK result: see ledger F-05-N-ERR.
-- Fail-befores done: MUSIC-START-2 44979435737, F-05-N 44977804955, F-05-N-ERR 44983223105 (branches deleted).
+- r15 CI 44987368473 (@e109bece, review_apk=false): pass-after for F-05-N-ON. Do not dispatch ci.yml on r15 before it ends
+  (a new dispatch cancels it).
+- Gate trio 44987227363 on api33-lowram: GATE-1-PREPARE-COLD, read the prepare YuStall after GATE_QUIET.
+- Fail-before ab/f05s-before CI 44988073278 (tests + compile stubs on e109bece): expect SkyStreamAdapterTest and
+  EcosystemRegistryTest#vegaRunsAndTheOthersAreRecognisedOnly to fail, compile ok. Then delete the branch.
+- After 44987368473 ends: dispatch r15 CI (review_apk=false) for F-05-S pass-after, and device
+  `-f test=SkyStreamProviderDeviceTest,VegaProviderDeviceTest,NuvioProviderDeviceTest` on both phones.
 - CI gitleaks scans every live branch: never leave an ab/ branch with a secret-looking literal alive during other runs.
 - Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before). They do
   not trip gitleaks; check their ledger rows before deleting.
 
 ## Next step
-1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05).
-2. GATE-1-PREPARE-COLD: read the rerun; if the prepare stall repeats on a quiet CPU, trace the first frame and fix.
+1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05) and GATE-1-PREPARE-COLD (if the stall repeats on a quiet CPU,
+   trace the first frame: Crossfade MTBottomBar.kt:148 via MTPlayerApp.kt:650, then HardwareRenderer.nSetStopped).
+2. F-05-S: fail-before result, r15 CI (fix compile errors if any; this code was written without a compiler), device
+   run; when the device test passes flip `scripts_skystream` to true in its own commit (like F-05-N-ON), then OMT-74.
 3. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
 4. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
-5. F-05 next: SkyStream adapter on the same seam (plugin.js globals getHome/search/load/loadStreams(cb), .sky zip,
-   manifest.baseUrl, loadExtractor; v2.9.0 ignores the manifest plugins list), then Stremio stream-only add-ons.
+5. F-05 rest: Stremio stream-only add-ons on the StreamAddons seam.
 6. B31-FRAME device test (real player first frame + seek on the test hash), FEED-ENGINE leftovers, C5, C6, other rows,
    then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- 2026-11-22 11:10: F-05-S SkyStream adapter (this push, flag off, CI + device pending).
+- 2026-11-22 11:00: GATE-1-PREPARE-COLD harness e109bece.
 - 2026-11-22 10:55: F-05-N-ON (this push); GATE-1-QUIET closed (664 / 559 ms Pass).
 - 2026-11-22 10:30: GATE-1-QUIET cd0b256a.
 - 2026-11-22 10:05: F-05-N-ERR 2ab4f33f.

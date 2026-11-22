@@ -1867,3 +1867,34 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
 - Tests: `f05/StreamAddonsMergeTest`, `f05/NuvioAdapterTest`, `f05/ScriptCryptoTest` (unit) and
   `NuvioProviderDeviceTest` (real QuickJS: crypto-js answers equal crypto-js's own, cheerio,
   DRM dropped, season / episode passed, a crashing scraper ends only itself, merged list).
+
+### ADR-058: SkyStream plugins (.sky) run as catalog sources on the ADR-047 registry (F-05-S)
+
+- Context: F-05's last ecosystem. A SkyStream repository is a `repo.json` with `pluginLists`
+  (or a "mega repo" whose `repos` point at other repositories); each plugin list is an array of
+  `{packageName, name, version, url, languages, categories}` whose `url` is a `.sky` file, a zip of
+  `plugin.json` (the manifest, with `baseUrl` or `domains`) and `plugin.js`. The script defines the
+  globals `getHome(cb)`, `search(query, cb)`, `load(url, cb)` and `loadStreams(url, cb)` and answers
+  `cb({success, data})`; helpers are `http_get` / `http_post` / `http_parallel`, `parse_html`,
+  `getAndUnpack`, `loadExtractor`, `crypto.decryptAES`, `solveCaptcha`
+  ([SkyStream developer guide](https://github.com/akashdh11/skystream-tools/blob/main/DEVELOPER.md)).
+  Since SkyStream 2.9.0 a plugin list inside a repo manifest itself is no longer read
+  ([release v2.9.0](https://github.com/akashdh11/skystream/releases/tag/v2.9.0)). SkyStream (GPL-3)
+  and skystream-plugins were read for the interface only; no code is used.
+- Decision: `SkyStreamAdapter` on the same registry, sandbox and caps as Vega and Nuvio. The
+  registry expands one level of child repositories (at most 16 list reads, 300 plugins, dedupe by
+  id; a list that fails is skipped). The `.sky` is downloaded under the same caps and hash, and
+  read in memory on each call: only the basenames `plugin.js` / `plugin.json`, at most 64 entries
+  and 4 MB each, nothing unpacked to disk. `sky_runtime.js` (assets, run after
+  `provider_runtime.js`) gives the SkyStream globals over the guarded fetch; `getAndUnpack` and
+  `loadExtractor` are host channels (JsUnpacker; CloudStream extractors with the SRC-2 address
+  check and a 15 s cap). `__invokeSky` passes the callback last, takes the first answer from the
+  callback or a returned promise, and turns `{success:false}` into its message.
+- Mapping: getHome's category map → one HomePageList per category, "Trending" first, at most 16
+  rows of 60; search page 1 only; load types movie / series / anime / livestream; an episode's
+  `streams` ride along in its data and come before `loadStreams`; DRM, torrents, `magic_m3u8:`
+  playlists and non-web links are skipped; a `MAGIC_PROXY_v1` link is unwrapped to its real
+  address (the player sends the headers itself).
+- Not supported, reported instead of faked: captchas, sub-providers (`providers` in plugin.json),
+  a lone `.sky` pasted without a repository, plugin settings UI.
+- Flag `scripts_skystream`, off until SkyStreamProviderDeviceTest passes on device.

@@ -64,8 +64,8 @@ object EcosystemRegistry {
     const val MAX_FILE_BYTES = 2L * 1024 * 1024
     const val MAX_TOTAL_BYTES = 50L * 1024 * 1024
 
-    /** Ecosystems that can run in this version (Vega ADR-047, Nuvio ADR-057). SkyStream is recognised, not run. */
-    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter, NuvioAdapter).associateBy { it.ecosystem }
+    /** Ecosystems that can run in this version (Vega ADR-047, Nuvio ADR-057, SkyStream ADR-058 behind scripts_skystream). */
+    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter, NuvioAdapter, SkyStreamAdapter).associateBy { it.ecosystem }
 
     /** Script ecosystems the registry knows the format of. */
     val known = setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO, SourceHub.Ecosystem.SKYSTREAM)
@@ -154,7 +154,35 @@ object EcosystemRegistry {
 
     /** Reads [url] and returns what it is, without saving anything (Universal add uses this to route). */
     suspend fun inspect(context: Context, url: String): ParsedRepo = withContext(Dispatchers.IO) {
-        RepoFormats.parse(fetchText(context, url, MAX_MANIFEST_BYTES), url) ?: error("This repository file is not valid")
+        val parsed = RepoFormats.parse(fetchText(context, url, MAX_MANIFEST_BYTES), url) ?: error("This repository file is not valid")
+        if (parsed.ecosystem == SourceHub.Ecosystem.SKYSTREAM && parsed.children.isNotEmpty() &&
+            FeatureFlags.on(context, SkyStreamAdapter.flag)) expandSky(parsed) { fetchText(context, it, MAX_MANIFEST_BYTES) } else parsed
+    }
+
+    /**
+     * F-05-S (ADR-058): a SkyStream repo lists its plugins in `pluginLists` files (SkyStream v2.9.0
+     * reads only those), and a mega repo lists child repos. Reads at most
+     * [SkyStreamRepoParser.MAX_CHILDREN] files, one level of child repos, first entry of an id wins.
+     * A list that fails is skipped (the others still count).
+     */
+    internal fun expandSky(repo: ParsedRepo, read: (String) -> String): ParsedRepo {
+        val plugins = LinkedHashMap<String, PluginEntry>()
+        repo.plugins.forEach { plugins.putIfAbsent(it.id, it) }
+        val queue = ArrayDeque(repo.children.map { it to 0 })
+        val seen = HashSet<String>()
+        var reads = 0
+        while (queue.isNotEmpty() && reads < SkyStreamRepoParser.MAX_CHILDREN) {
+            val (u, depth) = queue.removeFirst()
+            if (!seen.add(u)) continue
+            reads++
+            val root = runCatching { RepoFormats.json.parseToJsonElement(read(u)) }.onFailure { Log.w(TAG, "sky list $u: ${it.message}") }.getOrNull() ?: continue
+            if (SkyStreamRepoParser.isPluginList(root)) {
+                SkyStreamRepoParser.parsePluginList(root, u).forEach { plugins.putIfAbsent(it.id, it) }
+            } else if (depth == 0 && runCatching { SkyStreamRepoParser.accepts(root) }.getOrDefault(false)) {
+                SkyStreamRepoParser.parse(root, u).children.forEach { queue.addLast(it to 1) }
+            }
+        }
+        return repo.copy(plugins = plugins.values.take(SkyStreamRepoParser.MAX_PLUGINS))
     }
 
     /** Adds a script repository. CloudStream repositories are refused: they belong to the existing loader. */

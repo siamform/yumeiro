@@ -70,7 +70,8 @@ class EcosystemRegistryTest {
 
     @Test fun vegaRunsAndTheOthersAreRecognisedOnly() {
         // F-05-N (ADR-057): Nuvio has an adapter now. F-05-N-ON: scripts_nuvio is on by default, so Nuvio repos are added.
-        assertEquals(setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO), EcosystemRegistry.adapters.keys)
+        // F-05-S (ADR-058): SkyStream has an adapter too, but scripts_skystream is off, so its repos stay refused.
+        assertEquals(setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO, SourceHub.Ecosystem.SKYSTREAM), EcosystemRegistry.adapters.keys)
         assertFalse("Vega repos are added now", UniversalAdd.Kind.VEGA_REPO.notYet)
         assertFalse("Nuvio repos are added now (scripts_nuvio on)", UniversalAdd.Kind.NUVIO_REPO.notYet)
         assertTrue(UniversalAdd.Kind.SKYSTREAM_REPO.notYet && UniversalAdd.Kind.SKY_PLUGIN.notYet)

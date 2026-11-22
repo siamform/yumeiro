@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 10:55 +06): read docs/HANDOVER-LIVE.md (F-05-N-ON flag flip CI pending).
+Resume here (2026-11-22 11:10 +06): read docs/HANDOVER-LIVE.md (F-05-S SkyStream pushed, CI + device pending).
 
 # R15 status: every item in the master prompt, with its evidence
 

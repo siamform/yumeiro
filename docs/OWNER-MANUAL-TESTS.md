@@ -1018,3 +1018,13 @@ Passes if no tap leaves the screen stuck for about a second or more, and Android
 
 Passes if the repo is added (not "recognised only"), the source list shows extra rows named "Nuvio · <scraper name>",
 one of them plays, and a broken scraper only shows its own error while the other sources still appear.
+
+### OMT-74 — SkyStream plugins (F-05-S)
+
+Only after the agent turns `scripts_skystream` on (it says so in the handover).
+
+1. Sources → Add, paste a SkyStream repository URL you trust (a repo.json with pluginLists).
+2. Sources → Script repos: install one plugin, then open its source on Home.
+3. Search something, open a title, press Play.
+
+Passes if the repo is added with its plugin count, the source shows rows (Trending first), search finds titles, and a title plays. A plugin that needs a captcha shows that message instead of hanging.

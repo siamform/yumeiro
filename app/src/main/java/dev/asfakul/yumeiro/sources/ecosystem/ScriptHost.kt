@@ -87,7 +87,41 @@ internal class ScriptHost(
         "crypto_hmac" -> ScriptCrypto.hmac(a.s(0), a.s(1), a.s(2))
         "crypto_cipher" -> ScriptCrypto.cipher(a.s(0) == "enc", a.s(1), a.s(2), a.s(3), a.s(4), a.s(5), a.s(6))
         "crypto_evpkdf" -> ScriptCrypto.evpKdf(a.s(0), a.s(1), a.s(2).toIntOrNull() ?: 32, a.s(3).toIntOrNull() ?: 16)
+        // F-05-S (ADR-058): SkyStream's getAndUnpack and loadExtractor.
+        "sky_unpack" -> dev.asfakul.yumeiro.sources.js.JsUnpacker.unpack(a.s(0))
+        "sky_extract" -> extract(a.s(0), a.s(1))
         else -> { Log.w(TAG, "$tag: unsupported channel $ch"); "" }
+    }
+
+    /**
+     * F-05-S: a video host link resolved by CloudStream's extractor collection (the same one
+     * Mangayomi sources use through [JsBridge]). Counts as a request and stays inside the call's
+     * time; private addresses are refused before any extractor runs.
+     */
+    private fun extract(url: String, referer: String): String {
+        requests++
+        if (requests > MAX_REQUESTS) error("This source made too many requests in one call")
+        require(url.startsWith("https://") || url.startsWith("http://")) { "Only web links can be resolved" }
+        val hostName = runCatching { java.net.URI(url).host }.getOrNull() ?: error("Bad link")
+        require(java.net.InetAddress.getAllByName(hostName).none(dev.asfakul.yumeiro.network.PublicOnly::isPrivate)) { dev.asfakul.yumeiro.network.PublicOnly.MESSAGE }
+        val left = deadline - System.currentTimeMillis() - 1_000
+        if (left <= 0) error("This call ran out of time")
+        val out = java.util.Collections.synchronizedList(mutableListOf<JsonObject>())
+        val subs = java.util.Collections.synchronizedList(mutableListOf<JsonObject>())
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(minOf(left, EXTRACT_MS)) {
+                com.lagradost.cloudstream3.utils.loadExtractor(url, referer.ifBlank { null },
+                    { s -> subs += buildJsonObject { put("url", s.url); put("label", s.lang); put("lang", s.lang) } }) { l ->
+                    out += buildJsonObject {
+                        put("url", l.url)
+                        put("source", l.source)
+                        put("quality", if (l.quality > 0) "${l.quality}p" else l.name)
+                        put("headers", JsonObject((l.headers + listOfNotNull(l.referer.takeIf { it.isNotBlank() }?.let { "Referer" to it })).mapValues { JsonPrimitive(it.value) }))
+                    }
+                }
+            }
+        }
+        return JsonArray(out.toList().map { JsonObject(it + ("subtitles" to JsonArray(subs.toList()))) }).toString()
     }
 
     private fun info(n: Node?): JsonObject = when (n) {
@@ -137,5 +171,7 @@ internal class ScriptHost(
         /** Proposal F-05 §4: 30 requests per call. */
         const val MAX_REQUESTS = 30
         const val MAX_KV_BYTES = 64 * 1024
+        /** F-05-S: one `loadExtractor` call, within what is left of the call budget. */
+        const val EXTRACT_MS = 15_000L
     }
 }
