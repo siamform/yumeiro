@@ -19,7 +19,11 @@ import android.os.Process
 object Restart {
     const val EXTRA_PID = "pid"
 
+    /** Device tests only: called instead of the restart, so a test can check what was saved before it. */
+    @androidx.annotation.VisibleForTesting @Volatile var testHook: ((Context) -> Unit)? = null
+
     fun now(context: Context) {
+        testHook?.let { it(context); return }
         val app = context.applicationContext
         val i = Intent(app, RestartActivity::class.java).putExtra(EXTRA_PID, Process.myPid())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
