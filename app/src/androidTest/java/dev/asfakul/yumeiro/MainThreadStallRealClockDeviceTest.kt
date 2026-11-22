@@ -50,6 +50,10 @@ class GateOnePrepareDeviceTest {
         // No third-party starter extension may run in the gate (B-26 tracks that one on its own).
         ctx.getSharedPreferences("starter_extensions", android.content.Context.MODE_PRIVATE).edit().putBoolean("done_v1", true).commit()
         GateOneExitCheckDeviceTest.markStart(ctx)
+        // GATE-1-AB: `-e gate1Baseline true` runs the same walk with every GATE-1 app fix off (the app as it
+        // was before the GATE-1 work), so one build measures the app's own gain on the same device.
+        val baseline = InstrumentationRegistry.getArguments().getString("gate1Baseline") == "true"
+        GateOneVariant.write(ctx, baseline)
         FirstRun.toTabs(rule)
         Log.i("YuGate1", "GATE1_PREPARED first run answered")
     }
@@ -66,6 +70,7 @@ class MainThreadStallRealClockDeviceTest {
         val ctx = inst.targetContext
         val prepared = ctx.getSharedPreferences("starter_extensions", android.content.Context.MODE_PRIVATE).getBoolean("done_v1", false)
         assertTrue("run GateOnePrepareDeviceTest first (same filter, before this class)", prepared)
+        log("GATE1_VARIANT ${GateOneVariant.describe(ctx)} device=${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} sdk=${android.os.Build.VERSION.SDK_INT}")
         SourceHub.publishVideo(StallWalk.BRIDGE, SourceHub.Ecosystem.JAVASCRIPT, (1..300).map { RealFake(it) })
         try {
             FirstRun.shell("am start -W -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
@@ -336,5 +341,33 @@ class GateOneExitCheckDeviceTest {
                 .filter { it.timestamp >= since && it.reason in bad }
                 .map { "reason=${it.reason} at ${it.timestamp} process=${it.processName} · ${it.description.orEmpty().take(160)}" }
         }
+    }
+}
+
+/**
+ * GATE-1-AB: the GATE-1 app fixes, each behind its own flag (ledger GATE-1-VIDEOS-LOWRAM, GATE-1-RENDER,
+ * -2, -4, -5). Written with commit() in the prepare process, read by the app when the walk's process starts.
+ */
+object GateOneVariant {
+    val FLAGS = listOf(
+        FeatureFlags.Flag.TAB_NEXT_FRAME,
+        FeatureFlags.Flag.SHADER_PREWARM,
+        FeatureFlags.Flag.FEED_STAGED_REVEAL,
+        FeatureFlags.Flag.POSTER_PLAIN_IMAGE,
+        FeatureFlags.Flag.EXTENSION_BG_PRIORITY,
+    )
+
+    fun write(ctx: android.content.Context, baseline: Boolean) {
+        val e = ctx.getSharedPreferences("feature_flags", android.content.Context.MODE_PRIVATE).edit()
+        FLAGS.forEach { e.putBoolean(it.key, !baseline) }
+        e.commit()
+        Log.i("YuGate1", "GATE1_VARIANT_SET ${if (baseline) "baseline" else "current"}")
+    }
+
+    fun describe(ctx: android.content.Context): String {
+        val p = ctx.getSharedPreferences("feature_flags", android.content.Context.MODE_PRIVATE)
+        val on = FLAGS.map { p.getBoolean(it.key, it.default) }
+        val name = when { on.all { it } -> "current"; on.none { it } -> "baseline"; else -> "mixed" }
+        return name + " " + FLAGS.joinToString(",") { it.key + "=" + p.getBoolean(it.key, it.default) }
     }
 }

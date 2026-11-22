@@ -11,6 +11,8 @@ adb shell settings put global hide_error_dialogs 1 || true
 FILTER="${TEST_FILTER:-dev.asfakul.yumeiro.StabilityStressDeviceTest,dev.asfakul.yumeiro.PlayerSwitchDeviceTest,dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.SurfaceModeDeviceTest,dev.asfakul.yumeiro.ForceDownloadDeviceTest,dev.asfakul.yumeiro.PlaybackSessionDeviceTest,dev.asfakul.yumeiro.DramaPlaybackDeviceTest,dev.asfakul.yumeiro.FeedPositionDeviceTest,dev.asfakul.yumeiro.QualityListDeviceTest,dev.asfakul.yumeiro.PinnedExtensionsDeviceTest,dev.asfakul.yumeiro.HomeNavigationDeviceTest,dev.asfakul.yumeiro.BackNavigationDeviceTest,dev.asfakul.yumeiro.ExtensionsDeviceTest,dev.asfakul.yumeiro.LocalPlayerDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest,dev.asfakul.yumeiro.YumixDeviceTest,dev.asfakul.yumeiro.LibraryDeviceTest,dev.asfakul.yumeiro.DownloadResumeDeviceTest,dev.asfakul.yumeiro.BackupDeviceTest,dev.asfakul.yumeiro.AniSkipDeviceTest,dev.asfakul.yumeiro.AccessibilityDeviceTest,dev.asfakul.yumeiro.HeatGuardDeviceTest,dev.asfakul.yumeiro.ClosedAppAlertDeviceTest,dev.asfakul.yumeiro.CrashUiDeviceTest}" 
 case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac
 R=6; H="${HPROF:-false}"; case "$H" in true|false) ;; *) H=false;; esac
+# GATE-1-AB: GATE1_BASELINE=true runs the gate walk with the GATE-1 app fixes off (GateOneVariant).
+GB="${GATE1_BASELINE:-false}"; case "$GB" in true|false) ;; *) GB=false;; esac; echo "YuGateEnv gate1Baseline=$GB"
 # FLAVOR=Tv installs Yumeiro TV (minSdk 24) on the Android TV emulator; default is the phone app.
 FLAVOR="${FLAVOR:-Mobile}"
 ./gradlew --no-daemon install${FLAVOR}Debug install${FLAVOR}DebugAndroidTest
@@ -302,7 +304,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     echo "YuCrashUiScript phase a: $(grep -cE 'Process crashed|IllegalStateException: YuCrashUi' "inst-$C-a.txt") crash lines · pidof='$(adb shell pidof $P | tr -d '\r')'"
     timeout 600 adb shell am instrument -w -r -e class "$C#b_readShareAndDelete" -e crashed 1 $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
   else
-  timeout 900 adb shell am instrument -w -r -e class "$C" -e rounds $R -e hprof $H dev.asfakul.yumeiro.debug.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+  timeout 900 adb shell am instrument -w -r -e class "$C" -e rounds $R -e hprof $H -e gate1Baseline "$GB" dev.asfakul.yumeiro.debug.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
   fi
   grep -E "INSTRUMENTATION_STATUS: (class|test|stack)=|INSTRUMENTATION_STATUS_CODE|INSTRUMENTATION_CODE|OK \(|FAILURES|Tests run" "inst-$C.txt" | cut -c1-400 | tail -150
   if [ $RC -eq 124 ]; then echo "TIMEOUT in $C (last test started above)"; echo "TESTS_FAILED" > failed.txt; adb shell am force-stop dev.asfakul.yumeiro.debug || true; fi

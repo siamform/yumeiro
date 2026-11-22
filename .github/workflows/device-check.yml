@@ -72,6 +72,10 @@ on:
         type: boolean
         required: false
         default: false
+      gate1_baseline:
+        description: "GATE-1-AB: run the gate walk with the GATE-1 app fixes off (the app before the GATE-1 work)"
+        type: boolean
+        default: false
       hprof:
         description: "G12 X2: StabilityStress writes a heap dump (stress/end.hprof) at the end"
         type: boolean
@@ -82,7 +86,7 @@ on:
 # GitHub's 400-character limit (43902887573 never started). Runs on the same device set queue
 # instead of cancelling each other, so no dispatched batch is dropped.
 concurrency:
-  group: device-check-${{ github.ref }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && format('tv{0}', inputs.tv_api) || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}-${{ inputs.passes && 'passes' || 'single' }}-${{ inputs.once && 'once' || 'both' }}-${{ inputs.lane || 'l0' }}
+  group: device-check-${{ github.ref }}-${{ inputs.repeat || '1' }}-${{ inputs.tv && format('tv{0}', inputs.tv_api) || (inputs.minsdk && 'minsdk' || 'phone') }}-${{ inputs.bench || 'none' }}-${{ inputs.gpu || 'swiftshader_indirect' }}-${{ inputs.phone || 'both' }}-${{ inputs.shards || '[1]' }}-${{ inputs.upgrade_from || 'noupgrade' }}-${{ inputs.passes && 'passes' || 'single' }}-${{ inputs.once && 'once' || 'both' }}-${{ inputs.lane || 'l0' }}-${{ inputs.gate1_baseline && 'g1base' || 'g1cur' }}
   cancel-in-progress: false
 
 permissions:
@@ -144,6 +148,7 @@ jobs:
           FLAVOR: ${{ matrix.device.flavor }}
           REPEAT: ${{ github.event.inputs.repeat || '1' }}
           HPROF: ${{ inputs.hprof && 'true' || 'false' }}
+          GATE1_BASELINE: ${{ inputs.gate1_baseline && 'true' || 'false' }}
           PASSES: ${{ inputs.passes && 'true' || 'false' }}
           PASSES_ONCE: ${{ inputs.once && 'true' || 'false' }}
         with:
