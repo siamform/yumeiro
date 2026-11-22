@@ -28,6 +28,6 @@ Yumeiro 2.1.0: stability, one downloader, more sources, Yumeiro Hub, Yumeiro Liv
 - Owner tests: docs/release-2.1/MANUAL-TESTS-2.1.md.
 
 Merge with a merge commit (one push to main). That push runs release.yml (tag v2.1.0, signed APKs) and
-stream-sync.yml. The Worker is already deployed; no website deploy.
+stream-sync.yml. The Worker is already deployed. The website (siamform/yumeiro-web) is updated in its own repo after the release.
 
 <sub>Created with [Perplexity](https://www.perplexity.ai/computer/tasks/c2ba2617-0069-43e8-ac57-06af6f0c8f37)</sub>
