@@ -41,6 +41,27 @@ class ExtensionThreadsTest {
         assertTrue("all ${ExtensionThreads.SIZE} tasks were running together", ok.all { it })
     }
 
+    /** GATE-1-RENDER-5b: a task that raises its own priority does not leave the pooled thread raised. */
+    @Test fun aTaskThatRaisesItsPriorityDoesNotKeepTheThreadRaised() = runBlocking {
+        val n = ExtensionThreads.SIZE
+        val raised = CountDownLatch(n)
+        // Occupy all threads at once so every pooled thread has been raised by "extension code".
+        (1..n).map {
+            async(ExtensionGuard.dispatcher) {
+                Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT)
+                raised.countDown(); raised.await(5, TimeUnit.SECONDS)
+            }
+        }.awaitAll()
+        val again = CountDownLatch(n)
+        val prios = (1..n).map {
+            async(ExtensionGuard.dispatcher) {
+                val p = Process.getThreadPriority(Process.myTid())
+                again.countDown(); again.await(5, TimeUnit.SECONDS); p
+            }
+        }.awaitAll()
+        assertEquals(List(n) { Process.THREAD_PRIORITY_BACKGROUND }, prios)
+    }
+
     @Test fun flagIsOnByDefault() {
         assertTrue(FeatureFlags.Flag.EXTENSION_BG_PRIORITY.default)
     }

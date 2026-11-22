@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.online
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -21,6 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger
  * Android: "set the thread priority of worker threads to THREAD_PRIORITY_BACKGROUND" so they do not
  * compete with the UI thread (https://developer.android.com/topic/performance/threads). Same 8 threads
  * (network waits need them); idle threads end after 30 s.
+ *
+ * GATE-1-RENDER-5b: the priority is set again before every task, not only when a thread starts.
+ * Extension code is third-party and may call Process.setThreadPriority itself; a pooled thread would
+ * then keep that priority for every later extension task (and Robolectric's per-test reset showed the
+ * same gap: CI 44960387093). One setpriority call per task costs about a microsecond.
  */
 object ExtensionThreads {
     const val SIZE = 8
@@ -28,11 +34,15 @@ object ExtensionThreads {
     private val n = AtomicInteger()
 
     private val pool = ThreadPoolExecutor(SIZE, SIZE, 30, TimeUnit.SECONDS, LinkedBlockingQueue()) { r ->
-        Thread({
-            runCatching { android.os.Process.setThreadPriority(PRIORITY) }
-            r.run()
-        }, "yu-ext-" + n.incrementAndGet()).apply { isDaemon = true }
+        Thread(r, "yu-ext-" + n.incrementAndGet()).apply { isDaemon = true }
     }.apply { allowCoreThreadTimeOut(true) }
 
-    val dispatcher: CoroutineDispatcher = pool.asCoroutineDispatcher()
+    private fun background() {
+        runCatching { android.os.Process.setThreadPriority(PRIORITY) }
+    }
+
+    /** Every task starts at [PRIORITY], whatever the previous task on that thread did. */
+    private val executor = Executor { task -> pool.execute { background(); task.run() } }
+
+    val dispatcher: CoroutineDispatcher = executor.asCoroutineDispatcher()
 }
