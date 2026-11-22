@@ -75,6 +75,8 @@ object FeatureFlags {
         SHADER_PREWARM("gate1_shader_prewarm", true),
         /** GATE-1-RENDER-2: the Yumix feed opens with its sections added one per frame, top to bottom (a list reopened scrolled down shows all at once). */
         FEED_STAGED_REVEAL("gate1_feed_staged_reveal", true),
+        /** GATE-1-FEED-LATE: sections that appear after the opening reveal (data arriving under the skeleton) join one per frame too. */
+        FEED_STAGED_LATE("gate1_feed_staged_late", true),
         /** GATE-1-RENDER-4: posters load through AsyncImage in the same composition (no SubcomposeAsyncImage per poster). */
         POSTER_PLAIN_IMAGE("gate1_poster_plain_image", true),
         /** GATE-1-RENDER-5: extension work runs on 8 own threads at THREAD_PRIORITY_BACKGROUND (not normal-priority IO threads). */

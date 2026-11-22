@@ -6,27 +6,19 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 11:10 +0600, branch `r15-stability`. This push: F-05-S SkyStream adapter (ADR-058), behind
-`scripts_skystream` (default OFF until SkyStreamProviderDeviceTest passes on device). New: SkyStreamAdapter.kt
-(+ SkyStreamProvider), assets/js/sky_runtime.js, ScriptHost sky_unpack / sky_extract, ScriptRuntime raw modules +
-preludes + __invokeSky, registry pluginLists / mega-repo expansion, UniversalAdd routing. Tests: SkyStreamAdapterTest
-(10 unit), SkyStreamProviderDeviceTest (3 device), EcosystemRegistryTest adapters set now includes SKYSTREAM (deliberate).
-ADR-058 in SYSTEM-DESIGN.md. OMT-74. No local JDK: this code has NOT compiled yet; the r15 CI is the first compile.
-- F-05-N-ON (be0efc55) and GATE-1-PREPARE-COLD harness (e109bece) were the previous pushes.
-- Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
-- Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
+2026-11-22 12:30 +0600, branch `r15-stability`. OWNER RELEASE-DAY ORDER: read docs/RELEASE-DAY-PLAN.md (universal hard
+rules + today's checklist A-D: finish fixes, website yumeiro-web, changelog / manual tests / README / mockups / zip,
+then a CI-built soft-test APK shared in chat; no merge / tag / release / deploy until the owner approves).
+This push: GATE-1-FEED-LATE (StagedLate in StagedList.kt, flag gate1_feed_staged_late on, StagedLateTest; fail-before
+44990181586 valid, branch deleted) + SkyStreamAdapterTest temp-file prefix fix + ledger closes: F-05-N-ON Pass
+44987368473; GATE-1-PREPARE-COLD prepare stall now 1325 ms framework-only (gate 44987227363); F-05-S fail-before
+44988073278 valid, first r15 CI 44989934475 Blocked (Maven fetch) + 2 test-bug fails (fixed here).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44987368473 (@e109bece, review_apk=false): pass-after for F-05-N-ON. Do not dispatch ci.yml on r15 before it ends
-  (a new dispatch cancels it).
-- Gate trio 44987227363 on api33-lowram: GATE-1-PREPARE-COLD, read the prepare YuStall after GATE_QUIET.
-- Fail-before ab/f05s-before CI 44988073278 (tests + compile stubs on e109bece): expect SkyStreamAdapterTest and
-  EcosystemRegistryTest#vegaRunsAndTheOthersAreRecognisedOnly to fail, compile ok. Then delete the branch.
-- After 44987368473 ends: dispatch r15 CI (review_apk=false) for F-05-S pass-after, and device
-  `-f test=SkyStreamProviderDeviceTest,VegaProviderDeviceTest,NuvioProviderDeviceTest` on both phones.
-- CI gitleaks scans every live branch: never leave an ab/ branch with a secret-looking literal alive during other runs.
-- Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before). They do
-  not trip gitleaks; check their ledger rows before deleting.
+- r15 CI (review_apk=false) for this push: pass-after for F-05-S and GATE-1-FEED-LATE. Run ID in the progress log of
+  RELEASE-DAY-PLAN.md.
+- Device: SkyStreamProviderDeviceTest,VegaProviderDeviceTest,NuvioProviderDeviceTest; gate trio on api33-lowram.
+- Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before).
 
 ## Next step
 1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05) and GATE-1-PREPARE-COLD (if the stall repeats on a quiet CPU,

@@ -532,6 +532,8 @@ fun OnlineHomeScreen(
                     }
                     val stagedOn = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FEED_STAGED_REVEAL) }
                     val staged = dev.asfakul.yumeiro.ui.components.rememberStagedCount(stagedOn, listState)
+                    val lateOn = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FEED_STAGED_LATE) }
+                    val late = dev.asfakul.yumeiro.ui.components.rememberStagedLate(lateOn)
                     val nearEnd by remember { derivedStateOf { val info = listState.layoutInfo; val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0; info.totalItemsCount > 0 && last >= info.totalItemsCount - 6 && staged.intValue == dev.asfakul.yumeiro.ui.components.StagedReveal.ALL } }
                     LaunchedEffect(nearEnd, groups.size, ready.size, exploreItems.size, exploreBusy) {
                         if (!nearEnd) return@LaunchedEffect
@@ -552,7 +554,7 @@ fun OnlineHomeScreen(
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
-                        val st = dev.asfakul.yumeiro.ui.components.StagedList(this, staged.intValue)
+                        val st = dev.asfakul.yumeiro.ui.components.StagedList(this, staged.intValue, late)
                         if (cats.isNotEmpty()) st.item("categories") {
                             CategoryBar(cats, cat, onPick = { cat = it })
                         }

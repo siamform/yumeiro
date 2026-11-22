@@ -1,5 +1,9 @@
 # Yumeiro: start here (universal handover and resume prompt for any new agent)
 
+> HARD RULE (owner 2026-11-22): read `docs/RELEASE-DAY-PLAN.md` first. Agents and the sandbox can stop at any
+> second, so commit, push and update HANDOVER-LIVE after every step. That file holds the universal rules and today's
+> release checklist.
+
 This is the one document a new agent reads first. It holds the resume prompt, every rule the owner has set, how
 the work is done, where things are, and what is next. Other docs hold the details; this one tells you which.
 Trust the repo and CI run IDs over any summary, including this one. Last updated 2026-11-21.

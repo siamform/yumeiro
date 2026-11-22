@@ -41,7 +41,7 @@ class SkyStreamAdapterTest {
     private fun obj(s: String) = json(s).jsonObject
 
     private fun sky(vararg entries: Pair<String, ByteArray>): File {
-        val f = File.createTempFile("p", ".sky")
+        val f = File.createTempFile("skytest", ".sky")
         ZipOutputStream(f.outputStream()).use { z -> entries.forEach { (n, b) -> z.putNextEntry(ZipEntry(n)); z.write(b); z.closeEntry() } }
         return f
     }
