@@ -6,6 +6,11 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 ~23:25 +06: owner: the release is 2.1.0 (not 2.2.0). version.properties 2.1.0 (20); CHANGELOG, README,
+PR text (docs/evidence/final/PR-2.1.0.md) switched. Website branch r17-v220 in siamform/yumeiro-web: processor
+check on /download (lib/cpu.ts, components/CpuCheck.tsx, scripts/cpu.test.mts) + 2.1.0 notes; next build passes.
+Final CI must run again on this version (45047538777 was dispatched on 2.2.0 naming).
+
 2026-11-23 ~23:10 +06: owner order: all secrets set as GitHub secrets (14, from .secrets/env; Firebase mapped to
 YUMEIRO_FCM_*). Leave TV for now. Order: bugs (OWN-1..19, then older lists), release 2.2.0, then Live TV and
 extensions. Updater + ARM check in 2.2.0 (ProcessorCheck, Settings > Updates). README, CHANGELOG, website for 2.2.0.

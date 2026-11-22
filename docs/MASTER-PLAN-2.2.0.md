@@ -1,4 +1,8 @@
-# Yumeiro 2.2.0: master plan (one branch, one release)
+# Yumeiro 2.1.0 release plan (file and branch still named 2.2.0)
+
+Owner 2026-11-23: the release is **2.1.0** (version.properties 2.1.0, code 20; code 19 test builds still update).
+Branch stays `release-2.2.0`, tag will be v2.1.0. Leave TV for now. Order: bugs, release, then Live TV and extensions.
+
 
 Owner order 2026-11-22 ~22:30 +06: release as **2.2.0** tomorrow; "do everything"; one separate branch; do not wait
 on CI or device runs after every item; test in batches, read the log once, fix what failed. This file is the plan

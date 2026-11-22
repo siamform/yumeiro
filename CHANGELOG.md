@@ -2,7 +2,7 @@
 
 All notable changes to Yumeiro.
 
-## v2.2.0: faster feeds, more sources, no freezes (not released yet; 2.1.0 was never released, its work is in 2.2.0)
+## v2.1.0: faster feeds, more sources, no freezes
 
 Follows 2.0.0. Update straight from 2.0.0, 1.9.0 or 1.8.x; profiles, history, downloads and settings carry over.
 Every item below was checked with an automatic test (unit tests in CI and/or emulator runs on a low-RAM phone, a
@@ -111,11 +111,10 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - Telegram sign-in with a real account: CI can test it only up to Telegram's code check (Telegram has no public test
   accounts); the full sign-in is in the manual test list (OMT-63).
 - The built-in torrent engine is built but off until its device checks pass.
-- Smaller downloads per phone type (ABI split APKs, E3) are built but switched off for this release; the universal
-  APK is the download.
-- Curated Live TV lists per country (E2) are built on the server side but not published yet, so they are not in the
-  app. Yumeiro Live (all countries) is in.
-- Yumeiro Hub plays only through sources you installed; with none installed, a catalog title has no links.
+- Separate curated Live TV lists per country are not published; Yumeiro Live (every country, with the Country
+  filter) covers them.
+- Yumeiro Hub plays through the sources you installed. With none installed, only public-domain titles from the
+  Internet Archive play (exact title and year).
 - Real-phone checks the emulators cannot do (GPU frame times, real YouTube quality, download speed on a real
   network) are in the manual test list.
 

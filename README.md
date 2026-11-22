@@ -30,10 +30,10 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
-## What's new in 2.2.0
+## What's new in 2.1.0
 
 <!-- RELEASE-2.1-IMAGES -->
-<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.2.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
+<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.1.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
 <p align="center">
 <img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" alt="No more freezes" width="200">
 <img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" alt="A friendlier downloader" width="200">
@@ -41,7 +41,7 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 <img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" alt="Telegram has its own page" width="200">
 </p>
 
-Yumeiro 2.2.0 follows 2.0.0 (2.1.0 was a test build and never shipped; all its work is in 2.2.0). Full notes:
+Yumeiro 2.1.0 follows 2.0.0. Full notes:
 [CHANGELOG.md](CHANGELOG.md). Things that still need a real phone: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
 
 | | |
@@ -124,7 +124,7 @@ Settings is now organised by subject. Every page is also found by Settings searc
 
 ## Release status
 
-- **2.2.0 is the current release**; it replaces 2.0.0 (2.1.0 was a test build and was never released). Notes: [CHANGELOG.md](CHANGELOG.md).
+- **2.1.0 is the current release**; it replaces 2.0.0. Notes: [CHANGELOG.md](CHANGELOG.md).
 - **2.0.0** (2026-11-20) replaced 1.9.0, whose release build crashed when a video opened.
 - **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
   pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);

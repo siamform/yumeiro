@@ -29,14 +29,14 @@ class ProcessorCheckTest {
     }
 
     @Test fun updaterPicksThePhonesProcessorFile() {
-        val json = """{"tag_name":"v2.2.0","name":"v2.2.0","body":"","assets":[
-          {"id":1,"name":"release-Yumeiro-v2.2.0.apk","size":90,"url":"u1","browser_download_url":"b1"},
-          {"id":2,"name":"Yumeiro-v2.2.0-arm64-v8a.apk","size":40,"url":"u2","browser_download_url":"b2"},
-          {"id":3,"name":"Yumeiro-v2.2.0-armeabi-v7a.apk","size":35,"url":"u3","browser_download_url":"b3"},
-          {"id":4,"name":"Yumeiro-TV-v2.2.0-arm64-v8a.tv.apk","size":40,"url":"u4","browser_download_url":"b4"}]}"""
+        val json = """{"tag_name":"v2.1.0","name":"v2.1.0","body":"","assets":[
+          {"id":1,"name":"release-Yumeiro-v2.1.0.apk","size":90,"url":"u1","browser_download_url":"b1"},
+          {"id":2,"name":"Yumeiro-v2.1.0-arm64-v8a.apk","size":40,"url":"u2","browser_download_url":"b2"},
+          {"id":3,"name":"Yumeiro-v2.1.0-armeabi-v7a.apk","size":35,"url":"u3","browser_download_url":"b3"},
+          {"id":4,"name":"Yumeiro-TV-v2.1.0-arm64-v8a.tv.apk","size":40,"url":"u4","browser_download_url":"b4"}]}"""
         fun pick(abis: List<String>) = GitHubReleaseClient.parseRelease(json, UpdateSource.PUBLIC, abis).asset.name
-        assertEquals("Yumeiro-v2.2.0-arm64-v8a.apk", pick(listOf("arm64-v8a", "armeabi-v7a")))
-        assertEquals("Yumeiro-v2.2.0-armeabi-v7a.apk", pick(listOf("armeabi-v7a")))
-        assertEquals("release-Yumeiro-v2.2.0.apk", pick(listOf("x86_64")))
+        assertEquals("Yumeiro-v2.1.0-arm64-v8a.apk", pick(listOf("arm64-v8a", "armeabi-v7a")))
+        assertEquals("Yumeiro-v2.1.0-armeabi-v7a.apk", pick(listOf("armeabi-v7a")))
+        assertEquals("release-Yumeiro-v2.1.0.apk", pick(listOf("x86_64")))
     }
 }

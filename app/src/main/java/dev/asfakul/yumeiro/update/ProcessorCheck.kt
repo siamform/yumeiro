@@ -4,9 +4,9 @@ import android.content.Context
 import java.util.zip.ZipFile
 
 /**
- * ARM check (2.2.0, owner order 2026-11-22): tells the user which processor the phone has, which build is
+ * ARM check (2.1.0, owner order 2026-11-22): tells the user which processor the phone has, which build is
  * installed (one processor or universal) and which file the updater takes next. Releases ship per-processor
- * APKs ("Yumeiro-v2.2.0-arm64-v8a.apk") plus the universal one; [GitHubReleaseClient.parseRelease] already picks
+ * APKs ("Yumeiro-v2.1.0-arm64-v8a.apk") plus the universal one; [GitHubReleaseClient.parseRelease] already picks
  * the phone's first supported processor, so this only explains it.
  */
 object ProcessorCheck {
