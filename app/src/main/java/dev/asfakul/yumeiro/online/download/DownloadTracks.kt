@@ -39,6 +39,8 @@ object DownloadTracks {
         val subtitlesLater: Boolean = false,
         /** OWN-11: [audios] are audio-only downloads offered next to the video (YouTube), so even one is a choice. */
         val audioOnly: Boolean = false,
+        /** OWN-8: with [subtitlesLater], languages offered for a batch ("English", "Bengali"); saved per episode. */
+        val subtitleLanguages: List<String> = emptyList(),
     ) {
         val hasChoices: Boolean get() = heights.size > 1 || audios.size > 1 || (audioOnly && audios.isNotEmpty()) || subtitles.isNotEmpty() || subtitlesLater
     }
@@ -116,7 +118,8 @@ object DownloadTracks {
 
     private fun matches(r: Rendition, want: String): Boolean =
         r.label.equals(want, true) || r.name.equals(want, true) || (r.language != null && r.language.equals(want, true)) ||
-            (r.language != null && want.length >= 2 && r.language.substringBefore('-').equals(want.substringBefore('-'), true))
+            (r.language != null && want.length >= 2 && r.language.substringBefore('-').equals(want.substringBefore('-'), true)) ||
+            (want.length > 3 && (sameLanguage(r.label, want) || (r.language != null && sameLanguage(r.language, want))))
 
     /**
      * Audio rendition of [group] to save. [want] (a label or language) first, then DEFAULT=YES, then
@@ -145,8 +148,33 @@ object DownloadTracks {
         return when (want) {
             SUBS_NONE -> emptyList()
             SUBS_ALL -> distinct.take(MAX_SUBS)
-            else -> (distinct.firstOrNull { it.first.equals(want, true) } ?: distinct.firstOrNull { it.first.startsWith(want, true) })?.let { listOf(it) }.orEmpty()
+            else -> (distinct.firstOrNull { it.first.equals(want, true) } ?: distinct.firstOrNull { it.first.startsWith(want, true) }
+                ?: distinct.firstOrNull { sameLanguage(it.first, want) })?.let { listOf(it) }.orEmpty()
         }
+    }
+
+    /**
+     * OWN-8: an extension's subtitle label in the language [want] (an English language name): "en", "eng",
+     * "en-US", "English (CC)", "Inglés"-free labels by code. Pure.
+     */
+    fun sameLanguage(label: String, want: String): Boolean {
+        val l = label.trim()
+        if (l.startsWith(want, true)) return true
+        val code = l.split(' ', '(', '[', ',', '_').firstOrNull().orEmpty().replace('_', '-')
+        if (code.length !in 2..8) return false
+        val name = runCatching { java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.ENGLISH) }.getOrNull().orEmpty()
+        if (name.isNotEmpty() && !name.equals(code, true) && name.equals(want, true)) return true
+        // ISO 639-2 three-letter codes ("eng", "spa", "ben").
+        return java.util.Locale.getAvailableLocales().any { loc ->
+            loc.getDisplayLanguage(java.util.Locale.ENGLISH).equals(want, true) && runCatching { loc.isO3Language }.getOrNull().equals(code, true)
+        }
+    }
+
+    /** OWN-8: the languages an episode batch offers: the Settings subtitle language first, then English. */
+    fun batchLanguages(preferredCode: String): List<String> {
+        val pref = runCatching { java.util.Locale.forLanguageTag(preferredCode).getDisplayLanguage(java.util.Locale.ENGLISH) }.getOrNull()
+            ?.takeIf { it.isNotBlank() && !it.equals(preferredCode, true) }
+        return listOfNotNull(pref, "English").distinct()
     }
 
     const val MAX_SUBS = 12

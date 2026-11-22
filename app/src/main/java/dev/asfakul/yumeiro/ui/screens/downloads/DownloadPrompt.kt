@@ -230,7 +230,8 @@ internal fun TrackPicker(
     T.audioRow(offer)?.let { (title, chips) -> TrackChips(title, "download_track_audio", chips, audio, onAudio) }
     if (offer.subtitles.isNotEmpty()) TrackChips("Subtitles", "download_track_subs",
         listOf(T.SUBS_NONE to "None") + offer.subtitles.map { it to it } + if (offer.subtitles.size > 1) listOf(T.SUBS_ALL to "All") else emptyList(), subs, onSubs)
-    else if (offer.subtitlesLater) TrackChips("Subtitles", "download_track_subs", listOf(T.SUBS_NONE to "None", T.SUBS_ALL to "Save all the source has"), subs, onSubs)
+    else if (offer.subtitlesLater) TrackChips("Subtitles", "download_track_subs",
+        listOf(T.SUBS_NONE to "None") + offer.subtitleLanguages.map { it to it } + listOf(T.SUBS_ALL to "Save all the source has"), subs, onSubs)
 }
 
 /** NF-2b: quality for this download only (Settings → Downloads → Quality stays the default). */

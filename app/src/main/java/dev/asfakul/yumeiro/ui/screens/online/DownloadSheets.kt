@@ -243,7 +243,12 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
         // NF-2b: the prompt offers a quality for this download; -1 keeps the Settings value.
         startAt = { keep, h -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, h) == 0) "Already downloaded or queued" else null },
         // OL-5: extensions name their subtitles only when each episode's link is fetched, so the popup offers "save all".
-        offer = if (tracks) dev.asfakul.yumeiro.online.download.DownloadTracks.Offer(subtitlesLater = true) else null,
+        // OWN-8: one language for the whole batch (the Settings subtitle language, English), or all, or none.
+        offer = if (tracks) dev.asfakul.yumeiro.online.download.DownloadTracks.Offer(
+            subtitlesLater = true,
+            subtitleLanguages = if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.BATCH_SUB_LANGUAGE))
+                dev.asfakul.yumeiro.online.download.DownloadTracks.batchLanguages(dev.asfakul.yumeiro.online.OnlineSettings.subtitleLang.value) else emptyList(),
+        ) else null,
         startWith = if (tracks) { keep, pick -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, pick.maxHeight, pick.subtitles) == 0) "Already downloaded or queued" else null } else null,
     ) { keep -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep) == 0) "Already downloaded or queued" else null })
 }
