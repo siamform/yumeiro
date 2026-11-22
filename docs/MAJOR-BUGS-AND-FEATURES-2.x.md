@@ -146,7 +146,7 @@ Verified. Status "Not checked" = not yet compared with the code; re-check with a
 
 | ID | Finding | Status |
 |---|---|---|
-| DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Queued (found 2026-11-22 14:05 +06 during the DL-ONE audit) |
+| DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Fixed, checks running: flag web_download_listener, WebDownloadsTest (6); fail-before 45006640065 pending; OMT-81 |
 | DEX-REG-1 | Preview build failed the 224-register check (VideoPlayerModalContent 225) | Fixed as a blocker of item D (preview APK); Pass 45002048828 (194 / 195 regs) |
 
 ## Owner decisions needed (not reopened)

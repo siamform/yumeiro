@@ -50,6 +50,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.ui.screens.online.OnlineHomeHeroKt",
         "dev.asfakul.yumeiro.ui.screens.online.YumixFeed",
         "dev.asfakul.yumeiro.ui.screens.online.YumixFeed\$Category",
+        "dev.asfakul.yumeiro.online.web.WebDownloads\$Holder",
         "dev.asfakul.yumeiro.ui.screens.online.YumixFilterKt",
         "dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalogKt",
         "dev.asfakul.yumeiro.ui.screens.stream.StreamPlaylistUiKt",

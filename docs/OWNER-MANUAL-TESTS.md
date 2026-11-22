@@ -129,6 +129,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-78 | TV-FP-1: Home → Live TV card on an older Android TV | Owner test (pending) |
 | OMT-79 | B31-FRAME: built-in torrent first frame and seek on a real phone | Owner test (pending, needs a test build with the engine on) |
 | OMT-80 | DL-ONE: the same download popup everywhere | Owner test (pending) |
+| OMT-81 | DL-WEB: a file link inside a website opens the download popup | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1087,4 +1088,11 @@ Passes if the first picture shows within 15 s and the picture plays again within
 1. Download from the player (Download button), from an episode list, from a website link, from Telegram, from a YouTube video, from a YouTube song and from a YT Music playlist.
 2. Each time the same popup opens (Quality, Audio track, folder) and the file lands in Downloads.
 3. YouTube: no separate quality list appears first; "Audio only" saves just the sound.
-4. Note: a plain file link inside an in-app web page is not caught yet (DL-WEB).
+4. A plain file link inside an in-app web page: see OMT-81 (DL-WEB).
+
+### OMT-81 — A file link inside a website opens the download popup (DL-WEB)
+
+1. Open a website in Yumeiro (Sites) and tap a plain file link on the page (for example a .mp4, .mkv, .zip or .apk link).
+2. The usual download popup opens with the file's real name; pick Offline or Permanent and the file lands in Downloads.
+3. A site that signs you in (cookies) still downloads: the popup uses the page's cookies and address.
+4. A link the page builds itself (blob:) shows "This page makes the file itself ..." instead of doing nothing.

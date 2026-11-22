@@ -50,6 +50,10 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
   marked "Torrent" (F-05-STREMIO).
 - Downloader popup, redesigned: Offline / Permanent switch, real quality, audio language and subtitle choices for
   any stream, download one episode or a range, and a whole online-music playlist (OL-5, OL-6, OL-11, OL-12, NF-2b).
+- One download popup everywhere: from the player, an episode list, a website, Telegram, and now YouTube videos,
+  songs and YT Music playlists too ("Audio only" saves just the sound) (DL-ONE).
+- Watch later and Favourite by long press (or the Menu key on TV) on every poster, also on Yumix feed cards, Top 10
+  and Continue watching (F-09-FEED).
 - Websites: one website tab stays open while a stream plays; the stream bar can be rescanned, collapsed or closed; it
   lists only the video playing now; downloads ask Offline / Permanent first; the helper note hides after 3 s
   (OL-1 to OL-4, OL-8).

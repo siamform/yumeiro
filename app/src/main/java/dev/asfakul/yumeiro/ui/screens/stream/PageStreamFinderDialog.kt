@@ -501,6 +501,8 @@ fun PageStreamFinderDialog(
                                 SafeWebView.harden(this)
                                 // Pop-ups and click-catcher ad overlays stay off while the user browses.
                                 SafeWebView.addAdShield(this)
+                                // DL-WEB: a file link on the page opens the shared download popup.
+                                dev.asfakul.yumeiro.online.web.WebDownloads.attach(this) { currentUrl }
                                 webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                         val scheme = request?.url?.scheme?.lowercase()
