@@ -6,6 +6,10 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-22 ~23:50 +06 (release-2.2.0): OWN-15 fix committed (skip second logo after PIN, safe decide/open).
+Last.fm Worker secrets set (sign endpoint live). CI 45041431667 failed only on Robolectric jar download; CI now caches
+those jars. Next: B3 E2-ALL, then B4 E1, B5, B6, then one B7 test pass. See docs/MASTER-PLAN-2.2.0.md.
+
 2026-11-22 ~22:30 +06: owner order: release 2.2.0 tomorrow, everything in, one branch `release-2.2.0`,
 batch testing. Plan and live status: docs/MASTER-PLAN-2.2.0.md (read it first).
 

@@ -70,6 +70,16 @@ jobs:
       - name: Compile device tests (phone app)
         run: ./gradlew compileMobileDebugAndroidTestKotlin
 
+      # CI 45041431667: 194 Robolectric classes failed only because the android-all jar download
+      # from Maven Central broke (IOException in MavenArtifactFetcher). Robolectric keeps those jars
+      # in ~/.m2, so cache them; a network blip then cannot fail the unit tests again.
+      - name: Cache Robolectric Android jars
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-
+
       - name: Unit tests (phone app, all shared code)
         run: ./gradlew testMobileDebugUnitTest
 

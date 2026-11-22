@@ -102,19 +102,44 @@ fun ProfileAvatar(profile: Profiles.Profile, size: Dp, selected: Boolean = false
 object ProfileSession {
     val chosen = MutableStateFlow(false)
 
+    /**
+     * OWN-15: true once the person passed "Who's watching?" in this process. The logo was already on screen before
+     * the gate, so the app then opens straight in (Netflix and Disney+ go to Home after the profile pick). Before,
+     * the logo played again after the PIN and, on a cold start, stayed up (device run 45039700220, api33 + api36).
+     */
+    @Volatile var passedGate = false
+        private set
+
     /** MainActivity.onCreate, before the first frame. */
     fun decide(context: android.content.Context) {
         if (chosen.value) return
-        val need = FeatureFlags.on(context, FeatureFlags.Flag.PROFILES) && Profiles.askAtStart(context) && !Profiles.consumePass(context)
+        val need = runCatching {
+            FeatureFlags.on(context, FeatureFlags.Flag.PROFILES) && Profiles.askAtStart(context) && !Profiles.consumePass(context)
+        }.getOrElse { t ->
+            // A broken profile file must never keep the app closed: ask, so a locked profile stays locked.
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("ProfileSession.decide", t); true
+        }
+        android.util.Log.i("YuProfile", "decide gate=$need")
         chosen.value = !need
     }
 
+    /** OWN-15: MTPlayerApp's first frame shows the logo unless the gate was just passed. Pure apart from the flag. */
+    fun showLogo(): Boolean = !(passedGate && FeatureFlags.isOn(FeatureFlags.Flag.GATE_SKIPS_LOGO))
+
     /** Opens [id]: in place when it is the current one, otherwise saves it and restarts the app. */
     fun open(activity: Activity, id: String) {
-        if (id == Profiles.currentId(activity)) { chosen.value = true; return }
-        Profiles.select(activity, id)
-        Profiles.passRestart(activity, id)
-        dev.asfakul.yumeiro.backup.Restart.now(activity)
+        val same = runCatching { id == Profiles.currentId(activity) }.getOrDefault(false)
+        android.util.Log.i("YuProfile", "open same=$same")
+        if (same) { passedGate = true; chosen.value = true; return }
+        try {
+            Profiles.select(activity, id)
+            Profiles.passRestart(activity, id)
+            dev.asfakul.yumeiro.backup.Restart.now(activity)
+        } catch (t: Throwable) {
+            // OWN-15: never a force close here. The gate stays; the person can try again or pick another profile.
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("ProfileSession.open", t)
+            dev.asfakul.yumeiro.ui.components.AppMessages.error(activity, "Could not open this profile. Try again.")
+        }
     }
 }
 

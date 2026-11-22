@@ -21,8 +21,8 @@ and the live progress list. Every agent reads it first, then docs/HANDOVER-LIVE.
 | # | Batch | Items | Status |
 |---|---|---|---|
 | B0 | Setup | branch, this plan, version 2.2.0/20, docs renamed to 2.2.0 | In progress |
-| B1 | Bugs | OWN-15 (locked profile: logo stays after PIN, reproduced 45039700220); failures from CI 45041431667 | In progress |
-| B2 | Owner decisions 4 + 6 | X13-6 Jackson 2.19.4 -> 2.18.11 on phone; SEC-1 Last.fm sign-in on (Worker secrets set from .secrets) | To do |
+| B1 | Bugs | OWN-15 (locked profile: logo stays after PIN, reproduced 45039700220); failures from CI 45041431667 | Coded, run pending: OWN-15 fix (flag own15_gate_skips_logo: after the PIN gate the second logo is skipped; decide() and open() can no longer crash). CI 45041431667: 194 failures, all one cause (Robolectric android-all download IOException from Maven Central, no code failure); fix: CI caches ~/.m2/repository/org/robolectric |
+| B2 | Owner decisions 4 + 6 | X13-6 Jackson 2.19.4 -> 2.18.11 on phone; SEC-1 Last.fm sign-in on (Worker secrets set from .secrets) | Jackson: already 2.18.11 in libs.versions.toml (run pending: ExtensionsDeviceTest in B7). Last.fm: Done 2026-11-22: LASTFM_API_KEY + LASTFM_SHARED_SECRET set as Worker secrets; POST api.yumeiro.click/v1/lastfm/sign now answers bad_params (was lastfm_off) |
 | B3 | E2-ALL Yumeiro Live | first E2 publish to `streams`; one merged list (market lists + iptv-org index, adult groups dropped, deduped); 3-strike dead-stream remover; app ships Yumeiro Live as default with auto-update; failed-channel count report to the Worker | To do |
 | B4 | E1 Yumeiro Hub rest | E1-A catalog from the Worker (TMDB key stays on the Worker) into the one "Yumeiro" source; E1-B resolver fan-out over installed sources; E1-E first open ready; E1-D ranking; E1-C recipes only if time (honest status) | To do |
 | B5 | Vega providers | research the format first; build a runner only if it can be done legally and in time, else Not in 2.2.0 with the reason | To do |

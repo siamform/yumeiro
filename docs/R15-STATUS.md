@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 22:30 +06): owner moved to 2.2.0, all work on branch release-2.2.0. Read docs/MASTER-PLAN-2.2.0.md.
+Resume here (2026-11-22 23:50 +06): branch release-2.2.0. Read docs/MASTER-PLAN-2.2.0.md (status table).
 
 # R15 status: every item in the master prompt, with its evidence
 

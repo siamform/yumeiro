@@ -17,7 +17,7 @@ only "built" is listed here with what is missing. Words used:
 | OWN-1..12 | First two owner lists (nav guard, fast title open, Telegram keys, OWN-8 batch subtitles, Classics, YouTube audio, PIN reset, ...) | Done: rows, commits and runs in docs/RELEASE-AUDIT-2.1.0.md section 2 |
 | OWN-13 | One built-in "Yumeiro" source, all in one, no install | Coded, CI pending (CI 45041431667 on d0c5a1d2). One card, one switch, one home, one search; drama + films, documentaries, cartoons, TV, films by country. Rest of E1 (below) is Not in 2.1.0 |
 | OWN-14 | Page close / Back not like the open animation | Coded, CI pending (d8ae2c3b): one shared enter/exit pair, same duration both ways; Inbox / Support and Settings now close the way they open |
-| OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | REPRODUCED on device 45039700220 (api33 + api36): after the PIN on the current profile the logo stays over 15 s (test a fails "the logo to go"; test b passes). Root cause being fixed. Device test written (ProfileColdStartDeviceTest, run 45039700220). Result and fix: docs/RELEASE-AUDIT-2.1.0.md row OWN-15 |
+| OWN-15 | Locked profile, app swiped away, unlock hours later: force close, then stuck on the logo | Coded, run pending (release-2.2.0): second logo skipped after the PIN gate, decide()/open() no longer crash. Device ProfileColdStartDeviceTest rerun in B7 |
 | OWN-16 | Yumix > Upcoming: hard-coded filters, no search, filter should be an icon, dynamic list | Coded, CI pending (d8ae2c3b): search box, filter icon with a sheet, every filter list built from the data (genres, channel countries, days), schedule country from the phone first |
 | OWN-17 | This cross-check | This file |
 | OWN-18 | Download popup: size, quality, sub / dub and other facts on every popup | Coded, CI pending (Own18DownloadSizeTest); device check PopupQualityDeviceTest next |
@@ -36,7 +36,7 @@ Every row was read. Rows marked Verified / Done / Pass with run IDs stay closed 
 | F-22 Upcoming filters | Part built | Rest done as OWN-16. The "Extension" filter cannot exist: a calendar entry is not tied to an installed extension (no data links them) | Coded, CI pending (with OWN-16) |
 | F-02 login | Built | Code screen reached on Telegram's test servers (44879417411, 44933818039). Telegram closed public test accounts (tdlib/td#3083), so a full sign-in needs a real account | Owner test (OMT-63) |
 | UPG-1 | Not run (owner deferred) | TV upgrade and 1.9.0 to 2.0.0 upgrade check | Not in 2.1.0 (owner deferred) |
-| SEC-1 | Owner action | Last.fm secret rotation before built-in sign-in is on | Owner action |
+| SEC-1 | Done 2026-11-22 | Last.fm key + secret set as Worker secrets; built-in sign-in is on | Done |
 | FREEZE-4 | To confirm on a real phone | Home recomposition counter | Owner test |
 | BUG-3 | Blocked: owner | Download speed on a real phone | Owner test (OMT-20) |
 | PIP-1, S-1, NBUG-8 | Built / guarded | Code and unit guards in place, not reproduced on emulators | Owner test (real phone) |
