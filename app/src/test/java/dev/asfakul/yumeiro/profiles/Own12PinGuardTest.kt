@@ -30,7 +30,7 @@ import org.robolectric.annotation.Config
  * Remove PIN / security-question rows ran at once, and saving a first PIN closed the flow.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "w411dp-h891dp-xxhdpi") // a phone: the pad's bottom row (0, OK) is off the 470 dp default screen
 class Own12PinGuardTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
     private val ctx get() = rule.activity

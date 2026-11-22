@@ -247,10 +247,11 @@ fun MTPlayerApp(
     val navigateSub: (String) -> Unit = remember(navController) {
         { route ->
             // OWN-1: a second tap on the same route within the guard window is dropped.
-            if (!navGuardOn || navGuard.allowPush(route, android.os.SystemClock.uptimeMillis())) runCatching {
+            if (!navGuardOn || navGuard.allowPush(route, android.os.SystemClock.uptimeMillis(), navController.currentBackStackEntry?.id)) runCatching {
                 if (!(dev.asfakul.yumeiro.ui.navigation.SubNav.reusable(route) && navController.popBackStack(route, inclusive = false))) {
                     navController.navigate(route) { launchSingleTop = true }
                 }
+                navGuard.pushed(navController.currentBackStackEntry?.id)
             }
         }
     }

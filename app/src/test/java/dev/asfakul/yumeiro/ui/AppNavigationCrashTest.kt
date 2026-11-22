@@ -312,6 +312,7 @@ class AppNavigationCrashTest {
         // Drama is on by default from 1.8.0, so turn it off for this check.
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, false)
+        dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(ctx, false) // OWN-9, on by default too
         awaitHome()
         rule.mainClock.advanceTimeBy(1_000)
         rule.waitForIdle()
@@ -330,6 +331,7 @@ class AppNavigationCrashTest {
         org.junit.Assert.assertEquals("two videos per row on a phone", 2, cardsInRow)
         snap("home_video_grid")
         dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, true)
+        dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(ctx, true)
     }
 
     @Test fun swipeAnywhereMovesBetweenTabsAndBackReturnsHome() {

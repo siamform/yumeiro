@@ -17,12 +17,21 @@ class NavGuard(private val pushWindowMs: Long = PUSH_WINDOW_MS, private val popW
     private var lastPushAt = Long.MIN_VALUE / 2
     private var lastPopAt = Long.MIN_VALUE / 2
 
-    /** True when this push should run. The same route again within [pushWindowMs] is a double tap. */
-    fun allowPush(route: String, now: Long): Boolean {
-        if (route == lastRoute && now - lastPushAt < pushWindowMs) return false
-        lastRoute = route; lastPushAt = now
+    private var pushedTop: String? = null
+
+    /**
+     * True when this push should run. The same route again within [pushWindowMs] is a double tap, but only
+     * while the page that push opened is still on top ([top] = the current back stack entry id): after a
+     * system Back (gesture, key) the same page can open again at once.
+     */
+    fun allowPush(route: String, now: Long, top: String? = null): Boolean {
+        if (route == lastRoute && now - lastPushAt < pushWindowMs && top == pushedTop) return false
+        lastRoute = route; lastPushAt = now; pushedTop = null
         return true
     }
+
+    /** The back stack entry id the last allowed push opened. */
+    fun pushed(top: String?) { pushedTop = top }
 
     /** True when this button pop should run. A second pop within [popWindowMs] of the last one is a double tap. */
     fun allowPop(now: Long): Boolean {

@@ -47,7 +47,7 @@ class Own9YumeiroClassicsTest {
         val home = api.getMainPage(1, MainPageRequest("Classic feature films", "feature_films", false))
         val names = home.items.first().list.map { it.name }
         assertEquals(listOf("Charlie Chaplin Festival", "Suddenly"), names)
-        assertTrue(asked.first().contains("NOT+title"))
+        assertTrue("the adult filter is in the query", asked.first().contains("NOT%20title"))
         assertTrue(YumeiroClassicsProvider.adult("Sex Madness"))
         assertFalse(YumeiroClassicsProvider.adult("Sussex Story"))
     }
