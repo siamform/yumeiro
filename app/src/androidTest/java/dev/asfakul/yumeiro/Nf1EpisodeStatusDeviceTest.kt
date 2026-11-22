@@ -65,16 +65,23 @@ class Nf1EpisodeStatusDeviceTest {
         assertTrue("built-in drama source not published", api != null)
 
         // A series whose first season has 3+ numbered episodes.
-        val rows = runBlocking { OnlineRepository.home(api!!, force = true) }
         var detail: OnlineDetail? = null
         val tried = ArrayList<String>()
         // E1 (2026-11-23): the one Yumeiro source now opens with the Hub catalog shelves (mostly films, whose
         // episodes come from other sources), so the drama series are picked from the drama part's rows.
         val catalog = "${dev.asfakul.yumeiro.sources.hub.YumeiroCatalog.PART}:"
-        for (item in rows.flatMap { it.items }.filterNot { catalog in it.url }.distinctBy { it.url }.take(8)) {
-            val d = runCatching { runBlocking { OnlineRepository.load(api!!, item.url) } }.getOrNull()
+        // Device 45047541362 (api36): the first home batch held only catalog shelves, so the drama rows are asked
+        // for shelf by shelf here, skipping the catalog part, until 8 drama titles are found.
+        val urls = LinkedHashMap<String, String>()
+        for (mp in api!!.mainPage) {
+            if (urls.size >= 8) break
+            val res = runCatching { runBlocking { api!!.getMainPage(1, com.lagradost.cloudstream3.MainPageRequest(mp.name, mp.data, false)) } }.getOrNull()
+            res?.items?.flatMap { it.list }?.filterNot { catalog in it.url }?.forEach { if (urls.size < 8) urls.putIfAbsent(it.url, it.name) }
+        }
+        for ((url, name) in urls) {
+            val d = runCatching { runBlocking { OnlineRepository.load(api!!, url) } }.getOrNull()
             val n = d?.let { dd -> OnlineSession.labelledEpisodes(dd, OnlineSession.defaultVersion(dd.versions)).count { it.first.episode != null } } ?: -1
-            tried += "${item.name}=$n"
+            tried += "$name=$n"
             if (d != null && n >= 3) { detail = d; break }
         }
         log("candidates: $tried")
