@@ -6,13 +6,12 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 19:12 +0600 (13:12 UTC), branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
+2026-11-22 19:20 +0600 (13:20 UTC), branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
 docs/RELEASE-AUDIT-2.1.0.md first (owner list OWN-1..OWN-10, findings, runs).
-Just done (4 fix commits, not yet verified by CI): 78a667f6 OWN-7/OWN-2 Cloudflare DoH default DNS (flag
-own7_cloudflare_default); a4dd5ddf OWN-4 Add repository dialogs accept every format; 179d9e30 OWN-10 TeraBox human
-check opens the share page; a5d8d0d3 OWN-5 Extensions page lists Vega/Nuvio/SkyStream sources + Manage. DiskWala
-measured: its website refuses to play ("Download the app"), handoff stays. Correction AUD-TB-1 (TeraBox 400210 was a bad
-measurement; anonymous step works).
+Just done: db1634a8 AUD-CLAIM-1/2 (curated Live TV lists E2 were never published -> removed from CHANGELOG.md, README,
+image script and post-05 / square-05; ABI split APKs E3 are off -> moved to "Still being checked"). Website PR #5
+(siamform/yumeiro-web r16-v210) 63e3e78 same text fix (no deploy). Per-commit table docs/evidence/final/PER-COMMIT-2.1.0.md.
+Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5 (not yet verified by CI).
 
 ## Pending runs
 - 45024851633 CI review_apk=true on dd4ae197 (baseline), started 12:56 UTC.
@@ -21,10 +20,9 @@ measurement; anonymous step works).
   Wait with `gh run watch <id> --interval 120`.
 
 ## Next step
-1. Record the fail-befores; delete each ab/own*-before branch after it is recorded (local + origin).
-2. Investigate OWN-1 (transitions), OWN-6 (Yumix -> details -> player speed), OWN-8 (extension episode download
-   tracks), OWN-3 (Telegram sign-in flag); fix only blockers or small safe items, queue the rest.
-3. Then one r15 CI review_apk=true (pass-after for all OWN fixes), device suites, gate trio, stress, upgrade-check.
+1. Record the fail-befores + baseline; delete each ab/own*-before branch after it is recorded (local + origin).
+2. Dispatch r15 CI review_apk=true (pass-after for all OWN fixes), then device suites, gate trio, stress, upgrade-check.
+3. Queue OWN-1, OWN-6, OWN-3, OWN-8 (owner test), OWN-9 with reasons; finish W3/W4/W5/W8 in the audit doc.
    Never merge / release / deploy without the owner's go.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
