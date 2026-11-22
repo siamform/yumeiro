@@ -239,6 +239,24 @@ object UniversalAdd {
         }
     }
 
+    /**
+     * OWN-4 (owner list, 2.1.0): the "Add repository" dialogs in Extensions and the Extension market only knew
+     * CloudStream repositories, so a Vega, SkyStream, Nuvio, Stremio, Aniyomi/Mihon or single-extension link
+     * failed there with "not a repository" although Sources → Add anything accepts it. The dialogs now try the
+     * CloudStream repository first (same result as before for those) and, if that fails, the same detection as
+     * Add anything. Returns the CloudStream repo, or the other outcome; the error is the detection's when both fail.
+     */
+    internal suspend fun <R : Any> repoOrAnything(cloudStream: suspend () -> R, anything: suspend () -> Result<Outcome>): Result<Pair<R?, Outcome?>> {
+        val cs = runCatching { cloudStream() }
+        cs.getOrNull()?.let { return Result.success(it to null) }
+        if (cs.exceptionOrNull() is kotlinx.coroutines.CancellationException) return Result.failure(cs.exceptionOrNull()!!)
+        return anything().map { null to it }
+    }
+
+    /** OWN-4: what the "Add repository" dialogs (Extensions, Extension market) run. */
+    suspend fun addFromRepoDialog(context: Context, text: String): Result<Pair<dev.asfakul.yumeiro.online.ExtensionRepo?, Outcome?>> =
+        repoOrAnything({ ExtensionManager.addRepository(context, text) }, { add(context, text) })
+
     /** A picked or shared file: `.cs3`, an extension `.apk`, or a saved index / manifest. */
     suspend fun addFile(context: Context, uri: Uri, displayName: String?): Result<Outcome> = withContext(Dispatchers.IO) {
         runCatching {

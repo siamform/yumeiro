@@ -316,13 +316,16 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
         confirm = "Add", onDismiss = { showRepoDialog = false },
     ) { text, done ->
         scope.launch {
-            runCatching { ExtensionManager.addRepository(context, text) }
-                .onSuccess { repo ->
+            // OWN-4: a Vega, SkyStream, Stremio, Aniyomi/Mihon or single-extension link works here too.
+            dev.asfakul.yumeiro.sources.UniversalAdd.addFromRepoDialog(context, text)
+                .onSuccess { (repo, other) ->
                     done(null); showRepoDialog = false
-                    AppMessages.success(context, "Added ${repo.name}")
-                    load(true); repoFilter = repo.url; tab = MarketTab.DISCOVER
+                    if (repo != null) {
+                        AppMessages.success(context, "Added ${repo.name}")
+                        load(true); repoFilter = repo.url; tab = MarketTab.DISCOVER
+                    } else { AppMessages.success(context, other?.message ?: "Added"); load(true) }
                 }
-                .onFailure { done(OnlineErrors.friendly(it)) }
+                .onFailure { if (it is dev.asfakul.yumeiro.online.ExtensionReview.Declined) { done(null); showRepoDialog = false } else done(OnlineErrors.friendly(it)) }
         }
     }
 }
