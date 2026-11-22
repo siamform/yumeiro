@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 10:30 +06): read docs/HANDOVER-LIVE.md (GATE-1-QUIET gate rerun + F-05-N-ERR CI pending).
+Resume here (2026-11-22 10:55 +06): read docs/HANDOVER-LIVE.md (F-05-N-ON flag flip CI pending).
 
 # R15 status: every item in the master prompt, with its evidence
 

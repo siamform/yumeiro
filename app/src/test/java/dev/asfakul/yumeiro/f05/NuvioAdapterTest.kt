@@ -93,8 +93,9 @@ class NuvioAdapterTest {
     @Test fun nuvioIsAStreamOnlyAdapterBehindItsOwnFlag() {
         assertEquals(setOf("scraper.js"), NuvioAdapter.required(dev.asfakul.yumeiro.sources.ecosystem.PluginEntry("a", "A", "1", emptyMap())))
         assertEquals("scripts_nuvio", NuvioAdapter.flag.key)
-        assertFalse("off until the device test passes", NuvioAdapter.flag.default)
-        assertFalse(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_ADDONS.default)
+        // F-05-N-ON: deliberately flipped to on after NuvioProviderDeviceTest passed 4/4 on both phones (device 44985807462).
+        assertTrue("on since the device test passed", NuvioAdapter.flag.default)
+        assertTrue(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_ADDONS.default)
     }
 
     /** F-05-N-ERR (device 44982374518): QuickJS stacks have no message line; the reason shows the message. */

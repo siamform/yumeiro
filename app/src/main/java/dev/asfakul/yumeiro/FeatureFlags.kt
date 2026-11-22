@@ -151,11 +151,11 @@ object FeatureFlags {
         SCRIPTS_VEGA("scripts_vega", true),
         /**
          * F-05-N (ADR-057): Nuvio scrapers from a user-added repository; their streams join a title's
-         * sources. Off until NuvioProviderDeviceTest passes on a device.
+         * sources. On since F-05-N-ON: NuvioProviderDeviceTest 4/4 on api36 + api33-lowram (device 44985807462).
          */
-        SCRIPTS_NUVIO("scripts_nuvio", false),
-        /** F-05-N (ADR-057): stream-only add-ons (Nuvio now) are asked for extra links when a title plays. Off with SCRIPTS_NUVIO. */
-        STREAM_ADDONS("f05_stream_addons", false),
+        SCRIPTS_NUVIO("scripts_nuvio", true),
+        /** F-05-N (ADR-057): stream-only add-ons (Nuvio now) are asked for extra links when a title plays. On with SCRIPTS_NUVIO (F-05-N-ON). */
+        STREAM_ADDONS("f05_stream_addons", true),
         /** F-05-N-ERR: a script error is reported as "Error: message" (then the stack), not a bare stack line. */
         SCRIPT_ERROR_MESSAGE("f05_script_error_message", true),
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */

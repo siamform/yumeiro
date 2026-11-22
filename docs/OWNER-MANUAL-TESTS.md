@@ -1010,3 +1010,11 @@ On a real phone (a low-RAM one if you have it), with many extensions installed:
 2. Do it twice: once right after installing / updating, once after a normal start.
 
 Passes if no tap leaves the screen stuck for about a second or more, and Android never shows "Yumeiro isn't responding".
+
+### OMT-73 — Nuvio sources on a title (F-05-N-ON)
+
+1. Sources → Add (or Script repos), paste a Nuvio repository manifest URL you trust (one that lists scrapers).
+2. Open a movie, then a TV episode, and press Play / Sources.
+
+Passes if the repo is added (not "recognised only"), the source list shows extra rows named "Nuvio · <scraper name>",
+one of them plays, and a broken scraper only shows its own error while the other sources still appear.

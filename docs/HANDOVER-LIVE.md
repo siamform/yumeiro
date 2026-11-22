@@ -6,39 +6,37 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 10:30 +0600, branch `r15-stability`. This push: GATE-1-QUIET (harness only). Gate trio 44982381315:
-MUSIC-START confirmed (no getOrCreatePlayer YuStall on either phone); api36 Pass; api33-lowram Fail 3055 ms after
-Videos › Source, but the main thread was waiting for CPU (cpu 317 / run queue 997 of 1520 ms) while Google Maps
-crash-looped, Google apps updated and Play Services ran 154k getResources (1.8k on api36). scripts/device-check.sh
-gate_quiet (stop crash-looping Maps, wait max 240 s for CPU < 40 %, GATE_QUIET lines) + top every 5 s
-(stress/trace/top.txt); gate-trace.pbtxt drops `res`. Limit stays 700 ms.
-Earlier today: 2ab4f33f F-05-N-ERR (script errors show the message), f46c3f22 GATE-1-MUSIC-START-2, 06200fc3 F-05-N.
+2026-11-22 10:55 +0600, branch `r15-stability`. This push: F-05-N-ON (scripts_nuvio + f05_stream_addons default on)
+after device 44985807462: NuvioProviderDeviceTest 4/4 + VegaProviderDeviceTest 3/3 on api36 and api33-lowram.
+Tests changed on purpose for the flip (NuvioAdapterTest defaults, EcosystemRegistryTest Nuvio repos added). OMT-73.
+GATE-1-QUIET (cd0b256a) closed on the emulator: lowram Pass twice, 44984838999 worst 664 ms, 44985820433 worst 559 ms,
+app stall 0 ms. New finding GATE-1-PREPARE-COLD: the first start after install (prepare step, before the settle)
+stalls 4-6 s on lowram while the CPU is 90 % busy; not counted by the gate, open.
 - Prod 2026-11-22: /v1/health ok; Last.fm built-in signing off (Worker has no LASTFM_SHARED_SECRET; owner B-9).
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI 44983288674 (review_apk=true @2ab4f33f): pass-after F-05-N-ERR. Do NOT dispatch ci.yml on r15 until it ends.
-- Gate trio rerun with GATE-1-QUIET (dispatched with this push): read GATE_QUIET lines, stress/trace/top.txt and the
-  trace around the Videos › Source step. If lowram still fails with the CPU quiet, the stall is ours: name it.
-- After 44983288674: device rerun NuvioProviderDeviceTest + VegaProviderDeviceTest; if all pass, flip scripts_nuvio +
-  f05_stream_addons (own commit, own CI) and add the OMT row.
+- r15 CI for F-05-N-ON (dispatched after this push, review_apk=false): pass-after for the flip.
+- r15 CI 44983288674 (@2ab4f33f): Build, test & lint Pass, gitleaks Pass; review APK result: see ledger F-05-N-ERR.
 - Fail-befores done: MUSIC-START-2 44979435737, F-05-N 44977804955, F-05-N-ERR 44983223105 (branches deleted).
 - CI gitleaks scans every live branch: never leave an ab/ branch with a secret-looking literal alive during other runs.
 - Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before). They do
   not trip gitleaks; check their ledger rows before deleting.
 
 ## Next step
-1. Close the pending runs above (rows GATE-1-MUSIC-START-2, GATE-1-QUIET, F-05-N, F-05-N-ERR).
-2. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
-3. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
+1. Close F-05-N-ON pass-after (ledger row, MAJOR F-05).
+2. GATE-1-PREPARE-COLD: run gate_quiet before GateOnePrepareDeviceTest too, measure; trace if it repeats quietly.
+3. GATE-1-VIDEOS-COMPOSE: Perfetto trace of the Videos tap on lowram to name the slow list item.
+4. GATE-1 on real phones: when the owner turns Test Lab on, `gh workflow run ftl-gate.yml --ref r15-stability`.
    Never raise the 700 ms limit.
-4. F-05 next: SkyStream adapter on the same seam (plugin.js globals getHome/search/load/loadStreams(cb), .sky zip,
+5. F-05 next: SkyStream adapter on the same seam (plugin.js globals getHome/search/load/loadStreams(cb), .sky zip,
    manifest.baseUrl, loadExtractor; v2.9.0 ignores the manifest plugins list), then Stremio stream-only add-ons.
-5. B31-FRAME device test (real player first frame + seek on the test hash), FEED-ENGINE leftovers, C5, C6, other rows,
+6. B31-FRAME device test (real player first frame + seek on the test hash), FEED-ENGINE leftovers, C5, C6, other rows,
    then UNVERIFIED-QUEUE / INVENTORY (also EDGE-CASE-AUDIT P2-4, P2-5). E1 only on the owner's go.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
-- 2026-11-22 10:30: GATE-1-QUIET (this push).
+- 2026-11-22 10:55: F-05-N-ON (this push); GATE-1-QUIET closed (664 / 559 ms Pass).
+- 2026-11-22 10:30: GATE-1-QUIET cd0b256a.
 - 2026-11-22 10:05: F-05-N-ERR 2ab4f33f.
 - 2026-11-22 09:15: GATE-1-MUSIC-START-2 f46c3f22.
 - 2026-11-22 09:00: F-05-N Nuvio 06200fc3, docs digest 45aac76a.
