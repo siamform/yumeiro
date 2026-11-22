@@ -53,7 +53,7 @@ Help test it: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TES
 | **Websites that stay open** | One website tab stays open while a stream plays; the stream bar follows the video playing now. |
 | **More sources** | Nuvio scraper repositories add their streams to any title; TeraBox plays full files when you are signed in; DiskWala hands off to its app. |
 | **Vertical player** | Swipe through Shorts and any portrait video. |
-| **Live TV by country** | Country filter and a curated list of working channels. |
+| **Live TV by country** | Country filter in big playlists. |
 | **Your profiles, really yours** | Extensions, repositories, pins and reading are per profile; "Forgot PIN" uses security questions. |
 
 ## What's new in 2.0.0

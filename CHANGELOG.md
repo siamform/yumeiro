@@ -61,17 +61,20 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
   lists only the video playing now; downloads ask Offline / Permanent first; the helper note hides after 3 s
   (OL-1 to OL-4, OL-8).
 - Vertical swipe player for Shorts and for any portrait video (F-12).
-- Live TV: country filter, and a curated list of about 20 working channels per country (Country, E2).
+- Live TV: country filter in big playlists (Country).
 - Separate Telegram page (F-02).
 - Upcoming grouped by date, and Series by country (US, GB, JP, KR, IN and more, or Streaming) with a genre filter
   and country / genre badges, from TVmaze (F-22, F-22-C). Episode status on episode rows: Watched, minutes left, Fresh (NF-1).
 - More Home shortcuts and more pages you can put on the navigation bar (OL-9, OL-10).
 - About: Yumeiro on Discord, Facebook, Instagram, X, TikTok and Reddit, plus the developer's links (OL-13).
-- Smaller downloads per phone type (ABI split APKs) are ready in the build; the universal APK stays (E3).
 
 ### Still being checked (off or not proven yet)
 - Telegram sign-in (private channels and chats) is built but off until it is tested on a real phone (F-02 login).
 - The built-in torrent engine is built but off until its device checks pass.
+- Smaller downloads per phone type (ABI split APKs, E3) are built but switched off for this release; the universal
+  APK is the download.
+- Curated Live TV lists per country (E2) are built on the server side but not published yet, so they are not in the
+  app.
 - Real-phone checks the emulators cannot do (GPU frame times, real YouTube quality, download speed on a real
   network) are in the manual test list.
 

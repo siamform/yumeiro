@@ -181,7 +181,7 @@ P = [
     ("04-telegram", "Telegram", "Telegram has its own page",
      ["Add a public channel with @name or a t.me link", "TeraBox and DiskWala links in posts open in Yumeiro"], "telegram_page"),
     ("05-live-country", "Live TV", "Live TV by country",
-     ["Country chips when a playlist has two or more", "A curated list of working channels per country"], "live_country"),
+     ["Country chips when a playlist has two or more", "Pick a country, see only its channels"], "live_country"),
     ("06-profiles", "Profiles", "Every profile, really its own",
      ["Extensions, repositories, pins and reading per profile", "\"Forgot PIN\" uses security questions"], "whos_watching"),
     ("07-video", "Player", "Vertical player and a cleaner top bar",

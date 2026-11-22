@@ -17,3 +17,7 @@ Every phone screen is a real app screen. Where each one comes from:
 
 Sizes: hero-readme 1600x800, banner-github 1280x640, og-website 1200x630, x 1600x900, posts 1080x1350,
 squares 1080x1080, story 1080x1920, changelog-card 1080x1350.
+
+2026-11-22 (release audit, AUD-CLAIM-1): post-05 and square-05 said "A curated list of working channels per country",
+but the curated lists (E2) are not published and not in the app. Only that bullet was repainted, with the script's own
+background (`bg()`) and font: "Pick a country, see only its channels". The script text matches; every other pixel is unchanged.
