@@ -107,16 +107,28 @@ data class PlaylistAnalysis(
 
 /**
  * Default playlist (mirrored every 3 days to the `streams` branch by .github/workflows/stream-sync.yml).
- * Only Mrgify BDIX ships pre-installed; everything else is available in the Playlist Market.
+ * Mrgify BDIX and (E2-ALL, flag live_default) Yumeiro Live ship pre-installed; everything else is in the
+ * Playlist Market. Yumeiro Live is rebuilt and probed daily by build_live_all.py (dead streams removed after 3 runs).
  */
 object DefaultPlaylists {
     const val MIRROR_BASE = "https://raw.githubusercontent.com/siamform/yumeiro/streams"
     const val INDEX_URL = "$MIRROR_BASE/index.json"
     private const val UPSTREAM = "https://raw.githubusercontent.com/abusaeeidx"
 
-    val all: List<StreamPlaylist> = listOf(
-        d("mrgify_bdix", "Mrgify BDIX", "Bangladesh TV", "BDIX IPTV channels (Bangladesh)", "Mrgify-BDIX-IPTV/main/playlist.m3u"),
+    const val YUMEIRO_LIVE = "yumeiro_live"
+    /** Upstream of Yumeiro Live when the mirror is unreachable: iptv-org's public index (NSFW channels are not in it). */
+    const val YUMEIRO_LIVE_UPSTREAM = "https://iptv-org.github.io/iptv/index.m3u"
+
+    private val yumeiroLive = StreamPlaylist(
+        id = YUMEIRO_LIVE, name = "Yumeiro Live", url = "$MIRROR_BASE/playlists/$YUMEIRO_LIVE.m3u", fallbackUrl = YUMEIRO_LIVE_UPSTREAM,
+        category = "Live TV", description = "All-in-one free Live TV: every country, checked daily, dead channels removed", isDefault = true,
     )
+
+    val all: List<StreamPlaylist>
+        get() = listOfNotNull(
+            if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.LIVE_DEFAULT)) yumeiroLive else null,
+            d("mrgify_bdix", "Mrgify BDIX", "Bangladesh TV", "BDIX IPTV channels (Bangladesh)", "Mrgify-BDIX-IPTV/main/playlist.m3u"),
+        )
 
     /** Former defaults (≤ v1.6) that now live in the Playlist Market. Removed on upgrade unless edited. */
     val retired: Set<String> = setOf("zilla_combined", "movies_bangla", "bdxtv_events", "yupptv", "tsports", "crichd", "crestsport")
@@ -178,9 +190,12 @@ object PlaylistStore {
         // G7 LT-4: a download cut off by a kill leaves its temp file; ones older than an hour are not in use.
         runCatching { d.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") && System.currentTimeMillis() - f.lastModified() > 3_600_000 }?.forEach { it.delete() } }
         val migrated = saved != null && saved.optInt("version", 1) < STORE_VERSION && migrateDefaults(context)
+        // E2-ALL: a default added in a later version (Yumeiro Live) reaches existing users once, unless they deleted it.
+        val newDefaults = if (saved == null) emptyList() else DefaultPlaylists.all.filter { d -> d.id !in deletedDefaults && _playlists.value.none { it.id == d.id } }
+        if (newDefaults.isNotEmpty()) _playlists.value = newDefaults + _playlists.value
         // G7 LT-2: loadedDir was set before this write, so a failed write (disk full, folder not
         // writable) left the store "loaded" and the page's Retry never tried again.
-        if (saved == null || migrated || saved.optInt("version", 1) < STORE_VERSION) {
+        if (saved == null || migrated || newDefaults.isNotEmpty() || saved.optInt("version", 1) < STORE_VERSION) {
             try { persist(context) } catch (e: Exception) { loadedDir = null; throw e }
         }
     }

@@ -232,8 +232,8 @@ class AppNavigationCrashTest {
         val list = rule.onNodeWithTag("playlists_list")
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlist_mrgify_bdix"))
         settle { exists("playlist_mrgify_bdix") }
-        // Only one default ships; the former defaults live in the market.
-        org.junit.Assert.assertEquals(listOf("mrgify_bdix"), dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.map { it.id })
+        // E2-ALL: Yumeiro Live + Mrgify BDIX ship; the former defaults live in the market.
+        org.junit.Assert.assertEquals(listOf("yumeiro_live", "mrgify_bdix"), dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.map { it.id })
         org.junit.Assert.assertFalse(exists("playlist_zilla_combined"))
         snap("stream_playlists")
         // Disable.
@@ -247,7 +247,7 @@ class AppNavigationCrashTest {
         list.performScrollToNode(androidx.compose.ui.test.hasTestTag("playlists_more"))
         rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
         tap("playlists_more"); tap("playlists_restore")
-        settle { dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.let { p -> p.size == 1 && p.all { it.enabled } } }
+        settle { dev.asfakul.yumeiro.stream.PlaylistStore.playlists.value.let { p -> p.size == 2 && p.all { it.enabled } } }
         list.performScrollToIndex(0); rule.mainClock.advanceTimeBy(600); rule.waitForIdle()
         snap("stream_playlists_after")
     }

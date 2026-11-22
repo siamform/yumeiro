@@ -184,6 +184,7 @@ split APKs (YUMEIRO_ABI_SPLITS, not set: off). Both now only in "Still being che
 | 85 | YUMEIRO_HUB | `own13_yumeiro_hub` | true | yes (owner list 2026-11-22) |
 | 86 | PLAYER_ESSENTIALS | `own19_player_essentials` | true | yes (owner list 2026-11-22, OWN-19) |
 | 87 | GATE_SKIPS_LOGO | `own15_gate_skips_logo` | true | yes (OWN-15) |
+| 88 | LIVE_DEFAULT | `live_default` | true | yes (E2-ALL-C) |
 
 </details>
 

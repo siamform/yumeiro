@@ -128,6 +128,8 @@ object FeatureFlags {
         YUMEIRO_HUB("own13_yumeiro_hub", true),
         /** OWN-15: after "Who's watching?" the app opens straight away, without the logo a second time. */
         GATE_SKIPS_LOGO("own15_gate_skips_logo", true),
+        /** E2-ALL: "Yumeiro Live" (all-in-one Live TV, rebuilt and probed daily) ships as a default playlist. */
+        LIVE_DEFAULT("live_default", true),
         /** OWN-19: full-screen player shows only the main buttons (3 in the user's order + More); the rest are in More. */
         PLAYER_ESSENTIALS("own19_player_essentials", true),
         /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */

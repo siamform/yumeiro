@@ -6,7 +6,7 @@ name: Stream playlist sync
 # reach users without a new app release.
 on:
   schedule:
-    - cron: "23 22 */3 * *" # every 3 days, 04:23 Asia/Dhaka
+    - cron: "23 22 * * *" # daily, 04:23 Asia/Dhaka (E2-ALL: Yumeiro Live is re-checked every run)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,6 +18,7 @@ on:
     paths:
       - ".github/streams/**"
       - ".github/scripts/sync_streams.py"
+      - ".github/scripts/build_live_all.py"
       - ".github/workflows/stream-sync.yml"
 
 permissions:
@@ -33,7 +34,7 @@ jobs:
     permissions:
       contents: read # publishing uses the DATA_BRANCH_DEPLOY_KEY deploy key, not GITHUB_TOKEN
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45 # E2-ALL probes about 12k streams (about 10 min)
     steps:
       - name: Checkout sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,6 +60,16 @@ jobs:
         run: |
           python3 -m unittest discover -s .github/scripts -p 'test_curate_live.py'
           python3 .github/scripts/curate_live.py out
+
+      # E2-ALL (owner 2026-11-22): "Yumeiro Live", one all-in-one list from iptv-org, probed every run,
+      # 3-strike dead-stream remover (out/live/state.json). On by default; kill switch: set the
+      # repository variable YUMEIRO_LIVE_ALL to "false". A failed build keeps the previous list.
+      - name: Build and check Yumeiro Live
+        if: ${{ vars.YUMEIRO_LIVE_ALL != 'false' }}
+        run: |
+          python3 -m unittest discover -s .github/scripts -p 'test_build_live_all.py'
+          python3 .github/scripts/build_live_all.py out || echo "::warning::Yumeiro Live build failed; the previous list stays"
+          [ -f out/live/report.json ] && { echo "### Yumeiro Live"; cat out/live/report.json; } >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Upload curated lists (dry run)
         if: ${{ inputs.dry_run }}
