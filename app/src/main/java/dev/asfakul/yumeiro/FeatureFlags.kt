@@ -132,6 +132,8 @@ object FeatureFlags {
         LIVE_DEFAULT("live_default", true),
         /** E1-A/B/D/E: the "Yumeiro" source gets the Yumeiro Cloud catalog (TMDB shelves) and plays through installed sources. */
         HUB_CATALOG("hub_catalog", true),
+        /** E1-C: Hub titles can play from the Internet Archive (Yumeiro Classics) with no source installed. */
+        HUB_ARCHIVE("hub_archive", true),
         /** OWN-19: full-screen player shows only the main buttons (3 in the user's order + More); the rest are in More. */
         PLAYER_ESSENTIALS("own19_player_essentials", true),
         /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */

@@ -60,6 +60,9 @@ object YumeiroHub {
     /** E1-A: the catalog part (Yumeiro Cloud shelves + play through the user's installed sources). First, so Home opens full. */
     @Synchronized fun setCatalog(api: MainAPI?) { catalog = api; publish() }
 
+    /** E1-C: official parts that can also play a catalog title (public-domain films from the Internet Archive). */
+    @Synchronized fun resolvers(): List<MainAPI> = listOfNotNull(classics)
+
     private fun publish() {
         val parts = listOfNotNull(catalog, drama, classics)
         _enabled.value = parts.isNotEmpty()

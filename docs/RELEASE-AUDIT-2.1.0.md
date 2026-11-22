@@ -186,6 +186,7 @@ split APKs (YUMEIRO_ABI_SPLITS, not set: off). Both now only in "Still being che
 | 87 | GATE_SKIPS_LOGO | `own15_gate_skips_logo` | true | yes (OWN-15) |
 | 88 | LIVE_DEFAULT | `live_default` | true | yes (E2-ALL-C) |
 | 89 | HUB_CATALOG | `hub_catalog` | true | yes (E1-A/B/D/E) |
+| 90 | HUB_ARCHIVE | `hub_archive` | true | yes (E1-C) |
 
 </details>
 

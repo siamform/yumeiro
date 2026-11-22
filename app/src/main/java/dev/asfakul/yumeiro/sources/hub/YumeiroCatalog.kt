@@ -120,10 +120,15 @@ object YumeiroCatalog {
     }
 
     /** Best search hit for the title: score >= 85 on title or original title, type fits, year within 1 (pure; unit-tested). */
-    fun best(results: List<SearchResponse>, kind: String, title: String, original: String?, year: Int?): SearchResponse? =
+    /** [strict]: both years must be known and match (own Archive part: a remake must never play the old film). */
+    fun best(results: List<SearchResponse>, kind: String, title: String, original: String?, year: Int?, strict: Boolean = false): SearchResponse? =
         results.asSequence()
             .filter { typeFits(kind, it.type) }
-            .filter { r -> val y = yearOf(r); year == null || y == null || kotlin.math.abs(y - year) <= 1 }
+            .filter { r ->
+                val y = yearOf(r)
+                if (strict) year != null && y != null && kotlin.math.abs(y - year) <= 1
+                else year == null || y == null || kotlin.math.abs(y - year) <= 1
+            }
             .map { r -> r to maxOf(SearchRanker.score(title, r.name), original?.let { SearchRanker.score(it, r.name) } ?: 0) }
             .filter { it.second >= 85 }
             .sortedByDescending { it.second }
@@ -154,6 +159,9 @@ class YumeiroCatalogProvider(
     private val fetch: suspend (String) -> String? = { dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider.httpGet(it) },
     private val sources: () -> List<MainAPI> = { SourceHub.providers() },
     private val base: String = "https://${BuildConfig.CLOUD_HOST}/v1/hub",
+    /** E1-C (owner 2026-11-23): Yumeiro's own legal resolvers, asked first and with no install: today the
+     *  Internet Archive (Yumeiro Classics, public-domain films). Only an exact title + year + type match plays. */
+    private val builtins: () -> List<MainAPI> = { YumeiroHub.resolvers() },
 ) : MainAPI() {
     override var name = YumeiroCatalog.NAME
     override var mainUrl = "https://yumeiro.click"
@@ -229,14 +237,15 @@ class YumeiroCatalogProvider(
         val title = o.optString("title").ifBlank { return false }
         val original = o.optString("original").ifBlank { null }
         val year = o.optInt("year").takeIf { it > 0 }
-        val apis = YumeiroCatalog.Ranking.order(YumeiroCatalog.eligible(sources())).take(MAX_SOURCES)
+        val own = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.HUB_ARCHIVE)) builtins() else emptyList()
+        val apis = own + YumeiroCatalog.Ranking.order(YumeiroCatalog.eligible(sources())).take(MAX_SOURCES)
         if (apis.isEmpty()) return false
         val found = withTimeoutOrNull(TOTAL_MS) {
             coroutineScope {
                 apis.map { api ->
                     async {
                         val got = withTimeoutOrNull(PER_SOURCE_MS) {
-                            runCatching { resolve(api, ref, title, original, year, isCasting, subtitleCallback, callback) }.getOrDefault(false)
+                            runCatching { resolve(api, ref, title, original, year, api in own, isCasting, subtitleCallback, callback) }.getOrDefault(false)
                         } ?: false
                         if (got) YumeiroCatalog.Ranking.hit(api.name) else YumeiroCatalog.Ranking.miss(api.name)
                         got
@@ -248,12 +257,12 @@ class YumeiroCatalogProvider(
     }
 
     private suspend fun resolve(
-        api: MainAPI, ref: YumeiroCatalog.Ref, title: String, original: String?, year: Int?, isCasting: Boolean,
+        api: MainAPI, ref: YumeiroCatalog.Ref, title: String, original: String?, year: Int?, strict: Boolean, isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit,
     ): Boolean {
-        var hit = api.search(YumeiroCatalog.query(title)).orEmpty().let { YumeiroCatalog.best(it, ref.kind, title, original, year) }
+        var hit = api.search(YumeiroCatalog.query(title)).orEmpty().let { YumeiroCatalog.best(it, ref.kind, title, original, year, strict) }
         if (hit == null && original != null && original != title) {
-            hit = api.search(YumeiroCatalog.query(original)).orEmpty().let { YumeiroCatalog.best(it, ref.kind, title, original, year) }
+            hit = api.search(YumeiroCatalog.query(original)).orEmpty().let { YumeiroCatalog.best(it, ref.kind, title, original, year, strict) }
         }
         val page = api.load(hit?.url ?: return false) ?: return false
         val play = YumeiroCatalog.dataFor(page, ref) ?: return false

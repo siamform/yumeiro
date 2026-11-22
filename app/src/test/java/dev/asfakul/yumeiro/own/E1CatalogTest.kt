@@ -145,7 +145,20 @@ class E1CatalogTest {
         assertTrue(p.loadLinks("catalog:movie:2", false, {}) { links += it })
         assertTrue("finished within the total limit", System.currentTimeMillis() - t < YumeiroCatalogProvider.TOTAL_MS + 5_000)
         assertEquals(listOf("Source A"), links.map { it.source })
-        assertFalse(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "").loadLinks("catalog:movie:2", false, {}) {})
+        assertFalse(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { emptyList() }).loadLinks("catalog:movie:2", false, {}) {})
+    }
+
+    /** E1-C: with no source installed, a public-domain film still plays from Yumeiro's own Internet Archive part. */
+    @Test fun withNoSourceInstalledTheArchivePartPlaysAnExactMatch() = runBlocking {
+        val archive = Src("Yumeiro Classics", mapOf("Parasite" to 2019))
+        val wrongYear = Src("Yumeiro Classics", mapOf("Parasite" to 1950))
+        val noYear = Src("Yumeiro Classics", mapOf("Parasite" to null))
+        val links = mutableListOf<ExtractorLink>()
+        assertTrue(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { listOf(archive) })
+            .loadLinks("catalog:movie:2", false, {}) { links += it })
+        assertEquals(listOf("Yumeiro Classics"), links.map { it.source })
+        for (bad in listOf(wrongYear, noYear)) assertFalse(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { listOf(bad) })
+            .loadLinks("catalog:movie:2", false, {}) {})
     }
 
     @Test fun builtInPartsAndTheHubAreNeverAskedThemselves() {
