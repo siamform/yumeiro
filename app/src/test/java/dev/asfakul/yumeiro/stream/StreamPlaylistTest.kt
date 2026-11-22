@@ -118,6 +118,10 @@ class StreamPlaylistTest {
         assertEquals(listOf("yumeiro_live", "mrgify_bdix", "l_mine"), PlaylistStore.playlists.value.map { it.id })
         PlaylistStore.resetForTests(); PlaylistStore.init(context)
         assertEquals("persisted once", 3, PlaylistStore.playlists.value.size)
+        // Upgrade check (device-check upgrade_from=v2.0.0): the 2.0.0 file keeps version 2; only a list is added.
+        val after = org.json.JSONObject(java.io.File(dir, "playlists.json").readText())
+        assertEquals(2, after.getInt("version"))
+        assertTrue(after.getJSONArray("offeredDefaults").toString().contains("yumeiro_live"))
         // A user who deleted it before keeps it deleted.
         java.io.File(dir, "playlists.json").writeText(v2.put("deletedDefaults", org.json.JSONArray(listOf("yumeiro_live"))).toString())
         PlaylistStore.resetForTests(); PlaylistStore.init(context)
@@ -127,8 +131,9 @@ class StreamPlaylistTest {
     @Test fun aBrokenIndexIsNotOverwrittenWithDefaults() = runBlocking {
         // R16 (G7): an unreadable playlists.json used to be replaced at once by the defaults.
         val dir = java.io.File(context.filesDir, "streams").apply { mkdirs() }
-        // A current file (store v3, E2-ALL), so no newer default is added on load.
-        val good = org.json.JSONObject().put("version", 3).put("playlists", org.json.JSONArray()
+        // A file written by this version (E2-ALL: every default already offered), so no default is added on load.
+        val good = org.json.JSONObject().put("version", 2).put("offeredDefaults", org.json.JSONArray(DefaultPlaylists.ids.toList()))
+            .put("playlists", org.json.JSONArray()
             .put(org.json.JSONObject().put("id", "l_mine").put("name", "Mine").put("default", false))).toString()
         java.io.File(dir, "playlists.json").writeText(good.take(good.length / 2)) // torn write
         java.io.File(dir, "playlists.json.tmp").writeText(good)                   // the finished copy
@@ -159,7 +164,7 @@ class StreamPlaylistTest {
         // Migration is persisted (runs once).
         PlaylistStore.resetForTests(); PlaylistStore.init(context)
         assertEquals(ids, PlaylistStore.playlists.value.map { it.id }.toSet())
-        assertEquals(3, org.json.JSONObject(java.io.File(dir, "playlists.json").readText()).getInt("version"))
+        assertEquals(2, org.json.JSONObject(java.io.File(dir, "playlists.json").readText()).getInt("version"))
     }
 
     @Test fun marketFieldsSurviveJsonRoundTrip() {

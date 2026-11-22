@@ -149,9 +149,13 @@ object PlaylistStore {
     private const val MAX_BYTES = 40 * 1024 * 1024
     private const val MAX_INDEX_BYTES = 1L * 1024 * 1024
     const val STALE_MS = 2 * 60 * 60 * 1000L
-    private const val STORE_VERSION = 3
-    /** E2-ALL: the store version a default first shipped in. It reaches a user whose file is older, once. */
-    private val ADDED_IN = mapOf(DefaultPlaylists.YUMEIRO_LIVE to 3)
+    private const val STORE_VERSION = 2
+    /**
+     * E2-ALL: defaults that shipped after the store's "offeredDefaults" list existed (2.1.0). A file without
+     * that list (2.0.0 and older, or a recovered copy of one) has already been offered every other default.
+     * A list, not a version bump: the version stays 2 so a 2.0.0 file is not migrated again (upgrade check).
+     */
+    private val LATER_DEFAULTS = setOf(DefaultPlaylists.YUMEIRO_LIVE)
 
     private val mutex = Mutex()
     private val _playlists = MutableStateFlow<List<StreamPlaylist>>(emptyList())
@@ -159,6 +163,8 @@ object PlaylistStore {
     private val _lastSync = MutableStateFlow(0L)
     val lastSync: StateFlow<Long> = _lastSync.asStateFlow()
     private var deletedDefaults = mutableSetOf<String>()
+    /** E2-ALL: defaults this store has already offered once (added, or the user had them / removed them). */
+    private var offeredDefaults = mutableSetOf<String>()
     @Volatile private var loadedDir: File? = null
     /** Device tests only: the next call loads the index from disk again. */
     internal fun unloadForTests() { loadedDir = null }
@@ -183,6 +189,7 @@ object PlaylistStore {
         if (saved == null) {
             _playlists.value = DefaultPlaylists.all
             deletedDefaults = mutableSetOf()
+            offeredDefaults = DefaultPlaylists.ids.toMutableSet()
             _lastSync.value = 0L
         } else {
             val arr = saved.optJSONArray("playlists") ?: JSONArray()
@@ -190,6 +197,9 @@ object PlaylistStore {
                 .distinctBy { it.id }
             val del = saved.optJSONArray("deletedDefaults") ?: JSONArray()
             deletedDefaults = (0 until del.length()).map { del.optString(it) }.filter { it.isNotBlank() }.toMutableSet()
+            val off = saved.optJSONArray("offeredDefaults")
+            offeredDefaults = if (off == null) DefaultPlaylists.ids.filter { it !in LATER_DEFAULTS }.toMutableSet()
+                else (0 until off.length()).map { off.optString(it) }.filter { it.isNotBlank() }.toMutableSet()
             _lastSync.value = saved.optLong("lastSync")
         }
         loadedDir = d
@@ -197,15 +207,15 @@ object PlaylistStore {
         runCatching { d.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") && System.currentTimeMillis() - f.lastModified() > 3_600_000 }?.forEach { it.delete() } }
         val migrated = saved != null && saved.optInt("version", 1) < STORE_VERSION && migrateDefaults(context)
         // E2-ALL: a default added in a later version (Yumeiro Live) reaches existing users once, unless they deleted it.
-        // Only defaults newer than the file: a current file without a default (a recovered copy, an old list) stays as it is.
-        val from = saved?.optInt("version", 1) ?: STORE_VERSION
+        // Only defaults never offered: a default the user removed (or a recovered file without it) stays out.
         val newDefaults = if (saved == null) emptyList() else DefaultPlaylists.all.filter { d ->
-            (ADDED_IN[d.id] ?: 1) > from && d.id !in deletedDefaults && _playlists.value.none { it.id == d.id }
+            d.id !in offeredDefaults && d.id !in deletedDefaults && _playlists.value.none { it.id == d.id }
         }
         if (newDefaults.isNotEmpty()) _playlists.value = newDefaults + _playlists.value
+        val offeredChanged = offeredDefaults.addAll(DefaultPlaylists.ids)
         // G7 LT-2: loadedDir was set before this write, so a failed write (disk full, folder not
         // writable) left the store "loaded" and the page's Retry never tried again.
-        if (saved == null || migrated || newDefaults.isNotEmpty() || saved.optInt("version", 1) < STORE_VERSION) {
+        if (saved == null || migrated || newDefaults.isNotEmpty() || offeredChanged || saved.optInt("version", 1) < STORE_VERSION) {
             try { persist(context) } catch (e: Exception) { loadedDir = null; throw e }
         }
     }
@@ -233,6 +243,7 @@ object PlaylistStore {
             put("version", STORE_VERSION)
             put("playlists", JSONArray().apply { _playlists.value.forEach { put(it.toJson()) } })
             put("deletedDefaults", JSONArray(deletedDefaults.toList()))
+            put("offeredDefaults", JSONArray(offeredDefaults.toList()))
             put("lastSync", _lastSync.value)
         }
         writeAtomic(indexFile(context), json.toString())
@@ -655,5 +666,5 @@ object PlaylistStore {
     // endregion
 
     /** For tests: forget the in-memory state so the next call reloads from disk. */
-    internal fun resetForTests() { loadedDir = null; _playlists.value = emptyList(); deletedDefaults = mutableSetOf(); _lastSync.value = 0L }
+    internal fun resetForTests() { loadedDir = null; _playlists.value = emptyList(); deletedDefaults = mutableSetOf(); offeredDefaults = mutableSetOf(); _lastSync.value = 0L }
 }
