@@ -84,28 +84,56 @@ class StreamPlaylistTest {
         assertEquals(items[2], back[2])
     }
 
-    @Test fun onlyMrgifyBdixIsSeededAndCanBeDisabledDeletedAndRestored() = runBlocking {
+    // E2-ALL (owner 2026-11-22): two defaults ship now, Yumeiro Live (all-in-one) first, then Mrgify BDIX.
+    @Test fun yumeiroLiveAndMrgifyBdixAreSeededAndCanBeDisabledDeletedAndRestored() = runBlocking {
         PlaylistStore.init(context)
         val all = PlaylistStore.playlists.value
-        assertEquals(listOf("mrgify_bdix"), all.map { it.id })
-        assertTrue(all.single().isDefault && all.single().enabled && all.single().fallbackUrl!!.startsWith("https://raw.githubusercontent.com/abusaeeidx/"))
+        assertEquals(listOf("yumeiro_live", "mrgify_bdix"), all.map { it.id })
+        assertTrue(all.all { it.isDefault && it.enabled })
+        assertTrue(PlaylistStore.get("mrgify_bdix")!!.fallbackUrl!!.startsWith("https://raw.githubusercontent.com/abusaeeidx/"))
+        val live = PlaylistStore.get("yumeiro_live")!!
+        assertEquals("https://raw.githubusercontent.com/siamform/yumeiro/streams/playlists/yumeiro_live.m3u", live.url)
+        assertEquals("https://iptv-org.github.io/iptv/index.m3u", live.fallbackUrl)
 
         PlaylistStore.setEnabled(context, "mrgify_bdix", false)
         PlaylistStore.resetForTests(); PlaylistStore.init(context) // reload from disk
         assertFalse(PlaylistStore.get("mrgify_bdix")!!.enabled)
         PlaylistStore.delete(context, "mrgify_bdix")
+        PlaylistStore.delete(context, "yumeiro_live")
         PlaylistStore.resetForTests(); PlaylistStore.init(context)
-        assertTrue(PlaylistStore.playlists.value.isEmpty())
+        assertTrue("a deleted default does not come back by itself", PlaylistStore.playlists.value.isEmpty())
 
-        assertEquals(1, PlaylistStore.restoreDefaults(context))
-        assertEquals(listOf("mrgify_bdix"), PlaylistStore.playlists.value.map { it.id })
+        assertEquals(2, PlaylistStore.restoreDefaults(context))
+        assertEquals(setOf("yumeiro_live", "mrgify_bdix"), PlaylistStore.playlists.value.map { it.id }.toSet())
         assertTrue(PlaylistStore.playlists.value.all { it.enabled })
+    }
+
+    @Test fun existingUsersGetYumeiroLiveOnceOnUpgrade() = runBlocking {
+        val dir = java.io.File(context.filesDir, "streams").apply { mkdirs() }
+        val v2 = org.json.JSONObject().put("version", 2).put("playlists", org.json.JSONArray()
+            .put(org.json.JSONObject().put("id", "mrgify_bdix").put("name", "Mrgify BDIX").put("url", "https://m/b.m3u").put("default", true))
+            .put(org.json.JSONObject().put("id", "l_mine").put("name", "Mine").put("default", false)))
+        java.io.File(dir, "playlists.json").writeText(v2.toString())
+        PlaylistStore.init(context)
+        assertEquals(listOf("yumeiro_live", "mrgify_bdix", "l_mine"), PlaylistStore.playlists.value.map { it.id })
+        PlaylistStore.resetForTests(); PlaylistStore.init(context)
+        assertEquals("persisted once", 3, PlaylistStore.playlists.value.size)
+        // Upgrade check (device-check upgrade_from=v2.0.0): the 2.0.0 file keeps version 2; only a list is added.
+        val after = org.json.JSONObject(java.io.File(dir, "playlists.json").readText())
+        assertEquals(2, after.getInt("version"))
+        assertTrue(after.getJSONArray("offeredDefaults").toString().contains("yumeiro_live"))
+        // A user who deleted it before keeps it deleted.
+        java.io.File(dir, "playlists.json").writeText(v2.put("deletedDefaults", org.json.JSONArray(listOf("yumeiro_live"))).toString())
+        PlaylistStore.resetForTests(); PlaylistStore.init(context)
+        assertNull(PlaylistStore.get("yumeiro_live"))
     }
 
     @Test fun aBrokenIndexIsNotOverwrittenWithDefaults() = runBlocking {
         // R16 (G7): an unreadable playlists.json used to be replaced at once by the defaults.
         val dir = java.io.File(context.filesDir, "streams").apply { mkdirs() }
-        val good = org.json.JSONObject().put("version", 2).put("playlists", org.json.JSONArray()
+        // A file written by this version (E2-ALL: every default already offered), so no default is added on load.
+        val good = org.json.JSONObject().put("version", 2).put("offeredDefaults", org.json.JSONArray(DefaultPlaylists.ids.toList()))
+            .put("playlists", org.json.JSONArray()
             .put(org.json.JSONObject().put("id", "l_mine").put("name", "Mine").put("default", false))).toString()
         java.io.File(dir, "playlists.json").writeText(good.take(good.length / 2)) // torn write
         java.io.File(dir, "playlists.json.tmp").writeText(good)                   // the finished copy
@@ -129,7 +157,7 @@ class StreamPlaylistTest {
 
         PlaylistStore.init(context)
         val ids = PlaylistStore.playlists.value.map { it.id }.toSet()
-        assertEquals(setOf("mrgify_bdix", "yupptv", "l_mine"), ids)
+        assertEquals(setOf("yumeiro_live", "mrgify_bdix", "yupptv", "l_mine"), ids)
         assertFalse("edited former default becomes a normal playlist", PlaylistStore.get("yupptv")!!.isDefault)
         assertFalse(java.io.File(dir, "ch_zilla_combined.m3u").exists())
         assertTrue(java.io.File(dir, "ch_yupptv.m3u").exists())
@@ -144,6 +172,17 @@ class StreamPlaylistTest {
         assertEquals(p, StreamPlaylist.fromJson(p.toJson()))
         // Old JSON without the new keys: auto-update defaults to on.
         assertTrue(StreamPlaylist.fromJson(org.json.JSONObject().put("id", "a").put("name", "A")).autoUpdate)
+    }
+
+    /** E2-ALL-C: the mirror's "checked" time is kept, so the card can say "checked 3h ago". */
+    @Test fun checkedTimeFromTheIndexSurvivesJsonRoundTrip() {
+        val t = PlaylistStore.checkedAt("2026-11-22T16:23:55Z")
+        assertEquals(1795364635000L, t)
+        assertEquals(0L, PlaylistStore.checkedAt("yesterday"))
+        assertEquals(0L, PlaylistStore.checkedAt(null))
+        val p = StreamPlaylist(id = DefaultPlaylists.YUMEIRO_LIVE, name = "Yumeiro Live", url = "https://m/l.m3u", checked = t)
+        assertEquals(t, StreamPlaylist.fromJson(p.toJson()).checked)
+        assertEquals(0L, StreamPlaylist.fromJson(org.json.JSONObject().put("id", "a").put("name", "A")).checked)
     }
 
     @Test fun localPlaylistCrudAndPersistence() = runBlocking {
@@ -163,6 +202,6 @@ class StreamPlaylistTest {
         assertEquals(listOf("Two B"), PlaylistStore.channels(context, p.id).map { it.title })
         PlaylistStore.delete(context, p.id)
         assertNull(PlaylistStore.get(p.id))
-        assertEquals(1, PlaylistStore.playlists.value.size) // deleting a user playlist doesn't touch the default
+        assertEquals(2, PlaylistStore.playlists.value.size) // deleting a user playlist doesn't touch the defaults
     }
 }

@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -201,6 +203,13 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 CHIP_EXPLORE -> YmBrowse(YtMusicApi.EXPLORE)
                 else -> chips.firstOrNull { it.browse.params == forChip }?.browse ?: YmBrowse(YtMusicApi.HOME)
             }
+            // FE-7b: the page saved on the phone shows at once (no skeleton) while the live one loads.
+            if (!force && home.page == null) YtMusicApi.savedBrowse(target)?.let { saved ->
+                if (g == YmStore.homeGen && home.page == null) {
+                    if (target.browseId == YtMusicApi.HOME && saved.chips.isNotEmpty() && forChip == CHIP_HOME) chips = saved.chips
+                    home = YmState(saved, loading = false)
+                }
+            }
             val r = runCatching { YtMusicApi.browse(app, target, force) }
             if (g != YmStore.homeGen) return@launch
             home = r.fold(
@@ -309,14 +318,16 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
     }
     LaunchedEffect(query) {
         if (query.isBlank() || query == submitted) { suggestions = emptyList(); return@LaunchedEffect }
-        val local = dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(
+        // FE-S2: folding (regex) and the saved recent searches stay off the main thread.
+        val local = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(
             query, dev.asfakul.yumeiro.ui.components.RecentSearches.asSuggestions(context, "ytmusic"), limit = 3,
-        )
+        ) }
         suggestions = local
         delay(200)
         val remote = runCatching { YouTube.suggestions(context, query) }.getOrDefault(emptyList())
             .map { dev.asfakul.yumeiro.ui.components.Suggestion(it, dev.asfakul.yumeiro.ui.components.Suggestion.Kind.QUERY) }
-        suggestions = (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8)
+        suggestions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { (local + remote).distinctBy { dev.asfakul.yumeiro.ui.components.SearchSuggest.fold(it.text) }.take(8) }
     }
 
     val open: (YmBrowse) -> Unit = { stack.add(it) }
@@ -706,6 +717,46 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
     val art = header?.thumbnail?.takeIf { header.artist.not() }
     val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_detail:" + target.browseId + ":" + target.params)
     YtEndlessTrigger(listState, state.canLoadMore) { more() }
+    // OL-12: "Download playlist": every song (all pages, not just the loaded ones) as one batch.
+    val dlOn = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYLIST_DOWNLOAD)
+    var fetching by remember(target) { mutableStateOf(false) }
+    var batch by remember(target) { mutableStateOf<List<String>>(emptyList()) }
+    val dlItems by dev.asfakul.yumeiro.online.download.OnlineDownloads.items.collectAsState()
+    val progress = remember(batch, songs, dlItems) {
+        dev.asfakul.yumeiro.online.download.PlaylistDownload.progress(batch.ifEmpty { songs.map { it.videoId } }, dlItems)
+    }
+    fun downloadAll() {
+        if (fetching || songs.isEmpty()) return
+        fetching = true
+        val first = state.page
+        scope.launch {
+            val all = songs.toMutableList()
+            var token = first?.continuation
+            var pages = 0
+            while (pages < 50) {
+                val t = token ?: break
+                val p = runCatching { YtMusicApi.more(context, "browse", t) }.getOrNull() ?: break
+                all += p.shelves.flatMap { it.items }.filterIsInstance<YmItem.Song>()
+                token = p.continuation; pages++
+            }
+            fetching = false
+            val tracks = all.map { s -> dev.asfakul.yumeiro.online.download.PlaylistDownload.Track(s.videoId, s.title, s.artists.joinToString(", ") { it.name }.ifBlank { null }, s.thumbnail) }.distinctBy { it.id }
+            batch = tracks.map { it.id }
+            dev.asfakul.yumeiro.online.download.OnlineDownloads.ensureLoaded(context)
+            val left = dev.asfakul.yumeiro.online.download.PlaylistDownload.toQueue(tracks, dev.asfakul.yumeiro.online.download.OnlineDownloads.items.value)
+            if (left.isEmpty()) { dev.asfakul.yumeiro.ui.components.AppMessages.showQuiet(context, "All ${tracks.size} songs are already downloaded or downloading"); return@launch }
+            dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.ask(context, dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.Request(
+                type = dev.asfakul.yumeiro.ui.screens.downloads.DownloadPrompt.Type.YT_AUDIO,
+                title = header?.title ?: "Playlist",
+                what = if (left.size == 1) "1 song" else "${left.size} songs" + if (left.size < tracks.size) " (${tracks.size - left.size} already saved)" else "",
+                count = left.size, folder = dev.asfakul.yumeiro.online.download.OnlineDownloads.youTubeFolder(true, true),
+                quality = "Best audio (M4A when offered)", defaultKeep = true,
+                // OWN-18: songs x their length at 128 kbps (YouTube Music's usual best audio).
+                sizeFor = { _ -> dev.asfakul.yumeiro.online.download.DownloadSize.songsEstimate(all.filter { s -> left.any { it.id == s.videoId } }.map { it.durationSec }) },
+                facts = listOf("YouTube Music", "Audio only"),
+            ) { keep -> if (dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueueYouTubeBatch(context, left, keep) == 0) "Already downloaded or queued" else null })
+        }
+    }
     LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_detail"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
         item("bar") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -716,14 +767,47 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
         if (header != null) item("header") {
             DetailHeader(header, canPlay = songs.isNotEmpty(),
                 onPlay = { songs.firstOrNull()?.let { onPlay(it, songs, art) } },
-                onShuffle = { val s = songs.shuffled(); s.firstOrNull()?.let { onPlay(it, s, art) } })
+                onShuffle = { val s = songs.shuffled(); s.firstOrNull()?.let { onPlay(it, s, art) } },
+                download = if (dlOn && !header.artist) ({ PlaylistDownloadButton(progress, fetching) { downloadAll() } }) else null,
+                downloadStatus = if (dlOn && !header.artist) playlistDownloadStatus(progress, fetching) else "")
         }
         pageBody(state, home = false, onOpen = onOpen, onPlay = onPlay, onRetry = { load(true) }, art = art)
     }
 }
 
+/**
+ * OL-12: round "Download playlist" button next to Play / Shuffle (like YouTube Music's arrow),
+ * with a ring for the whole batch and a status line under the row ("Downloading · 3 of 20 done").
+ */
 @Composable
-private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit) {
+internal fun PlaylistDownloadButton(p: dev.asfakul.yumeiro.online.download.PlaylistDownload.Progress, fetching: Boolean, onClick: () -> Unit) {
+    val status = playlistDownloadStatus(p, fetching)
+    Box(
+        // OL-12-TOUCH: 44 dp circle, 48 dp touch area (TouchTargetTest).
+        Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(GlassFill)
+            .clickable(enabled = !fetching && !p.allDone, onClickLabel = "Download playlist", onClick = onClick)
+            .semantics { contentDescription = "Download playlist" + if (status.isNotBlank()) ". $status" else "" }
+            .testTag("ytmusic_download_all"),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            fetching -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp, color = SpotifyGreen)
+            p.allDone -> Icon(Icons.Default.DownloadDone, null, tint = SpotifyGreen)
+            p.active > 0 -> {
+                androidx.compose.material3.CircularProgressIndicator(progress = { p.fraction }, modifier = Modifier.size(34.dp).testTag("ytmusic_download_progress"), strokeWidth = 3.dp, color = SpotifyGreen)
+                Icon(Icons.Default.Download, null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+            }
+            else -> Icon(Icons.Default.Download, null, tint = TextPrimary)
+        }
+    }
+}
+
+/** OL-12: the batch status line under Play / Shuffle / Download. */
+internal fun playlistDownloadStatus(p: dev.asfakul.yumeiro.online.download.PlaylistDownload.Progress, fetching: Boolean): String =
+    if (fetching) "Getting every song…" else dev.asfakul.yumeiro.online.download.PlaylistDownload.label(p)
+
+@Composable
+private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit, download: (@Composable () -> Unit)? = null, downloadStatus: String = "") {
     val palette = LocalMtPalette.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (h.artist) {
@@ -754,7 +838,9 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
                     Modifier.height(44.dp).clip(CircleShape).background(GlassFill).clickable(onClick = onShuffle).padding(horizontal = 20.dp).testTag("ytmusic_shuffle_all"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) { Icon(Icons.Default.Shuffle, null, tint = palette.textPrimary); Spacer(Modifier.width(6.dp)); Text("Shuffle", color = TextPrimary, fontWeight = FontWeight.SemiBold) }
+                download?.invoke()
             }
+            if (downloadStatus.isNotBlank()) Text(downloadStatus, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).testTag("ytmusic_download_status"))
         }
         if (h.description.isNotBlank()) {
             var open by remember { mutableStateOf(false) }

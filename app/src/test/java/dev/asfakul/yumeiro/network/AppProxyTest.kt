@@ -120,4 +120,24 @@ class AppProxyTest {
             assertTrue(bad, bad.startsWith("Failed") && bad.contains("couldn't reach the proxy"))
         } finally { AppProxy.TEST_URL = "https://www.gstatic.com/generate_204" }
     }
+
+    /**
+     * NBUG-13-PORT: CI 44914717596 failed testButtonReportsSuccessAndAnUnreachableProxy with "Failed · the proxy
+     * wants a login" for a closed local port: the free port it got held the digits 407, and the message check
+     * looked for "407" anywhere in "Failed to connect to /127.0.0.1:<port>". Fixed ports, so it never depends on luck.
+     */
+    @Test fun anUnreachableProxyIsNeverReadAsALoginAnswer() {
+        val cfg = AppProxy.Config(AppProxy.Type.HTTP, "127.0.0.1", 40712)
+        listOf(40712, 14070, 4071, 54407, 407).forEach { port ->
+            val m = AppProxy.message(java.net.ConnectException("Failed to connect to /127.0.0.1:$port"), cfg.copy(port = port))
+            assertTrue("port $port: $m", m.startsWith("couldn't reach the proxy"))
+        }
+        val t = AppProxy.message(java.net.SocketTimeoutException("Connect timed out to proxy.example:8407"), cfg)
+        assertTrue(t, t.startsWith("couldn't reach the proxy"))
+        // OkHttp's real login answers still read as a login answer.
+        listOf("Unexpected response code for CONNECT: 407", "Failed to authenticate with proxy", "HTTP 407 Proxy Authentication Required").forEach { msg ->
+            val m = AppProxy.message(java.io.IOException(msg), cfg)
+            assertTrue("$msg -> $m", m.startsWith("the proxy wants a login"))
+        }
+    }
 }

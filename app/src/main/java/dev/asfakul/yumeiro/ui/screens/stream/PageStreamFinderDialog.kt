@@ -18,25 +18,18 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,8 +61,6 @@ import dev.asfakul.yumeiro.stream.StreamFormat
 import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.stream.StreamSniffer
 import dev.asfakul.yumeiro.ui.theme.DarkSurface
-import dev.asfakul.yumeiro.ui.theme.GlassFill
-import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
@@ -102,11 +93,17 @@ data class CapturedStream(
     val kind: MediaKind,
     val label: String,
     val headers: Map<String, String>,
+    /** OL-3: title of the video this stream belongs to (the page's video title, og:title or page title). */
+    val title: String = "",
 )
 
 /** Captures streams a page's own player requests. Pure logic (no WebView) so it can be unit tested. */
-class PageStreamCapture {
+class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_000_000L }) {
     private val seen = LinkedHashMap<String, CapturedStream>()
+    /** OL-3: when each capture was first seen, so a video switch keeps only what the new video asked for. */
+    private val seenAt = HashMap<String, Long>()
+    /** OL-3: title of the video playing now; new captures take it. */
+    var mediaTitle: String = ""; private set
     var licenseUrl: String? = null; private set
     var drmSystem: String? = null
 
@@ -130,12 +127,39 @@ class PageStreamCapture {
         }
         val key = lower.substringBefore('#')
         if (key in seen) return null
-        val c = CapturedStream(url, sniff.kind, sniff.label, headers)
+        val c = CapturedStream(url, sniff.kind, sniff.label, headers, mediaTitle)
         seen[key] = c
+        seenAt[key] = clock()
         return c
     }
 
     fun all(): List<CapturedStream> = seen.values.sortedBy { rank(it.kind) }
+
+    /** OL-2 Rescan: forgets every capture so the page's streams are offered again from scratch. DRM info stays. */
+    fun reset() { seen.clear(); seenAt.clear() }
+
+    /**
+     * OL-3: the page switched to another video (a new `<video>` source, a new page or an in-page
+     * navigation). Captures older than [NEW_MEDIA_GRACE_MS] belong to the old video and are dropped; the
+     * newest ones stay because the new video's manifest is often requested just before the switch is seen.
+     * @return true when the list changed.
+     */
+    fun newMedia(title: String?): Boolean {
+        val now = clock()
+        val old = seenAt.filterValues { now - it > NEW_MEDIA_GRACE_MS }.keys
+        old.forEach { seen.remove(it); seenAt.remove(it) }
+        val titled = title?.trim()?.takeIf { it.isNotEmpty() }?.let { retitle(it) } ?: false
+        return old.isNotEmpty() || titled
+    }
+
+    /** OL-3: the video playing now is called [title]; every capture of it shows that title. @return true when anything changed. */
+    fun retitle(title: String): Boolean {
+        val t = title.trim().take(MAX_TITLE)
+        if (t.isEmpty() || (t == mediaTitle && seen.values.all { it.title == t })) return false
+        mediaTitle = t
+        for (k in seen.keys.toList()) seen[k] = seen.getValue(k).copy(title = t)
+        return true
+    }
 
     private fun rank(k: MediaKind) = when (k) {
         MediaKind.HLS, MediaKind.DASH, MediaKind.SMOOTH -> 0
@@ -177,6 +201,9 @@ class PageStreamCapture {
         /** More than any real page offers (qualities × audio tracks × mirrors). */
         const val MAX_CAPTURES = 64
         const val MAX_URL = 8_192
+        const val MAX_TITLE = 200
+        /** OL-3: on a video switch, captures newer than this stay (the new video's own manifest). */
+        const val NEW_MEDIA_GRACE_MS = 1_500L
         private val LICENSE_HINTS = listOf("license", "licence", "widevine", "drm", "/wv", "getkey")
         private val SEGMENT_EXT = listOf(".ts", ".m4s", ".aac", ".mp4", ".m4a", ".m4v", ".cmfv", ".cmfa")
 
@@ -197,6 +224,54 @@ class PageStreamCapture {
     } catch(e) {}
   }
   scan(); setInterval(scan, 1500);
+  // OL-3: which video plays now. A new source on a video element means the page switched video.
+  function title(v){
+    try {
+      var t = v && (v.getAttribute('title') || v.getAttribute('aria-label'));
+      if (t) return String(t);
+      var m = document.querySelector('meta[property="og:title"]');
+      return String((m && m.content) || document.title || '');
+    } catch(e) { return ''; }
+  }
+  document.addEventListener('loadstart', function(e){
+    var v = e.target; if (!v || v.tagName !== 'VIDEO') return;
+    var s = v.currentSrc || v.src || '';
+    window.__mtLoadAt = performance.now();
+    try {
+      if (window.__mtSrc && s && s !== window.__mtSrc) MTFinder.onNewMedia(title(v)); else MTFinder.onTitle(title(v));
+    } catch(x) {}
+    if (s) window.__mtSrc = s;
+  }, true);
+  document.addEventListener('playing', function(e){
+    var v = e.target; if (!v || v.tagName !== 'VIDEO') return;
+    try { MTFinder.onTitle(title(v)); } catch(x) {}
+  }, true);
+  // The hook often lands after the first video already started loading: name it now.
+  try {
+    var v0 = document.querySelector('video');
+    if (v0) { var s0 = v0.currentSrc || v0.src; if (s0) window.__mtSrc = s0; MTFinder.onTitle(title(v0)); }
+  } catch(x) {}
+})();
+"""
+
+        /**
+         * OL-2 Rescan: reports what the page's players play now (their current source) and the media files
+         * and manifests the page already fetched (Resource Timing), so a cleared list fills again without a reload.
+         */
+        const val RESCAN_JS = """
+(function(){
+  try {
+    document.querySelectorAll('video,audio,source').forEach(function(v){
+      var s = v.currentSrc || v.src;
+      if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
+    });
+    var since = (window.__mtLoadAt || 0) - 2000; // OL-3: only what the video playing now fetched
+    (performance.getEntriesByType('resource') || []).forEach(function(e){
+      if (e.startTime < since) return;
+      var n = String(e.name || ''); var l = n.toLowerCase().split('?')[0];
+      if (/\.(m3u8|mpd|mp4|webm|mkv|m4v|mov)$/.test(l)) MTFinder.onMedia(n);
+    });
+  } catch(e) {}
 })();
 """
 
@@ -258,21 +333,53 @@ fun PageStreamFinderDialog(
     onDismiss: () -> Unit,
     /** Start the page's player by itself and play the first stream (known file hosts). */
     auto: Boolean = false,
+    /** OL-1: keep the page alive in [keep] (website tabs): the WebView is reused and never destroyed here. */
+    keep: PageKeep? = null,
+    /** OL-1: hides the page and keeps it (Minimize button; Back at the first page). Null = no minimize. */
+    onMinimize: (() -> Unit)? = null,
 ) {
-    val capture = remember(pageUrl) { PageStreamCapture() }
+    val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
     var autoActive by remember(pageUrl) { mutableStateOf(auto) }
     var autoStep by remember(pageUrl) { mutableStateOf("Opening the link") }
     var autoNote by remember(pageUrl) { mutableStateOf<String?>(null) }
     var played by remember(pageUrl) { mutableStateOf(false) }
-    val found = remember(pageUrl) { mutableStateListOf<CapturedStream>() }
-    var progress by remember { mutableIntStateOf(0) }
-    var pageTitle by remember { mutableStateOf("") }
-    var currentUrl by remember { mutableStateOf(pageUrl) }
-    var drmNote by remember { mutableStateOf<String?>(null) }
+    val found = keep?.found ?: remember(pageUrl) { mutableStateListOf<CapturedStream>() }
+    // OL-1: a kept page keeps its title, address, progress and notes too (the WebView's callbacks write them).
+    // Own states are always remembered (same slots every composition); a kept page's states win.
+    val ownProgress = remember { mutableIntStateOf(0) }
+    val ownTitle = remember { mutableStateOf("") }
+    val ownUrl = remember { mutableStateOf(pageUrl) }
+    val ownDrm = remember { mutableStateOf<String?>(null) }
+    val ownPanel = remember { mutableStateOf(StreamPanel.OPEN) }
+    val progressState: androidx.compose.runtime.MutableIntState = keep?.progress ?: ownProgress
+    val titleState: androidx.compose.runtime.MutableState<String> = keep?.pageTitle ?: ownTitle
+    val urlState: androidx.compose.runtime.MutableState<String> = keep?.currentUrl ?: ownUrl
+    val drmState: androidx.compose.runtime.MutableState<String?> = keep?.drmNote ?: ownDrm
+    val panelState: androidx.compose.runtime.MutableState<StreamPanel> = keep?.panel ?: ownPanel
+    var progress by progressState
+    var pageTitle by titleState
+    var currentUrl by urlState
+    var drmNote by drmState
     var showHint by remember { mutableStateOf(true) }
+    var panel by panelState
+    // OL-8: a later note (sign in, auto gave up) shows the banner again; it hides by itself after 3 s.
+    androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val main = remember { Handler(Looper.getMainLooper()) }
+
+    fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
+
+    /** OL-3: the page switched video or page: keep only the new video's streams. */
+    fun switched(title: String?) {
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_CURRENT_ONLY)) return
+        if (synchronized(capture) { capture.newMedia(title) }) refresh()
+    }
+
+    fun titled(title: String) {
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_CURRENT_ONLY)) return
+        if (synchronized(capture) { capture.retitle(title) }) refresh()
+    }
 
     fun record(url: String, method: String, headers: Map<String, String>) {
         synchronized(capture) { capture.onRequest(url, method, headers) }?.let { c ->
@@ -287,7 +394,7 @@ fun PageStreamFinderDialog(
         val wv = webViewRef
         val request = synchronized(capture) {
             capture.toRequest(
-                c, currentUrl, pageTitle.ifBlank { base?.title.orEmpty() },
+                c, currentUrl, c.title.ifBlank { pageTitle.ifBlank { base?.title.orEmpty() } },
                 userAgent = wv?.settings?.userAgentString,
                 cookie = runCatching { CookieManager.getInstance().getCookie(c.url) }.getOrNull(),
                 base = base,
@@ -325,15 +432,16 @@ fun PageStreamFinderDialog(
         }
     }
 
-    DisposableEffect(pageUrl) {
+    DisposableEffect(pageUrl, keep) {
         onDispose {
-            webViewRef?.apply { stopLoading(); onPause(); destroy() }
+            // OL-1: a kept page only leaves the screen; its owner releases it.
+            if (keep == null) webViewRef?.apply { stopLoading(); onPause(); destroy() }
             webViewRef = null
         }
     }
 
-    // Back walks the page history first (browsing a saved website), then closes.
-    Dialog(onDismissRequest = { val wv = webViewRef; if (wv != null && wv.canGoBack()) wv.goBack() else onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    // Back walks the page history first (browsing a saved website), then minimizes (kept tab) or closes.
+    Dialog(onDismissRequest = { val wv = webViewRef; if (wv != null && wv.canGoBack()) wv.goBack() else (onMinimize ?: onDismiss)() }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         dev.asfakul.yumeiro.ui.screens.online.FullScreenDialogBars()
         Surface(color = DarkSurface, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -343,23 +451,26 @@ fun PageStreamFinderDialog(
                         Text(pageTitle.ifBlank { "Find stream" }, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = TextSecondary) }
                     IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
-                if (showHint && !autoActive) {
-                    Surface(color = GlassFill, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(8.dp).clickable { showHint = false }.testTag("page_finder_hint")) {
-                        Text(
-                            (autoNote ?: reason) + "\n\nStart playback on the page; detected streams appear below. Tap to hide.",
-                            color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(10.dp),
-                        )
-                    }
-                }
+                if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
+                            // OL-1: a kept page comes back as it was (no reload).
+                            keep?.webView?.let { kept ->
+                                (kept.parent as? android.view.ViewGroup)?.removeView(kept)
+                                keep.adopt(ctx)
+                                kept.onResume()
+                                webViewRef = kept
+                                return@AndroidView kept
+                            }
                             // Local + with(page), never WebView(..).apply {}: CodeQL counts apply's result as a new WebView and misses these settings.
-                            val page = WebView(ctx)
+                            val page = if (keep != null) WebView(android.content.MutableContextWrapper(ctx)) else WebView(ctx)
+                            keep?.webView = page
                             page.settings.allowFileAccess = false
                             page.settings.allowContentAccess = false
                             with(page) {
@@ -375,6 +486,8 @@ fun PageStreamFinderDialog(
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 addJavascriptInterface(object {
                                     @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
+                                    @JavascriptInterface fun onNewMedia(title: String) = switched(title)
+                                    @JavascriptInterface fun onTitle(title: String) = titled(title)
                                     @JavascriptInterface fun onDrm(system: String) {
                                         val system = dev.asfakul.yumeiro.online.web.pageDrmSystemName(system)
                                         synchronized(capture) { capture.drmSystem = system }
@@ -388,6 +501,8 @@ fun PageStreamFinderDialog(
                                 SafeWebView.harden(this)
                                 // Pop-ups and click-catcher ad overlays stay off while the user browses.
                                 SafeWebView.addAdShield(this)
+                                // DL-WEB: a file link on the page opens the shared download popup.
+                                dev.asfakul.yumeiro.online.web.WebDownloads.attach(this) { currentUrl }
                                 webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                         val scheme = request?.url?.scheme?.lowercase()
@@ -399,7 +514,15 @@ fun PageStreamFinderDialog(
                                         request?.let { record(it.url.toString(), it.method ?: "GET", it.requestHeaders.orEmpty()) }
                                         return null // the page loads normally; we only observe
                                     }
+                                    override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                        // OL-3: an in-page navigation (single-page sites) to another address is another video.
+                                        if (url != null && !isReload && url.substringBefore('#') != currentUrl.substringBefore('#')) {
+                                            currentUrl = url
+                                            switched(null)
+                                        }
+                                    }
                                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                        if (url != null && url.substringBefore('#') != currentUrl.substringBefore('#')) switched(null)
                                         url?.let { currentUrl = it }
                                         if (autoActive && url != null && PageStreamCapture.needsUser(url)) {
                                             autoActive = false
@@ -415,7 +538,8 @@ fun PageStreamFinderDialog(
                                     base?.referer?.let { put("Referer", it) }
                                     base?.headers?.let { putAll(it) }
                                 }
-                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, pageUrl, headers)
+                                // OL-1: a kept tab that gave its page back on low memory reopens where it was.
+                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, if (keep != null) currentUrl else pageUrl, headers)
                             }
                             page
                         },
@@ -427,32 +551,17 @@ fun PageStreamFinderDialog(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                Surface(color = DarkSurface, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            if (found.isEmpty()) "No stream detected yet — start the video on the page." else "Detected streams",
-                            color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                        )
-                        drmNote?.let { Text(it, color = TextTertiary, fontSize = 11.sp) }
-                        LazyColumn(Modifier.heightIn(max = 180.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(found, key = { it.url }) { c ->
-                                Row(
-                                    Modifier.fillMaxWidth().background(GlassFill, RoundedCornerShape(12.dp)).clickable { play(c) }.padding(10.dp).testTag("page_finder_stream"),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(c.label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                        Text(c.url, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Box(Modifier.size(34.dp).background(SpotifyGreen, RoundedCornerShape(17.dp)), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.PlayArrow, "Play", tint = OnAccent, modifier = Modifier.size(20.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                DetectedStreamsPanel(
+                    found = found, drmNote = drmNote, state = panel,
+                    nowTitle = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREAM_CURRENT_ONLY)) found.firstOrNull { it.title.isNotBlank() }?.title ?: pageTitle else null, onState = { panel = it },
+                    onRescan = {
+                        // OL-2: start over: forget what was seen, then ask the page for what it plays now.
+                        synchronized(capture) { capture.reset() }
+                        found.clear()
+                        webViewRef?.evaluateJavascript(PageStreamCapture.RESCAN_JS, null)
+                    },
+                    onPlay = { play(it) },
+                )
             }
         }
     }

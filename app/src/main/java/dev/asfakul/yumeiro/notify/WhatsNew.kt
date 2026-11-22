@@ -21,7 +21,7 @@ object WhatsNew {
         "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint and their own 18+ switch. " +
         "Private downloads: the lock at the top of Downloads, or Settings → Downloads. " +
         "Statistics: Settings → Your statistics, or the Statistics card in Library music. " +
-        "Telegram channels (no login): Settings → Telegram & web sites, then type @channel or a t.me link. TeraBox and DiskWala links work there too. " +
+        "Telegram channels (no login): Settings → Telegram, then type @channel or a t.me link. TeraBox and DiskWala links work there too. " +
         "Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. " +
         "Video quality, Anime4K and torrents: Settings → Video quality & playback. Subtitles and skip intro: Settings → Subtitles & intros. " +
         "Hi-Res audio, equalizer and lyrics: Settings → Music & sound. DNS fallback and proxy: Settings → Network. " +
@@ -30,7 +30,8 @@ object WhatsNew {
     fun shouldPost(firstInstall: Long, lastUpdate: Long, version: String): Boolean =
         // 2.0.0 is the 1.9.0 feature set with the player crash fixed; most users skip 1.9.0, so the
         // note is posted for 2.0.x too (same ID: anyone who saw it on 1.9.0 does not get it again).
-        (version.startsWith("1.9.") || version.startsWith("2.0.")) && lastUpdate > firstInstall
+        // 2.1.x: same note for people who update straight from 1.8.x (release checklist W8).
+        (version.startsWith("1.9.") || version.startsWith("2.0.") || version.startsWith("2.1.")) && lastUpdate > firstInstall
 
     /** Call off the main thread (it reads the inbox file). */
     fun postOnce(c: Context) {

@@ -174,3 +174,13 @@
 -keep class io.github.anilbeesetti.nextlib.media3ext.ffdecoder.** { *; }
 -keep class androidx.media3.decoder.SimpleDecoderOutputBuffer { *; }
 -keep class androidx.media3.decoder.DecoderInputBuffer { *; }
+
+# ---- F-02 / ADR-052: TDLib (Telegram login) ----
+# libtdjsonjava.so's JNI_OnLoad registers its natives against these classes by name.
+-keep class org.drinkless.tdlib.JsonClient { *; }
+-keep interface org.drinkless.tdlib.JsonClient$LogMessageHandler { *; }
+
+# B-31 (ADR-053): libtorrent4j's SWIG layer is called from native code by name (alerts, callbacks).
+-keep class org.libtorrent4j.swig.** { *; }
+-keep class org.libtorrent4j.** { *; }
+-dontwarn org.libtorrent4j.**

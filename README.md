@@ -30,6 +30,35 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
+## What's new in 2.1.0
+
+<!-- RELEASE-2.1-IMAGES -->
+<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.1.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
+<p align="center">
+<img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" alt="No more freezes" width="200">
+<img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" alt="A friendlier downloader" width="200">
+<img src="docs/assets/release-2.1/post-03-shortcuts-1080x1350.png" alt="More Home shortcuts" width="200">
+<img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" alt="Telegram has its own page" width="200">
+</p>
+
+Yumeiro 2.1.0 follows 2.0.0. Full notes:
+[CHANGELOG.md](CHANGELOG.md). Things that still need a real phone: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
+
+| | |
+|---|---|
+| **No more freezes** | The touch freeze of 2.0.0 is fixed, and a new automatic check fails the build on any frame over 700 ms on a low-RAM phone. |
+| **Feeds at once** | Yumix and Home show the saved feed straight away, even after a night away or an update, and refresh behind it; fastest extensions first, dead sites set aside. |
+| **A friendlier downloader** | Offline / Permanent switch, real quality, audio and subtitle choices for any stream, one episode or a range, whole music playlists. |
+| **Websites that stay open** | One website tab stays open while a stream plays; the stream bar follows the video playing now. |
+| **More sources** | Nuvio scraper repositories add their streams to any title; TeraBox plays full files when you are signed in; DiskWala hands off to its app. |
+| **Vertical player** | Swipe through Shorts and any portrait video. |
+| **Live TV by country** | Country filter in big playlists. |
+| **Your profiles, really yours** | Extensions, repositories, pins and reading are per profile; "Forgot PIN" uses security questions. |
+| **Yumeiro, all in one** | One built-in source for drama, films, documentaries, cartoons and TV, with no install; public-domain classics from the Internet Archive play with no source at all. |
+| **Yumeiro Live** | One checked Live TV list from iptv-org, dead links removed every day, with a Country filter and "checked N hours ago". |
+| **Smaller downloads** | Per-processor APKs (arm64-v8a, armeabi-v7a) next to the universal one; Settings → Updates shows your processor and the exact update file. |
+| **Upcoming you can search** | Search, a filter icon, and filters built from the calendar itself. |
+
 ## What's new in 2.0.0
 
 Yumeiro 2.0.0 replaces 1.9.0: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
@@ -83,7 +112,8 @@ Settings is now organised by subject. Every page is also found by Settings searc
 |---|---|
 | Profiles, PINs, "Who's watching?", 18+ per profile | Settings → You → Profiles |
 | Your statistics (week, streak, activity map) | Settings → You → Your statistics |
-| Public Telegram channels (no login), saved web sites | Settings → Sources & accounts → Telegram & web sites |
+| Public Telegram channels (no login) | Settings → Sources & accounts → Telegram |
+| Saved web sites | Settings → Sources & accounts → Websites |
 | Extensions, script repos (Vega, Nuvio, SkyStream), home servers | Settings → Sources & accounts → Sources |
 | Video quality, decoder, TorrServer | Settings → Video → Video quality & playback |
 | Subtitles, subtitle downloads, skip intros | Settings → Video → Subtitles & intros |
@@ -94,7 +124,8 @@ Settings is now organised by subject. Every page is also found by Settings searc
 
 ## Release status
 
-- **2.0.0 is the current release** (2026-11-20); it replaces 1.9.0, whose release build crashed when a video opened. Notes: [CHANGELOG.md](CHANGELOG.md).
+- **2.1.0 is the current release**; it replaces 2.0.0. Notes: [CHANGELOG.md](CHANGELOG.md).
+- **2.0.0** (2026-11-20) replaced 1.9.0, whose release build crashed when a video opened.
 - **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
   pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);
   what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
@@ -130,8 +161,8 @@ like a crowd of new users would. Full notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Android TV, Google TV and Fire TV
 
-Yumeiro installs on TV boxes and sticks from the same APKs (use `armeabi-v7a` for most Fire TV Sticks, `arm64-v8a`
-for newer Google TV devices, or the universal APK if unsure). On a TV it switches to TV mode on its own:
+Yumeiro installs on TV boxes and sticks with the TV APK (`Yumeiro-TV-v<version>.tv.apk`, universal, Android 7.0 or
+newer). On a TV it switches to TV mode on its own:
 
 - **Left navigation rail** instead of the bottom dock. Icon-only until focused, then it shows labels. D-pad Left from the left edge of any page opens it.
 - **Every button shows where you are**: a visible focus ring and lift on everything clickable, so the remote reaches every option.
@@ -305,7 +336,7 @@ How Yumeiro compares with the apps it learns from. All of them are great at thei
 | Crash guard for broken extensions | ✓ | – | – | partial | n/a | – | n/a |
 | Public source status page | [✓](https://yumeiro.click/status) | – | – | – | – | – | – |
 
-Yumeiro does not ship torrent streaming. Stremio add-ons that only return torrents are listed but their torrent streams are skipped.
+Torrent links (magnet links, raw info-hashes and Stremio torrent add-ons) play through your own TorrServer (Settings → Video → Video quality & playback). A built-in torrent engine is in testing and off by default.
 
 ## For extension authors
 
@@ -317,12 +348,13 @@ Repositories listed in [.github/extensions/sources.json](.github/extensions/sour
 ## Install
 
 1. Pick your APK on **[the download page](https://yumeiro.click/download)** (or [Releases](https://github.com/siamform/yumeiro/releases/latest)):
-   `Yumeiro-vX.Y.Z-arm64-v8a.apk` (most phones from 2017 on, newer TVs), `Yumeiro-vX.Y.Z-armeabi-v7a.apk` (older
-   32-bit phones, most Fire TV Sticks) or `release-Yumeiro-vX.Y.Z.apk` (universal, runs everywhere).
+   `Yumeiro-vX.Y.Z-arm64-v8a.apk` for most phones (64-bit), `Yumeiro-vX.Y.Z-armeabi-v7a.apk` for older 32-bit phones,
+   or the universal `release-Yumeiro-vX.Y.Z.apk` if you are not sure. TVs: `Yumeiro-TV-vX.Y.Z-<processor>.tv.apk` or
+   the universal `Yumeiro-TV-vX.Y.Z.tv.apk`. The download page checks your processor for you.
 2. Open it and allow "Install unknown apps" for your browser or file manager.
 3. Done. Yumeiro checks for new versions and shows you the version and source before installing (Settings → Updates).
 
-Phones and tablets: Android 9 or newer, `release-Yumeiro-v<version>.apk`. Android TV, Google TV and Fire TV: Android 7.0 or newer, `Yumeiro-TV-v<version>.tv.apk`. Each is one universal APK that runs on every processor (arm64-v8a, armeabi-v7a, x86, x86_64).
+Phones and tablets: Android 9 or newer, `release-Yumeiro-v<version>.apk`. Android TV, Google TV and Fire TV: Android 7.0 or newer, `Yumeiro-TV-v<version>.tv.apk`. The universal APK runs on every processor (arm64-v8a, armeabi-v7a, x86, x86_64); the per-processor APKs are smaller. The updater always takes the file that fits your phone (Settings → Updates shows which).
 
 ## Verify a release
 
@@ -441,6 +473,25 @@ and **[docs/HANDOVER.md](docs/HANDOVER.md)**.
 Pull requests are welcome. Branch from `main`, use [Conventional Commits](https://www.conventionalcommits.org/),
 and make sure CI passes — merging to `main` ships a release automatically. Security issues: please use
 [private reporting](https://github.com/siamform/yumeiro/security/advisories/new).
+
+## Community
+
+Yumeiro is **@officialyumeiro** everywhere:
+[Website](https://yumeiro.click) ·
+[Telegram channel](https://t.me/yumeiroofficial) ·
+[Telegram group](https://t.me/chatyumeiroofficial) ·
+[Discord](https://discord.gg/eqkNymUAMJ) ·
+[Facebook](https://www.facebook.com/officialyumeiro) ·
+[Instagram](https://www.instagram.com/officialyumeiro) ·
+[X (Twitter)](https://x.com/officialyumeiro) ·
+[TikTok](https://www.tiktok.com/@officialyumeiro) ·
+[Reddit](https://www.reddit.com/user/officialyumeiro)
+
+Developer, Asfakul Siam:
+[Facebook](https://www.facebook.com/siam1p) ·
+[Instagram](https://www.instagram.com/asfakul_siam) ·
+[Telegram](https://t.me/siamorwho) ·
+[GitHub](https://github.com/siamform)
 
 ## Support the project
 

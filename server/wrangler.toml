@@ -38,7 +38,13 @@ name = "LASTFM_SIGN"
 namespace_id = "7003"
 simple = { limit = 30, period = 60 }
 
-# LASTFM_API_KEY and LASTFM_SHARED_SECRET are Worker secrets (scripts/deploy-worker.sh puts them from .env).
+# E1-A: per-IP limit on Yumeiro Hub catalog calls that miss the edge cache.
+[[ratelimits]]
+name = "HUB"
+namespace_id = "7004"
+simple = { limit = 120, period = 60 }
+
+# LASTFM_API_KEY and LASTFM_SHARED_SECRET are Worker secrets (scripts/deploy-worker.sh puts them from .env). TMDB_TOKEN too (E1-A).
 
 [triggers]
 # Every 10 minutes: episodes that just aired on AniList. the 03:00 UTC run also prunes silent devices.

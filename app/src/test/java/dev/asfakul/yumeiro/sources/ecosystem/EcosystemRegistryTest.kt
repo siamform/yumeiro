@@ -69,9 +69,14 @@ class EcosystemRegistryTest {
     }
 
     @Test fun vegaRunsAndTheOthersAreRecognisedOnly() {
-        assertEquals(setOf(SourceHub.Ecosystem.VEGA), EcosystemRegistry.adapters.keys)
+        // F-05-N (ADR-057): Nuvio has an adapter now. F-05-N-ON: scripts_nuvio is on by default, so Nuvio repos are added.
+        // F-05-S (ADR-058): SkyStream has an adapter too; F-05-S-ON: scripts_skystream is on, so its repos are added.
+        // A lone .sky file is still recognised only (it has no repository to update from).
+        assertEquals(setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO, SourceHub.Ecosystem.SKYSTREAM), EcosystemRegistry.adapters.keys)
         assertFalse("Vega repos are added now", UniversalAdd.Kind.VEGA_REPO.notYet)
-        assertTrue(UniversalAdd.Kind.NUVIO_REPO.notYet && UniversalAdd.Kind.SKYSTREAM_REPO.notYet && UniversalAdd.Kind.SKY_PLUGIN.notYet)
+        assertFalse("Nuvio repos are added now (scripts_nuvio on)", UniversalAdd.Kind.NUVIO_REPO.notYet)
+        assertFalse("SkyStream repos are added now (scripts_skystream on)", UniversalAdd.Kind.SKYSTREAM_REPO.notYet)
+        assertTrue(UniversalAdd.Kind.SKY_PLUGIN.notYet)
         assertFalse("the CloudStream loader is not part of the registry", SourceHub.Ecosystem.CLOUDSTREAM in EcosystemRegistry.known)
     }
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Test-only components (installed with the test APK, never in the app). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- F-07 device check: stands in for MX Player (its published intent API). -->
+        <activity
+            android:name="dev.asfakul.yumeiro.StubPlayerActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+    </application>
+</manifest>

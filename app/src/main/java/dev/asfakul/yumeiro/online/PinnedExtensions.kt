@@ -25,7 +25,7 @@ object PinnedExtensions {
 
     fun init(context: Context) {
         if (prefs != null) return
-        val p = context.applicationContext.getSharedPreferences("pinned_extensions", Context.MODE_PRIVATE).also { prefs = it }
+        val p = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, "pinned_extensions"), Context.MODE_PRIVATE).also { prefs = it }
         _pins.value = decode(p.getString(KEY, null))
     }
 

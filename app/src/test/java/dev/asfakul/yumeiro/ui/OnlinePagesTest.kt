@@ -37,6 +37,8 @@ class OnlinePagesTest {
     @get:Rule val rule = createComposeRule()
     private val context get() = ApplicationProvider.getApplicationContext<android.app.Application>()
 
+    @org.junit.After fun hubBackOn() { dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(ApplicationProvider.getApplicationContext(), true) }
+
     @Before fun reset() {
         java.io.File(context.filesDir, "extensions").deleteRecursively()
         ExtensionManager.resetForTests(); ExtensionMarket.resetForTests()
@@ -46,10 +48,10 @@ class OnlinePagesTest {
     private fun settle(cond: () -> Boolean) = rule.waitUntil(10_000) { cond() }
 
     @Test fun switchesBetweenDeviceAndOnline() {
-        // Yumeiro Drama is on by default from 1.8.0; with it off, a fresh install has no sources
-        // and shows the get-started page.
+        // The built-in Yumeiro source (drama, classics and, since E1, the catalog) is on by default; with its one
+        // switch off (OWN-13), a fresh install has no sources and shows the get-started page.
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
-        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, false)
+        dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(ctx, false)
         var market = 0; var manage = 0
         rule.setContent {
             MTPlayerTheme {
@@ -68,6 +70,7 @@ class OnlinePagesTest {
         rule.onNodeWithTag("video_source_device").performClick()
         settle { !has("online_home") }
         dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, true)
+        dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(ctx, true)
     }
 
     @Test fun extensionsPageShowsEmptyStateAndAddMenu() {

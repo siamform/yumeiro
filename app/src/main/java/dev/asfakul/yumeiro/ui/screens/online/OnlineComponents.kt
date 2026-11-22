@@ -51,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,15 +86,55 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
             headers.forEach { (k, v) -> runCatching { addHeader(k, v) } }
         }.crossfade(true).build()
     }
-    SubcomposeAsyncImage(
-        model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier,
-        loading = { Box(Modifier.fillMaxSize().shimmer(RoundedCornerShape(0.dp))) },
-        error = {
-            Box(Modifier.fillMaxSize().background(GlassFill), contentAlignment = Alignment.Center) {
-                Icon(fallbackIcon, null, tint = TextTertiary, modifier = Modifier.size(28.dp))
-            }
-        },
-    )
+    if (!PosterImageMode.plain) {
+        SubcomposeAsyncImage(
+            model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier,
+            loading = { Box(Modifier.fillMaxSize().shimmer(RoundedCornerShape(0.dp)).testTag(PosterImageMode.LOADING_TAG)) },
+            error = { PosterFallback(fallbackIcon) },
+        )
+        return
+    }
+    // GATE-1-RENDER-4: one composition, no subcomposition per poster (Coil: "Subcomposition is slower than
+    // regular composition so this composable may not be suitable for performance-critical parts of your UI
+    // (e.g. LazyList)", https://coil-kt.github.io/coil/compose/). Loading shimmer sits under the image and
+    // leaves once it loads; the fallback icon covers it on error. propagateMinConstraints keeps the old sizing.
+    // GATE-1-RENDER-4b: no picture to fetch means the fallback at once, with no image request at all.
+    var phase by remember(request) { mutableIntStateOf(if (request.data == coil.request.NullRequestData) PosterImageMode.FAILED else PosterImageMode.LOADING) }
+    Box(modifier, propagateMinConstraints = true) {
+        if (phase == PosterImageMode.LOADING) Box(Modifier.matchParentSize().shimmer(RoundedCornerShape(0.dp)).testTag(PosterImageMode.LOADING_TAG))
+        if (request.data != coil.request.NullRequestData) coil.compose.AsyncImage(
+            model = request, contentDescription = null, contentScale = ContentScale.Crop,
+            onState = { st -> phase = PosterImageMode.next(phase, st) },
+        )
+        if (phase == PosterImageMode.FAILED) Box(Modifier.matchParentSize()) { PosterFallback(fallbackIcon) }
+    }
+}
+
+/** GATE-1-RENDER-4: how posters are drawn (flag POSTER_PLAIN_IMAGE); tags for tests. */
+internal object PosterImageMode {
+    const val LOADING = 0
+    const val LOADED = 1
+    const val FAILED = 2
+    const val LOADING_TAG = "poster_loading"
+    const val FALLBACK_TAG = "poster_fallback"
+    /**
+     * GATE-1-RENDER-4b: State.Empty (painter reset) keeps the phase, and a Loading after an Error for the same
+     * request does not bring the shimmer back over the fallback (CI 44956359334 found both nodes at once).
+     */
+    fun next(phase: Int, st: coil.compose.AsyncImagePainter.State): Int = when (st) {
+        is coil.compose.AsyncImagePainter.State.Success -> LOADED
+        is coil.compose.AsyncImagePainter.State.Error -> FAILED
+        is coil.compose.AsyncImagePainter.State.Loading -> if (phase == FAILED) FAILED else LOADING
+        else -> phase
+    }
+    val plain: Boolean get() = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.POSTER_PLAIN_IMAGE)
+}
+
+@Composable
+private fun PosterFallback(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Box(Modifier.fillMaxSize().background(GlassFill).testTag(PosterImageMode.FALLBACK_TAG), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = TextTertiary, modifier = Modifier.size(28.dp))
+    }
 }
 
 /**

@@ -34,10 +34,13 @@ class SettingsDiscoverabilityTest {
         assertEquals("stats", Category.STATS.route)
     }
 
-    @Test fun `telegram opens the web sites screen`() {
+    // F-02 split (2.1.0): Telegram and Websites are separate pages with their own entries.
+    @Test fun `telegram opens the telegram page and websites the websites page`() {
         assertEquals(Category.TELEGRAM, SettingsCatalog.search("telegram").first())
         assertTrue(Category.TELEGRAM in SettingsCatalog.search("terabox"))
-        assertEquals("websites", Category.TELEGRAM.route)
+        assertEquals("telegram", Category.TELEGRAM.route)
+        assertEquals(Category.WEBSITES, SettingsCatalog.search("websites").first())
+        assertEquals("websites", Category.WEBSITES.route)
     }
 
     @Test fun `script repos and vega find sources`() {
@@ -75,7 +78,9 @@ class SettingsDiscoverabilityTest {
         assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "1.9.0"))
         assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.0.0"))
         assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "2.0.0"))
-        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.1.0"))
+        assertTrue(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.1.0"))
+        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 1000L, version = "2.1.0"))
+        assertFalse(WhatsNew.shouldPost(firstInstall = 1000L, lastUpdate = 5000L, version = "2.2.0"))
     }
 
     @Test fun `whats new names only real settings pages`() {

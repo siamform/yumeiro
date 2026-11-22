@@ -36,7 +36,11 @@ private val RX_HLS_MAP_BYTERANGE = Regex("""BYTERANGE="(\d+)(?:@(\d+))?"""")
  * playlist points to (the same thing any HLS player does). SAMPLE-AES / DRM is refused.
  * Resumes by skipping segments already written (tracked in a small side file).
  */
-class HlsDownloader(private val client: OkHttpClient, private val headers: Map<String, String>, private val maxHeight: Int = 0) {
+class HlsDownloader(
+    private val client: OkHttpClient, private val headers: Map<String, String>, private val maxHeight: Int = 0,
+    /** OL-5: audio track picked in the download popup (label / language); null = the stream's default. */
+    private val audioWant: String? = null,
+) {
 
     /**
      * One media segment. G8-1: [start]/[length] is its `#EXT-X-BYTERANGE` inside [url] (-1 = the whole
@@ -65,7 +69,7 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         var text = fetchText(url)
         if ("#EXT-X-STREAM-INF" in text) {
             playlistUrl = bestVariant(text, url, maxHeight) ?: throw IOException("No playable variant in the playlist")
-            val audioUrl = audioRendition(text, url, playlistUrl)
+            val audioUrl = audioRendition(text, url, playlistUrl, audioWant)
             text = fetchText(playlistUrl)
             if (audioUrl != null) return downloadJoined(playlistUrl, text, audioUrl, out, join, onContainer, progress)
         }
@@ -142,6 +146,9 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
         return b.build()
     }
 
+    /** OL-5: text of [url] with this download's headers (subtitle playlists and segments). */
+    internal fun text(url: String): String = fetchText(url)
+
     private fun fetchText(url: String): String = client.newCall(request(url)).execute().use { r ->
         if (!r.isSuccessful) throw HttpStatus(r.code); r.body.string()
     }
@@ -210,7 +217,7 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
          * (its `AUDIO="group"`; the `DEFAULT=YES` rendition of that group first), or null when the variant
          * has no audio group or the group's audio is muxed into the variant (no `URI`).
          */
-        fun audioRendition(master: String, base: String, variant: String): String? {
+        fun audioRendition(master: String, base: String, variant: String, want: String? = null): String? {
             val lines = master.lines().map { it.trim() }
             val group = lines.indices.firstNotNullOfOrNull { i ->
                 val l = lines[i]
@@ -219,6 +226,8 @@ class HlsDownloader(private val client: OkHttpClient, private val headers: Map<S
                 if (resolve(base, uri) != variant) null else RX_HLS_AUDIO_GROUP.find(l)?.groupValues?.get(1) ?: ""
             }?.takeIf { it.isNotEmpty() } ?: return null
             val media = lines.filter { it.startsWith("#EXT-X-MEDIA:") && "TYPE=AUDIO" in it && RX_HLS_GROUP_ID.find(it)?.groupValues?.get(1) == group }
+            // OL-5: the audio track picked in the download popup, when this group has it.
+            if (want != null) DownloadTracks.parseMaster(master, base)?.let { m -> DownloadTracks.pickAudio(m.audios, group, want)?.uri?.let { return it } }
             val pick = media.firstOrNull { "DEFAULT=YES" in it && RX_HLS_URI.containsMatchIn(it) } ?: media.firstOrNull { RX_HLS_URI.containsMatchIn(it) } ?: return null
             return RX_HLS_URI.find(pick)?.groupValues?.get(1)?.let { resolve(base, it) }
         }

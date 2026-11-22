@@ -295,7 +295,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                 MyListButton(d)
                 if (d.unsupportedReason == null && (d.playData != null || ordered.isNotEmpty()) && d.kind != OnlineKind.LIVE) {
                     Spacer(Modifier.height(8.dp))
-                    TitleDownloadButton(d, version, ordered, episodes, season?.title?.takeIf { seasons.size > 1 }, Modifier.fillMaxWidth())
+                    TitleDownloadButton(d, version, ordered, episodes, season?.title?.takeIf { seasons.size > 1 }, Modifier.fillMaxWidth(), current = target, onVersion = { version = it })
                 }
                 d.plot?.takeIf { it.isNotBlank() }?.let { plot ->
                     Spacer(Modifier.height(14.dp))

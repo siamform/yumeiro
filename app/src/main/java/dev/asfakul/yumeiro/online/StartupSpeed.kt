@@ -35,6 +35,14 @@ object StartupSpeed {
     }
 
     /**
+     * SPEED-3: pinned first (as above), then the extensions whose home answered fastest on this phone, unknown in the
+     * middle, quarantined last ([ExtensionSpeed]). The feed fills from the first extensions loaded, so a slow or dead
+     * one no longer loads ahead of fast ones.
+     */
+    fun <T> loadOrder(items: List<T>, name: (T) -> String, pinned: List<String>, stat: (String) -> ExtensionSpeed.Stat?, now: Long): List<T> =
+        loadOrder(ExtensionSpeed.order(items, name, null, stat, now), name, pinned)
+
+    /**
      * Loads [items] in order and calls [publish] after each one, so a screen can use the first extension
      * while the rest load. [open] (the costly, thread-safe step: opening the code file) runs ahead for up to
      * [ahead] items at once; [load] (registers providers, must be one at a time) runs strictly in order.

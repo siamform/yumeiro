@@ -264,9 +264,20 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                             Text("Update all (${updates.size})", fontWeight = FontWeight.Bold)
                         }
                     }
-                    if (tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
+                    // OWN-13: with the hub on, one "Yumeiro" card (Discover: All, drama, Movies, TV; Installed) instead of two.
+                    val hubCard = officialHub() && repoFilter == null &&
+                        ((tab == MarketTab.DISCOVER && category in setOf("All", "Short drama", "Asian drama", "Movies", "TV")) || (tab == MarketTab.INSTALLED && query.isBlank())) &&
+                        (query.isBlank() || "yumeiro all in one official drama short dramabox reelshort shortmax classics movies films documentaries cartoons public domain archive film noir".contains(query.trim(), true))
+                    if (hubCard) item("builtin_yumeiro") { YumeiroHubCard() }
+                    if (!officialHub() && tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
                         (query.isBlank() || "yumeiro drama short dramabox reelshort shortmax".contains(query.trim(), true))
                     ) item("builtin_drama") { DramaBuiltinCard() }
+                    // OWN-9: the official Yumeiro Classics source, in Discover (All / Movies) and in Installed (with Drama).
+                    if (!officialHub() && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS) && repoFilter == null &&
+                        ((tab == MarketTab.DISCOVER && (category == "All" || category == "Movies")) || tab == MarketTab.INSTALLED) &&
+                        (query.isBlank() || "yumeiro classics movies public domain archive film noir cartoons".contains(query.trim(), true))
+                    ) item("builtin_classics") { ClassicsBuiltinCard() }
+                    if (!officialHub() && tab == MarketTab.INSTALLED && repoFilter == null && query.isBlank()) item("builtin_drama_installed") { DramaBuiltinCard() }
                     items(visible, key = { it.key }, contentType = { "market_card" }) { ext ->
                         MarketCard(
                             ext = ext,
@@ -316,13 +327,16 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
         confirm = "Add", onDismiss = { showRepoDialog = false },
     ) { text, done ->
         scope.launch {
-            runCatching { ExtensionManager.addRepository(context, text) }
-                .onSuccess { repo ->
+            // OWN-4: a Vega, SkyStream, Stremio, Aniyomi/Mihon or single-extension link works here too.
+            dev.asfakul.yumeiro.sources.UniversalAdd.addFromRepoDialog(context, text)
+                .onSuccess { (repo, other) ->
                     done(null); showRepoDialog = false
-                    AppMessages.success(context, "Added ${repo.name}")
-                    load(true); repoFilter = repo.url; tab = MarketTab.DISCOVER
+                    if (repo != null) {
+                        AppMessages.success(context, "Added ${repo.name}")
+                        load(true); repoFilter = repo.url; tab = MarketTab.DISCOVER
+                    } else { AppMessages.success(context, other?.message ?: "Added"); load(true) }
                 }
-                .onFailure { done(OnlineErrors.friendly(it)) }
+                .onFailure { if (it is dev.asfakul.yumeiro.online.ExtensionReview.Declined) { done(null); showRepoDialog = false } else done(OnlineErrors.friendly(it)) }
         }
     }
 }
@@ -366,6 +380,8 @@ private fun MarketCard(
     ext: RemoteExtension, installedVersion: Int?, hasUpdate: Boolean, busy: Boolean, showRank: Boolean,
     onInstall: () -> Unit, onManage: () -> Unit,
 ) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val rich = remember { dev.asfakul.yumeiro.FeatureFlags.on(ctx, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS) }
     Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("market_item_${ext.internalName}")) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -375,14 +391,16 @@ private fun MarketCard(
                 ExtensionIcon(ext.iconUrl?.replace("%size%", "128"))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(ext.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    // F-21: shared label. Source count is only known after install, so the market leaves it out.
+                    val label = remember(rich, ext.name, ext.language, ext.repoName, ext.version, ext.fileSize) {
+                        dev.asfakul.yumeiro.online.ExtensionLabels.build(
+                            ext.name, ext.language.takeIf { rich }, null, "CloudStream".takeIf { rich }, ext.repoName,
+                            listOfNotNull("v${ext.version}", ext.fileSize?.takeIf { it > 0 }?.let { formatSize(it) }),
+                        )
+                    }
+                    ExtensionLabelText(label, titleColor = TextPrimary, lineColor = TextTertiary) {
                         if (ext.verified) { Spacer(Modifier.width(4.dp)); Icon(Icons.Default.Verified, "Curated", tint = SpotifyGreen, modifier = Modifier.size(14.dp)) }
                     }
-                    Text(
-                        listOfNotNull("v${ext.version}", ext.repoName, ext.fileSize?.takeIf { it > 0 }?.let { formatSize(it) }).joinToString(" · "),
-                        color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
                     // FlowRow + single-line chunks: when the trailing button grows (e.g. "Installed"),
                     // whole chunks wrap to the next line instead of breaking text letter by letter.
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("market_stats_${ext.internalName}")) {
@@ -417,7 +435,8 @@ private fun MarketCard(
             Spacer(Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Pill(ext.statusLabel, when (ext.status) { 0 -> ErrorColor; 2, 3 -> WarnColor; else -> SpotifyGreen })
-                ext.language?.takeIf { it.isNotBlank() }?.let { Pill(it.uppercase(), TextSecondary) }
+                // F-21: the language is the chip next to the name now; keep a pill only when it isn't a code.
+                ext.language?.takeIf { it.isNotBlank() && (!rich || dev.asfakul.yumeiro.online.ExtensionLabels.langCode(it) == null) }?.let { Pill(it.uppercase(), TextSecondary) }
                 ext.categories.take(3).forEach { Pill(it, TextSecondary) }
                 if (ext.origin != "curated") OriginPill(ext.origin, ext.verified)
                 if (ext.apiVersion > OnlineRuntime.API_VERSION) Pill("Needs app update", ErrorColor)

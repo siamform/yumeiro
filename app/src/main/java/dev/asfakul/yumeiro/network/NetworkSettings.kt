@@ -100,25 +100,53 @@ object NetworkSettings {
     /** Loads the settings if [attach] was called and nothing loaded them yet. Disk read: off main. */
     fun ensureLoaded() { if (!loaded) app?.let { init(it) } }
 
+    /**
+     * CI-DNS-RACE (unit run 44894173529, Nbug6FallbackTest): [init] read the prefs and then wrote [dns] without
+     * looking again, so a setting saved while the prefs were being read (PrefsWarmup / StreamResolver load them on a
+     * background thread) was overwritten with the old stored one. Writes now go through [writeLock] (no disk inside):
+     * the stored value applies only if nothing was set meanwhile.
+     */
+    private val writeLock = Any()
+    /** Test hook: runs after [init] read the prefs, before it writes. */
+    @Volatile internal var afterPrefsReadForTests: (() -> Unit)? = null
+
+    /** CI-DNS-RACE-2: bumped by [resetForTests]; an init that started before a reset must not write after it. */
+    @Volatile private var generation = 0
+
     @Synchronized
     fun init(context: Context) {
         if (loaded) return
+        val gen = generation
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        _dns.value = DnsConfig(
+        val stored = if (!p.contains("dns_provider")) freshDefault(context) else DnsConfig(
             provider = enumOr(p.getString("dns_provider", null), DnsProvider.SYSTEM),
             transport = enumOr(p.getString("dns_transport", null), DnsTransport.DOH),
             mode = enumOr(p.getString("dns_mode", null), DnsMode.FALLBACK),
             auto = p.getBoolean("dns_auto", true),
             fallback = p.getBoolean("dns_fallback_auto", false),
         )
+        val bypass = p.getStringSet(BYPASS_KEY, emptySet()).orEmpty()
+        afterPrefsReadForTests?.invoke()
         prefs = p
-        SmartDns.restoreBypass(p.getStringSet(BYPASS_KEY, emptySet()).orEmpty())
-        loaded = true
+        SmartDns.restoreBypass(bypass)
+        synchronized(writeLock) { if (!loaded && gen == generation) { _dns.value = stored; loaded = true } }
     }
 
+    /**
+     * OWN-7 / OWN-2: the settings used when the user never saved a DNS choice (fresh install, or an update from a
+     * version where they kept the default). Before, that was System DNS + auto bypass, and on networks whose DNS
+     * blocks or hijacks the sources' hosts in a way the bypass does not notice, online features failed until the
+     * user picked a resolver in Settings → Network (the setup guide's "Set up DNS" step). Now Cloudflare
+     * DNS-over-HTTPS answers, system DNS is the safety net when Cloudflare can't be reached, and LAN names still
+     * use system DNS. A saved choice (any [setDns]) is always kept. Kill switch: [FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS].
+     */
+    internal fun freshDefault(context: Context): DnsConfig =
+        if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS))
+            DnsConfig(provider = DnsProvider.CLOUDFLARE, transport = DnsTransport.DOH, mode = DnsMode.ALWAYS)
+        else DnsConfig()
+
     fun setDns(context: Context, config: DnsConfig) {
-        _dns.value = config
-        loaded = true
+        synchronized(writeLock) { _dns.value = config; loaded = true }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("dns_provider", config.provider.name)
             .putString("dns_transport", config.transport.name)
@@ -130,8 +158,8 @@ object NetworkSettings {
     }
 
     /** For tests. */
-    internal fun setForTests(config: DnsConfig) { _dns.value = config; loaded = true; SmartDns.clearCache() }
-    internal fun resetForTests() { loaded = false; app = null; prefs = null; _dns.value = DnsConfig(); SmartDns.clearCache() }
+    internal fun setForTests(config: DnsConfig) { synchronized(writeLock) { _dns.value = config; loaded = true }; SmartDns.clearCache() }
+    internal fun resetForTests() { synchronized(writeLock) { generation++; loaded = false }; app = null; prefs = null; _dns.value = DnsConfig(); SmartDns.clearCache() }
 
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =
         runCatching { enumValueOf<T>(name ?: return default) }.getOrDefault(default)

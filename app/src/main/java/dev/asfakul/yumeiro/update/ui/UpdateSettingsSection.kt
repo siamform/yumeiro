@@ -92,6 +92,23 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                         "Build ${BuildConfig.VERSION_CODE} · ${if (manager.usesAuthenticatedChannel) "Private" else "Public"} GitHub channel",
                         style = MaterialTheme.typography.bodySmall, color = TextSecondary,
                     )
+                    // ARM check: the phone's processor, the installed build, and what the next update takes.
+                    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+                    val cpu by androidx.compose.runtime.produceState<dev.asfakul.yumeiro.update.ProcessorCheck.Result?>(null) {
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.update.ProcessorCheck.run(appContext) }
+                    }
+                    cpu?.let { r ->
+                        Text(
+                            "Processor ${dev.asfakul.yumeiro.update.ProcessorCheck.label(r.phone)} · installed build: ${dev.asfakul.yumeiro.update.ProcessorCheck.installedText(r)}",
+                            style = MaterialTheme.typography.bodySmall, color = TextSecondary,
+                            modifier = Modifier.testTag("update_processor"),
+                        )
+                        r.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = TextSecondary) }
+                    }
+                    (state as? UpdateState.Available)?.release?.asset?.let { a ->
+                        Text("Update file: ${a.name}" + (if (a.sizeBytes > 0) " · ${"%.1f".format(a.sizeBytes / 1048576.0)} MB" else ""),
+                            style = MaterialTheme.typography.bodySmall, color = TextSecondary, modifier = Modifier.testTag("update_file"))
+                    }
                 }
             }
 

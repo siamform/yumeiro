@@ -23,6 +23,9 @@ object ProviderOverrides {
         if (prefs == null) prefs = context.applicationContext.getSharedPreferences("provider_overrides", Context.MODE_PRIVATE)
     }
 
+    /** FREEZE-2: part of the provider-list stamp, so overrides apply once they are readable. */
+    val ready: Boolean get() = prefs != null
+
     fun mainUrl(api: String): String? = prefs?.getString("url:$api", null)
 
     /** Original address the extension shipped with. */

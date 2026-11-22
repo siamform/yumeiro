@@ -97,6 +97,10 @@ object ExtensionManager {
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(Snapshot())
+    /** F-19-EXT: entries and repositories other profiles have (kept on disk, never shown or loaded here). */
+    private var otherInstalled: List<InstalledExtension> = emptyList()
+    private var otherRepos: List<RepoRef> = emptyList()
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
     val state: StateFlow<Snapshot> = _state.asStateFlow()
 
     /** Plugins currently loaded, by installed key. */
@@ -216,7 +220,10 @@ object ExtensionManager {
             // SPD-1 (ADR-038): the feed used to wait here for every extension. Each one is published as soon
             // as it is loaded (pinned first), and the next files are opened while the current one loads.
             val pins = runCatching { PinnedExtensions.init(context); PinnedExtensions.pins.value }.getOrDefault(emptyList())
-            val order = StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
+            val order = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) {
+                runCatching { ExtensionSpeed.init(context) }
+                StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins, ExtensionSpeed::stat, System.currentTimeMillis())
+            } else StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
             StartupSpeed.loadProgressively(
                 order,
                 ahead = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 2 else 4,
@@ -254,22 +261,85 @@ object ExtensionManager {
 
     fun pluginFile(context: Context, ext: InstalledExtension): File = File(pluginDir(context), ext.fileName)
 
-    /** Providers of enabled, loaded extensions. */
-    fun providers(): List<MainAPI> {
+    /**
+     * Providers of enabled, loaded extensions.
+     * FREEZE-2: built once per provider change ([providerStamp]) and shared. Screens read this while composing
+     * (several times per frame on Home, Yumix and Search); rebuilding it on every call was the cost behind the
+     * 2.0.0 touch freeze (FREEZE-1).
+     */
+    fun providers(): List<MainAPI> = providerMemo.get(providerStamp()) { buildProviders() }
+
+    private val providerMemo = StampMemo<List<MainAPI>>()
+
+    private fun buildProviders(): List<MainAPI> {
         val enabled = _state.value.installed.filter { it.enabled }.map { it.key }.toSet()
         val files = synchronized(plugins) { plugins.filterKeys { it in enabled }.values.mapNotNull { it.filename }.toSet() }
         val cloudstream = runCatching { APIHolder.allProviders.toList() }.getOrDefault(emptyList())
             .filter { it.sourcePlugin in files }
         // Aniyomi, Stremio, JavaScript and home-server sources join through the same MainAPI shape.
-        return (cloudstream + dev.asfakul.yumeiro.sources.SourceHub.providers())
-            .distinctBy { it.name }
+        val all = (cloudstream + dev.asfakul.yumeiro.sources.SourceHub.providers()).distinct()
+        // PIN-2: the same extension name from two repositories used to show once (distinctBy name). Now the
+        // one installed first keeps its name (its history, bookmarks, downloads and pins are under it) and
+        // the others get "Name · Repo", so both are listed and can be picked.
+        val ext = extensionLookup()
+        uniqueNames(all, { it.name }, { ext(it)?.installedAt ?: Long.MAX_VALUE }, { ext(it)?.repoName })
+            .forEach { (api, newName) -> runCatching { api.name = newName } }
+        return all.distinctBy { it.name }
             .also { ProviderOverrides.apply(it) }
+    }
+
+    /**
+     * PIN-2, pure: new names for items whose name is taken. Per name, the lowest [rank] (then list order)
+     * keeps it; each other gets "name · label" (or "name · 2", "name · 3" when the label is blank or taken).
+     */
+    internal fun <T> uniqueNames(items: List<T>, name: (T) -> String, rank: (T) -> Long, label: (T) -> String?): List<Pair<T, String>> {
+        val taken = items.map(name).toMutableSet()
+        val out = ArrayList<Pair<T, String>>()
+        items.withIndex().groupBy { name(it.value) }.values.filter { it.size > 1 }.forEach { group ->
+            val ordered = group.sortedWith(compareBy({ rank(it.value) }, { it.index }))
+            ordered.drop(1).forEach { (_, item) ->
+                val base = name(item)
+                var candidate = label(item)?.trim()?.takeIf { it.isNotEmpty() }?.let { "$base · $it" }
+                var n = 2
+                while (candidate == null || candidate in taken) { candidate = "$base · ${n++}" }
+                taken += candidate
+                out += item to candidate
+            }
+        }
+        return out
     }
 
     /** Called by [dev.asfakul.yumeiro.sources.SourceHub] when bridged sources change, so screens reload. */
     fun bumpGeneration() = _state.update { it.copy(generation = it.generation + 1) }
 
     fun provider(name: String): MainAPI? = providers().firstOrNull { it.name == name }
+        // OWN-13: titles saved under "Yumeiro Drama" / "Yumeiro Classics" open with the one "Yumeiro" source.
+        ?: dev.asfakul.yumeiro.sources.hub.YumeiroHub.aliasOf(name)?.let { alias -> providers().firstOrNull { it.name == alias } }
+
+    /**
+     * FREEZE-1: changes whenever [providers] can change: engine state, bridged sources, loaded CloudStream
+     * providers or plugins. Engine and bridge states are compared by identity (every update is a new copy).
+     */
+    fun providerStamp(): Any = ProviderStamp(
+        _state.value,
+        dev.asfakul.yumeiro.sources.SourceHub.state.value,
+        runCatching { APIHolder.allProviders.size }.getOrDefault(-1),
+        synchronized(plugins) { plugins.size },
+        ProviderOverrides.ready,
+    )
+
+    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int, val overrides: Boolean) {
+        override fun equals(other: Any?): Boolean = other is ProviderStamp && other.engine === engine &&
+            other.hub === hub && other.apis == apis && other.plugins == plugins && other.overrides == overrides
+        override fun hashCode(): Int = System.identityHashCode(engine) * 31 + apis * 7 + plugins
+    }
+
+    /** FREEZE-1: [extensionOf] for many providers with one pass over the plugins. */
+    fun extensionLookup(): (MainAPI) -> InstalledExtension? {
+        val byFile = synchronized(plugins) { plugins.entries.mapNotNull { e -> e.value.filename?.let { it to e.key } }.toMap() }
+        val byKey = _state.value.installed.associateBy { it.key }
+        return { api -> byFile[api.sourcePlugin]?.let { byKey[it] } }
+    }
 
     /** Extension that registered [api]. */
     fun extensionOf(api: MainAPI): InstalledExtension? {
@@ -281,12 +351,35 @@ object ExtensionManager {
 
     // region install / remove
 
+    /** PIN-1-DUP: most installed copies of one extension name (each from a different repository). */
+    const val MAX_SAME_NAME = 2
+
+    /**
+     * PIN-1-DUP, pure: the message to show when installing [name] as [key] would make a third copy of that
+     * name, else null. Updating or reinstalling a copy that is already there ([key] matches) is always allowed.
+     * Names compare without case and surrounding spaces, as the user reads them.
+     */
+    internal fun duplicateCapMessage(installed: List<InstalledExtension>, name: String, key: String): String? {
+        if (installed.any { it.key == key }) return null
+        val norm = name.trim().lowercase()
+        val same = installed.filter { it.name.trim().lowercase() == norm }
+        if (same.size < MAX_SAME_NAME) return null
+        val from = same.joinToString(" and ") { it.repoName.ifBlank { "Added manually" } }
+        return "$name is already installed $MAX_SAME_NAME times (from $from). Remove one first"
+    }
+
+    private fun checkDuplicateCap(name: String, key: String) {
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DUPLICATE_CAP)) return
+        duplicateCapMessage(_state.value.installed, name, key)?.let { throw ExtensionException(it) }
+    }
+
     /** Downloads and installs (or updates) [remote]. Throws [ExtensionException] with a friendly message. */
     suspend fun install(
         context: Context, remote: RemoteExtension, review: ExtensionReview.Mode = ExtensionReview.Mode.ALWAYS,
     ): InstalledExtension = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         if (remote.apiVersion > OnlineRuntime.API_VERSION) throw ExtensionException("${remote.name} needs a newer app version")
+        checkDuplicateCap(remote.name, remote.key)
         markBusy(remote.key, true)
         try {
             val bytes = downloadFirst(listOfNotNull(remote.url, remote.sourceUrl).distinct())
@@ -350,6 +443,7 @@ object ExtensionManager {
             .replace(RX_EXTENSIONMANAGER_1, "_").take(80)
         val name = manifest.name ?: internal
         val repoUrl = "manual:$internal"
+        checkDuplicateCap(name, RemoteExtension.keyOf(repoUrl, internal))
         val isUpdate = _state.value.installed.any { it.key == RemoteExtension.keyOf(repoUrl, internal) }
         gate(review, name, manifest.version, if (source == "file") "a file on this phone" else source, isUpdate, bytes)
         return mutex.withLock {
@@ -449,6 +543,12 @@ object ExtensionManager {
             throw ExtensionException("${ext.name} can't run in this app: ${info.error ?: "unknown error"}")
         }
         if (previous != null && previous.fileName != file.name) deleteIfUnused(context, File(pluginDir(context), previous.fileName), previous.key)
+        // F-19-EXT: another profile's copy of the same entry is now this one (shared, newest file).
+        otherInstalled.firstOrNull { it.key == installed.key }?.let { theirs ->
+            otherInstalled = otherInstalled - theirs
+            if (theirs.fileName != file.name) deleteIfUnused(context, File(pluginDir(context), theirs.fileName), theirs.key, alsoOwner = true)
+        }
+        SCOPE.claim(context, SCOPE.EXTENSIONS, installed.key)
         removedDefaults.remove(installed.key)
         // The user added Internet Archive themselves: the 1.8.0 clean-up must not take it away.
         if (previous == null && installed.key == DEFAULT_KEY) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
@@ -468,7 +568,9 @@ object ExtensionManager {
         mutex.withLock {
             val ext = _state.value.installed.firstOrNull { it.key == key } ?: return@withLock
             unloadInternal(key)
-            deleteIfUnused(context, File(pluginDir(context), ext.fileName), key)
+            // F-19-EXT: another profile still has it: keep the file and the entry for that profile.
+            if (SCOPE.release(context, SCOPE.EXTENSIONS, key)) otherInstalled = otherInstalled.filterNot { it.key == key } + ext
+            else deleteIfUnused(context, File(pluginDir(context), ext.fileName), key)
             if (key == DEFAULT_KEY) removedDefaults.add(key)
             _state.update { s -> s.copy(installed = s.installed.filterNot { it.key == key }, runtime = s.runtime - key, generation = s.generation + 1) }
             writeState(context)
@@ -514,6 +616,8 @@ object ExtensionManager {
             _state.update { s ->
                 s.copy(repos = s.repos.filterNot { it.url.equals(url, true) } + RepoRef(url, repo.name, System.currentTimeMillis()))
             }
+            otherRepos = otherRepos.filterNot { it.url.equals(url, true) }
+            SCOPE.claim(context, SCOPE.REPOSITORIES, url)
             writeState(context)
         }
         ExtensionSources.invalidate(url)
@@ -523,7 +627,9 @@ object ExtensionManager {
     suspend fun removeRepository(context: Context, url: String) = withContext(Dispatchers.IO) {
         ensureLoaded(context)
         mutex.withLock {
+            val ref = _state.value.repos.firstOrNull { it.url == url }
             _state.update { s -> s.copy(repos = s.repos.filterNot { it.url == url }) }
+            if (ref != null && SCOPE.release(context, SCOPE.REPOSITORIES, url)) otherRepos = otherRepos.filterNot { it.url == url } + ref
             writeState(context)
         }
     }
@@ -645,6 +751,17 @@ object ExtensionManager {
     private fun providersOf(filename: String?): List<String> =
         APIHolder.allProviders.toList().filter { it.sourcePlugin == filename }.map { it.name }
 
+    /**
+     * SPEED-T (device speed test only): unloads every plugin and marks the engine not loaded, so the next
+     * [ensureLoaded] times a relaunch (code already compiled on disk) inside one test process.
+     */
+    internal suspend fun unloadAllForSpeedTest() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            synchronized(plugins) { plugins.keys.toList() }.forEach { unloadInternal(it) }
+            _state.update { it.copy(ready = false, partial = false, runtime = emptyMap(), generation = it.generation + 1) }
+        }
+    }
+
     private fun unloadInternal(key: String) {
         val plugin = synchronized(plugins) { plugins.remove(key) } ?: return
         // R16 G4: one line per unload, with the caller, so a section that leaves Yumix can be traced.
@@ -740,15 +857,15 @@ object ExtensionManager {
     private fun deleteFile(f: File) { runCatching { f.setWritable(true); f.delete() } }
 
     /** G9-7: deletes [f] unless another installed entry than [ownerKey] still uses it (older installs shared names). */
-    private fun deleteIfUnused(context: Context, f: File, ownerKey: String) {
+    private fun deleteIfUnused(context: Context, f: File, ownerKey: String, alsoOwner: Boolean = false) {
         if (f.name.isBlank() || f.parentFile != pluginDir(context)) return
-        val used = _state.value.installed.any { it.key != ownerKey && it.fileName == f.name }
+        val used = (_state.value.installed + otherInstalled).any { (alsoOwner || it.key != ownerKey) && it.fileName == f.name }
         if (!used) deleteFile(f)
     }
 
     /** Removes files no installed extension points to (failed updates, crashes mid-install). */
     private fun cleanupFiles(context: Context) {
-        val keep = _state.value.installed.map { it.fileName }.toSet()
+        val keep = (_state.value.installed + otherInstalled).map { it.fileName }.toSet()
         pluginDir(context).listFiles()?.forEach { f -> if (f.name !in keep) deleteFile(f) }
     }
 
@@ -774,15 +891,20 @@ object ExtensionManager {
         }.orEmpty()
         removedDefaults = o.optJSONArray("removedDefaults").strings().toMutableSet()
         if (!legacyDefaultMigrationDue(removedDefaults, installed.map { it.key })) removedDefaults.add(LEGACY_DEFAULT_MIGRATION)
-        _state.update { it.copy(installed = installed.distinctBy { e -> e.key }, repos = repos, lastSync = o.optLong("lastSync")) }
+        val (mine, others) = SCOPE.split(context, SCOPE.EXTENSIONS, installed.distinctBy { e -> e.key }) { it.key }
+        val (myRepos, theirRepos) = SCOPE.split(context, SCOPE.REPOSITORIES, repos) { it.url }
+        otherInstalled = others; otherRepos = theirRepos
+        _state.update { it.copy(installed = mine, repos = myRepos, lastSync = o.optLong("lastSync")) }
+        // F-19-EXT: entries of a removed profile were dropped; write so they do not come back as "no record".
+        if (mine.size + others.size < installed.distinctBy { e -> e.key }.size || myRepos.size + theirRepos.size < repos.size) writeState(context)
     }
 
     private fun writeState(context: Context) {
         val s = _state.value
         val o = JSONObject()
             .put("version", STATE_VERSION)
-            .put("installed", JSONArray().apply { s.installed.forEach { put(it.toJson()) } })
-            .put("repos", JSONArray().apply { s.repos.forEach { put(JSONObject().put("url", it.url).put("name", it.name).put("addedAt", it.addedAt)) } })
+            .put("installed", JSONArray().apply { (s.installed + otherInstalled.filter { o -> s.installed.none { it.key == o.key } }).forEach { put(it.toJson()) } })
+            .put("repos", JSONArray().apply { (s.repos + otherRepos.filter { o -> s.repos.none { it.url == o.url } }).forEach { put(JSONObject().put("url", it.url).put("name", it.name).put("addedAt", it.addedAt)) } })
             .put("removedDefaults", JSONArray(removedDefaults.toList()))
             .put("lastSync", s.lastSync)
         val f = stateFile(context)
@@ -799,6 +921,8 @@ object ExtensionManager {
         synchronized(plugins) { plugins.keys.toList().forEach { unloadInternal(it) } }
         removedDefaults.clear()
         started = false
+        otherInstalled = emptyList(); otherRepos = emptyList()
+        dev.asfakul.yumeiro.profiles.ProfileScope.resetMemoryForTests()
         _state.value = Snapshot()
     }
 

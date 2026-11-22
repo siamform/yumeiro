@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.OnlineItem
+import kotlinx.coroutines.flow.collectLatest
 import dev.asfakul.yumeiro.online.OnlineRepository
 import dev.asfakul.yumeiro.ui.components.StateMessage
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
@@ -73,6 +74,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private sealed interface ProviderResult {
     data object Searching : ProviderResult
@@ -99,8 +101,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     // 18+ off: adult-only extensions that are still installed (18+ was on earlier) are not searched,
     // and NSFW-typed items from mixed sources are dropped. With 18+ on (private or not) search finds them.
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
-    val providers = remember(engine.generation, engine.ready, adultOn) {
-        if (!engine.ready) emptyList()
+    // SPEED-4: search starts with the extensions loaded so far (engine.usable), like Yumix; before it waited for
+    // every installed extension to load (engine.ready).
+    val providers = remember(engine.generation, engine.usable, adultOn) {
+        if (!engine.usable) emptyList()
         else ExtensionManager.providers().filter { adultOn || !dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }
     }
 
@@ -128,7 +132,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     // Keyed on the *names* of the sources: a new engine snapshot (another extension finished
     // loading) used to clear the results mid-search and start over.
     val providerNames = remember(providers) { providers.map { it.name }.sorted() }
-    LaunchedEffect(submitted, providerNames, attempt) {
+    // SPEED-4: the search is keyed on the words only. Extensions that finish loading during a search join it
+    // (SearchJoin.plan); before, every newly loaded extension cancelled the whole search and started it again.
+    val latestProviders = androidx.compose.runtime.rememberUpdatedState(providers)
+    LaunchedEffect(submitted, attempt, providerNames.isEmpty()) {
         val key = "$submitted|" + providerNames.joinToString(",")
         // Retry always asks again; otherwise a finished search for the same words is reused.
         if (attempt == 0 && submitted.isNotBlank() && OnlineSearchMemory.key == key && OnlineSearchMemory.results.values.none { it is ProviderResult.Searching }) {
@@ -137,14 +144,30 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         }
         results.clear()
         if (submitted.isBlank() || providers.isEmpty()) return@LaunchedEffect
-        providers.forEach { results[it.name] = ProviderResult.Searching }
         SearchHistory.add(context, submitted); history.clear(); history.addAll(SearchHistory.load(context))
-        OnlineRepository.search(submitted, providers).collect { u ->
-            results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
-                else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
+        val q = submitted
+        val started = mutableSetOf<String>()
+        kotlinx.coroutines.coroutineScope {
+            androidx.compose.runtime.snapshotFlow { latestProviders.value }.collect { now ->
+                val step = dev.asfakul.yumeiro.online.SearchJoin.plan(started, now.map { it.name })
+                step.drop.forEach { results.remove(it); started.remove(it) }
+                val batch = now.filter { it.name in step.start }
+                if (batch.isEmpty()) return@collect
+                started += step.start
+                batch.forEach { results[it.name] = ProviderResult.Searching }
+                launch {
+                    OnlineRepository.search(q, batch, retry = attempt > 0).collect { u ->
+                        if (u.api !in started) return@collect
+                        results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
+                            else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
+                        if (results.values.none { it is ProviderResult.Searching }) {
+                            OnlineSearchMemory.key = "$q|" + results.keys.sorted().joinToString(",")
+                            OnlineSearchMemory.results = results.toMap()
+                        }
+                    }
+                }
+            }
         }
-        OnlineSearchMemory.key = key
-        OnlineSearchMemory.results = results.toMap()
     }
 
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
@@ -168,20 +191,35 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
 
         val searching = results.values.count { it is ProviderResult.Searching }
         // Ranked by match quality across every Hue (stable while results stream in), unique keys.
-        val done = results.entries.mapNotNull { (n, r) -> (r as? ProviderResult.Done)?.let { n to it.items } }.toMap()
         val order = remember(providers) { providers.map { it.name } }
-        val all = remember(submitted, done, order) {
-            dev.asfakul.yumeiro.online.SearchRanker.rank(submitted, done, order).map { it.item }
+        // FE-S2 (docs/FEED-ENGINE-2.1.md FE-6): the ranking (Unicode normalize + regex per title, every result of every
+        // extension) ran in composition on the main thread, again on each extension's answer. It now runs on
+        // Dispatchers.Default; a newer answer replaces an older ranking (collectLatest).
+        val ranked by androidx.compose.runtime.produceState(0 to emptyList<OnlineItem>(), submitted, order) {
+            androidx.compose.runtime.snapshotFlow {
+                results.entries.mapNotNull { (n, r) -> (r as? ProviderResult.Done)?.let { n to it.items } }.toMap()
+            }.collectLatest { done ->
+                value = done.size to kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    dev.asfakul.yumeiro.online.SearchRanker.rank(submitted, done, order).map { it.item }
+                }
+            }
         }
+        val all = ranked.second
+        // Answers that arrived but are not ranked yet: never say "No results" in that gap.
+        val rankingBehind = ranked.first != results.values.count { it is ProviderResult.Done }
         // Typeahead: recent searches, My List, watched titles, titles seen while browsing and the live results.
-        val suggestions = remember(text, history.toList(), bookmarks, watched, all.size) {
-            if (text.isBlank()) emptyList() else {
-                        fun S(t: String, k: SuggestionKind, d: String?) = dev.asfakul.yumeiro.ui.components.Suggestion(t, k, d)
+        // FE-S2: the typeahead folds ~400 titles with regexes; it used to do that in composition on every keystroke.
+        val historyNow = history.toList()
+        val suggestions by androidx.compose.runtime.produceState(emptyList<dev.asfakul.yumeiro.ui.components.Suggestion>(), text, historyNow, bookmarks, watched, all.size) {
+            if (text.isBlank()) { value = emptyList(); return@produceState }
+            val liveTitles = all.take(60)
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                fun S(t: String, k: SuggestionKind, d: String?) = dev.asfakul.yumeiro.ui.components.Suggestion(t, k, d)
                 val c = buildList {
-                    history.forEach { add(S(it, SuggestionKind.RECENT, null)) }
+                    historyNow.forEach { add(S(it, SuggestionKind.RECENT, null)) }
                     bookmarks.forEach { add(S(it.name, SuggestionKind.TITLE, (if (it.listed) "My List" else "Favorites") + " · ${it.api}")) }
                     watched.forEach { add(S(it.name, SuggestionKind.TITLE, "Watched · ${it.api}")) }
-                    all.take(60).forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
+                    liveTitles.forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
                     OnlineRepository.previews.values.take(300).forEach { add(S(it.name, SuggestionKind.TITLE, it.api)) }
                 }
                 dev.asfakul.yumeiro.ui.components.SearchSuggest.rank(text, c, limit = 6)
@@ -239,9 +277,9 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 val shown = if (filter == null) all else all.filter { it.api == filter }
                 val failed = (results[filter] as? ProviderResult.Failed)?.message
                 when {
-                    shown.isEmpty() && (searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
+                    shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
                         Column(Modifier.fillMaxWidth()) {
-                            Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                            if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
                             PosterGridSkeleton(rows = 3)
                         }
                     failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,

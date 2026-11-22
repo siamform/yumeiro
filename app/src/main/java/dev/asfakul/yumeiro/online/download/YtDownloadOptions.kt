@@ -14,6 +14,19 @@ package dev.asfakul.yumeiro.online.download
  * bundling yt-dlp + ffmpeg): MP4 video (H.264 / AV1) + AAC, or WebM VP9 + Opus.
  */
 object YtDownloadOptions {
+    /** OL-12: audio itag "best audio, picked when the download starts" (bulk playlist downloads). */
+    const val AUTO_AUDIO = -2
+
+    /** OL-12: the choice a playlist batch queues for every song (resolved by [bestAudio] at start). */
+    val AUTO_AUDIO_CHOICE = Choice(label = "Best audio", detail = "M4A when offered", videoItag = -1, audioItag = AUTO_AUDIO, container = "m4a", sizeBytes = -1, audioOnly = true)
+
+    /** OL-12: best audio-only choice of [choices]: M4A (AAC, plays everywhere) first, then any; highest bitrate. */
+    fun bestAudio(choices: List<Choice>): Choice? {
+        val audio = choices.filter { it.audioOnly && it.audioItag > 0 }
+        fun kbps(c: Choice) = c.label.filter(Char::isDigit).toIntOrNull() ?: 0
+        return audio.filter { it.container == "m4a" }.maxByOrNull(::kbps) ?: audio.maxByOrNull(::kbps)
+    }
+
     data class Video(val itag: Int, val height: Int, val fps: Int, val container: String, val codec: String, val size: Long, val videoOnly: Boolean)
     data class Audio(val itag: Int, val bitrate: Int, val container: String, val codec: String, val size: Long, val original: Boolean = true)
 

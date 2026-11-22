@@ -99,6 +99,9 @@ object OnlineSession {
     private val _opening = MutableStateFlow<OnlineItem?>(null)
     /** A tapped title whose details are loading (before playback or the episode list). */
     val opening: StateFlow<OnlineItem?> = _opening.asStateFlow()
+    private val _handoff = MutableStateFlow(false)
+    /** OWN-1: the title page is already pushed under the loading layer; Back belongs to the page. */
+    val handoff: StateFlow<Boolean> = _handoff.asStateFlow()
 
     /**
      * Tap on a poster: movies and live streams start playing straight away; series (or anything
@@ -107,13 +110,35 @@ object OnlineSession {
     fun open(context: Context, item: OnlineItem, onShowTitle: (OnlineItem) -> Unit) {
         val app = context.applicationContext
         job?.cancel()
+        // OWN-6: a source known to open a title page goes there at once; the page shows the card while the
+        // details load (CloudStream / Hikari open the details shell first too).
+        if (OpenFlow.pageFirst(dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN), OpeningKinds.opensPage(app, item))) {
+            _opening.value = null
+            onShowTitle(item)
+            job = scope.launch {
+                val provider = kotlinx.coroutines.withContext(Dispatchers.Default) { ExtensionManager.provider(item.api) }
+                val detail = provider?.let { p -> runCatching { OnlineRepository.load(p, item.url) }.getOrNull() }
+                if (detail != null) OpeningKinds.learn(app, item, opensPage = !OpenFlow.direct(detail))
+            }
+            return
+        }
         _opening.value = item
         job = scope.launch {
             val provider = kotlinx.coroutines.withContext(Dispatchers.Default) { ExtensionManager.provider(item.api) }
             val detail = provider?.let { p -> runCatching { OnlineRepository.load(p, item.url) }.onFailure { Log.w(TAG, "open ${item.name}", it) }.getOrNull() }
             if (_opening.value != item) return@launch
+            val direct = detail != null && OpenFlow.direct(detail)
+            if (!direct && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN)) {
+                // OWN-1: the page slides in under the loading layer, which goes only after the slide. Before, the
+                // layer vanished first, the feed flashed, then the page came in: it looked like a page closing.
+                if (detail != null) OpeningKinds.learn(app, item, opensPage = true)
+                onShowTitle(item)
+                _handoff.value = true
+                try { kotlinx.coroutines.delay(OpenFlow.HANDOFF_MS) } finally { _handoff.value = false }
+                if (_opening.value == item) _opening.value = null
+                return@launch
+            }
             _opening.value = null
-            val direct = detail != null && detail.episodes.values.all { it.isEmpty() } && detail.playData != null && detail.unsupportedReason == null
             // Round 13: remembered so the next tap on this source shows the right skeleton.
             if (detail != null) OpeningKinds.learn(app, item, opensPage = !direct)
             when {
@@ -136,7 +161,7 @@ object OnlineSession {
     private fun defaultAudioKey(): String =
         if (dev.asfakul.yumeiro.player.VideoPrefs.audio.value == dev.asfakul.yumeiro.player.VideoPrefs.AudioDefault.DUB) AudioLanguages.DUB_OTHER else AudioLanguages.ORIG
 
-    fun cancelOpening() { _opening.value = null; job?.cancel() }
+    fun cancelOpening() { _opening.value = null; _handoff.value = false; job?.cancel() }
 
     fun titleFor(d: OnlineDetail, e: OnlineEpisode?): String = buildString {
         append(d.name)
@@ -270,7 +295,8 @@ object OnlineSession {
             // Round 2 (heat): 300 ms instead of 150 ms, slower again when the phone is warm.
             val ticker = launch { while (true) { delay(dev.asfakul.yumeiro.player.HeatGuard.interval(300)); startIfReady(false); if (pendingPublish && started) publish(false) } }
             val ok = withTimeoutOrNull(FIRST_LINK_TIMEOUT_MS + 60_000L) {
-                OnlineRepository.links(provider, data).transformWhile { ev ->
+                // F-05-N (ADR-057): stream-only add-ons (Nuvio scrapers) join with their own links when on.
+                StreamAddons.withAddons(context, start.detail, start.episode, OnlineRepository.links(provider, data)).transformWhile { ev ->
                     emit(ev)
                     // Round 2 (heat): once a video plays and enough backups are in, stop asking the
                     // extension for more mirrors (each one is more network, parsing and battery).

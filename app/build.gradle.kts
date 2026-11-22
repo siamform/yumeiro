@@ -104,6 +104,9 @@ fun fcmClient(pkg: String, suffix: String): Pair<String, String> {
 
 fun buildConfigSafe(value: String): String = value.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' || it == '.' }
 
+val yumeiroAbis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+val abiSplits = providers.gradleProperty("yumeiro.abiSplits").orNull == "true"
+
 android {
   namespace = "dev.asfakul.yumeiro"
   compileSdk { version = release(37) }
@@ -117,8 +120,9 @@ android {
     targetSdk = 37 // Android 17
     versionCode = appVersionCode
     versionName = appVersionName
-    // Round 13: one universal APK with native code for every Android processor.
-    ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64") }
+    // Round 13: one universal APK with native code for every Android processor. With E3 ABI splits
+    // on (-Pyumeiro.abiSplits=true) the processors come from splits.abi instead (AGP rejects both).
+    if (!abiSplits) ndk { abiFilters += yumeiroAbis }
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -148,6 +152,10 @@ android {
     // SEC-LFM (ADR-048): no Last.fm shared secret in the APK; Yumeiro Cloud signs the built-in key's calls.
     buildConfigField("String", "LRCLIB_APP_ID", "\"${optionalKey("lrclibAppId", "LRCLIB_APP_ID")}\"")
     buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${optionalKey("opensubtitlesApiKey", "OPENSUBTITLES_API_KEY")}\"")
+    // F-02 login (owner decision 2026-11-21): Telegram app id / hash for TDLib sign-in. Repo secrets
+    // YUMEIRO_TG_API_ID / YUMEIRO_TG_API_HASH; blank = Telegram sign-in hidden. Never committed.
+    buildConfigField("String", "TG_API_ID", "\"${optionalKey("tgApiId", "YUMEIRO_TG_API_ID")}\"")
+    buildConfigField("String", "TG_API_HASH", "\"${optionalKey("tgApiHash", "YUMEIRO_TG_API_HASH")}\"")
     // Yumeiro Cloud (server/): host of the tiny wake-up server. Blank turns the feature off.
     buildConfigField("String", "CLOUD_HOST", "\"${(providers.gradleProperty("cloudHost").orNull ?: System.getenv("YUMEIRO_CLOUD_HOST") ?: "api.yumeiro.click").let(::buildConfigSafe)}\"")
 
@@ -245,8 +253,21 @@ android {
     isCoreLibraryDesugaringEnabled = true
   }
 
-  // Round 13: no per-processor APKs any more. Each edition ships as ONE universal APK (phone and
-  // TV) with native libraries for arm64-v8a, armeabi-v7a, x86 and x86_64 (see ndk.abiFilters).
+  // Round 13: each edition ships as ONE universal APK (phone and TV) with native libraries for
+  // arm64-v8a, armeabi-v7a, x86 and x86_64 (see ndk.abiFilters).
+  // E3 (kill switch: Gradle property yumeiro.abiSplits, off by default): also build one smaller
+  // APK per processor next to the universal one. ADR-054: every APK keeps the SAME versionCode
+  // (we sideload, Play's unique-code rule does not apply), so the switch can be turned off again
+  // without stranding anyone on a higher code; the updater picks the device's processor file
+  // first and the universal file otherwise (GitHubReleaseClient.parseRelease).
+  splits {
+    abi {
+      isEnable = abiSplits
+      reset()
+      include(*yumeiroAbis.toTypedArray())
+      isUniversalApk = true
+    }
+  }
 
   buildFeatures {
     compose = true
@@ -260,6 +281,10 @@ android {
       // -Pyumeiro.lowMemTests=true to cap the heap and recycle the test JVM.
       if (providers.gradleProperty("yumeiro.lowMemTests").orNull == "true") {
         all { it.maxHeapSize = "1600m"; it.setForkEvery(25) }
+      } else {
+        // 2.1.0: with about 400 test classes one JVM on Gradle's default 512 MB heap ran out of memory
+        // (CI 45047538777: OutOfMemoryError, then a hang). Give it room and start a fresh JVM now and then.
+        all { it.maxHeapSize = "3g"; it.setForkEvery(150) }
       }
       // Live network tests (Yumeiro Drama tap-to-play): -Pyumeiro.live=true.
       if (providers.gradleProperty("yumeiro.live").orNull == "true") {
@@ -375,6 +400,7 @@ dependencies {
   implementation(libs.rxjava)
   implementation(libs.nanohttpd)
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.libtorrent4j) // B-31 (ADR-053) Java part; TV pinned to 2.1.0-38 below
   implementation(libs.kotlinx.serialization.json.okio)
   implementation(libs.kotlinx.serialization.protobuf)
   // Mangayomi-style JavaScript sources
@@ -404,6 +430,8 @@ dependencies {
 
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
+  // GATE-1-RENDER: composable names in system traces of debug builds (scripts/gate-trace.pbtxt).
+  debugImplementation(libs.androidx.compose.runtime.tracing)
 }
 
 // One NewPipeExtractor on the classpath: CloudStream depends on "com.github.teamnewpipe" (lowercase),
@@ -412,6 +440,17 @@ configurations.configureEach {
   resolutionStrategy.dependencySubstitution {
     substitute(module("com.github.teamnewpipe:NewPipeExtractor"))
       .using(module("com.github.TeamNewPipe:NewPipeExtractor:${libs.versions.newpipeExtractor.get()}"))
+  }
+}
+
+// B-31 (ADR-053): libtorrent4j 2.1.0-39 needs Android 9; the TV build (Android 7) uses 2.1.0-38. The native part
+// is fetched at runtime and its pin set follows LibTorrent.libtorrent4jVersion(), so each build loads its own .so.
+configurations.matching { it.name.startsWith("tv") && it.name.endsWith("Classpath") }.configureEach {
+  resolutionStrategy.eachDependency {
+    if (requested.group == "org.libtorrent4j") {
+      useVersion(libs.versions.libtorrent4jTv.get())
+      because("libtorrent4j 2.1.0-39 raised minSdk to 28; the TV build runs on Android 7")
+    }
   }
 }
 

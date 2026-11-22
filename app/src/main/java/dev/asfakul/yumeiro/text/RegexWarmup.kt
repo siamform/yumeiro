@@ -50,6 +50,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.ui.screens.online.OnlineHomeHeroKt",
         "dev.asfakul.yumeiro.ui.screens.online.YumixFeed",
         "dev.asfakul.yumeiro.ui.screens.online.YumixFeed\$Category",
+        "dev.asfakul.yumeiro.online.web.WebDownloads\$Holder",
         "dev.asfakul.yumeiro.ui.screens.online.YumixFilterKt",
         "dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalogKt",
         "dev.asfakul.yumeiro.ui.screens.stream.StreamPlaylistUiKt",
@@ -83,7 +84,6 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.online.ReleaseTags",
         "dev.asfakul.yumeiro.online.SearchRankerKt",
         "dev.asfakul.yumeiro.online.SourceFacts",
-        "dev.asfakul.yumeiro.online.StarterExtensions",
         "dev.asfakul.yumeiro.online.UrlFixKt",
         "dev.asfakul.yumeiro.online.anime.AnimeIdsKt",
         "dev.asfakul.yumeiro.online.download.DownloadNaming",
@@ -97,6 +97,8 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.cast.SrtToVtt",
         "dev.asfakul.yumeiro.online.subtitles.SubtitleHubKt",
         "dev.asfakul.yumeiro.online.web.AdFilter",
+        "dev.asfakul.yumeiro.stream.TeraBoxApi", // B-29 jsToken pattern
+        "dev.asfakul.yumeiro.stream.DiskWalaApi", // B-30 share id pattern
         "dev.asfakul.yumeiro.online.ExtensionPopups", // ADR-014 classifier words (first touch is a window check on main)
         "dev.asfakul.yumeiro.scrobble.ScrobbleRulesKt",
         "dev.asfakul.yumeiro.scrobble.TrackNames",
@@ -106,6 +108,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.sources.drama.DramaHealthKt",
         "dev.asfakul.yumeiro.sources.drama.OnShortCatalogKt",
         "dev.asfakul.yumeiro.sources.drama.YumeiroDrama",
+        "dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider", // OWN-9 adult words, ids, query cleaning
         "dev.asfakul.yumeiro.sources.manga.MangaTlPlan", // F-11 bubble filter (first touch is the reader)
         "dev.asfakul.yumeiro.online.telegram.TelegramPublicKt", // F-02 public post / channel name
         "dev.asfakul.yumeiro.sources.js.JsBridgeKt",
@@ -121,6 +124,10 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.IncomingMediaKt",
         "dev.asfakul.yumeiro.stream.KvsPlayer",
         "dev.asfakul.yumeiro.stream.LinkHostsKt",
+        "dev.asfakul.yumeiro.stream.LinkHosts", // T-1 info-hash patterns
+        "dev.asfakul.yumeiro.stream.torrent.TorrentPlan", // B-31 info-hash, episode in file names
+        "dev.asfakul.yumeiro.stream.LiveCountry", // Live TV country filter
+        "dev.asfakul.yumeiro.profiles.Profiles", // F-19 answer normalising
         "dev.asfakul.yumeiro.stream.M3uParser",
         "dev.asfakul.yumeiro.stream.PlaylistMarketKt",
         "dev.asfakul.yumeiro.stream.PlaylistStoreKt",

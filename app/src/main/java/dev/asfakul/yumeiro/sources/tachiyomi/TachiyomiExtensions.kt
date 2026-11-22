@@ -218,16 +218,28 @@ object TachiyomiExtensions {
                 // N5-1: build on the saved file, not on memory that start-up may not have filled yet.
                 val repos = (readRepos(context).filterNot { it.url == base } + repo)
                 saveRepos(context, repos)
-                _state.update { it.copy(repos = repos) }
+                SCOPE.claim(context, SCOPE.TACHI_REPOS, base)
+                _state.update { it.copy(repos = myRepos(context, repos)) }
             }
             count
         }
     }
 
     suspend fun removeRepo(context: Context, url: String) = mutex.withLock {
-        val repos = readRepos(context).filterNot { it.url == url }
-        saveRepos(context, repos)
-        _state.update { it.copy(repos = repos) }
+        // F-19-EXT-2: another profile still has it: keep it in the file for that profile.
+        val kept = SCOPE.release(context, SCOPE.TACHI_REPOS, url)
+        val repos = if (kept) readRepos(context) else readRepos(context).filterNot { it.url == url }
+        if (!kept) saveRepos(context, repos)
+        _state.update { it.copy(repos = myRepos(context, repos).filterNot { r -> r.url == url }) }
+    }
+
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
+
+    /** F-19-EXT-2: the repos this profile sees; a removed profile's are dropped from the file. */
+    private fun myRepos(context: Context, repos: List<Repo>): List<Repo> {
+        val (mine, _, gone) = SCOPE.splitAll(context, SCOPE.TACHI_REPOS, repos) { it.url }
+        if (gone.isNotEmpty()) saveRepos(context, repos - gone.toSet())
+        return mine
     }
 
     suspend fun fetchIndex(context: Context, repo: Repo): List<IndexEntry> = fetchRepoIndex(context, repo).entries
@@ -346,11 +358,13 @@ object TachiyomiExtensions {
             saveTrusted(context, trustedSet(context) + "${info.packageName}:$sig")
         }
         iconUrl?.let { prefs(context).edit().putString("icon:" + info.packageName, it).apply() }
+        SCOPE.claim(context, SCOPE.TACHI_EXTENSIONS, info.packageName)
         reloadLocked(context)
     }
 
     suspend fun uninstall(context: Context, pkg: String) = mutex.withLock {
-        Kind.entries.forEach { k -> File(extDir(context, k), "$pkg.ext").let { it.setWritable(true); it.delete() } }
+        // F-19-EXT-2: another profile still has it: keep the file; this profile just stops loading it.
+        if (!SCOPE.release(context, SCOPE.TACHI_EXTENSIONS, pkg)) Kind.entries.forEach { k -> File(extDir(context, k), "$pkg.ext").let { it.setWritable(true); it.delete() } }
         reloadLocked(context)
     }
 
@@ -368,12 +382,17 @@ object TachiyomiExtensions {
 
     private suspend fun reloadLocked(context: Context) = withContext(Dispatchers.IO) {
         TachiyomiRuntime.init(context)
-        val repos = readRepos(context)
+        val repos = myRepos(context, readRepos(context))
         val anime = mutableListOf<AnimeCatalogueSource>()
         val manga = mutableListOf<CatalogueSource>()
         val installed = mutableListOf<Installed>()
+        // F-19-EXT-2: only this profile's extensions load (both kinds split at once, so the first-use
+        // seed sees all of them); a removed profile's files are deleted.
+        val all = Kind.entries.flatMap { k -> extDir(context, k).listFiles { f -> f.name.endsWith(".ext") }.orEmpty().map { k to it } }
+        val (mineFiles, _, goneFiles) = SCOPE.splitAll(context, SCOPE.TACHI_EXTENSIONS, all) { it.second.nameWithoutExtension }
+        goneFiles.forEach { (_, f) -> f.setWritable(true); f.delete() }
         for (kind in Kind.entries) {
-            for (file in extDir(context, kind).listFiles { f -> f.name.endsWith(".ext") }.orEmpty()) {
+            for (file in mineFiles.filter { it.first == kind }.map { it.second }) {
                 val result = runCatching { load(context, file, kind) }.getOrElse { e ->
                     Log.w(TAG, "load ${file.name}", e)
                     LoadResult(Installed(file.nameWithoutExtension, file.nameWithoutExtension, kind, "?", 0, null, false, null, false, 0, e.message ?: e.javaClass.simpleName))

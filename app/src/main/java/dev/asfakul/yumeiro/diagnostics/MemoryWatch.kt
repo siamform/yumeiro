@@ -130,7 +130,8 @@ object MemoryWatch {
             "sysFree=${mi.availMem / MB}M low=${mi.lowMemory}"
         }.orEmpty()
         val threads = threadGroups()
-        add("$why heap=${used}/${max}M native=${native}M $sys threads=$threads")
+        val draws = DrawCounter.drain().let { if (it.isEmpty()) "" else " $it" } // FREEZE-4
+        add("$why heap=${used}/${max}M native=${native}M $sys threads=$threads$draws")
         // A Java heap that is nearly full is the moment to let go of decoded images.
         if (max > 0 && used * 100 / max >= 85) {
             add("pressure: java heap ${used * 100 / max}% — clearing image memory cache")
@@ -235,17 +236,23 @@ object MainThreadWatchdog {
                     // recording or a call of ours; `ours=` names the app frames seen).
                     val kind = kinds.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: "app"
                     Log.w("YuStall", "main thread recovered after ${SystemClock.uptimeMillis() - posted}ms · kind=$kind · samples=${kinds.joinToString(",")} · ours=$oursSeen")
+                    stallListener?.let { l -> runCatching { l(SystemClock.uptimeMillis() - posted, kind) } }
                 }
                 runCatching { Thread.sleep(1000) }
             }
         }, "yu-watchdog").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
 
+    /** GATE-1-T11: told about every stall over [STALL_MS] once it ends (length, kind); the gate walk counts them. */
+    @Volatile var stallListener: ((Long, String) -> Unit)? = null
+
     internal fun kindOf(trace: Array<StackTraceElement>): String {
         val top = trace.take(6)
         return when {
             top.any { it.className.endsWith("HardwareRenderer") || it.className.endsWith("ThreadedRenderer") && it.methodName.startsWith("n") } -> "render"
             trace.any { it.className.startsWith("androidx.compose.ui.test.") || it.className.startsWith("androidx.test.") } -> "harness"
+            // GATE-1-T11: the main thread answering an accessibility query (TalkBack, or a test reading the screen).
+            trace.any { it.className == "android.view.AccessibilityInteractionController" || it.className.startsWith("android.view.AccessibilityInteractionController$") } -> "a11y"
             // ST-20: a frame from an extension's dex (third-party code posted to our main looper).
             trace.any { dev.asfakul.yumeiro.online.ExtensionWindowWatch.isExtensionClass(it.className) } -> "extension"
             else -> "app"

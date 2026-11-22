@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import dev.asfakul.yumeiro.stream.PlaylistStore
@@ -140,7 +141,9 @@ fun StreamScreen(
     onOpenPlaylist: (String) -> Unit = {},
     onOpenMarket: () -> Unit = {},
     onOpenWebsites: () -> Unit = {},
+    onOpenTelegram: () -> Unit = {},
 ) {
+    androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("live") } // FREEZE-4
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
@@ -282,7 +285,8 @@ fun StreamScreen(
     }
 
     fun play() {
-        val u = url.trim()
+        // T-1: a pasted info-hash plays as the magnet link it stands for.
+        val u = dev.asfakul.yumeiro.stream.LinkHosts.magnetFromHash(url) ?: url.trim()
         error = null
         if (!RX_STREAMSCREEN_1.matches(u) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
             error = "Enter a valid http(s)://, rtsp:// or magnet: link"
@@ -322,10 +326,8 @@ fun StreamScreen(
             val r = runCatching { StreamResolver.resolve(context, currentRequest(), thorough = true) }.getOrNull()
             loading = false
             when (r) {
-                is Resolution.Playable -> when (val o = dev.asfakul.yumeiro.stream.StreamDownload.enqueue(context, r.request, u)) {
-                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Refused -> error = o.message
-                    is dev.asfakul.yumeiro.stream.StreamDownload.Outcome.Queued -> dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Downloading \"${o.title}\"", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO, "View downloads") { dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open() }
-                }
+                // OL-4: the same Offline / Permanent popup as every other download.
+                is Resolution.Playable -> dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, r.request, u) { error = it }
                 is Resolution.NeedsBrowser -> pageFinder = r
                 is Resolution.Handoff -> { handoff = r; error = r.reason }
                 is Resolution.Playlist -> error = "This is a playlist. Open it and download a single channel or file."
@@ -342,7 +344,9 @@ fun StreamScreen(
     // liveGroup = the category chip (null = all categories).
     var liveSel by rememberSaveable { mutableStateOf<String?>(null) }
     var liveGroup by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
-    var liveLimit by rememberSaveable(liveSel, liveGroup) { mutableStateOf(LiveChannelFeed.PAGE) }
+    // 2.1.0: country chip (null = every country), from tvg-country / the iptv-org tvg-id suffix.
+    var liveCountry by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
+    var liveLimit by rememberSaveable(liveSel, liveGroup, liveCountry) { mutableStateOf(LiveChannelFeed.PAGE) }
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var toolsOpen by rememberSaveable { mutableStateOf(false) }
     var playlistQuery by rememberSaveable { mutableStateOf("") }
@@ -402,8 +406,9 @@ fun StreamScreen(
     }
     val feedLoading = feedIds.count { loads[it]?.loading != false }
     val feedFailed = feedIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id }?.takeIf { loads[id]?.let { l -> !l.loading && l.error != null && l.channels.isEmpty() } == true } }
-    val feedShown = remember(feed, liveGroup) { LiveChannelFeed.filter(feed, liveGroup) }
+    val feedShown = remember(feed, liveGroup, liveCountry) { LiveChannelFeed.filter(feed, liveGroup, liveCountry) }
     LaunchedEffect(feed) { if (liveGroup != null && feedLoading == 0 && feed.categories.none { it.name.equals(liveGroup, ignoreCase = true) }) liveGroup = null }
+    LaunchedEffect(feed) { if (liveCountry != null && feedLoading == 0 && feed.countries.none { it.name.equals(liveCountry, ignoreCase = true) }) liveCountry = null }
     // Near the end = the footer or one of the last two shown tile rows is on screen. Read from the item
     // keys (not the item count). The footer's key carries the feed size, and a page is added only when the
     // list is still near its end after two fresh frames, so a layout from before a playlist finished
@@ -427,7 +432,7 @@ fun StreamScreen(
         if (liveNearEnd) liveLimit = LiveChannelFeed.nextLimit(liveLimit, feedShown.size)
     }
     val feedRows = remember(feed, feedShown, liveLimit, liveColumns, liveGroup) {
-        LiveChannelFeed.rows(feedShown, liveLimit, liveColumns, feed.categories.associate { it.name to it.count }, headers = liveGroup == null)
+        LiveChannelFeed.rows(feedShown, liveLimit, liveColumns, feed.categories.associate { it.name to it.count }, headers = liveGroup == null && liveCountry == null)
     }
     fun playEntry(e: LiveChannelFeed.Entry) {
         val p = activePlaylists.firstOrNull { it.id == e.playlistId }
@@ -595,6 +600,7 @@ fun StreamScreen(
         },
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
+        LiveTool("stream_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
         LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
         LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
         LiveTool("live_tool_sync", "Update all", if (syncing) "Updating…" else "Every playlist", Icons.Default.Sync, liveHue("sync")) { sync() },
@@ -739,6 +745,7 @@ fun StreamScreen(
         }
         if (activePlaylists.isNotEmpty()) {
             if (feed.categories.size > 1) item(key = "live_cats") { LiveCategoryBar(feed.categories, feed.size, liveGroup) { liveGroup = it } }
+            if (feed.countries.size > 1) item(key = "live_countries") { LiveCountryBar(feed.countries, liveCountry) { liveCountry = it } }
             if (feedFailed.isNotEmpty()) item(key = "live_failed") {
                 LiveProblem(
                     if (feedFailed.size == 1) "${feedFailed[0].name} didn't load. ${loads[feedFailed[0].id]?.error.orEmpty()}".trim()

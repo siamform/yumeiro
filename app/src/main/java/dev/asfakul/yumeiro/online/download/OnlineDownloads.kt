@@ -94,6 +94,14 @@ object OnlineDownloads {
         val hidden: Boolean = false,
         /** DL-H / PR-1: the profile that hid it (only that profile sees and unhides it). */
         val profile: String = "0",
+        /** NF-2b: highest height picked for this download in the prompt (-1 = Settings → Downloads → Quality). */
+        val maxHeight: Int = -1,
+        /** OL-5: audio track picked in the popup (label or language); null = the stream's default. */
+        val audioPref: String? = null,
+        /** OL-5: subtitles to save next to the file: [DownloadTracks.SUBS_NONE], [DownloadTracks.SUBS_ALL] or a label / language. */
+        val subsPref: String = DownloadTracks.SUBS_NONE,
+        /** OL-5: subtitle files the source offered (label to URL), saved after the video when [subsPref] asks. */
+        val subs: List<Pair<String, String>> = emptyList(),
     ) {
         val fraction: Float get() = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
         val active: Boolean get() = status == Status.QUEUED || status == Status.RUNNING
@@ -184,6 +192,7 @@ object OnlineDownloads {
         context: Context, title: String, api: String, titleUrl: String, episodeLabel: String?,
         posterUrl: String?, posterHeaders: Map<String, String>, link: OnlineLink,
         folder: String = "", version: String? = null, keep: Boolean? = null,
+        pick: DownloadTracks.Pick? = null, subs: List<Pair<String, String>> = emptyList(),
     ): String? {
         ensureLoaded(context)
         // R15 forced download: DASH and split video/audio sources are saved too (ForceGrab).
@@ -193,7 +202,8 @@ object OnlineDownloads {
         val name = safeName(listOfNotNull(title.takeIf { it.isNotBlank() }, link.qualityLabel.takeIf { it.isNotBlank() }).joinToString(" ")) + "-" + id + "." + ext
         val item = Item(id, title, api, titleUrl, episodeLabel, posterUrl, posterHeaders, link.url, link.isHls, headersFor(link), name,
             folder = folder, version = version, keep = keep ?: DownloadSettings.keepByDefault.value, quality = link.qualityLabel.ifBlank { null },
-            isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first)
+            isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first,
+            maxHeight = pick?.maxHeight ?: -1, audioPref = pick?.audio, subsPref = pick?.subtitles ?: DownloadTracks.SUBS_NONE, subs = subs)
         update { list -> listOf(item) + list.filterNot { it.id == id } }
         start(context, id)
         return null
@@ -209,7 +219,7 @@ object OnlineDownloads {
      * Queues whole episodes of [detail] ([episodes]: index in watch order → episode). Links are
      * found when each download starts. Returns how many were added (already saved/queued skipped).
      */
-    fun enqueueEpisodes(context: Context, detail: OnlineDetail, version: String, episodes: List<Pair<Int, OnlineEpisode>>, keep: Boolean? = null): Int {
+    fun enqueueEpisodes(context: Context, detail: OnlineDetail, version: String, episodes: List<Pair<Int, OnlineEpisode>>, keep: Boolean? = null, maxHeight: Int = -1, subsPref: String = DownloadTracks.SUBS_NONE): Int {
         ensureLoaded(context); DownloadSettings.init(context)
         val folder = DownloadNaming.seriesFolder(detail.name, detail.api, version)
         val now = System.currentTimeMillis()
@@ -225,6 +235,7 @@ object OnlineDownloads {
                 createdAt = now + index, kind = Kind.EPISODE, folder = folder, version = version.ifBlank { null },
                 data = ep.data, order = index, keep = keep ?: DownloadSettings.keepByDefault.value,
                 baseName = DownloadNaming.episodeBase(ep.season, ep.episode, ep.name, index),
+                maxHeight = maxHeight, subsPref = subsPref,
             )
         }
         if (added.isEmpty()) return 0
@@ -239,9 +250,34 @@ object OnlineDownloads {
         ensureLoaded(context); DownloadSettings.init(context)
         val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
         get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
+        val item = ytItem(ytId, title, channel, thumbnail, music, choice, keep)
+        update { list -> listOf(item) + list.filterNot { it.id == id } }
+        start(context, id)
+        return null
+    }
+
+    /**
+     * OL-12: queues every song of a playlist as best audio in one go (one list write), skipping
+     * songs already saved or downloading. Returns how many were queued.
+     */
+    fun enqueueYouTubeBatch(context: Context, tracks: List<PlaylistDownload.Track>, keep: Boolean): Int {
+        ensureLoaded(context); DownloadSettings.init(context)
+        val now = System.currentTimeMillis()
+        val added = PlaylistDownload.toQueue(tracks, _items.value).mapIndexed { i, t ->
+            ytItem(t.id, t.title, t.channel, t.thumbnail, true, YtDownloadOptions.AUTO_AUDIO_CHOICE, keep).copy(createdAt = now + i)
+        }
+        if (added.isEmpty()) return 0
+        val ids = added.map { it.id }.toSet()
+        update { list -> added + list.filterNot { it.id in ids } }
+        added.forEach { start(context, it.id) }
+        return added.size
+    }
+
+    private fun ytItem(ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice, keep: Boolean): Item {
+        val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
         val base = DownloadNaming.clean(title.ifBlank { ytId }, 90)
         val suffix = if (choice.audioOnly) "" else " (" + choice.label + ")"
-        val item = Item(
+        return Item(
             id = id, title = title.ifBlank { ytId }, api = "YouTube", titleUrl = "https://www.youtube.com/watch?v=$ytId",
             episodeLabel = channel?.takeIf { it.isNotBlank() }, posterUrl = thumbnail, posterHeaders = emptyMap(),
             url = "", isHls = false, headers = emptyMap(), fileName = base + suffix + "-" + id + "." + choice.container,
@@ -250,9 +286,6 @@ object OnlineDownloads {
             ytId = ytId, videoItag = choice.videoItag, audioItag = choice.audioItag, container = choice.container,
             quality = choice.label, keep = keep,
         )
-        update { list -> listOf(item) + list.filterNot { it.id == id } }
-        start(context, id)
-        return null
     }
 
     fun setKeep(context: Context, id: String, keep: Boolean) { ensureLoaded(context); set(id) { it.copy(keep = keep) } }
@@ -336,7 +369,11 @@ object OnlineDownloads {
         val prefix = f.name + "."
         var n = 0
         if (f.delete()) n++
-        f.parentFile?.listFiles()?.forEach { if (it.isFile && it.name.startsWith(prefix) && it.delete()) n++ }
+        val files = f.parentFile?.listFiles().orEmpty()
+        files.forEach { if (it.isFile && it.name.startsWith(prefix) && it.delete()) n++ }
+        // OL-5: subtitle files saved next to it ("x.English.vtt").
+        val subs = DownloadTracks.sidecarsOf(f.name, files.map { it.name }).map { it.first }.toSet()
+        files.forEach { if (it.name in subs && it.delete()) n++ }
         return n
     }
 
@@ -427,7 +464,7 @@ object OnlineDownloads {
     internal fun safeName(s: String): String =
         s.replace(RX_BAD_NAME, " ").replace(RX_SPACES, " ").trim().take(80).ifBlank { "video" }
 
-    private fun json(i: Item) = JSONObject()
+    internal fun json(i: Item) = JSONObject()
         .put("id", i.id).put("title", i.title).put("api", i.api).put("titleUrl", i.titleUrl).put("episode", i.episodeLabel)
         .put("poster", i.posterUrl).put("posterHeaders", JSONObject(i.posterHeaders)).put("url", i.url).put("hls", i.isHls)
         .put("headers", JSONObject(i.headers)).put("file", i.fileName).put("status", i.status.name)
@@ -436,9 +473,11 @@ object OnlineDownloads {
         .put("ytId", i.ytId).put("vItag", i.videoItag).put("aItag", i.audioItag).put("container", i.container)
         .put("keep", i.keep).put("finishedAt", i.finishedAt).put("quality", i.quality).put("publicUri", i.publicUri)
         .put("base", i.baseName).put("dash", i.isDash).put("audio", i.audioUrl)
-        .put("hidden", i.hidden).put("profile", i.profile)
+        .put("hidden", i.hidden).put("profile", i.profile).put("maxH", i.maxHeight)
+        .put("aPref", i.audioPref).put("sPref", i.subsPref)
+        .put("subs", JSONArray().apply { i.subs.forEach { (l, u) -> put(JSONArray().put(l).put(u)) } })
 
-    private fun from(o: JSONObject): Item? {
+    internal fun from(o: JSONObject): Item? {
         fun map(k: String) = o.optJSONObject(k)?.let { h -> h.keys().asSequence().associateWith { h.optString(it) } }.orEmpty()
         fun str(k: String) = if (o.isNull(k)) null else o.optString(k).ifBlank { null }
         val kind = runCatching { Kind.valueOf(o.optString("kind")) }.getOrDefault(Kind.LINK)
@@ -455,6 +494,9 @@ object OnlineDownloads {
             keep = o.optBoolean("keep"), finishedAt = o.optLong("finishedAt"), quality = str("quality"), publicUri = str("publicUri"), baseName = str("base"),
             isDash = o.optBoolean("dash"), audioUrl = str("audio"),
             hidden = o.optBoolean("hidden"), profile = o.optString("profile").ifBlank { "0" },
+            maxHeight = o.optInt("maxH", -1),
+            audioPref = str("aPref"), subsPref = o.optString("sPref"),
+            subs = o.optJSONArray("subs")?.let { a -> (0 until a.length()).mapNotNull { k -> a.optJSONArray(k)?.let { p -> p.optString(0) to p.optString(1) }?.takeIf { it.second.isNotBlank() } } }.orEmpty(),
         )
     }
 

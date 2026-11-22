@@ -135,7 +135,7 @@ fun MTPlayerApp(
     val barItems = remember(navConfig) { dev.asfakul.yumeiro.ui.navigation.NavPrefs.barItems(navConfig) }
     val pageItemsNow by androidx.compose.runtime.rememberUpdatedState(pageItems)
     val tabPager = rememberPagerState { bottomNavItems.size }
-    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.settledPage }.collect { TabPagerProbe.page = it } }
+    LaunchedEffect(tabPager) { androidx.compose.runtime.snapshotFlow { tabPager.settledPage }.collect { TabPagerProbe.page = it; android.util.Log.i("YuGateTab", "settled page $it") } }
     val tabScope = rememberCoroutineScope()
     // R15 (run 43650046635): the tab pager must never rest between two pages. With nothing
     // dragging or animating it, an offset left over (a fling cut short by a focus move) is settled
@@ -162,7 +162,8 @@ fun MTPlayerApp(
 
     // Splash is an overlay instead of a navigation destination, so the back stack always
     // starts at Home and can never be left in a broken state after navigation.
-    var showSplash by rememberSaveable { mutableStateOf(true) }
+    // OWN-15: no second logo right after "Who's watching?" (ProfileSession.showLogo).
+    var showSplash by rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.showLogo()) }
     // ST-18: on a cold start the opaque splash covers Home for at least 900 ms. Home's content then
     // joins one frame later, so the first frame is the splash and the app shell instead of the whole
     // Home page (traces 44185180596: frame 1 4.2–4.5 s, most of it the RenderThread's first flush of
@@ -176,7 +177,13 @@ fun MTPlayerApp(
     // Home tab look dead.
     // The running tab jump (slide or fade-through), so Back can cancel it instead of racing it.
     val tabJump = remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    val navigateTop: (String) -> Unit = remember(navController, tabPager, tabFade, tabShift) {
+    // TV-FP-1: user drags on the tab pager (a retry never fights the user's own swipe).
+    val tabJumpHold = remember { dev.asfakul.yumeiro.FeatureFlags.on(navContext, dev.asfakul.yumeiro.FeatureFlags.Flag.TAB_JUMP_HOLD) }
+    val tabDrags = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(tabPager) {
+        tabPager.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) tabDrags.intValue++ }
+    }
+    val navigateTop: (String) -> Unit = remember(navController, tabPager, tabFade, tabShift, tabJumpHold) {
         { route ->
             runCatching {
                 if (navController.currentDestination?.route != Screen.Home.route &&
@@ -186,6 +193,7 @@ fun MTPlayerApp(
                 }
             }
             val page = pageItemsNow.indexOfFirst { it.route == route }
+            android.util.Log.i("YuGateTab", "navigateTop $route → page $page (now ${tabPager.currentPage})")
             if (page >= 0 && page != tabPager.currentPage) tabJump.value?.cancel()
             if (page >= 0 && page != tabPager.currentPage) tabJump.value = tabScope.launch {
                 // Neighbouring tab: the pager slides. Far tab (Home → Videos / Library, Spaces and
@@ -199,10 +207,35 @@ fun MTPlayerApp(
                     tabPager.animateScrollToPage(page, animationSpec = androidx.compose.animation.core.tween(360, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized))
                 } else {
                     tabFade.animateTo(0f, androidx.compose.animation.core.tween(110, easing = dev.asfakul.yumeiro.ui.components.YuMotion.EmphasizedAccelerate))
-                    tabPager.scrollToPage(page)
+                    if (tabJumpHold) {
+                        // TV-FP-1: a focus bring-into-view (Default priority) cannot interrupt this snap.
+                        tabPager.scroll(androidx.compose.foundation.MutatePriority.PreventUserInput) { with(tabPager) { updateCurrentPage(page) } }
+                    } else {
+                        tabPager.scrollToPage(page)
+                    }
                     tabShift.snapTo(dir)
                     launch { tabShift.animateTo(0f, androidx.compose.animation.core.tween(320, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Emphasized)) }
                     tabFade.animateTo(1f, androidx.compose.animation.core.tween(240, easing = dev.asfakul.yumeiro.ui.components.YuMotion.Standard))
+                }
+            }.also { j -> j.invokeOnCompletion { c -> android.util.Log.i("YuGateTab", "jump to $page ended (${c?.javaClass?.simpleName ?: "done"}), page ${tabPager.currentPage}") } }
+            if (tabJumpHold && page >= 0 && page != tabPager.currentPage) {
+                // TV-FP-1: after the jump, check the page; a jump pulled off its target (not by the user) snaps again.
+                val dragsAtStart = tabDrags.intValue
+                val jump = tabJump.value
+                tabScope.launch {
+                    jump?.join()
+                    // A far jump cut off mid-fade must not leave the page invisible or shifted.
+                    if (tabJump.value === jump && jump?.isCancelled == true) { tabFade.snapTo(1f); tabShift.snapTo(0f) }
+                    var retries = 0
+                    while (true) {
+                        kotlinx.coroutines.delay(300)
+                        if (tabJump.value !== jump) break // a newer jump took over
+                        val dragged = tabDrags.intValue != dragsAtStart
+                        if (!dev.asfakul.yumeiro.ui.navigation.TabJump.needsRetry(page, tabPager.currentPage, dragged, retries)) break
+                        retries++
+                        android.util.Log.i("YuGateTab", "jump to $page landed on ${tabPager.currentPage}: snap again ($retries)")
+                        runCatching { tabPager.scroll(androidx.compose.foundation.MutatePriority.PreventUserInput) { with(tabPager) { updateCurrentPage(page) } } }
+                    }
                 }
             }
         }
@@ -210,17 +243,25 @@ fun MTPlayerApp(
     // A page that is already open further down the stack is brought back instead of stacked again:
     // Extensions → Market → "Manage" used to push a second Extensions page (and so on), so Back
     // kept re-opening Extensions as if it had been tapped again.
+    val navGuard = remember(navController) { dev.asfakul.yumeiro.ui.navigation.NavGuard() }
+    val navGuardOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.NAV_GUARD) }
     val navigateSub: (String) -> Unit = remember(navController) {
         { route ->
-            runCatching {
+            // OWN-1: a second tap on the same route within the guard window is dropped.
+            if (!navGuardOn || navGuard.allowPush(route, android.os.SystemClock.uptimeMillis(), navController.currentBackStackEntry?.id)) runCatching {
                 if (!(dev.asfakul.yumeiro.ui.navigation.SubNav.reusable(route) && navController.popBackStack(route, inclusive = false))) {
                     navController.navigate(route) { launchSingleTop = true }
                 }
+                navGuard.pushed(navController.currentBackStackEntry?.id)
             }
         }
     }
     val popSub: () -> Unit = remember(navController) {
-        { if (navController.previousBackStackEntry != null) navController.popBackStack() }
+        {
+            if (navController.previousBackStackEntry != null) {
+                if (!navGuardOn || navGuard.allowPop(android.os.SystemClock.uptimeMillis())) navController.popBackStack()
+            }
+        }
     }
     // Tap on an online title: movies play straight away; series open their episode list.
     val openOnline: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = remember(navigateSub) {
@@ -412,14 +453,9 @@ fun MTPlayerApp(
         // SPD-3 (ADR-038): a new user already waited for the welcome screen; returning users keep the pause
         // so the first frames stay smooth.
         kotlinx.coroutines.delay(dev.asfakul.yumeiro.online.StartupSpeed.firstChecksDelayMs(firstRunAtLaunch))
-        // First run: install one top-rated Movies, Anime and Sports extension so online video works right away.
-        if (dev.asfakul.yumeiro.network.Connectivity.isOnline(context)) {
-            val starters = runCatching { dev.asfakul.yumeiro.online.StarterExtensions.ensure(context) }.getOrDefault(emptyList())
-            if (starters.isNotEmpty()) {
-                dev.asfakul.yumeiro.online.OnlineRepository.refreshAfterExtensionChange()
-                dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Ready to watch: ${starters.joinToString()} installed")
-            }
-        }
+        // Owner decision 2026-11-21: no third-party "starter" extensions are installed on first run
+        // (B-26: one ran a WebView on the main thread and showed a donation dialog). The Yumeiro
+        // master extension (E1) will be the only built-in source; until then Get started lets the user pick.
         backgroundUpdates()
         firstChecksDone = true
     }
@@ -607,6 +643,7 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YOUTUBE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YUMIX -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YTMUSIC -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MIX -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX)
@@ -619,6 +656,15 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WATCH_TOGETHER -> navigateSub(Screen.WatchTogether.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SETTINGS -> navigateSub(Screen.Settings.route)
+            // OL-10: the newer pages.
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.PROFILES -> {
+                dev.asfakul.yumeiro.ui.screens.settings.SettingsLaunch.request(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PROFILES)
+                navigateSub(Screen.Settings.route)
+            }
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.STATS -> navigateSub(Screen.Stats.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TRACKING -> navigateSub(Screen.Tracking.route)
         }
     }
     val tabBottomBar: @Composable () -> Unit = {
@@ -652,6 +698,8 @@ fun MTPlayerApp(
                 }
     }
     Box(modifier = Modifier.fillMaxSize().pageBackground()) {
+        // GATE-1-RENDER: first-use GPU programs compile in idle frames, drawn under every page.
+        dev.asfakul.yumeiro.ui.components.ShaderPrewarmHost(remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SHADER_PREWARM) })
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -681,6 +729,7 @@ fun MTPlayerApp(
             ) {
                 // No tab swipes under the full-screen video or Now Playing.
                 val tabSwipeEnabled = (activePlayingVideo == null || videoMinimized) && !isNowPlayingExpanded
+                val nextFramePages = remember { dev.asfakul.yumeiro.ui.components.NextFramePages(dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.TAB_NEXT_FRAME)) }
                 val tabPage: @Composable (Int) -> Unit = { page ->
                     when (pageItems[page].route) {
                         Screen.Home.route -> {
@@ -753,6 +802,13 @@ fun MTPlayerApp(
                                         navigateSub(Screen.Settings.route)
                                     }
                                     when (sc) {
+                                        // OL-9: the newer pages.
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PROFILES -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PROFILES)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.STATS -> navigateSub(Screen.Stats.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.MY_LIST -> navigateSub(Screen.OnlineLibrary.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.HISTORY -> navigateSub(Screen.OnlineHistory.route)
@@ -799,7 +855,7 @@ fun MTPlayerApp(
                                 },
                                 onPlayYouTube = { item, list ->
                                     if (item.music) {
-                                        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
+                                        dev.asfakul.yumeiro.youtube.YtHistory.record(context, item)
                                         val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                         viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                     } else {
@@ -823,7 +879,7 @@ fun MTPlayerApp(
                                     currentTrackId = playbackState.currentTrack?.id,
                                     onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                                     onPlayOnline = { item, list ->
-                                        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
+                                        dev.asfakul.yumeiro.youtube.YtHistory.record(context, item.copy(music = true))
                                         val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                         viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                     },
@@ -834,7 +890,7 @@ fun MTPlayerApp(
                                 Column(Modifier.fillMaxSize()) {
                                 if (!isOnline) dev.asfakul.yumeiro.ui.components.OfflineNotice("YouTube Music", tag = "offline_notice_music")
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
-                                    dev.asfakul.yumeiro.youtube.YtHistory.add(context, item.copy(music = true))
+                                    dev.asfakul.yumeiro.youtube.YtHistory.record(context, item.copy(music = true))
                                     val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
                                     viewModel.playTrack(dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(item), queue)
                                 })
@@ -902,6 +958,7 @@ fun MTPlayerApp(
                                     onOpenPlaylist = { id -> navigateSub(Screen.PlaylistDetail.route(id)) },
                                     onOpenMarket = { navigateSub(Screen.Market.route) },
                                     onOpenWebsites = { navigateSub(Screen.WebSites.route) },
+                                    onOpenTelegram = { navigateSub(Screen.Telegram.route) },
                                 )
                             } else if (vs == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
@@ -996,7 +1053,7 @@ fun MTPlayerApp(
                     // page below, which drifts a little to the left; Back reverses it. Switching
                     // tabs happens inside the pager, so it never runs these.
                     // Round 8: shared push / pop motion (PageMotion). 420 ms emphasized push with the page
-                    // underneath drifting and dimming a little; Back is quicker (320 ms).
+                    // underneath drifting and dimming a little; Back is the same motion reversed (OWN-14).
                     enterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.push(reducedMotionOn) },
                     exitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.pushExit(reducedMotionOn) },
                     popEnterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popEnter(reducedMotionOn) },
@@ -1033,6 +1090,10 @@ fun MTPlayerApp(
                                 if (tvLayout) Box(
                                     Modifier.fillMaxSize()
                                         .focusProperties {
+                                            // TV 45045033098 h5: Right from the rail put focus into Home, a page the
+                                            // pager still kept off screen after the jump to Music, so the pager slid back
+                                            // to Home. Only the page on screen (or being moved to) can take focus.
+                                            onEnter = { if (page != tabPager.settledPage && page != tabPager.targetPage) cancelFocusChange() }
                                             onExit = {
                                                 when (requestedFocusDirection) {
                                                     androidx.compose.ui.focus.FocusDirection.Left -> { cancelFocusChange(); runCatching { railFocus.requestFocus() } }
@@ -1047,7 +1108,11 @@ fun MTPlayerApp(
                                             else if (focusedTabPage.intValue == page) focusedTabPage.intValue = -1
                                         },
                                     propagateMinConstraints = true,
-                                ) { tabPage(page) } else tabPage(page)
+                                ) { tabPage(page) } else {
+                                    // GATE-1-VIDEOS-LOWRAM: the jump frame composes the page, its content comes a frame later.
+                                    val waitFrame = remember { nextFramePages.deferNext() }
+                                    dev.asfakul.yumeiro.ui.components.NextFramePage(waitFrame) { tabPage(page) }
+                                }
                             }
                             val railPad = if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
@@ -1131,7 +1196,7 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.Extensions.route) {
                         OpaquePage {
-                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) }, onOpenSources = { navigateSub(Screen.SourcesHub.route()) })
+                        ExtensionsScreen(onBack = popSub, onOpenMarket = { navigateSub(Screen.ExtensionMarket.route) }, onOpenSources = { navigateSub(Screen.SourcesHub.route()) }, onOpenScriptRepos = { navigateSub(Screen.SourcesHub.route(5)) })
                         }
                     }
                     page(subPad, Screen.ExtensionMarket.route) {
@@ -1156,7 +1221,10 @@ fun MTPlayerApp(
                         }
                     }
                     page(subPad, Screen.WebSites.route) {
-                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub) }
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.WEBSITE) }
+                    }
+                    page(subPad, Screen.Telegram.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.TELEGRAM) }
                     }
                     page(subPad, Screen.MangaTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
                         val a = entry.arguments
@@ -1288,6 +1356,7 @@ fun MTPlayerApp(
                                     "youtube" -> Screen.YouTubeAccount.route
                                     "stats" -> Screen.Stats.route
                                     "websites" -> Screen.WebSites.route
+                                    "telegram" -> Screen.Telegram.route
                                     else -> Screen.Privacy.route
                                 })
                             },
@@ -1340,7 +1409,7 @@ fun MTPlayerApp(
         AnimatedVisibility(
             visible = isNowPlayingExpanded && playbackState.currentTrack != null,
             enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)),
-            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(240, easing = FastOutSlowInEasing))
+            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(280, easing = FastOutSlowInEasing)) // OWN-14: as long as the way in
         ) {
             NowPlayingScreen(
                 playbackState = playbackState,
@@ -1434,7 +1503,13 @@ fun MTPlayerApp(
         // Full-screen Video Player Modal
         // Media opened from the Stream tab or from other apps ("Open with" / "Share")
         val incoming by IncomingMedia.pending.collectAsStateWithLifecycle()
-        LaunchedEffect(activePlayingVideo == null) { if (activePlayingVideo == null) videoMinimized = false }
+        LaunchedEffect(activePlayingVideo == null) {
+            if (activePlayingVideo == null) {
+                videoMinimized = false
+                // OL-1: a website tab hidden by playing one of its videos comes back when the player closes.
+                dev.asfakul.yumeiro.ui.screens.sites.WebsiteTab.onPlayerClosed()
+            }
+        }
         LaunchedEffect(incoming) {
             incoming?.let { viewModel.playVideo(it); IncomingMedia.consume() }
         }
@@ -1576,8 +1651,9 @@ fun MTPlayerApp(
         // Notification inbox / Support page, opened from the bell, a notification, a reminder or Settings.
         AnimatedVisibility(
             visible = appPage != null,
-            enter = slideInVertically(initialOffsetY = { it / 6 }, animationSpec = tween(NAV_ANIM_MS)) + fadeIn(tween(NAV_ANIM_MS)),
-            exit = fadeOut(tween(160)),
+            // OWN-14: closes the way it opened (it used to rise in and then just blink out).
+            enter = dev.asfakul.yumeiro.ui.components.PageMotion.pageRiseIn(reducedMotionOn, NAV_ANIM_MS),
+            exit = dev.asfakul.yumeiro.ui.components.PageMotion.pageRiseOut(reducedMotionOn, NAV_ANIM_MS),
         ) {
             val closePage = { dev.asfakul.yumeiro.ui.screens.extras.AppPages.close() }
             when (appPage) {

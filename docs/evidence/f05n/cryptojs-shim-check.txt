@@ -1,0 +1,17 @@
+ok md5
+ok sha256 utf8
+ok hmac256
+ok hmacmd5 b64
+ok aes cbc key dec
+ok aes passphrase dec
+ok aes passphrase roundtrip
+ok aes ecb enc
+ok 3des
+ok b64 roundtrip
+ok b64 parse words
+ok wordarray create
+ok cipherparams
+ok default interop
+ok zero pad
+ok concat
+fails 0

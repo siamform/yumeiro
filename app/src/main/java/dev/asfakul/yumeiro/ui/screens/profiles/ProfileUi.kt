@@ -102,19 +102,44 @@ fun ProfileAvatar(profile: Profiles.Profile, size: Dp, selected: Boolean = false
 object ProfileSession {
     val chosen = MutableStateFlow(false)
 
+    /**
+     * OWN-15: true once the person passed "Who's watching?" in this process. The logo was already on screen before
+     * the gate, so the app then opens straight in (Netflix and Disney+ go to Home after the profile pick). Before,
+     * the logo played again after the PIN and, on a cold start, stayed up (device run 45039700220, api33 + api36).
+     */
+    @Volatile var passedGate = false
+        private set
+
     /** MainActivity.onCreate, before the first frame. */
     fun decide(context: android.content.Context) {
         if (chosen.value) return
-        val need = FeatureFlags.on(context, FeatureFlags.Flag.PROFILES) && Profiles.askAtStart(context) && !Profiles.consumePass(context)
+        val need = runCatching {
+            FeatureFlags.on(context, FeatureFlags.Flag.PROFILES) && Profiles.askAtStart(context) && !Profiles.consumePass(context)
+        }.getOrElse { t ->
+            // A broken profile file must never keep the app closed: ask, so a locked profile stays locked.
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("ProfileSession.decide", t); true
+        }
+        android.util.Log.i("YuProfile", "decide gate=$need")
         chosen.value = !need
     }
 
+    /** OWN-15: MTPlayerApp's first frame shows the logo unless the gate was just passed. Pure apart from the flag. */
+    fun showLogo(): Boolean = !(passedGate && FeatureFlags.isOn(FeatureFlags.Flag.GATE_SKIPS_LOGO))
+
     /** Opens [id]: in place when it is the current one, otherwise saves it and restarts the app. */
     fun open(activity: Activity, id: String) {
-        if (id == Profiles.currentId(activity)) { chosen.value = true; return }
-        Profiles.select(activity, id)
-        Profiles.passRestart(activity, id)
-        dev.asfakul.yumeiro.backup.Restart.now(activity)
+        val same = runCatching { id == Profiles.currentId(activity) }.getOrDefault(false)
+        android.util.Log.i("YuProfile", "open same=$same")
+        if (same) { passedGate = true; chosen.value = true; return }
+        try {
+            Profiles.select(activity, id)
+            Profiles.passRestart(activity, id)
+            dev.asfakul.yumeiro.backup.Restart.now(activity)
+        } catch (t: Throwable) {
+            // OWN-15: never a force close here. The gate stays; the person can try again or pick another profile.
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("ProfileSession.open", t)
+            dev.asfakul.yumeiro.ui.components.AppMessages.error(activity, "Could not open this profile. Try again.")
+        }
     }
 }
 
@@ -188,7 +213,13 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
     }
     if (!profile.hasPin) return // the system prompt is up
     var forgot by remember { mutableStateOf(false) }
-    if (forgot) { ForgotPinDialog(activity, profile, onDismiss = { forgot = false }, onCleared = onUnlocked); return }
+    var otherWay by remember { mutableStateOf(false) }
+    if (forgot) {
+        // F-19: with security questions set, they replace the phone's screen lock (a child may know it).
+        if (profile.hasRecovery && !otherWay) RecoveryAnswerDialog(profile, onDismiss = { forgot = false }, onOtherWay = { otherWay = true }, onCleared = onUnlocked)
+        else ForgotPinDialog(activity, profile, allowDevice = !profile.hasRecovery, onDismiss = { forgot = false; otherWay = false }, onCleared = onUnlocked)
+        return
+    }
     PinPadDialog(
         title = title, subtitle = if (bioOk) "Enter the PIN or use your fingerprint" else "Enter the PIN",
         error = error,
@@ -212,9 +243,9 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
  * history and private downloads are cleared.
  */
 @Composable
-private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, onDismiss: () -> Unit, onCleared: () -> Unit) {
+private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, allowDevice: Boolean = true, onDismiss: () -> Unit, onCleared: () -> Unit) {
     val context = LocalContext.current
-    val device = remember { Privacy.canAuthenticate(activity) }
+    val device = remember { allowDevice && Privacy.canAuthenticate(activity) }
     dev.asfakul.yumeiro.ui.components.TsukiDialog(
         tone = if (device) dev.asfakul.yumeiro.ui.components.DialogTone.NEUTRAL else dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = onDismiss,
@@ -222,6 +253,8 @@ private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, onDis
         text = {
             Text(
                 if (device) "Use this phone's screen lock to remove ${profile.name}'s PIN. Nothing else changes."
+                else if (!allowDevice && profile.id == Profiles.DEFAULT) "Without the security answers, the PIN can only be removed together with ${profile.name}'s history, lists, YouTube history and private downloads. Extensions and settings stay."
+                else if (!allowDevice) "Without the security answers, the PIN can only be removed by deleting ${profile.name} with its history, lists and private downloads."
                 else if (profile.id == Profiles.DEFAULT) "This phone has no screen lock, so the PIN can only be removed together with ${profile.name}'s history, lists, YouTube history and private downloads. Extensions and settings stay."
                 else "This phone has no screen lock, so the PIN can only be removed by deleting ${profile.name} with its history, lists and private downloads.",
             )

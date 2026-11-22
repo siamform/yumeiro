@@ -177,12 +177,28 @@ object SkyStreamRepoParser : ManifestParser {
         ParsedRepo(SourceHub.Ecosystem.SKYSTREAM, format, o.s("name") ?: "SkyStream repository", emptyList(), children)
     }
 
-    /** A SkyStream plugin list (array of `{packageName, name, version, url}`). */
+    /**
+     * A SkyStream plugin list (array of `{packageName, name, version, url, baseUrl, languages,
+     * categories}`, as in akashdh11/skystream-plugins dist/plugins.json). F-05-S: `version` may be a
+     * number; the first language is the plugin's language; categories are its types.
+     */
     fun parsePluginList(root: JsonElement, sourceUrl: String): List<PluginEntry> = with(RepoFormats) {
-        root.objects().filter { it.s("packageName") != null && it.s("url") != null }.map { p ->
+        root.objects().filter { it.s("packageName") != null && it.s("url") != null }.take(MAX_PLUGINS).map { p ->
             val id = safeId(p.s("packageName")!!)
-            PluginEntry(id, p.s("name") ?: id, p.s("version") ?: "0", mapOf("plugin.sky" to resolve(sourceUrl, p.s("url")!!)),
-                p.strings("tvTypes"), p.s("lang"), p.s("iconUrl") ?: p.s("icon"))
+            PluginEntry(id, p.s("name") ?: id, p.s("version") ?: "0", mapOf(SKY_FILE to resolve(sourceUrl, p.s("url")!!)),
+                (p.strings("tvTypes") + p.strings("categories")).distinct(), p.s("lang") ?: p.strings("languages").firstOrNull(),
+                p.s("iconUrl") ?: p.s("icon"), disabled = p.b("disabled") == true)
         }
     }
+
+    /** True for a SkyStream plugin list: a JSON array whose entries have packageName and a .sky url. */
+    fun isPluginList(root: JsonElement): Boolean = with(RepoFormats) {
+        val list = root.objects()
+        list.isNotEmpty() && list.all { it.s("packageName") != null && it.s("url") != null } && list.any { it.s("url")!!.substringBefore('?').endsWith(".sky") }
+    }
+
+    const val SKY_FILE = "plugin.sky"
+    /** F-05-S: at most this many plugin lists / child repos are read for one repository. */
+    const val MAX_CHILDREN = 16
+    const val MAX_PLUGINS = 300
 }

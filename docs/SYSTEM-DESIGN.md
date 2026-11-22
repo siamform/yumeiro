@@ -1617,3 +1617,284 @@ Terms. No access control, DRM or service terms are involved (local UI input only
 Tests. Device: PinnedExtensionsDeviceTest asserts on the TV layout that the keyboard is down after the sheet opens
 (`dumpsys input_method` mInputShown); fail-before 44666813073 (logcat) and the a5bc4da chunk-12 TV runs (same no-op
 first attempt, see FINAL-39b); phones unchanged.
+
+### ADR-052: Telegram full login runs on TDLib we build ourselves, downloaded on first sign-in (F-02 login)
+
+Status: accepted 2026-11-21 (owner decision 2026-11-21: full login replaces "no login"). Built step by step; the
+flag `TELEGRAM_LOGIN` stays off until the device tests below pass.
+
+Context. Public channels already work without login (ADR-042, F-02 Pass 2/2). The owner wants phone + code + 2FA
+sign-in, the chat and channel list, search inside a chat, and video playback in Yumeiro's player. The only
+supported way to be a full Telegram client on Android is TDLib (Boost licence, [tdlib/td](https://github.com/tdlib/td)).
+The universal APK is already 125 MB (v2.0.0 assets) and 2 GB phones are the target.
+
+Competitors (read 2026-11-21).
+- Hikari (`codegeasse1/hikari` @ 5d97a309, `app/src/main/jniLibs/README.md`, `telegram/Td.kt`, `telegram/TdStream.kt`):
+  copies `libtdjni.so` and OpenSSL out of the Telegram X 0.29 APK and the 5 MB generated `TdApi.java` (about 2000
+  classes, all kept from R8); arm ABIs only (no x86_64, so it cannot run on x86_64 emulators); database encryption key
+  empty; the player data source polls TDLib on a timer for the bytes it waits for. APKs 57-60 MB per ABI.
+- Telegram X bundle (`TGX-Android/tdlib`): its README says it is not meant for other projects and may hold unstable
+  changes.
+- TDLib's own Android example (`example/android`, build-tdlib.sh): builds Java, JSON or JSON-from-Java interfaces for
+  arm64-v8a, armeabi-v7a, x86_64, x86, statically linked OpenSSL, `-flto=thin -Oz`.
+
+Options.
+(a) Copy another app's prebuilt binary: rejected (not meant for reuse, cannot be rebuilt or audited, no x86_64).
+(b) Build TDLib in every CI run: rejected (about an hour per ABI on every build).
+(c) Build TDLib once per pinned TDLib commit in our own workflow, keep the binaries on a `tdlib-bin` branch, and
+    bundle them in the APK: works, but adds roughly 30-40 MB to the universal APK for everyone, Telegram user or not.
+(d) Same build as (c), but the app downloads only its own ABI's library the first time the user opens Telegram
+    sign-in, checks it against a SHA-256 pinned in the app source, and loads it with `System.load`: chosen.
+
+Decision.
+- `tdlib-build.yml` (workflow_dispatch only) builds TDLib at td commit `03220f6b` (TDLib 1.8.70, the commit Telegram X
+  ships) with the JSON-from-Java interface (`libtdjsonjava.so`, 4 natives), `c++_static`, API level 24 (TV minSdk),
+  16 KB page alignment, for all four ABIs. The output (gzip, SHA-256) is committed to the orphan branch `tdlib-bin`;
+  the app pins that commit and each file's SHA-256 in `TdEngine.kt`. A bad or changed file is never loaded.
+- JSON interface instead of the Java one: one 70-line binding class (`org.drinkless.tdlib.JsonClient`, Boost) instead
+  of 2000 kept classes; Yumeiro parses only the objects it uses with kotlinx.serialization, off the main thread.
+- One receive thread per client; responses are matched by `@extra`; updates go to a `SharedFlow`. File downloads
+  wake readers on `updateFile` (no timer polling). Playback uses a Media3 `DataSource` that asks TDLib for the bytes
+  at the read position with priority 32 and reads the partly written file.
+- Sign-in is a pure state machine (`TgAuth`) over TDLib's `authorizationState*`, unit tested with a fake transport.
+- Each Yumeiro profile gets its own TDLib database folder (F-19 isolation). The database encryption key is random
+  per profile and wrapped with an Android Keystore key.
+- Hidden when `BuildConfig.TG_API_ID` is blank or the flag is off. Public channels (ADR-042) are unchanged.
+
+Side effects. First sign-in needs about 9-12 MB of download (one ABI, gzip). If GitHub raw is blocked, sign-in shows
+a clear error and public channels keep working. The api_hash is in every APK (true for every third-party Telegram
+client). Rollback: flag off; delete `noBackupFilesDir/tdlib`.
+
+Terms. Uses Telegram's official client library with the owner's own api_id under Telegram's API terms; no DRM,
+paywall or authentication bypass. TDLib is Boost-licensed (notice in docs/licenses).
+
+Tests. Unit: `TgAuthTest` (every authorization state, wrong code, wrong password, flood wait, Back / cancel, process
+death resume), `TdEngineTest` (hash mismatch is never loaded, partial download is discarded). Device: the screens
+without an account; engine download + load + `getOption version` on api36, api33-lowram and TV; sign-in on Telegram's
+test servers (`use_test_dc`, test numbers 99966XYYYY) where the test environment allows it. Real account: owner list.
+
+### ADR-053: Built-in torrent engine: libtorrent (libtorrent4j), native part fetched once and pinned (B-31)
+
+Status: accepted 2026-11-21. Built, not tested on a device; the flag `BUILTIN_TORRENT` (`b31_builtin_torrent`) stays
+off until the device tests and the bars below pass.
+
+Context. Torrents play only through a TorrServer the user runs and types in (Settings › Network); with no server the
+link is handed to another app. The owner wants (2026-11-21): no TorrServer, one engine and one loopback server ready
+for the app's life, every magnet / info-hash / .torrent link plays, and faster download, start and seek where
+possible. Test hash BF2063A5E9A69F14716288FCA7C2D6078BDA7369. Bars (GOAL-TOP-OF-CLASS): first frame <= 15 s, seek <= 5 s
+on a healthy swarm; 2 GB phone and TV budgets.
+
+Competitors (read 2026-11-21).
+- CloudStream: streams torrents through TorrServer (YouROK/TorrServer, GPL-3.0, a Go program), downloaded on first use
+  after the user agrees, run on 127.0.0.1; its desktop port does the same with a pinned release checked by SHA-256
+  ([weaponlions/cloudstream#20](https://github.com/weaponlions/cloudstream/pull/20),
+  [recloudstream/cloudstream#3262](https://github.com/recloudstream/cloudstream/pull/3262)).
+- LibreTorrent (GPL-3.0): a full client on libtorrent4j; 4.1.1 went back to libtorrent4j 2.1.0-38 because -39 needs
+  Android 9 ([LibreTorrent 4.1.1](https://github.com/proninyaroslav/libretorrent/releases/tag/4.1.1)).
+- TorrServer itself: HTTP API, cache sized to the device; a separate process with its own port and settings.
+
+Options.
+(a) Bundle TorrServer's Go binary and run it as a child process: rejected. A second runtime (~20 MB per ABI), a
+    process Android may kill separately, its own HTTP API between us and the pieces, and GPL-3.0 code we would
+    have to keep in step; no piece-level control from the player.
+(b) libtorrent4j in the APK (Maven `libtorrent4j-android-<abi>` jars): works, but adds ~24 MB of native code to the
+    universal APK for everyone.
+(c) libtorrent4j's Java part (833 KB, pure Java) in the APK; the native library (~6 MB download, 14-17 MB on disk)
+    for the phone's ABI fetched once from Maven Central's own `libtorrent4j-android-<abi>` jar, both the jar and the
+    `.so` checked against SHA-256 values pinned in `TorrentEngine.PINS`, stored read-only in no-backup storage and
+    loaded through libtorrent4j's `libtorrent4j.jni.path` property: chosen. Same pattern as TDLib (ADR-052), no
+    hosting of our own, nothing unverified is ever loaded.
+
+Decision.
+- Versions: phone 2.1.0-39 (Android 9+, phone minSdk 28; OpenSSL 3.5.5, boost 1.90); TV 2.1.0-38 (Android 7, TV
+  minSdk 24), forced on `tv*Classpath` in app/build.gradle.kts. The pin set is chosen by the Java jar's own
+  `LibTorrent.libtorrent4jVersion()`, so a build can never load the other version's `.so`.
+- One `LtCore` (libtorrent session) for the app's life, started on the first torrent; DHT, LSD, PEX on; torrents
+  not auto-managed (libtorrent's queue never pauses the one playing); 80 connections and a 4 MB disk queue on a
+  low-end device (DeviceClass.lowEnd), 200 / 16 MB otherwise.
+- One loopback server (`LocalStreamServer.shared`, also used by Telegram): `TorrentStreams.open` returns
+  `http://127.0.0.1:<port>/s/<128-bit token>/<file name>`; Yumeiro's player, external players and downloads read it
+  like a web file with Range requests.
+- Speed: only the chosen file downloads (other files of a pack set to "don't download"); 12 open public trackers are
+  added to every magnet (private torrents never announce elsewhere); when a file opens, its first and last ~2 MB get
+  deadline 0 (MP4 `moov`, MKV cues); every read outside the current window sends deadlines for the read piece (0 ms)
+  and the read-ahead after it (+120 ms per piece; 24 MB on low-end, 64 MB otherwise), so libtorrent asks the fastest
+  peers first and a seek waits only for the pieces it needs. Reads sleep on the session's alert signal (piece
+  finished), never a timer.
+- File choice: BEP 53 `so=` (Stremio add-ons' `fileIdx` is now passed as `so=`), else the video whose name has the
+  title's SxxEyy, else the largest non-sample video, else the largest audio, else the largest file.
+- Cache: `cacheDir/torrents/<hash>` with resume data (`<hash>.resume`, info dictionary included), so a replay starts
+  from what is on disk with no metadata wait and no re-check. Oldest torrents are removed above 2 GB (low-end) / 4 GB;
+  the playing one never. A torrent nobody read for 2 minutes is paused and its resume data saved (no background
+  seeding); opening another torrent pauses the previous one.
+- Fallback: when the engine can't start or the torrent fails and a TorrServer address is set, TorrServer is used as
+  before; with no address the player shows the plain error ("No peers found for this torrent...").
+- Before the flag turns on (not built yet): a one-time notice on the first torrent ("Torrents share pieces with other
+  people, who can see your IP address. Use a VPN or proxy if that matters to you.") with Continue / Cancel, as
+  CloudStream asks before its first torrent session; the answer is kept per profile.
+- Licences: libtorrent4j MIT, libtorrent BSD-3 (docs/licenses/). The native library also contains Boost (BSL-1.0)
+  and OpenSSL (Apache-2.0), both permissive. No DRM, no auth bypass, nothing copied from GPL code.
+
+Tests. Unit: TorrentPlanTest (hash, `so=`, trackers, file pick, pieces, deadlines, window), TorrentEngineTest
+(install: both hashes and sizes, read-only, bad pins deleted; pins for both versions and all four ABIs),
+TorrentSourceTest (waits for the piece, stops at its end, seek moves the window, timeout / error),
+TorrentCacheTest (eviction never removes the playing torrent). Device (next): engine download + load on api36,
+api33-lowram and TV api24; test hash first frame and seek times against the bars; memory on api33-lowram.
+
+### ADR-054: ABI-split APKs share one versionCode, behind a Gradle switch (E3)
+
+- Context: the universal APK carries native code for four processors (TDLib, libtorrent, media
+  libraries), so most phones download libraries they never load. Android's guide gives each ABI
+  APK its own versionCode, but that rule exists for Google Play; we sideload and our updater
+  compares the release's versionCode marker with the installed code.
+- Decision: `splits.abi` builds arm64-v8a, armeabi-v7a, x86 and x86_64 APKs plus the universal
+  APK, all with the SAME versionCode. Off by default; on with `-Pyumeiro.abiSplits=true`
+  (release.yml reads the repository variable `YUMEIRO_ABI_SPLITS`). File names follow the updater's
+  existing rules: `Yumeiro-v<V>-<abi>.apk`, `Yumeiro-TV-v<V>-<abi>.tv.apk`; the universal file
+  keeps `release-Yumeiro-v<V>.apk` / `Yumeiro-TV-v<V>.tv.apk`.
+- Why one code: per-ABI codes (base*10+n) would make the release marker smaller than the installed
+  code and turning splits off later would strand users on a higher code. One code keeps the switch
+  reversible. A universal install moves to its processor's file on the next update (the updater
+  prefers the device's ABI), no same-version reinstall needed.
+- Check: `scripts/check_abi_splits.py` (CI input `abi_splits`) fails unless each edition has five
+  APKs, each split holds only its own lib/<abi>, the universal holds all four, and all share one
+  versionCode.
+
+### ADR-055: Curated Live TV is built from the iptv-org database and probed on every sync (E2)
+
+- Context: big public playlists carry thousands of dead or geo-locked links. iptv-org's own
+  tooling checks links and drops broken ones; its data (channels, streams, blocklist, logos) is
+  public domain.
+- Decision: our own script `.github/scripts/curate_live.py` (no iptv-org code copied) picks about
+  20 channels per country from the iptv-org API, drops NSFW, closed and blocklisted (DMCA / NSFW)
+  channels and links that need special headers, ranks 24/7, not geo-blocked, https, higher quality
+  first, and keeps only links that answer with an HLS playlist (a master playlist's first variant
+  must answer too). One link per channel. Output: `curated/<cc>.m3u` + `curated/index.json` on the
+  streams branch, inside the existing stream-sync run. Kill switch: repository variable
+  `YUMEIRO_CURATED_LIVE` (off unless "true"); a country whose probe finds nothing keeps its last file.
+- Limits: the probe runs from a GitHub runner (US), so a link geo-locked outside the US can be kept
+  or dropped wrongly; the app still shows its normal error for a dead link. Countries live in
+  `.github/streams/curated.json`.
+
+### ADR-056: Vertical mode in the normal player, and Shorts chrome that hides when idle (F-12)
+
+- Context: F-12 asked for 9:16 content that does not come from YouTube to open vertically, with
+  swipe up for the next item, controls that hide when idle and return on tap, and Back to the
+  normal player. Research: the YouTube app fills the screen for a vertical video and enters
+  vertical full screen with a swipe up ([YouTube Help](https://support.google.com/youtube/answer/6375112?hl=en&co=GENIE.Platform=Android));
+  YouTube Shorts uses tap to pause, hold the edge for 2x, and a Clear screen mode
+  ([YouTube Help thread](https://support.google.com/youtube/thread/445002770));
+  local swipe players (Swiply, [Google Play](https://play.google.com/store/apps/details?id=com.shyamsavroop.swiply&hl=en))
+  swipe up / down through a folder and keep left = brightness, right = volume; the Media3
+  short-form demo ([androidx/media](https://github.com/androidx/media/tree/1.11.1/demos/shortform))
+  uses a player pool and DefaultPreloadManager (more memory, rejected in ADR-018). No code copied.
+- Decision, normal player (`VerticalMode`, `DragRule`): on a phone (not TV, not a tablet, not
+  floating or PiP), a video whose shown height is at least 1.5 x its width (rotation and pixel
+  ratio counted; 9:16 yes, 3:4 no) switches the player to vertical mode once: full screen in
+  portrait (`PlayerOrientationRule` already asks USER_PORTRAIT for a vertical video) and cropped to
+  fill (ZOOM). In vertical mode a centre-third swipe up plays the next queue item and a swipe down
+  the previous one (down with no previous item leaves vertical mode); the side thirds stay
+  brightness and volume, horizontal drags stay seek, hold stays 2x. The normal controls keep their
+  3.5 s auto-hide. Back, the fullscreen button or a swipe down on the first item leave vertical
+  mode: the same item keeps playing in the normal layout (FIT), and the player does not switch
+  back by itself in that session. A landscape next item also returns to the normal layout.
+- Decision, Shorts player (`ShortsWindow.chromeMayHide`, `tap`): the top bar and the title hide
+  after 3.5 s of uninterrupted play and stay up while paused, buffering or on an error. A tap
+  while hidden only shows them (the Short keeps playing); a tap with them up pauses or plays. A new
+  page shows its title again. Back from the Shorts player closes it (to the shelf), and its
+  "Full player" button still opens the normal player.
+- Preloading: the Shorts pager resolves links ahead (2 ahead and 1 behind; 1 ahead on low-end) in
+  `ShortsWindow.prefetch` and keeps one shared player and one video view (ADR-018, F12-VIEW). That
+  is the lightweight preload; media bytes are not fetched ahead (no DefaultPreloadManager, no
+  disk cache), to keep memory low on 2 GB phones. The normal player's queue already gives the next
+  item at once (local files, extension episodes).
+- Flags: `f12_vertical_mode` and `f12_shorts_autohide` (kill switches, on) act only while
+  `f12_vertical_shorts` is on; that one stays off until F-12 is Verified.
+- Tests: `F12VerticalModeTest` (unit), `F12VerticalModeDeviceTest` and
+  `F12ShortsSwipeDeviceTest#chromeHidesWhenIdleAndATapBringsItBack` (device; TV: vertical mode
+  must never start).
+
+### ADR-057: Nuvio scrapers run as stream-only add-ons whose links join the opened title's list (F-05-N)
+
+- Context: F-05 asked for Nuvio, SkyStream and Vega repositories. Vega runs since ADR-047. Nuvio
+  "local scrapers" are a different shape: one JavaScript file per scraper exporting
+  `getStreams(tmdbId, mediaType, season, episode)` that answers `[{name, title, url, quality,
+  size?, headers?}]`, with no catalog ([tapframe/nuvio-providers](https://github.com/tapframe/nuvio-providers)).
+  Nuvio itself merges those streams with its add-ons' streams in one source list
+  ([Nuvio Wiki, Plugins](https://nuvio.wiki/integrations/plugins)). Its runtime is QuickJS
+  (quickjs-kt), a fresh context per call, `require` limited to cheerio and crypto-js, 60 s per
+  scraper, up to 10 at once, plus `SCRAPER_ID` / `SCRAPER_SETTINGS` globals
+  ([runtime notes in a community repo](https://github.com/Apirss/my-gowaru-nuvio-providers/blob/main/DOCUMENTATION.md),
+  [nuvio-bdix-plugin README](https://github.com/Riaz-404/nuvio-bdix-plugin)). Other ports either
+  bundle crypto-js 4.2.0 (Nuvio, [StremioK](https://github.com/Kepler75/StremioK/blob/main/docs/PLUGINS.md))
+  or write a native layer that leaves TripleDES out ([NuvioTVOS](https://github.com/vatax3/NuvioTVOS)).
+  Read for the ledger: 92 scraper bundles in four community repos; 90 need no Node.js built-in,
+  crypto-js is used for enc.Utf8 / Base64 / Hex, AES CBC / Pkcs7, TripleDES, SHA256, MD5,
+  HmacSHA256, HmacMD5, lib.WordArray.create and lib.CipherParams.create. No Nuvio code is used.
+- Decision, seam (`online/StreamAddons.kt`): a `StreamAddon` is asked with a `StreamRequest`
+  (TMDB id, IMDb id, "movie" / "tv", season, episode, title, year) built from the opened title's
+  `OnlineDetail` ids and the current episode; titles with no id, and live channels, ask nothing.
+  `StreamAddons.merge` runs the opened source's `links` flow and every active add-on side by side,
+  forwards Link / Subtitle / Skipped as they come, swallows the inner Done events and sends one
+  Done after all of them: ok when any link came in, else the opened source's error (an add-on's
+  only when the source had none). A throwing add-on ends only itself; GatherCap collecting less
+  cancels all of them. `OnlineSession.resolve` is the only caller (downloads keep the source's own
+  links). Add-on links carry `source = "Nuvio · <scraper>"` as their badge and `raw = null`, so no
+  extension interceptor is registered for them. SkyStream and Stremio stream-only add-ons and E1
+  Layer B plug into the same seam.
+- Decision, adapter (`NuvioAdapter`, `NuvioStreams`): `RuntimeAdapter.build` may return null, and
+  Nuvio's does, so no catalog source is published. A Nuvio repo goes through the same registry as
+  Vega (caps 1 MB manifest, 2 MB a file, 50 MB total, SHA-256 per file, checked before each run).
+  Each installed scraper whose `supportedTypes` fit runs in its own `ScriptRuntime.call` with the
+  new `__invokePositional` (a JSON array spread as arguments) and `SCRAPER_ID` / `SCRAPER_SETTINGS`
+  set; the shared gate keeps 4 at once (2 on low-end phones and TV), the call budget stays 25 s,
+  memory 48 / 32 MB, 30 requests, SRC-2. Streams with DRM data are dropped, torrents become
+  Skipped with their link, non-web links are ignored; quality is read without a regex. A scraper
+  whose code asks for a Node.js built-in is installed but reported in Script repos ("may find
+  nothing"), because bundles often reach those only on paths that never run.
+- Decision, crypto-js: not bundled. `provider_runtime.js` has a shim with crypto-js 4's shapes
+  (WordArray with words / sigBytes, enc.Hex / Latin1 / Utf8 / Base64 / Base64url, AES and
+  TripleDES with CBC / ECB and Pkcs7 / NoPadding / ZeroPadding / AnsiX923, OpenSSL "Salted__"
+  passphrases, MD5, SHA1 / 224 / 256 / 384 / 512 and their HMACs, EvpKDF, `.default` for esbuild
+  interop). The bytes go to the host as hex (`crypto_*` channels) and `ScriptCrypto` does the work
+  with javax.crypto, so there is no third-party crypto code and no pure-JS AES on a slow phone.
+  Also added: `Promise.allSettled` / `Promise.any` when missing, `TextEncoder` / `TextDecoder`.
+  The shim was checked against crypto-js 4.2.0 on 16 cases (docs/evidence/f05n/).
+- No repositories are built in and no TMDB key is shipped; community scrapers carry their own.
+  The empty result says "No scrapers returned a stream".
+- Flags: `scripts_nuvio` (repos, install, run) and `f05_stream_addons` (the merge), both off
+  until NuvioProviderDeviceTest passes on a device; then both flip on.
+- Tests: `f05/StreamAddonsMergeTest`, `f05/NuvioAdapterTest`, `f05/ScriptCryptoTest` (unit) and
+  `NuvioProviderDeviceTest` (real QuickJS: crypto-js answers equal crypto-js's own, cheerio,
+  DRM dropped, season / episode passed, a crashing scraper ends only itself, merged list).
+
+### ADR-058: SkyStream plugins (.sky) run as catalog sources on the ADR-047 registry (F-05-S)
+
+- Context: F-05's last ecosystem. A SkyStream repository is a `repo.json` with `pluginLists`
+  (or a "mega repo" whose `repos` point at other repositories); each plugin list is an array of
+  `{packageName, name, version, url, languages, categories}` whose `url` is a `.sky` file, a zip of
+  `plugin.json` (the manifest, with `baseUrl` or `domains`) and `plugin.js`. The script defines the
+  globals `getHome(cb)`, `search(query, cb)`, `load(url, cb)` and `loadStreams(url, cb)` and answers
+  `cb({success, data})`; helpers are `http_get` / `http_post` / `http_parallel`, `parse_html`,
+  `getAndUnpack`, `loadExtractor`, `crypto.decryptAES`, `solveCaptcha`
+  ([SkyStream developer guide](https://github.com/akashdh11/skystream-tools/blob/main/DEVELOPER.md)).
+  Since SkyStream 2.9.0 a plugin list inside a repo manifest itself is no longer read
+  ([release v2.9.0](https://github.com/akashdh11/skystream/releases/tag/v2.9.0)). SkyStream (GPL-3)
+  and skystream-plugins were read for the interface only; no code is used.
+- Decision: `SkyStreamAdapter` on the same registry, sandbox and caps as Vega and Nuvio. The
+  registry expands one level of child repositories (at most 16 list reads, 300 plugins, dedupe by
+  id; a list that fails is skipped). The `.sky` is downloaded under the same caps and hash, and
+  read in memory on each call: only the basenames `plugin.js` / `plugin.json`, at most 64 entries
+  and 4 MB each, nothing unpacked to disk. `sky_runtime.js` (assets, run after
+  `provider_runtime.js`) gives the SkyStream globals over the guarded fetch; `getAndUnpack` and
+  `loadExtractor` are host channels (JsUnpacker; CloudStream extractors with the SRC-2 address
+  check and a 15 s cap). `__invokeSky` passes the callback last, takes the first answer from the
+  callback or a returned promise, and turns `{success:false}` into its message.
+- Mapping: getHome's category map → one HomePageList per category, "Trending" first, at most 16
+  rows of 60; search page 1 only; load types movie / series / anime / livestream; an episode's
+  `streams` ride along in its data and come before `loadStreams`; DRM, torrents, `magic_m3u8:`
+  playlists and non-web links are skipped; a `MAGIC_PROXY_v1` link is unwrapped to its real
+  address (the player sends the headers itself).
+- Not supported, reported instead of faked: captchas, sub-providers (`providers` in plugin.json),
+  a lone `.sky` pasted without a repository, plugin settings UI.
+- Flag `scripts_skystream`, off until SkyStreamProviderDeviceTest passes on device.

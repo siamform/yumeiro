@@ -39,6 +39,10 @@ jackson = "2.18.11" # phone (minSdk 28). X13-6 (ADR-035): 2.19 line unpatched (1
 # (ExceptionUtil -> java.lang.BootstrapMethodError, databind#4653; seen on the TV api24 emulator,
 # run 43765162241). 2.13 is the last line upstream supports on SDK 24, and CloudStream 4.8.0 asks for 2.13.1.
 jacksonTv = "2.13.5"
+# B-31 (ADR-053): Java part only; the native engine is fetched and pinned at runtime (TorrentEngine.PINS).
+# Phone 2.1.0-39 (needs Android 9 = phone minSdk 28); TV 2.1.0-38 (Android 7, TV minSdk 24), see app/build.gradle.kts.
+libtorrent4j = "2.1.0-39"
+libtorrent4jTv = "2.1.0-38"
 castFramework = "23.0.0"
 # Push (FCM only — no Analytics, Auth or Firestore). BoM 35.2.0 → firebase-messaging 26.0.2.
 firebaseBom = "35.2.0"
@@ -89,6 +93,7 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-runtime-tracing = { group = "androidx.compose.runtime", name = "runtime-tracing" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-test-junit4-accessibility = { group = "androidx.compose.ui", name = "ui-test-junit4-accessibility" }
@@ -141,6 +146,7 @@ mlkit-text-korean = { group = "com.google.mlkit", name = "text-recognition-korea
 mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkitTranslate" }
 cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "castFramework" }
 androidx-mediarouter = { group = "androidx.mediarouter", name = "mediarouter", version.ref = "mediarouter" }
+libtorrent4j = { group = "org.libtorrent4j", name = "libtorrent4j", version.ref = "libtorrent4j" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
 nicehttp = { group = "com.github.Blatzar", name = "NiceHttp", version.ref = "nicehttp" }
 newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }

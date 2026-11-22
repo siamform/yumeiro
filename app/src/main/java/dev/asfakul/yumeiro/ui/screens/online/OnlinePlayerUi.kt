@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -146,19 +147,23 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
             Modifier.statusBarsPadding().padding(top = 60.dp, start = 12.dp, end = 12.dp).horizontalScroll(rememberScrollState()).testTag("online_player_bar"),
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (state.episodes.size > 1) PlayerChip(Icons.AutoMirrored.Filled.List, state.episode?.let { e -> listOfNotNull(e.season?.let { "S$it" }, e.episode?.let { "E$it" }).joinToString("").ifBlank { "Episodes" } } ?: "Episodes", "online_player_episodes") { panel = Panel.EPISODES }
-            if (state.links.isNotEmpty()) PlayerChip(Icons.Default.HighQuality, "Source ${state.linkIndex + 1}/${state.links.size}", "online_player_sources") { panel = Panel.SOURCES }
-            PlayerChip(Icons.Default.ClosedCaption, "Subtitles", "online_player_subtitles") { panel = Panel.SUBTITLES }
             val castOk by androidx.compose.runtime.remember { dev.asfakul.yumeiro.cast.CastSupport.ready(context) }.collectAsState()
-            if (castOk && state.link != null) PlayerChip(Icons.Default.Cast, "Cast", "online_player_cast") { castCurrent(context, state, player) }
-            if (state.detail.versions.size > 1) {
-                val other = state.detail.versions.firstOrNull { it != state.version }
-                if (other != null) PlayerChip(Icons.Default.Translate, "${state.version.ifBlank { "Default" }} → ${other.ifBlank { "Default" }}", "online_player_version") { OnlineSession.switchVersion(context, other) }
+            val other = if (state.detail.versions.size > 1) state.detail.versions.firstOrNull { it != state.version } else null
+            val actions = buildList {
+                if (state.episodes.size > 1) add(PlayerAction(PlayerActions.EPISODES, Icons.AutoMirrored.Filled.List, state.episode?.let { e -> listOfNotNull(e.season?.let { "S$it" }, e.episode?.let { "E$it" }).joinToString("").ifBlank { "Episodes" } } ?: "Episodes", "online_player_episodes") { panel = Panel.EPISODES })
+                if (state.hasNext) add(PlayerAction(PlayerActions.NEXT, Icons.Default.SkipNext, "Next", "online_player_next") { OnlineSession.next(context) })
+                if (state.links.isNotEmpty()) add(PlayerAction(PlayerActions.SOURCES, Icons.Default.HighQuality, "Source ${state.linkIndex + 1}/${state.links.size}", "online_player_sources") { panel = Panel.SOURCES })
+                add(PlayerAction(PlayerActions.SUBTITLES, Icons.Default.ClosedCaption, "Subtitles", "online_player_subtitles") { panel = Panel.SUBTITLES })
+                if (other != null) add(PlayerAction(PlayerActions.VERSION, Icons.Default.Translate, "${state.version.ifBlank { "Default" }} → ${other.ifBlank { "Default" }}", "online_player_version") { OnlineSession.switchVersion(context, other) })
+                if (castOk && state.link != null) add(PlayerAction(PlayerActions.CAST, Icons.Default.Cast, "Cast", "online_player_cast") { castCurrent(context, state, player) })
+                if (state.link != null && state.detail.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) add(PlayerAction(PlayerActions.DOWNLOAD, Icons.Default.Download, "Download", "online_player_download") { askDownloadCurrent(context, state) })
             }
-            if (state.hasNext) PlayerChip(Icons.Default.SkipNext, "Next", "online_player_next") { OnlineSession.next(context) }
-            if (state.link != null && state.detail.kind != dev.asfakul.yumeiro.online.OnlineKind.LIVE) PlayerChip(Icons.Default.Download, "Download", "online_player_download") {
-                askDownloadCurrent(context, state)
-            }
+            if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_ESSENTIALS)) {
+                // OWN-19: Episodes and Next stay on screen; the rest is one tap away under More.
+                val (shown, more) = PlayerActions.split(actions)
+                shown.forEach { a -> PlayerChip(a.icon, a.label, a.tag, a.onClick) }
+                if (more.isNotEmpty()) PlayerMoreChip(more)
+            } else actions.sortedBy { PlayerActions.OLD_ORDER.indexOf(it.key) }.forEach { a -> PlayerChip(a.icon, a.label, a.tag, a.onClick) }
         }
     }
 
@@ -191,6 +196,44 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
                     Panel.SUBTITLES -> SubtitlesPanel(state) { sub -> panel = null; OnlineSession.addSubtitle(context, sub, positionMs()) }
                     null -> {}
                 }
+            }
+        }
+    }
+}
+
+/** OWN-19: one action of the online player's chip row. */
+internal class PlayerAction(val key: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val tag: String, val onClick: () -> Unit)
+
+/** OWN-19: which online-player actions stay on the full-screen row and which go under More. Pure. */
+internal object PlayerActions {
+    const val EPISODES = "episodes"; const val NEXT = "next"; const val SOURCES = "sources"; const val SUBTITLES = "subtitles"
+    const val VERSION = "version"; const val CAST = "cast"; const val DOWNLOAD = "download"
+    /** On screen: what people use while watching a series. Subtitles are already on the top bar. */
+    val ON_SCREEN = setOf(EPISODES, NEXT)
+    /** The row before OWN-19 (kill switch off). */
+    val OLD_ORDER = listOf(EPISODES, SOURCES, SUBTITLES, CAST, VERSION, NEXT, DOWNLOAD)
+
+    fun split(actions: List<PlayerAction>): Pair<List<PlayerAction>, List<PlayerAction>> {
+        val (shown, more) = actions.partition { it.key in ON_SCREEN }
+        // A film has no Episodes / Next: keep its first action (Source) on screen so the row is not just "More".
+        return if (shown.isEmpty() && more.size > 1) listOf(more.first()) to more.drop(1) else if (shown.isEmpty()) more to emptyList() else shown to more
+    }
+}
+
+/** OWN-19: the "More" chip and its menu; items keep their old test tags. */
+@Composable
+private fun PlayerMoreChip(actions: List<PlayerAction>) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        PlayerChip(Icons.Default.MoreVert, "More", "online_player_more") { open = true }
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.testTag("online_player_more_menu")) {
+            actions.forEach { a ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(a.label, maxLines = 1) },
+                    leadingIcon = { Icon(a.icon, null) },
+                    onClick = { open = false; a.onClick() },
+                    modifier = Modifier.testTag(a.tag),
+                )
             }
         }
     }
@@ -376,6 +419,7 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
 fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: String) -> Unit, onOpenItem: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = {}) {
     val s by OnlineSession.state.collectAsState()
     val opening by OnlineSession.opening.collectAsState()
+    val handoff by OnlineSession.handoff.collectAsState()
     opening?.let { item ->
         val ctx = LocalContext.current
         // Round 13: the skeleton follows what's coming (direct video, film, series, or a title page).
@@ -384,6 +428,9 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
         dev.asfakul.yumeiro.ui.screens.watch.WatchScaffold(
             backdrop = item.posterUrl, backdropHeaders = item.posterHeaders,
             onBack = { OnlineSession.cancelOpening() }, tag = "online_opening",
+            // OWN-1: during the hand-off the title page is already pushed; a Back must close that page (it used
+            // to only hide this layer, leaving the page open: HomeNavigationDeviceTest h2, device run 45032861815).
+            backEnabled = !handoff,
             screen = {
                 when (kind) {
                     dev.asfakul.yumeiro.ui.screens.watch.WatchKind.MOVIE -> WatchScreenStatus("Opening the film…", onCancel = { OnlineSession.cancelOpening() }, overline = "映画 · MOVIE")
@@ -876,5 +923,17 @@ internal fun askDownloadCurrent(context: android.content.Context, state: OnlineS
         folder = if (state.episode != null) dev.asfakul.yumeiro.online.download.DownloadNaming.seriesFolder(state.detail.name, state.api, state.version) else dev.asfakul.yumeiro.online.download.DownloadGroups.LOOSE,
         quality = state.link?.qualityLabel?.ifBlank { null } ?: "Current source",
         defaultKeep = s.keepByDefault.value,
+        // OWN-18: size, sub / dub, format and source of what is playing.
+        facts = downloadFacts(state.version, state.link),
+        sizeFor = state.link?.let { link -> { h -> dev.asfakul.yumeiro.online.download.DownloadSize.probe(
+            dev.asfakul.yumeiro.network.NetworkClient.get(context), link.url, dev.asfakul.yumeiro.online.download.OnlineDownloads.headersFor(link), link.isHls, link.isDash, h) } },
     ) { keep -> dev.asfakul.yumeiro.online.download.OnlineDownloads.downloadCurrent(context, keep) })
 }
+
+/** OWN-18: the chips the download popup shows for an online title: Sub / Dub, format, source. Pure. */
+internal fun downloadFacts(version: String?, link: dev.asfakul.yumeiro.online.OnlineLink?): List<String> = listOfNotNull(
+    version?.trim()?.takeIf { it.isNotEmpty() && !it.equals("default", true) },
+    link?.let { if (it.isHls) "HLS stream" else if (it.isDash) "DASH stream" else "Video file" },
+    link?.audioTracks?.size?.takeIf { it > 0 }?.let { "+ $it audio ${if (it == 1) "track" else "tracks"}" },
+    link?.source?.trim()?.takeIf { it.isNotEmpty() }?.let { "Source: $it" },
+)

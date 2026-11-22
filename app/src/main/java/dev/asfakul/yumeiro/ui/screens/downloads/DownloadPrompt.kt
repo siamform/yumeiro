@@ -84,7 +84,7 @@ object DownloadsNav {
  * "Don't ask again" turns it off (Settings → Downloads turns it back on).
  */
 object DownloadPrompt {
-    enum class Type { EPISODES, MOVIE, CURRENT, YT_VIDEO, YT_AUDIO }
+    enum class Type { EPISODES, MOVIE, CURRENT, YT_VIDEO, YT_AUDIO, /** OL-4: a website, link or Telegram video. */ LINK }
 
     data class Request(
         val type: Type,
@@ -98,9 +98,32 @@ object DownloadPrompt {
         val quality: String,
         val sizeBytes: Long = 0,
         val defaultKeep: Boolean,
+        /**
+         * NF-2b: when set, the prompt offers Best / 1080p / 720p / 480p / 360p for this download and starts it
+         * with the picked height (-1 = the Settings value) instead of [start].
+         */
+        val startAt: ((keep: Boolean, maxHeight: Int) -> String?)? = null,
+        /** OL-5: quality / audio / subtitle choices this source has (null = none to offer). */
+        val offer: dev.asfakul.yumeiro.online.download.DownloadTracks.Offer? = null,
+        /** OL-5: starts with everything picked in the popup; used instead of [startAt] / [start] when set. */
+        val startWith: ((keep: Boolean, pick: dev.asfakul.yumeiro.online.download.DownloadTracks.Pick) -> String?)? = null,
+        /** OWN-11: show the popup even with "Ask before download" off (a YouTube video: Video or Audio only). */
+        val alwaysAsk: Boolean = false,
+        /**
+         * OWN-18: finds the size for the picked quality (max height, <= 0 = best) when [sizeBytes] is not known.
+         * Blocking network allowed: the popup runs it off the main thread with a timeout.
+         */
+        val sizeFor: ((maxHeight: Int) -> dev.asfakul.yumeiro.online.download.DownloadSize.Size?)? = null,
+        /** OWN-18: what else the user should see before saving: "Sub", "Dub", "Hindi audio", "HLS stream", source name. */
+        val facts: List<String> = emptyList(),
+        /** OWN-18: why there is no size (a batch whose links are fetched only when each item starts). */
+        val sizeNote: String? = null,
         /** Starts the download; returns an error text or null. */
         val start: (keep: Boolean) -> String?,
     )
+
+    /** Whether [ask] shows the popup (true) or starts at once. */
+    internal fun shows(askFirst: Boolean, request: Request, hosts: Int): Boolean = (askFirst || request.alwaysAsk) && hosts > 0
 
     private val _current = MutableStateFlow<Request?>(null)
     val current: StateFlow<Request?> = _current.asStateFlow()
@@ -108,15 +131,21 @@ object DownloadPrompt {
 
     fun ask(context: Context, request: Request) {
         DownloadSettings.init(context)
-        if (DownloadSettings.askFirst.value && hosts > 0) _current.value = request
+        if (shows(DownloadSettings.askFirst.value, request, hosts)) _current.value = request
         else run(context, request, request.defaultKeep)
     }
 
     internal fun dismiss() { _current.value = null }
 
-    internal fun run(context: Context, r: Request, keep: Boolean) {
+    internal fun run(context: Context, r: Request, keep: Boolean, maxHeight: Int = -1, tracks: dev.asfakul.yumeiro.online.download.DownloadTracks.Pick? = null) {
         _current.value = null
-        val err = r.start(keep)
+        val pick = r.startAt
+        val with = r.startWith
+        val err = when {
+            with != null -> with(keep, tracks ?: dev.asfakul.yumeiro.online.download.DownloadTracks.Pick(maxHeight = maxHeight))
+            pick != null -> pick(keep, maxHeight)
+            else -> r.start(keep)
+        }
         if (err != null) { AppMessages.error(context, err); return }
         val mode = if (keep) "Permanent" else "Offline"
         AppMessages.show(context, "Downloading ${r.what} · $mode", AppMessages.Kind.SUCCESS, "View downloads") { DownloadsNav.open() }
@@ -139,6 +168,21 @@ fun DownloadPromptHost() {
     val req = r ?: return
     var keep by remember(req) { mutableStateOf(req.defaultKeep) }
     var dontAsk by remember(req) { mutableStateOf(false) }
+    var height by remember(req) { mutableStateOf(DownloadSettings.quality.value) }
+    // OL-5: audio track and subtitles for this download.
+    val offer = req.offer?.takeIf { it.hasChoices }
+    var audio by remember(req) { mutableStateOf<String?>(null) }
+    var subs by remember(req) { mutableStateOf(dev.asfakul.yumeiro.online.download.DownloadTracks.SUBS_NONE) }
+    val start = {
+        if (dontAsk) DownloadSettings.setAskFirst(context, false)
+        DownloadPrompt.run(context, req, keep, if (req.startAt != null || req.startWith != null) height else -1,
+            dev.asfakul.yumeiro.online.download.DownloadTracks.Pick(maxHeight = if (req.startAt != null || req.startWith != null || offer != null) height else -1, audio = audio, subtitles = subs))
+    }
+    // OL-6: the redesigned popup (bottom sheet on phones, dialog on TV / wide screens).
+    if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_SHEET)) {
+        DownloadSheetHost(req, offer, height, { height = it }, audio, { audio = it }, subs, { subs = it }, keep, { keep = it }, dontAsk, { dontAsk = it }, start)
+        return
+    }
 
     TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
@@ -146,14 +190,19 @@ fun DownloadPromptHost() {
         modifier = Modifier.testTag("download_confirm"),
         icon = { Icon(Icons.Default.Download, null) },
         title = { Text("Download ${req.what}?", fontWeight = FontWeight.Bold) },
-        text = { DownloadConfirmBody(req, keep, { keep = it }, dontAsk, { dontAsk = it }) },
+        text = {
+            Column {
+                if (offer != null && offer.heights.size > 1) TrackChips("Quality for this download", "download_track_quality", listOf(0 to "Best") + offer.heights.map { it to "${it}p" }, height) { height = it }
+                else if (req.startAt != null || req.startWith != null) QualityPicker(height) { height = it }
+                // OL-5: many tracks scroll in their own box so the Offline / Permanent choice stays in view.
+                if (offer != null) Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) { TrackPicker(offer, audio, { audio = it }, subs, { subs = it }) }
+                DownloadConfirmBody(req, keep, { keep = it }, dontAsk, { dontAsk = it })
+            }
+        },
         confirmButton = {
             dev.asfakul.yumeiro.ui.components.DialogConfirmButton(
                 if (req.count > 1) "Download ${req.count}" else "Download",
-                onClick = {
-                    if (dontAsk) DownloadSettings.setAskFirst(context, false)
-                    DownloadPrompt.run(context, req, keep)
-                },
+                onClick = { start() },
                 modifier = Modifier.testTag("download_confirm_start"),
             )
         },
@@ -164,6 +213,50 @@ fun DownloadPromptHost() {
             }
         },
     )
+}
+
+/** OL-5: one row of choice chips (quality heights, audio tracks, subtitles). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun <T> TrackChips(title: String, tag: String, options: List<Pair<T, String>>, selected: T, onPick: (T) -> Unit) {
+    Column(Modifier.padding(bottom = 8.dp).testTag(tag)) {
+        Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            options.forEachIndexed { i, (v, label) ->
+                FilterChip(selected = selected == v, onClick = { onPick(v) }, label = { Text(label, maxLines = 1) }, modifier = Modifier.testTag("${tag}_$i"))
+            }
+        }
+    }
+}
+
+/** OL-5: audio track (when the stream has more than one) and subtitles to save with the video. */
+@Composable
+internal fun TrackPicker(
+    offer: dev.asfakul.yumeiro.online.download.DownloadTracks.Offer,
+    audio: String?, onAudio: (String?) -> Unit, subs: String, onSubs: (String) -> Unit,
+) {
+    val T = dev.asfakul.yumeiro.online.download.DownloadTracks
+    T.audioRow(offer)?.let { (title, chips) -> TrackChips(title, "download_track_audio", chips, audio, onAudio) }
+    if (offer.subtitles.isNotEmpty()) TrackChips("Subtitles", "download_track_subs",
+        listOf(T.SUBS_NONE to "None") + offer.subtitles.map { it to it } + if (offer.subtitles.size > 1) listOf(T.SUBS_ALL to "All") else emptyList(), subs, onSubs)
+    else if (offer.subtitlesLater) TrackChips("Subtitles", "download_track_subs",
+        listOf(T.SUBS_NONE to "None") + offer.subtitleLanguages.map { it to it } + listOf(T.SUBS_ALL to "Save all the source has"), subs, onSubs)
+}
+
+/** NF-2b: quality for this download only (Settings → Downloads → Quality stays the default). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun QualityPicker(selected: Int, onPick: (Int) -> Unit) {
+    Column(Modifier.padding(bottom = 8.dp).testTag("download_quality")) {
+        Text("Quality for this download", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (h in DownloadSettings.QUALITY_CHOICES) FilterChip(
+                selected = selected == h, onClick = { onPick(h) },
+                label = { Text(if (h == 0) "Best" else "Up to ${h}p") },
+                modifier = Modifier.testTag("download_quality_$h"),
+            )
+        }
+    }
 }
 
 /** Body of the download confirmation (separate so it can be previewed and tested). */
@@ -250,6 +343,7 @@ internal fun tipsFor(type: DownloadPrompt.Type): List<String> = buildList {
         }
         DownloadPrompt.Type.YT_VIDEO -> add("HD video and its sound download separately and are joined on your phone.")
         DownloadPrompt.Type.YT_AUDIO -> add("Audio only is the smallest download and plays like any song.")
+        DownloadPrompt.Type.LINK -> add("Saved as one video file. Streams (HLS, DASH) are fetched piece by piece and joined on your phone.")
     }
     add("Uses mobile data when Wi-Fi is off. Quality and parallel downloads are in Settings → Downloads.")
 }

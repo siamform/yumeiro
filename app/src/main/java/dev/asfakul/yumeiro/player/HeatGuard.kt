@@ -83,12 +83,24 @@ object HeatGuard {
     /** Decorative motion (hero auto-advance) pauses when warm or hot. */
     fun allowDecorativeMotion(level: Level = _level.value): Boolean = level == Level.COOL
 
-    private val base = Semaphore(6)
+    /**
+     * FE-2c (docs/FEED-ENGINE-2.1.md): the shared limit of 6 extension calls serves the lanes by priority
+     * ([dev.asfakul.yumeiro.online.PriorityGate.Lane] in the caller's context; none = BACKGROUND). Before, it was a
+     * FIFO Semaphore(6): a search the user just typed, or the next page under the finger, waited behind every
+     * background feed row queued before it. While something plays, background calls run one at a time (FE-P).
+     */
+    private val base = dev.asfakul.yumeiro.online.PriorityGate(6) {
+        if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_CALL_LANES)) dev.asfakul.yumeiro.online.PlayingNow.backgroundLimit(6) else 6
+    }
     private val warmGate = Semaphore(4)
     private val hotGate = Semaphore(2)
 
+    private suspend fun lane(): Int =
+        if (!dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_CALL_LANES)) dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND
+        else kotlin.coroutines.coroutineContext[dev.asfakul.yumeiro.online.PriorityGate.Lane]?.priority ?: dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND
+
     /** Runs [block] under the extension-call limit for the current level (6 / 4 / 2 at once). */
-    suspend fun <T> limited(level: Level = _level.value, block: suspend () -> T): T = base.withPermit {
+    suspend fun <T> limited(level: Level = _level.value, block: suspend () -> T): T = base.run("", lane()) {
         when (level) {
             Level.COOL -> block()
             Level.WARM -> warmGate.withPermit { block() }

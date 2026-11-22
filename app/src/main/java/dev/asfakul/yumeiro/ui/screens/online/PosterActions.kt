@@ -11,6 +11,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -169,3 +173,26 @@ private fun ActionRow(icon: ImageVector, label: String, tint: Color, tag: String
         Text(label, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     }
 }
+
+/**
+ * F-09-FEED: Watch later / Favorite on the cards that are not a [PosterCard] (Yumix feed cards, Top 10, Continue
+ * watching). Before, they had a plain click only, so a long press there did nothing. On when both
+ * poster_actions and f09_feed_actions are on.
+ */
+@Composable
+internal fun feedPosterActionsOn(): Boolean {
+    val ctx = LocalContext.current
+    return remember {
+        dev.asfakul.yumeiro.FeatureFlags.on(ctx, dev.asfakul.yumeiro.FeatureFlags.Flag.POSTER_ACTIONS) &&
+            dev.asfakul.yumeiro.FeatureFlags.on(ctx, dev.asfakul.yumeiro.FeatureFlags.Flag.F09_FEED_ACTIONS)
+    }
+}
+
+/** F-09-FEED: tap opens; long press (phone, or hold OK on TV) or the remote's Menu key calls [onActions]. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+internal fun Modifier.posterPress(onClick: () -> Unit, onActions: (() -> Unit)?): Modifier =
+    if (onActions == null) clickable(onClick = onClick)
+    else onPreviewKeyEvent { e ->
+        if (e.key == androidx.compose.ui.input.key.Key.Menu && e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp) { onActions(); true }
+        else e.key == androidx.compose.ui.input.key.Key.Menu
+    }.combinedClickable(onClick = onClick, onLongClick = onActions, onLongClickLabel = "Watch later or Favorite")

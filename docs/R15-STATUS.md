@@ -1,3 +1,7 @@
+## Resume here (2026-11-21, no release until the owner says)
+
+Resume here: release 2.1.0. CI 45062571312 green, phone upgrade 45067511656 PASS. Open PR to main, merge, watch release.yml.
+
 # R15 status: every item in the master prompt, with its evidence
 
 ## Resume here (updated 2026-11-20 08:35 UTC)

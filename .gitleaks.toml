@@ -12,6 +12,9 @@ useDefault = true
 description = "Mirrored third-party playlists (market/streams branches) - not Yumeiro secrets"
 paths = [
   '''(^|/)playlists/[^/]+\.m3u8?$''',
+  # Yumeiro Live state on the streams branch. The first file (commit 2d8cf9a6) was keyed by the
+  # same third-party stream links as the playlist; since state version 2 the keys are hashes.
+  '''^live/state\.json$''',
 ]
 
 # Saved third-party web pages used as parser fixtures. Commit 7df5564 kept the site's public ad-slot

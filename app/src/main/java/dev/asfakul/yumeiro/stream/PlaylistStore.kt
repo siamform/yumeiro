@@ -54,6 +54,8 @@ data class StreamPlaylist(
     val autoUpdate: Boolean = true,
     /** GitHub repository the playlist comes from ("owner/name"). */
     val repo: String? = null,
+    /** E2-ALL-C: when the mirror last checked every stream of this list (index.json "checked"); 0 = unknown. */
+    val checked: Long = 0L,
 ) {
     val isLocal: Boolean get() = url == null
     val isMarket: Boolean get() = marketId != null
@@ -64,6 +66,7 @@ data class StreamPlaylist(
         put("default", isDefault); put("enabled", enabled); put("count", channelCount); put("updated", lastUpdated)
         lastError?.let { put("error", it) }; put("edited", userEdited)
         marketId?.let { put("market", it) }; marketSha?.let { put("marketSha", it) }; put("auto", autoUpdate); repo?.let { put("repo", it) }
+        if (checked > 0) put("checked", checked)
     }
 
     companion object {
@@ -84,6 +87,7 @@ data class StreamPlaylist(
             marketSha = o.optString("marketSha").ifBlank { null },
             autoUpdate = o.optBoolean("auto", true),
             repo = o.optString("repo").ifBlank { null },
+            checked = o.optLong("checked"),
         )
     }
 }
@@ -107,16 +111,28 @@ data class PlaylistAnalysis(
 
 /**
  * Default playlist (mirrored every 3 days to the `streams` branch by .github/workflows/stream-sync.yml).
- * Only Mrgify BDIX ships pre-installed; everything else is available in the Playlist Market.
+ * Mrgify BDIX and (E2-ALL, flag live_default) Yumeiro Live ship pre-installed; everything else is in the
+ * Playlist Market. Yumeiro Live is rebuilt and probed daily by build_live_all.py (dead streams removed after 3 runs).
  */
 object DefaultPlaylists {
     const val MIRROR_BASE = "https://raw.githubusercontent.com/siamform/yumeiro/streams"
     const val INDEX_URL = "$MIRROR_BASE/index.json"
     private const val UPSTREAM = "https://raw.githubusercontent.com/abusaeeidx"
 
-    val all: List<StreamPlaylist> = listOf(
-        d("mrgify_bdix", "Mrgify BDIX", "Bangladesh TV", "BDIX IPTV channels (Bangladesh)", "Mrgify-BDIX-IPTV/main/playlist.m3u"),
+    const val YUMEIRO_LIVE = "yumeiro_live"
+    /** Upstream of Yumeiro Live when the mirror is unreachable: iptv-org's public index (NSFW channels are not in it). */
+    const val YUMEIRO_LIVE_UPSTREAM = "https://iptv-org.github.io/iptv/index.m3u"
+
+    private val yumeiroLive = StreamPlaylist(
+        id = YUMEIRO_LIVE, name = "Yumeiro Live", url = "$MIRROR_BASE/playlists/$YUMEIRO_LIVE.m3u", fallbackUrl = YUMEIRO_LIVE_UPSTREAM,
+        category = "Live TV", description = "All-in-one free Live TV: every country, checked daily, dead channels removed", isDefault = true,
     )
+
+    val all: List<StreamPlaylist>
+        get() = listOfNotNull(
+            if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.LIVE_DEFAULT)) yumeiroLive else null,
+            d("mrgify_bdix", "Mrgify BDIX", "Bangladesh TV", "BDIX IPTV channels (Bangladesh)", "Mrgify-BDIX-IPTV/main/playlist.m3u"),
+        )
 
     /** Former defaults (≤ v1.6) that now live in the Playlist Market. Removed on upgrade unless edited. */
     val retired: Set<String> = setOf("zilla_combined", "movies_bangla", "bdxtv_events", "yupptv", "tsports", "crichd", "crestsport")
@@ -134,6 +150,12 @@ object PlaylistStore {
     private const val MAX_INDEX_BYTES = 1L * 1024 * 1024
     const val STALE_MS = 2 * 60 * 60 * 1000L
     private const val STORE_VERSION = 2
+    /**
+     * E2-ALL: defaults that shipped after the store's "offeredDefaults" list existed (2.1.0). A file without
+     * that list (2.0.0 and older, or a recovered copy of one) has already been offered every other default.
+     * A list, not a version bump: the version stays 2 so a 2.0.0 file is not migrated again (upgrade check).
+     */
+    private val LATER_DEFAULTS = setOf(DefaultPlaylists.YUMEIRO_LIVE)
 
     private val mutex = Mutex()
     private val _playlists = MutableStateFlow<List<StreamPlaylist>>(emptyList())
@@ -141,6 +163,8 @@ object PlaylistStore {
     private val _lastSync = MutableStateFlow(0L)
     val lastSync: StateFlow<Long> = _lastSync.asStateFlow()
     private var deletedDefaults = mutableSetOf<String>()
+    /** E2-ALL: defaults this store has already offered once (added, or the user had them / removed them). */
+    private var offeredDefaults = mutableSetOf<String>()
     @Volatile private var loadedDir: File? = null
     /** Device tests only: the next call loads the index from disk again. */
     internal fun unloadForTests() { loadedDir = null }
@@ -165,6 +189,7 @@ object PlaylistStore {
         if (saved == null) {
             _playlists.value = DefaultPlaylists.all
             deletedDefaults = mutableSetOf()
+            offeredDefaults = DefaultPlaylists.ids.toMutableSet()
             _lastSync.value = 0L
         } else {
             val arr = saved.optJSONArray("playlists") ?: JSONArray()
@@ -172,15 +197,25 @@ object PlaylistStore {
                 .distinctBy { it.id }
             val del = saved.optJSONArray("deletedDefaults") ?: JSONArray()
             deletedDefaults = (0 until del.length()).map { del.optString(it) }.filter { it.isNotBlank() }.toMutableSet()
+            val off = saved.optJSONArray("offeredDefaults")
+            offeredDefaults = if (off == null) DefaultPlaylists.ids.filter { it !in LATER_DEFAULTS }.toMutableSet()
+                else (0 until off.length()).map { off.optString(it) }.filter { it.isNotBlank() }.toMutableSet()
             _lastSync.value = saved.optLong("lastSync")
         }
         loadedDir = d
         // G7 LT-4: a download cut off by a kill leaves its temp file; ones older than an hour are not in use.
         runCatching { d.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") && System.currentTimeMillis() - f.lastModified() > 3_600_000 }?.forEach { it.delete() } }
         val migrated = saved != null && saved.optInt("version", 1) < STORE_VERSION && migrateDefaults(context)
+        // E2-ALL: a default added in a later version (Yumeiro Live) reaches existing users once, unless they deleted it.
+        // Only defaults never offered: a default the user removed (or a recovered file without it) stays out.
+        val newDefaults = if (saved == null) emptyList() else DefaultPlaylists.all.filter { d ->
+            d.id !in offeredDefaults && d.id !in deletedDefaults && _playlists.value.none { it.id == d.id }
+        }
+        if (newDefaults.isNotEmpty()) _playlists.value = newDefaults + _playlists.value
+        val offeredChanged = offeredDefaults.addAll(DefaultPlaylists.ids)
         // G7 LT-2: loadedDir was set before this write, so a failed write (disk full, folder not
         // writable) left the store "loaded" and the page's Retry never tried again.
-        if (saved == null || migrated || saved.optInt("version", 1) < STORE_VERSION) {
+        if (saved == null || migrated || newDefaults.isNotEmpty() || offeredChanged || saved.optInt("version", 1) < STORE_VERSION) {
             try { persist(context) } catch (e: Exception) { loadedDir = null; throw e }
         }
     }
@@ -208,6 +243,7 @@ object PlaylistStore {
             put("version", STORE_VERSION)
             put("playlists", JSONArray().apply { _playlists.value.forEach { put(it.toJson()) } })
             put("deletedDefaults", JSONArray(deletedDefaults.toList()))
+            put("offeredDefaults", JSONArray(offeredDefaults.toList()))
             put("lastSync", _lastSync.value)
         }
         writeAtomic(indexFile(context), json.toString())
@@ -418,6 +454,10 @@ object PlaylistStore {
 
     // region Sync
 
+    /** index.json "checked" (ISO time) -> epoch ms; 0 when missing or not a time. */
+    internal fun checkedAt(s: String?): Long =
+        runCatching { java.time.Instant.parse(s!!.trim()).toEpochMilli() }.getOrDefault(0L)
+
     data class SyncResult(val updated: Int, val failed: Int, val added: Int)
 
     /**
@@ -440,12 +480,13 @@ object PlaylistStore {
                 // Defaults may only point at the official mirror; the upstream fallback must be HTTPS.
                 val url = e.optString("url").trim().takeIf { TrustedSources.isOfficialCatalogUrl(it) } ?: continue
                 val source = e.optString("source").trim().takeIf { it.startsWith("https://") }
+                val checked = checkedAt(e.optString("checked"))
                 val existing = get(id)
                 if (existing == null) {
                     _playlists.value = _playlists.value + StreamPlaylist(
                         id = id, name = e.optString("name").ifBlank { id }, url = url, fallbackUrl = source,
                         category = e.optString("category").ifBlank { null }, description = e.optString("description").ifBlank { null },
-                        isDefault = true, channelCount = e.optInt("channels"),
+                        isDefault = true, channelCount = e.optInt("channels"), checked = checked,
                     )
                     added++
                 } else if (existing.isDefault && !existing.userEdited) {
@@ -454,6 +495,7 @@ object PlaylistStore {
                             name = e.optString("name").ifBlank { it.name }, url = url, fallbackUrl = source ?: it.fallbackUrl,
                             category = e.optString("category").ifBlank { it.category },
                             description = e.optString("description").ifBlank { it.description },
+                            checked = checked.takeIf { c -> c > 0 } ?: it.checked,
                         )
                     }
                 }
@@ -624,5 +666,5 @@ object PlaylistStore {
     // endregion
 
     /** For tests: forget the in-memory state so the next call reloads from disk. */
-    internal fun resetForTests() { loadedDir = null; _playlists.value = emptyList(); deletedDefaults = mutableSetOf(); _lastSync.value = 0L }
+    internal fun resetForTests() { loadedDir = null; _playlists.value = emptyList(); deletedDefaults = mutableSetOf(); offeredDefaults = mutableSetOf(); _lastSync.value = 0L }
 }

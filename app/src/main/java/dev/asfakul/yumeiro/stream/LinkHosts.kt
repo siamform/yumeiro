@@ -74,6 +74,28 @@ object LinkHosts {
         return u.startsWith("http", ignoreCase = true) && u.substringBefore('?').substringBefore('#').endsWith(".torrent", ignoreCase = true)
     }
 
+    /**
+     * T-1 (owner list: "raw torrent info-hash → magnet"): a bare BitTorrent v1 info-hash (40 hex or 32 base32
+     * characters, optionally "urn:btih:" in front) as a magnet link, with an optional display name and trackers;
+     * null for anything else (a URL, a magnet that is already one, plain text).
+     */
+    fun magnetFromHash(text: String, name: String? = null, trackers: List<String> = emptyList(), fileIndex: Int? = null): String? {
+        val raw = text.trim().let { if (it.startsWith("urn:btih:", ignoreCase = true)) it.substring(9) else it }
+        if (!RX_BTIH_HEX.matches(raw) && !RX_BTIH_B32.matches(raw)) return null
+        val hash = if (raw.length == 40) raw.lowercase() else raw.uppercase()
+        val enc = { v: String -> java.net.URLEncoder.encode(v, "UTF-8") }
+        return buildString {
+            append("magnet:?xt=urn:btih:").append(hash)
+            name?.trim()?.takeIf { it.isNotEmpty() }?.let { append("&dn=").append(enc(it.take(200))) }
+            trackers.map { it.trim() }.filter { it.isNotEmpty() }.distinct().forEach { append("&tr=").append(enc(it)) }
+            // B-31: BEP 53 "select only", so a pack plays the episode the add-on chose (Stremio fileIdx).
+            fileIndex?.takeIf { it >= 0 }?.let { append("&so=").append(it) }
+        }
+    }
+
+    private val RX_BTIH_HEX = Regex("[0-9a-fA-F]{40}")
+    private val RX_BTIH_B32 = Regex("[A-Za-z2-7]{32}")
+
     /** The file id of a Google Drive share link, or null. */
     fun googleDriveId(url: String): String? {
         val host = hostOf(url) ?: return null
@@ -156,7 +178,7 @@ object LinkHosts {
             "TeraBox only gives the video to its own web player. Yumeiro opens the share, starts that player and plays its stream here. " +
                 "If TeraBox asks you to sign in or solve a check, the page appears so you can do it once.", auto = true)
         if (DISKWALA.any { under(host, it) }) return Browser(u, "DiskWala",
-            "DiskWala loads the video in its own web player. Yumeiro opens the page, starts the player and plays its stream here.", auto = true)
+            "DiskWala only plays its files inside the DiskWala app; Yumeiro checks the link and opens it there.", auto = true)
         return null
     }
 
@@ -178,12 +200,22 @@ object TorrentSettings {
     private const val PREFS = "yu_torrent"
     private val _server = MutableStateFlow("")
     val server: StateFlow<String> = _server.asStateFlow()
+    private val _engineAccepted = MutableStateFlow(false)
+    /** B-31: the user read the built-in engine's privacy notice and turned it on (Settings → Torrent links). */
+    val engineAccepted: StateFlow<Boolean> = _engineAccepted.asStateFlow()
     @Volatile private var loaded = false
 
     fun init(context: Context) {
         if (loaded) return
         loaded = true
-        _server.value = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("server", "").orEmpty()
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        _server.value = p.getString("server", "").orEmpty()
+        _engineAccepted.value = p.getBoolean("engine_accepted", false)
+    }
+
+    fun setEngineAccepted(context: Context, on: Boolean) {
+        _engineAccepted.value = on
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("engine_accepted", on).apply()
     }
 
     /** Keeps only http(s) host[:port] addresses; returns false when [value] isn't one. */

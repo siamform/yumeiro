@@ -180,7 +180,9 @@ sealed interface LinkEvent {
  */
 object OnlineRepository {
     private const val TAG = "Online"
-    private const val HOME_TIMEOUT = 25_000L
+    private const val HOME_TIMEOUT_MS = 25_000L
+    /** One home row call's limit; also the budget for asking more batches (FE-2b). Changed only by tests. */
+    @androidx.annotation.VisibleForTesting @Volatile internal var homeTimeoutMs = HOME_TIMEOUT_MS
     private const val SEARCH_TIMEOUT = 25_000L
     private const val LOAD_TIMEOUT = 35_000L
     private const val LINKS_TIMEOUT = 75_000L
@@ -226,19 +228,62 @@ object OnlineRepository {
     // region home
 
     /** Home rows of [api] (its main page). Cached for a while unless [force]. */
-    suspend fun home(api: MainAPI, force: Boolean = false): List<OnlineRow> = withContext(ExtensionGuard.dispatcher + ExtensionGuard.coroutineHandler) {
-        homeCache[api.name]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
+    suspend fun home(api: MainAPI, force: Boolean = false, onRows: ((List<OnlineRow>) -> Unit)? = null): List<OnlineRow> = withContext(ExtensionGuard.dispatcher + ExtensionGuard.coroutineHandler) {
+        if (!force) cachedHomeNow(api)?.let { return@withContext it }
+        val diskKey = diskKey(api, "home")
+        if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
+        // E4: every live fetch is timed; failures count towards quarantine (ExtensionSpeed).
+        // A fetch cancelled by a newer one (Retry, leaving the screen) is not the extension's fault.
+        val started = System.currentTimeMillis()
+        val live = try {
+            homeLive(api, diskKey, onRows)
+        } catch (c: kotlinx.coroutines.CancellationException) {
+            throw c
+        } catch (t: Throwable) {
+            if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) ExtensionSpeed.record(api.name, System.currentTimeMillis() - started, ok = false)
+            throw t
+        }
+        if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)) ExtensionSpeed.record(api.name, System.currentTimeMillis() - started, ok = live.isNotEmpty())
+        live
+    }
+
+    /**
+     * SPEED-1: the home rows of [api] from memory or the phone, without asking the extension; null when there are
+     * none. Runs on Dispatchers.IO, not the extension pool, so a saved page never waits behind live fetches (the
+     * Yumix gate of three and the 8-thread extension pool used to queue cached pages behind slow sites).
+     */
+    suspend fun cachedHome(api: MainAPI): List<OnlineRow>? = withContext(Dispatchers.IO) { cachedHomeNow(api) }
+
+    /**
+     * FE-1 (docs/FEED-ENGINE-2.1.md, FE-RC2): what a feed shows at once for [api]. The fresh copy when there is one,
+     * else the last saved page of any age up to keepDays, marked stale so the caller refreshes it live behind it
+     * ([takeStaleHome]). Before, a saved page older than 6 h counted as nothing, so after a night away or an app
+     * update every extension went back through the live queue of three (minutes of skeletons with pages on disk).
+     * Disk read: Dispatchers.IO. The stale copy is not put in the memory cache, so [home] still fetches live.
+     */
+    suspend fun feedHome(api: MainAPI): List<OnlineRow>? = withContext(Dispatchers.IO) {
+        cachedHomeNow(api) ?: savedHome(api)?.filter { it.items.isNotEmpty() }?.takeIf { it.isNotEmpty() }?.also { diskServed.add(api.name) }
+    }
+
+    private fun cachedHomeNow(api: MainAPI): List<OnlineRow>? {
+        homeCache[api.name]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }
         // Round 12: saved on the phone too, so reopening Yumix doesn't ask every extension again.
         val diskKey = diskKey(api, "home")
-        if (!force) dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)?.takeIf { it.isNotEmpty() }?.let { rows ->
-            homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
-            // R15: a saved page is shown at once, but it may be hours old. The caller refreshes it
-            // in the background (stale-while-revalidate) instead of leaving the old copy up.
-            val age = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L
-            if (age > CACHE_MS || System.currentTimeMillis() - age < staleBefore) diskServed.add(api.name)
-            return@withContext rows
-        }
-        if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
+        val rows = dev.asfakul.yumeiro.cache.DataCache.read("home", diskKey)?.let(dev.asfakul.yumeiro.cache.OnlineCodec::rows)?.takeIf { it.isNotEmpty() } ?: return null
+        homeCache[api.name] = Timed(System.currentTimeMillis(), rows)
+        // R15: a saved page is shown at once, but it may be hours old. The caller refreshes it
+        // in the background (stale-while-revalidate) instead of leaving the old copy up.
+        val age = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey) ?: 0L
+        if (age > CACHE_MS || System.currentTimeMillis() - age < staleBefore) diskServed.add(api.name)
+        return rows
+    }
+
+    /**
+     * [onRows] (FE-3, docs/FEED-ENGINE-2.1.md): called with the rows so far each time one row answers, so a screen can
+     * show the extension at its first row. Before, the whole batch waited for its slowest row (up to 25 s) even
+     * when the other rows were back in under a second. Called on the extension pool; may run concurrently.
+     */
+    private suspend fun homeLive(api: MainAPI, diskKey: String, onRows: ((List<OnlineRow>) -> Unit)? = null): List<OnlineRow> {
         val allPages = runCatching { api.mainPage }.getOrDefault(emptyList())
         // R15: the first ROWS_PER_PROVIDER pages are asked; when they come back empty or broken
         // (a studio that is down, a row that timed out) the next pages are asked too, up to
@@ -248,14 +293,19 @@ object OnlineRepository {
         val failures = java.util.Collections.synchronizedList(mutableListOf<Throwable>())
         var asked = 0
         var batch = 0
-        while (batch < MAX_PAGE_BATCHES && rows.size < ROWS_PER_PROVIDER) {
+        // FE-2b (docs/FEED-ENGINE-2.1.md FE-RC1): more batches only while this home is still within one row timeout.
+        // Before, a dead site (every row timing out) was asked three batches in a row, 25 s each, and held one of
+        // Yumix's three slots for 75 s; quickly failing rows (a busy studio answering an error) still get batch 2 and 3.
+        val started = System.currentTimeMillis()
+        while (batch < MAX_PAGE_BATCHES && rows.size < ROWS_PER_PROVIDER && (batch == 0 || System.currentTimeMillis() - started < homeTimeoutMs)) {
             val pages = allPages.drop(batch * ROWS_PER_PROVIDER).take(ROWS_PER_PROVIDER)
             if (pages.isEmpty()) break
             asked += pages.size
-            rows += homeBatch(api, pages, failures)
+            val before = rows.toList()
+            rows += homeBatch(api, pages, failures, onRows?.let { cb -> { soFar: List<OnlineRow> -> cb(shownRows(before + soFar)) } })
             batch++
         }
-        val result = rows.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
+        val result = shownRows(rows)
         // G7-L1: when every page threw (QuickIPTV's sites sending a web page instead of a playlist),
         // the section said "Nothing came back from this extension" and Source Health "Home page is
         // empty". The first page error is passed on so both can show the reason.
@@ -268,22 +318,41 @@ object OnlineRepository {
             homeCache[api.name] = Timed(System.currentTimeMillis(), result)
             dev.asfakul.yumeiro.cache.DataCache.write("home", diskKey, dev.asfakul.yumeiro.cache.OnlineCodec.rows(result))
         }
-        result
+        return result
     }
 
-    private suspend fun homeBatch(api: MainAPI, pages: List<com.lagradost.cloudstream3.MainPageData>, failures: MutableList<Throwable>? = null): List<OnlineRow> {
+    private fun shownRows(rows: List<OnlineRow>): List<OnlineRow> =
+        rows.filter { it.items.isNotEmpty() }.distinctBy { it.title + "|" + it.pageData }.take(MAX_ROWS_PER_PROVIDER)
+
+    private suspend fun homeBatch(
+        api: MainAPI,
+        pages: List<com.lagradost.cloudstream3.MainPageData>,
+        failures: MutableList<Throwable>? = null,
+        onRows: ((List<OnlineRow>) -> Unit)? = null,
+    ): List<OnlineRow> {
+        // FE-3: rows answered so far, by page position, handed to [onRows] as each one lands (page order kept).
+        val landed = java.util.TreeMap<Int, List<OnlineRow>>()
         // supervisorScope: one broken row (or one extension bug) never cancels the others.
         return supervisorScope {
-            pages.map { page ->
+            pages.mapIndexed { i, page ->
                 async {
                     parallel.withPermit {
                         runCatching {
-                            ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
-                        }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { page to it }
+                            ExtensionCall.bounded(homeTimeoutMs) { api.getMainPage(1, MainPageRequest(page.name, page.data, page.horizontalImages)) }
+                        }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { pageRows(api, page, it) }
+                    }?.also { rows ->
+                        if (onRows != null && rows.isNotEmpty()) {
+                            val soFar = synchronized(landed) { landed[i] = rows; landed.values.flatten() }
+                            runCatching { onRows(soFar) }
+                        }
                     }
                 }
             }.mapNotNull { runCatching { it.await() }.getOrNull() }
-        }.flatMap { (page, resp) ->
+        }.flatten()
+    }
+
+    private fun pageRows(api: MainAPI, page: com.lagradost.cloudstream3.MainPageData, resp: com.lagradost.cloudstream3.HomePageResponse): List<OnlineRow> =
+        run {
             // Extension objects can break Kotlin's null-safety (reflection / Java), so mapping is guarded too.
             runCatching {
                 resp.items.orEmpty().map { r ->
@@ -295,7 +364,9 @@ object OnlineRepository {
                 }
             }.onFailure { Log.w(TAG, "home rows ${api.name}/${page.name}", it) }.getOrDefault(emptyList())
         }.filter { it.items.isNotEmpty() }
-    }
+
+    /** FE-5: age of [api]'s saved home page in ms, or null when none is saved. Disk metadata: call off main. */
+    fun homeAgeMs(api: MainAPI): Long? = dev.asfakul.yumeiro.cache.DataCache.ageOf("home", diskKey(api, "home"))
 
     private val diskServed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
@@ -314,9 +385,10 @@ object OnlineRepository {
     /** One page of a home row ("See all"), [page] starting at 1. */
     suspend fun page(api: MainAPI, pageName: String, pageData: String, page: Int): OnlinePage = withContext(Dispatchers.IO) {
         val req = api.mainPage.firstOrNull { it.name == pageName && it.data == pageData } ?: api.mainPage.firstOrNull { it.data == pageData }
-        val resp = parallel.withPermit {
-            ExtensionCall.bounded(HOME_TIMEOUT) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
-        } ?: return@withContext OnlinePage(emptyList(), false)
+        // FE-2c: the next page under the finger goes before background feed rows.
+        val resp = withContext(PriorityGate.Lane(PriorityGate.VISIBLE)) { parallel.withPermit {
+            ExtensionCall.bounded(homeTimeoutMs) { api.getMainPage(page, MainPageRequest(pageName, pageData, req?.horizontalImages ?: false)) }
+        } } ?: return@withContext OnlinePage(emptyList(), false)
         val items = resp.items.flatMap { r -> r.list.mapNotNull { it.toItem(api.name, feed = true) } }.distinctBy { it.url }
         OnlinePage(items, resp.hasNext && items.isNotEmpty())
     }
@@ -328,45 +400,77 @@ object OnlineRepository {
     data class SearchUpdate(val api: String, val items: List<OnlineItem>, val error: String? = null)
 
     /** Searches every provider in parallel; emits each provider's results as soon as they arrive. */
-    fun search(query: String, apis: List<MainAPI>): Flow<SearchUpdate> = channelFlow {
+    fun search(query: String, apis: List<MainAPI>, retry: Boolean = false): Flow<SearchUpdate> = channelFlow {
         val q = query.trim()
         if (q.isEmpty()) return@channelFlow
-        for (api in apis) {
+        val failMemory = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S3_FAIL_MEMORY)
+        val adaptive = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S4_ADAPTIVE_TIMEOUT)
+        val speed = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER)
+        // SPEED-2: fastest measured searchers take the permits first; quarantined ones go last.
+        val ordered = if (speed) ExtensionSpeed.order(apis, { it.name }, null, { ExtensionSpeed.stat(searchKey(it)) }, System.currentTimeMillis()) else apis
+        for (api in ordered) {
             launch {
+                // SPEED-2: a saved answer is sent at once, without waiting for a permit behind slow live searches.
+                cachedSearch(api, q)?.let { send(SearchUpdate(api.name, it)); return@launch }
+                // FE-S3 (lowram run 44884969625: a repeated search waited 15 s for a site that had just timed out): a site
+                // that failed this query in the last 2 minutes answers with that failure at once; Retry asks again.
+                val failKey = "${api.name}|${q.lowercase()}"
+                if (failMemory && !retry) searchFails[failKey]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_FAIL_MS }
+                    ?.let { send(SearchUpdate(api.name, emptyList(), it.value)); return@launch }
                 val update = parallel.withPermit {
+                    val started = System.currentTimeMillis()
                     runCatching {
-                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(SEARCH_TIMEOUT) { searchOne(api, q) } }
+                        // FE-S4: measured sites get a timeout from their own speed; Retry and unknown sites the full 25 s.
+                        val limit = if (speed && adaptive) ExtensionSpeed.searchTimeoutMs(ExtensionSpeed.stat(searchKey(api.name)), retry, started, SEARCH_TIMEOUT) else SEARCH_TIMEOUT
+                        withContext(ProviderBase(runCatching { api.mainUrl }.getOrDefault(""))) { ExtensionCall.bounded(limit) { searchOne(api, q) } }
                     }.fold(
-                        { SearchUpdate(api.name, it) },
+                        { if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = true)
+                          searchFails.remove(failKey)
+                          SearchUpdate(api.name, it) },
                         { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it
-                          SearchUpdate(api.name, emptyList(), OnlineErrors.friendly(it)) },
+                          if (speed) ExtensionSpeed.record(searchKey(api.name), System.currentTimeMillis() - started, ok = false)
+                          val msg = OnlineErrors.friendly(it)
+                          if (failMemory) { if (searchFails.size > 256) searchFails.clear(); searchFails[failKey] = Timed(System.currentTimeMillis(), msg) }
+                          SearchUpdate(api.name, emptyList(), msg) },
                     )
                 }
                 send(update)
             }
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(Dispatchers.IO + PriorityGate.Lane(PriorityGate.PICKED)) // FE-2c: the user is waiting for a search.
 
     private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
+    /** FE-S3: memory only, 2 minutes: a site that just failed a query is not asked again until Retry. */
+    private val searchFails = ConcurrentHashMap<String, Timed<String>>()
+    private const val SEARCH_FAIL_MS = 2 * 60_000L
 
-    private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+    private fun searchKey(api: String) = "search|$api"
+
+    /** SPEED-2: this query's results for [api] from memory or the phone (fresh enough), or null. Disk read: call off main. */
+    fun cachedSearch(api: MainAPI, q: String): List<OnlineItem>? {
         val key = "${api.name}|${q.lowercase()}"
         searchCache[key]?.takeIf { System.currentTimeMillis() - it.at < SEARCH_CACHE_MS }?.let { return it.value }
         val dk = diskKey(api, "search", q.lowercase())
-        dev.asfakul.yumeiro.cache.DataCache.read("search", dk, maxAgeMs = minOf(dev.asfakul.yumeiro.cache.DataCache.Settings.freshMs, SEARCH_DISK_MS))
-            ?.let(dev.asfakul.yumeiro.cache.OnlineCodec::items)?.takeIf { it.isNotEmpty() }?.let { saved ->
+        return dev.asfakul.yumeiro.cache.DataCache.read("search", dk, maxAgeMs = minOf(dev.asfakul.yumeiro.cache.DataCache.Settings.freshMs, SEARCH_DISK_MS))
+            // FE-S1: an empty answer is saved too (a site that has nothing for this query), so it isn't asked again.
+            ?.let { raw -> runCatching { dev.asfakul.yumeiro.cache.OnlineCodec.items(raw) }.getOrNull() }?.also { saved ->
                 searchCache[key] = Timed(System.currentTimeMillis(), saved)
-                return saved
             }
+    }
+
+    /** Live search of [api]; the caller already checked [cachedSearch] (FE-S1: the second disk read on a miss is gone). */
+    private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+        val key = "${api.name}|${q.lowercase()}"
+        val dk = diskKey(api, "search", q.lowercase())
         val results = try {
             api.search(q, 1)?.items
         } catch (e: NotImplementedError) { null } ?: api.search(q).orEmpty()
         val items = results.mapNotNull { runCatching { it.toItem(api.name) }.getOrNull() }.distinctBy { it.url }
-        if (items.isNotEmpty()) {
-            if (searchCache.size > 64) searchCache.clear()
-            searchCache[key] = Timed(System.currentTimeMillis(), items)
-            dev.asfakul.yumeiro.cache.DataCache.write("search", dk, dev.asfakul.yumeiro.cache.OnlineCodec.items(items))
-        }
+        // FE-S1 (SpeedDeviceTest run 44883372732: a repeated search took 15.1 s): empty answers are kept as well
+        // (memory 10 min, phone 1 h like any search); errors and timeouts are not, so Retry still asks again.
+        if (searchCache.size > 64) searchCache.clear()
+        searchCache[key] = Timed(System.currentTimeMillis(), items)
+        dev.asfakul.yumeiro.cache.DataCache.write("search", dk, dev.asfakul.yumeiro.cache.OnlineCodec.items(items))
         return items
     }
 
@@ -374,7 +478,31 @@ object OnlineRepository {
 
     // region details
 
-    suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail = withContext(Dispatchers.IO) {
+    /**
+     * OWN-6: one extension `load` per title at a time. The tap (OnlineSession.open) and the title page both asked
+     * the extension for the same details at once, so the page waited for a second, slower network call.
+     */
+    private val loadsInFlight = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<OnlineDetail>>()
+    private val loadScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail {
+        if (force || !dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN)) return loadOnce(api, url, force)
+        val key = "${api.name}|$url"
+        detailCache[key]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }
+        val running = loadsInFlight[key]
+        if (running != null && running.isActive) return running.await()
+        val d = loadScope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { loadOnce(api, url, false) }
+        val prev = loadsInFlight.putIfAbsent(key, d)
+        if (prev != null && prev.isActive) { d.cancel(); return prev.await() }
+        if (prev != null) loadsInFlight[key] = d
+        d.invokeOnCompletion { loadsInFlight.remove(key, d) }
+        d.start()
+        return d.await()
+    }
+
+    internal fun loadsRunning(): Int = loadsInFlight.size
+
+    private suspend fun loadOnce(api: MainAPI, url: String, force: Boolean): OnlineDetail = withContext(Dispatchers.IO) {
         val key = "${api.name}|$url"
         detailCache[key]?.takeIf { !force && System.currentTimeMillis() - it.at < CACHE_MS }?.let { return@withContext it.value }
         val dk = diskKey(api, "detail", url)

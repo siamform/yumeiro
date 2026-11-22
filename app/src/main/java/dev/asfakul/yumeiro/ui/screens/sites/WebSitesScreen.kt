@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
@@ -85,11 +88,14 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun WebSitesScreen(onBack: () -> Unit) {
+fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     val context = LocalContext.current
     val p = LocalMtPalette.current
     LaunchedEffect(Unit) { SavedSites.init(context) }
-    val sites by SavedSites.sites.collectAsState()
+    val allSites by SavedSites.sites.collectAsState()
+    // F-02 split: the Telegram page and the Websites page each show their own kind.
+    val sites = remember(allSites, only) { SavedSites.ofKind(allSites, only) }
+    val telegramPage = only == SavedSites.Kind.TELEGRAM
     var input by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<SavedSites.Site?>(null) }
@@ -103,8 +109,16 @@ fun WebSitesScreen(onBack: () -> Unit) {
 
     fun add() {
         // F-02: "@name" or a t.me channel link saves the channel's public page (handled in SavedSites.add).
-        val err = SavedSites.add(context, input)
+        val err = SavedSites.wrongPage(input, only) ?: SavedSites.add(context, input)
         if (err != null) error = err else { input = ""; error = null }
+    }
+
+    // F-02 (ADR-052): the signed-in account opens in place, like a channel.
+    var account by rememberSaveable { mutableStateOf(false) }
+    val accountEnabled = remember(telegramPage) { telegramPage && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(context) }
+    if (account && accountEnabled) {
+        TelegramAccountScreen(onBack = { account = false }, onPlay = { req -> IncomingMedia.open(context, req) })
+        return
     }
 
     // F-02 (ADR-042): a saved public Telegram channel opens its video posts, not the page browser.
@@ -117,6 +131,21 @@ fun WebSitesScreen(onBack: () -> Unit) {
             onPlay = { req -> IncomingMedia.open(context, req) },
         )
         return
+    }
+
+    // OL-1: websites open in the kept tab: playing a video, Downloads, Minimize or Back hide it, never close it.
+    val tabs = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
+    val tab by WebsiteTab.tab.collectAsState()
+    tab?.takeIf { tabs && it.visible }?.let { t ->
+        PageStreamFinderDialog(
+            pageUrl = t.keep.pageUrl,
+            reason = "Browsing ${t.name}. Press play on any video; Yumeiro plays the stream in its own player.",
+            base = null,
+            keep = t.keep,
+            onMinimize = { WebsiteTab.minimize(byPlay = false) },
+            onPlay = { req -> WebsiteTab.minimize(byPlay = true); IncomingMedia.open(context, req.copy(title = req.title.ifBlank { t.name })) },
+            onDismiss = { WebsiteTab.close() },
+        )
     }
 
     open?.let { site ->
@@ -174,8 +203,11 @@ fun WebSitesScreen(onBack: () -> Unit) {
         )
     }
 
-    Column(Modifier.fillMaxSize().testTag("websites_screen")) {
-        SubPageHeader(title = "Websites", onBack = onBack, subtitle = if (sites.isEmpty()) "Play videos from any site" else "${sites.size} saved") {
+    Column(Modifier.fillMaxSize().testTag(if (telegramPage) "telegram_screen" else "websites_screen")) {
+        SubPageHeader(
+            title = if (telegramPage) "Telegram" else "Websites", onBack = onBack,
+            subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else if (telegramPage) "Public channels, no login" else "Play videos from any site",
+        ) {
             IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", tint = p.textSecondary) }
             if (sites.isNotEmpty()) IconButton(onClick = {
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
@@ -189,12 +221,43 @@ fun WebSitesScreen(onBack: () -> Unit) {
             contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 140.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            // OL-1: the website kept in the background, one tap from where it was.
+            tab?.takeIf { tabs && !it.visible }?.let { t ->
+                item("website_tab_card") {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                            .clickable { WebsiteTab.resume() }.heightIn(min = 56.dp).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("website_tab_card"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.keep.title.ifBlank { t.keep.address }, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text("Resume") }
+                        IconButton(onClick = { WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, "Close tab", tint = p.textSecondary) }
+                    }
+                }
+            }
+            if (accountEnabled) item("tg_account_card") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                        .clickable { account = true }.heightIn(min = 56.dp).padding(16.dp).testTag("tg_account_card"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                        Text("Sign in to play videos and audio from your chats, groups and channels", color = p.textSecondary, fontSize = 12.sp)
+                    }
+                }
+            }
             item("add") {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
                         .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
                 ) {
-                    Text("Add a website or Telegram channel", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(when (only) { SavedSites.Kind.TELEGRAM -> "Add a public Telegram channel"; SavedSites.Kind.WEBSITE -> "Add a website"; null -> "Add a website or Telegram channel" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
@@ -243,7 +306,12 @@ fun WebSitesScreen(onBack: () -> Unit) {
                 }
             } else items(shown, key = { it.url }) { site ->
                 SiteRow(
-                    site, onOpen = { open = site }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) },
+                    site, onOpen = {
+                        // OL-1: Telegram channels keep their own screen; every other site opens in the kept tab.
+                        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(site.url) != null &&
+                            dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
+                        if (tabs && !tg) WebsiteTab.open(context, site.url, site.name) else open = site
+                    }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) },
                     onPin = { SavedSites.setPinned(context, site.url, !site.pinned) },
                     onMove = if (query.isBlank()) ({ up -> SavedSites.moveSite(context, site.url, up) }) else null,
                     modifier = Modifier.animateItem(),

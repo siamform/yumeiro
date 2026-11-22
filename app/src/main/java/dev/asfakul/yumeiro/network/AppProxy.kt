@@ -297,12 +297,36 @@ object AppProxy : ProxySelector(), okhttp3.Authenticator {
     /** What a failed request through the proxy means, in words. */
     fun message(e: Throwable, cfg: Config = _config.value): String {
         val m = e.message.orEmpty()
+        // NBUG-13-PORT: a connect failure names the proxy's address ("Failed to connect to /127.0.0.1:40712"),
+        // so the "407" check must not see it first. Reaching the proxy is decided by the exception type; the
+        // login answer only by OkHttp's own CONNECT wording or a whole 407 code.
+        if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PROXY_REACH_FIRST)) return when {
+            e is java.net.UnknownHostException -> "couldn't find the proxy ${cfg.host}."
+            e is java.net.ConnectException || e is java.net.SocketTimeoutException || e is java.net.NoRouteToHostException ->
+                "couldn't reach the proxy ${cfg.host}:${cfg.port}."
+            loginAnswer(m) -> "the proxy wants a login (or the login is wrong)."
+            m.contains("SOCKS", true) -> "couldn't reach the proxy ${cfg.host}:${cfg.port}."
+            else -> dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "no answer")
+        }
         return when {
             m.contains("407") || m.contains("Proxy Authentication", true) -> "the proxy wants a login (or the login is wrong)."
             e is java.net.UnknownHostException -> "couldn't find the proxy ${cfg.host}."
             e is java.net.ConnectException || e is java.net.SocketTimeoutException || m.contains("SOCKS", true) -> "couldn't reach the proxy ${cfg.host}:${cfg.port}."
             else -> dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "no answer")
         }
+    }
+
+    /** OkHttp's words for a 407 (tunnel or plain), or 407 as a whole number, never digits inside a port. */
+    internal fun loginAnswer(m: String): Boolean {
+        if (m.contains("Proxy Authentication", true) || m.contains("authenticate with proxy", true)) return true
+        var i = m.indexOf("407")
+        while (i >= 0) {
+            val before = if (i == 0) ' ' else m[i - 1]
+            val after = if (i + 3 >= m.length) ' ' else m[i + 3]
+            if (!before.isDigit() && before != ':' && before != '.' && !after.isDigit() && after != '.') return true
+            i = m.indexOf("407", i + 1)
+        }
+        return false
     }
 
     internal fun setForTests(cfg: Config) { activate(cfg); loaded = true }

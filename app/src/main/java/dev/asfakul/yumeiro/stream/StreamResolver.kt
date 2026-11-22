@@ -69,6 +69,20 @@ object StreamResolver {
             if (req != null) return@withContext Resolution.Playable(req, Sniff(MediaKind.VIDEO, "YouTube", "extractor"))
         }
         TorrentSettings.init(context.applicationContext)
+        // B-31 (ADR-053): the built-in engine plays torrents itself; TorrServer (if set) is the fallback.
+        val torrent = LinkHosts.classify(request.url) as? LinkHosts.Torrent
+        if (torrent != null && dev.asfakul.yumeiro.stream.torrent.TorrentStreams.enabled(context)) {
+            val opened = try {
+                dev.asfakul.yumeiro.stream.torrent.TorrentStreams.open(context, torrent.link, request.title, NetworkClient.get(context))
+            } catch (e: java.io.IOException) {
+                if (TorrentSettings.server.value.isBlank()) return@withContext Resolution.Failed("Torrent can't play", e.message ?: "The torrent didn't start.")
+                null
+            }
+            if (opened != null) return@withContext Resolution.Playable(
+                request.copy(url = opened.url, title = request.title.ifBlank { opened.name }, format = StreamFormat.PROGRESSIVE, pageUrl = request.pageUrl ?: torrent.link),
+                Sniff(MediaKind.VIDEO, "Torrent", "engine"),
+            )
+        }
         dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
         val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
@@ -102,6 +116,41 @@ object StreamResolver {
 
     const val TELEGRAM_GROUP = "Telegram"
 
+    /** B-30: a DiskWala share is checked, then handed to the DiskWala app (its website never plays). */
+    internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient): Resolution {
+        val id = DiskWalaApi.shareId(route.pageUrl) ?: return Resolution.Failed("DiskWala link can't play", "This DiskWala link has no file in it. Copy the full share link.")
+        val info = DiskWalaApi.info(client, id)
+            ?: return Resolution.Failed("DiskWala file not found", "DiskWala doesn't know this file; it may have been removed.")
+        return Resolution.Handoff(route.pageUrl, "the DiskWala app", "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)}). ${DiskWalaApi.APP_ONLY}")
+    }
+
+    /** TeraBox's sign-in page; the cookie it leaves in the web view is what [TeraBoxApi] reuses. */
+    const val TERABOX_SIGN_IN = "https://www.terabox.app/wap/outlogin/login"
+
+    /**
+     * B-29: TeraBox through its share API (original file, else full HLS). Never the 30-second
+     * no-login preview: without a TeraBox sign-in the user is sent to sign in once instead.
+     */
+    internal fun resolveTeraBox(request: StreamRequest, route: LinkHosts.Browser, client: OkHttpClient): Resolution =
+        when (val r = TeraBoxApi.resolve(client, route.pageUrl)) {
+            is TeraBoxApi.Result.Ok -> Resolution.Playable(
+                request.copy(
+                    url = r.streamUrl,
+                    title = request.title.ifBlank { r.fileName },
+                    format = if (r.hls) StreamFormat.HLS else StreamFormat.PROGRESSIVE,
+                    userAgent = r.userAgent,
+                    referer = "https://www.terabox.app/",
+                    cookie = r.cookie,
+                    pageUrl = request.pageUrl ?: route.pageUrl,
+                ),
+                Sniff(MediaKind.VIDEO, "TeraBox", "api"),
+            )
+            TeraBoxApi.Result.NeedsSignIn -> Resolution.NeedsBrowser(TERABOX_SIGN_IN, TeraBoxApi.SIGN_IN_REASON, request, auto = false)
+            is TeraBoxApi.Result.Failed -> Resolution.Failed("TeraBox link can't play", r.reason + ".")
+            // OWN-10: the user does TeraBox's own check on the share page; nothing is captured automatically.
+            TeraBoxApi.Result.NeedsVerify -> Resolution.NeedsBrowser(route.pageUrl, TeraBoxApi.VERIFY_REASON, request, auto = false)
+        }
+
     /**
      * @param thorough also probe URLs whose extension looks certain (`.m3u8` can be an IPTV list).
      * Player-side resolution uses `false` so confident links start instantly.
@@ -114,7 +163,11 @@ object StreamResolver {
             ).let { r ->
                 if (r is Resolution.Failed) Resolution.Failed(r.title, r.message + " If this is a ${route.host} file, check that it's shared as \"Anyone with the link\".") else r
             }
-            is LinkHosts.Browser -> return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
+            is LinkHosts.Browser -> {
+                if (route.host == "TeraBox") return resolveTeraBox(request, route, client)
+                if (route.host == "DiskWala") return resolveDiskWala(route, client)
+                return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
+            }
             is LinkHosts.Torrent -> {
                 val server = TorrentSettings.server.value
                 if (server.isBlank()) return Resolution.Handoff(

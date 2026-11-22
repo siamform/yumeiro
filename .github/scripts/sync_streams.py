@@ -102,6 +102,10 @@ def main():
                 entry.update(url=s["url"], ok=False, error=str(e)[:200], checked=now, channels=0)
         entries.append(entry)
 
+    # E2-ALL: entries written by another builder (build_live_all.py, "builder" key) are kept as they are;
+    # that builder replaces its own entry after this step, and a failed build keeps the last good one.
+    own = {e["id"] for e in entries}
+    entries += [p for i, p in old_index.items() if p.get("builder") and i not in own]
     index = {"version": 1, "generated": now, "repo": REPO, "branch": BRANCH, "playlists": entries}
     with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8") as f:
         json.dump(index, f, indent=2, ensure_ascii=False)

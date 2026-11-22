@@ -48,6 +48,11 @@ object Upcoming {
         val firstEpisode: Int?,
         val lastEpisode: Int?,
         val simklId: Long,
+        /** F-22: air time in the phone's zone; null when the calendar only gives a date. */
+        val time: java.time.LocalTime? = null,
+        /** F-22-C: ISO country of the channel and the show's genres (TVmaze lists only; Simkl has neither). */
+        val country: String? = null,
+        val genres: List<String> = emptyList(),
     ) {
         val episodeLabel: String? get() = firstEpisode?.let { f ->
             val eps = if (lastEpisode != null && lastEpisode != f) "E$f–$lastEpisode" else "E$f"
@@ -73,7 +78,7 @@ object Upcoming {
         val seq = json.decodeToSequence<JsonElement>(input, DecodeSequenceMode.ARRAY_WRAPPED)
         for (el in seq) {
             val o = el as? JsonObject ?: continue
-            val e = runCatching { toEntry(o, zone) }.getOrNull() ?: continue
+            val e = runCatching { toEntry(o, kind, zone) }.getOrNull() ?: continue
             if (e.day.isBefore(today) || !e.day.isBefore(end)) continue
             val key = "${e.simklId}|${e.day}|${e.season}"
             val prev = merged[key]
@@ -97,11 +102,13 @@ object Upcoming {
         map.clear(); best.forEach { map[it.key] = it.value }
     }
 
-    private fun toEntry(o: JsonObject, zone: ZoneId): Entry? {
+    private fun toEntry(o: JsonObject, kind: Kind, zone: ZoneId): Entry? {
         val title = o["title"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val date = o["date"]?.jsonPrimitive?.contentOrNull ?: return null
-        val day = runCatching { OffsetDateTime.parse(date).atZoneSameInstant(zone).toLocalDate() }
-            .getOrElse { LocalDate.parse(date.take(10)) }
+        val (day, time) = when (val odt = runCatching { OffsetDateTime.parse(date) }.getOrNull()) {
+            null -> LocalDate.parse(date.take(10)) to null
+            else -> placeInZone(odt, kind, zone)
+        }
         val id = (o["ids"] as? JsonObject)?.get("simkl_id")?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: title.hashCode().toLong()
         val ep = o["episode"] as? JsonObject
         val poster = o["poster"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() && !it.contains("..") }
@@ -114,8 +121,39 @@ object Upcoming {
             firstEpisode = ep?.get("episode")?.jsonPrimitive?.intOrNull,
             lastEpisode = null,
             simklId = id,
+            time = time,
         )
     }
+
+    /**
+     * F-22, pure: the local day and air time of a calendar date. Simkl writes "date only" as midnight in the
+     * file's zone (all movies, and series at 00:00 New York time); converting those moved them to the day before
+     * west of New York. They keep their calendar date and no time. Anime times are Japanese broadcast slots,
+     * where 00:00 is a real late-night slot, so anime always converts.
+     */
+    fun placeInZone(odt: OffsetDateTime, kind: Kind, zone: ZoneId): Pair<LocalDate, java.time.LocalTime?> {
+        val dateOnly = kind == Kind.MOVIES || (kind != Kind.ANIME && odt.toLocalTime() == java.time.LocalTime.MIDNIGHT)
+        if (dateOnly) return odt.toLocalDate() to null
+        val z = odt.atZoneSameInstant(zone)
+        return z.toLocalDate() to z.toLocalTime()
+    }
+
+    /**
+     * F-22 section header: "Today • Sat, Nov 21", "Tomorrow • Sun, Nov 22", later days with the category in front:
+     * "Anime • Mon, Nov 23, 2026".
+     */
+    fun dayHeader(day: LocalDate, today: LocalDate, kind: Kind, locale: Locale = Locale.getDefault()): String {
+        val short = day.dayOfWeek.getDisplayName(TextStyle.SHORT, locale) + ", " + day.month.getDisplayName(TextStyle.SHORT, locale) + " " + day.dayOfMonth
+        return when (day) {
+            today -> "Today • $short"
+            today.plusDays(1) -> "Tomorrow • $short"
+            else -> "${kind.label} • $short, ${day.year}"
+        }
+    }
+
+    /** "20:00" / "8:00 PM" in the phone's style; null when there is no time. */
+    fun timeLabel(e: Entry, locale: Locale = Locale.getDefault()): String? =
+        e.time?.format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT).withLocale(locale))
 
     fun dayLabel(day: LocalDate, today: LocalDate, locale: Locale = Locale.getDefault()): String = when (day) {
         today -> "Today"
@@ -159,6 +197,9 @@ object Upcoming {
                 put("r", kotlinx.serialization.json.JsonPrimitive(e.rank)); put("p", kotlinx.serialization.json.JsonPrimitive(e.posterUrl))
                 put("s", kotlinx.serialization.json.JsonPrimitive(e.season)); put("a", kotlinx.serialization.json.JsonPrimitive(e.firstEpisode))
                 put("b", kotlinx.serialization.json.JsonPrimitive(e.lastEpisode)); put("i", kotlinx.serialization.json.JsonPrimitive(e.simklId))
+                put("h", kotlinx.serialization.json.JsonPrimitive(e.time?.toString()))
+                if (e.country != null) put("c", kotlinx.serialization.json.JsonPrimitive(e.country))
+                if (e.genres.isNotEmpty()) put("g", kotlinx.serialization.json.JsonArray(e.genres.map { kotlinx.serialization.json.JsonPrimitive(it) }))
             })
         }
     }.toString()
@@ -173,6 +214,9 @@ object Upcoming {
                     rank = o["r"]?.jsonPrimitive?.intOrNull ?: 0, posterUrl = o["p"]?.jsonPrimitive?.contentOrNull,
                     season = o["s"]?.jsonPrimitive?.intOrNull, firstEpisode = o["a"]?.jsonPrimitive?.intOrNull,
                     lastEpisode = o["b"]?.jsonPrimitive?.intOrNull, simklId = o["i"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
+                    time = o["h"]?.jsonPrimitive?.contentOrNull?.let { runCatching { java.time.LocalTime.parse(it) }.getOrNull() },
+                    country = o["c"]?.jsonPrimitive?.contentOrNull,
+                    genres = (o["g"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty(),
                 )
             }.getOrNull()
         }.toList()

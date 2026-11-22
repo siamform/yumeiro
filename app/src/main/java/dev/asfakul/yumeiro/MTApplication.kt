@@ -28,6 +28,8 @@ class MTApplication : Application(), ImageLoaderFactory {
         if (dev.asfakul.yumeiro.backup.Restart.isRestartProcess(this)) return
         // Round 12: a staged restore / reset is applied before anything reads a setting or file.
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
+        // FF-LOAD: flags read without a context load the saved file (not the defaults); no disk read here.
+        FeatureFlags.attach(this)
         // G12 X11-2: the first network request loads the user's DNS settings (not the defaults).
         dev.asfakul.yumeiro.network.NetworkSettings.attach(this)
         // NBUG-13 (ADR-045): proxy settings load with the first request; WebView set-up only when it is on, at idle.
@@ -55,6 +57,14 @@ class MTApplication : Application(), ImageLoaderFactory {
         // F-02 / F-03 (ADR-042): fresh-link refreshers for Telegram posts and TeraBox / DiskWala pages (no I/O here).
         runCatching { dev.asfakul.yumeiro.online.telegram.TelegramPlayback.install(this) }
         runCatching { dev.asfakul.yumeiro.stream.CloudRecapture.install(this) }
+        // B-29: TeraBox's API reuses the sign-in the user made in the web view (read lazily, off the main thread).
+        dev.asfakul.yumeiro.stream.TeraBoxApi.canPlayAv1 = {
+            runCatching {
+                android.media.MediaCodecList(android.media.MediaCodecList.ALL_CODECS).codecInfos
+                    .any { !it.isEncoder && it.supportedTypes.any { t -> t.equals("video/av01", true) } }
+            }.getOrDefault(false)
+        }
+        dev.asfakul.yumeiro.stream.TeraBoxApi.cookieSource = { url -> runCatching { android.webkit.CookieManager.getInstance().getCookie(url) }.getOrNull() }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
@@ -70,6 +80,8 @@ class MTApplication : Application(), ImageLoaderFactory {
             // Precompile the big pattern tables (release tags, audio languages, source facts, Yumix
             // feed rules) here so the first list that shows a card never compiles them on the main thread.
             runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
+            // E4: measured extension speeds (prefs read, so here and not on main).
+            runCatching { dev.asfakul.yumeiro.online.ExtensionSpeed.init(app) }
             // R16 (ST-7): build the source-menu icons (Material vectors, the Yumix logo) here, not in
             // the first composition on main. Icon getters cache what they build; a race only builds twice.
             runCatching {
@@ -98,11 +110,15 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, level) }
         // A closed player kept for its short reopen grace goes at once when memory is tight.
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) runCatching { dev.asfakul.yumeiro.player.PlaybackSession.releaseIfDetached() }
+        // E4 part 2: background feed work steps back to one job for a minute when memory is short (FeedThrottle).
+        // FE-T1: only when the trim is backed by a real shortage (FeedThrottle.confirmed).
+        runCatching { dev.asfakul.yumeiro.online.FeedThrottle.onTrim(this, level) }
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.onTrim(this, android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) }
+        dev.asfakul.yumeiro.online.FeedThrottle.memoryLow()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)

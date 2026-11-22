@@ -147,7 +147,7 @@ class PinnedExtensionsDeviceTest {
         waitTag("online_filter", 120_000) // shown once two or more sources are on
     }
 
-    @Test fun pinMovesFirstShowsAChipFiltersAndPersists() {
+    @Test fun pinMovesFirstAndPersists() {
         openYumix()
         tap("online_filter"); waitTag("online_filter_sheet")
         assertNoKeyboardOnTv("opening the sheet")
@@ -165,30 +165,26 @@ class PinnedExtensionsDeviceTest {
         assertEquals("the other sources keep their order", before - target, after.drop(1))
 
         closeSheet(dragged)
-        waitTag("online_pinned_bar"); waitTag("online_pinned_$target")
-
-        // The chip narrows the feed to that one source; a second tap goes back to all.
-        FirstRun.clickTag(rule, "online_pinned_$target"); waitTag("online_filter_active", 20_000) // TV: OK, not touch
-        FirstRun.clickTag(rule, "online_pinned_$target"); waitGone("online_filter_active", 20_000)
+        // PIN-1 (2.1.0): no chip row on the feed any more; the sheet is where a pinned source is picked.
+        waitGone("online_pinned_bar")
 
         // Written to storage (not only kept in memory).
         rule.waitUntil(5_000) {
             ctx.getSharedPreferences("pinned_extensions", Context.MODE_PRIVATE).getString("pinned", null) == target
         }
 
-        // Survives the activity being destroyed and recreated.
+        // Survives the activity being destroyed and recreated: still first in the sheet.
         rule.activityRule.scenario.recreate()
         rule.waitForIdle()
-        if (!has("online_pinned_$target")) openYumix()
-        waitTag("online_pinned_$target", 60_000)
+        if (!has("online_filter")) openYumix()
+        tap("online_filter"); waitTag("online_filter_sheet")
+        assertEquals("the pin survives recreate", target, sheetOrder().first())
         log("pin survived recreate")
 
-        // Unpin: the chip bar goes away.
-        tap("online_filter"); waitTag("online_filter_sheet")
+        // Unpin: the source goes back to its place.
         tap("online_filter_pin_$target")
         rule.waitUntil(5_000) { PinnedExtensions.pins.value.isEmpty() }
         back(); waitGone("online_filter_sheet")
-        waitGone("online_pinned_bar")
         log("PIN_RESULT PASS target=$target sources=$before")
     }
 }

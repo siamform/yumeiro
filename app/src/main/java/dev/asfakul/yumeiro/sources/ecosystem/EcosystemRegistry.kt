@@ -44,7 +44,8 @@ interface RuntimeAdapter {
     fun required(p: PluginEntry): Set<String>
     /** Runs once after download (for example to read home rows); the result is saved with the plugin. */
     suspend fun prepare(context: Context, plugin: EcosystemRegistry.Installed, dir: File): JsonObject = JsonObject(emptyMap())
-    fun build(context: Context, plugin: EcosystemRegistry.Installed, dir: File, displayName: String): MainAPI
+    /** The catalog source, or null for a stream-only ecosystem (Nuvio, ADR-057) that publishes none. */
+    fun build(context: Context, plugin: EcosystemRegistry.Installed, dir: File, displayName: String): MainAPI?
 }
 
 /**
@@ -63,8 +64,8 @@ object EcosystemRegistry {
     const val MAX_FILE_BYTES = 2L * 1024 * 1024
     const val MAX_TOTAL_BYTES = 50L * 1024 * 1024
 
-    /** Ecosystems that can run in this version. Nuvio and SkyStream are recognised, not run (ADR-047). */
-    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter).associateBy { it.ecosystem }
+    /** Ecosystems that can run in this version (Vega ADR-047, Nuvio ADR-057, SkyStream ADR-058 behind scripts_skystream). */
+    val adapters: Map<SourceHub.Ecosystem, RuntimeAdapter> = listOf<RuntimeAdapter>(VegaAdapter, NuvioAdapter, SkyStreamAdapter).associateBy { it.ecosystem }
 
     /** Script ecosystems the registry knows the format of. */
     val known = setOf(SourceHub.Ecosystem.VEGA, SourceHub.Ecosystem.NUVIO, SourceHub.Ecosystem.SKYSTREAM)
@@ -118,24 +119,74 @@ object EcosystemRegistry {
     private fun ensureLoaded(context: Context) = synchronized(lock) {
         if (loaded) return@synchronized
         val saved = SafeJsonFile.read(file(context)) { t -> decode(RepoFormats.json.parseToJsonElement(t) as JsonObject) }.value ?: State()
-        _state.value = State((saved.repos + _state.value.repos).distinctBy { it.url }, (saved.installed + _state.value.installed).distinctBy { it.key })
+        // F-19-EXT-2: this profile's repos and plugins only; the others' are written back; a removed
+        // profile's are dropped with their code and storage.
+        val (myRepos, theirRepos, goneRepos) = SCOPE.splitAll(context, SCOPE.SCRIPT_REPOS, saved.repos.distinctBy { it.url }) { it.url }
+        val (mine, theirs, gone) = SCOPE.splitAll(context, SCOPE.SCRIPT_PLUGINS, saved.installed.distinctBy { it.key }) { it.key }
+        otherState = State(theirRepos, theirs)
+        gone.forEach { p -> dirOf(context, p).deleteRecursively(); context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply() }
+        _state.value = State((myRepos + _state.value.repos).distinctBy { it.url }, (mine + _state.value.installed).distinctBy { it.key })
         loaded = true
+        if (goneRepos.isNotEmpty() || gone.isNotEmpty()) SafeJsonFile.write(file(context), encode(merged()).toString())
     }
 
     private fun change(context: Context, f: (State) -> State) = synchronized(lock) {
         ensureLoaded(context)
         _state.value = f(_state.value)
-        SafeJsonFile.write(file(context), encode(_state.value).toString())
+        SafeJsonFile.write(file(context), encode(merged()).toString())
+    }
+
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
+    /** F-19-EXT-2: other profiles' repos and plugins (on disk, never shown or loaded here). */
+    private var otherState = State()
+
+    /** This profile's lists plus the other profiles' (what the file holds). */
+    private fun merged(): State {
+        val s = _state.value
+        return State(s.repos + otherState.repos.filter { o -> s.repos.none { it.url == o.url } },
+            s.installed + otherState.installed.filter { o -> s.installed.none { it.key == o.key } })
     }
 
     @androidx.annotation.VisibleForTesting
-    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); _problems.value = emptyMap() }
+    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); otherState = State(); _problems.value = emptyMap() }
+
+    /** OWN-5 test hook: a loaded state without disk or network (start() then does nothing). */
+    @androidx.annotation.VisibleForTesting
+    internal fun setStateForTests(s: State) = synchronized(lock) { started = true; loaded = true; _state.value = s }
 
     // region repositories
 
     /** Reads [url] and returns what it is, without saving anything (Universal add uses this to route). */
     suspend fun inspect(context: Context, url: String): ParsedRepo = withContext(Dispatchers.IO) {
-        RepoFormats.parse(fetchText(context, url, MAX_MANIFEST_BYTES), url) ?: error("This repository file is not valid")
+        val parsed = RepoFormats.parse(fetchText(context, url, MAX_MANIFEST_BYTES), url) ?: error("This repository file is not valid")
+        if (parsed.ecosystem == SourceHub.Ecosystem.SKYSTREAM && parsed.children.isNotEmpty() &&
+            FeatureFlags.on(context, SkyStreamAdapter.flag)) expandSky(parsed) { fetchText(context, it, MAX_MANIFEST_BYTES) } else parsed
+    }
+
+    /**
+     * F-05-S (ADR-058): a SkyStream repo lists its plugins in `pluginLists` files (SkyStream v2.9.0
+     * reads only those), and a mega repo lists child repos. Reads at most
+     * [SkyStreamRepoParser.MAX_CHILDREN] files, one level of child repos, first entry of an id wins.
+     * A list that fails is skipped (the others still count).
+     */
+    internal fun expandSky(repo: ParsedRepo, read: (String) -> String): ParsedRepo {
+        val plugins = LinkedHashMap<String, PluginEntry>()
+        repo.plugins.forEach { plugins.putIfAbsent(it.id, it) }
+        val queue = ArrayDeque(repo.children.map { it to 0 })
+        val seen = HashSet<String>()
+        var reads = 0
+        while (queue.isNotEmpty() && reads < SkyStreamRepoParser.MAX_CHILDREN) {
+            val (u, depth) = queue.removeFirst()
+            if (!seen.add(u)) continue
+            reads++
+            val root = runCatching { RepoFormats.json.parseToJsonElement(read(u)) }.onFailure { Log.w(TAG, "sky list $u: ${it.message}") }.getOrNull() ?: continue
+            if (SkyStreamRepoParser.isPluginList(root)) {
+                SkyStreamRepoParser.parsePluginList(root, u).forEach { plugins.putIfAbsent(it.id, it) }
+            } else if (depth == 0 && runCatching { SkyStreamRepoParser.accepts(root) }.getOrDefault(false)) {
+                SkyStreamRepoParser.parse(root, u).children.forEach { queue.addLast(it to 1) }
+            }
+        }
+        return repo.copy(plugins = plugins.values.take(SkyStreamRepoParser.MAX_PLUGINS))
     }
 
     /** Adds a script repository. CloudStream repositories are refused: they belong to the existing loader. */
@@ -148,12 +199,22 @@ object EcosystemRegistry {
                 ?: error("This is a ${parsed.ecosystem.label} repository. Yumeiro recognises it, but can't run ${parsed.ecosystem.label} plugins in this version yet. Nothing was added.")
             require(FeatureFlags.on(context, adapter.flag)) { "${parsed.ecosystem.label} sources are switched off in this version" }
             require(parsed.plugins.isNotEmpty()) { "That repository has no ${parsed.ecosystem.label} plugins" }
-            change(context) { s -> s.copy(repos = s.repos.filterNot { it.url == url } + Repo(url, parsed.ecosystem, parsed.name, System.currentTimeMillis())) }
+            change(context) { s ->
+                otherState = otherState.copy(repos = otherState.repos.filterNot { it.url == url })
+                s.copy(repos = s.repos.filterNot { it.url == url } + Repo(url, parsed.ecosystem, parsed.name, System.currentTimeMillis()))
+            }
+            SCOPE.claim(context, SCOPE.SCRIPT_REPOS, url)
             parsed
         }
     }
 
-    fun removeRepo(context: Context, url: String) { change(context) { s -> s.copy(repos = s.repos.filterNot { it.url == url }) } }
+    fun removeRepo(context: Context, url: String) {
+        val kept = SCOPE.release(context, SCOPE.SCRIPT_REPOS, url)
+        change(context) { s ->
+            if (kept) s.repos.firstOrNull { it.url == url }?.let { r -> otherState = otherState.copy(repos = otherState.repos.filterNot { it.url == url } + r) }
+            s.copy(repos = s.repos.filterNot { it.url == url })
+        }
+    }
 
     /** Every plugin offered by the saved repositories that has a runtime, newest manifest first. */
     suspend fun available(context: Context): List<Pair<Repo, PluginEntry>> = withContext(Dispatchers.IO) {
@@ -194,9 +255,15 @@ object EcosystemRegistry {
                 require(staging.renameTo(dir)) { "Couldn't save the plugin" }
             } finally { staging.deleteRecursively() }
             val prepared = base.copy(hashes = hashes)
-            val extra = runCatching { adapter.prepare(context, prepared, dir) }.getOrDefault(JsonObject(emptyMap()))
+            val prepExtra = runCatching { adapter.prepare(context, prepared, dir) }.getOrDefault(JsonObject(emptyMap()))
+            // F-05-N: the media types the manifest declares, for stream-only adapters that filter by them.
+            val extra = if (entry.types.isEmpty()) prepExtra else JsonObject(prepExtra + ("types" to JsonArray(entry.types.map(::JsonPrimitive))))
             val done = prepared.copy(extra = extra)
-            change(context) { s -> s.copy(installed = s.installed.filterNot { it.key == done.key } + done) }
+            change(context) { s ->
+                otherState = otherState.copy(installed = otherState.installed.filterNot { it.key == done.key })
+                s.copy(installed = s.installed.filterNot { it.key == done.key } + done)
+            }
+            SCOPE.claim(context, SCOPE.SCRIPT_PLUGINS, done.key)
             publish(context)
             done
         }
@@ -204,9 +271,16 @@ object EcosystemRegistry {
 
     fun uninstall(context: Context, key: String) {
         val p = _state.value.installed.firstOrNull { it.key == key } ?: return
-        dirOf(context, p).deleteRecursively()
-        context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply()
-        change(context) { s -> s.copy(installed = s.installed.filterNot { it.key == key }) }
+        // F-19-EXT-2: another profile still has it: keep its code and storage for that profile.
+        val kept = SCOPE.release(context, SCOPE.SCRIPT_PLUGINS, key)
+        if (!kept) {
+            dirOf(context, p).deleteRecursively()
+            context.getSharedPreferences("script_kv_${p.storeName}", Context.MODE_PRIVATE).edit().clear().apply()
+        }
+        change(context) { s ->
+            if (kept) otherState = otherState.copy(installed = otherState.installed.filterNot { it.key == key } + p)
+            s.copy(installed = s.installed.filterNot { it.key == key })
+        }
         publish(context)
     }
 
@@ -229,6 +303,7 @@ object EcosystemRegistry {
                 _state.value.installed.filter { it.ecosystem == eco }.mapNotNull { p ->
                     runCatching {
                         check(intact(c, p)) { "code changed on disk" }
+                        if (eco == SourceHub.Ecosystem.NUVIO) NuvioAdapter.problemOf(p)?.let { problems[p.key] = it }
                         adapter.build(c, p, dirOf(c, p), SourceHub.uniqueName(p.name, p.lang, taken).also(taken::add))
                     }.onFailure { problems[p.key] = it.message ?: it.javaClass.simpleName; Log.w(TAG, "${p.key}: ${it.message}") }.getOrNull()
                 }

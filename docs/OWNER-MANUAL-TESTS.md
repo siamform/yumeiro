@@ -9,8 +9,9 @@ The file has two sections: **Yumeiro users checklist** (anyone can run these on 
 (developer) tests** (need the owner's accounts, consoles or adb). The detailed step-by-step scripts (Y, P, T, F) are
 in [`MANUAL-TESTS.md`](MANUAL-TESTS.md).
 
-Which build: the **1.9.0 release candidate review APK**, release-signed (artifact `yumeiro-review-apk` of the `ci.yml`
-run named in [`RELEASE-SUMMARY-FINAL.md`](RELEASE-SUMMARY-FINAL.md); check its SHA-256 against `SHA256SUMS.txt`).
+Which build: the newest **review APK of `r15-stability`** (2.x), release-signed (artifact `yumeiro-review-apk` of the
+latest green `ci.yml` run named in [`HANDOVER-LIVE.md`](HANDOVER-LIVE.md); check its SHA-256 against `SHA256SUMS.txt`).
+Older tests below that name the 1.9.0 release candidate were written for that build; run them on the newest one.
 Back up 1.8.x first (Settings → Backup & restore → Back up now), then install over it; your data stays. TV: `adb install -r` with the
 TV APK (`yumeiro-tv-1.9.0-…-review.apk`). How to record logs: see "Which build to install" in `MANUAL-TESTS.md`
 (`adb logcat ... -s YuStart YuStall YuMemory YuGate YuCache AndroidRuntime`). How to report: Settings → Crash
@@ -69,7 +70,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-19 | A real YouTube download (video + audio) on your home network (G8 D6) | Pending |
 | OMT-20 | BUG-3 download speed per 10 % band on your phone (eighth cycle rule) | Blocked: owner |
 | OMT-21 | BUG-5 / TV-4: choose how TV search should work (G7 proposal 3) | Decided (agent) |
-| OMT-22 | X3-TL: give the service account the Firebase Test Lab role | Blocked: owner (console) |
+| OMT-22 | X3-TL: enable the Cloud Testing API and Cloud Tool Results API, and give the service account the Editor role (FTL answered 403, 2026-11-22) | Blocked: owner (console) |
 | OMT-23 | X13-6: phone Jackson 2.19.4 → 2.18.11 | Decided (agent) |
 | OMT-24 | Vega: what do you mean by "Vega"? | Decided (agent) |
 | OMT-25 | Telegram, Terabox, Diskwala and manga cloud path | Decided (agent) |
@@ -100,6 +101,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-50 | F-03: a TeraBox / DiskWala share link | Owner/community test (pending) |
 | OMT-51 | F-11: manga auto-translation on a real chapter | Owner/community test (pending) |
 | OMT-52 | F-AIR: airing alert on a Firebase phone (after the Worker deploy) | Owner/community test (pending) |
+| OMT-63 | F-02 login: your own Telegram account, private chats, video + audio play and download | Owner/community test (pending; flag f02_telegram_login is on since OWN-3, 2026-11-22). This is the only full sign-in check: Telegram switched off its public test accounts (tdlib/td#3083), so CI can only test up to Telegram checking the code |
 | OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
 | OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
@@ -110,6 +112,35 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-60 | FT-B3: Yumix "See all" keeps paging while searching | Owner/community test (pending) |
 | OMT-61 | FINAL-46: video plays right after the upgrade; TV data kept | Owner test (pending) |
 | OMT-62 | FINAL-47/47b: Settings organised by subject (Profiles, Statistics, Telegram own pages) | Owner/community test (pending) |
+| OMT-64 | OL-1 / OL-3 / OL-8: website tab stays open, only the current stream, banner hides | Owner test (pending) |
+| OMT-65 | OL-2 / OL-4 / OL-5: website stream panel and download popup with tracks | Owner test (pending) |
+| OMT-66 | OL-7: player top bar on a real phone and TV | Owner test (pending) |
+| OMT-67 | OL-11 / OL-5: episode range and Sub / Dub download on a real extension | Owner test (pending) |
+| OMT-68 | OL-12: a whole YT Music playlist downloads | Owner test (pending) |
+| OMT-69 | F-12: vertical Shorts on a real phone | Owner test (pending) |
+| OMT-70 | OL-6: the new download popup on a real phone and TV | Owner test (pending) |
+| OMT-71 | OL-13: every social button opens the right account in its app | Owner test (pending) |
+| OMT-72 | GATE-1: no freeze when switching sources on a real (low-RAM) phone | Owner test (pending) |
+| OMT-73 | F-05-N-ON: Nuvio sources on a title | Owner test (pending) |
+| OMT-74 | F-05-S: SkyStream plugins | Owner test (pending) |
+| OMT-75 | F-05-STREMIO: a Stremio stream add-on gives links | Owner test (pending) |
+| OMT-76 | F-22-C: Upcoming by country and genre | Owner test (pending) |
+| OMT-77 | F-09-FEED: Watch later / Favorite from Yumix, Top 10, Continue watching | Owner test (pending) |
+| OMT-78 | TV-FP-1: Home → Live TV card on an older Android TV | Owner test (pending) |
+| OMT-79 | B31-FRAME: built-in torrent first frame and seek on a real phone | Owner test (pending, needs a test build with the engine on) |
+| OMT-80 | DL-ONE: the same download popup everywhere | Owner test (pending) |
+| OMT-81 | DL-WEB: a file link inside a website opens the download popup | Owner test (pending) |
+| OMT-82 | ST-17-BACK: one Back leaves a vertical video | Owner test (pending) |
+| OMT-83 | OWN-2 / OWN-7: fresh install, skip the tour, online works; Cloudflare DNS by default | Owner test (pending) |
+| OMT-84 | OWN-10: TeraBox signed-in playback; human check opens the TeraBox page | Owner test (pending, needs a TeraBox account) |
+| OMT-85 | OWN-1: screen recording of a page that closes by itself | Owner evidence (pending; fix landed in 2.1.0, see OMT-89) |
+| OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the market box, script sources card | Owner test (pending) |
+| OMT-87 | OWN-11: YouTube audio-only download (also with "Ask before download" off) | Owner test (pending) |
+| OMT-88 | OWN-12: profile PIN asks current PIN to change / remove; first PIN leads to security questions | Owner test (pending) |
+| OMT-89 | OWN-1 / OWN-6: double taps open / close one page; Yumix -> details fast | Owner test (pending) |
+| OMT-90 | OWN-3: Telegram sign-in with your own API ID / hash | Owner test (pending) |
+| OMT-91 | OWN-9: fresh install shows Yumeiro Classics; a film plays | Owner test (pending) |
+| OMT-92 | OWN-10: TeraBox shares from two mirrors play when signed in | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -554,7 +585,12 @@ the app version and your device. Don't send passwords or account details.
 - **Why:** real-device cloud runs would turn some owner tests into agent tests. The service account mints a
   token, but Test Lab answers 403 (ledger X3-TL, 2026-11-16).
 - **Instructions:** Google Cloud console → IAM → the service account → add role "Firebase Test Lab Admin"
-  (`roles/cloudtestservice.testAdmin`); APIs → enable "Cloud Testing API" and "Cloud Tool Results API".
+  (`roles/cloudtestservice.testAdmin`) or "Editor"; APIs → enable "Cloud Testing API" and "Cloud Tool Results API".
+  Links (project yumeiro-ab29e): [Cloud Testing API](https://console.cloud.google.com/apis/library/testing.googleapis.com?project=yumeiro-ab29e),
+  [Cloud Tool Results API](https://console.cloud.google.com/apis/library/toolresults.googleapis.com?project=yumeiro-ab29e),
+  [IAM](https://console.cloud.google.com/iam-admin/iam?project=yumeiro-ab29e) for
+  firebase-adminsdk-fbsvc@yumeiro-ab29e.iam.gserviceaccount.com. Re-checked 2026-11-22: still 403. After it, the
+  agent runs `gh workflow run ftl-gate.yml --ref r15-stability` (GATE-1 on real phones).
 - **What to send back:** "done" (no keys in chat). **Status:** Blocked: owner.
 
 ---
@@ -899,3 +935,182 @@ On a phone and on the TV, after updating from 1.8.1:
 
 Passes if every step shows what it says, Back returns to Settings each time, and search finds each page.
 
+### OMT-63 — Your own Telegram account (F-02 login)
+
+On a phone with a debug build that has the Telegram keys, and the flag `f02_telegram_login` turned on (no menu for flags: `adb shell run-as dev.asfakul.yumeiro` and set `f02_telegram_login` to true in shared_prefs/feature_flags.xml, or ask the agent for a build with it on):
+
+1. Sources & accounts → Telegram & web sites → "Your Telegram account". The first time, a bar shows "Downloading Telegram support" and reaches 100 %.
+2. Type your number (paste works), tap Next. Type the code Telegram sends to your other device. If you have a cloud password, type it.
+3. Your chats appear: a private channel you joined, a group, and a public channel. The search box filters them.
+4. Open each one. Videos and audio files (music, voice notes) are listed; search finds a file by name.
+5. Tap a video: it plays in Yumeiro's player and seeking forward works. Tap an audio file: it plays.
+6. Tap Download on one video and one audio file. Both appear in Downloads and play with the phone in airplane mode.
+7. Close and reopen the app: you are still signed in. Log out from the account screen: you are back at the phone step.
+
+Passes if every step does what it says. Note: a download started from Telegram can't resume after the app is closed; start it again from the chat.
+
+### OMT-64 — Website tab stays open (OL-1, OL-3, OL-8)
+
+On a phone and on the TV, on a real site you are signed in to:
+
+1. Websites → open the site, sign in, open a video page. The helper banner hides by itself after about 3 s.
+2. Play the video in Yumeiro's player, then close the player: the same page is back, still signed in, same scroll.
+3. Start a download from the page, tap "View downloads" in the message, then Back: the page is still there.
+4. Tap the down arrow (Minimize). The Websites page shows an "Open tab" card; Resume brings the page back as it was.
+5. TV: Back on the first page hides the tab (it does not close it); the "Open tab" card resumes it.
+6. Play a second video on the same page: the stream list shows only the new one, named "Now playing: <its title>".
+
+Passes if every step does what it says.
+
+### OMT-65 — Website stream panel and download popup (OL-2, OL-4, OL-5)
+
+On a real site that plays HLS with more than one audio track or subtitles (for example an anime site with Sub / Dub):
+
+1. The stream panel has Rescan, a down arrow (collapse) and Close. Close leaves a small "Streams · n" pill that reopens it.
+2. Tap Download on a stream: the popup asks Offline copy or Permanent, every time.
+3. The popup shows Quality chips with the stream's real sizes, an Audio track row and a Subtitles row.
+4. Pick a non-default audio track and one subtitle, download. Open it from Downloads in airplane mode: that audio plays and the subtitle is in the captions menu.
+
+Passes if every step does what it says. A site with only one track shows no Audio row (nothing to choose).
+
+### OMT-66 — Player top bar (OL-7)
+
+On a real phone (portrait and landscape) and the TV, play any video: Quality, Audio and the 3-dot buttons sit at the right edge, the title fills the rest, no big empty gap.
+
+### OMT-67 — Episode range and Sub/Dub download (OL-11, OL-5)
+
+On a real extension title with 80+ episodes and Sub / Dub versions:
+
+1. Download → the sheet shows "Version" chips (Sub / Dub); pick Dub, the lists below follow it.
+2. "Episode range": From 50 To 80 → "Download 31 episodes" (fewer if some are saved). Start, pick Permanent.
+3. Downloads shows 50..80 queued in order, in the Dub folder; the quality picked applies to all.
+4. "This episode only" saves just the episode Play / Continue opens.
+5. With Subtitles "Save all the source has", a finished episode plays offline with its subtitles in the captions menu.
+
+### OMT-68 — Download a whole YT Music playlist (OL-12)
+
+On a real YouTube Music playlist with 100+ songs:
+
+1. Online Music → open the playlist. A round Download button sits next to Play / Shuffle (not on artist pages).
+2. Tap it, pick Offline copy. Every song is queued (not only the rows on screen); the ring and "Downloading · n of N done" move.
+3. Tap again when done: nothing is downloaded twice. Repeat with Permanent on another playlist.
+
+Passes if all songs land in Downloads and play in airplane mode.
+
+### OMT-69 — Vertical Shorts on a real phone (F-12)
+
+Play a 9:16 clip that is not from YouTube on a real phone: it goes full screen portrait; swipe up / down changes clip; Back returns to the normal player and the clip keeps playing. (Same as OMT-37, now with the flag on by default.)
+
+### OMT-70 — New download popup (OL-6)
+
+On a real phone (small screen if you have one) and the TV, start any download that asks first (an episode, a website video, a YouTube video):
+
+1. Phone: a bottom sheet slides up; TV: a centred dialog the remote can move through.
+2. One line at the top says the quality, the size and the free space. Offline copy / Permanent is one switch with one line under it.
+3. "Where it goes and tips" is folded; tap it: the text opens and the sheet scrolls so you can read it.
+4. The Download button stays on screen the whole time, even with many quality / audio / subtitle chips.
+
+Passes if every step does what it says and nothing is cut off.
+
+### OMT-71 — Social links (OL-13)
+
+Settings → About on a real phone with Facebook, Instagram, X, TikTok, Reddit, Discord and Telegram installed (any you have):
+
+1. Community: Telegram channel, Telegram group, then a row Discord · Facebook · Instagram · X · TikTok · Reddit, then Website and GitHub.
+2. Each button opens @officialyumeiro (Discord: the Yumeiro server invite) in its app, or in the browser if the app is missing.
+3. Developer: Website, GitHub, Facebook (siam1p), Instagram (asfakul_siam), Telegram (@siamorwho); each opens the right profile.
+
+Passes if every button lands on the right account.
+
+### OMT-72 — No freeze when switching sources (GATE-1)
+
+On a real phone (a low-RAM one if you have it), with many extensions installed:
+
+1. Open the app, tap Videos, then Source → Yumix → Source → YouTube → Source → Live TV → Home.
+2. Do it twice: once right after installing / updating, once after a normal start.
+
+Passes if no tap leaves the screen stuck for about a second or more, and Android never shows "Yumeiro isn't responding".
+
+### OMT-73 — Nuvio sources on a title (F-05-N-ON)
+
+1. Sources → Add (or Script repos), paste a Nuvio repository manifest URL you trust (one that lists scrapers).
+2. Open a movie, then a TV episode, and press Play / Sources.
+
+Passes if the repo is added (not "recognised only"), the source list shows extra rows named "Nuvio · <scraper name>",
+one of them plays, and a broken scraper only shows its own error while the other sources still appear.
+
+### OMT-74 — SkyStream plugins (F-05-S)
+
+Only after the agent turns `scripts_skystream` on (it says so in the handover).
+
+1. Sources → Add, paste a SkyStream repository URL you trust (a repo.json with pluginLists).
+2. Sources → Script repos: install one plugin, then open its source on Home.
+3. Search something, open a title, press Play.
+
+Passes if the repo is added with its plugin count, the source shows rows (Trending first), search finds titles, and a title plays. A plugin that needs a captcha shows that message instead of hanging.
+
+### OMT-75 — Stremio stream add-on (F-05-STREMIO)
+
+1. Sources → Add, paste the manifest URL of a Stremio add-on you trust that gives streams (its manifest lists
+   "stream" in resources), for example a public HTTP-link add-on.
+2. Open any movie or series episode that has an IMDb id (most TMDB/IMDb titles) and open the sources list.
+3. Press one link marked "Stremio · <add-on name>".
+
+Passes if the add-on's links appear with quality, a direct link plays, and a torrent-only result shows as
+"Torrent" (skipped) instead of failing. Yumeiro never logs in or unlocks paid content for an add-on.
+
+### OMT-76 — Upcoming by country and genre (F-22-C)
+
+1. Online → Upcoming → Series.
+2. Tap JP, then KR, then Streaming; on each, tap a genre chip (e.g. Drama, Anime).
+3. Close the app, open Upcoming again.
+
+Passes if each country lists only its shows with a "JP • Anime, Fantasy"-style badge and local air times, the
+genre chip narrows the list, the credit line says TVmaze, and the last country and genre are kept after reopening.
+
+### OMT-77 — Watch later / Favorite from every poster row (F-09-FEED)
+
+1. Phone: Online home. Long-press a Yumix feed card, a Top 10 poster and a Continue watching card.
+2. Each time pick Favorite (or Watch later). Then tap the same card once.
+3. TV: focus each of those cards with the D-pad and press Menu.
+
+Passes if every long press (phone) and Menu press (TV) opens the Watch later / Favorite sheet, the choice shows
+the small mark on the poster and in Library, and a normal tap still opens the title (no sheet).
+
+### OMT-78 — Home → Live TV on an older Android TV (TV-FP-1)
+
+1. On an Android TV box (Android 7 to 9 if you have one, else any TV), open Home.
+2. Move to the "Live TV" card with the D-pad and press OK.
+
+Passes if the Live TV channel grid opens (not the Music page). If Music opens, note the TV model and Android version.
+
+### OMT-79 — Built-in torrent: first frame and seek on a real phone (B31-FRAME)
+
+The emulator cannot decode the test file (HEVC 10-bit), so this needs a real phone. Needs a test build with the
+built-in torrent engine on (flag b31_builtin_torrent; it is off in the release).
+
+1. Play magnet:?xt=urn:btih:BF2063A5E9A69F14716288FCA7C2D6078BDA7369 with a stopwatch.
+2. When the picture shows, drag the seek bar to the middle.
+
+Passes if the first picture shows within 15 s and the picture plays again within 5 s after the seek.
+
+### OMT-80 — The same download popup everywhere (DL-ONE)
+
+1. Download from the player (Download button), from an episode list, from a website link, from Telegram, from a YouTube video, from a YouTube song and from a YT Music playlist.
+2. Each time the same popup opens (Quality, Audio track, folder) and the file lands in Downloads.
+3. YouTube: no separate quality list appears first; "Audio only" saves just the sound.
+4. A plain file link inside an in-app web page: see OMT-81 (DL-WEB).
+
+### OMT-81 — A file link inside a website opens the download popup (DL-WEB)
+
+1. Open a website in Yumeiro (Sites) and tap a plain file link on the page (for example a .mp4, .mkv, .zip or .apk link).
+2. The usual download popup opens with the file's real name; pick Offline or Permanent and the file lands in Downloads.
+3. A site that signs you in (cookies) still downloads: the popup uses the page's cookies and address.
+4. A link the page builds itself (blob:) shows "This page makes the file itself ..." instead of doing nothing.
+
+### OMT-82 — One Back leaves a vertical video (ST-17-BACK)
+
+1. Open a short drama or any portrait video (for example a ReelShort title from Yumix) so the player goes vertical.
+2. Press Back once: the normal player layout comes back (the video keeps playing).
+3. Press Back again: you leave the player as usual. Back never does nothing.
+4. Repeat after swiping up to the next episode a few times.

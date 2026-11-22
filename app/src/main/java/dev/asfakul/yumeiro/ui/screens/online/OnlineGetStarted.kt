@@ -83,8 +83,8 @@ internal fun topPicks(all: List<RemoteExtension>, category: String, n: Int): Lis
         .take(n).toList()
 
 /**
- * First run (nothing installed): Yumeiro installs one top-rated Movies, Anime and Sports extension
- * ([dev.asfakul.yumeiro.online.StarterExtensions]); this screen shows if those are removed or offline.
+ * First run (nothing installed): no third-party extension is installed for the user (owner decision
+ * 2026-11-21); this screen shows until they pick one.
  * The user picks what they watch;
  * suggestions are the market's top-ranked extensions per category.
  */
@@ -158,6 +158,7 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
                     }
                 }
                 if (category == "Short drama" || category == "Asian drama") item("builtin_drama") { DramaBuiltinCard() }
+                if (category == "Movies" || category == "TV") item("builtin_classics") { ClassicsBuiltinCard() }
                 items(picks, key = { "pick_" + it.key }) { ext ->
                     val on = ext.key in chosen
                     val installed = extState.installed.any { it.key == ext.key }

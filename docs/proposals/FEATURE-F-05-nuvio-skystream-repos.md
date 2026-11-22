@@ -10,7 +10,7 @@ Decisions:
    later" message instead of a broken install.
 3. Step 2: build one hardened JS sandbox (time limit, memory limit, private-network guard, no
    file access) and use it first in Yumeiro's existing JS engine.
-4. Step 3: run Nuvio scrapers (stream-only, keyed by the TMDB id Yumeiro already has).
+4. Step 3: run Nuvio scrapers (stream-only, keyed by the TMDB id Yumeiro already has). Built 2026-11-22 as F-05-N (ADR-057), flags off until the device run passes.
 5. Step 4: run Vega providers (catalog, search, meta, streams) on the same sandbox.
 6. SkyStream `.sky` plugins last, only if users ask; detection message until then.
 7. No default repositories shipped. User-added only, with the existing consent sheet. Streams

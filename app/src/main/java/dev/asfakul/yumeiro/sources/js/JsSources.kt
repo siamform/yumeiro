@@ -99,6 +99,10 @@ object JsSources {
      */
     private val lock = Any()
     @Volatile private var loaded = false
+    private val SCOPE = dev.asfakul.yumeiro.profiles.ProfileScope
+    /** F-19-EXT-2: other profiles' repos and sources (on disk, never shown or loaded here). */
+    private var otherRepos: List<String> = emptyList()
+    private var otherInstalled: List<Entry> = emptyList()
 
     private fun ensureLoaded(context: Context) = synchronized(lock) {
         if (loaded) return@synchronized
@@ -109,9 +113,16 @@ object JsSources {
         val installed = dev.asfakul.yumeiro.data.SafeJsonFile.read(File(d, "sources.json")) { t ->
             (JsJson.json.parseToJsonElement(t) as JsonArray).mapNotNull { (it as? JsonObject)?.let(::Entry) }
         }.value.orEmpty()
+        // F-19-EXT-2: this profile's repos and sources are shown and loaded; the others' are kept for
+        // writing back; a removed profile's are dropped with their code.
+        val (myRepos, theirRepos, goneRepos) = SCOPE.splitAll(context, SCOPE.JS_REPOS, repos) { it }
+        val (mine, theirs, gone) = SCOPE.splitAll(context, SCOPE.JS_SOURCES, installed.distinctBy { it.id }) { it.id }
+        otherRepos = theirRepos; otherInstalled = theirs
+        gone.forEach { File(d, "${it.id}.js").delete() }
         // Keep anything a change already put in memory (cannot happen now, but never drop data).
-        _state.value = State((repos + _state.value.repos).distinct(), (installed + _state.value.installed).distinctBy { it.id })
+        _state.value = State((myRepos + _state.value.repos).distinct(), (mine + _state.value.installed).distinctBy { it.id })
         loaded = true
+        if (goneRepos.isNotEmpty() || gone.isNotEmpty()) save(context)
     }
 
     private fun change(context: Context, f: (State) -> State) = synchronized(lock) {
@@ -121,7 +132,7 @@ object JsSources {
     }
 
     @androidx.annotation.VisibleForTesting
-    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State() }
+    internal fun resetForTests() = synchronized(lock) { started = false; loaded = false; _state.value = State(); otherRepos = emptyList(); otherInstalled = emptyList() }
 
     fun normalizeRepo(raw: String): String {
         var u = raw.trim()
@@ -136,12 +147,16 @@ object JsSources {
             val url = normalizeRepo(raw)
             val n = fetchIndex(context, url).size
             require(n > 0) { "That link has no JavaScript sources" }
-            change(context) { it.copy(repos = (it.repos - url) + url) }
+            change(context) { otherRepos = otherRepos - url; it.copy(repos = (it.repos - url) + url) }
+            SCOPE.claim(context, SCOPE.JS_REPOS, url)
             n
         }
     }
 
-    fun removeRepo(context: Context, url: String) { change(context) { it.copy(repos = it.repos - url) } }
+    fun removeRepo(context: Context, url: String) {
+        val kept = SCOPE.release(context, SCOPE.JS_REPOS, url)
+        change(context) { if (kept) otherRepos = otherRepos - url + url; it.copy(repos = it.repos - url) }
+    }
 
     suspend fun fetchIndex(context: Context, url: String): List<Entry> = withContext(Dispatchers.IO) {
         val body = NetworkClient.get(context).newCall(Request.Builder().url(url).build()).execute().use { r ->
@@ -166,15 +181,21 @@ object JsSources {
             require("DefaultExtension" in code) { "This file isn't a Mangayomi JavaScript source" }
             File(dir(context), "${e.id}.js").writeText(code)
             synchronized(engines) { engines.remove(e.id)?.close() }
-            change(context) { it.copy(installed = it.installed.filterNot { x -> x.id == e.id } + e) }
+            change(context) { otherInstalled = otherInstalled.filterNot { x -> x.id == e.id }; it.copy(installed = it.installed.filterNot { x -> x.id == e.id } + e) }
+            SCOPE.claim(context, SCOPE.JS_SOURCES, e.id)
             publish()
         }
     }
 
     fun uninstall(context: Context, id: String) {
-        File(dir(context), "$id.js").delete()
+        // F-19-EXT-2: another profile still has it: keep its code and entry for that profile.
+        val kept = SCOPE.release(context, SCOPE.JS_SOURCES, id)
+        if (!kept) File(dir(context), "$id.js").delete()
         synchronized(engines) { engines.remove(id)?.close() }
-        change(context) { it.copy(installed = it.installed.filterNot { x -> x.id == id }) }
+        change(context) { s ->
+            if (kept) s.installed.firstOrNull { x -> x.id == id }?.let { e -> otherInstalled = otherInstalled.filterNot { x -> x.id == id } + e }
+            s.copy(installed = s.installed.filterNot { x -> x.id == id })
+        }
         publish()
     }
 
@@ -185,8 +206,8 @@ object JsSources {
     }
 
     private fun save(context: Context) {
-        dev.asfakul.yumeiro.data.SafeJsonFile.write(File(dir(context), "repos.json"), JsonArray(_state.value.repos.map(::JsonPrimitive)).toString())
-        dev.asfakul.yumeiro.data.SafeJsonFile.write(File(dir(context), "sources.json"), JsonArray(_state.value.installed.map { it.raw }).toString())
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(File(dir(context), "repos.json"), JsonArray((_state.value.repos + (otherRepos - _state.value.repos.toSet())).map(::JsonPrimitive)).toString())
+        dev.asfakul.yumeiro.data.SafeJsonFile.write(File(dir(context), "sources.json"), JsonArray((_state.value.installed + otherInstalled.filter { o -> _state.value.installed.none { it.id == o.id } }).map { it.raw }).toString())
     }
 
     private fun publish() {

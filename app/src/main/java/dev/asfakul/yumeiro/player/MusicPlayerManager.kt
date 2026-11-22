@@ -54,8 +54,13 @@ class MusicPlayerManager(
      */
     private var attached: ExoPlayer? = null
     private var recorderReleased = false
+    // B-27: counted at most once, and never after release. A manager released before its deferred
+    // attach, then touched (a late seek or pause), attached and counted itself with no release left
+    // to undo it; screenRecorders stayed above 0 and the background watch stopped saving plays and
+    // Home Continue for the rest of the process.
+    private var recorderCounted = false
     private val player: ExoPlayer
-        get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context))
+        get() = attached ?: attach(PlaybackService.getOrCreatePlayer(context), fromCommand = true)
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -119,6 +124,7 @@ class MusicPlayerManager(
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playbackState.update { it.copy(isPlaying = isPlaying) }
+            dev.asfakul.yumeiro.online.PlayingNow.music(isPlaying) // FE-P
             if (isPlaying) {
                 startProgressTracker()
             } else {
@@ -200,18 +206,33 @@ class MusicPlayerManager(
         }
     }
 
-    private fun attach(p: ExoPlayer): ExoPlayer {
+    /** GATE-1-MUSIC-START: the player was built elsewhere (headset Play); attach so this screen shows it. */
+    private val onPlayerBuilt: (ExoPlayer) -> Unit = { p -> if (attached == null && !recorderReleased) attach(p) }
+
+    /**
+     * GATE-1-MUSIC-START-2: [fromCommand] is true when a music command (playTrack) builds the player.
+     * The command has already set the new track and queue; restoring an empty player's state then
+     * cleared them, so the first song tap after a cold start showed no now-playing screen
+     * (AppNavigationCrashTest.darkThemeRenders, CI 44976838656). An empty player has nothing to restore.
+     */
+    private fun attach(p: ExoPlayer, fromCommand: Boolean = false): ExoPlayer {
+        PlaybackService.stopWhenBuilt(onPlayerBuilt)
         attached = p
         p.addListener(playerListener)
         // G5-PC1: while this listener records plays, the process-wide watch does not.
-        if (onTrackChanged != null) dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.incrementAndGet()
+        if (onTrackChanged != null && !recorderReleased && !recorderCounted) {
+            recorderCounted = true
+            dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.incrementAndGet()
+        }
         runCatching { p.addAnalyticsListener(analyticsListener) }
         refreshCodec()
         // If music is already playing (activity recreated), reconnect to the session now;
         // otherwise connect lazily on first playback.
         if (p.mediaItemCount > 0) connectSession()
         // Restore playback state if player was already playing in background
-        restoreExistingState()
+        val keepCommandState = fromCommand && p.mediaItemCount == 0 &&
+            dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.MUSIC_PLAYER_ON_USE)
+        if (!keepCommandState) restoreExistingState()
         return p
     }
 
@@ -221,7 +242,12 @@ class MusicPlayerManager(
     init {
         // An existing player (music playing in the background, activity recreated) is attached
         // now so the now-playing bar is right on the first frame; it costs no player build.
+        // GATE-1-MUSIC-START: with no player alive nothing plays, so the build waits for the first
+        // command ([player]); the deferred build still blocked the main thread 1.6-3.9 s right after
+        // start on api33-lowram (device-check 44973946688 / 44973948479, getOrCreatePlayer:60).
         if (PlaybackService.sharedPlayer != null) attach(PlaybackService.getOrCreatePlayer(context))
+        else if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.MUSIC_PLAYER_ON_USE))
+            PlaybackService.whenBuilt(onPlayerBuilt)
         else scope.launch { if (attached == null) attach(PlaybackService.getOrCreatePlayer(context)) }
         // Last.fm scrobbling is watched by the shared player (BackgroundPlaybackWatch), so it keeps
         // working after this screen-scoped manager is released. Queued listens are sent now.
@@ -504,15 +530,16 @@ class MusicPlayerManager(
     }
 
     fun release() {
+        PlaybackService.stopWhenBuilt(onPlayerBuilt)
         stopProgressTracker()
         // Not attached yet: nothing to detach, and no reason to build the player now.
         attached?.let { p ->
             p.removeListener(playerListener)
             runCatching { p.removeAnalyticsListener(analyticsListener) }
-            if (onTrackChanged != null && !recorderReleased) {
-                recorderReleased = true
-                dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.decrementAndGet()
-            }
+        }
+        if (!recorderReleased) {
+            recorderReleased = true
+            if (recorderCounted) dev.asfakul.yumeiro.data.MusicPlayHistory.screenRecorders.decrementAndGet()
         }
         scope.cancel()
         controllerFuture?.let { future -> runCatching { MediaController.releaseFuture(future) } }

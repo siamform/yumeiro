@@ -29,7 +29,7 @@ object LiveChannelFeed {
     data class Category(val name: String, val count: Int)
 
     @Immutable
-    data class Feed(val entries: List<Entry>, val categories: List<Category>) {
+    data class Feed(val entries: List<Entry>, val categories: List<Category>, val countries: List<Category> = emptyList()) {
         val size get() = entries.size
         companion object { val EMPTY = Feed(emptyList(), emptyList()) }
     }
@@ -59,12 +59,19 @@ object LiveChannelFeed {
         val keys = display.keys.sortedWith(compareBy<String>({ it == otherKey }, { -(counts[it] ?: 0) }, { firstSeen[it] ?: 0 }))
         val rank = keys.withIndex().associate { display.getValue(it.value) to it.index }
         val entries = raw.withIndex().sortedWith(compareBy<IndexedValue<Entry>>({ rank[it.value.category] ?: 0 }, { it.index })).map { it.value }
-        return Feed(entries, keys.map { Category(display.getValue(it), counts[it] ?: 0) })
+        // Country filter (2.1.0): ISO codes with their channel counts, most channels first.
+        val byCountry = raw.mapNotNull { it.channel.country }.groupingBy { it }.eachCount()
+        val countries = byCountry.entries.sortedWith(compareBy({ -it.value }, { it.key })).map { Category(it.key, it.value) }
+        return Feed(entries, keys.map { Category(display.getValue(it), counts[it] ?: 0) }, countries)
     }
 
-    /** The feed's entries in [category] (null = all), in feed order. */
-    fun filter(feed: Feed, category: String?): List<Entry> =
-        if (category == null) feed.entries else feed.entries.filter { it.category.equals(category, ignoreCase = true) }
+    /** The feed's entries in [category] and [country] (null = all), in feed order. */
+    fun filter(feed: Feed, category: String?, country: String? = null): List<Entry> =
+        if (category == null && country == null) feed.entries
+        else feed.entries.filter { e ->
+            (category == null || e.category.equals(category, ignoreCase = true)) &&
+                (country == null || e.channel.country.equals(country, ignoreCase = true))
+        }
 
     /** How many to show after the list neared its end: one more [PAGE], never past [total]. */
     fun nextLimit(limit: Int, total: Int): Int = if (limit >= total) limit else (limit + PAGE).coerceAtMost(total)

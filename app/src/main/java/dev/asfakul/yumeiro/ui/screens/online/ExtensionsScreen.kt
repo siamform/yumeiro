@@ -96,11 +96,14 @@ import kotlinx.coroutines.launch
 
 /** Videos → Online → Extensions: installed extensions, their updates and the user's repositories. */
 @Composable
-fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources: () -> Unit = {}) {
+fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources: () -> Unit = {}, onOpenScriptRepos: () -> Unit = onOpenSources) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine by ExtensionManager.state.collectAsState()
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
+    // OWN-5: Vega / Nuvio / SkyStream script sources were only visible under Sources → Script repos.
+    val scripts by dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.state.collectAsState()
+    LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.start(context.applicationContext) } }
 
     var available by remember { mutableStateOf<List<RemoteExtension>>(emptyList()) }
     var checking by remember { mutableStateOf(false) }
@@ -287,8 +290,27 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                         }
                     }
                 }
+                if (scripts.repos.isNotEmpty() || scripts.installed.isNotEmpty()) item("script_sources") {
+                    // OWN-5: installed script sources (Vega, Nuvio, SkyStream) with a direct Manage shortcut.
+                    val names = scripts.installed.map { it.name }
+                    val kinds = (scripts.installed.map { it.ecosystem.label } + scripts.repos.map { it.ecosystem.label }).distinct().joinToString(", ")
+                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_script_sources"),
+                        onClick = onOpenScriptRepos) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Extension, null, tint = SpotifyGreen)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("$kinds sources: ${names.size} installed", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(if (names.isEmpty()) "${scripts.repos.size} repositor${if (scripts.repos.size == 1) "y" else "ies"} added. Tap to install providers"
+                                    else names.take(4).joinToString(", ") + if (names.size > 4) " and ${names.size - 4} more" else "",
+                                    color = TextTertiary, fontSize = 12.sp, maxLines = 2)
+                            }
+                            Text("Manage", color = SpotifyGreen, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("extensions_script_manage"))
+                        }
+                    }
+                }
                 if (engine.installed.isEmpty()) item("empty") {
-                    StateMessage(Icons.Default.Extension, "No extensions installed", "Extensions add online sources: home rows, search, details and streams.",
+                    StateMessage(Icons.Default.Extension, "No extensions installed", "Extensions add more online sources: home rows, search, details and streams. Yumeiro's own built-in sources are below.",
                         primary = "Browse market" to onOpenMarket, secondary = "Add a repository" to { showRepoDialog = true }, testTag = "extensions_empty")
                 }
                 if (engine.installed.isNotEmpty() && shown.isEmpty()) item("no_match") {
@@ -311,6 +333,12 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                         onLongPress = { if (!selecting) { selecting = true; selected = setOf(ext.key) } },
                     )
                 }
+                // OWN-9: the official built-in sources, right after the installed ones (before: only in the market).
+                item("official_header") {
+                    Text("Official · built in", color = TextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp).testTag("extensions_official"))
+                }
+                if (!officialHub() && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS)) item("builtin_classics") { ClassicsBuiltinCard() }
+                item("builtin_drama_installed") { DramaBuiltinCard() }
                 item("repos_header") {
                     Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -362,9 +390,14 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         confirm = "Add", onDismiss = { showRepoDialog = false },
     ) { text, done ->
         scope.launch {
-            runCatching { ExtensionManager.addRepository(context, text) }
-                .onSuccess { AppMessages.success(context, "Added ${it.name}"); done(null); showRepoDialog = false; check(true); onOpenMarket() }
-                .onFailure { done(OnlineErrors.friendly(it)) }
+            // OWN-4: a Vega, SkyStream, Stremio, Aniyomi/Mihon or single-extension link works here too.
+            dev.asfakul.yumeiro.sources.UniversalAdd.addFromRepoDialog(context, text)
+                .onSuccess { (repo, other) ->
+                    done(null); showRepoDialog = false
+                    if (repo != null) { AppMessages.success(context, "Added ${repo.name}"); check(true); onOpenMarket() }
+                    else { AppMessages.success(context, other?.message ?: "Added"); afterChange() }
+                }
+                .onFailure { if (it is dev.asfakul.yumeiro.online.ExtensionReview.Declined) { done(null); showRepoDialog = false } else done(OnlineErrors.friendly(it)) }
         }
     }
     if (showLinkDialog) InputDialog(
@@ -489,10 +522,15 @@ private fun InstalledCard(
                 )
                 ExtensionIcon(ext.iconUrl)
                 Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(ext.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("v${ext.version} · ${ext.repoName}", color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // F-21: shared label — name + language chip, then "3 sources • CloudStream • Repo • v12".
+                val rich = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS) }
+                val label = remember(rich, ext.name, ext.language, ext.repoName, ext.version, info.loaded, info.providers.size) {
+                    if (!rich) dev.asfakul.yumeiro.online.ExtensionLabels.Label(ext.name, null, "v${ext.version} · ${ext.repoName}")
+                    else dev.asfakul.yumeiro.online.ExtensionLabels.build(
+                        ext.name, ext.language, info.providers.size.takeIf { info.loaded }, "CloudStream", ext.repoName, listOf("v${ext.version}"),
+                    )
                 }
+                ExtensionLabelText(label, titleColor = TextPrimary, lineColor = TextTertiary, modifier = Modifier.weight(1f))
                 if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
                 else if (!selecting) Switch(
                     checked = ext.enabled, onCheckedChange = onToggle,
@@ -530,7 +568,7 @@ private fun InstalledCard(
                 when {
                     !ext.enabled -> Pill("Off", TextTertiary)
                     info.error != null -> Pill("Error", ErrorColor)
-                    info.loaded -> Pill("${info.providers.size} source${if (info.providers.size == 1) "" else "s"}")
+                    info.loaded -> Pill(if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) "On" else "${info.providers.size} source${if (info.providers.size == 1) "" else "s"}")
                 }
                 if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else "Manual updates", TextSecondary)
                 if (update != null) Pill("Update v${update.version}", WarnColor)

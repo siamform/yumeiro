@@ -114,6 +114,7 @@ internal fun HuePage(
     onRetry: () -> Unit,
     openItem: (OnlineItem) -> Unit,
     openInfo: (OnlineItem) -> Unit,
+    errorFix: dev.asfakul.yumeiro.online.EmptyHome.Diagnosis? = null,
 ) {
     val scope = rememberCoroutineScope()
     // R15: keyed by the channel only. A refreshed copy of [rows] (background refresh of a saved
@@ -210,7 +211,21 @@ internal fun HuePage(
         when {
             api != null && !runCatching { api.hasMainPage }.getOrDefault(false) -> item("nomain") { HueNotice("$name is search-only — use search to find titles") }
             rows == null && loading -> item("load") { PosterGridSkeleton(3) }
-            error != null -> item("fail") { HueNotice("$name didn't load: $error", "Retry", onRetry) }
+            error != null -> item("fail") {
+                // B-32: the diagnosis brings its own fix next to Retry.
+                val fix = errorFix
+                val second: Pair<String, () -> Unit>? = when (fix?.kind) {
+                    dev.asfakul.yumeiro.online.EmptyHome.Kind.BROWSER_CHECK -> "Open site" to {
+                        scope.launch { dev.asfakul.yumeiro.online.web.BrowserCheck.solve(fix.site); onRetry() }; Unit
+                    }
+                    dev.asfakul.yumeiro.online.EmptyHome.Kind.MOVED -> if (api != null && fix.movedTo != null) ("Use new address" to {
+                        dev.asfakul.yumeiro.online.ProviderOverrides.setMainUrl(api, fix.movedTo); onRetry()
+                    }) else null
+                    dev.asfakul.yumeiro.online.EmptyHome.Kind.NOTHING_PARSED -> "Search" to onSearch
+                    else -> null
+                }
+                HueNotice("$name didn't load: $error", "Retry", onRetry, second?.first, second?.second)
+            }
             feeds.isEmpty() -> item("empty") { HueNotice("Nothing to show on $name right now") }
             else -> {
                 if (feeds.size > 1) item("tabs") {
@@ -260,13 +275,14 @@ internal fun FeedCardSkeleton() {
 }
 
 @Composable
-private fun HueNotice(message: String, action: String? = null, onAction: (() -> Unit)? = null) {
+private fun HueNotice(message: String, action: String? = null, onAction: (() -> Unit)? = null, action2: String? = null, onAction2: (() -> Unit)? = null) {
     androidx.compose.material3.Surface(
         shape = RoundedCornerShape(18.dp), color = dev.asfakul.yumeiro.ui.theme.GlassFill,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error"),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(message, color = dev.asfakul.yumeiro.ui.theme.TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            if (action2 != null && onAction2 != null) androidx.compose.material3.TextButton(onClick = onAction2, modifier = Modifier.testTag("online_provider_fix")) { Text(action2, color = dev.asfakul.yumeiro.ui.theme.SpotifyGreen) }
             if (action != null && onAction != null) androidx.compose.material3.TextButton(onClick = onAction) { Text(action, color = dev.asfakul.yumeiro.ui.theme.SpotifyGreen) }
         }
     }

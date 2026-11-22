@@ -89,5 +89,14 @@ object DownloadSettings {
     fun setDownloader(context: Context, pkg: String) { init(context); _downloader.value = pkg; prefs?.edit()?.putString("downloader", pkg)?.apply() }
 
     fun autoDeleteLabel(days: Int) = when (days) { 0 -> "Never"; 1 -> "1 day"; else -> "$days days" }
+    /** NF-2b: the height a download uses: the one picked for it, else the Settings value. */
+    fun heightFor(picked: Int, setting: Int = quality.value): Int = if (picked in QUALITY_CHOICES) picked else setting
+
+    /**
+     * OL-5: height for one download picked in the popup: any real height a stream offers (144..4320,
+     * e.g. 540 or 1440), 0 = best, anything else the Settings value. [heightFor] stays the Settings-choice check.
+     */
+    fun heightForPick(picked: Int, setting: Int = quality.value): Int = if (picked == 0 || picked in 144..4320) picked else setting
+
     fun qualityLabel(h: Int) = if (h == 0) "Best" else "${h}p"
 }

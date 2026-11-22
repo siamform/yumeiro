@@ -66,8 +66,10 @@ object UniversalAdd {
         VEGA_REPO("Vega providers repository"),
         ;
 
-        /** F-05: formats Yumeiro recognises but can't run in this version. */
-        val notYet: Boolean get() = this == SKYSTREAM_REPO || this == SKY_PLUGIN || this == NUVIO_REPO
+        /** F-05: formats Yumeiro recognises but can't run in this version (Nuvio runs once `scripts_nuvio` is on, ADR-057). */
+        val notYet: Boolean get() = this == SKY_PLUGIN ||
+            (this == SKYSTREAM_REPO && !dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SCRIPTS_SKYSTREAM)) ||
+            (this == NUVIO_REPO && !dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SCRIPTS_NUVIO))
     }
 
     /** F-05: the message for a recognised format that this version can't run. */
@@ -237,6 +239,24 @@ object UniversalAdd {
         }
     }
 
+    /**
+     * OWN-4 (owner list, 2.1.0): the "Add repository" dialogs in Extensions and the Extension market only knew
+     * CloudStream repositories, so a Vega, SkyStream, Nuvio, Stremio, Aniyomi/Mihon or single-extension link
+     * failed there with "not a repository" although Sources → Add anything accepts it. The dialogs now try the
+     * CloudStream repository first (same result as before for those) and, if that fails, the same detection as
+     * Add anything. Returns the CloudStream repo, or the other outcome; the error is the detection's when both fail.
+     */
+    internal suspend fun <R : Any> repoOrAnything(cloudStream: suspend () -> R, anything: suspend () -> Result<Outcome>): Result<Pair<R?, Outcome?>> {
+        val cs = runCatching { cloudStream() }
+        cs.getOrNull()?.let { return Result.success(it to null) }
+        if (cs.exceptionOrNull() is kotlinx.coroutines.CancellationException) return Result.failure(cs.exceptionOrNull()!!)
+        return anything().map { null to it }
+    }
+
+    /** OWN-4: what the "Add repository" dialogs (Extensions, Extension market) run. */
+    suspend fun addFromRepoDialog(context: Context, text: String): Result<Pair<dev.asfakul.yumeiro.online.ExtensionRepo?, Outcome?>> =
+        repoOrAnything({ ExtensionManager.addRepository(context, text) }, { add(context, text) })
+
     /** A picked or shared file: `.cs3`, an extension `.apk`, or a saved index / manifest. */
     suspend fun addFile(context: Context, uri: Uri, displayName: String?): Result<Outcome> = withContext(Dispatchers.IO) {
         runCatching {
@@ -269,10 +289,15 @@ object UniversalAdd {
         Kind.TACHI_APK -> Outcome(kind, installApk(context, body ?: download(context, url)))
         Kind.STREMIO -> StremioAddons.add(context, url).getOrThrow().let { Outcome(kind, "${it.name} added") }
         Kind.JS_REPO -> JsSources.addRepo(context, url).getOrThrow().let { Outcome(kind, "JavaScript repository added ($it sources)") }
-        // ADR-047: Vega runs through the shared ecosystem registry; Nuvio and SkyStream are recognised only.
+        // ADR-047: Vega runs through the shared ecosystem registry; Nuvio too (ADR-057) when its flag is on;
+        // SkyStream repositories too (ADR-058) when `scripts_skystream` is on; a lone .sky file is recognised only.
         Kind.VEGA_REPO -> dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.addRepo(context, url).getOrThrow()
             .let { Outcome(kind, "${it.name} added (${it.plugins.size} providers). Install them in Sources → Script repos") }
-        Kind.SKYSTREAM_REPO, Kind.SKY_PLUGIN, Kind.NUVIO_REPO -> error(notYetMessage(kind))
+        Kind.NUVIO_REPO -> if (kind.notYet) error(notYetMessage(kind)) else dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.addRepo(context, url).getOrThrow()
+            .let { Outcome(kind, "${it.name} added (${it.plugins.size} scrapers). Install them in Sources → Script repos; their streams join a title's sources") }
+        Kind.SKYSTREAM_REPO -> if (kind.notYet) error(notYetMessage(kind)) else dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.addRepo(context, url).getOrThrow()
+            .let { Outcome(kind, "${it.name} added (${it.plugins.size} plugins). Install them in Sources → Script repos") }
+        Kind.SKY_PLUGIN -> error(notYetMessage(kind))
         Kind.JELLYFIN, Kind.EMBY, Kind.PLEX -> {
             val base = url.substringBefore("/System/Info/Public").substringBefore("/identity").removeSuffix("/manifest.json")
             val sk = when (kind) { Kind.EMBY -> HomeServers.Kind.EMBY; Kind.PLEX -> HomeServers.Kind.PLEX; else -> HomeServers.Kind.JELLYFIN }

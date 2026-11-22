@@ -24,8 +24,8 @@ import kotlinx.serialization.json.JsonElement
 import java.io.File
 
 /**
- * ADR-047: the one script runtime every JavaScript ecosystem adapter shares (Vega now; Nuvio and
- * SkyStream plug into the same call when their adapters ship). Rules from proposal F-05 §4:
+ * ADR-047: the one script runtime every JavaScript ecosystem adapter shares (Vega, Nuvio since
+ * ADR-057; SkyStream plugs into the same call when its adapter ships). Rules from proposal F-05 §4:
  * - a fresh QuickJS per call, closed afterwards, so nothing leaks between titles or providers;
  * - memory 48 MB (32 MB on low-end phones and TV), stack 1 MB, evaluation limit per evaluate and
  *   a whole-call budget;
@@ -57,15 +57,34 @@ object ScriptRuntime {
         gate ?: Semaphore(if (constrained(context)) 2 else 4).also { gate = it }
     }
 
-    /** One module of a plugin: its name (`posts`) and code file. */
-    data class Module(val name: String, val file: File)
+    /**
+     * One module of a plugin: its name (`posts`) and code file. F-05-S: a [raw] module (SkyStream's
+     * plugin.js) runs as a plain script, so its top-level functions become globals as in SkyStream.
+     * [code] replaces reading [file] (a SkyStream plugin is read out of its .sky zip).
+     */
+    data class Module(val name: String, val file: File, val raw: Boolean = false, val code: String? = null)
 
     /**
      * Loads [modules] as CommonJS modules, calls `require(entry)[fn](args)`, awaits it and returns
      * the JSON result. [storeName] keys the provider's own small key/value store.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun call(context: Context, storeName: String, modules: List<Module>, entry: String, fn: String, argsJson: String): JsonElement {
+    suspend fun call(
+        context: Context,
+        storeName: String,
+        modules: List<Module>,
+        entry: String,
+        fn: String,
+        argsJson: String,
+        /** F-05-N (ADR-057): `__invoke` passes one args object (Vega); `__invokePositional` spreads a JSON array (Nuvio). */
+        invoker: String = "__invoke",
+        /** F-05-N: globals set before the modules load, name to JSON value (e.g. `SCRAPER_ID`). */
+        globals: Map<String, String> = emptyMap(),
+        /** F-05-S (ADR-058): extra runtime files from assets/js, run after provider_runtime.js (`sky_runtime.js`). */
+        preludes: List<String> = emptyList(),
+    ): JsonElement {
+        require(invoker == "__invoke" || invoker == "__invokePositional" || invoker == "__invokeSky") { "Unknown invoker" }
+        require(preludes.all { it in PRELUDES }) { "Unknown runtime file" }
         val app = context.applicationContext
         return gate(app).withPermit {
             withTimeout(CALL_BUDGET_MS) {
@@ -90,13 +109,28 @@ object ScriptRuntime {
                         q.defineBinding("__error", FunctionBinding<Any?> { args -> failure = args.getOrNull(0)?.toString() ?: "error"; null })
                         q.evaluationTimeoutMillis = left()
                         q.evaluate<Any?>(runtime(app), "provider_runtime.js", false)
-                        for (m in modules) {
-                            val code = m.file.readText()
+                        for (pre in preludes) {
                             q.evaluationTimeoutMillis = left()
-                            q.evaluate<Any?>("__defineModule(${quote(m.name)}, function (module, exports, require) {\n$code\n});", "${m.name}.js", false)
+                            q.evaluate<Any?>(asset(app, pre), pre, false)
+                        }
+                        // F-05-N-ERR: thrown errors are reported with their message first.
+                        val all = globals + ("__ERR_MESSAGE" to dev.asfakul.yumeiro.FeatureFlags.isOn(
+                            dev.asfakul.yumeiro.FeatureFlags.Flag.SCRIPT_ERROR_MESSAGE).toString())
+                        if (all.isNotEmpty()) {
+                            val set = all.entries.joinToString("\n") { (k, v) -> "globalThis[${quote(k)}] = JSON.parse(${quote(v)});" }
+                            q.evaluate<Any?>(set, "globals.js", false)
+                        }
+                        for (m in modules) {
+                            val code = m.code ?: m.file.readText()
+                            q.evaluationTimeoutMillis = left()
+                            if (m.raw) q.evaluate<Any?>(code, "${m.name}.js", false)
+                            else q.evaluate<Any?>("__defineModule(${quote(m.name)}, function (module, exports, require) {\n$code\n});", "${m.name}.js", false)
                         }
                         q.evaluationTimeoutMillis = left()
-                        q.evaluate<Any?>("__invoke(${quote(entry)}, ${quote(fn)}, ${quote(argsJson)})", "call.js", false)
+                        // __invokeSky looks the function up among the globals: no module name.
+                        val call = if (invoker == "__invokeSky") "$invoker(${quote(fn)}, ${quote(argsJson)})"
+                            else "$invoker(${quote(entry)}, ${quote(fn)}, ${quote(argsJson)})"
+                        q.evaluate<Any?>(call, "call.js", false)
                         var spins = 0
                         while (result == null && failure == null && spins++ < MAX_SPINS) {
                             if (System.currentTimeMillis() >= deadline) throw ScriptException(STOPPED)
@@ -117,6 +151,12 @@ object ScriptRuntime {
 
     private fun runtime(context: Context): String = runtimeJs
         ?: context.assets.open("js/provider_runtime.js").bufferedReader().use { it.readText() }.also { runtimeJs = it }
+
+    /** F-05-S: runtime files a call may add, read once each. */
+    val PRELUDES = setOf("sky_runtime.js")
+    private val preludeJs = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun asset(context: Context, name: String): String =
+        preludeJs.getOrPut(name) { context.assets.open("js/$name").bufferedReader().use { it.readText() } }
 
     /** A JS string literal for [s] (JSON string escaping is valid JS). */
     internal fun quote(s: String): String = kotlinx.serialization.json.JsonPrimitive(s).toString()

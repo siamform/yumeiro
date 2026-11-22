@@ -11,12 +11,16 @@ adb shell settings put global hide_error_dialogs 1 || true
 FILTER="${TEST_FILTER:-dev.asfakul.yumeiro.StabilityStressDeviceTest,dev.asfakul.yumeiro.PlayerSwitchDeviceTest,dev.asfakul.yumeiro.OnlinePlaybackDeviceTest,dev.asfakul.yumeiro.SurfaceModeDeviceTest,dev.asfakul.yumeiro.ForceDownloadDeviceTest,dev.asfakul.yumeiro.PlaybackSessionDeviceTest,dev.asfakul.yumeiro.DramaPlaybackDeviceTest,dev.asfakul.yumeiro.FeedPositionDeviceTest,dev.asfakul.yumeiro.QualityListDeviceTest,dev.asfakul.yumeiro.PinnedExtensionsDeviceTest,dev.asfakul.yumeiro.HomeNavigationDeviceTest,dev.asfakul.yumeiro.BackNavigationDeviceTest,dev.asfakul.yumeiro.ExtensionsDeviceTest,dev.asfakul.yumeiro.LocalPlayerDeviceTest,dev.asfakul.yumeiro.HeaderStreamDeviceTest,dev.asfakul.yumeiro.YumixDeviceTest,dev.asfakul.yumeiro.LibraryDeviceTest,dev.asfakul.yumeiro.DownloadResumeDeviceTest,dev.asfakul.yumeiro.BackupDeviceTest,dev.asfakul.yumeiro.AniSkipDeviceTest,dev.asfakul.yumeiro.AccessibilityDeviceTest,dev.asfakul.yumeiro.HeatGuardDeviceTest,dev.asfakul.yumeiro.ClosedAppAlertDeviceTest,dev.asfakul.yumeiro.CrashUiDeviceTest}" 
 case "$FILTER" in *[!A-Za-z0-9._,#]*) echo "::error::Invalid test filter"; exit 1;; esac
 R=6; H="${HPROF:-false}"; case "$H" in true|false) ;; *) H=false;; esac
+# GATE-1-AB: GATE1_BASELINE=true runs the gate walk with the GATE-1 app fixes off (GateOneVariant).
+GB="${GATE1_BASELINE:-false}"; case "$GB" in true|false) ;; *) GB=false;; esac; echo "YuGateEnv gate1Baseline=$GB"
 # FLAVOR=Tv installs Yumeiro TV (minSdk 24) on the Android TV emulator; default is the phone app.
 FLAVOR="${FLAVOR:-Mobile}"
 ./gradlew --no-daemon install${FLAVOR}Debug install${FLAVOR}DebugAndroidTest
 # R15: one class at a time with its own time limit, so one hung test (run 43612391254
 # spent 70 min in one) can't hide every other result; results go into the job log.
 SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r'); case "$SDK" in ''|*[!0-9]*) SDK=99;; esac
+# GATE-1-ANR-T8: emulators scale the 5 s input-ANR timeout by ro.hw_timeout_multiplier; log it.
+echo "YuGateEnv hw_timeout_multiplier='$(adb shell getprop ro.hw_timeout_multiplier | tr -d '\r')' sdk=$SDK"
 REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
 # Final test (MASTER-CHECKLIST-FINAL): P1 = every class from cleared data and a cold start; P2 = the
 # same classes again with P1's data kept, the app killed and reopened (warm start, populated data).
@@ -57,6 +61,34 @@ adb_alive() {
   echo "HARNESS adb lost before $C (run $N): stopping; the remaining classes are not run"
   ADB_LOST=1; return 1
 }
+# GATE-1-QUIET (gate 44982381315, api33-lowram): during the walk Google Maps'
+# server_recovery_process crash-looped (about 25 restarts in 20 s), Google apps were killed for package
+# changes (background updates) and Play Services ran 154k getResources calls (1.8k on api36). The main
+# thread then waited 997 ms of a 1520 ms stall in the run queue. The gate measures Yumeiro, so before
+# the walk: stop a crash-looping Maps, then wait (max 240 s) until the CPU is below 40 % busy for 3
+# samples in a row. Everything is logged as GATE_QUIET lines; the 700 ms limit is unchanged.
+cpu_busy() {
+  local a b; a=$(timeout 10 adb shell head -1 /proc/stat < /dev/null | tr -d '\r'); sleep 5
+  b=$(timeout 10 adb shell head -1 /proc/stat < /dev/null | tr -d '\r')
+  echo "$a|$b" | awk -F'|' '{ split($1,x," "); split($2,y," "); ti=0; tb=0;
+    for (i=2;i<=NF+20;i++) if (x[i]!="") { d=y[i]-x[i]; ti+=d; if (i!=5 && i!=6) tb+=d }
+    if (ti>0) printf "%d", 100*tb/ti; else print 100 }'
+}
+gate_quiet() {
+  local deaths; deaths=$(grep -cE "server_recovery_process \(pid [0-9]+\) has died" logcat.txt 2>/dev/null)
+  if [ "${deaths:-0}" -ge 5 ]; then
+    echo "GATE_QUIET maps server_recovery_process died $deaths times: force-stop com.google.android.apps.maps"
+    timeout 20 adb shell am force-stop com.google.android.apps.maps < /dev/null > /dev/null 2>&1 || true
+  fi
+  local t0 calm busy; t0=$(date +%s); calm=0
+  while [ $(( $(date +%s) - t0 )) -lt 240 ]; do
+    busy=$(cpu_busy); echo "GATE_QUIET cpu busy ${busy}% at $(( $(date +%s) - t0 )) s"
+    if [ "${busy:-100}" -lt 40 ]; then calm=$((calm + 1)); else calm=0; fi
+    [ "$calm" -ge 3 ] && break
+  done
+  echo "GATE_QUIET settled=$([ "$calm" -ge 3 ] && echo yes || echo no) after $(( $(date +%s) - t0 )) s"
+  timeout 20 adb shell top -b -n 1 -m 8 < /dev/null 2>/dev/null | tr -d '\r' | head -16 | sed 's/^/GATE_QUIET top /'
+}
 for N in $(seq 1 "$REPEAT"); do
 for C in $(echo "$FILTER" | tr ',' ' '); do
   adb_alive || break 2
@@ -74,6 +106,9 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   fi
   recover_system_anr
   echo "::group::$C (run $N/$REPEAT)"
+  # GATE-1-PREPARE-COLD: the first start after install is measured on a settled CPU too, so a stall there
+  # (4-6 s while Play Services ran in 44984838999 / 44985820433) can be told apart from CPU starvation.
+  [ "$C" = "dev.asfakul.yumeiro.GateOnePrepareDeviceTest" ] && gate_quiet
   L0=$(wc -l < logcat.txt)
   if [ "$C" = "dev.asfakul.yumeiro.HomeTraceDeviceTest" ]; then
     # ST-18: prepare (guide answered), then three traced cold starts to Home.
@@ -94,6 +129,45 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
       adb pull /data/misc/perfetto-traces/home-$T.pftrace stress/trace/ > /dev/null 2>&1 || echo "HOME_TRACE no trace $T: $(cat stress/trace/perfetto-$T.txt | head -3)"
     done
     ls -la stress/trace | sed 's/^/HOME_TRACE file /'
+  elif [ "$C" = "dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest" ]; then
+    # GATE-1: the walk runs under a Perfetto trace (main + RenderThread + HWUI) so a long frame can be read.
+    P=dev.asfakul.yumeiro.debug
+    mkdir -p stress/trace
+    gate_quiet
+    adb shell rm -f /data/misc/perfetto-traces/gate.pftrace > /dev/null 2>&1
+    adb shell "perfetto --txt -c - -o /data/misc/perfetto-traces/gate.pftrace --background" < scripts/gate-trace.pbtxt > stress/trace/perfetto-gate.txt 2>&1 || true
+    sleep 2
+    # GATE-1-QUIET: who else used the CPU during the walk, every 5 s (the trace ring can lose the start).
+    ( while :; do echo "== $(date -u +%H:%M:%S)"; timeout 10 adb shell top -b -n 1 -m 8 < /dev/null 2>/dev/null | tr -d '\r' | head -16; sleep 5; done ) > stress/trace/top.txt 2>&1 &
+    TOP_PID=$!
+    timeout 600 adb shell am instrument -w -r -e class "$C" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+    kill $TOP_PID > /dev/null 2>&1 || true
+    adb shell killall -INT perfetto > /dev/null 2>&1 || true
+    sleep 4
+    adb pull /data/misc/perfetto-traces/gate.pftrace stress/trace/ > /dev/null 2>&1 || echo "GATE_TRACE no trace: $(head -3 stress/trace/perfetto-gate.txt)"
+  elif [ "$C" = "dev.asfakul.yumeiro.UpdateFeedDeviceTest" ]; then
+    # FE-Q1 / FE-Q2: a installs extensions and saves homes; b = relaunch; c = after an in-place update
+    # (`adb install -r` of the same debug APK: new code path, data kept, like a store update).
+    P=dev.asfakul.yumeiro.debug
+    timeout 600 adb shell am instrument -w -r -e class "$C#a_installAndSaveHomes" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-a.txt" 2>&1
+    adb shell am force-stop $P; sleep 2
+    timeout 400 adb shell am instrument -w -r -e class "$C#b_relaunchBeforeUpdate" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-b.txt" 2>&1
+    adb shell am force-stop $P; sleep 2
+    mkdir -p stress/updfeed
+    adb shell run-as $P ls -laR files/extensions > stress/updfeed/ext-before.txt 2>&1 || true
+    adb shell dumpsys package dexopt > stress/updfeed/dexopt-before.txt 2>&1 || true
+    APK=$(ls app/build/outputs/apk/${FLAVOR,,}/debug/*.apk 2>/dev/null | grep -v -- '-androidTest' | head -1)
+    echo "UPDFEED_SCRIPT update: $(adb install -r "$APK" 2>&1 | tail -1) ($APK)"
+    sleep 3
+    adb shell run-as $P ls -laR files/extensions > stress/updfeed/ext-after-install.txt 2>&1 || true
+    adb shell dumpsys package dexopt > stress/updfeed/dexopt-after-install.txt 2>&1 || true
+    timeout 400 adb shell am instrument -w -r -e class "$C#c_afterUpdate" $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C-c.txt" 2>&1; RC=$?
+    adb shell run-as $P ls -laR files/extensions > stress/updfeed/ext-after.txt 2>&1 || true
+    adb shell dumpsys package dexopt > stress/updfeed/dexopt-after.txt 2>&1 || true
+    grep -a "UPDFEED" logcat.txt | sed 's/^.*UPDFEED/UPDFEED/' | tee stress/updfeed/numbers.txt
+    cat "inst-$C-a.txt" "inst-$C-b.txt" "inst-$C-c.txt" > "inst-$C.txt"
+    # All three phases must report OK.
+    [ "$(grep -c '^OK (' "inst-$C.txt")" -eq 3 ] || sed -i 's/^OK (/PHASE_OK (/' "inst-$C.txt"
   elif [ "$C" = "dev.asfakul.yumeiro.ClosedAppAlertDeviceTest" ]; then
     # G12 X5: queue (phase a), then Home, kill, deep Doze, wait for the alarm to post it, then check (phase b).
     P=dev.asfakul.yumeiro.debug
@@ -266,7 +340,7 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
     echo "YuCrashUiScript phase a: $(grep -cE 'Process crashed|IllegalStateException: YuCrashUi' "inst-$C-a.txt") crash lines · pidof='$(adb shell pidof $P | tr -d '\r')'"
     timeout 600 adb shell am instrument -w -r -e class "$C#b_readShareAndDelete" -e crashed 1 $P.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
   else
-  timeout 900 adb shell am instrument -w -r -e class "$C" -e rounds $R -e hprof $H dev.asfakul.yumeiro.debug.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
+  timeout 900 adb shell am instrument -w -r -e class "$C" -e rounds $R -e hprof $H -e gate1Baseline "$GB" dev.asfakul.yumeiro.debug.test/androidx.test.runner.AndroidJUnitRunner > "inst-$C.txt" 2>&1; RC=$?
   fi
   grep -E "INSTRUMENTATION_STATUS: (class|test|stack)=|INSTRUMENTATION_STATUS_CODE|INSTRUMENTATION_CODE|OK \(|FAILURES|Tests run" "inst-$C.txt" | cut -c1-400 | tail -150
   if [ $RC -eq 124 ]; then echo "TIMEOUT in $C (last test started above)"; echo "TESTS_FAILED" > failed.txt; adb shell am force-stop dev.asfakul.yumeiro.debug || true; fi
@@ -276,6 +350,9 @@ for C in $(echo "$FILTER" | tr ',' ' '); do
   awk '/^INSTRUMENTATION_STATUS: stack=/{p=1} /^INSTRUMENTATION_STATUS: (test|class|current|id|numtests|stream)=|^INSTRUMENTATION_STATUS_CODE/{p=0} p' "inst-$C.txt" | grep -vE "^\s+at (org\.junit|java\.lang\.reflect|jdk\.internal|androidx\.test\.internal)" | head -80
   grep -qE "FAILURES!!!|INSTRUMENTATION_STATUS_CODE: -2|Process crashed" "inst-$C.txt" && echo "TESTS_FAILED" > failed.txt
   grep -qE "^OK \(" "inst-$C.txt" || echo "TESTS_FAILED" > failed.txt
+  # GATE-1-ANR-T8: an input ANR under instrumentation never reaches ApplicationExitInfo or
+  # processesInErrorState; AMS ends the run with shortMsg=keyDispatchingTimedOut (AMS.inputDispatchingTimedOut).
+  grep -qE "shortMsg=(keyDispatchingTimedOut|Process crashed)|longMsg=Input dispatching timed out" "inst-$C.txt" && { echo "GATE_ANR_OR_CRASH in $C: $(grep -hE 'shortMsg=|longMsg=' "inst-$C.txt" | head -2 | tr '\n' ' ')"; echo "TESTS_FAILED" > failed.txt; }
   if grep -qE "^OK \(" "inst-$C.txt" && [ $RC -ne 124 ]; then V=PASS; else V=FAIL; fi
   PL=""; [ "$PASSES" = "true" ] && PL=" pass=P$N"
   # Ignored tests (status -3) and assumption failures (status -4, e.g. "needs API 26") are skips; the final

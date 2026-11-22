@@ -93,7 +93,8 @@ import kotlinx.coroutines.sync.withPermit
 private sealed interface ProviderHome {
     data object Loading : ProviderHome
     data class Ready(val rows: List<OnlineRow>) : ProviderHome
-    data class Failed(val message: String) : ProviderHome
+    /** [fix]: B-32 diagnosis of an empty home (browser check, moved site, out-of-date extension…). */
+    data class Failed(val message: String, val fix: dev.asfakul.yumeiro.online.EmptyHome.Diagnosis? = null) : ProviderHome
 }
 
 /**
@@ -184,6 +185,7 @@ fun OnlineHomeScreen(
     onOpenLibrary: () -> Unit = onOpenHistory,
     onOpenUpcoming: (() -> Unit)? = null,
 ) {
+    androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("yumix") } // FREEZE-4
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine by ExtensionManager.state.collectAsState()
@@ -206,6 +208,14 @@ fun OnlineHomeScreen(
     // over its rows). Loading every extension at full parallelism is what starved the device and
     // crashed "For you" with many extensions enabled.
     val gate = remember { Semaphore(3) }
+    // FE-2: same three slots, served by priority. The picked extension moves to the front even after loading began.
+    val pgate = remember { dev.asfakul.yumeiro.online.PriorityGate(3) { dev.asfakul.yumeiro.online.PlayingNow.backgroundLimit(3) } }
+    // FE-P: when playback stops, waiting background fetches get their slots back.
+    LaunchedEffect(pgate) { dev.asfakul.yumeiro.online.PlayingNow.active.collect { pgate.poke() } }
+    val prioritized = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_PRIORITY_GATE)
+    suspend fun <T> slot(name: String, block: suspend () -> T): T =
+        if (prioritized) pgate.run(name, if (name == selected) dev.asfakul.yumeiro.online.PriorityGate.PICKED else dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND, block)
+        else gate.withPermit { block() }
 
     // One fetch per extension at a time. Extensions finish loading one by one at start-up, and
     // every new engine snapshot used to restart the whole feed effect: in-flight homes were
@@ -213,32 +223,73 @@ fun OnlineHomeScreen(
     // Fetches now run in the screen's scope and survive those restarts; a name is only fetched
     // again when forced (pull to refresh, Retry) or after it failed.
     val inflight = YumixMemory.inflight
-    /** Loads one extension's home; true when it brought titles that were not on screen yet. */
-    suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean): Boolean {
+    // FE-4b: only the working set fetches live; [waitingLive] are shown from their saved page (or not yet) until
+    // the feed is scrolled to its end and the set grows (FeedWorkingSet.grow).
+    val workingSetOn = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE4_WORKING_SET)
+    var workingLimit by rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.online.FeedWorkingSet.initial(dev.asfakul.yumeiro.DeviceClass.lowEnd)) }
+    val waitingLive = remember { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
+    /** R15 / FE-1: an old saved copy is on screen; fetch the live page and merge it in. */
+    fun refreshStale(api: com.lagradost.cloudstream3.MainAPI) {
         val name = api.name
-        if (!force && homes[name] is ProviderHome.Ready) return false
+        YumixMemory.scope.launch {
+            val live = slot(name) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
+            val cur = homes[name] as? ProviderHome.Ready
+            if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
+        }
+    }
+    /** Loads one extension's home; true when it brought titles that were not on screen yet. [live] false = saved page only. */
+    suspend fun loadOne(api: com.lagradost.cloudstream3.MainAPI, force: Boolean, live: Boolean = true): Boolean {
+        val name = api.name
+        if (!live) {
+            // FE-4b: outside the working set: the saved page if there is one, no slot, no live refresh yet.
+            if (homes[name] !is ProviderHome.Ready) {
+                val saved = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
+                if (!saved.isNullOrEmpty()) homes[name] = ProviderHome.Ready(saved)
+            }
+            waitingLive[name] = true
+            return false
+        }
+        waitingLive.remove(name)
+        if (!force && homes[name] is ProviderHome.Ready) {
+            // FE-4b: shown from its saved page while outside the working set; now inside, refresh it live.
+            if (workingSetOn && OnlineRepository.takeStaleHome(name)) refreshStale(api)
+            return false
+        }
         inflight[name]?.takeIf { it.isActive }?.let { running -> if (!force) { return runCatching { running.await() }.getOrDefault(false) } else running.cancel() }
         val job = YumixMemory.scope.async {
             if (homes[name] !is ProviderHome.Ready) homes[name] = ProviderHome.Loading
-            val result = gate.withPermit {
-                runCatching { OnlineRepository.home(api, force) }
+            // SPEED-1: a saved page shows at once; only live fetches wait for one of the three slots.
+            // FE-1: an old saved page too (refreshed live below via takeStaleHome).
+            val cached = if (force) null else runCatching { OnlineRepository.feedHome(api) }.getOrNull()
+            // FE-3: the extension shows at its first row; the slower rows fill in as they answer.
+            val firstRows = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE3_FIRST_ROW)
+            val before = homes[name] as? ProviderHome.Ready
+            val onRows: ((List<OnlineRow>) -> Unit)? = if (!firstRows) null else { soFar ->
+                if (isActive) YumixFeed.homeAfterFetch(before?.rows, soFar)?.let { homes[name] = ProviderHome.Ready(it) }
+            }
+            val result = if (cached != null) Result.success(cached) else slot(name) {
+                // FE-2c: its row calls keep the lane in the shared extension-call limit too.
+                val lane = if (name == selected) dev.asfakul.yumeiro.online.PriorityGate.PICKED else dev.asfakul.yumeiro.online.PriorityGate.BACKGROUND
+                runCatching { kotlinx.coroutines.withContext(dev.asfakul.yumeiro.online.PriorityGate.Lane(lane)) { OnlineRepository.home(api, force, onRows) } }
             }
             // R16 G4: a fetch cancelled by a newer one (Retry, pull to refresh) used to fall
             // through here with the CancellationException as its "error" and briefly put
             // "Couldn't load" over the newer fetch's loading state. The newer fetch owns the section.
             if (!isActive) return@async false
-            val prev = (homes[name] as? ProviderHome.Ready)?.rows
+            // FE-3: rows shown early by onRows are part of this fetch, so compare with what was there before it.
+            val prev = if (firstRows) before?.rows else (homes[name] as? ProviderHome.Ready)?.rows
             val fresh = result.getOrNull()
             // A failed or empty answer keeps what is on screen (see YumixFeed.homeAfterFetch).
             val rows = YumixFeed.homeAfterFetch(prev, fresh)
+            // B-32: an empty answer with no error used to say only "Nothing came back from this
+            // extension"; the site is checked once and the real reason is shown.
+            val diagnosis = if (rows == null && result.exceptionOrNull() == null && runCatching { api.hasMainPage }.getOrDefault(false))
+                dev.asfakul.yumeiro.online.EmptyHome.probe(api, dev.asfakul.yumeiro.network.NetworkClient.get()) else null
+            if (!isActive) return@async false
             homes[name] = if (rows != null) ProviderHome.Ready(rows)
-                else ProviderHome.Failed(result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension")
+                else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension", diagnosis)
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
-            if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) YumixMemory.scope.launch {
-                val live = gate.withPermit { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() }
-                val cur = homes[name] as? ProviderHome.Ready
-                if (!live.isNullOrEmpty() && cur != null) homes[name] = ProviderHome.Ready(mergeRows(cur.rows, live))
-            }
+            if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) refreshStale(api)
             YumixFeed.broughtNew(prev, fresh)
         }
         inflight[name] = job
@@ -248,9 +299,17 @@ fun OnlineHomeScreen(
     /** Returns how many extensions answered with titles that were not shown yet. */
     suspend fun loadAll(force: Boolean): Int = supervisorScope {
         // The selected channel (if any) goes first so its page fills before the rest of the mix.
-        val ordered = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.sortedBy { if (it.name == selected) 0 else 1 }
-        ordered.map { api -> async { runCatching { loadOne(api, force) }.getOrDefault(false) } }.awaitAll().count { it }
+        val withHome = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }
+        // E4: then the fastest measured on this phone; quarantined (failing) extensions wait for the rest.
+        val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
+            dev.asfakul.yumeiro.online.ExtensionSpeed.order(withHome, { it.name }, selected)
+            else withHome.sortedBy { if (it.name == selected) 0 else 1 }
+        val liveNow = if (!workingSetOn) null else dev.asfakul.yumeiro.online.FeedWorkingSet.live(
+            ordered.map { it.name }, workingLimit, selected, dev.asfakul.yumeiro.online.PinnedExtensions.pins.value)
+        ordered.map { api -> async { runCatching { loadOne(api, force, live = liveNow == null || api.name in liveNow) }.getOrDefault(false) } }.awaitAll().count { it }
     }
+    // FE-4b: the working set grew (feed scrolled to its end): the next extensions go live.
+    LaunchedEffect(workingLimit) { if (workingSetOn && workingLimit > dev.asfakul.yumeiro.online.FeedWorkingSet.initial(dev.asfakul.yumeiro.DeviceClass.lowEnd)) loadAll(false) }
     val providerNames = remember(providers) { providers.map { it.name }.toSet() }
     LaunchedEffect(providerNames) {
         // The extension engine starts with no providers; don't wipe the kept home before it's ready.
@@ -260,8 +319,17 @@ fun OnlineHomeScreen(
             homes.keys.retainAll(providerNames)
         }
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
+        waitingLive.keys.retainAll(providerNames)
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)
+    }
+    // FE-2: picking an extension moves its waiting fetch to the front; one that failed or never started loads now.
+    LaunchedEffect(selected) {
+        val pick = selected ?: return@LaunchedEffect
+        if (!prioritized) return@LaunchedEffect
+        pgate.bump(pick, dev.asfakul.yumeiro.online.PriorityGate.PICKED)
+        val api = providers.firstOrNull { it.name == pick } ?: return@LaunchedEffect
+        if ((homes[pick] !is ProviderHome.Ready || waitingLive.containsKey(pick)) && inflight[pick]?.isActive != true) runCatching { loadOne(api, false) }
     }
 
     LaunchedEffect(Unit) { OnlineHistory.ensureLoaded(context) }
@@ -271,7 +339,9 @@ fun OnlineHomeScreen(
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(context) }
     val bookmarks by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
     val channelNames = remember(providers) { providers.map { it.name } }
-    val loadingNames = providers.filter { homes[it.name] == null || homes[it.name] is ProviderHome.Loading }.map { it.name }.toSet()
+    val withHome = remember(providers) { providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.map { it.name } }
+    // FE-4b: extensions waiting outside the working set are not "loading" (they go live when the feed reaches its end).
+    val loadingNames = YumixFeed.stillLoading(withHome) { n -> waitingLive.containsKey(n) || homes[n].let { it != null && it !is ProviderHome.Loading } }
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
@@ -312,18 +382,17 @@ fun OnlineHomeScreen(
             }
         }
         }
-        // R15 Phase 5: favourite extensions, one tap away (only those that are on).
+        // R15 Phase 5: favourite extensions come first in "Show videos from" (only those that are on).
+        // PIN-1 (2.1.0, owner's master list): the extra row of pinned chips on the feed is gone; pins
+        // order the filter sheet and the feed, the sheet is the one place to pick an extension.
         val pinsAll by dev.asfakul.yumeiro.online.PinnedExtensions.pins.collectAsState()
         val pins = remember(pinsAll, channelNames) { pinsAll.filter { it in channelNames } }
         remember { dev.asfakul.yumeiro.online.PinnedExtensions.init(context); true }
-        if (providers.size > 1 && pins.isNotEmpty()) androidx.compose.animation.AnimatedVisibility(
-            visible = barHide.visible || showFilter,
-            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
-        ) { PinnedExtensionBar(pins, selected) { selected = it } }
+        // F-21: language chip, source count, ecosystem and repo per row; built once per provider set.
+        val labels = remember(providers, showFilter) { if (showFilter && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) providers.associate { it.name to dev.asfakul.yumeiro.online.ExtensionLabels.forApi(it) } else emptyMap() }
         if (showFilter) SourceFilterSheet(
             names = channelNames, selected = selected,
-            pins = pins,
+            pins = pins, details = labels::get,
             onTogglePin = { n ->
                 if (!dev.asfakul.yumeiro.online.PinnedExtensions.toggle(context, n))
                     dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions. Unpin one first", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
@@ -333,6 +402,10 @@ fun OnlineHomeScreen(
             onDismiss = { showFilter = false },
         )
 
+        // GATE-1-VIDEOS-LOWRAM: the strip above shows in the page's first frame, the feed one frame later
+        // (api33-lowram composed both in one 790 ms message, run 44939433464).
+        val feedNextFrame = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.TAB_NEXT_FRAME) }
+        dev.asfakul.yumeiro.ui.components.NextFramePage(feedNextFrame) {
         when {
             !engine.ready && providers.isEmpty() -> LazyColumn(Modifier.fillMaxSize()) { items(3) { PosterGridSkeleton(); Spacer(Modifier.height(12.dp)) } }
             engine.installed.isEmpty() && providers.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
@@ -371,7 +444,17 @@ fun OnlineHomeScreen(
                 } },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                val ready = providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } }
+                // FE-4: the mix is rebuilt per frame (first update at once, then at most every 300 ms), not per row answer.
+                val framed = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE4_FEED_FRAMES) }
+                val readyNow0 = { providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
+                val ready = if (!framed) readyNow0() else {
+                    val r by androidx.compose.runtime.produceState(readyNow0(), providers) {
+                        with(dev.asfakul.yumeiro.online.FeedFrames) {
+                            androidx.compose.runtime.snapshotFlow { readyNow0() }.atMostEvery().collect { value = it }
+                        }
+                    }
+                    r
+                }
                 // Round 8: "All" ⇄ extension page used to be a bare if/else (one-frame cut). It now
                 // slides in the direction of the tapped channel and Back returns to "All".
                 androidx.activity.compose.BackHandler(enabled = selected != null) { selected = null }
@@ -447,11 +530,17 @@ fun OnlineHomeScreen(
                             }
                         }
                     }
-                    val nearEnd by remember { derivedStateOf { val info = listState.layoutInfo; val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0; info.totalItemsCount > 0 && last >= info.totalItemsCount - 6 } }
+                    val stagedOn = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FEED_STAGED_REVEAL) }
+                    val staged = dev.asfakul.yumeiro.ui.components.rememberStagedCount(stagedOn, listState)
+                    val lateOn = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FEED_STAGED_LATE) }
+                    val late = dev.asfakul.yumeiro.ui.components.rememberStagedLate(lateOn)
+                    val nearEnd by remember { derivedStateOf { val info = listState.layoutInfo; val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0; info.totalItemsCount > 0 && last >= info.totalItemsCount - 6 && staged.intValue == dev.asfakul.yumeiro.ui.components.StagedReveal.ALL } }
                     LaunchedEffect(nearEnd, groups.size, ready.size, exploreItems.size, exploreBusy) {
                         if (!nearEnd) return@LaunchedEffect
                         when {
                             !groupsDone && groupLimit < ready.size -> groupLimit += 3
+                            // FE-4b: every section shown; extensions outside the working set go live next.
+                            workingSetOn && waitingLive.isNotEmpty() -> workingLimit = dev.asfakul.yumeiro.online.FeedWorkingSet.grow(workingLimit, waitingLive.size)
                             exploreLimit < exploreItems.size -> exploreLimit += 30
                             !exploreBusy && exploreMore -> pageExplore()
                         }
@@ -463,44 +552,46 @@ fun OnlineHomeScreen(
                     val exploreSnap = exploreItems.toList()
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
+                    // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
-                        if (cats.isNotEmpty()) item("categories") {
+                        val st = dev.asfakul.yumeiro.ui.components.StagedList(this, staged.intValue, late)
+                        if (cats.isNotEmpty()) st.item("categories") {
                             CategoryBar(cats, cat, onPick = { cat = it })
                         }
                         if (catItems != null) {
-                            items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
+                            st.items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
                         } else {
-                        if (banner.first.isNotEmpty() || resume != null) item("hero") {
+                        if (banner.first.isNotEmpty() || resume != null) st.item("hero") {
                             HeroCarousel(banner.first, onPlay = openItem, onInfo = openInfo, resume = resume, onResume = { onOpenTitle(it.toItem()) }, newKeys = banner.second)
-                        } else if (loadingNames.isNotEmpty()) item("hero_skel") {
+                        } else if (loadingNames.isNotEmpty()) st.item("hero_skel") {
                             dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), RoundedCornerShape(24.dp))
                         }
-                        if (continueItems.isNotEmpty()) item("continue") {
+                        if (continueItems.isNotEmpty()) st.item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
                         }
                         val saved = bookmarks.filter { b -> providers.any { it.name == b.api } }.distinctBy { it.api + "|" + it.url }
                         // F-09: My List holds listed titles; Favorites get their own shelf (a Favorite can be in both).
                         val mine = saved.filter { it.listed }
                         val favorites = saved.filter { it.favorite }
-                        if (mine.isNotEmpty()) item("mylist") {
+                        if (mine.isNotEmpty()) st.item("mylist") {
                             PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
-                        if (favorites.isNotEmpty()) item("favorites") {
+                        if (favorites.isNotEmpty()) st.item("favorites") {
                             PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         // F-08: one compact entry to the release calendar (kill switch FeatureFlags.UPCOMING).
-                        if (onOpenUpcoming != null && upcomingOn) item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
-                        if (picks.isNotEmpty()) item("feed_label") {
+                        if (onOpenUpcoming != null && upcomingOn) st.item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
+                        if (picks.isNotEmpty()) st.item("feed_label") {
                             PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
-                        if (latest.isNotEmpty()) item("latest") {
+                        if (latest.isNotEmpty()) st.item("latest") {
                             PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         groups.forEach { g ->
                             // Round 2, order 4: no "extension name + View" header between sections; the
                             // shelf's small subtitle says which extension it is from.
                             g.rows.forEachIndexed { i, row ->
-                                item("grp_${g.name}_${i}_${row.title}", contentType = "shelf") {
+                                st.item("grp_${g.name}_${i}_${row.title}", contentType = "shelf") {
                                     PosterShelf(
                                         row.title, subtitle = g.name, items = row.items, horizontal = row.horizontal,
                                         onClick = openInfo, onSeeAll = if (row.pageData != null) ({ onOpenRow(row) }) else ({ selected = g.name }),
@@ -509,34 +600,34 @@ fun OnlineHomeScreen(
                             }
                         }
                         if (groupsDone && exploreSnap.isNotEmpty()) {
-                            item("explore_h") {
+                            st.item("explore_h") {
                                 dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} extensions", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
                             }
-                            items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
+                            st.items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
                                 val wide = r.first().second
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("explore_grid_row"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     r.forEach { (item, _) -> dev.asfakul.yumeiro.ui.feed.FeedSlot("ex_" + r.first().first.key) { PosterCard(item, onClick = { openInfo(item) }, horizontal = wide, modifier = Modifier.weight(1f)) } }
                                     repeat((if (wide) 2 else 3) - r.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
-                            if (exploreBusy || exploreLimit < exploreSnap.size) item("explore_more") { PosterGridSkeleton(1) }
-                            else if (!exploreMore) item("explore_end") {
+                            if (exploreBusy || exploreLimit < exploreSnap.size) st.item("explore_more") { PosterGridSkeleton(1) }
+                            else if (!exploreMore) st.item("explore_end") {
                                 Text("You've reached the end. Pull down to refresh.", color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
                             }
                         }
-                        if (loadingNames.isNotEmpty()) item("feed_loading") {
+                        if (loadingNames.isNotEmpty()) st.item("feed_loading") {
                             Column { SectionHeader("Loading ${loadingNames.size} more extension${if (loadingNames.size == 1) "" else "s"}…"); PosterGridSkeleton() }
                         }
                         val failed = providers.filter { homes[it.name] is ProviderHome.Failed }
-                        if (failed.isNotEmpty()) item("feed_failed") {
+                        if (failed.isNotEmpty()) st.item("feed_failed") {
                             ProviderProblem(
                                 if (failed.size == 1) failed[0].name else "${failed.size} extensions didn't load",
                                 failed.joinToString(" · ") { it.name }.take(160),
                             ) { scope.launch { supervisorScope { failed.forEach { api -> launch { loadOne(api, true) } } } } }
                         }
                         val searchOnly = providers.filter { !runCatching { it.hasMainPage }.getOrDefault(false) }
-                        if (searchOnly.isNotEmpty()) item("search_only") {
-                            SearchOnlyCard(searchOnly.joinToString(", ") { it.name }, onOpenSearch)
+                        if (searchOnly.isNotEmpty()) st.item("search_only") {
+                            SearchOnlyCard(YumixFeed.searchOnlyLabel(searchOnly.map { it.name }), onOpenSearch)
                         }
                         }
                     }
@@ -549,6 +640,7 @@ fun OnlineHomeScreen(
                         rows = (h as? ProviderHome.Ready)?.rows,
                         loading = h == null || h is ProviderHome.Loading,
                         error = (h as? ProviderHome.Failed)?.message,
+                        errorFix = (h as? ProviderHome.Failed)?.fix,
                         listState = listState,
                         strip = { ActiveFilterBar(name, onChange = { showFilter = true }, onClear = { selected = null }) },
                         onSearch = onOpenSearch,
@@ -558,6 +650,7 @@ fun OnlineHomeScreen(
                 }
                 }
             }
+        }
         }
     }
 }
@@ -584,7 +677,7 @@ private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
             Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, null, tint = SpotifyGreen) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text("Search-only source — find titles with search", color = TextSecondary, fontSize = 12.sp)
             }
             TextButton(onClick = onSearch) { Text("Search", color = SpotifyGreen) }

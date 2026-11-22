@@ -127,6 +127,18 @@ internal fun LiveCategoryBar(categories: List<LiveChannelFeed.Category>, total: 
 }
 
 /** The merged feed's rows (category headings and tile rows) for a LazyColumn. */
+/** 2.1.0: country chips ("Any country", then "Bangladesh · 40" …); shown when the feed spans 2+ countries. */
+@Composable
+internal fun LiveCountryBar(countries: List<LiveChannelFeed.Category>, selected: String?, onPick: (String?) -> Unit) {
+    LazyRow(Modifier.fillMaxWidth().padding(top = 8.dp).testTag("live_countries"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item("any") { LiveChip("Any country", selected == null, "live_country_all") { onPick(null) } }
+        items(countries, key = { "k_" + it.name }) { c ->
+            val on = selected.equals(c.name, ignoreCase = true)
+            LiveChip("${dev.asfakul.yumeiro.stream.LiveCountry.name(c.name)} · ${c.count}", on, "live_country_${c.name}") { onPick(if (on) null else c.name) }
+        }
+    }
+}
+
 internal fun LazyListScope.liveFeedItems(rows: List<LiveChannelFeed.Row>, columns: Int, onPlay: (LiveChannelFeed.Entry) -> Unit) {
     items(rows, key = { it.key }, contentType = { if (it is LiveChannelFeed.Row.Header) "live_cat_h" else "live_row" }) { r ->
         when (r) {

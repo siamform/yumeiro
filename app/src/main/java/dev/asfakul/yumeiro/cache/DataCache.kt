@@ -149,6 +149,13 @@ object DataCache {
         fileFor(ns, key)?.delete()
     }
 
+    /** Drops every saved entry of [ns] (memory now, files on the background thread). FE-7b: account change. */
+    fun dropNamespace(ns: String) {
+        synchronized(memory) { memory.keys.filter { it.startsWith("$ns|") }.forEach { k -> memory.remove(k)?.let { memoryChars -= it.second.length } } }
+        val dir = root?.let { File(it, ns.filter { c -> c.isLetterOrDigit() || c == '_' }) } ?: return
+        clearer.execute { runCatching { dir.deleteRecursively() }.onFailure { Log.w(TAG, "drop $ns", it) } }
+    }
+
     fun clearMemory() = synchronized(memory) { memory.clear(); memoryChars = 0 }
 
     /** Deletes everything now, on the calling thread. For background callers and tests; the UI uses [invalidateAll]. */

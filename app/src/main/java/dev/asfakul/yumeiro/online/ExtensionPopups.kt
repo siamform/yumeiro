@@ -46,7 +46,7 @@ object ExtensionPopups {
     data class Snapshot(val texts: List<String>, val hasInput: Boolean, val hasWeb: Boolean)
 
     /** A promotional window concealed in place; [ExtensionWindowWatch.reveal] shows it when the user asks. */
-    class Held(val id: Long, val extKey: String, val extName: String, val title: String, internal val view: View)
+    class Held(val id: Long, val extKey: String, val extName: String, val title: String, internal val view: View, val functional: Boolean = false)
 
     private val seq = AtomicLong()
     private val _mode = MutableStateFlow(Mode.QUIET)
@@ -118,8 +118,16 @@ object ExtensionPopups {
     /** True when [extKey] may show a card again ([last] = when its previous card showed, 0 = never). */
     fun rateOk(last: Long, now: Long, period: Long = PERIOD_MS): Boolean = last <= 0L || now - last >= period || now < last
 
-    fun decide(kind: Kind, mode: Mode, playerOnScreen: Boolean, rateOk: Boolean): Action = when {
-        kind == Kind.FUNCTIONAL || mode == Mode.SHOW -> Action.SHOW_FRAMED
+    /**
+     * [userTyping]: the app's keyboard is up for one of our fields. NBUG10-IME (device run 44899145489):
+     * AnimePahe's "Quick security check" window opened by itself during a background load and took the
+     * focus, so the filter-sheet keyboard closed 2 s after it opened. A functional window met while
+     * typing waits behind a card ("Show" opens it) instead; at any other time it opens as before.
+     */
+    fun decide(kind: Kind, mode: Mode, playerOnScreen: Boolean, rateOk: Boolean, userTyping: Boolean = false): Action = when {
+        mode == Mode.SHOW -> Action.SHOW_FRAMED
+        kind == Kind.FUNCTIONAL && userTyping -> Action.HOLD_AND_CARD
+        kind == Kind.FUNCTIONAL -> Action.SHOW_FRAMED
         mode == Mode.BLOCK_PROMOTIONAL -> Action.DROP
         !rateOk -> Action.DROP
         playerOnScreen -> Action.HOLD_DEFERRED
@@ -156,13 +164,13 @@ object ExtensionPopups {
     }
 
     /** Called on the main thread by [ExtensionWindowWatch] for a promotional window it concealed. */
-    internal fun hold(extKey: String, extName: String, snap: Snapshot, view: View, deferredCard: Boolean): Held {
+    internal fun hold(extKey: String, extName: String, snap: Snapshot, view: View, deferredCard: Boolean, functional: Boolean = false): Held {
         val title = snap.texts.firstOrNull().orEmpty().take(80)
-        val h = Held(seq.incrementAndGet(), extKey, extName, title, view)
+        val h = Held(seq.incrementAndGet(), extKey, extName, title, view, functional)
         _held.value = (_held.value.filterNot { it.extKey == extKey } + h).takeLast(10)
-        markCard(extKey, System.currentTimeMillis())
+        if (!functional) markCard(extKey, System.currentTimeMillis()) // the promotional rate limit only
         if (deferredCard) deferred[extKey] = h else card(h)
-        Log.i(TAG, "held a promotional window from $extName (${if (deferredCard) "card after playback" else "card shown"})")
+        Log.i(TAG, "held a ${if (functional) "functional" else "promotional"} window from $extName (${if (deferredCard) "card after playback" else "card shown"})")
         return h
     }
 
@@ -214,7 +222,10 @@ object ExtensionPopups {
         if (m.text == cardText(h)) dev.asfakul.yumeiro.ui.components.AppMessages.dismiss(m.id)
     }
 
-    private fun cardText(h: Held) = "${h.extName} has a message"
+    private fun cardText(h: Held) = cardText(h.extName, h.functional)
+
+    internal fun cardText(extName: String, functional: Boolean) =
+        if (functional) "$extName needs a quick check" else "$extName has a message"
 
     /** The activity is going away: held windows belong to it and must not outlive it. */
     fun clear() {

@@ -32,3 +32,33 @@ fun AfterFirstFrame(enabled: Boolean = true, content: @Composable () -> Unit) {
     LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
     if (ready) content()
 }
+
+/**
+ * GATE-1-VIDEOS-LOWRAM: a tab page composes its content one frame after the page itself.
+ *
+ * A far tab jump (Home → Videos) fades the pager out, jumps and fades in. The jump frame used to
+ * dispose Home's page and compose the whole Videos page (top bar change, Yumix feed) in one main-thread
+ * message: 794 ms on api33-lowram and 697 ms on api36 (device run 44937485728), 1,251 ms on api36 in
+ * 44937327148 — the gate's limit is 700 ms. The page is invisible at that moment (alpha 0), so its
+ * content can arrive one frame later; the two halves run as separate messages and input is answered
+ * between them (Android "Diagnose and fix ANRs": expensive frame → do less work per frame).
+ * [enabled] = false composes [content] at once (fixed for the life of the call site).
+ */
+@Composable
+fun NextFramePage(enabled: Boolean, content: @Composable () -> Unit) {
+    if (!enabled) { content(); return }
+    var ready by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
+    if (ready) content()
+}
+
+/** Which tab pages wait a frame ([NextFramePage]): every page but the very first one shown after start. */
+class NextFramePages(private val on: Boolean) {
+    private var firstShown = false
+    /** Called once per page composition; true when that page's content should wait a frame. */
+    fun deferNext(): Boolean {
+        if (!on) return false
+        if (!firstShown) { firstShown = true; return false }
+        return true
+    }
+}

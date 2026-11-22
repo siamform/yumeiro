@@ -98,13 +98,26 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
         dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
             val gate = Semaphore(3)
             supervisorScope {
-                providers.map { api ->
+                // E4 / SPEED-1: fastest extensions first; saved pages skip the gate entirely.
+                val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
+                    dev.asfakul.yumeiro.online.ExtensionSpeed.order(providers, { it.name }, null) else providers
+                ordered.map { api ->
                     launch {
-                        val rows = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api) }.getOrNull() } }
+                        // FE-1: an old saved page shows at once too, then is refreshed live behind it.
+                        val cached = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
+                        // FE-2c: Home is on screen, so its first fetch is VISIBLE; the stale refresh below stays background.
+                        val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching {
+                            kotlinx.coroutines.withContext(dev.asfakul.yumeiro.online.PriorityGate.Lane(dev.asfakul.yumeiro.online.PriorityGate.VISIBLE)) { OnlineRepository.home(api) }
+                        }.getOrNull() } }
                         if (g == feed.gen) {
                             // A failed refresh never wipes rows that are already shown.
                             val fresh = rows.orEmpty().filter { it.items.isNotEmpty() }
                             if (fresh.isNotEmpty() || feed.homes[api.name].isNullOrEmpty()) feed.put(api.name, fresh)
+                        }
+                        if (cached != null && OnlineRepository.takeStaleHome(api.name)) {
+                            val live = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() } }
+                                ?.filter { it.items.isNotEmpty() }
+                            if (g == feed.gen && !live.isNullOrEmpty()) feed.put(api.name, live)
                         }
                     }
                 }.joinAll()

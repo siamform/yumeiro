@@ -1,0 +1,5 @@
+{
+  "comment": "E2 / ADR-055: curated Live TV, about 20 working channels per country, picked from the iptv-org database (public domain, https://github.com/iptv-org/iptv) and probed on every sync. Countries use iptv-org codes (UK, not GB). Published to the streams branch under curated/ only when the repository variable YUMEIRO_CURATED_LIVE is true.",
+  "per_country": 20,
+  "countries": ["BD", "IN", "PK", "NP", "LK", "US", "UK", "CA", "AU", "AE", "SA", "QA", "TR", "DE", "FR", "ES", "IT", "JP", "KR", "ID", "BR", "MX", "EG"]
+}

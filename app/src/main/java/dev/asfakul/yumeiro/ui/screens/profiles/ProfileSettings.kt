@@ -52,6 +52,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import kotlinx.coroutines.launch
 
 /**
  * PR-1: Settings → Privacy → Profiles. Lists the profiles; tap one to rename it, pick its colour, set a
@@ -120,6 +121,11 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
     var firstPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var questions by remember { mutableStateOf(false) }
+    // OWN-12: an action that waits for the current PIN; settingFirst: the PIN being set is the profile's first.
+    var guard by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var settingFirst by remember { mutableStateOf(false) }
+    fun guarded(action: () -> Unit) { if (ProfilePinGuard.needsCurrentPin(p)) guard = action else action() }
     TsukiDialog(
         onDismissRequest = onDismiss,
         icon = { ProfileAvatar(p, 56.dp) },
@@ -129,8 +135,10 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                 ToneRow(p.tone) { Profiles.setTone(context, p.id, it) }
                 Spacer(Modifier.height(8.dp))
                 ActionRow("Rename", "profile_rename") { rename = true }
-                ActionRow(if (p.hasPin) "Change PIN" else "Set a PIN", "profile_pin") { pinError = null; pinStep = 1 }
-                if (p.hasPin) ActionRow("Remove PIN", "profile_pin_remove") { Profiles.setPin(context, p.id, null); AppMessages.success(context, "PIN removed") }
+                ActionRow(if (p.hasPin) "Change PIN" else "Set a PIN", "profile_pin") { guarded { pinError = null; settingFirst = !p.hasPin; pinStep = 1 } }
+                if (p.hasPin) ActionRow("Remove PIN", "profile_pin_remove") { guarded { Profiles.setPin(context, p.id, null); AppMessages.success(context, "PIN removed") } }
+                if (p.hasPin) ActionRow(if (p.hasRecovery) "Change security questions" else "Set security questions", "profile_recovery") { guarded { questions = true } }
+                if (p.hasRecovery) ActionRow("Remove security questions", "profile_recovery_remove") { guarded { Profiles.setRecovery(context, p.id, emptyList(), emptyList()); AppMessages.success(context, "Security questions removed") } }
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Unlock with the phone's lock", color = TextPrimary, fontSize = 14.sp)
@@ -147,6 +155,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
     )
+    if (questions) SecurityQuestionsDialog(p) { questions = false }
     if (rename) NameAndColourDialog("Rename", p.name, null, onDismiss = { rename = false }) { name, _ -> rename = false; Profiles.rename(context, p.id, name) }
     if (pinStep > 0) PinPadDialog(
         title = if (pinStep == 1) "New PIN for ${p.name}" else "Repeat the PIN",
@@ -155,20 +164,42 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
         onPin = { pin ->
             if (pinStep == 1) { firstPin = pin; pinError = null; pinStep = 2 }
             else if (pin != firstPin) { pinError = "The PINs don't match"; pinStep = 1 }
-            else { Profiles.setPin(context, p.id, pin); pinStep = 0; AppMessages.success(context, "PIN set for ${p.name}") }
+            else {
+                val askQuestions = ProfilePinGuard.askQuestionsAfterSet(settingFirst, p)
+                Profiles.setPin(context, p.id, pin); pinStep = 0; AppMessages.success(context, "PIN set for ${p.name}")
+                if (askQuestions) questions = true
+            }
         },
     )
+    guard?.let { action ->
+        val title = "Current PIN for ${p.name}"
+        if (activity != null) UnlockProfileDialog(activity, p, title = title, onDismiss = { guard = null }, onUnlocked = { guard = null; action() })
+        else {
+            var err by remember { mutableStateOf<String?>(null) }
+            PinPadDialog(title = title, subtitle = "Enter the PIN", error = err, onDismiss = { guard = null }, onPin = { pin ->
+                when (Profiles.checkPin(context, p.id, pin)) {
+                    Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> { guard = null; action() }
+                    Profiles.PinCheck.WRONG -> err = "Wrong PIN"
+                    Profiles.PinCheck.LOCKED_OUT -> err = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, p.id))}"
+                }
+            })
+        }
+    }
+    val deleteScope = androidx.compose.runtime.rememberCoroutineScope()
     if (confirmDelete) TsukiDialog(
         tone = DialogTone.DANGER,
         onDismissRequest = { confirmDelete = false },
         title = { Text("Delete ${p.name}?") },
-        text = { Text("Its history, lists, favorites and private downloads are removed from this phone. This can't be undone.") },
+        text = { Text("Its history, lists, favorites, private downloads and the extensions only it added are removed from this phone. This can't be undone.") },
         confirmButton = { TextButton(onClick = {
             confirmDelete = false
             val wasCurrent = isCurrent
-            Profiles.remove(context, p.id)
-            onDismiss()
-            if (wasCurrent && activity != null) dev.asfakul.yumeiro.backup.Restart.now(activity)
+            // F-19-EXT: the removal writes files (profile data, extension owners): off the main thread.
+            deleteScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Profiles.remove(context, p.id) }
+                onDismiss()
+                if (wasCurrent && activity != null) dev.asfakul.yumeiro.backup.Restart.now(activity)
+            }
         }, modifier = Modifier.testTag("profile_delete_confirm")) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
     )

@@ -23,6 +23,23 @@ internal object YumixFeed {
 
     fun isLatestRow(title: String): Boolean = LATEST.containsMatchIn(title)
 
+    /**
+     * B-25 (GATE-1 run 44786829781): [withHome] are the extensions with a home page; returns those still fetching it. A search-only
+     * extension never gets a home, so it counted as "loading" for ever: with 300 of them the feed
+     * said "Loading 300 more extensions…" with a skeleton that never went away.
+     */
+    fun stillLoading(withHome: List<String>, settled: (String) -> Boolean): Set<String> =
+        withHome.filterTo(LinkedHashSet()) { !settled(it) }
+
+    /**
+     * B-25: the search-only card listed every name in one unbounded Text (300 names, about 6,000
+     * characters measured on the main thread when Yumix opened). It names a few and counts the rest.
+     */
+    fun searchOnlyLabel(names: List<String>, shown: Int = 3): String = when {
+        names.size <= shown -> names.joinToString(", ")
+        else -> names.take(shown).joinToString(", ") + " and ${names.size - shown} more"
+    }
+
     /** Latest episodes across every extension, round-robin so one source can't take the whole row. */
     fun latest(channels: List<Pair<String, List<OnlineRow>>>, max: Int = 24, skip: Set<String> = emptySet()): List<OnlineItem> {
         val lists = channels.map { (_, rows) -> rows.filter { isLatestRow(it.title) }.flatMap { it.items } }.filter { it.isNotEmpty() }

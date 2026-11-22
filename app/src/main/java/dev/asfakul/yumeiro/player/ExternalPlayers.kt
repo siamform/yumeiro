@@ -64,7 +64,9 @@ object ExternalPlayers {
                     out["subs.name"] = subs.map { it.name }.toTypedArray()
                     picked?.let { out["subs.enable"] = listOf(it.url) }
                 }
-                if (app != null) out["return_result"] = true
+                // F-07-RES: also for the chooser ("Choose each time"): MX / Just Player return the position only when
+                // asked, and the user may pick them there. Other players ignore the extra.
+                out["return_result"] = true
             }
         }
         return out
@@ -123,6 +125,8 @@ object ExternalPlayerHost {
     }
 
     fun onResult(data: Intent?) {
+        // Keys only: the extras never hold secrets on the way back, but headers did on the way out.
+        android.util.Log.i("F07", "result pending=${pending != null} keys=${data?.extras?.keySet()}")
         val cb = pending ?: return
         pending = null
         ExternalPlayers.result(ExternalPlayers.bundleToMap(data?.extras))?.let { w -> runCatching { cb(w) } }

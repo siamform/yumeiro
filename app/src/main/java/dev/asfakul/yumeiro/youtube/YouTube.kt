@@ -45,6 +45,8 @@ data class YtItem(
     val live: Boolean = false,
     /** Came from YouTube Music (song) rather than regular YouTube. */
     val music: Boolean = false,
+    /** F-12: YouTube marks it a Short (vertical, up to 3 min), whatever its length. */
+    val vertical: Boolean = false,
 ) {
     val key: String get() = "yt|$id"
 }
@@ -151,11 +153,30 @@ object YouTube {
         }
         if (page == null && result.items.isNotEmpty()) {
             listCache[key] = Timed(System.currentTimeMillis(), result.items)
+            rememberFeed(feed, result.items)
             if (result.next != null) pageTokens[key] = result.next else pageTokens.remove(key)
         }
         result
     }
     private val pageTokens = ConcurrentHashMap<String, Page>()
+
+    /**
+     * FE-7a (docs/FEED-ENGINE-2.1.md): the first page of every shelf is saved on the phone, so the next cold start
+     * shows it at once (any age up to keepDays) while the live copy loads. Before, shelves lived only in memory for
+     * 20 min: every app start showed skeletons and fetched every shelf live, two at a time.
+     */
+    internal fun rememberFeed(feed: YtFeed, items: List<YtItem>) {
+        if (items.isEmpty()) return
+        runCatching { dev.asfakul.yumeiro.cache.DataCache.write(FEED_NS, feed.id, YtHistory.encode(items.take(60))) }
+    }
+
+    /** The saved first page of [feed] (any age up to keepDays), or null. Disk read on Dispatchers.IO. */
+    suspend fun savedFeed(feed: YtFeed): List<YtItem>? = withContext(Dispatchers.IO) {
+        runCatching {
+            dev.asfakul.yumeiro.cache.DataCache.read(FEED_NS, feed.id, maxAgeMs = dev.asfakul.yumeiro.cache.DataCache.Settings.keepDays * 86_400_000L)
+        }.getOrNull()?.let(YtHistory::decode)?.takeIf { it.isNotEmpty() }
+    }
+    private const val FEED_NS = "ytfeed"
 
     private fun fallbackSearch(shelf: YtShelf): List<YtItem> {
         val q = shelf.query ?: shelf.title
@@ -307,7 +328,7 @@ object YouTube {
     internal fun bestImage(images: List<Image>?): String? =
         images.orEmpty().maxByOrNull { if (it.height > 0) it.height else 0 }?.url
 
-    private fun InfoItem.toYt(music: Boolean): YtItem? {
+    internal fun InfoItem.toYt(music: Boolean): YtItem? {
         val s = this as? StreamInfoItem ?: return null
         val id = idFrom(s.url) ?: return null
         val live = s.streamType == StreamType.LIVE_STREAM || s.streamType == StreamType.AUDIO_LIVE_STREAM
@@ -316,6 +337,7 @@ object YouTube {
             channelUrl = s.uploaderUrl, thumbnail = bestImage(s.thumbnails) ?: "https://i.ytimg.com/vi/$id/hqdefault.jpg",
             channelAvatar = bestImage(runCatching { s.uploaderAvatars }.getOrNull()),
             durationSec = s.duration, views = s.viewCount, uploaded = s.textualUploadDate, live = live, music = music,
+            vertical = !music && runCatching { s.isShortFormContent }.getOrDefault(false),
         )
     }
 }
@@ -353,8 +375,12 @@ fun interleaveFeeds(lists: List<List<YtItem>>, limit: Int = Int.MAX_VALUE): List
     return out
 }
 
-/** Short vertical clips (under a minute, not live) for the Shorts shelf. */
-fun YtItem.isShort(): Boolean = !live && durationSec in 1..60 || url.contains("/shorts/")
+/**
+ * Short vertical clips for the Shorts shelf: under a minute (not live), a /shorts/ link, or (F-12, flag
+ * f12_vertical_shorts) YouTube's own Short mark, which covers the 61 s to 3 min Shorts the length rule missed.
+ */
+fun YtItem.isShort(vertical3min: Boolean = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_VERTICAL)): Boolean =
+    !live && (durationSec in 1..60 || vertical3min && vertical) || url.contains("/shorts/")
 
 /** "1.2M views" style. */
 fun formatYtViews(views: Long): String = when {

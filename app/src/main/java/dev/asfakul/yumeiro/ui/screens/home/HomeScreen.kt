@@ -37,6 +37,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Close
@@ -267,6 +272,7 @@ fun HomeScreen(
     onPlayYouTube: (YtItem, List<YtItem>) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("home") } // FREEZE-4
     val context = LocalContext.current
     val p = LocalMtPalette.current
     val scope = rememberCoroutineScope()
@@ -322,17 +328,20 @@ fun HomeScreen(
     // NBUG-11 (ADR-023): the 18+ check depends on which extensions are loaded, so Most played is
     // worked out again when they change (it ran once, before they had loaded, and let 18+ through).
     val engine by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
+    // FREEZE-1: the 18+ map is worked out off the main thread; until it is known, unknown plays stay out.
+    var adultLoaded by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     LaunchedEffect(engine.ready, engine.generation) {
         if (engine.ready) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val loaded = dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis()
             PlayCounts.learnAdult(context) { e -> dev.asfakul.yumeiro.online.AdultContent.knownAdult(e.api, e.url, loaded) }
+            adultLoaded = loaded
         }
     }
-    val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate, engine.ready, engine.generation) {
+    val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate, adultLoaded) {
         val byId = recentVideos.associateBy { it.id }
         val songs = mostPlayed.take(12).map { Played.Song(it) }
         val hide = !adultOn || adultPrivate
-        val loaded = if (hide && videoPlays.any { it.kind == PlayCounts.Kind.ONLINE }) dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis() else emptyMap()
+        val loaded = adultLoaded
         val videos = videoPlays.asSequence()
             .filterNot { it.kind == PlayCounts.Kind.ONLINE && hide && dev.asfakul.yumeiro.online.AdultContent.hidePlay(it.adult, it.api, it.url, loaded) }
             .mapNotNull { e -> if (e.kind == PlayCounts.Kind.DEVICE) byId[e.id]?.let { Played.Video(e, it) } else Played.Video(e) }
@@ -378,7 +387,17 @@ fun HomeScreen(
     // Round 8: everything else worth one tap (settings people look for most, plus pages that
     // used to be three taps deep), in two labelled groups behind "See more".
     val moreGo = remember {
-        listOf(
+        // OL-9 (owner): the newer pages (Telegram, Profiles, Your statistics, Airing soon, Reading,
+        // Inbox) one tap away from Home too.
+        val newer = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.HOME_SPACES_MORE)
+        val stats = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PROFILE_STATS)
+        listOfNotNull(
+            if (newer) Feature("quick_card_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, "電", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.TELEGRAM) }) else null,
+            if (newer) Feature("quick_card_profiles", "Profiles", "Who's watching", Icons.Default.AccountCircle, "人", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.PROFILES) }) else null,
+            if (newer && stats) Feature("quick_card_stats", "Your stats", "Streaks · totals", Icons.Default.Insights, "績", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.STATS) }) else null,
+            if (newer) Feature("quick_card_upcoming", "Airing soon", "New episodes", Icons.Default.CalendarMonth, "暦", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.UPCOMING) }) else null,
+            if (newer) Feature("quick_card_reading", "Reading", "Manga you read", Icons.Default.AutoStories, "頁", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.READING) }) else null,
+            if (newer) Feature("quick_card_inbox", "Inbox", "News · messages", Icons.Default.Inbox, "便", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.INBOX) }) else null,
             Feature("quick_card_search", "Search", "All sources", Icons.Default.Search, "探", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SEARCH) }),
             Feature("quick_card_mylist", "My List", "Saved titles", Icons.Default.Bookmarks, "栞", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.MY_LIST) }),
             Feature("quick_card_history", "History", "Keep watching", Icons.Default.History, "歴", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.HISTORY) }),
@@ -963,7 +982,7 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
 }
 
 /** Round 8: the extra Spaces shortcuts (mapped to pages / Settings categories by the host). */
-enum class HomeShortcut { SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
+enum class HomeShortcut { TELEGRAM, PROFILES, STATS, UPCOMING, READING, INBOX, SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
 
 @Composable
 private fun SpacesGroupLabel(kanji: String, title: String, modifier: Modifier = Modifier) {

@@ -154,7 +154,8 @@ object CrashLog {
             // kill to free memory is normal Android behaviour, a foreground one is our bug.
             val facts = "Importance at exit: ${importanceName(e.importance)} · PSS ${e.pss / 1024} MB · RSS ${e.rss / 1024} MB · status ${e.status}"
             val body = (e.description ?: kind) + "\n" + facts + "\n\n" + (trace ?: "Android kept no trace for this one.") +
-                (if (trail != null && e.reason == ApplicationExitInfo.REASON_LOW_MEMORY) "\n\n--- Last memory / thread samples before the kill ---\n$trail" else "")
+                // FREEZE-4: freezes get the trail too (it holds the "draws home=…" counts before the freeze).
+                (if (trail != null && (e.reason == ApplicationExitInfo.REASON_LOW_MEMORY || e.reason == ApplicationExitInfo.REASON_ANR)) "\n\n--- Last memory / thread samples before the kill ---\n$trail" else "")
             write(d, kind, "process ${e.processName} · ${e.description.orEmpty()}", null, body, e.timestamp)
         }
         if (newest > seen) prefs.edit().putLong("last_exit", newest).apply()

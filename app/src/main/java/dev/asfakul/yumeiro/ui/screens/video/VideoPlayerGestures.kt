@@ -38,7 +38,32 @@ enum class DragMode {
     BRIGHTNESS,
     VOLUME,
     /** Swipe down in the centre: minimise the player (YouTube style) or leave fullscreen. */
-    SWIPE_DOWN
+    SWIPE_DOWN,
+    /** F-12 vertical mode: swipe up in the centre for the next item in the queue. */
+    SWIPE_UP
+}
+
+/**
+ * Which kind of drag a gesture becomes, decided once when the finger passes the touch slop.
+ * Pure, so the rule is unit tested (`F12VerticalModeTest`). Side thirds always stay brightness
+ * (left) and volume (right); only the centre third can swipe up or down.
+ */
+internal object DragRule {
+    fun pick(
+        held: Boolean, dx: Float, dy: Float, startX: Float, width: Float,
+        swipeDown: Boolean, swipeUp: Boolean,
+    ): DragMode {
+        val centre = width > 0f && startX / width in 0.3f..0.7f
+        return when {
+            // After a hold only a downward slide means something (→ PiP).
+            held -> if (dy > 0f && abs(dy) >= abs(dx)) DragMode.HOLD_SWIPE_DOWN else DragMode.NONE
+            abs(dx) > abs(dy) -> DragMode.SEEK
+            centre && dy > 0f && swipeDown -> DragMode.SWIPE_DOWN
+            centre && dy < 0f && swipeUp -> DragMode.SWIPE_UP
+            startX < width / 2f -> DragMode.BRIGHTNESS
+            else -> DragMode.VOLUME
+        }
+    }
 }
 
 @Composable
@@ -60,6 +85,8 @@ fun VideoGestureOverlay(
     onSwipeDown: (() -> Unit)? = null,
     /** Live drag distance in px while swiping down (0 when not swiping), for a follow-the-finger effect. */
     onSwipeDownProgress: (Float) -> Unit = {},
+    /** F-12 vertical mode: called when the user drags up from the centre far enough. Null disables it. */
+    onSwipeUp: (() -> Unit)? = null,
     /**
      * YouTube-style: touch and hold anywhere on the video, then slide down → picture-in-picture.
      * Null disables it (the hold then behaves like a normal touch).
@@ -87,6 +114,7 @@ fun VideoGestureOverlay(
     val currentHoldEnabled by rememberUpdatedState(holdEnabled)
     val currentOnSwipeDown by rememberUpdatedState(onSwipeDown)
     val currentOnSwipeDownProgress by rememberUpdatedState(onSwipeDownProgress)
+    val currentOnSwipeUp by rememberUpdatedState(onSwipeUp)
     val coroutineScope = rememberCoroutineScope()
     var pendingSingleTapJob by remember { mutableStateOf<Job?>(null) }
     var lastTapTimeMs by remember { mutableLongStateOf(0L) }
@@ -211,6 +239,10 @@ fun VideoGestureOverlay(
                                     val dy = pointer.position.y - startY
                                     if (dy > maxOf(height * 0.18f, 48.dp.toPx())) currentOnSwipeDown?.invoke()
                                 }
+                                if (dragDirection == DragMode.SWIPE_UP) {
+                                    val dy = startY - pointer.position.y
+                                    if (dy > maxOf(height * 0.18f, 48.dp.toPx())) currentOnSwipeUp?.invoke()
+                                }
                                 if (dragDirection == DragMode.HOLD_SWIPE_DOWN) {
                                     currentOnSwipeDownProgress(0f)
                                     val dy = pointer.position.y - startY
@@ -276,17 +308,8 @@ fun VideoGestureOverlay(
                                 pendingSingleTapJob?.cancel()
                                 pendingSingleTapJob = null
 
-                                val centre = width > 0f && startX / width in 0.3f..0.7f
-                                dragDirection = if (held) {
-                                    // After a hold only a downward slide means something (→ PiP).
-                                    if (totalDy > 0f && abs(totalDy) >= abs(totalDx)) DragMode.HOLD_SWIPE_DOWN else DragMode.NONE
-                                } else if (abs(totalDx) > abs(totalDy)) {
-                                    DragMode.SEEK
-                                } else if (centre && totalDy > 0f && currentOnSwipeDown != null) {
-                                    DragMode.SWIPE_DOWN
-                                } else {
-                                    if (startX < width / 2f) DragMode.BRIGHTNESS else DragMode.VOLUME
-                                }
+                                dragDirection = DragRule.pick(held, totalDx, totalDy, startX, width,
+                                    swipeDown = currentOnSwipeDown != null, swipeUp = currentOnSwipeUp != null)
 
                                 if (dragDirection == DragMode.SEEK) {
                                     currentOnScrubStart()
@@ -304,7 +327,7 @@ fun VideoGestureOverlay(
                                 DragMode.BRIGHTNESS -> currentOnBrightnessDelta(-deltaY / height)
                                 DragMode.VOLUME -> currentOnVolumeDelta(-deltaY / height)
                                 DragMode.SWIPE_DOWN, DragMode.HOLD_SWIPE_DOWN -> currentOnSwipeDownProgress((pointer.position.y - startY).coerceAtLeast(0f))
-                                DragMode.NONE -> {}
+                                DragMode.SWIPE_UP, DragMode.NONE -> {}
                             }
                         }
                     }

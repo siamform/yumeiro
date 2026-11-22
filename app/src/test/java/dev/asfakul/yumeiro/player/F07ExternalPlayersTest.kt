@@ -50,6 +50,8 @@ class F07ExternalPlayersTest {
         assertEquals(1_000, x["position"])
         assertTrue("headers" in x)
         assertFalse("subs" in x)
+        // F-07-RES: MX / Just Player return the position only when asked; the chooser can land on them.
+        assertEquals(true, x["return_result"])
     }
 
     @Test fun noHeadersMeansNoHeadersExtra() {

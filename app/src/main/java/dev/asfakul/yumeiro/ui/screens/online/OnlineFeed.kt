@@ -227,10 +227,17 @@ private fun ChannelChipItem(name: String, selected: Boolean, mix: Boolean, loadi
 @Composable
 internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit, onChannel: () -> Unit) {
     val border = rememberGlassBorder()
+    // F-09-FEED: long press / Menu key opens Watch later / Favorite here too, and the saved mark shows.
+    val actions = feedPosterActionsOn()
+    var sheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    if (actions && sheet) PosterActionsSheet(item) { sheet = false }
+    val marks by dev.asfakul.yumeiro.online.OnlineBookmarks.marks.collectAsState()
+    val mark = if (actions) marks[posterMarkKey(item)] else null
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_feed_card").feedCard("yumix", item.key)) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(22.dp))
-                .border(1.dp, border, RoundedCornerShape(22.dp)).background(GlassFill).clickable(onClick = onClick),
+                .border(1.dp, border, RoundedCornerShape(22.dp)).background(GlassFill)
+                .posterPress(onClick, if (actions) ({ sheet = true }) else null),
         ) {
             if (horizontal) {
                 PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
@@ -253,6 +260,7 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
                 item.score?.takeIf { it > 0 }?.let { s -> Badge("★ %.1f".format(java.util.Locale.US, s)) }
                 item.quality?.takeIf { it.isNotBlank() && it != "Unknown" }?.let { Badge(it) }
             }
+            PosterMark(mark, Modifier.align(Alignment.TopEnd))
             Box(
                 Modifier.align(Alignment.Center).size(46.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)),
                 contentAlignment = Alignment.Center,

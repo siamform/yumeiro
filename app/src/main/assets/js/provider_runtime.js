@@ -9,6 +9,7 @@
  *   http_*            -> JsBridge (SRC-2 private-network guard, 5 MB cap)
  *   dom_*             -> ScriptHost (jsoup-backed handles)
  *   kv_*, log, cookie -> ScriptHost
+ *   crypto_*          -> ScriptHost -> ScriptCrypto (crypto-js shim, F-05-N)
  */
 (function (G) {
   "use strict";
@@ -418,6 +419,197 @@
     clear: function () { return Promise.resolve().then(function () { host("kv_clear", []); }); },
   };
 
+  // ---- crypto-js (F-05-N, ADR-057) ---------------------------------------------------------
+  // Same shapes as crypto-js 4 (WordArray, enc.*, AES / TripleDES with CBC / ECB, Pkcs7 /
+  // NoPadding / ZeroPadding, hashes, HMACs, OpenSSL "Salted__" passphrases), written for Yumeiro
+  // from the public API; the bytes go to the host (ScriptCrypto, javax.crypto), hex in / hex out.
+  var CJ = (function () {
+    var HEXC = "0123456789abcdef";
+    function WordArray(words, sigBytes) {
+      this.words = words || [];
+      this.sigBytes = sigBytes !== undefined ? sigBytes : this.words.length * 4;
+    }
+    WordArray.prototype.toString = function (encoder) { return (encoder || Hex).stringify(this); };
+    WordArray.prototype.concat = function (wa) {
+      var h = Hex.stringify(this) + Hex.stringify(wa), r = Hex.parse(h);
+      this.words = r.words; this.sigBytes = r.sigBytes; return this;
+    };
+    WordArray.prototype.clamp = function () {
+      var w = this.words, n = this.sigBytes;
+      w[n >>> 2] &= 0xffffffff << (32 - (n % 4) * 8);
+      w.length = Math.ceil(n / 4);
+    };
+    WordArray.prototype.clone = function () { return new WordArray(this.words.slice(0), this.sigBytes); };
+    var lib = {
+      WordArray: {
+        create: function (words, sigBytes) {
+          if (words instanceof ArrayBuffer) words = new Uint8Array(words);
+          if (words && typeof words.BYTES_PER_ELEMENT === "number") {
+            var b = new Uint8Array(words.buffer, words.byteOffset, words.byteLength), w = [];
+            for (var i = 0; i < b.length; i++) w[i >>> 2] |= b[i] << (24 - (i % 4) * 8);
+            return new WordArray(w, b.length);
+          }
+          return new WordArray(words, sigBytes);
+        },
+        random: function (n) {
+          var w = [];
+          for (var i = 0; i < n; i += 4) w.push((Math.random() * 0x100000000) | 0);
+          return new WordArray(w, n);
+        },
+      },
+      CipherParams: { create: function (o) { return new CipherParams(o); } },
+    };
+    lib.WordArray.prototype = WordArray.prototype;
+    function hexOfBytes(bytes) { var s = ""; for (var i = 0; i < bytes.length; i++) s += HEXC[(bytes[i] >> 4) & 15] + HEXC[bytes[i] & 15]; return s; }
+    var Hex = {
+      stringify: function (wa) {
+        var w = wa.words, out = "";
+        for (var i = 0; i < wa.sigBytes; i++) { var b = (w[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff; out += HEXC[b >> 4] + HEXC[b & 15]; }
+        return out;
+      },
+      parse: function (h) {
+        h = str(h); var w = [];
+        for (var i = 0; i + 1 < h.length; i += 2) w[i >>> 3] |= parseInt(h.substr(i, 2), 16) << (24 - (i % 8) * 4);
+        return new WordArray(w, h.length >> 1);
+      },
+    };
+    var Latin1 = {
+      stringify: function (wa) {
+        var w = wa.words, out = "";
+        for (var i = 0; i < wa.sigBytes; i++) out += String.fromCharCode((w[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff);
+        return out;
+      },
+      parse: function (s) {
+        s = str(s); var w = [];
+        for (var i = 0; i < s.length; i++) w[i >>> 2] |= (s.charCodeAt(i) & 0xff) << (24 - (i % 4) * 8);
+        return new WordArray(w, s.length);
+      },
+    };
+    var Utf8 = {
+      stringify: function (wa) {
+        var l = Latin1.stringify(wa);
+        try { return decodeURIComponent(escape(l)); } catch (e) { throw new Error("Malformed UTF-8 data"); }
+      },
+      parse: function (s) { return Latin1.parse(unescape(encodeURIComponent(str(s)))); },
+    };
+    var Base64 = {
+      stringify: function (wa) { return G.btoa(Latin1.stringify(wa)); },
+      parse: function (b) { return Latin1.parse(G.atob(str(b).replace(/[\s]/g, ""))); },
+    };
+    var Base64url = {
+      stringify: function (wa) { return Base64.stringify(wa).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); },
+      parse: function (b) { b = str(b).replace(/-/g, "+").replace(/_/g, "/"); while (b.length % 4) b += "="; return Base64.parse(b); },
+    };
+    var enc = { Hex: Hex, Latin1: Latin1, Utf8: Utf8, Base64: Base64, Base64url: Base64url };
+    function wa(v) { return v instanceof WordArray ? v : Utf8.parse(v); }
+    function hx(v) { return Hex.stringify(wa(v)); }
+    function hostHex(ch, args) {
+      var r = host(ch, args);
+      if (r === "") throw new Error("Crypto operation failed");
+      return Hex.parse(r);
+    }
+    function hasher(alg) { var f = function (m) { return hostHex("crypto_hash", [alg, hx(m)]); }; f.__alg = alg; return f; }
+    function hmac(alg) { return function (m, k) { return hostHex("crypto_hmac", [alg, hx(k), hx(m)]); }; }
+    function CipherParams(o) { o = o || {}; for (var k in o) this[k] = o[k]; }
+    CipherParams.prototype.toString = function (formatter) { return (formatter || OpenSSL).stringify(this); };
+    var SALTED = 0x53616c74, TED = 0x65645f5f;
+    var OpenSSL = {
+      stringify: function (cp) {
+        var c = cp.ciphertext, s = cp.salt;
+        var all = s ? new WordArray([SALTED, TED], 8).concat(s).concat(c) : c;
+        return Base64.stringify(all);
+      },
+      parse: function (text) {
+        var c = Base64.parse(text), w = c.words, salt;
+        if (w[0] === SALTED && w[1] === TED) {
+          salt = new WordArray(w.slice(2, 4), 8);
+          c = Hex.parse(Hex.stringify(c).substr(32));
+        }
+        return new CipherParams({ ciphertext: c, salt: salt });
+      },
+    };
+    var mode = { CBC: { __m: "CBC" }, ECB: { __m: "ECB" } };
+    var pad = { Pkcs7: { __p: "Pkcs7" }, NoPadding: { __p: "NoPadding" }, ZeroPadding: { __p: "Zero" }, AnsiX923: { __p: "Ansi" } };
+    function cipher(name, keyBytes, ivBytes) {
+      function setup(key, cfg, salt) {
+        cfg = cfg || {};
+        if (typeof key === "string") {
+          // Passphrase: OpenSSL EVP_BytesToKey (MD5, 1 round), like crypto-js.
+          salt = salt || lib.WordArray.random(8);
+          var kiv = Hex.stringify(hostHex("crypto_evpkdf", [hx(key), Hex.stringify(salt), String(keyBytes), String(ivBytes)]));
+          return { key: Hex.parse(kiv.substr(0, keyBytes * 2)), iv: Hex.parse(kiv.substr(keyBytes * 2)), salt: salt, cfg: cfg };
+        }
+        return { key: key, iv: cfg.iv, salt: undefined, cfg: cfg };
+      }
+      function m(cfg) { return (cfg.mode && cfg.mode.__m) || "CBC"; }
+      function p(cfg) { return (cfg.padding && cfg.padding.__p) || "Pkcs7"; }
+      return {
+        encrypt: function (msg, key, cfg) {
+          var s = setup(key, cfg), pd = p(s.cfg), data = Hex.stringify(wa(msg));
+          if (pd === "Zero" || pd === "Ansi") { var n = (ivBytes || 16) - ((data.length / 2) % (ivBytes || 16)); if (n !== (ivBytes || 16)) for (var i = 0; i < n; i++) data += (pd === "Ansi" && i === n - 1) ? ("0" + n.toString(16)).slice(-2) : "00"; pd = "NoPadding"; }
+          var ct = hostHex("crypto_cipher", ["enc", name, m(s.cfg), pd, Hex.stringify(s.key), s.iv ? Hex.stringify(s.iv) : "", data]);
+          return new CipherParams({ ciphertext: ct, key: s.key, iv: s.iv, salt: s.salt, mode: s.cfg.mode, padding: s.cfg.padding });
+        },
+        decrypt: function (cp, key, cfg) {
+          if (typeof cp === "string") cp = OpenSSL.parse(cp);
+          var s = setup(key, cfg, cp.salt), pd = p(s.cfg);
+          var out = Hex.stringify(hostHex("crypto_cipher", ["dec", name, m(s.cfg), pd === "Pkcs7" ? "Pkcs7" : "NoPadding", Hex.stringify(s.key), s.iv ? Hex.stringify(s.iv) : "", Hex.stringify(cp.ciphertext)]));
+          if (pd === "Zero") out = out.replace(/(00)+$/, "");
+          if (pd === "Ansi") out = out.substr(0, out.length - parseInt(out.substr(-2), 16) * 2);
+          return Hex.parse(out);
+        },
+      };
+    }
+    var C = {
+      lib: lib, enc: enc, mode: mode, pad: pad, format: { OpenSSL: OpenSSL },
+      MD5: hasher("MD5"), SHA1: hasher("SHA1"), SHA224: hasher("SHA224"), SHA256: hasher("SHA256"),
+      SHA384: hasher("SHA384"), SHA512: hasher("SHA512"),
+      HmacMD5: hmac("MD5"), HmacSHA1: hmac("SHA1"), HmacSHA224: hmac("SHA224"), HmacSHA256: hmac("SHA256"),
+      HmacSHA384: hmac("SHA384"), HmacSHA512: hmac("SHA512"),
+      AES: cipher("AES", 32, 16), TripleDES: cipher("DES-EDE", 24, 8),
+      EvpKDF: function (pass, salt, cfg) { var ks = ((cfg && cfg.keySize) || 4) * 4; return hostHex("crypto_evpkdf", [hx(pass), hx(salt), String(ks), "0"]); },
+    };
+    C.default = C;
+    return C;
+  })();
+  G.CryptoJS = CJ;
+
+  // ---- small web / Node shapes scrapers expect (F-05-N) -------------------------------------
+  if (typeof Promise.allSettled !== "function") {
+    Promise.allSettled = function (ps) {
+      return Promise.all(Array.prototype.map.call(ps, function (p) {
+        return Promise.resolve(p).then(function (v) { return { status: "fulfilled", value: v }; }, function (e) { return { status: "rejected", reason: e }; });
+      }));
+    };
+  }
+  if (typeof Promise.any !== "function") {
+    Promise.any = function (ps) {
+      return new Promise(function (res, rej) {
+        var list = Array.prototype.slice.call(ps), left = list.length, errs = [];
+        if (!left) rej(new Error("All promises were rejected"));
+        list.forEach(function (p, i) { Promise.resolve(p).then(res, function (e) { errs[i] = e; if (--left === 0) rej(new Error("All promises were rejected")); }); });
+      });
+    };
+  }
+  if (typeof G.TextEncoder !== "function") {
+    G.TextEncoder = function () {};
+    G.TextEncoder.prototype.encode = function (s) {
+      var l = unescape(encodeURIComponent(str(s))), b = new Uint8Array(l.length);
+      for (var i = 0; i < l.length; i++) b[i] = l.charCodeAt(i);
+      return b;
+    };
+  }
+  if (typeof G.TextDecoder !== "function") {
+    G.TextDecoder = function () {};
+    G.TextDecoder.prototype.decode = function (b) {
+      if (!b) return "";
+      var u = b instanceof ArrayBuffer ? new Uint8Array(b) : new Uint8Array(b.buffer, b.byteOffset, b.byteLength), l = "";
+      for (var i = 0; i < u.length; i++) l += String.fromCharCode(u[i]);
+      try { return decodeURIComponent(escape(l)); } catch (e) { return l; }
+    };
+  }
+  G.SCRAPER_SETTINGS = G.SCRAPER_SETTINGS || {};
+
   // ---- CommonJS module loader --------------------------------------------------------------
   var modules = {};
   G.__defineModule = function (name, fn) { modules[name] = { fn: fn, exports: null }; };
@@ -428,6 +620,7 @@
       return m.exports;
     }
     if (name === "axios") return G.axios;
+    if (name === "crypto-js" || name.indexOf("crypto-js/") === 0) return CJ;
     if (name === "cheerio" || name === "cheerio-without-node-native" || name === "react-native-cheerio") return G.cheerio;
     throw new Error("Module not available: " + name);
   };
@@ -452,7 +645,31 @@
         return v;
       })
       .then(function (v) { __result(JSON.stringify(v === undefined ? null : v)); },
-        function (e) { __error(String((e && (e.stack || e.message)) || e)); });
+        function (e) { __error(G.__errText(e)); });
+  };
+
+  // F-05-N-ERR: QuickJS `stack` has only the "at ..." lines, not V8's "Error: message" head, so a
+  // thrown Error was reported as a bare stack line. With __ERR_MESSAGE the message leads.
+  G.__errText = function (e) {
+    if (!e) return String(e);
+    if (G.__ERR_MESSAGE !== true) return String(e.stack || e.message || e);
+    var head = e.message !== undefined ? ((e.name || "Error") + ": " + e.message) : String(e);
+    return e.stack ? head + "\n" + e.stack : head;
+  };
+
+  // F-05-N (ADR-057): Nuvio's `getStreams(tmdbId, mediaType, season, episode)` takes positional
+  // arguments; [argsJson] is a JSON array. A script without module.exports may set a global.
+  G.__invokePositional = function (moduleName, fnName, argsJson) {
+    var exp = G.require(moduleName) || {};
+    var target = exp[fnName] !== undefined ? exp[fnName] : (exp.default && exp.default[fnName] !== undefined ? exp.default[fnName] : G[fnName]);
+    Promise.resolve()
+      .then(function () {
+        var args = JSON.parse(argsJson || "[]");
+        if (typeof target !== "function") throw new Error(moduleName + "." + fnName + " is not exported");
+        return target.apply(null, Array.isArray(args) ? args : [args]);
+      })
+      .then(function (v) { __result(JSON.stringify(v === undefined ? null : v)); },
+        function (e) { __error(G.__errText(e)); });
   };
 
   G.__providerContext = {

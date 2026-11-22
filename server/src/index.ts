@@ -14,6 +14,7 @@ import {
   FANOUT_PER_MESSAGE, buildMessage, buildWake, needsFanout, parseNotice, parseServiceAccount, parseTopics, send, sameSecret, topicFor, validFid, type Notice,
 } from "./fcm.ts";
 import { apiSig, signRequest } from "./lastfm.ts";
+import { plan as hubPlan, shape as hubShape, shelves as hubShelves } from "./hub.ts";
 
 export interface Env {
   DB: D1Database;
@@ -35,6 +36,10 @@ export interface Env {
   LASTFM_SHARED_SECRET?: string;
   /** Per-IP limit on Last.fm signatures (a phone needs a few a minute). */
   LASTFM_SIGN?: RateLimit;
+  /** E1-A: TMDB API read token (wrangler secret put TMDB_TOKEN). Unset = hub catalog off (503). */
+  TMDB_TOKEN?: string;
+  /** E1-A: per-IP limit on hub catalog calls (cache hits are not counted). */
+  HUB?: RateLimit;
 }
 
 /** Airing nudges (UnifiedPush endpoints) or NOTIFY-1 direct copies of a broadcast (FCM ids). */
@@ -54,9 +59,10 @@ function json(body: unknown, status = 200): Response {
 const fail = (status: number, error: string) => json({ error }, status);
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     try {
+      if (url.pathname.startsWith("/v1/hub/") && req.method === "GET") return await hub(req, env, url, ctx);
       if (url.pathname === "/v1/health" && req.method === "GET") return await health(env);
       if (url.pathname === "/v1/devices" && req.method === "POST") return await register(req, env);
       if (url.pathname === "/v1/devices" && req.method === "DELETE") return await unregister(req, env);
@@ -94,6 +100,36 @@ export default {
  * For uptime monitors: 200 only if D1 answers and the 10-minute job ran in the last 30 minutes.
  * `cron_s` = seconds since the job last finished. One D1 read per call.
  */
+/**
+ * E1-A: Yumeiro Hub catalog (shelves, search, title pages) from TMDB, cached at the edge
+ * (6 h shelves, 1 h search, 24 h titles). Metadata only; the token never leaves the Worker.
+ */
+async function hub(req: Request, env: Env, url: URL, ctx?: ExecutionContext): Promise<Response> {
+  const p = hubPlan(url.pathname, url.searchParams);
+  if ("error" in p) return fail(p.error === "not_found" ? 404 : 400, p.error);
+  if (url.pathname === "/v1/hub/shelves") return cached(json(hubShelves()), p.ttl);
+  if (!env.TMDB_TOKEN) return fail(503, "hub_off");
+  const key = new Request(`https://hub.cache${url.pathname}?${[...url.searchParams].sort().map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`);
+  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
+  const hit = cache ? await cache.match(key) : undefined;
+  if (hit) return hit;
+  if (env.HUB && !(await env.HUB.limit({ key: `hub:${req.headers.get("cf-connecting-ip") ?? "?"}` })).success) return fail(429, "slow_down");
+  const r = await fetch(`https://api.themoviedb.org/3${p.tmdb}`, { headers: { authorization: `Bearer ${env.TMDB_TOKEN}`, accept: "application/json" } });
+  if (r.status === 404) return fail(404, "not_found");
+  if (!r.ok) return fail(502, "upstream");
+  const body = hubShape(url.pathname, await r.json<Record<string, unknown>>(), p.kind);
+  if (body && typeof body === "object" && "error" in body) return fail(404, "not_found");
+  const res = cached(json(body), p.ttl);
+  if (cache) { const put = cache.put(key, res.clone()); if (ctx) ctx.waitUntil(put); else await put; }
+  return res;
+}
+
+function cached(r: Response, ttl: number): Response {
+  const h = new Headers(r.headers);
+  h.set("cache-control", `public, max-age=${ttl}`);
+  return new Response(r.body, { status: r.status, headers: h });
+}
+
 /** SEC-LFM (ADR-048): signs one of the app's four Last.fm calls for the built-in key. Never logs parameters. */
 async function lastfmSign(req: Request, env: Env): Promise<Response> {
   if (!env.LASTFM_SHARED_SECRET || !env.LASTFM_API_KEY) return fail(503, "lastfm_off");

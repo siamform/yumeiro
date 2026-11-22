@@ -47,6 +47,17 @@ class PlaybackService : MediaSessionService() {
         @androidx.annotation.VisibleForTesting
         internal fun forgetSharedPlayerForTest() = synchronized(this) { sharedPlayer = null }
 
+        /**
+         * GATE-1-MUSIC-START: told (on the main thread, next message) when the process player is built
+         * by someone else (the session service for a headset Play), so a screen that waits for its
+         * first command still shows that music.
+         */
+        private val builtListeners = java.util.concurrent.CopyOnWriteArrayList<(ExoPlayer) -> Unit>()
+        private val mainHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+        fun whenBuilt(listener: (ExoPlayer) -> Unit) { builtListeners += listener }
+        fun stopWhenBuilt(listener: (ExoPlayer) -> Unit) { builtListeners -= listener }
+
         fun getOrCreatePlayer(context: android.content.Context): ExoPlayer {
             val existing = sharedPlayer
             if (existing != null) return existing
@@ -93,6 +104,7 @@ class PlaybackService : MediaSessionService() {
                 dev.asfakul.yumeiro.player.BackgroundPlaybackWatch.attach(app, player)
 
                 sharedPlayer = player
+                if (builtListeners.isNotEmpty()) mainHandler.post { builtListeners.forEach { it(player) } }
                 return player
             }
         }

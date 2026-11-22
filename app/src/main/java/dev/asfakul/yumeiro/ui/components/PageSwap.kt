@@ -16,6 +16,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,8 +44,15 @@ import androidx.compose.ui.Modifier
 object PageMotion {
     /** Sub-page push (NavHost). Long enough to read as a slide, decelerating, never front-loaded. */
     const val PUSH_MS = 420
-    /** Back is quicker than forward. */
-    const val POP_MS = 320
+    /**
+     * OWN-14: Back mirrors the push exactly (same length, same curve, same distances, played in
+     * reverse). It used to be 320 ms with an accelerating curve on the top page and a different
+     * curve on the page below, so the two pages ran out of step and closing looked unlike opening.
+     */
+    const val POP_MS = PUSH_MS
+    /** How far the page underneath drifts (a third of the width) and how dim it gets. */
+    const val UNDER_SHIFT_DIV = 3
+    const val UNDER_ALPHA = 0.55f
     const val TAB_ENTER_MS = 300
     const val TAB_EXIT_MS = 180
     const val FADE_IN_MS = 240
@@ -71,20 +80,39 @@ object PageMotion {
     // appeared. The page underneath drifts a third of the way with a slight fade, so the motion is
     // visible from both sides and nothing is ever drawn half-transparent on top of another page.
     fun push(reduced: Boolean): EnterTransition =
-        if (reduced) fadeIn(tween(150)) else slideInHorizontally(tween(PUSH_MS, easing = YuMotion.Emphasized)) { it }
+        if (reduced) fadeIn(tween(REDUCED_MS)) else slideInHorizontally(tween(PUSH_MS, easing = YuMotion.Emphasized)) { it }
 
     fun pushExit(reduced: Boolean): ExitTransition =
-        if (reduced) fadeOut(tween(120))
-        else slideOutHorizontally(tween(PUSH_MS, easing = YuMotion.Emphasized)) { -it / 3 } +
-            fadeOut(tween(PUSH_MS, easing = YuMotion.Standard), targetAlpha = 0.55f)
+        if (reduced) fadeOut(tween(REDUCED_MS))
+        else slideOutHorizontally(tween(PUSH_MS, easing = YuMotion.Emphasized)) { -it / UNDER_SHIFT_DIV } +
+            fadeOut(tween(PUSH_MS, easing = YuMotion.Standard), targetAlpha = UNDER_ALPHA)
 
     fun popEnter(reduced: Boolean): EnterTransition =
-        if (reduced) fadeIn(tween(150))
-        else slideInHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { -it / 3 } +
-            fadeIn(tween(POP_MS, easing = YuMotion.Standard), initialAlpha = 0.55f)
+        if (reduced) fadeIn(tween(REDUCED_MS))
+        else slideInHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { -it / UNDER_SHIFT_DIV } +
+            fadeIn(tween(POP_MS, easing = YuMotion.Standard), initialAlpha = UNDER_ALPHA)
 
     fun popExit(reduced: Boolean): ExitTransition =
-        if (reduced) fadeOut(tween(120)) else slideOutHorizontally(tween(POP_MS, easing = YuMotion.EmphasizedAccelerate)) { it }
+        if (reduced) fadeOut(tween(REDUCED_MS)) else slideOutHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { it }
+
+    /** Reduced motion: the same short cross-fade both ways. */
+    const val REDUCED_MS = 150
+
+    // ---- Full-screen pages outside the NavHost (Inbox / Support, Settings categories) ----------
+    /** A page that rises in; [pageRiseOut] is the same motion reversed. */
+    fun pageRiseIn(reduced: Boolean, ms: Int): EnterTransition =
+        if (reduced) fadeIn(tween(REDUCED_MS)) else slideInVertically(tween(ms, easing = YuMotion.Emphasized)) { it / 6 } + fadeIn(tween(ms, easing = YuMotion.Standard))
+
+    fun pageRiseOut(reduced: Boolean, ms: Int): ExitTransition =
+        if (reduced) fadeOut(tween(REDUCED_MS)) else slideOutVertically(tween(ms, easing = YuMotion.Emphasized)) { it / 6 } + fadeOut(tween(ms, easing = YuMotion.Standard))
+
+    /** Settings home → category and back: the NavHost push / pop, so it feels like every other page. */
+    fun <S> pushOrPop(scope: AnimatedContentTransitionScope<S>, forward: Boolean, reduced: Boolean): ContentTransform = with(scope) {
+        if (forward) push(reduced) togetherWith pushExit(reduced) else popEnter(reduced) togetherWith popExit(reduced)
+    }
+
+    /** Pure, unit-tested: every pair runs as long both ways (OWN-14). */
+    fun isSymmetric(): Boolean = POP_MS == PUSH_MS
 }
 
 /**

@@ -42,6 +42,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -84,6 +85,35 @@ object ShortsWindow {
     /** The Shorts player opens for a Short on phones when the feature is on; TV keeps the normal player. */
     fun opens(isShort: Boolean, queueSize: Int, tv: Boolean, enabled: Boolean): Boolean =
         enabled && !tv && isShort && queueSize >= 1
+
+    /** ADR-056: the top bar and title hide after this long of uninterrupted play. */
+    const val CHROME_IDLE_MS = 3_500L
+
+    /** Whether the chrome may hide now: only while playing, never while buffering, paused or on an error. */
+    fun chromeMayHide(autohide: Boolean, playing: Boolean, buffering: Boolean, error: Boolean): Boolean =
+        autohide && playing && !buffering && !error
+
+    enum class Tap { SHOW_CHROME, TOGGLE_PLAY }
+
+    /** A tap while the chrome is hidden only brings it back; with the chrome up it pauses or plays. */
+    fun tap(chromeShown: Boolean): Tap = if (chromeShown) Tap.TOGGLE_PLAY else Tap.SHOW_CHROME
+
+    /** F-12: 9:16 (portrait or square) fills the screen; a landscape clip is fitted so nothing is cropped. */
+    @androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class]) // AspectRatioFrameLayout resize constants (Media3 pinned)
+    fun resizeFor(width: Int, height: Int, fitLandscape: Boolean): Int =
+        if (fitLandscape && width > 0 && height > 0 && width > height) AspectRatioFrameLayout.RESIZE_MODE_FIT
+        else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+
+    /** Device tests only: resolve a Short to a local clip instead of YouTube. Null in the app. */
+    @Volatile internal var testResolver: (suspend (YtItem) -> StreamRequest)? = null
+
+    /** F-12 evidence: ms from a page settling to its first rendered frame, per Short id (last 32). */
+    internal val firstFrameMs = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Identity of every player used by the pager since the last reset; one entry = one shared player. */
+    @Volatile internal var lastResize: Int = -1
+    /** F12-VIEW evidence: video views inflated since the last reset (1 with the shared view, one per page without). */
+    internal val viewsCreated = java.util.concurrent.atomic.AtomicInteger()
+    internal val playersUsed: MutableSet<Int> = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
 }
 
 /** Full-screen vertical pager over [items]; swipe up / down for the next / previous Short. */
@@ -109,13 +139,21 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     var playing by remember { mutableStateOf(true) }
     var buffering by remember { mutableStateOf(true) }
     var fast by remember { mutableStateOf(false) }
+    var settledAt by remember { mutableStateOf(0L) }
+    val framed = remember { mutableStateMapOf<String, Boolean>() }
+    val resize = remember { mutableStateMapOf<String, Int>() }
+    val oneView = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_ONE_VIEW) }
+    val fitLandscape = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_VERTICAL) }
+    val autohide = remember(context) { fitLandscape && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_AUTOHIDE) }
+    var chrome by remember { mutableStateOf(true) }
+    var touched by remember { mutableStateOf(0) }
 
     fun resolve(i: Int) {
         val item = items.getOrNull(i) ?: return
         if (item.id in resolved || item.id in inFlight) return
         inFlight += item.id
         scope.launch {
-            runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, item.id, height) }
+            runCatching { ShortsWindow.testResolver?.invoke(item) ?: dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(context, item.id, height) }
                 .onSuccess { resolved[item.id] = it; failed.remove(item.id) }
                 .onFailure { e -> if (e !is kotlinx.coroutines.CancellationException) failed[item.id] = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e) }
             inFlight -= item.id
@@ -125,6 +163,8 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     // The page on screen plays in the one shared player (ADR-006); neighbours only get their links.
     LaunchedEffect(pager) {
         snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
+            settledAt = android.os.SystemClock.elapsedRealtime()
+            items.getOrNull(page)?.let { framed.remove(it.id) }
             resolve(page)
             ShortsWindow.prefetch(page, items.size, lowEnd).forEach { resolve(it) }
             val keep = ShortsWindow.keep(page, items.size, lowEnd).mapNotNull { items.getOrNull(it)?.id }.toSet()
@@ -133,11 +173,21 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
     }
     val current = items.getOrNull(pager.settledPage)
     val currentReq = current?.let { resolved[it.id] }
+    // ADR-056: a new page shows its title again; idle play hides the chrome after 3.5 s.
+    LaunchedEffect(pager.settledPage) { chrome = true }
+    val currentError = current?.let { failed[it.id] } != null
+    LaunchedEffect(chrome, playing, buffering, currentError, touched, pager.settledPage) {
+        if (chrome && ShortsWindow.chromeMayHide(autohide, playing, buffering, currentError)) {
+            kotlinx.coroutines.delay(ShortsWindow.CHROME_IDLE_MS)
+            chrome = false
+        } else if (!chrome && !ShortsWindow.chromeMayHide(autohide, playing, buffering, currentError)) chrome = true
+    }
     LaunchedEffect(current?.id, currentReq) {
         val item = current ?: return@LaunchedEffect
         val req = currentReq ?: return@LaunchedEffect
         val l = dev.asfakul.yumeiro.player.PlaybackSession.acquire(context, "yt:${item.id}", req.url)
         lease = l
+        ShortsWindow.playersUsed += System.identityHashCode(l.player)
         buffering = true
         dev.asfakul.yumeiro.stream.StreamRepository.register(req)
         dev.asfakul.yumeiro.stream.StreamMediaFactory.setMedia(l.player, req.url, title = item.title)
@@ -146,15 +196,27 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         l.player.prepare()
         l.player.playWhenReady = true
         playing = true
-        dev.asfakul.yumeiro.youtube.YtHistory.add(context, item)
+        dev.asfakul.yumeiro.youtube.YtHistory.record(context, item)
     }
+    val currentNow = androidx.compose.runtime.rememberUpdatedState(current)
     DisposableEffect(lease) {
         val l = lease ?: return@DisposableEffect onDispose { }
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE }
             override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) buffering = false }
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                val id = currentNow.value?.id ?: return
+                resize[id] = ShortsWindow.resizeFor(videoSize.width, videoSize.height, fitLandscape)
+                ShortsWindow.lastResize = resize[id]!!
+            }
+            override fun onRenderedFirstFrame() {
+                val id = currentNow.value?.id ?: return
+                if (ShortsWindow.firstFrameMs.size > 32) ShortsWindow.firstFrameMs.clear()
+                ShortsWindow.firstFrameMs[id] = android.os.SystemClock.elapsedRealtime() - settledAt
+                framed[id] = true
+            }
             override fun onPlayerError(error: PlaybackException) {
-                current?.let { failed[it.id] = "This Short couldn't play." }
+                currentNow.value?.let { failed[it.id] = "This Short couldn't play." }
             }
         }
         l.addListener(listener)
@@ -170,32 +232,55 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         onDispose { owner.lifecycle.removeObserver(obs) }
     }
 
+    // One video view for the whole pager (F12-VIEW): the same view and surface for every Short, so a swipe never
+    // inflates a PlayerView or builds a new TextureView (a 700+ ms main-thread stall on api36, run 44910278641).
+    @Composable
+    fun VideoView(item: YtItem, page: Int, modifier: Modifier) {
+        AndroidView(
+            factory = { ctx ->
+                ShortsWindow.viewsCreated.incrementAndGet()
+                (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
+                    useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                }
+            },
+            update = { v ->
+                if (v.player !== lease?.player) v.player = lease?.player
+                val m = resize[item.id] ?: AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                if (v.resizeMode != m) v.resizeMode = m
+            },
+            onRelease = { v -> v.player = null },
+            modifier = modifier.testTag(if (framed[item.id] == true) "shorts_frame_$page" else "shorts_video_$page"),
+        )
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black).testTag("shorts_player")) {
+        val settledItem = items.getOrNull(pager.settledPage)
+        if (oneView && lease != null && settledItem != null && resolved[settledItem.id] != null) {
+            // Under the pages; follows the settled page while the user drags (TextureView follows Compose transforms).
+            VideoView(settledItem, pager.settledPage, Modifier.fillMaxSize().graphicsLayer {
+                translationY = (pager.settledPage - (pager.currentPage + pager.currentPageOffsetFraction)) * size.height
+            })
+        }
         VerticalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 0, key = { items[it].id }) { page ->
             val item = items[page]
             Box(Modifier.fillMaxSize().testTag("shorts_page_$page")) {
                 val onScreen = page == pager.settledPage && lease != null && resolved[item.id] != null
-                if (onScreen) {
-                    AndroidView(
-                        factory = { ctx ->
-                            (android.view.LayoutInflater.from(ctx).inflate(dev.asfakul.yumeiro.R.layout.yumeiro_player_view, null) as PlayerView).apply {
-                                useController = false
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                            }
-                        },
-                        update = { v -> if (v.player !== lease?.player) v.player = lease?.player },
-                        onRelease = { v -> v.player = null },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    dev.asfakul.yumeiro.ui.screens.online.PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
+                when {
+                    // The shared view below shows through once this Short has its first frame; the poster covers
+                    // the previous Short's last frame until then.
+                    oneView && onScreen && framed[item.id] == true -> Unit
+                    !oneView && onScreen -> VideoView(item, page, Modifier.fillMaxSize())
+                    else -> dev.asfakul.yumeiro.ui.screens.online.PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
                 }
                 // Tap: pause / play. Hold: 2x while held.
                 Box(
                     Modifier.fillMaxSize().testTag("shorts_touch").pointerInput(item.id) {
                         detectTapGestures(
                             onTap = {
+                                touched++
+                                if (ShortsWindow.tap(chrome) == ShortsWindow.Tap.SHOW_CHROME) { chrome = true; return@detectTapGestures }
                                 val p = lease?.player ?: return@detectTapGestures
                                 if (p.isPlaying) { p.pause(); playing = false } else { p.play(); playing = true }
                             },
@@ -220,14 +305,14 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                     page == pager.settledPage && (resolved[item.id] == null || buffering) ->
                         CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = Color.White)
                     page == pager.settledPage && !playing ->
-                        Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.Center).size(64.dp))
+                        Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.Center).size(64.dp).testTag("shorts_paused"))
                 }
                 if (fast && page == pager.settledPage) {
                     Text("2x", color = Color.White, modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp)
                         .background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp).testTag("shorts_fast"))
                 }
-                Column(
-                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                if (chrome) Column(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().testTag("shorts_title")
                         .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
                         .safeDrawingPadding().padding(16.dp)
                 ) {
@@ -236,7 +321,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        if (chrome) Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(4.dp).testTag("shorts_chrome"), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose, modifier = Modifier.testTag("shorts_close")) { Icon(Icons.Default.ArrowBack, "Close Shorts", tint = Color.White) }
             TextButton(
                 onClick = { current?.let { lease?.player?.pause(); onFullPlayer(it) } },
