@@ -1090,6 +1090,10 @@ fun MTPlayerApp(
                                 if (tvLayout) Box(
                                     Modifier.fillMaxSize()
                                         .focusProperties {
+                                            // TV 45045033098 h5: Right from the rail put focus into Home, a page the
+                                            // pager still kept off screen after the jump to Music, so the pager slid back
+                                            // to Home. Only the page on screen (or being moved to) can take focus.
+                                            onEnter = { if (page != tabPager.settledPage && page != tabPager.targetPage) cancelFocusChange() }
                                             onExit = {
                                                 when (requestedFocusDirection) {
                                                     androidx.compose.ui.focus.FocusDirection.Left -> { cancelFocusChange(); runCatching { railFocus.requestFocus() } }
