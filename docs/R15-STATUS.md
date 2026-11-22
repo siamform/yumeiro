@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 20:10 +06): release audit; OWN-11/12 fixed, CI 45028981973 + fail-befores running; read docs/HANDOVER-LIVE.md.
+Resume here (2026-11-22 21:40 +06): OWN-1..12 all coded; batch CI 45032539983 on 7719e54e; then release. Read docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

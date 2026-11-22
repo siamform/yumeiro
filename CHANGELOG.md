@@ -35,6 +35,19 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
 - The proxy check called some unreachable proxies "wants a login" (NBUG-13).
 - The filter sheet keyboard closed or showed late (NBUG-10).
 - The player's top-right buttons now sit at the edge (OL-7).
+- Online sources no longer fail after skipping the tour, on a fresh install or after an update: Cloudflare DNS is the
+  default network when you never picked one; your own choice is kept (OWN-2, OWN-7).
+- A fast double tap no longer opens a page twice or closes two pages; Yumix -> details no longer flashes the feed
+  between the loading card and the page (OWN-1).
+- Opening a title from Yumix is faster: for sources that have a title page, the page opens at once and fills in
+  (OWN-6).
+- YouTube downloads always offer "Video" or "Audio only" again (OWN-11).
+- Profiles: setting a first PIN asks for the security questions used by "Forgot PIN"; changing or removing a PIN asks
+  for the current one first (OWN-12).
+- TeraBox: Yumeiro asks the share's own site, retries once with a fresh session, and when TeraBox wants a human
+  check it opens the share page so you can do it yourself (OWN-10).
+- Vega, SkyStream and other single-source links work in the market's add box; Vega / Nuvio / SkyStream sources show
+  in Extensions with their installed count and a Manage shortcut (OWN-4, OWN-5).
 
 ### Faster
 - Yumix and Home show the saved feed at once, even after a night away or an update, and refresh behind it (FE-1).
@@ -67,9 +80,16 @@ docs/release-2.1/MANUAL-TESTS-2.1.md. The full list with every test run is docs/
   and country / genre badges, from TVmaze (F-22, F-22-C). Episode status on episode rows: Watched, minutes left, Fresh (NF-1).
 - More Home shortcuts and more pages you can put on the navigation bar (OL-9, OL-10).
 - About: Yumeiro on Discord, Facebook, Instagram, X, TikTok and Reddit, plus the developer's links (OL-13).
+- Yumeiro Classics, an official built-in source: free public-domain films, film noir, sci-fi, silent films, cartoons
+  and classic TV from the Internet Archive, on from the first start. Extensions now lists the official built-in
+  sources (Classics and Yumeiro Drama) (OWN-9).
+- Telegram sign-in: sign in to your own account to watch private channels and chats; you can use your own API ID and
+  API hash from my.telegram.org (OWN-3, F-02 login).
+- Episode batch downloads can pick a subtitle language (your Online subtitle language or English) (OWN-8).
 
 ### Still being checked (off or not proven yet)
-- Telegram sign-in (private channels and chats) is built but off until it is tested on a real phone (F-02 login).
+- Telegram sign-in with a real account: CI can test it only up to Telegram's code check (Telegram has no public test
+  accounts); the full sign-in is in the manual test list (OMT-63).
 - The built-in torrent engine is built but off until its device checks pass.
 - Smaller downloads per phone type (ABI split APKs, E3) are built but switched off for this release; the universal
   APK is the download.

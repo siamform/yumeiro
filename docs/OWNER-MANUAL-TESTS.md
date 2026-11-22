@@ -101,7 +101,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-50 | F-03: a TeraBox / DiskWala share link | Owner/community test (pending) |
 | OMT-51 | F-11: manga auto-translation on a real chapter | Owner/community test (pending) |
 | OMT-52 | F-AIR: airing alert on a Firebase phone (after the Worker deploy) | Owner/community test (pending) |
-| OMT-63 | F-02 login: your own Telegram account, private chats, video + audio play and download | Owner/community test (pending; flag f02_telegram_login off until it passes). This is the only full sign-in check: Telegram switched off its public test accounts (tdlib/td#3083), so CI can only test up to Telegram checking the code |
+| OMT-63 | F-02 login: your own Telegram account, private chats, video + audio play and download | Owner/community test (pending; flag f02_telegram_login is on since OWN-3, 2026-11-22). This is the only full sign-in check: Telegram switched off its public test accounts (tdlib/td#3083), so CI can only test up to Telegram checking the code |
 | OMT-53 | NBUG-13: your own HTTP / SOCKS5 proxy for adult hosts | Owner/community test (pending) |
 | OMT-54 | Skip-intro times after the TV was offline (final test: AniSkip skipped on TV emulators) | Owner/community test (pending) |
 | OMT-55 | App lock with a PIN on a TV (final test: AppLock b_ skipped on TV emulators) | Owner/community test (pending) |
@@ -133,10 +133,14 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-82 | ST-17-BACK: one Back leaves a vertical video | Owner test (pending) |
 | OMT-83 | OWN-2 / OWN-7: fresh install, skip the tour, online works; Cloudflare DNS by default | Owner test (pending) |
 | OMT-84 | OWN-10: TeraBox signed-in playback; human check opens the TeraBox page | Owner test (pending, needs a TeraBox account) |
-| OMT-85 | OWN-1: screen recording of a page that closes by itself | Owner evidence (pending; fix in 2.1.1) |
+| OMT-85 | OWN-1: screen recording of a page that closes by itself | Owner evidence (pending; fix landed in 2.1.0, see OMT-89) |
 | OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the market box, script sources card | Owner test (pending) |
 | OMT-87 | OWN-11: YouTube audio-only download (also with "Ask before download" off) | Owner test (pending) |
 | OMT-88 | OWN-12: profile PIN asks current PIN to change / remove; first PIN leads to security questions | Owner test (pending) |
+| OMT-89 | OWN-1 / OWN-6: double taps open / close one page; Yumix -> details fast | Owner test (pending) |
+| OMT-90 | OWN-3: Telegram sign-in with your own API ID / hash | Owner test (pending) |
+| OMT-91 | OWN-9: fresh install shows Yumeiro Classics; a film plays | Owner test (pending) |
+| OMT-92 | OWN-10: TeraBox shares from two mirrors play when signed in | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).

@@ -59,6 +59,10 @@ Full step lists for older tests: docs/OWNER-MANUAL-TESTS.md (same IDs).
 | OMT-86 | OWN-8 / OWN-4 / OWN-5: download choices, Vega link in the Extension market box, script sources on Extensions | |
 | OMT-87 | OWN-11: YouTube video -> Download offers "Save as: Video / Audio only", also with "Ask before download" off | |
 | OMT-88 | OWN-12: profile PIN: first PIN leads to security questions; Change / Remove PIN asks the current PIN | |
+| OMT-89 | OWN-1 / OWN-6: double taps open one page; Yumix -> details opens fast, no feed flash | |
+| OMT-90 | OWN-3: Telegram sign-in with your own API ID / hash | |
+| OMT-91 | OWN-9: fresh install shows Yumeiro Classics; a classic film plays | |
+| OMT-92 | OWN-10: TeraBox share from 1024terabox / terabox.app plays when signed in | |
 | OMT-9 | Usability feedback | |
 
 ## 1. Install and first start (everyone)
@@ -506,3 +510,28 @@ and send the clip: which page, what you tapped, how fast. That decides the fix f
 2. Open the profile again -> Remove PIN: the PIN pad asks for the current PIN. A wrong PIN says "Wrong PIN" and
    keeps it; the right PIN removes it. "Forgot?" answers the security questions.
 3. Change PIN and Remove security questions ask for the current PIN the same way. TV: all of it by D-pad / number keys.
+
+### OMT-89 — Fast title open and double taps (OWN-1, OWN-6), phone and TV
+
+1. Yumix -> tap a title: the title page slides in at once (or under the loading card); the feed does not flash.
+2. Tap a poster twice fast, and press Back twice fast on My List / Reading: one page opens, one page closes.
+3. Open the same title again: it opens at once (its source is remembered as one that has a title page).
+
+### OMT-90 — Telegram sign-in with your own keys (OWN-3), phone
+
+1. On a computer or phone browser, sign in at my.telegram.org -> API development tools -> create an app; copy
+   App api_id and App api_hash.
+2. Yumeiro -> Telegram -> Your Telegram account -> "Use your own API ID and hash" -> paste both -> Save and sign in.
+3. Phone number -> code from Telegram -> (2FA password if set): your chats open; a video in a chat plays.
+4. A wrong hash (not 32 letters / digits) shows the reason and saves nothing.
+
+### OMT-91 — Official source on a fresh install (OWN-9), phone and TV
+
+1. Fresh install, skip the tour. Extensions shows "Official · built in": Yumeiro Classics and Yumeiro Drama, both On.
+2. Yumix shows Classics shelves (Classic feature films, Film noir, ...). Search "chaplin": results from Yumeiro Classics.
+3. Open a film -> Play: it plays (Internet Archive MP4); Download works. Turn Classics off: its shelves go.
+
+### OMT-92 — TeraBox (OWN-10), phone
+
+1. Sign in to TeraBox once in Websites. Play a 1024terabox.com share and a terabox.app share: both play past 0:30.
+2. If TeraBox asks for a human check, the share page opens; do the check, go back, play again: it plays.

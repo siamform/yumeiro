@@ -6,27 +6,21 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 20:10 +0600 (14:10 UTC), branch `r15-stability`, head dfa5e334. RELEASE AUDIT IN PROGRESS. Read
-docs/RELEASE-AUDIT-2.1.0.md first (owner list OWN-1..OWN-12, findings, runs).
-Just done: owner added OWN-11 (no audio-only option for a YouTube video download) and OWN-12 (profile PIN: no current
-PIN to change / remove, no security questions after a first PIN) and ordered them fixed. Commits OWN-11 (flag
-own11_yt_audio_choice, Own11YtAudioChoiceTest) and OWN-12 (flag own12_pin_guard, Own12PinGuardTest). OMT-87, OMT-88.
-Earlier: 78a667f6 OWN-7/OWN-2, a4dd5ddf OWN-4, 179d9e30 OWN-10, a5d8d0d3 OWN-5, db1634a8 AUD-CLAIM-1/2, f90b4999 release prep.
+2026-11-22 ~21:40 +0600, branch `r15-stability`, code head 7719e54e. RELEASE AUDIT, owner order 3 ("stop the CI per
+fix; fix all by groups; CI once; remove debug code; final CI; release"). The owner authorized the release.
+Just done (one commit per group): bc768506 OWN-1/OWN-6 (NavGuard, fast title open, load de-dup), 4c64bf4e OWN-8
+(batch subtitle language), 9704ae29 OWN-3 (own Telegram API ID / hash, flag f02_telegram_login on), b44d5237 OWN-10
+(TeraBox share origin, browserid, one fresh retry), 8d0e7cda debug logs removed, 7719e54e OWN-9 (Yumeiro Classics
+official source; Extensions "Official · built in"). Docs: audit §2/§5/§6, CHANGELOG, OMT-89..92, CANCELLED-RUNS.
 
 ## Pending runs
-- Fail-befores (each must fail ONLY in its new tests; then delete the branch local + origin):
-  45027077707 ab/own7-before, 45027534810 ab/own5-before, 45028979680 ab/own1112-before (fix with both flags off;
-  must fail only in Own11YtAudioChoiceTest + Own12PinGuardTest). Done + deleted: own4 45025907314, own10 45025909528.
-- r15 pass-after CI review_apk=true 45028981973 on dfa5e334 (all OWN fixes). 45027652884 cancelled by it (logged).
-- Device on 51c507ba (stale, before OWN-11/12): phones 45027685406, tv-api24 45027687692; rerun on dfa5e334 after they end.
-  Still to dispatch: tv-api34, gate trio, stress repeat 10 lowram, upgrade-check (v2.0.0, v1.9.0, v1.8.x).
-  Wait with `gh run watch <id> --interval 120`.
+- The one batch CI: ci.yml review_apk=true 45032539983 on 7719e54e. If it fails: fix, push, rerun once.
+- Earlier runs are recorded in docs/RELEASE-AUDIT-2.1.0.md §5.
 
 ## Next step
-1. Record the three fail-befores; delete ab/own7-before, ab/own5-before, ab/own1112-before (local + origin, worktrees /tmp/ab7 /tmp/ab5 /tmp/ab1112).
-2. Record pass-after 45028981973; device suites on dfa5e334 (phones, tv-api24, tv-api34), gate trio, stress, upgrade-check.
-3. Then CHANGELOG OWN lines, CHANGELOG-FULL regen, kit zip, Not checked, GO / NO-GO, owner message.
-   Never merge / release / deploy without the owner's go.
+1. Record 45032539983. Green -> regenerate CHANGELOG-FULL, kit zip + PDF, audit §10/§11, delete ab/* branches.
+2. PR r15-stability -> main (docs/evidence/final/PR-2.1.0.md), merge commit; watch release.yml; check the APK sha256.
+3. Owner message: fixed list, run IDs, OMT-83..92, release link.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
 ## Last updated (pre-audit, 14:12, stale)
