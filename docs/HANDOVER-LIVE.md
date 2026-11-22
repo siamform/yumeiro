@@ -6,7 +6,7 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 09:15 +0600, branch `r15-stability`. This push: GATE-1-MUSIC-START-2. r15 CI 44976838656 failed 1 of 1758:
+2026-11-22 09:40 +0600, branch `r15-stability`. This push: fail-before results. Previous push f46c3f22: GATE-1-MUSIC-START-2. r15 CI 44976838656 failed 1 of 1758:
 AppNavigationCrashTest.darkThemeRenders :185 (now-playing never opened after the first song tap). Cause: with MUSIC-START
 the first playTrack builds the player; attach() then ran restoreExistingState() on the empty player and cleared the
 track/queue just set. Fix (MusicPlayerManager.attach fromCommand): a command-built empty player keeps the command state.
@@ -18,14 +18,9 @@ sources/ecosystem/ScriptCrypto.kt, crypto-js shim in assets/js/provider_runtime.
 - Test Lab still Blocked on the owner (enable 2 APIs + Editor role, OMT-22 has the links).
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- CI 44979435737 (ab/musicstart2-before, review_apk=false): fail-before MUSIC-START-2. Expect exactly
-  PlayerBuiltOnFirstUseTest.theFirstSongTapOnAColdStartKeepsTheTrack to fail. Then
-  `git push origin --delete ab/musicstart2-before; git worktree remove --force /tmp/fb_ms2; git worktree prune`.
-- CI 44977804955 (ab/f05n-before, review_apk=false): fail-before F-05-N. Expect f05/StreamAddonsMergeTest,
-  f05/NuvioAdapterTest, f05/ScriptCryptoTest and EcosystemRegistryTest#vegaRunsAndTheOthersAreRecognisedOnly to fail
-  (compile must pass; gitleaks fails there on an old test literal, renamed on r15). Then
-  `git push origin --delete ab/f05n-before; git worktree remove --force /tmp/fb_nuvio; git worktree prune`.
-- r15 CI review_apk=true on this commit: pass-after MUSIC-START, MUSIC-START-2 and F-05-N. Then device runs:
+- Fail-befores done: MUSIC-START-2 44979435737 and F-05-N 44977804955 both Fail as expected, branches deleted.
+  Note: CI gitleaks scans every live branch, so a live ab/ branch with an old test literal fails other runs' scan.
+- r15 CI 44979533703 (review_apk=true @f46c3f22): pass-after MUSIC-START, MUSIC-START-2 and F-05-N. Then device runs:
   `-f test=dev.asfakul.yumeiro.NuvioProviderDeviceTest,dev.asfakul.yumeiro.VegaProviderDeviceTest` and the GATE-1 trio
   (GateOnePrepareDeviceTest, MainThreadStallRealClockDeviceTest, GateOneExitCheckDeviceTest; no getOrCreatePlayer YuStall).
 - When NuvioProviderDeviceTest passes: flip both flags to true in FeatureFlags.kt (own commit, own CI) and add an OMT row

@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 09:15 +06): read docs/HANDOVER-LIVE.md (MUSIC-START-2 fix + F-05-N, runs pending).
+Resume here (2026-11-22 09:40 +06): read docs/HANDOVER-LIVE.md (r15 CI 44979533703 pending, then device runs).
 
 # R15 status: every item in the master prompt, with its evidence
 
