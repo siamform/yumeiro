@@ -125,6 +125,7 @@ competitors, decides with the evidence written down, and builds; the owner only 
 | OMT-74 | F-05-S: SkyStream plugins | Owner test (pending) |
 | OMT-75 | F-05-STREMIO: a Stremio stream add-on gives links | Owner test (pending) |
 | OMT-76 | F-22-C: Upcoming by country and genre | Owner test (pending) |
+| OMT-77 | F-09-FEED: Watch later / Favorite from Yumix, Top 10, Continue watching | Owner test (pending) |
 
 Status words: Pending (not run yet) · Passed · Failed (send the evidence; the agent fixes it) ·
 Blocked (you couldn't run it; say why).
@@ -1051,3 +1052,12 @@ Passes if the add-on's links appear with quality, a direct link plays, and a tor
 
 Passes if each country lists only its shows with a "JP • Anime, Fantasy"-style badge and local air times, the
 genre chip narrows the list, the credit line says TVmaze, and the last country and genre are kept after reopening.
+
+### OMT-77 — Watch later / Favorite from every poster row (F-09-FEED)
+
+1. Phone: Online home. Long-press a Yumix feed card, a Top 10 poster and a Continue watching card.
+2. Each time pick Favorite (or Watch later). Then tap the same card once.
+3. TV: focus each of those cards with the D-pad and press Menu.
+
+Passes if every long press (phone) and Menu press (TV) opens the Watch later / Favorite sheet, the choice shows
+the small mark on the poster and in Library, and a normal tap still opens the title (no sheet).

@@ -6,32 +6,33 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-22 12:49 +0600, branch `r15-stability`. OWNER ORDER (latest, 2026-11-22): fix and build the open bugs and features
+2026-11-22 12:56 +0600, branch `r15-stability`. OWNER ORDER (latest, 2026-11-22): fix and build the open bugs and features
 FIRST; the release kit, website, docs and review APK come LAST. Rules: docs/RELEASE-DAY-PLAN.md. No merge / tag /
 release / deploy until the owner approves.
-This push: F-05-S-ON b5c61f85 (SkyStream on), F-21 device test 7c1ffce3, F-05-STREMIO 5f60ccea (stream-only Stremio
-add-ons, flag f05_stremio_streams), F-22-C 2b6338b1 (Upcoming Series by country + genre from TVmaze, flag
-f22_country_genre), C5 and C6 mapped in MAJOR (sections "C5 mapping", "C6 mapping"), OMT-75 / OMT-76, CHANGELOG
-v2.1.0 + CHANGELOG-FULL + SOCIAL-CAPTIONS updated.
+This push: F-09-FEED (owner: Watch later / Favorite taps did not work). Cause: only PosterCard had the long press;
+Yumix FeedCard, TopTenRow, ContinueRow had a plain click. Fix: Modifier.posterPress in PosterActions.kt (long press +
+Menu key) on all three, sheet + mark, flag f09_feed_actions. Test F09FeedActionsTest. OMT-77. Ledger row F-09-FEED.
+Earlier: F-05-S-ON, F-21 device test, F-05-STREMIO, F-22-C (2b6338b1), F22CountryDeviceTest 2a210e65.
 
 ## Pending runs (check each, then update the ledger rows that say PENDING)
-- r15 CI (review_apk=false) for this push: pass-after for F-05-S-ON, F-05-STREMIO, F-22-C. Run ID: see
-  RELEASE-DAY-PLAN.md progress log / `gh run list --workflow ci.yml --branch r15-stability -L1`.
-- Fail-before F-22-C: ab/f22c-before 44994603153 (valid = compiles, only F22CountryGenreTest fails). Then delete
-  the branch (`git push origin --delete ab/f22c-before`; worktree /tmp/abf22).
-- Device phones 44994337536 @7c1ffce3: F21ExtensionLabelDeviceTest (F-21 device check) + C5 re-check
-  (LocalPlayer, Nbug11/12/14/15). TV api34 44994339669: SheetFocusTvDeviceTest (NB15-OB2 / ER-28).
-- Old leftover remote branches from past agents: ab/b27, b29, b30, freeze1, freeze2, gate1, prof1, t1 (-before).
+- r15 CI 44995462689 @c2560e07: pass-after for F-05-S-ON, F-05-STREMIO, F-22-C. After it ends, dispatch r15 CI again
+  for F-09-FEED pass-after (do NOT dispatch while it runs: that cancels it).
+- Fail-before F-22-C: ab/f22c-before 44994603153 (valid = compiles, only F22CountryGenreTest fails); worktree /tmp/abf22.
+- Fail-before F-09-FEED: ab/f09feed-before 44995800916 (valid = compiles, only F09FeedActionsTest fails); worktree
+  /tmp/abf09. Delete each ab branch after recording.
+- Device phones 44995560569 @2a210e65: F22CountryDeviceTest + UpcomingDeviceTest (F-22-C).
+- Done, record in docs: device 44994337536 Pass (F21ExtensionLabelDeviceTest api36 + api33-lowram; C5 LocalPlayer,
+  Nbug11/12/14/15), TV api34 44994339669 Pass (SheetFocusTvDeviceTest).
 
 ## Next step
-1. Record the runs above (ledger F-05-S-ON, F-05-STREMIO, F-22-C, F-21; MAJOR C5 table "re-check" cells).
-2. Device check for F-22-C (Upcoming country chips) if a slot frees: none written yet; OMT-76 covers real data.
-3. Open rows: GATE-1-VIDEOS-COMPOSE (Perfetto trace of the Videos tap on lowram), B31-FRAME device test, F-09 taps
-   (owner says taps do not work: device check), TV-FP-1 test rewrite, ST-17. E1 only on the owner's go.
+1. Record the runs above (ledger F-05-S-ON, F-05-STREMIO, F-22-C, F-21, F-09-FEED; MAJOR C5 table "re-check" cells).
+2. F-09-FEED device check (PosterActionsDeviceTest on feed cards) after phones slot frees.
+3. Open rows: GATE-1-VIDEOS-COMPOSE, B31-FRAME, TV-FP-1 test rewrite, ST-17. E1 only on the owner's go.
 4. LAST: ci.yml review_apk=true on r15 (only when no r15 CI runs), download `yumeiro-review-apk`, SHA256, share
-   the APK; rebuild the kit zip / PDF (changelog changed); re-share both living docs; short final reply.
+   the APK; rebuild the kit zip / PDF; re-share both living docs; short final reply.
 
 ## Done this session (2026-11-21 evening / 2026-11-22), newest first
+- 2026-11-22 12:56: F-09-FEED long press on Yumix / Top 10 / Continue watching (this push, CI pending).
 - 2026-11-22 12:49: F-05-S-ON, F-21 device test, F-05-STREMIO, F-22-C, C5 / C6 mapping (this push).
 - 2026-11-22 11:10: F-05-S SkyStream adapter (this push, flag off, CI + device pending).
 - 2026-11-22 11:00: GATE-1-PREPARE-COLD harness e109bece.

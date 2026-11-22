@@ -59,6 +59,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -293,7 +294,13 @@ internal fun TopTenRow(title: String, items: List<OnlineItem>, onClick: (OnlineI
         SectionHeader(title)
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             itemsIndexed(items.take(10), key = { i, it -> "${i}_${it.key}" }) { i, item ->
-                Row(Modifier.clickable { onClick(item) }.testTag("online_poster"), verticalAlignment = Alignment.Bottom) {
+                // F-09-FEED: long press / Menu key: Watch later / Favorite.
+                val actions = feedPosterActionsOn()
+                var sheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                if (actions && sheet) PosterActionsSheet(item) { sheet = false }
+                val marks by dev.asfakul.yumeiro.online.OnlineBookmarks.marks.collectAsState()
+                val mark = if (actions) marks[posterMarkKey(item)] else null
+                Row(Modifier.posterPress({ onClick(item) }, if (actions) ({ sheet = true }) else null).testTag("online_poster"), verticalAlignment = Alignment.Bottom) {
                     Box(Modifier.width(if (i == 9) 62.dp else 44.dp).height(150.dp), contentAlignment = Alignment.BottomEnd) {
                         Text(
                             "${i + 1}", fontSize = 92.sp, fontWeight = FontWeight.Black, lineHeight = 92.sp,
@@ -304,6 +311,7 @@ internal fun TopTenRow(title: String, items: List<OnlineItem>, onClick: (OnlineI
                     }
                     Box(Modifier.width(104.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp))) {
                         PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
+                        PosterMark(mark, Modifier.align(Alignment.BottomEnd))
                     }
                 }
             }
@@ -319,7 +327,13 @@ internal fun ContinueRow(entries: List<OnlineHistory.Entry>, onClick: (OnlineIte
         SectionHeader("Continue watching") { SeeAllButton(onSeeAll) }
         LazyRow(contentPadding = PaddingValues(horizontal = edgePadding), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             itemsIndexed(entries.take(15), key = { i, it -> "${i}_${it.key}" }) { _, e ->
-                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onClick(e.toItem()) }.padding(bottom = 10.dp)) {
+                // F-09-FEED: long press / Menu key: Watch later / Favorite for the title being watched.
+                val actions = feedPosterActionsOn()
+                var sheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                val asItem = remember(e) { e.toItem() }
+                if (actions && sheet) PosterActionsSheet(asItem) { sheet = false }
+                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).posterPress({ onClick(asItem) }, if (actions) ({ sheet = true }) else null)
+                    .testTag("online_continue_card").padding(bottom = 10.dp)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp))) {
                         PosterImage(e.posterUrl, e.posterHeaders, Modifier.fillMaxSize())
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))))
