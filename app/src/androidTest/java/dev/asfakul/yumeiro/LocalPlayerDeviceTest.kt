@@ -356,6 +356,31 @@ class LocalPlayerDeviceTest {
         log("LOCAL_F_RESULT PASS")
     }
 
+    /** OWN-19: the full-screen bar shows at most 3 controls plus More; the others are in the 3-dot menu. */
+    @Test fun h_own19FullscreenBarKeepsOnlyTheMainButtons() {
+        org.junit.Assume.assumeFalse("TV player has no fullscreen toggle", dev.asfakul.yumeiro.Edition.isTv)
+        openClipFromDevice()
+        loopClip()
+        control("video_fullscreen_btn")
+        pause(1_500)
+        FirstRun.touchMode()
+        if (!has("video_more_btn")) runCatching { rule.onAllNodesWithTag("video_player_root", true)[0].performClick() }
+        wait("controls with More", 8_000) { has("video_more_btn") }
+        val bar = listOf("video_quality_btn", "video_audio_track_btn", "video_subtitle_btn", "video_speed_btn", "video_aspect_ratio_btn", "video_pip_btn", "video_info_btn")
+        val inline = bar.filter { has(it) }
+        log("OWN19 inline=$inline")
+        FirstRun.shot("own19_fullscreen_bar")
+        assertTrue("OWN-19: at most 3 controls on the full-screen bar, got $inline", inline.size <= 3)
+        tap("video_more_btn")
+        wait("More menu", 5_000) { has("video_more_menu") }
+        val moved = bar.filter { it !in inline }.filter { has("${it}_menu") }
+        log("OWN19 menu=$moved")
+        FirstRun.shot("own19_more_menu")
+        assertTrue("OWN-19: the other controls are in the menu, got $moved", moved.isNotEmpty())
+        back()
+        log("LOCAL_H_RESULT PASS")
+    }
+
     /** R17 PL-18: on a phone one Back leaves full screen and the player together (floating window). */
     @Test fun g_oneBackLeavesFullscreenOnPhone() {
         // Phone only: the TV player is always full screen and has no fullscreen button (showFullscreenButton = !tvPlayer).
