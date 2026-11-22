@@ -1,0 +1,51 @@
+# GATE-1-USB: the GATE-1 walk on a real phone (USB) or a host-GPU emulator attached to the owner's own
+# self-hosted runner (labels: self-hosted, yumeiro-device). Manual only; it waits in the queue until such a
+# runner is online. Setup: docs/GATE-1-REAL-DEVICE.md. Same body as device-check (scripts/device-check.sh).
+name: Gate on own device
+
+on:
+  workflow_dispatch:
+    inputs:
+      gate1_baseline:
+        description: "GATE-1-AB: run with the GATE-1 app fixes off (the app before the GATE-1 work)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: gate-usb
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  device:
+    runs-on: [self-hosted, yumeiro-device]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Device attached
+        run: |
+          adb start-server > /dev/null
+          N=$(adb devices | awk 'NR>1 && $2=="device"' | wc -l)
+          test "$N" = 1 || { echo "::error::need exactly one adb device, found $N"; adb devices; exit 1; }
+          echo "YuGateEnv device=$(adb shell getprop ro.product.model | tr -d '\r') sdk=$(adb shell getprop ro.build.version.sdk | tr -d '\r') ram_kb=$(adb shell grep MemTotal /proc/meminfo | tr -s ' ' | cut -d' ' -f2) gpu=$(adb shell getprop ro.hardware.egl | tr -d '\r')"
+      - name: Gate walk
+        env:
+          YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
+          YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
+          TEST_FILTER: dev.asfakul.yumeiro.GateOnePrepareDeviceTest,dev.asfakul.yumeiro.MainThreadStallRealClockDeviceTest,dev.asfakul.yumeiro.GateOneExitCheckDeviceTest
+          FLAVOR: Mobile
+          REPEAT: "1"
+          GATE1_BASELINE: ${{ inputs.gate1_baseline && 'true' || 'false' }}
+        run: bash scripts/device-check.sh
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gate-usb-${{ inputs.gate1_baseline && 'baseline' || 'current' }}
+          path: |
+            stress/
+            logcat.txt
+      - name: Fail if tests failed
+        run: test ! -f failed.txt
