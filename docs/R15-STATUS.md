@@ -1,6 +1,6 @@
 ## Resume here (2026-11-21, no release until the owner says)
 
-Resume here (2026-11-22 16:50 +06): review APK 45008845576 @2d79e048 (TV-FP-1, DL-WEB, ST-17-BACK; stress 45006967759 10/10) shared; waiting for the owner's test and go (PR, merge, release). Read docs/RELEASE-DAY-PLAN.md, then docs/HANDOVER-LIVE.md.
+Resume here (2026-11-22 19:20 +06): release audit in progress; read docs/RELEASE-AUDIT-2.1.0.md then docs/HANDOVER-LIVE.md.
 
 # R15 status: every item in the master prompt, with its evidence
 

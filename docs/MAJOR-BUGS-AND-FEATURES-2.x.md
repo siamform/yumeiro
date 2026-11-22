@@ -148,6 +148,7 @@ Verified. Status "Not checked" = not yet compared with the code; re-check with a
 |---|---|---|
 | DL-WEB | In-app web pages have no WebView download listener, so a plain file link there does not open the download popup | Pass (fail-before 45006640065, pass-after 45008845576); flag web_download_listener; OMT-81 |
 | ST-17-BACK | Back did nothing on a vertical (portrait) video once full screen was already off: 4 Backs in 14 s, the stress test could not return to the tabs (44998769417 run 7). Fixed under rule 7 exception: it blocks the queued item ST-17 itself | Pass (fail-before 45006886661, pass-after 45008845576, stress 45006967759 10 of 10); flag vertical_back_leaves; OMT-82 |
+| OWN-1..OWN-10 | Owner list 2026-11-22 evening (transitions, online after skip / fresh / update, Telegram own-key sign-in, market add box for Vega / SkyStream, managed repos in the installed list, Yumix -> details -> player speed, Cloudflare default, download quality / audio / subtitles, official extension, TeraBox / DiskWala). Triage, root causes and status: docs/RELEASE-AUDIT-2.1.0.md section 2 | In progress (release audit) |
 | DEX-REG-1 | Preview build failed the 224-register check (VideoPlayerModalContent 225) | Fixed as a blocker of item D (preview APK); Pass 45002048828 (194 / 195 regs) |
 
 ## Owner decisions needed (not reopened)

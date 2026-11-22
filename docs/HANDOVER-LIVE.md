@@ -6,6 +6,22 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-22 19:20 +0600, branch `r15-stability`. RELEASE AUDIT IN PROGRESS (independent auditor). Read
+docs/RELEASE-AUDIT-2.1.0.md first: owner list OWN-1..OWN-10 (2026-11-22 evening, "hurry, fix all and prepare
+release") with root causes and plan, findings register, run table.
+
+## Pending runs
+- 45024851633 CI review_apk=true on dd4ae197 (baseline before audit fixes), started 12:56 UTC. Wait with
+  `gh run watch 45024851633 --interval 120`.
+
+## Next step
+1. Fixes in progress (each: test, ab/<id>-before fail-before, one commit, flag): OWN-7/OWN-2 Cloudflare DNS default,
+   OWN-4 market add box accepts every format, OWN-10 TeraBox human check. Then OWN-1, OWN-5, OWN-6, OWN-8, OWN-3.
+2. After the fixes: one r15 CI review_apk=true, then device suites (api36 + api33-lowram, tv-api24, tv-api34), gate
+   trio, stress repeat 10, upgrade-check. Never merge / release / deploy without the owner's go.
+
+## Earlier state (before the audit; history, superseded where the audit says so)
+## Last updated (pre-audit, 14:12, stale)
 2026-11-22 14:12 +0600, branch `r15-stability`. Owner order 2026-11-22 ~14:00: share the preview APK (owner has one
 hour to test), then on his approval: PR r15-stability -> main, merge, release 2.1.0. Same download popup everywhere
 (DL-ONE). Yumeiro's own all-in-one extension (E1 Yumeiro Hub) and all-in-one Live TV (E2-ALL Yumeiro Live, on top of the built E2): docs now,
