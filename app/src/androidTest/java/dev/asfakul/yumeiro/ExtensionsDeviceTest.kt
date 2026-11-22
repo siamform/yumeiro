@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro
 
+import okhttp3.ResponseBody.Companion.toResponseBody
 import android.content.Context
 import android.util.Log
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -246,7 +247,7 @@ class ExtensionsDeviceTest {
     /**
      * EXT-T1 reproduction (eighth cycle): the original failure (43744809503) had a second window over
      * Source status while five drama feeds timed out. Here five ONShort studio shelves hang 10 s and
-     * then time out (the other five use the real site), studio health and the shelf cache are
+     * then time out (the rest of onshort.net answers 503 at once, see 45083384193), studio health and the shelf cache are
      * cleared, and the probes run again while Source status is open. Pass: when the cleanup Back is
      * sent the focused window is MainActivity and no other window of ours was added.
      */
@@ -261,6 +262,13 @@ class ExtensionsDeviceTest {
             if (u.host.endsWith("onshort.net") && u.pathSegments.firstOrNull() == "platform" && slug != null && slug in failing) {
                 seeded.incrementAndGet(); log("EXT_T1 seeded timeout $u")
                 Thread.sleep(10_000); throw java.net.SocketTimeoutException("EXT-T1 seeded timeout")
+            }
+            // 45083384193: the real onshort.net timed out from CI (10-20 s per call, retried), so the probes queued behind
+            // it and only 3 of the 5 seeded shelves were asked within the wait. The rest of onshort.net now answers 503 at
+            // once, so the run no longer depends on that site. The check (no window of ours over Source status) is unchanged.
+            if (u.host.endsWith("onshort.net")) {
+                return@addInterceptor okhttp3.Response.Builder().request(chain.request()).protocol(okhttp3.Protocol.HTTP_1_1)
+                    .code(503).message("EXT-T1 offline").body("".toResponseBody(null)).build()
             }
             chain.proceed(chain.request())
         }.build())
