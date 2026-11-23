@@ -14,7 +14,7 @@ Field probe tooling: .github/workflows/field-probe.yml runs on push to probe/** 
 back, home, shot, gesturenav, buttonnav, swipeback, edgeback.
 Done on r19-restore: 07cd54de FCM re-register storm fix (ONLINE-INIT-1), 60540fb0 predictive-back slide (NAV-1 part),
 5dafbf4d B-32b "try another repository's copy" (CI 45118971931 unit tests passed).
-Open, in order: NAV-1 key Back cut (diagnostic probe/r5-navdiag-b, run 45121952110: read YuNavDiag in logcat);
+Open, in order: NAV-1 key Back cut (45124251735: key Back runs the same popSub as the arrow; cause is in drawing, see ledger);
 LIVE-SLOW-1; themes (2.1.0 probes 45117913756 / 1.5.0 45117910872: light stays light, dark stays dark, glass fill
 values unchanged since 1.5.0; the owner's "glass on every theme" is not reproduced on Home / Music / Library /
 Settings, ask for the screen or check Backdrop pictures); extension engine; Live TV; Telegram; UI/UX.
