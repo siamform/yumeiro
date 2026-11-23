@@ -295,7 +295,7 @@ object SmartDns : Dns {
             addresses = override(host, config)
         } else when (config.transport) {
             DnsTransport.DOH -> addresses = try {
-                (if (config.fallback) fallbackDoh(config.provider) else doh(config.provider)).lookup(host)
+                (if (config.fallback || config.quick) fallbackDoh(config.provider) else doh(config.provider)).lookup(host)
             } catch (e: UnknownHostException) {
                 // G12 X11-3: OkHttp's DnsOverHttps reports a failed request (timeout, refused, TLS) as
                 // UnknownHostException with the network error as its cause. Only a cause-less one is a

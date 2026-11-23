@@ -66,6 +66,13 @@ data class DnsConfig(
      * `nbug6_dns_fallback`.
      */
     val fallback: Boolean = false,
+    /**
+     * ONLINE-INIT-1 (R19): true only for the built-in default (Cloudflare DoH, never saved by the user). Each
+     * Cloudflare lookup then has the short [SmartDns.FALLBACK_ATTEMPT_MS] budget before system DNS answers, so
+     * Cloudflare being slow or unreachable cannot hold startup (field run 45115735797: a dead 1.1.1.1 connection
+     * held the first lookups 5.5 s). Not saved; a choice the user saves keeps the normal timeouts.
+     */
+    val quick: Boolean = false,
 ) {
     val usesAlternative: Boolean get() = provider != DnsProvider.SYSTEM
     val summary: String get() = if (!usesAlternative) (if (auto) "System DNS · auto bypass for blocked sites" else "System DNS") else "${provider.label} (${provider.primaryIp}) · ${transport.label} · ${mode.label.lowercase()}"
@@ -142,11 +149,11 @@ object NetworkSettings {
      */
     internal fun freshDefault(context: Context): DnsConfig =
         if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS))
-            DnsConfig(provider = DnsProvider.CLOUDFLARE, transport = DnsTransport.DOH, mode = DnsMode.ALWAYS)
+            DnsConfig(provider = DnsProvider.CLOUDFLARE, transport = DnsTransport.DOH, mode = DnsMode.ALWAYS, quick = true)
         else DnsConfig()
 
     fun setDns(context: Context, config: DnsConfig) {
-        synchronized(writeLock) { _dns.value = config; loaded = true }
+        synchronized(writeLock) { _dns.value = config.copy(quick = false); loaded = true }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("dns_provider", config.provider.name)
             .putString("dns_transport", config.transport.name)
