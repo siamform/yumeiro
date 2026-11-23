@@ -17,10 +17,9 @@ after OWN-12 hold commits, run ids and verification level (CI / emulator / real 
 Probe tooling: PREWAIT N (wait before install) and step "relaunch" (9b4031f6); answer_system answers system ANR dialogs.
 
 ## Pending runs
-- CI 45161173640 on 26eb41a4 (TG-PAGE-2). If red: `gh run view 45161173640 -R siamform/yumeiro --log-failed`.
+- None. CI 45161173640 on 26eb41a4 (TG-PAGE-2) green.
 
 ## Next step
-1. Confirm CI 45161173640 green.
 2. UI/UX audit continues screen by screen (tour probe 45155200957 covered Library, History, Downloads, Reading,
    Home "See more", Settings, Telegram; Search / Yumix source menu taps missed).
 3. Blocked: Telegram signed-in search (no account), every real-device check (no device), real slow mobile network.
