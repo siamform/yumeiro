@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -98,6 +98,20 @@ run_steps() {
       rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
         r=${s#rec }; adb shell "screenrecord --time-limit 5 --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
         sleep 0.6; note "recording [$r]" ;;
+      field*) # field [N]: tap the Nth (default 1st) text field on screen; hints are not in the UI dump
+        n=${s#field}; n=${n# }; [ -n "$n" ] || n=1
+        adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml "$OUT/tap.xml" > /dev/null 2>&1
+        XY=$(python3 - "$OUT/tap.xml" "$n" <<'PY'
+import sys, re
+t = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+f = [m.group(0) for m in re.finditer(r'<node [^>]*>', t) if 'class="android.widget.EditText"' in m.group(0)]
+n = int(sys.argv[2])
+if len(f) >= n:
+    b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', f[n - 1])
+    if b: x1, y1, x2, y2 = map(int, b.groups()); print((x1 + x2) // 2, (y1 + y2) // 2)
+PY
+)
+        if [ -n "$XY" ]; then adb shell input tap $XY; note "tapped text field $n at $XY"; else note "field miss [$n]"; fi; sleep 1 ;;
       type*) # type TEXT into the focused field, as the on-screen keyboard would (LIVE-1 search probes)
         t=${s#type }; adb shell input text "'${t// /%s}'"; note "typed [$t]"; sleep 1; dump "after-type" ;;
       send*) # send TEXT: share a link to Yumeiro like another app's Share sheet would (text/plain)

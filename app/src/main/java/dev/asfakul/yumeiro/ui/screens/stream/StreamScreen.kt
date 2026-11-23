@@ -791,8 +791,13 @@ fun StreamScreen(
             else if (countriesByCategory && feed.genres.size > 1) item(key = "live_genres") {
                 // The country already sits in the header; the one chip row shows the genres (News, Sports...) of
                 // the channels the country filter leaves, with their counts.
-                val inScope = remember(feed, liveGroup) { if (liveGroup == null) feed.genres else LiveChannelFeed.filter(feed, liveGroup).mapNotNull { it.channel.genre }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { LiveChannelFeed.Category(it.key, it.value) } }
-                if (inScope.size > 1) LiveCategoryBar(inScope, inScope.sumOf { it.count }, liveGenre, tag = "live_genres", prefix = "live_genre_") { liveGenre = it }
+                // "All" counts every channel in scope (probe 45243905968: it showed 7262, the channels with a genre,
+                // under a 7555-channel header).
+                val (inScope, scopeSize) = remember(feed, liveGroup) {
+                    if (liveGroup == null) feed.genres to feed.size
+                    else LiveChannelFeed.filter(feed, liveGroup).let { l -> l.mapNotNull { it.channel.genre }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { LiveChannelFeed.Category(it.key, it.value) } to l.size }
+                }
+                if (inScope.size > 1) LiveCategoryBar(inScope, scopeSize, liveGenre, tag = "live_genres", prefix = "live_genre_") { liveGenre = it }
             }
             if (feedFailed.isNotEmpty()) item(key = "live_failed") {
                 LiveProblem(
