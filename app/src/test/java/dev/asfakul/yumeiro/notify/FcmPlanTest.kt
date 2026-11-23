@@ -13,6 +13,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FcmPlanTest {
+    @Test fun sameIdFromRegisterIsNotANewRegistration() {
+        // R19 ONLINE-INIT: register() calls onRegistered with the unchanged id on every sync; that must not
+        // queue another sync, or sync -> register -> onRegistered -> sync loops.
+        assertFalse(FcmPlan.idChanged("fid-1", "fid-1"))
+        assertTrue(FcmPlan.idChanged(null, "fid-1"))
+        assertTrue(FcmPlan.idChanged("fid-1", "fid-2"))
+        assertFalse(FcmPlan.idChanged(null, ""))
+    }
+
     private fun msg(vararg kv: Pair<String, String>) = mapOf("y" to "1", "id" to "abc123", "title" to "Hello", "body" to "World", *kv)
 
     @Test fun configNeedsEveryPartAndARealAppId() {
