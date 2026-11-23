@@ -16,7 +16,7 @@ DiskWala (19b) is blocked on an owner decision: see "DiskWala findings" in docs/
 in docs/BUGS-AND-FIXES-2.0.0.md, after REL-2.2-CI.
 
 ### Pending runs (check each one first)
-- CI 45229632390 on r21-major-list (a0fc0e2f, up to DEDUP-1; the earlier 45228964730 was cancelled by it).
+- CI 45230632843 on r21-major-list (df240341, covers everything incl. TB-PREVIEW-1; it replaced 45229632390).
   TB-PREVIEW-1 (3dd034aa) and later commits need a new dispatch: `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
   If it fails, read the log (`gh run view <id> --log-failed | tail -200`) and fix the compile and test errors first.
   The new code that has never been compiled is: TitleFacts.kt, the OnlineDetailScreen about / cast / trailers block,
