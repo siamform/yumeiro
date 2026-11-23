@@ -6,85 +6,25 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-23 16:08 +06 (R19, owner directive 2 "complete bug resolution", branch **r19-restore**, head 979014b9).
-Verification labels: CI / emulator / real device (none available) / untested / blocked. Ledger rows "(R19)" in
-docs/BUGS-AND-FIXES-2.0.0.md after OWN-12 hold the evidence and run ids.
-- ONLINE-INIT-1 (07cd54de FCM storm, d35e2aa9 DNS budget): emulator verified for skip / tour / update scenarios
-  (Job-didn't-exist lines 153,438 -> 4). Firebase notifications and Cloudflare kept.
-- LIVE-DNS-1 (ad56caff + 979014b9 test): IPv6-only DoH answer asks for A records; emulator: IPv4 at 17.5 s (was 174.5 s).
-- LIVE-SLOW-1 (24a78259): CI verified; emulated umts still 0 channels on a fresh install. The emulated link is taken by Google
-  Play services (~5 MB in 240 s); inconclusive, not an app defect proof. Real slow network: blocked (no device).
-- NAV-1 / NAV-1b (60540fb0, 79570c07, 89434454, dcdf875c): emulator + CI verified.
-- THEME-1 (d3f16b9a): glass removed, Kasumi gone; probe 45145661829 screenshots of all 5 themes: solid, emulator verified.
-- ENGINE-1 (16d216f9): 10 extensions at once, isolation holds, 4/10 played, 6 extension/site faults (ledger).
-- LEGACY-EXT-1/2, TG-PAGE-1, UX-MARKET-1, PERF-IDLE-1: see ledger.
-Probe tooling: answer_system taps "Wait" on system ANR dialogs (f669199f); before it, r8 skip/live/theme probes were invalid.
+2026-11-23 17:12 +06 (R19, owner directive 2, branch **r19-restore**). Ledger rows "(R19)" in docs/BUGS-AND-FIXES-2.0.0.md
+after OWN-12 hold commits, run ids and verification level (CI / emulator / real device = none available / blocked).
+- ONLINE-INIT-1 (07cd54de, d35e2aa9): emulator verified (skip / tour / update). Firebase notifications + Cloudflare kept.
+- LIVE-DNS-1 (ad56caff, 979014b9): CI 45151409433 green; emulator: IPv4 at 17.5 s (was 174.5 s).
+- LIVE-SLOW-1 (24a78259): lte 45158999820 7555 channels by 60 s, relaunch shows saved copy within 5 s. umts / hsdpa
+  emulator shaping carries 2-7 KB/s (inconclusive). Range-resume tried and dropped (gzip bodies). Real 3G: blocked.
+- NAV-1 / NAV-1b, THEME-1, ENGINE-1, LEGACY-EXT-1/2, TG-PAGE-1, UX-MARKET-1, PERF-IDLE-1: see ledger.
+- New this round: UX-LIB-1 (020e1db5) and UX-LIVE-1 (6a19672b), CI 45155141844 green + emulator; TG-PAGE-2 (26eb41a4).
+Probe tooling: PREWAIT N (wait before install) and step "relaunch" (9b4031f6); answer_system answers system ANR dialogs.
 
 ## Pending runs
-- CI 45151409433 on 979014b9 (DohIpv4AnswerTest fix). If red: `gh run view 45151409433 -R siamform/yumeiro --log-failed`.
+- CI 45161173640 on 26eb41a4 (TG-PAGE-2). If red: `gh run view 45161173640 -R siamform/yumeiro --log-failed`.
 
 ## Next step
-1. Confirm CI 45151409433 green.
-2. Live TV slow link: probe with a less degraded profile (NET=edge) after Play services settle (wait step), with a saved
-   playlist (second launch) to check the last-known-good path.
-3. Telegram signed-in search needs an account (blocked). Real-device checks for everything: blocked (no device).
+1. Confirm CI 45161173640 green.
+2. UI/UX audit continues screen by screen (tour probe 45155200957 covered Library, History, Downloads, Reading,
+   Home "See more", Settings, Telegram; Search / Yumix source menu taps missed).
+3. Blocked: Telegram signed-in search (no account), every real-device check (no device), real slow mobile network.
 4. No merge / release / tag without owner approval.
-
-2026-11-23 ~12:30 +06 (R19, new agent): working branch is now **r19-restore** (from r18-live-ext). Owner brief R19 =
-10 audit sections; every earlier "done" is treated as unverified. Skills: ui-ux-pro-max (design), kotlin-agent-skills,
-rea (problem solving), jeffallan/claude-skills architecture-designer (system design / ADRs; Kotlin skill for Android).
-Field probe tooling: .github/workflows/field-probe.yml runs on push to probe/** and reads .github/field-probe.env
-(must be committed with `git add`, `-a` skips it). Steps: skip, tour, wait N, tap, find, top, dismiss, rec/recpull,
-back, home, shot, gesturenav, buttonnav, swipeback, edgeback.
-Done on r19-restore: 07cd54de FCM re-register storm fix (ONLINE-INIT-1), 60540fb0 predictive-back slide (NAV-1 part),
-5dafbf4d B-32b "try another repository's copy" (CI 45118971931 unit tests passed).
-Open, in order: NAV-1 key Back cut (45124251735: key Back runs the same popSub as the arrow; cause is in drawing, see ledger);
-LIVE-SLOW-1; themes (2.1.0 probes 45117913756 / 1.5.0 45117910872: light stays light, dark stays dark, glass fill
-values unchanged since 1.5.0; the owner's "glass on every theme" is not reproduced on Home / Music / Library /
-Settings, ask for the screen or check Backdrop pictures); extension engine; Live TV; Telegram; UI/UX.
-See docs/BUGS-AND-FIXES-2.0.0.md rows ONLINE-INIT-1, LIVE-SLOW-1, NAV-1, B-32b.
-
-2026-11-23 ~05:30 +06: 2.1.0 RELEASED. https://github.com/siamform/yumeiro/releases/tag/v2.1.0 (Latest). Release run
-45080181866 (after 45071581793 hit the 45-min job limit and 45075918561 ran the Kotlin daemon out of memory; fixed by
-a 90-min limit and two Gradle calls, PR #41). 11 APKs + SHA256SUMS: every sha256 OK, every signer cert = 2ecdfd04...
-(.github/release-signing-cert.sha256). Website: yumeiro-web PR #6 merged, Vercel success, yumeiro.click shows 2.1.0.
-Old PRs closed (yumeiro #37-39 dependabot, yumeiro-web #5). Old branches deleted; fail-before and old web branches kept
-as archive/* tags. Open: 17 CodeQL alerts from PR #40 (docs/evidence/final/CODEQL-2.1.0.md, owner decides).
-Note: one commit (90-min limit + docs) was pushed straight to main and bypassed the PR rule; use PRs from now on.
-Working branch now: r18-live-ext (Live TV + extensions).
-
-2026-11-23 ~00:30 +06: CI 45047538777 hit the 40 min limit (3 unit test faults + test JVM out of its 512 MB heap).
-Fixed in 4c62fe3b (tests isolated; test JVM 3 GB, fork every 150 classes). New CI 45051586296 running.
-Device: Own12PinGuardDeviceTest OK both phones (45051247401); NF1 not checked (onshort.net down, 45049508477).
-Website branch is r17-v210 in siamform/yumeiro-web.
-2026-11-23 ~00:50 +06: CI 45051586296 finished: 1914 tests, 5 failed, no OOM. All 5 fixed in 3a18b985 (2 real bugs:
-NavGuard dropped Back on a page opened right after a Back; PlaylistStore re-added removed defaults to current files;
-3 test faults, see commit). Each class passed locally (Robolectric). C6LoaderTest added. New CI 45057299595.
-2026-11-23 ~01:45 +06: CI 45057299595 green (1944 unit tests, 0 failed, 11 opt-in skipped; APKs built). Upgrade
-checks from v2.0.0: phone 45061470350 (review APK of 45057299595), TV 45061494331. Docs: proof/open items updated.
-Phone upgrade 45061470350 FAILED on one value: playlists.json version 2 -> 3 (my bump in 3a18b985; it also
-re-ran the v1->v2 migration). Fixed in the next commit: version stays 2, new offeredDefaults list. New CI 45062571312;
-phone upgrade again after it.
-2026-11-23 ~04:00 +06: CI 45062571312 green (1944 unit tests, 0 failed). Phone upgrade v2.0.0 -> 2.1.0 with that review
-APK: PASS 45067511656 (0 lost, clip resumed, fatal 0, verifier 0). TV upgrade 45061494331: install over 2.0.0 Success,
-FATAL 0, verifier 0; data compare and resume Not checked (android-tv image has no root, as in 44684601986).
-Next: PR release-2.2.0 -> main, merge commit, release.yml v2.1.0.
-
-## OWN-15 finding
-Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
-"the logo to go" (splash_screen_root still there 15 s after the gate closed). Test b passes. So the bug is real or
-the test's wait does not let the splash LaunchedEffect run (it polls with Thread.sleep). Check both: the gate
-composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
-
-## Live TV / extensions, first runs (2026-11-23 ~06:00 +06)
-- 45083382288 LiveCountryDeviceTest + HeaderStreamDeviceTest: Pass on both phones.
-- 45083384193 ExtensionsDeviceTest 6/7, PinnedExtensionsDeviceTest 1/1, F21ExtensionLabelDeviceTest 1/1 Pass on both phones;
-  e13 failed on both ("five feeds failed", only 3 of 5 seeded shelves asked): the real onshort.net timed out from CI.
-- e13 change (503 for the rest of onshort.net inside the test) did NOT help: 45084925615 still fails on both. Logcat: the
-  drama shelves from app start-up hold the one onshort.net background slot ("waited 25 s for a slot ... held by
-  platform/dramawave") with 20 s real timeouts, and no request reached the test's interceptor (they use a client made
-  before the swap). Next: seed at the gate or swap the client before the drama source starts; and look at the app side:
-  one slow host makes every drama shelf wait 20-25 s in line (feed speed, owner focus).
 
 ## Next step (older)
 1. Live TV (E2-ALL): Yumeiro Live is published on the streams branch (playlists/yumeiro_live.m3u, 1.7 MB, sync 45071581763).
