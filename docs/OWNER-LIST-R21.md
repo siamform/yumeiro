@@ -14,7 +14,7 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 
 | # | Item | ID | Status | Notes |
 |---|------|----|--------|-------|
-| 1 | Live TV: search by channel name, filter by country, easier country picking, replace the two confusing category rows, redesign inspired by Yumix | — | not started | Plan below |
+| 1 | Live TV: search by channel name, filter by country, easier country picking, replace the two confusing category rows, redesign inspired by Yumix | LIVE-1 | emulator verified (header, genre row, Country sheet); search + play probe 45247707490 | Probe 45243905968 shots |
 | 2 | Settings sub-pages leave the previous page visible underneath for about 2 s | NAV-2 | CI pending | Opaque layers, and the sliding page gets its own zIndex. screenrecord on the emulator gets only about 10 frames, so this can only be proven by the Robolectric test |
 | 3 | Extension Sources page redesign (add repo / browse / install clearly separated) | — | not started | Plan below |
 | 4 | Manga translation is broken: engine research, downloadable engine, on-screen auto-translate, language packs | — | not started | Plan below (largest item) |
@@ -24,21 +24,22 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 8A | Telegram: own avatar and name; channel and group avatars and names; "+ Add Public Channel" at the top | TG-8ABC-1 | CI pending | |
 | 8B | Telegram: chat counts (videos, photos, audio) | TG-8ABC-1 | CI pending | getChatMessageCount, return_local=false |
 | 8C | Telegram: gallery with video previews | TG-8ABC-1 | CI pending | LazyVerticalGrid tg_video_grid |
-| 8D | Telegram videos don't play and send the user to the Telegram app (critical) | TG-PLAY-1 | CI pending; emulator probe 45227123635 running | Baseline v2.1.0 probe 45225547048 reproduced the bug on t.me/telegram/441 |
+| 8D | Telegram videos don't play and send the user to the Telegram app (critical) | TG-PLAY-1 | emulator verified for public posts (probe 45227123635); signed-in chats not checked | Baseline v2.1.0 probe 45225547048 reproduced the bug on t.me/telegram/441 |
 | 8E | Player "Up next" shows unrelated Live TV channels | UP-NEXT-1 | CI pending | |
-| 9 | Market Discover: dynamic repository/source filter | — | not started | |
+| 9 | Market Discover: dynamic repository/source filter | MKT-FILTER-1 | implemented, unit tested; emulator check pending | Filters sheet: Source + Repository from the loaded index |
 | 10 | Yumix "Show videos from": 30 pins, dynamic source filter, search icon, redesign | YF-2 | CI pending | |
 | 11 | Settings > Video Player: customizable player controls | PC-1 | CI pending | |
 | 12 | Torrent: open info-hashes and magnets (e.g. BF2063A5E9A69F14716288FCA7C2D6078BDA7369) | TOR-1 | CI pending | Root cause: a pasted hash was checked as a magnet, but the bare hash was sent |
 | 13 | Video details metadata (year, duration, rating + votes, country, language, release date, director, writers, companies, cast, trailers); show only the fields that exist | META-1 | CI pending | Cinemeta + Simkl + Wikidata by IMDb id; fixtures in app/src/test/resources/meta |
 | 14 | Yumix feed: no duplicate titles across extensions | DEDUP-1 | CI pending | online/TitleDedupe.kt |
-| 15 | A selected extension shows its own sections with See All | — | not started | Check first: the Hue page (OnlineHuePage.kt) shows playlist tabs and an endless feed, with no shelves and no See All |
-| 16A | Upcoming: a rotating carousel on Yumix | — | not started | |
-| 16B | Upcoming page redesign: 3 filter icon buttons, dynamic country and category | — | not started | |
+| 15 | A selected extension shows its own sections with See All | EXT-SEC-1 | implemented, CI pending | Check first: the Hue page (OnlineHuePage.kt) shows playlist tabs and an endless feed, with no shelves and no See All |
+| 16A | Upcoming: a rotating carousel on Yumix | UP-BANNER-1 | implemented, CI pending | |
+| 16B | Upcoming page redesign: 3 filter icon buttons, dynamic country and category | UP-FILTER-1 | implemented, CI pending | |
 | 17 | README cleanup | DOC-README-1 | done (docs) | README went from 545 to 245 lines, plus docs/WHATS-NEW.md, SCREENSHOTS.md, COMPARISON.md and FAQ.md |
 | 18 | Fix Skip Intro and add Skip Outro (AniSkip / IntroDB) | — | not started | |
 | 19a | TeraBox plays only a 30 s preview | TB-PREVIEW-1 | CI pending | The page finder played the page player's preview capture. Now: never plays a preview, resolves the share via the API, opens sign-in in the same browser and resumes by itself after sign-in. Full playback needs a TeraBox account (owner-side check) |
 | 19b | Diskwala links don't open | — | **blocked: owner decision** | See "DiskWala findings" below |
+| 20 | Yumeiro Mega Extension (all-in-one) | — | not started | Only legal sources; no 18+; no copied code |
 | web | yumeiro-web: changelog and download text say v2.2.0 | — | done, merged | yumeiro-web PR #8. Re-check www.yumeiro.click/changelog |
 | PR44 | What is inside PR 44 | — | answered | Docs only: the HANDOVER-LIVE rewrite and the REL-2.2-CI ledger row. Its commit 0265a031 is now on r21-major-list, so close PR 44 as superseded when the r21 PR opens |
 
