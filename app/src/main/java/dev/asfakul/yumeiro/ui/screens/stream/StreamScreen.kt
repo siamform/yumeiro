@@ -411,7 +411,7 @@ fun StreamScreen(
     val feedFailed = feedIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id }?.takeIf { loads[id]?.let { l -> !l.loading && l.error != null && l.channels.isEmpty() } == true } }
     val feedShown = remember(feed, liveGroup, liveCountry) { LiveChannelFeed.filter(feed, liveGroup, liveCountry) }
     LaunchedEffect(feed) { if (liveGroup != null && feedLoading == 0 && feed.categories.none { it.name.equals(liveGroup, ignoreCase = true) }) liveGroup = null }
-    LaunchedEffect(feed) { if (liveCountry != null && feedLoading == 0 && feed.countries.none { it.name.equals(liveCountry, ignoreCase = true) }) liveCountry = null }
+    LaunchedEffect(feed) { if (liveCountry != null && feedLoading == 0 && (!feed.showCountryChips || feed.countries.none { it.name.equals(liveCountry, ignoreCase = true) })) liveCountry = null }
     // Near the end = the footer or one of the last two shown tile rows is on screen. Read from the item
     // keys (not the item count). The footer's key carries the feed size, and a page is added only when the
     // list is still near its end after two fresh frames, so a layout from before a playlist finished
@@ -748,7 +748,7 @@ fun StreamScreen(
         }
         if (activePlaylists.isNotEmpty()) {
             if (feed.categories.size > 1) item(key = "live_cats") { LiveCategoryBar(feed.categories, feed.size, liveGroup) { liveGroup = it } }
-            if (feed.countries.size > 1) item(key = "live_countries") { LiveCountryBar(feed.countries, liveCountry) { liveCountry = it } }
+            if (feed.showCountryChips) item(key = "live_countries") { LiveCountryBar(feed.countries, liveCountry) { liveCountry = it } }
             if (feedFailed.isNotEmpty()) item(key = "live_failed") {
                 LiveProblem(
                     if (feedFailed.size == 1) "${feedFailed[0].name} didn't load. ${loads[feedFailed[0].id]?.error.orEmpty()}".trim()

@@ -29,8 +29,16 @@ object LiveChannelFeed {
     data class Category(val name: String, val count: Int)
 
     @Immutable
-    data class Feed(val entries: List<Entry>, val categories: List<Category>, val countries: List<Category> = emptyList()) {
+    data class Feed(
+        val entries: List<Entry>,
+        val categories: List<Category>,
+        val countries: List<Category> = emptyList(),
+        /** UX-LIVE-1: the country chips would repeat the category chips (see [countriesRepeatCategories]). */
+        val countriesAreCategories: Boolean = false,
+    ) {
         val size get() = entries.size
+        /** Country chips are worth showing: 2+ countries that are not already the categories. */
+        val showCountryChips get() = countries.size > 1 && !countriesAreCategories
         companion object { val EMPTY = Feed(emptyList(), emptyList()) }
     }
 
@@ -62,7 +70,28 @@ object LiveChannelFeed {
         // Country filter (2.1.0): ISO codes with their channel counts, most channels first.
         val byCountry = raw.mapNotNull { it.channel.country }.groupingBy { it }.eachCount()
         val countries = byCountry.entries.sortedWith(compareBy({ -it.value }, { it.key })).map { Category(it.key, it.value) }
-        return Feed(entries, keys.map { Category(display.getValue(it), counts[it] ?: 0) }, countries)
+        val feed = Feed(entries, keys.map { Category(display.getValue(it), counts[it] ?: 0) }, countries)
+        return if (countries.size > 1 && countriesRepeatCategories(feed)) feed.copy(countriesAreCategories = true) else feed
+    }
+
+    /**
+     * UX-LIVE-1 (probe 45143962374, Yumeiro Live 7555 channels): that list's group-title is the country, so the
+     * category chips ("United States · 1386", "India · 710") and the country chips ("United States · 1386",
+     * "India · 708") were the same filter twice. True when at least 80 % of the channels that carry a country sit in a
+     * category named after it (English or the phone's language); the country chips are then left out.
+     */
+    fun countriesRepeatCategories(feed: Feed, locale: java.util.Locale = java.util.Locale.getDefault()): Boolean {
+        var withCountry = 0
+        var same = 0
+        for (e in feed.entries) {
+            val code = e.channel.country ?: continue
+            withCountry++
+            if (e.category.equals(LiveCountry.name(code, java.util.Locale.ENGLISH), ignoreCase = true) ||
+                e.category.equals(LiveCountry.name(code, locale), ignoreCase = true) ||
+                e.category.equals(code, ignoreCase = true)
+            ) same++
+        }
+        return withCountry > 0 && same * 5 >= withCountry * 4
     }
 
     /** The feed's entries in [category] and [country] (null = all), in feed order. */
