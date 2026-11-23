@@ -6,36 +6,39 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-23 R21 (Asia/Dhaka evening). Branch **r21-major-list** is pushed, and **no PR is open yet**. main = v2.2.0
-(released). The owner's 19-item list and the per-item status and plans are in **docs/OWNER-LIST-R21.md**: read it next.
+2026-11-24 R21 (Asia/Dhaka, early morning). Branch **r21-major-list** is pushed; **no PR is open yet**; main = v2.2.0.
+The owner's 20-item list with per-item status is **docs/OWNER-LIST-R21.md** (read it next). Every change has a ledger
+row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
 
-### Done on r21-major-list (all CI pending unless stated)
-TG-PLAY-1 (8D), UP-NEXT-1 (8E), TG-TAB-1 (7), NAV-2 (2), YF-2 (10), PC-1 (11), DOC-README-1 (17, docs), PROBE-1
-(field-probe new_tag=branch), TG-8ABC-1 (8A–C), TOR-1 (12), META-1 (13), DEDUP-1 (14), TB-PREVIEW-1 (19a TeraBox).
-DiskWala (19b) is blocked on an owner decision: see "DiskWala findings" in docs/OWNER-LIST-R21.md. Each has a ledger row "(R21)"
-in docs/BUGS-AND-FIXES-2.0.0.md, after REL-2.2-CI.
+### Latest changes (this session)
+- TB-PREVIEW-2 (6e010fce, 488889a3): TeraBox ties a sign-in to the site it was made on. Measured in a real browser
+  with the owner's test account (credentials only in the ignored secrets/yumeiro.env.local; never in probe steps):
+  signed in on terabox.app, `share/streaming` M3U8_AUTO_480 on terabox.app = full HLS, 1057 segments, 10532 s;
+  anonymous / other host = 3 x 10 s preview; 720p = errno 130; share/list = errno 105 (no dlink) even signed in.
+  TeraBoxApi.origins() now asks only hosts whose own cookies hold ndus. Unit tested; in-app emulator playback with a
+  signed-in account is NOT shown yet (needs an in-app sign-in on the emulator without typing creds through probe inputs).
+- TL-3 (3a7e532a): manga translation reads a band across strip seams. Device-check 45253443660 (api36, real ML Kit):
+  A ja→en, B overlay on/off, C es→en, E same-language note + packs PASS; D (seam through letters) failed → fixed, re-run
+  45256209381 pending.
+- SD-2 (70e2535f): a shared movie page played its favicon (JSON-LD ImageObject contentUrl). Fixed in WebPageExtractor
+  + StreamResolver; re-probe 45257033081 pending (also re-checks WEB-5 browser bar on archive.org).
 
 ### Pending runs (check each one first)
-- CI 45230632843 on r21-major-list (df240341, covers everything incl. TB-PREVIEW-1; it replaced 45229632390).
-  TB-PREVIEW-1 (3dd034aa) and later commits need a new dispatch: `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
-  If it fails, read the log (`gh run view <id> --log-failed | tail -200`) and fix the compile and test errors first.
-  The new code that has never been compiled is: TitleFacts.kt, the OnlineDetailScreen about / cast / trailers block,
-  TelegramAvatars.kt, TelegramAvatar.kt, the TelegramAccountScreen grid, IncomingMedia magnet handling, TitleDedupe.kt,
-  and the TB-PREVIEW-1 code in PageStreamFinderDialog.kt, StreamResolver.checkCapture and CloudRecapture.
-- Field probe 45227123635 (branch build, api36; the first attempt failed on a runner system-image download, re-run): `send https://t.me/telegram/441`, with shots tgplay and tgplay2. It is
-  the emulator check for TG-PLAY-1. Download it with
-  `gh run download 45227123635 -R siamform/yumeiro -n field-probe -D /tmp/ob`, then grep timeline.txt for
-  "Telegram post can't play". The baseline v2.1.0 (45225547048) showed that message; the fix should play.
+- CI 45252547839 (ci.yml, older head) — dispatch a fresh one on the current head: `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
+- Device-check 45256209381: MangaTranslateDeviceTest on api36 (grep logcat for `TL_RESULT_`).
+- Field probes: 45253665347 (web-example, tg-tab [item 7], tg-play, tg-play-end [Up next], torrent hash, player-settings-2),
+  45257033081 (Websites → archive.org browser, Block element, Recently visited, shared movielinkbd page → finder),
+  45257174845 (Sources hub, Browse, Video player, Player controls, Live TV search "atn" → ATN Bangla plays).
+  Download: `gh run download <id> -R siamform/yumeiro -n field-probe -D /tmp/obX`; read timeline.txt + shots.
+- Earlier evidence: 45247707490 (Live TV country search, ATN Bangla plays, Coming up banner), 45252551715 (Market
+  filter sheet shows the dynamic SOURCE section; Live TV search "atn" → 6 channels).
 
 ### Next steps, in order
-1. Get the CI to green on r21-major-list, then open the PR r21-major-list -> main (with the footer). Merging it
-   releases (release.yml runs on app/** pushes to main). The owner gave merge approval for release PRs ("i already
-   author you to approved the marge"); still bump the version (app/build.gradle.kts versionName / versionCode) and
-   write the CHANGELOG / docs/WHATS-NEW.md entry before merging. Close PR #44 as superseded (its only commit 0265a031
-   is in r21), with a comment and the footer.
-2. Continue the not-started items in docs/OWNER-LIST-R21.md: 1 (Live TV), 15, 16, 9, 3, 5,
-   6, 18, 4. Load ui-ux-pro-max before any redesign; use rea when stuck.
-3. Re-check www.yumeiro.click/changelog shows v2.2.0 (yumeiro-web PR #8 merged).
+1. Read the pending runs above, update OWNER-LIST-R21.md rows with the evidence (labels only from real runs).
+2. Fresh CI on the head; fix anything red.
+3. Open PR r21-major-list → main only with owner approval for this list (footer required); bump version + CHANGELOG.
+4. Open items: 19b DiskWala (blocked, owner decision), Skip intro emulator check (needs an anime extension), 20 legal
+   free-anime part, TeraBox in-app signed-in emulator proof.
 
 ### How this agent works (copy this method)
 - One owner item = one commit with its own ID (for example META-1). Order: read the code and reproduce (field
