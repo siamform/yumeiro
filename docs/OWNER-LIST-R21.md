@@ -14,10 +14,10 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 
 | # | Item | ID | Status | Notes |
 |---|------|----|--------|-------|
-| 1 | Live TV: search by channel name, filter by country, easier country picking, replace the two confusing category rows, redesign inspired by Yumix | LIVE-1 | emulator verified (header, genre row, Country sheet); search + play probe 45247707490 | Probe 45243905968 shots |
+| 1 | Live TV: search by channel name, filter by country, easier country picking, replace the two confusing category rows, redesign inspired by Yumix | LIVE-1, LIVE-1c | emulator verified: Country sheet search "bangla" → Bangladesh 32, pick, channel search "atn" → 2, ATN Bangla plays (probe 45247707490). LIVE-1c (header count, keyboard over player) re-check pending | Probes 45243905968, 45247707490 shots |
 | 2 | Settings sub-pages leave the previous page visible underneath for about 2 s | NAV-2 | CI pending | Opaque layers, and the sliding page gets its own zIndex. screenrecord on the emulator gets only about 10 frames, so this can only be proven by the Robolectric test |
 | 3 | Extension Sources page redesign (add repo / browse / install clearly separated) | SRC-HUB-1 | implemented, Robolectric tested; emulator check pending | Installed / Browse / Repositories parts |
-| 4 | Manga translation is broken: engine research, downloadable engine, on-screen auto-translate, language packs | — | not started | Plan below (largest item) |
+| 4 | Manga translation is broken: engine research, downloadable engine, on-screen auto-translate, language packs | TL-2 | implemented, unit tested (13); emulator run 45253443660 pending | Causes found in code: Latin pages always sent as English, source fixed to Japanese, English→English did nothing silently, failures hidden, webtoon seam bubbles split, packs not manageable, offered on TV against ML Kit terms. Engine stays on-device ML Kit (OCR bundled, translation packs downloaded on demand, managed in the sheet). No online engine added: no free keyless legal API fits 200k users |
 | 5 | Websites page: "+" with the name read from metadata, search icon, auto-add visited sites, Back / Forward / Reload / Open in Chrome, ad blocker | WEB-5 | implemented, Robolectric tested; emulator check pending | Visited sites go to "Recently visited" (one tap to save), not straight into the saved list |
 | 6 | Stream detector misses streams (test site a5x2nt.movielinkbd.at) | SD-1 | implemented, unit tested; emulator check pending | Cause: playlist without extension served as image/jpeg inside an iframe; now found by its content |
 | 7 | The Telegram page shows the last website shortcut | TG-TAB-1 | CI pending | |
@@ -33,13 +33,13 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 13 | Video details metadata (year, duration, rating + votes, country, language, release date, director, writers, companies, cast, trailers); show only the fields that exist | META-1 | CI pending | Cinemeta + Simkl + Wikidata by IMDb id; fixtures in app/src/test/resources/meta |
 | 14 | Yumix feed: no duplicate titles across extensions | DEDUP-1 | CI pending | online/TitleDedupe.kt |
 | 15 | A selected extension shows its own sections with See All | EXT-SEC-1 | implemented, CI pending | Check first: the Hue page (OnlineHuePage.kt) shows playlist tabs and an endless feed, with no shelves and no See All |
-| 16A | Upcoming: a rotating carousel on Yumix | UP-BANNER-1 | implemented, CI pending | |
+| 16A | Upcoming: a rotating carousel on Yumix | UP-BANNER-1 | emulator verified: "Coming up" banner rotates (The Simpsons Today, On Cinema In 2 days...) | Probe 45247707490 shots coming-up, coming-up-2 |
 | 16B | Upcoming page redesign: 3 filter icon buttons, dynamic country and category | UP-FILTER-1 | implemented, CI pending | |
 | 17 | README cleanup | DOC-README-1 | done (docs) | README went from 545 to 245 lines, plus docs/WHATS-NEW.md, SCREENSHOTS.md, COMPARISON.md and FAQ.md |
 | 18 | Fix Skip Intro and add Skip Outro (AniSkip / IntroDB) | SKIP-1, SKIP-2 | implemented, unit tested on real API answers; emulator check pending | IntroDB needs the source to give an IMDb id |
 | 19a | TeraBox plays only a 30 s preview | TB-PREVIEW-1 | CI pending | The page finder played the page player's preview capture. Now: never plays a preview, resolves the share via the API, opens sign-in in the same browser and resumes by itself after sign-in. Full playback needs a TeraBox account (owner-side check) |
 | 19b | Diskwala links don't open | — | **blocked: owner decision** | See "DiskWala findings" below |
-| 20 | Yumeiro Mega Extension (all-in-one) | — | not started | Only legal sources; no 18+; no copied code |
+| 20 | Yumeiro Mega Extension (all-in-one) | OWN-13, E1-A/B/D | built earlier as the one built-in "Yumeiro" source (catalog shelves from Yumeiro Cloud/TMDB, Yumeiro Drama, Yumeiro Classics public-domain films, play through installed sources). This row said "not started": that was wrong. Emulator: Yumix shows its Spotlight (probe 45247707490). Open: a legal free-anime part | Only legal sources; no 18+; no copied code |
 | web | yumeiro-web: changelog and download text say v2.2.0 | — | done, merged | yumeiro-web PR #8. Re-check www.yumeiro.click/changelog |
 | PR44 | What is inside PR 44 | — | answered | Docs only: the HANDOVER-LIVE rewrite and the REL-2.2-CI ledger row. Its commit 0265a031 is now on r21-major-list, so close PR 44 as superseded when the r21 PR opens |
 
