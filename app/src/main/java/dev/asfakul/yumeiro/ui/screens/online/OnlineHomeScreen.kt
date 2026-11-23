@@ -671,6 +671,7 @@ fun OnlineHomeScreen(
                         onRetry = { if (api != null) scope.launch { loadOne(api, true) } },
                         openItem = openItem, openInfo = openInfo,
                         otherCopy = otherCopy,
+                        onOpenRow = onOpenRow,
                         onTryCopy = { copy ->
                             scope.launch {
                                 runCatching { ExtensionManager.install(context, copy) }

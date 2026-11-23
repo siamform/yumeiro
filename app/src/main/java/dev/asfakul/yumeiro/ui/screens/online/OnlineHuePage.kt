@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -84,6 +85,9 @@ internal fun hueGridRows(feed: List<Pair<OnlineItem, Boolean>>): List<List<Pair<
     return out
 }
 
+/** EXT-SEC-1: posters per section shelf on an extension's home (the rest are behind "See all"). */
+internal const val SHELF_ITEMS = 20
+
 internal fun hueFeed(rows: List<HueRowFeed>, only: Int?): List<Pair<OnlineItem, Boolean>> {
     val src = if (only != null) listOfNotNull(rows.getOrNull(only)) else rows
     val out = ArrayList<Pair<OnlineItem, Boolean>>()
@@ -118,6 +122,8 @@ internal fun HuePage(
     /** B-32 (R19): another repository's copy of this extension, offered when its home parses nothing. */
     otherCopy: dev.asfakul.yumeiro.online.RemoteExtension? = null,
     onTryCopy: (dev.asfakul.yumeiro.online.RemoteExtension) -> Unit = {},
+    /** EXT-SEC-1 (owner list R21, item 15): "See all" of one of this extension's sections (rows with paging). */
+    onOpenRow: ((OnlineRow) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     // R15: keyed by the channel only. A refreshed copy of [rows] (background refresh of a saved
@@ -134,6 +140,9 @@ internal fun HuePage(
             .forEach { feeds += HueRowFeed(it, it.items, 1, it.hasNext && it.pageData != null) }
     }
     var only by remember(name) { mutableStateOf<Int?>(null) }
+    // EXT-SEC-1: the extension opens on its own home: one shelf per section with "See all", like its site. The
+    // endless mixed feed stays one tap away ("Everything"); a section tab still shows that section endlessly.
+    var home by androidx.compose.runtime.saveable.rememberSaveable(name) { mutableStateOf(true) }
     // R15: the "all playlists" feed only ever appends (see YumixFeed.appendNew), so cards on screen
     // never shift when a shorter playlist gets its next page.
     val allSeen = remember(name) { HashSet<String>() }
@@ -153,6 +162,7 @@ internal fun HuePage(
         value = if (query.isBlank()) fullFeed else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { filterByTitle(fullFeed, query) { it.first.name } }
     }
     val feed = if (query.isBlank()) fullFeed else searched
+    val shelves = home && only == null && query.isBlank() && feeds.size > 1
     val pagingBusy by remember(feeds) { derivedStateOf { feeds.any { it.loading } } }
     val canLoadMore by remember(feeds, only) { derivedStateOf { (if (only != null) listOfNotNull(feeds.getOrNull(only!!)) else feeds).any { it.hasNext } } }
 
@@ -187,7 +197,7 @@ internal fun HuePage(
             info.totalItemsCount > 0 && last >= info.totalItemsCount - 5
         }
     }
-    LaunchedEffect(nearEnd, feed.size, only, pagingBusy) { if (nearEnd && !pagingBusy && canLoadMore) loadMore() }
+    LaunchedEffect(nearEnd, feed.size, only, pagingBusy, shelves) { if (!shelves && nearEnd && !pagingBusy && canLoadMore) loadMore() }
     // While searching, keep fetching pages (one at a time) so titles further down are found too.
     LaunchedEffect(query, pagingBusy, fullFeed.size) {
         if (query.isNotBlank() && !pagingBusy && canLoadMore && fullFeed.size < SECTION_SEARCH_CAP) { kotlinx.coroutines.delay(250); loadMore() }
@@ -234,9 +244,29 @@ internal fun HuePage(
             else -> {
                 if (feeds.size > 1) item("tabs") {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("hue_tabs")) {
-                        item("all") { OnlineChip("All", only == null, { only = null }) }
-                        items(feeds.size, key = { "tab_$it" }) { i -> OnlineChip(feeds[i].row.title, only == i, { only = if (only == i) null else i }) }
+                        item("home") { OnlineChip("Home", only == null && home, { only = null; home = true }, Modifier.testTag("hue_tab_home")) }
+                        item("all") { OnlineChip("Everything", only == null && !home, { only = null; home = false }, Modifier.testTag("hue_tab_all")) }
+                        items(feeds.size, key = { "tab_$it" }) { i -> OnlineChip(feeds[i].row.title, only == i, { if (only == i) { only = null; home = true } else { only = i; home = false } }, Modifier.testTag("hue_tab_$i")) }
                     }
+                }
+                if (shelves) {
+                    items(feeds.size, key = { i -> "shelf_" + i + "_" + feeds[i].row.title }, contentType = { "shelf" }) { i ->
+                        val f = feeds[i]
+                        Box(Modifier.testTag("hue_shelf")) {
+                            PosterShelf(
+                                f.row.title, subtitle = null, items = f.items.take(SHELF_ITEMS), horizontal = f.row.horizontal, onClick = openInfo,
+                                // Paged sections open the endless See all page; the rest show here as one section.
+                                onSeeAll = if (onOpenRow != null && f.row.pageData != null) ({ onOpenRow(f.row) }) else ({ only = i; home = false }),
+                            )
+                        }
+                    }
+                    item("browse_all") {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { home = false },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp).heightIn(min = 48.dp).testTag("hue_browse_all"),
+                        ) { Text("Browse everything on $name", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }
+                    }
+                    return@LazyColumn
                 }
                 // An organised poster grid (3 portrait / 2 landscape per row) instead of one huge card each.
                 val gridRows = hueGridRows(feed)
