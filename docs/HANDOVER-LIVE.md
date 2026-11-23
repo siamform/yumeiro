@@ -13,32 +13,32 @@ row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
 ### Latest changes (this session)
 - TB-PREVIEW-2 (6e010fce, 488889a3): TeraBox ties a sign-in to the site it was made on. Measured in a real browser
   with the owner's test account (credentials only in the ignored secrets/yumeiro.env.local; never in probe steps):
-  signed in on terabox.app, `share/streaming` M3U8_AUTO_480 on terabox.app = full HLS, 1057 segments, 10532 s;
-  anonymous / other host = 3 x 10 s preview; 720p = errno 130; share/list = errno 105 (no dlink) even signed in.
-  TeraBoxApi.origins() now asks only hosts whose own cookies hold ndus. Unit tested; in-app emulator playback with a
-  signed-in account is NOT shown yet (needs an in-app sign-in on the emulator without typing creds through probe inputs).
-- TL-3 (3a7e532a): manga translation reads a band across strip seams. Device-check 45253443660 (api36, real ML Kit):
-  A ja→en, B overlay on/off, C es→en, E same-language note + packs PASS; D (seam through letters) failed → fixed, re-run
-  45256209381 pending.
-- SD-2 (70e2535f): a shared movie page played its favicon (JSON-LD ImageObject contentUrl). Fixed in WebPageExtractor
-  + StreamResolver; re-probe 45257033081 pending (also re-checks WEB-5 browser bar on archive.org).
+  signed in on terabox.app, `share/streaming` M3U8_AUTO_480 = full HLS, 1057 segments, 10532 s; anonymous = 30 s
+  preview, never played. In-app emulator playback with a signed-in account is NOT shown yet.
+- TL-3 (3a7e532a): seam band for manga translation. Device-check 45256209381: MangaTranslateDeviceTest 5/5 PASS.
+- SD-2 (70e2535f) + ERR-CARD-1 (0098825a): item 6 emulator verified end to end (probe 45265113188): shared movielinkbd
+  page → "Find the video" → "HLS stream · master" detected → plays 1080p 2:21:10 in Yumeiro's player.
+- WEB-RECENT-2 (1a3803ff): Recently visited also matches a typed address (unit tested only).
+- TOR-2 (29b7d31b) emulator verified (probe 45260133429); TOR-3 (4224947b) right Settings page in torrent messages.
+- PC-1 emulator verified (probe 45268021731): "Rewind and forward 10 s" off → only Pause in the player middle.
+- PROBE-XY (14a58c08): field probe step `xy X Y` taps a screen point (the video surface has no text).
+- Built-in torrent engine device test 45268091524: first frame OK (Sintel 6.4 s / 5.6 s), seek FAILS (13.6 s on api36,
+  no resume on api33-lowram; budget 5 s). Flag b31_builtin_torrent stays off. Ledger B31-FRAME-RUN.
 
 ### Pending runs (check each one first)
-- CI 45252547839 (ci.yml, older head) — dispatch a fresh one on the current head: `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
-- Device-check 45256209381: MangaTranslateDeviceTest on api36 (grep logcat for `TL_RESULT_`).
-- Field probes: 45253665347 (web-example, tg-tab [item 7], tg-play, tg-play-end [Up next], torrent hash, player-settings-2),
-  45257033081 (Websites → archive.org browser, Block element, Recently visited, shared movielinkbd page → finder),
-  45257174845 (Sources hub, Browse, Video player, Player controls, Live TV search "atn" → ATN Bangla plays).
+- None open. Last green CI: 45263833897 on 1a3803ff. Commits after it (TOR-3, PROBE-XY, docs) need one more CI:
+  `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
+- Evidence index: 45247707490, 45252551715, 45253665347, 45257033081, 45257174845, 45260133429, 45261500409,
+  45265113188, 45268021731 (field probes); 45256209381, 45268091524 (device checks).
   Download: `gh run download <id> -R siamform/yumeiro -n field-probe -D /tmp/obX`; read timeline.txt + shots.
-- Earlier evidence: 45247707490 (Live TV country search, ATN Bangla plays, Coming up banner), 45252551715 (Market
-  filter sheet shows the dynamic SOURCE section; Live TV search "atn" → 6 channels).
 
 ### Next steps, in order
-1. Read the pending runs above, update OWNER-LIST-R21.md rows with the evidence (labels only from real runs).
-2. Fresh CI on the head; fix anything red.
-3. Open PR r21-major-list → main only with owner approval for this list (footer required); bump version + CHANGELOG.
+1. Fresh CI on the head; fix anything red.
+2. Torrent seek (B31-FRAME-RUN): trace piece deadlines after a seek on api33-lowram, then re-run B31FrameDeviceTest
+   (`-f test=dev.asfakul.yumeiro.B31FrameDeviceTest`, the full class name is required).
+3. Open PR r21-major-list → main only with owner approval (footer required); bump version + CHANGELOG.
 4. Open items: 19b DiskWala (blocked, owner decision), Skip intro emulator check (needs an anime extension), 20 legal
-   free-anime part, TeraBox in-app signed-in emulator proof.
+   free-anime part, TeraBox in-app signed-in emulator proof, items still "CI pending" in OWNER-LIST-R21.md.
 
 ### How this agent works (copy this method)
 - One owner item = one commit with its own ID (for example META-1). Order: read the code and reproduce (field
