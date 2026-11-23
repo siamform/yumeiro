@@ -98,6 +98,8 @@ run_steps() {
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
       shot*) dump "${s#shot }" ;;
+      gfxreset) adb shell dumpsys gfxinfo "$P" reset > /dev/null 2>&1; note "gfxinfo reset" ;;
+      gfx*) g=${s#gfx }; adb shell dumpsys gfxinfo "$P" > "$OUT/gfx-$g.txt" 2>&1; note "gfx [$g] $(grep -m1 'Total frames rendered' "$OUT/gfx-$g.txt")" ;;
       gesturenav) adb shell cmd overlay enable com.android.internal.systemui.navbar.gestural > /dev/null 2>&1; sleep 3
         note "navigation_mode=$(adb shell settings get secure navigation_mode | tr -d '\r')" ;;
       buttonnav) adb shell cmd overlay enable com.android.internal.systemui.navbar.threebutton > /dev/null 2>&1; sleep 3
