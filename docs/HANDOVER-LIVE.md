@@ -6,6 +6,20 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 ~12:30 +06 (R19, new agent): working branch is now **r19-restore** (from r18-live-ext). Owner brief R19 =
+10 audit sections; every earlier "done" is treated as unverified. Skills: ui-ux-pro-max (design), kotlin-agent-skills,
+rea (problem solving), jeffallan/claude-skills architecture-designer (system design / ADRs; Kotlin skill for Android).
+Field probe tooling: .github/workflows/field-probe.yml runs on push to probe/** and reads .github/field-probe.env
+(must be committed with `git add`, `-a` skips it). Steps: skip, tour, wait N, tap, find, top, dismiss, rec/recpull,
+back, home, shot, gesturenav, buttonnav, swipeback, edgeback.
+Done on r19-restore: 07cd54de FCM re-register storm fix (ONLINE-INIT-1), 60540fb0 predictive-back slide (NAV-1 part),
+5dafbf4d B-32b "try another repository's copy" (CI 45118971931 unit tests passed).
+Open, in order: NAV-1 key Back cut (diagnostic probe/r5-navdiag-b, run 45121952110: read YuNavDiag in logcat);
+LIVE-SLOW-1; themes (2.1.0 probes 45117913756 / 1.5.0 45117910872: light stays light, dark stays dark, glass fill
+values unchanged since 1.5.0; the owner's "glass on every theme" is not reproduced on Home / Music / Library /
+Settings, ask for the screen or check Backdrop pictures); extension engine; Live TV; Telegram; UI/UX.
+See docs/BUGS-AND-FIXES-2.0.0.md rows ONLINE-INIT-1, LIVE-SLOW-1, NAV-1, B-32b.
+
 2026-11-23 ~05:30 +06: 2.1.0 RELEASED. https://github.com/siamform/yumeiro/releases/tag/v2.1.0 (Latest). Release run
 45080181866 (after 45071581793 hit the 45-min job limit and 45075918561 ran the Kotlin daemon out of memory; fixed by
 a 90-min limit and two Gradle calls, PR #41). 11 APKs + SHA256SUMS: every sha256 OK, every signer cert = 2ecdfd04...
