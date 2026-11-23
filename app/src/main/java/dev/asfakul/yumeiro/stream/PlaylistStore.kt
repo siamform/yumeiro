@@ -685,9 +685,10 @@ object PlaylistStore {
     }
 
     /** Follows redirects and reports what [url] returns, without saving anything. */
-    suspend fun analyze(url: String): PlaylistAnalysis = withContext(Dispatchers.IO) {
+    suspend fun analyze(context: Context, url: String): PlaylistAnalysis = withContext(Dispatchers.IO) {
         // G7 LT-4: read from a temp file line by line, not from one String of the whole body.
-        val tmp = File.createTempFile("yu_analyze", ".m3u") // java.io.tmpdir is the app cache on Android
+        // CQ-89: in the app's own cache dir, named explicitly (not java.io.tmpdir, which other apps may share).
+        val tmp = File.createTempFile("yu_analyze", ".m3u", context.cacheDir)
         val (d, isHls, channels, head) = try {
             val dl = download(url.trim(), tmp)
             val hls = tmp.bufferedReader().useLines { lines -> lines.any { M3uParser.isHlsLine(it) } }

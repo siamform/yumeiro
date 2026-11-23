@@ -255,6 +255,7 @@ internal fun PlaylistEditDialog(
     onSave: suspend (name: String, url: String?) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     var name by remember { mutableStateOf(playlist?.name.orEmpty()) }
     var url by remember { mutableStateOf(playlist?.url.orEmpty()) }
     var analysis by remember { mutableStateOf<PlaylistAnalysis?>(null) }
@@ -285,7 +286,7 @@ internal fun PlaylistEditDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), colors = colors,
                         modifier = Modifier.fillMaxWidth().testTag("playlist_url_field"),
                     )
-                    TextButton(onClick = { run { analysis = PlaylistStore.analyze(url) } }, enabled = !busy && isHttpUrl(url)) {
+                    TextButton(onClick = { run { analysis = PlaylistStore.analyze(appContext, url) } }, enabled = !busy && isHttpUrl(url)) {
                         Text("Analyse link", color = SpotifyGreen)
                     }
                     analysis?.let { AnalysisSummary(it) }
