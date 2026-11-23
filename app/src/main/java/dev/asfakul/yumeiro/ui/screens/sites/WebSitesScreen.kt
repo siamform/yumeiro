@@ -140,7 +140,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     }
 
     // OL-1: websites open in the kept tab: playing a video, Downloads, Minimize or Back hide it, never close it.
-    val tabs = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
+    // TG-TAB-1: the Telegram page shares this screen; the kept website tab (and its "Open tab" card) belongs to
+    // the Websites page only. Before, the last website browsed showed as a shortcut on the Telegram page.
+    val tabs = remember(telegramPage) { !telegramPage && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
     val tab by WebsiteTab.tab.collectAsState()
     tab?.takeIf { tabs && it.visible }?.let { t ->
         PageStreamFinderDialog(
