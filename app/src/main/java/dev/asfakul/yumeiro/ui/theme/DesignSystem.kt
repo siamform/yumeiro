@@ -116,17 +116,13 @@ fun rememberSignatureBrush(): Brush {
 @Composable
 fun rememberGlassBorder(): Brush {
     val p = LocalMtPalette.current
-    return remember(p.isDark, p.accent, p.accent2) {
-        Brush.linearGradient(
-            listOf(
-                Color.White.copy(alpha = if (p.isDark) 0.12f else 0.9f),
-                Color.White.copy(alpha = if (p.isDark) 0.05f else 0.6f),
-            )
-        )
+    return remember(p.outlineVariant) {
+        // R19 THEME-1: a plain theme hairline, not a white "glass edge" gradient.
+        androidx.compose.ui.graphics.SolidColor(p.outlineVariant)
     }
 }
 
-/** Translucent "glass" surface used by cards, pills and round buttons (no blur → cheap). */
+/** Tonal fill used by cards, pills and round buttons (solid since R19 THEME-1; the name is historical). */
 fun Modifier.glass(shape: Shape): Modifier = composed { clip(shape).background(LocalMtPalette.current.glass, shape) }
 
 /** Artwork gradient pairs taken from the prototype; chosen deterministically per item. */

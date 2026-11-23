@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,26 +74,32 @@ fun rememberMtPalette(): MtPalette {
     val dayPart by produceState(currentDayPart(), mode) {
         while (mode == ThemeMode.TIME) { value = currentDayPart(); delay(60_000) }
     }
-    // F-10: Kasumi re-checks battery saver / heat every minute while it is the theme (kill switch -> Tsuki Night).
-    val glassOn = remember(context) { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.GLASS_THEME) }
-    val glassTier by produceState(remember(context) { GlassTier.current(context) }, mode) {
-        while (mode == ThemeMode.GLASS) { value = GlassTier.current(context); delay(60_000) }
-    }
     val palette = when (mode) {
         ThemeMode.LIGHT -> Palettes.Light
         ThemeMode.DARK -> Palettes.Dark
         ThemeMode.SYSTEM -> if (systemDark) Palettes.Dark else Palettes.Light
         ThemeMode.TIME -> dayPart.palette()
         ThemeMode.AFTERGLOW -> Palettes.Afterglow
-        ThemeMode.GLASS -> if (glassOn) Palettes.kasumi(glassTier) else Palettes.Dark
         ThemeMode.DYNAMIC -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             (if (systemDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).toPalette(systemDark)
         } else if (systemDark) Palettes.Dark else Palettes.Light
     }
     // TH-1: the chosen accent over every Yumeiro theme; Material You keeps the system's own colours.
     val toned = if (mode == ThemeMode.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) palette else palette.withAccent(accent)
-    return if (amoled) toned.amoled() else toned
+    return (if (amoled) toned.amoled() else toned).solidSurfaces()
 }
+
+/**
+ * R19 THEME-1 (owner 2026-11-23: no glassmorphism anywhere for now). Card / pill / round-button fills, the dock
+ * and the mini player used to be see-through on every theme (white 7-10 % on dark, 80 % white on light, 96 %
+ * bars), so pages, artwork and the backdrop showed through them. They are now the same colour made solid
+ * (composited over the page colour once): each theme keeps its tone, nothing bleeds through.
+ */
+fun MtPalette.solidSurfaces(): MtPalette = copy(
+    glass = glass.compositeOver(background),
+    navBar = navBar.compositeOver(background),
+    miniPlayer = miniPlayer.compositeOver(background),
+)
 
 /** The palette a theme mode would use, for previews in Settings (Material You shows the current one). */
 fun previewPaletteFor(mode: ThemeMode, systemDark: Boolean, current: MtPalette): MtPalette = when (mode) {
@@ -101,7 +108,6 @@ fun previewPaletteFor(mode: ThemeMode, systemDark: Boolean, current: MtPalette):
     ThemeMode.SYSTEM -> if (systemDark) Palettes.Dark else Palettes.Light
     ThemeMode.TIME -> currentDayPart().palette()
     ThemeMode.AFTERGLOW -> Palettes.Afterglow
-    ThemeMode.GLASS -> Palettes.kasumi(GlassTier.GLASS)
     ThemeMode.DYNAMIC -> if (current.scene == DreamScene.YOU) current else (if (systemDark) Palettes.Dark else Palettes.Light).copy(scene = DreamScene.YOU)
 }
 

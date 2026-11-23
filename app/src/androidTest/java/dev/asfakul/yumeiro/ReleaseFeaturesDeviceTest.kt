@@ -89,23 +89,6 @@ class ReleaseFeaturesDeviceTest {
         assertEquals("frieren", handed)
     }
 
-    /** F-10 (ADR-017): low-RAM phones and TV always get the solid tint, never see-through bars. */
-    @Test fun glassTierIsSolidOnLowRamAndTv() {
-        DeviceClass.init(ctx)
-        val tier = dev.asfakul.yumeiro.ui.theme.GlassTier.current(ctx)
-        log("RELEASE glass tier=$tier lowEnd=${DeviceClass.lowEnd} tv=$tv sdk=${android.os.Build.VERSION.SDK_INT}")
-        if (DeviceClass.lowEnd || tv) assertEquals(dev.asfakul.yumeiro.ui.theme.GlassTier.TINT, tier)
-        val before = dev.asfakul.yumeiro.ui.theme.ThemeSettings.mode.value
-        try {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync { dev.asfakul.yumeiro.ui.theme.ThemeSettings.setMode(ctx, dev.asfakul.yumeiro.ui.theme.ThemeMode.GLASS) }
-            compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { dev.asfakul.yumeiro.ui.screens.stats.StatsScreen(onBack = {}) } } }
-            assertTrue("Kasumi theme did not render a page", waitTag("stats_screen"))
-            FirstRun.shot("release_kasumi")
-        } finally {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync { dev.asfakul.yumeiro.ui.theme.ThemeSettings.setMode(ctx, before) }
-        }
-    }
-
     /** F-12: a Short that can't resolve shows Retry (no endless spinner), and Close leaves at once. Phones only. */
     @Test fun shortsPlayerUnresolvableShortShowsRetryAndCloses() {
         if (tv) { log("RELEASE shorts skipped on TV (phones only, ADR-018)"); return }
