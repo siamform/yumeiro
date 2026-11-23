@@ -904,45 +904,62 @@ fun PlaybackErrorOverlay(
     onAction: (() -> Unit)? = null,
     showRetry: Boolean = true,
 ) {
-    Box(
+    // ERR-CARD-1: the card used to be laid out for a full-screen player. In the short portrait player
+    // (about 220 dp) its buttons fell below the player's edge, so "Find the video" could not be tapped.
+    // The card now fits the space it has: the text scrolls and the buttons always stay on screen.
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp),
+            .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
+        val compact = maxHeight < 380.dp
+        val room = maxHeight
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(if (compact) 16.dp else 20.dp),
             color = Color.Black.copy(alpha = 0.90f),
             tonalElevation = 10.dp,
-            modifier = Modifier.fillMaxWidth(0.85f)
+            modifier = Modifier
+                .padding(if (compact) 8.dp else 24.dp)
+                .fillMaxWidth(if (compact) 0.96f else 0.85f)
+                .heightIn(max = room - if (compact) 16.dp else 48.dp)
+                .testTag("error_card")
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(if (compact) 14.dp else 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.ErrorOutline,
-                    contentDescription = null,
-                    tint = Color(0xFFFF5252),
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = title,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                if (compact) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.ErrorOutline, null, tint = Color(0xFFFF5252), modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(title, style = MaterialTheme.typography.titleSmall, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 2)
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = title,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 val parsed = remember(detail, errorMessage, title) {
                     dev.asfakul.yumeiro.ui.components.ErrorHelp.parse(
                         detail ?: errorMessage.ifBlank { "This phone's decoders couldn't play this file, or the file is damaged." }
                     ).let { if (it.tips.isEmpty()) it.copy(tips = dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor("$title $errorMessage")) else it }
                 }
                 Column(
-                    Modifier.heightIn(max = 260.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                    Modifier.weight(1f, fill = false).heightIn(max = 260.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -954,29 +971,38 @@ fun PlaybackErrorOverlay(
                     Spacer(modifier = Modifier.height(12.dp))
                     dev.asfakul.yumeiro.ui.components.ErrorSuggestions(parsed.tips)
                 }
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(if (compact) 10.dp else 20.dp))
                 // Remote / keyboard: land on the obvious next step so OK works without hunting.
                 val primaryFocus = remember { androidx.compose.ui.focus.FocusRequester() }
                 val keyDriven = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current ||
                     androidx.compose.ui.platform.LocalInputModeManager.current.inputMode == androidx.compose.ui.input.InputMode.Keyboard
-                LaunchedEffect(showRetry, keyDriven) {
+                val hasAction = actionLabel != null && onAction != null
+                LaunchedEffect(showRetry, keyDriven, hasAction) {
                     if (!keyDriven) return@LaunchedEffect
                     for (i in 0 until 10) { if (runCatching { primaryFocus.requestFocus() }.isSuccess) break; kotlinx.coroutines.delay(60) }
                 }
+                // In the compact card the action shares the button row so it is never cut off.
+                val actionInRow = compact && hasAction
+                val retryInRow = showRetry && !(actionInRow)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(
                         onClick = onClose,
                         modifier = Modifier
                             .weight(1f)
-                            .then(if (showRetry) Modifier else Modifier.focusRequester(primaryFocus))
+                            .then(if (retryInRow || actionInRow) Modifier else Modifier.focusRequester(primaryFocus))
                             .testTag("error_close_btn")
                     ) {
-                        Text("Close", color = TextPrimary)
+                        Text("Close", color = TextPrimary, maxLines = 1)
                     }
-                    if (showRetry) Button(
+                    if (actionInRow && showRetry) androidx.compose.material3.IconButton(
+                        onClick = onRetry,
+                        modifier = Modifier.testTag("error_retry_btn"),
+                    ) { Icon(Icons.Default.Replay, contentDescription = "Retry", tint = TextPrimary) }
+                    if (retryInRow) Button(
                         onClick = onRetry,
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier
@@ -986,16 +1012,21 @@ fun PlaybackErrorOverlay(
                     ) {
                         Icon(imageVector = Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Retry", fontWeight = FontWeight.Bold)
+                        Text("Retry", fontWeight = FontWeight.Bold, maxLines = 1)
                     }
+                    if (actionInRow) Button(
+                        onClick = onAction!!,
+                        colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                        modifier = Modifier.weight(1.4f).focusRequester(primaryFocus).testTag("error_action_btn")
+                    ) { Text(actionLabel!!, fontWeight = FontWeight.Bold, maxLines = 1) }
                 }
-                if (actionLabel != null && onAction != null) {
+                if (hasAction && !actionInRow) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = onAction,
+                        onClick = onAction!!,
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.fillMaxWidth().testTag("error_action_btn")
-                    ) { Text(actionLabel, fontWeight = FontWeight.Bold) }
+                    ) { Text(actionLabel!!, fontWeight = FontWeight.Bold) }
                 }
                 if (onNextVideo != null) {
                     Spacer(modifier = Modifier.height(8.dp))
